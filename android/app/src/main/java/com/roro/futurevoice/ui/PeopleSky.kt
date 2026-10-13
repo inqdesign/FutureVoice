@@ -1,6 +1,14 @@
 package com.roro.futurevoice.ui
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.blur
+import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.exponentialDecay
@@ -119,9 +127,9 @@ import kotlin.math.sin
  * lens folds away and the next ring moves in. Nobody changes angle — a person
  * who doesn't belong to the lens fades out where they stand.
  *
- * Only what a RELEASE iOS build draws: the situation dock over the map
- * (person card, greeting bubbles, voice previews, creating mode) is iOS
- * DEBUG-only (`PeopleSky.dockEnabled`) and is not here.
+ * With the situation dock over it (iOS `PeopleSky.dockEnabled`, on in
+ * release from 1.1.8, 418314a0): a person's card, their greeting bubble and
+ * voice, and the situation box under the map — see [WatchTabBody].
  */
 internal object PeopleSky {
 
@@ -432,10 +440,18 @@ private fun Modifier.centerAt(x: Dp, y: Dp) = layout { m, _ ->
     }
 }
 
+/** A pan the host asks for (a pick, a card). [nonce] re-asks for the same person. */
+internal data class SkyScroll(val id: String, val nonce: Int)
+
 /**
- * The map itself (iOS `PeopleSkyMap` with the dock off): rings and their
- * names under the people, the learner in the middle, a 2-D pan with fling,
- * and "Back to me" once the learner has panned away.
+ * The map itself (iOS `PeopleSkyMap`): rings and their names under the
+ * people, the learner in the middle, a 2-D pan with fling. With the situation
+ * dock (iOS `PeopleSky.dockEnabled`, on for everyone from 1.1.8, 418314a0)
+ * it also says who is in the middle of the screen ([onCenterChange]), rings
+ * the one a situation is with ([focusedId]), puts a line over the one
+ * speaking ([bubble]) and pans to whoever the host asks for ([scrollTarget]).
+ * "Back to me" is drawn by the host, above the map's fade; the map reports
+ * [onAwayChange] and comes back on [backToMeRequest].
  */
 @Composable
 internal fun PeopleSkyMap(
@@ -444,22 +460,41 @@ internal fun PeopleSkyMap(
     lens: PeopleSky.Lens,
     onTap: (PeopleSky.Node) -> Unit,
     onTapMe: () -> Unit,
-    /** How high "Back to me" sits — level with "New situation". */
-    backToMeBottom: Dp,
     modifier: Modifier = Modifier,
+    /** Who the situation is with: ringed, a touch larger. Only a pick changes it — never a scroll. */
+    focusedId: String? = null,
+    /** Who is in the middle of the screen and says something. */
+    bubbleId: String? = null,
+    /** What they say while they are in the middle. */
+    bubble: String? = null,
+    /** The bubble answers: tapping it writes into the box. */
+    onTapBubble: () -> Unit = {},
+    /** Pan to this person. Scrolling by hand never sets it. */
+    scrollTarget: SkyScroll? = null,
+    /** Who is nearest the middle of the screen now (null: nobody close). */
+    onCenterChange: (String?) -> Unit = {},
+    /** Writing a situation: everyone but the one it's with goes soft. */
+    softenOthers: Boolean = false,
+    onAwayChange: (Boolean) -> Unit = {},
+    backToMeRequest: Int = 0,
+    /** A tap on the map between the people (they win their own taps). */
+    onTapEmpty: () -> Unit = {},
 ) {
     val density = LocalDensity.current
     val side = remember(nodes) { PeopleSky.side(nodes) }
     val geometry = remember(nodes, lens) { PeopleSky.geometry(lens, nodes) }
     val positions = remember(nodes, lens, side) { PeopleSky.solve(nodes, lens, side) }
-    // The map's edges can be dragged clear of the header and the floating
-    // button, so nobody on it is ever out of reach of a tap. Equal top and
-    // bottom, or the centre anchor puts "me" off-centre.
-    val marginX = 24f
-    val marginY = 120f
+    // With the situation dock, a picked person must be able to come to the
+    // middle wherever they sit — edge or bottom — with room for their bubble,
+    // so the map can be dragged much further. Equal top and bottom, or the
+    // centre anchor puts "me" off-centre.
+    val marginX = 170f
+    val marginY = 280f
     val contentW = side + 2 * marginX
     val contentH = side + 2 * marginY
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val centerChange by rememberUpdatedState(onCenterChange)
+    val awayChange by rememberUpdatedState(onAwayChange)
 
     BoxWithConstraints(modifier.fillMaxSize()) {
         val viewW = with(density) { maxWidth.toPx() }
@@ -472,11 +507,26 @@ internal fun PeopleSkyMap(
         val sy = remember { Animatable(0f) }
         var moved by remember { mutableStateOf(false) }
         val scope = rememberCoroutineScope()
+        val marginXPx = with(density) { marginX.dp.toPx() }
+        val marginYPx = with(density) { marginY.dp.toPx() }
+        val focusY = viewH * PeopleSky.FOCUS_LINE
+
+        /** The scroll offset that puts [id] on the focus line, a little above centre. */
+        fun offsetFor(id: String): Offset? {
+            val p = positions[id] ?: return null
+            val px = with(density) { p.x.dp.toPx() } + marginXPx
+            val py = with(density) { p.y.dp.toPx() } + marginYPx
+            return Offset((px - viewW / 2).coerceIn(0f, maxX), (py - focusY).coerceIn(0f, maxY))
+        }
+
         // Starts on the centre (iOS `defaultScrollAnchor(.center)`); until
-        // the learner has moved it, a map that grows stays centred.
+        // the learner has moved it, a map that grows stays centred. The pool
+        // can land after a pick and grow the map: then it stays on them.
         LaunchedEffect(maxX, maxY) {
             sx.updateBounds(0f, maxX); sy.updateBounds(0f, maxY)
-            if (!moved) { sx.snapTo(maxX / 2); sy.snapTo(maxY / 2) }
+            val held = scrollTarget?.let { offsetFor(it.id) }
+            if (held != null) { sx.snapTo(held.x); sy.snapTo(held.y) }
+            else if (!moved) { sx.snapTo(maxX / 2); sy.snapTo(maxY / 2) }
         }
         fun toCentre() {
             scope.launch { sx.animateTo(maxX / 2, tween(500)) }
@@ -485,35 +535,49 @@ internal fun PeopleSkyMap(
         // A new lens brings the map back to the learner.
         var firstLens by remember { mutableStateOf(true) }
         LaunchedEffect(lens) { if (firstLens) firstLens = false else toCentre() }
+        LaunchedEffect(backToMeRequest) { if (backToMeRequest > 0) toCentre() }
+        // A pick pans to them, a little above centre: the box covers the
+        // bottom of the map.
+        LaunchedEffect(scrollTarget) {
+            val target = scrollTarget?.let { offsetFor(it.id) } ?: return@LaunchedEffect
+            moved = true
+            launch { sx.animateTo(target.x, tween(500)) }
+            launch { sy.animateTo(target.y, tween(500)) }
+        }
 
-        var away by remember { mutableStateOf(false) }
         val awayPx = with(density) { 160.dp.toPx() }
         LaunchedEffect(viewW, viewH, cW, cH) {
             snapshotFlow {
                 val cx = sx.value + viewW / 2 - cW / 2
                 val cy = sy.value + viewH / 2 - cH / 2
                 hypot(cx, cy) > awayPx
-            }.collect { away = it }
+            }.distinctUntilChanged().collect { awayChange(it) }
         }
 
-        val marginXPx = with(density) { marginX.dp.toPx() }
-        val marginYPx = with(density) { marginY.dp.toPx() }
-        val focusY = viewH * PeopleSky.FOCUS_LINE
+        // Who sits nearest the focus line as the map scrolls — and again when
+        // the PEOPLE change (the pool lands after the first layout), so the
+        // middle is found without a drag.
+        val candidates = remember(nodes, lens) { nodes.filter { it.shows(lens) }.map { it.id } }
+        LaunchedEffect(candidates, positions, viewW, viewH) {
+            if (viewW <= 0f) return@LaunchedEffect
+            snapshotFlow {
+                val fx = with(density) { (sx.value + viewW / 2 - marginXPx).toDp().value }
+                val fy = with(density) { (sy.value + focusY - marginYPx).toDp().value }
+                var best: String? = null
+                var bestD = Float.MAX_VALUE
+                for (id in candidates) {
+                    val p = positions[id] ?: continue
+                    val d = hypot(p.x - fx, p.y - fy)
+                    if (d < 130f && d < bestD) { best = id; bestD = d }
+                }
+                best
+            }.distinctUntilChanged().collect { centerChange(it) }
+        }
+
         val reach = max(min(viewW, viewH) * 0.62f, 1f)
 
         Box(
             Modifier.fillMaxSize()
-                // The whole screen is the canvas: the map runs under the title
-                // and the tab bar and fades into the page at both ends
-                // instead of being cut off.
-                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                .drawWithContent {
-                    drawContent()
-                    drawRect(Brush.verticalGradient(
-                        0f to Color.Transparent, 0.2f to Color.Black,
-                        0.62f to Color.Black, 0.94f to Color.Transparent),
-                        blendMode = BlendMode.DstIn)
-                }
                 .pointerInput(maxX, maxY) {
                     val tracker = VelocityTracker()
                     detectDragGestures(
@@ -534,6 +598,9 @@ internal fun PeopleSkyMap(
                         scope.launch { sy.snapTo((sy.value - drag.y).coerceIn(0f, maxY)) }
                     }
                 }
+                // The people are buttons and win their own taps; this only
+                // hears the map between them.
+                .pointerInput(Unit) { detectTapGestures(onTap = { onTapEmpty() }) }
         ) {
             Box(
                 Modifier
@@ -581,53 +648,139 @@ internal fun PeopleSkyMap(
                                 .padding(horizontal = 6.dp))
                     }
 
-                    for (n in nodes) {
-                        val on = n.shows(lens)
-                        val shown by animateFloatAsState(if (on) 1f else 0f, tween(500), label = "on")
-                        val scale by animateFloatAsState(if (on) 1f else 0.6f, tween(500), label = "scale")
-                        // A seat never glides: whatever moves it, it is simply there.
-                        val p = positions[n.id] ?: Offset(c, c)
-                        val px = with(density) { p.x.dp.toPx() } + marginXPx
-                        val py = with(density) { p.y.dp.toPx() } + marginYPx
-                        SkyNode(
-                            n, dark = dark,
-                            enabled = on,
-                            onClick = { onTap(n) },
-                            modifier = Modifier
-                                .centerAt(p.x.dp, p.y.dp)
-                                .graphicsLayer {
-                                    // Like a word cloud: sharp across the middle
-                                    // of the screen, fading past it. Fade only —
-                                    // a shrink by distance made everyone squirm.
-                                    val dx = px - sx.value - viewW / 2
-                                    val dy = py - sy.value - focusY
-                                    val t = min(hypot(dx, dy * 0.8f) / reach, 1.6f)
-                                    val depth = max(0.3f, min(1f, 1.45f - 0.75f * t))
-                                    alpha = shown * depth
-                                    scaleX = scale; scaleY = scale
-                                },
-                        )
+                    // The ringed one and the speaking one draw over their
+                    // neighbours (iOS `zIndex`).
+                    val ordered = nodes.sortedBy { if (it.id == focusedId || it.id == bubbleId) 1 else 0 }
+                    for (n in ordered) {
+                        androidx.compose.runtime.key(n.id) {
+                            val on = n.shows(lens)
+                            val focused = n.id == focusedId
+                            val shown by animateFloatAsState(if (on) 1f else 0f, tween(500), label = "on")
+                            val scale by animateFloatAsState(if (!on) 0.6f else if (focused) 1.12f else 1f,
+                                tween(if (on) 350 else 500), label = "scale")
+                            // Sharp at the height the bubble is triggered at, and
+                            // the one speaking is never faded.
+                            val sharp = if (softenOthers) focused else (n.id == bubbleId || focused)
+                            val soft by animateFloatAsState(if (softenOthers && !sharp) 1f else 0f,
+                                tween(350), label = "soft")
+                            // A seat never glides: whatever moves it, it is simply there.
+                            val p = positions[n.id] ?: Offset(c, c)
+                            val px = with(density) { p.x.dp.toPx() } + marginXPx
+                            val py = with(density) { p.y.dp.toPx() } + marginYPx
+                            val speaking = n.id == (bubbleId ?: focusedId)
+                            BubbleAnchor(
+                                bubble = if (speaking) bubble else null,
+                                onTapBubble = onTapBubble,
+                                modifier = Modifier
+                                    .centerAt(p.x.dp, p.y.dp)
+                                    .graphicsLayer {
+                                        alpha = shown
+                                        scaleX = scale; scaleY = scale
+                                    },
+                            ) {
+                                SkyNode(
+                                    n, dark = dark,
+                                    enabled = on,
+                                    lit = n.id == bubbleId || focused,
+                                    focused = focused,
+                                    onClick = { onTap(n) },
+                                    modifier = Modifier
+                                        .then(if (soft > 0f) Modifier.blur((6 * soft).dp,
+                                            BlurredEdgeTreatment.Unbounded) else Modifier)
+                                        .graphicsLayer {
+                                            // Like a word cloud: sharp across the middle
+                                            // of the screen, fading past it. Fade only —
+                                            // a shrink by distance made everyone squirm.
+                                            val dx = px - sx.value - viewW / 2
+                                            val dy = py - sy.value - focusY
+                                            val t = min(hypot(dx, dy * 0.8f) / reach, 1.6f)
+                                            val depth = if (sharp) 1f else max(0.3f, min(1f, 1.45f - 0.75f * t))
+                                            alpha = depth * (1f - 0.45f * soft)
+                                        },
+                                )
+                            }
+                        }
                     }
                     SkyMe(size = geometry.me, name = meName, onClick = onTapMe,
                         modifier = Modifier.centerAt(c.dp, (c + 8).dp))
                 }
             }
         }
+    }
+}
 
-        // Back to me: an icon is enough, on the right, clear of the centred
-        // "New situation" button.
-        AnimatedVisibility(
-            visible = away,
-            enter = fadeIn(tween(200)), exit = fadeOut(tween(200)),
-            modifier = Modifier.align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = backToMeBottom),
-        ) {
-            val label = stringResource(R.string.watch_sky_backtome)
-            IosGlassButton(onClick = { toCentre() }, circle = true,
-                modifier = Modifier.size(48.dp).semantics { contentDescription = label }) {
-                Icon(Icons.Filled.GpsFixed, contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+/**
+ * A node with its bubble hanging over it. The bubble is pinned by its TIP: it
+ * sits 10 pt above the node's top and hangs off that point by its bottom
+ * edge, so a longer line only grows upward. The node alone sets the size, so
+ * the seat never moves when a line appears.
+ */
+@Composable
+private fun BubbleAnchor(
+    bubble: String?,
+    onTapBubble: () -> Unit,
+    modifier: Modifier = Modifier,
+    node: @Composable () -> Unit,
+) {
+    val lift = with(LocalDensity.current) { 14.dp.roundToPx() }
+    androidx.compose.ui.layout.Layout(
+        content = {
+            node()
+            Box {
+                AnimatedContent(
+                    targetState = bubble,
+                    transitionSpec = {
+                        (fadeIn(tween(350)) + slideInVertically(tween(350)) { lift })
+                            .togetherWith(fadeOut(tween(350)))
+                    },
+                    contentAlignment = Alignment.BottomCenter,
+                    label = "bubble",
+                ) { text ->
+                    if (text != null) {
+                        // 168 pt of text + 15 pt padding a side; a short line
+                        // still hugs its words.
+                        Box(Modifier.width(198.dp), contentAlignment = Alignment.BottomCenter) {
+                            SkyBubble(text, onClick = onTapBubble)
+                        }
+                    }
+                }
             }
+        },
+        modifier = modifier,
+    ) { measurables, constraints ->
+        val nodeP = measurables[0].measure(Constraints())
+        val bubbleP = measurables[1].measure(Constraints())
+        layout(nodeP.width, nodeP.height) {
+            nodeP.place(0, 0)
+            bubbleP.place((nodeP.width - bubbleP.width) / 2, -bubbleP.height - 10.dp.roundToPx())
+        }
+    }
+}
+
+/** A picked person's line, over their face: a rounded bubble with a small tail. */
+@Composable
+internal fun SkyBubble(text: String, onClick: () -> Unit = {}) {
+    val fill = MaterialTheme.colorScheme.surface
+    Column(
+        Modifier
+            .shadow(10.dp, RoundedCornerShape(16.dp), clip = false,
+                ambientColor = Color.Black.copy(alpha = 0.14f), spotColor = Color.Black.copy(alpha = 0.14f))
+            .clickable(remember { MutableInteractionSource() }, indication = null, onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(text,
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center,
+            maxLines = 4, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .background(fill, com.roro.futurevoice.ui.brand.ContinuousShape(16.dp))
+                .padding(horizontal = 15.dp, vertical = 11.dp))
+        Canvas(Modifier.size(16.dp, 8.dp)) {
+            val path = androidx.compose.ui.graphics.Path().apply {
+                moveTo(0f, 0f); lineTo(size.width, 0f); lineTo(size.width / 2, size.height); close()
+            }
+            drawPath(path, fill)
         }
     }
 }
@@ -670,11 +823,18 @@ private fun SkyNode(
     n: PeopleSky.Node,
     dark: Boolean,
     enabled: Boolean,
+    /** In the middle and speaking (or picked): drawn in their colour even if
+     *  not met yet — the quiet grey is for faces passing by. */
+    lit: Boolean,
+    /** Who the situation is with: an accent ring around the face. */
+    focused: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val photo = rememberPersonPhoto(n.person.id)
     val label = listOfNotNull(n.name, n.eyebrow?.takeIf { it.isNotEmpty() }).joinToString(", ")
+    val quiet = n.isUnmet && !lit
+    val accent = MaterialTheme.colorScheme.primary
     Column(
         modifier
             .then(if (enabled) Modifier.clickable(remember { MutableInteractionSource() },
@@ -688,13 +848,13 @@ private fun SkyNode(
             Box(Modifier.size(n.size.dp).clip(CircleShape).background(
                 when {
                     photo != null -> Color.Transparent
-                    n.isUnmet -> com.roro.futurevoice.ui.brand.iosFill().compositeOver(AppSurfaces.ground)
+                    quiet -> com.roro.futurevoice.ui.brand.iosFill().compositeOver(AppSurfaces.ground)
                     else -> PeopleSky.faceColor(n.id, dark)
                 }), contentAlignment = Alignment.Center) {
                 if (photo != null) {
                     Image(photo, contentDescription = null, contentScale = ContentScale.Crop,
                         modifier = Modifier.size(n.size.dp).clip(CircleShape))
-                } else if (n.isUnmet) {
+                } else if (quiet) {
                     // someone not met yet is drawn quietly, so the learner's
                     // own people are the colour on the map
                     Icon(PeopleSky.icon(n.symbol), contentDescription = null,
@@ -703,6 +863,14 @@ private fun SkyNode(
                 } else {
                     Icon(PeopleSky.icon(n.symbol), contentDescription = null, tint = Color.White,
                         modifier = Modifier.size((n.size * 0.38f).dp))
+                }
+            }
+            if (focused) {
+                // The ring sits 4 pt outside the face, drawn without moving it.
+                Canvas(Modifier.size(n.size.dp)) {
+                    val w = 3.dp.toPx()
+                    drawCircle(color = accent, radius = size.minDimension / 2 + 4.dp.toPx() - w / 2,
+                        style = Stroke(width = w))
                 }
             }
             if (n.hasKept) {

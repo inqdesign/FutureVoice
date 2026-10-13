@@ -416,10 +416,6 @@ fun RootScreen() {
     }
     var editProfile by remember { mutableStateOf(false) }
     var editProfileStep by remember { mutableStateOf(0) }
-    /** Someone tapped on the Watch map, and their pool row if they came from it. */
-    var watchPerson by remember {
-        mutableStateOf<Pair<com.roro.futurevoice.data.Counterpart, com.roro.futurevoice.net.PublicPersonaClient.PublicPersona?>?>(null)
-    }
     var dailyCallOnboarded by remember {
         mutableStateOf(OnboardingFlags.seen(context, OnboardingFlags.DAILY_CALL))
     }
@@ -849,7 +845,6 @@ fun RootScreen() {
         studyDeckKind?.let { add(RootRoute.StudyDeck(it)) }
         personDetailId?.let { add(RootRoute.Person(it)) }
         if (showPeople) add(RootRoute.People)
-        watchPerson?.let { add(RootRoute.WatchPerson(it.first.id)) }
         finishedBooks?.let { add(RootRoute.Finished(it)) }
         // Settings is a SHEET over the tabs (iOS `.sheet` from the Talk
         // header), and what it pushes lives inside it — see [meSheetStack].
@@ -881,7 +876,6 @@ fun RootScreen() {
                 RootRoute.Activity -> showActivity = false
                 RootRoute.Effort -> showEffort = false
                 is RootRoute.Person -> personDetailId = null
-                is RootRoute.WatchPerson -> watchPerson = null
                 is RootRoute.Finished -> finishedBooks = null
                 RootRoute.CreditGuide -> showCreditGuide = false
                 RootRoute.PlanPage -> showPlanPage = false
@@ -1130,58 +1124,6 @@ fun RootScreen() {
             },
         )
 
-        // A person on the Watch map: their card, as iOS's Watch tab presents
-        // `FindPersonCard` — your own people and strangers alike.
-        is RootRoute.WatchPerson -> {
-            val held = watchPerson
-            if (held != null) {
-                val (c, row) = held
-                val persona = row ?: if (c.remoteId != null) c.asPublicPersona(state.targetLanguage)
-                    else c.asPublicPersona(state.targetLanguage).copy(owner_user_id = null,
-                        kind = c.personaKind ?: "character")
-                var bookmarks by remember { mutableStateOf(bookmarkedIds(context)) }
-                FindPersonCard(
-                    person = persona,
-                    language = state.targetLanguage,
-                    seated = false,
-                    bookmarked = bookmarks.contains(persona.id),
-                    onToggleBookmark = { bookmarks = toggleBookmark(context, persona.id) },
-                    onTalk = { p, meet ->
-                        val own = c.takeIf { it.remoteId == null }
-                        callCast = if (own != null) com.roro.futurevoice.talk.ConversationEngine.Cast.of(own)
-                        else com.roro.futurevoice.talk.ConversationEngine.Cast(
-                            name = p.display_name, intro = p.intro, location = p.location,
-                            occupation = p.occupation, interests = p.interests,
-                            conversationStyle = p.conversation_style,
-                            commonGround = com.roro.futurevoice.talk.CommonGround.block(state.persona, com.roro.futurevoice.talk.CommonGround.of(p)))
-                        callCastVoice = p.voice_preset_id.takeIf { it.isNotBlank() }
-                        callCounterpartId = p.id
-                        gate {
-                            meet()
-                            callTopic = ""; callFacts = emptyList(); callScenarioId = null
-                            watchPerson = null; inCall = true
-                        }
-                    },
-                    onWatch = { meet -> gateScene {
-                        val person = meet()
-                        gateScope.launch {
-                            com.roro.futurevoice.data.CounterpartStore.shared(context).save(person)
-                            val sc = meetingScenario(context, person, state.targetLanguage)
-                            watchPerson = null; watchReplay = false; watchScenarioId = sc.id
-                        }
-                    } },
-                    onPersonSaved = { com.roro.futurevoice.data.StoreEvents.bump() },
-                    onBack = { watchPerson = null },
-                    // "Make a situation" is the WRITING door, with them.
-                    onCompose = { person ->
-                        watchPerson = null
-                        WatchComposeRequest.pending.value = person to ""
-                    },
-                    showsBookmark = c.remoteId != null,
-                )
-            }
-        }
-
         RootRoute.People -> FindPeopleScreen(
             language = state.targetLanguage,
             persona = state.persona,
@@ -1379,7 +1321,30 @@ fun RootScreen() {
             onOpenBook = { bookScenarioId = it },
             onOpenPeople = { showPeople = true },
             onOpenProfile = { editProfileStep = 0; editProfile = true },
-            onOpenWatchPerson = { c, row -> watchPerson = c to row },
+            // The Watch map's person card (iOS `SkyPersonCard`): Talk is a call
+            // with them, Watch a scene of the two of them past the hellos.
+            onTalkWithPerson = { c ->
+                callCast = if (c.remoteId == null) com.roro.futurevoice.talk.ConversationEngine.Cast.of(c)
+                else c.asPublicPersona(state.targetLanguage).let { p ->
+                    com.roro.futurevoice.talk.ConversationEngine.Cast(
+                        name = p.display_name, intro = p.intro, location = p.location,
+                        occupation = p.occupation, interests = p.interests,
+                        conversationStyle = p.conversation_style,
+                        commonGround = com.roro.futurevoice.talk.CommonGround.block(state.persona, com.roro.futurevoice.talk.CommonGround.of(p)))
+                }
+                callCastVoice = c.voicePresetId.takeIf { it.isNotBlank() }
+                callCounterpartId = c.id
+                gate {
+                    callTopic = ""; callFacts = emptyList(); callScenarioId = null
+                    inCall = true
+                }
+            },
+            onWatchWithPerson = { c -> gateScene {
+                gateScope.launch {
+                    val sc = meetingScenario(context, c, state.targetLanguage)
+                    watchReplay = false; watchScenarioId = sc.id
+                }
+            } },
             onOpenFinished = { finishedBooks = it },
             onOpenActivity = { showActivity = true },
             onOpenEffort = { showEffort = true },
@@ -1554,8 +1519,10 @@ internal fun HomeScreen(
     onOpenPeople: () -> Unit = {},
     /** The learner in the middle of the Watch map — their profile. */
     onOpenProfile: () -> Unit = {},
-    /** Someone on the Watch map — their card (iOS `FindPersonCard` sheet). */
-    onOpenWatchPerson: (com.roro.futurevoice.data.Counterpart, com.roro.futurevoice.net.PublicPersonaClient.PublicPersona?) -> Unit = { _, _ -> },
+    /** The Watch map's person card: a call with them (gated here). */
+    onTalkWithPerson: (com.roro.futurevoice.data.Counterpart) -> Unit = {},
+    /** The Watch map's person card: a scene of the two of them (gated here). */
+    onWatchWithPerson: (com.roro.futurevoice.data.Counterpart) -> Unit = {},
     /** Practice's header seal → the finished-books page, with the books it counted. */
     onOpenFinished: (List<FinishedBook>) -> Unit = {},
     onOpenActivity: () -> Unit = {},
@@ -1681,6 +1648,10 @@ internal fun HomeScreen(
         permission.launch(Manifest.permission.RECORD_AUDIO)
     }
 
+    // Writing a situation on the Watch map: the tab bar steps aside for the
+    // box, and the title for Cancel (iOS `WatchCreation`).
+    val watchCreating by WatchCreation.creating.collectAsStateWithLifecycle()
+    val writingSituation = tab == HomeTab.WATCH && watchCreating
     Scaffold(
         topBar = {
             if (tab == HomeTab.TALK) {
@@ -1742,9 +1713,17 @@ internal fun HomeScreen(
                 TopAppBar(
                     colors = AppSurfaces.topBarColors(),
                     title = {
-                        val title = stringResource(tab.label)
-                        Text(title, style = DisplayFace.style(title,
-                            MaterialTheme.typography.headlineMedium))
+                        // Writing a situation, the title steps aside for
+                        // Cancel in its place (top left, like any compose
+                        // screen); the options on the right stay.
+                        if (writingSituation) {
+                            com.roro.futurevoice.ui.brand.IosGlassTextButton(stringResource(R.string.cancel),
+                                onClick = { WatchCreation.cancelTick.value += 1 })
+                        } else {
+                            val title = stringResource(tab.label)
+                            Text(title, style = DisplayFace.style(title,
+                                MaterialTheme.typography.headlineMedium))
+                        }
                     },
                     actions = {
                         // iOS 26 toolbar buttons: white glass, a circle for an
@@ -1863,7 +1842,9 @@ internal fun HomeScreen(
                         onWatch = onWatch,
                         meName = state.persona?.displayName.orEmpty(),
                         onOpenProfile = onOpenProfile,
-                        onOpenPerson = onOpenWatchPerson,
+                        onTalkWith = onTalkWithPerson,
+                        onWatchWith = onWatchWithPerson,
+                        onOpenTalk = onOpenTalk,
                     )
 
                     HomeTab.PRACTICE -> PracticeBody(
@@ -1912,9 +1893,19 @@ internal fun HomeScreen(
         // from the physical bottom edge, 44 dp of page colour and a 72 dp
         // ramp to transparent above it, so pages dissolve as they slide
         // under the bar instead of running razor-sharp off the screen.
-        ScrollEdgeFeather(color = AppSurfaces.ground, modifier = Modifier.align(Alignment.BottomCenter))
-        IosTabBar(selected = tab, onSelect = onTabChange,
-            modifier = Modifier.align(Alignment.BottomCenter))
+        androidx.compose.animation.AnimatedVisibility(
+            visible = !writingSituation,
+            enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(300)) +
+                androidx.compose.animation.slideInVertically(androidx.compose.animation.core.tween(300)) { it },
+            exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(300)) +
+                androidx.compose.animation.slideOutVertically(androidx.compose.animation.core.tween(300)) { it },
+            modifier = Modifier.align(Alignment.BottomCenter),
+        ) {
+            Box(contentAlignment = Alignment.BottomCenter) {
+                ScrollEdgeFeather(color = AppSurfaces.ground)
+                IosTabBar(selected = tab, onSelect = onTabChange)
+            }
+        }
       }
     }
 }
@@ -2739,7 +2730,6 @@ internal sealed interface RootRoute {
     data class StudyDeck(val kind: StudyScheduleStore.Kind) : RootRoute { override val key = "studyDeck:$kind" }
     data class Person(val id: String) : RootRoute { override val key = "person:$id" }
     data object People : RootRoute { override val key = "people" }
-    data class WatchPerson(val id: String) : RootRoute { override val key = "watchPerson:$id" }
     data class Finished(val books: List<FinishedBook>) : RootRoute { override val key = "finished" }
     data object CreditGuide : RootRoute { override val key = "creditGuide" }
     data object PlanPage : RootRoute { override val key = "planPage" }

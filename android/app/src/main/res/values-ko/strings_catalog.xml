@@ -1849,6 +1849,7 @@
     <string name="show_again_in_3_days">"3일 뒤에 다시 보기"</string>
     <string name="show_again_tomorrow">"내일 다시 보기"</string>
     <string name="show_each_guide_again_when_i_open_its_tab">"탭을 열 때 가이드 다시 보기"</string>
+    <string name="show_less">"접기"</string>
     <string name="show_my_photo">"내 사진 보이기"</string>
     <string name="show_the_talk">"그 통화 보기"</string>
     <string name="showing_earlier_stories">"지난 기사를 보여드리고 있어요"</string>

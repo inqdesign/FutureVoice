@@ -1,6 +1,25 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.union
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.GpsFixed
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.input.pointer.pointerInput
+import com.roro.futurevoice.talk.GreetingEngine
+import com.roro.futurevoice.talk.VoicePreset
+import kotlin.math.max
 import androidx.compose.foundation.border
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.outlined.Layers
@@ -86,26 +105,47 @@ internal object WatchSky {
 }
 
 /**
+ * Whether the Watch tab is writing a new situation (iOS `WatchCreation`): the
+ * tab bar steps aside, the box shows under the map, Cancel takes the title's
+ * place in the header. Lives outside the tab because the header and the tab
+ * bar are drawn by the home shell.
+ */
+internal object WatchCreation {
+    val creating = kotlinx.coroutines.flow.MutableStateFlow(false)
+    /** The header's Cancel, handed to the tab (the keyboard goes down first). */
+    val cancelTick = kotlinx.coroutines.flow.MutableStateFlow(0)
+}
+
+/**
  * Watch — simulate a specific situation BEFORE it happens (iOS `WatchTab`).
  * Since 1.1.8 (iOS fe83c0f1) the tab IS the people map ([PeopleSkyMap]): a
  * saved situation is almost never played again, but the people in a
- * learner's life come back. A tap on someone opens their card; "New
- * situation" opens the writing door; every situation made before the map
- * lives in the header's list sheet.
+ * learner's life come back. With the situation dock (iOS 418314a0, on in
+ * release): whoever comes to the middle of the screen greets the learner in
+ * their own voice; a tap on someone floats their card over the map; "New
+ * situation" (or the card's "Make a situation", or a tap on their greeting)
+ * lifts the situation box under the map, the tab bar steps aside and the
+ * header gets Cancel. Every situation made before the map lives in the
+ * header's list sheet.
  *
  * Minting a scenario PLAYS it. A saved scenario is a reusable TEMPLATE:
  * tapping its card opens it in edit mode, whose CTA writes a fresh take.
  */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 internal fun WatchTabBody(
     language: String,
     enabled: Boolean,
     onWatch: (String) -> Unit,
     meName: String = "",
-    /** The learner in the middle — their profile. */
+    /** The learner in the middle — their page. */
     onOpenProfile: () -> Unit = {},
-    /** Someone on the map — their card, with the pool row when they came from it. */
-    onOpenPerson: (Counterpart, com.roro.futurevoice.net.PublicPersonaClient.PublicPersona?) -> Unit = { _, _ -> },
+    /** The card's Talk: a call with them (already gated by the caller). */
+    onTalkWith: (Counterpart) -> Unit = {},
+    /** The card's Watch: a scene of the two of them (gated by the caller). */
+    onWatchWith: (Counterpart) -> Unit = {},
+    /** A talk on the card's "Your talks together". */
+    onOpenTalk: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
@@ -129,6 +169,38 @@ internal fun WatchTabBody(
     var talksByPerson by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     /** The map is drawn once the pool is in, so nobody shifts when it lands. */
     var skyReady by remember { mutableStateOf(false) }
+
+    // MARK: The situation dock (iOS 2026-10-12, release from 418314a0)
+    val creating by WatchCreation.creating.collectAsStateWithLifecycle()
+    fun setCreating(on: Boolean) { WatchCreation.creating.value = on }
+    /** Who the box's situation is with — shared both ways with its person chip. */
+    var dockPerson by remember { mutableStateOf<Counterpart?>(null) }
+    /** The box was opened from a person's card: no category chips. */
+    var dockNoChips by remember { mutableStateOf(false) }
+    /** The person whose card floats over the map (a tap on them). */
+    var skyCard by remember { mutableStateOf<Counterpart?>(null) }
+    /** Panned away from me: "Back to me" shows (drawn here, over the fade). */
+    var skyAway by remember { mutableStateOf(false) }
+    var backToMeTick by remember { mutableStateOf(0) }
+    var dockBubble by remember { mutableStateOf<String?>(null) }
+    var dockFill by remember { mutableStateOf("") }
+    /** Who is in the middle of the screen, and the pan a pick asks for. */
+    var skyCentred by remember { mutableStateOf<Counterpart?>(null) }
+    var skyScroll by remember { mutableStateOf<SkyScroll?>(null) }
+    var scrollNonce by remember { mutableStateOf(0) }
+    /** A pick is panning the map: the people it passes on the way are not
+     *  "in the middle", so their bubbles stay down until it lands. */
+    var panningUntil by remember { mutableStateOf(0L) }
+    var bubbleJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    var previewJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    /** Greetings written this visit for strangers (people on file keep theirs). */
+    val strangerGreetings = remember { mutableMapOf<String, String>() }
+    val previewPlayer = remember { com.roro.futurevoice.audio.Mp3Player(context.cacheDir, source = "voice_preview") }
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { previewPlayer.stop() } }
+    val imeVisible = WindowInsets.isImeVisible
+    val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+
     val composeRequest by WatchComposeRequest.pending.collectAsStateWithLifecycle()
     LaunchedEffect(composeRequest) {
         val (person, line) = composeRequest ?: return@LaunchedEffect
@@ -170,36 +242,329 @@ internal fun WatchTabBody(
     val nodes = remember(people, poolRows, scenarios, talksByPerson) {
         skyNodes(people, poolRows, scenarios, talksByPerson, metLabel)
     }
+    /** The pool's people not met yet, as they stand on the map. */
+    val skyPool = remember(people, poolRows) {
+        val met = people.mapNotNull { it.remoteId }.toSet()
+        poolRows.filter { it.id !in met }.map { it.asCounterpart(metLabel) }
+    }
+    fun personFor(id: String): Counterpart? =
+        people.firstOrNull { it.id == id } ?: skyPool.firstOrNull { it.id == id }
+
+    /** Put the keyboard away, then do the next thing once it is down. */
+    fun afterKeyboard(then: () -> Unit) {
+        if (!imeVisible) { then(); return }
+        keyboard?.hide(); focusManager.clearFocus()
+        scope.launch { kotlinx.coroutines.delay(300); then() }
+    }
+
+    /** Their voice as their bubble rises. A person from the pool reads the
+     *  start of their own intro in their own voice — clips that ship with the
+     *  app (`assets/people_voices`, the files iOS bundles), so scrolling past
+     *  people spends nothing. Your own people fall back to their preset's
+     *  sample; a voice with no clip stays silent rather than paying for one. */
+    fun playVoicePreview(person: Counterpart) {
+        previewJob?.cancel(); previewPlayer.stop()
+        val lang = language.substringBefore('-')
+        fun asset(path: String) = runCatching { context.assets.open(path).use { it.readBytes() } }.getOrNull()
+        var bytes: ByteArray? = null
+        val rid = person.remoteId
+        if (rid != null && !rid.startsWith("builtin:")) bytes = asset("people_voices/intro-${rid.lowercase()}.mp3")
+        if (bytes == null && person.voicePresetId.isNotEmpty()) {
+            bytes = asset("voice_previews/preview-$lang-${person.voicePresetId}.mp3")
+        }
+        val audio = bytes ?: return
+        previewJob = scope.launch { runCatching { previewPlayer.play(audio) } }
+    }
+
+    /** Their greeting, over their face: the line written for them (in the
+     *  person form, or at publish for someone from the pool), else one written
+     *  now — kept on a person on file, remembered this visit for a stranger. */
+    suspend fun sayGreeting(person: Counterpart) {
+        val lang = language
+        val people0 = CounterpartStore.shared(context)
+        val onFile = people0.load().firstOrNull { it.id == person.id }
+        // A person on file whose line came from an older prompt is written
+        // again before it is shown (the learner's own line never is).
+        if (onFile != null && onFile.greetingNeedsWriting(lang, GreetingEngine.PROMPT_VERSION)
+            && onFile.greeting(lang).isNotEmpty()) {
+            GreetingEngine.ensure(context, onFile, lang)
+        }
+        var line = (people0.load().firstOrNull { it.id == person.id } ?: person).greeting(lang)
+        if (line.isEmpty()) line = strangerGreetings[person.id].orEmpty()
+        if (line.isEmpty()) {
+            if (onFile != null) {
+                GreetingEngine.ensure(context, onFile, lang)
+                line = people0.load().firstOrNull { it.id == person.id }?.greeting(lang).orEmpty()
+            } else {
+                val fresh = runCatching {
+                    GreetingEngine.write(person, com.roro.futurevoice.data.PersonaStore.shared(context).load(), lang)
+                }.getOrNull()
+                if (fresh != null) { strangerGreetings[person.id] = fresh; line = fresh }
+            }
+        }
+        if (line.isEmpty() || skyCentred?.id != person.id) return
+        dockBubble = line
+        // Felt as they speak: one firm tap as the bubble rises.
+        HapticEngine.medium(context)
+        playVoicePreview(person)
+    }
+
+    /** Someone came to the middle of the screen (or nobody is there now).
+     *  Their bubble rises once they have settled there. */
+    fun centre(id: String?, force: Boolean = false) {
+        if (!force && System.currentTimeMillis() < panningUntil) return
+        // Already the one in the middle: their greeting and voice stand.
+        // Tapping them again, or opening the box with them, must not say it
+        // all a second time.
+        if (id == skyCentred?.id) return
+        bubbleJob?.cancel()
+        dockBubble = null
+        previewJob?.cancel(); previewPlayer.stop()
+        val person = id?.let { personFor(it) }
+        skyCentred = person
+        if (person == null) return
+        bubbleJob = scope.launch {
+            kotlinx.coroutines.delay(450)
+            sayGreeting(person)
+        }
+    }
+
+    /** Pan to someone; once there, they are the one in the middle. */
+    fun panTo(id: String) {
+        panningUntil = System.currentTimeMillis() + 700
+        scrollNonce += 1
+        skyScroll = SkyScroll(id, scrollNonce)
+        scope.launch { kotlinx.coroutines.delay(750); centre(id, force = true) }
+    }
+
+    /** A tap on someone: their card floats up over the bottom of the map and
+     *  they come to the middle, above it, where their greeting rises. */
+    fun openSkyCard(c: Counterpart) {
+        skyCard = c
+        panTo(c.id)
+    }
+
+    /** Out of the box and back to a person's card, in one motion — the step
+     *  before "Make a situation", never the old full sheet. One thing at a
+     *  time: the keyboard goes down first, then the box gives way. */
+    fun leaveBoxForCard(c: Counterpart) {
+        afterKeyboard {
+            setCreating(false)
+            dockFill = ""
+            openSkyCard(c)
+        }
+    }
+
+    /** With the box or a card up, a tap on the map is only "put it away" —
+     *  even one that lands on someone. Picking a person happens from the bare map. */
+    fun putAway(): Boolean {
+        if (creating) {
+            val p = dockPerson
+            if (p != null) leaveBoxForCard(p) else afterKeyboard { setCreating(false) }
+            return true
+        }
+        if (skyCard != null) { skyCard = null; return true }
+        return false
+    }
+
+    /** The card's "Make a situation": the card goes down as the box comes up,
+     *  in one motion, with them already the person it's with. */
+    fun composeFromCard(c: Counterpart) {
+        skyCard = null
+        dockNoChips = true
+        setCreating(true)
+        dockPerson = c
+    }
+
+    /** Meeting someone from the pool files them, like the full card does. */
+    suspend fun savedFromCard(c: Counterpart): Counterpart {
+        val ownStore = CounterpartStore.shared(context)
+        ownStore.load().firstOrNull { it.id == c.id }?.let { return it }
+        ownStore.save(c)
+        StoreEvents.bump()
+        return ownStore.load().firstOrNull { it.id == c.id } ?: c
+    }
+
+    /** Tapping their greeting answers it: the box opens with them as the
+     *  person the situation is with. */
+    fun tapBubble() {
+        val person = skyCentred ?: return
+        setCreating(true)
+        dockPerson = person
+    }
+
+    /** A chip in the box picks the person that situation is with — someone of
+     *  the learner's own first, then a stranger already met, then one from the
+     *  pool. No match leaves the box's person as it was. */
+    fun pickDockCategory(title: String) {
+        val jobs = poolRows.associate { it.id to it.occupation }
+        val candidates = people.filter { it.remoteId == null } +
+            people.filter { it.remoteId != null } + skyPool
+        val match = candidates.firstOrNull { watchFits(it, title, it.remoteId?.let { r -> jobs[r] }) } ?: return
+        dockPerson = match
+    }
+
+    LaunchedEffect(creating) {
+        if (!creating) dockNoChips = false else skyCard = null
+    }
+    LaunchedEffect(dockPerson?.id) {
+        // Picked in the box (its person chip, or a category chip): bring them
+        // to the middle. Picked BY the middle: already there.
+        val id = dockPerson?.id ?: return@LaunchedEffect
+        if (!creating) return@LaunchedEffect
+        panTo(id)
+    }
+    // The header's Cancel.
+    val cancelTick by WatchCreation.cancelTick.collectAsStateWithLifecycle()
+    var seenCancel by remember { mutableStateOf(cancelTick) }
+    LaunchedEffect(cancelTick) {
+        if (cancelTick == seenCancel) return@LaunchedEffect
+        seenCancel = cancelTick
+        afterKeyboard { setCreating(false); dockFill = "" }
+    }
+    // Android's back steps out of the box or the card, as the tap on the map does.
+    androidx.activity.compose.BackHandler(enabled = creating || skyCard != null) { putAway() }
 
     Box(Modifier.fillMaxSize()) {
         val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
         // Level with the floating tab bar's top, plus iOS's 16 pt.
-        val floatBottom = navBottom + 76.dp + 16.dp
+        val tabBarTop = navBottom + 76.dp
+        val floatBottom = tabBarTop + 16.dp
         Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (skyReady) 1f else 0f }) {
             PeopleSkyMap(
                 nodes = nodes,
                 meName = meName,
                 lens = lens,
                 onTap = { n ->
-                    // A tap is for who they are: their card.
-                    val row = n.person.remoteId?.let { rid -> poolRows.firstOrNull { it.id == rid } }
-                    onOpenPerson(people.firstOrNull { it.id == n.person.id } ?: n.person, row)
+                    // A tap is for who they are; the middle of the screen is
+                    // for what to talk about.
+                    if (!putAway()) openSkyCard(people.firstOrNull { it.id == n.person.id } ?: n.person)
                 },
+                // TODO(port/profile): iOS 2c153cdd opens the one-page profile
+                // (`MyProfileView`) here; the host wires it once that page lands.
                 onTapMe = onOpenProfile,
-                backToMeBottom = floatBottom,
+                focusedId = if (creating) dockPerson?.id else null,
+                bubbleId = skyCentred?.id,
+                bubble = dockBubble,
+                onTapBubble = { tapBubble() },
+                scrollTarget = skyScroll,
+                onCenterChange = { centre(it) },
+                softenOthers = creating,
+                onAwayChange = { skyAway = it },
+                backToMeRequest = backToMeTick,
+                // A tap on the empty map while writing goes back a step: to
+                // the card of the person the box was with.
+                onTapEmpty = { putAway() },
             )
         }
+
+        // The "Your situation" box itself — chips, attach, the person,
+        // dictation — exactly as its sheet draws it, rising with the keyboard
+        // while the map stays put.
+        androidx.compose.animation.AnimatedVisibility(
+            visible = creating,
+            enter = androidx.compose.animation.slideInVertically(tween(300)) { it } +
+                androidx.compose.animation.fadeIn(tween(300)),
+            exit = androidx.compose.animation.slideOutVertically(tween(300)) { it } +
+                androidx.compose.animation.fadeOut(tween(300)),
+            modifier = Modifier.align(Alignment.BottomCenter)
+                .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars)),
+        ) {
+            ScenarioComposer(
+                targetLanguage = language,
+                existingCategories = scenarios.mapNotNull { it.category }.distinct(),
+                host = ComposerHost.WATCH,
+                mode = ComposerMode.CUSTOM,
+                onCommitted = { sc -> if (enabled) onWatch(sc.id) },
+                onDismiss = {},
+                embedded = true,
+                partnerSync = dockPerson,
+                onPartnerSync = { dockPerson = it },
+                situationSync = dockFill,
+                onSituationTaken = { dockFill = "" },
+                onPickCategory = { pickDockCategory(it) },
+                showsCategoryChips = !dockNoChips,
+                focusOnAppear = dockNoChips,
+            )
+        }
+
         // Writing your own situation is its own button, not a tap on "me":
         // tapping a person opens that person, so tapping me opens me.
-        com.roro.futurevoice.ui.brand.IosGlassButton(
-            onClick = { withPerson = null; situationPrefill = ""; composing = ComposerMode.CUSTOM },
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = floatBottom).height(50.dp),
+        val card = skyCard
+        androidx.compose.animation.AnimatedVisibility(
+            visible = !creating && card != null,
+            enter = androidx.compose.animation.slideInVertically(tween(300)) { it } +
+                androidx.compose.animation.fadeIn(tween(300)),
+            exit = androidx.compose.animation.slideOutVertically(tween(300)) { it } +
+                androidx.compose.animation.fadeOut(tween(300)),
+            modifier = Modifier.align(Alignment.BottomCenter)
+                .padding(start = 12.dp, end = 12.dp, bottom = tabBarTop + 8.dp),
         ) {
-            Icon(Icons.Filled.EditNote, contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.new_situation), style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+            // Held while it slides away, so the card doesn't empty mid-exit.
+            var shown by remember { mutableStateOf(card) }
+            if (card != null) shown = card
+            shown?.let { c ->
+                SkyPersonCard(
+                    person = people.firstOrNull { it.id == c.id } ?: c,
+                    language = language,
+                    onClose = { skyCard = null },
+                    onCompose = { composeFromCard(c) },
+                    onWatch = {
+                        scope.launch {
+                            val p = savedFromCard(c)
+                            onWatchWith(p)
+                        }
+                    },
+                    onTalk = {
+                        scope.launch {
+                            val p = savedFromCard(c)
+                            onTalkWith(p)
+                        }
+                    },
+                    onOpenTalk = onOpenTalk,
+                )
+            }
+        }
+        androidx.compose.animation.AnimatedVisibility(
+            visible = !creating && card == null,
+            enter = androidx.compose.animation.fadeIn(tween(300)),
+            exit = androidx.compose.animation.fadeOut(tween(300)),
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = floatBottom),
+        ) {
+            com.roro.futurevoice.ui.brand.IosGlassButton(
+                onClick = {
+                    // Whoever is in the middle is who it's with — the box
+                    // never starts on a default the map would fly to.
+                    setCreating(true)
+                    skyCentred?.let { dockPerson = it }
+                },
+                modifier = Modifier.height(50.dp),
+            ) {
+                Icon(Icons.Filled.EditNote, contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.new_situation), style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+            }
+        }
+
+        // Back to me, in the tab's own layer: inside the map it sat in the
+        // faded bottom edge and showed at a third of its strength. Level with
+        // "New situation"; above the box while writing; out of the way of a
+        // person's card.
+        androidx.compose.animation.AnimatedVisibility(
+            visible = skyAway && card == null,
+            enter = androidx.compose.animation.fadeIn(tween(300)),
+            exit = androidx.compose.animation.fadeOut(tween(300)),
+            modifier = Modifier.align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = if (creating) navBottom + 216.dp else floatBottom),
+        ) {
+            val label = stringResource(R.string.watch_sky_backtome)
+            com.roro.futurevoice.ui.brand.IosGlassButton(onClick = { backToMeTick += 1 }, circle = true,
+                modifier = Modifier.size(48.dp).semantics { contentDescription = label }) {
+                Icon(Icons.Filled.GpsFixed, contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+            }
         }
     }
 
@@ -247,6 +612,227 @@ internal fun WatchTabBody(
             },
             onDismiss = { editingScenario = null },
         )
+    }
+}
+
+/** Who a common situation is with, read off what the learner wrote about
+ *  their people and what a stranger does (iOS `WatchTab.fits`). */
+internal fun watchFits(c: Counterpart, category: String, job: String?): Boolean {
+    val text = listOf(c.relationship, c.relationshipKind.orEmpty(), c.intro, c.background, job.orEmpty())
+        .joinToString(" ").lowercase()
+    val words = when (category) {
+        "Work" -> listOf("coworker", "manager", "boss", "colleague", "team", "상사", "팀장", "동료", "부장", "과장", "上司", "同僚", "kollege")
+        "Social" -> listOf("friend", "친구", "友達", "freund")
+        "School" -> listOf("teacher", "fellow parent", "parent", "선생님", "학부모", "先生", "lehrer")
+        "Cafe" -> listOf("barista", "cafe", "café", "coffee", "바리스타", "카페", "カフェ")
+        "Travel" -> listOf("flight", "airline", "hotel", "travel", "guide", "승무원", "호텔", "여행", "ホテル")
+        "Health" -> listOf("nurse", "doctor", "pharmac", "간호", "의사", "약사", "看護", "医師", "arzt")
+        "Shopping" -> listOf("shop", "store", "retail", "sales", "점원", "가게", "店")
+        "Phone" -> listOf("support", "call center", "customer service", "상담", "コールセンター")
+        else -> emptyList()
+    }
+    return words.any { text.contains(it) }
+}
+
+/**
+ * A person, as a card floating over the bottom of the map (iOS
+ * `SkyPersonCard`). Closed, it is who they are in a line or three and one row
+ * of actions — less than half the screen, so the map and them in its middle
+ * stay in view. Opened (tap the text), it grows upward like an accordion into
+ * everything the old full page held. No close button: it goes like a sheet —
+ * pulled down, or a tap on the map.
+ */
+@Composable
+internal fun SkyPersonCard(
+    person: Counterpart,
+    language: String,
+    onClose: () -> Unit,
+    onCompose: () -> Unit,
+    onWatch: () -> Unit,
+    onTalk: () -> Unit,
+    onOpenTalk: (String) -> Unit,
+) {
+    val context = LocalContext.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    /** How far the card is being pulled down; past 90 pt it goes. */
+    val pull = remember { androidx.compose.animation.core.Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    var expanded by remember(person.id) { mutableStateOf(false) }
+    val about = if (person.personaKind == "user") "" else person.intro.ifEmpty { person.background }
+    val voiceName = VoicePreset.known(person.voicePresetId)?.let { VoicePreset.name(it.voiceId, it.name, language) }
+        ?: stringResource(R.string.their_own)
+    var talks by remember(person.id) { mutableStateOf<List<com.roro.futurevoice.talk.Session>>(emptyList()) }
+    LaunchedEffect(person.id, language) {
+        talks = com.roro.futurevoice.data.SessionStore.shared(context).load(language)
+            .filter { it.counterpartId == person.id && it.endedAt != null }
+            .sortedByDescending { it.startedAt }
+    }
+    val dismissPx = with(density) { 90.dp.toPx() }
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .graphicsLayer { translationY = pull.value }
+            .shadow(24.dp, ContinuousShape(34.dp), clip = false,
+                ambientColor = Color.Black.copy(alpha = 0.08f), spotColor = Color.Black.copy(alpha = 0.08f))
+            .background(MaterialTheme.colorScheme.surface, ContinuousShape(34.dp))
+            .pointerInput(Unit) {
+                val tracker = androidx.compose.ui.input.pointer.util.VelocityTracker()
+                detectVerticalDragGestures(
+                    onDragStart = { tracker.resetTracking() },
+                    onDragEnd = {
+                        val v = tracker.calculateVelocity().y
+                        // Predicted end: where the flick would carry it.
+                        if (pull.value > dismissPx || pull.value + v * 0.25f > dismissPx * 2) onClose()
+                        else scope.launch { pull.animateTo(0f, tween(250)) }
+                    },
+                    onDragCancel = { scope.launch { pull.animateTo(0f, tween(250)) } },
+                ) { change, dy ->
+                    tracker.addPosition(change.uptimeMillis, change.position)
+                    change.consume()
+                    scope.launch { pull.snapTo(max(0f, pull.value + dy)) }
+                }
+            }
+            .padding(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 16.dp)
+            .animateContentSize(tween(300)),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        // A sheet's grabber: it says the card can be pulled away.
+        Box(Modifier.fillMaxWidth().offset(y = (-6).dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(36.dp, 5.dp).clip(CircleShape)
+                .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)))
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            PersonBubble(person.name, person.id, size = 44.dp)
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                Text(person.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                val cap = partnerCaptionOf(person)
+                if (cap.isNotEmpty()) {
+                    Text(cap, style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+
+        // The accordion: two lines and a chevron, or everything, scrolling
+        // inside the card once it would pass ~half the screen.
+        if (expanded) {
+            Column(
+                Modifier.fillMaxWidth().heightIn(max = 340.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                if (about.isNotEmpty()) Text(about, style = MaterialTheme.typography.bodyMedium)
+                if (person.commonTopics.isNotEmpty()) {
+                    CardSection(stringResource(R.string.topics)) {
+                        Text(person.commonTopics, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+                CardSection(stringResource(R.string.voice)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(voiceName, style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.their_own_voice_chosen_with_their_introduction_not_a_recordi_ac2731),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                if (talks.isNotEmpty()) {
+                    CardSection(stringResource(R.string.your_talks_together)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            talks.forEach { s ->
+                                Row(Modifier.fillMaxWidth().clickable(remember { MutableInteractionSource() },
+                                    indication = null) { onOpenTalk(s.id) },
+                                    verticalAlignment = Alignment.CenterVertically) {
+                                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                                        Text(s.displayTitle ?: stringResource(R.string.conversation),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM,
+                                            java.text.DateFormat.SHORT).format(java.util.Date(s.startedAt)),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(18.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            CardToggle(open = false) { expanded = false }
+        } else {
+            if (about.isNotEmpty()) {
+                Text(about, style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.clickable(remember { MutableInteractionSource() },
+                        indication = null) { expanded = true })
+            }
+            CardToggle(open = true) { expanded = true }
+        }
+
+        // One row: the situation keeps its words (it is the card's point),
+        // Watch and Talk are their glyphs alone — a label in every language
+        // would not fit three across.
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.weight(1f).height(50.dp).clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary).clickable(onClick = onCompose)
+                    .padding(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Filled.EditNote, contentDescription = null, tint = Color.White,
+                    modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(R.string.make_a_situation), color = Color.White,
+                    style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            CardIconButton(Icons.Filled.PlayArrow, stringResource(R.string.watch), onWatch)
+            CardIconButton(Icons.Filled.Phone, stringResource(R.string.talk), onTalk)
+        }
+    }
+}
+
+@Composable
+private fun CardIconButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
+    Box(
+        Modifier.size(width = 58.dp, height = 50.dp).clip(CircleShape)
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
+            .clickable(onClick = onClick)
+            .semantics { contentDescription = label },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(22.dp))
+    }
+}
+
+@Composable
+private fun CardToggle(open: Boolean, onClick: () -> Unit) {
+    // A real tap target, with air above and a clear gap before the row of actions.
+    Row(
+        Modifier.offset(y = (-2).dp).padding(bottom = 8.dp)
+            .clickable(remember { MutableInteractionSource() }, indication = null, onClick = onClick)
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(stringResource(if (open) R.string.more else R.string.show_less),
+            style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Icon(if (open) Icons.Filled.KeyboardArrowDown else Icons.Filled.KeyboardArrowUp,
+            contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(16.dp))
+    }
+}
+
+@Composable
+private fun CardSection(title: String, content: @Composable () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(title, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        content()
     }
 }
 

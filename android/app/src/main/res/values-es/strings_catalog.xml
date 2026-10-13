@@ -1839,6 +1839,7 @@
     <string name="show_again_in_3_days">"Mostrar de nuevo en 3 días"</string>
     <string name="show_again_tomorrow">"Mostrar de nuevo mañana"</string>
     <string name="show_each_guide_again_when_i_open_its_tab">"Volver a mostrar cada guía al abrir su pestaña"</string>
+    <string name="show_less">"Ver menos"</string>
     <string name="show_my_photo">"Mostrar mi foto"</string>
     <string name="show_the_talk">"Ver la conversación"</string>
     <string name="showing_earlier_stories">"Mostrando noticias anteriores"</string>
@@ -2380,6 +2381,7 @@
     <string name="watch_scenes">"Escenas"</string>
     <!-- "Watch shows that situation played out by your fluent self, in your voice. You come away with ideas: how to open, what to ask, which expressions work. Then you practice them until they're yours." -->
     <string name="watch_shows_that_situation_played_out_by_your_fluent_self_in_214796">"Escenas te muestra esa situación interpretada por tu yo fluido, con tu voz. Sales con ideas: cómo empezar, qué preguntar, qué expresiones funcionan. Luego las practicas hasta que son tuyas."</string>
+    <string name="watch_sky_backtome">"Volver a mí"</string>
     <!-- "Watch the scene and notice the moves you'd never have thought of." -->
     <string name="watch_the_scene_and_notice_the_moves_you_d_never_have_though_b126d7">"Mira la escena y fíjate en los recursos que nunca se te habrían ocurrido."</string>
     <string name="watch_the_scene_first">"Mira primero la escena."</string>

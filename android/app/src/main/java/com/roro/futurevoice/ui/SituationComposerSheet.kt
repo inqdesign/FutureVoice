@@ -91,6 +91,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.roro.futurevoice.ui.brand.IosGlassTextButton
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -190,6 +191,28 @@ internal fun ScenarioComposer(
     /** Edit mode only — remove the scenario, and with it its Practice book. */
     onDelete: (() -> Unit)? = null,
     onDismiss: () -> Unit,
+    /**
+     * Hosted IN the Watch tab under the people map rather than as a sheet
+     * (iOS `embedded`, 2026-10-12): the box and its chips exactly as the
+     * sheet draws them, with the map standing where the title and the
+     * rolling examples were. The CTA rides at the end of the box's row.
+     */
+    embedded: Boolean = false,
+    /** The other person, shared with the map (iOS `partnerSync`): picking
+     *  here rings them there, and a pick on the map lands here. */
+    partnerSync: Counterpart? = null,
+    onPartnerSync: ((Counterpart?) -> Unit)? = null,
+    /** A line handed in from outside, written into the box as if a reel line
+     *  had been tapped (iOS `situationSync`); [onSituationTaken] clears it. */
+    situationSync: String = "",
+    onSituationTaken: () -> Unit = {},
+    /** A category chip was tapped — the host picks who it is with. */
+    onPickCategory: ((String) -> Unit)? = null,
+    /** Off when the box was opened FOR someone (a person's "Make a
+     *  situation"): that door is for describing, not browsing. */
+    showsCategoryChips: Boolean = true,
+    /** Open with the field focused and the keyboard up. */
+    focusOnAppear: Boolean = false,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -214,7 +237,10 @@ internal fun ScenarioComposer(
 
     // WHO the other side is. nil = the future self (Talk only). Materialized
     // into CounterpartStore on commit, so downstream it is an ordinary person.
-    var partner by remember { mutableStateOf(person) }
+    // The host may already have picked them (a person's card, their bubble):
+    // start on them, never on the default first — the map would fly to that
+    // one and back.
+    var partner by remember { mutableStateOf(person ?: partnerSync) }
     var pickingPartner by remember { mutableStateOf(false) }
 
     /** The material on this situation — links and files read where they
@@ -233,6 +259,27 @@ internal fun ScenarioComposer(
      *  reel line picked. The chips above the box give way to one mark. */
     var customMode by remember { mutableStateOf(false) }
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    val boxFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    if (embedded) {
+        LaunchedEffect(partner?.id) {
+            if (partnerSync?.id != partner?.id) onPartnerSync?.invoke(partner)
+        }
+        LaunchedEffect(partnerSync?.id) {
+            if (partnerSync != null && partnerSync.id != partner?.id) partner = partnerSync
+        }
+        LaunchedEffect(situationSync) {
+            if (situationSync.isEmpty()) return@LaunchedEffect
+            draft = situationSync
+            customMode = true
+            onSituationTaken()
+        }
+        LaunchedEffect(Unit) {
+            if (!focusOnAppear) return@LaunchedEffect
+            // After the box's rise, or the focus is lost mid-move.
+            kotlinx.coroutines.delay(350)
+            runCatching { boxFocus.requestFocus() }
+        }
+    }
 
     LaunchedEffect(Unit) {
         // Editing: the person the saved scenario was built with. A legacy
@@ -551,6 +598,220 @@ internal fun ScenarioComposer(
     })
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
+    /** The chips and the box — the bottom of the custom door, and all of the
+     *  embedded one. One implementation, so the Watch tab's box can never
+     *  drift from the sheet's. */
+    val boxBottom: @Composable () -> Unit = {
+        // The common situations, as chips right above the box: a
+        // tap goes one step deeper in the same row (Cafe →
+        // Ordering → …), and the last step writes its sentence
+        // into the box, where it can still be changed. Once the
+        // learner types, the row gives way to one mark saying
+        // this one is theirs.
+        androidx.compose.animation.Crossfade(
+            targetState = customMode && draft.isNotBlank(),
+            animationSpec = tween(250),
+            modifier = Modifier.padding(bottom = if (showsCategoryChips || customMode) 10.dp else 0.dp),
+            label = "chips",
+        ) { custom ->
+            if (custom) {
+                Row(Modifier.fillMaxWidth().heightIn(min = 50.dp).padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Filled.EditNote, contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp))
+                    Text(stringResource(R.string.composer_customsituation),
+                        style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp),
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            } else if (showsCategoryChips) {
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (path.isEmpty()) {
+                        PathIdeasContent.categories.forEach { c ->
+                            SoftChip(categoryTitle(c.title), icon = c.icon) {
+                                onPickCategory?.invoke(c.title)
+                                navigate(listOf(Crumb(c.title, c.icon)))
+                            }
+                        }
+                    } else {
+                        SoftChip(categoryTitle(path.last().label), back = true, selected = true) {
+                            val back = path.dropLast(1)
+                            if (back.isEmpty()) { path = emptyList(); options = emptyList() }
+                            else navigate(back)
+                        }
+                        if (loadingOptions) {
+                            CircularProgressIndicator(Modifier.padding(horizontal = 8.dp).size(16.dp),
+                                strokeWidth = 2.dp)
+                        } else if (path.size < MAX_DEPTH) {
+                            options.forEach { o ->
+                                SoftChip(o.title) {
+                                    summary = o.title   // the chip's short label is the tidy card title
+                                    navigate(path + Crumb(o.title, null, o.blurb.ifBlank { o.title }))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Column(
+            Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp).fillMaxWidth()
+                .clip(ContinuousShape(24.dp))
+                .background(AppSurfaces.card)
+                .padding(vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (sources.isNotEmpty()) {
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 14.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    sources.forEach { src -> AttachmentChip(src) { removeSource(src) } }
+                }
+                if (sources.any { it.kind != ScenarioBrief.Kind.LINK }) {
+                    Text(stringResource(R.string.your_files_stay_on_your_phone_only_what_was_read_is_kept_her_ec86b8),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 14.dp))
+                }
+            }
+            SpeakOrTypeField(
+                text = draft,
+                onText = {
+                    draft = it
+                    // A keystroke makes it the learner's own
+                    // situation: the chips give way to a "Custom
+                    // situation" mark, and a chip's category is
+                    // dropped — the CTA files what was actually
+                    // written. Emptied, the chips come back.
+                    customMode = it.isNotBlank()
+                    if (path.isNotEmpty()) { path = emptyList(); options = emptyList() }
+                    summary = ""
+                },
+                usedVoice = usedVoice,
+                onUsedVoice = { usedVoice = it },
+                placeholder = stringResource(R.string.what_situation_should_we_build_the_more_detail_the_better),
+                locale = LanguageCatalog.sttLocale(dictationLocale),
+                plainMic = true,
+                fieldModifier = Modifier.focusRequester(boxFocus).onFocusEvent { boxFocused = it.hasFocus },
+                leadingControls = {
+                    AttachMenuButton(attachActions)
+                    // A fixed label when the box was opened from a
+                    // person — the entry point chose them — and a
+                    // free choice when it was opened from the tab.
+                    if (person != null) PersonChip(person, fixed = true) {}
+                    else PersonChip(partner, fixed = false) { pickingPartner = true }
+                },
+                trailingControls = {
+                    DictationLanguagePill(dictationLocale) { dictationLocale = it }
+                },
+                // Hosted in the tab there is no header for the CTA, so it
+                // rides at the end of the box's own row — and only once
+                // there is something to watch.
+                endControls = if (!embedded) null else ({
+                    if (draft.isNotBlank()) {
+                        Box(
+                            Modifier.size(40.dp).clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary)
+                                .clickable(enabled = !committing,
+                                    role = androidx.compose.ui.semantics.Role.Button) { commit() }
+                                .semantics { contentDescription = ctaTitle },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (committing) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp,
+                                color = Color.White)
+                            else Icon(if (playsScene) Icons.Filled.PlayArrow else Icons.Filled.Mic,
+                                contentDescription = null, modifier = Modifier.size(20.dp), tint = Color.White)
+                        }
+                    }
+                }),
+            )
+        }
+    }
+    /** Everything the box can raise, whichever way it is hosted. */
+    val dialogs: @Composable () -> Unit = {
+        if (pickingPartner) {
+            PartnerPickerSheet(
+                host = host,
+                language = targetLanguage,
+                current = partner,
+                onPick = { partner = it; pickingPartner = false },
+                onDismiss = { pickingPartner = false },
+            )
+        }
+
+        if (addingLink) {
+            var linkText by remember { mutableStateOf("") }
+            AlertDialog(
+                onDismissRequest = { addingLink = false },
+                title = { Text(stringResource(R.string.paste_a_link)) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(stringResource(R.string.a_job_posting_a_listing_an_event_page_anything_about_the_sit_623078),
+                            style = MaterialTheme.typography.bodyMedium)
+                        OutlinedTextField(
+                            value = linkText, onValueChange = { linkText = it },
+                            placeholder = { Text("https://…") }, singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                            modifier = Modifier.fillMaxWidth())
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { attachLink(linkText); addingLink = false }) {
+                        Text(stringResource(R.string.add))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { addingLink = false }) { Text(stringResource(R.string.cancel)) }
+                },
+            )
+        }
+
+        if (confirmingDelete) {
+            AlertDialog(
+                onDismissRequest = { confirmingDelete = false },
+                title = { Text(stringResource(R.string.delete_this_scenario)) },
+                text = { Text(stringResource(R.string.its_book_in_review_goes_with_it_study_items_and_mastery_incl_ad0876)) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        confirmingDelete = false
+                        onDelete?.invoke()
+                        onDismiss()
+                    }) { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { confirmingDelete = false }) { Text(stringResource(R.string.cancel)) }
+                },
+            )
+        }
+
+        attachError?.let { msg ->
+            AlertDialog(
+                onDismissRequest = { attachError = null },
+                title = { Text(stringResource(R.string.couldn_t_attach_that)) },
+                text = { Text(msg) },
+                confirmButton = { TextButton(onClick = { attachError = null }) { Text(stringResource(R.string.ok)) } },
+            )
+        }
+
+        // The plans, when the CTA can't be paid for — from HERE, so the sheet
+        // (and the situation in it) survives being told no.
+        if (showPaywall) PaywallDialog(onDismiss = { showPaywall = false })
+    }
+    if (embedded) {
+        Column(Modifier.fillMaxWidth()) { boxBottom() }
+        dialogs()
+        return
+    }
+
     // A SHEET, not a dialog: non-primary content lives in sheets (iOS UI
     // rules), and a dialog over a full-width composer reads as an alert.
     // FULL height, like iOS's `NavigationStack` presentation.
@@ -633,118 +894,7 @@ internal fun ScenarioComposer(
                             SituationReel(reelLines, onPick = { draft = it; customMode = true })
                         }
                     }
-                    // The common situations, as chips right above the box: a
-                    // tap goes one step deeper in the same row (Cafe →
-                    // Ordering → …), and the last step writes its sentence
-                    // into the box, where it can still be changed. Once the
-                    // learner types, the row gives way to one mark saying
-                    // this one is theirs.
-                    androidx.compose.animation.Crossfade(
-                        targetState = customMode && draft.isNotBlank(),
-                        animationSpec = tween(250),
-                        modifier = Modifier.padding(bottom = 10.dp),
-                        label = "chips",
-                    ) { custom ->
-                        if (custom) {
-                            Row(Modifier.fillMaxWidth().heightIn(min = 50.dp).padding(horizontal = 16.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Icon(Icons.Filled.EditNote, contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(18.dp))
-                                Text(stringResource(R.string.composer_customsituation),
-                                    style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp),
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        } else {
-                            Row(
-                                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
-                                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                if (path.isEmpty()) {
-                                    PathIdeasContent.categories.forEach { c ->
-                                        SoftChip(categoryTitle(c.title), icon = c.icon) {
-                                            navigate(listOf(Crumb(c.title, c.icon)))
-                                        }
-                                    }
-                                } else {
-                                    SoftChip(categoryTitle(path.last().label), back = true, selected = true) {
-                                        val back = path.dropLast(1)
-                                        if (back.isEmpty()) { path = emptyList(); options = emptyList() }
-                                        else navigate(back)
-                                    }
-                                    if (loadingOptions) {
-                                        CircularProgressIndicator(Modifier.padding(horizontal = 8.dp).size(16.dp),
-                                            strokeWidth = 2.dp)
-                                    } else if (path.size < MAX_DEPTH) {
-                                        options.forEach { o ->
-                                            SoftChip(o.title) {
-                                                summary = o.title   // the chip's short label is the tidy card title
-                                                navigate(path + Crumb(o.title, null, o.blurb.ifBlank { o.title }))
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    Column(
-                        Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp).fillMaxWidth()
-                            .clip(ContinuousShape(24.dp))
-                            .background(AppSurfaces.card)
-                            .padding(vertical = 6.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        if (sources.isNotEmpty()) {
-                            Row(
-                                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
-                                    .padding(horizontal = 14.dp, vertical = 4.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                sources.forEach { src -> AttachmentChip(src) { removeSource(src) } }
-                            }
-                            if (sources.any { it.kind != ScenarioBrief.Kind.LINK }) {
-                                Text(stringResource(R.string.your_files_stay_on_your_phone_only_what_was_read_is_kept_her_ec86b8),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(horizontal = 14.dp))
-                            }
-                        }
-                        SpeakOrTypeField(
-                            text = draft,
-                            onText = {
-                                draft = it
-                                // A keystroke makes it the learner's own
-                                // situation: the chips give way to a "Custom
-                                // situation" mark, and a chip's category is
-                                // dropped — the CTA files what was actually
-                                // written. Emptied, the chips come back.
-                                customMode = it.isNotBlank()
-                                if (path.isNotEmpty()) { path = emptyList(); options = emptyList() }
-                                summary = ""
-                            },
-                            usedVoice = usedVoice,
-                            onUsedVoice = { usedVoice = it },
-                            placeholder = stringResource(R.string.what_situation_should_we_build_the_more_detail_the_better),
-                            locale = LanguageCatalog.sttLocale(dictationLocale),
-                            plainMic = true,
-                            fieldModifier = Modifier.onFocusEvent { boxFocused = it.hasFocus },
-                            leadingControls = {
-                                AttachMenuButton(attachActions)
-                                // A fixed label when the box was opened from a
-                                // person — the entry point chose them — and a
-                                // free choice when it was opened from the tab.
-                                if (person != null) PersonChip(person, fixed = true) {}
-                                else PersonChip(partner, fixed = false) { pickingPartner = true }
-                            },
-                            trailingControls = {
-                                DictationLanguagePill(dictationLocale) { dictationLocale = it }
-                            },
-                        )
-                    }
+                    boxBottom()
                 }
             } else Column(
                 Modifier.weight(1f).verticalScroll(rememberScrollState())
@@ -945,73 +1095,7 @@ internal fun ScenarioComposer(
             }
         }
 
-        if (pickingPartner) {
-            PartnerPickerSheet(
-                host = host,
-                language = targetLanguage,
-                current = partner,
-                onPick = { partner = it; pickingPartner = false },
-                onDismiss = { pickingPartner = false },
-            )
-        }
-
-        if (addingLink) {
-            var linkText by remember { mutableStateOf("") }
-            AlertDialog(
-                onDismissRequest = { addingLink = false },
-                title = { Text(stringResource(R.string.paste_a_link)) },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(stringResource(R.string.a_job_posting_a_listing_an_event_page_anything_about_the_sit_623078),
-                            style = MaterialTheme.typography.bodyMedium)
-                        OutlinedTextField(
-                            value = linkText, onValueChange = { linkText = it },
-                            placeholder = { Text("https://…") }, singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                            modifier = Modifier.fillMaxWidth())
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = { attachLink(linkText); addingLink = false }) {
-                        Text(stringResource(R.string.add))
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { addingLink = false }) { Text(stringResource(R.string.cancel)) }
-                },
-            )
-        }
-
-        if (confirmingDelete) {
-            AlertDialog(
-                onDismissRequest = { confirmingDelete = false },
-                title = { Text(stringResource(R.string.delete_this_scenario)) },
-                text = { Text(stringResource(R.string.its_book_in_review_goes_with_it_study_items_and_mastery_incl_ad0876)) },
-                confirmButton = {
-                    TextButton(onClick = {
-                        confirmingDelete = false
-                        onDelete?.invoke()
-                        onDismiss()
-                    }) { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) }
-                },
-                dismissButton = {
-                    TextButton(onClick = { confirmingDelete = false }) { Text(stringResource(R.string.cancel)) }
-                },
-            )
-        }
-
-        attachError?.let { msg ->
-            AlertDialog(
-                onDismissRequest = { attachError = null },
-                title = { Text(stringResource(R.string.couldn_t_attach_that)) },
-                text = { Text(msg) },
-                confirmButton = { TextButton(onClick = { attachError = null }) { Text(stringResource(R.string.ok)) } },
-            )
-        }
-
-        // The plans, when the CTA can't be paid for — from HERE, so the sheet
-        // (and the situation in it) survives being told no.
-        if (showPaywall) PaywallDialog(onDismiss = { showPaywall = false })
+        dialogs()
     }
 }
 
@@ -1236,7 +1320,7 @@ private fun roleLine(who: Counterpart?): String {
     return who.relationship.ifBlank { who.name }
 }
 
-private fun partnerCaptionOf(p: Counterpart): String {
+internal fun partnerCaptionOf(p: Counterpart): String {
     val rid = p.remoteId
     if (rid != null && rid.startsWith("builtin:"))
         return StockPerson.by(p.voicePresetId).identityIn(com.roro.futurevoice.talk.VoicePreset.activeLanguage())

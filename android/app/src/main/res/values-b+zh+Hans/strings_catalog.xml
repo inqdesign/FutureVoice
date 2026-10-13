@@ -1842,6 +1842,7 @@
     <string name="show_again_in_3_days">"3 天后再看"</string>
     <string name="show_again_tomorrow">"明天再看"</string>
     <string name="show_each_guide_again_when_i_open_its_tab">"打开页面时再次显示指南"</string>
+    <string name="show_less">"收起"</string>
     <string name="show_my_photo">"显示我的照片"</string>
     <string name="show_the_talk">"看那次通话"</string>
     <string name="showing_earlier_stories">"目前显示的是先前的新闻"</string>
@@ -2383,6 +2384,7 @@
     <string name="watch_scenes">"情境练习"</string>
     <!-- "Watch shows that situation played out by your fluent self, in your voice. You come away with ideas: how to open, what to ask, which expressions work. Then you practice them until they're yours." -->
     <string name="watch_shows_that_situation_played_out_by_your_fluent_self_in_214796">"情境会让流利的自己用你的声音把那个情况演一遍。你会得到思路：怎么开口、问什么、哪些用语管用。然后反复练习，直到变成你自己的。"</string>
+    <string name="watch_sky_backtome">"回到我"</string>
     <!-- "Watch the scene and notice the moves you'd never have thought of." -->
     <string name="watch_the_scene_and_notice_the_moves_you_d_never_have_though_b126d7">"看情境，找出那些你自己想不到的说法和做法。"</string>
     <string name="watch_the_scene_first">"先看场景。"</string>

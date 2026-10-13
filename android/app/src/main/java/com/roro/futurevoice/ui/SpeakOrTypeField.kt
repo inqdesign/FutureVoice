@@ -75,6 +75,9 @@ fun SpeakOrTypeField(
     plainMic: Boolean = false,
     /** Hidden while the box shows its reel; the host watches focus. */
     fieldModifier: Modifier = Modifier,
+    /** After the mic, at the very end of the strip (iOS `trailingControls`
+     *  sits there) — the Watch box's inline CTA. */
+    endControls: (@Composable () -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val transcriber = remember { LiveTranscriber(context) }
@@ -182,6 +185,7 @@ fun SpeakOrTypeField(
                 Spacer(Modifier.weight(1f))
                 if (!listening) trailingControls?.invoke()
                 micButton()
+                endControls?.invoke()
             }
             if (unavailable) {
                 Text(stringResource(R.string.speech_recognition_isnt_available_type_instead),
