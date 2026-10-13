@@ -437,9 +437,14 @@ class TalkViewModel(context: Context) : ViewModel() {
             "turns" to turns.count { it.role == TurnRole.USER },
             "seconds" to ((session.endedAt ?: startedAt) - startedAt) / 1000))
         CoroutineScope(Dispatchers.Main).launch {
-            runCatching { sessions.save(session) }
+            // A resumed practice call stays one: its earlier half was coached
+            // (iOS `prior?.isPractice`). The row on file under this id is the
+            // talk before this sitting.
+            val prior = runCatching { sessions.load(cfg.targetLanguage).firstOrNull { it.id == session.id } }.getOrNull()
+            val saved = if (prior?.isPractice == true) session.copy(coached = true) else session
+            runCatching { sessions.save(saved) }
             StoreEvents.bump()
-            SessionSummarizer.summarizeInBackground(appContext, session, cfg.nativeLanguage, cfg.level)
+            SessionSummarizer.summarizeInBackground(appContext, saved, cfg.nativeLanguage, cfg.level)
         }
     }
 
