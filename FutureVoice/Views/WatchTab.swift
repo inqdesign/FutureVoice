@@ -460,9 +460,13 @@ struct WatchTab: View {
                 // writing; out of the way of a person's card.
                 if skyAway, skyCard == nil {
                     Button { backToMeTick += 1 } label: {
+                        // Same size as "New situation" beside it: the glass
+                        // button already pads its content, so a 48-pt frame
+                        // inside it made a button twice the height of its
+                        // neighbour.
                         Image(systemName: "scope")
-                            .font(.title3.weight(.semibold))
-                            .frame(width: 48, height: 48)
+                            .font(.body.weight(.semibold))
+                            .padding(4)
                     }
                     .modifier(GlassFloatingButton())
                     .accessibilityLabel(Text(explain(key: "watch.sky.backToMe", default: "Back to me")))
