@@ -6,13 +6,15 @@ ready-to-edit situation text at each leaf. Retyping it by hand is how the two
 platforms would drift into offering different situations, so it is read out of
 the Swift source instead. Re-run after editing `WatchTab.swift`.
 
-    python3 scripts/android/gen-situation-tree.py
+    python3 scripts/android/gen-situation-tree.py [--check] [--ref <sha>]
 """
 import pathlib
 import re
+import sys
 
-ROOT = pathlib.Path(__file__).resolve().parents[2]
-SRC = ROOT / "FutureVoice/Views/WatchTab.swift"
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / "promptgen"))
+from iosref import ROOT, show, emit  # iOS at scripts/android/promptgen/IOS_REF; --check
+SRC = "FutureVoice/Views/WatchTab.swift"
 OUT = (ROOT / "android/app/src/main/java/com/roro/futurevoice/data"
             / "SituationTree.kt")
 
@@ -85,14 +87,14 @@ def render(nodes, indent: int) -> str:
 
 
 def main() -> None:
-    m = BLOCK.search(SRC.read_text())
+    m = BLOCK.search(show(SRC))
     if not m:
         raise SystemExit("situationTree not found in WatchTab.swift")
     tree = parse(m.group(1))
     if not tree:
         raise SystemExit("parsed an empty tree — the Swift literal's shape changed")
     leaves = sum(1 for r in tree for c in r["children"] for _ in c["children"])
-    OUT.write_text(f'''package com.roro.futurevoice.data
+    emit(OUT, f'''package com.roro.futurevoice.data
 
 /**
  * "Likely situations" — the category chain a learner drills into on Watch
@@ -152,7 +154,6 @@ object SituationTree {{
     )
 }}
 ''')
-    print(f"wrote {OUT.relative_to(ROOT)} — {len(tree)} categories, {leaves} leaves")
 
 
 if __name__ == "__main__":

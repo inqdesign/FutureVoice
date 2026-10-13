@@ -19,21 +19,12 @@ iOS output (scripts/android/gen-prompt-vectors.sh).
     python3 scripts/android/gen-conversation-prompt.py --check    # exit 1 if stale
     python3 scripts/android/gen-conversation-prompt.py --ref <sha>
 """
-import argparse, json, pathlib, re, subprocess, sys
+import pathlib, re, sys
 
-ROOT = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / "promptgen"))
+from iosref import ROOT, REF, show, emit, unescape, literal_at, kt, LIT  # noqa: E402
+
 OUT = ROOT / "android/app/src/main/java/com/roro/futurevoice/talk/ConversationPrompt.kt"
-PIN = ROOT / "scripts/android/promptgen/IOS_REF"
-
-ap = argparse.ArgumentParser()
-ap.add_argument("--ref", default=PIN.read_text().strip())
-ap.add_argument("--check", action="store_true")
-args = ap.parse_args()
-
-
-def show(path):
-    return subprocess.run(["git", "-C", str(ROOT), "show", f"{args.ref}:{path}"],
-                          check=True, capture_output=True, text=True).stdout
 
 
 engine = show("FutureVoice/Services/ConversationEngine.swift")
@@ -43,76 +34,7 @@ ground = show("FutureVoice/Services/CommonGround.swift")
 clocksrc = show("FutureVoice/Services/PromptClock.swift")
 
 
-def unescape(s):
-    out, k = "", 0
-    while k < len(s):
-        if s[k] == "\\":
-            out += {"\"": "\"", "\\": "\\", "n": "\n", "t": "\t"}[s[k + 1]]
-            k += 2
-        else:
-            out += s[k]; k += 1
-    return out
-
-
-def literal_at(src, anchor, start=0):
-    """The Swift multiline literal opening on the first `\"\"\"` at/after
-    `anchor`, as segments ('t', text) / ('i', expr), with Swift's semantics:
-    closing-delimiter indent stripped, `\\` at a line end joins the next line
-    (whose remaining indent is kept)."""
-    i = src.find(anchor, start)
-    if i < 0: sys.exit(f"anchor not found: {anchor!r}")
-    o = src.find('"""', i)
-    body_start = src.find("\n", o) + 1
-    close = re.compile(r'\n([ \t]*)"""').search(src, body_start - 1)
-    raw = src[body_start:close.start() + 1]
-    indent = close.group(1)
-    out = []
-    for ln in raw.split("\n")[:-1]:
-        if ln.strip() == "": out.append("")
-        elif ln.startswith(indent): out.append(ln[len(indent):])
-        else: sys.exit(f"bad indent: {ln!r}")
-    text = ""
-    for n, ln in enumerate(out):
-        last = n == len(out) - 1
-        if ln.endswith("\\") and not ln.endswith("\\\\"):
-            text += ln[:-1]
-        else:
-            text += ln + ("" if last else "\n")
-    segs, buf, k = [], "", 0
-    while k < len(text):
-        c = text[k]
-        if c == "\\":
-            nxt = text[k + 1]
-            if nxt == "(":
-                depth, j, in_str = 1, k + 2, False
-                while depth:
-                    ch = text[j]
-                    if ch == "\\" and in_str: j += 2; continue
-                    if ch == '"': in_str = not in_str
-                    elif not in_str and ch == "(": depth += 1
-                    elif not in_str and ch == ")": depth -= 1
-                    j += 1
-                if buf: segs.append(("t", buf)); buf = ""
-                segs.append(("i", text[k + 2:j - 1]))
-                k = j
-                continue
-            buf += {"\"": "\"", "\\": "\\", "n": "\n", "t": "\t"}[nxt]
-            k += 2
-            continue
-        buf += c
-        k += 1
-    if buf: segs.append(("t", buf))
-    return segs
-
-
-def kt(s):
-    return json.dumps(s, ensure_ascii=False).replace("$", "\\$")
-
-
-LIT = r'"((?:[^"\\]|\\.)*)"'
-
-
-def kotlin(segs, interp, indent="            "):
+def kotlin_conv(segs, interp, indent="            "):
     parts = []
     for kind, v in segs:
         if kind == "t":
@@ -147,21 +69,21 @@ vocab, struct_ = [], []
 pos = fn
 for _ in range(3):
     vi = engine.index('vocabulary: """', pos)
-    vocab.append(kotlin(literal_at(engine, 'vocabulary: """', pos), {}))
+    vocab.append(kotlin_conv(literal_at(engine, 'vocabulary: """', pos), {}))
     si = engine.index('structure: """', vi)
-    struct_.append(kotlin(literal_at(engine, 'structure: """', vi), {}))
+    struct_.append(kotlin_conv(literal_at(engine, 'structure: """', vi), {}))
     pos = si + 1
 
 max_turn = re.search(r"static let maxTurnSentences = (\d+)", engine).group(1)
 
 csp = func_from("static func conversationSystemPrompt(")
-news = kotlin(literal_at(engine, 'let newsBlock = newsFacts.isEmpty ? "" : """', csp), {
+news = kotlin_conv(literal_at(engine, 'let newsBlock = newsFacts.isEmpty ? "" : """', csp), {
     'newsFacts.map { "- \\($0)" }.joined(separator: "\\n")': 'newsFacts.joinToString("\\n") { "- $it" }',
 })
-first = kotlin(literal_at(engine, "let firstMeetingBlock = (firstMeeting && counterpart == nil) ?", csp),
+first = kotlin_conv(literal_at(engine, "let firstMeetingBlock = (firstMeeting && counterpart == nil) ?", csp),
                {"languageName": "languageName"})
 main_anchor = engine.index("        return \"\"\"\n        You're in a real-feeling SPOKEN", csp)
-system = kotlin(literal_at(engine, 'return """', main_anchor), {
+system = kotlin_conv(literal_at(engine, 'return """', main_anchor), {
     "languageName": "languageName",
     "counterpart.map { personaBlock(forCast: $0, persona: persona, languageName: languageName) } ?? personaBlock(persona, languageName: languageName)": "personaBlock",
     "counterpartBlock": "counterpartBlock",
@@ -184,16 +106,16 @@ system = kotlin(literal_at(engine, 'return """', main_anchor), {
     'tutor ? tutorBlock(targetLanguage: targetLanguage, languageName: languageName) : ""':
         '(if (tutor) tutorBlock(targetLanguage, languageName) else "")',
 })
-beginner = kotlin(literal_at(engine, "static func beginnerQuestions(_ level: CEFRLevel)"),
+beginner = kotlin_conv(literal_at(engine, "static func beginnerQuestions(_ level: CEFRLevel)"),
                   {"level.rawValue.uppercased()": "level.code.uppercase()"})
 guards = {
     "scriptGuard(targetLanguage)": "CorrectionOnlyPrompt.scriptGuard(targetLanguage)",
     "spacingGuard(targetLanguage)": "CorrectionOnlyPrompt.spacingGuard(targetLanguage)",
     "registerGuard(targetLanguage)": "CorrectionOnlyPrompt.registerGuard(targetLanguage)",
 }
-tutor = kotlin(literal_at(engine, "static func tutorBlock(targetLanguage: String, languageName: String)"),
+tutor = kotlin_conv(literal_at(engine, "static func tutorBlock(targetLanguage: String, languageName: String)"),
                {"languageName": "languageName", **guards})
-output = kotlin(literal_at(engine, "static func turnOutputInstruction("), {
+output = kotlin_conv(literal_at(engine, "static func turnOutputInstruction("), {
     "LanguageCatalog.englishName(targetLanguage)": "targetName",
     "nativeName": "nativeName",
     **guards,
@@ -202,44 +124,44 @@ output = kotlin(literal_at(engine, "static func turnOutputInstruction("), {
     "politeSettingLine(targetLanguage, counterpart: counterpart, inScene: inScene)":
         "ConversationCharacter.politeSettingLine(targetLanguage, counterpart, inScene)",
 })
-realtime = kotlin(literal_at(view, "private static let realtimeStyleRules = "), {})
+realtime = kotlin_conv(literal_at(view, "private static let realtimeStyleRules = "), {})
 
 # --- the text inside the hand-ported LOGIC blocks ---------------------------
 LN = {"languageName": "languageName"}
 pos = engine.index("private static func strangerPersonaBlock(")
-stranger_guard = kotlin(literal_at(engine, 'lines.append("""', pos), LN)
+stranger_guard = kotlin_conv(literal_at(engine, 'lines.append("""', pos), LN)
 pos = engine.index("static func rememberedBlock(")
-remembered_lead = kotlin(literal_at(engine, 'var out = lead ?? """', pos), {})
+remembered_lead = kotlin_conv(literal_at(engine, 'var out = lead ?? """', pos), {})
 p2 = engine.index("if !recent.isEmpty {", pos)
-remembered_recent = kotlin(literal_at(engine, 'out += """', p2),
+remembered_recent = kotlin_conv(literal_at(engine, 'out += """', p2),
                            {'recent.map(line).joined(separator: "\\n")': "recentLines"})
 p3 = engine.index('out += """', p2) + 10
-remembered_close = kotlin(literal_at(engine, 'out += """', p3), LN)
+remembered_close = kotlin_conv(literal_at(engine, 'out += """', p3), LN)
 
 pos = character.index("static func personaBlock(forCast")
-cast_lead = kotlin(literal_at(character, 'lead: """', pos), {})
+cast_lead = kotlin_conv(literal_at(character, 'lead: """', pos), {})
 pos = character.index("static func addressBlock(")
-address = kotlin(literal_at(character, 'return """', pos), {'lines.joined(separator: "\\n")': "lines"})
+address = kotlin_conv(literal_at(character, 'return """', pos), {'lines.joined(separator: "\\n")': "lines"})
 ADDR = {"addressBlock(c, targetLanguage: targetLanguage, languageName: languageName)": "addressBlock",
         "c.name": "name", **LN}
 pos = character.index("private static func ownPersonBlock(")
-tone_close = kotlin(literal_at(character, '? """', pos), {})
-tone_distant = kotlin(literal_at(character, ': """', character.index('? """', pos) + 5), {})
-own = kotlin(literal_at(character, 'return """', pos),
+tone_close = kotlin_conv(literal_at(character, '? """', pos), {})
+tone_distant = kotlin_conv(literal_at(character, ': """', character.index('? """', pos) + 5), {})
+own = kotlin_conv(literal_at(character, 'return """', pos),
              {**ADDR, "tone": "tone", 'facts.isEmpty ? "" : facts + "\\n"': '(if (facts.isEmpty()) "" else facts + "\\n")'})
 pos = character.index("private static func strangerBlock(")
-strangerb = kotlin(literal_at(character, 'return """', pos), {
+strangerb = kotlin_conv(literal_at(character, 'return """', pos), {
     **ADDR, 'facets.isEmpty ? "" : facets + "\\n"': '(if (facets.isEmpty()) "" else facets + "\\n")',
     "c.intro.isEmpty ? c.background : c.intro": "intro",
     "CommonGround.block(learner: persona, counterpart: c)": "commonGround"})
 pos = character.index("private static func publicFigureBlock(")
-public = kotlin(literal_at(character, 'return """', pos), {**ADDR, "identity": "identity"})
+public = kotlin_conv(literal_at(character, 'return """', pos), {**ADDR, "identity": "identity"})
 
 pos = ground.index("static func block(")
-ground_none = kotlin(literal_at(ground, 'return """', pos), {})
-ground_some = kotlin(literal_at(ground, 'return """', ground.index('return """', pos) + 10),
+ground_none = kotlin_conv(literal_at(ground, 'return """', pos), {})
+ground_some = kotlin_conv(literal_at(ground, 'return """', ground.index('return """', pos) + 10),
                      {'shared.map { "- \\($0)" }.joined(separator: "\\n")': 'shared.joinToString("\\n") { "- $it" }'})
-clock_block = kotlin(literal_at(clocksrc, 'return """', clocksrc.index("func promptBlock(")),
+clock_block = kotlin_conv(literal_at(clocksrc, 'return """', clocksrc.index("func promptBlock(")),
                      {'lines.joined(separator: "\\n")': "lines"})
 
 
@@ -255,7 +177,7 @@ import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.data.Counterpart
 import com.roro.futurevoice.data.LanguageCatalog
 
-// GENERATED by scripts/android/gen-conversation-prompt.py --ref {args.ref} — do not edit.
+// GENERATED by scripts/android/gen-conversation-prompt.py --ref {REF} — do not edit.
 // Source: FutureVoice/Services/ConversationEngine.swift (conversationSystemPrompt's
 // literals, speechScale, beginnerQuestions, tutorBlock, turnOutputInstruction) and
 // FutureVoice/Views/ConversationView.swift (realtimeStyleRules).
@@ -375,10 +297,4 @@ object ConversationPrompt {{
         {realtime}
 }}
 '''
-if args.check:
-    if not OUT.exists() or OUT.read_text() != text:
-        sys.exit(f"{OUT.relative_to(ROOT)} is stale — run scripts/android/gen-conversation-prompt.py")
-    print(f"{OUT.relative_to(ROOT)} matches iOS {args.ref}")
-else:
-    OUT.write_text(text)
-    print(f"wrote {OUT.relative_to(ROOT)} (iOS {args.ref})")
+emit(OUT, text)

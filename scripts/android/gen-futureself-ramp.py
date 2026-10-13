@@ -7,8 +7,9 @@ touching either; a palette that drifts between platforms is the same brand
 wearing two faces.
 """
 import re, sys, pathlib
-ROOT = pathlib.Path(__file__).resolve().parents[2]
-src = (ROOT / 'FutureVoice/Shared/FutureselfPixels.swift').read_text()
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / 'promptgen'))
+from iosref import ROOT, show, emit  # iOS at scripts/android/promptgen/IOS_REF; --check
+src = show('FutureVoice/Shared/FutureselfPixels.swift')
 seg = src[src.index('static let table'):src.index('static func rgb')]
 themes = re.findall(r'\[ // (\d) (\w+)(.*?)\n        \],', seg, re.S)
 assert len(themes) == 6, len(themes)
@@ -40,5 +41,4 @@ out += ['    )', '',
         '    fun color(theme: Int, dark: Boolean, step: Int): Color =',
         '        rgb(theme, dark, step).let { Color(it[0], it[1], it[2]) }', '}']
 dest = ROOT / 'android/app/src/main/java/com/roro/futurevoice/ui/brand/FutureselfRamp.kt'
-dest.write_text('\n'.join(out) + '\n')
-print(f'FutureselfRamp.kt regenerated ({len(themes)} themes)', file=sys.stderr)
+emit(dest, '\n'.join(out) + '\n')

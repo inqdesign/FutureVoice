@@ -2,8 +2,9 @@
 """Re-extract VoiceCloneScript.kt from VoiceCloneScript.swift (verbatim —
 never retype the scripts; the six-beat text IS the phonetic contract)."""
 import re, sys, pathlib
-ROOT = pathlib.Path(__file__).resolve().parents[2]
-sw = (ROOT/'FutureVoice/Services/VoiceCloneScript.swift').read_text()
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / 'promptgen'))
+from iosref import ROOT, show, emit  # iOS at scripts/android/promptgen/IOS_REF; --check
+sw = show('FutureVoice/Services/VoiceCloneScript.swift')
 def seg(name):
     i = sw.index(f'private static let {name}')
     return sw[i:sw.index('\n    ]', i)]
@@ -55,5 +56,4 @@ out += [f'        "{code}" to {k(greet[code])},' for code in paras]
 out += ['    )', '', '    private val paceSamples: Map<String, String> = mapOf(']
 out += [f'        "{code}" to {k(v)},' for code, v in pace.items()]
 out += ['    )', '}']
-(ROOT/'android/app/src/main/java/com/roro/futurevoice/talk/VoiceCloneScript.kt').write_text('\n'.join(out) + '\n')
-print('VoiceCloneScript.kt regenerated', file=sys.stderr)
+emit(ROOT/'android/app/src/main/java/com/roro/futurevoice/talk/VoiceCloneScript.kt', '\n'.join(out) + '\n')
