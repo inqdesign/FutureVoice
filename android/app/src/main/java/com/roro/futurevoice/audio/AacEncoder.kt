@@ -31,6 +31,10 @@ object AacEncoder {
         val format = MediaFormat.createAudioFormat(MIME, sampleRate, 1).apply {
             setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectLC)
             setInteger(MediaFormat.KEY_BIT_RATE, bitrate)
+            // Constant, as on iOS (iOS 2026-10-13): Gemini sizes an ADTS
+            // stream from its bitrate, and a VBR file read shorter than it
+            // is — the last sentence of a speech take was never transcribed.
+            setInteger(MediaFormat.KEY_BITRATE_MODE, MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_CBR)
             setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, 16_384)
         }
         val codec = runCatching { MediaCodec.createEncoderByType(MIME) }.getOrNull() ?: return false
