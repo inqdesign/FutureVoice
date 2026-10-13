@@ -1320,6 +1320,52 @@
         }
       }
     },
+    "Pick your accent again in Me → Voice. It didn't go on this time." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähl deinen Akzent unter Ich → Stimme noch einmal aus. Diesmal hat es nicht geklappt."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vuelve a elegir tu acento en Mi perfil → Voz. Esta vez no se aplicó."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisis à nouveau ton accent dans Mon profil → Voix. Il n’a pas été appliqué cette fois."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アクセントはマイページ → 声でもう一度選んでください。今回は反映されませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "억양은 나 → 목소리에서 다시 골라 주세요. 이번엔 적용되지 않았어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请到“我的 → 声音”重新选择口音。这次没有应用成功。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請到「我的 → 聲音」重新選擇口音。這次沒有套用成功。"
+          }
+        }
+      }
+    },
     "Scenes" : {
       "localizations" : {
         "de" : {
@@ -1610,6 +1656,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "社交"
+          }
+        }
+      }
+    },
+    "Tap it once more. Your voice didn't move this time." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tipp noch einmal darauf. Diesmal konnte deine Stimme nicht umziehen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tócalo una vez más. Esta vez no se pudo trasladar tu voz."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touche encore une fois. Ta voix n’a pas pu être transférée cette fois."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "もう一度タップしてください。今回は声を移せませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "한 번 더 눌러 주세요. 이번엔 목소리를 옮기지 못했어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请再点一次。这次没能迁移你的声音。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請再點一次。這次沒能搬移你的聲音。"
           }
         }
       }

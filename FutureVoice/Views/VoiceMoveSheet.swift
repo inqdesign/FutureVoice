@@ -21,6 +21,9 @@ struct VoiceMoveSheet: View {
     @State private var accentId: String?
     @State private var phase: Phase = .ready
     @State private var error: String?
+    /// The voice moved but its accent didn't go on (2026-10-13): the move is
+    /// done, so the sheet closes like any done move and says where to pick it.
+    @State private var accentMissed = false
     /// Neither this phone nor the server holds the recording (an accent
     /// remix keeps none upstream): only a new recording can move the voice.
     @State private var needsRecording = false
@@ -54,6 +57,10 @@ struct VoiceMoveSheet: View {
                         if phase == .done {
                             Text(explain("From now on your fluent self speaks with your new voice."))
                                 .foregroundStyle(.secondary)
+                            if accentMissed {
+                                Text(explain("Pick your accent again in Me → Voice. It didn't go on this time."))
+                                    .foregroundStyle(.secondary)
+                            }
                         } else {
                             Text(explain("So you can practice with a voice that sounds more natural and more like you, we're moving your voice to a new voice engine. Replies get faster too."))
                             Text(explain("When it moves, your current voice is deleted and a new one is made from the recording saved on this device. Audio that was already made keeps playing."))
@@ -115,7 +122,7 @@ struct VoiceMoveSheet: View {
                 if VoiceMove.isCartesia(appState.voiceCloneId ?? "") {
                     phase = .working
                     Task {
-                        try? await applyPickedAccent()
+                        do { try await applyPickedAccent() } catch { accentMissed = true }
                         phase = .done
                         playSample()
                     }
@@ -165,32 +172,45 @@ struct VoiceMoveSheet: View {
                                                  "from": hasRecording ? "device" : "server"])
         Task {
             do {
-                if let url = VoiceSampleStore.shared.url, hasRecording {
-                    // The server clones on Cartesia (CLONE_PROVIDER) and the
-                    // old voice is staged for deletion like any rebuild.
-                    try await appState.regenerateVoiceClone(fromSampleAt: url)
-                } else {
-                    // No recording here: the server rebuilds from the copy the
-                    // old voice was made from — or says there is none.
-                    guard let moved = try await ElevenLabsClient.shared.moveVoiceFromServer() else {
-                        Analytics.capture("voice_move_no_original")
-                        needsRecording = true
-                        phase = .ready
-                        return
+                // A retry after the voice already moved must not make a
+                // second one: only the accent is left to do.
+                if !VoiceMove.isCartesia(appState.voiceCloneId ?? "") {
+                    if let url = VoiceSampleStore.shared.url, hasRecording {
+                        // The server clones on Cartesia (CLONE_PROVIDER) and the
+                        // old voice is staged for deletion like any rebuild.
+                        try await appState.regenerateVoiceClone(fromSampleAt: url)
+                    } else {
+                        // No recording here: the server rebuilds from the copy the
+                        // old voice was made from — or says there is none.
+                        guard let moved = try await ElevenLabsClient.shared.moveVoiceFromServer() else {
+                            Analytics.capture("voice_move_no_original")
+                            needsRecording = true
+                            phase = .ready
+                            return
+                        }
+                        await appState.adoptMovedVoice(moved)
                     }
-                    await appState.adoptMovedVoice(moved)
                 }
-                try await applyPickedAccent()
-                Analytics.capture("voice_move_done", ["accent": accent?.id ?? "original"])
-                HapticEngine.success()
-                phase = .done
-                playSample()
             } catch {
                 Analytics.capture("voice_move_failed",
                                   ["reason": String(error.localizedDescription.prefix(200))])
-                self.error = error.localizedDescription
+                self.error = explain("Tap it once more. Your voice didn't move this time.")
                 phase = .ready
+                return
             }
+            // The voice has moved. An accent that won't go on is not a failed
+            // move: it can be picked again in Me → Voice.
+            do {
+                try await applyPickedAccent()
+            } catch {
+                Analytics.capture("voice_move_accent_failed",
+                                  ["reason": String(error.localizedDescription.prefix(200))])
+                accentMissed = true
+            }
+            Analytics.capture("voice_move_done", ["accent": accentMissed ? "original" : (accent?.id ?? "original")])
+            HapticEngine.success()
+            phase = .done
+            playSample()
         }
     }
 
