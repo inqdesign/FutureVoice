@@ -21,6 +21,20 @@ import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.WorkOutline
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.AccountBox
+import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.FamilyRestroom
+import androidx.compose.material.icons.filled.Feedback
+import androidx.compose.material.icons.filled.Forum
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.automirrored.filled.Help
+import androidx.compose.material.icons.filled.Key
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
@@ -70,6 +84,22 @@ object Symbols {
         "map" to Icons.Filled.Map,
         "bed.double" to Icons.Filled.Hotel,
         "tram" to Icons.Filled.Train,
+        // Talk's purpose chips (`LearningPurpose`, `StarterSituation`'s
+        // interview / work / life / travel sets) and the purpose rows.
+        "person.crop.square" to Icons.Filled.AccountBox,
+        "questionmark.bubble" to Icons.AutoMirrored.Filled.Help,
+        "chart.bar" to Icons.Filled.BarChart,
+        "person.3" to Icons.Filled.Groups,
+        "chart.line.uptrend.xyaxis" to Icons.AutoMirrored.Filled.TrendingUp,
+        "key" to Icons.Filled.Key,
+        "building.columns" to Icons.Filled.AccountBalance,
+        "figure.and.child.holdinghands" to Icons.Filled.FamilyRestroom,
+        "exclamationmark.bubble" to Icons.Filled.Feedback,
+        "bubble.left.and.bubble.right" to Icons.Filled.Forum,
+        "checklist" to Icons.Filled.Checklist,
+        "person.text.rectangle" to Icons.Filled.Badge,
+        "book" to Icons.AutoMirrored.Filled.MenuBook,
+        "square.and.pencil" to Icons.Filled.EditNote,
     )
 
     /**

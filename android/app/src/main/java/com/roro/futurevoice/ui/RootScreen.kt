@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.PlayCircleFilled
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.PathEffect
@@ -157,6 +158,8 @@ import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.data.StudyScheduleStore
 import com.roro.futurevoice.data.TalkTimeLog
 import com.roro.futurevoice.net.NewsClient
+import com.roro.futurevoice.net.PurposeTopicClient
+import com.roro.futurevoice.data.DiscoverChip
 import com.roro.futurevoice.net.TopicClient
 import com.roro.futurevoice.data.DrillStore
 import com.roro.futurevoice.data.ScenarioStore
@@ -185,6 +188,8 @@ fun RootScreen() {
     var inCall by call.inCall
     var callTopic by call.topic
     var callFacts by call.facts
+    /** Context the call is told beside the topic (iOS `CallLaunch.blurb`). */
+    var callBlurb by call.blurb
     var callScenarioId by call.scenarioId
     var callOpener by call.opener
     var callCast by call.cast
@@ -394,7 +399,7 @@ fun RootScreen() {
                 gate {
                     showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false; detailSessionId = null
                     bookScenarioId = null; watchScenarioId = null; shadowLine = null
-                    callTopic = ""; callFacts = emptyList(); callScenarioId = null
+                    callTopic = ""; callFacts = emptyList(); callBlurb = ""; callScenarioId = null
                     inCall = true
                 }
             }
@@ -411,7 +416,7 @@ fun RootScreen() {
             showMe = false; showDeck = false; detailSessionId = null
             watchScenarioId = null; shadowLine = null; clonePreview = false
             shadowHand = emptyList(); shadowAt = 0
-            callTopic = ""; callFacts = emptyList(); callScenarioId = null
+            callTopic = ""; callFacts = emptyList(); callBlurb = ""; callScenarioId = null
             // The pre-written voicemail IS the call's first line; consumed
             // so a plain free talk later doesn't replay it.
             callOpener = com.roro.futurevoice.data.DailyCallStore.script(context).orEmpty()
@@ -606,7 +611,7 @@ fun RootScreen() {
             com.roro.futurevoice.core.Analytics.capture(
                 "free_talk_welcome_closed", mapOf("started" to true))
             tab = HomeTab.TALK
-            gate { callTopic = ""; callFacts = emptyList(); callScenarioId = null; inCall = true }
+            gate { callTopic = ""; callFacts = emptyList(); callBlurb = ""; callScenarioId = null; inCall = true }
         }
     }
 
@@ -629,7 +634,7 @@ fun RootScreen() {
     val morphScope = rememberCoroutineScope()
     /** Every metered launcher from the home lands here (`mint` = an unsaved
      *  ready-made situation, saved once the gate passes). */
-    fun startCall(topic: String, facts: List<String>, scenarioId: String?, mint: Scenario?) {
+    fun startCall(topic: String, facts: List<String>, scenarioId: String?, mint: Scenario?, blurb: String = "") {
         // The paywall is asked here, at the TAP — every metered
         // launcher (free talk, a news story, a scenario, a widget
         // deep link) meets in this one callback, so one gate covers
@@ -637,7 +642,7 @@ fun RootScreen() {
         // screen was already up.
         gate {
             fun open() {
-                callTopic = topic; callFacts = facts; callScenarioId = scenarioId
+                callTopic = topic; callFacts = facts; callScenarioId = scenarioId; callBlurb = blurb
                 callFromHomeCard = topic.isNotEmpty() || scenarioId != null
                 // The FREE talk is the ring's own tap: its surface morphs
                 // into the call pill (iOS). Every other launcher opens flat.
@@ -947,7 +952,7 @@ fun RootScreen() {
                 onContinue = { topic ->
                     gate {
                         detailSessionId = null
-                        callTopic = topic; callFacts = emptyList(); callScenarioId = null
+                        callTopic = topic; callFacts = emptyList(); callBlurb = ""; callScenarioId = null
                         inCall = true
                     }
                 },
@@ -965,7 +970,7 @@ fun RootScreen() {
                 onWatch = { id -> watchReplay = true; watchScenarioId = id },
                 onTalk = { sc -> gate {
                     bookScenarioId = null
-                    callTopic = sc.promptBlurb; callFacts = emptyList(); callScenarioId = sc.id
+                    callTopic = sc.promptBlurb; callFacts = emptyList(); callBlurb = ""; callScenarioId = sc.id
                     inCall = true
                 } },
                 onShadow = { shadowLine = it },
@@ -1164,7 +1169,7 @@ fun RootScreen() {
                 callCounterpartId = p.id
                 gate {
                     meet()
-                    callTopic = ""; callFacts = emptyList(); callScenarioId = null
+                    callTopic = ""; callFacts = emptyList(); callBlurb = ""; callScenarioId = null
                     showPeople = false; inCall = true
                 }
             },
@@ -1304,6 +1309,7 @@ fun RootScreen() {
                 level = state.level,
                 persona = state.persona,
                 topic = callTopic,
+                topicBlurb = callBlurb,
                 newsFacts = callFacts,
                 scenarioId = callScenarioId,
                 initialOpener = callOpener,
@@ -1315,7 +1321,7 @@ fun RootScreen() {
                     TalkMorph.close(morphScope) {
                         if (callFromHomeCard) deepenPending = true
                         callFromHomeCard = false
-                        inCall = false; callTopic = ""; callFacts = emptyList()
+                        inCall = false; callTopic = ""; callFacts = emptyList(); callBlurb = ""
                         callScenarioId = null; callOpener = ""; callCast = null
                         callCastVoice = null; callCounterpartId = null
                     }
@@ -1346,6 +1352,7 @@ fun RootScreen() {
             state = state,
             onStartCall = { topic, facts, scenarioId -> startCall(topic, facts, scenarioId, null) },
             onStartStarter = { sc -> startCall(sc.promptBlurb, emptyList(), sc.id, sc) },
+            onStartTopic = { topic, blurb -> startCall(topic, emptyList(), null, null, blurb) },
             onOpenMe = { showMe = true },
             onOpenBook = { bookScenarioId = it },
             onOpenPeople = { showPeople = true },
@@ -1489,7 +1496,9 @@ internal fun SignInScreen(
 
 private data class PendingLaunch(val topic: String, val facts: List<String>, val scenarioId: String?,
                                   /** An unsaved ready-made situation, saved once the gate passes. */
-                                  val mint: Scenario? = null)
+                                  val mint: Scenario? = null,
+                                  /** Context told to the call beside the topic. */
+                                  val blurb: String = "")
 
 /** The four verbs, in the order the product does them. Internal so the
  *  capture build can open the shell on a tab. */
@@ -1513,6 +1522,9 @@ internal fun HomeScreen(
     onStartCall: (topic: String, newsFacts: List<String>, scenarioId: String?) -> Unit,
     /** A ready-made situation (`StarterSituation`), saved only once the tap passes the gate. */
     onStartStarter: (Scenario) -> Unit = {},
+    /** A topic with its own context — an exam question, a topic from the
+     *  learner's field (iOS `runExam` / `runFieldTopic`). */
+    onStartTopic: (topic: String, blurb: String) -> Unit = { _, _ -> },
     onOpenMe: () -> Unit,
     onOpenPractice: () -> Unit = {},
     onOpenDeck: () -> Unit = {},
@@ -1615,7 +1627,11 @@ internal fun HomeScreen(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) pendingLaunch?.let { p ->
-            p.mint?.let(onStartStarter) ?: onStartCall(p.topic, p.facts, p.scenarioId)
+            when {
+                p.mint != null -> onStartStarter(p.mint)
+                p.blurb.isNotEmpty() -> onStartTopic(p.topic, p.blurb)
+                else -> onStartCall(p.topic, p.facts, p.scenarioId)
+            }
         }
         // A refusal has to be answerable: the tap did nothing and nothing on
         // screen said why, and the only route back is the system settings.
@@ -1641,8 +1657,9 @@ internal fun HomeScreen(
                 TextButton(onClick = { micDenied = false }) { Text(stringResource(R.string.not_now)) }
             })
     }
-    fun launch(topic: String, facts: List<String>, scenarioId: String? = null, mint: Scenario? = null) {
-        pendingLaunch = PendingLaunch(topic, facts, scenarioId, mint)
+    fun launch(topic: String, facts: List<String>, scenarioId: String? = null, mint: Scenario? = null,
+               blurb: String = "") {
+        pendingLaunch = PendingLaunch(topic, facts, scenarioId, mint, blurb)
         permission.launch(Manifest.permission.RECORD_AUDIO)
     }
 
@@ -1799,6 +1816,10 @@ internal fun HomeScreen(
                             onPickNews = { topic -> launch(topic.title, topic.facts.orEmpty()) },
                             onPickScenario = { sc -> launch(sc.promptBlurb, emptyList(), sc.id) },
                             onPickStarter = { sc -> launch(sc.promptBlurb, emptyList(), sc.id, mint = sc) },
+                            // An ordinary topic call: the blurb tells it which
+                            // exam and which part (iOS `runExam`).
+                            onPickExam = { t, exam -> launch(t.title, emptyList(), blurb = t.callBlurb(exam)) },
+                            onPickTopic = { t -> launch(t.title, emptyList(), blurb = t.blurb) },
                             // They all live on Watch — that IS the collection.
                             onAllScenarios = { onTabChange(HomeTab.WATCH) },
                         )
@@ -2062,10 +2083,12 @@ private val RING_DIAMETER = 280.dp
 private val RING_TAIL = 20.dp
 
 /**
- * Discover — what to talk about today, in two chips (`DiscoverSection`):
- * the day's stories from the platform pool, or a situation the learner
- * built. One full-width card list on the 20pt grid; a horizontal rail read
- * as posters and this reads as a list.
+ * Discover — what to talk about today (`DiscoverSection`). The chips are the
+ * learner's purposes (`LearningPurposeStore.chips`): each purpose's own chip
+ * first, in the order picked, then news and their own situations. Never
+ * answered = the row as it always was (News · Everyday · Scenarios). One
+ * full-width card list on the 20pt grid; a horizontal rail read as posters
+ * and this reads as a list.
  */
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
@@ -2076,28 +2099,97 @@ private fun DiscoverSection(
     onPickScenario: (Scenario) -> Unit,
     /** A ready-made situation, possibly not saved yet (`StarterSituation`). */
     onPickStarter: (Scenario) -> Unit = {},
+    /** A common exam question (iOS `runExam`). */
+    onPickExam: (com.roro.futurevoice.data.ExamTopic, com.roro.futurevoice.data.ExamKind) -> Unit = { _, _ -> },
+    /** A topic made from the learner's own field (iOS `runFieldTopic`). */
+    onPickTopic: (SuggestedTopic) -> Unit = {},
     onSavePersona: (com.roro.futurevoice.talk.UserPersona) -> Unit = {},
     /** The full collection — the Watch tab, which is where they all live. */
     onAllScenarios: () -> Unit = {},
 ) {
-    var editingInterests by remember { mutableStateOf(false) }
+    /** The one settings page for the whole row (`DiscoverSettingsSheet`). */
+    var showingSettings by remember { mutableStateOf(false) }
+    /** Bumped when settings close, so the row re-reads its chips. */
+    var settingsVersion by remember { mutableIntStateOf(0) }
     var newsFailed by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
-    // News · Everyday · Scenarios (iOS `DiscoverSection.Tab`, `5b0587a`).
-    var discoverTab by remember {
-        mutableStateOf(com.roro.futurevoice.capture.flags.TalkCaptureFlags.discoverTab ?: DiscoverTab.NEWS)
+    val chips = remember(settingsVersion, state.level) {
+        com.roro.futurevoice.data.LearningPurposeStore.chips(context, state.level)
     }
-    val newsTab = discoverTab == DiscoverTab.NEWS
+    // The row opens on the first chip once, then stays where the learner put it.
+    var discoverTab by remember {
+        mutableStateOf(com.roro.futurevoice.capture.flags.TalkCaptureFlags.discoverTab ?: chips.first())
+    }
+    if (discoverTab !in chips) discoverTab = chips.first()
+    val newsTab = discoverTab == DiscoverChip.NEWS
     val interests = state.persona?.interests.orEmpty()
     val language = state.targetLanguage
+    /** Exam chip: which slice of the topic list is showing, and the filter. */
+    var examShift by remember { mutableIntStateOf(0) }
+    var exam by remember(language) {
+        mutableStateOf(com.roro.futurevoice.data.LearningPurposeStore.exam(context, language))
+    }
+    val details = remember(settingsVersion) { com.roro.futurevoice.data.LearningPurposeStore.details(context) }
+    fun fieldContext(chip: DiscoverChip): String? = PurposeTopicClient.field(chip, details)
+    /** Field topics per chip, once loaded; the chips being written now. */
+    val fieldTopics = remember { androidx.compose.runtime.mutableStateMapOf<DiscoverChip, List<SuggestedTopic>>() }
+    val writingTopics = remember { androidx.compose.runtime.mutableStateListOf<DiscoverChip>() }
+    val failedTopics = remember { androidx.compose.runtime.mutableStateListOf<DiscoverChip>() }
+    /** Where in a field's pool the shown eight start. */
+    val fieldShift = remember { androidx.compose.runtime.mutableStateMapOf<DiscoverChip, Int>() }
 
-    if (editingInterests) {
-        InterestsEditorSheet(
+    /** `fresh`: the refresh button. Walk on through the pool while it has
+     *  unseen topics; at its end, ask the server to grow it (capped there). */
+    suspend fun loadFieldTopics(chip: DiscoverChip, fresh: Boolean) {
+        if (fieldContext(chip) == null || chip in writingTopics) return
+        val level = state.level
+        if (!fresh) {
+            PurposeTopicClient.cached(context, chip, details, language, level)?.let {
+                fieldTopics[chip] = it; return
+            }
+        }
+        if (fresh) fieldTopics[chip]?.let { pool ->
+            val next = (fieldShift[chip] ?: 0) + PurposeTopicClient.SHOWN
+            if (next < pool.size) { fieldShift[chip] = next; return }
+        }
+        writingTopics += chip
+        failedTopics -= chip
+        val before = fieldTopics[chip]?.size ?: 0
+        try {
+            val topics = runCatching {
+                PurposeTopicClient.fetch(context, chip, details, language, level, refresh = fresh)
+            }.getOrNull()
+            if (!topics.isNullOrEmpty()) {
+                fieldTopics[chip] = topics
+                // Grown: show the new ones. Not grown (the pool is full): start over.
+                fieldShift[chip] = if (fresh) (if (topics.size > before) before else 0) else 0
+            } else if (fieldTopics[chip] == null) {
+                failedTopics += chip
+            }
+        } finally { writingTopics -= chip }
+    }
+
+    /** Settings closed: the chips may have changed (stay on the chip if it
+     *  is still there, else the new first one), the exam, the interests. */
+    fun settingsClosed() {
+        settingsVersion += 1
+        val newChips = com.roro.futurevoice.data.LearningPurposeStore.chips(context, state.level)
+        if (discoverTab !in newChips) discoverTab = newChips.first()
+        val newExam = com.roro.futurevoice.data.LearningPurposeStore.exam(context, language)
+        if (newExam != exam) { exam = newExam; examShift = 0 }
+        val newDetails = com.roro.futurevoice.data.LearningPurposeStore.details(context)
+        fieldTopics.keys.filter { PurposeTopicClient.field(it, newDetails) == null }.forEach { fieldTopics.remove(it) }
+    }
+
+    if (showingSettings) {
+        DiscoverSettingsSheet(
             persona = state.persona,
-            onSave = onSavePersona,
-            onDismiss = { editingInterests = false },
+            language = language,
+            onSavePersona = onSavePersona,
+            onDismiss = { showingSettings = false; settingsClosed() },
+            onSaved = { settingsClosed() },
         )
     }
     val store = remember { NewsTopicStore.shared(context) }
@@ -2156,202 +2248,320 @@ private fun DiscoverSection(
                 store.lastKnown(interests, language)?.let { topics = displaySelection(it) }
                 fetchNews(false)
             }
-        }
+        } else topics = emptyList()
     }
     LaunchedEffect(language, revision) {
         scenarios = scenarioStore.load(language)
         people = CounterpartStore.shared(context).load()
     }
 
+    /** The ready-made situations behind a situation chip. A tap starts the
+     *  call; one already talked through carries a check. */
+    @Composable
+    fun StarterRows(starters: List<StarterSituation>) {
+        starters.forEach { starter ->
+            val existing = scenarios.firstOrNull { it.starterId == starter.id }
+            val title = stringResource(starter.title)
+            val role = stringResource(starter.role)
+            DiscoverRow(
+                title = title,
+                caption = if (starter.showsRole) stringResource(R.string.with, role) else null,
+                icon = Symbols.icon(starter.icon),
+                onClick = if (enabled) ({
+                    onPickStarter(starter.scenario(scenarios, language, title, role))
+                }) else null,
+                trailing = if (existing?.lastUsedAt != null) ({
+                    Row(verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Icon(Icons.Filled.CheckCircle, contentDescription = stringResource(R.string.done),
+                            tint = androidx.compose.ui.graphics.Color(0xFF34C759),
+                            modifier = Modifier.size(20.dp))
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.outline)
+                    }
+                }) else null,
+            )
+        }
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            SegmentChip(stringResource(R.string.news), newsTab) { discoverTab = DiscoverTab.NEWS }
-            SegmentChip(stringResource(R.string.everyday), discoverTab == DiscoverTab.EVERYDAY) {
-                discoverTab = DiscoverTab.EVERYDAY
-            }
-            SegmentChip(stringResource(R.string.scenarios), discoverTab == DiscoverTab.SCENARIOS) {
-                discoverTab = DiscoverTab.SCENARIOS
-            }
-            Spacer(Modifier.weight(1f))
-            if (newsTab) {
-                // Interests FIRST, then refresh — iOS's order, and the one that
-                // reads left to right: what the stories are about, then get
-                // more of them.
-                DiscoverHeaderButton(onClick = { editingInterests = true }) {
-                    Icon(Icons.Filled.Tune, contentDescription = stringResource(R.string.edit_interests),
-                        tint = MaterialTheme.colorScheme.primary)
-                }
-                // iOS: the refresh slot exists only once there are stories,
-                // and while loading it holds the spinner in the same place.
-                if (topics.isNotEmpty() && loading) {
-                    Box(Modifier.size(DiscoverHeaderIcon), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                    }
-                } else if (topics.isNotEmpty()) {
-                    DiscoverHeaderButton(onClick = {
-                        scope.launch {
-                            // Rotating the unseen pool is free — only ask the
-                            // server once the local pool is exhausted.
-                            val cached = store.valid(interests, language)
-                            if (cached != null && cached.size > topics.size) {
-                                store.markSeen(topics.map { it.title }, interests, language)
-                                val rotated = displaySelection(cached)
-                                if (rotated.map { it.title } != topics.map { it.title }) {
-                                    topics = rotated; return@launch
-                                }
-                            }
-                            store.markSeen(topics.map { it.title }, interests, language)
-                            fetchNews(true)
+            if (chips.size > 3) {
+                // Four chips and two buttons don't fit a phone in every
+                // language; past three the chips scroll sideways, clipped
+                // BEFORE the buttons and faded at that edge so the cut reads
+                // as "slide for more" rather than a chip broken in half.
+                Row(
+                    Modifier.weight(1f)
+                        .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+                        .drawWithContent {
+                            drawContent()
+                            val fade = 20.dp.toPx()
+                            drawRect(
+                                androidx.compose.ui.graphics.Brush.horizontalGradient(
+                                    listOf(androidx.compose.ui.graphics.Color.Black,
+                                        androidx.compose.ui.graphics.Color.Transparent),
+                                    startX = size.width - fade, endX = size.width),
+                                topLeft = androidx.compose.ui.geometry.Offset(size.width - fade, 0f),
+                                size = androidx.compose.ui.geometry.Size(fade, size.height),
+                                blendMode = androidx.compose.ui.graphics.BlendMode.DstIn)
                         }
-                    }) {
-                        Icon(Icons.Filled.Refresh,
-                            contentDescription = stringResource(R.string.refresh_stories),
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    chips.forEach { c -> SegmentChip(stringResource(c.label), discoverTab == c) { discoverTab = c } }
+                    Spacer(Modifier.width(16.dp))
+                }
+            } else {
+                chips.forEach { c -> SegmentChip(stringResource(c.label), discoverTab == c) { discoverTab = c } }
+                Spacer(Modifier.weight(1f))
+            }
+            // The row's own buttons as one group, spaced for a thumb — at the
+            // row's 8 dp they read as one control and a tap hit the wrong one.
+            Row(verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                if (discoverTab == DiscoverChip.EXAM) {
+                    DiscoverHeaderButton(onClick = { examShift += EXAM_SHOWN }) {
+                        Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.other_topics),
+                            tint = MaterialTheme.colorScheme.primary)
+                    }
+                } else if (fieldContext(discoverTab) != null) {
+                    if (discoverTab in writingTopics) {
+                        Box(Modifier.size(DiscoverHeaderIcon), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                        }
+                    } else {
+                        val chip = discoverTab
+                        DiscoverHeaderButton(onClick = { scope.launch { loadFieldTopics(chip, fresh = true) } }) {
+                            Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.other_topics),
+                                tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                } else if (newsTab && topics.isNotEmpty()) {
+                    // iOS: the refresh slot exists only once there are stories,
+                    // and while loading it holds the spinner in the same place.
+                    if (loading) {
+                        Box(Modifier.size(DiscoverHeaderIcon), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                        }
+                    } else {
+                        DiscoverHeaderButton(onClick = {
+                            scope.launch {
+                                // Rotating the unseen pool is free — only ask the
+                                // server once the local pool is exhausted.
+                                val cached = store.valid(interests, language)
+                                if (cached != null && cached.size > topics.size) {
+                                    store.markSeen(topics.map { it.title }, interests, language)
+                                    val rotated = displaySelection(cached)
+                                    if (rotated.map { it.title } != topics.map { it.title }) {
+                                        topics = rotated; return@launch
+                                    }
+                                }
+                                store.markSeen(topics.map { it.title }, interests, language)
+                                fetchNews(true)
+                            }
+                        }) {
+                            Icon(Icons.Filled.Refresh,
+                                contentDescription = stringResource(R.string.refresh_stories),
+                                tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                } else if (discoverTab == DiscoverChip.SCENARIOS) {
+                    DiscoverHeaderButton(onClick = { composing = true }) {
+                        Icon(Icons.Filled.Add,
+                            contentDescription = stringResource(R.string.build_a_scenario),
                             tint = MaterialTheme.colorScheme.primary)
                     }
                 }
-            } else if (discoverTab == DiscoverTab.SCENARIOS) {
-                DiscoverHeaderButton(onClick = { composing = true }) {
-                    Icon(Icons.Filled.Add,
-                        contentDescription = stringResource(R.string.build_a_scenario),
+                // One settings button whatever chip is showing — the chips,
+                // the exam and the interests are one page.
+                DiscoverHeaderButton(onClick = { showingSettings = true }) {
+                    Icon(Icons.Filled.Tune, contentDescription = stringResource(R.string.talk_settings),
                         tint = MaterialTheme.colorScheme.primary)
                 }
             }
         }
 
-        if (newsTab && interests.isEmpty()) {
-            // Nothing to build stories from yet — the fix is one tap, so
-            // offer it instead of an empty section.
-            DiscoverRow(
-                title = stringResource(R.string.add_interests),
-                icon = Icons.Filled.Add,
-                onClick = { editingInterests = true },
-            )
-        } else if (newsTab && topics.isEmpty()) {
-            if (loading) {
-                Row(Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                    Text(stringResource(R.string.finding_stories),
-                        style = MaterialTheme.typography.bodyMedium,
+        when (discoverTab) {
+            DiscoverChip.NEWS -> {
+                if (interests.isEmpty()) {
+                    // Nothing to build stories from yet — the fix is one tap, so
+                    // offer it instead of an empty section.
+                    DiscoverRow(
+                        title = stringResource(R.string.add_interests),
+                        icon = Icons.Filled.Add,
+                        onClick = { showingSettings = true },
+                    )
+                } else if (topics.isEmpty()) {
+                    if (loading) {
+                        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                            Text(stringResource(R.string.finding_stories),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    } else {
+                        // Auto-load happens on open; this is the retry path when that
+                        // failed or came back empty.
+                        DiscoverRow(
+                            title = stringResource(R.string.load_stories),
+                            icon = Icons.Filled.Newspaper,
+                            onClick = { scope.launch { fetchNews(true) } },
+                        )
+                    }
+                }
+                topics.forEach { topic ->
+                    DiscoverRow(
+                        title = topic.title,
+                        // Capitalized, like iOS: the pool writes categories in
+                        // lower case ("ai / tech") and a caption is a label.
+                        caption = topic.category
+                            ?.replaceFirstChar { it.titlecase(java.util.Locale.getDefault()) },
+                        icon = categoryIcon(topic.category),
+                        onClick = if (enabled) ({ onPickNews(topic) }) else null,
+                    )
+                }
+                if (newsFailed) {
+                    Text(stringResource(
+                        if (topics.isEmpty()) R.string.couldn_t_load_stories
+                        else R.string.showing_earlier_stories),
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-            } else {
-                // Auto-load happens on open; this is the retry path when that
-                // failed or came back empty.
-                DiscoverRow(
-                    title = stringResource(R.string.load_stories),
-                    icon = Icons.Filled.Newspaper,
-                    onClick = { scope.launch { fetchNews(true) } },
-                )
             }
-        }
-        if (newsTab) {
-            topics.forEach { topic ->
-                DiscoverRow(
-                    title = topic.title,
-                    // Capitalized, like iOS: the pool writes categories in
-                    // lower case ("ai / tech") and a caption is a label.
-                    caption = topic.category
-                        ?.replaceFirstChar { it.titlecase(java.util.Locale.getDefault()) },
-                    icon = categoryIcon(topic.category),
-                    onClick = if (enabled) ({ onPickNews(topic) }) else null,
-                )
-            }
-            if (newsFailed) {
-                Text(stringResource(
-                    if (topics.isEmpty()) R.string.couldn_t_load_stories
-                    else R.string.showing_earlier_stories),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        } else if (discoverTab == DiscoverTab.EVERYDAY) {
-            // Ready-made situations on a chip of their own, right under the
-            // chips. A tap starts the call; one already talked through
-            // carries a check.
-            StarterSituation.all.forEach { starter ->
-                val existing = scenarios.firstOrNull { it.starterId == starter.id }
-                val title = stringResource(starter.title)
-                val role = stringResource(starter.role)
-                DiscoverRow(
-                    title = title,
-                    caption = if (starter.showsRole) stringResource(R.string.with, role) else null,
-                    icon = Symbols.icon(starter.icon),
-                    onClick = if (enabled) ({
-                        onPickStarter(starter.scenario(scenarios, language, title, role))
-                    }) else null,
-                    trailing = if (existing?.lastUsedAt != null) ({
-                        Row(verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Icon(Icons.Filled.CheckCircle, contentDescription = stringResource(R.string.done),
-                                tint = androidx.compose.ui.graphics.Color(0xFF34C759),
-                                modifier = Modifier.size(20.dp))
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
-                                tint = MaterialTheme.colorScheme.outline)
-                        }
-                    }) else null,
-                )
-            }
-        } else {
-            // The learner's own situations — ready-made ones live on Everyday.
-            val live = scenarios.filter { it.archivedAt == null && it.isMeeting != true && it.starterId == null }
-            live.take(5).forEach { sc ->
-                // WHO the scene is with, not what shelf it sits on — a
-                // category told the learner nothing they didn't already see.
-                val personName = sc.counterpartId?.let { id -> people.firstOrNull { it.id == id }?.name }
-                var rowMenu by remember(sc.id) { mutableStateOf(false) }
-                Box {
+            DiscoverChip.EXAM -> {
+                // Common questions of the picked exam, five at a time; refresh
+                // shows the next five. Same card as a news story.
+                val all = com.roro.futurevoice.data.ExamTopics.topics(exam, language)
+                val start = if (all.isEmpty()) 0 else examShift % all.size
+                (0 until minOf(EXAM_SHOWN, all.size)).map { all[(start + it) % all.size] }.forEach { topic ->
                     DiscoverRow(
-                        title = sc.cardTitle,
-                        caption = (personName ?: sc.role?.takeIf { it.isNotBlank() })
-                            ?.let { stringResource(R.string.with, it) } ?: sc.category,
-                        // The icon the categorizer picked for this scenario —
-                        // a fixed pin made every scenario look like a place.
-                        icon = Symbols.icon(sc.categoryIcon),
-                        onClick = null,
-                        modifier = Modifier.combinedClickable(
-                            onClick = {
-                                if (enabled) {
-                                    scope.launch { scenarioStore.touch(sc.id, language); StoreEvents.bump() }
-                                    onPickScenario(sc)
-                                }
-                            },
-                            onLongClick = { rowMenu = true }),
+                        title = topic.title,
+                        caption = "${exam.examName} · ${topic.part}",
+                        icon = Symbols.icon("graduationcap.fill"),
+                        onClick = if (enabled) ({ onPickExam(topic, exam) }) else null,
                     )
-                    com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = rowMenu, onDismissRequest = { rowMenu = false }) {
-                        com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
-                            text = { Text(stringResource(R.string.delete),
-                                color = MaterialTheme.colorScheme.error) },
-                            leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error) },
-                            onClick = {
-                                rowMenu = false
-                                scope.launch { scenarioStore.delete(sc.id, language); StoreEvents.bump() }
-                            })
+                }
+            }
+            DiscoverChip.STUDY, DiscoverChip.WORK, DiscoverChip.INTERVIEW -> {
+                // Topics from what the learner wrote about their field, then —
+                // for work and interviews — the ready-made situations under
+                // them. Nothing written yet: one row that says what writing it
+                // buys, opening the settings.
+                val chip = discoverTab
+                val field = fieldContext(chip)
+                LaunchedEffect(chip, field, language) { loadFieldTopics(chip, fresh = false) }
+                val pool = fieldTopics[chip]
+                if (field == null) {
+                    DiscoverRow(
+                        title = stringResource(when (chip) {
+                            DiscoverChip.STUDY -> R.string.add_your_school_and_subject_for_topics_from_your_field
+                            DiscoverChip.INTERVIEW -> R.string.add_the_role_you_re_applying_for_i_ll_ask_its_questions
+                            else -> R.string.add_your_job_and_role_for_topics_from_your_work
+                        }),
+                        icon = Symbols.icon("square.and.pencil"),
+                        onClick = { showingSettings = true },
+                    )
+                } else if (!pool.isNullOrEmpty()) {
+                    val begin = (fieldShift[chip] ?: 0) % pool.size
+                    (0 until minOf(PurposeTopicClient.SHOWN, pool.size)).map { pool[(begin + it) % pool.size] }
+                        .forEach { t ->
+                            DiscoverRow(
+                                title = t.title,
+                                icon = Symbols.icon(when (chip) {
+                                    DiscoverChip.STUDY -> "book.fill"
+                                    DiscoverChip.INTERVIEW -> "person.crop.square"
+                                    else -> "briefcase.fill"
+                                }),
+                                onClick = if (enabled) ({
+                                    onPickTopic(SuggestedTopic(title = t.title,
+                                        blurb = PurposeTopicClient.launchBlurb(t, chip, details)))
+                                }) else null,
+                            )
+                        }
+                } else if (chip in failedTopics) {
+                    TextButton(onClick = { scope.launch { loadFieldTopics(chip, fresh = true) } }) {
+                        Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.couldn_t_write_topics_try_again),
+                            style = MaterialTheme.typography.bodyMedium)
+                    }
+                } else {
+                    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                        Text(stringResource(R.string.writing_topics_for_your_field),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                chip.starters?.let { StarterRows(it) }
+            }
+            DiscoverChip.SCENARIOS -> {
+                // The learner's own situations — ready-made ones live on their chips.
+                val live = scenarios.filter { it.archivedAt == null && it.isMeeting != true && it.starterId == null }
+                live.take(5).forEach { sc ->
+                    // WHO the scene is with, not what shelf it sits on — a
+                    // category told the learner nothing they didn't already see.
+                    val personName = sc.counterpartId?.let { id -> people.firstOrNull { it.id == id }?.name }
+                    var rowMenu by remember(sc.id) { mutableStateOf(false) }
+                    Box {
+                        DiscoverRow(
+                            title = sc.cardTitle,
+                            caption = (personName ?: sc.role?.takeIf { it.isNotBlank() })
+                                ?.let { stringResource(R.string.with, it) } ?: sc.category,
+                            // The icon the categorizer picked for this scenario —
+                            // a fixed pin made every scenario look like a place.
+                            icon = Symbols.icon(sc.categoryIcon),
+                            onClick = null,
+                            modifier = Modifier.combinedClickable(
+                                onClick = {
+                                    if (enabled) {
+                                        scope.launch { scenarioStore.touch(sc.id, language); StoreEvents.bump() }
+                                        onPickScenario(sc)
+                                    }
+                                },
+                                onLongClick = { rowMenu = true }),
+                        )
+                        com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = rowMenu, onDismissRequest = { rowMenu = false }) {
+                            com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
+                                text = { Text(stringResource(R.string.delete),
+                                    color = MaterialTheme.colorScheme.error) },
+                                leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error) },
+                                onClick = {
+                                    rowMenu = false
+                                    scope.launch { scenarioStore.delete(sc.id, language); StoreEvents.bump() }
+                                })
+                        }
+                    }
+                }
+                // The door to the rest of them, rather than a list that grows
+                // until the home screen is a filing cabinet — always the list's
+                // tail, as on iOS.
+                if (live.isNotEmpty()) {
+                    DiscoverRow(
+                        title = stringResource(R.string.all_scenarios),
+                        caption = "${live.size}",
+                        icon = Icons.Filled.Layers,
+                        onClick = onAllScenarios,
+                    )
+                }
+                if (live.isEmpty()) {
+                    // iOS `scenariosContent`: a plain tinted "+" label, not a card.
+                    TextButton(onClick = { composing = true }) {
+                        Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.build_your_first_scenario),
+                            style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
-            // The door to the rest of them, rather than a list that grows
-            // until the home screen is a filing cabinet — always the list's
-            // tail, as on iOS.
-            if (live.isNotEmpty()) {
-                DiscoverRow(
-                    title = stringResource(R.string.all_scenarios),
-                    caption = "${live.size}",
-                    icon = Icons.Filled.Layers,
-                    onClick = onAllScenarios,
-                )
-            }
-            if (live.isEmpty()) {
-                // iOS `scenariosContent`: a plain tinted "+" label, not a card.
-                TextButton(onClick = { composing = true }) {
-                    Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.build_your_first_scenario),
-                        style = MaterialTheme.typography.bodyMedium)
-                }
-            }
+            else -> StarterRows(discoverTab.starters ?: StarterSituation.all)
         }
     }
 
@@ -2368,8 +2578,8 @@ private fun DiscoverSection(
     }
 }
 
-/** Talk's Discover chips (iOS `DiscoverSection.Tab`). */
-enum class DiscoverTab { NEWS, EVERYDAY, SCENARIOS }
+/** iOS `DiscoverSection.examShown`: exam questions show five at a time. */
+private const val EXAM_SHOWN = 5
 
 /**
  * Best-effort glyph for a free-form interest category — the fallback is the
@@ -2639,6 +2849,7 @@ class CallRoute : androidx.lifecycle.ViewModel() {
     val inCall = mutableStateOf(false)
     val topic = mutableStateOf("")
     val facts = mutableStateOf<List<String>>(emptyList())
+    val blurb = mutableStateOf("")
     val scenarioId = mutableStateOf<String?>(null)
     val opener = mutableStateOf("")
     val cast = mutableStateOf<com.roro.futurevoice.talk.ConversationEngine.Cast?>(null)

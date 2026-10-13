@@ -605,7 +605,7 @@ fun backupStepLabel(step: BackupService.Step): String = when (step) {
 /** "Every day", "Weekdays", "Weekends", or the days by name, Monday first —
  *  the way the routine draws its week (iOS `weekdaySummary`). */
 @Composable
-private fun routineWeekdaySummary(days: Set<Int>): String = when (days) {
+internal fun routineWeekdaySummary(days: Set<Int>): String = when (days) {
     (1..7).toSet() -> stringResource(R.string.routine_every_day)
     (2..6).toSet() -> stringResource(R.string.routine_weekdays)
     setOf(1, 7) -> stringResource(R.string.routine_weekends)
