@@ -54,6 +54,9 @@ class VoicemailClient(private val auth: AuthRepository) {
             if (consecutiveUnanswered > 0) put("consecutive_unanswered", consecutiveUnanswered)
             lastTalkAt?.let { put("last_talk_at", java.time.Instant.ofEpochMilli(it).toString()) }
             putJsonArray("ring_dates") { ringDates.forEach { add(java.time.Instant.ofEpochMilli(it).toString()) } }
+            // The budget the prompt asks for at the learner's speed (iOS puts
+            // `maxScriptCharacters` straight into the prompt).
+            put("max_script_characters", MAX_SCRIPT_CHARACTERS)
             put("utc_offset_minutes", java.util.TimeZone.getDefault()
                 .getOffset(ringDates.firstOrNull() ?: System.currentTimeMillis()) / 60_000)
         }

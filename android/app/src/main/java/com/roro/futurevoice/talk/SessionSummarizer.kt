@@ -422,13 +422,18 @@ object SessionSummarizer {
                     nativeLanguage = nativeLanguage,
                     proficiency = level.code,
                     personaName = PersonaStore.shared(context).load()?.displayName,
-                    lastTopic = resolvedTopic,
-                    lastPhrases = (computed.expressionsOffered + computed.expressionsUsed).take(4),
+                    // iOS `last?.displayTitle`: the topic, else the learner's
+                    // first words, else "Conversation".
+                    lastTopic = saved.displayTitle ?: "Conversation",
+                    // iOS `voicemailContext`: what the learner SAID — expressions
+                    // used, then new words used — never what was offered.
+                    lastPhrases = (computed.expressionsUsed + computed.newWordsUsed).take(4),
                     daysSinceLastTalk = 0,
                     dueCount = drills.dueCount(language),
                     lastOutcome = DailyCallStore.lastOutcome(context)?.raw,
                     consecutiveUnanswered = DailyCallStore.consecutiveUnanswered(context),
-                    lastTalkAt = turns.maxOfOrNull { it.timestamp } ?: System.currentTimeMillis(),
+                    lastTalkAt = session.endedAt ?: turns.maxOfOrNull { it.timestamp }
+                        ?: System.currentTimeMillis(),
                     ringDates = runCatching { com.roro.futurevoice.data.DailyCallScheduler.fireDates(context) }.getOrDefault(emptyList()),
                 )
                 if (script.isNotBlank()) DailyCallStore.setScript(context, script)
