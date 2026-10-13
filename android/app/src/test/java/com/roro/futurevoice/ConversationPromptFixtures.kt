@@ -115,4 +115,14 @@ object ConversationPromptFixtures {
         listOf("output/ja_stranger", "ja", "ko", stranger, false),
         listOf("output/de_plain", "de", "en", null, false),
     )
+
+    /** Mirrors `corrections` in scripts/android/promptgen/main.swift. */
+    val corrections = listOf(
+        listOf("correction/en_plain", "en", "ko", CefrLevel.B1, null, false),
+        listOf("correction/ko_close_friend", "ko", "en", CefrLevel.B2, closeFriend, false),
+        listOf("correction/ko_scene", "ko", "en", CefrLevel.A2, null, true),
+        listOf("correction/ko_manager", "ko", "ja", CefrLevel.B1, manager, false),
+        listOf("correction/ja_stranger", "ja", "ko", CefrLevel.A1, stranger, false),
+        listOf("correction/de_plain", "de", "en", CefrLevel.C1, null, false),
+    )
 }

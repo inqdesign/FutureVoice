@@ -7,59 +7,42 @@ content: retyped, the two platforms would judge the same spoken line by
 different rules, and the ASR guards (drop / digit / contraction) are exactly
 the lines a retype loses. So it is extracted, never copied by hand.
 
-    python3 scripts/android/gen-correction-prompt.py               # worktree Swift
-    python3 scripts/android/gen-correction-prompt.py --ref 7c12b9e # iOS at a commit
+    python3 scripts/android/gen-correction-prompt.py [--check] [--ref <sha>]
+    (iOS at the pinned ref, scripts/android/promptgen/IOS_REF)
 
 Fails loudly on any interpolation it does not know how to map.
 """
 import pathlib
 import re
-import subprocess
 import sys
 
-ROOT = pathlib.Path(__file__).resolve().parents[2]
-SWIFT = ROOT / "FutureVoice/Services/ConversationEngine.swift"
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / "promptgen"))
+from iosref import ROOT, REF, show, emit, literal_at, kotlin  # noqa: E402
+
 OUT = ROOT / "android/app/src/main/java/com/roro/futurevoice/talk/CorrectionOnlyPrompt.kt"
+src = show("FutureVoice/Services/ConversationEngine.swift")
 
-REL = "FutureVoice/Services/ConversationEngine.swift"
-if "--ref" in sys.argv:
-    ref = sys.argv[sys.argv.index("--ref") + 1]
-    src = subprocess.check_output(["git", "-C", str(ROOT), "show", f"{ref}:{REL}"], text=True)
-else:
-    src = SWIFT.read_text()
-m = re.search(
-    r'static func correctionOnlyPrompt\(.*?\{\s*'
-    r'let targetName = .*?\n\s*let nativeName = .*?\n\s*return """\n(.*?)\n\s*"""',
-    src, re.S)
-if not m:
-    sys.exit("could not find correctionOnlyPrompt's literal")
-
-body = m.group(1)
-lines = body.split("\n")
-indent = min((len(l) - len(l.lstrip()) for l in lines if l.strip()), default=0)
-text = "\n".join(l[indent:] if l.strip() else "" for l in lines)
-
-# The interpolations the Swift literal uses, mapped to Kotlin template
-# names. Anything else is an unmapped interpolation → fail. The guards are
-# appended at LINE ENDS and are empty for every other target, so each
-# language's prompt stays byte-identical to what iOS sends.
-mapping = {
-    r"\(targetName)": "$targetName",
-    r"\(nativeName)": "$nativeName",
-    r"\(level.rawValue)": "$levelCode",
-    r"\(scriptGuard(targetLanguage))": "$scriptGuard",
-    r"\(spacingGuard(targetLanguage))": "$spacingGuard",
-    r"\(registerGuard(targetLanguage))": "$registerGuard",
-    # A call with someone the learner SET a form of address for (iOS
-    # `ede039e`): the one register slip a coach may name. Built by the
-    # caller (`ConversationEngine.relationshipRegisterLine`), "" otherwise.
-    r"\(relationshipRegisterLine(targetLanguage, counterpart: counterpart))": "$relationshipLine",
-    # Korean only (iOS `bee9052d`): a learner who set NO level, talking to a
-    # scene character / stranger / public figure / colleague, may be told a
-    # 반말 line wants 해요체. Built by the caller
+# The literal, with Swift's own semantics (closing-indent strip, `\`
+# continuations), its interpolations mapped to Kotlin. Anything else fails.
+# The guards are appended at LINE ENDS and are empty for every other target,
+# so each language's prompt stays byte-identical to what iOS sends.
+body = kotlin(literal_at(src, 'return """', src.index("static func correctionOnlyPrompt(")), {
+    "targetName": "targetName",
+    "nativeName": "nativeName",
+    # iOS interpolates the RAW value: "a b1 learner", lower case.
+    "level.rawValue": "level.code",
+    "scriptGuard(targetLanguage)": "scriptGuard(targetLanguage)",
+    "spacingGuard(targetLanguage)": "spacingGuard(targetLanguage)",
+    "registerGuard(targetLanguage)": "registerGuard(targetLanguage)",
+    # A call with someone the learner SET a form of address for: the one
+    # register slip a coach may name. Built by the caller
+    # (`ConversationCharacter.relationshipRegisterLine`), "" otherwise.
+    "relationshipRegisterLine(targetLanguage, counterpart: counterpart)": "relationshipLine",
+    # Korean only: a learner who set NO level, talking to a scene character /
+    # stranger / public figure / colleague. Built by the caller
     # (`ConversationCharacter.politeSettingLine`), "" otherwise.
-    r"\(politeSettingLine(targetLanguage, counterpart: counterpart, inScene: inScene))": "$politeLine",
-}
+    "politeSettingLine(targetLanguage, counterpart: counterpart, inScene: inScene)": "politeLine",
+})
 
 
 def func_body(name: str) -> str:
@@ -100,22 +83,11 @@ script, _ = guard_chunks("scriptGuard")
 register, register_extra = guard_chunks("registerGuard")
 if not spacing or not script or not register or set(register_extra) != {"ko", "ja"}:
     sys.exit("a guard's shape changed — spacing/script/register(ko, ja) expected")
-for k, v in mapping.items():
-    text = text.replace(k, v)
-if r"\(" in text:
-    sys.exit("prompt carries an interpolation this script doesn't map: "
-             + re.search(r"\\\([^)]*\)", text).group(0))
-
-# Kotlin raw strings can't escape `$`; only our own placeholders may remain.
-stray = re.sub(r"\$(targetName|nativeName|levelCode|scriptGuard|spacingGuard|registerGuard|relationshipLine|politeLine)\b", "", text)
-if "$" in stray:
-    sys.exit("prompt carries a literal '$' — escape it before generating")
-
 register_ko = register_extra['ko']
 register_ja = register_extra['ja']
-OUT.write_text(f'''package com.roro.futurevoice.talk
+emit(OUT, f'''package com.roro.futurevoice.talk
 
-// GENERATED by scripts/android/gen-correction-prompt.py — do not edit.
+// GENERATED by scripts/android/gen-correction-prompt.py --ref {REF} — do not edit.
 // Source: FutureVoice/Services/ConversationEngine.swift (correctionOnlyPrompt).
 
 import com.roro.futurevoice.data.CefrLevel
@@ -153,12 +125,7 @@ object CorrectionOnlyPrompt {{
               relationshipLine: String = "", politeLine: String = ""): String {{
         val targetName = LanguageCatalog.englishName(targetLanguage)
         val nativeName = LanguageCatalog.englishName(nativeLanguage)
-        val levelCode = level.code.uppercase()
-        val scriptGuard = scriptGuard(targetLanguage)
-        val spacingGuard = spacingGuard(targetLanguage)
-        val registerGuard = registerGuard(targetLanguage)
-        return """{text}""".trimIndent()
+        return {body}
     }}
 }}
 ''')
-print(f"wrote {OUT.relative_to(ROOT)} ({len(text)} chars)")

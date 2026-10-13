@@ -1,7 +1,10 @@
 package com.roro.futurevoice
 
 import com.roro.futurevoice.data.Counterpart
+import com.roro.futurevoice.data.CefrLevel
+import com.roro.futurevoice.talk.ConversationCharacter
 import com.roro.futurevoice.talk.ConversationEngine
+import com.roro.futurevoice.talk.CorrectionOnlyPrompt
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -59,5 +62,17 @@ class ConversationPromptVectorTest {
             check(o[0] as String, ConversationEngine.turnOutputInstruction(
                 o[1] as String, o[2] as String, o[3] as Counterpart?, o[4] as Boolean))
         }
+    }
+
+    @Test fun everyCorrectionPromptMatchesIos() {
+        val all = ConversationPromptFixtures.corrections
+        for (o in all) {
+            val target = o[1] as String
+            val person = o[4] as Counterpart?
+            check(o[0] as String, CorrectionOnlyPrompt.build(target, o[2] as String, o[3] as CefrLevel,
+                relationshipLine = ConversationCharacter.relationshipRegisterLine(target, person),
+                politeLine = ConversationCharacter.politeSettingLine(target, person, inScene = o[5] as Boolean)))
+        }
+        assertEquals(all.size, ios.keys.count { it.startsWith("correction/") })
     }
 }

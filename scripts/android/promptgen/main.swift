@@ -164,6 +164,22 @@ for (name, target, native, cp, scene) in outputs {
         targetLanguage: target, nativeLanguage: native, counterpart: cp, inScene: scene)
 }
 
+// The realtime path's correction request (`correctionOnlyPrompt`), on the
+// same people: a set register, a scene, a stranger, three guard languages.
+let corrections: [(String, String, String, CEFRLevel, Counterpart?, Bool)] = [
+    ("correction/en_plain", "en", "ko", .b1, nil, false),
+    ("correction/ko_close_friend", "ko", "en", .b2, closeFriend, false),
+    ("correction/ko_scene", "ko", "en", .a2, nil, true),
+    ("correction/ko_manager", "ko", "ja", .b1, manager, false),
+    ("correction/ja_stranger", "ja", "ko", .a1, stranger, false),
+    ("correction/de_plain", "de", "en", .c1, nil, false),
+]
+for (name, target, native, level, cp, scene) in corrections {
+    LanguageScope.active = target
+    prompts[name] = ConversationEngine.correctionOnlyPrompt(
+        targetLanguage: target, nativeLanguage: native, level: level, counterpart: cp, inScene: scene)
+}
+
 let ref = CommandLine.arguments.count > 2 ? CommandLine.arguments[2] : "?"
 let doc: [String: Any] = ["ios_ref": ref, "prompts": prompts]
 let data = try JSONSerialization.data(withJSONObject: doc, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
