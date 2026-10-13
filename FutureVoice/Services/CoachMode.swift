@@ -57,11 +57,12 @@ enum CoachMode {
 
 /// Tutor mode (2026-10-13, founder: "a tutor, not a conversation partner").
 ///
-/// Coach mode helps BEFORE the learner answers; tutor mode answers AFTER.
-/// When the learner's line had a mistake, the fluent self says it back the
-/// right way OUT LOUD — "We'd say: 'My name is Eunggyu.'" — sometimes with a
-/// second way to say it in another register, and then carries on with the
-/// next question. No repeat-after-me: the call moves on.
+/// The call becomes a LESSON: the fluent self leads one practical theme at a
+/// time and every turn teaches — their sentence said right if it was wrong
+/// ("We'd say: 'My name is Eunggyu.'"), the more natural way if it was stiff,
+/// one step up if it was fine — then a practice question built to use it.
+/// No repeat-after-me: the lesson moves on. (A first cut that only
+/// corrected mistakes inside a free chat read as no mode at all.)
 ///
 /// It lives in the conversation's SYSTEM prompt
 /// (`ConversationEngine.tutorBlock`), so it is fixed for a call: the gateway
