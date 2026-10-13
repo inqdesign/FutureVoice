@@ -297,4 +297,14 @@ class StudyPlanTest {
         assertFalse(PromiseJudge.rejudged(old, PromiseLedger.Entry(4, 4, touched = 4), 1L).kept)
         assertTrue(PromiseJudge.rejudged(PromiseLedger.Entry(2, 2), PromiseLedger.Entry(2, 0, touched = 0), 1L).kept)
     }
+
+    /** A day missed only for its weekly test is kept again under rule 3. */
+    @Test
+    fun dayMissedOnlyForTheWeeklyTestIsRevived() {
+        val old = PromiseLedger.Entry(planned = 2, done = 1, touched = 1, rule = 2)
+        val revived = PromiseJudge.rejudged(old, PromiseLedger.Entry(1, 1, touched = 1), 1L, exempt = 1)
+        assertTrue(revived.kept)
+        assertEquals(3, revived.rule)
+        assertFalse(PromiseJudge.rejudged(old, PromiseLedger.Entry(1, 1, touched = 1), 1L).kept)
+    }
 }

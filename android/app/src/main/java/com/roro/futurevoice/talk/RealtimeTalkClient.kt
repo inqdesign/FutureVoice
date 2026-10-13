@@ -358,7 +358,9 @@ class RealtimeTalkClient(private val context: Context) {
                 }
                 scope.launch(audioThread) {
                     val p = player ?: return@launch
-                    p.write(chunk)
+                    // On THIS thread, never hopping off it: frames must reach
+                    // the track in the order they came (see `writeNow`).
+                    p.writeNow(chunk)
                     // The first buffer in the player: the voice is audible,
                     // and the line's first sentence goes up with it.
                     var step = false

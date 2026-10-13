@@ -37,7 +37,10 @@ object PromiseLedger {
          * still counts finished blocks. Null on older entries; reads as [done].
          */
         val touched: Int? = null,
-        /** The keep rule the entry was judged by; null = finish-every-block. */
+        /**
+         * The keep rule the entry was judged by; null = finish-every-block,
+         * 2 = every block started, 3 = the same without the weekly test.
+         */
         val rule: Int? = null,
     ) {
         /** Nothing was planned that day: a rest day. */
@@ -45,8 +48,11 @@ object PromiseLedger {
         val kept: Boolean get() = keptAt != null || (planned > 0 && (touched ?: done) >= planned)
     }
 
-    /** The rule [PromiseJudge] writes today: every block started. */
-    const val CURRENT_RULE = 2
+    /**
+     * The rule [PromiseJudge] writes today: every block the LEARNER placed
+     * was started. The weekly test is not one of them (2026-10-13).
+     */
+    const val CURRENT_RULE = 3
 
     private val serializer = MapSerializer(String.serializer(), Entry.serializer())
     private var cache: Map<String, Entry>? = null
@@ -85,30 +91,39 @@ object PromiseJudge {
     /** How far back an unsettled stretch is filled in — the talk meter keeps 45. */
     const val MAX_BACKFILL_DAYS = 45
 
-    /** Planned and done for one day, by the plan as it stands now. */
-    fun result(c: Context, day: Long, plan: StudyPlan, testDays: Set<String>): PromiseLedger.Entry {
+    /**
+     * Planned and done for one day, by the plan as it stands now.
+     *
+     * The weekly test is not part of the promise (2026-10-13): the app puts
+     * it there, not the learner, and it is "this week's" until the next
+     * opening, so taking Saturday's test on Sunday cost a streak over a block
+     * nobody placed. Only blocks from the plan itself are judged.
+     */
+    fun result(c: Context, day: Long, plan: StudyPlan): PromiseLedger.Entry {
         val start = StudyPlan.startOfDay(day)
-        val occ = plan.occurrences(start, WeeklyTestSettings.schedule(c))
+        val occ = plan.occurrences(start)
         if (occ.isEmpty()) return PromiseLedger.Entry(0, 0, true)
         val end = StudyPlan.addDays(start, 1)
         val totals = PlannerDay.totals(
             talkSeconds = TalkTimeLog.secondsToday(c, start),
             log = PracticeLog.day(c, start),
             events = ActivityEventLog.events(c, start, end),
-            testFinished = StudyPlan.dayKey(start) in testDays)
+            testFinished = false)
         val progress = PlannerDay.progress(occ, totals).values
         return PromiseLedger.Entry(occ.size, progress.count { it >= 1.0 }, true,
             touched = progress.count { it > 0.0 }, rule = PromiseLedger.CURRENT_RULE)
     }
 
     /**
-     * A day settled under the old finish-every-block rule, judged again by
-     * today's. Only ever UPGRADES, and only when the plan still gives the
-     * day the number of blocks it had — otherwise the old verdict stands.
+     * A day settled under an older rule, judged again by today's. Only ever
+     * UPGRADES, and only when the plan still gives the day the blocks it had,
+     * less [exempt] (that day's weekly test, for entries before rule 3) —
+     * otherwise the old verdict stands.
      */
-    fun rejudged(old: PromiseLedger.Entry, fresh: PromiseLedger.Entry, now: Long): PromiseLedger.Entry {
+    fun rejudged(old: PromiseLedger.Entry, fresh: PromiseLedger.Entry, now: Long,
+                 exempt: Int = 0): PromiseLedger.Entry {
         val out = old.copy(rule = PromiseLedger.CURRENT_RULE)
-        return if (!old.kept && old.planned > 0 && fresh.planned == old.planned && fresh.kept)
+        return if (!old.kept && old.planned > 0 && fresh.planned + exempt == old.planned && fresh.kept)
             out.copy(touched = fresh.touched, keptAt = now) else out
     }
 
@@ -125,19 +140,20 @@ object PromiseJudge {
     suspend fun refresh(c: Context, now: Long = System.currentTimeMillis(),
                         plan: StudyPlan = StudyPlanStore.current(c)) {
         val since = plan.streakSince ?: return
-        val tests = testDays(c)
+        val schedule = WeeklyTestSettings.schedule(c)
         val today = StudyPlan.startOfDay(now)
         var day = maxOf(StudyPlan.startOfDay(since), StudyPlan.addDays(today, -MAX_BACKFILL_DAYS))
         while (day < today) {
             val old = PromiseLedger.entry(c, day)
             if (old?.settled != true) {
-                PromiseLedger.set(c, day, carryingKept(result(c, day, plan, tests), old, now))
+                PromiseLedger.set(c, day, carryingKept(result(c, day, plan), old, now))
             } else if ((old.rule ?: 1) < PromiseLedger.CURRENT_RULE) {
-                PromiseLedger.set(c, day, rejudged(old, result(c, day, plan, tests), now))
+                val exempt = plan.occurrences(day, schedule).count { it.kind == StudyPlan.Kind.TEST }
+                PromiseLedger.set(c, day, rejudged(old, result(c, day, plan), now, exempt))
             }
             day = StudyPlan.addDays(day, 1)
         }
-        PromiseLedger.set(c, today, carryingKept(result(c, today, plan, tests),
+        PromiseLedger.set(c, today, carryingKept(result(c, today, plan),
             PromiseLedger.entry(c, today), now).copy(settled = false))
     }
 
