@@ -61,22 +61,40 @@ class PcmStreamPlayer(val sampleRate: Int = 22_050) {
             .setTransferMode(AudioTrack.MODE_STREAM)
             .build()
         writtenFrames = 0
+        carry = null
         track?.setVolume(volume)
         track?.play()
     }
 
     /** Blocking write — call from an IO context; back-pressure is the point. */
-    suspend fun write(chunk: ByteArray) = withContext(Dispatchers.IO) {
-        synchronized(this@PcmStreamPlayer) {
-            val t = track ?: return@withContext
-            var offset = 0
-            while (offset < chunk.size) {
-                val written = t.write(chunk, offset, chunk.size - offset)
-                if (written <= 0) break
-                offset += written
-            }
+    suspend fun write(chunk: ByteArray) = withContext(Dispatchers.IO) { writeNow(chunk) }
+
+    /** A byte left over from a chunk of odd length — the first half of a
+     *  sample whose second half is the next chunk's first byte. */
+    private var carry: Byte? = null
+
+    /**
+     * Blocking write on the CALLER's thread. The realtime client calls this
+     * from its single audio thread, where ORDER is the point (2026-10-13):
+     * through [write], each frame hopped to the IO pool, which freed the
+     * audio thread to start the next frame's write before this one was done,
+     * so frames reached the track out of order — the voice choppy and
+     * "overlapping", worst on Cartesia, whose frames are small and many.
+     * A chunk's odd byte is carried to the next one: AudioTrack refuses a
+     * 16-bit write of odd length, which dropped the whole chunk.
+     */
+    fun writeNow(chunk: ByteArray) = synchronized(this) {
+        val t = track ?: return@synchronized
+        var data = chunk
+        carry?.let { data = byteArrayOf(it) + chunk; carry = null }
+        if (data.size % 2 == 1) { carry = data[data.size - 1]; data = data.copyOf(data.size - 1) }
+        var offset = 0
+        while (offset < data.size) {
+            val written = t.write(data, offset, data.size - offset)
+            if (written <= 0) break
+            offset += written
         }
-        writtenFrames += chunk.size / 2
+        writtenFrames += data.size / 2
     }
 
     /** Waits for the DAC to actually finish the audio already handed to it. */
@@ -98,5 +116,6 @@ class PcmStreamPlayer(val sampleRate: Int = 22_050) {
         }
         track = null
         writtenFrames = 0
+        carry = null
     }
 }
