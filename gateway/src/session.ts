@@ -23,7 +23,7 @@ import { rereadUtterance } from "./reread"
 import { nativeTurnText } from "./native-turn"
 import { ReplyEngine } from "./reply"
 import { ElevenTTS, type ElevenTTSCallbacks } from "./eleven-tts"
-import { CartesiaTTS, isCartesiaVoice } from "./cartesia-tts"
+import { CartesiaTTS, isCartesiaVoice, withGermanDefault } from "./cartesia-tts"
 import { send, type ClientMessage, type ServerMessage } from "./protocol"
 import { verifyUser, ownsVoice, speakAsVoice, recordGeminiUsage, type Env } from "./supabase"
 import { TalkBilling, type WallCode } from "./billing"
@@ -693,7 +693,8 @@ export class CallSession implements DurableObject {
         ownsVoice(this.env, userId, msg.voiceId)
           .then((r) => { console.log(`start: ownsVoice ${Date.now() - gateAt}ms`); return r }),
         preflight,
-        speakAsVoice(this.env, userId, msg.voiceId, msg.language || "en"),
+        speakAsVoice(this.env, userId, msg.voiceId, msg.language || "en")
+          .then((v) => withGermanDefault(this.env.CARTESIA_API_KEY, v, msg.language || "en")),
       ])
       this.upstreamVoiceId = speakAs
       if (owns === "forbidden") {

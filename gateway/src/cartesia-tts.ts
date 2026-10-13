@@ -54,6 +54,38 @@ export async function isStockVoice(apiKey: string | undefined, voiceId: string):
   }
 }
 
+/** A German call speaks standard German unless the voice id names another
+ *  German accent (2026-10-13; mirror of withDefaultAccent in
+ *  supabase/functions/_shared/cartesia.ts). The id usually carries the
+ *  English accent, so this is decided per call. Only applied when the voice
+ *  already carries the accent — the edge function adds it on the first
+ *  German line, a clone gets it when it is made — because a request naming
+ *  an accent the voice lacks fails. Never throws. */
+const germanReady = new Map<string, boolean>()
+export async function withGermanDefault(apiKey: string | undefined, voiceId: string, language: string): Promise<string> {
+  if (!apiKey || language.toLowerCase().split("-")[0] !== "de") return voiceId
+  const m = VOICE.exec(voiceId)
+  if (!m) return voiceId
+  const uuid = m[1].toLowerCase()
+  const accent = m[2]?.toLowerCase()
+  if (accent && ACCENT_LANGUAGE[accent] === "de") return voiceId
+  let ready = germanReady.get(uuid)
+  if (ready === undefined) {
+    try {
+      const r = await fetch(`https://api.cartesia.ai/voices/${uuid}`, {
+        headers: { "X-API-Key": apiKey, "Cartesia-Version": VERSION },
+      })
+      if (!r.ok) return voiceId
+      const v = await r.json() as { accents?: { accent: string }[] | null }
+      ready = (v.accents ?? []).some((a) => a.accent === "standard-german")
+      if (ready) germanReady.set(uuid, true)
+    } catch {
+      return voiceId
+    }
+  }
+  return ready ? `${uuid}:standard-german` : voiceId
+}
+
 /** Each accent's language — an accent is applied only to a line in it. */
 const ACCENT_LANGUAGE: Record<string, string> = {
   "general-american": "en", "british": "en", "australian": "en", "indian-english": "en", "southern-us": "en",

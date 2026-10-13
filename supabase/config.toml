@@ -551,3 +551,11 @@ enabled = true
 # refuses everything when the env var is unset.
 verify_jwt = false
 entrypoint = "./functions/owner-watch/index.ts"
+
+[functions.voice-move-all]
+enabled = true
+# Called by an operator, one learner per request, to move voices to Cartesia
+# from the server (2026-10-13). Authenticity is a service-level key as the
+# bearer, proven inside the function by listing users with it.
+verify_jwt = false
+entrypoint = "./functions/voice-move-all/index.ts"

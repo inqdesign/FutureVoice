@@ -66,6 +66,35 @@ export function accentFromDescription(description: string): string | null {
   return null
 }
 
+/** The accent every German line is spoken in unless the voice id names
+ *  another German one (2026-10-13, founder: learning German means standard
+ *  German by default, also after switching to it from another language).
+ *  The id carries ONE accent, usually the English one, so this is decided
+ *  per line rather than stored. */
+export const GERMAN_DEFAULT = "standard-german"
+
+const germanReady = new Map<string, boolean>()
+
+/** The line with the German default applied — only once the voice is known
+ *  to carry the accent (added here if it doesn't; a request naming an accent
+ *  the voice lacks fails). Never throws: any doubt speaks the line plain. */
+export async function withDefaultAccent(line: CartesiaLine): Promise<CartesiaLine> {
+  if (line.language !== "de") return line
+  const { uuid, accent } = parseVoice(line.voiceId)
+  if (accent && ACCENT_LANGUAGE[accent] === "de") return line
+  try {
+    let ready = germanReady.get(uuid)
+    if (ready === undefined) {
+      if (await isStockVoice(uuid)) ready = false
+      else ready = (await ensureAccent(uuid, GERMAN_DEFAULT)).ok
+      germanReady.set(uuid, ready)
+    }
+    return ready ? { ...line, voiceId: `${uuid}:${GERMAN_DEFAULT}` } : line
+  } catch {
+    return line
+  }
+}
+
 /** Make sure the voice can speak `accent`: a voice with no accent of its own
  *  gets its language's base first (Cartesia requires one), then the accent
  *  is added if missing (~225 credits, once per voice per accent). */
@@ -340,7 +369,18 @@ export async function cloneVoice(
   if (!r.ok) return { ok: false, status: r.status, detail: (await r.text()).slice(0, 500) }
   const json = await r.json() as { id?: string }
   if (!json.id) return { ok: false, status: 502, detail: "cartesia clone returned no id" }
-  return { ok: true, voiceId: json.id }
+  // Every clone can speak standard German from the start (GERMAN_DEFAULT);
+  // best-effort and off the clone's own wait (three round trips);
+  // withDefaultAccent adds it later if this fails.
+  const voiceId = json.id
+  const addGerman = ensureAccent(voiceId, GERMAN_DEFAULT)
+    .then((de) => { if (de.ok) germanReady.set(voiceId, true); else console.warn("german accent at clone failed", de.detail) })
+    .catch((e) => console.warn("german accent at clone failed", String(e)))
+  // deno-lint-ignore no-explicit-any
+  const runtime = (globalThis as any).EdgeRuntime
+  if (runtime?.waitUntil) runtime.waitUntil(addGerman)
+  else await addGerman
+  return { ok: true, voiceId }
 }
 
 /** Delete a clone. A voice that is already gone counts as deleted. */

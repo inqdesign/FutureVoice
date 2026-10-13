@@ -530,7 +530,7 @@ async function speakOnCartesia(o: {
   speed?: number; timestamped: boolean; streaming: boolean; streamFormats?: string[]
   onFail: (status: number) => Promise<void>; balanceAfter: number
 }): Promise<Response> {
-  const line = { voiceId: o.voiceId, text: o.text, language: o.language, speed: o.speed }
+  const line = await cartesia.withDefaultAccent({ voiceId: o.voiceId, text: o.text, language: o.language, speed: o.speed })
   const headers = new Headers(cors())
   headers.set("X-Credits-Balance", String(o.balanceAfter))
   headers.set("X-Voice-Provider", "cartesia")
