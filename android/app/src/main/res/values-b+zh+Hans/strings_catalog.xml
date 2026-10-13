@@ -757,6 +757,7 @@
     <string name="hear_my_attempt">"听我的录音"</string>
     <string name="hear_target">"听范本"</string>
     <string name="hear_your_recording_and_your_clone_side_by_side">"把你的录音和克隆声音放在一起听听看"</string>
+    <string name="hear_your_voice">"听听你的声音"</string>
     <string name="hear_yourself">"听自己的声音"</string>
     <string name="heard">"听到的是"</string>
     <string name="heard_in_a_call">"通话里听到的"</string>
@@ -1737,6 +1738,8 @@
     <string name="saved">"已保存"</string>
     <!-- "Saved here, but ElevenLabs didn't accept the new name: %@ It'll be applied the next time your voice is cloned." -->
     <string name="saved_here_but_elevenlabs_didn_t_accept_the_new_name_it_ll_b_76dd24">"已存在这台设备上，但 ElevenLabs 没有接受新名字：%s 下次重新克隆声音时会套用。"</string>
+    <!-- "Saved here, but the voice service didn't take the new name yet: %@ It'll be applied the next time your voice is made." -->
+    <string name="saved_here_but_the_voice_service_didn_t_take_the_new_name_ye_8a3a70">"已在这里保存，但语音服务还没应用新名字：%s 下次制作声音时会应用。"</string>
     <string name="saved_to_expressions">"已存到用语"</string>
     <string name="saved_to_photos">"已存储到照片"</string>
     <string name="saved_to_sentences">"已存到句子"</string>
@@ -2131,6 +2134,8 @@
     <string name="the_most_ordinary_everyday_words_one_clause_sentences_rarely_3dc042">"最普通的日常词汇。单子句的句子，最多两个。"</string>
     <!-- 'The name other learners will see — first name or nickname is plenty.' -->
     <string name="the_name_other_learners_will_see_first_name_or_nickname_is_p_4cde17">"其他学习者会看到的名字，写名字或暱称就够了。"</string>
+    <!-- 'The name your voice goes by in the app. Leave it empty to go back to the default.' -->
+    <string name="the_name_your_voice_goes_by_in_the_app_leave_it_empty_to_go_f9c525">"这是你的声音在 App 里的名字。留空就会恢复默认名称。"</string>
     <string name="the_next_contact">"后续联系"</string>
     <!-- 'The other days are rest days: nothing is planned, and they never break your streak.' -->
     <string name="the_other_days_are_rest_days_nothing_is_planned_and_they_nev_321b55">"其他日子是休息日：没有安排，也不会中断连续记录。"</string>
@@ -2223,6 +2228,8 @@
     <string name="this_conversation_isn_t_saved_yet">"这段对话还没保存"</string>
     <!-- 'This day has its own plan, so this change is for this day only.' -->
     <string name="this_day_has_its_own_plan_so_this_change_is_for_this_day_onl_6323e8">"这天有单独调整过的安排，所以这次修改只应用在这一天。"</string>
+    <!-- "This deletes your voice model everywhere it is kept. Audio already made keeps playing until you delete your account. The app can't hold a call without a voice, so it will ask you to record a new one, or you can delete your account entirely." -->
+    <string name="this_deletes_your_voice_model_everywhere_it_is_kept_audio_al_7612fd">"这会从所有保存的地方删除你的声音模型。已经做好的音频在删除账号前都能继续听。没有声音就无法通话，所以会请你重新录一次，你也可以直接删除整个账号。"</string>
     <!-- "This deletes your voice model here and at ElevenLabs. Audio already generated keeps playing until you delete your account. The app can't hold a call without a voice, so it will ask you to record a new one — or you can delete your account entirely." -->
     <string name="this_deletes_your_voice_model_here_and_at_elevenlabs_audio_a_b79e8b">"会把你的声音模型从这里和ElevenLabs两边都删掉。已经生成的音频在你删除账号前还是会照常播放。没有声音就没办法通话，所以会请你重新录一个，或者你也可以直接删除整个账号。"</string>
     <!-- 'This is how other learners find you. Tap to change it or take it down.' -->
@@ -2467,6 +2474,7 @@
     <string name="what_your_clone_is_called_here_and_on_elevenlabs">"这个声音在这里和ElevenLabs上的名称"</string>
     <string name="what_your_fluent_self_knows_about_you">"流利的自己对你的了解"</string>
     <string name="what_your_plan_holds">"方案里有什么"</string>
+    <string name="what_your_voice_is_called_in_the_app">"你的声音在 App 里的名字"</string>
     <!-- "When a friend joins with your code, you both get %lld minutes — and invite minutes are spent before the month's pool." -->
     <string name="when_a_friend_joins_with_your_code_you_both_get_lld_minutes_de6e19">"朋友用你的邀请码注册，两人各拿到%d分钟通话时间。邀请得到的时间会比这个月的额度先用。"</string>
     <!-- "When a new week starts, a short report on the last one comes up once: the days you studied, your streak, how long you talked, and what became yours. Every past week stays here, and a dot marks one you haven't opened." -->
@@ -2693,6 +2701,8 @@
     <!-- "Your corrections, notes and word meanings come back in this language. The app's own screens stay English." -->
     <string name="your_corrections_notes_and_word_meanings_come_back_in_this_l_95bb21">"纠正、笔记和单词意思会用这个语言显示。App 本身的界面仍是英文。"</string>
     <string name="your_current_voice_is_deleted_and_you_ll_record_a_new_one">"现在的声音会被删除，你要重新录一次。"</string>
+    <!-- "Your current voice is replaced by the new one and deleted, so you can't go back to it. Audio already made keeps playing." -->
+    <string name="your_current_voice_is_replaced_by_the_new_one_and_deleted_so_dd7e3f">"目前的声音会被新声音取代并删除，无法还原。已经做好的音频可以继续听。"</string>
     <!-- "Your daily call is off, so this one won't ring. Turn it on in Me → Daily call." -->
     <string name="your_daily_call_is_off_so_this_one_won_t_ring_turn_it_on_in_10477c">"每日来电已关闭，所以不会响。可以在“我的”→“每日来电”开启。"</string>
     <string name="your_daily_call_rings_at_this_time">"每日来电会在这个时间打来。"</string>
@@ -2756,6 +2766,7 @@
     <string name="your_name">"我的名字"</string>
     <string name="your_name_on_the_board">"排行榜上的名字"</string>
     <string name="your_native_language">"平常用的语言？"</string>
+    <string name="your_new_voice_is_ready">"新的声音准备好了"</string>
     <!-- "Your original recording isn't kept for this voice. Record for about a minute and your voice moves to the new engine." -->
     <string name="your_original_recording_isn_t_kept_for_this_voice_record_for_8f818c">"这个声音没有留下原始录音。重新录大约一分钟，就会搬到新引擎。"</string>
     <string name="your_overall_level">"你的总体水平"</string>
@@ -2848,6 +2859,8 @@
     <string name="your_voice_model_is_biometric_data_it_s_used_only_to_speak_y_b3256f">"语音模型是生物特征数据，只用来以你的声音念出练习句子。不会出售、不会分享，也不会拿去训练别人的模型。"</string>
     <!-- 'Your voice model is built by the most trusted service there is, and used for your language practice only.' -->
     <string name="your_voice_model_is_built_by_the_most_trusted_service_there_b4db4a">"语音模型由最值得信赖的服务创建，只用于语言练习。"</string>
+    <!-- "Your voice model is deleted everywhere it is kept, and this can't be undone. You'll be asked to record a new one before your next call." -->
+    <string name="your_voice_model_is_deleted_everywhere_it_is_kept_and_this_c_b14bff">"你的声音模型会从所有保存的地方删除，无法还原。下次通话前会请你重新录音。"</string>
     <!-- "Your voice model is deleted here and at ElevenLabs, and this can't be undone. You'll be asked to record a new one before your next call." -->
     <string name="your_voice_model_is_deleted_here_and_at_elevenlabs_and_this_107e07">"语音模型会从 App 和 ElevenLabs 两边删除，无法复原。下一通电话前会请你重新录一个。"</string>
     <!-- 'Your voice recording goes too, so a new phone makes your voice again without recording.' -->

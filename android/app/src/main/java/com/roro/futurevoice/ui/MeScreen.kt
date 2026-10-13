@@ -141,7 +141,9 @@ fun MeScreen(
     voiceIsStandIn: Boolean = false,
     voiceQueuedUntil: Long? = null,
     onChooseStandIn: (String) -> Unit = {},
-    onRerecordVoice: () -> Unit = {},
+    /** A re-record from the Voice page made a new voice (the recording
+     *  screen runs on its own over Me — iOS `fromSettings`). */
+    onVoiceRecorded: (String) -> Unit = {},
     onPickAppLanguage: (String) -> Unit = {},
     onEditProfile: () -> Unit,
     /** The remembered lines live in the profile editor (iOS keeps them out
@@ -180,7 +182,12 @@ fun MeScreen(
     var addingLanguage by remember { mutableStateOf(false) }
     var pickingAccent by remember { mutableStateOf(false) }
     var comparingVoice by remember { mutableStateOf(false) }
-    var confirmingRerecord by remember { mutableStateOf(false) }
+    /** The recording screen, straight from the row: its Cancel keeps the
+     *  voice they have, so there is nothing to confirm (iOS 2026-10-13). */
+    var rerecording by remember { mutableStateOf(false) }
+    /** The accent sheet opened right after a re-record made a new voice:
+     *  hear it, then pick the accent (iOS `accentAfterRerecord`). */
+    var accentAfterRerecord by remember { mutableStateOf(false) }
     // Non-null while a pack or a restore is running — both are slow enough to
     // look hung, so the page says where it has got to.
     var backupStep by remember { mutableStateOf<BackupService.Step?>(null) }
@@ -272,7 +279,7 @@ fun MeScreen(
             personaName = persona?.displayName,
             onPickAccent = { pickingAccent = true },
             onCompare = { comparingVoice = true },
-            onRerecord = { confirmingRerecord = true },
+            onRerecord = { rerecording = true },
             onPickSceneVoice = { page = MePage.SCENE_VOICE },
             onRebuilt = { onAccentApplied(it, "") },
             onApplyDefaultAccent = onApplyDefaultAccent,
@@ -693,19 +700,24 @@ fun MeScreen(
 
     if (comparingVoice && voiceId != null) {
         VoiceComparisonSheet(voiceId = voiceId, targetLanguage = targetLanguage,
-            onRerecord = { confirmingRerecord = true }, onDismiss = { comparingVoice = false })
+            onRerecord = { rerecording = true }, onDismiss = { comparingVoice = false })
     }
-    // Outside onboarding a re-record is the full destructive path.
-    if (confirmingRerecord) {
-        // iOS: all three consequences on the confirm — it costs talk time,
-        // it replaces, and the old voice can't come back.
-        AlertDialog(onDismissRequest = { confirmingRerecord = false },
-            title = { Text(stringResource(R.string.re_record_your_voice)) },
-            text = { Text(stringResource(
-                R.string.cloning_again_uses_a_few_minutes_of_talk_time_your_current_v_551704)) },
-            confirmButton = { TextButton(onClick = { confirmingRerecord = false; onRerecordVoice() }) {
-                Text(stringResource(R.string.start_over), color = MaterialTheme.colorScheme.error) } },
-            dismissButton = { TextButton(onClick = { confirmingRerecord = false }) { Text(stringResource(R.string.cancel)) } })
+    if (rerecording) {
+        var madeNew by remember { mutableStateOf(false) }
+        VoiceRerecordCover(
+            targetLanguage = targetLanguage,
+            nativeLanguage = nativeLanguage,
+            onCloned = { id -> madeNew = true; onVoiceRecorded(id) },
+            onClose = {
+                rerecording = false
+                // A new voice was made: hear it and pick the accent next.
+                if (madeNew) scope.launch {
+                    kotlinx.coroutines.delay(600)
+                    accentAfterRerecord = true
+                    pickingAccent = true
+                }
+            },
+        )
     }
     if (pickingAccent && voiceId != null) {
         VoiceAccentSheet(
@@ -713,7 +725,8 @@ fun MeScreen(
             targetLanguage = targetLanguage,
             appliedAccentId = voiceAccentId,
             onApplied = onAccentApplied,
-            onDismiss = { pickingAccent = false },
+            justMade = accentAfterRerecord,
+            onDismiss = { pickingAccent = false; accentAfterRerecord = false },
         )
     }
 

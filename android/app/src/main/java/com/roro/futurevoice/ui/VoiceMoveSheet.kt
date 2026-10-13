@@ -49,7 +49,9 @@ import kotlinx.coroutines.launch
  * voice is deleted, keeps or picks an accent, rebuilds from the recording on
  * this device (the server clones on Cartesia), and applies the accent onto the
  * new voice as "<uuid>:<accent>". Names neither company — "Learn more" opens
- * the privacy page's processor list. Shown at most once a day ([VoiceMove]).
+ * the privacy page's processor list. Shown on every open while the live voice
+ * is an ElevenLabs one ([VoiceMove]), with no Later: the move is required
+ * (iOS 2026-10-13).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,9 +64,11 @@ fun VoiceMoveSheet(
     /** A voice the server rebuilt from its own copy of the recording (iOS
      *  `AppState.adoptMovedVoice`, `f1aa915`). */
     onMoved: (String) -> Unit = onRebuilt,
-    /** Neither phone nor server holds the recording: start the re-record
-     *  (iOS `resetVoiceClone`, which swaps to the recording screen). */
-    onRerecord: () -> Unit = {},
+    /** What the recording screen offers to read in. */
+    nativeLanguage: String = targetLanguage,
+    /** Neither phone nor server holds the recording: a re-record (the
+     *  recording screen on its own, never the onboarding) made this voice. */
+    onVoiceRecorded: (String) -> Unit = onRebuilt,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -87,7 +91,7 @@ fun VoiceMoveSheet(
     /** Neither this phone nor the server holds the recording (an accent
      *  remix keeps none upstream): only a new recording can move the voice. */
     var needsRecording by remember { mutableStateOf(false) }
-    var confirmingRerecord by remember { mutableStateOf(false) }
+    var rerecording by remember { mutableStateOf(false) }
     var working by remember { mutableStateOf(false) }
     var done by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -108,6 +112,19 @@ fun VoiceMoveSheet(
                 player.play(data)
             }
         }
+    }
+
+    /** On Cartesia an accent is a setting on the same voice, so saving
+     *  "<uuid>:<accent>" is the whole of applying it. */
+    suspend fun applyPickedAccent() {
+        val accent = options.firstOrNull { it.id == accentId } ?: return
+        val newId = currentVoiceId() ?: return
+        val cartesiaAccent = VoiceMove.cartesiaAccent(accent.id) ?: return
+        val name = com.roro.futurevoice.data.VoiceName.display(context,
+            com.roro.futurevoice.data.PersonaStore.shared(context).load()?.displayName)
+        val accented = VoiceRemixClient(AuthRepository())
+            .save("$newId:$cartesiaAccent", name, accent.prompt)
+        onAccentApplied(accented, accent.id)
     }
 
     fun move() {
@@ -140,13 +157,7 @@ fun VoiceMoveSheet(
                     newId = moved
                     onMoved(newId)
                 }
-                val cartesiaAccent = accent?.let { VoiceMove.cartesiaAccent(it.id) }
-                if (accent != null && cartesiaAccent != null) {
-                    // On Cartesia an accent is a setting on the same voice.
-                    val accented = VoiceRemixClient(AuthRepository())
-                        .save("$newId:$cartesiaAccent", name, accent.prompt)
-                    onAccentApplied(accented, accent.id)
-                }
+                applyPickedAccent()
                 true
             }.onSuccess { moved ->
                 if (!moved) return@onSuccess
@@ -161,9 +172,36 @@ fun VoiceMoveSheet(
         }
     }
 
+    // The recording screen on its own (iOS `fullScreenCover`). The sheet
+    // steps aside while it is up and comes back to finish the move.
+    if (rerecording) {
+        VoiceRerecordCover(
+            targetLanguage = targetLanguage,
+            nativeLanguage = nativeLanguage,
+            onCloned = onVoiceRecorded,
+            onClose = {
+                rerecording = false
+                // A new voice: give it the accent picked above, then let them hear it.
+                if (VoiceMove.isCartesia(currentVoiceId() ?: "")) {
+                    working = true
+                    scope.launch {
+                        runCatching { applyPickedAccent() }
+                        working = false
+                        done = true
+                        playSample()
+                    }
+                }
+            },
+        )
+        return
+    }
+    // Not optional (iOS 2026-10-13, founder): every voice moves, so the sheet
+    // has no Later and can't be swiped or backed away until it is done.
     ModalBottomSheet(
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        onDismissRequest = { if (!working) onDismiss() },
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true,
+            confirmValueChange = { it != androidx.compose.material3.SheetValue.Hidden || done }),
+        onDismissRequest = { if (done) onDismiss() },
+        properties = androidx.compose.material3.ModalBottomSheetProperties(shouldDismissOnBackPress = false),
     ) {
         Column(
             Modifier.sheetBody().padding(horizontal = 24.dp).padding(top = 8.dp, bottom = 28.dp),
@@ -200,7 +238,7 @@ fun VoiceMoveSheet(
             if (needsRecording) {
                 Text(stringResource(R.string.your_original_recording_isn_t_kept_for_this_voice_record_for_8f818c),
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Button(onClick = { confirmingRerecord = true }, modifier = Modifier.fillMaxWidth()) {
+                Button(onClick = { rerecording = true }, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.record_again), fontWeight = FontWeight.SemiBold)
                 }
             } else {
@@ -209,31 +247,8 @@ fun VoiceMoveSheet(
                     else Text(stringResource(R.string.voice_move_cta))
                 }
             }
-            TextButton(onClick = {
-                com.roro.futurevoice.core.Analytics.capture("voice_move_later")
-                onDismiss()
-            }, enabled = !working, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-                Text(stringResource(R.string.later))
-            }
             error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
         }
-    }
-    if (confirmingRerecord) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { confirmingRerecord = false },
-            title = { Text(stringResource(R.string.re_record_your_voice)) },
-            text = { Text(stringResource(R.string.your_current_voice_is_deleted_and_you_ll_record_a_new_one)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    confirmingRerecord = false
-                    com.roro.futurevoice.core.Analytics.capture("voice_move_rerecord")
-                    onRerecord()
-                }) { Text(stringResource(R.string.start_over), color = MaterialTheme.colorScheme.error) }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirmingRerecord = false }) { Text(stringResource(R.string.cancel)) }
-            },
-        )
     }
 }
 
@@ -248,8 +263,7 @@ object VoiceMove {
         // Not a stand-in preset (its own voice is queued, iOS `isDue`).
         if (!signedIn || voiceId == null || standIn || isCartesia(voiceId)) return false
         if (com.roro.futurevoice.data.VoiceParking.isParked(voiceId)) return false
-        val last = prefs(context).getLong(SHOWN_KEY, 0L)
-        if (last > 0 && android.text.format.DateUtils.isToday(last)) return false
+        // Every open until the voice has moved: the move is not optional.
         return true
     }
 

@@ -249,7 +249,7 @@ fun VoicePage(
         GroupedSectionHeader(stringResource(R.string.voice))
         GroupedCard {
             MeRow(Icons.Filled.TextFields, stringResource(R.string.voice_name_f1c3a3, displayName),
-                stringResource(R.string.what_your_clone_is_called_here_and_on_elevenlabs),
+                stringResource(R.string.what_your_voice_is_called_in_the_app),
                 kind = MeRowKind.ACTION, onClick = { renaming = true })
             GroupedRowDivider()
             val sceneId = com.roro.futurevoice.talk.VoicePreset.sceneDefaultId()
@@ -343,7 +343,7 @@ fun VoicePage(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(stringResource(
-                        R.string.names_your_clone_here_and_on_elevenlabs_leave_it_empty_to_go_d44a48))
+                        R.string.the_name_your_voice_goes_by_in_the_app_leave_it_empty_to_go_f9c525))
                     androidx.compose.material3.OutlinedTextField(draft, { draft = it },
                         singleLine = true, placeholder = { Text("Future Self") })
                 }
@@ -356,7 +356,7 @@ fun VoicePage(
                             com.roro.futurevoice.data.VoiceName.rename(context, draft, personaName, voiceId)
                         }.onFailure {
                             renameWarning = context.getString(
-                                R.string.saved_here_but_elevenlabs_didn_t_accept_the_new_name_it_ll_b_76dd24,
+                                R.string.saved_here_but_the_voice_service_didn_t_take_the_new_name_ye_8a3a70,
                                 it.message ?: "")
                         }
                         nameTick++
@@ -387,7 +387,7 @@ fun VoicePage(
             onDismissRequest = { confirmingRebuild = false },
             title = { Text(stringResource(R.string.rebuild_your_voice)) },
             text = { Text(stringResource(
-                R.string.cloning_again_uses_a_few_minutes_of_talk_time_your_current_v_551704)) },
+                R.string.your_current_voice_is_replaced_by_the_new_one_and_deleted_so_dd7e3f)) },
             confirmButton = {
                 androidx.compose.material3.TextButton(onClick = {
                     confirmingRebuild = false

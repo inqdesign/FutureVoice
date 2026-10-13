@@ -13,6 +13,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.StopCircle
+import androidx.compose.material.icons.filled.PlayCircleFilled
+import androidx.compose.foundation.layout.Spacer
 import com.roro.futurevoice.ui.brand.IosButton as Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -79,6 +82,10 @@ fun VoiceAccentSheet(
      * learner's.
      */
     initialAccent: VoiceAccent? = null,
+    /** Opened right after a re-record (iOS 2026-10-13, founder: the new
+     *  voice closed the screen before it could be heard). Heads the sheet
+     *  with the new voice to listen to, then the accent choice. */
+    justMade: Boolean = false,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -106,6 +113,23 @@ fun VoiceAccentSheet(
     var error by remember { mutableStateOf<String?>(null) }
 
     DisposableEffect(Unit) { onDispose { runCatching { player.stop() } } }
+
+    /** The voice as it is now, to listen to before picking anything. */
+    var playingVoice by remember { mutableStateOf(false) }
+    fun hearVoice() {
+        if (playingVoice) { player.stop(); playingVoice = false; return }
+        playingVoice = true
+        scope.launch {
+            runCatching {
+                val data = com.roro.futurevoice.net.ElevenLabsClient(AuthRepository()).synthesize(
+                    voiceId = voiceId, text = VoiceAccentCatalog.sampleText(targetLanguage),
+                    purpose = "voice_comparison")
+                player.play(data)
+            }
+            playingVoice = false
+        }
+    }
+    LaunchedEffect(Unit) { if (justMade) hearVoice() }
 
     fun generate(chosen: VoiceAccent) {
         generating = true; error = null
@@ -153,6 +177,20 @@ fun VoiceAccentSheet(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Text(stringResource(R.string.accent), style = MaterialTheme.typography.titleLarge)
+            if (justMade) {
+                Text(stringResource(R.string.your_new_voice_is_ready),
+                    style = MaterialTheme.typography.titleSmall)
+            }
+            OutlinedButton(
+                onClick = { hearVoice() },
+                enabled = !generating && !saving && !removing,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(if (playingVoice) Icons.Filled.StopCircle else Icons.Filled.PlayCircleFilled,
+                    null, Modifier.size(20.dp))
+                Spacer(Modifier.size(6.dp))
+                Text(stringResource(if (playingVoice) R.string.stop else R.string.hear_your_voice))
+            }
             Text(stringResource(R.string.your_clone_speaking_with_a_different_accent),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)

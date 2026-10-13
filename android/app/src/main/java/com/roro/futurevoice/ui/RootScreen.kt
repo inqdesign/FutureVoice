@@ -262,7 +262,6 @@ fun RootScreen() {
     var showPeople by remember { mutableStateOf(false) }
     /** The finished-books page (iOS "Finished"), opened from Practice's header seal. */
     var finishedBooks by remember { mutableStateOf<List<FinishedBook>?>(null) }
-    var recloning by remember { mutableStateOf(false) }
     var personDetailId by remember { mutableStateOf<String?>(null) }
     var clonePreview by remember { mutableStateOf(false) }
     /** Debug only: the developer email sign-in screen, opened from Welcome. */
@@ -539,8 +538,10 @@ fun RootScreen() {
             onAccentApplied = app::adoptRemixedVoice,
             currentVoiceId = { app.state.value.voiceId },
             onMoved = app::adoptMovedVoice,
-            // RootScreen swaps to the recording (iOS `resetVoiceClone`).
-            onRerecord = { showVoiceMove = false; recloning = true },
+            // The recording screen on its own, over the sheet (iOS
+            // `fromSettings`); the sheet then finishes the move.
+            nativeLanguage = state.nativeLanguage,
+            onVoiceRecorded = app::adoptRecordedVoice,
             onDismiss = { showVoiceMove = false },
         )
     }
@@ -645,17 +646,6 @@ fun RootScreen() {
             targetLanguage = state.targetLanguage,
             nativeLanguage = state.nativeLanguage,
             onCloned = { clonePreview = false },
-        )
-
-        // Re-record from Me: the same flow as the first clone; the new voice
-        // replaces the old one only once it is kept.
-        }}
-        recloning -> {{ CloneFlowScreen(
-            targetLanguage = state.targetLanguage,
-            nativeLanguage = state.nativeLanguage,
-            onCloned = { id -> app.onVoiceCloned(id); recloning = false },
-            signedIn = state.signedIn && !state.isAnonymous,
-            onBack = { recloning = false },
         )
 
         // Match the launch screen until we know whether there's a stored
@@ -1239,7 +1229,7 @@ fun RootScreen() {
             onAddLanguage = app::addLanguage,
             onSetLevel = app::setLevel,
             hasVoice = state.voiceId != null,
-            onRerecordVoice = { showMe = false; recloning = true },
+            onVoiceRecorded = app::adoptRecordedVoice,
             onPickAppLanguage = { code ->
                 app.setNativeLanguage(code)
                 // Every string on screen was resolved from a context built at

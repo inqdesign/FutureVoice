@@ -100,6 +100,7 @@ import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.FrontHand
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.UnfoldMore
 import androidx.compose.material.icons.filled.PlayCircleFilled
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Schedule
@@ -194,6 +195,14 @@ fun CloneFlowScreen(
     /** The stand-in picked to practice with meanwhile, and the pick. */
     standInVoiceId: String? = null,
     onChooseStandIn: (String) -> Unit = {},
+    /** Re-recording from Settings or the voice-move sheet, by someone whose
+     *  onboarding is long over (iOS `fromSettings`, 2026-10-13: "Record
+     *  again" dropped them into the whole onboarding with no way out).
+     *  Starts on the quiet spot, never meets or signs up, and closes itself
+     *  through [onClose]: Cancel keeps the voice they have, a new clone
+     *  replaces it ([onCloned]) and closes. */
+    fromSettings: Boolean = false,
+    onClose: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -211,7 +220,7 @@ fun CloneFlowScreen(
             "meet" -> CloneAct.MEET
             "account" -> CloneAct.ACCOUNT
             "queued" -> CloneAct.QUEUED
-            else -> CloneAct.INTRO
+            else -> if (fromSettings) CloneAct.SPOT else CloneAct.INTRO
         })
     }
     // Came back after the unclaimed voice was collected (see [VoiceReclaim]).
@@ -234,7 +243,36 @@ fun CloneFlowScreen(
             // Same language on both sides means there is nothing to choose.
             ?.takeIf { !LanguageCatalog.sameLanguage(nativeLanguage, targetLanguage) }
     }
-    val activeScript = (nativeScript.takeIf { readInNative } ?: VoiceCloneScript.paragraphs(targetLanguage))
+    /** Any other language with a hand-written script, picked from the menu
+     *  (iOS 2026-10-13, founder: with the app in English only English
+     *  showed). Null = the target/native choice above decides. */
+    var otherScriptLanguage by remember { mutableStateOf<String?>(null) }
+    /** Every script on offer: the target, the native, then every language
+     *  with a hand-written script — so nobody is stuck reading a language
+     *  they can't read aloud for a minute. */
+    val scriptLanguages = remember(targetLanguage, nativeLanguage, nativeScript) {
+        val out = mutableListOf(targetLanguage)
+        if (nativeScript != null) out += nativeLanguage
+        for (code in listOf("en", "ko", "ja", "de", "es", "fr", "it", "pt", "zh-Hant", "zh")) {
+            if (out.none { LanguageCatalog.sameLanguage(it, code) } &&
+                CloneScriptStore.handAuthored(code) != null) out += code
+        }
+        out
+    }
+    /** What the take is read in. */
+    val scriptLanguageCode = otherScriptLanguage
+        ?: if (readInNative && nativeScript != null) nativeLanguage else targetLanguage
+    fun selectScript(code: String) {
+        when {
+            LanguageCatalog.sameLanguage(code, targetLanguage) -> { otherScriptLanguage = null; readInNative = false }
+            nativeScript != null && LanguageCatalog.sameLanguage(code, nativeLanguage) -> {
+                otherScriptLanguage = null; readInNative = true
+            }
+            else -> otherScriptLanguage = code
+        }
+    }
+    val activeScript = otherScriptLanguage?.let { CloneScriptStore.handAuthored(it) }
+        ?: (nativeScript.takeIf { readInNative } ?: VoiceCloneScript.paragraphs(targetLanguage))
     val recorder = remember { WavRecorder() }
     // The clone is built from ONE recording, so it takes the best microphone
     // in the room — the phone's. This is the one mic surface that never asks.
@@ -262,7 +300,7 @@ fun CloneFlowScreen(
     val canChangeVoice = voiceChange?.canChange ?: true
     /** The second pass, started from the meet act: Back means "keep the
      *  voice I have", not "walk the wizard backwards". */
-    var reRecording by remember { mutableStateOf(false) }
+    var reRecording by remember { mutableStateOf(fromSettings) }
     var comparing by remember { mutableStateOf(false) }
     var meetBurst by remember { mutableStateOf(false) }
     var becomingTheme by remember { mutableStateOf(FutureselfTheme.BLUE) }
@@ -411,6 +449,7 @@ fun CloneFlowScreen(
         prefs.edit().remove(PENDING_TAKE_KEY).apply()
         quality = null; elapsed = 0f; error = null
         reRecording = false
+        if (fromSettings) { onClose(); return }
         act = CloneAct.MEET
     }
 
@@ -472,8 +511,9 @@ fun CloneFlowScreen(
     fun performClone() {
         act = CloneAct.UPLOADING
         error = null
-        onHold(true)
-        com.roro.futurevoice.core.Analytics.capture("voice_clone_started")
+        if (!fromSettings) onHold(true)
+        com.roro.futurevoice.core.Analytics.capture("voice_clone_started",
+            mapOf("script_language" to scriptLanguageCode, "native_language" to nativeLanguage))
         scope.launch {
             try {
                 // A sign-up that adopted an existing account rebuilds from the
@@ -510,6 +550,14 @@ fun CloneFlowScreen(
                 if (signedIn) com.roro.futurevoice.data.VoiceReclaim.clear(context)
                 else com.roro.futurevoice.data.VoiceReclaim.markUnclaimed(context)
                 com.roro.futurevoice.core.Analytics.capture("voice_clone_succeeded")
+                if (fromSettings) {
+                    // The new voice is live, un-accented; the old one goes.
+                    com.roro.futurevoice.data.VoiceChanges.refresh()
+                    HapticEngine.success(context)
+                    onCloned(voiceId)
+                    onClose()
+                    return@launch
+                }
                 // Into the default accent BEFORE the greeting, so the first
                 // words are already in the accent the voice will keep (iOS
                 // `AppState.applyDefaultAccent`). Best-effort: a failure
@@ -658,8 +706,9 @@ fun CloneFlowScreen(
             CloneAct.INTRO -> onBack?.invoke()
             CloneAct.CONSENT -> act = CloneAct.INTRO
             CloneAct.MIC -> act = stepAfterIntro()
-            CloneAct.SPOT -> act = CloneAct.MIC
-            CloneAct.SCRIPT -> if (reRecording) cancelReRecord() else act = CloneAct.SPOT
+            CloneAct.SPOT -> if (fromSettings) cancelReRecord() else act = CloneAct.MIC
+            CloneAct.SCRIPT -> if (fromSettings) act = CloneAct.SPOT
+                else if (reRecording) cancelReRecord() else act = CloneAct.SPOT
             CloneAct.ACCOUNT -> act = if (clonedVoiceId == null) CloneAct.REVIEW
                 else if (voiceIsStandIn) CloneAct.QUEUED else CloneAct.MEET
             // Mid-take, mid-clone and the meet act have no Back on iOS either.
@@ -695,6 +744,7 @@ fun CloneFlowScreen(
     val green = Color(0xFF34C759)
     val red = Color(0xFFFF3B30)
 
+    Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).systemBarsPadding()) {
         // The stage: one fixed shape across every act so nothing jumps.
         Column(Modifier.fillMaxWidth().padding(top = if (shortScreen) 12.dp else 28.dp),
@@ -787,12 +837,29 @@ fun CloneFlowScreen(
             Column(contentModifier, horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (act == CloneAct.SCRIPT) {
-                    // The language choice is made by LOOKING at the text.
-                    if (nativeScript != null) {
-                        com.roro.futurevoice.ui.brand.IosSegmented(listOf(LanguageCatalog.endonym(targetLanguage),
-                            LanguageCatalog.endonym(nativeLanguage)),
-                            if (readInNative) 1 else 0, { readInNative = it == 1 },
-                            Modifier.fillMaxWidth().padding(horizontal = 28.dp))
+                    // The language choice is made by LOOKING at the text —
+                    // every language with a script, from one menu (iOS
+                    // 2026-10-13).
+                    Box {
+                        var scriptMenuOpen by remember { mutableStateOf(false) }
+                        OutlinedButton(onClick = { scriptMenuOpen = true },
+                            modifier = Modifier.heightIn(min = 34.dp),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                horizontal = 14.dp, vertical = 6.dp)) {
+                            Text(stringResource(R.string.read_in), style = MaterialTheme.typography.bodyMedium)
+                            Spacer(Modifier.size(6.dp))
+                            Text(LanguageCatalog.endonym(scriptLanguageCode),
+                                style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                            Spacer(Modifier.size(6.dp))
+                            Icon(Icons.Filled.UnfoldMore, null, Modifier.size(14.dp))
+                        }
+                        com.roro.futurevoice.ui.brand.IosMenu(scriptMenuOpen, { scriptMenuOpen = false }) {
+                            scriptLanguages.forEach { code ->
+                                com.roro.futurevoice.ui.brand.IosMenuItem(LanguageCatalog.endonym(code),
+                                    checked = LanguageCatalog.sameLanguage(code, scriptLanguageCode),
+                                    onClick = { scriptMenuOpen = false; selectScript(code) })
+                            }
+                        }
                     }
                     Text(stringResource(if (nativeScript == null)
                         R.string.read_it_naturally_mistakes_are_fine_just_keep_going
@@ -1197,9 +1264,12 @@ fun CloneFlowScreen(
                 CloneAct.MIC -> wizardBar(stringResource(R.string.next),
                     onBackTap = { act = stepAfterIntro() }) { withMic { act = CloneAct.SPOT } }
                 CloneAct.SPOT -> wizardBar(stringResource(R.string.next),
-                    onBackTap = { act = CloneAct.MIC }) { act = CloneAct.SCRIPT }
+                    onBackTap = { if (fromSettings) cancelReRecord() else act = CloneAct.MIC }) { act = CloneAct.SCRIPT }
                 CloneAct.SCRIPT -> wizardBar(stringResource(R.string.record_my_voice), nextIcon = Icons.Filled.Mic,
-                    onBackTap = { if (reRecording) cancelReRecord() else act = CloneAct.SPOT }) { startRecording() }
+                    onBackTap = {
+                        if (fromSettings) act = CloneAct.SPOT
+                        else if (reRecording) cancelReRecord() else act = CloneAct.SPOT
+                    }) { startRecording() }
                 // No early submit: before the minimum the only exit is
                 // starting over — a short take can't proceed.
                 CloneAct.RECORDING -> {
@@ -1290,6 +1360,16 @@ fun CloneFlowScreen(
                 }
             }
         }
+    }
+    // A re-record from Settings can be called off before the take goes up
+    // (iOS overlay, top trailing): the voice they have stays.
+    if (fromSettings && (act == CloneAct.SPOT || act == CloneAct.SCRIPT || act == CloneAct.REVIEW)) {
+        Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.primary, fontSize = 17.sp,
+            modifier = Modifier.align(Alignment.TopEnd).systemBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 4.dp)
+                .clip(RoundedCornerShape(8.dp)).clickable { cancelReRecord() }
+                .padding(horizontal = 4.dp, vertical = 6.dp))
+    }
     }
 
     val picking = accentToPick
@@ -1510,5 +1590,36 @@ internal fun SpeedAudition(
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
             textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+    }
+}
+
+/**
+ * The recording screen on its own, full screen, for a re-record from Me →
+ * Voice or the voice-move sheet (iOS `VoiceCloneOnboardingView(fromSettings:
+ * true)` in a `fullScreenCover`, 2026-10-13) — never the onboarding. The voice
+ * they have stays until a new one is made; [onCloned] hands that one over,
+ * and [onClose] is every way out (Cancel, or the new voice landing).
+ */
+@Composable
+fun VoiceRerecordCover(
+    targetLanguage: String,
+    nativeLanguage: String,
+    onCloned: (voiceId: String) -> Unit,
+    onClose: () -> Unit,
+) {
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = {},
+        properties = androidx.compose.ui.window.DialogProperties(
+            usePlatformDefaultWidth = false, decorFitsSystemWindows = false,
+            dismissOnBackPress = false, dismissOnClickOutside = false),
+    ) {
+        CloneFlowScreen(
+            targetLanguage = targetLanguage,
+            nativeLanguage = nativeLanguage,
+            onCloned = onCloned,
+            signedIn = true,
+            fromSettings = true,
+            onClose = onClose,
+        )
     }
 }

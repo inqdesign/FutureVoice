@@ -754,6 +754,7 @@
     <string name="hear_my_attempt">"Escuchar mi grabación"</string>
     <string name="hear_target">"Escuchar el modelo"</string>
     <string name="hear_your_recording_and_your_clone_side_by_side">"Escucha tu grabación y tu clon una al lado de la otra"</string>
+    <string name="hear_your_voice">"Escuchar tu voz"</string>
     <string name="hear_yourself">"Escuchar mi voz"</string>
     <string name="heard">"Se oyó"</string>
     <string name="heard_in_a_call">"Lo escuché en una llamada"</string>
@@ -1734,6 +1735,8 @@
     <string name="saved">"Guardado"</string>
     <!-- "Saved here, but ElevenLabs didn't accept the new name: %@ It'll be applied the next time your voice is cloned." -->
     <string name="saved_here_but_elevenlabs_didn_t_accept_the_new_name_it_ll_b_76dd24">"Guardado aquí, pero ElevenLabs no aceptó el nombre nuevo: %s Se aplicará la próxima vez que se cree tu voz."</string>
+    <!-- "Saved here, but the voice service didn't take the new name yet: %@ It'll be applied the next time your voice is made." -->
+    <string name="saved_here_but_the_voice_service_didn_t_take_the_new_name_ye_8a3a70">"Guardado aquí, pero el servicio de voz aún no tomó el nuevo nombre: %s Se aplicará la próxima vez que se cree tu voz."</string>
     <string name="saved_to_expressions">"Guardado en expresiones"</string>
     <string name="saved_to_photos">"Guardada en Fotos"</string>
     <string name="saved_to_sentences">"Guardado en frases"</string>
@@ -2128,6 +2131,8 @@
     <string name="the_most_ordinary_everyday_words_one_clause_sentences_rarely_3dc042">"Las palabras más corrientes del día a día. Frases de una sola oración, rara vez dos."</string>
     <!-- 'The name other learners will see — first name or nickname is plenty.' -->
     <string name="the_name_other_learners_will_see_first_name_or_nickname_is_p_4cde17">"El nombre que verán otras personas — con tu nombre o un apodo basta."</string>
+    <!-- 'The name your voice goes by in the app. Leave it empty to go back to the default.' -->
+    <string name="the_name_your_voice_goes_by_in_the_app_leave_it_empty_to_go_f9c525">"El nombre de tu voz en la app. Déjalo vacío para volver al nombre original."</string>
     <string name="the_next_contact">"el siguiente contacto"</string>
     <!-- 'The other days are rest days: nothing is planned, and they never break your streak.' -->
     <string name="the_other_days_are_rest_days_nothing_is_planned_and_they_nev_321b55">"Los demás días son de descanso: no hay nada planeado y tu racha no se rompe."</string>
@@ -2220,6 +2225,8 @@
     <string name="this_conversation_isn_t_saved_yet">"Esta conversación aún no está guardada"</string>
     <!-- 'This day has its own plan, so this change is for this day only.' -->
     <string name="this_day_has_its_own_plan_so_this_change_is_for_this_day_onl_6323e8">"Este día tiene su propio plan, así que este cambio es solo para este día."</string>
+    <!-- "This deletes your voice model everywhere it is kept. Audio already made keeps playing until you delete your account. The app can't hold a call without a voice, so it will ask you to record a new one, or you can delete your account entirely." -->
+    <string name="this_deletes_your_voice_model_everywhere_it_is_kept_audio_al_7612fd">"Esto borra tu modelo de voz de todos los lugares donde se guarda. El audio que ya existe se sigue escuchando hasta que borres tu cuenta. Sin voz no hay llamadas, así que te pediremos grabar una nueva, o puedes borrar tu cuenta por completo."</string>
     <!-- "This deletes your voice model here and at ElevenLabs. Audio already generated keeps playing until you delete your account. The app can't hold a call without a voice, so it will ask you to record a new one — or you can delete your account entirely." -->
     <string name="this_deletes_your_voice_model_here_and_at_elevenlabs_audio_a_b79e8b">"Esto borra tu modelo de voz aquí y en ElevenLabs. El audio ya generado se sigue escuchando hasta que elimines tu cuenta. La app no puede mantener una llamada sin voz, así que te pedirá grabar una nueva — o puedes eliminar la cuenta por completo."</string>
     <!-- 'This is how other learners find you. Tap to change it or take it down.' -->
@@ -2464,6 +2471,7 @@
     <string name="what_your_clone_is_called_here_and_on_elevenlabs">"Cómo se llama tu clon aquí y en ElevenLabs"</string>
     <string name="what_your_fluent_self_knows_about_you">"Lo que tu yo fluido sabe de ti"</string>
     <string name="what_your_plan_holds">"Lo que incluye tu plan"</string>
+    <string name="what_your_voice_is_called_in_the_app">"El nombre de tu voz en la app"</string>
     <!-- "When a friend joins with your code, you both get %lld minutes — and invite minutes are spent before the month's pool." -->
     <string name="when_a_friend_joins_with_your_code_you_both_get_lld_minutes_de6e19">"Si un amigo se registra con tu código, cada uno recibe %d minutos, y los minutos de invitación se gastan antes que los del mes."</string>
     <!-- "When a new week starts, a short report on the last one comes up once: the days you studied, your streak, how long you talked, and what became yours. Every past week stays here, and a dot marks one you haven't opened." -->
@@ -2690,6 +2698,8 @@
     <!-- "Your corrections, notes and word meanings come back in this language. The app's own screens stay English." -->
     <string name="your_corrections_notes_and_word_meanings_come_back_in_this_l_95bb21">"Las correcciones, las notas y los significados llegan en este idioma. Las pantallas de la app siguen en inglés."</string>
     <string name="your_current_voice_is_deleted_and_you_ll_record_a_new_one">"Tu voz actual se borra y grabarás una nueva."</string>
+    <!-- "Your current voice is replaced by the new one and deleted, so you can't go back to it. Audio already made keeps playing." -->
+    <string name="your_current_voice_is_replaced_by_the_new_one_and_deleted_so_dd7e3f">"Tu voz actual se reemplaza por la nueva y se elimina, así que no podrás recuperarla. El audio que ya existe se sigue escuchando."</string>
     <!-- "Your daily call is off, so this one won't ring. Turn it on in Me → Daily call." -->
     <string name="your_daily_call_is_off_so_this_one_won_t_ring_turn_it_on_in_10477c">"Tu llamada diaria está desactivada, así que esta no sonará. Actívala en Mi perfil → Llamada diaria."</string>
     <string name="your_daily_call_rings_at_this_time">"Tu llamada diaria suena a esta hora."</string>
@@ -2753,6 +2763,7 @@
     <string name="your_name">"Tu nombre"</string>
     <string name="your_name_on_the_board">"Tu nombre en la clasificación"</string>
     <string name="your_native_language">"¿Tu idioma nativo?"</string>
+    <string name="your_new_voice_is_ready">"Tu nueva voz está lista"</string>
     <!-- "Your original recording isn't kept for this voice. Record for about a minute and your voice moves to the new engine." -->
     <string name="your_original_recording_isn_t_kept_for_this_voice_record_for_8f818c">"No se guardó la grabación original de esta voz. Graba un minuto más o menos y tu voz pasará al nuevo motor."</string>
     <string name="your_overall_level">"Tu nivel general"</string>
@@ -2845,6 +2856,8 @@
     <string name="your_voice_model_is_biometric_data_it_s_used_only_to_speak_y_b3256f">"El modelo de voz es un dato biométrico. Solo se usa para decir tus frases de práctica con tu propia voz: nunca se vende, nunca se comparte, nunca sirve para entrenar el modelo de otra persona."</string>
     <!-- 'Your voice model is built by the most trusted service there is, and used for your language practice only.' -->
     <string name="your_voice_model_is_built_by_the_most_trusted_service_there_b4db4a">"El modelo de voz lo crea el servicio más fiable que existe y se usa solo para tu práctica de idiomas."</string>
+    <!-- "Your voice model is deleted everywhere it is kept, and this can't be undone. You'll be asked to record a new one before your next call." -->
+    <string name="your_voice_model_is_deleted_everywhere_it_is_kept_and_this_c_b14bff">"Tu modelo de voz se borra de todos los lugares donde se guarda, y no se puede deshacer. Grabarás uno nuevo antes de tu próxima llamada."</string>
     <!-- "Your voice model is deleted here and at ElevenLabs, and this can't be undone. You'll be asked to record a new one before your next call." -->
     <string name="your_voice_model_is_deleted_here_and_at_elevenlabs_and_this_107e07">"El modelo de voz se borra aquí y en ElevenLabs, y no se puede deshacer. Te pediremos grabar uno nuevo antes de tu próxima llamada."</string>
     <!-- 'Your voice recording goes too, so a new phone makes your voice again without recording.' -->

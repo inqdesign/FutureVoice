@@ -757,6 +757,7 @@
     <string name="hear_my_attempt">"自分の録音を聞く"</string>
     <string name="hear_target">"お手本を聞く"</string>
     <string name="hear_your_recording_and_your_clone_side_by_side">"自分の録音とできあがった声を並べて聞いてみましょう"</string>
+    <string name="hear_your_voice">"自分の声を聞く"</string>
     <string name="hear_yourself">"自分の声を聞く"</string>
     <string name="heard">"聞こえた言葉"</string>
     <string name="heard_in_a_call">"通話で聞いた"</string>
@@ -1737,6 +1738,8 @@
     <string name="saved">"保存済み"</string>
     <!-- "Saved here, but ElevenLabs didn't accept the new name: %@ It'll be applied the next time your voice is cloned." -->
     <string name="saved_here_but_elevenlabs_didn_t_accept_the_new_name_it_ll_b_76dd24">"この端末には保存しましたが、ElevenLabsが新しい名前を受け付けませんでした: %s 次に声を作り直すときに反映されます。"</string>
+    <!-- "Saved here, but the voice service didn't take the new name yet: %@ It'll be applied the next time your voice is made." -->
+    <string name="saved_here_but_the_voice_service_didn_t_take_the_new_name_ye_8a3a70">"ここには保存しましたが、音声サービスにはまだ新しい名前が反映されていません: %s 次に声を作るときに反映されます。"</string>
     <string name="saved_to_expressions">"表現に保存済み"</string>
     <string name="saved_to_photos">"写真に保存しました"</string>
     <string name="saved_to_sentences">"文に保存済み"</string>
@@ -2131,6 +2134,8 @@
     <string name="the_most_ordinary_everyday_words_one_clause_sentences_rarely_3dc042">"いちばんありふれた日常の単語。節ひとつの文、多くても二つ。"</string>
     <!-- 'The name other learners will see — first name or nickname is plenty.' -->
     <string name="the_name_other_learners_will_see_first_name_or_nickname_is_p_4cde17">"ほかの学習者に見える名前です。名前かニックネームで十分です。"</string>
+    <!-- 'The name your voice goes by in the app. Leave it empty to go back to the default.' -->
+    <string name="the_name_your_voice_goes_by_in_the_app_leave_it_empty_to_go_f9c525">"アプリでの声の名前です。空にするとデフォルトの名前に戻ります。"</string>
     <string name="the_next_contact">"次の連絡"</string>
     <!-- 'The other days are rest days: nothing is planned, and they never break your streak.' -->
     <string name="the_other_days_are_rest_days_nothing_is_planned_and_they_nev_321b55">"ほかの日は休みの日です。予定はなく、連続記録も途切れません。"</string>
@@ -2223,6 +2228,8 @@
     <string name="this_conversation_isn_t_saved_yet">"この会話はまだ保存されていません"</string>
     <!-- 'This day has its own plan, so this change is for this day only.' -->
     <string name="this_day_has_its_own_plan_so_this_change_is_for_this_day_onl_6323e8">"この日は個別に予定を変えているので、この変更はこの日だけに適用されます。"</string>
+    <!-- "This deletes your voice model everywhere it is kept. Audio already made keeps playing until you delete your account. The app can't hold a call without a voice, so it will ask you to record a new one, or you can delete your account entirely." -->
+    <string name="this_deletes_your_voice_model_everywhere_it_is_kept_audio_al_7612fd">"声のモデルを保管されているすべての場所から削除します。すでに作った音声は、アカウントを削除するまで聞けます。声がないと通話できないので、新しく録音するよう案内します。アカウントごと削除することもできます。"</string>
     <!-- "This deletes your voice model here and at ElevenLabs. Audio already generated keeps playing until you delete your account. The app can't hold a call without a voice, so it will ask you to record a new one — or you can delete your account entirely." -->
     <string name="this_deletes_your_voice_model_here_and_at_elevenlabs_audio_a_b79e8b">"アプリとElevenLabsの両方から音声モデルを削除します。すでに作られた音声は、アカウントを削除するまでそのまま再生されます。声がないと通話ができないので、新しく録音するよう求められます。アカウントごと削除することもできます。"</string>
     <!-- 'This is how other learners find you. Tap to change it or take it down.' -->
@@ -2467,6 +2474,7 @@
     <string name="what_your_clone_is_called_here_and_on_elevenlabs">"こことElevenLabsでこの声を呼ぶ名前"</string>
     <string name="what_your_fluent_self_knows_about_you">"流暢な自分が知っていること"</string>
     <string name="what_your_plan_holds">"プランに含まれるもの"</string>
+    <string name="what_your_voice_is_called_in_the_app">"アプリでの声の名前"</string>
     <!-- "When a friend joins with your code, you both get %lld minutes — and invite minutes are spent before the month's pool." -->
     <string name="when_a_friend_joins_with_your_code_you_both_get_lld_minutes_de6e19">"自分のコードで友だちが登録すると、ふたりとも通話%d分もらえます。招待でもらった時間は今月の分より先に使われます。"</string>
     <!-- "When a new week starts, a short report on the last one comes up once: the days you studied, your streak, how long you talked, and what became yours. Every past week stays here, and a dot marks one you haven't opened." -->
@@ -2693,6 +2701,8 @@
     <!-- "Your corrections, notes and word meanings come back in this language. The app's own screens stay English." -->
     <string name="your_corrections_notes_and_word_meanings_come_back_in_this_l_95bb21">"修正やメモ、単語の意味がこの言語で返ってきます。アプリの画面自体は英語のままです。"</string>
     <string name="your_current_voice_is_deleted_and_you_ll_record_a_new_one">"今の声は削除され、新しく録音します。"</string>
+    <!-- "Your current voice is replaced by the new one and deleted, so you can't go back to it. Audio already made keeps playing." -->
+    <string name="your_current_voice_is_replaced_by_the_new_one_and_deleted_so_dd7e3f">"今の声は新しい声に置き換わって削除され、元に戻せません。すでに作った音声はそのまま聞けます。"</string>
     <!-- "Your daily call is off, so this one won't ring. Turn it on in Me → Daily call." -->
     <string name="your_daily_call_is_off_so_this_one_won_t_ring_turn_it_on_in_10477c">"毎日の電話がオフなので鳴りません。マイページ → 毎日の電話でオンにできます。"</string>
     <string name="your_daily_call_rings_at_this_time">"この時間に毎日の電話が鳴ります。"</string>
@@ -2756,6 +2766,7 @@
     <string name="your_name">"名前"</string>
     <string name="your_name_on_the_board">"ランキングでの名前"</string>
     <string name="your_native_language">"ふだん使う言語は？"</string>
+    <string name="your_new_voice_is_ready">"新しい声ができました"</string>
     <!-- "Your original recording isn't kept for this voice. Record for about a minute and your voice moves to the new engine." -->
     <string name="your_original_recording_isn_t_kept_for_this_voice_record_for_8f818c">"この声は元の録音が残っていません。1分ほど録音し直すと、新しいエンジンに移ります。"</string>
     <string name="your_overall_level">"総合レベル"</string>
@@ -2848,6 +2859,8 @@
     <string name="your_voice_model_is_biometric_data_it_s_used_only_to_speak_y_b3256f">"音声モデルは生体情報です。練習の文を自分の声で聞かせるためだけに使います。売ることも、他人に渡すことも、ほかのモデルの学習に使うこともありません。"</string>
     <!-- 'Your voice model is built by the most trusted service there is, and used for your language practice only.' -->
     <string name="your_voice_model_is_built_by_the_most_trusted_service_there_b4db4a">"音声モデルはもっとも信頼できるサービスで作ります。語学の練習にだけ使われます。"</string>
+    <!-- "Your voice model is deleted everywhere it is kept, and this can't be undone. You'll be asked to record a new one before your next call." -->
+    <string name="your_voice_model_is_deleted_everywhere_it_is_kept_and_this_c_b14bff">"声のモデルは保管されているすべての場所から削除され、元に戻せません。次の通話の前に新しく録音します。"</string>
     <!-- "Your voice model is deleted here and at ElevenLabs, and this can't be undone. You'll be asked to record a new one before your next call." -->
     <string name="your_voice_model_is_deleted_here_and_at_elevenlabs_and_this_107e07">"音声モデルはアプリとElevenLabsの両方から削除され、元に戻せません。次の通話の前に、新しく録音するよう求められます。"</string>
     <!-- 'Your voice recording goes too, so a new phone makes your voice again without recording.' -->

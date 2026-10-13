@@ -574,6 +574,24 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
         refreshVoiceChangeStatus()
     }
 
+    /**
+     * A re-record from Me or the voice-move sheet made a new voice (iOS
+     * `regenerateVoiceClone` from `VoiceCloneOnboardingView(fromSettings:)`):
+     * it is live at once, un-accented, and the voice it replaces is deleted
+     * (a parked one is already gone upstream).
+     */
+    fun adoptRecordedVoice(newId: String) {
+        val st = _state.value
+        val old = st.voiceId
+        val oldParked = old != null && com.roro.futurevoice.data.VoiceParking.isParked(old)
+        prefs.edit().remove(ACCENT_KEY).apply()
+        com.roro.futurevoice.data.PhraseAudioStore.shared(appContext).registerOwnVoice(newId)
+        onVoiceCloned(newId)
+        if (old != null && old != newId && !st.voiceIsStandIn && !oldParked) viewModelScope.launch {
+            runCatching { com.roro.futurevoice.data.AccountEraser.deleteVoice(old) }
+        }
+    }
+
     // MARK: - Queued voice (the monthly voice allowance is spent)
 
     /**

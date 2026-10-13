@@ -86,7 +86,7 @@ fun PrivacyScreen(voiceId: String?, onVoiceDeleted: () -> Unit, onBack: () -> Un
                     }) else null,
                     onClick = { confirming = true })
             }
-            GroupedFooter(stringResource(R.string.this_deletes_your_voice_model_here_and_at_elevenlabs_audio_a_b79e8b))
+            GroupedFooter(stringResource(R.string.this_deletes_your_voice_model_everywhere_it_is_kept_audio_al_7612fd))
         }
 
         GroupedSectionSpacer()
@@ -108,7 +108,7 @@ fun PrivacyScreen(voiceId: String?, onVoiceDeleted: () -> Unit, onBack: () -> Un
         AlertDialog(
             onDismissRequest = { confirming = false },
             title = { Text(stringResource(R.string.delete_your_voice)) },
-            text = { Text(stringResource(R.string.your_voice_model_is_deleted_here_and_at_elevenlabs_and_this_107e07)) },
+            text = { Text(stringResource(R.string.your_voice_model_is_deleted_everywhere_it_is_kept_and_this_c_b14bff)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirming = false

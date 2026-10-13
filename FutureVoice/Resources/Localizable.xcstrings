@@ -128552,6 +128552,58 @@
         }
       }
     },
+    "Your new voice is ready" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine neue Stimme ist bereit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しい声ができました"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新的聲音準備好了"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新的声音准备好了"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta nouvelle voix est prête"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu nueva voz está lista"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your new voice is ready"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "새 목소리가 준비됐어요"
+          }
+        }
+      }
+    },
     "Your original recording isn't kept for this voice. Record for about a minute and your voice moves to the new engine." : {
       "localizations" : {
         "de" : {
@@ -128600,6 +128652,328 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "이 목소리는 원본 녹음이 남아 있지 않아요. 1분쯤 다시 녹음하면 새 엔진으로 옮겨져요."
+          }
+        }
+      }
+    },
+    "Your current voice is replaced by the new one and deleted, so you can't go back to it. Audio already made keeps playing." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine jetzige Stimme wird durch die neue ersetzt und gelöscht, zurück geht es nicht. Bereits erzeugte Audios bleiben abspielbar."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu voz actual se reemplaza por la nueva y se elimina, así que no podrás recuperarla. El audio que ya existe se sigue escuchando."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta voix actuelle est remplacée par la nouvelle et supprimée, impossible de revenir en arrière. L’audio déjà créé continue de s’écouter."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今の声は新しい声に置き換わって削除され、元に戻せません。すでに作った音声はそのまま聞けます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지금 목소리는 새 목소리로 바뀌고 지워져서 되돌릴 수 없어요. 이미 만들어 둔 소리는 계속 들려요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目前的声音会被新声音取代并删除，无法还原。已经做好的音频可以继续听。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目前的聲音會被新聲音取代並刪除，無法還原。已經做好的音訊可以繼續聽。"
+          }
+        }
+      }
+    },
+    "The name your voice goes by in the app. Leave it empty to go back to the default." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "So heißt deine Stimme in der App. Leer lassen für den Standardnamen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El nombre de tu voz en la app. Déjalo vacío para volver al nombre original."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le nom de ta voix dans l’app. Laisse vide pour revenir au nom par défaut."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリでの声の名前です。空にするとデフォルトの名前に戻ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "앱에서 내 목소리를 부르는 이름이에요. 비워 두면 기본 이름으로 돌아가요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这是你的声音在 App 里的名字。留空就会恢复默认名称。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這是你的聲音在 App 裡的名字。留空就會回到預設名稱。"
+          }
+        }
+      }
+    },
+    "What your voice is called in the app" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "So heißt deine Stimme in der App"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El nombre de tu voz en la app"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le nom de ta voix dans l’app"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリでの声の名前"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "앱에서 내 목소리를 부르는 이름"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的声音在 App 里的名字"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的聲音在 App 裡的名字"
+          }
+        }
+      }
+    },
+    "Saved here, but the voice service didn't take the new name yet: %@ It'll be applied the next time your voice is made." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hier gespeichert, aber der Sprachdienst hat den neuen Namen noch nicht übernommen: %@ Er wird beim nächsten Erstellen deiner Stimme übernommen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardado aquí, pero el servicio de voz aún no tomó el nuevo nombre: %@ Se aplicará la próxima vez que se cree tu voz."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistré ici, mais le service vocal n’a pas encore pris le nouveau nom : %@ Il sera appliqué la prochaine fois que ta voix sera créée."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ここには保存しましたが、音声サービスにはまだ新しい名前が反映されていません: %@ 次に声を作るときに反映されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "여기엔 저장했지만 음성 서비스에 새 이름이 아직 반영되지 않았어요: %@ 다음에 목소리를 만들 때 적용돼요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已在这里保存，但语音服务还没应用新名字：%@ 下次制作声音时会应用。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已在這裡儲存，但語音服務還沒套用新名字：%@ 下次製作聲音時會套用。"
+          }
+        }
+      }
+    },
+    "This deletes your voice model everywhere it is kept. Audio already made keeps playing until you delete your account. The app can't hold a call without a voice, so it will ask you to record a new one, or you can delete your account entirely." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Damit wird dein Stimmmodell überall gelöscht, wo es gespeichert ist. Bereits erzeugte Audios bleiben abspielbar, bis du dein Konto löschst. Ohne Stimme gibt es keine Gespräche, daher wirst du gebeten, eine neue aufzunehmen, oder du löschst dein Konto ganz."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esto borra tu modelo de voz de todos los lugares donde se guarda. El audio que ya existe se sigue escuchando hasta que borres tu cuenta. Sin voz no hay llamadas, así que te pediremos grabar una nueva, o puedes borrar tu cuenta por completo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cela supprime ton modèle de voix partout où il est conservé. L’audio déjà créé reste lisible jusqu’à la suppression de ton compte. Sans voix, pas d’appel : l’app te demandera d’en enregistrer une nouvelle, ou tu peux supprimer ton compte entièrement."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "声のモデルを保管されているすべての場所から削除します。すでに作った音声は、アカウントを削除するまで聞けます。声がないと通話できないので、新しく録音するよう案内します。アカウントごと削除することもできます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목소리 모델을 보관된 모든 곳에서 지워요. 이미 만든 소리는 계정을 지울 때까지 계속 들려요. 목소리가 없으면 대화를 할 수 없어서 새로 녹음하라고 안내하거나, 계정을 완전히 지울 수도 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这会从所有保存的地方删除你的声音模型。已经做好的音频在删除账号前都能继续听。没有声音就无法通话，所以会请你重新录一次，你也可以直接删除整个账号。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這會從所有保存的地方刪除你的聲音模型。已經做好的音訊在刪除帳號前都能繼續聽。沒有聲音就無法通話，所以會請你重新錄一次，你也可以直接刪除整個帳號。"
+          }
+        }
+      }
+    },
+    "Your voice model is deleted everywhere it is kept, and this can't be undone. You'll be asked to record a new one before your next call." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Stimmmodell wird überall gelöscht, wo es gespeichert ist, und das lässt sich nicht rückgängig machen. Vor deinem nächsten Gespräch nimmst du eine neue Stimme auf."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu modelo de voz se borra de todos los lugares donde se guarda, y no se puede deshacer. Grabarás uno nuevo antes de tu próxima llamada."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ton modèle de voix est supprimé partout où il est conservé, et c’est définitif. Tu en enregistreras un nouveau avant ton prochain appel."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "声のモデルは保管されているすべての場所から削除され、元に戻せません。次の通話の前に新しく録音します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목소리 모델이 보관된 모든 곳에서 지워지고, 되돌릴 수 없어요. 다음 대화 전에 새로 녹음하게 돼요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的声音模型会从所有保存的地方删除，无法还原。下次通话前会请你重新录音。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的聲音模型會從所有保存的地方刪除，無法還原。下次通話前會請你重新錄音。"
+          }
+        }
+      }
+    },
+    "Hear your voice" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Stimme anhören"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escuchar tu voz"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Écouter ta voix"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分の声を聞く"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 목소리 들어보기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "听听你的声音"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "聽聽你的聲音"
           }
         }
       }
