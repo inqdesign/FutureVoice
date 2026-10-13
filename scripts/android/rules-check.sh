@@ -29,7 +29,8 @@ CLIENT="conversation-prompt coach-prompts correction-prompt lifted-prompts breat
   free-talk-openers counterpart-ideas counterpart-parser path-ideas persona-polish
   shadow-coach-prompt shadow-transcribe-prompt clone-script contractions situation-tree
   voice-accents futureself-ramp"
-SERVER="summary-prompt weekly-prompt enrichment-prompt"
+SERVER="summary-prompt weekly-prompt enrichment-prompt topic-prompt voicemail-prompt
+  scenario-prompt"
 for g in scripts/android/gen-*.py; do   # a new generator must be listed in one of the two
   n=$(basename "$g" .py); n=${n#gen-}
   [ "$n" = strings ] && continue
@@ -37,10 +38,13 @@ for g in scripts/android/gen-*.py; do   # a new generator must be listed in one 
 done
 for g in $CLIENT; do python3 "scripts/android/gen-$g.py" --check; done
 # Server prompts (supabase/functions/*/prompt.ts): Android-only edge functions
-# whose prompt iOS builds client-side. A stale one is LOUD but not fatal —
-# changing it is a server deploy, which is the founder's call.
+# whose prompt iOS builds client-side. Held exactly like the client ones — a
+# stale one FAILS. Fixing it is a regenerate AND an edge deploy of that
+# function (`supabase functions deploy <name>`); the check sees the repo, not
+# what is deployed.
 for g in $SERVER; do
-  python3 "scripts/android/gen-$g.py" --check || echo "▲ server prompt behind iOS: gen-$g.py — needs a regenerate + edge deploy"
+  python3 "scripts/android/gen-$g.py" --check || {
+    echo "✗ server prompt behind iOS: run gen-$g.py, then redeploy its edge function"; exit 1; }
 done
 python3 scripts/android/gen-strings.py --check >/dev/null 2>&1 || { echo "✗ strings stale — run gen-strings.py"; exit 1; }
 scripts/android/gen-prompt-vectors.sh
