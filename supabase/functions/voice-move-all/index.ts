@@ -23,8 +23,8 @@
 // earlier plain clone of the same learner that still exists upstream; and
 // only then the remix's own sample, which already carries the accent.
 //
-// Parked voices are skipped: their ElevenLabs voice is gone, and the app's
-// revival flow rebuilds them from the phone's recording. The old ElevenLabs
+// Parked voices move only from the operator's archive (their ElevenLabs
+// voice is gone); without it the app's revival flow rebuilds them. The old ElevenLabs
 // voice is NOT deleted here — it is the way back if a move sounds wrong.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
@@ -95,7 +95,9 @@ Deno.serve(async (req) => {
     return json({ user_id: userId, result: "cartesia", from: active.elevenlabs_voice_id, to: id, german: de.ok })
   }
 
-  if (active.parked_at) return json({ user_id: userId, result: "parked" })
+  // A parked voice is gone upstream; it moves only from an archived take
+  // (the new row is not parked — parking ended with Cartesia, 2026-10-12).
+  if (active.parked_at && !body.sample_b64) return json({ user_id: userId, result: "parked" })
 
   let lastStatus = 0
   const el = async (id: string): Promise<ElVoice | null> => {
