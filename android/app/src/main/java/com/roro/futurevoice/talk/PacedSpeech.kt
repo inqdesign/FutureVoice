@@ -63,11 +63,15 @@ object PacedSpeech {
     /**
      * Synthesize `text` sentence by sentence and join the takes with
      * [SENTENCE_GAP_SECONDS] between them, as a WAV. Null when the text is a
-     * single sentence (the caller's ordinary path is already right) or the
+     * single sentence or the voice is a Cartesia clone (the caller's
+     * ordinary path is already right; a Cartesia line already pauses between
+     * its sentences, and split, its one-word first sentence came back a
+     * clipped word — iOS 2026-10-13) or the
      * server answered in MP3 (an edge deploy with no streaming — nothing to
      * join; the caller falls back).
      */
     suspend fun synthesizeWav(voiceId: String, text: String, modelId: String, purpose: String): ByteArray? {
+        if (com.roro.futurevoice.ui.VoiceMove.isCartesia(voiceId)) return null
         val parts = sentences(text)
         if (parts.size <= 1) return null
         val client = ElevenLabsClient(AuthRepository())

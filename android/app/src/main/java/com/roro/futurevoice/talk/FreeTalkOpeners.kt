@@ -49,6 +49,7 @@ class FreeTalkOpeners(private val context: Context) {
     companion object {
         private const val BAKED_SPEED_KEY = "futurevoice.freeTalkOpeners.bakedSpeed"
         private const val BAKED_LINES_KEY = "futurevoice.freeTalkOpeners.bakedLines"
+        private const val CARTESIA_WHOLE_KEY = "futurevoice.freeTalkOpeners.cartesiaWhole"
         private const val TAG = "FreeTalkOpeners"
 
         /**
@@ -157,7 +158,7 @@ class FreeTalkOpeners(private val context: Context) {
         // a call are re-made whenever the speed moves, or the greeting plays
         // at the old speed and every answer after it at the new one (iOS
         // `needsBake`, 2026-09-25).
-        if (store.data(line, voiceId) != null && !needsBake(line)) return true
+        if (store.data(line, voiceId) != null && !needsBake(line, voiceId)) return true
         val audio = try {
             // A line of several sentences is made sentence by sentence so it
             // breathes like the answers after it (see `PacedSpeech`). Billed
@@ -182,7 +183,13 @@ class FreeTalkOpeners(private val context: Context) {
 
     private val bakePrefs get() = context.getSharedPreferences("futurevoice", android.content.Context.MODE_PRIVATE)
 
-    private fun needsBake(line: String): Boolean {
+    private fun needsBake(line: String, voiceId: String): Boolean {
+        // A Cartesia voice's openers made before 2026-10-13 were split
+        // sentence by sentence (`PacedSpeech`): re-made whole, once.
+        if (com.roro.futurevoice.ui.VoiceMove.isCartesia(voiceId) && !bakePrefs.getBoolean(CARTESIA_WHOLE_KEY, false)) {
+            bakePrefs.edit().putBoolean(CARTESIA_WHOLE_KEY, true).remove(BAKED_LINES_KEY).apply()
+            return true
+        }
         val current = com.roro.futurevoice.data.SpeechSpeed.currentMultiplier()?.toFloat() ?: return false
         val p = bakePrefs
         if (p.getFloat(BAKED_SPEED_KEY, Float.NaN) != current) {
