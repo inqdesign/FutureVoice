@@ -1580,6 +1580,8 @@
     <string name="pick_up_where_you_left_off">"Pick up where you left off"</string>
     <string name="pick_what_to_do_there_talk_words_review_and_more">"Pick what to do there: talk, words, review and more."</string>
     <string name="pick_who_you_practice_with">"Pick who you practice with"</string>
+    <!-- "Pick your accent again in Me → Voice. It didn't go on this time." -->
+    <string name="pick_your_accent_again_in_me_voice_it_didn_t_go_on_this_time">"Pick your accent again in Me → Voice. It didn't go on this time."</string>
     <string name="place">"Place"</string>
     <string name="plan">"Plan"</string>
     <string name="plan_on_the_timeline">"Plan on the timeline"</string>
@@ -2153,6 +2155,7 @@
     <string name="tap_an_empty_spot_to_add_hold_a_block_and_drag_to_move_it">"Tap an empty spot to add. Hold a block and drag to move it."</string>
     <string name="tap_edit_at_the_top_right_days_run_across_hours_run_down">"Tap Edit at the top right. Days run across, hours run down."</string>
     <string name="tap_end_session_after_a_conversation_and_it_ll_show_up_here">"Tap End session after a conversation and it'll show up here."</string>
+    <string name="tap_it_once_more_your_voice_didn_t_move_this_time">"Tap it once more. Your voice didn't move this time."</string>
     <!-- "Tap Let's talk — or a scenario or story below — to have your first conversation. Everything you meet ends up in Review." -->
     <string name="tap_let_s_talk_or_a_scenario_or_story_below_to_have_your_fir_acaae8">"Tap Let's talk — or a scenario or story below — to have your first conversation. Everything you meet ends up in Review."</string>
     <!-- 'Tap one, then the other. Listen for the voice, not the words — everyone finds their own recording strange at first.' -->

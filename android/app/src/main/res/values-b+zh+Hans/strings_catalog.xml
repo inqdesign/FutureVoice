@@ -1577,6 +1577,8 @@
     <string name="pick_up_where_you_left_off">"从上次的地方继续"</string>
     <string name="pick_what_to_do_there_talk_words_review_and_more">"选好那个时间要做什么：对话、单词、复习等。"</string>
     <string name="pick_who_you_practice_with">"选择要跟谁练习"</string>
+    <!-- "Pick your accent again in Me → Voice. It didn't go on this time." -->
+    <string name="pick_your_accent_again_in_me_voice_it_didn_t_go_on_this_time">"请到“我的 → 声音”重新选择口音。这次没有应用成功。"</string>
     <string name="place">"名次"</string>
     <string name="plan">"方案"</string>
     <string name="plan_on_the_timeline">"在时间轴上安排"</string>
@@ -2150,6 +2152,7 @@
     <string name="tap_an_empty_spot_to_add_hold_a_block_and_drag_to_move_it">"点一下空白处即可添加，长按时段并拖动即可移动。"</string>
     <string name="tap_edit_at_the_top_right_days_run_across_hours_run_down">"点右上角的“编辑”。横向是星期，纵向是时间。"</string>
     <string name="tap_end_session_after_a_conversation_and_it_ll_show_up_here">"对话结束后点 End session，就会出现在这里。"</string>
+    <string name="tap_it_once_more_your_voice_didn_t_move_this_time">"请再点一次。这次没能迁移你的声音。"</string>
     <!-- "Tap Let's talk — or a scenario or story below — to have your first conversation. Everything you meet ends up in Review." -->
     <string name="tap_let_s_talk_or_a_scenario_or_story_below_to_have_your_fir_acaae8">"点下方的「开始说」开始第一次对话，点情境或新闻也可以。在这里遇到的一切都会累积到复习页里当复习材料。"</string>
     <!-- 'Tap one, then the other. Listen for the voice, not the words — everyone finds their own recording strange at first.' -->

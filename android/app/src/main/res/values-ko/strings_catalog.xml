@@ -1578,6 +1578,8 @@
     <string name="pick_up_where_you_left_off">"하던 데부터 이어서"</string>
     <string name="pick_what_to_do_there_talk_words_review_and_more">"그 시간에 할 걸 골라요. 대화, 단어, 복습 같은 것들이요."</string>
     <string name="pick_who_you_practice_with">"누구와 연습할지 골라요"</string>
+    <!-- "Pick your accent again in Me → Voice. It didn't go on this time." -->
+    <string name="pick_your_accent_again_in_me_voice_it_didn_t_go_on_this_time">"억양은 나 → 목소리에서 다시 골라 주세요. 이번엔 적용되지 않았어요."</string>
     <string name="place">"순위"</string>
     <string name="plan">"요금제"</string>
     <string name="plan_on_the_timeline">"타임라인에서 계획해요"</string>
@@ -2151,6 +2153,7 @@
     <string name="tap_an_empty_spot_to_add_hold_a_block_and_drag_to_move_it">"빈 곳을 누르면 추가돼요. 칸을 길게 눌러 끌면 옮겨져요."</string>
     <string name="tap_edit_at_the_top_right_days_run_across_hours_run_down">"오른쪽 위 편집을 누르세요. 가로는 요일, 세로는 시간이에요."</string>
     <string name="tap_end_session_after_a_conversation_and_it_ll_show_up_here">"대화 후 End session을 누르면 여기에 나타나요."</string>
+    <string name="tap_it_once_more_your_voice_didn_t_move_this_time">"한 번 더 눌러 주세요. 이번엔 목소리를 옮기지 못했어요."</string>
     <!-- "Tap Let's talk — or a scenario or story below — to have your first conversation. Everything you meet ends up in Review." -->
     <string name="tap_let_s_talk_or_a_scenario_or_story_below_to_have_your_fir_acaae8">"아래 Let's talk을 눌러 첫 대화를 시작해 보세요. 상황이나 뉴스를 눌러도 돼요. 여기서 만난 건 전부 복습 탭에 복습거리로 쌓여요."</string>
     <!-- 'Tap one, then the other. Listen for the voice, not the words — everyone finds their own recording strange at first.' -->

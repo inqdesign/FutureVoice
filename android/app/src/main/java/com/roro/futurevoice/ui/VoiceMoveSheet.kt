@@ -95,6 +95,9 @@ fun VoiceMoveSheet(
     var working by remember { mutableStateOf(false) }
     var done by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    /** The voice moved but its accent didn't go on (iOS 2026-10-13): the move
+     *  is done, so the sheet closes like any done move and says where to pick it. */
+    var accentMissed by remember { mutableStateOf(false) }
     val player = remember { Mp3Player(context.cacheDir, source = "voice_move") }
     DisposableEffect(Unit) { onDispose { runCatching { player.stop() } } }
     LaunchedEffect(Unit) {
@@ -134,14 +137,16 @@ fun VoiceMoveSheet(
         com.roro.futurevoice.core.Analytics.capture("voice_move_started", mapOf(
             "accent" to (accent?.id ?: "original"), "from" to if (hasRecording) "device" else "server"))
         scope.launch {
-            runCatching {
+            // A retry after the voice already moved must not make a second
+            // one: only the accent is left to do.
+            val moveResult = runCatching {
+                if (VoiceMove.isCartesia(currentVoiceId() ?: "")) return@runCatching true
                 val name = com.roro.futurevoice.data.VoiceName.display(context,
                     com.roro.futurevoice.data.PersonaStore.shared(context).load()?.displayName)
-                val newId: String
                 if (hasRecording) {
                     // The server clones on Cartesia (CLONE_PROVIDER) and the
                     // old voice is staged for deletion like any rebuild.
-                    newId = com.roro.futurevoice.net.VoiceCloneClient(AuthRepository()).cloneVoice(
+                    val newId = com.roro.futurevoice.net.VoiceCloneClient(AuthRepository()).cloneVoice(
                         name = name, sample = VoiceComparison.sampleFile(context.filesDir),
                         removeBackgroundNoise = false)
                     onRebuilt(newId)
@@ -154,19 +159,25 @@ fun VoiceMoveSheet(
                         needsRecording = true
                         return@runCatching false
                     }
-                    newId = moved
-                    onMoved(newId)
+                    onMoved(moved)
                 }
-                applyPickedAccent()
                 true
-            }.onSuccess { moved ->
-                if (!moved) return@onSuccess
-                com.roro.futurevoice.core.Analytics.capture("voice_move_done", mapOf("accent" to (accent?.id ?: "original")))
+            }
+            moveResult.onFailure {
+                com.roro.futurevoice.core.Analytics.capture("voice_move_failed", mapOf("reason" to (it.localizedMessage ?: "").take(200)))
+                error = context.getString(R.string.tap_it_once_more_your_voice_didn_t_move_this_time)
+            }
+            if (moveResult.getOrNull() == true) {
+                // The voice has moved. An accent that won't go on is not a
+                // failed move: it can be picked again in Me → Voice.
+                runCatching { applyPickedAccent() }.onFailure {
+                    com.roro.futurevoice.core.Analytics.capture("voice_move_accent_failed", mapOf("reason" to (it.localizedMessage ?: "").take(200)))
+                    accentMissed = true
+                }
+                com.roro.futurevoice.core.Analytics.capture("voice_move_done",
+                    mapOf("accent" to if (accentMissed) "original" else (accent?.id ?: "original")))
                 done = true
                 playSample()
-            }.onFailure {
-                com.roro.futurevoice.core.Analytics.capture("voice_move_failed", mapOf("reason" to (it.localizedMessage ?: "").take(200)))
-                error = it.localizedMessage ?: it.toString()
             }
             working = false
         }
@@ -185,7 +196,7 @@ fun VoiceMoveSheet(
                 if (VoiceMove.isCartesia(currentVoiceId() ?: "")) {
                     working = true
                     scope.launch {
-                        runCatching { applyPickedAccent() }
+                        runCatching { applyPickedAccent() }.onFailure { accentMissed = true }
                         working = false
                         done = true
                         playSample()
@@ -214,6 +225,10 @@ fun VoiceMoveSheet(
             if (done) {
                 Text(stringResource(R.string.voice_move_done_body),
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (accentMissed) {
+                    Text(stringResource(R.string.pick_your_accent_again_in_me_voice_it_didn_t_go_on_this_time),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 TextButton(onClick = { playSample() }) { Text(stringResource(R.string.hear_it)) }
                 Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.done)) }
                 return@Column

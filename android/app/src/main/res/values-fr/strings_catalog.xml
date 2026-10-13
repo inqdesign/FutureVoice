@@ -1574,6 +1574,8 @@
     <string name="pick_up_where_you_left_off">"Reprends là où tu en étais"</string>
     <string name="pick_what_to_do_there_talk_words_review_and_more">"Choisis quoi faire à ce moment-là : parler, mots, révision et plus."</string>
     <string name="pick_who_you_practice_with">"Choisis avec qui tu t’entraînes"</string>
+    <!-- "Pick your accent again in Me → Voice. It didn't go on this time." -->
+    <string name="pick_your_accent_again_in_me_voice_it_didn_t_go_on_this_time">"Choisis à nouveau ton accent dans Mon profil → Voix. Il n’a pas été appliqué cette fois."</string>
     <string name="place">"Rang"</string>
     <string name="plan">"Formule"</string>
     <string name="plan_on_the_timeline">"Planifie sur la frise"</string>
@@ -2147,6 +2149,7 @@
     <string name="tap_an_empty_spot_to_add_hold_a_block_and_drag_to_move_it">"Touche un espace vide pour ajouter. Maintiens un créneau et fais-le glisser pour le déplacer."</string>
     <string name="tap_edit_at_the_top_right_days_run_across_hours_run_down">"Touche Modifier en haut à droite. Les jours vont de gauche à droite, les heures de haut en bas."</string>
     <string name="tap_end_session_after_a_conversation_and_it_ll_show_up_here">"Touche Enregistrer la conversation après un appel et elle apparaîtra ici."</string>
+    <string name="tap_it_once_more_your_voice_didn_t_move_this_time">"Touche encore une fois. Ta voix n’a pas pu être transférée cette fois."</string>
     <!-- "Tap Let's talk — or a scenario or story below — to have your first conversation. Everything you meet ends up in Review." -->
     <string name="tap_let_s_talk_or_a_scenario_or_story_below_to_have_your_fir_acaae8">"Touche « On parle ? » — ou une situation ou une actu plus bas — pour ta première conversation. Tout ce que tu y croises se retrouve dans Révision."</string>
     <!-- 'Tap one, then the other. Listen for the voice, not the words — everyone finds their own recording strange at first.' -->

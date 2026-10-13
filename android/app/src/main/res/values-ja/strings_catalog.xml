@@ -1577,6 +1577,8 @@
     <string name="pick_up_where_you_left_off">"続きから"</string>
     <string name="pick_what_to_do_there_talk_words_review_and_more">"その時間にやることを選びます。トーク、単語、復習など。"</string>
     <string name="pick_who_you_practice_with">"練習する相手を選べます"</string>
+    <!-- "Pick your accent again in Me → Voice. It didn't go on this time." -->
+    <string name="pick_your_accent_again_in_me_voice_it_didn_t_go_on_this_time">"アクセントはマイページ → 声でもう一度選んでください。今回は反映されませんでした。"</string>
     <string name="place">"順位"</string>
     <string name="plan">"プラン"</string>
     <string name="plan_on_the_timeline">"タイムラインで計画"</string>
@@ -2150,6 +2152,7 @@
     <string name="tap_an_empty_spot_to_add_hold_a_block_and_drag_to_move_it">"空いている所をタップで追加、ブロックを長押ししてドラッグで移動できます。"</string>
     <string name="tap_edit_at_the_top_right_days_run_across_hours_run_down">"右上の「編集」をタップします。横が曜日、縦が時間です。"</string>
     <string name="tap_end_session_after_a_conversation_and_it_ll_show_up_here">"会話のあとにEnd sessionをタップすると、ここに表示されます。"</string>
+    <string name="tap_it_once_more_your_voice_didn_t_move_this_time">"もう一度タップしてください。今回は声を移せませんでした。"</string>
     <!-- "Tap Let's talk — or a scenario or story below — to have your first conversation. Everything you meet ends up in Review." -->
     <string name="tap_let_s_talk_or_a_scenario_or_story_below_to_have_your_fir_acaae8">"下の「話す」をタップして最初の会話を始めましょう。シチュエーションやニュースをタップしてもかまいません。ここで出会ったものはすべて、復習タブに復習の材料としてたまります。"</string>
     <!-- 'Tap one, then the other. Listen for the voice, not the words — everyone finds their own recording strange at first.' -->
