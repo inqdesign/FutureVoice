@@ -906,8 +906,10 @@ fun RootScreen() {
     fun popRoute(top: RootRoute) {
             when (top) {
                 is RootRoute.TalkBook -> detailSessionId = null
+                // iOS SceneWatchView: the book is a sheet over the finished
+                // scene, and however it goes away the scene goes with it.
                 is RootRoute.ScenarioBook ->
-                    if (top.id == bookOverWatchId && watchScenarioId != null) bookOverWatchId = null
+                    if (top.id == bookOverWatchId && watchScenarioId != null) { bookOverWatchId = null; watchScenarioId = null }
                     else bookScenarioId = null
                 is RootRoute.Watch -> watchScenarioId = null
                 RootRoute.Deck -> { showDeck = false; focusCardId = null; deckSessionId = null; deckPushed = false }
@@ -977,8 +979,9 @@ fun RootScreen() {
 
 
         is RootRoute.ScenarioBook -> {
-            // Pushed over a finished scene by its "Study this": back, and the
-            // book's own Watch, return to that scene underneath.
+            // Over a finished scene by its "Study this" (iOS: a sheet whose
+            // dismissal closes the scene too): back returns to Watch; the
+            // book's own Watch replays the scene underneath.
             val overWatch = r.id == bookOverWatchId && watchScenarioId != null
             ScenarioBookScreen(
                 scenarioId = r.id,
@@ -998,7 +1001,7 @@ fun RootScreen() {
                     inCall = true
                 } },
                 onShadow = { shadowLine = it },
-                onBack = { if (overWatch) bookOverWatchId = null else bookScenarioId = null },
+                onBack = { if (overWatch) { bookOverWatchId = null; watchScenarioId = null } else bookScenarioId = null },
                 // The talk page sits above the book, so back returns here.
                 onOpenTalk = { id ->
                     if (overWatch) {
