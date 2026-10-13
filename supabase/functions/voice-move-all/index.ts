@@ -232,7 +232,9 @@ Deno.serve(async (req) => {
  *  otherwise English is General American, and ja/ko stay plain. */
 function chooseAccent(target: string, had: string | null): string | null {
   if (target === "de") return cartesia.GERMAN_DEFAULT
-  if (had) return had
+  // Kept only if it is an accent OF the language being learned — a German
+  // accent left on an English learner's id does nothing to an English line.
+  if (had && cartesia.ACCENT_LANGUAGE[had] === target) return had
   if (target === "en") return "general-american"
   return null
 }
