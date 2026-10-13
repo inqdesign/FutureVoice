@@ -74,9 +74,16 @@ data class StarterSituation(
     }
 
     companion object {
-        /** The starter a scenario was minted from, if any. */
+        /** The starter a scenario was minted from, if any — from every chip's
+         *  set, since a purpose chip (`DiscoverChip`) mints the same way. */
         fun of(scenario: Scenario?): StarterSituation? =
-            scenario?.starterId?.let { id -> all.firstOrNull { it.id == id } }
+            scenario?.starterId?.let { id -> catalog.firstOrNull { it.id == id } }
+
+        /** Every starter on any chip, each once. */
+        val catalog: List<StarterSituation> by lazy {
+            val seen = mutableSetOf<String>()
+            (all + interview + work + life + travel).filter { seen.add(it.id) }
+        }
 
         /**
          * Meeting someone new is the one starter that is NOT open (iOS
@@ -212,5 +219,142 @@ data class StarterSituation(
                     "de" to listOf("Oh, hallo! Wie geht's Ihnen?", "Hallo! Lange nicht gesehen."),
                 )),
         )
+        // MARK: - Purpose chips (`LearningPurpose`)
+
+        private const val INTERVIEW_NOTE = "You're interviewing the learner for a job they applied for, in an " +
+            "ordinary first-round interview. Ask the way a real interviewer does — " +
+            "one question at a time, a short follow-up on what they actually said, " +
+            "no lecture and no feedback on their answers. Stay friendly but " +
+            "professional, and use the polite form the whole call (German Sie, " +
+            "French vous, Spanish usted, Korean 존댓말, Japanese です・ます). " +
+            "Never score them or tell them how they did."
+
+        /** The Interview chip: the questions every first interview asks. */
+        val interview: List<StarterSituation> by lazy { listOf(
+            StarterSituation(
+                id = "interview-about-you", icon = "person.crop.square",
+                title = R.string.tell_me_about_yourself, role = R.string.an_interviewer,
+                notes = "$INTERVIEW_NOTE Open by asking them to introduce themselves, then follow their answer: their background, what they do now, what they're looking for.",
+                openers = mapOf(
+                    "en" to listOf("Thanks for coming in. So, tell me a little about yourself.", "Nice to meet you. Why don't you start by telling me about yourself?"),
+                    "ko" to listOf("와 주셔서 감사합니다. 먼저 간단히 자기소개 부탁드릴게요.", "반갑습니다. 자기소개부터 해 주시겠어요?"),
+                )),
+            StarterSituation(
+                id = "interview-why-job", icon = "questionmark.bubble",
+                title = R.string.why_do_you_want_this_job, role = R.string.an_interviewer,
+                notes = "$INTERVIEW_NOTE This part of the interview is about motivation: why this role, why this company, why now, and where they see themselves.",
+                openers = mapOf(
+                    "en" to listOf("So, what made you apply for this position?", "Tell me, why do you want to work here?"),
+                    "ko" to listOf("이 자리에 지원하신 이유가 궁금해요.", "왜 저희 회사에서 일하고 싶으세요?"),
+                )),
+            StarterSituation(
+                id = "interview-strengths", icon = "chart.bar",
+                title = R.string.strengths_and_weaknesses, role = R.string.an_interviewer,
+                notes = "$INTERVIEW_NOTE This part is about their strengths, a weakness and what they do about it, and a concrete example of each.",
+                openers = mapOf(
+                    "en" to listOf("What would you say is your biggest strength?", "Let's talk about you. What are you really good at?"),
+                    "ko" to listOf("본인의 가장 큰 강점은 뭐라고 생각하세요?", "스스로 생각하는 장점부터 들어 볼게요."),
+                )),
+            StarterSituation(
+                id = "interview-experience", icon = "briefcase",
+                title = R.string.a_project_you_re_proud_of, role = R.string.an_interviewer,
+                notes = "$INTERVIEW_NOTE This part is about their experience: one project or situation from their work or studies, what they did, what went wrong, what they learned.",
+                openers = mapOf(
+                    "en" to listOf("Can you walk me through a project you're proud of?", "Tell me about a time you solved a difficult problem at work."),
+                    "ko" to listOf("자랑스러웠던 프로젝트 하나 소개해 주시겠어요?", "어려운 문제를 해결했던 경험이 있으면 말씀해 주세요."),
+                )),
+            StarterSituation(
+                id = "interview-salary", icon = "banknote",
+                title = R.string.talking_about_salary, role = R.string.a_recruiter,
+                notes = "$INTERVIEW_NOTE You're the recruiter at the end of the process, talking about salary expectations, start date and benefits. Be realistic and a little firm, the way recruiters are.",
+                openers = mapOf(
+                    "en" to listOf("Before we wrap up, what are your salary expectations?", "Let's talk about the offer. What range did you have in mind?"),
+                    "ko" to listOf("마무리하기 전에, 희망 연봉은 어느 정도 생각하세요?", "처우 얘기를 좀 해 볼까요? 생각하신 범위가 있으세요?"),
+                )),
+        ) }
+
+        /** The Work chip: speaking moments of an ordinary working week. */
+        val work: List<StarterSituation> by lazy { listOf(
+            StarterSituation(
+                id = "work-meeting", icon = "person.3.fill",
+                title = R.string.giving_your_view_in_a_meeting, role = R.string.a_coworker, showsRole = false,
+                notes = "You're the learner's coworker in a small team meeting, asking what they think about the plan on the table. $OPEN_NOTE",
+                openers = mapOf(
+                    "en" to listOf("So, what do you think? Does this plan work for your side?", "Before we decide — any thoughts from you?"),
+                    "ko" to listOf("어떻게 생각하세요? 이 계획, 그쪽 입장에선 괜찮을까요?", "결정하기 전에, 의견 있으세요?"),
+                )),
+            StarterSituation(
+                id = "work-update", icon = "chart.line.uptrend.xyaxis",
+                title = R.string.your_project_update, role = R.string.your_manager,
+                notes = "You're the learner's manager in a weekly one-on-one, asking how their work is going. $OPEN_NOTE",
+                openers = mapOf(
+                    "en" to listOf("Hey, how's everything going on your side this week?", "So, where are we with your project?"),
+                    "ko" to listOf("이번 주 일은 어떻게 돼 가요?", "맡은 프로젝트는 지금 어디까지 왔어요?"),
+                )),
+            StarterSituation(
+                id = "work-client", icon = "phone.fill",
+                title = R.string.a_call_with_a_client, role = R.string.a_client,
+                notes = "You're a client calling the learner's company about something you need. Be polite, a bit busy, and expect clear answers. $OPEN_NOTE",
+                openers = mapOf(
+                    "en" to listOf("Hi, thanks for taking my call. Do you have a minute?", "Hello! I wanted to check in about our order."),
+                    "ko" to listOf("안녕하세요, 통화 괜찮으세요?", "안녕하세요! 저희 주문 건 때문에 연락드렸어요."),
+                )),
+            StarterSituation(
+                id = "work-small-talk", icon = "cup.and.saucer",
+                title = R.string.small_talk_with_a_coworker, role = R.string.a_coworker, showsRole = false,
+                notes = "You're the learner's coworker, chatting by the coffee machine. $OPEN_NOTE",
+                openers = mapOf(
+                    "en" to listOf("Morning! Busy day?", "Hey! How was your weekend?"),
+                    "ko" to listOf("좋은 아침이에요! 오늘 바빠요?", "주말 잘 보냈어요?"),
+                )),
+        ) }
+
+        /** The Life chip: living somewhere, not visiting it. */
+        val life: List<StarterSituation> by lazy { listOf(
+            StarterSituation(
+                id = "life-landlord", icon = "key.fill",
+                title = R.string.calling_your_landlord, role = R.string.your_landlord,
+                notes = "You're the learner's landlord, answering the phone. Something in the flat probably needs fixing. $OPEN_NOTE",
+                openers = mapOf(
+                    "en" to listOf("Hello? Oh, hi. What can I do for you?", "Hi there, is everything all right with the flat?"),
+                    "ko" to listOf("여보세요? 아, 네. 무슨 일이세요?", "안녕하세요, 집에 무슨 문제 있으세요?"),
+                )),
+            StarterSituation(
+                id = "life-town-hall", icon = "building.columns.fill",
+                title = R.string.at_the_town_hall, role = R.string.a_clerk,
+                notes = "You're a clerk at the town hall's registration desk. You're busy but correct, and you ask for the documents you need. $OPEN_NOTE",
+                openers = mapOf(
+                    "en" to listOf("Next, please. How can I help you?", "Good morning. What do you need today?"),
+                    "ko" to listOf("다음 분이요. 어떤 일로 오셨어요?", "안녕하세요. 무슨 업무 보러 오셨어요?"),
+                )),
+            StarterSituation(
+                id = "life-teacher", icon = "figure.and.child.holdinghands",
+                title = R.string.your_child_s_teacher, role = R.string.a_teacher,
+                notes = "You're the teacher of the learner's child, at pick-up time or a short parent meeting. $OPEN_NOTE",
+                openers = mapOf(
+                    "en" to listOf("Oh, hello! Do you have a minute? I wanted to tell you about today.", "Hi! Thanks for coming in."),
+                    "ko" to listOf("아, 안녕하세요! 잠깐 시간 괜찮으세요? 오늘 있었던 일 말씀드리려고요.", "안녕하세요! 와 주셔서 감사해요."),
+                )),
+        ) + all.filter { it.id in listOf("doctor-appointment", "neighbor-small-talk") } }
+
+        /** The Travel chip: being a visitor. */
+        val travel: List<StarterSituation> by lazy { listOf(
+            StarterSituation(
+                id = "travel-airport", icon = "airplane",
+                title = R.string.at_the_check_in_desk, role = R.string.an_airline_agent,
+                notes = "You're an agent at an airline check-in desk. $OPEN_NOTE",
+                openers = mapOf(
+                    "en" to listOf("Hi! Where are you flying today?", "Good morning. Passport, please."),
+                    "ko" to listOf("안녕하세요! 오늘 어디로 가세요?", "안녕하세요. 여권 부탁드릴게요."),
+                )),
+            StarterSituation(
+                id = "travel-problem", icon = "exclamationmark.bubble",
+                title = R.string.when_something_goes_wrong, role = R.string.a_front_desk_clerk,
+                notes = "You're at a hotel front desk. The learner comes to you because something went wrong — the room, a booking, lost luggage; let them say what. $OPEN_NOTE",
+                openers = mapOf(
+                    "en" to listOf("Hi, is everything all right?", "Hello! What can I do for you?"),
+                    "ko" to listOf("안녕하세요, 무슨 문제 있으세요?", "안녕하세요! 뭘 도와드릴까요?"),
+                )),
+        ) + all.filter { it.id in listOf("hotel-checkin", "train-ticket", "ask-directions", "order-restaurant") } }
     }
 }

@@ -48,7 +48,7 @@ object TalkCaptureFlags {
 
     /** The Discover chip Talk opens on (iOS `previewScenariosTab`, the
      *  `home-scenarios` capture opens on Everyday). */
-    @JvmField var discoverTab: com.roro.futurevoice.ui.DiscoverTab? = null
+    @JvmField var discoverTab: com.roro.futurevoice.data.DiscoverChip? = null
 
     /** `VoiceRevivalScreen` holds this stage instead of rebuilding the voice
      *  ("rebuilding" or "tune" — iOS `voice-revival[-tune]`). */

@@ -37,6 +37,10 @@ data class TalkConfig(
     val nativeLanguage: String = "ko",
     val level: CefrLevel = CefrLevel.B1,
     val topic: String = "",
+    /** Context the call is told beside the topic — an exam question's part
+     *  and cue card, a field topic's line (iOS `topicBlurb`). Prompt only:
+     *  the session's title stays [topic]. */
+    val topicBlurb: String = "",
     val persona: UserPersona? = null,
     /** Pool-grounded facts for a news talk — the model's only ground truth. */
     val newsFacts: List<String> = emptyList(),
@@ -63,7 +67,10 @@ data class TalkConfig(
      * and book mechanism work on it for free.
      */
     val counterpartId: String? = null,
-)
+) {
+    /** iOS `systemPrompt()`'s `composedTopic`. */
+    val composedTopic: String get() = if (topicBlurb.isEmpty()) topic else "$topic. $topicBlurb"
+}
 
 /**
  * [PAUSED] is the call put DOWN, not away: the mic is closed and nothing
@@ -331,7 +338,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                     level = config.level,
                     topPatterns = profile.recurringMistakes,
                     weakVocabAreas = profile.weakVocabAreas,
-                    topic = config.topic,
+                    topic = config.composedTopic,
                     persona = config.persona,
                     newsFacts = config.newsFacts,
                     cast = config.cast,
@@ -464,7 +471,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                     level = config.level,
                     topPatterns = profile.recurringMistakes,
                     weakVocabAreas = profile.weakVocabAreas,
-                    topic = config.topic,
+                    topic = config.composedTopic,
                     persona = config.persona,
                     // Free talk only: a scenario casts the model as the
                     // barista and a Find-people call as a stranger; neither

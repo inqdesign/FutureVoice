@@ -11,13 +11,18 @@
     <string name="a_book">"교재 한 권"</string>
     <!-- 'A book lands here once every word and line in it is mastered. Nothing you file away counts — only what you finished.' -->
     <string name="a_book_lands_here_once_every_word_and_line_in_it_is_mastered_d3fa9a">"책 안의 단어와 문장을 전부 익히면 여기로 와요. 미뤄 둔 건 세지 않고, 끝낸 것만 쳐요."</string>
+    <string name="a_call_with_a_client">"고객과 통화"</string>
+    <string name="a_clerk">"창구 직원"</string>
+    <string name="a_client">"고객"</string>
     <string name="a_clinic_receptionist">"병원 접수 직원"</string>
     <string name="a_closet_is_the_best_spot">"옷장 속이 제일 좋아요."</string>
     <!-- "A coached call counts as a practice call. Your minutes, streak and book all count, but it isn't used to measure your level, and words you use in it aren't marked as learned." -->
     <string name="a_coached_call_counts_as_a_practice_call_your_minutes_streak_9831ff">"코치 모드로 한 통화는 연습 통화로 기록돼요. 통화 시간, 연속 기록, 교재는 그대로 남지만 레벨 측정에는 쓰이지 않고, 그 통화에서 쓴 단어도 익힌 것으로 치지 않아요."</string>
     <string name="a_code_counts_once_per_account_so_this_one_is_done">"코드는 계정당 한 번이라 이걸로 끝이에요."</string>
+    <string name="a_company_a_team_a_person_anything">"회사, 팀, 사람… 뭐든 적어 보세요"</string>
     <!-- 'A confident talk — you kept the story going and only the tenses tripped you.' -->
     <string name="a_confident_talk_you_kept_the_story_going_and_only_the_tense_44673a">"자신 있게 말했어요. 이야기를 끝까지 끌고 갔고, 시제에서만 걸렸어요."</string>
+    <string name="a_coworker">"동료"</string>
     <!-- 'A day counts once every goal here is met — and only FINISHED work counts: “Got it” on a sentence, “I know” on a word or phrase, a recorded shadow take. Sending something to 10 minutes or tomorrow is progress, but it isn’t done. Set a goal to 0 to leave it out.' -->
     <string name="a_day_counts_once_every_goal_here_is_met_and_only_finished_w_970192">"여기 목표를 모두 채우면 그날이 완료돼요 — 그리고 **끝낸 것만** 세어져요: 문장은 “Got it”, 단어·표현은 “알아요”, 섀도잉은 녹음한 시도. 10분 뒤나 내일로 미루는 것도 진전이지만 끝낸 건 아니에요. 목표를 0으로 두면 그 항목은 빠져요."</string>
     <string name="a_few_days_in_the_rhythm_is_starting">"며칠씩 이어졌어요. 리듬이 잡히는 중이에요."</string>
@@ -63,12 +68,14 @@
     <string name="a_presentation_a_pitch_a_speech_you_have_to_give">"곧 해야 할 발표, 피칭, 스피치를 그대로 연습해요."</string>
     <!-- 'A presentation at work, a pitch, introducing yourself at a meeting. Saying prepared words clearly, at a steady pace, with pauses in the right places, is its own skill, and most people only find that out on the day.' -->
     <string name="a_presentation_at_work_a_pitch_introducing_yourself_at_a_mee_fb70e2">"회사 발표, 투자 피칭, 회의 자리의 자기소개. 준비한 말을 또박또박, 알맞은 속도로, 쉴 곳에서 쉬어 가며 전하는 건 따로 연습해야 늘어요. 대부분 그날이 돼서야 알게 되죠."</string>
+    <string name="a_project_you_re_proud_of">"자랑하고 싶은 프로젝트"</string>
     <!-- "A public figure's profile comes from public coverage. Their voice is a preset, never their real one." -->
     <string name="a_public_figure_s_profile_comes_from_public_coverage_their_v_f715e8">"유명인의 프로필은 공개된 정보로 채워요. 목소리는 프리셋이고, 실제 목소리는 쓰지 않아요."</string>
     <string name="a_quick_daily_habit_one_short_call">"가볍게 매일, 짧은 통화 한 번"</string>
     <!-- "A quick run through this talk's key phrases — anything left comes back in Review." -->
     <string name="a_quick_run_through_this_talk_s_key_phrases_anything_left_co_e8cef5">"이 대화의 핵심 문장만 빠르게 복습해요 — 나머지는 복습 탭에서 다시 만나요."</string>
     <string name="a_quiet_week">"쉬어 간 한 주"</string>
+    <string name="a_recruiter">"채용 담당자"</string>
     <!-- 'A reminder that your trial is about to convert — we ask to send notifications when the trial starts.' -->
     <string name="a_reminder_that_your_trial_is_about_to_convert_we_ask_to_sen_cd5350">"체험이 곧 결제로 바뀐다는 알림이에요. 체험이 시작될 때 알림 권한을 여쭤봐요."</string>
     <!-- 'A sentence lands here once it reaches the top of the review ladder.' -->
@@ -79,6 +86,7 @@
     <string name="a_server">"종업원"</string>
     <string name="a_shop_assistant">"점원"</string>
     <string name="a_short_call_now_and_then">"가끔 짧게 통화"</string>
+    <string name="a_short_update_the_way_you_d_give_it_in_a_meeting">"회의에서 하듯 짧게 진행 상황 말하기"</string>
     <!-- 'A stock voice that plays "you" — your cloned voice is never used, and nobody\'s talks with your persona are ever shown to you or anyone else.' -->
     <string name="a_stock_voice_that_plays_you_your_cloned_voice_is_never_used_920f41">"\"나\"를 연기하는 기본 목소리예요 — 내 클론 목소리는 절대 쓰이지 않고, 누가 내 페르소나와 나눈 대화도 나를 포함해 누구에게도 보이지 않아요."</string>
     <string name="a_strong_week">"훌륭한 한 주예요"</string>
@@ -86,13 +94,25 @@
     <string name="a_talk_block_rings_as_your_daily_call_when_the_call_is_on_me_815e72">"매일 전화가 켜져 있으면 대화 칸은 그 시각에 전화로 울려요(나 › 전화). 전화 시각은 4개까지예요."</string>
     <string name="a_talk_or_two_first">"먼저 대화를 한두 번 해요"</string>
     <string name="a_talk_or_two_first_next">"대화 한두 번 뒤에 · 다음은 %s"</string>
+    <string name="a_teacher">"선생님"</string>
     <string name="a_ticket_agent">"매표소 직원"</string>
     <!-- "A voice from where you're from, speaking %@. Never your own voice." -->
     <string name="a_voice_from_where_you_re_from_speaking_never_your_own_voice">"내가 온 나라의 목소리가 %s로 말해요. 내 목소리는 쓰지 않아요."</string>
+    <string name="a_week_made_for_you">"나를 위한 한 주"</string>
+    <string name="a_week_of_exam_practice">"시험을 준비하는 한 주"</string>
+    <string name="a_week_of_handling_life_where_you_live">"사는 곳에서 혼자 해결하는 한 주"</string>
+    <string name="a_week_of_talking_about_what_you_love">"좋아하는 이야기로 채우는 한 주"</string>
+    <string name="a_week_of_talking_about_what_you_study">"내 전공을 말로 풀어 보는 한 주"</string>
+    <string name="a_week_of_the_talk_you_need_at_work">"일에서 쓰는 말을 익히는 한 주"</string>
+    <string name="a_week_to_get_interview_ready">"면접을 준비하는 한 주"</string>
+    <string name="a_week_to_get_ready_for_your_trip">"여행을 준비하는 한 주"</string>
+    <string name="a_week_to_get_you_talking">"말문을 트는 한 주"</string>
     <string name="a_year">"1년"</string>
     <string name="about_half_a_minute">"30초쯤 걸려요."</string>
     <string name="about_lld_hr_a_day">"하루 %d시간꼴"</string>
     <string name="about_lld_min_a_day">"하루 %d분꼴"</string>
+    <!-- 'About %lld minutes of talk a day, and what it corrected comes back the same evening.' -->
+    <string name="about_lld_minutes_of_talk_a_day_and_what_it_corrected_comes_22496d">"하루 %d분쯤 말하고, 고친 문장은 그날 저녁에 다시 봐요."</string>
     <string name="about_lld_waiting">"약 %d개 기다리는 중"</string>
     <string name="about_them">"상대 정보"</string>
     <string name="about_to_read_leave_a_blank_line_between_paragraphs">"읽는 데 %s 정도 걸려요 · 문단 사이는 한 줄 띄워 주세요."</string>
@@ -123,9 +143,12 @@
     <!-- 'Add minutes to keep going now, or review what this month left you.' -->
     <string name="add_minutes_to_keep_going_now_or_review_what_this_month_left_044ece">"시간을 추가해 지금 이어가거나, 이달에 남긴 걸 복습해요."</string>
     <string name="add_my_own_script">"내 원고 넣기"</string>
+    <string name="add_the_role_you_re_applying_for_i_ll_ask_its_questions">"지원하는 직무를 적으면 그 직무 면접 질문을 만들어 줘요"</string>
+    <string name="add_your_job_and_role_for_topics_from_your_work">"하는 일과 역할을 적으면 내 일에 맞춘 주제를 만들어 줘요"</string>
     <string name="add_your_own">"내 원고 넣기"</string>
     <string name="add_your_own_comma_separated">"직접 추가 (쉼표로 구분)"</string>
     <string name="add_your_own_script">"내 원고 넣기"</string>
+    <string name="add_your_school_and_subject_for_topics_from_your_field">"학교와 전공을 적으면 내 분야 주제를 만들어 줘요"</string>
     <string name="advanced_i_express_myself_fluently_and_precisely">"고급 — 유창하고 정확하게 표현해요"</string>
     <string name="after_each_take">"녹화를 마치면"</string>
     <string name="again">"다시"</string>
@@ -133,6 +156,7 @@
     <string name="ahead_of_2_by_lld">"2위보다 %d점 앞서 있어요"</string>
     <string name="ai_read_tap_to_apply">"AI가 본 레벨: %s — 눌러서 적용"</string>
     <string name="ai_tech">"AI · 기술"</string>
+    <string name="airport_hotel_restaurants">"공항, 호텔, 식당"</string>
     <string name="all_caught_up">"다 끝냈어요"</string>
     <string name="all_challenges">"모든 챌린지"</string>
     <string name="all_levels">"모든 레벨"</string>
@@ -152,8 +176,10 @@
     <string name="already_have_an_account_sign_in">"이미 계정이 있나요? 로그인"</string>
     <string name="always_free">"언제나 무료"</string>
     <string name="am_i_actually_getting_better">"정말 늘고 있는 걸까요?"</string>
+    <string name="an_airline_agent">"항공사 직원"</string>
     <string name="an_empty_day_is_a_rest_day_so_it_doesn_t_break_your_streak">"비워 둔 날은 쉬는 날이라 연속 기록이 끊기지 않아요."</string>
     <string name="an_idea_is_only_yours_once_you_ve_said_it">"아이디어는 직접 말해 봐야 내 것이 돼요."</string>
+    <string name="an_interviewer">"면접관"</string>
     <string name="analyzing_your_week">"이번 주를 분석하는 중…"</string>
     <string name="and_lld_more">"그 밖에 %d번 더"</string>
     <string name="and_what_s_always_free">"그리고 언제나 무료인 것"</string>
@@ -202,7 +228,12 @@
     <string name="at_a_hotel">"호텔에서"</string>
     <string name="at_a_restaurant">"식당에서"</string>
     <string name="at_least_lld">"만 %d세 이상"</string>
+    <!-- 'At talk times your fluent self calls you. You can change all of it later in My routine.' -->
+    <string name="at_talk_times_your_fluent_self_calls_you_you_can_change_all_3984de">"대화 시간이 되면 미래의 내가 전화를 걸어요. 나중에 '나의 루틴'에서 전부 바꿀 수 있어요."</string>
+    <string name="at_the_check_in_desk">"체크인 카운터에서"</string>
+    <string name="at_the_town_hall">"관공서에서"</string>
     <string name="at_the_train_station">"기차역에서"</string>
+    <string name="at_your_routine_s_talk_times">"루틴에 정한 시간에 걸게: %s"</string>
     <string name="attach_a_link_or_a_file">"링크나 파일 붙이기"</string>
     <string name="attach_material">"자료 붙이기"</string>
     <string name="automatic">"자동"</string>
@@ -259,6 +290,7 @@
     <string name="call_settings">"통화 설정"</string>
     <string name="call_voice_volume">"통화 음성 크기"</string>
     <string name="calling_a_clinic">"병원에 전화하기"</string>
+    <string name="calling_your_landlord">"집주인에게 전화하기"</string>
     <string name="calls_and_scenes_speak_this_way">"통화와 장면에서 이 말투를 써요."</string>
     <!-- "Calls and scenes speak this way. Someone who knows your life knows what you've told your future self, the way a close friend would." -->
     <string name="calls_and_scenes_speak_this_way_someone_who_knows_your_life_e341fe">"통화와 장면에서 이 말투를 써요. 내 삶을 아는 사람은 미래의 나에게 한 이야기를 친한 친구처럼 알고 있어요."</string>
@@ -305,6 +337,7 @@
     <string name="choose_a_photo">"사진 고르기"</string>
     <!-- 'Choose a topic and AI writes it for your level, or paste a text of your own.' -->
     <string name="choose_a_topic_and_ai_writes_it_for_your_level_or_paste_a_te_d4a75b">"주제를 고르면 AI가 내 수준에 맞춰 써 줘요. 가지고 있는 글을 붙여 넣어도 돼요."</string>
+    <string name="choose_exam">"시험 고르기"</string>
     <string name="choose_your_plan">"요금제 선택"</string>
     <string name="city">"도시"</string>
     <string name="city_country">"도시, 나라"</string>
@@ -401,6 +434,7 @@
     <string name="couldn_t_turn_on_sync">"동기화를 켜지 못했어요"</string>
     <string name="couldn_t_write_the_scene">"상황연습을 쓰지 못했어요"</string>
     <string name="couldn_t_write_the_script">"원고를 만들지 못했어요"</string>
+    <string name="couldn_t_write_topics_try_again">"주제를 못 만들었어요 · 다시 시도"</string>
     <string name="country">"국가"</string>
     <string name="cover_and_write">"가리고 쓰기"</string>
     <string name="create">"만들기"</string>
@@ -428,6 +462,7 @@
     <string name="deal_this_week_s_paper_again_past_weeks_stay">"이번 주 시험지를 다시 내요. 지난 주는 그대로예요"</string>
     <!-- 'Debug builds only. Routes back through the first-run setup flow.' -->
     <string name="debug_builds_only_routes_back_through_the_first_run_setup_fl_465aa6">"디버그 빌드에서만 보여요. 처음 켰을 때 설정 화면으로 되돌아가요."</string>
+    <string name="decide_later">"나중에 정할게요"</string>
     <string name="decide_who_it_s_with_and_what_s_happening">"누구와, 어떤 상황인지만 정하면 돼요."</string>
     <string name="delete">"삭제"</string>
     <string name="delete_account">"계정 삭제"</string>
@@ -581,6 +616,7 @@
     <!-- 'Every word you say in a talk is collected and graded by CEFR — the level reads what you use, not what you know.' -->
     <string name="every_word_you_say_in_a_talk_is_collected_and_graded_by_cefr_81f280">"대화에서 실제로 말한 단어를 모아 CEFR 등급으로 매겨요 — 아는 단어가 아니라 쓰는 단어로 읽어요."</string>
     <string name="everyday">"일상"</string>
+    <string name="everyday_chip_a_caf_asking_the_way_a_neighbor">"일상 칩 · 카페, 길 묻기, 이웃"</string>
     <!-- 'Everyday topics in simple terms — routines, plans, basic needs.' -->
     <string name="everyday_topics_in_simple_terms_routines_plans_basic_needs">"일상적인 주제를 간단한 말로 — 하루 일과, 계획, 기본적인 필요."</string>
     <!-- 'Everyday words plus the common idioms and phrasal verbs. Subordinate clauses and hedging.' -->
@@ -610,6 +646,8 @@
     <string name="everything_you_ve_collected_from_every_book_in_one_place">"모든 교재에서 모은 단어, 표현, 섀도잉을 한곳에서 찾아봐요."</string>
     <!-- "Everything you've practiced on this device — talks, drills, words, books — plus your languages, levels and goals, as one file. Use it to carry progress into another install. Your voice and minutes already follow your account." -->
     <string name="everything_you_ve_practiced_on_this_device_talks_drills_word_498dd4">"이 기기에서 연습한 것 전부를 파일 하나로 묶어요. 대화, 드릴, 단어, 책에 언어·레벨·목표까지요. 다른 곳에 새로 깐 앱으로 진도를 옮길 때 쓰면 돼요. 목소리와 통화 시간은 원래 계정을 따라다녀요."</string>
+    <string name="exam">"시험"</string>
+    <string name="exam_chip_topics_the_exam_keeps_asking">"시험 칩 · 시험에 자주 나오는 주제"</string>
     <string name="example">"예문"</string>
     <string name="example_for">"“%s” 예문"</string>
     <string name="example_situations">"상황 예시"</string>
@@ -678,7 +716,12 @@
     <string name="follow_my_voice">"내 목소리 따라가기"</string>
     <string name="follow_the_highlight_tap_to_cancel">"하이라이트를 따라가세요 · 누르면 취소"</string>
     <string name="follows_your_voice">"목소리를 따라가요"</string>
+    <string name="for_a_job_hunt">"취업·이직 준비"</string>
+    <string name="for_an_exam">"시험 준비"</string>
+    <string name="for_fun">"취미로"</string>
+    <string name="for_my_studies">"대학·공부"</string>
     <string name="for_the_weeks_you_re_all_in">"몰입하는 몇 주를 위해"</string>
+    <string name="for_travel">"여행 가요"</string>
     <string name="for_watch_scenes_without_a_saved_person">"저장한 사람이 없는 상황연습에 쓰여요"</string>
     <!-- "For when you know what you want to say but can't find the words. It starts out on at A1 and A2." -->
     <string name="for_when_you_know_what_you_want_to_say_but_can_t_find_the_wo_399d09">"하고 싶은 말은 있는데 말이 안 나올 때 써요. A1·A2 레벨은 처음부터 켜져 있어요."</string>
@@ -721,6 +764,7 @@
     <string name="get_under_1f_and_this_reads">" — %1$.1f개 아래로 내려가면 ≈%2$s로 읽혀요"</string>
     <string name="getting_what_your_other_devices_did">"다른 기기에서 한 것을 가져오는 중…"</string>
     <string name="given">"동의한 날: %s"</string>
+    <string name="giving_your_view_in_a_meeting">"회의에서 의견 말하기"</string>
     <string name="glossary">"낱말 풀이"</string>
     <string name="go_again">"다시 도전하기"</string>
     <string name="go_through_it_before_it_happens">"그 일을 미리 한 번 겪어 보세요"</string>
@@ -815,6 +859,7 @@
     <string name="i_called_earlier">"아까 전화했었는데."</string>
     <string name="i_know">"알아요"</string>
     <string name="i_left_you_a_message">"메시지 남겨 뒀어."</string>
+    <string name="i_live_abroad">"해외에서 살아요"</string>
     <string name="i_ll_call_you_let_s_talk_five_minutes_a_day">"내가 전화 걸어 줄게.\n매일 5분, 나와 대화하자."</string>
     <!-- "%@, I'll help you keep it up" -->
     <string name="i_ll_help_you_keep_it_up_d1116e">"%s, 내가 계속하게 도와줄게"</string>
@@ -825,11 +870,14 @@
     <string name="i_m_lld_or_older_and_i_agree_to_my_recording_being_used_to_b_a31e9d">"저는 만 %d세 이상이고, 제 녹음으로 음성 모델을 만드는 데 동의합니다."</string>
     <!-- "I'm practicing speaking with my own AI voice on nawana. Enter my code %@ when you sign up and we both get %lld minutes of talk time." -->
     <string name="i_m_practicing_speaking_with_my_own_ai_voice_on_nawana_enter_50926d">"nawana에서 내 목소리로 말하기 연습하고 있어요. 가입할 때 코드 %1$s 를 넣으면 둘 다 통화 %2$d분을 받아요."</string>
+    <string name="i_need_it_at_work">"일에서 써야 해요"</string>
+    <string name="i_want_to_start_speaking">"말문을 트고 싶어요"</string>
     <!-- "iCloud isn't available on this device" -->
     <string name="icloud_isn_t_available_on_this_device_2fccd1">"이 기기에서는 iCloud를 쓸 수 없어요"</string>
     <!-- "iCloud isn't available on this device." -->
     <string name="icloud_isn_t_available_on_this_device_58fd8e">"이 기기에서는 iCloud를 쓸 수 없어요."</string>
     <string name="icloud_storage_is_full_audio_isn_t_syncing">"iCloud 저장 공간이 꽉 찼어요 — 오디오는 동기화되지 않아요"</string>
+    <string name="ielts_opic_toeic_speaking">"IELTS, OPIc, TOEIC Speaking…"</string>
     <string name="import_practice_data">"연습 데이터 가져오기"</string>
     <string name="in_">"%1$s로는 %2$s"</string>
     <string name="in_a_new_situation_you_don_t_know_what_to_say">"처음 겪는 상황에선 무슨 말을 할지 떠오르지 않아요"</string>
@@ -853,6 +901,9 @@
     <!-- 'Instead of a reminder, your fluent self phones you once a day with a question to answer out loud. They remember how the last call went.' -->
     <string name="instead_of_a_reminder_your_fluent_self_phones_you_once_a_day_30a288">"알림이 뜨는 대신, 유창해진 내가 하루에 한 번 전화를 걸어요. 소리 내어 답할 질문 하나를 들고요. 지난 통화가 어땠는지도 기억하고 있어요."</string>
     <string name="interests">"관심사"</string>
+    <string name="interview">"면접"</string>
+    <string name="interview_chip_about_yourself_why_this_job">"면접 칩 · 자기소개, 지원 동기"</string>
+    <string name="interviews_the_field_i_m_applying_to">"면접, 지원하는 업계 이야기"</string>
     <string name="introduce_someone_worth_knowing">"알아둘 만한 사람 소개"</string>
     <string name="introduction">"소개"</string>
     <string name="invite_a_friend_lld_min_each">"친구 초대하고 %d분 받기"</string>
@@ -924,6 +975,7 @@
     <string name="know_it">"이미 안다면"</string>
     <string name="known">"아는 것"</string>
     <string name="knows_your_life">"내 삶을 알아요"</string>
+    <string name="landlord_town_hall_doctor_my_kid_s_school">"집주인, 관공서, 병원, 아이 학교"</string>
     <string name="language">"언어"</string>
     <string name="language_learning">"외국어 공부"</string>
     <string name="large">"크게"</string>
@@ -956,6 +1008,8 @@
     <!-- '%@. Level %@' -->
     <string name="level_f11db5">"%1$s. 레벨 %2$s"</string>
     <string name="level_up">"레벨 업"</string>
+    <string name="life">"생활"</string>
+    <string name="life_chip_landlord_town_hall_doctor">"생활 칩 · 집주인, 관공서, 병원"</string>
     <string name="light">"밝게"</string>
     <string name="lines_that_didn_t_quite_land_when_you_shadowed_them">"섀도잉할 때 아직 입에 덜 붙은 문장이에요."</string>
     <string name="lines_worth_saying_differently">"다르게 말해볼 문장"</string>
@@ -1152,6 +1206,7 @@
     <!-- "Meeting my partner's parents for the first time over dinner at their place." -->
     <string name="meeting_my_partner_s_parents_for_the_first_time_over_dinner_7291f9">"애인의 부모님을 처음 뵙는 자리. 그 집에서 저녁을 먹으면서."</string>
     <string name="meeting_someone_new">"처음 만난 사람과"</string>
+    <string name="meetings_presentations_client_calls">"회의, 발표, 고객 통화"</string>
     <string name="met_on_nawana">"nawana에서 만남"</string>
     <string name="mic_check">"마이크 확인"</string>
     <string name="mic_on_bluetooth">"블루투스 이어폰 사용시"</string>
@@ -1244,6 +1299,7 @@
     <!-- 'New voices can be made again in a few days. The voice you have keeps working until then.' -->
     <string name="new_voices_can_be_made_again_in_a_few_days_the_voice_you_hav_81c7eb">"새 목소리는 며칠 뒤에 다시 만들 수 있어요. 그때까지 지금 목소리는 그대로 쓸 수 있어요."</string>
     <string name="news">"뉴스"</string>
+    <string name="news_chip_stories_on_what_you_re_into">"뉴스 칩 · 내 관심사 기사"</string>
     <string name="news_topic">"뉴스 주제"</string>
     <string name="next">"다음"</string>
     <string name="next_assessment">"다음 평가"</string>
@@ -1379,6 +1435,7 @@
     <string name="once">"1회"</string>
     <!-- "Once a week, a test made only from that week's own talks: what a word means, the missing phrase, rebuilding a corrected sentence, writing down what you hear, saying a line out loud, and the grammar from your weekly report. A dot means it's open." -->
     <string name="once_a_week_a_test_made_only_from_that_week_s_own_talks_what_d9930a">"일주일에 한 번, 그 주에 내가 한 대화로만 만든 테스트가 열려요. 단어 뜻 고르기, 빈칸에 들어갈 표현, 고친 문장 다시 맞추기, 듣고 받아쓰기, 소리 내어 말하기, 주간 리포트에 나온 문법까지요. 점이 보이면 테스트가 열려 있다는 뜻이에요."</string>
+    <string name="once_a_week_everything_the_week_taught">"일주일에 한 번, 그 주에 배운 것 전부"</string>
     <string name="once_a_week_let_s_look_back">"일주일에 한 번, 같이 돌아보자"</string>
     <string name="once_you_re_in_one_missed_day_a_month_is_forgiven">"들어간 뒤에는 한 달에 하루까지는 빠져도 괜찮아요."</string>
     <!-- "One dialogue for exactly this situation — its words, expressions, and your lines become the checklist. Generated once, then it's your book." -->
@@ -1428,6 +1485,7 @@
     <string name="other_learners_see_it_over_your_face_on_their_watch_map_writ_b92221">"다른 학습자의 상황연습 지도에서 내 얼굴 위에 떠요. %s로 써 주세요. 비워 두면 자기소개를 보고 알아서 써 둬요."</string>
     <!-- "Other learners who published an introduction. Talking with someone doesn't notify them — it's an AI speaking their introduction, in a stock voice, never theirs." -->
     <string name="other_learners_who_published_an_introduction_talking_with_so_5df6d6">"소개를 공개한 다른 학습자들이에요. 대화해도 상대에게 알림이 가지 않아요 — 그 사람의 소개를 AI가 기본 목소리로 말하는 것이고, 본인 목소리는 쓰이지 않아요."</string>
+    <string name="other_topics">"다른 주제"</string>
     <string name="overall">"전체"</string>
     <string name="overview">"개요"</string>
     <string name="pace">"말하기 속도"</string>
@@ -1480,9 +1538,11 @@
     <!-- 'Pick a type, like an explainer, a person or the news, then a topic and a length. The facts are checked and the words fit your level. Plus and Max.' -->
     <string name="pick_a_type_like_an_explainer_a_person_or_the_news_then_a_to_08bd90">"설명, 인물, 뉴스 같은 종류와 주제, 길이만 고르면 내 수준에 맞춰 원고를 써 줘요. 사실관계도 확인해요."</string>
     <string name="pick_an_area_to_go_one_step_deeper">"한 단계 더 들어갈 영역을 고르세요."</string>
+    <string name="pick_as_many_as_you_like_the_first_one_is_where_talk_opens">"여러 개 골라도 돼요. 처음 고른 게 대화 탭의 첫 칸이 돼요."</string>
     <string name="pick_from_categories">"카테고리에서 고르기"</string>
     <string name="pick_how_much_you_want_to_talk_each_month">"한 달에 얼마나 이야기할지 골라요."</string>
     <string name="pick_how_your_fluent_self_looks_and_sounds">"유창해진 나의 모습과 말하는 속도를 골라요."</string>
+    <string name="pick_up_to_three_the_first_one_is_where_talk_opens">"세 개까지 고를 수 있어요. 처음 고른 게 대화 탭의 첫 칸이 돼요."</string>
     <string name="pick_up_where_you_left_off">"하던 데부터 이어서"</string>
     <string name="pick_what_to_do_there_talk_words_review_and_more">"그 시간에 할 걸 골라요. 대화, 단어, 복습 같은 것들이요."</string>
     <string name="pick_who_you_practice_with">"누구와 연습할지 골라요"</string>
@@ -1505,6 +1565,7 @@
     <string name="plus_and_max">"Plus·Max 전용"</string>
     <string name="podcasts">"팟캐스트"</string>
     <string name="policy">"처리방침"</string>
+    <string name="polish_your_one_minute_self_introduction">"면접 첫 질문, 1분 자기소개 다듬기"</string>
     <string name="polite">"예의 있게"</string>
     <string name="practice">"복습"</string>
     <string name="practice_call">"연습 대화"</string>
@@ -1641,6 +1702,8 @@
     <string name="reminders_are_off">"알림이 꺼져 있어요"</string>
     <string name="reminders_on">"알림 켜짐"</string>
     <string name="remove">"없애기"</string>
+    <!-- 'Remove %@' -->
+    <string name="remove_4f3891">"%s 빼기"</string>
     <string name="remove_accent">"억양 없애기"</string>
     <string name="remove_from_saved_lines">"저장한 문장에서 삭제"</string>
     <string name="remove_photo">"사진 빼기"</string>
@@ -1703,6 +1766,7 @@
     <string name="right_now">"요즘"</string>
     <!-- 'Right now your practice is on this device only. If you delete the app, your talks, books and recordings are gone for good.' -->
     <string name="right_now_your_practice_is_on_this_device_only_if_you_delete_40da0e">"지금 연습 기록은 이 기기에만 있어요. 앱을 지우면 대화·책·녹음이 모두 사라지고 되돌릴 수 없어요."</string>
+    <string name="role_you_re_applying_for_e_g_backend_developer">"지원하는 직무 — 예: 백엔드 개발자"</string>
     <!-- "Rough transcript — the final recognition pass didn't finish (network). The score may be off this time." -->
     <string name="rough_transcript_the_final_recognition_pass_didn_t_finish_ne_ac415f">"받아쓰기가 거칠어요. 네트워크 때문에 최종 인식이 끝나지 못했거든요. 이번 점수는 정확하지 않을 수 있어요."</string>
     <string name="run_again">"처음부터 다시"</string>
@@ -1771,6 +1835,7 @@
     <string name="scenes_you_ve_already_watched_replay_free_forever_and_never_d6d2d2">"이미 본 상황연습은 다시 봐도 그 수가 줄지 않아요."</string>
     <!-- "School, classes, YouTube, books, apps...\nYou tried so hard... didn't you?" -->
     <string name="school_classes_youtube_books_apps_you_tried_so_hard_didn_t_y_70dd65">"학교, 학원, 유튜브, 책, 앱...\n참 열심히 했는데... 그치?"</string>
+    <string name="school_or_university">"학교 또는 대학"</string>
     <string name="science">"과학"</string>
     <string name="score">"점수"</string>
     <string name="scorecard">"스코어카드"</string>
@@ -1796,6 +1861,7 @@
     <string name="see_the_results">"결과 보기"</string>
     <string name="see_where_it_went">"어디에 썼는지 보기"</string>
     <string name="see_words">"%s 단어 보기"</string>
+    <string name="seminars_presentations_my_subject">"수업 토론, 발표, 내 전공 이야기"</string>
     <string name="send">"보내기"</string>
     <string name="sending_lld_of_lld">"보내는 중 %1$d / %2$d…"</string>
     <string name="sentences">"문장"</string>
@@ -1872,6 +1938,7 @@
     <string name="slow">"천천히"</string>
     <string name="slower">"느리게"</string>
     <string name="small">"작게"</string>
+    <string name="small_talk_with_a_coworker">"동료와 가벼운 이야기"</string>
     <string name="so_much_you_want_to_say_all_of_it_still_in_your_head">"하고 싶은 말은\n머릿속에 가득한데"</string>
     <!-- "Some unusual usage needs checking. Write to us and we'll sort it out — everything you've saved is untouched, and reviewing still works." -->
     <string name="some_unusual_usage_needs_checking_write_to_us_and_we_ll_sort_989cca">"평소와 다른 사용이 있어 확인하고 있어요. 메일을 보내 주시면 바로 정리해 드릴게요. 저장한 건 그대로고, 복습도 계속 할 수 있어요."</string>
@@ -1926,6 +1993,7 @@
     <string name="start_the_call">"통화 시작"</string>
     <string name="start_this_week_s_test">"이번 주 테스트 풀기"</string>
     <string name="start_with_the_sample">"샘플 원고로 시작"</string>
+    <string name="start_with_this_routine">"이 루틴으로 시작"</string>
     <string name="start_your_streak">"연속 기록을 시작하세요"</string>
     <string name="starting_a_call">"통화 시작하기"</string>
     <string name="starting_level">"시작 레벨"</string>
@@ -1953,8 +2021,11 @@
     <string name="strangers_hear_the_gist_the_outline_not_the_details">"대략만 공개 — 자세한 내용은 빼고"</string>
     <string name="streak">"연속"</string>
     <string name="streaming_shows">"영상 · 드라마"</string>
+    <string name="strengths_and_weaknesses">"강점과 약점"</string>
     <string name="studied">"%s 학습함"</string>
     <string name="studied_then_said">"공부하고 실제로 말한 것"</string>
+    <string name="studies">"전공"</string>
+    <string name="studies_chip_topics_from_your_subject">"전공 칩 · 내 전공에서 나온 주제"</string>
     <string name="study">"공부"</string>
     <string name="study_days">"공부하는 날"</string>
     <string name="study_record">"학습 기록"</string>
@@ -1967,6 +2038,7 @@
     <!-- "Stumble, get it wrong, that's fine.\nI'll show you how it goes." -->
     <string name="stumble_get_it_wrong_that_s_fine_i_ll_show_you_how_it_goes">"더듬어도, 틀려도 괜찮아.\n내가 다 알려줄게."</string>
     <string name="style_e_g_direct_loves_jokes_formal_careful">"스타일 (예: 직설적, 농담 좋아함 / 격식 있음, 신중함)"</string>
+    <string name="subject_e_g_mechanical_engineering">"전공 — 예: 기계공학"</string>
     <string name="subscribe">"구독하기"</string>
     <string name="subscribe_to_monthly">"월간 %s 구독하기"</string>
     <string name="subscribe_to_yearly">"연간 %s 구독하기"</string>
@@ -1990,6 +2062,7 @@
     <string name="take_your_intro_out_of_the_pool_learners_who_already_met_you_863b54">"소개를 풀에서 내릴까요? 이미 내 페르소나를 만난 학습자의 지난 대화는 그 사람에게 남아 있어요."</string>
     <string name="takes">"테이크"</string>
     <string name="talk">"대화"</string>
+    <string name="talk_about_what_i_like">"좋아하는 걸 마음껏 이야기"</string>
     <string name="talk_as_much_as_you_want">"통화 시간 제한 없음"</string>
     <string name="talk_at_length_most_days">"거의 매일 길게 통화"</string>
     <string name="talk_book">"대화 책"</string>
@@ -1999,6 +2072,7 @@
     <string name="talk_lld_more_minutes_and_this_level_gets_re_read_from_every_b72704">"%d분 더 대화하면 그동안 새로 말한 걸 전부 모아 레벨을 다시 판정해요."</string>
     <string name="talk_mastered">"대화 완료"</string>
     <string name="talk_now">"지금 대화하기"</string>
+    <string name="talk_settings">"대화 설정"</string>
     <!-- "Talk the way you would on the phone. There's no button to hold down." -->
     <string name="talk_the_way_you_would_on_the_phone_there_s_no_button_to_hol_f6c495">"전화하듯 말하면 돼요. 버튼을 누르고 있을 필요가 없어요."</string>
     <string name="talk_then_pause">"말하고, 잠깐 멈추기"</string>
@@ -2008,6 +2082,7 @@
     <string name="talk_your_fill_every_day">"매일 실컷 이야기해도 남아요"</string>
     <string name="talked_this_month">"이번 달 %s 통화"</string>
     <string name="talking">"통화"</string>
+    <string name="talking_about_salary">"연봉 이야기"</string>
     <string name="talking_needs_a_plan">"대화하려면 요금제가 있어야 해요"</string>
     <string name="talking_to_your_future_self">"미래의 나와 통화"</string>
     <string name="talks">"통화"</string>
@@ -2056,6 +2131,7 @@
     <string name="target_line">"원본 문장"</string>
     <string name="telegram">"텔레그램"</string>
     <string name="tell_me_about_them">"그 사람에 대해 알려주세요"</string>
+    <string name="tell_me_about_yourself">"자기소개 해 주세요"</string>
     <string name="tell_me_more_about_you">"나에 대해 더 알려주기"</string>
     <string name="tell_me_when_it_s_ready">"준비되면 알려 주세요"</string>
     <string name="tell_me_when_next_week_s_is_ready">"다음 주 돌아보기도 알려 주세요"</string>
@@ -2066,6 +2142,7 @@
     <string name="text">"텍스트"</string>
     <string name="text_size">"글자 크기"</string>
     <string name="thank_you">"감사합니다"</string>
+    <string name="that_day_s_talk_said_the_way_it_should_have_gone">"그날 대화를 고친 대로 다시"</string>
     <string name="that_doesn_t_look_like_a_link">"링크가 아닌 것 같아요."</string>
     <!-- 'That file held no practice data — nothing was restored. Export again from the other install and check the file is the one you just made.' -->
     <string name="that_file_held_no_practice_data_nothing_was_restored_export_0321b7">"그 파일에는 연습 데이터가 없어서 아무것도 복원되지 않았어요. 다른 설치본에서 다시 내보낸 뒤, 방금 만든 파일이 맞는지 확인해 주세요."</string>
@@ -2095,6 +2172,9 @@
     <string name="the_call_clock_is_the_meter_a_10_minute_call_uses_10_minutes_6bb450">"통화한 시간이 그대로 쓴 시간이에요. 10분 통화하면 10분. 전화가 그렇듯, 생각하느라 멈춘 시간도 똑같이 들어가요."</string>
     <string name="the_call_dropped">"통화가 끊겼어요"</string>
     <string name="the_camera_was_off_so_this_take_isn_t_on_the_board">"카메라가 꺼져 있어서 이번 기록은 순위에 올라가지 않았어요."</string>
+    <string name="the_chips_under_talk_follow_this_in_the_order_you_picked">"대화 탭의 칩이 이 순서대로 놓여요."</string>
+    <!-- 'The chips under Talk follow this, in the order you picked. What you write under one shapes its topics.' -->
+    <string name="the_chips_under_talk_follow_this_in_the_order_you_picked_wha_eac8ab">"대화 탭의 칩이 고른 순서대로 놓여요. 아래에 적은 내용으로 그 칩의 주제를 만들어요."</string>
     <!-- 'The conversation, its score, review cards and audio are removed for good. To keep it but leave it out of your stats, archive it instead.' -->
     <string name="the_conversation_its_score_review_cards_and_audio_are_remove_1fe16e">"대화와 점수, 복습 카드, 오디오가 영구히 사라져요. 남겨 두되 통계에서만 빼려면 삭제 대신 보관하세요."</string>
     <!-- "The conversation was saved, but the analysis that turns it into words, corrections and drill cards didn't finish. You can run it now." -->
@@ -2108,6 +2188,7 @@
     <!-- 'The days you studied add up here. Tap it to see your routine and the days behind you.' -->
     <string name="the_days_you_studied_add_up_here_tap_it_to_see_your_routine_e22534">"공부한 날이 여기 쌓여요. 누르면 내 루틴과 지난 기록을 볼 수 있어요."</string>
     <string name="the_estimated_level">"추정 레벨"</string>
+    <string name="the_exam_chip_shows_topics_this_exam_keeps_asking">"시험 칩에 이 시험의 단골 주제가 나와요."</string>
     <!-- 'The full range — idiom, precise nuance, register shifts. Asides and self-corrections.' -->
     <string name="the_full_range_idiom_precise_nuance_register_shifts_asides_a_e48bdb">"폭 전체 — 관용구, 정확한 뉘앙스, 말투 전환. 곁말과 말하다 고치기까지."</string>
     <string name="the_gist_in_a_few_words">"대략적인 내용을 짧게"</string>
@@ -2132,6 +2213,7 @@
     <string name="the_most_ordinary_everyday_words_one_clause_sentences_rarely_3dc042">"가장 흔한 일상 단어. 한 절짜리 문장, 많아야 두 절."</string>
     <!-- 'The name other learners will see — first name or nickname is plenty.' -->
     <string name="the_name_other_learners_will_see_first_name_or_nickname_is_p_4cde17">"다른 학습자에게 보이는 이름이에요 — 이름이나 닉네임이면 충분해요."</string>
+    <string name="the_news_chip_brings_this_week_s_stories_for_each_one">"뉴스 칩에서 관심사마다 이번 주 기사를 가져와요."</string>
     <string name="the_next_contact">"뒤이은 연락"</string>
     <!-- 'The other days are rest days: nothing is planned, and they never break your streak.' -->
     <string name="the_other_days_are_rest_days_nothing_is_planned_and_they_nev_321b55">"나머지 날은 쉬는 날이에요. 계획이 없고, 연속 기록도 끊기지 않아요."</string>
@@ -2162,6 +2244,7 @@
     <string name="the_script_follows_your_voice">"원고가 나를 따라와요"</string>
     <!-- 'The seal marks the 100 people speaking most days right now. Anyone can earn one.' -->
     <string name="the_seal_marks_the_100_people_speaking_most_days_right_now_a_7bf2ab">"지금 거의 매일 말하고 있는 100명한테 붙어요. 누구나 얻을 수 있어요."</string>
+    <string name="the_sentences_your_talks_corrected">"대화에서 고친 문장"</string>
     <string name="the_settings_button">"설정 버튼"</string>
     <!-- 'The slider button next to the mic opens them. The call keeps going while you change things.' -->
     <string name="the_slider_button_next_to_the_mic_opens_them_the_call_keeps_331b07">"마이크 옆 슬라이더 버튼을 누르면 열려요. 바꾸는 동안에도 통화는 계속돼요."</string>
@@ -2173,6 +2256,7 @@
     <string name="the_top_score_of_lld_people">"%d명 중 가장 높은 점수예요"</string>
     <string name="the_trial_s_scenes_are_used_up">"체험 상황연습을 다 봤어요."</string>
     <string name="the_trial_s_talk_time_is_used_up">"체험 통화 시간을 다 썼어요."</string>
+    <string name="the_week_at_a_glance">"한 주 한눈에 보기"</string>
     <string name="the_week_before_lld_min">"그 전 주: %d분"</string>
     <string name="the_week_is_in_the_book">"이번 주도 기록했어요"</string>
     <string name="the_whole_conversation">"대화 전체"</string>
@@ -2267,12 +2351,15 @@
     <string name="too_noisy">"너무 시끄러워요"</string>
     <string name="topic">"주제"</string>
     <string name="topics">"주제"</string>
+    <!-- 'Topics that exam asks again and again, to talk through with your fluent self.' -->
+    <string name="topics_that_exam_asks_again_and_again_to_talk_through_with_y_02281f">"그 시험에 자꾸 나오는 주제로 미래의 나와 이야기해요."</string>
     <string name="total">"합계"</string>
     <string name="touch_and_hold_to_file_it_again">"길게 누르면 다시 정할 수 있어요."</string>
     <string name="transcript">"대화록"</string>
     <string name="trap_words_what_you_said_before_the_fix">"함정 단어 · 고치기 전에 쓴 말"</string>
     <!-- 'Travel' -->
     <string name="travel_22fb76">"여행"</string>
+    <string name="travel_chip_airport_hotel_restaurants">"여행 칩 · 공항, 호텔, 식당"</string>
     <!-- 'travel' -->
     <string name="travel_f7956b">"여행"</string>
     <string name="trend">"추이"</string>
@@ -2295,6 +2382,7 @@
     <string name="turn_on_photos_for_nawana_in_settings_to_save_the_card">"카드를 저장하려면 설정에서 나와나의 사진 접근을 켜 주세요."</string>
     <string name="turn_on_reminders">"알림 켜기"</string>
     <string name="turn_them_on_in_settings">"설정에서 켤 수 있어요"</string>
+    <string name="two_minutes_on_one_topic_without_stopping">"한 주제로 2분, 멈추지 않고"</string>
     <string name="type">"종류"</string>
     <string name="type_a_topic">"주제 입력"</string>
     <string name="type_here_or_tap_the_mic_and_just_talk_i_ll_sort_it_out">"여기에 적거나, 마이크를 누르고 그냥 말해요. 정리는 제가 할게요."</string>
@@ -2312,6 +2400,8 @@
     <string name="up_and_down_changes_the_time_sideways_changes_the_day">"위아래로 끌면 시간이, 옆으로 끌면 요일이 바뀌어요."</string>
     <string name="up_to_date">"최신 상태 · %s"</string>
     <string name="up_to_lld_of_lld">"%2$d명 중 %1$d위로 올라갔어요"</string>
+    <!-- 'Up to three. The chips under Talk follow them in the order you picked, and what you write under one shapes its topics.' -->
+    <string name="up_to_three_the_chips_under_talk_follow_them_in_the_order_yo_4b1735">"세 개까지 골라요. 대화 탭의 칩이 고른 순서대로 놓이고, 아래에 적은 내용으로 그 칩의 주제를 만들어요."</string>
     <string name="update">"업데이트"</string>
     <string name="update_to_keep_going">"계속하려면 업데이트해 주세요"</string>
     <string name="upgrade_to_plus">"Plus로 업그레이드"</string>
@@ -2413,6 +2503,7 @@
     <string name="well_describes_how_something_went">"어떻게 됐는지는 well로 말해요."</string>
     <string name="what_are_you_into">"요즘 뭐에 빠져 있어요?"</string>
     <string name="what_did_you_do_today">"오늘 뭐 했어?"</string>
+    <string name="what_do_you_want_it_for">"어디에 쓰고 싶어요?"</string>
     <string name="what_do_you_want_to_be_able_to_do_in">"%s로 뭘 할 수 있으면 좋겠어요?"</string>
     <!-- 'What each day was made of — talk turns, shadow takes, drill reviews.' -->
     <string name="what_each_day_was_made_of_talk_turns_shadow_takes_drill_revi_2a49f0">"그날 무엇으로 채웠는지 — 대화 턴, 섀도잉, 드릴 복습."</string>
@@ -2452,6 +2543,7 @@
     <string name="what_you_call_them">"내가 부르는 호칭"</string>
     <string name="what_you_call_them_optional">"내가 부르는 호칭 (선택)"</string>
     <string name="what_you_do">"하는 일"</string>
+    <string name="what_you_do_in_it_e_g_i_run_the_mobile_team">"맡은 역할 — 예: 모바일 팀을 이끌어요"</string>
     <string name="what_you_get">"혜택"</string>
     <!-- "What you get wrong comes back in next week's test, and at the start of each month a monthly test gathers that month's misses. The test day is Saturday at 10:00 unless you change it." -->
     <string name="what_you_get_wrong_comes_back_in_next_week_s_test_and_at_the_c2fa10">"틀린 문제는 다음 주 테스트에 다시 나오고, 매달 초에는 그달에 틀린 것만 모은 월간 테스트도 열려요. 테스트는 따로 바꾸지 않으면 토요일 오전 10시에 열려요."</string>
@@ -2475,6 +2567,7 @@
     <string name="when_does_my_level_appear">"레벨은 언제 나와요?"</string>
     <string name="when_it_s_time_you_pick_which_recent_talk_to_say_again">"시간이 되면 어떤 최근 대화를 다시 말할지 골라요."</string>
     <string name="when_should_it_come_back">"언제 다시 볼까요?"</string>
+    <string name="when_something_goes_wrong">"문제가 생겼을 때"</string>
     <!-- 'When you hang up, the words you used and the sentences you fixed become your own study book in Review.' -->
     <string name="when_you_hang_up_the_words_you_used_and_the_sentences_you_fi_494463">"통화를 끊으면 내가 쓴 단어와 고친 문장으로 나만의 교재가 만들어져 복습 탭에 들어가요."</string>
     <!-- 'When you send a card to 10 minutes, tomorrow or 3 days, this is what brings it back. One reminder at a time, at the earliest thing waiting.' -->
@@ -2493,6 +2586,7 @@
     <string name="where_you_stand">"내 위치"</string>
     <!-- 'Where you studied that day — the photo is the place. Nothing else about the location is saved.' -->
     <string name="where_you_studied_that_day_the_photo_is_the_place_nothing_el_642592">"그날 공부한 자리를 담아요. 사진이 곧 장소이고, 위치 정보는 따로 저장하지 않아요."</string>
+    <string name="which_exam">"어떤 시험?"</string>
     <string name="which_language_do_you_want_to_speak">"어떤 언어를 말하고 싶으세요?"</string>
     <string name="which_language_next">"다음은 어떤 언어로 할까요?"</string>
     <string name="which_mic">"어느 마이크로 녹음할까요?"</string>
@@ -2506,6 +2600,8 @@
     <string name="whoever_qualified_first_takes_it">"자격을 먼저 갖춘 사람이 먼저 앉아요."</string>
     <string name="whole_script">"원고 전체"</string>
     <string name="why">"이유"</string>
+    <string name="why_are_you_learning">"왜 배워요?"</string>
+    <string name="why_do_you_want_this_job">"지원 동기"</string>
     <string name="why_is_it_so_hard_just_to_start_talking">"막상 입을 떼기가\n왜 그렇게 힘든지..."</string>
     <string name="why_it_matters">"왜 필요한가요"</string>
     <string name="why_it_was_corrected">"이 문장을 고친 이유"</string>
@@ -2529,6 +2625,7 @@
     <string name="words_and_phrases_that_became_yours_this_week">"이번 주에 내 것이 된 단어와 표현이에요."</string>
     <!-- 'Words' -->
     <string name="words_d26d55">"단어"</string>
+    <string name="words_don_t_come_out_yet">"아직 말이 잘 안 나와요"</string>
     <!-- 'words' -->
     <string name="words_efb893">"단어"</string>
     <!-- "Words, expressions and sentences from your talks show up here when it's time to review them." -->
@@ -2555,6 +2652,8 @@
     <string name="words_you_use_by_level">"내가 쓴 단어, 레벨별"</string>
     <string name="words_you_used_first">"내가 처음 쓴 단어"</string>
     <string name="words_you_ve_used_out_loud_or_marked_as_known">"직접 말해봤거나 아는 것으로 표시한 단어예요."</string>
+    <string name="work">"일"</string>
+    <string name="work_chip_meetings_presentations_client_calls">"업무 칩 · 회의, 발표, 고객 통화"</string>
     <string name="work_meetings">"회사 회의"</string>
     <string name="workbook">"워크북"</string>
     <string name="workbook_answers">"정답"</string>
@@ -2589,6 +2688,7 @@
     <string name="writing_the_scene">"장면을 쓰는 중…"</string>
     <string name="writing_this_scenario_s_scene">"이 상황연습을 쓰는 중…"</string>
     <string name="writing_this_scene">"상황연습을 쓰는 중…"</string>
+    <string name="writing_topics_for_your_field">"내 분야 주제를 만드는 중…"</string>
     <string name="writing_your_introduction">"소개를 쓰는 중…"</string>
     <string name="writing_your_script">"원고를 쓰고 있어요…"</string>
     <!-- 'year' -->
@@ -2684,6 +2784,7 @@
     <string name="your_best_stays_at_lld">"최고 점수는 %d점 그대로예요."</string>
     <string name="your_books">"내 책"</string>
     <string name="your_camera">"카메라"</string>
+    <string name="your_child_s_teacher">"아이 선생님과"</string>
     <!-- 'Your clone speaks with whatever accent the AI guesses. Pick one instead: same voice, your chosen accent. Takes about half a minute to prepare.' -->
     <string name="your_clone_speaks_with_whatever_accent_the_ai_guesses_pick_o_a36d21">"지금은 AI가 짐작한 억양으로 말해요. 직접 고르면 목소리는 그대로 두고 억양만 바뀌어요. 준비에 30초쯤 걸려요."</string>
     <!-- 'Your cloned voice already speaks %@ — no new recording needed. Your %@ progress stays untouched.' -->
@@ -2733,6 +2834,8 @@
     <string name="your_icloud_storage_is_full">"iCloud 저장 공간이 가득 찼어요"</string>
     <string name="your_interests">"내 관심사"</string>
     <string name="your_invite_code">"내 초대 코드"</string>
+    <string name="your_job_e_g_product_manager">"하는 일 — 예: 프로덕트 매니저"</string>
+    <string name="your_landlord">"집주인"</string>
     <!-- 'Your level' -->
     <string name="your_level_0ad2c2">"내 레벨"</string>
     <!-- 'Your level?' -->
@@ -2752,6 +2855,7 @@
     <string name="your_library">"라이브러리"</string>
     <string name="your_life">"일상"</string>
     <string name="your_lines">"내 대사"</string>
+    <string name="your_manager">"팀장님"</string>
     <string name="your_match">"일치도"</string>
     <string name="your_material">"내 학습 재료"</string>
     <string name="your_name">"내 이름"</string>
@@ -2789,6 +2893,7 @@
     <!-- "Your practice on this device takes about %@. That's roughly the space it needs in iCloud." -->
     <string name="your_practice_on_this_device_takes_about_that_s_roughly_the_b08018">"이 기기의 연습 기록은 약 %s예요. iCloud에도 그만큼 공간이 필요해요."</string>
     <string name="your_profile">"프로필"</string>
+    <string name="your_project_update">"진행 상황 보고"</string>
     <!-- 'Your recent conversations measure at a higher level. Scoring and material difficulty now follow it.' -->
     <string name="your_recent_conversations_measure_at_a_higher_level_scoring_8861e0">"최근 대화가 더 높은 레벨로 측정됐어요. 이제 채점과 학습 자료 난이도가 새 레벨을 따라가요."</string>
     <!-- "Your recordings aren't backed up to iCloud right now, so they're on this device only. If you delete the app on this device, they're deleted with it." -->

@@ -234,7 +234,7 @@ object CaptureTalk {
     private fun Home(context: Context, mode: String) {
         TalkCaptureFlags.headerAccount = headerAccount(mode)
         TalkCaptureFlags.discoverTab =
-            if (mode == "home-scenarios") com.roro.futurevoice.ui.DiscoverTab.EVERYDAY else null
+            if (mode == "home-scenarios") com.roro.futurevoice.data.DiscoverChip.EVERYDAY else null
         var state by remember { mutableStateOf<AppState?>(null) }
         Seeded(work = {
             when (mode) {

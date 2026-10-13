@@ -115,6 +115,8 @@ fun TalkScreen(
     level: CefrLevel,
     persona: com.roro.futurevoice.talk.UserPersona? = null,
     topic: String = "",
+    /** Context the call is told beside the topic (iOS `initialBlurb`). */
+    topicBlurb: String = "",
     newsFacts: List<String> = emptyList(),
     scenarioId: String? = null,
     initialOpener: String = "",
@@ -406,6 +408,7 @@ fun TalkScreen(
                 level = level,
                 persona = persona,
                 topic = topic,
+                topicBlurb = topicBlurb,
                 newsFacts = newsFacts,
                 scenarioId = scenarioId,
                 initialOpener = initialOpener,

@@ -77,6 +77,13 @@ object OnboardingFlags {
 fun DailyCallOnboardingScreen(context: Context, onDone: () -> Unit) {
     var hour by remember { mutableStateOf(8) }
     var minute by remember { mutableStateOf(0) }
+    /** The talk times of the week setup suggested, when it was saved — then
+     *  the routine already says when to ring, and picking one time here
+     *  would collapse its several calls into one. */
+    val routineTimes = remember {
+        if (!com.roro.futurevoice.data.LearningPurposeStore.routineApplied(context)) emptyList()
+        else com.roro.futurevoice.data.StudyPlanStore.current(context).callTimes
+    }
     // By NAME when there is one: everything on this screen is the future self
     // speaking, and being called by name is what separates that from an app
     // announcing a feature (`DailyCallOnboardingView`).
@@ -89,8 +96,9 @@ fun DailyCallOnboardingScreen(context: Context, onDone: () -> Unit) {
     var denied by remember { mutableStateOf(false) }
     fun finish(enable: Boolean) {
         com.roro.futurevoice.core.Analytics.capture("daily_call_onboarding",
-            mapOf("enabled" to enable, "hour" to hour))
-        DailyCallStore.set(context, enable, hour, minute)
+            mapOf("enabled" to enable, "hour" to (routineTimes.minOrNull()?.div(60) ?: hour)))
+        if (routineTimes.isEmpty()) DailyCallStore.set(context, enable, hour, minute)
+        else DailyCallStore.setTimes(context, enable, routineTimes)
         OnboardingFlags.markSeen(context, OnboardingFlags.DAILY_CALL)
         // The weekly step before this one may have asked for its notice: arm
         // it, or switch the wish off if notifications can't post.
@@ -139,8 +147,15 @@ fun DailyCallOnboardingScreen(context: Context, onDone: () -> Unit) {
             }
             // iOS's wheel (150 pt), not Material's dial: the dial alone was
             // taller than half a short phone.
-            IosWheelTimePicker(hour = hour, minute = minute,
-                onChange = { h, m -> hour = h; minute = m })
+            if (routineTimes.isEmpty()) {
+                IosWheelTimePicker(hour = hour, minute = minute,
+                    onChange = { h, m -> hour = h; minute = m })
+            } else {
+                Text(stringResource(R.string.at_your_routine_s_talk_times,
+                    routineTimes.sorted().joinToString(" · ") { String.format(java.util.Locale.US, "%02d:%02d", it / 60, it % 60) }),
+                    style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center)
+            }
             if (denied) {
                 Text(stringResource(R.string.android_is_blocking_the_call),
                     style = MaterialTheme.typography.bodySmall,
