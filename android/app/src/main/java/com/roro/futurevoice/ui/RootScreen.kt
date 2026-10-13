@@ -547,9 +547,12 @@ fun RootScreen() {
     LaunchedEffect(tabsArrived) {
         if (!tabsArrived) return@LaunchedEffect
         delay(1200)
+        // The tab's guide counts as a sheet too: on iOS a second `.sheet`
+        // over the page intro is dropped by SwiftUI, here both would stack.
         val anotherSheetUp = showAgeCheck || paywalled || welcomeMinutes != null || showIntroPreview ||
             showVoiceMove || inCall || state.levelUp != null || referralJoin != null ||
-            com.roro.futurevoice.data.AppUpdateService.pending.value != null
+            com.roro.futurevoice.data.AppUpdateService.pending.value != null ||
+            com.roro.futurevoice.data.PageIntroStore.showing.value
         if (!showWhatsNew && !anotherSheetUp && WhatsNew.isDue(context, state.setupComplete)) showWhatsNew = true
     }
     var whatsNewGoals by remember { mutableStateOf(false) }
@@ -573,10 +576,11 @@ fun RootScreen() {
     // The ElevenLabs → Cartesia voice move (iOS `offerVoiceMove`): a beat
     // after the app is up, never over the welcome or What's new (offered
     // again when that card closes), once a day until moved.
-    LaunchedEffect(state.voiceId, state.signedIn, showWhatsNew) {
-        if (showWhatsNew) return@LaunchedEffect
+    LaunchedEffect(state.voiceId, state.signedIn, showWhatsNew, guideUp) {
+        if (showWhatsNew || guideUp) return@LaunchedEffect
         delay(2500)
         if (welcomeMinutes == null && !showWhatsNew &&
+            !com.roro.futurevoice.data.PageIntroStore.showing.value &&
             VoiceMove.isDue(context, state.voiceId, state.signedIn, state.voiceIsStandIn)) showVoiceMove = true
     }
     if (showVoiceMove) {
@@ -1466,7 +1470,8 @@ fun RootScreen() {
             onDeepenConsumed = { deepenPending = false },
             // A tab's first-visit guide never rises over a sheet the root owns.
             guideBlocked = paywalled || showIntroPreview || state.levelUp != null ||
-                referralJoin != null || welcomeMinutes != null || updatePending != null || showAgeCheck,
+                referralJoin != null || welcomeMinutes != null || updatePending != null || showAgeCheck ||
+                showWhatsNew || showVoiceMove,
         )
             },
           )

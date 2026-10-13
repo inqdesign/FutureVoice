@@ -304,6 +304,7 @@ fun PracticeBody(
             properties = androidx.compose.ui.window.DialogProperties(
                 usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
         ) {
+            DialogSystemBarsLikeActivity()
             StudyDeckHost(
                 kind = items.firstOrNull()?.kind ?: StudyScheduleStore.Kind.WORD,
                 language = language, nativeLanguage = nativeLanguage, level = level,

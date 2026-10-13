@@ -581,21 +581,21 @@ fun WatchSceneScreen(
                             // Two states, not two extra buttons: after the end,
                             // the study handoff takes the prominent slot.
                             OutlinedButton(onClick = { playFrom(0) }, enabled = !loading,
-                                modifier = Modifier.weight(1f)) {
+                                modifier = Modifier.weight(1f), contentPadding = SceneBarPadding) {
                                 ControlLabel(Icons.Filled.Refresh, stringResource(R.string.watch_again))
                             }
-                            Button(onClick = { pause(); onStudy(scenarioId) }, modifier = Modifier.weight(1f)) {
+                            Button(onClick = { pause(); onStudy(scenarioId) }, modifier = Modifier.weight(1f), contentPadding = SceneBarPadding) {
                                 ControlLabel(Icons.AutoMirrored.Filled.LibraryBooks, stringResource(R.string.study_this))
                             }
                         } else {
                             OutlinedButton(onClick = { playFrom(0) },
                                 enabled = turns.isNotEmpty() && !loading,
-                                modifier = Modifier.weight(1f)) {
+                                modifier = Modifier.weight(1f), contentPadding = SceneBarPadding) {
                                 ControlLabel(Icons.Filled.SkipPrevious, stringResource(R.string.restart))
                             }
                             Button(onClick = { if (isPlaying) pause() else playFrom(currentIndex ?: 0) },
                                 enabled = turns.isNotEmpty() && !loading,
-                                modifier = Modifier.weight(1f)) {
+                                modifier = Modifier.weight(1f), contentPadding = SceneBarPadding) {
                                 ControlLabel(
                                     if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                                     stringResource(if (isPlaying) R.string.pause else R.string.play))
@@ -781,10 +781,16 @@ private val Scenario.displayTitle: String
         return if (r.isEmpty()) environment else "$environment · with $r"
     }
 
+/** Half-width bar buttons: Material's 24 dp sides left a long label ~130 dp. */
+private val SceneBarPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+
 @Composable
 private fun ControlLabel(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String) {
     Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
-    Text("  $label", maxLines = 1)
+    // Wraps like iOS's `Label` in a `.bordered` button rather than clipping:
+    // one line clipped "Empezar de nuevo" (es) to "Empezar de".
+    Text("  $label", maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
 }
 
 /** One line's offer: a glyph and a word, in the accent — never a button, or

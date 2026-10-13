@@ -139,6 +139,7 @@ fun ReviewHeaderActions(language: String, level: CefrLevel, onOpenPutOff: () -> 
             onDismissRequest = { openTest = false; reload++ },
             properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
         ) {
+            DialogSystemBarsLikeActivity()
             WeeklyTestScreen(language = language, level = level,
                 onClose = { openTest = false; reload++; StoreEvents.bump() })
         }

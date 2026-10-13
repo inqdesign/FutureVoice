@@ -103,6 +103,7 @@ fun VoiceRevivalHost(app: AppViewModel) {
             decorFitsSystemWindows = false,
         ),
     ) {
+        DialogSystemBarsLikeActivity()
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             VoiceRevivalScreen(app = app, purpose = r.purpose, onFinish = ::finish)
         }

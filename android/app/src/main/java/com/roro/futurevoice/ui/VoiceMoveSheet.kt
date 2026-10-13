@@ -10,11 +10,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -225,13 +225,12 @@ fun VoiceMoveSheet(
                 modifier = Modifier.clickable { uri.openUri(com.roro.futurevoice.data.ConsentStore.privacyUrl() + "#processors") })
             if (options.isNotEmpty()) {
                 Text(stringResource(R.string.accent), style = MaterialTheme.typography.titleSmall)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected = accentId == null, enabled = !working,
-                        onClick = { accentId = null },
-                        label = { Text(stringResource(R.string.accent_original)) })
+                // One row per accent with a check, as iOS's `accentRow` —
+                // a chip row ran out of width at four accents (en).
+                Column {
+                    AccentRow(stringResource(R.string.accent_original), accentId == null, !working) { accentId = null }
                     options.forEach { o ->
-                        FilterChip(selected = accentId == o.id, enabled = !working,
-                            onClick = { accentId = o.id }, label = { Text(accentLabel(o)) })
+                        AccentRow(accentLabel(o), accentId == o.id, !working) { accentId = o.id }
                     }
                 }
             }
@@ -249,6 +248,16 @@ fun VoiceMoveSheet(
             }
             error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
         }
+    }
+}
+
+@Composable
+private fun AccentRow(text: String, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable(enabled = enabled, onClick = onClick).padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Text(text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        if (selected) Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.primary)
     }
 }
 

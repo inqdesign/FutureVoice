@@ -114,6 +114,11 @@ internal object WatchCreation {
     val creating = kotlinx.coroutines.flow.MutableStateFlow(false)
     /** The header's Cancel, handed to the tab (the keyboard goes down first). */
     val cancelTick = kotlinx.coroutines.flow.MutableStateFlow(0)
+    /** Who the open box is with. Kept here, beside [creating], because the
+     *  tab leaves composition while a scene plays (iOS keeps WatchTab alive
+     *  under the cover): coming back found the box still open but with the
+     *  composer's default person instead of the one the scene was with. */
+    var dockPerson: com.roro.futurevoice.data.Counterpart? = null
 }
 
 /**
@@ -174,7 +179,8 @@ internal fun WatchTabBody(
     val creating by WatchCreation.creating.collectAsStateWithLifecycle()
     fun setCreating(on: Boolean) { WatchCreation.creating.value = on }
     /** Who the box's situation is with — shared both ways with its person chip. */
-    var dockPerson by remember { mutableStateOf<Counterpart?>(null) }
+    var dockPerson by remember { mutableStateOf(WatchCreation.dockPerson) }
+    LaunchedEffect(dockPerson) { WatchCreation.dockPerson = dockPerson }
     /** The box was opened from a person's card: no category chips. */
     var dockNoChips by remember { mutableStateOf(false) }
     /** The person whose card floats over the map (a tap on them). */
