@@ -59,11 +59,8 @@ class TopicClient(private val auth: AuthRepository) {
     }
 
     companion object {
-        /** The composer's icon palette (`ScenarioComposerSheet.iconPalette` subset). */
-        val ICON_PALETTE = listOf(
-            "cup.and.saucer", "fork.knife", "cart", "briefcase", "stethoscope",
-            "airplane", "house", "graduationcap", "phone", "person.2",
-            "car", "banknote", "heart", "sparkles",
-        )
+        /** The composer's icon palette, generated from iOS
+         *  (`ScenarioComposerSheet.iconPalette`) — it is prompt text. */
+        val ICON_PALETTE: List<String> get() = ScenarioIconPalette.ICONS
     }
 }

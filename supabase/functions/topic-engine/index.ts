@@ -2,8 +2,9 @@
 // (brain-lift #3's first slice; `android-launch-roadmap.md` §1.13).
 //
 // v1 serves ONE action, the composer's: sort a typed scenario into a
-// category + icon + tidy card summary. The prompt below was EXTRACTED from
-// `TopicEngine.categorize` in Swift by script, never retyped; iOS still
+// category + icon + tidy card summary. The prompt is GENERATED into
+// `prompt.ts` from `TopicEngine.categorize` by
+// `scripts/android/gen-topic-prompt.py`, never retyped; iOS still
 // builds it client-side and calls `gemini` — switching iOS over is a
 // separate, owner-approved step. Suggestion/path actions extend this same
 // function later.
@@ -17,33 +18,12 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
 import { recordFreeUsage, enforceRequestRate, rateLimitedResponse,
          recordProviderUsage, background, geminiUsageFields } from "../_shared/credits.ts"
+import { categorizePrompt, categorizeUserLine } from "./prompt.ts"
 
 const SOURCE_FN = "topic-engine"
 const MODEL = "gemini-3.1-flash-lite"
 const HOURLY_REQUEST_LIMIT = 300
 const DAILY_CAP = 200            // = gemini's "topics" cap
-
-function categorizePrompt(existing: string[], iconOptions: string[]): string {
-  const existingBlock = existing.length === 0 ? "(none)" : existing.join(", ")
-  const iconBlock = iconOptions.join(", ")
-  return `You sort a language-practice SCENARIO into a CATEGORY — a short place/theme
-bucket the app groups scenarios by — and give it a tidy title.
-
-Existing categories: ${existingBlock}.
-
-Rules:
-- category: if one existing category clearly fits, return it EXACTLY,
-  isNew=false. Otherwise invent a SHORT new one, 1–2 words, Title Case
-  ("Interview", "Landlord", "Doctor", "Dating"), isNew=true.
-- icon: best-fitting SF Symbol name from THIS list only:
-  ${iconBlock}. If nothing fits, "sparkles".
-- summary: a clean ≤6-word title of the SITUATION for a card
-  ("Job interview practice", "Returning a jacket, no receipt"). NOT the
-  user's raw words — a tidy paraphrase.
-
-Return STRICT JSON only — no prose, no code fences:
-{ "category": "...", "icon": "...", "isNew": true, "summary": "..." }`
-}
 
 Deno.serve(async (req) => {
   const pre = handlePreflight(req)
@@ -89,7 +69,7 @@ Deno.serve(async (req) => {
 
   const geminiBody = {
     system_instruction: { parts: [{ text: categorizePrompt(existing, iconOptions) }] },
-    contents: [{ role: "user", parts: [{ text: `scenario: ${text}` }] }],
+    contents: [{ role: "user", parts: [{ text: categorizeUserLine(text) }] }],
     generationConfig: {
       // 512, like the Swift call: 160 left nothing for thinking, and this is
       // the only thing standing between a typed scenario and a category.

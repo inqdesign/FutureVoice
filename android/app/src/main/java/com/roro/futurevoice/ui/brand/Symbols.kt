@@ -35,6 +35,12 @@ import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Apartment
+import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.EmojiPeople
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Pets
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
@@ -73,6 +79,13 @@ object Symbols {
         "banknote" to Icons.Filled.Payments,
         "heart" to Icons.Filled.Favorite,
         "sparkles" to Icons.Filled.AutoAwesome,
+        // The rest of iOS's palette (`ScenarioIconPalette`, generated).
+        "building.2" to Icons.Filled.Apartment,
+        "gift" to Icons.Filled.CardGiftcard,
+        "figure.wave" to Icons.Filled.EmojiPeople,
+        "dumbbell" to Icons.Filled.FitnessCenter,
+        "pawprint" to Icons.Filled.Pets,
+        "music.mic" to Icons.Filled.Mic,
         // `SituationTree`'s own names — the same symbols with `.fill`, which
         // SF Symbols treats as a variant of one glyph and Material does not.
         "cup.and.saucer.fill" to Icons.Filled.LocalCafe,
