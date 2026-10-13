@@ -374,6 +374,10 @@ fun RootScreen() {
     var shadowHand by remember { mutableStateOf<List<com.roro.futurevoice.data.ShadowPicks.Pick>>(emptyList()) }
     var shadowAt by remember { mutableIntStateOf(0) }
     var bookScenarioId by remember { mutableStateOf<String?>(null) }
+    /** A scene's "Study this" (iOS `SceneWatchView` pushes `ScenarioDetailView`):
+     *  the book over the finished scene, so its back returns to the scene. */
+    var bookOverWatchId by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(watchScenarioId) { if (watchScenarioId == null) bookOverWatchId = null }
     // Widget taps that carry more than a tab (iOS RootTabView "talk" /
     // "book" / "freetalk"). A free talk goes through the SAME gate the Talk ring does,
     // and waits for the voice to load rather than being dropped on a cold start.
@@ -861,6 +865,7 @@ fun RootScreen() {
         if (editProfile) add(RootRoute.EditProfile)
         if (shadowHand.isNotEmpty()) add(RootRoute.ShadowHand)
         if (!overProfile) shadowLine?.let { add(RootRoute.ShadowLine(it)) }
+        if (watchScenarioId != null) bookOverWatchId?.let { add(RootRoute.ScenarioBook(it)) }
         watchScenarioId?.let { add(RootRoute.Watch(it)) }
         if (showDeck && !overProfile) add(RootRoute.Deck)
         if (!overProfile) detailSessionId?.let { add(RootRoute.TalkBook(it)) }
@@ -901,7 +906,9 @@ fun RootScreen() {
     fun popRoute(top: RootRoute) {
             when (top) {
                 is RootRoute.TalkBook -> detailSessionId = null
-                is RootRoute.ScenarioBook -> bookScenarioId = null
+                is RootRoute.ScenarioBook ->
+                    if (top.id == bookOverWatchId && watchScenarioId != null) bookOverWatchId = null
+                    else bookScenarioId = null
                 is RootRoute.Watch -> watchScenarioId = null
                 RootRoute.Deck -> { showDeck = false; focusCardId = null; deckSessionId = null; deckPushed = false }
                 RootRoute.Sentences -> showSentences = false
@@ -969,7 +976,11 @@ fun RootScreen() {
             )
 
 
-        is RootRoute.ScenarioBook -> ScenarioBookScreen(
+        is RootRoute.ScenarioBook -> {
+            // Pushed over a finished scene by its "Study this": back, and the
+            // book's own Watch, return to that scene underneath.
+            val overWatch = r.id == bookOverWatchId && watchScenarioId != null
+            ScenarioBookScreen(
                 scenarioId = r.id,
                 language = state.targetLanguage,
                 // A fresh take costs a scene count, so the wall is asked at the
@@ -977,17 +988,26 @@ fun RootScreen() {
                 // Watch on the book replays THE scene the book was extracted
                 // from (iOS `WatchView(savedDialogue:)`): free after the first
                 // listen, so no gate and no new take.
-                onWatch = { id -> watchReplay = true; watchScenarioId = id },
+                onWatch = { id ->
+                    if (overWatch) { bookOverWatchId = null; watchReplay = true }
+                    else { watchReplay = true; watchScenarioId = id }
+                },
                 onTalk = { sc -> gate {
-                    bookScenarioId = null
+                    bookScenarioId = null; bookOverWatchId = null; watchScenarioId = null
                     callTopic = sc.promptBlurb; callFacts = emptyList(); callBlurb = ""; callScenarioId = sc.id
                     inCall = true
                 } },
                 onShadow = { shadowLine = it },
-                onBack = { bookScenarioId = null },
+                onBack = { if (overWatch) bookOverWatchId = null else bookScenarioId = null },
                 // The talk page sits above the book, so back returns here.
-                onOpenTalk = { id -> detailSessionId = id },
+                onOpenTalk = { id ->
+                    if (overWatch) {
+                        watchScenarioId = null; bookOverWatchId = null; bookScenarioId = r.id
+                    }
+                    detailSessionId = id
+                },
             )
+        }
         // iOS `PersonaOnboardingView` (Me → Profile): its own form, saved
         // page by page — not the first-run intake cards.
         RootRoute.EditProfile -> PersonaEditScreen(
@@ -1022,8 +1042,11 @@ fun RootScreen() {
 
         is RootRoute.Watch -> WatchSceneScreen(
             scenarioId = r.id,
-            onShadow = { watchScenarioId = null; shadowLine = it },
-            onStudy = { id -> watchScenarioId = null; bookScenarioId = id },
+            // Over the scene, as iOS's sheet: back returns to it.
+            onShadow = { shadowLine = it },
+            // iOS `SceneHandoff`: from the Watch tab the book is pushed over
+            // the scene; opened FROM the book, it pops back to it.
+            onStudy = { id -> if (bookScenarioId == id) watchScenarioId = null else bookOverWatchId = id },
             voiceId = state.voiceId ?: "",
             persona = state.persona,
             targetLanguage = state.targetLanguage,

@@ -48,7 +48,16 @@ class CurriculumClient(private val auth: AuthRepository) {
         avoidTitles: List<String> = emptyList(),
         commonGround: String = "",
         runKey: String? = null,
+        // Streaming taps (iOS `ScenarioCurriculumEngine.generate(onTitle:onTurn:)`):
+        // when either is set the scene STREAMS — the title and each turn are
+        // handed over the moment they finish parsing, so playback starts while
+        // the model is still writing the study tail. The returned curriculum
+        // is still the full, final payload; callers persist from THAT, never
+        // from what the taps saw. Called on the main thread.
+        onTitle: (suspend (String) -> Unit)? = null,
+        onTurn: (suspend (DialogueEngineTurn) -> Unit)? = null,
     ): ScenarioCurriculum = withContext(Dispatchers.IO) {
+        val stream = onTitle != null || onTurn != null
         val body: JsonObject = buildJsonObject {
             put("scenario", buildJsonObject {
                 put("environment", scenario.environment)
@@ -83,6 +92,7 @@ class CurriculumClient(private val auth: AuthRepository) {
             put("target_language", targetLanguage)
             putJsonArray("avoid_titles") { avoidTitles.forEach { add(it) } }
             commonGround.takeIf { it.isNotBlank() }?.let { put("common_ground", it) }
+            if (stream) put("stream", true)
         }
         val key = runKey?.let { "curriculum-v2:${scenario.id}:$it" } ?: "curriculum-v2:${scenario.id}"
         val request = Request.Builder()
@@ -92,12 +102,60 @@ class CurriculumClient(private val auth: AuthRepository) {
             .post(body.toString().toRequestBody("application/json".toMediaType()))
             .build()
         Edge.client.newCall(request).execute().use { resp ->
-            val raw = resp.body.string()
-            if (resp.code !in 200..299) throw EdgeError.Http(resp.code, raw.take(512))
-            val joined = Edge.json.decodeFromString(ApiResponse.serializer(), raw)
-                .candidates?.firstOrNull()?.content?.parts?.mapNotNull { it.text }
-                ?.joinToString("").orEmpty()
-            val json = Edge.extractJson(joined) ?: throw EdgeError.JsonNotFound(joined)
+            if (resp.code !in 200..299) {
+                val snippet = runCatching { resp.body.source().readByteString(512L) }
+                    .getOrNull()?.utf8().orEmpty()
+                throw EdgeError.Http(resp.code, snippet)
+            }
+            val joined = StringBuilder()
+            if (!stream || resp.header("X-Gemini-Stream") != "sse") {
+                // Buffered — or a deploy that ignored `stream`: one body, no
+                // early taps; the caller puts the final turns on screen.
+                val raw = resp.body.string()
+                joined.append(Edge.json.decodeFromString(ApiResponse.serializer(), raw)
+                    .candidates?.firstOrNull()?.content?.parts?.mapNotNull { it.text }
+                    ?.joinToString("").orEmpty())
+            } else {
+                // The partial replays the whole accumulated body each time;
+                // the counters make every emission exactly-once.
+                var sentTitle = false
+                var sentTurns = 0
+                val source = resp.body.source()
+                while (true) {
+                    val line = source.readUtf8Line() ?: break
+                    if (!line.startsWith("data:")) continue
+                    val event = line.removePrefix("data:").trim()
+                    if (event.isEmpty() || event == "[DONE]") continue
+                    val chunk = runCatching {
+                        Edge.json.decodeFromString(ApiResponse.serializer(), event)
+                    }.getOrNull() ?: continue
+                    val delta = chunk.candidates?.firstOrNull()?.content?.parts
+                        ?.mapNotNull { it.text }?.joinToString("").orEmpty()
+                    if (delta.isEmpty()) continue
+                    joined.append(delta)
+                    val partial = joined.toString()
+                    if (!sentTitle) {
+                        JsonFieldScanner.completedStringField("title", partial)?.let { t ->
+                            sentTitle = true
+                            onTitle?.let { cb -> withContext(Dispatchers.Main) { cb(t) } }
+                        }
+                    }
+                    val objects = ScenarioBriefEngine.completedArrayObjects("turns", partial)
+                    while (sentTurns < objects.size) {
+                        val slice = objects[sentTurns]
+                        sentTurns += 1
+                        val item = runCatching {
+                            Edge.json.decodeFromString(TurnItem.serializer(), slice)
+                        }.getOrNull() ?: continue
+                        val turn = DialogueEngineTurn(
+                            speaker = if (item.speaker.lowercase() == "user") "user" else "counterpart",
+                            text = item.text)
+                        onTurn?.let { cb -> withContext(Dispatchers.Main) { cb(turn) } }
+                    }
+                }
+            }
+            val text = joined.toString()
+            val json = Edge.extractJson(text) ?: throw EdgeError.JsonNotFound(text)
             val payload = GeminiJson.decode(Payload.serializer(), json)
             val turns = payload.turns.map {
                 DialogueEngineTurn(

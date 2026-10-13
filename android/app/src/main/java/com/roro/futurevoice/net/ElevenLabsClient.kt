@@ -92,6 +92,10 @@ class ElevenLabsClient(private val auth: AuthRepository) {
         val speed: Double? = null,
         /** Pins the line's language upstream — Korean only ([pinnedLanguage]). */
         val language_code: String? = null,
+        /** The lines around this one in a longer exchange (iOS
+         *  `previousText`/`nextText`) — so a scene line lands MID-conversation. */
+        val previous_text: String? = null,
+        val next_text: String? = null,
     )
 
     /** Buffered synthesis → MP3 bytes. */
@@ -105,11 +109,14 @@ class ElevenLabsClient(private val auth: AuthRepository) {
         /** An explicit rung — the onboarding pills audition one before it is
          *  the setting. Null = the learner's current speed. */
         speed: Double? = null,
+        previousText: String? = null,
+        nextText: String? = null,
     ): ByteArray = withContext(Dispatchers.IO) {
         val request = buildRequest(
             voiceId, text, modelId, withTimestamps = false, stream = false,
             purpose = purpose, idempotencyKey = idempotencyKey, accept = "audio/mpeg",
             sceneKey = sceneKey, speed = speed,
+            previousText = previousText, nextText = nextText,
         )
         Edge.client.newCall(request).execute().use { response ->
             val bytes = response.body.bytes()
@@ -196,11 +203,14 @@ class ElevenLabsClient(private val auth: AuthRepository) {
         modelId: String = CONVERSATION_MODEL_ID,
         idempotencyKey: String? = null,
         purpose: String? = null,
+        /** One key per SCENE (Watch) — the server claims the scene count once on it. */
+        sceneKey: String? = null,
         onPcmChunk: suspend (ByteArray) -> Unit,
     ): StreamedAudio = withContext(Dispatchers.IO) {
         val request = buildRequest(
             voiceId, text, modelId, withTimestamps = false, stream = true,
             purpose = purpose, idempotencyKey = idempotencyKey, accept = null,
+            sceneKey = sceneKey,
         )
 
         // One immediate re-dial on a transient connect failure: a cellular blip
@@ -266,7 +276,9 @@ class ElevenLabsClient(private val auth: AuthRepository) {
         idempotencyKey: String?,
         accept: String?,
         sceneKey: String? = null,
-        speed: Double? = null,): Request {
+        speed: Double? = null,
+        previousText: String? = null,
+        nextText: String? = null,): Request {
         // A parked voice no longer exists upstream (see `VoiceParking`).
         // Refused before the network with the error every surface already
         // answers with its paywall; the revival happens at a launcher's tap.
@@ -285,6 +297,8 @@ class ElevenLabsClient(private val auth: AuthRepository) {
             scene_key = sceneKey,
             speed = speed ?: com.roro.futurevoice.data.SpeechSpeed.currentMultiplier(),
             language_code = pinnedLanguage(text, com.roro.futurevoice.data.CoreVocabulary.activeLanguage()),
+            previous_text = previousText?.takeIf { it.isNotEmpty() },
+            next_text = nextText?.takeIf { it.isNotEmpty() },
         )
         val builder = Request.Builder()
             .url(Config.functionUrl("elevenlabs-tts"))
