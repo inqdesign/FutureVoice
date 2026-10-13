@@ -440,6 +440,14 @@ enum AudioLoudness {
         guard let aacFormat = AVAudioFormat(streamDescription: &aacDesc),
               let encoder = AVAudioConverter(from: pcm16k, to: aacFormat) else { return nil }
         encoder.bitRate = 32_000
+        // CONSTANT, or Gemini loses the end (2026-10-13). An ADTS stream has
+        // no duration field, and Gemini sizes it from the bitrate: the VBR
+        // encoder's quiet opening frames made a 51.5 s read come out as
+        // 48.6 s (1215 audio tokens against the WAV's 1283), and the
+        // transcript stopped at "The minute you just spend" three runs out of
+        // three — a speech take's last sentence was scored as skipped on
+        // every take. CBR: 1287 tokens, the whole text, same size.
+        encoder.bitRateStrategy = AVAudioBitRateStrategy_Constant
 
         var fedPCM = false
         var adts = Data()
