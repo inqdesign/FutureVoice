@@ -4,17 +4,14 @@ import Foundation
 /// (`Documents/freetalk_openers_by_language.json`).
 ///
 /// A free talk opens with more or less the same kind of greeting every time,
-/// so paying a Gemini call per session to write one (and an ElevenLabs call
-/// to voice a line that's never repeated) is waste. Instead ONE Gemini call
-/// writes a small pool of openers; sessions rotate through it, and because
-/// the texts repeat verbatim, `PhraseAudioStore`'s content cache makes every
-/// TTS after each line's first play free.
+/// so sessions rotate through a small pool of pick-up lines, and because the
+/// texts repeat verbatim, `PhraseAudioStore`'s content cache makes every TTS
+/// after each line's first play free. Since 2026-10-13 the lines are bundled
+/// per language (`pickUpLines`); until then one Gemini call wrote them.
 ///
 /// Topic/scenario/news openers stay dynamic — this pool is only for the
-/// no-topic free talk. The pool is keyed to language + persona name and
-/// regenerates when either changes. Until a pool exists, `fallbackOpener`
-/// (bundled, per language) is what a call speaks — the first free talk must
-/// never wait on a live Gemini round trip.
+/// no-topic free talk. The pool is keyed to language + persona name (kept
+/// so the rotation cursor survives as it did) and is written on first use.
 final class FreeTalkOpeners {
     static let shared = FreeTalkOpeners()
 
@@ -23,10 +20,6 @@ final class FreeTalkOpeners {
         var lines: [String]
         var cursor: Int
         var generatedAt: Date
-    }
-
-    private struct Payload: Decodable {
-        let openers: [String]
     }
 
     /// Lines being synthesized right now, so two warm-ups landing at once
@@ -80,8 +73,12 @@ final class FreeTalkOpeners {
     /// on disk (produced audio is never deleted). v3 (2026-10-07): pools
     /// joined two sentences with a bare comma ("…that project, how is it
     /// going?"), which `PacedSpeech` can't split, so the opener ran on with
-    /// no pause — `breathPunctuation` now names the comma splice.
-    private static let poolVersion = 3
+    /// no pause — `breathPunctuation` now names the comma splice. v4
+    /// (2026-10-13, founder: "it asks in a direction I don't want"): every line
+    /// put a guessed topic to the learner — "how's your project", "what's been
+    /// worrying you", "got a minute?" — when THEY placed the call and came with
+    /// something to say. Lines now only pick up and hand them the floor.
+    private static let poolVersion = 4
 
     private static func key(language: String, personaName: String?) -> String {
         "v\(poolVersion)|\(language)|\(personaName ?? "")"
@@ -94,8 +91,7 @@ final class FreeTalkOpeners {
     /// language. Deliberately name-free: one cache entry serves every persona,
     /// and its TTS can be warmed before a persona even exists.
     static func fallbackOpener(language: String) -> String {
-        let code = LanguageCatalog.language(language)?.code ?? "en"
-        return fallbackOpeners[code] ?? fallbackOpeners["en"]!
+        pickUpLines(language: language)[0]
     }
 
     /// The line the VERY FIRST free talk opens on, before the fluent self has
@@ -166,20 +162,101 @@ final class FreeTalkOpeners {
         "zh": "你好。我是流利说中文的未来的你。我很期待我们接下来的每一次聊天。别放弃，我们一起，让现在的你变成我。对了，你最近都在忙什么？",
     ]
 
-    // Time-neutral since 2026-09-28: "how was your day?" is heard at 8 a.m.
-    // as often as at 8 p.m., and a call that opens as if the day were over is
-    // the "it thinks it's the afternoon" complaint in its first line.
-    private static let fallbackOpeners: [String: String] = [
-        "en": "Hey, good to hear you. What were you up to just now?",
-        "de": "Hey, schön dich zu hören. Was hast du gerade gemacht?",
-        "ko": "안녕, 목소리 들으니까 좋다. 방금 뭐 하고 있었어?",
-        "ja": "やあ、話せてうれしいよ。いま何してたの？",
-        "es": "Hola, qué bueno escucharte. ¿Qué estabas haciendo?",
-        "fr": "Salut, ça fait plaisir de t'entendre. Tu faisais quoi, là\u{00A0}?",
-        "it": "Ciao, che bello sentirti. Cosa stavi facendo?",
-        "pt": "Oi, que bom te ouvir. O que você estava fazendo agora?",
-        "zh": "嘿，听到你的声音真好。你刚才在忙什么？",
+    /// How a free talk picks up — written by hand per language since
+    /// 2026-10-13 (founder: "it asks in a direction I don't want"). Until then
+    /// one flash-lite call wrote six lines per learner, and every one put a
+    /// guessed subject to them ("how's your project going?", "what's been
+    /// worrying you?", "got a minute?") when it was THEY who placed the call
+    /// and came with something to say. Prompted to only hand them the floor,
+    /// it still answered in Korean with 무슨 일이야 / 왜 전화했어 (an emergency,
+    /// or being bothered), turned a Hangul name into kanji in Japanese, and
+    /// assumed the hour (お疲れ様). Six lines that only say "glad you called —
+    /// what are we talking about?" need no level and no name, so they are
+    /// written, not generated. Whatever the learner says next IS the call;
+    /// if it is "nothing much", the conversation prompt's THEY CALLED YOU
+    /// block has the fluent self bring something.
+    ///
+    /// Still time-neutral (2026-09-28): each line is heard at any hour.
+    /// MATERIAL → target language, informal address throughout.
+    private static let pickUpLines: [String: [String]] = [
+        "en": [
+            "Hey, it's me. What's up?",
+            "Oh, hey! What are we talking about today?",
+            "Hey you. Go on, I'm listening.",
+            "Hi! What's on your mind?",
+            "Hey. So, what do you feel like talking about?",
+            "There you are. What's new?",
+        ],
+        "de": [
+            "Hey, ich bin's. Was gibt's?",
+            "Oh, hallo! Worüber reden wir heute?",
+            "Na du. Erzähl, ich hör zu.",
+            "Hi! Was gibt's Neues?",
+            "Hey. Worüber willst du reden?",
+            "Da bist du ja. Leg los!",
+        ],
+        "ko": [
+            "오, 반가워. 오늘은 무슨 얘기 할까?",
+            "왔네. 뭐든 말해 봐. 듣고 있을게.",
+            "어, 나야. 무슨 얘기 하고 싶어?",
+            "좋아. 오늘은 네 얘기부터 들어 볼까?",
+            "응, 듣고 있어. 편하게 말해 봐.",
+            "안녕. 오늘은 어떤 얘기부터 해 볼까?",
+        ],
+        "ja": [
+            "もしもし。今日は何の話する？",
+            "あ、来たね。今日は何の話しようか？",
+            "やあ。なんでも話してよ。ちゃんと聞いてるから。",
+            "おっ、いいね。今日はどんな話？",
+            "うん、聞いてるよ。気楽に話して。",
+            "やあ。なんか話したいことある？",
+        ],
+        "es": [
+            "Hola, soy yo. ¿Qué me cuentas?",
+            "¡Hola! ¿De qué hablamos hoy?",
+            "Aquí estoy. Cuéntame, te escucho.",
+            "¡Ey! ¿Qué hay de nuevo?",
+            "Hola. ¿De qué tienes ganas de hablar?",
+            "¡Qué bien que llamas! ¿Por dónde empezamos?",
+        ],
+        "fr": [
+            "Salut, c’est moi. Quoi de neuf\u{00A0}?",
+            "Oh, salut\u{00A0}! On parle de quoi aujourd’hui\u{00A0}?",
+            "Je t’écoute. Raconte\u{00A0}!",
+            "Coucou\u{00A0}! Qu’est-ce que tu racontes\u{00A0}?",
+            "Salut. Tu as envie de parler de quoi\u{00A0}?",
+            "Ah, te voilà\u{00A0}! Par quoi on commence\u{00A0}?",
+        ],
+        "it": [
+            "Ciao, sono io. Che mi racconti?",
+            "Oh, ciao! Di cosa parliamo oggi?",
+            "Eccomi. Racconta, ti ascolto.",
+            "Ehi! Che c'è di nuovo?",
+            "Ciao. Di cosa hai voglia di parlare?",
+            "Eccoti! Da dove cominciamo?",
+        ],
+        "pt": [
+            "Oi, sou eu. Me conta, o que tem de novo?",
+            "Opa, oi! Sobre o que a gente vai conversar hoje?",
+            "Tô aqui. Pode falar, tô ouvindo.",
+            "E aí! Quais são as novidades?",
+            "Oi. Do que você está a fim de falar?",
+            "Olha você aí! Por onde a gente começa?",
+        ],
+        "zh": [
+            "喂，是我。想聊点什么？",
+            "哎，你来啦！今天聊什么？",
+            "我在呢。你说吧，我听着。",
+            "嘿！最近有什么新鲜事？",
+            "你好呀。今天想从哪儿聊起？",
+            "来啦！有什么想说的，尽管说。",
+        ],
     ]
+
+    private static func pickUpLines(language: String) -> [String] {
+        let code = LanguageCatalog.language(language)?.code ?? "en"
+        return pickUpLines[code] ?? pickUpLines["en"]!
+    }
 
     /// The next greeting in rotation, or nil when no valid pool exists yet
     /// (caller falls back to a generated opener). Advances and persists the
@@ -390,15 +467,14 @@ final class FreeTalkOpeners {
     /// of the first "Let's talk" so that call opens on a canned line instead
     /// of holding the greeting hostage to a live Gemini call (which, cold,
     /// used to be the multi-second blank screen on the first free talk).
-    /// No-op when a valid pool already exists; failures stay silent — the
-    /// in-call fallback path still generates on demand.
+    /// No-op when a valid pool already exists.
     func warmUp(language: String, personaName: String?, proficiency: CEFRLevel) async {
         guard !hasPool(language: language, personaName: personaName) else { return }
         _ = try? await generatePool(language: language, personaName: personaName,
                                     proficiency: proficiency)
     }
 
-    /// Generate (or refresh) the pool with one Gemini call. Returns the first
+    /// Write the pool from the bundled lines. Returns the first
     /// line in rotation so the generating session can use it directly.
     func generatePool(language: String,
                       personaName: String?,
@@ -418,52 +494,10 @@ final class FreeTalkOpeners {
     private func writePool(language: String,
                            personaName: String?,
                            proficiency: CEFRLevel) async throws -> String {
-        let payload: Payload = try await GeminiClient.shared.sendJSON(
-            system: Self.systemPrompt(language: language, personaName: personaName,
-                                      proficiency: proficiency),
-            messages: [GeminiClient.Message(role: .user, content: "Write the greetings.")],
-            model: .flashLite31,
-            maxTokens: 1200,
-            purpose: "freetalk-openers",
-            idempotencyKey: "freetalk-openers:\(Self.key(language: language, personaName: personaName))"
-        )
-        let lines = payload.openers
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-        guard let first = lines.first else {
-            throw GeminiError.jsonNotFound(raw: "empty opener pool")
-        }
+        let lines = Self.pickUpLines(language: language)
         save(Pool(key: Self.key(language: language, personaName: personaName),
                   lines: lines, cursor: 1, generatedAt: Date()))
-        return first
-    }
-
-    private static func systemPrompt(language: String, personaName: String?,
-                                     proficiency: CEFRLevel) -> String {
-        let name = (personaName?.isEmpty == false) ? personaName! : "the learner"
-        let languageName = LanguageCatalog.englishName(language)
-        return """
-        You are the learner's fluent future self opening a casual, free-form
-        voice chat in \(languageName). Write 6 SHORT greeting openers (6–14 words
-        each) that could start such a call on any day, at any time of day.
-
-        Rules:
-        - Warm, natural spoken \(languageName) a CEFR \(proficiency.rawValue.uppercased()) learner easily follows.
-        - \(CoachingLanguage.breathPunctuation)
-        - \(CoachingLanguage.selfWarmth)
-        - Each opener distinct in flavor; every one must invite a reply.
-        - Address \(name) by name in AT MOST two of them.
-        - In a language that separates formal from informal address (Korean
-          반말, Japanese plain form, German du, French tu, Spanish tú…), use the
-          INFORMAL form — it is you talking to yourself.
-        - No references to specific shared events, dates, news, or time of day —
-          and nothing that assumes the day is over or just starting ("how was
-          your day", "good morning", "tonight"): each line is heard at any hour.
-        - Speakable as-is: no placeholders, brackets, or stage directions.
-
-        Return STRICT JSON only — no prose, no code fences:
-        { "openers": ["...", "..."] }
-        """
+        return lines[0]
     }
 
     // MARK: - Disk

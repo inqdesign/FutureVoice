@@ -233,6 +233,26 @@ enum ConversationEngine {
           biography.
         """ : ""
 
+        // A plain free talk is a call the LEARNER placed (2026-10-13, founder):
+        // they rang for a reason, so the opener only hands them the floor
+        // (`FreeTalkOpeners`) and their subject comes first. The remembered
+        // lines are what YOU bring when they have nothing in particular — or
+        // later, once their own subject has had its turn ("by the way, how's
+        // that going?"). Not for the first meeting, whose block owns the call.
+        let theyCalledBlock = (topic.isEmpty && counterpart == nil && !firstMeeting) ? """
+
+
+        THEY CALLED YOU. Your opening line only asked what's up, so whatever \
+        they bring first IS the call — go with it, and don't steer to \
+        something you'd rather ask about. If they say there's nothing in \
+        particular ("not much", "just because", "nothing special"), that's \
+        your cue to bring something: one thing you remember from earlier \
+        calls ("by the way, how's … going?"), or a small thing of your own \
+        to react to. One thing, not a menu of options. Later in the call, \
+        once their subject has run its course, the same move is how you \
+        keep it going.
+        """ : ""
+
         // When this is (`PromptClock`). The history is left out for a cast
         // stranger (no shared past, by that block's own rule) and for the
         // first meeting (whose block already says you have never spoken).
@@ -245,7 +265,7 @@ enum ConversationEngine {
         The point is for it to sound like two actual people talking — not a \
         language-class exchange. Read everything below, then talk like a real person.
 
-        \(counterpart.map { personaBlock(forCast: $0, persona: persona, languageName: languageName) } ?? personaBlock(persona, languageName: languageName))\(counterpartBlock)\(firstMeetingBlock)\(clockBlock)
+        \(counterpart.map { personaBlock(forCast: $0, persona: persona, languageName: languageName) } ?? personaBlock(persona, languageName: languageName))\(counterpartBlock)\(firstMeetingBlock)\(theyCalledBlock)\(clockBlock)
 
         Language profile:
         - Native language: \(LanguageCatalog.englishName(nativeLanguage))
