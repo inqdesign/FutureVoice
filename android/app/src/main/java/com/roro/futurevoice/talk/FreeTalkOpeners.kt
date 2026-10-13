@@ -1,21 +1,21 @@
 package com.roro.futurevoice.talk
 
 import android.content.Context
-import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.CefrLevel
-import com.roro.futurevoice.data.LanguageCatalog
 import com.roro.futurevoice.data.StoreJson
-import com.roro.futurevoice.net.GeminiClient
 import kotlinx.serialization.Serializable
 import java.io.File
 
 /**
  * Rotating pools of free-talk greeting lines, one per language + persona
- * (`freetalk_openers_by_language.json`, iOS `58d6802`). One Gemini call writes six openers; sessions rotate through them,
- * so the first line of a free talk never waits on the model. Topic, scenario
- * and news openers stay dynamic — this pool is only for the no-topic talk.
+ * (`freetalk_openers_by_language.json`, iOS `58d6802`). Sessions rotate
+ * through six pick-up lines, written by hand per language since iOS
+ * `a92d7fc8` (2026-10-13 — until then one Gemini call wrote them, and every
+ * line put a guessed topic to a learner who had called with something to
+ * say). Topic, scenario and news openers stay dynamic — this pool is only
+ * for the no-topic talk.
  *
- * Keyed to language + persona name and regenerated when either changes.
+ * Keyed to language + persona name, written on first use.
  * Until a pool exists, [fallbackOpener] speaks; on the very first free talk,
  * before the fluent self has met the learner, [introOpener] outranks both —
  * a rotating "good to hear you" is a greeting between people who already
@@ -31,9 +31,6 @@ class FreeTalkOpeners(private val context: Context) {
         @Serializable(with = com.roro.futurevoice.data.IsoDateMillisSerializer::class)
         val generatedAt: Long = System.currentTimeMillis(),
     )
-
-    @Serializable
-    private data class Payload(val openers: List<String> = emptyList())
 
     /**
      * One pool PER language + persona, in one file. Until 2026-09-28 the file
@@ -61,8 +58,10 @@ class FreeTalkOpeners(private val context: Context) {
          * v3 (2026-10-07): pools joined two sentences with a bare comma, which
          * the sentence splitter can't cut, so the opener ran on with no pause
          * — `breathPunctuation` now names the comma splice.
+         * v4 (iOS `a92d7fc8`, 2026-10-13): the lines are bundled pick-ups that
+         * only hand the learner the floor (`FreeTalkOpenerContent.pickUp`).
          */
-        private const val POOL_VERSION = 3
+        private const val POOL_VERSION = 4
 
         /** Languages × persona names a learner actually uses is a handful; the
          *  cap only stops a long history of renames from growing the file. */
@@ -88,8 +87,10 @@ class FreeTalkOpeners(private val context: Context) {
         fun introOpener(language: String): String =
             FreeTalkOpenerContent.intro[language.take(2)] ?: FreeTalkOpenerContent.intro.getValue("en")
 
-        fun fallbackOpener(language: String): String =
-            FreeTalkOpenerContent.fallback[language.take(2)] ?: FreeTalkOpenerContent.fallback.getValue("en")
+        fun fallbackOpener(language: String): String = pickUpLines(language).first()
+
+        private fun pickUpLines(language: String): List<String> =
+            FreeTalkOpenerContent.pickUp[language.take(2)] ?: FreeTalkOpenerContent.pickUp.getValue("en")
     }
 
     /** The single-pool file from before 2026-09-28 — read for migration only. */
@@ -228,19 +229,8 @@ class FreeTalkOpeners(private val context: Context) {
         }
 
     private suspend fun writePool(language: String, personaName: String?, level: CefrLevel): List<String> {
-        val name = personaName?.takeIf { it.isNotBlank() } ?: "the learner"
-        val payload = GeminiClient(AuthRepository()).sendJson(
-            system = FreeTalkOpenerContent.poolPrompt(
-                LanguageCatalog.englishName(language), level.code.uppercase(), name),
-            messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER, "Write the greetings.")),
-            serializer = Payload.serializer(),
-            model = GeminiClient.Model.FLASH_LITE_31,
-            maxTokens = 512,
-            purpose = "freetalk-openers",
-            idempotencyKey = "freetalk-openers:" + key(language, personaName),
-        )
-        val lines = payload.openers.map { it.trim() }.filter { it.isNotEmpty() }
-        if (lines.isNotEmpty()) save(Pool(key(language, personaName), lines, cursor = 0))
+        val lines = pickUpLines(language)
+        save(Pool(key(language, personaName), lines, cursor = 0))
         return lines
     }
 

@@ -82,12 +82,15 @@ news = kotlin_conv(literal_at(engine, 'let newsBlock = newsFacts.isEmpty ? "" : 
 })
 first = kotlin_conv(literal_at(engine, "let firstMeetingBlock = (firstMeeting && counterpart == nil) ?", csp),
                {"languageName": "languageName"})
+they_called = kotlin_conv(literal_at(
+    engine, "let theyCalledBlock = (topic.isEmpty && counterpart == nil && !firstMeeting) ?", csp), {})
 main_anchor = engine.index("        return \"\"\"\n        You're in a real-feeling SPOKEN", csp)
 system = kotlin_conv(literal_at(engine, 'return """', main_anchor), {
     "languageName": "languageName",
     "counterpart.map { personaBlock(forCast: $0, persona: persona, languageName: languageName) } ?? personaBlock(persona, languageName: languageName)": "personaBlock",
     "counterpartBlock": "counterpartBlock",
     "firstMeetingBlock": "firstMeetingBlock",
+    "theyCalledBlock": "theyCalledBlock",
     "clockBlock": "clockBlock",
     "LanguageCatalog.englishName(nativeLanguage)": "nativeName",
     "levelName": "levelName",
@@ -206,6 +209,10 @@ object ConversationPrompt {{
     fun firstCallBlock(languageName: String): String =
         {first}
 
+    /** iOS `theyCalledBlock` — a plain free talk the LEARNER placed. */
+    const val theyCalledBlock: String =
+        {they_called}
+
     /** iOS `beginnerQuestions` — empty at B1 and above. */
     fun beginnerQuestions(level: CefrLevel): String {{
         if (level != CefrLevel.A1 && level != CefrLevel.A2) return ""
@@ -219,7 +226,8 @@ object ConversationPrompt {{
     /** iOS `conversationSystemPrompt`'s body, every computed piece passed in. */
     fun systemPrompt(
         languageName: String, nativeName: String, levelName: String, level: CefrLevel,
-        personaBlock: String, counterpartBlock: String, firstMeetingBlock: String, clockBlock: String,
+        personaBlock: String, counterpartBlock: String, firstMeetingBlock: String,
+        theyCalledBlock: String, clockBlock: String,
         patterns: String, weak: String, topic: String, newsBlock: String, briefBlock: String,
         targetLanguage: String, tutor: Boolean,
     ): String =

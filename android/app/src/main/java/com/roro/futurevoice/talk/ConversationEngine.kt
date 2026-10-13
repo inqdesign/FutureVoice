@@ -105,6 +105,11 @@ object ConversationEngine {
         val firstMeetingBlock = if (firstMeeting && counterpart == null)
             ConversationPrompt.firstCallBlock(languageName) else ""
 
+        // A plain free talk the learner placed: their subject first, and on
+        // "nothing much" the fluent self brings something (iOS `a92d7fc8`).
+        val theyCalledBlock = if (topic.isEmpty() && counterpart == null && !firstMeeting)
+            ConversationPrompt.theyCalledBlock else ""
+
         // History is left out for a cast stranger (no shared past) and the
         // first meeting (its own block says you have never spoken).
         val clockBlock = clock?.promptBlock(includeHistory = counterpart == null && !firstMeeting) ?: ""
@@ -117,7 +122,8 @@ object ConversationEngine {
             nativeName = LanguageCatalog.englishName(nativeLanguage),
             levelName = levelName, level = level,
             personaBlock = personaBlock, counterpartBlock = counterpartBlock,
-            firstMeetingBlock = firstMeetingBlock, clockBlock = clockBlock,
+            firstMeetingBlock = firstMeetingBlock, theyCalledBlock = theyCalledBlock,
+            clockBlock = clockBlock,
             patterns = patterns, weak = weak, topic = topic,
             newsBlock = newsBlock, briefBlock = briefBlock,
             targetLanguage = targetLanguage, tutor = tutor,
