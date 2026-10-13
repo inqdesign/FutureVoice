@@ -920,36 +920,8 @@ object WeeklyTestEngine {
         val topics = windowSessions.mapNotNull { it.topic }.filter { it.isNotEmpty() }.take(6)
         val targetName = LanguageCatalog.englishName(target)
         val nativeName = LanguageCatalog.englishName(native)
-        val system = "You write a short translation quiz for a $targetName learner whose own " +
-            "language is $nativeName, level ${level.code.uppercase()}. " +
-            "They answer by laying word tiles in order. You get mistakes they really " +
-            "made. Pick up to $MAX_TRANSLATE of them, each a DIFFERENT grammar point " +
-            "(skip pure word choice or a slip with no rule behind it), and for each " +
-            "write ONE new everyday sentence that cannot be said right without that " +
-            "grammar point.\n" +
-            "\n" +
-            "Return {\"items\":[{\"source\":n,\"point\":\"...\",\"native\":\"...\",\"answer\":\"...\"," +
-            "\"orders\":[\"...\"],\"decoys\":[\"...\"],\"tip\":\"...\"}]}\n" +
-            "- source: the number of the mistake it is built on.\n" +
-            "- native: the sentence in $nativeName, casual and spoken, the way they'd " +
-            "say it to a friend, 6–12 words, about ordinary life (these were their " +
-            "topics: ${topics.joinToString("; ")}). NOT their original sentence.\n" +
-            "- answer: the most natural $targetName way to say it, at their level, " +
-            "5–12 words. Its words are the tiles, so there must be ONE wording: no " +
-            "optional words, nothing a learner could naturally say differently " +
-            "with other words.\n" +
-            "- orders: every OTHER order of exactly the same words that is just as " +
-            "correct. Go through each time, place and duration phrase (\"for two " +
-            "years\", \"yesterday\", \"at midnight\") and each adverb, and list the " +
-            "sentence with it at the front too wherever that is natural — a " +
-            "learner who lays a right order and is marked wrong stops trusting " +
-            "the test. [] only if the order is truly fixed.\n" +
-            "- decoys: 2–3 single words built from their mistake (e.g. \"since\", \"am\" " +
-            "for \"I am working here since 2020\") that make the sentence WRONG " +
-            "wherever they go, and are not in answer.\n" +
-            "- point: the grammar point in $nativeName, 2–5 words. tip: one line in " +
-            "$nativeName on when it applies, at most 14 words.\n" +
-            "JSON only."
+        val system = com.roro.futurevoice.talk.LiftedPrompts.weeklyTranslateSystem(
+            targetName, nativeName, level.code.uppercase(), MAX_TRANSLATE, topics.joinToString("; "))
         val user = list.mapIndexed { i, s ->
             "${i + 1}. said \"${s.was}\" → should be \"${s.now}\"" + (if (s.why.isEmpty()) "" else " (${s.why})")
         }.joinToString("\n")
@@ -1268,14 +1240,7 @@ object WeeklyTestEngine {
         val name = LanguageCatalog.englishName(language)
         // Told the point and the learner's slip, or it accepts the slip itself
         // as "understandable" (probe 2026-10-08).
-        val system = "A learner laid word tiles to say a $name sentence. They used exactly " +
-            "the words of the model answer, in a different order. Judge only the " +
-            "order: is it grammatical and natural, meaning the same — something a " +
-            "careful teacher would accept? Unusual but correct emphasis (a time " +
-            "phrase moved to the front) is fine. The quiz tests one grammar point, " +
-            "given below with the learner's earlier mistake; an order that repeats " +
-            "that mistake is NOT acceptable, even if a listener would understand it.\n" +
-            "Return {\"natural\": true} or {\"natural\": false}."
+        val system = com.roro.futurevoice.talk.LiftedPrompts.weeklyOrderSystem(name)
         var user = ""
         item.rule?.let { user += "Grammar point: $it\n" }
         if (item.focus != null && item.example != null) user += "Their earlier mistake: ${item.focus} → ${item.example}\n"

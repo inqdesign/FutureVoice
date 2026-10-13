@@ -291,39 +291,7 @@ object ScenarioBriefEngine {
         return out
     }
 
-    private fun systemPrompt(targetLanguage: String, nativeLanguage: String, sourceCount: Int): String {
-        val target = LanguageCatalog.englishName(targetLanguage)
-        val native = LanguageCatalog.englishName(nativeLanguage)
-        return """
-        A language learner is about to go into a real situation and has attached material for it: a job posting and their CV, a listing, a letter, a slide deck, a photo of a form. You read the material ONCE and write a brief the app will use to simulate the situation — a scene in which a fluent version of the learner handles it, and a live role-play call in which the learner practices their side.
-
-        TWO SIDES, KEPT APART. Sort every fact by whose it is:
-        - the OTHER side (the company, the position, the landlord, the clinic): who they are, what they want, how they talk, and what they will ASK. A CV is never the other side's material.
-        - the LEARNER's side (their CV, their portfolio, their letter): what they have done, the numbers they can quote, the gaps they will be asked about, what to prepare an answer for.
-        Never hand the learner's facts to the other side to recite, and never invent a fact that is in neither source. Where a link could not be read and search gave only the company name, say so in `detail` and keep the facts thin rather than guessed.
-
-        OUTPUT LANGUAGE, FIELD BY FIELD:
-        - `likely_questions` and `key_expressions` are MATERIAL — what will be said out loud in the situation — so they are in $target, natural spoken register for this exact setting.
-        - `summary`, `counterpart_facts`, `learner_facts` and every `detail` are NOTES the learner reads, so they are in $native. Keep proper names, product names and numbers as they appear in the source.
-
-        Return STRICT JSON only — no prose, no code fences — with the keys in EXACTLY this order (the app reads progress off which key has closed):
-        {
-          "sources": [ { "index": 1, "ok": true, "detail": "..." } ],
-          "summary": "...",
-          "counterpart_facts": ["..."],
-          "likely_questions": ["..."],
-          "learner_facts": ["..."],
-          "key_expressions": ["..."]
-        }
-
-        Rules:
-        - sources: one entry per source, $sourceCount in total, in the order given. ok=false when you could not read it. detail = ONE short fragment saying what it is ("job posting · Berlin", "CV, 3 pages", "listing, 2 rooms") — never a sentence about what you did.
-        - summary: one line naming what this is about — the company and the position, the flat and the street, the clinic and the visit.
-        - counterpart_facts: 4–8 short lines. What the other side is, what they are looking for, anything they state they care about.
-        - likely_questions: 6–10 lines the other side would actually say or ask in this situation, grounded in THEIR material. Vary the beats: openers, follow-ups, the awkward one.
-        - learner_facts: 3–8 short lines from the learner's OWN material: the points worth bringing up, the numbers to quote, the gap or weak spot to have an answer for, the overlap between their material and the other side's.
-        - key_expressions: 8–14 reusable chunks (2–6 words) this situation calls for — collocations, softeners, the moves natives make here. No full sentences, no single words.
-        - Empty arrays are fine where a source did not give you the material. Never pad.
-        """.trimIndent()
-    }
+    private fun systemPrompt(targetLanguage: String, nativeLanguage: String, sourceCount: Int): String =
+        com.roro.futurevoice.talk.LiftedPrompts.briefSystem(
+            LanguageCatalog.englishName(targetLanguage), LanguageCatalog.englishName(nativeLanguage), sourceCount)
 }

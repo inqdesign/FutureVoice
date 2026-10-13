@@ -52,14 +52,8 @@ data class GrammarFocus(
     suspend fun isRepeat(fixes: List<TurnFix>, turnId: String): Boolean {
         if (fixes.isEmpty()) return false
         val list = fixes.joinToString("\n") { "- \"${it.was}\" → \"${it.now}\"" }
-        val system = "A language learner is working on one recurring mistake. Decide " +
-            "whether any of the new corrections is the SAME KIND of mistake — " +
-            "the same grammar point, even with different words (a wrong past " +
-            "form is a wrong past form whatever the verb). A different point " +
-            "that happens to sit in the same sentence does not count.\n" +
-            "Return {\"same\": true} or {\"same\": false}. When unsure, false."
-        val content = "Recurring mistake: \"${pattern.mistake}\" → \"${pattern.correction}\" (${pattern.context})\n" +
-            "New corrections:\n$list"
+        val system = LiftedPrompts.focusRepeatSystem()
+        val content = LiftedPrompts.focusRepeatContent(pattern.mistake, pattern.correction, pattern.context, list)
         val v = withTimeoutOrNull(8_000) {
             runCatching {
                 GeminiClient(AuthRepository()).sendJson(
@@ -167,22 +161,8 @@ data class GrammarFocus(
             }
             val nativeName = LanguageCatalog.englishName(native)
             val targetName = LanguageCatalog.englishName(target)
-            val system = "A $targetName learner keeps making one mistake. Name the grammar " +
-                "point it belongs to, for a label they read mid-call, and say in one " +
-                "short sentence what to watch for.\n\n" +
-                "First decide: is it a GRAMMAR point (a form, an ending, word order, " +
-                "an article, a particle, a tense — a rule that applies to other words " +
-                "too), or a WORD choice (one word or name confused with another, a " +
-                "collocation)? Set \"grammar\" to true or false.\n\n" +
-                "Return {\"grammar\": true, \"label\": \"...\", \"tip\": \"...\"}, label and tip in $nativeName:\n" +
-                "- label: the grammar point as a learner would say it, 2–4 words " +
-                "(e.g. \"past tense\", \"articles a/the\", \"subject particle\"). Not " +
-                "the example, not a sentence.\n" +
-                "- tip: one plain sentence, at most 12 words, about WHEN it applies. " +
-                "Friendly, never scolding, no grammar jargon beyond the label."
-            val content = "They said: \"${pattern.mistake}\"\n" +
-                "Fluent: \"${pattern.correction}\"\n" +
-                "Note: ${pattern.context}"
+            val system = LiftedPrompts.focusDescribeSystem(targetName, nativeName)
+            val content = LiftedPrompts.focusDescribeContent(pattern.mistake, pattern.correction, pattern.context)
             val d = withTimeoutOrNull(8_000) {
                 runCatching {
                     GeminiClient(AuthRepository()).sendJson(
