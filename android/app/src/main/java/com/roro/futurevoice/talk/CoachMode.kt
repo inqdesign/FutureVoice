@@ -65,6 +65,30 @@ object CoachMode {
     }
 }
 
+/**
+ * Tutor mode (iOS `TutorMode`, b3a6d30f + 234e77cf): the call becomes a
+ * LESSON. The fluent self leads one practical theme at a time and every turn
+ * teaches — their sentence said right if it was wrong, the more natural way if
+ * it was stiff, one step up if it was fine — then a practice question built to
+ * use it ([TutorPrompt]).
+ *
+ * It lives in the conversation's SYSTEM prompt, so it is fixed for a call:
+ * the gateway caches that prompt for the whole call. Flipped mid-call it
+ * applies from the next call. Off by default for everyone. A tutored call is
+ * a PRACTICE call, like a coached one (`Session.coached`).
+ */
+object TutorMode {
+    /** Same name as iOS's defaults key. */
+    const val KEY = "futurevoice.call.tutorMode"
+
+    private fun prefs(context: Context) =
+        context.applicationContext.getSharedPreferences("futurevoice", Context.MODE_PRIVATE)
+
+    fun isOn(context: Context): Boolean = prefs(context).getBoolean(KEY, false)
+
+    fun set(context: Context, on: Boolean) = prefs(context).edit().putBoolean(KEY, on).apply()
+}
+
 /** The ration, as a value so it can be reasoned about (and tested) apart from the call. */
 data class CoachPlan(
     val hintsShown: Int = 0,

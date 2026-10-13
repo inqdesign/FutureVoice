@@ -215,6 +215,11 @@ class TalkViewModel(context: Context) : ViewModel() {
     /** Coach mode was on at some point in this call — the whole call is then
      *  a practice call (`Session.coached`). */
     private var coachWasOn = false
+    /** Tutor mode for THIS call (iOS `tutorThisCall`), read once when the
+     *  call opens: it lives in the system prompt the gateway caches for the
+     *  whole call, so a flip mid-call applies from the next one. A tutored
+     *  call is a practice call. */
+    private var tutorThisCall = false
     /** Where a scenario call takes place and who the other side is, for the
      *  "try saying" — "What can I get you?" only has one natural answer once
      *  it knows it is a café (iOS `coachSituation`). Null on every other call. */
@@ -280,6 +285,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         _state.value = TalkUiState(phase = TalkPhase.CONNECTING)
         coachOn = CoachMode.resolve(CoachMode.choice(appContext), config.level.code)
         coachWasOn = coachOn
+        tutorThisCall = TutorMode.isOn(appContext)
         coachPlan = CoachPlan()
         coachSteerSent = ""
         coachSituation = null
@@ -344,6 +350,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                     cast = config.cast,
                     brief = scenarioBrief(config),
                     clock = pinPromptClock(config),
+                    tutor = tutorThisCall,
                 ) + ConversationEngine.turnOutputInstruction(config.targetLanguage, config.nativeLanguage,
                     cast = config.cast, inScene = config.scenarioId != null)
                 if (BuildConfig.DEBUG) Log.d(TAG, "prompt: patterns=${profile.recurringMistakes.size}" +
@@ -420,7 +427,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             grammarFocus = if (learnerSpokeThisCall)
                 _state.value.grammarFocus?.record(_state.value.focusRepeatTurns.size) else null,
             // Coach mode on at any point makes the whole call practice.
-            coached = if (coachWasOn) true else null,
+            coached = if (coachWasOn || tutorThisCall) true else null,
         )
         // Saved from the app scope on purpose: the ViewModel may be cleared
         // (screen left) before a viewModelScope job gets to run. The summary
@@ -482,6 +489,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                     cast = config.cast,
                     brief = scenarioBrief(config),
                     clock = pinPromptClock(config),
+                    tutor = tutorThisCall,
                 ) + REALTIME_STYLE_RULES
                 // A ready-made situation the LEARNER opens (asking a stranger
                 // the way, iOS `5b0587a`): the other side waits to be spoken

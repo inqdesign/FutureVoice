@@ -78,6 +78,8 @@ object ConversationEngine {
         brief: ScenarioBrief? = null,
         /** When this is (iOS `clock:`), pinned at call start. */
         clock: PromptClock? = null,
+        /** Tutor mode for this call (iOS `tutor:`, `TutorMode`), fixed when it opens. */
+        tutor: Boolean = false,
     ): String {
         val languageName = LanguageCatalog.englishName(targetLanguage)
         // History is left out for a cast stranger (no shared past) and the
@@ -208,7 +210,7 @@ object ConversationEngine {
 
         STRICT:
         - Reply in $languageName only.
-        - Never correct the user mid-conversation. Corrections happen elsewhere.
+        - ${if (tutor) TutorPrompt.CORRECT_ONLY_AS_TUTOR else TutorPrompt.NEVER_CORRECT}
         - Speak mostly AT their level (${level.code.uppercase()}), but let a slightly-above-level word or turn of phrase slip in naturally now and then — that small stretch is where they grow. Never two levels up.
         """.trimIndent() +
             // How the fluent self ASKS a beginner (iOS `beginnerQuestions`,
@@ -216,7 +218,11 @@ object ConversationEngine {
             // follow-a-thread and don't-always-ask rules above. Empty at B1+,
             // so those prompts are byte for byte what they were. Appended
             // AFTER trimIndent: its lines start at column 0.
-            CoachPrompts.beginnerQuestions(level)
+            CoachPrompts.beginnerQuestions(level) +
+            // Tutor mode (iOS `tutorBlock`, b3a6d30f + 234e77cf): the call is a
+            // LESSON. Last, after the beginner rules it says it outranks; only
+            // appended when on, so every other prompt is unchanged.
+            (if (tutor) TutorPrompt.block(targetLanguage, languageName) else "")
     }
 
     /**

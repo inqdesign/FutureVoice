@@ -2443,6 +2443,7 @@
     <string name="turn_on_photos_for_nawana_in_settings_to_save_the_card">"Active Photos pour nawana dans Réglages pour enregistrer la carte."</string>
     <string name="turn_on_reminders">"Activer les notifications"</string>
     <string name="turn_them_on_in_settings">"Tu peux les activer dans Réglages"</string>
+    <string name="tutor_mode">"Mode tuteur"</string>
     <string name="two_minutes_on_one_topic_without_stopping">"Deux minutes sur un sujet, sans t’arrêter"</string>
     <string name="type">"Type"</string>
     <string name="type_a_topic">"Saisir un thème"</string>
@@ -2642,6 +2643,8 @@
     <string name="when_something_goes_wrong">"Quand quelque chose tourne mal"</string>
     <!-- 'When you hang up, the words you used and the sentences you fixed become your own study book in Review.' -->
     <string name="when_you_hang_up_the_words_you_used_and_the_sentences_you_fi_494463">"Quand tu raccroches, les mots que tu as employés et les phrases que tu as corrigées deviennent ton propre carnet d’étude dans Révision."</string>
+    <!-- 'When you make a mistake, your future self says it the right way out loud, then carries on. Starts with your next call.' -->
+    <string name="when_you_make_a_mistake_your_future_self_says_it_the_right_w_458e22">"Quand tu fais une erreur, ton moi fluide te dit à voix haute comment le dire, puis la conversation continue. À partir de ton prochain appel."</string>
     <!-- 'When you send a card to 10 minutes, tomorrow or 3 days, this is what brings it back. One reminder at a time, at the earliest thing waiting.' -->
     <string name="when_you_send_a_card_to_10_minutes_tomorrow_or_3_days_this_i_dc4513">"Quand tu envoies une carte à 10 minutes, à demain ou à 3 jours, c’est cette notification qui la ramène. Un seul rappel à la fois, réglé sur l’échéance la plus proche."</string>
     <!-- 'When you stop speaking, your fluent self answers. Take your time to think.' -->

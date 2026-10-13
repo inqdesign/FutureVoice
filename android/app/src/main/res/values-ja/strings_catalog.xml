@@ -2446,6 +2446,7 @@
     <string name="turn_on_photos_for_nawana_in_settings_to_save_the_card">"カードを保存するには、設定でnawanaの写真へのアクセスをオンにしてください。"</string>
     <string name="turn_on_reminders">"通知をオンにする"</string>
     <string name="turn_them_on_in_settings">"設定でオンにできます"</string>
+    <string name="tutor_mode">"チューターモード"</string>
     <string name="two_minutes_on_one_topic_without_stopping">"ひとつの話題で2分間、止まらずに"</string>
     <string name="type">"種類"</string>
     <string name="type_a_topic">"トピックを入力"</string>
@@ -2645,6 +2646,8 @@
     <string name="when_something_goes_wrong">"トラブルが起きたとき"</string>
     <!-- 'When you hang up, the words you used and the sentences you fixed become your own study book in Review.' -->
     <string name="when_you_hang_up_the_words_you_used_and_the_sentences_you_fi_494463">"通話を切ると、使った単語と直した文から自分だけの教材が作られ、復習タブに入ります。"</string>
+    <!-- 'When you make a mistake, your future self says it the right way out loud, then carries on. Starts with your next call.' -->
+    <string name="when_you_make_a_mistake_your_future_self_says_it_the_right_w_458e22">"言い間違えると、流暢な自分がすぐ正しい言い方を声で教えて、そのまま話を続けます。次の通話から使えます。"</string>
     <!-- 'When you send a card to 10 minutes, tomorrow or 3 days, this is what brings it back. One reminder at a time, at the earliest thing waiting.' -->
     <string name="when_you_send_a_card_to_10_minutes_tomorrow_or_3_days_this_i_dc4513">"カードを10分後・明日・3日後に送ると、そのときに戻してくれるのがこの通知です。いちばん早く待っている1件に合わせて、1回だけ鳴ります。"</string>
     <!-- 'When you stop speaking, your fluent self answers. Take your time to think.' -->

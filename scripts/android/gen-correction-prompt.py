@@ -130,15 +130,15 @@ import com.roro.futurevoice.data.LanguageCatalog
 object CorrectionOnlyPrompt {{
 
     /** Japanese only: the recognizer, not the learner, decides kanji or kana. */
-    private fun scriptGuard(targetLanguage: String): String =
+    internal fun scriptGuard(targetLanguage: String): String =
         if (targetLanguage.substringBefore('-') != "ja") "" else "{script}"
 
     /** Korean only: word spacing is the recognizer's (띄어쓰기). */
-    private fun spacingGuard(targetLanguage: String): String =
+    internal fun spacingGuard(targetLanguage: String): String =
         if (targetLanguage.substringBefore('-') != "ko") "" else "{spacing}"
 
     /** Korean and Japanese: the speech level is the learner's, never a slip. */
-    private fun registerGuard(targetLanguage: String): String =
+    internal fun registerGuard(targetLanguage: String): String =
         when (targetLanguage.substringBefore('-')) {{
             "ko" -> "{register}" + "{register_ko}"
             "ja" -> "{register}" + "{register_ja}"
