@@ -60,8 +60,9 @@ class FreeTalkOpeners(private val context: Context) {
          * — `breathPunctuation` now names the comma splice.
          * v4 (iOS `a92d7fc8`, 2026-10-13): the lines are bundled pick-ups that
          * only hand the learner the floor (`FreeTalkOpenerContent.pickUp`).
+         * v5 (iOS `bd9952d3`): mid-call lines ("응, 듣고 있어") replaced.
          */
-        private const val POOL_VERSION = 4
+        private const val POOL_VERSION = 5
 
         /** Languages × persona names a learner actually uses is a handful; the
          *  cap only stops a long history of renames from growing the file. */
