@@ -469,14 +469,16 @@ fun WatchSceneScreen(
         // What the two actually share, worked out in code — a scene about a
         // person has to open on the overlap. Builtin seeds have no person.
         val withPerson = other?.takeIf { it.remoteId?.startsWith("builtin:") != true }
-        // Plus who a public figure is and how the two address each other.
+        // iOS `userMessage`: the person block (who they are, how the two
+        // address each other) stands before the learner; the overlap after.
         val commonGround = withPerson?.let {
-            listOf(
-                if (it.isPublicFigure == true) ""
-                else com.roro.futurevoice.talk.CommonGround.block(persona, com.roro.futurevoice.talk.CommonGround.of(it)),
-                com.roro.futurevoice.talk.ConversationCharacter.sceneCounterpartLines(it, targetLanguage),
-            ).filter { b -> b.isNotBlank() }.joinToString("\n\n")
+            com.roro.futurevoice.talk.CommonGround.block(persona, com.roro.futurevoice.talk.CommonGround.of(it))
         } ?: ""
+        val counterpartLines = withPerson?.let { CurriculumClient.counterpartLines(it, targetLanguage) } ?: ""
+        // Steer the study picks toward what this learner actually gets wrong.
+        val learnerProfile = runCatching {
+            com.roro.futurevoice.data.ProfileStore.shared(context).load(targetLanguage, proficiency)
+        }.getOrNull()
         val cast = StockPerson.by(other?.voicePresetId?.takeIf { it.isNotBlank() } ?: scenario.voicePresetId)
         // Fresh conduit per attempt, then the player — it starts playing
         // turns the moment the model produces them.
@@ -499,6 +501,9 @@ fun WatchSceneScreen(
                     proficiency = proficiency, targetLanguage = targetLanguage,
                     avoidTitles = if (hasScene) listOfNotNull(scenario.curriculum?.dialogueTitle) else emptyList(),
                     commonGround = commonGround,
+                    counterpartLines = counterpartLines,
+                    weakVocabAreas = learnerProfile?.weakVocabAreas.orEmpty(),
+                    recurringMistakes = learnerProfile?.recurringMistakes.orEmpty(),
                     runKey = if (hasScene) runKey else null,
                     onTitle = { title = it.trim() },
                     onTurn = { appendStreamed(it) },

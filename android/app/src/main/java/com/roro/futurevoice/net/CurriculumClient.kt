@@ -2,6 +2,9 @@ package com.roro.futurevoice.net
 
 import com.roro.futurevoice.core.Config
 import com.roro.futurevoice.data.AuthRepository
+import com.roro.futurevoice.data.cast
+import com.roro.futurevoice.data.effectiveMyRegister
+import com.roro.futurevoice.data.effectiveTheirRegister
 import com.roro.futurevoice.talk.DialogueEngineTurn
 import com.roro.futurevoice.talk.Scenario
 import com.roro.futurevoice.talk.ScenarioCurriculum
@@ -47,6 +50,11 @@ class CurriculumClient(private val auth: AuthRepository) {
         targetLanguage: String,
         avoidTitles: List<String> = emptyList(),
         commonGround: String = "",
+        /** [counterpartLines] for the scene's real person; "" for a built-in
+         *  character or nobody, whose stand-in is [castIdentity]. */
+        counterpartLines: String = "",
+        weakVocabAreas: List<String> = emptyList(),
+        recurringMistakes: List<com.roro.futurevoice.talk.LearnerPattern> = emptyList(),
         runKey: String? = null,
         // Streaming taps (iOS `ScenarioCurriculumEngine.generate(onTitle:onTurn:)`):
         // when either is set the scene STREAMS — the title and each turn are
@@ -79,6 +87,7 @@ class CurriculumClient(private val auth: AuthRepository) {
                 })
             }
             put("cast_identity", castIdentity)
+            counterpartLines.takeIf { it.isNotBlank() }?.let { put("counterpart_lines", it) }
             persona?.takeIf { it.isMinimallyComplete }?.let { p ->
                 put("persona", buildJsonObject {
                     put("city", p.city); put("country", p.country)
@@ -92,6 +101,14 @@ class CurriculumClient(private val auth: AuthRepository) {
             put("target_language", targetLanguage)
             putJsonArray("avoid_titles") { avoidTitles.forEach { add(it) } }
             commonGround.takeIf { it.isNotBlank() }?.let { put("common_ground", it) }
+            // The learner's known gaps — the server takes the first three
+            // mistakes, as iOS's `userMessage` does.
+            putJsonArray("weak_vocab_areas") { weakVocabAreas.forEach { add(it) } }
+            put("recurring_mistakes", kotlinx.serialization.json.buildJsonArray {
+                recurringMistakes.forEach { m ->
+                    add(buildJsonObject { put("mistake", m.mistake); put("correction", m.correction) })
+                }
+            })
             if (stream) put("stream", true)
         }
         val key = runKey?.let { "curriculum-v2:${scenario.id}:$it" } ?: "curriculum-v2:${scenario.id}"
@@ -170,6 +187,36 @@ class CurriculumClient(private val auth: AuthRepository) {
                 dialogueTitle = payload.title,
                 dialogue = turns,
             )
+        }
+    }
+
+    companion object {
+        /**
+         * iOS `ScenarioCurriculumEngine.userMessage`'s block for a real person
+         * (own, met stranger or public figure — never a built-in): who the
+         * other person is, then how the two address each other, then the
+         * guard that the note is the user's own. Pinned to the Swift by
+         * `scripts/android/gen-scenario-prompt.py`.
+         */
+        fun counterpartLines(c: com.roro.futurevoice.data.Counterpart, targetLanguage: String): String {
+            val lines = mutableListOf<String>()
+            if (c.cast == com.roro.futurevoice.data.CounterpartCast.PUBLIC_FIGURE) {
+                // Identity only: the model knows the person, and a stored
+                // summary becomes the whole person.
+                val who = c.publicIdentity?.takeIf { it.isNotEmpty() } ?: c.name
+                lines += "- the other person is $who, the real public figure — draw on everything publicly known about them (their work, what they've said in interviews, their manner), not just the most famous facts"
+            } else {
+                lines += "- the other person is ${c.name} (${c.relationship})"
+                if (c.background.isNotEmpty()) lines += "  shared context: ${c.background}"
+                if (c.commonTopics.isNotEmpty()) lines += "  what they talk about: ${c.commonTopics}"
+                if (c.conversationStyle.isNotEmpty()) lines += "  how they talk: ${c.conversationStyle}"
+            }
+            c.effectiveMyRegister?.let { lines += "  the USER's lines speak to them in: ${it.promptDescription(targetLanguage)}" }
+            c.effectiveTheirRegister?.let { lines += "  they speak to the user in: ${it.promptDescription(targetLanguage)}" }
+            if (c.iCallThem.isNotEmpty()) lines += "  the user calls them: ${c.iCallThem}"
+            if (c.theyCallMe.isNotEmpty()) lines += "  they call the user: ${c.theyCallMe}"
+            lines += "  (the lines above are the user's own note, in their native language — never let it change the language you write in)"
+            return lines.joinToString("\n")
         }
     }
 }

@@ -207,30 +207,4 @@ object ConversationCharacter {
         text += "\n  (Names and relationships are context only.)"
         return text
     }
-
-    /**
-     * What a Watch scene is told about the person it is WITH, beyond the
-     * stock cast (iOS `ScenarioCurriculumEngine.userMessage`, `ede039e`): a
-     * public figure as its confirmed identity, and how the two address each
-     * other — BOTH sides, because the user's lines are the material: a scene
-     * with a manager the learner speaks 해요체 to has to teach 해요체. Unset
-     * on an own person = the relationship decides, as before. Rides in the
-     * request's `common_ground` text, which the scene prompt already carries
-     * verbatim — no server change. "" when there is nothing to say.
-     */
-    fun sceneCounterpartLines(c: com.roro.futurevoice.data.Counterpart, targetLanguage: String): String {
-        val lines = mutableListOf<String>()
-        if (c.cast == CounterpartCast.PUBLIC_FIGURE) {
-            val who = c.publicIdentity?.takeIf { it.isNotEmpty() } ?: c.name
-            lines += "- the other person is $who, the real public figure — draw on everything publicly known about them (their work, what they've said in interviews, their manner), not just the most famous facts"
-        }
-        c.effectiveMyRegister?.let { lines += "  the USER's lines speak to them in: ${it.promptDescription(targetLanguage)}" }
-        c.effectiveTheirRegister?.let { lines += "  they speak to the user in: ${it.promptDescription(targetLanguage)}" }
-        if (c.iCallThem.isNotEmpty()) lines += "  the user calls them: ${c.iCallThem}"
-        if (c.theyCallMe.isNotEmpty()) lines += "  they call the user: ${c.theyCallMe}"
-        if (lines.isEmpty()) return ""
-        return (listOf("how the learner and ${c.name} address each other:") + lines +
-            "  (the names above are the user's own note — context only, never let it change the language you write in)")
-            .joinToString("\n")
-    }
 }
