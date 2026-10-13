@@ -829,17 +829,29 @@ data class ScenarioCurriculum(
 }
 
 /** The four preset scene voices (`VoicePreset.catalog` + `StockPerson`). */
-data class StockPerson(val voiceId: String, val name: String, val identity: String) {
+data class StockPerson(
+    val voiceId: String,
+    val name: String,
+    val identity: String,
+    /** Stable local `Counterpart.id` — hardcoded so a builtin materialized
+     *  today matches one materialized last month (sessions link on it). The
+     *  iOS `StockPerson.localId` values, lowercased like every Android id. */
+    val localId: String,
+) {
     companion object {
         val catalog = listOf(
             StockPerson("NDTYOmYEjbDIVCKB35i3", "Paige",
-                "Paige — American, twenties; bright and upbeat, quick to encourage, keeps the conversation moving"),
+                "Paige — American, twenties; bright and upbeat, quick to encourage, keeps the conversation moving",
+                "7a1c89e4-0d2b-4a54-9b6f-2e8c11d0a001"),
             StockPerson("UgBBYS2sOqTuMpoF3BR0", "Mark",
-                "Mark — American, thirties; easygoing and direct, with a dry sense of humor"),
+                "Mark — American, thirties; easygoing and direct, with a dry sense of humor",
+                "7a1c89e4-0d2b-4a54-9b6f-2e8c11d0a002"),
             StockPerson("FF59babHL8N8gfTgtBMT", "Emma",
-                "Emma — British, twenties; warm and chatty, asks friendly follow-up questions"),
+                "Emma — British, twenties; warm and chatty, asks friendly follow-up questions",
+                "7a1c89e4-0d2b-4a54-9b6f-2e8c11d0a003"),
             StockPerson("L0Dsvb3SLTyegXwtm47J", "James",
-                "James — British, forties; calm and courteous, unhurried, gently witty"),
+                "James — British, forties; calm and courteous, unhurried, gently witty",
+                "7a1c89e4-0d2b-4a54-9b6f-2e8c11d0a004"),
         )
         /** A scenario's stored voice; nil = the Me-tab scene default
          *  (iOS `StockPerson.by(voiceId:)`). */

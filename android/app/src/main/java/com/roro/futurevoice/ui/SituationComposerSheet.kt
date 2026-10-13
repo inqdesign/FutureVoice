@@ -1550,15 +1550,16 @@ private fun PartnerPickerSheet(
     // A person already on disk is reused rather than minted again, so picking
     // the same character twice can never leave two rows behind.
     val existing = known
+    val metLabel = stringResource(R.string.met_on_nawana)
     val own = remember(known) { known.filter { it.remoteId == null } }
     val characters = remember(pool, known) {
         val builtins = StockPerson.catalog.map { it.asCounterpart(existing) }
-        val fetched = pool.filter { !it.isRealUser }.map { it.asCounterpart(existing) }
+        val fetched = pool.filter { !it.isRealUser }.map { it.asCounterpart(existing, metLabel) }
         val seen = builtins.map { it.id }.toMutableSet()
         builtins + fetched.filter { seen.add(it.id) }
     }
     val users = remember(pool, known) {
-        pool.filter { it.isRealUser }.map { it.asCounterpart(existing) }
+        pool.filter { it.isRealUser }.map { it.asCounterpart(existing, metLabel) }
     }
 
     ModalBottomSheet(
@@ -1662,10 +1663,11 @@ private fun StockPerson.asCounterpart(existing: List<Counterpart>): Counterpart 
     // Named for the language being practised (시안 in Korean, Paige in
     // English) — one row serves every target language (iOS `b49e91b`).
     val language = com.roro.futurevoice.talk.VoicePreset.activeLanguage()
-    existing.firstOrNull { it.remoteId == rid }?.let {
+    existing.firstOrNull { it.remoteId == rid || it.id == localId }?.let {
         return com.roro.futurevoice.talk.VoicePreset.localized(it, language)
     }
     return com.roro.futurevoice.talk.VoicePreset.localized(Counterpart(
+        id = localId,
         name = name,
         intro = identity,
         voicePresetId = voiceId,
@@ -1674,19 +1676,12 @@ private fun StockPerson.asCounterpart(existing: List<Counterpart>): Counterpart 
     ), language)
 }
 
-/** A pool persona as an ordinary person. Their voice is never a clone — the
- *  person on the other end is a stranger, not the fluent self. */
-private fun PublicPersonaClient.PublicPersona.asCounterpart(existing: List<Counterpart>): Counterpart {
-    existing.firstOrNull { it.remoteId == id }?.let { return it }
-    return Counterpart(
-        name = display_name,
-        location = location,
-        conversationStyle = conversation_style,
-        commonTopics = interests,
-        intro = intro,
-        voicePresetId = voice_preset_id,
-        remoteId = id,
-        personaKind = if (isRealUser) "user" else "character",
-        greetingByLanguage = greeting?.trim()?.takeIf { it.isNotEmpty() }?.let { mapOf(language to it) }.orEmpty(),
-    )
-}
+/** A pool persona as an ordinary person, the SAME one Find people and the
+ *  Watch map materialize (iOS `PublicPersonaService.asCounterpart`): the
+ *  saved row when they were met before, else a person whose local id IS
+ *  the remote one — so the same stranger is one person everywhere and the
+ *  pool's photo, adopted under that id, is theirs. Their voice is never a
+ *  clone — the person on the other end is a stranger, not the fluent self. */
+private fun PublicPersonaClient.PublicPersona.asCounterpart(
+    existing: List<Counterpart>, metLabel: String,
+): Counterpart = existing.firstOrNull { it.remoteId == id } ?: asCounterpart(metLabel)
