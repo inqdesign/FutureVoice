@@ -692,6 +692,7 @@ fun MeScreen(
 
     if (comparingVoice && voiceId != null) {
         VoiceComparisonSheet(voiceId = voiceId, targetLanguage = targetLanguage,
+            nativeLanguage = nativeLanguage,
             onRerecord = { rerecording = true }, onDismiss = { comparingVoice = false })
     }
     if (rerecording) {

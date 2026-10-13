@@ -121,14 +121,6 @@
     <string name="take_your_intro_out_of_the_pool">Deine Vorstellung entfernen? Wer deine Persona schon getroffen hat, behält die eigenen bisherigen Gespräche.</string>
     <string name="copy_clipboard">Kopieren</string>
     <string name="accent">Akzent</string>
-    <string name="your_clone_speaking_with_a_different_accent">Deine eigene Stimme mit einem anderen Akzent. Ein Klon, der in deiner Sprache aufgenommen wurde, bringt keinen mit, also leiht er sich einen Standardakzent.</string>
-    <string name="hear_some_takes">Ein paar Versionen anhören</string>
-    <string name="making_a_few_takes">Erstelle ein paar Versionen …</string>
-    <string name="pick_the_one_that_sounds_most_like_you">Wähl die, die am meisten nach dir klingt</string>
-    <string name="use_this_take">Diese Version nehmen</string>
-    <string name="this_replaces_your_current_voice">Das ersetzt deine aktuelle Stimme. Das Original kannst du jederzeit aus deiner gespeicherten Aufnahme neu erstellen.</string>
-    <string name="couldnt_make_the_takes_try_again">Versionen konnten nicht erstellt werden – versuch es noch einmal.</string>
-    <string name="couldnt_apply_that_take_try_again">Diese Version konnte nicht übernommen werden – versuch es noch einmal.</string>
     <string name="as_recorded">Wie aufgenommen</string>
     <string name="your_plan_ends_on_lld">Dein Tarif endet am %s.</string>
     <string name="help">Hilfe</string>
@@ -244,7 +236,6 @@
     <string name="voice_change_again_from">Ab dem %s kannst du deine Stimme wieder ändern.</string>
     <string name="voice_change_uses_it">Du kannst deine Stimme alle 30 Tage einmal ändern – damit nutzt du diese Änderung.</string>
     <string name="use_this_voice_q">Diese Stimme nehmen?</string>
-    <string name="voice_replaced_only_if_kept">Deine jetzige Stimme wird nur ersetzt, wenn du die neue behältst.</string>
     <string name="getting_your_line_ready">Dein Satz wird vorbereitet…</string>
     <string name="rel_how_do_you_two_talk">Wie sprecht ihr miteinander?</string>
     <string name="rel_how_do_you_and_s_talk">Wie sprecht ihr miteinander, du und %1$s?</string>

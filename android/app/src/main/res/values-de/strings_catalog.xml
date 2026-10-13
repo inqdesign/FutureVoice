@@ -2309,6 +2309,8 @@
     <string name="the_top_score_of_lld_people">"Die beste Punktzahl von %d Leuten"</string>
     <string name="the_trial_s_scenes_are_used_up">"Die Szenen der Testphase sind aufgebraucht."</string>
     <string name="the_trial_s_talk_time_is_used_up">"Die Sprechzeit der Testphase ist aufgebraucht."</string>
+    <!-- 'The voice you have now is only replaced if you keep the new one.' -->
+    <string name="the_voice_you_have_now_is_only_replaced_if_you_keep_the_new_2247d6">"Deine jetzige Stimme wird nur ersetzt, wenn du die neue behältst."</string>
     <string name="the_week_at_a_glance">"Die Woche auf einen Blick"</string>
     <string name="the_week_before_lld_min">"Woche davor: %d Min."</string>
     <string name="the_week_is_in_the_book">"Die Woche ist festgehalten"</string>

@@ -121,14 +121,6 @@
     <string name="take_your_intro_out_of_the_pool">¿Quitar tu presentación del grupo? Quienes ya conocieron a tu personaje conservan sus conversaciones pasadas.</string>
     <string name="copy_clipboard">Copiar</string>
     <string name="accent">Acento</string>
-    <string name="your_clone_speaking_with_a_different_accent">Tu propia voz, hablando con otro acento. Un clon grabado en tu idioma no tiene acento propio, así que usa uno predeterminado.</string>
-    <string name="hear_some_takes">Escuchar algunas tomas</string>
-    <string name="making_a_few_takes">Generando algunas tomas…</string>
-    <string name="pick_the_one_that_sounds_most_like_you">Elige la que suene más a ti</string>
-    <string name="use_this_take">Usar esta toma</string>
-    <string name="this_replaces_your_current_voice">Esto reemplaza tu voz actual. Siempre puedes recrear la original a partir de tu grabación guardada.</string>
-    <string name="couldnt_make_the_takes_try_again">No se pudieron generar las tomas — inténtalo de nuevo.</string>
-    <string name="couldnt_apply_that_take_try_again">No se pudo aplicar esa toma — inténtalo de nuevo.</string>
     <string name="as_recorded">Tal como se grabó</string>
     <string name="your_plan_ends_on_lld">Tu plan termina el %s.</string>
     <string name="help">Ayuda</string>
@@ -270,7 +262,6 @@
     <string name="voice_change_again_from">Podrás volver a cambiar tu voz a partir del %s.</string>
     <string name="voice_change_uses_it">Puedes cambiar tu voz una vez cada 30 días, y con esto usas ese cambio.</string>
     <string name="use_this_voice_q">¿Usar esta voz?</string>
-    <string name="voice_replaced_only_if_kept">Tu voz actual solo cambia si te quedas con la nueva.</string>
     <string name="getting_your_line_ready">Preparando tu frase…</string>
     <!-- iOS ede039e: how two people talk (SpeechRegister) and the public figure's identity. -->
     <string name="rel_how_do_you_two_talk">¿Cómo se hablan?</string>

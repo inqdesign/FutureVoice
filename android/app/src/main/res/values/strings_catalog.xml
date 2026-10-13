@@ -2316,6 +2316,8 @@
     <string name="the_top_score_of_lld_people">"The top score of %d people"</string>
     <string name="the_trial_s_scenes_are_used_up">"The trial's scenes are used up."</string>
     <string name="the_trial_s_talk_time_is_used_up">"The trial's talk time is used up."</string>
+    <!-- 'The voice you have now is only replaced if you keep the new one.' -->
+    <string name="the_voice_you_have_now_is_only_replaced_if_you_keep_the_new_2247d6">"The voice you have now is only replaced if you keep the new one."</string>
     <string name="the_week_at_a_glance">"The week at a glance"</string>
     <string name="the_week_before_lld_min">"The week before: %d min"</string>
     <string name="the_week_is_in_the_book">"The week is in the book"</string>

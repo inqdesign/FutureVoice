@@ -121,14 +121,6 @@
     <string name="take_your_intro_out_of_the_pool">要把介紹從名單裡下架嗎？已經見過我的人物的學習者，過去的對話會留著。</string>
     <string name="copy_clipboard">複製</string>
     <string name="accent">腔調</string>
-    <string name="your_clone_speaking_with_a_different_accent">一樣是我的聲音，只換腔調。用母語錄的複製聲音沒有腔調資訊，所以會借用預設值。</string>
-    <string name="hear_some_takes">聽幾個版本</string>
-    <string name="making_a_few_takes">正在做幾個版本…</string>
-    <string name="pick_the_one_that_sounds_most_like_you">選最像我的那一個</string>
-    <string name="use_this_take">就用這個</string>
-    <string name="this_replaces_your_current_voice">這會取代現在的聲音。用存下來的錄音，隨時都可以重新做回原本的聲音。</string>
-    <string name="couldnt_make_the_takes_try_again">無法產生版本。請再試一次。</string>
-    <string name="couldnt_apply_that_take_try_again">無法套用。請再試一次。</string>
     <string name="as_recorded">錄音原樣</string>
     <string name="your_plan_ends_on_lld">方案會在 %s 結束。</string>
     <string name="help">說明</string>
@@ -254,7 +246,6 @@
     <string name="voice_change_again_from">%s 起可以再換聲音。</string>
     <string name="voice_change_uses_it">聲音每 30 天可以換一次，現在換就會用掉這一次。</string>
     <string name="use_this_voice_q">要用這個聲音嗎？</string>
-    <string name="voice_replaced_only_if_kept">只有在你選用新聲音時，現在的聲音才會被換掉。</string>
     <string name="getting_your_line_ready">正在整理你的句子…</string>
     <!-- iOS ede039e: how two people talk (SpeechRegister) and the public figure's identity. -->
     <string name="rel_how_do_you_two_talk">你們怎麼說話？</string>

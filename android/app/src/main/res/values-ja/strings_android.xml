@@ -121,14 +121,6 @@
     <string name="take_your_intro_out_of_the_pool">自己紹介をプールから取り下げますか？すでにこのペルソナと話した学習者には、過去の通話がそのまま残ります。</string>
     <string name="copy_clipboard">コピー</string>
     <string name="accent">アクセント</string>
-    <string name="your_clone_speaking_with_a_different_accent">自分の声そのままで、アクセントだけ変えられます。母語で録音したクローンにはアクセントの情報がないので、標準のものを借りています。</string>
-    <string name="hear_some_takes">試しに聞いてみる</string>
-    <string name="making_a_few_takes">いくつか作っています…</string>
-    <string name="pick_the_one_that_sounds_most_like_you">いちばん自分らしいものを選んでください</string>
-    <string name="use_this_take">これにする</string>
-    <string name="this_replaces_your_current_voice">今の声と置き換わります。保存してある録音から、元の声はいつでも作り直せます。</string>
-    <string name="couldnt_make_the_takes_try_again">作れませんでした。もう一度お試しください。</string>
-    <string name="couldnt_apply_that_take_try_again">適用できませんでした。もう一度お試しください。</string>
     <string name="as_recorded">録音したまま</string>
     <string name="your_plan_ends_on_lld">%sにプランが終了します。</string>
     <string name="help">ヘルプ</string>
@@ -254,7 +246,6 @@
     <string name="voice_change_again_from">%sから、また声を変えられます。</string>
     <string name="voice_change_uses_it">声は30日に1回変えられます。今変えると、その1回を使います。</string>
     <string name="use_this_voice_q">この声にしますか？</string>
-    <string name="voice_replaced_only_if_kept">新しい声を選んだときだけ、今の声が置き換わります。</string>
     <string name="getting_your_line_ready">セリフを整えています…</string>
     <!-- iOS ede039e: how two people talk (SpeechRegister) and the public figure's identity. -->
     <string name="rel_how_do_you_two_talk">ふたりはどう話していますか？</string>

@@ -2310,6 +2310,8 @@
     <string name="the_top_score_of_lld_people">"La mejor puntuación de %d personas"</string>
     <string name="the_trial_s_scenes_are_used_up">"Ya has visto todas las escenas de la prueba."</string>
     <string name="the_trial_s_talk_time_is_used_up">"Has usado todo el tiempo de conversación de la prueba."</string>
+    <!-- 'The voice you have now is only replaced if you keep the new one.' -->
+    <string name="the_voice_you_have_now_is_only_replaced_if_you_keep_the_new_2247d6">"Tu voz actual solo cambia si te quedas con la nueva."</string>
     <string name="the_week_at_a_glance">"La semana de un vistazo"</string>
     <string name="the_week_before_lld_min">"La semana anterior: %d min"</string>
     <string name="the_week_is_in_the_book">"Otra semana en el cuaderno"</string>

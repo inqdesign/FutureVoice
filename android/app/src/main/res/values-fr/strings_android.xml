@@ -121,14 +121,6 @@
     <string name="take_your_intro_out_of_the_pool">Retirer ta présentation du vivier ? Les apprenants qui ont déjà rencontré ton personnage gardent leurs anciennes conversations.</string>
     <string name="copy_clipboard">Copier</string>
     <string name="accent">Accent</string>
-    <string name="your_clone_speaking_with_a_different_accent">Ta propre voix, avec un accent différent. Un clone enregistré dans ta langue n’en a pas, donc il en emprunte un par défaut.</string>
-    <string name="hear_some_takes">Écouter quelques essais</string>
-    <string name="making_a_few_takes">Génération de quelques essais…</string>
-    <string name="pick_the_one_that_sounds_most_like_you">Choisis celui qui te ressemble le plus</string>
-    <string name="use_this_take">Utiliser cet essai</string>
-    <string name="this_replaces_your_current_voice">Ça remplace ta voix actuelle. Tu peux toujours reconstruire l’originale à partir de ton enregistrement sauvegardé.</string>
-    <string name="couldnt_make_the_takes_try_again">Impossible de générer les essais — réessaie.</string>
-    <string name="couldnt_apply_that_take_try_again">Impossible d’appliquer cet essai — réessaie.</string>
     <string name="as_recorded">Tel qu’enregistré</string>
     <string name="your_plan_ends_on_lld">Ton abonnement se termine le %s.</string>
     <string name="help">Aide</string>
@@ -257,7 +249,6 @@
     <string name="voice_change_again_from">Tu pourras de nouveau changer ta voix à partir du %s.</string>
     <string name="voice_change_uses_it">Tu peux changer ta voix une fois tous les 30 jours, et ce changement compte.</string>
     <string name="use_this_voice_q">Utiliser cette voix ?</string>
-    <string name="voice_replaced_only_if_kept">Ta voix actuelle ne change que si tu gardes la nouvelle.</string>
     <string name="getting_your_line_ready">On prépare ta phrase…</string>
     <!-- iOS ede039e: how two people talk (SpeechRegister) and the public figure's identity. -->
     <string name="rel_how_do_you_two_talk">Comment vous vous parlez ?</string>

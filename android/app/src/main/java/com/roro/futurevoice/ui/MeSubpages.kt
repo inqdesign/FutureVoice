@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.HourglassTop
-import androidx.compose.material.icons.filled.SettingsVoice
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.PhoneCallback
@@ -269,7 +268,7 @@ fun VoicePage(
                     stringResource(R.string.made_from_the_recording_on_this_phone_a_stand_in_voice_speak_f60768),
                     kind = MeRowKind.PLAIN)
                 GroupedRowDivider()
-                MeRow(Icons.Filled.SettingsVoice,
+                MeRow(Icons.Filled.RecordVoiceOver,
                     stringResource(R.string.voice_until_then,
                         com.roro.futurevoice.talk.StockPerson.by(voiceId).let {
                             com.roro.futurevoice.talk.VoicePreset.name(it.voiceId, it.name, targetLanguage)

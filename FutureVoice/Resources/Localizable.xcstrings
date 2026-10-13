@@ -98899,6 +98899,52 @@
         }
       }
     },
+    "The voice you have now is only replaced if you keep the new one." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine jetzige Stimme wird nur ersetzt, wenn du die neue behältst."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu voz actual solo cambia si te quedas con la nueva."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta voix actuelle ne change que si tu gardes la nouvelle."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しい声を選んだときだけ、今の声が置き換わります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "새로 만든 목소리를 고를 때만 지금 목소리가 바뀌어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只有在你选用新声音时，现在的声音才会被换掉。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只有在你選用新聲音時，現在的聲音才會被換掉。"
+          }
+        }
+      }
+    },
     "The week before: %lld min" : {
       "localizations" : {
         "de" : {

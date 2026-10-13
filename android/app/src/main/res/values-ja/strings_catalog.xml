@@ -2313,6 +2313,8 @@
     <string name="the_top_score_of_lld_people">"%d人の中でいちばん高い点数です"</string>
     <string name="the_trial_s_scenes_are_used_up">"トライアルのシーン練習は使い切りました。"</string>
     <string name="the_trial_s_talk_time_is_used_up">"トライアルの通話時間は使い切りました。"</string>
+    <!-- 'The voice you have now is only replaced if you keep the new one.' -->
+    <string name="the_voice_you_have_now_is_only_replaced_if_you_keep_the_new_2247d6">"新しい声を選んだときだけ、今の声が置き換わります。"</string>
     <string name="the_week_at_a_glance">"1週間をひと目で"</string>
     <string name="the_week_before_lld_min">"その前の週：%d分"</string>
     <string name="the_week_is_in_the_book">"今週も記録しました"</string>

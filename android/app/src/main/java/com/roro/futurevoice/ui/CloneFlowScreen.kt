@@ -542,6 +542,9 @@ fun CloneFlowScreen(
                 val old = clonedVoiceId
                 clonedVoiceId = voiceId
                 accentId = null
+                // Remember what the sample holds, so the comparison puts the
+                // same words on both sides (iOS `cloneScriptLanguage`).
+                if (source != sampleFile) VoiceComparison.setScriptLanguage(context, scriptLanguageCode)
                 if (old != null && old != voiceId) scope.launch {
                     runCatching { com.roro.futurevoice.data.AccountEraser.deleteVoice(old) }
                 }
@@ -1403,6 +1406,7 @@ fun CloneFlowScreen(
     val compareVoice = clonedVoiceId
     if (comparing && compareVoice != null) {
         VoiceComparisonSheet(voiceId = compareVoice, targetLanguage = targetLanguage,
+            nativeLanguage = nativeLanguage, scriptLanguage = scriptLanguageCode,
             onRerecord = { comparing = false; beginReRecordFromMeet() },
             onDismiss = { comparing = false })
     }

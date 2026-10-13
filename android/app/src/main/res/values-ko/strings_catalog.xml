@@ -2314,6 +2314,8 @@
     <string name="the_top_score_of_lld_people">"%d명 중 가장 높은 점수예요"</string>
     <string name="the_trial_s_scenes_are_used_up">"체험 상황연습을 다 봤어요."</string>
     <string name="the_trial_s_talk_time_is_used_up">"체험 통화 시간을 다 썼어요."</string>
+    <!-- 'The voice you have now is only replaced if you keep the new one.' -->
+    <string name="the_voice_you_have_now_is_only_replaced_if_you_keep_the_new_2247d6">"새로 만든 목소리를 고를 때만 지금 목소리가 바뀌어요."</string>
     <string name="the_week_at_a_glance">"한 주 한눈에 보기"</string>
     <string name="the_week_before_lld_min">"그 전 주: %d분"</string>
     <string name="the_week_is_in_the_book">"이번 주도 기록했어요"</string>
