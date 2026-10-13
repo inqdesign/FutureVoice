@@ -50,6 +50,7 @@
     <string name="a_more_natural_way_to_say_it">"更自然的說法"</string>
     <string name="a_neighbor">"鄰居"</string>
     <string name="a_new_assessment_is_due_it_runs_after_your_next_talk">"該做新的評估了。下一次通話結束後會執行。"</string>
+    <string name="a_new_watch">"全新的情境練習"</string>
     <string name="a_new_week_starts_now_start_small">"新的一週開始了，輕鬆開始就好。"</string>
     <string name="a_passerby">"路人"</string>
     <!-- 'A person you describe once: someone real in your life, someone famous, or someone you invent. Save who they are, how the two of you know each other and how you talk, and they become a character you can bring back.' -->
@@ -304,6 +305,7 @@
     <string name="choose_a_photo">"選照片"</string>
     <!-- 'Choose a topic and AI writes it for your level, or paste a text of your own.' -->
     <string name="choose_a_topic_and_ai_writes_it_for_your_level_or_paste_a_te_d4a75b">"選個主題，AI 會照你的程度寫好；也可以貼上你自己的文字。"</string>
+    <string name="choose_my_goal">"選擇目的"</string>
     <string name="choose_your_plan">"選擇方案"</string>
     <string name="city">"城市"</string>
     <string name="city_country">"城市、國家"</string>
@@ -839,6 +841,10 @@
     <string name="in_short_minutes_buy_speaking_time_with_your_fluent_self_pra_828cac">"簡單說，只有和流利的自己說話時才會用掉分鐘數。用已經累積的內容複習永遠免費。"</string>
     <string name="in_the_core">"核心"</string>
     <string name="in_the_core_lld_days">"核心 · %d天"</string>
+    <!-- 'In the Progress tab, see what you practised and how much, over a week or a month.' -->
+    <string name="in_the_progress_tab_see_what_you_practised_and_how_much_over_25b25f">"在成長分頁，可以看到一週或一個月裡練了什麼、練了多少。"</string>
+    <!-- 'In the Speech tab, everyone reads the same script. Read it with the camera on and you land on the leaderboard.' -->
+    <string name="in_the_speech_tab_everyone_reads_the_same_script_read_it_wit_932336">"在演講分頁，大家讀同一篇講稿。開著相機讀，就會登上排行榜。"</string>
     <string name="in_this_book">"本冊內容"</string>
     <string name="in_your_life">"你的日常"</string>
     <!-- 'In your own words (optional) — e.g. switches to English when excited' -->
@@ -1900,6 +1906,7 @@
     <string name="speaks_at_this_speed">"以這個速度說話"</string>
     <!-- 'Specific enough — %@ it, or tap a breadcrumb to explore more.' -->
     <string name="specific_enough_it_or_tap_a_breadcrumb_to_explore_more">"夠具體了，可以直接%s，或點上方的路徑再探索。"</string>
+    <string name="speech_challenges">"演講挑戰"</string>
     <!-- 'Speech' -->
     <string name="speech_d00d85">"演講"</string>
     <!-- '+ Speech' -->
@@ -2061,6 +2068,8 @@
     <string name="tell_me_more_about_you">"多說一點關於自己"</string>
     <string name="tell_me_when_it_s_ready">"準備好時通知我"</string>
     <string name="tell_me_when_next_week_s_is_ready">"下週的整理好時提醒我"</string>
+    <!-- "Tell us what you're learning for, like an exam, work or travel, and the Talk tab fills with topics for it." -->
+    <string name="tell_us_what_you_re_learning_for_like_an_exam_work_or_travel_13326b">"告訴我們你為什麼學，例如考試、工作或旅行，對話分頁就會出現相關的話題。"</string>
     <!-- 'Telling my landlord the heating has been broken for three weeks, and getting a date out of them.' -->
     <string name="telling_my_landlord_the_heating_has_been_broken_for_three_we_9a0ae9">"跟房東說暖氣壞了三個星期了，並且問出確切的修繕日期。"</string>
     <string name="terms_of_use">"使用條款"</string>
@@ -2115,6 +2124,8 @@
     <string name="the_gist_in_a_few_words">"大概的內容，幾個字就好"</string>
     <!-- "The intro another learner's phone speaks as you in Find people. Change it or take it down in Me → Find people." -->
     <string name="the_intro_another_learner_s_phone_speaks_as_you_in_find_peop_3caa8f">"在「找人」裡，其他學習者的手機會以你的身分說這段自我介紹。到「我的 → 找人」可以修改或撤下。"</string>
+    <!-- "The intro another learner's phone speaks as you in Find people. Publish it or take it down on your profile page." -->
+    <string name="the_intro_another_learner_s_phone_speaks_as_you_in_find_peop_4e45c2">"在「找人」裡，其他學習者的手機會以你的身分說這段自我介紹。到個人檔案可以公開或撤下。"</string>
     <!-- "The left button plays the scene once more. The right one opens the scene's book in Review, with its words and expressions. Tap the same situation in Watch again for a new take with new ideas." -->
     <string name="the_left_button_plays_the_scene_once_more_the_right_one_open_f0a919">"左邊的按鈕會再播一次同一個情境。右邊的按鈕會打開這個情境的教材，單字和用語都在複習分頁裡。在情境分頁再點一次同樣的情境，會出現新的版本和新點子。"</string>
     <!-- 'The lines play one after another, and the one playing is outlined. Your lines are in your voice. Watch how it opens, what it asks and how it gets through the tricky part.' -->
@@ -2273,6 +2284,7 @@
     <string name="too_noisy">"太吵了"</string>
     <string name="topic">"主題"</string>
     <string name="topics">"主題"</string>
+    <string name="topics_for_why_you_re_learning">"配合學習目的的話題"</string>
     <string name="total">"總計"</string>
     <string name="touch_and_hold_to_file_it_again">"長按可以重新歸類。"</string>
     <string name="transcript">"對話紀錄"</string>
@@ -2778,6 +2790,8 @@
     <!-- 'Your pace is %lld words/min — talk more often and a little longer; longer turns build flow.' -->
     <string name="your_pace_is_lld_words_min_talk_more_often_and_a_little_long_608384">"說話速度是每分鐘%d個字。更常說、說久一點，流暢度就會上來。"</string>
     <string name="your_people">"我的人物"</string>
+    <!-- 'Your people now sit around you on a map. Bring someone to the middle and they greet you in their own voice, then start a scene or a call right from their card.' -->
+    <string name="your_people_now_sit_around_you_on_a_map_bring_someone_to_the_e12a8b">"你身邊的人現在圍著你排在地圖上。把某個人拉到中間，他會用自己的聲音打招呼，從卡片就能直接開始情境練習或通話。"</string>
     <string name="your_persona_plays_this_scene_in_their_own_voice">"你的角色會用自己的聲音演這個場景。"</string>
     <!-- "Your phone rings at every time you set here, even on silent. Can't talk? Just decline — nothing counts against you." -->
     <string name="your_phone_rings_at_every_time_you_set_here_even_on_silent_c_b210fc">"每到這裡設定的時間，電話就會響，靜音也一樣。不方便接？直接拒接就好，不會扣分。"</string>

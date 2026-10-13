@@ -108,8 +108,10 @@ import java.util.Locale
 @Composable
 fun FindPeopleScreen(
     language: String,
-    /** For the editor behind the learner's own row. */
+    /** For the profile page behind the learner's own row. */
     persona: com.roro.futurevoice.talk.UserPersona? = null,
+    /** The profile editor, opened from that page (the host's cover). */
+    onEditProfile: () -> Unit = {},
     /** Talk on a card. [meet] persists the person — called by the host only
      *  once its gate has passed (iOS `start { onTalk(savedPerson()) }`). */
     onTalk: (person: PublicPersonaClient.PublicPersona, meet: () -> Unit) -> Unit,
@@ -159,7 +161,9 @@ fun FindPeopleScreen(
      *  published. Null (no section at all) when unpublished OR when the read
      *  failed: "not published" and "couldn't ask" must never look alike. */
     var mine by remember { mutableStateOf<PublicPersonaClient.PublicPersona?>(null) }
-    var editingIntro by remember { mutableStateOf(false) }
+    /** Your own row's page (iOS `MyProfileView`). Saveable: the profile
+     *  editor covers this page, and back from it lands here again. */
+    var editingProfile by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
 
     val client = remember { PublicPersonaClient(AuthRepository()) }
     suspend fun loadPool() {
@@ -231,21 +235,24 @@ fun FindPeopleScreen(
     card?.let { lastCard = it }
     val peopleStack: List<String> = buildList {
         add("list")
-        if (editingIntro) add("intro")
+        if (editingProfile) add("profile")
         card?.let { add("card:${it.id}") }
     }
     IosNavStack(stack = peopleStack, onPop = {
         if (card != null) card = null
-        else if (editingIntro) { editingIntro = false; reloadToken++ }
+        else if (editingProfile) { editingProfile = false; reloadToken++ }
     }) { page ->
-    if (page == "intro") {
-        PublicIntroScreen(
+    if (page == "profile") {
+        // Your profile page, where the profile the paragraph is written
+        // from sits above it (iOS `MyProfileView(onPublicChange:)`).
+        MyProfileScreen(
             persona = persona,
             targetLanguage = language,
             // Publishing or taking down changes the row — re-read it on the
             // way back so the page doesn't keep the old face.
-            onBack = { editingIntro = false; reloadToken++ },
-            onDecided = { scope.launch { mine = runCatching { client.fetchMine(language) }.getOrNull() } },
+            onBack = { editingProfile = false; reloadToken++ },
+            onEditProfile = onEditProfile,
+            onPublicChange = { scope.launch { mine = runCatching { client.fetchMine(language) }.getOrNull() } },
         )
         return@IosNavStack
     }
@@ -321,9 +328,9 @@ fun FindPeopleScreen(
                         footer = if (me != null) stringResource(R.string.this_is_how_other_learners_find_you_tap_to_change_it_or_take_211599)
                             else stringResource(R.string.publish_a_short_introduction_and_other_learners_can_practise_862528)) {
                         if (me != null) {
-                            PoolRow(me, badges, emptySet(), onClick = { editingIntro = true })
+                            PoolRow(me, badges, emptySet(), isMine = true, onClick = { editingProfile = true })
                         } else {
-                            Row(Modifier.fillMaxWidth().clickable { editingIntro = true }
+                            Row(Modifier.fillMaxWidth().clickable { editingProfile = true }
                                 .padding(horizontal = 16.dp, vertical = 10.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -719,10 +726,14 @@ private fun PoolRow(
     p: PublicPersonaClient.PublicPersona,
     badges: Map<String, CoreClubClient.Badge>,
     bookmarks: Set<String>,
+    /** Your own row wears your own face, the one the Watch map and the
+     *  profile page show; a name bubble there read as a photo gone missing. */
+    isMine: Boolean = false,
     onClick: () -> Unit,
 ) {
     PersonListRow(
         name = p.display_name,
+        isMine = isMine,
         caption = listOf(p.occupation, p.location).filter { it.isNotBlank() }.joinToString(" · "),
         // Characters we wrote ARE their intro; a real learner's row shows the
         // three facets a stranger has any business seeing.
@@ -746,6 +757,7 @@ private fun PersonListRow(
     caption2Lines: Int = 1,
     seated: Boolean = false,
     bookmarked: Boolean = false,
+    isMine: Boolean = false,
     onClick: () -> Unit,
 ) {
     Row(
@@ -754,7 +766,7 @@ private fun PersonListRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        PersonBubble(name, 44.dp)
+        if (isMine) ProfileAvatar(name, 44.dp) else PersonBubble(name, 44.dp)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)) {

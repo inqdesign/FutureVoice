@@ -91,6 +91,7 @@ object CaptureRouter {
         "level-header",
         "level-sheet",
         "me",
+        "my-profile",
         "paywall",
         "paywall-ladder-pack",
         "paywall-plans",

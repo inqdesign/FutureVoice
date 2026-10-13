@@ -50,6 +50,7 @@
     <string name="a_more_natural_way_to_say_it">"So klingt es natürlicher"</string>
     <string name="a_neighbor">"einem Nachbarn"</string>
     <string name="a_new_assessment_is_due_it_runs_after_your_next_talk">"Eine neue Einstufung steht an — sie läuft nach deinem nächsten Gespräch."</string>
+    <string name="a_new_watch">"„Ansehen“ ist neu"</string>
     <string name="a_new_week_starts_now_start_small">"Eine neue Woche beginnt. Fang klein an."</string>
     <string name="a_passerby">"einem Passanten"</string>
     <!-- 'A person you describe once: someone real in your life, someone famous, or someone you invent. Save who they are, how the two of you know each other and how you talk, and they become a character you can bring back.' -->
@@ -301,6 +302,7 @@
     <string name="choose_a_photo">"Foto auswählen"</string>
     <!-- 'Choose a topic and AI writes it for your level, or paste a text of your own.' -->
     <string name="choose_a_topic_and_ai_writes_it_for_your_level_or_paste_a_te_d4a75b">"Wähl ein Thema und die KI schreibt es für dein Niveau – oder füg einen eigenen Text ein."</string>
+    <string name="choose_my_goal">"Ziel wählen"</string>
     <string name="choose_your_plan">"Wähle deinen Tarif"</string>
     <string name="city">"Stadt"</string>
     <string name="city_country">"Stadt, Land"</string>
@@ -835,6 +837,10 @@
     <string name="in_short_minutes_buy_speaking_time_with_your_fluent_self_pra_828cac">"Kurz gesagt: Minuten kaufen Sprechzeit mit deinem fließenden Ich. Mit dem zu üben, was schon da ist, ist immer kostenlos."</string>
     <string name="in_the_core">"Im Core"</string>
     <string name="in_the_core_lld_days">"Im Core · %d Tage"</string>
+    <!-- 'In the Progress tab, see what you practised and how much, over a week or a month.' -->
+    <string name="in_the_progress_tab_see_what_you_practised_and_how_much_over_25b25f">"Im Tab „Fortschritt“ siehst du, was du in einer Woche oder einem Monat geübt hast und wie viel."</string>
+    <!-- 'In the Speech tab, everyone reads the same script. Read it with the camera on and you land on the leaderboard.' -->
+    <string name="in_the_speech_tab_everyone_reads_the_same_script_read_it_wit_932336">"Im Tab „Rede“ lesen alle denselben Text. Lies ihn mit eingeschalteter Kamera, und du landest in der Rangliste."</string>
     <string name="in_this_book">"In diesem Buch"</string>
     <string name="in_your_life">"In deinem Alltag"</string>
     <!-- 'In your own words (optional) — e.g. switches to English when excited' -->
@@ -1896,6 +1902,7 @@
     <string name="speaks_at_this_speed">"Spricht in diesem Tempo"</string>
     <!-- 'Specific enough — %@ it, or tap a breadcrumb to explore more.' -->
     <string name="specific_enough_it_or_tap_a_breadcrumb_to_explore_more">"Konkret genug — %s starten oder auf einen Pfadpunkt tippen, um weiterzustöbern."</string>
+    <string name="speech_challenges">"Rede-Challenges"</string>
     <!-- 'Speech' -->
     <string name="speech_d00d85">"Rede"</string>
     <!-- '+ Speech' -->
@@ -2057,6 +2064,8 @@
     <string name="tell_me_more_about_you">"Erzähl mir mehr über dich"</string>
     <string name="tell_me_when_it_s_ready">"Sag mir Bescheid, wenn es so weit ist"</string>
     <string name="tell_me_when_next_week_s_is_ready">"Sag mir Bescheid, wenn die nächste Woche fertig ist"</string>
+    <!-- "Tell us what you're learning for, like an exam, work or travel, and the Talk tab fills with topics for it." -->
+    <string name="tell_us_what_you_re_learning_for_like_an_exam_work_or_travel_13326b">"Sag uns, wofür du lernst, etwa für eine Prüfung, die Arbeit oder Reisen, und der Tab „Sprechen“ füllt sich mit passenden Themen."</string>
     <!-- 'Telling my landlord the heating has been broken for three weeks, and getting a date out of them.' -->
     <string name="telling_my_landlord_the_heating_has_been_broken_for_three_we_9a0ae9">"Meinem Vermieter sagen, dass die Heizung seit drei Wochen kaputt ist, und einen Termin rausholen."</string>
     <string name="terms_of_use">"Nutzungsbedingungen"</string>
@@ -2111,6 +2120,8 @@
     <string name="the_gist_in_a_few_words">"das Wesentliche, in wenigen Worten"</string>
     <!-- "The intro another learner's phone speaks as you in Find people. Change it or take it down in Me → Find people." -->
     <string name="the_intro_another_learner_s_phone_speaks_as_you_in_find_peop_3caa8f">"Die Vorstellung, die das Handy anderer Lernender bei „Leute finden“ in deinem Namen spricht. Ändern oder entfernen kannst du sie unter Ich → Leute finden."</string>
+    <!-- "The intro another learner's phone speaks as you in Find people. Publish it or take it down on your profile page." -->
+    <string name="the_intro_another_learner_s_phone_speaks_as_you_in_find_peop_4e45c2">"Die Vorstellung, die das Handy anderer Lernender bei „Leute finden“ in deinem Namen spricht. Veröffentlichen oder entfernen kannst du sie in deinem Profil."</string>
     <!-- "The left button plays the scene once more. The right one opens the scene's book in Review, with its words and expressions. Tap the same situation in Watch again for a new take with new ideas." -->
     <string name="the_left_button_plays_the_scene_once_more_the_right_one_open_f0a919">"Der linke Button spielt die Szene noch einmal ab. Der rechte öffnet das Buch der Szene in Üben, mit ihren Wörtern und Wendungen. Tipp in Ansehen noch einmal auf dieselbe Situation für eine neue Version mit neuen Ideen."</string>
     <!-- 'The lines play one after another, and the one playing is outlined. Your lines are in your voice. Watch how it opens, what it asks and how it gets through the tricky part.' -->
@@ -2269,6 +2280,7 @@
     <string name="too_noisy">"zu laut"</string>
     <string name="topic">"Thema"</string>
     <string name="topics">"Themen"</string>
+    <string name="topics_for_why_you_re_learning">"Themen für dein Lernziel"</string>
     <string name="total">"Gesamt"</string>
     <string name="touch_and_hold_to_file_it_again">"Gedrückt halten, um es neu einzusortieren."</string>
     <string name="transcript">"Transkript"</string>
@@ -2774,6 +2786,8 @@
     <!-- 'Your pace is %lld words/min — talk more often and a little longer; longer turns build flow.' -->
     <string name="your_pace_is_lld_words_min_talk_more_often_and_a_little_long_608384">"Du sprichst %d Wörter pro Minute. Sprich öfter und etwas länger, längere Beiträge bringen dich in Fluss."</string>
     <string name="your_people">"Deine Leute"</string>
+    <!-- 'Your people now sit around you on a map. Bring someone to the middle and they greet you in their own voice, then start a scene or a call right from their card.' -->
+    <string name="your_people_now_sit_around_you_on_a_map_bring_someone_to_the_e12a8b">"Deine Leute stehen jetzt auf einer Karte um dich herum. Hol jemanden in die Mitte, und die Person begrüßt dich mit ihrer eigenen Stimme. Von ihrer Karte aus startest du direkt eine Szene oder ein Gespräch."</string>
     <string name="your_persona_plays_this_scene_in_their_own_voice">"Deine Persona spielt diese Szene mit ihrer eigenen Stimme."</string>
     <!-- "Your phone rings at every time you set here, even on silent. Can't talk? Just decline — nothing counts against you." -->
     <string name="your_phone_rings_at_every_time_you_set_here_even_on_silent_c_b210fc">"Dein Telefon klingelt zu jeder hier gesetzten Zeit, auch lautlos. Keine Zeit? Einfach ablehnen – nichts zählt gegen dich."</string>

@@ -136,7 +136,7 @@ fun RememberedLinesSection(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
         )
     }
-    GroupedFooter(stringResource(R.string.the_intro_another_learner_s_phone_speaks_as_you_in_find_peop_3caa8f))
+    GroupedFooter(stringResource(R.string.the_intro_another_learner_s_phone_speaks_as_you_in_find_peop_4e45c2))
 }
 
 @OptIn(ExperimentalFoundationApi::class)
