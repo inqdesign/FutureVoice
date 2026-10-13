@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="voice_move_title">Tu voz se muda a un nuevo motor</string>
+    <string name="voice_move_body">Para que practiques con una voz más natural y más parecida a la tuya, pasamos tu voz a un nuevo motor de voz. Las respuestas también llegan más rápido.</string>
+    <string name="voice_move_loss">Al mudarla, tu voz actual se borra y se crea una nueva con la grabación guardada en este dispositivo. El audio que ya existe se sigue escuchando.</string>
+    <string name="voice_move_learn_more">Más información</string>
+    <string name="voice_move_cta">Rehacer con mi voz</string>
+    <string name="voice_move_done_title">Tu nueva voz está lista</string>
+    <string name="voice_move_done_body">A partir de ahora, tu yo fluido habla con tu nueva voz.</string>
+</resources>

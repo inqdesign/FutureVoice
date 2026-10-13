@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="voice_move_title">Ta voix passe sur un nouveau moteur</string>
+    <string name="voice_move_body">Pour que tu t’entraînes avec une voix plus naturelle et plus proche de la tienne, on passe ta voix sur un nouveau moteur vocal. Les réponses arrivent aussi plus vite.</string>
+    <string name="voice_move_loss">Au passage, ta voix actuelle est supprimée et une nouvelle est créée à partir de l’enregistrement gardé sur cet appareil. Les audios déjà créés restent lisibles.</string>
+    <string name="voice_move_learn_more">En savoir plus</string>
+    <string name="voice_move_cta">Recréer avec ma voix</string>
+    <string name="voice_move_done_title">Ta nouvelle voix est prête</string>
+    <string name="voice_move_done_body">Désormais, ton moi fluide parle avec ta nouvelle voix.</string>
+</resources>

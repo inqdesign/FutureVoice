@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="voice_move_title">你的聲音要搬到新引擎了</string>
+    <string name="voice_move_body">為了讓你用更自然、更像自己的聲音練習，我們要把你的聲音搬到新的語音引擎。回覆也會變快。</string>
+    <string name="voice_move_loss">搬過去時，現在的聲音會被刪除，再用這台裝置上存的錄音重新製作。已經做好的音訊照樣能播。</string>
+    <string name="voice_move_learn_more">了解更多</string>
+    <string name="voice_move_cta">用我的聲音重新製作</string>
+    <string name="voice_move_done_title">新的聲音準備好了</string>
+    <string name="voice_move_done_body">從現在起，流利的你會用新的聲音說話。</string>
+</resources>

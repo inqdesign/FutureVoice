@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="voice_move_title">声を新しいエンジンに移します</string>
+    <string name="voice_move_body">もっと自然で、もっと自分らしい声で練習できるように、声を新しい音声エンジンに移します。返事も速くなります。</string>
+    <string name="voice_move_loss">移すと今の声は削除され、この端末に保存された録音から新しく作ります。すでに作られた音声はそのまま聞けます。</string>
+    <string name="voice_move_learn_more">詳しく見る</string>
+    <string name="voice_move_cta">自分の声で作り直す</string>
+    <string name="voice_move_done_title">新しい声ができました</string>
+    <string name="voice_move_done_body">これからは流暢な自分が新しい声で話します。</string>
+</resources>

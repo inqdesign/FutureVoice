@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="voice_move_title">Deine Stimme zieht auf eine neue Engine um</string>
+    <string name="voice_move_body">Damit du mit einer Stimme üben kannst, die natürlicher und mehr nach dir klingt, ziehen wir sie auf eine neue Sprach-Engine um. Antworten kommen dann auch schneller.</string>
+    <string name="voice_move_loss">Beim Umzug wird deine jetzige Stimme gelöscht und aus der Aufnahme auf diesem Gerät neu erstellt. Bereits erstellte Audios spielen weiter.</string>
+    <string name="voice_move_learn_more">Mehr erfahren</string>
+    <string name="voice_move_cta">Mit meiner Stimme neu erstellen</string>
+    <string name="voice_move_done_title">Deine neue Stimme ist bereit</string>
+    <string name="voice_move_done_body">Ab jetzt spricht dein fließendes Ich mit deiner neuen Stimme.</string>
+</resources>
