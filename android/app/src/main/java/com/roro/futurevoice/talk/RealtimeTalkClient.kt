@@ -792,10 +792,10 @@ class RealtimeTalkClient(private val context: Context) {
         synchronized(revealLock) {
             reveal = Reveal(context)
             revealJob = scope.launch {
-                // Ten times a second: the next sentence goes up when its
+                // Twenty times a second: the next word goes up when its
                 // audio should be starting.
                 while (isActive) {
-                    delay(100)
+                    delay(50)
                     stepReveal()
                 }
             }
@@ -833,9 +833,8 @@ class RealtimeTalkClient(private val context: Context) {
                 if (r.context == replyContext && (serverAudioEnded || quiet))
                     replyPCM.size() / 2.0 / replyRate else null
             }
-            val weight = ReplyReveal.weight(r.text)
-            val cps = if (r.isFinal && seconds != null && seconds > 0.5 && weight > 0) weight / seconds
-                else ReplyReveal.defaultCharactersPerSecond(r.text,
+            val own = if (r.isFinal && seconds != null) ReplyReveal.charactersPerSecond(r.text, seconds) else null
+            val cps = own ?: ReplyReveal.defaultCharactersPerSecond(r.text,
                     com.roro.futurevoice.data.SpeechSpeed.currentMultiplier() ?: DEFAULT_SPEECH_SPEED)
             val shown = ReplyReveal.visible(r.text, r.isFinal, elapsed, cps)
             if (shown.length > r.shown.length) {

@@ -8,37 +8,84 @@ package com.roro.futurevoice.talk
  * already complete, so the whole line landed on screen at once and the voice
  * followed ~1 s later (synthesis only starts once the turn is committed).
  * Read as "it writes everything, then thinks again, then talks". So the text
- * is held until the voice is audible and then revealed a SENTENCE at a time,
- * each one when its audio should be starting.
+ * is held until the voice is audible and then revealed a WORD at a time, each
+ * one when its audio should be starting (2026-10-13, founder: a sentence
+ * dropping in whole read as stiff beside other voice chats). Unspaced
+ * scripts (ja, zh) go a character at a time.
  *
- * Sentence timing is an estimate: the PCM stream carries no alignment. The
- * rate is the line's own once all of its audio is in (letters ÷ seconds of
- * audio received), a per-script default before that.
+ * Word timing is an estimate: the PCM stream carries no alignment. The rate
+ * is the line's own once all of its audio is in (letters ÷ seconds of voice,
+ * the gaps between sentences taken out), a per-script default before that;
+ * each sentence boundary costs [SENTENCE_PAUSE_SECONDS]. Only complete
+ * sentences are ever revealed into while the line is still being written.
  */
 object ReplyReveal {
-    /** A sentence is shown this much before its estimated start, so the eye
-     *  is never behind the ear. */
-    const val LEAD_SECONDS = 0.2
+    /** A word is shown this much before its estimated start, so the eye is
+     *  never behind the ear. */
+    const val LEAD_SECONDS = 0.15
+
+    /** The silence between two sentences of one line. */
+    const val SENTENCE_PAUSE_SECONDS = 0.4
 
     /** The prefix of [text] to show [elapsed] seconds into the voice. Only
-     *  complete sentences are shown while the line is still being written;
-     *  the unterminated tail joins once [isFinal]. */
+     *  complete sentences are revealed into while the line is still being
+     *  written; the unterminated tail joins once [isFinal]. */
     fun visible(text: String, isFinal: Boolean, elapsed: Double, charactersPerSecond: Double): String {
         val ends = sentenceEnds(text).toMutableList()
         if (isFinal && ends.lastOrNull() != text.length &&
             text.substring(ends.lastOrNull() ?: 0).isNotBlank()) {
             ends.add(text.length)
         }
-        if (ends.isEmpty() || charactersPerSecond <= 0) return ""
-        var shownEnd = ends[0]
-        for (end in ends.drop(1)) {
-            // This sentence starts where the previous one ended.
-            val before = weight(text.substring(0, shownEnd))
-            if (before / charactersPerSecond > elapsed + LEAD_SECONDS) break
+        val limit = ends.lastOrNull() ?: return ""
+        if (charactersPerSecond <= 0) return ""
+        var shownEnd = 0
+        var sentence = 0
+        for ((start, end) in units(text.substring(0, limit))) {
+            while (sentence < ends.size && ends[sentence] <= start) sentence++
+            val startsAt = weight(text.substring(0, start)) / charactersPerSecond +
+                sentence * SENTENCE_PAUSE_SECONDS
+            if (startsAt > elapsed + LEAD_SECONDS) break
             shownEnd = end
         }
         return text.substring(0, shownEnd).trim()
     }
+
+    /** The line's own letters per second once all of its audio is in: the
+     *  sentence gaps are silence, not speech. */
+    fun charactersPerSecond(text: String, seconds: Double): Double? {
+        val ends = sentenceEnds(text)
+        // The last sentence has no space after it, so it isn't in `ends`.
+        val tail = text.substring(ends.lastOrNull() ?: 0)
+        val sentences = ends.size + (if (weight(tail) > 0) 1 else 0)
+        val speaking = seconds - maxOf(0, sentences - 1) * SENTENCE_PAUSE_SECONDS
+        val w = weight(text)
+        if (speaking <= 0.5 || w <= 0) return null
+        return w / speaking
+    }
+
+    /** The pieces revealed one at a time: a word with whatever punctuation
+     *  and space trail it, or — in an unspaced script — one character. */
+    fun units(text: String): List<Pair<Int, Int>> {
+        val out = mutableListOf<Pair<Int, Int>>()
+        var i = 0
+        while (i < text.length) {
+            while (i < text.length && text[i].isWhitespace()) i++
+            if (i >= text.length) break
+            val start = i
+            if (isUnspaced(text[i])) {
+                i++
+            } else {
+                while (i < text.length && !text[i].isWhitespace() && !isUnspaced(text[i])) i++
+            }
+            // Punctuation that closes the piece rides with it.
+            while (i < text.length && !text[i].isWhitespace() && !text[i].isLetterOrDigit()) i++
+            out.add(start to i)
+        }
+        return out
+    }
+
+    /** Kana and Han: no spaces between words, so each character is a piece. */
+    private fun isUnspaced(c: Char): Boolean = c.code in 0x3040..0x30FF || c.code in 0x4E00..0x9FFF
 
     /** End index of every COMPLETE sentence: a Latin terminator followed by
      *  whitespace, or a CJK one (which needs no space after it). Closing
