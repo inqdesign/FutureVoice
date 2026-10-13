@@ -95,6 +95,7 @@ fun WeeklyTestRows(language: String, level: CefrLevel) {
             onDismissRequest = { open = false; reload++ },
             properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
         ) {
+            DialogSystemBarsLikeActivity()
             WeeklyTestScreen(language = language, level = level,
                 onClose = { open = false; reload++; StoreEvents.bump() })
         }

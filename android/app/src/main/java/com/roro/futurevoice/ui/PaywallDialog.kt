@@ -22,13 +22,26 @@ fun PaywallDialog(onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
-        val dark = isSystemInDarkTheme()
-        val window = (LocalView.current.parent as? DialogWindowProvider)?.window
-        SideEffect {
-            window?.let {
-                WindowCompat.getInsetsController(it, it.decorView).isAppearanceLightStatusBars = !dark
-            }
-        }
+        DialogSystemBarsLikeActivity()
         PaywallScreen(onDismiss = onDismiss)
+    }
+}
+
+/**
+ * A full-screen `Dialog` is its own window, and its system bars default to
+ * LIGHT icons — white clock and battery on the light page, invisible (seen on
+ * the chapter decks). Call first inside the dialog's content: the bars' icons
+ * go dark on a light theme, as the activity's are.
+ */
+@Composable
+fun DialogSystemBarsLikeActivity() {
+    val dark = isSystemInDarkTheme()
+    val window = (LocalView.current.parent as? DialogWindowProvider)?.window
+    SideEffect {
+        window?.let {
+            val ctl = WindowCompat.getInsetsController(it, it.decorView)
+            ctl.isAppearanceLightStatusBars = !dark
+            ctl.isAppearanceLightNavigationBars = !dark
+        }
     }
 }

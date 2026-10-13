@@ -28,6 +28,9 @@ import kotlin.math.sqrt
  * synthesized as PCM, its INNER edges are trimmed to the voice, and one fixed
  * gap goes between. New audio only — nothing already cached is re-made.
  */
+private const val SENTENCE_END =
+    """(?<!\b(?:Mr|Mrs|Ms|Dr|St|Prof|Nr|vs|etc|ca|bzw|e\.g|i\.e|z\.B))[.!?…][)"'”’」』]*\s+|[。！？](?:[)"'”’」』]*\s+|(?=[^)"'”’」』\s])|[)"'”’」』]+(?=[^\sとっ)"'”’」』]))"""
+
 object PacedSpeech {
     /** Silence between two sentences, voice to voice. */
     const val SENTENCE_GAP_SECONDS = 0.42
@@ -42,10 +45,15 @@ object PacedSpeech {
      * CJK full stops, which take no space, before the next character; never
      * after a title abbreviation or inside a quote closed by と/って.
      */
-    private val sentenceEnd: Pattern = Pattern.compile(
-        """(?<!\b(?:Mr|Mrs|Ms|Dr|St|Prof|Nr|vs|etc|ca|bzw|e\.g|i\.e|z\.B))[.!?…][)"'”’」』]*\s+|[。！？](?:[)"'”’」』]*\s+|(?=[^)"'”’」』\s])|[)"'”’」』]+(?=[^\sとっ)"'”’」』]))""",
-        Pattern.UNICODE_CHARACTER_CLASS,
-    )
+    // Android's regex engine (ICU) is Unicode-aware by default and REFUSES
+    // `UNICODE_CHARACTER_CLASS` — passing it threw in this object's static
+    // init, so every opener warm-up failed and no greeting was ever cached.
+    // The JVM (unit tests) needs the flag for `\s`/`\b` to match the
+    // gateway's Unicode rule, so it is asked for and dropped where refused.
+    private val sentenceEnd: Pattern = SENTENCE_END.let { re ->
+        runCatching { Pattern.compile(re, Pattern.UNICODE_CHARACTER_CLASS) }
+            .getOrElse { Pattern.compile(re) }
+    }
 
     /** The sentences of `text`, trimmed, empty ones dropped. */
     fun sentences(text: String): List<String> {
