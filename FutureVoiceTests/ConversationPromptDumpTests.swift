@@ -2,6 +2,7 @@ import XCTest
 @testable import FutureVoice
 
 /// Writes the LIVE conversation prompt to disk for `scripts/beginner-probe.py`
+/// and `scripts/tutor-probe.py`
 /// (2026-10-03), so the probe runs exactly what the app sends instead of a
 /// reconstruction that can drift. Does nothing unless the runner passes
 /// `TEST_RUNNER_PROMPT_DUMP_DIR` (xcodebuild hands `TEST_RUNNER_*` variables
@@ -28,6 +29,17 @@ final class ConversationPromptDumpTests: XCTestCase {
                     let name = "\(lang)-\(level.rawValue)\(first ? "-first" : "").txt"
                     try prompt.write(to: url.appendingPathComponent(name), atomically: true, encoding: .utf8)
                 }
+                // Tutor mode, for `scripts/tutor-probe.py` (2026-10-13).
+                let tutor = ConversationEngine.conversationSystemPrompt(
+                    targetLanguage: lang,
+                    nativeLanguage: lang == "ko" ? "en" : "ko",
+                    level: level,
+                    topPatterns: [],
+                    weakVocabAreas: [],
+                    topic: "",
+                    tutor: true)
+                try tutor.write(to: url.appendingPathComponent("\(lang)-\(level.rawValue)-tutor.txt"),
+                                atomically: true, encoding: .utf8)
             }
         }
     }

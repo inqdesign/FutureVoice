@@ -53,6 +53,7 @@ struct CallSettingsSheet: View {
     /// nil until the learner flips it — the level decides until then.
     @AppStorage(CoachMode.key) private var coachModeChoice: Bool?
     @AppStorage(AppState.proficiencyKey) private var proficiencyRaw = CEFRLevel.b1.rawValue
+    @AppStorage(TutorMode.key) private var tutorMode = false
     private var coachMode: Binding<Bool> {
         Binding(get: { CoachMode.resolve(choice: coachModeChoice, levelRaw: proficiencyRaw) },
                 set: { coachModeChoice = $0 })
@@ -92,6 +93,16 @@ struct CallSettingsSheet: View {
                     }
                 } footer: {
                     Text(explain("Now and then your future self asks something you can answer with a word you're studying, and the mistake you make most becomes the call's focus."))
+                }
+
+                // Fixed for a call: it is part of the prompt the gateway
+                // caches when the call opens (`TutorMode`).
+                Section {
+                    Toggle(isOn: $tutorMode) {
+                        Label("Tutor mode", systemImage: "graduationcap")
+                    }
+                } footer: {
+                    Text(explain("When you make a mistake, your future self says it the right way out loud, then carries on. Starts with your next call."))
                 }
 
                 Section {

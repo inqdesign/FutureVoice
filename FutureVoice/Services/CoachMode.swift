@@ -55,6 +55,29 @@ enum CoachMode {
     static let maxCandidates = 8
 }
 
+/// Tutor mode (2026-10-13, founder: "a tutor, not a conversation partner").
+///
+/// Coach mode helps BEFORE the learner answers; tutor mode answers AFTER.
+/// When the learner's line had a mistake, the fluent self says it back the
+/// right way OUT LOUD — "We'd say: 'My name is Eunggyu.'" — sometimes with a
+/// second way to say it in another register, and then carries on with the
+/// next question. No repeat-after-me: the call moves on.
+///
+/// It lives in the conversation's SYSTEM prompt
+/// (`ConversationEngine.tutorBlock`), so it is fixed for a call: the gateway
+/// caches that prompt for the whole call, and every reply — speculative ones
+/// included — has to be written under the same rules. Flipped mid-call it
+/// applies from the next call. Off by default for everyone; with it off the
+/// prompt is byte-identical to before (`TutorModeTests`).
+///
+/// A tutored call is a PRACTICE call, like a coached one (`Session.coached`):
+/// a line said right after being corrected is a repeat, not evidence.
+enum TutorMode {
+    static let key = "futurevoice.call.tutorMode"
+
+    static var isOn: Bool { UserDefaults.standard.bool(forKey: key) }
+}
+
 /// The ration, as a value so it can be reasoned about (and tested) apart
 /// from the call screen.
 struct CoachPlan: Equatable {

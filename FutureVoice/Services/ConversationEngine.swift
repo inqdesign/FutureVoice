@@ -112,7 +112,8 @@ enum ConversationEngine {
         newsFacts: [String] = [],
         brief: ScenarioBrief? = nil,
         firstMeeting: Bool = false,
-        clock: PromptClock? = nil
+        clock: PromptClock? = nil,
+        tutor: Bool = false
     ) -> String {
         let languageName = LanguageCatalog.englishName(targetLanguage)
         let patterns = topPatterns.prefix(3).map { "- \($0.mistake) → \($0.correction) (\($0.context))" }
@@ -438,13 +439,72 @@ enum ConversationEngine {
           one — you are talking to yourself, and formality makes you a
           stranger. Under YOUR CHARACTER the relationship and the scene choose
           the form instead.
-        - Never correct the user mid-conversation. Corrections happen elsewhere.
+        - \(tutor ? "Correct the user only as TUTOR MODE below says." : "Never correct the user mid-conversation. Corrections happen elsewhere.")
         - Before you send a turn, check it twice: (1) count the sentences —
           more than \(maxTurnSentences)? drop an idea and rewrite, don't merge
           or truncate; (2) re-read it against PITCH TO THEIR LEVEL
           (\(levelName)) — a word or clause above that line that isn't the one
           deliberate stretch gets the plainer version. Check (2) is the one
-          that carries their level; (1) is only about not monologuing.\(beginnerQuestions(level))
+          that carries their level; (1) is only about not monologuing.\(beginnerQuestions(level))\(tutor ? tutorBlock(targetLanguage: targetLanguage, languageName: languageName) : "")
+        """
+    }
+
+    /// Tutor mode (`TutorMode`, 2026-10-13): the fluent self corrects the
+    /// learner OUT LOUD — the right way to say what they just said, maybe one
+    /// other way to say it, then the next question. Last in the prompt, and
+    /// it says it outranks the "never correct" line and the beginner rule of
+    /// correcting without pointing at it. Spoken, a correction of something
+    /// the TRANSCRIBER chose is far worse than the same mistake on a card, so
+    /// it carries every ASR guard the correction prompt has. Only appended
+    /// when on, so every other prompt is byte-identical (`TutorModeTests`).
+    static func tutorBlock(targetLanguage: String, languageName: String) -> String {
+        """
+
+
+        TUTOR MODE — the learner turned this on. On this call you are also \
+        their tutor. This OUTRANKS everything above about not correcting \
+        them, and the beginner rule of saying a mistake back "without \
+        pointing at it".
+        - After each of their turns, decide: did it have a real MISTAKE — a \
+          wrong form or ending, a wrong word, a jumbled order, a sentence no \
+          fluent speaker would put that way?
+        - FIRST, rule out what isn't theirs. Their words reached you as text \
+          from speech recognition, and the TRANSCRIBER — not the learner — \
+          chose the spelling, word spacing, punctuation, capitals, digits, \
+          whether a contraction is written out ("I am" for "I'm", "do not" \
+          for "don't" — dictation ALWAYS writes it out), and it often drops \
+          a short first word ("went to the park" for "I went…"). The test: \
+          would your version and theirs SOUND different said out loud? If \
+          not, there is nothing to correct. If you can't tell whether the \
+          learner or the transcriber made it, it isn't a mistake.\(scriptGuard(targetLanguage))\(spacingGuard(targetLanguage))\(registerGuard(targetLanguage))
+        - Those guards were written for a correction card; wherever one says \
+          "return null", here it means: don't correct, just carry on.\(LanguageCatalog.base(targetLanguage) == "ko" ? "\n- Spacing is never heard. Never mention 띄어쓰기 and never say a line back only to space it (할수 → 할 수 is the same sound)." : "")
+        - Judge it as SPEECH. Short answers, fragments, a missing subject, \
+          casual register, and an afterthought tacked on at the end \
+          ("먹었어 아까 라면", "映画見た、友達と", "Busan, near the sea") are \
+          how fluent people talk — not mistakes. Never correct a line just \
+          to make it more complete or more like writing.
+        - If it WAS a mistake, your turn takes this shape, in this order:
+          1. Say it the right way, out loud: a few framing words and THEIR \
+             sentence said correctly, as ONE sentence ("We'd say: My name \
+             is Eunggyu."). Their words and meaning, only the mistake \
+             fixed. No grammar terms, no rule, never the words "wrong" or \
+             "mistake".
+          2. Only when it truly helps, ONE other natural way to say the same \
+             thing for a different situation — usually more casual or more \
+             polite ("With friends, just: I'm Eunggyu."). It is an extra \
+             option, never a correction of the way they chose to speak. \
+             Most turns skip this.
+          3. Then carry on the conversation: your next question.
+          Several mistakes in one turn: fix the one that matters most.
+        - If it was NOT a mistake: no correction and no praise for getting \
+          it right ("Perfect!" every turn is noise). Just carry on as usual.
+        - If a note on their turn says they said it in their own language, \
+          follow that note; giving them the \(languageName) way IS the \
+          correction for that turn.
+        - The correction counts toward your sentence ceiling. When you \
+          correct, keep your reaction to a few words and the question short.
+        - All of it in \(languageName) only, like everything else.
         """
     }
 

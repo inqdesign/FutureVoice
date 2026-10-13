@@ -643,6 +643,11 @@ struct ConversationView: View {
     /// Coach mode was on at some point in this call — the whole call is then
     /// a practice call (`Session.coached`).
     @State private var coachWasOn = false
+    /// Tutor mode for THIS call (`TutorMode`), read once when the call opens:
+    /// it lives in the system prompt the gateway caches for the whole call,
+    /// so a flip mid-call applies from the next one — a reconnect must not
+    /// quietly change the rules halfway. A tutored call is a practice call.
+    @State private var tutorThisCall = TutorMode.isOn
     /// Coach mode's grammar focus for this call (`GrammarFocus`): picked from
     /// the learner's recurring mistakes on appear, named in their language,
     /// and watched on every correction. nil = none this call.
@@ -4356,7 +4361,7 @@ struct ConversationView: View {
             grammarFocus: learnerSpokeThisCall
                 ? grammarFocus?.record(repeats: focusRepeatTurns.count) : nil,
             // A resumed practice call stays one: its earlier half was coached.
-            coached: (coachWasOn || prior?.isPractice == true) ? true : nil
+            coached: (coachWasOn || tutorThisCall || prior?.isPractice == true) ? true : nil
         )
         SessionStore.shared.save(draft)
         didSaveCurrentSession = true
@@ -4498,6 +4503,7 @@ struct ConversationView: View {
         sessionStartedAt = Date()
         turns = []
         pinPromptClock()
+        tutorThisCall = TutorMode.isOn
         learnerSpokeThisCall = false
         learnerStartedThisCall = false
         didSaveCurrentSession = false
@@ -4642,7 +4648,8 @@ struct ConversationView: View {
                 appState.scenarios.first { $0.id == sid }?.brief
             },
             firstMeeting: isFirstMeeting,
-            clock: promptClock
+            clock: promptClock,
+            tutor: tutorThisCall
         )
     }
 }
