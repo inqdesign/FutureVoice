@@ -29,7 +29,8 @@ final class PromiseLedger: @unchecked Sendable {
         /// still counts finished blocks — it is what the day's ring shows.
         /// nil on entries written before the rule; they read as `done`.
         var touched: Int? = nil
-        /// The keep rule the entry was judged by; nil = finish-every-block.
+        /// The keep rule the entry was judged by; nil = finish-every-block,
+        /// 2 = every block started, 3 = the same without the weekly test.
         var rule: Int? = nil
         /// Nothing was planned that day: a rest day — it neither counts nor
         /// breaks the streak.
@@ -37,8 +38,9 @@ final class PromiseLedger: @unchecked Sendable {
         var kept: Bool { keptAt != nil || (planned > 0 && (touched ?? done) >= planned) }
     }
 
-    /// The rule `PromiseJudge` writes today: every block started.
-    static let currentRule = 2
+    /// The rule `PromiseJudge` writes today: every block the LEARNER placed
+    /// was started. The weekly test is not one of them (2026-10-13).
+    static let currentRule = 3
 
     private let lock = NSLock()
     private var entries: [String: Entry]
@@ -87,21 +89,26 @@ enum PromiseJudge {
     static let maxBackfillDays = 45
 
     /// Planned and done for one day, by the plan as it stands now.
+    ///
+    /// **The weekly test is not part of the promise** (2026-10-13, founder).
+    /// It is drawn on the routine and ticks like any block, but the app puts
+    /// it there, not the learner, and it is "this week's" until the next
+    /// opening — so a learner who took Saturday's test on Sunday morning lost
+    /// a streak over a block they never placed, on a day they did everything
+    /// else. Only blocks from the plan itself are judged.
     static func result(for day: Date, plan: StudyPlan, calendar cal: Calendar = .current) -> PromiseLedger.Entry {
         let start = cal.startOfDay(for: day)
         let end = cal.date(byAdding: .day, value: 1, to: start) ?? start
-        let occ = plan.occurrences(on: start, test: WeeklyTestSettings.shared.schedule, calendar: cal)
+        let occ = plan.occurrences(on: start, calendar: cal)
         guard !occ.isEmpty else { return .init(planned: 0, done: 0, settled: true) }
         let events = ActivityEventLog.shared.events(from: start, to: end)
         let talks = SessionStore.shared.loadAcrossLanguages()
             .filter { $0.endedAt != nil && $0.startedAt >= start && $0.startedAt < end }
             .map { PlannerDay.Talk(id: $0.id, start: $0.startedAt, end: $0.endedAt ?? $0.startedAt,
                                    title: $0.displayTitle) }
-        let tested = WeeklyTestStore.shared.load().compactMap(\.finishedAt)
-            .contains { cal.isDate($0, inSameDayAs: start) }
         _ = talks
         let progress = PlannerDay.progress(planned: occ,
-                                           totals: PlannerDay.totals(on: start, events: events, testFinished: tested))
+                                           totals: PlannerDay.totals(on: start, events: events, testFinished: false))
         return .init(planned: occ.count,
                      done: progress.values.filter { $0 >= 1 }.count,
                      settled: true,
@@ -109,16 +116,17 @@ enum PromiseJudge {
                      rule: PromiseLedger.currentRule)
     }
 
-    /// A day settled under the old finish-every-block rule, judged again by
-    /// today's. Only ever UPGRADES: a day that was kept stays kept, and a
-    /// missed day is revived only when the plan still gives it the same
-    /// number of blocks it had — otherwise it is today's plan judging a day
-    /// that had another, and the old verdict stands.
+    /// A day settled under an older rule, judged again by today's. Only ever
+    /// UPGRADES: a day that was kept stays kept, and a missed day is revived
+    /// only when the plan still gives it the same blocks it had — otherwise
+    /// it is today's plan judging a day that had another, and the old verdict
+    /// stands. `exempt` is how many of the old entry's blocks today's rule no
+    /// longer judges (that day's weekly test, for entries before rule 3).
     static func rejudged(_ old: PromiseLedger.Entry, fresh: PromiseLedger.Entry,
-                         now: Date) -> PromiseLedger.Entry {
+                         exempt: Int = 0, now: Date) -> PromiseLedger.Entry {
         var out = old
         out.rule = PromiseLedger.currentRule
-        if !old.kept, old.planned > 0, fresh.planned == old.planned, fresh.kept {
+        if !old.kept, old.planned > 0, fresh.planned + exempt == old.planned, fresh.kept {
             out.touched = fresh.touched
             out.keptAt = now
         }
@@ -140,7 +148,10 @@ enum PromiseJudge {
                 ledger.set(carryingKept(result(for: day, plan: plan, calendar: cal), from: old, now: now),
                            for: day, calendar: cal)
             } else if let old, (old.rule ?? 1) < PromiseLedger.currentRule {
-                ledger.set(rejudged(old, fresh: result(for: day, plan: plan, calendar: cal), now: now),
+                let tests = plan.occurrences(on: day, test: WeeklyTestSettings.shared.schedule, calendar: cal)
+                    .filter { $0.kind == .test }.count
+                ledger.set(rejudged(old, fresh: result(for: day, plan: plan, calendar: cal),
+                                    exempt: tests, now: now),
                            for: day, calendar: cal)
             }
             guard let next = cal.date(byAdding: .day, value: 1, to: day) else { break }

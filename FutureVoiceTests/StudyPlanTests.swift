@@ -385,4 +385,19 @@ final class StudyPlanTests: XCTestCase {
         let kept = PromiseLedger.Entry(planned: 2, done: 2)
         XCTAssertTrue(PromiseJudge.rejudged(kept, fresh: .init(planned: 2, done: 0, touched: 0), now: now).kept)
     }
+
+    /// A day missed only for its weekly test is kept again under rule 3:
+    /// the test was counted then and is not judged now.
+    @MainActor
+    func testDayMissedOnlyForTheWeeklyTestIsRevived() {
+        let now = Date()
+        let old = PromiseLedger.Entry(planned: 2, done: 1, touched: 1, rule: 2)
+        let revived = PromiseJudge.rejudged(old, fresh: .init(planned: 1, done: 1, touched: 1),
+                                            exempt: 1, now: now)
+        XCTAssertTrue(revived.kept)
+        XCTAssertEqual(revived.rule, 3)
+        // Without the test to exempt, a block fewer is a different plan.
+        XCTAssertFalse(PromiseJudge.rejudged(old, fresh: .init(planned: 1, done: 1, touched: 1),
+                                             now: now).kept)
+    }
 }
