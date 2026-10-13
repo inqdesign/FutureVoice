@@ -586,26 +586,11 @@ class TalkViewModel(context: Context) : ViewModel() {
                 val opener = config.initialOpener.ifBlank {
                     // A free talk opens on a bundled line, never on a request:
                     // the INTRO line before the two have met (it introduces
-                    // itself first), then the rotating pool, then the fallback
-                    // while the pool is still being written.
+                    // itself first), then a friend's hello for the time of
+                    // day (iOS `a9a80ed7`).
                     if (freeTalk) {
-                        val openers = FreeTalkOpeners(appContext)
-                        val name = config.persona?.displayName
-                        if (config.persona?.metAt == null) {
-                            if (!openers.hasPool(config.targetLanguage, name)) {
-                                viewModelScope.launch {
-                                    runCatching { openers.generatePool(config.targetLanguage, name, config.level) }
-                                }
-                            }
-                            FreeTalkOpeners.introOpener(config.targetLanguage)
-                        } else {
-                            openers.next(config.targetLanguage, name) ?: run {
-                                viewModelScope.launch {
-                                    runCatching { openers.generatePool(config.targetLanguage, name, config.level) }
-                                }
-                                FreeTalkOpeners.fallbackOpener(config.targetLanguage)
-                            }
-                        }
+                        if (config.persona?.metAt == null) FreeTalkOpeners.introOpener(config.targetLanguage)
+                        else FreeTalkOpeners.pickUpOpener(config.targetLanguage)
                     } else config.scenarioId?.let { id ->
                         // A scenario with a stored pool (a ready-made
                         // situation's written greetings, or an iOS-made

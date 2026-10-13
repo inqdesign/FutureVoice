@@ -2,9 +2,9 @@
 """Lift FreeTalkOpeners' bundled lines out of the Swift source.
 
 Two pieces of CONTENT: the per-language INTRO line (the very first free talk,
-before the fluent self has met the learner) and the per-language PICK-UP lines
-every later free talk rotates through — hand-written since iOS 2026-10-13, so
-the Gemini pool prompt this script used to lift is gone. Retyped, the two
+before the fluent self has met the learner) and the per-language PICK-UP hello
+for each part of the day every later free talk opens on — hand-written since
+iOS 2026-10-13, so the Gemini pool prompt this script used to lift is gone. Retyped, the two
 platforms greet the same learner differently — and the intro line is the
 first thing the product ever says.
 
@@ -29,17 +29,18 @@ def table(name):
     return pairs
 
 
-def list_table(name):
-    m = re.search(rf'private static let {name}: \[String: \[String\]\] = \[(.*?)\n    \]', src, re.S)
+def part_table(name):
+    m = re.search(rf'private static let {name}: \[String: \[String: String\]\] = \[(.*?)\n    \]', src, re.S)
     if not m: sys.exit(f"no table {name}")
     groups = re.findall(r'"(\w+)": \[(.*?)\n\s*\],', m.group(1), re.S)
-    out = [(k, re.findall(STR, body)) for k, body in groups]
-    if not out or any(len(v) < 1 for _, v in out): sys.exit(f"empty table {name}")
+    out = [(k, re.findall(r'"(\w+)":\s*' + STR, body)) for k, body in groups]
+    parts = {"morning", "afternoon", "evening", "night"}
+    if not out or any({p for p, _ in v} != parts for _, v in out): sys.exit(f"bad table {name}")
     return out
 
 
 intro = table("introOpeners")
-pick_up = list_table("pickUpLines")
+pick_up = part_table("pickUpLines")
 
 
 def swift_unescape(v):
@@ -52,10 +53,10 @@ def kmap(pairs):
     return ",\n".join(f'        "{k}" to {kt(swift_unescape(v))}' for k, v in pairs)
 
 
-def klists(groups):
+def kparts(groups):
     return ",\n".join(
-        f'        "{k}" to listOf(\n'
-        + ",\n".join(f"            {kt(swift_unescape(x))}" for x in lines)
+        f'        "{k}" to mapOf(\n'
+        + ",\n".join(f'            "{p}" to {kt(swift_unescape(x))}' for p, x in lines)
         + "\n        )"
         for k, lines in groups)
 
@@ -73,11 +74,10 @@ object FreeTalkOpenerContent {{
 {kmap(intro)}
     )
 
-    /** How every later free talk picks up (iOS `pickUpLines`): glad they
-     *  called, the floor handed to them, no guessed topic. Rotated; the
-     *  first line is also what speaks while no pool exists yet. */
-    val pickUp: Map<String, List<String>> = mapOf(
-{klists(pick_up)}
+    /** How every later free talk picks up (iOS `pickUpLines`): one light
+     *  hello per part of the day (`PromptClock.partOfDay`), no guessed topic. */
+    val pickUp: Map<String, Map<String, String>> = mapOf(
+{kparts(pick_up)}
     )
 }}
 ''')

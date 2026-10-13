@@ -2,46 +2,17 @@ package com.roro.futurevoice.talk
 
 import android.content.Context
 import com.roro.futurevoice.data.CefrLevel
-import com.roro.futurevoice.data.StoreJson
-import kotlinx.serialization.Serializable
-import java.io.File
 
 /**
- * Rotating pools of free-talk greeting lines, one per language + persona
- * (`freetalk_openers_by_language.json`, iOS `58d6802`). Sessions rotate
- * through six pick-up lines, written by hand per language since iOS
- * `a92d7fc8` (2026-10-13 — until then one Gemini call wrote them, and every
- * line put a guessed topic to a learner who had called with something to
- * say). Topic, scenario and news openers stay dynamic — this pool is only
- * for the no-topic talk.
- *
- * Keyed to language + persona name, written on first use.
- * Until a pool exists, [fallbackOpener] speaks; on the very first free talk,
- * before the fluent self has met the learner, [introOpener] outranks both —
- * a rotating "good to hear you" is a greeting between people who already
- * know each other.
+ * How a no-topic free talk picks up (iOS `FreeTalkOpeners`, `a9a80ed7`): one
+ * light hello per language and part of the day, chosen at the moment of the
+ * call ("안녕, 잘 잤어?" · "안녕, 지금 뭐해?" · "안녕, 오늘은 어땠어?" ·
+ * "안녕, 아직 안 자?"), plus the first-call introduction ([introOpener]). The
+ * texts repeat verbatim, so the phrase cache makes every TTS after a line's
+ * first play free. Until 2026-10-13 a Gemini call wrote a rotating pool of
+ * six per learner (`freetalk_openers_by_language.json`, no longer read).
  */
 class FreeTalkOpeners(private val context: Context) {
-
-    @Serializable
-    private data class Pool(
-        val key: String,
-        val lines: List<String>,
-        val cursor: Int = 0,
-        @Serializable(with = com.roro.futurevoice.data.IsoDateMillisSerializer::class)
-        val generatedAt: Long = System.currentTimeMillis(),
-    )
-
-    /**
-     * One pool PER language + persona, in one file. Until 2026-09-28 the file
-     * held a single pool, so a learner who talked in two languages threw one
-     * language's pool away every time they used the other — each switch
-     * meant a new Gemini call, the bundled fallback line in the meantime, and
-     * new ElevenLabs takes of lines whose audio had already been paid for.
-     * The old single-pool file is read once and folded in (never deleted).
-     */
-    @Serializable
-    private data class Store(val pools: Map<String, Pool> = emptyMap())
 
     companion object {
         private const val BAKED_SPEED_KEY = "futurevoice.freeTalkOpeners.bakedSpeed"
@@ -49,33 +20,9 @@ class FreeTalkOpeners(private val context: Context) {
         private const val CARTESIA_WHOLE_KEY = "futurevoice.freeTalkOpeners.cartesiaWhole"
         private const val TAG = "FreeTalkOpeners"
 
-        /**
-         * Bumped when the pool's PROMPT changes in a way the lines already on
-         * phones must not outlive: a pool is otherwise kept until the language
-         * or name changes, i.e. forever. v2 (iOS `a212c70`, 2026-09-30):
-         * `selfWarmth` — pools held "너무 보고싶어". An old pool is simply not
-         * found; its audio stays on disk (produced audio is never deleted).
-         * v3 (2026-10-07): pools joined two sentences with a bare comma, which
-         * the sentence splitter can't cut, so the opener ran on with no pause
-         * — `breathPunctuation` now names the comma splice.
-         * v4 (iOS `a92d7fc8`, 2026-10-13): the lines are bundled pick-ups that
-         * only hand the learner the floor (`FreeTalkOpenerContent.pickUp`).
-         * v5 (iOS `bd9952d3`): mid-call lines ("응, 듣고 있어") replaced.
-         * v6 (iOS `89d9643e`): no leading interjection (오, 어, 야 / Oh, Hey…).
-         * v7 (iOS `cecd8b9e`): the pick-up is one hello per language ("안녕?").
-         */
-        private const val POOL_VERSION = 7
-
-        /** Languages × persona names a learner actually uses is a handful; the
-         *  cap only stops a long history of renames from growing the file. */
-        private const val MAX_POOLS = 8
-
         /** iOS `FreeTalkOpeners.warmAhead` — one since 2026-10-09: the
          *  launcher re-warms after every call, so a spare was rarely played. */
         const val WARM_AHEAD = 1
-
-        private fun key(language: String, personaName: String?) =
-            "v$POOL_VERSION|" + language.take(2) + "|" + personaName.orEmpty().trim()
 
         /** Failures only — one row each, never a success, so the volume is
          *  the number of things that went wrong (iOS `report`). */
@@ -90,37 +37,36 @@ class FreeTalkOpeners(private val context: Context) {
         fun introOpener(language: String): String =
             FreeTalkOpenerContent.intro[language.take(2)] ?: FreeTalkOpenerContent.intro.getValue("en")
 
-        fun fallbackOpener(language: String): String = pickUpLines(language).first()
-
-        private fun pickUpLines(language: String): List<String> =
-            FreeTalkOpenerContent.pickUp[language.take(2)] ?: FreeTalkOpenerContent.pickUp.getValue("en")
+        /** The hello a free talk placed at [at] opens on (iOS `pickUpLine`):
+         *  the part of the day is `PromptClock.partOfDay`, the same split the
+         *  call's own prompt is told. */
+        fun pickUpOpener(language: String, at: Long = System.currentTimeMillis()): String {
+            val lines = FreeTalkOpenerContent.pickUp[language.take(2)] ?: FreeTalkOpenerContent.pickUp.getValue("en")
+            val hour = java.time.Instant.ofEpochMilli(at).atZone(java.time.ZoneId.systemDefault()).hour
+            return lines[PromptClock.partOfDay(hour)] ?: lines.getValue("afternoon")
+        }
     }
 
-    /** The single-pool file from before 2026-09-28 — read for migration only. */
-    private val legacyFile = File(context.filesDir, "freetalk_openers.json")
-    private val file = File(context.filesDir, "freetalk_openers_by_language.json")
-
-    fun hasPool(language: String, personaName: String?): Boolean =
-        load(key(language, personaName))?.lines?.isNotEmpty() == true
-
     /**
-     * How many upcoming pool lines are kept synthesized ahead of the rotation
-     * (iOS `warmAhead`, 2026-10-02). The whole pool of six used to be paid
-     * for up front — and again on every speed change or new voice — while a
-     * call only ever opens on the next one.
+     * The hello a call placed now opens on, then — when asked for more — the
+     * next parts of the day's, so a warm-up just before a boundary still has
+     * the following hello ready (iOS `upcomingLines`).
      */
-    fun upcomingLines(language: String, personaName: String?, count: Int = WARM_AHEAD): List<String> {
-        val pool = load(key(language, personaName)) ?: return emptyList()
-        if (pool.lines.isEmpty()) return emptyList()
-        val n = minOf(count, pool.lines.size)
-        return (0 until n).map { pool.lines[(pool.cursor + it) % pool.lines.size] }
+    fun upcomingLines(language: String, count: Int = WARM_AHEAD): List<String> {
+        val out = mutableListOf<String>()
+        var at = System.currentTimeMillis()
+        repeat(maxOf(0, count)) {
+            val line = pickUpOpener(language, at)
+            if (line !in out) out += line
+            at += 5 * 3600 * 1000L
+        }
+        return out
     }
 
     /**
      * The first call's opener, ready before the tap (iOS `warmFirstCall`):
      * the INTRO line for a learner not yet met (it is what their call opens
-     * on), the fallback while no pool exists, the pool itself, then the next
-     * [WARM_AHEAD] pool lines' audio. Everything is cache-checked, so repeat
+     * on), otherwise the hello for the time of day. Cache-checked, so repeat
      * calls cost nothing.
      */
     suspend fun warmFirstCall(language: String, personaName: String?, level: CefrLevel,
@@ -128,25 +74,21 @@ class FreeTalkOpeners(private val context: Context) {
         if (!voiceId.isNullOrBlank() && firstMeeting) {
             if (!warmLine(introOpener(language), voiceId)) return
         }
-        if (!voiceId.isNullOrBlank() && !firstMeeting && !hasPool(language, personaName)) {
-            if (!warmLine(fallbackOpener(language), voiceId)) return
-        }
-        if (!hasPool(language, personaName)) runCatching { generatePool(language, personaName, level) }
-        // An unmet learner's first call opens on the intro, never a pool line,
-        // so pool audio waits for the first call's own re-warm (iOS, 2026-10-09).
+        // An unmet learner's first call opens on the intro, never the hello,
+        // so its audio waits for the first call's own re-warm (iOS, 2026-10-09).
         if (firstMeeting) return
         warmAudio(language, personaName, voiceId)
     }
 
     /**
-     * Synthesize the next [WARM_AHEAD] pool lines that aren't cached yet, so
-     * the call's FIRST word is already on the phone when the learner taps
-     * (iOS `26a246c`). Called again after calls, so the window walks with the
-     * rotation. A failure aborts the sweep (the rest would fail the same way).
+     * Synthesize the next [WARM_AHEAD] hellos that aren't cached yet, so the
+     * call's FIRST word is already on the phone when the learner taps (iOS
+     * `26a246c`). Called again after calls and on foreground, so the window
+     * follows the clock. A failure aborts the sweep.
      */
     suspend fun warmAudio(language: String, personaName: String?, voiceId: String?) {
         if (voiceId.isNullOrBlank()) return
-        for (line in upcomingLines(language, personaName)) {
+        for (line in upcomingLines(language)) {
             if (!warmLine(line, voiceId)) return
         }
     }
@@ -210,54 +152,5 @@ class FreeTalkOpeners(private val context: Context) {
         if (line in lines) return
         lines.add(line)
         bakePrefs.edit().putString(BAKED_LINES_KEY, lines.takeLast(60).joinToString("\n")).apply()
-    }
-
-    /** The next line in rotation, advancing the cursor; null without a pool. */
-    fun next(language: String, personaName: String?): String? {
-        val pool = load(key(language, personaName)) ?: return null
-        if (pool.lines.isEmpty()) return null
-        val line = pool.lines[pool.cursor % pool.lines.size]
-        save(pool.copy(cursor = (pool.cursor + 1) % pool.lines.size))
-        return line
-    }
-
-    suspend fun generatePool(language: String, personaName: String?, level: CefrLevel): List<String> =
-        try {
-            writePool(language, personaName, level)
-        } catch (e: Exception) {
-            // Every caller discards this with runCatching, and a pool that is
-            // never written is a call that opens on the fallback line forever.
-            report("freetalk_openers_failed", language, e)
-            throw e
-        }
-
-    private suspend fun writePool(language: String, personaName: String?, level: CefrLevel): List<String> {
-        val lines = pickUpLines(language)
-        save(Pool(key(language, personaName), lines, cursor = 0))
-        return lines
-    }
-
-    private fun loadStore(): Store {
-        runCatching {
-            if (file.exists()) return StoreJson.json.decodeFromString(Store.serializer(), file.readText())
-        }
-        runCatching {
-            if (legacyFile.exists()) {
-                val legacy = StoreJson.json.decodeFromString(Pool.serializer(), legacyFile.readText())
-                return Store(mapOf(legacy.key to legacy))
-            }
-        }
-        return Store()
-    }
-
-    private fun load(key: String): Pool? = loadStore().pools[key]?.takeIf { it.key == key }
-
-    private fun save(pool: Pool) {
-        var pools = loadStore().pools + (pool.key to pool)
-        if (pools.size > MAX_POOLS) {
-            pools = pools.values.sortedByDescending { it.generatedAt }.take(MAX_POOLS)
-                .associateBy { it.key }
-        }
-        runCatching { file.writeText(StoreJson.json.encodeToString(Store.serializer(), Store(pools))) }
     }
 }
