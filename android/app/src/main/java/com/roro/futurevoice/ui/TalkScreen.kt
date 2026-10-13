@@ -358,11 +358,18 @@ fun TalkScreen(
         mutableStateOf(com.roro.futurevoice.talk.CoachMode.resolve(
             com.roro.futurevoice.talk.CoachMode.choice(context), level.code))
     }
+    // Tutor mode: read by the NEXT call when it opens (`TutorMode`).
+    var tutorMode by remember { mutableStateOf(com.roro.futurevoice.talk.TutorMode.isOn(context)) }
     if (showingCallSettings) {
         CallSettingsSheet(
             showsTranscript = showsTranscript, showsCorrections = showsCorrections,
             showsGoalChips = showsGoalChips,
             coachMode = coachMode,
+            tutorMode = tutorMode,
+            onTutorMode = {
+                com.roro.futurevoice.talk.TutorMode.set(context, it)
+                tutorMode = it
+            },
             onCoachMode = {
                 com.roro.futurevoice.talk.CoachMode.setChoice(context, it)
                 coachMode = it

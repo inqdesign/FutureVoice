@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.outlined.Lightbulb
+import androidx.compose.material.icons.outlined.School
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -70,6 +71,9 @@ fun CallSettingsSheet(
     /** Coach mode as it resolves now (the learner's flip, else the level's). */
     coachMode: Boolean,
     onCoachMode: (Boolean) -> Unit,
+    /** Tutor mode (`TutorMode`, default off) — applies from the next call. */
+    tutorMode: Boolean,
+    onTutorMode: (Boolean) -> Unit,
     onFlag: (key: String, value: Boolean) -> Unit,
     onSpeedChange: (SpeechSpeed) -> Unit,
     onDismiss: () -> Unit,
@@ -116,6 +120,16 @@ fun CallSettingsSheet(
                 }
             }
             GroupedFooter(stringResource(R.string.cm_coach_mode_footer))
+
+            // Fixed for a call: it is part of the prompt the gateway caches
+            // when the call opens (`TutorMode`).
+            GroupedSectionSpacer()
+            GroupedCard {
+                ToggleRow(Icons.Outlined.School, stringResource(R.string.tutor_mode), tutorMode) {
+                    onTutorMode(it)
+                }
+            }
+            GroupedFooter(stringResource(R.string.when_you_make_a_mistake_your_future_self_says_it_the_right_w_458e22))
 
             GroupedSectionHeader(stringResource(R.string.screen))
             GroupedCard {

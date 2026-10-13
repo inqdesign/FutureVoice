@@ -215,6 +215,11 @@ class TalkViewModel(context: Context) : ViewModel() {
     /** Coach mode was on at some point in this call — the whole call is then
      *  a practice call (`Session.coached`). */
     private var coachWasOn = false
+    /** Tutor mode for THIS call (iOS `tutorThisCall`), read once when the
+     *  call opens: it lives in the system prompt the gateway caches for the
+     *  whole call, so a flip mid-call applies from the next one. A tutored
+     *  call is a practice call. */
+    private var tutorThisCall = false
     /** Where a scenario call takes place and who the other side is, for the
      *  "try saying" — "What can I get you?" only has one natural answer once
      *  it knows it is a café (iOS `coachSituation`). Null on every other call. */
@@ -280,6 +285,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         _state.value = TalkUiState(phase = TalkPhase.CONNECTING)
         coachOn = CoachMode.resolve(CoachMode.choice(appContext), config.level.code)
         coachWasOn = coachOn
+        tutorThisCall = TutorMode.isOn(appContext)
         coachPlan = CoachPlan()
         coachSteerSent = ""
         coachSituation = null
@@ -341,11 +347,12 @@ class TalkViewModel(context: Context) : ViewModel() {
                     topic = config.composedTopic,
                     persona = config.persona,
                     newsFacts = config.newsFacts,
-                    cast = config.cast,
+                    counterpart = config.cast?.person,
                     brief = scenarioBrief(config),
                     clock = pinPromptClock(config),
+                    tutor = tutorThisCall,
                 ) + ConversationEngine.turnOutputInstruction(config.targetLanguage, config.nativeLanguage,
-                    cast = config.cast, inScene = config.scenarioId != null)
+                    counterpart = config.cast?.person, inScene = config.scenarioId != null)
                 if (BuildConfig.DEBUG) Log.d(TAG, "prompt: patterns=${profile.recurringMistakes.size}" +
                     " weak=${profile.weakVocabAreas} first='${profile.recurringMistakes.firstOrNull()?.mistake}'")
                 openConversation()
@@ -420,7 +427,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             grammarFocus = if (learnerSpokeThisCall)
                 _state.value.grammarFocus?.record(_state.value.focusRepeatTurns.size) else null,
             // Coach mode on at any point makes the whole call practice.
-            coached = if (coachWasOn) true else null,
+            coached = if (coachWasOn || tutorThisCall) true else null,
         )
         // Saved from the app scope on purpose: the ViewModel may be cleared
         // (screen left) before a viewModelScope job gets to run. The summary
@@ -430,9 +437,14 @@ class TalkViewModel(context: Context) : ViewModel() {
             "turns" to turns.count { it.role == TurnRole.USER },
             "seconds" to ((session.endedAt ?: startedAt) - startedAt) / 1000))
         CoroutineScope(Dispatchers.Main).launch {
-            runCatching { sessions.save(session) }
+            // A resumed practice call stays one: its earlier half was coached
+            // (iOS `prior?.isPractice`). The row on file under this id is the
+            // talk before this sitting.
+            val prior = runCatching { sessions.load(cfg.targetLanguage).firstOrNull { it.id == session.id } }.getOrNull()
+            val saved = if (prior?.isPractice == true) session.copy(coached = true) else session
+            runCatching { sessions.save(saved) }
             StoreEvents.bump()
-            SessionSummarizer.summarizeInBackground(appContext, session, cfg.nativeLanguage, cfg.level)
+            SessionSummarizer.summarizeInBackground(appContext, saved, cfg.nativeLanguage, cfg.level)
         }
     }
 
@@ -479,10 +491,11 @@ class TalkViewModel(context: Context) : ViewModel() {
                     // launched as.
                     firstMeeting = freeTalk && config.persona?.metAt == null,
                     newsFacts = config.newsFacts,
-                    cast = config.cast,
+                    counterpart = config.cast?.person,
                     brief = scenarioBrief(config),
                     clock = pinPromptClock(config),
-                ) + REALTIME_STYLE_RULES
+                    tutor = tutorThisCall,
+                ) + ConversationPrompt.REALTIME_STYLE_RULES
                 // A ready-made situation the LEARNER opens (asking a stranger
                 // the way, iOS `5b0587a`): the other side waits to be spoken
                 // to, and the coach's own slot above the pill offers a first
@@ -548,7 +561,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                     } ?: runCatching {
                         GeminiClient(auth).sendJson(
                             system = realtimeSystem + ConversationEngine.turnOutputInstruction(
-                                config.targetLanguage, config.nativeLanguage, cast = config.cast,
+                                config.targetLanguage, config.nativeLanguage, counterpart = config.cast?.person,
                                 inScene = config.scenarioId != null),
                             messages = listOf(GeminiClient.Message(
                                 GeminiClient.Message.Role.USER,
@@ -1648,7 +1661,3 @@ class TalkViewModel(context: Context) : ViewModel() {
     }
 }
 
-/** Appended to the system prompt on the realtime path (iOS `realtimeStyleRules`). */
-private const val REALTIME_STYLE_RULES = """
-
-This is a LIVE phone call. Speak in one to three short sentences, never write JSON, never add labels or stage directions — just say your line."""

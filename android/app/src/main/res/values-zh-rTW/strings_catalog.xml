@@ -2446,6 +2446,7 @@
     <string name="turn_on_photos_for_nawana_in_settings_to_save_the_card">"要儲存卡片，請在設定中允許 nawana 取用照片。"</string>
     <string name="turn_on_reminders">"開啟通知"</string>
     <string name="turn_them_on_in_settings">"可以在設定裡開啟"</string>
+    <string name="tutor_mode">"家教模式"</string>
     <string name="two_minutes_on_one_topic_without_stopping">"一個話題講兩分鐘，不停下來"</string>
     <string name="type">"類型"</string>
     <string name="type_a_topic">"輸入主題"</string>
@@ -2645,6 +2646,8 @@
     <string name="when_something_goes_wrong">"遇到問題時"</string>
     <!-- 'When you hang up, the words you used and the sentences you fixed become your own study book in Review.' -->
     <string name="when_you_hang_up_the_words_you_used_and_the_sentences_you_fi_494463">"掛斷後，你用到的單字和修正過的句子會變成你專屬的教材，放進複習分頁。"</string>
+    <!-- 'When you make a mistake, your future self says it the right way out loud, then carries on. Starts with your next call.' -->
+    <string name="when_you_make_a_mistake_your_future_self_says_it_the_right_w_458e22">"說錯的時候，流利的自己會馬上唸出正確的說法，然後接著聊。下次通話開始生效。"</string>
     <!-- 'When you send a card to 10 minutes, tomorrow or 3 days, this is what brings it back. One reminder at a time, at the earliest thing waiting.' -->
     <string name="when_you_send_a_card_to_10_minutes_tomorrow_or_3_days_this_i_dc4513">"把卡片送到10分鐘後、明天或3天後，到時候把它叫回來的就是這個通知。一次只響一次，對準最早等著的那一張。"</string>
     <!-- 'When you stop speaking, your fluent self answers. Take your time to think.' -->

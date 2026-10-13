@@ -44,12 +44,10 @@ object CommonGround {
     }
 
     /** The block to splice into a prompt. Never invents an overlap. */
+    /** iOS `CommonGround.block` — the text is generated ([ConversationPrompt]). */
     fun block(learner: UserPersona?, other: Party): String {
         val shared = between(learner, other)
-        if (shared.isEmpty()) return "COMMON GROUND: none found. Don't force one. Open on something concrete from YOUR OWN life (the person you are), the way a real person offers a piece of themselves first, and let the learner pick up whatever interests them."
-        return "COMMON GROUND — start here, this is what you two actually share:\n" +
-            shared.joinToString("\n") { "- $it" } +
-            "\nReal strangers open on the overlap, not on a fact plucked from one side's biography. Take one of these and get specific about it fast."
+        return if (shared.isEmpty()) ConversationPrompt.COMMON_GROUND_NONE else ConversationPrompt.commonGround(shared)
     }
 
     private val markers = listOf("kid", "child", "children", "son", "daughter", "kita", "school", "baby", "toddler",

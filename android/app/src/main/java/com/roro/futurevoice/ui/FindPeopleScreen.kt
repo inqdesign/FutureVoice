@@ -115,7 +115,7 @@ fun FindPeopleScreen(
     onEditProfile: () -> Unit = {},
     /** Talk on a card. [meet] persists the person — called by the host only
      *  once its gate has passed (iOS `start { onTalk(savedPerson()) }`). */
-    onTalk: (person: PublicPersonaClient.PublicPersona, meet: () -> Unit) -> Unit,
+    onTalk: (person: PublicPersonaClient.PublicPersona, meet: () -> Counterpart) -> Unit,
     /** Watch on a person's card: a scene of the two of them, in THEIR preset
      *  voice (iOS `FindPeopleSheet(onWatch:)`). The host gates it as a scene
      *  and calls [meet] only after the gate (iOS `startScene { onWatch(savedPerson()) }`). */
@@ -534,7 +534,7 @@ internal fun FindPersonCard(
     seated: Boolean,
     bookmarked: Boolean,
     onToggleBookmark: () -> Unit,
-    onTalk: (PublicPersonaClient.PublicPersona, () -> Unit) -> Unit,
+    onTalk: (PublicPersonaClient.PublicPersona, () -> Counterpart) -> Unit,
     onWatch: (() -> Counterpart) -> Unit,
     onPersonSaved: () -> Unit,
     onBack: () -> Unit,
