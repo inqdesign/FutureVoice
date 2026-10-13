@@ -196,6 +196,8 @@ fun RootScreen() {
     var callCastVoice by call.castVoice
     /** Who the call is with, so the saved talk lands on their card. */
     var callCounterpartId by call.counterpartId
+    /** A saved talk the call picks back up (Continue on its book). */
+    var callResume by call.resume
     var callFromHomeCard by call.fromHomeCard
     /** Set when a Talk-home card's call closes; the home consumes it and
      *  offers the persona-deepen sheet (iOS `maybePromptDeepen`). */
@@ -968,12 +970,25 @@ fun RootScreen() {
                 onReviewTalk = { id -> deckSessionId = id; showDeck = true },
                 // Picking a talk back up is a metered call, so it goes through
                 // the same gate every other launcher does.
-                onContinue = { topic ->
-                    gate {
+                // It RESUMES the talk (iOS `ConversationView(resumeSession:)`):
+                // same session, its topic, its scenario, the person it was with.
+                onContinue = { s ->
+                    gate { gateScope.launch {
+                        val person = s.counterpartId?.let { id ->
+                            runCatching {
+                                com.roro.futurevoice.data.CounterpartStore.shared(context).load()
+                                    .firstOrNull { it.id == id }
+                            }.getOrNull()
+                        }
                         detailSessionId = null
-                        callTopic = topic; callFacts = emptyList(); callBlurb = ""; callScenarioId = null
+                        callTopic = s.topic.orEmpty(); callFacts = emptyList(); callBlurb = ""
+                        callScenarioId = s.originScenarioId
+                        callCounterpartId = s.counterpartId
+                        callCast = person?.let { com.roro.futurevoice.talk.ConversationEngine.Cast.of(it) }
+                        callCastVoice = person?.voicePresetId?.takeIf { it.isNotBlank() }
+                        callResume = s
                         inCall = true
-                    }
+                    } }
                 },
             )
 
@@ -1350,6 +1365,7 @@ fun RootScreen() {
                 cast = callCast,
                 castVoiceId = callCastVoice,
                 counterpartId = callCounterpartId,
+                resume = callResume,
                 onExit = {
                     // A call that flew in from the ring flies back to it.
                     TalkMorph.close(morphScope) {
@@ -1357,7 +1373,7 @@ fun RootScreen() {
                         callFromHomeCard = false
                         inCall = false; callTopic = ""; callFacts = emptyList(); callBlurb = ""
                         callScenarioId = null; callOpener = ""; callCast = null
-                        callCastVoice = null; callCounterpartId = null
+                        callCastVoice = null; callCounterpartId = null; callResume = null
                     }
                 },
             )
@@ -2945,6 +2961,7 @@ class CallRoute : androidx.lifecycle.ViewModel() {
     val cast = mutableStateOf<com.roro.futurevoice.talk.ConversationEngine.Cast?>(null)
     val castVoice = mutableStateOf<String?>(null)
     val counterpartId = mutableStateOf<String?>(null)
+    val resume = mutableStateOf<com.roro.futurevoice.talk.Session?>(null)
     /** Launched from a Talk-home card (a scenario or a news story) — iOS
      *  `ConversationHome.callLaunch`, whose dismissal is the one moment the
      *  persona-deepen sheet is offered. The ring's free talk is not one. */

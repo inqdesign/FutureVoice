@@ -69,6 +69,14 @@ data class TalkConfig(
      * and book mechanism work on it for free.
      */
     val counterpartId: String? = null,
+    /**
+     * A saved talk this call PICKS UP (iOS `ConversationView(resumeSession:)`):
+     * same session id, same start, its turns on screen and sent as history,
+     * no opener — the mic opens and the learner carries on. The prompt clock
+     * says how long it was paused, and the end saves over the same row and
+     * re-summarizes the whole talk, merged with its previous analysis.
+     */
+    val resume: Session? = null,
 ) {
     /** iOS `systemPrompt()`'s `composedTopic`. */
     val composedTopic: String get() = if (topicBlurb.isEmpty()) topic else "$topic. $topicBlurb"
@@ -121,6 +129,10 @@ data class TalkUiState(
     val pausedForIdle: Boolean = false,
     /** Set when the call ended with something said — the wrap-up's subject. */
     val endedSessionId: String? = null,
+    /** How many of [turns] came from the resumed talk (iOS `isResuming` +
+     *  `didSaveCurrentSession`: a resumed talk starts saved, and only a new
+     *  turn makes it something closing would lose). */
+    val resumedTurnCount: Int = 0,
     val lastTiming: Map<String, String> = emptyMap(),
     /** Coach mode's word for the question just asked (iOS `coachHint`) —
      *  drawn above the pill, under the "try saying" line, while they answer. */
@@ -293,7 +305,9 @@ class TalkViewModel(context: Context) : ViewModel() {
         stagedCall = false
         if (_state.value.phase != TalkPhase.IDLE && _state.value.phase != TalkPhase.ENDED) return
         this.config = config
-        _state.value = TalkUiState(phase = TalkPhase.CONNECTING)
+        val resume = config.resume
+        _state.value = TalkUiState(phase = TalkPhase.CONNECTING,
+            turns = resume?.turns.orEmpty(), resumedTurnCount = resume?.turns?.size ?: 0)
         coachOn = CoachMode.resolve(CoachMode.choice(appContext), config.level.code)
         coachWasOn = coachOn
         tutorThisCall = TutorMode.isOn(appContext)
@@ -325,8 +339,10 @@ class TalkViewModel(context: Context) : ViewModel() {
             }
         }
         loadGrammarFocus(config)
-        sessionId = StoreJson.newId()
-        startedAt = System.currentTimeMillis()
+        // A resumed talk is the SAME session: same id (the meter, the book,
+        // the cards all hang off it), same start.
+        sessionId = resume?.id ?: StoreJson.newId()
+        startedAt = resume?.startedAt ?: System.currentTimeMillis()
         // DEBUG only: a staged wall in place of a real call (see DebugBilling).
         com.roro.futurevoice.data.DebugBilling.consumeCallWall()?.let { staged ->
             startStagedWall(staged); return
@@ -374,7 +390,10 @@ class TalkViewModel(context: Context) : ViewModel() {
                     counterpart = config.cast?.person, inScene = config.scenarioId != null)
                 if (BuildConfig.DEBUG) Log.d(TAG, "prompt: patterns=${profile.recurringMistakes.size}" +
                     " weak=${profile.weakVocabAreas} first='${profile.recurringMistakes.firstOrNull()?.mistake}'")
-                openConversation()
+                // Continue from the loaded transcript: open the mic so the
+                // learner picks up where they left off (the model already has
+                // the prior turns as context).
+                if (config.resume != null) beginListening() else openConversation()
             } catch (e: Exception) {
                 fail(e)
             }
@@ -433,7 +452,10 @@ class TalkViewModel(context: Context) : ViewModel() {
             startedAt = startedAt,
             endedAt = System.currentTimeMillis(),
             turns = turns,
-            origin = when {
+            origin = cfg.resume?.let { r ->
+                // A resumed talk keeps its badge (iOS `s.origin ?? (topic ? .news : .free)`).
+                r.origin ?: if (r.topic.isNullOrEmpty()) SessionOrigin.FREE else SessionOrigin.NEWS
+            } ?: when {
                 cfg.scenarioId != null -> SessionOrigin.SCENARIO
                 cfg.newsFacts.isNotEmpty() -> SessionOrigin.NEWS
                 cfg.topic.isBlank() -> SessionOrigin.FREE
@@ -461,9 +483,14 @@ class TalkViewModel(context: Context) : ViewModel() {
             // talk before this sitting.
             val prior = runCatching { sessions.load(cfg.targetLanguage).firstOrNull { it.id == session.id } }.getOrNull()
             val saved = if (prior?.isPractice == true) session.copy(coached = true) else session
+            // The draft goes down with no summary (that is what marks the row
+            // "needs analysis"), but a resumed talk's previous analysis is
+            // handed to the summarizer so it MERGES with it instead of losing
+            // it (iOS `toAnalyze.summary = priorSummary`).
             runCatching { sessions.save(saved) }
             StoreEvents.bump()
-            SessionSummarizer.summarizeInBackground(appContext, saved, cfg.nativeLanguage, cfg.level)
+            SessionSummarizer.summarizeInBackground(appContext, saved, cfg.nativeLanguage, cfg.level,
+                priorSummary = prior?.summary)
         }
     }
 
@@ -475,7 +502,11 @@ class TalkViewModel(context: Context) : ViewModel() {
         val store = com.roro.futurevoice.data.SessionStore.shared(appContext)
         val langs = (com.roro.futurevoice.data.LanguageScope.enrolled(appContext) + config.targetLanguage).distinct()
         val sessions = langs.flatMap { runCatching { store.load(it) }.getOrDefault(emptyList()) }
-        PromptClock.make(sessions = sessions, excluding = sessionId)
+        // A resumed talk's saved lines are from whenever it paused, so the
+        // prompt says how long ago — otherwise a talk from last week is
+        // continued as if it never stopped.
+        PromptClock.make(sessions = sessions, excluding = sessionId,
+            resumedFrom = config.resume?.turns?.lastOrNull()?.timestamp)
     }
 
     private fun startRealtime(config: TalkConfig) {
@@ -487,7 +518,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         startIdleWatch()
         com.roro.futurevoice.core.Analytics.capture("conversation_started", mapOf(
             "origin" to when { config.scenarioId != null -> "scenario"; config.newsFacts.isNotEmpty() -> "news"; config.cast != null -> "person"; else -> "free" },
-            "language" to config.targetLanguage, "realtime" to true))
+            "language" to config.targetLanguage, "realtime" to true, "resumed" to (config.resume != null)))
         val freeTalk = config.topic.isBlank() && config.cast == null && config.scenarioId == null
         callJob = viewModelScope.launch {
             try {
@@ -515,6 +546,13 @@ class TalkViewModel(context: Context) : ViewModel() {
                     clock = pinPromptClock(config),
                     tutor = tutorThisCall,
                 ) + ConversationPrompt.REALTIME_STYLE_RULES
+                // A resumed talk carries its history so the fluent self knows
+                // what was already said, and opens on the learner's mic — no
+                // opener, no "you go first".
+                if (config.resume != null) {
+                    connectRealtime(config, null, historyOf(_state.value.turns))
+                    return@launch
+                }
                 // A ready-made situation the LEARNER opens (asking a stranger
                 // the way, iOS `5b0587a`): the other side waits to be spoken
                 // to, and the coach's own slot above the pill offers a first
@@ -640,13 +678,20 @@ class TalkViewModel(context: Context) : ViewModel() {
         lastActivityAt = System.currentTimeMillis()
         startIdleWatch()
         _state.update { it.copy(phase = TalkPhase.CONNECTING, pausedForIdle = false, wall = null) }
-        viewModelScope.launch {
-            connectRealtime(cfg, null,
-                _state.value.turns.map {
-                    (if (it.role == TurnRole.USER) "user" else "model") to it.transcript
-                })
-        }
+        viewModelScope.launch { connectRealtime(cfg, null, historyOf(_state.value.turns)) }
     }
+
+    /** The talk so far as the gateway's history (iOS `history:`). */
+    private fun historyOf(turns: List<Turn>): List<Pair<String, String>> =
+        turns.map { (if (it.role == TurnRole.USER) "user" else "model") to it.transcript }
+
+    /** Something said since the last save — what closing would lose (iOS
+     *  `turns.contains(user) && !didSaveCurrentSession`). */
+    val hasUnsavedTalk: Boolean
+        get() = _state.value.let { st ->
+            st.phase != TalkPhase.ENDED && st.turns.size > st.resumedTurnCount &&
+                st.turns.any { it.role == TurnRole.USER }
+        }
 
     private fun callTitle(cfg: TalkConfig): String =
         cfg.cast?.name ?: cfg.topic.ifBlank { appContext.getString(com.roro.futurevoice.R.string.talk) }

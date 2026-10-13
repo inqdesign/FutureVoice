@@ -123,7 +123,8 @@ fun TalkDetailScreen(
     level: com.roro.futurevoice.data.CefrLevel = com.roro.futurevoice.data.CefrLevel.B1,
     onBack: () -> Unit,
     onShadow: (String) -> Unit = {},
-    onContinue: ((String) -> Unit)? = null,
+    /** Pick this talk back up — the SAME session (iOS `ConversationView(resumeSession:)`). */
+    onContinue: ((Session) -> Unit)? = null,
     onDone: (() -> Unit)? = null,
     onReviewTalk: ((String) -> Unit)? = null,
 ) {
@@ -138,7 +139,7 @@ fun TalkDetailScreen(
             TalkTranscriptScreen(
                 session = shown, language = language, level = level,
                 onBack = { transcript = null; StoreEvents.bump() },
-                onContinue = onContinue?.let { go -> { go(shown.topic ?: shown.displayTitle.orEmpty()) } })
+                onContinue = onContinue?.let { go -> { go(shown) } })
         } else if (page == "book") {
             TalkDetailPage(sessionId, language, level, onBack, onShadow, onContinue, onDone, onReviewTalk,
                 onReplay = { transcript = it })
@@ -156,7 +157,7 @@ private fun TalkDetailPage(
     onBack: () -> Unit,
     onShadow: (String) -> Unit = {},
     /** Pick the talk back up — a metered call, so the host gates it. */
-    onContinue: ((String) -> Unit)? = null,
+    onContinue: ((Session) -> Unit)? = null,
     /** Opened by the call that just ended (iOS `postTalk`): the page IS the
      *  wrap-up, so it closes with Done rather than going back. */
     onDone: (() -> Unit)? = null,
@@ -321,7 +322,7 @@ private fun TalkDetailPage(
         return
     }
 
-    val continueTalk: (() -> Unit)? = onContinue?.let { go -> { go(s.topic ?: s.displayTitle.orEmpty()) } }
+    val continueTalk: (() -> Unit)? = onContinue?.let { go -> { go(s) } }
     // A capture asks for the transcript up front: push it once.
     LaunchedEffect(showingTranscript) { if (showingTranscript) { showingTranscript = false; onReplay(s) } }
 

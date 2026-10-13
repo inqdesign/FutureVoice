@@ -124,6 +124,8 @@ fun TalkScreen(
     castVoiceId: String? = null,
     /** The stranger's local row, so the talk lands on their card. */
     counterpartId: String? = null,
+    /** A saved talk to pick back up (iOS `resumeSession`): Continue on its book. */
+    resume: com.roro.futurevoice.talk.Session? = null,
     onExit: () -> Unit,
 ) {
     // "Go to Review" on the spent sheet (iOS `routeToPracticeOnClose`):
@@ -340,7 +342,7 @@ fun TalkScreen(
      */
     fun leaveForPractice() {
         routeToPractice = true
-        if (state.turns.any { it.role == TurnRole.USER } && state.phase != TalkPhase.ENDED) {
+        if (vm.hasUnsavedTalk) {
             vm.end()
             // Nothing saved (set synchronously) → no board to wait on.
             if (vm.state.value.endedSessionId == null) onExit()
@@ -422,6 +424,7 @@ fun TalkScreen(
                 cast = cast,
                 castVoiceId = castVoiceId,
                 counterpartId = counterpartId,
+                resume = resume,
             )
         )
     }
@@ -654,9 +657,15 @@ fun TalkScreen(
                     // flow: summary, drills) and discarding. Only the
                     // LEARNER's turns count: an opener alone is not a talk.
                     IconButton(onClick = {
-                        if (state.turns.any { it.role == TurnRole.USER } && state.phase != TalkPhase.ENDED) {
+                        if (vm.hasUnsavedTalk) {
                             confirmingDiscard = true
-                        } else onExit()
+                        } else {
+                            // Nothing new to keep: hang up without saving, or a
+                            // resumed talk left untouched would be summarized
+                            // again on the way out (iOS `close()`).
+                            if (state.phase != TalkPhase.ENDED) vm.discard()
+                            onExit()
+                        }
                     }, modifier = Modifier.padding(start = 8.dp).size(44.dp)
                         .background(MaterialTheme.colorScheme.surfaceContainerHighest, CircleShape)) {
                         Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.close))

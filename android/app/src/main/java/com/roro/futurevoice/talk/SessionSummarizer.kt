@@ -115,9 +115,17 @@ object SessionSummarizer {
     fun needsSummary(session: Session): Boolean =
         session.summary == null && session.turns.any { it.role == TurnRole.USER }
 
-    /** Fire-and-forget from the call screen; the store bumps when done. */
-    fun summarizeInBackground(context: Context, session: Session, nativeLanguage: String, level: CefrLevel) {
+    /**
+     * Fire-and-forget from the call screen; the store bumps when done.
+     * [priorSummary] is a resumed talk's previous analysis: the row on disk
+     * has none (the draft marks it "needs analysis"), and the new one is
+     * MERGED with it rather than replacing it (iOS `toAnalyze.summary`).
+     */
+    fun summarizeInBackground(context: Context, session: Session, nativeLanguage: String, level: CefrLevel,
+                              priorSummary: SessionSummary? = null) {
         if (!needsSummary(session)) return
+        @Suppress("NAME_SHADOWING")
+        val session = if (priorSummary != null) session.copy(summary = priorSummary) else session
         if (session.id in _inFlight.value) return
         val appContext = context.applicationContext
         _inFlight.update { it + session.id }
