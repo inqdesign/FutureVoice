@@ -158,6 +158,7 @@
     <string name="ai_read_tap_to_apply">"AI가 본 레벨: %s — 눌러서 적용"</string>
     <string name="ai_tech">"AI · 기술"</string>
     <string name="airport_hotel_restaurants">"공항, 호텔, 식당"</string>
+    <string name="all_activity">"전체 활동"</string>
     <string name="all_caught_up">"다 끝냈어요"</string>
     <string name="all_challenges">"모든 챌린지"</string>
     <string name="all_levels">"모든 레벨"</string>
@@ -240,6 +241,8 @@
     <string name="automatic">"자동"</string>
     <string name="available_with_or_without_a_plan">"구독과 상관없이 구매 가능"</string>
     <string name="average_lld">"평균 %d점"</string>
+    <string name="average_of_your_last_10_takes">"최근 10번 평균"</string>
+    <string name="avg_a_day">"하루 평균 %s"</string>
     <string name="back">"뒤로"</string>
     <string name="back_from_earlier">"미뤄둔 것"</string>
     <string name="back_in_3_days">"3일 뒤에 다시 나와요"</string>
@@ -285,6 +288,8 @@
     <string name="busy_today">"오늘 바빠?"</string>
     <string name="buy_lld_minutes">"%d분 구매"</string>
     <string name="by_level">"레벨별"</string>
+    <string name="cafe">"카페"</string>
+    <string name="calendar_and_routine">"달력과 루틴"</string>
     <string name="call">"전화"</string>
     <string name="call_me_every_day">"매일 전화해 주세요"</string>
     <string name="call_paused_tap_to_pick_it_back_up">"통화 잠시 멈춤 · 탭하면 이어서 해요"</string>
@@ -315,6 +320,7 @@
     <string name="capped_at_by_the_words_you_use_your_next_talk_will_be_read_f_13babf">"쓰는 단어 수준에 맞춰 ≈%s까지로 잡았어요 — 다음 통화부터는 만드는 문장 구조도 함께 읽어요."</string>
     <!-- "Captured from what you say, what your fluent self says back, and the expressions your watched scenes teach. Mark the ones you've got down as known." -->
     <string name="captured_from_what_you_say_what_your_fluent_self_says_back_a_21aa65">"내가 한 말, 유창해진 내가 되돌려준 말, 그리고 본 상황연습이 알려준 표현을 모아둬요. 익숙해진 건 아는 표현으로 표시해 두세요."</string>
+    <string name="cards_done">"카드를 다 봤어요"</string>
     <string name="cards_done_now_say_it_out_loud">"카드 끝 — 이제 소리 내어 말해 보세요"</string>
     <string name="cards_you_put_off">"미룬 카드"</string>
     <string name="casual">"편하게"</string>
@@ -374,6 +380,7 @@
     <string name="comfortable_lld_lld">"적정 범위 %1$d–%2$d"</string>
     <string name="common_situations">"흔한 상황"</string>
     <string name="comparing">"비교하는 중…"</string>
+    <string name="composer_customsituation">"직접 쓴 상황"</string>
     <string name="congratulations">"축하해요!"</string>
     <string name="connecting">"연결 중…"</string>
     <string name="consent">"동의"</string>
@@ -448,6 +455,7 @@
     <string name="daily_goals">"하루 목표"</string>
     <string name="daily_small_talk">"일상 잡담"</string>
     <string name="dark">"어둡게"</string>
+    <string name="dashed_line_your_daily_average_best_day">"점선은 하루 평균이에요. 가장 많이 한 날: %1$s, %2$s."</string>
     <string name="day">"일"</string>
     <string name="day_1">"1일차"</string>
     <string name="day_14">"14일차"</string>
@@ -615,6 +623,8 @@
     <string name="every_talk_becomes_your_own_textbook">"대화가 끝나면,\n나만의 교재가 된다"</string>
     <!-- "Every talk in your routine with a set time is a call. Your phone rings then, even on silent. Can't talk? Just decline — nothing counts against you." -->
     <string name="every_talk_in_your_routine_with_a_set_time_is_a_call_your_ph_174441">"루틴에서 시간이 정해진 대화가 곧 전화예요. 그 시간에 무음이어도 전화가 울려요. 받기 어려우면 거절하면 돼요. 불이익은 없어요."</string>
+    <!-- 'Every word, expression and card you studied, shadow take, run and scene — one block each.' -->
+    <string name="every_word_expression_and_card_you_studied_shadow_take_run_a_66737b">"공부한 단어·표현·카드, 섀도잉 녹음, 다시 말하기, 장면을 하나에 한 칸씩 쌓았어요."</string>
     <!-- 'Every word you say in a talk is collected and graded by CEFR — the level reads what you use, not what you know.' -->
     <string name="every_word_you_say_in_a_talk_is_collected_and_graded_by_cefr_81f280">"대화에서 실제로 말한 단어를 모아 CEFR 등급으로 매겨요 — 아는 단어가 아니라 쓰는 단어로 읽어요."</string>
     <string name="everyday">"일상"</string>
@@ -798,6 +808,7 @@
     <string name="have_a_conversation_or_watch_a_scene_then_come_back_to_shado_9066e7">"대화를 하거나 상황연습을 보고 나면, 유창해진 내가 한 말을 골라 따라 말할 수 있어요."</string>
     <string name="have_an_invite_code">"초대 코드가 있나요?"</string>
     <string name="headline">"헤드라인"</string>
+    <string name="health">"건강"</string>
     <string name="hear_it">"들어보기"</string>
     <string name="hear_it_again">"다시 듣기"</string>
     <string name="hear_it_in_the_app_write_it_here">"앱에서 듣고 여기에 쓰기"</string>
@@ -1095,8 +1106,10 @@
     <string name="lld_min_of_talk_lld_talk_inflect_true">"%1$d분 대화 · %2$d번"</string>
     <!-- '%lld min of talk over %lld days. See how it went, then take the test.' -->
     <string name="lld_min_of_talk_over_lld_days_see_how_it_went_then_take_the_dcd06c">"%2$d일 동안 %1$d분 이야기했어요. 어떤 한 주였는지 보고, 테스트도 풀어봐요."</string>
+    <string name="lld_min_other_practice">"그 밖의 연습 %d분"</string>
     <string name="lld_min_talked">"통화 %d분"</string>
     <string name="lld_min_talked_this_month">"이번 달 %d분 통화"</string>
+    <string name="lld_min_talking">"대화 %d분"</string>
     <string name="lld_min_this_week">"이번 주 %d분"</string>
     <string name="lld_min_used_lld_min_left">"%1$d분 사용 · %2$d분 남음"</string>
     <string name="lld_minutes_a_month">"한 달에 %d분"</string>
@@ -1111,6 +1124,7 @@
     <string name="lld_new_phrase_inflect_true_from_your_fluent_self">"유창해진 나에게 받은 새 표현 %d개"</string>
     <string name="lld_new_review_card_inflect_true_from_your_corrections">"고친 문장으로 복습 카드 %d장이 생겼어요"</string>
     <string name="lld_of">"%1$d/%2$s"</string>
+    <string name="lld_of_7_days_active">"7일 중 %d일 공부했어요"</string>
     <string name="lld_of_lld">"%1$d / %2$d"</string>
     <!-- '#%lld of %lld' -->
     <string name="lld_of_lld_8e05fc">"%2$d명 중 %1$d위"</string>
@@ -1122,6 +1136,7 @@
     <string name="lld_of_lld_seats_taken">"%2$d자리 중 %1$d자리가 찼어요."</string>
     <string name="lld_of_your_turns_lld_min">"내 발화 %1$d번 · %2$d분"</string>
     <string name="lld_out_of_5">"5점 만점에 %d점"</string>
+    <string name="lld_runs">"%d번"</string>
     <string name="lld_scene_inflect_true_watched">"상황연습 %d개를 봤어요"</string>
     <string name="lld_scenes">"%d개"</string>
     <!-- '+ %lld scenes' -->
@@ -1134,6 +1149,7 @@
     <string name="lld_sessions">"세션 %1$d회 · %2$s"</string>
     <string name="lld_shadowing_take_inflect_true">"섀도잉 %d번"</string>
     <string name="lld_syllables_min">"분당 %d음절"</string>
+    <string name="lld_takes">"%d번"</string>
     <string name="lld_taking_part">"%d명 도전 중"</string>
     <string name="lld_talks_tap_for_calendar">"대화 %d회 · 탭하면 달력"</string>
     <string name="lld_thing_inflect_true_you_studied_said_out_loud">"공부한 것 %d개를 직접 말했어요"</string>
@@ -1227,6 +1243,9 @@
     <!-- 'min' -->
     <string name="min_b6c935">"분"</string>
     <string name="min_mo">"%s분/월"</string>
+    <string name="min_other_practice">"분 그 밖의 연습"</string>
+    <string name="min_studied">"분 공부"</string>
+    <string name="min_talking">"분 대화"</string>
     <string name="min_vs">"%2$s보다 %1$s분"</string>
     <string name="mine">"내 문장"</string>
     <string name="minutes">"분"</string>
@@ -1237,6 +1256,8 @@
     <string name="minutes_of_speaking_per_day">"하루에 말할 시간"</string>
     <!-- 'Minutes you actually spoke, per day. The dashed line is your %lld-minute daily goal.' -->
     <string name="minutes_you_actually_spoke_per_day_the_dashed_line_is_your_l_b779b3">"하루에 실제로 말한 시간이에요. 점선은 하루 목표 %d분이고요."</string>
+    <!-- 'Minutes you actually talked, per day. The dashed line is your %lld-minute daily goal.' -->
+    <string name="minutes_you_actually_talked_per_day_the_dashed_line_is_your_7e3d9a">"날마다 실제로 말한 시간이에요. 점선은 하루 목표 %d분이에요."</string>
     <string name="misheard">"잘못 들림"</string>
     <string name="misheard_exclude_from_scoring">"잘못 들림 — 채점에서 제외"</string>
     <string name="miss_a_day_and_the_count_starts_again_at_zero">"하루라도 빠지면 처음부터 다시예요."</string>
@@ -1317,6 +1338,7 @@
     <string name="next_lld">"다음 %d개"</string>
     <string name="next_one">"다음은 %s"</string>
     <string name="next_report_in_lldd_lld_more_minutes_of_practice">"다음 리포트까지 %1$d일 · 연습 %2$d분 더."</string>
+    <string name="next_shadowing">"다음: 섀도잉"</string>
     <string name="next_week_s_arrives">"다음 돌아보기는 %s에 도착해요"</string>
     <string name="next_word">"다음 단어"</string>
     <string name="nice">"좋아요"</string>
@@ -1416,6 +1438,7 @@
     <string name="nothing_to_study_yet_have_a_talk_or_watch_a_scene_first_the_0fc601">"아직 학습할 단어가 없어요 — 먼저 대화를 하거나 상황연습을 시청해 보세요. 거기서 나온 단어들이 여기로 배달돼요."</string>
     <string name="nothing_was_scored_this_time_the_mic_heard_no_speech">"이번엔 채점된 게 없어요. 마이크에 목소리가 들리지 않았어요."</string>
     <string name="nothing_yet">"아직 없어요"</string>
+    <string name="nothing_yet_in_this_period">"이 기간에는 아직 기록이 없어요."</string>
     <!-- "Nothing you hide is lost — your talk's book keeps every correction." -->
     <string name="nothing_you_hide_is_lost_your_talk_s_book_keeps_every_correc_4f2f1b">"숨겨도 사라지지 않아요. 통화 책에는 교정이 모두 남아요."</string>
     <string name="notice_how_it_s_done_not_just_what_s_said">"무슨 말을 했는지보다, 어떻게 풀어 가는지를 봐요."</string>
@@ -1492,6 +1515,7 @@
     <string name="other_learners_see_it_over_your_face_on_their_watch_map_writ_b92221">"다른 학습자의 상황연습 지도에서 내 얼굴 위에 떠요. %s로 써 주세요. 비워 두면 자기소개를 보고 알아서 써 둬요."</string>
     <!-- "Other learners who published an introduction. Talking with someone doesn't notify them — it's an AI speaking their introduction, in a stock voice, never theirs." -->
     <string name="other_learners_who_published_an_introduction_talking_with_so_5df6d6">"소개를 공개한 다른 학습자들이에요. 대화해도 상대에게 알림이 가지 않아요 — 그 사람의 소개를 AI가 기본 목소리로 말하는 것이고, 본인 목소리는 쓰이지 않아요."</string>
+    <string name="other_practice">"그 밖의 연습"</string>
     <string name="other_topics">"다른 주제"</string>
     <string name="overall">"전체"</string>
     <string name="overview">"개요"</string>
@@ -1521,6 +1545,7 @@
     <string name="people_you_ve_met">"만난 사람들"</string>
     <string name="people_your_own_cast">"사람: 나만의 대화 상대"</string>
     <string name="person">"인물"</string>
+    <string name="phone">"전화"</string>
     <string name="phone_mic">"폰 마이크"</string>
     <string name="photo">"사진"</string>
     <string name="photo_library">"사진 보관함"</string>
@@ -1779,15 +1804,21 @@
     <string name="run_again">"처음부터 다시"</string>
     <string name="s_100_seats_30_days_in_a_row_to_enter">"100자리 · 들어가려면 30일 연속"</string>
     <string name="s_1_book_finished">"끝낸 책 1권"</string>
+    <string name="s_1_card">"1장"</string>
+    <string name="s_1_expression">"표현 1개"</string>
     <string name="s_1_min">"약 1분"</string>
     <string name="s_1_minute_vary_your_pitch_a_little">"1분이면 돼요. 억양을 조금씩 바꿔가며 읽어 주세요."</string>
     <string name="s_1_more_meaning">"+뜻 1개 더"</string>
+    <string name="s_1_run">"1번"</string>
     <string name="s_1_scene">"상황연습 1개"</string>
+    <string name="s_1_take">"1번"</string>
+    <string name="s_1_word">"단어 1개"</string>
     <string name="s_1_word_phrase_or_line_is_waiting">"단어·표현·문장 1개가 기다리고 있어요."</string>
     <!-- '%.1f verified grammar slips per 100 spoken words — the same density the assessment weighs.' -->
     <string name="s_1f_verified_grammar_slips_per_100_spoken_words_the_same_de_b8c9f0">"말한 100단어당 확인된 문법 실수 %.1f개 — 레벨 평가가 보는 바로 그 수치예요."</string>
     <string name="s_3_days">"3일"</string>
     <string name="said_lld">"말한 횟수 %d번"</string>
+    <string name="same_as_before">"변화 없음"</string>
     <!-- 'Same bands as “How this is assessed” — tap a skill for its measured numbers.' -->
     <string name="same_bands_as_how_this_is_assessed_tap_a_skill_for_its_measu_19d33d">"“How this is assessed”와 같은 기준이에요. 항목을 누르면 실제로 잰 수치를 볼 수 있어요."</string>
     <string name="same_voice_new_language">"같은 목소리로 새 언어를"</string>
@@ -1838,10 +1869,12 @@
     <string name="scenarios">"상황"</string>
     <string name="scene">"상황연습"</string>
     <string name="scene_partner_voice">"상황연습 상대 목소리: %s"</string>
+    <string name="scenes">"장면"</string>
     <string name="scenes_refill_at_the_start_of_each_billing_period">"상황연습은 결제 주기가 시작될 때 새로 채워져요."</string>
     <string name="scenes_refill_on">"상황연습은 %s에 새로 채워져요."</string>
     <!-- "Scenes you've already watched replay free forever and never use a new one." -->
     <string name="scenes_you_ve_already_watched_replay_free_forever_and_never_d6d2d2">"이미 본 상황연습은 다시 봐도 그 수가 줄지 않아요."</string>
+    <string name="school">"학교"</string>
     <!-- "School, classes, YouTube, books, apps...\nYou tried so hard... didn't you?" -->
     <string name="school_classes_youtube_books_apps_you_tried_so_hard_didn_t_y_70dd65">"학교, 학원, 유튜브, 책, 앱...\n참 열심히 했는데... 그치?"</string>
     <string name="school_or_university">"학교 또는 대학"</string>
@@ -1906,6 +1939,7 @@
     <!-- "Shadow your fluent self's lines in your own voice. Slow it down, loop the part that trips you, until it comes out without thinking." -->
     <string name="shadow_your_fluent_self_s_lines_in_your_own_voice_slow_it_do_fafe50">"유창해진 내 목소리를 그대로 따라 말해요. 느리게, 걸리는 구간만 반복해서, 생각 없이 나올 때까지요."</string>
     <string name="shadowing">"섀도잉"</string>
+    <string name="shadowing_score">"섀도잉 점수"</string>
     <!-- 'Shadowing scores and review reps measure practice, not level. They live under Activity and in the Review tab — doing them makes you better, and the level moves only when your speech does.' -->
     <string name="shadowing_scores_and_review_reps_measure_practice_not_level_3e15b4">"섀도잉 점수와 복습 횟수는 레벨이 아니라 얼마나 연습했는지를 보여줘요. 활동과 복습 탭에 있고요. 연습하면 실력은 늘지만, 레벨은 실제로 말하는 게 달라져야 움직여요."</string>
     <string name="shadowing_words_replays_drills">"섀도잉·단어학습·대화 재생·드릴 복습"</string>
@@ -1915,9 +1949,11 @@
     <string name="share_card">"카드 공유"</string>
     <string name="share_invite">"초대 공유"</string>
     <string name="shared_context_memories_inside_jokes">"함께 아는 맥락, 추억, 우리끼리 농담"</string>
+    <string name="shopping">"쇼핑"</string>
     <string name="show_again_in_3_days">"3일 뒤에 다시 보기"</string>
     <string name="show_again_tomorrow">"내일 다시 보기"</string>
     <string name="show_each_guide_again_when_i_open_its_tab">"탭을 열 때 가이드 다시 보기"</string>
+    <string name="show_less">"접기"</string>
     <string name="show_my_photo">"내 사진 보이기"</string>
     <string name="show_the_talk">"그 통화 보기"</string>
     <string name="showing_earlier_stories">"지난 기사를 보여드리고 있어요"</string>
@@ -1949,6 +1985,7 @@
     <string name="small">"작게"</string>
     <string name="small_talk_with_a_coworker">"동료와 가벼운 이야기"</string>
     <string name="so_much_you_want_to_say_all_of_it_still_in_your_head">"하고 싶은 말은\n머릿속에 가득한데"</string>
+    <string name="social">"모임"</string>
     <!-- "Some unusual usage needs checking. Write to us and we'll sort it out — everything you've saved is untouched, and reviewing still works." -->
     <string name="some_unusual_usage_needs_checking_write_to_us_and_we_ll_sort_989cca">"평소와 다른 사용이 있어 확인하고 있어요. 메일을 보내 주시면 바로 정리해 드릴게요. 저장한 건 그대로고, 복습도 계속 할 수 있어요."</string>
     <string name="some_words_are_traps_you_don_t_have_to_use_them_all">"함정 단어도 있어요. 모든 단어를 다 쓰지 않아도 돼요."</string>
@@ -2071,11 +2108,14 @@
     <!-- 'Take your intro out of the pool? Learners who already met your persona keep their own past talks.' -->
     <string name="take_your_intro_out_of_the_pool_learners_who_already_met_you_863b54">"소개를 풀에서 내릴까요? 이미 내 페르소나를 만난 학습자의 지난 대화는 그 사람에게 남아 있어요."</string>
     <string name="takes">"테이크"</string>
+    <string name="takes_this_week">"이번 주 녹음"</string>
     <string name="talk">"대화"</string>
     <string name="talk_about_what_i_like">"좋아하는 걸 마음껏 이야기"</string>
     <string name="talk_as_much_as_you_want">"통화 시간 제한 없음"</string>
     <string name="talk_at_length_most_days">"거의 매일 길게 통화"</string>
     <string name="talk_book">"대화 책"</string>
+    <!-- 'talk' -->
+    <string name="talk_e55e91">"대화"</string>
     <string name="talk_for_about_10_minutes">"10분 정도 말하기"</string>
     <string name="talk_lld_minutes_a_day_lld_days_in_a_row">"Talk 하루 %1$d분씩, %2$d일 연속."</string>
     <!-- "Talk %lld more minutes and this level gets re-read from everything new you've said." -->
@@ -2096,6 +2136,8 @@
     <string name="talking_needs_a_plan">"대화하려면 요금제가 있어야 해요"</string>
     <string name="talking_to_your_future_self">"미래의 나와 통화"</string>
     <string name="talks">"통화"</string>
+    <!-- 'talks' -->
+    <string name="talks_b1cc1f">"대화"</string>
     <string name="talks_get_more_real_when_i_know_your_life">"일상을 알려주실수록 대화가 더 진짜 같아져요."</string>
     <string name="talks_to_you">"%s의 말투"</string>
     <!-- 'Tap a language to practice it. Its level calibrates every conversation. The daily goal drives the ring on Home; explanations come back in your app language.' -->
@@ -2348,6 +2390,8 @@
     <string name="time_for_your_expressions">"표현 연습할 시간이에요"</string>
     <string name="time_for_your_speech">"스피치할 시간이에요"</string>
     <string name="time_for_your_words">"단어 연습할 시간이에요"</string>
+    <!-- 'Time in the app, every day you opened it — talking, and everything around it: words, cards, shadowing, scenes.' -->
+    <string name="time_in_the_app_every_day_you_opened_it_talking_and_everythi_c65ddc">"앱을 연 날마다 앱에서 보낸 시간이에요. 대화와 그 주변의 모든 것, 단어·카드·섀도잉·장면까지요."</string>
     <string name="time_speaking">"말한 시간"</string>
     <!-- 'Time to meet the you who speaks perfect %@ — in your own voice. One minute of reading is all it takes.' -->
     <string name="time_to_meet_the_you_who_speaks_perfect_in_your_own_voice_on_e62699">"이제 내 목소리로 %s를 유창하게 하는 미래의 나를 만날 시간이에요. 1분만 읽으면 만들어져요."</string>
@@ -2481,6 +2525,8 @@
     <string name="voicepreset_male">"남성"</string>
     <string name="voicepreset_mark">"자연스러운 대화체"</string>
     <string name="voicepreset_paige">"생기 있고 자연스러운"</string>
+    <string name="vs_last_week">"지난주 대비"</string>
+    <string name="vs_previous_30_days">"지난 30일 대비"</string>
     <string name="waiting_for_the_first_sync">"첫 동기화를 기다리는 중"</string>
     <string name="warm_and_chatty">"다정한 수다쟁이"</string>
     <string name="watch">"상황연습"</string>
@@ -2493,6 +2539,11 @@
     <string name="watch_scenes">"상황연습"</string>
     <!-- "Watch shows that situation played out by your fluent self, in your voice. You come away with ideas: how to open, what to ask, which expressions work. Then you practice them until they're yours." -->
     <string name="watch_shows_that_situation_played_out_by_your_fluent_self_in_214796">"상황연습은 그 상황을 유창해진 내가 내 목소리로 해내는 장면으로 보여줘요. 어떻게 말을 꺼내고, 뭘 묻고, 어떤 표현을 쓰는지 아이디어를 얻은 다음, 연습해서 내 것으로 만들어요."</string>
+    <string name="watch_sky_backtome">"나에게"</string>
+    <string name="watch_sky_lens_known">"아는 사람"</string>
+    <string name="watch_sky_lens_mine">"내 사람"</string>
+    <string name="watch_sky_ring_close">"가까운 사람"</string>
+    <string name="watch_sky_ring_known">"주변 사람"</string>
     <!-- "Watch the scene and notice the moves you'd never have thought of." -->
     <string name="watch_the_scene_and_notice_the_moves_you_d_never_have_though_b126d7">"장면을 보면서 내가 생각 못 했던 말과 방법을 찾아요."</string>
     <string name="watch_the_scene_first">"장면을 먼저 보세요."</string>
@@ -2512,6 +2563,8 @@
     <!-- "We've paused talking on this account while we check some unusual usage. Write to us and we'll sort it out." -->
     <string name="we_ve_paused_talking_on_this_account_while_we_check_some_unu_7e9d82">"평소와 다른 사용이 있어 확인하는 동안 이 계정의 통화를 잠시 멈췄어요. 메일을 보내 주시면 바로 정리해 드릴게요."</string>
     <string name="week">"주"</string>
+    <!-- 'Week' -->
+    <string name="week_f82be6">"주"</string>
     <string name="weekdays">"평일"</string>
     <string name="weekends">"주말"</string>
     <string name="weekly">"주간"</string>
@@ -2524,6 +2577,7 @@
     <string name="what_did_you_do_today">"오늘 뭐 했어?"</string>
     <string name="what_do_you_want_it_for">"어디에 쓰고 싶어요?"</string>
     <string name="what_do_you_want_to_be_able_to_do_in">"%s로 뭘 할 수 있으면 좋겠어요?"</string>
+    <string name="what_each_day_was_made_of">"날마다 무엇을 했는지"</string>
     <!-- 'What each day was made of — talk turns, shadow takes, drill reviews.' -->
     <string name="what_each_day_was_made_of_talk_turns_shadow_takes_drill_revi_2a49f0">"그날 무엇으로 채웠는지 — 대화 턴, 섀도잉, 드릴 복습."</string>
     <string name="what_each_tab_is_for_and_how_to_use_it">"탭마다 무엇을 하는지, 어떻게 쓰는지"</string>

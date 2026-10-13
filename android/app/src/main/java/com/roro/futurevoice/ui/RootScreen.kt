@@ -546,12 +546,22 @@ fun RootScreen() {
             com.roro.futurevoice.data.AppUpdateService.pending.value != null
         if (!showWhatsNew && !anotherSheetUp && WhatsNew.isDue(context, state.setupComplete)) showWhatsNew = true
     }
+    var whatsNewGoals by remember { mutableStateOf(false) }
     if (showWhatsNew) {
         WhatsNewSheet(
-            // The talk settings sheet the goal lives in (iOS
-            // `DiscoverSettingsSheet`) arrives with the learning-purpose port.
-            onChooseGoal = {},
+            // iOS opens `DiscoverSettingsSheet` on top of the card.
+            onChooseGoal = { whatsNewGoals = true },
             onDismiss = { showWhatsNew = false },
+        )
+    }
+    if (whatsNewGoals) {
+        DiscoverSettingsSheet(
+            persona = state.persona,
+            language = state.targetLanguage,
+            onSavePersona = app::savePersona,
+            onDismiss = { whatsNewGoals = false },
+            // The Talk row re-reads its chips on a store revision.
+            onSaved = { StoreEvents.bump() },
         )
     }
     // The ElevenLabs → Cartesia voice move (iOS `offerVoiceMove`): a beat
@@ -1356,6 +1366,31 @@ fun RootScreen() {
             onOpenMe = { showMe = true },
             onOpenBook = { bookScenarioId = it },
             onOpenPeople = { showPeople = true },
+            onOpenProfile = { showMyProfileSheet = true },
+            // The Watch map's person card (iOS `SkyPersonCard`): Talk is a call
+            // with them, Watch a scene of the two of them past the hellos.
+            onTalkWithPerson = { c ->
+                callCast = if (c.remoteId == null) com.roro.futurevoice.talk.ConversationEngine.Cast.of(c)
+                else c.asPublicPersona(state.targetLanguage).let { p ->
+                    com.roro.futurevoice.talk.ConversationEngine.Cast(
+                        name = p.display_name, intro = p.intro, location = p.location,
+                        occupation = p.occupation, interests = p.interests,
+                        conversationStyle = p.conversation_style,
+                        commonGround = com.roro.futurevoice.talk.CommonGround.block(state.persona, com.roro.futurevoice.talk.CommonGround.of(p)))
+                }
+                callCastVoice = c.voicePresetId.takeIf { it.isNotBlank() }
+                callCounterpartId = c.id
+                gate {
+                    callTopic = ""; callFacts = emptyList(); callScenarioId = null
+                    inCall = true
+                }
+            },
+            onWatchWithPerson = { c -> gateScene {
+                gateScope.launch {
+                    val sc = meetingScenario(context, c, state.targetLanguage)
+                    watchReplay = false; watchScenarioId = sc.id
+                }
+            } },
             onOpenFinished = { finishedBooks = it },
             onOpenActivity = { showActivity = true },
             onOpenEffort = { showEffort = true },
@@ -1533,6 +1568,12 @@ internal fun HomeScreen(
     onOpenTalk: (String) -> Unit = {},
     onWatch: (String) -> Unit = {},
     onOpenPeople: () -> Unit = {},
+    /** The learner in the middle of the Watch map — their profile. */
+    onOpenProfile: () -> Unit = {},
+    /** The Watch map's person card: a call with them (gated here). */
+    onTalkWithPerson: (com.roro.futurevoice.data.Counterpart) -> Unit = {},
+    /** The Watch map's person card: a scene of the two of them (gated here). */
+    onWatchWithPerson: (com.roro.futurevoice.data.Counterpart) -> Unit = {},
     /** Practice's header seal → the finished-books page, with the books it counted. */
     onOpenFinished: (List<FinishedBook>) -> Unit = {},
     onOpenActivity: () -> Unit = {},
@@ -1663,6 +1704,10 @@ internal fun HomeScreen(
         permission.launch(Manifest.permission.RECORD_AUDIO)
     }
 
+    // Writing a situation on the Watch map: the tab bar steps aside for the
+    // box, and the title for Cancel (iOS `WatchCreation`).
+    val watchCreating by WatchCreation.creating.collectAsStateWithLifecycle()
+    val writingSituation = tab == HomeTab.WATCH && watchCreating
     Scaffold(
         topBar = {
             if (tab == HomeTab.TALK) {
@@ -1724,23 +1769,24 @@ internal fun HomeScreen(
                 TopAppBar(
                     colors = AppSurfaces.topBarColors(),
                     title = {
-                        val title = stringResource(tab.label)
-                        Text(title, style = DisplayFace.style(title,
-                            MaterialTheme.typography.headlineMedium))
+                        // Writing a situation, the title steps aside for
+                        // Cancel in its place (top left, like any compose
+                        // screen); the options on the right stay.
+                        if (writingSituation) {
+                            com.roro.futurevoice.ui.brand.IosGlassTextButton(stringResource(R.string.cancel),
+                                onClick = { WatchCreation.cancelTick.value += 1 })
+                        } else {
+                            val title = stringResource(tab.label)
+                            Text(title, style = DisplayFace.style(title,
+                                MaterialTheme.typography.headlineMedium))
+                        }
                     },
                     actions = {
                         // iOS 26 toolbar buttons: white glass, a circle for an
                         // icon and a capsule for icon + count.
                         // The people page opens from the WATCH header, as on iOS.
                         if (tab == HomeTab.WATCH) {
-                            com.roro.futurevoice.ui.brand.IosGlassButton(onClick = onOpenPeople,
-                                circle = true, modifier = Modifier.padding(end = 12.dp)) {
-                                // iOS draws `person.2` as an OUTLINE here.
-                                Icon(Icons.Outlined.People,
-                                    contentDescription = stringResource(R.string.people),
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(24.dp))
-                            }
+                            WatchHeaderActions(onOpenPeople = onOpenPeople)
                         }
                         // The week's things — put off, the week, the tests — as
                         // icons with a dot (iOS `weekToolbar`, 2026-10-03). The
@@ -1778,12 +1824,17 @@ internal fun HomeScreen(
             // Review and Progress are chip-tab PAGERS: each page scrolls
             // itself under a pinned chip bar (iOS), so the tab itself doesn't.
             val paged = t == HomeTab.PRACTICE || t == HomeTab.PROGRESS
+            // Watch is the people map: the whole screen is its canvas, under
+            // the header and the floating bar alike (iOS ignores both safe
+            // areas there), and it pans itself.
+            val canvas = t == HomeTab.WATCH
             Column(
-                Modifier.padding(top = padding.calculateTopPadding()).fillMaxSize()
+                Modifier.then(if (canvas) Modifier else Modifier.padding(top = padding.calculateTopPadding()))
+                    .fillMaxSize()
                     // A hidden tab stays composed but is neither measured nor
                     // placed: nothing drawn, no touches.
                     .then(if (t == tab) Modifier else Modifier.layout { _, _ -> layout(0, 0) {} })
-                    .then(if (paged) Modifier
+                    .then(if (paged || canvas) Modifier
                         else Modifier.verticalScroll(pageScroll).padding(horizontal = 20.dp)),
                 verticalArrangement = Arrangement.spacedBy(24.dp),
             ) {
@@ -1849,6 +1900,11 @@ internal fun HomeScreen(
                         language = state.targetLanguage,
                         enabled = state.voiceId != null,
                         onWatch = onWatch,
+                        meName = state.persona?.displayName.orEmpty(),
+                        onOpenProfile = onOpenProfile,
+                        onTalkWith = onTalkWithPerson,
+                        onWatchWith = onWatchWithPerson,
+                        onOpenTalk = onOpenTalk,
                     )
 
                     HomeTab.PRACTICE -> PracticeBody(
@@ -1887,7 +1943,7 @@ internal fun HomeScreen(
                     )
                 }
                 // Room to scroll the last item up past the floating bar.
-                if (!paged) Spacer(Modifier.height(IosTabBarClearance)
+                if (!paged && !canvas) Spacer(Modifier.height(IosTabBarClearance)
                     .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.navigationBars))
             }
 
@@ -1897,9 +1953,19 @@ internal fun HomeScreen(
         // from the physical bottom edge, 44 dp of page colour and a 72 dp
         // ramp to transparent above it, so pages dissolve as they slide
         // under the bar instead of running razor-sharp off the screen.
-        ScrollEdgeFeather(color = AppSurfaces.ground, modifier = Modifier.align(Alignment.BottomCenter))
-        IosTabBar(selected = tab, onSelect = onTabChange,
-            modifier = Modifier.align(Alignment.BottomCenter))
+        androidx.compose.animation.AnimatedVisibility(
+            visible = !writingSituation,
+            enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(300)) +
+                androidx.compose.animation.slideInVertically(androidx.compose.animation.core.tween(300)) { it },
+            exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(300)) +
+                androidx.compose.animation.slideOutVertically(androidx.compose.animation.core.tween(300)) { it },
+            modifier = Modifier.align(Alignment.BottomCenter),
+        ) {
+            Box(contentAlignment = Alignment.BottomCenter) {
+                ScrollEdgeFeather(color = AppSurfaces.ground)
+                IosTabBar(selected = tab, onSelect = onTabChange)
+            }
+        }
       }
     }
 }
@@ -2181,6 +2247,12 @@ private fun DiscoverSection(
         if (newExam != exam) { exam = newExam; examShift = 0 }
         val newDetails = com.roro.futurevoice.data.LearningPurposeStore.details(context)
         fieldTopics.keys.filter { PurposeTopicClient.field(it, newDetails) == null }.forEach { fieldTopics.remove(it) }
+    }
+    // A goal saved from somewhere else (the What's new card) reaches the row
+    // through a store revision, like iOS re-reading on appear.
+    val seenRevision = remember { mutableIntStateOf(revision) }
+    LaunchedEffect(revision) {
+        if (revision != seenRevision.intValue) { seenRevision.intValue = revision; settingsClosed() }
     }
 
     if (showingSettings) {

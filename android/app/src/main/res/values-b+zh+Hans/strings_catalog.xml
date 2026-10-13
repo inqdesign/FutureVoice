@@ -158,6 +158,7 @@
     <string name="ai_read_tap_to_apply">"AI判读：%s · 点击套用"</string>
     <string name="ai_tech">"AI · 科技"</string>
     <string name="airport_hotel_restaurants">"机场、酒店、餐厅"</string>
+    <string name="all_activity">"所有活动"</string>
     <string name="all_caught_up">"都完成了"</string>
     <string name="all_challenges">"所有挑战"</string>
     <string name="all_levels">"所有水平"</string>
@@ -239,6 +240,8 @@
     <string name="automatic">"自动"</string>
     <string name="available_with_or_without_a_plan">"不论是否订阅都能购买"</string>
     <string name="average_lld">"平均%d分"</string>
+    <string name="average_of_your_last_10_takes">"最近 10 次的平均"</string>
+    <string name="avg_a_day">"每天平均 %s"</string>
     <string name="back">"返回"</string>
     <string name="back_from_earlier">"先前延后的"</string>
     <string name="back_in_3_days">"3天后再出现"</string>
@@ -284,6 +287,8 @@
     <string name="busy_today">"今天忙吗？"</string>
     <string name="buy_lld_minutes">"购买 %d 分钟"</string>
     <string name="by_level">"依等级"</string>
+    <string name="cafe">"咖啡馆"</string>
+    <string name="calendar_and_routine">"日历与作息"</string>
     <string name="call">"电话"</string>
     <string name="call_me_every_day">"每天打给我"</string>
     <string name="call_paused_tap_to_pick_it_back_up">"通话暂停 · 点击继续"</string>
@@ -314,6 +319,7 @@
     <string name="capped_at_by_the_words_you_use_your_next_talk_will_be_read_f_13babf">"依你使用的单词先定在 ≈%s；下一次对话起，也会一并读取你组成的句子结构。"</string>
     <!-- "Captured from what you say, what your fluent self says back, and the expressions your watched scenes teach. Mark the ones you've got down as known." -->
     <string name="captured_from_what_you_say_what_your_fluent_self_says_back_a_21aa65">"收集你说的话、流利的自己回你的话，还有看过的情境练习教的用语。已经学会的，标为我会了。"</string>
+    <string name="cards_done">"卡片都看完了"</string>
     <string name="cards_done_now_say_it_out_loud">"卡片完成。现在大声说出来吧"</string>
     <string name="cards_you_put_off">"推迟的卡片"</string>
     <string name="casual">"轻松"</string>
@@ -373,6 +379,7 @@
     <string name="comfortable_lld_lld">"舒适范围 %1$d–%2$d"</string>
     <string name="common_situations">"常见情境"</string>
     <string name="comparing">"比较中…"</string>
+    <string name="composer_customsituation">"自己写的情境"</string>
     <string name="congratulations">"恭喜！"</string>
     <string name="connecting">"连接中…"</string>
     <string name="consent">"同意"</string>
@@ -447,6 +454,7 @@
     <string name="daily_goals">"每日目标"</string>
     <string name="daily_small_talk">"日常闲聊"</string>
     <string name="dark">"深色"</string>
+    <string name="dashed_line_your_daily_average_best_day">"虚线是每日平均。最多的一天：%1$s，%2$s。"</string>
     <string name="day">"天"</string>
     <string name="day_1">"第1天"</string>
     <string name="day_14">"第14天"</string>
@@ -614,6 +622,8 @@
     <string name="every_talk_becomes_your_own_textbook">"一通电话结束，\n就是一本自己的教材"</string>
     <!-- "Every talk in your routine with a set time is a call. Your phone rings then, even on silent. Can't talk? Just decline — nothing counts against you." -->
     <string name="every_talk_in_your_routine_with_a_set_time_is_a_call_your_ph_174441">"例行计划里有设定时间的对话就是一通电话。到时候即使静音也会响。不方便接就拒接，不会有任何影响。"</string>
+    <!-- 'Every word, expression and card you studied, shadow take, run and scene — one block each.' -->
+    <string name="every_word_expression_and_card_you_studied_shadow_take_run_a_66737b">"你学过的每个单词、用语、卡片，每次跟读、重说和情境，各算一格。"</string>
     <!-- 'Every word you say in a talk is collected and graded by CEFR — the level reads what you use, not what you know.' -->
     <string name="every_word_you_say_in_a_talk_is_collected_and_graded_by_cefr_81f280">"对话里真正说出口的单词会被收集起来，按CEFR分级。等级看的是你用的字，不是你会的字。"</string>
     <string name="everyday">"日常"</string>
@@ -797,6 +807,7 @@
     <string name="have_a_conversation_or_watch_a_scene_then_come_back_to_shado_9066e7">"聊一次或看一个场景，再回来跟读流利的自己说过的任何一句。"</string>
     <string name="have_an_invite_code">"有邀请码吗？"</string>
     <string name="headline">"标题"</string>
+    <string name="health">"健康"</string>
     <string name="hear_it">"听听看"</string>
     <string name="hear_it_again">"再听一次"</string>
     <string name="hear_it_in_the_app_write_it_here">"在 App 里听，在这里写"</string>
@@ -1094,8 +1105,10 @@
     <string name="lld_min_of_talk_lld_talk_inflect_true">"聊了%1$d分钟 · %2$d次"</string>
     <!-- '%lld min of talk over %lld days. See how it went, then take the test.' -->
     <string name="lld_min_of_talk_over_lld_days_see_how_it_went_then_take_the_dcd06c">"这周你有%2$d天在练，一共聊了%1$d分钟。回顾一下这一周，再做个测验吧。"</string>
+    <string name="lld_min_other_practice">"其他练习 %d 分钟"</string>
     <string name="lld_min_talked">"通话%d分钟"</string>
     <string name="lld_min_talked_this_month">"本月已通话%d分钟"</string>
+    <string name="lld_min_talking">"对话 %d 分钟"</string>
     <string name="lld_min_this_week">"本周%d分钟"</string>
     <string name="lld_min_used_lld_min_left">"已用%1$d分钟 · 剩%2$d分钟"</string>
     <string name="lld_minutes_a_month">"每月%d分钟"</string>
@@ -1110,6 +1123,7 @@
     <string name="lld_new_phrase_inflect_true_from_your_fluent_self">"流利的自己带来%d个新用语"</string>
     <string name="lld_new_review_card_inflect_true_from_your_corrections">"从纠正里多了%d张复习卡"</string>
     <string name="lld_of">"%1$d/%2$s"</string>
+    <string name="lld_of_7_days_active">"7 天中有 %d 天学习"</string>
     <string name="lld_of_lld">"%1$d / %2$d"</string>
     <!-- '#%lld of %lld' -->
     <string name="lld_of_lld_8e05fc">"%2$d 人中第 %1$d 名"</string>
@@ -1121,6 +1135,7 @@
     <string name="lld_of_lld_seats_taken">"%2$d席中已坐了%1$d席。"</string>
     <string name="lld_of_your_turns_lld_min">"我的发言%1$d轮 · %2$d分钟"</string>
     <string name="lld_out_of_5">"5 分中 %d 分"</string>
+    <string name="lld_runs">"%d 次"</string>
     <string name="lld_scene_inflect_true_watched">"看了%d个情境"</string>
     <string name="lld_scenes">"%d场"</string>
     <!-- '+ %lld scenes' -->
@@ -1133,6 +1148,7 @@
     <string name="lld_sessions">"练习%1$d次 · %2$s"</string>
     <string name="lld_shadowing_take_inflect_true">"跟读%d次"</string>
     <string name="lld_syllables_min">"每分钟 %d 音节"</string>
+    <string name="lld_takes">"%d 次"</string>
     <string name="lld_taking_part">"%d 人参加"</string>
     <string name="lld_talks_tap_for_calendar">"通话%d次 · 点击看日历"</string>
     <string name="lld_thing_inflect_true_you_studied_said_out_loud">"学过的东西，亲口说出了%d个"</string>
@@ -1226,6 +1242,9 @@
     <!-- 'min' -->
     <string name="min_b6c935">"分钟"</string>
     <string name="min_mo">"%s分钟/月"</string>
+    <string name="min_other_practice">"分钟其他练习"</string>
+    <string name="min_studied">"分钟学习"</string>
+    <string name="min_talking">"分钟对话"</string>
     <string name="min_vs">"%1$s分钟 vs %2$s"</string>
     <string name="mine">"我的句子"</string>
     <string name="minutes">"分钟"</string>
@@ -1236,6 +1255,8 @@
     <string name="minutes_of_speaking_per_day">"每天说话的时间"</string>
     <!-- 'Minutes you actually spoke, per day. The dashed line is your %lld-minute daily goal.' -->
     <string name="minutes_you_actually_spoke_per_day_the_dashed_line_is_your_l_b779b3">"每天实际说话的分钟数。虚线是你每天%d分钟的目标。"</string>
+    <!-- 'Minutes you actually talked, per day. The dashed line is your %lld-minute daily goal.' -->
+    <string name="minutes_you_actually_talked_per_day_the_dashed_line_is_your_7e3d9a">"每天实际开口说话的分钟数。虚线是你每天 %d 分钟的目标。"</string>
     <string name="misheard">"听错了"</string>
     <string name="misheard_exclude_from_scoring">"听错了 · 不列入计分"</string>
     <string name="miss_a_day_and_the_count_starts_again_at_zero">"只要漏掉一天，就从零重新开始。"</string>
@@ -1316,6 +1337,7 @@
     <string name="next_lld">"接下来%d个"</string>
     <string name="next_one">"下次 %s"</string>
     <string name="next_report_in_lldd_lld_more_minutes_of_practice">"距离下次报告还有%1$d天 · 再练习%2$d分钟。"</string>
+    <string name="next_shadowing">"下一步：跟读"</string>
     <string name="next_week_s_arrives">"下一份 %s 送达"</string>
     <string name="next_word">"下一个单词"</string>
     <string name="nice">"不错"</string>
@@ -1415,6 +1437,7 @@
     <string name="nothing_to_study_yet_have_a_talk_or_watch_a_scene_first_the_0fc601">"还没有可以学的单词。先聊一通电话，或看一场情境练习，那里出现的单词会送到这里。"</string>
     <string name="nothing_was_scored_this_time_the_mic_heard_no_speech">"这次没有评分，麦克风没有听到声音。"</string>
     <string name="nothing_yet">"还没有"</string>
+    <string name="nothing_yet_in_this_period">"这段时间还没有记录。"</string>
     <!-- "Nothing you hide is lost — your talk's book keeps every correction." -->
     <string name="nothing_you_hide_is_lost_your_talk_s_book_keeps_every_correc_4f2f1b">"隐藏不会弄丢任何东西，通话复习本里每一条修正都还在。"</string>
     <string name="notice_how_it_s_done_not_just_what_s_said">"不只看说了什么，更要看怎么说。"</string>
@@ -1491,6 +1514,7 @@
     <string name="other_learners_see_it_over_your_face_on_their_watch_map_writ_b92221">"会显示在其他学习者的情境练习地图上、你的头像上方。请用%s写；留空的话会根据你的自我介绍自动写。"</string>
     <!-- "Other learners who published an introduction. Talking with someone doesn't notify them — it's an AI speaking their introduction, in a stock voice, never theirs." -->
     <string name="other_learners_who_published_an_introduction_talking_with_so_5df6d6">"这些是公开了自我介绍的其他学习者。跟他们对话不会通知对方。是AI用默认声音念出那个人的自我介绍，不会用到本人的声音。"</string>
+    <string name="other_practice">"其他练习"</string>
     <string name="other_topics">"其他话题"</string>
     <string name="overall">"整体"</string>
     <string name="overview">"总览"</string>
@@ -1520,6 +1544,7 @@
     <string name="people_you_ve_met">"见过的人"</string>
     <string name="people_your_own_cast">"人物：你自己的角色阵容"</string>
     <string name="person">"人物"</string>
+    <string name="phone">"电话"</string>
     <string name="phone_mic">"手机麦克风"</string>
     <string name="photo">"照片"</string>
     <string name="photo_library">"照片图库"</string>
@@ -1778,15 +1803,21 @@
     <string name="run_again">"从头再来"</string>
     <string name="s_100_seats_30_days_in_a_row_to_enter">"100席 · 连续30天才能进入"</string>
     <string name="s_1_book_finished">"完成的复习本1本"</string>
+    <string name="s_1_card">"1 张"</string>
+    <string name="s_1_expression">"用语1个"</string>
     <string name="s_1_min">"约1分钟"</string>
     <string name="s_1_minute_vary_your_pitch_a_little">"1分钟就够。读的时候语调稍微变化一下。"</string>
     <string name="s_1_more_meaning">"+还有1个意思"</string>
+    <string name="s_1_run">"1 次"</string>
     <string name="s_1_scene">"情境练习1场"</string>
+    <string name="s_1_take">"1 次"</string>
+    <string name="s_1_word">"单词1个"</string>
     <string name="s_1_word_phrase_or_line_is_waiting">"有1个单词、用语或句子在等你。"</string>
     <!-- '%.1f verified grammar slips per 100 spoken words — the same density the assessment weighs.' -->
     <string name="s_1f_verified_grammar_slips_per_100_spoken_words_the_same_de_b8c9f0">"每说 100 个字有 %.1f 个确认到的语法错误，和等级评估看的是同一个数字。"</string>
     <string name="s_3_days">"3天"</string>
     <string name="said_lld">"说过%d次"</string>
+    <string name="same_as_before">"没有变化"</string>
     <!-- 'Same bands as “How this is assessed” — tap a skill for its measured numbers.' -->
     <string name="same_bands_as_how_this_is_assessed_tap_a_skill_for_its_measu_19d33d">"和「判定方式」用的是同一套标准。点击项目就能看到实际量到的数字。"</string>
     <string name="same_voice_new_language">"同一个声音，新的语言"</string>
@@ -1837,10 +1868,12 @@
     <string name="scenarios">"情境"</string>
     <string name="scene">"情境练习"</string>
     <string name="scene_partner_voice">"情境练习对方的声音：%s"</string>
+    <string name="scenes">"情境"</string>
     <string name="scenes_refill_at_the_start_of_each_billing_period">"情境练习的次数会在每个账单周期开始时补满。"</string>
     <string name="scenes_refill_on">"情境练习的次数会在%s补满。"</string>
     <!-- "Scenes you've already watched replay free forever and never use a new one." -->
     <string name="scenes_you_ve_already_watched_replay_free_forever_and_never_d6d2d2">"看过的情境练习再看几次都不会扣次数。"</string>
+    <string name="school">"学校"</string>
     <!-- "School, classes, YouTube, books, apps...\nYou tried so hard... didn't you?" -->
     <string name="school_classes_youtube_books_apps_you_tried_so_hard_didn_t_y_70dd65">"学校、培训班、YouTube、书、App……\n你真的很努力了，对吧？"</string>
     <string name="school_or_university">"学校或大学"</string>
@@ -1905,6 +1938,7 @@
     <!-- "Shadow your fluent self's lines in your own voice. Slow it down, loop the part that trips you, until it comes out without thinking." -->
     <string name="shadow_your_fluent_self_s_lines_in_your_own_voice_slow_it_do_fafe50">"用自己的声音跟着流利的自己说。放慢，只重复卡住的地方，练到不用想就能说出口。"</string>
     <string name="shadowing">"跟读"</string>
+    <string name="shadowing_score">"跟读分数"</string>
     <!-- 'Shadowing scores and review reps measure practice, not level. They live under Activity and in the Review tab — doing them makes you better, and the level moves only when your speech does.' -->
     <string name="shadowing_scores_and_review_reps_measure_practice_not_level_3e15b4">"跟读分数和复习次数看的是练习量，不是水平。它们在活动和复习页里。练习会让你进步，但水平只有在实际说出口的话改变时才会动。"</string>
     <string name="shadowing_words_replays_drills">"跟读·单词学习·对话重听·训练复习"</string>
@@ -1914,9 +1948,11 @@
     <string name="share_card">"分享卡片"</string>
     <string name="share_invite">"分享邀请"</string>
     <string name="shared_context_memories_inside_jokes">"共同的背景、回忆、只有你们懂的笑话"</string>
+    <string name="shopping">"购物"</string>
     <string name="show_again_in_3_days">"3 天后再看"</string>
     <string name="show_again_tomorrow">"明天再看"</string>
     <string name="show_each_guide_again_when_i_open_its_tab">"打开页面时再次显示指南"</string>
+    <string name="show_less">"收起"</string>
     <string name="show_my_photo">"显示我的照片"</string>
     <string name="show_the_talk">"看那次通话"</string>
     <string name="showing_earlier_stories">"目前显示的是先前的新闻"</string>
@@ -1948,6 +1984,7 @@
     <string name="small">"小"</string>
     <string name="small_talk_with_a_coworker">"和同事闲聊"</string>
     <string name="so_much_you_want_to_say_all_of_it_still_in_your_head">"想说的话\n明明都在脑子里"</string>
+    <string name="social">"社交"</string>
     <!-- "Some unusual usage needs checking. Write to us and we'll sort it out — everything you've saved is untouched, and reviewing still works." -->
     <string name="some_unusual_usage_needs_checking_write_to_us_and_we_ll_sort_989cca">"检测到不太寻常的使用状况，正在确认中。写信给我们，我们会马上处理。你存下的东西都还在，复习也照常可用。"</string>
     <string name="some_words_are_traps_you_don_t_have_to_use_them_all">"有些是陷阱单词，不用全部用上。"</string>
@@ -2070,11 +2107,14 @@
     <!-- 'Take your intro out of the pool? Learners who already met your persona keep their own past talks.' -->
     <string name="take_your_intro_out_of_the_pool_learners_who_already_met_you_863b54">"要把自我介绍从人物池撤下吗？已经和你的角色聊过的学习者，会保留他们自己的过往通话。"</string>
     <string name="takes">"版本"</string>
+    <string name="takes_this_week">"本周次数"</string>
     <string name="talk">"对话"</string>
     <string name="talk_about_what_i_like">"尽情聊喜欢的事"</string>
     <string name="talk_as_much_as_you_want">"通话时间不设限"</string>
     <string name="talk_at_length_most_days">"几乎每天长时间通话"</string>
     <string name="talk_book">"通话复习本"</string>
+    <!-- 'talk' -->
+    <string name="talk_e55e91">"对话"</string>
     <string name="talk_for_about_10_minutes">"说大约 10 分钟"</string>
     <string name="talk_lld_minutes_a_day_lld_days_in_a_row">"每天通话%1$d分钟，连续%2$d天。"</string>
     <!-- "Talk %lld more minutes and this level gets re-read from everything new you've said." -->
@@ -2095,6 +2135,8 @@
     <string name="talking_needs_a_plan">"通话需要方案"</string>
     <string name="talking_to_your_future_self">"和未来的自己通话"</string>
     <string name="talks">"通话"</string>
+    <!-- 'talks' -->
+    <string name="talks_b1cc1f">"对话"</string>
     <string name="talks_get_more_real_when_i_know_your_life">"越了解你的生活，对话就越真实。"</string>
     <string name="talks_to_you">"%s的语气"</string>
     <!-- 'Tap a language to practice it. Its level calibrates every conversation. The daily goal drives the ring on Home; explanations come back in your app language.' -->
@@ -2347,6 +2389,8 @@
     <string name="time_for_your_expressions">"该练习用语了"</string>
     <string name="time_for_your_speech">"该练演讲了"</string>
     <string name="time_for_your_words">"该练习单词了"</string>
+    <!-- 'Time in the app, every day you opened it — talking, and everything around it: words, cards, shadowing, scenes.' -->
+    <string name="time_in_the_app_every_day_you_opened_it_talking_and_everythi_c65ddc">"每天打开 App 的使用时间，包括对话，以及单词、卡片、跟读、情境等所有练习。"</string>
     <string name="time_speaking">"说话时间"</string>
     <!-- 'Time to meet the you who speaks perfect %@ — in your own voice. One minute of reading is all it takes.' -->
     <string name="time_to_meet_the_you_who_speaks_perfect_in_your_own_voice_on_e62699">"该来见见用自己的声音、把%s说得流利的未来的自己了。只要读1分钟就能做好。"</string>
@@ -2480,6 +2524,8 @@
     <string name="voicepreset_male">"男声"</string>
     <string name="voicepreset_mark">"自然、像聊天"</string>
     <string name="voicepreset_paige">"亲切、自然"</string>
+    <string name="vs_last_week">"与上周相比"</string>
+    <string name="vs_previous_30_days">"与前 30 天相比"</string>
     <string name="waiting_for_the_first_sync">"等待第一次同步"</string>
     <string name="warm_and_chatty">"温暖又爱聊"</string>
     <string name="watch">"情境练习"</string>
@@ -2492,6 +2538,11 @@
     <string name="watch_scenes">"情境练习"</string>
     <!-- "Watch shows that situation played out by your fluent self, in your voice. You come away with ideas: how to open, what to ask, which expressions work. Then you practice them until they're yours." -->
     <string name="watch_shows_that_situation_played_out_by_your_fluent_self_in_214796">"情境会让流利的自己用你的声音把那个情况演一遍。你会得到思路：怎么开口、问什么、哪些用语管用。然后反复练习，直到变成你自己的。"</string>
+    <string name="watch_sky_backtome">"回到我"</string>
+    <string name="watch_sky_lens_known">"认识的人"</string>
+    <string name="watch_sky_lens_mine">"我的人"</string>
+    <string name="watch_sky_ring_close">"亲近的人"</string>
+    <string name="watch_sky_ring_known">"身边的人"</string>
     <!-- "Watch the scene and notice the moves you'd never have thought of." -->
     <string name="watch_the_scene_and_notice_the_moves_you_d_never_have_though_b126d7">"看情境，找出那些你自己想不到的说法和做法。"</string>
     <string name="watch_the_scene_first">"先看场景。"</string>
@@ -2511,6 +2562,8 @@
     <!-- "We've paused talking on this account while we check some unusual usage. Write to us and we'll sort it out." -->
     <string name="we_ve_paused_talking_on_this_account_while_we_check_some_unu_7e9d82">"因为有些不寻常的使用情况，确认期间先暂停了这个账号的通话。写信给我们，会马上处理。"</string>
     <string name="week">"周"</string>
+    <!-- 'Week' -->
+    <string name="week_f82be6">"周"</string>
     <string name="weekdays">"工作日"</string>
     <string name="weekends">"周末"</string>
     <string name="weekly">"每周"</string>
@@ -2523,6 +2576,7 @@
     <string name="what_did_you_do_today">"今天做了什么？"</string>
     <string name="what_do_you_want_it_for">"想用在哪儿？"</string>
     <string name="what_do_you_want_to_be_able_to_do_in">"希望能用%s做什么？"</string>
+    <string name="what_each_day_was_made_of">"每天做了什么"</string>
     <!-- 'What each day was made of — talk turns, shadow takes, drill reviews.' -->
     <string name="what_each_day_was_made_of_talk_turns_shadow_takes_drill_revi_2a49f0">"那天是由什么组成的：对话回合、跟读、训练复习。"</string>
     <string name="what_each_tab_is_for_and_how_to_use_it">"每个页面的用途和用法"</string>

@@ -158,6 +158,7 @@
     <string name="ai_read_tap_to_apply">"Niveau selon l’IA : %s — touche pour appliquer"</string>
     <string name="ai_tech">"IA · tech"</string>
     <string name="airport_hotel_restaurants">"Aéroport, hôtel, restaurants"</string>
+    <string name="all_activity">"Toute l’activité"</string>
     <string name="all_caught_up">"Tout est à jour"</string>
     <string name="all_challenges">"Tous les défis"</string>
     <string name="all_levels">"Tous les niveaux"</string>
@@ -239,6 +240,8 @@
     <string name="automatic">"Automatique"</string>
     <string name="available_with_or_without_a_plan">"Disponible avec ou sans formule"</string>
     <string name="average_lld">"moyenne %d"</string>
+    <string name="average_of_your_last_10_takes">"moyenne de tes 10 dernières prises"</string>
+    <string name="avg_a_day">"en moyenne %s par jour"</string>
     <string name="back">"Retour"</string>
     <string name="back_from_earlier">"Remis à plus tard"</string>
     <string name="back_in_3_days">"Revient dans 3 jours"</string>
@@ -284,6 +287,8 @@
     <string name="busy_today">"Journée chargée aujourd’hui ?"</string>
     <string name="buy_lld_minutes">"Acheter %d minutes"</string>
     <string name="by_level">"Par niveau"</string>
+    <string name="cafe">"Café"</string>
+    <string name="calendar_and_routine">"Calendrier et routine"</string>
     <string name="call">"Appel"</string>
     <string name="call_me_every_day">"Appelle-moi tous les jours"</string>
     <string name="call_paused_tap_to_pick_it_back_up">"Appel en pause · touche pour reprendre"</string>
@@ -311,6 +316,7 @@
     <string name="capped_at_by_the_words_you_use_your_next_talk_will_be_read_f_13babf">"Plafonné à ≈%s par les mots que tu utilises : ta prochaine conversation sera aussi lue pour les structures que tu construis."</string>
     <!-- "Captured from what you say, what your fluent self says back, and the expressions your watched scenes teach. Mark the ones you've got down as known." -->
     <string name="captured_from_what_you_say_what_your_fluent_self_says_back_a_21aa65">"Récupérés de ce que tu dis, de ce que ton moi fluide te répond et des expressions qu’enseignent les scènes que tu regardes. Marque comme acquis ceux que tu maîtrises."</string>
+    <string name="cards_done">"Cartes terminées"</string>
     <string name="cards_done_now_say_it_out_loud">"Cartes terminées — maintenant, dis-le à voix haute"</string>
     <string name="cards_you_put_off">"Cartes reportées"</string>
     <string name="casual">"Familier"</string>
@@ -370,6 +376,7 @@
     <string name="comfortable_lld_lld">"Plage idéale : %1$d–%2$d"</string>
     <string name="common_situations">"Situations courantes"</string>
     <string name="comparing">"Comparaison…"</string>
+    <string name="composer_customsituation">"Situation personnelle"</string>
     <string name="congratulations">"Félicitations !"</string>
     <string name="connecting">"Connexion…"</string>
     <string name="consent">"Consentement"</string>
@@ -444,6 +451,7 @@
     <string name="daily_goals">"Objectifs du jour"</string>
     <string name="daily_small_talk">"Papoter au quotidien"</string>
     <string name="dark">"Sombre"</string>
+    <string name="dashed_line_your_daily_average_best_day">"Ligne pointillée : ta moyenne par jour. Meilleur jour : %1$s, %2$s."</string>
     <string name="day">"Jour"</string>
     <string name="day_1">"Jour 1"</string>
     <string name="day_14">"Jour 14"</string>
@@ -611,6 +619,8 @@
     <string name="every_talk_becomes_your_own_textbook">"Chaque appel devient\nton propre manuel"</string>
     <!-- "Every talk in your routine with a set time is a call. Your phone rings then, even on silent. Can't talk? Just decline — nothing counts against you." -->
     <string name="every_talk_in_your_routine_with_a_set_time_is_a_call_your_ph_174441">"Chaque conversation à heure fixe de ta routine est un appel. Ton téléphone sonne à ce moment-là, même en silencieux. Pas dispo ? Refuse, ça ne compte pas contre toi."</string>
+    <!-- 'Every word, expression and card you studied, shadow take, run and scene — one block each.' -->
+    <string name="every_word_expression_and_card_you_studied_shadow_take_run_a_66737b">"Chaque mot, expression et carte étudiés, chaque prise de shadowing, chaque reprise et chaque scène : un bloc chacun."</string>
     <!-- 'Every word you say in a talk is collected and graded by CEFR — the level reads what you use, not what you know.' -->
     <string name="every_word_you_say_in_a_talk_is_collected_and_graded_by_cefr_81f280">"Les mots réellement dits pendant un appel sont réunis et notés selon le CEFR — le niveau lit ce que tu utilises, pas ce que tu connais."</string>
     <string name="everyday">"Quotidien"</string>
@@ -794,6 +804,7 @@
     <string name="have_a_conversation_or_watch_a_scene_then_come_back_to_shado_9066e7">"Fais un appel ou regarde une scène, puis reviens faire du shadowing sur une phrase de ton moi fluide."</string>
     <string name="have_an_invite_code">"Tu as un code d’invitation ?"</string>
     <string name="headline">"Titre"</string>
+    <string name="health">"Santé"</string>
     <string name="hear_it">"Écouter"</string>
     <string name="hear_it_again">"Réécouter"</string>
     <string name="hear_it_in_the_app_write_it_here">"Écoute dans l’app, écris ici"</string>
@@ -1091,8 +1102,10 @@
     <string name="lld_min_of_talk_lld_talk_inflect_true">"%1$d min de conversation · ^[%2$d échange](inflect: true)"</string>
     <!-- '%lld min of talk over %lld days. See how it went, then take the test.' -->
     <string name="lld_min_of_talk_over_lld_days_see_how_it_went_then_take_the_dcd06c">"%1$d min de conversation sur ^[%2$d jour](inflect: true). Revois ta semaine, puis passe le test."</string>
+    <string name="lld_min_other_practice">"%d min d’autre pratique"</string>
     <string name="lld_min_talked">"%d min d’appel"</string>
     <string name="lld_min_talked_this_month">"%d min d’appel ce mois-ci"</string>
+    <string name="lld_min_talking">"%d min de conversation"</string>
     <string name="lld_min_this_week">"%d min cette semaine"</string>
     <string name="lld_min_used_lld_min_left">"%1$d min utilisées · %2$d min restantes"</string>
     <string name="lld_minutes_a_month">"%d minutes par mois"</string>
@@ -1107,6 +1120,7 @@
     <string name="lld_new_phrase_inflect_true_from_your_fluent_self">"^[%d nouvelle expression](inflect: true) de ton moi fluide"</string>
     <string name="lld_new_review_card_inflect_true_from_your_corrections">"^[%d nouvelle carte](inflect: true) de révision tirée de tes corrections"</string>
     <string name="lld_of">"%1$d sur %2$s"</string>
+    <string name="lld_of_7_days_active">"%d jours actifs sur 7"</string>
     <string name="lld_of_lld">"%1$d / %2$d"</string>
     <!-- '#%lld of %lld' -->
     <string name="lld_of_lld_8e05fc">"Rang %1$d sur %2$d"</string>
@@ -1118,6 +1132,7 @@
     <string name="lld_of_lld_seats_taken">"%1$d places prises sur %2$d."</string>
     <string name="lld_of_your_turns_lld_min">"%1$d tours de parole à toi · %2$d min"</string>
     <string name="lld_out_of_5">"%d sur 5"</string>
+    <string name="lld_runs">"%d fois"</string>
     <string name="lld_scene_inflect_true_watched">"^[%d scène regardée](inflect: true)"</string>
     <string name="lld_scenes">"%d scènes"</string>
     <!-- '+ %lld scenes' -->
@@ -1130,6 +1145,7 @@
     <string name="lld_sessions">"%1$d sessions · %2$s"</string>
     <string name="lld_shadowing_take_inflect_true">"^[%d prise](inflect: true) de shadowing"</string>
     <string name="lld_syllables_min">"%d syllabes/min"</string>
+    <string name="lld_takes">"%d prises"</string>
     <string name="lld_taking_part">"%d participants"</string>
     <string name="lld_talks_tap_for_calendar">"%d appels · touche pour le calendrier"</string>
     <string name="lld_thing_inflect_true_you_studied_said_out_loud">"^[%d chose travaillée](inflect: true), dite à voix haute"</string>
@@ -1223,6 +1239,9 @@
     <!-- 'min' -->
     <string name="min_b6c935">"min"</string>
     <string name="min_mo">"%s min/mois"</string>
+    <string name="min_other_practice">"min d’autre pratique"</string>
+    <string name="min_studied">"min d’étude"</string>
+    <string name="min_talking">"min de conversation"</string>
     <string name="min_vs">"%1$s min contre %2$s"</string>
     <string name="mine">"À toi"</string>
     <string name="minutes">"Minutes"</string>
@@ -1233,6 +1252,8 @@
     <string name="minutes_of_speaking_per_day">"Minutes de parole par jour"</string>
     <!-- 'Minutes you actually spoke, per day. The dashed line is your %lld-minute daily goal.' -->
     <string name="minutes_you_actually_spoke_per_day_the_dashed_line_is_your_l_b779b3">"Les minutes où tu as vraiment parlé, jour par jour. La ligne pointillée, c’est ton objectif de %d minutes par jour."</string>
+    <!-- 'Minutes you actually talked, per day. The dashed line is your %lld-minute daily goal.' -->
+    <string name="minutes_you_actually_talked_per_day_the_dashed_line_is_your_7e3d9a">"Les minutes où tu as vraiment parlé, jour par jour. La ligne pointillée est ton objectif de %d minutes par jour."</string>
     <string name="misheard">"Mal entendu"</string>
     <string name="misheard_exclude_from_scoring">"Mal entendu — exclure de la note"</string>
     <string name="miss_a_day_and_the_count_starts_again_at_zero">"Un jour manqué et le compte repart à zéro."</string>
@@ -1313,6 +1334,7 @@
     <string name="next_lld">"%d de plus"</string>
     <string name="next_one">"Prochain %s"</string>
     <string name="next_report_in_lldd_lld_more_minutes_of_practice">"Prochain rapport dans %1$d j · encore %2$d min de pratique."</string>
+    <string name="next_shadowing">"Ensuite : shadowing"</string>
     <string name="next_week_s_arrives">"La prochaine arrive le %s"</string>
     <string name="next_word">"Mot suivant"</string>
     <string name="nice">"Bien"</string>
@@ -1412,6 +1434,7 @@
     <string name="nothing_to_study_yet_have_a_talk_or_watch_a_scene_first_the_0fc601">"Rien à étudier pour l’instant — commence par un appel ou une scène ; les mots qui en sortent arrivent ici."</string>
     <string name="nothing_was_scored_this_time_the_mic_heard_no_speech">"Rien n’a été noté cette fois : le micro n’a entendu aucune voix."</string>
     <string name="nothing_yet">"Rien pour l’instant"</string>
+    <string name="nothing_yet_in_this_period">"Rien pour l’instant sur cette période."</string>
     <!-- "Nothing you hide is lost — your talk's book keeps every correction." -->
     <string name="nothing_you_hide_is_lost_your_talk_s_book_keeps_every_correc_4f2f1b">"Rien de ce que tu masques n’est perdu : le carnet d’appel garde toutes les corrections."</string>
     <string name="notice_how_it_s_done_not_just_what_s_said">"Remarque comment c’est fait, pas seulement ce qui est dit."</string>
@@ -1488,6 +1511,7 @@
     <string name="other_learners_see_it_over_your_face_on_their_watch_map_writ_b92221">"Les autres apprenants le voient au-dessus de ton visage sur leur carte Scènes. Écris-le en %s ; laissé vide, il est écrit à partir de ta présentation."</string>
     <!-- "Other learners who published an introduction. Talking with someone doesn't notify them — it's an AI speaking their introduction, in a stock voice, never theirs." -->
     <string name="other_learners_who_published_an_introduction_talking_with_so_5df6d6">"D’autres personnes qui apprennent et ont publié une présentation. Leur parler ne leur envoie aucune notification — c’est une IA qui lit leur présentation avec une voix standard, jamais la leur."</string>
+    <string name="other_practice">"Autre pratique"</string>
     <string name="other_topics">"Autres sujets"</string>
     <string name="overall">"Global"</string>
     <string name="overview">"Aperçu"</string>
@@ -1517,6 +1541,7 @@
     <string name="people_you_ve_met">"Personnes rencontrées"</string>
     <string name="people_your_own_cast">"Personnes : tes interlocuteurs"</string>
     <string name="person">"Personnalité"</string>
+    <string name="phone">"Téléphone"</string>
     <string name="phone_mic">"Micro du téléphone"</string>
     <string name="photo">"Photo"</string>
     <string name="photo_library">"Photothèque"</string>
@@ -1775,15 +1800,21 @@
     <string name="run_again">"Recommencer"</string>
     <string name="s_100_seats_30_days_in_a_row_to_enter">"100 places · 30 jours d’affilée pour entrer"</string>
     <string name="s_1_book_finished">"1 carnet terminé"</string>
+    <string name="s_1_card">"1 carte"</string>
+    <string name="s_1_expression">"1 expression"</string>
     <string name="s_1_min">"~1 min"</string>
     <string name="s_1_minute_vary_your_pitch_a_little">"1 minute suffit. Lis en variant un peu l’intonation."</string>
     <string name="s_1_more_meaning">"+1 sens de plus"</string>
+    <string name="s_1_run">"1 fois"</string>
     <string name="s_1_scene">"1 scène"</string>
+    <string name="s_1_take">"1 prise"</string>
+    <string name="s_1_word">"1 mot"</string>
     <string name="s_1_word_phrase_or_line_is_waiting">"1 mot, expression ou phrase t’attend."</string>
     <!-- '%.1f verified grammar slips per 100 spoken words — the same density the assessment weighs.' -->
     <string name="s_1f_verified_grammar_slips_per_100_spoken_words_the_same_de_b8c9f0">"%.1f fautes de grammaire confirmées pour 100 mots parlés : la densité même que pèse l’évaluation."</string>
     <string name="s_3_days">"3 jours"</string>
     <string name="said_lld">"Dit %d×"</string>
+    <string name="same_as_before">"comme avant"</string>
     <!-- 'Same bands as “How this is assessed” — tap a skill for its measured numbers.' -->
     <string name="same_bands_as_how_this_is_assessed_tap_a_skill_for_its_measu_19d33d">"Mêmes bandes que dans “Comment c’est évalué” — touche une compétence pour voir ses chiffres mesurés."</string>
     <string name="same_voice_new_language">"La même voix, une nouvelle langue"</string>
@@ -1834,10 +1865,12 @@
     <string name="scenarios">"Situations"</string>
     <string name="scene">"Scène"</string>
     <string name="scene_partner_voice">"Voix de l’autre personne dans la scène : %s"</string>
+    <string name="scenes">"Scènes"</string>
     <string name="scenes_refill_at_the_start_of_each_billing_period">"Les scènes sont rechargées au début de chaque période de facturation."</string>
     <string name="scenes_refill_on">"Les scènes sont rechargées le %s."</string>
     <!-- "Scenes you've already watched replay free forever and never use a new one." -->
     <string name="scenes_you_ve_already_watched_replay_free_forever_and_never_d6d2d2">"Une scène déjà vue peut être revue autant que tu veux, sans qu’aucune scène soit décomptée."</string>
+    <string name="school">"École"</string>
     <!-- "School, classes, YouTube, books, apps...\nYou tried so hard... didn't you?" -->
     <string name="school_classes_youtube_books_apps_you_tried_so_hard_didn_t_y_70dd65">"École, cours, YouTube, livres, applis…\nTu as tellement travaillé, pas vrai ?"</string>
     <string name="school_or_university">"École ou université"</string>
@@ -1902,6 +1935,7 @@
     <!-- "Shadow your fluent self's lines in your own voice. Slow it down, loop the part that trips you, until it comes out without thinking." -->
     <string name="shadow_your_fluent_self_s_lines_in_your_own_voice_slow_it_do_fafe50">"Répète les phrases de ton moi fluide avec ta propre voix. Plus lentement, en boucle sur le passage qui coince, jusqu’à ce que ça sorte sans réfléchir."</string>
     <string name="shadowing">"Shadowing"</string>
+    <string name="shadowing_score">"Score de shadowing"</string>
     <!-- 'Shadowing scores and review reps measure practice, not level. They live under Activity and in the Review tab — doing them makes you better, and the level moves only when your speech does.' -->
     <string name="shadowing_scores_and_review_reps_measure_practice_not_level_3e15b4">"Les scores de shadowing et les répétitions de révision mesurent combien tu t’entraînes, pas ton niveau. Ils sont dans Activité et dans l’onglet Révision : t’entraîner te fait progresser, mais le niveau ne bouge que quand ta façon de parler change."</string>
     <string name="shadowing_words_replays_drills">"Shadowing · mots · réécoutes · exercices"</string>
@@ -1911,9 +1945,11 @@
     <string name="share_card">"Partager la carte"</string>
     <string name="share_invite">"Partager l’invitation"</string>
     <string name="shared_context_memories_inside_jokes">"Le vécu commun, les souvenirs, les blagues à nous"</string>
+    <string name="shopping">"Courses"</string>
     <string name="show_again_in_3_days">"Revoir dans 3 jours"</string>
     <string name="show_again_tomorrow">"Revoir demain"</string>
     <string name="show_each_guide_again_when_i_open_its_tab">"Revoir chaque guide en ouvrant son onglet"</string>
+    <string name="show_less">"Voir moins"</string>
     <string name="show_my_photo">"Afficher ma photo"</string>
     <string name="show_the_talk">"Voir la conversation"</string>
     <string name="showing_earlier_stories">"On affiche des articles plus anciens"</string>
@@ -1945,6 +1981,7 @@
     <string name="small">"Petit"</string>
     <string name="small_talk_with_a_coworker">"Discuter avec un collègue"</string>
     <string name="so_much_you_want_to_say_all_of_it_still_in_your_head">"Tu as tant de choses à dire,\ntoutes là, dans ta tête…"</string>
+    <string name="social">"Vie sociale"</string>
     <!-- "Some unusual usage needs checking. Write to us and we'll sort it out — everything you've saved is untouched, and reviewing still works." -->
     <string name="some_unusual_usage_needs_checking_write_to_us_and_we_ll_sort_989cca">"Un usage inhabituel est en cours de vérification. Écris-nous et on règle ça tout de suite : tout ce que tu as enregistré est intact, et tu peux continuer à réviser."</string>
     <string name="some_words_are_traps_you_don_t_have_to_use_them_all">"Certains mots sont des pièges : tu n’as pas à tous les utiliser."</string>
@@ -2067,11 +2104,14 @@
     <!-- 'Take your intro out of the pool? Learners who already met your persona keep their own past talks.' -->
     <string name="take_your_intro_out_of_the_pool_learners_who_already_met_you_863b54">"Retirer ta présentation du pool partagé ? Les personnes qui ont déjà rencontré ton personnage gardent leurs propres appels passés."</string>
     <string name="takes">"Prises"</string>
+    <string name="takes_this_week">"prises cette semaine"</string>
     <string name="talk">"Parler"</string>
     <string name="talk_about_what_i_like">"Parler de ce que j’aime"</string>
     <string name="talk_as_much_as_you_want">"Temps de conversation illimité"</string>
     <string name="talk_at_length_most_days">"De longs appels presque chaque jour"</string>
     <string name="talk_book">"Carnet d’appel"</string>
+    <!-- 'talk' -->
+    <string name="talk_e55e91">"conversation"</string>
     <string name="talk_for_about_10_minutes">"Parle environ 10 minutes"</string>
     <string name="talk_lld_minutes_a_day_lld_days_in_a_row">"Parler %1$d minutes par jour, %2$d jours de suite."</string>
     <!-- "Talk %lld more minutes and this level gets re-read from everything new you've said." -->
@@ -2092,6 +2132,8 @@
     <string name="talking_needs_a_plan">"Parler demande une formule"</string>
     <string name="talking_to_your_future_self">"Parler à ton futur moi"</string>
     <string name="talks">"Appels"</string>
+    <!-- 'talks' -->
+    <string name="talks_b1cc1f">"conversations"</string>
     <string name="talks_get_more_real_when_i_know_your_life">"Plus je connais ton quotidien, plus les appels sonnent vrai."</string>
     <string name="talks_to_you">"Comment %s te parle"</string>
     <!-- 'Tap a language to practice it. Its level calibrates every conversation. The daily goal drives the ring on Home; explanations come back in your app language.' -->
@@ -2344,6 +2386,8 @@
     <string name="time_for_your_expressions">"C’est l’heure de tes expressions"</string>
     <string name="time_for_your_speech">"C’est l’heure de ton discours"</string>
     <string name="time_for_your_words">"C’est l’heure de tes mots"</string>
+    <!-- 'Time in the app, every day you opened it — talking, and everything around it: words, cards, shadowing, scenes.' -->
+    <string name="time_in_the_app_every_day_you_opened_it_talking_and_everythi_c65ddc">"Le temps passé dans l’app chaque jour où tu l’as ouverte : la conversation, et tout le reste autour, mots, cartes, shadowing, scènes."</string>
     <string name="time_speaking">"Temps de parole"</string>
     <!-- 'Time to meet the you who speaks perfect %@ — in your own voice. One minute of reading is all it takes.' -->
     <string name="time_to_meet_the_you_who_speaks_perfect_in_your_own_voice_on_e62699">"Il est temps de rencontrer le toi qui parle %s couramment — avec ta propre voix. Une minute de lecture suffit."</string>
@@ -2477,6 +2521,8 @@
     <string name="voicepreset_male">"Masculine"</string>
     <string name="voicepreset_mark">"naturelle, ton de conversation"</string>
     <string name="voicepreset_paige">"vivante et naturelle"</string>
+    <string name="vs_last_week">"par rapport à la semaine dernière"</string>
+    <string name="vs_previous_30_days">"par rapport aux 30 jours précédents"</string>
     <string name="waiting_for_the_first_sync">"En attente de la première synchronisation"</string>
     <string name="warm_and_chatty">"Chaleureux et bavard"</string>
     <string name="watch">"Scènes"</string>
@@ -2489,6 +2535,11 @@
     <string name="watch_scenes">"Scènes"</string>
     <!-- "Watch shows that situation played out by your fluent self, in your voice. You come away with ideas: how to open, what to ask, which expressions work. Then you practice them until they're yours." -->
     <string name="watch_shows_that_situation_played_out_by_your_fluent_self_in_214796">"Scènes te montre cette situation jouée par ton moi fluide, avec ta voix. Tu en ressors avec des idées : comment commencer, quoi demander, quelles expressions marchent. Puis tu les pratiques jusqu’à ce qu’elles soient à toi."</string>
+    <string name="watch_sky_backtome">"Revenir à moi"</string>
+    <string name="watch_sky_lens_known">"Les gens que je connais"</string>
+    <string name="watch_sky_lens_mine">"Les miens"</string>
+    <string name="watch_sky_ring_close">"Mes proches"</string>
+    <string name="watch_sky_ring_known">"Mon entourage"</string>
     <!-- "Watch the scene and notice the moves you'd never have thought of." -->
     <string name="watch_the_scene_and_notice_the_moves_you_d_never_have_though_b126d7">"Regarde la scène et repère les idées auxquelles tu n’aurais jamais pensé."</string>
     <string name="watch_the_scene_first">"Regarde d’abord la scène."</string>
@@ -2508,6 +2559,8 @@
     <!-- "We've paused talking on this account while we check some unusual usage. Write to us and we'll sort it out." -->
     <string name="we_ve_paused_talking_on_this_account_while_we_check_some_unu_7e9d82">"On a mis les appels de ce compte en pause le temps de vérifier un usage inhabituel. Écris-nous et on règle ça tout de suite."</string>
     <string name="week">"semaine"</string>
+    <!-- 'Week' -->
+    <string name="week_f82be6">"Semaine"</string>
     <string name="weekdays">"En semaine"</string>
     <string name="weekends">"Week-end"</string>
     <string name="weekly">"Hebdomadaire"</string>
@@ -2520,6 +2573,7 @@
     <string name="what_did_you_do_today">"Tu as fait quoi aujourd’hui ?"</string>
     <string name="what_do_you_want_it_for">"Pour quoi faire ?"</string>
     <string name="what_do_you_want_to_be_able_to_do_in">"Qu’est-ce que tu aimerais pouvoir faire en %s ?"</string>
+    <string name="what_each_day_was_made_of">"De quoi chaque jour était fait"</string>
     <!-- 'What each day was made of — talk turns, shadow takes, drill reviews.' -->
     <string name="what_each_day_was_made_of_talk_turns_shadow_takes_drill_revi_2a49f0">"De quoi chaque journée était faite — tours de parole, prises de shadowing, révisions d’exercices."</string>
     <string name="what_each_tab_is_for_and_how_to_use_it">"À quoi sert chaque onglet, et comment l’utiliser"</string>

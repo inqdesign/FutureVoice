@@ -171,7 +171,7 @@ private fun Dot(color: Color, modifier: Modifier = Modifier) {
 /** The glass capsule of [IosGlassButton], holding its own buttons — iOS
  *  groups a toolbar's icons in ONE glass shape. */
 @Composable
-private fun GlassCapsule(content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit) {
+internal fun GlassCapsule(content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit) {
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     Row(
         Modifier
