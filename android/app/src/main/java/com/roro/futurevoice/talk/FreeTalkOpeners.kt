@@ -62,8 +62,9 @@ class FreeTalkOpeners(private val context: Context) {
          * only hand the learner the floor (`FreeTalkOpenerContent.pickUp`).
          * v5 (iOS `bd9952d3`): mid-call lines ("응, 듣고 있어") replaced.
          * v6 (iOS `89d9643e`): no leading interjection (오, 어, 야 / Oh, Hey…).
+         * v7 (iOS `cecd8b9e`): the pick-up is one hello per language ("안녕?").
          */
-        private const val POOL_VERSION = 6
+        private const val POOL_VERSION = 7
 
         /** Languages × persona names a learner actually uses is a handful; the
          *  cap only stops a long history of renames from growing the file. */

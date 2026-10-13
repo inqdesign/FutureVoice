@@ -34,7 +34,7 @@ def list_table(name):
     if not m: sys.exit(f"no table {name}")
     groups = re.findall(r'"(\w+)": \[(.*?)\n\s*\],', m.group(1), re.S)
     out = [(k, re.findall(STR, body)) for k, body in groups]
-    if not out or any(len(v) < 2 for _, v in out): sys.exit(f"empty table {name}")
+    if not out or any(len(v) < 1 for _, v in out): sys.exit(f"empty table {name}")
     return out
 
 
