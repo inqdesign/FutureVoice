@@ -123,9 +123,19 @@ export async function ensureAccent(uuid: string, accent: string): Promise<{ ok: 
     if (!have.includes(base)) have = [base, ...have]
   }
   if (have.includes(accent)) return { ok: true }
-  const a = await fetch(`${HOST}/voices/${uuid}/accents`, {
+  const add = () => fetch(`${HOST}/voices/${uuid}/accents`, {
     method: "PATCH", headers: headers(), body: JSON.stringify({ accents: [accent] }),
   })
+  let a = await add()
+  // Two accents added to a new voice at once (the clone's German default and
+  // the learner's pick, 2026-10-13) race on the base: one finds no native
+  // accent set yet and is refused. Set the base and try once more.
+  if (a.status === 400) {
+    await a.text()
+    await new Promise((r) => setTimeout(r, 800))
+    await fetch(`${HOST}/voices/${uuid}`, { method: "PATCH", headers: headers(), body: JSON.stringify({ accent: base }) })
+    a = await add()
+  }
   if (!a.ok) return { ok: false, detail: `add accent ${a.status} ${(await a.text()).slice(0, 200)}` }
   return { ok: true }
 }
