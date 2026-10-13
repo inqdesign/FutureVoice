@@ -8,19 +8,30 @@ import Foundation
 /// voice followed ~1 s later (synthesis only starts once the turn is
 /// committed). Read as "it writes everything, then thinks again, then
 /// talks". So the text is held until the voice is audible and then revealed
-/// a SENTENCE at a time, each one when its audio should be starting.
+/// a WORD at a time, each one when its audio should be starting (2026-10-13,
+/// founder: a sentence dropping in whole read as stiff beside other voice
+/// chats; it was a sentence at a time until then). Unspaced scripts (ja,
+/// zh) go a character at a time.
 ///
-/// Sentence timing is an estimate: the PCM stream carries no alignment. The
+/// Word timing is an estimate: the PCM stream carries no alignment. The
 /// rate is the line's own once all of its audio is in (letters ÷ seconds of
-/// audio received), a per-script default before that.
+/// voice, the gaps between sentences taken out), a per-script default
+/// before that; each sentence boundary costs `sentencePause`, the gap the
+/// gateway's one-sentence-per-request voice leaves (~0.4 s, measured
+/// 2026-09-30). Only complete sentences are ever revealed into while the
+/// line is still being written — the voice speaks nothing before its
+/// sentence ends either.
 enum ReplyReveal {
-    /// A sentence is shown this much before its estimated start, so the eye
-    /// is never behind the ear.
-    static let lead: TimeInterval = 0.2
+    /// A word is shown this much before its estimated start, so the eye is
+    /// never behind the ear.
+    static let lead: TimeInterval = 0.15
+
+    /// The silence between two sentences of one line.
+    static let sentencePause: TimeInterval = 0.4
 
     /// The prefix of `text` to show `elapsed` seconds into the voice.
-    /// Only complete sentences are shown while the line is still being
-    /// written; the unterminated tail joins once `isFinal`.
+    /// Only complete sentences are revealed into while the line is still
+    /// being written; the unterminated tail joins once `isFinal`.
     static func visible(text: String, isFinal: Bool, elapsed: TimeInterval,
                         charactersPerSecond cps: Double) -> String {
         var ends = sentenceEnds(in: text)
@@ -28,15 +39,63 @@ enum ReplyReveal {
            !text[(ends.last ?? text.startIndex)...].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             ends.append(text.endIndex)
         }
-        guard !ends.isEmpty, cps > 0 else { return "" }
-        var shownEnd = ends[0]
-        for end in ends.dropFirst() {
-            // This sentence starts where the previous one ended.
-            let before = weight(text[text.startIndex..<shownEnd])
-            guard Double(before) / cps <= elapsed + lead else { break }
+        guard let limit = ends.last, cps > 0 else { return "" }
+        var shownEnd = text.startIndex
+        var sentence = 0
+        for (start, end) in units(in: text[..<limit]) {
+            while sentence < ends.count, ends[sentence] <= start { sentence += 1 }
+            let startsAt = Double(weight(text[text.startIndex..<start])) / cps
+                + Double(sentence) * sentencePause
+            guard startsAt <= elapsed + lead else { break }
             shownEnd = end
         }
         return String(text[..<shownEnd]).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// The line's own letters per second once all of its audio is in: the
+    /// sentence gaps are silence, not speech.
+    static func charactersPerSecond(text: String, seconds: Double) -> Double? {
+        let ends = sentenceEnds(in: text)
+        // The last sentence has no space after it, so it isn't in `ends`.
+        let tail = text[(ends.last ?? text.startIndex)...]
+        let sentences = ends.count + (weight(tail) > 0 ? 1 : 0)
+        let gaps = Double(max(0, sentences - 1)) * sentencePause
+        let speaking = seconds - gaps
+        let w = weight(text)
+        guard speaking > 0.5, w > 0 else { return nil }
+        return Double(w) / speaking
+    }
+
+    /// The pieces revealed one at a time: a word with whatever punctuation
+    /// and space trail it, or — in an unspaced script — one character.
+    static func units(in text: Substring) -> [(String.Index, String.Index)] {
+        var out: [(String.Index, String.Index)] = []
+        var i = text.startIndex
+        while i < text.endIndex {
+            while i < text.endIndex, text[i].isWhitespace { i = text.index(after: i) }
+            guard i < text.endIndex else { break }
+            let start = i
+            if isUnspaced(text[i]) {
+                i = text.index(after: i)
+            } else {
+                while i < text.endIndex, !text[i].isWhitespace, !isUnspaced(text[i]) {
+                    i = text.index(after: i)
+                }
+            }
+            // Punctuation that closes the piece rides with it.
+            while i < text.endIndex, !text[i].isWhitespace, !text[i].isLetter, !text[i].isNumber {
+                i = text.index(after: i)
+            }
+            out.append((start, i))
+        }
+        return out
+    }
+
+    /// Kana and Han: no spaces between words, so each character is a piece.
+    private static func isUnspaced(_ c: Character) -> Bool {
+        c.unicodeScalars.contains { s in
+            (0x3040...0x30FF).contains(s.value) || (0x4E00...0x9FFF).contains(s.value)
+        }
     }
 
     /// End index of every COMPLETE sentence: a Latin terminator followed by

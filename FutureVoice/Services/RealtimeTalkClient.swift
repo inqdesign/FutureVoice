@@ -2214,10 +2214,10 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         finishReveal()
         reveal = Reveal(context: context)
         revealTask = Task { @MainActor [weak self] in
-            // Ten times a second: the next sentence goes up when its audio
+            // Twenty times a second: the next word goes up when its audio
             // should be starting.
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 100_000_000)
+                try? await Task.sleep(nanoseconds: 50_000_000)
                 guard let self, !Task.isCancelled else { return }
                 self.stepReveal()
             }
@@ -2251,10 +2251,10 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             else { return nil }
             return Double(replyPCM.count / 2) / replySampleRate
         }()
-        let weight = ReplyReveal.weight(r.text)
         let cps: Double
-        if r.isFinal, let seconds, seconds > 0.5, weight > 0 {
-            cps = Double(weight) / seconds
+        if r.isFinal, let seconds,
+           let own = ReplyReveal.charactersPerSecond(text: r.text, seconds: seconds) {
+            cps = own
         } else {
             cps = ReplyReveal.defaultCharactersPerSecond(for: r.text,
                                                          speed: SpeechSpeed.current.multiplier)
