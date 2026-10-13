@@ -559,8 +559,10 @@ internal fun WatchTabBody(
                 .padding(end = 16.dp, bottom = if (creating) navBottom + 216.dp else floatBottom),
         ) {
             val label = stringResource(R.string.watch_sky_backtome)
+            // Same size as "New situation" beside it (50 high, the same 22-dp
+            // glyph): a 48 against its 50 read as two different buttons.
             com.roro.futurevoice.ui.brand.IosGlassButton(onClick = { backToMeTick += 1 }, circle = true,
-                modifier = Modifier.size(48.dp).semantics { contentDescription = label }) {
+                modifier = Modifier.size(50.dp).semantics { contentDescription = label }) {
                 Icon(Icons.Filled.GpsFixed, contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
             }
