@@ -242,13 +242,17 @@ enum ConversationEngine {
         let theyCalledBlock = (topic.isEmpty && counterpart == nil && !firstMeeting) ? """
 
 
-        THEY CALLED YOU. Your opening line was only a hello, so whatever \
-        they bring first IS the call — go with it, and don't steer to \
-        something you'd rather ask about. If they only say hello back, ask \
-        one short, open question that hands them the floor ("what's new?", \
-        "what's on your mind?") — no guessed topic, and nothing that sounds \
-        worried or puzzled that they called ("is something wrong?", 무슨 일 \
-        있어?, 왜 전화했어?). If they say there's nothing in \
+        THEY CALLED YOU. Your opening line was only a friend's hello for \
+        the time of day ("did you sleep well?", "what are you up to?", \
+        "how was your day?"), so whatever they bring first IS the call — go \
+        with it, and don't steer to something you'd rather ask about. If they \
+        only answer the greeting ("good, you?"), say how you are in a few \
+        words and then ask \
+        one short, plain question that hands them the floor ("what's new?", \
+        요즘 어때?) — plain means no qualifier on it (not "anything fun / \
+        interesting / exciting", not 재미있는 일), no guessed topic, and \
+        nothing that sounds worried or puzzled that they called ("is \
+        something wrong?", 무슨 일 있어?, 왜 전화했어?). If they say there's nothing in \
         particular ("not much", "just because", "nothing special"), that's \
         your cue to bring something: one thing you remember from earlier \
         calls ("by the way, how's … going?"), or a small thing of your own \

@@ -1,26 +1,15 @@
 import Foundation
 
-/// Rotating pools of Free-talk greeting lines, one per language + persona
-/// (`Documents/freetalk_openers_by_language.json`).
+/// How a no-topic free talk picks up: one light hello per language and part
+/// of the day (`pickUpLines`), chosen at the moment of the call, plus the
+/// first-call introduction (`introOpener`). The texts repeat verbatim, so
+/// `PhraseAudioStore`'s content cache makes every TTS after a line's first
+/// play free. Until 2026-10-13 a Gemini call wrote a rotating pool of six per
+/// learner (`Documents/freetalk_openers_by_language.json`, no longer read).
 ///
-/// A free talk opens with more or less the same kind of greeting every time,
-/// so sessions rotate through a small pool of pick-up lines, and because the
-/// texts repeat verbatim, `PhraseAudioStore`'s content cache makes every TTS
-/// after each line's first play free. Since 2026-10-13 the lines are bundled
-/// per language (`pickUpLines`); until then one Gemini call wrote them.
-///
-/// Topic/scenario/news openers stay dynamic — this pool is only for the
-/// no-topic free talk. The pool is keyed to language + persona name (kept
-/// so the rotation cursor survives as it did) and is written on first use.
+/// Topic/scenario/news openers stay dynamic — this is only the no-topic talk.
 final class FreeTalkOpeners {
     static let shared = FreeTalkOpeners()
-
-    struct Pool: Codable {
-        var key: String
-        var lines: [String]
-        var cursor: Int
-        var generatedAt: Date
-    }
 
     /// Lines being synthesized right now, so two warm-ups landing at once
     /// (a new voice id arrives while the Talk tab's own warm-up is running)
@@ -44,58 +33,10 @@ final class FreeTalkOpeners {
     /// learners), 42 of them for 8 learners who never called at all.
     static let warmAhead = 1
 
-    /// The single-pool file from before 2026-09-28 — read for migration only.
-    private let fileURL: URL
-    private let storeURL: URL
-    private let encoder: JSONEncoder
-    private let decoder: JSONDecoder
-
-    init(filename: String = "freetalk_openers.json") {
-        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        self.fileURL = dir.appendingPathComponent(filename)
-        self.storeURL = dir.appendingPathComponent(
-            (filename as NSString).deletingPathExtension + "_by_language.json")
-
-        let enc = JSONEncoder()
-        enc.outputFormatting = [.prettyPrinted, .sortedKeys]
-        enc.dateEncodingStrategy = .iso8601
-        self.encoder = enc
-
-        let dec = JSONDecoder()
-        dec.dateDecodingStrategy = .iso8601
-        self.decoder = dec
-    }
-
-    /// Bumped when the pool's PROMPT changes in a way the lines already on
-    /// phones must not outlive: a pool is otherwise kept until the language
-    /// or name changes, i.e. forever. v2 (2026-09-30): `selfWarmth` — pools
-    /// held "너무 보고싶어". An old pool is simply not found; its audio stays
-    /// on disk (produced audio is never deleted). v3 (2026-10-07): pools
-    /// joined two sentences with a bare comma ("…that project, how is it
-    /// going?"), which `PacedSpeech` can't split, so the opener ran on with
-    /// no pause — `breathPunctuation` now names the comma splice. v4
-    /// (2026-10-13, founder: "it asks in a direction I don't want"): every line
-    /// put a guessed topic to the learner — "how's your project", "what's been
-    /// worrying you", "got a minute?" — when THEY placed the call and came with
-    /// something to say. Lines now only pick up and hand them the floor.
-    /// v5 (same day): lines that sound mid-call ("응, 듣고 있어", "I'm
-    /// listening") were replaced by ones said on picking up. v6 (same day,
-    /// founder): no leading interjection (오, 어, 야, 좋아 / Oh, Hey, Ehi…).
-    /// v7: the pick-up is one hello per language ("안녕?").
-    private static let poolVersion = 7
-
-    private static func key(language: String, personaName: String?) -> String {
-        "v\(poolVersion)|\(language)|\(personaName ?? "")"
-    }
-
-    /// The line a free talk opens on while no pool exists yet — the very
-    /// first call, or the one right after a language/persona switch. Bundled
-    /// per target language so the greeting NEVER waits on a live Gemini call;
-    /// the pool is generated in the background instead. MATERIAL → target
-    /// language. Deliberately name-free: one cache entry serves every persona,
-    /// and its TTS can be warmed before a persona even exists.
-    static func fallbackOpener(language: String) -> String {
-        pickUpLines(language: language)[0]
+    /// The line a free talk placed now opens on. MATERIAL → target language,
+    /// name-free, so one cache entry serves every persona.
+    static func pickUpOpener(language: String) -> String {
+        pickUpLine(language: language, at: Date())
     }
 
     /// The line the VERY FIRST free talk opens on, before the fluent self has
@@ -166,71 +107,103 @@ final class FreeTalkOpeners {
         "zh": "你好。我是流利说中文的未来的你。我很期待我们接下来的每一次聊天。别放弃，我们一起，让现在的你变成我。对了，你最近都在忙什么？",
     ]
 
-    /// How a free talk picks up — written by hand per language since
-    /// 2026-10-13 (founder: "it asks in a direction I don't want"). Until then
-    /// one flash-lite call wrote six lines per learner, and every one put a
+    /// How a free talk picks up — one light hello for the time of day,
+    /// written by hand per language (2026-10-13, founder). Until then one
+    /// flash-lite call wrote six lines per learner, and every one put a
     /// guessed subject to them ("how's your project going?", "what's been
     /// worrying you?", "got a minute?") when it was THEY who placed the call
     /// and came with something to say. Prompted to only hand them the floor,
-    /// it still answered in Korean with 무슨 일이야 / 왜 전화했어 (an emergency,
-    /// or being bothered), turned a Hangul name into kanji in Japanese, and
-    /// assumed the hour (お疲れ様). Six lines that only say "glad you called —
-    /// what are we talking about?" need no level and no name, so they are
-    /// written, not generated. And since the same evening it is ONE word —
-    /// "안녕?" (founder, over "여보세요" and over the learner going first):
-    /// enough to say the line is live and to be heard in their own voice,
-    /// nothing to steer by. Whatever the learner says next IS the call; a
-    /// hello back or "nothing much" is the conversation prompt's THEY CALLED
-    /// YOU block's to answer. Kept as a list so the rotation still works.
+    /// it still answered in Korean with 무슨 일이야 / 왜 전화했어 (an
+    /// emergency, or being bothered), turned a Hangul name into kanji in
+    /// Japanese, and assumed the hour. The founder then weighed a list of
+    /// door-opening lines, "여보세요", and the learner going first, and picked
+    /// a friend's hello that knows what time it is: "안녕, 잘 잤어?" in the
+    /// morning, "안녕, 지금 뭐해?" by day, "안녕, 오늘은 어땠어?" in the
+    /// evening, "안녕, 아직 안 자?" at night. It says the line is live, is
+    /// heard in their own voice, and steers nothing; whatever they say next IS
+    /// the call, and a greeting answered back or "nothing much" is the
+    /// conversation prompt's THEY CALLED YOU block's to answer.
     ///
-    /// Still time-neutral (2026-09-28): each line is heard at any hour.
-    /// MATERIAL → target language, informal address throughout.
-    private static let pickUpLines: [String: [String]] = [
-        "en": ["Hey!"],
-        "de": ["Hallo!"],
-        "ko": ["안녕?"],
-        "ja": ["やあ！"],
-        "es": ["¡Hola!"],
-        "fr": ["Salut\u{00A0}!"],
-        "it": ["Ciao!"],
-        "pt": ["Oi!"],
-        "zh": ["嗨！"],
+    /// The part of the day is `PromptClock.partOfDay`, the same split the
+    /// call's own prompt is told, so the hello and the model agree on the
+    /// hour. MATERIAL → target language, informal address throughout, no
+    /// leading interjection (founder: "앞에 감탄사들 다 빼").
+    private static let pickUpLines: [String: [String: String]] = [
+        "en": [
+            "morning": "Hi, did you sleep well?",
+            "afternoon": "Hi, what are you up to?",
+            "evening": "Hi, how was your day?",
+            "night": "Hi, still up?",
+        ],
+        "de": [
+            "morning": "Hi, gut geschlafen?",
+            "afternoon": "Hi, was machst du gerade?",
+            "evening": "Hi, wie war dein Tag?",
+            "night": "Hi, noch wach?",
+        ],
+        "ko": [
+            "morning": "안녕, 잘 잤어?",
+            "afternoon": "안녕, 지금 뭐해?",
+            "evening": "안녕, 오늘은 어땠어?",
+            "night": "안녕, 아직 안 자?",
+        ],
+        "ja": [
+            "morning": "おはよう、よく眠れた？",
+            "afternoon": "やあ、今なにしてる？",
+            "evening": "やあ、今日はどうだった？",
+            "night": "やあ、まだ起きてるの？",
+        ],
+        "es": [
+            "morning": "¡Hola! ¿Dormiste bien?",
+            "afternoon": "¡Hola! ¿Qué haces?",
+            "evening": "¡Hola! ¿Qué tal tu día?",
+            "night": "¡Hola! ¿Aún no te has dormido?",
+        ],
+        "fr": [
+            "morning": "Salut, bien dormi\u{00A0}?",
+            "afternoon": "Salut, tu fais quoi\u{00A0}?",
+            "evening": "Salut, c’était comment ta journée\u{00A0}?",
+            "night": "Salut, tu ne dors pas encore\u{00A0}?",
+        ],
+        "it": [
+            "morning": "Ciao, dormito bene?",
+            "afternoon": "Ciao, che fai?",
+            "evening": "Ciao, com'è andata oggi?",
+            "night": "Ciao, non dormi ancora?",
+        ],
+        "pt": [
+            "morning": "Oi, dormiu bem?",
+            "afternoon": "Oi, o que você tá fazendo?",
+            "evening": "Oi, como foi o seu dia?",
+            "night": "Oi, ainda não foi dormir?",
+        ],
+        "zh": [
+            "morning": "早啊，睡得好吗？",
+            "afternoon": "嗨，在干嘛呢？",
+            "evening": "嗨，今天过得怎么样？",
+            "night": "嗨，还没睡呀？",
+        ],
     ]
 
-    private static func pickUpLines(language: String) -> [String] {
+    static func pickUpLine(language: String, at date: Date) -> String {
         let code = LanguageCatalog.language(language)?.code ?? "en"
-        return pickUpLines[code] ?? pickUpLines["en"]!
+        let lines = pickUpLines[code] ?? pickUpLines["en"]!
+        let hour = Calendar.current.component(.hour, from: date)
+        return lines[PromptClock.partOfDay(hour: hour)] ?? lines["afternoon"]!
     }
 
-    /// The next greeting in rotation, or nil when no valid pool exists yet
-    /// (caller falls back to a generated opener). Advances and persists the
-    /// cursor so consecutive free talks don't repeat the same line.
-    func next(language: String, personaName: String?) -> String? {
-        guard var pool = load(key: Self.key(language: language, personaName: personaName)),
-              !pool.lines.isEmpty else { return nil }
-        let line = pool.lines[pool.cursor % pool.lines.count]
-        pool.cursor = (pool.cursor + 1) % pool.lines.count
-        save(pool)
-        return line
-    }
-
-    /// The line `next()` WOULD return, without consuming it. Read-only — the
-    /// launcher uses this to synthesize the upcoming greeting ahead of the
-    /// tap, so the call opens on cached audio instead of an ElevenLabs round
-    /// trip. Must stay in sync with `next()`'s index arithmetic.
-    func peek(language: String, personaName: String?) -> String? {
-        guard let pool = load(key: Self.key(language: language, personaName: personaName)),
-              !pool.lines.isEmpty else { return nil }
-        return pool.lines[pool.cursor % pool.lines.count]
-    }
-
-    /// The next `count` lines in rotation, starting at the one `next()` will
-    /// return (empty when there is no pool). Read-only.
+    /// The line a call placed now opens on, then — when asked for more — the
+    /// next parts of the day's, so a warm-up just before a boundary still
+    /// has the following hello ready.
     func upcomingLines(language: String, personaName: String?, count: Int) -> [String] {
-        guard let pool = load(key: Self.key(language: language, personaName: personaName)),
-              !pool.lines.isEmpty else { return [] }
-        let n = min(count, pool.lines.count)
-        return (0..<n).map { pool.lines[(pool.cursor + $0) % pool.lines.count] }
+        var out: [String] = []
+        var date = Date()
+        for _ in 0..<max(0, count) {
+            let line = Self.pickUpLine(language: language, at: date)
+            if !out.contains(line) { out.append(line) }
+            date = date.addingTimeInterval(5 * 3600)
+        }
+        return out
     }
 
     /// Synthesize the next `warmAhead` lines' audio that isn't cached yet, so
@@ -378,114 +351,19 @@ final class FreeTalkOpeners {
                        proficiency: CEFRLevel, voiceId: String?,
                        firstMeeting: Bool = false) async {
         // The introduction line is what an unmet learner's call actually
-        // opens on — warming the pool around it would leave the one greeting
+        // opens on — warming the hello instead would leave the one greeting
         // they're going to hear as the only slow one.
         if let voiceId, firstMeeting {
             try? await warmLine(Self.introOpener(language: language), voiceId: voiceId)
         }
-        if let voiceId, !firstMeeting, !hasPool(language: language, personaName: personaName) {
-            try? await warmLine(Self.fallbackOpener(language: language), voiceId: voiceId)
-        }
-        await warmUp(language: language, personaName: personaName, proficiency: proficiency)
         // An unmet learner's first free talk opens on the introduction, never
         // on a pool line, so pool AUDIO made now could only open a second
         // call — and is made again whenever the voice id moves before then
         // (the onboarding accent remix is one). It waits for the first call's
         // own re-warm (`RootTabView`, after the call closes). Reported
         // 2026-10-09: two pool lines in a new learner's voice history before
-        // they had said a word. The pool TEXT is still written now (cheap,
-        // and the second call should not wait on it).
+        // they had said a word.
         guard !firstMeeting else { return }
         await warmAudio(language: language, personaName: personaName, voiceId: voiceId)
-    }
-
-    /// True when a valid pool exists for this language/persona. Read-only —
-    /// unlike `next()` it never advances the rotation cursor.
-    func hasPool(language: String, personaName: String?) -> Bool {
-        guard let pool = load(key: Self.key(language: language, personaName: personaName)),
-              !pool.lines.isEmpty else { return false }
-        return true
-    }
-
-    /// Fire-and-forget warm-up for the Talk launcher: generate the pool ahead
-    /// of the first "Let's talk" so that call opens on a canned line instead
-    /// of holding the greeting hostage to a live Gemini call (which, cold,
-    /// used to be the multi-second blank screen on the first free talk).
-    /// No-op when a valid pool already exists.
-    func warmUp(language: String, personaName: String?, proficiency: CEFRLevel) async {
-        guard !hasPool(language: language, personaName: personaName) else { return }
-        _ = try? await generatePool(language: language, personaName: personaName,
-                                    proficiency: proficiency)
-    }
-
-    /// Write the pool from the bundled lines. Returns the first
-    /// line in rotation so the generating session can use it directly.
-    func generatePool(language: String,
-                      personaName: String?,
-                      proficiency: CEFRLevel) async throws -> String {
-        do {
-            return try await writePool(language: language, personaName: personaName,
-                                       proficiency: proficiency)
-        } catch {
-            // Every caller discards this with `try?`, and a pool that is never
-            // written is a call that opens on the fallback line forever — each
-            // one a fresh ElevenLabs take nobody can see the reason for.
-            Self.report("freetalk_openers_failed", language: language, error: error)
-            throw error
-        }
-    }
-
-    private func writePool(language: String,
-                           personaName: String?,
-                           proficiency: CEFRLevel) async throws -> String {
-        let lines = Self.pickUpLines(language: language)
-        save(Pool(key: Self.key(language: language, personaName: personaName),
-                  lines: lines, cursor: 1, generatedAt: Date()))
-        return lines[0]
-    }
-
-    // MARK: - Disk
-
-    /// One pool PER language + persona, in one file. Until 2026-09-28 the file
-    /// held a single pool, so a learner who talked in two languages threw one
-    /// language's pool away every time they used the other — each switch
-    /// meant a new Gemini call, the bundled fallback line in the meantime,
-    /// and new ElevenLabs takes of lines whose audio had already been paid
-    /// for. The old single-pool file is read once and folded in.
-    private struct Store: Codable {
-        var pools: [String: Pool]
-    }
-    /// Languages × persona names a learner actually uses is a handful; the
-    /// cap only stops a long history of renames from growing the file.
-    private static let maxPools = 8
-
-    private func loadStore() -> Store {
-        if let data = try? Data(contentsOf: storeURL),
-           let store = try? decoder.decode(Store.self, from: data) {
-            return store
-        }
-        if let data = try? Data(contentsOf: fileURL),
-           let legacy = try? decoder.decode(Pool.self, from: data) {
-            return Store(pools: [legacy.key: legacy])
-        }
-        return Store(pools: [:])
-    }
-
-    private func load(key: String) -> Pool? {
-        guard let pool = loadStore().pools[key], pool.key == key else { return nil }
-        return pool
-    }
-
-    private func save(_ pool: Pool) {
-        var store = loadStore()
-        store.pools[pool.key] = pool
-        if store.pools.count > Self.maxPools {
-            let keep = store.pools.values
-                .sorted { $0.generatedAt > $1.generatedAt }
-                .prefix(Self.maxPools)
-            store.pools = Dictionary(uniqueKeysWithValues: keep.map { ($0.key, $0) })
-        }
-        guard let data = try? encoder.encode(store) else { return }
-        try? data.write(to: storeURL, options: .atomic)
     }
 }

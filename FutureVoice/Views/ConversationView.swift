@@ -2505,48 +2505,18 @@ struct ConversationView: View {
             } else if topicIsNews, let fromPool = openNewsConversation() {
                 opener = fromPool
             } else if isFirstMeeting {
-                // They've never spoken. A rotating "good to hear you" is a
-                // greeting between people who know each other — this call
-                // opens by admitting it's the first one and asking who they
-                // are (the FIRST CALL block runs the rest of it). Bundled, so
-                // the first greeting of all never waits on Gemini, and the
-                // pool is written in the background for later sessions.
+                // They've never spoken. A friend's hello is a greeting
+                // between people who know each other — this call opens by
+                // introducing itself (the FIRST CALL block runs the rest of
+                // it). Bundled, so the first greeting of all never waits on
+                // Gemini.
                 opener = FreeTalkOpeners.introOpener(language: appState.targetLanguage)
-                if !FreeTalkOpeners.shared.hasPool(
-                    language: appState.targetLanguage,
-                    personaName: appState.persona?.displayName) {
-                    let language = appState.targetLanguage
-                    let personaName = appState.persona?.displayName
-                    let proficiency = appState.proficiency
-                    Task.detached(priority: .utility) {
-                        _ = try? await FreeTalkOpeners.shared.generatePool(
-                            language: language, personaName: personaName,
-                            proficiency: proficiency)
-                    }
-                }
-            } else if topic.isEmpty, counterpart == nil,
-                      let canned = FreeTalkOpeners.shared.next(
-                          language: appState.targetLanguage,
-                          personaName: appState.persona?.displayName) {
-                // Free talk: greetings are interchangeable, so rotate a stored
-                // pool instead of paying a Gemini call per session — and since
-                // the texts repeat verbatim, the TTS content cache makes the
-                // voice free after each line's first play.
-                opener = canned
             } else if topic.isEmpty, counterpart == nil {
-                // First free talk (or language/persona changed — no pool
-                // yet): the bundled line opens the call NOW instead of
-                // holding the greeting hostage to a live Gemini call; the
-                // pool is written in the background for every later session.
-                opener = FreeTalkOpeners.fallbackOpener(language: appState.targetLanguage)
-                let language = appState.targetLanguage
-                let personaName = appState.persona?.displayName
-                let proficiency = appState.proficiency
-                Task.detached(priority: .utility) {
-                    _ = try? await FreeTalkOpeners.shared.generatePool(
-                        language: language, personaName: personaName,
-                        proficiency: proficiency)
-                }
+                // Free talk: one light hello for the time of day, bundled
+                // (`FreeTalkOpeners.pickUpLines`) — the texts repeat
+                // verbatim, so the TTS content cache makes the voice free
+                // after each line's first play.
+                opener = FreeTalkOpeners.pickUpOpener(language: appState.targetLanguage)
             } else if let line = learnerOpensLine {
                 // A starter the LEARNER opens (asking a stranger the way):
                 // the other side waits to be spoken to, and the coach's own
