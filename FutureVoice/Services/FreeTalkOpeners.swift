@@ -81,7 +81,8 @@ final class FreeTalkOpeners {
     /// v5 (same day): lines that sound mid-call ("응, 듣고 있어", "I'm
     /// listening") were replaced by ones said on picking up. v6 (same day,
     /// founder): no leading interjection (오, 어, 야, 좋아 / Oh, Hey, Ehi…).
-    private static let poolVersion = 6
+    /// v7: the pick-up is one hello per language ("안녕?").
+    private static let poolVersion = 7
 
     private static func key(language: String, personaName: String?) -> String {
         "v\(poolVersion)|\(language)|\(personaName ?? "")"
@@ -175,85 +176,25 @@ final class FreeTalkOpeners {
     /// or being bothered), turned a Hangul name into kanji in Japanese, and
     /// assumed the hour (お疲れ様). Six lines that only say "glad you called —
     /// what are we talking about?" need no level and no name, so they are
-    /// written, not generated. Whatever the learner says next IS the call;
-    /// if it is "nothing much", the conversation prompt's THEY CALLED YOU
-    /// block has the fluent self bring something.
+    /// written, not generated. And since the same evening it is ONE word —
+    /// "안녕?" (founder, over "여보세요" and over the learner going first):
+    /// enough to say the line is live and to be heard in their own voice,
+    /// nothing to steer by. Whatever the learner says next IS the call; a
+    /// hello back or "nothing much" is the conversation prompt's THEY CALLED
+    /// YOU block's to answer. Kept as a list so the rotation still works.
     ///
     /// Still time-neutral (2026-09-28): each line is heard at any hour.
     /// MATERIAL → target language, informal address throughout.
     private static let pickUpLines: [String: [String]] = [
-        "en": [
-            "It's me. What's up?",
-            "What are we talking about today?",
-            "You called! What's going on?",
-            "Hi. What's on your mind?",
-            "What do you feel like talking about?",
-            "There you are. What's new?",
-        ],
-        "de": [
-            "Ich bin's. Was gibt's?",
-            "Worüber reden wir heute?",
-            "Schön, dass du anrufst. Erzähl!",
-            "Hallo! Was gibt's Neues?",
-            "Womit fangen wir heute an?",
-            "Da bist du ja. Leg los!",
-        ],
-        "ko": [
-            "반가워. 오늘은 무슨 얘기 할까?",
-            "왔네! 오늘은 무슨 얘기 들려줄 거야?",
-            "나야. 무슨 얘기 하고 싶어?",
-            "오늘은 네 얘기부터 들어 볼까?",
-            "전화 잘했다. 요즘 별일 없어?",
-            "안녕. 오늘은 어떤 얘기부터 해 볼까?",
-        ],
-        "ja": [
-            "もしもし。今日は何の話する？",
-            "来たね。今日は何の話しようか？",
-            "今日は何から話そうか？",
-            "今日はどんな話を聞かせてくれる？",
-            "電話くれたんだ。最近どう？",
-            "なんか話したいことある？",
-        ],
-        "es": [
-            "Soy yo. ¿Qué me cuentas?",
-            "¿De qué hablamos hoy?",
-            "¡Hola! ¿Cómo va todo?",
-            "¿Qué hay de nuevo?",
-            "¿De qué tienes ganas de hablar?",
-            "¡Qué bien que llamas! ¿Por dónde empezamos?",
-        ],
-        "fr": [
-            "C’est moi. Quoi de neuf\u{00A0}?",
-            "On parle de quoi aujourd’hui\u{00A0}?",
-            "Tu m’appelles\u{00A0}! Ça va\u{00A0}?",
-            "Coucou\u{00A0}! Qu’est-ce que tu racontes\u{00A0}?",
-            "Tu as envie de parler de quoi\u{00A0}?",
-            "Te voilà\u{00A0}! Par quoi on commence\u{00A0}?",
-        ],
-        "it": [
-            "Sono io. Che mi racconti?",
-            "Di cosa parliamo oggi?",
-            "Ciao! Come va tutto?",
-            "Che c'è di nuovo?",
-            "Di cosa hai voglia di parlare?",
-            "Eccoti! Da dove cominciamo?",
-        ],
-        "pt": [
-            "Sou eu. Do que você quer falar?",
-            "Sobre o que a gente vai conversar hoje?",
-            "Oi! Como estão as coisas?",
-            "Me conta, quais são as novidades?",
-            "O que você está a fim de contar?",
-            "Que bom que você ligou! Por onde a gente começa?",
-        ],
-        "zh": [
-            "喂，是我。想聊点什么？",
-            "今天我们聊点什么？",
-            "你打来啦！最近怎么样？",
-            "最近有什么新鲜事？",
-            "今天想从哪儿聊起？",
-            "来啦！有什么想说的，尽管说。",
-        ],
+        "en": ["Hey!"],
+        "de": ["Hallo!"],
+        "ko": ["안녕?"],
+        "ja": ["やあ！"],
+        "es": ["¡Hola!"],
+        "fr": ["Salut\u{00A0}!"],
+        "it": ["Ciao!"],
+        "pt": ["Oi!"],
+        "zh": ["嗨！"],
     ]
 
     private static func pickUpLines(language: String) -> [String] {
