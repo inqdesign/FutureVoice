@@ -63,6 +63,7 @@ Deno.serve(async (req) => {
   const body = await req.json().catch(() => ({})) as {
     user_id?: string; dry?: boolean
     sample_b64?: string; sample_kind?: "original" | "remix"; accent_description?: string
+    reclone?: boolean
   }
   const userId = body.user_id
   if (!userId) return json({ error: "user_id required" }, 400)
@@ -79,6 +80,88 @@ Deno.serve(async (req) => {
 
   const { data: profile } = await db.from("profiles").select("target_language").eq("id", userId).maybeSingle()
   const target = ((profile as { target_language?: string } | null)?.target_language ?? "en").toLowerCase().split("-")[0]
+
+  let lastStatus = 0
+  const el = async (id: string): Promise<ElVoice | null> => {
+    const r = await fetch(`https://api.elevenlabs.io/v1/voices/${id}`, { headers: { "xi-api-key": elKey } })
+    lastStatus = r.status
+    return r.ok ? await r.json() as ElVoice : null
+  }
+  // Clone the recording (cartesia.cloneVoice cleans and levels it), give it
+  // the accent, and swap it in for the voice the learner is on.
+  const finish = async (
+    source: { voiceId: string; sampleId: string; kind: string } | null,
+    accent: string | null, plan: Record<string, unknown>,
+  ): Promise<Response> => {
+    let bytes: Uint8Array
+    if (source) {
+      const audio = await fetch(
+        `https://api.elevenlabs.io/v1/voices/${source.voiceId}/samples/${source.sampleId}/audio`,
+        { headers: { "xi-api-key": elKey } })
+      if (!audio.ok) return json({ ...plan, result: "failed", detail: `sample ${audio.status}` }, 502)
+      bytes = new Uint8Array(await audio.arrayBuffer())
+    } else {
+      const bin = atob(body.sample_b64!)
+      bytes = new Uint8Array(bin.length)
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+    }
+    let clip: File
+    if (bytes.length > 12 && String.fromCharCode(...bytes.subarray(0, 4)) === "RIFF") {
+      clip = new File([bytes.slice().buffer as ArrayBuffer], "sample.wav", { type: "audio/wav" })
+    } else {
+      const decoder = new MPEGDecoder()
+      await decoder.ready
+      const decoded = decoder.decode(bytes)
+      decoder.free()
+      if (!decoded.samplesDecoded) return json({ ...plan, result: "failed", detail: "undecodable sample" }, 502)
+      clip = cartesia.wavFileFromFloat(decoded.channelData, decoded.sampleRate)
+    }
+
+    const made = await cartesia.cloneVoice(clip, active.name ?? `Future ${userId.slice(0, 8)}`,
+      cartesia.lineLanguage("", target))
+    if (!made.ok) return json({ ...plan, result: "failed", detail: made.detail }, 502)
+    if (accent && accent !== cartesia.GERMAN_DEFAULT) {
+      const ok = await cartesia.ensureAccent(made.voiceId, accent)
+      if (!ok.ok) {
+        await cartesia.deleteVoice(made.voiceId)
+        return json({ ...plan, result: "failed", detail: ok.detail }, 502)
+      }
+    }
+    const id = accent ? `${made.voiceId}:${accent}` : made.voiceId
+
+    // Swap only if the learner is still on the voice we read — a phone that
+    // re-recorded or moved itself meanwhile wins.
+    const swapped = await swap(db, userId, active.elevenlabs_voice_id, id, active.name)
+    if (!swapped) {
+      await cartesia.deleteVoice(made.voiceId)
+      return json({ ...plan, result: "changed_meanwhile" })
+    }
+    console.log("voice moved by operator", plan, id)
+    return json({ ...plan, result: "moved", to: id })
+  }
+
+  // Already on Cartesia. `reclone`: made again from the original recording
+  // (2026-10-13 — every clone is now made from a cleaned take, so voices
+  // moved before carry their room's noise); else only the accent rules.
+  if (cartesia.isCartesiaVoice(active.elevenlabs_voice_id) && body.reclone) {
+    const { accent: had } = cartesia.parseVoice(active.elevenlabs_voice_id)
+    const accent = chooseAccent(target, had)
+    let source: { voiceId: string; sampleId: string; kind: string } | null = null
+    for (const r of all) {
+      if (cartesia.isCartesiaVoice(r.elevenlabs_voice_id)) continue
+      const v = await el(r.elevenlabs_voice_id)
+      if (v?.category === "cloned" && v.samples?.[0]) {
+        source = { voiceId: r.elevenlabs_voice_id, sampleId: v.samples[0].sample_id, kind: "earlier_clone" }
+        break
+      }
+    }
+    const archivedOriginal = body.sample_b64 && body.sample_kind !== "remix"
+    if (!source && !archivedOriginal) return json({ user_id: userId, result: "no_recording", from: active.elevenlabs_voice_id })
+    const plan = { user_id: userId, target, from: active.elevenlabs_voice_id, accent,
+      source: source?.kind ?? "archive_original" }
+    if (dry) return json({ ...plan, result: "would_reclone" })
+    return await finish(source, accent, plan)
+  }
 
   // Already on Cartesia: only the accent rules.
   if (cartesia.isCartesiaVoice(active.elevenlabs_voice_id)) {
@@ -99,12 +182,6 @@ Deno.serve(async (req) => {
   // (the new row is not parked — parking ended with Cartesia, 2026-10-12).
   if (active.parked_at && !body.sample_b64) return json({ user_id: userId, result: "parked" })
 
-  let lastStatus = 0
-  const el = async (id: string): Promise<ElVoice | null> => {
-    const r = await fetch(`https://api.elevenlabs.io/v1/voices/${id}`, { headers: { "xi-api-key": elKey } })
-    lastStatus = r.status
-    return r.ok ? await r.json() as ElVoice : null
-  }
   const upstream = await el(active.elevenlabs_voice_id)
   if (!upstream && !body.sample_b64) {
     return json({ user_id: userId, result: "no_upstream_voice", status: lastStatus, from: active.elevenlabs_voice_id })
@@ -148,51 +225,7 @@ Deno.serve(async (req) => {
     el_accent: elAccent, accent, source: source?.kind ?? archived!.kind }
   if (dry) return json({ ...plan, result: "would_move" })
 
-  let bytes: Uint8Array
-  if (source) {
-    const audio = await fetch(
-      `https://api.elevenlabs.io/v1/voices/${source.voiceId}/samples/${source.sampleId}/audio`,
-      { headers: { "xi-api-key": elKey } })
-    if (!audio.ok) return json({ ...plan, result: "failed", detail: `sample ${audio.status}` }, 502)
-    bytes = new Uint8Array(await audio.arrayBuffer())
-  } else {
-    const bin = atob(body.sample_b64!)
-    bytes = new Uint8Array(bin.length)
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
-  }
-  let clip: File
-  if (bytes.length > 12 && String.fromCharCode(...bytes.subarray(0, 4)) === "RIFF") {
-    clip = new File([bytes.slice().buffer as ArrayBuffer], "sample.wav", { type: "audio/wav" })
-  } else {
-    const decoder = new MPEGDecoder()
-    await decoder.ready
-    const decoded = decoder.decode(bytes)
-    decoder.free()
-    if (!decoded.samplesDecoded) return json({ ...plan, result: "failed", detail: "undecodable sample" }, 502)
-    clip = cartesia.wavFileFromFloat(decoded.channelData, decoded.sampleRate)
-  }
-
-  const made = await cartesia.cloneVoice(clip, active.name ?? `Future ${userId.slice(0, 8)}`,
-    cartesia.lineLanguage("", target))
-  if (!made.ok) return json({ ...plan, result: "failed", detail: made.detail }, 502)
-  if (accent && accent !== cartesia.GERMAN_DEFAULT) {
-    const ok = await cartesia.ensureAccent(made.voiceId, accent)
-    if (!ok.ok) {
-      await cartesia.deleteVoice(made.voiceId)
-      return json({ ...plan, result: "failed", detail: ok.detail }, 502)
-    }
-  }
-  const id = accent ? `${made.voiceId}:${accent}` : made.voiceId
-
-  // Swap only if the learner is still on the voice we read — a phone that
-  // re-recorded or moved itself meanwhile wins.
-  const swapped = await swap(db, userId, active.elevenlabs_voice_id, id, active.name)
-  if (!swapped) {
-    await cartesia.deleteVoice(made.voiceId)
-    return json({ ...plan, result: "changed_meanwhile" })
-  }
-  console.log("voice moved by operator", plan, id)
-  return json({ ...plan, result: "moved", to: id })
+  return await finish(source, accent, plan)
 })
 
 /** German learners speak standard German; an accent they had is kept;

@@ -14,6 +14,8 @@
 // `voice_clones.elevenlabs_voice_id` like any other (the column name is
 // history; it means "the provider's voice id").
 
+import { MPEGDecoder } from "npm:mpg123-decoder@1.0.3"
+
 const HOST = "https://api.cartesia.ai"
 export const CARTESIA_VERSION = "2026-08-14"
 export const CARTESIA_MODEL = "sonic-3.6"
@@ -361,8 +363,14 @@ export async function cloneVoice(
   // levelled to -20 gave -19.8. Phone takes are quiet, and the un-accented
   // voice came out so soft the app's own levelling couldn't lift the first
   // greeting. So the take is levelled here before it goes up.
-  const levelled = await levelledWav(clip)
-  form.append("clip", levelled ?? clip, clip.name || "sample.wav")
+  // And the room is taken out first (2026-10-13): a clone copies the
+  // recording's background hiss and echo into every line it speaks.
+  // Measured on the founder's take, the cloned voice's noise floor fell
+  // 6–10 dB (scripts/voice-denoise-probe.sh), and the founder judged the
+  // voice still his by ear. Best-effort: any failure clones the take as is.
+  const cleaned = await isolatedVoice(clip)
+  const levelled = await levelledWav(cleaned ?? clip)
+  form.append("clip", levelled ?? cleaned ?? clip, clip.name || "sample.wav")
   form.append("name", name.slice(0, 100) || "voice")
   form.append("language", SUPPORTED.has(language) ? language : "en")
   const r = await fetch(`${HOST}/voices/clone`, { method: "POST", headers: headers(false), body: form })
@@ -381,6 +389,36 @@ export async function cloneVoice(
   if (runtime?.waitUntil) runtime.waitUntil(addGerman)
   else await addGerman
   return { ok: true, voiceId }
+}
+
+/** The take with only the voice left in it — ElevenLabs Audio Isolation
+ *  (~1,000 credits a minute, so ~2¢ a clone), decoded back to a WAV so it
+ *  can be levelled. Null on any failure. */
+export async function isolatedVoice(clip: File): Promise<File | null> {
+  const key = Deno.env.get("ELEVENLABS_API_KEY")
+  if (!key) return null
+  try {
+    const form = new FormData()
+    form.append("audio", clip, clip.name || "sample.wav")
+    const r = await fetch("https://api.elevenlabs.io/v1/audio-isolation", {
+      method: "POST", headers: { "xi-api-key": key }, body: form,
+      signal: AbortSignal.timeout(60_000),
+    })
+    if (!r.ok) {
+      console.warn("audio isolation failed", r.status, (await r.text()).slice(0, 200))
+      return null
+    }
+    const bytes = new Uint8Array(await r.arrayBuffer())
+    const decoder = new MPEGDecoder()
+    await decoder.ready
+    const decoded = decoder.decode(bytes)
+    decoder.free()
+    if (!decoded.samplesDecoded) return null
+    return wavFileFromFloat(decoded.channelData, decoded.sampleRate, clip.name || "sample.wav")
+  } catch (e) {
+    console.warn("audio isolation failed", String(e))
+    return null
+  }
 }
 
 /** Delete a clone. A voice that is already gone counts as deleted. */

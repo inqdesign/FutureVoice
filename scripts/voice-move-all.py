@@ -10,6 +10,10 @@ voices has one, else the active remix's sample with its accent prompt.
   python3 scripts/voice-move-all.py              # dry run
   python3 scripts/voice-move-all.py --send       # move everyone
   python3 scripts/voice-move-all.py --send <user_id> ...
+  python3 scripts/voice-move-all.py --send --days 5   # only learners seen in
+      the last 5 days, most recent first; a voice already on Cartesia is made
+      again from its original recording (now cleaned before cloning)
+  python3 scripts/voice-move-all.py --send --reclone <user_id> ...   # same, these only
 
 Results are appended to /tmp/voice-move-all-<date>.jsonl.
 """
@@ -78,7 +82,12 @@ def archived(voice_ids: list[str], active_id: str):
 def main():
     args = sys.argv[1:]
     send = "--send" in args
-    only = [a for a in args if a != "--send"]
+    days = None
+    if "--days" in args:
+        days = int(args[args.index("--days") + 1])
+        args = [a for i, a in enumerate(args) if a != "--days" and (i == 0 or args[i - 1] != "--days")]
+    reclone = days is not None or "--reclone" in args
+    only = [a for a in args if a not in ("--send", "--reclone")]
     rows = query("""
         select v.user_id, v.elevenlabs_voice_id, v.is_active
         from voice_clones v join auth.users u on u.id = v.user_id
@@ -92,6 +101,18 @@ def main():
         if r["is_active"]:
             u["active"] = r["elevenlabs_voice_id"]
     users = only or list(by_user)
+    if days is not None and not only:
+        seen = query(f"""
+            select u.id as user_id, greatest(
+              (select max(updated_at) from auth.refresh_tokens r where r.user_id::uuid = u.id),
+              (select max(refreshed_at) from auth.sessions s where s.user_id = u.id),
+              u.last_sign_in_at) as last_seen
+            from auth.users u where not coalesce(u.is_anonymous, false)""")
+        recent = sorted((r for r in seen if r["last_seen"] and r["user_id"] in by_user
+                         and r["last_seen"] >= time.strftime("%Y-%m-%d", time.gmtime(time.time() - days * 86400))),
+                        key=lambda r: r["last_seen"], reverse=True)
+        users = [r["user_id"] for r in recent]
+        print(f"{len(users)} learners seen in the last {days} days", flush=True)
     key = service_key()
     out = f"/tmp/voice-move-all-{time.strftime('%Y%m%d')}.jsonl"
     for uid in users:
@@ -99,6 +120,11 @@ def main():
         if not info or not info["active"]:
             continue
         payload = {"user_id": uid, "dry": not send}
+        if reclone and "-" in info["active"]:
+            payload["reclone"] = True
+            b64, kind, _ = archived([i for i in info["ids"] if "-" not in i], "")
+            if b64 and kind == "original":
+                payload.update(sample_b64=b64, sample_kind=kind)
         if "-" not in info["active"]:          # an ElevenLabs voice
             b64, kind, desc = archived([i for i in info["ids"] if "-" not in i], info["active"])
             if b64:
