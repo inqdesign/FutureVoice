@@ -80,15 +80,15 @@ class BeginnerQuestionTest {
     @Test fun otherLevelsAreUntouched() {
         for (level in listOf(CefrLevel.B1, CefrLevel.B2, CefrLevel.C1, CefrLevel.C2)) {
             assertFalse(prompt(level).contains("BEGINNER"))
-            assertTrue(prompt(level).endsWith("Never two levels up."))
+            assertTrue(prompt(level).endsWith("(1) is only about not monologuing."))
         }
     }
 
-    /** The block sits AFTER trimIndent: the rest of the prompt keeps its trimming. */
+    /** Last in the prompt, after the STRICT checks, as on iOS. */
     @Test fun beginnerPromptStaysTrimmed() {
         val p = prompt(CefrLevel.A2)
         assertTrue(p.startsWith("You're in a real-feeling SPOKEN"))
-        assertTrue(p.contains("Never two levels up.\n\nHOW TO ASK"))
+        assertTrue(p.contains("(1) is only about not monologuing.\n\nHOW TO ASK"))
     }
 }
 

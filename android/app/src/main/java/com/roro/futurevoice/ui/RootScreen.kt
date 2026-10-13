@@ -1193,18 +1193,16 @@ fun RootScreen() {
             onEditProfile = { editProfileStep = 0; editProfile = true },
             onOpenPerson = { personDetailId = it },
             onTalk = { p, meet ->
-                callCast = com.roro.futurevoice.talk.ConversationEngine.Cast(
-                    name = p.display_name, intro = p.intro, location = p.location,
-                    occupation = p.occupation, interests = p.interests,
-                    conversationStyle = p.conversation_style,
-                    commonGround = com.roro.futurevoice.talk.CommonGround.block(state.persona, com.roro.futurevoice.talk.CommonGround.of(p)))
                 callCastVoice = p.voice_preset_id.takeIf { it.isNotBlank() }
                 // The talk saves as an ordinary Session carrying this, so the
                 // person's card lists it and every review mechanism works on
                 // it for free. The local row's id IS the remote persona's.
                 callCounterpartId = p.id
                 gate {
-                    meet()
+                    // Cast as the person the meeting saved — the met row, or
+                    // the pool row materialized (iOS `onTalk(savedPerson())`),
+                    // so the call reads the fields iOS reads.
+                    callCast = com.roro.futurevoice.talk.ConversationEngine.Cast.of(meet())
                     callTopic = ""; callFacts = emptyList(); callBlurb = ""; callScenarioId = null
                     showPeople = false; inCall = true
                 }
@@ -1396,14 +1394,8 @@ fun RootScreen() {
             // The Watch map's person card (iOS `SkyPersonCard`): Talk is a call
             // with them, Watch a scene of the two of them past the hellos.
             onTalkWithPerson = { c ->
-                callCast = if (c.remoteId == null) com.roro.futurevoice.talk.ConversationEngine.Cast.of(c)
-                else c.asPublicPersona(state.targetLanguage).let { p ->
-                    com.roro.futurevoice.talk.ConversationEngine.Cast(
-                        name = p.display_name, intro = p.intro, location = p.location,
-                        occupation = p.occupation, interests = p.interests,
-                        conversationStyle = p.conversation_style,
-                        commonGround = com.roro.futurevoice.talk.CommonGround.block(state.persona, com.roro.futurevoice.talk.CommonGround.of(p)))
-                }
+                // A met stranger is cast from their saved row, as on iOS.
+                callCast = com.roro.futurevoice.talk.ConversationEngine.Cast.of(c)
                 callCastVoice = c.voicePresetId.takeIf { it.isNotBlank() }
                 callCounterpartId = c.id
                 gate {

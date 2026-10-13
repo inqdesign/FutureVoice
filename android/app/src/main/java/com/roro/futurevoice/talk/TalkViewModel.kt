@@ -347,12 +347,12 @@ class TalkViewModel(context: Context) : ViewModel() {
                     topic = config.composedTopic,
                     persona = config.persona,
                     newsFacts = config.newsFacts,
-                    cast = config.cast,
+                    counterpart = config.cast?.person,
                     brief = scenarioBrief(config),
                     clock = pinPromptClock(config),
                     tutor = tutorThisCall,
                 ) + ConversationEngine.turnOutputInstruction(config.targetLanguage, config.nativeLanguage,
-                    cast = config.cast, inScene = config.scenarioId != null)
+                    counterpart = config.cast?.person, inScene = config.scenarioId != null)
                 if (BuildConfig.DEBUG) Log.d(TAG, "prompt: patterns=${profile.recurringMistakes.size}" +
                     " weak=${profile.weakVocabAreas} first='${profile.recurringMistakes.firstOrNull()?.mistake}'")
                 openConversation()
@@ -486,11 +486,11 @@ class TalkViewModel(context: Context) : ViewModel() {
                     // launched as.
                     firstMeeting = freeTalk && config.persona?.metAt == null,
                     newsFacts = config.newsFacts,
-                    cast = config.cast,
+                    counterpart = config.cast?.person,
                     brief = scenarioBrief(config),
                     clock = pinPromptClock(config),
                     tutor = tutorThisCall,
-                ) + REALTIME_STYLE_RULES
+                ) + ConversationPrompt.REALTIME_STYLE_RULES
                 // A ready-made situation the LEARNER opens (asking a stranger
                 // the way, iOS `5b0587a`): the other side waits to be spoken
                 // to, and the coach's own slot above the pill offers a first
@@ -556,7 +556,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                     } ?: runCatching {
                         GeminiClient(auth).sendJson(
                             system = realtimeSystem + ConversationEngine.turnOutputInstruction(
-                                config.targetLanguage, config.nativeLanguage, cast = config.cast,
+                                config.targetLanguage, config.nativeLanguage, counterpart = config.cast?.person,
                                 inScene = config.scenarioId != null),
                             messages = listOf(GeminiClient.Message(
                                 GeminiClient.Message.Role.USER,
@@ -1656,7 +1656,3 @@ class TalkViewModel(context: Context) : ViewModel() {
     }
 }
 
-/** Appended to the system prompt on the realtime path (iOS `realtimeStyleRules`). */
-private const val REALTIME_STYLE_RULES = """
-
-This is a LIVE phone call. Speak in one to three short sentences, never write JSON, never add labels or stage directions — just say your line."""

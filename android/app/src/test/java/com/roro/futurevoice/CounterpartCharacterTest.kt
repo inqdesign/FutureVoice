@@ -30,7 +30,7 @@ class CounterpartCharacterTest {
     )
 
     private fun block(c: Counterpart, lang: String = "ko") =
-        ConversationCharacter.characterBlock(ConversationEngine.Cast.of(c), lang,
+        ConversationCharacter.characterBlock(c, null, lang,
             com.roro.futurevoice.data.LanguageCatalog.englishName(lang))
 
     @Test fun ownPersonIsNotANewAcquaintance() {
@@ -57,10 +57,12 @@ class CounterpartCharacterTest {
         assertTrue(b.contains("해요체"))
     }
 
-    /** A Find-people persona with no saved row yet is a stranger, spoken to politely. */
+    /** A Find-people persona met for the first time (materialized like iOS
+     *  `asCounterpart`) is a stranger, spoken to politely. */
     @Test fun poolPersonaWithoutARowIsAPoliteStranger() {
         val b = ConversationCharacter.characterBlock(
-            ConversationEngine.Cast(name = "Mina", intro = "I run a bakery."), "ko", "Korean")
+            Counterpart(name = "Mina", relationship = "Met on nawana", intro = "I run a bakery.",
+                background = "I run a bakery.", remoteId = "mina"), null, "ko", "Korean")
         assertTrue(b.contains("new acquaintances"))
         assertTrue(b.contains("해요체"))
     }
@@ -97,8 +99,8 @@ class CounterpartCharacterTest {
         assertEquals(prompt("en", null), prompt("en", set))
         // The in-call turn instruction follows the same rule.
         assertEquals(ConversationEngine.turnOutputInstruction("ko", "en"),
-            ConversationEngine.turnOutputInstruction("ko", "en", ConversationEngine.Cast.of(person())))
-        assertTrue(ConversationEngine.turnOutputInstruction("ko", "en", ConversationEngine.Cast.of(set))
+            ConversationEngine.turnOutputInstruction("ko", "en", person()))
+        assertTrue(ConversationEngine.turnOutputInstruction("ko", "en", set)
             .contains("EXCEPTION FOR THIS CALL"))
     }
 

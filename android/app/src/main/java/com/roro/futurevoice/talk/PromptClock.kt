@@ -125,16 +125,6 @@ data class PromptClock(
         resumedFrom?.let {
             lines += "- This call RESUMES a saved talk that paused ${gap(it, now, zone)}. The lines already in the conversation were said then, not just now — pick it back up the way you would after that much time."
         }
-        return "\n\nWHEN THIS IS — the user's own clock, and your ONLY source for time:\n" +
-            lines.joinToString("\n") + "\n" +
-            "Use this to get time RIGHT, not to talk about it. Greet for the part of " +
-            "the day it actually is, or don't mention it at all. Never announce the " +
-            "date, a count of talks, or how long it has been unless it comes up " +
-            "naturally. A talk earlier today means you spoke recently — never greet " +
-            "them as if after a long absence. Anything about time that is not " +
-            "written here — the hour later in the call, a count, a gap — you do NOT " +
-            "know: never guess it, and never invent how many times you have talked. " +
-            "If you are playing a character in a scene rather than their future " +
-            "self, their talk history is not yours; leave it out."
+        return ConversationPrompt.clockBlock(lines.joinToString("\n"))
     }
 }

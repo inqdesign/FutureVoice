@@ -117,7 +117,8 @@ class PersonaPrivacyTest {
     @Test fun castCounterpartGetsOnlyStrangerLines() {
         val prompt = ConversationEngine.conversationSystemPrompt(
             targetLanguage = "en", nativeLanguage = "ko", level = CefrLevel.B1, persona = sample,
-            cast = ConversationEngine.Cast(name = "Lena", intro = "I teach piano in Vienna."),
+            counterpart = com.roro.futurevoice.data.Counterpart(name = "Lena", relationship = "Met on nawana",
+                intro = "I teach piano in Vienna.", background = "I teach piano in Vienna.", remoteId = "lena"),
         )
         assertTrue(prompt.contains("a parent"))
         assertFalse(prompt.contains("money is tight"))

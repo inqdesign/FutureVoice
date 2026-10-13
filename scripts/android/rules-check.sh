@@ -4,9 +4,16 @@
 #   2. say whether any vector changed — a change means an iOS rule moved,
 #      and the Android port now owes the same change
 #   3. run the Android tests that read those vectors
+#
+# The conversation prompt is held to iOS twice: its text must be what
+# gen-conversation-prompt.py lifts from the pinned iOS ref (scripts/android/
+# promptgen/IOS_REF), and ConversationPromptVectorTest compares the whole
+# assembled prompt against the real iOS output (gen-prompt-vectors.sh).
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 scripts/android/gen-vectors.sh
+python3 scripts/android/gen-conversation-prompt.py --check
+scripts/android/gen-prompt-vectors.sh
 if ! git diff --quiet -- docs/contracts/vectors; then
   echo "▲ golden vectors changed — an iOS rule moved:"; git --no-pager diff --stat -- docs/contracts/vectors
 fi

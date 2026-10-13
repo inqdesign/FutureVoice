@@ -17,7 +17,7 @@ class TutorModeTest {
         val off = prompt("en", tutor = false)
         assertFalse(off.contains("TUTOR MODE"))
         assertTrue(off.contains("Never correct the user mid-conversation."))
-        assertTrue(off.endsWith("Never two levels up."))
+        assertTrue(off.endsWith("(1) is only about not monologuing."))
     }
 
     @Test fun onReplacesTheNoCorrectionRuleAndComesLast() {
