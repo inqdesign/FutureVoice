@@ -162,3 +162,80 @@ def plain(segs):
     if any(k == "i" for k, _ in segs):
         sys.exit(f"{pathlib.Path(sys.argv[0]).name}: literal carries an interpolation: {segs}")
     return "".join(v for _, v in segs)
+
+
+# --- pinning hand-ported Swift ---------------------------------------------
+# Code that can't be lifted as text (a loop that builds a grounding list, a
+# date formatter) is ported by hand and PINNED: the generator stores a
+# fingerprint of the Swift body it stands for, and fails the run the day that
+# body changes at the ref, naming what to re-port.
+
+def func_body(src, name, start=0):
+    """The body of `func <name>(...)` — braces balanced, string literals
+    (single- and triple-quoted) skipped."""
+    i = src.index(f"func {name}(", start)
+    j = src.index("{", i)
+    depth, k, in_str = 0, j, False
+    while True:
+        if src.startswith('"""', k):
+            in_str = not in_str
+            k += 3
+            continue
+        c = src[k]
+        if in_str:
+            if c == "\\":
+                k += 2
+                continue
+        elif c == '"':
+            e = k + 1
+            while src[e] != '"':
+                e += 2 if src[e] == "\\" else 1
+            k = e + 1
+            continue
+        elif c == "{":
+            depth += 1
+        elif c == "}":
+            depth -= 1
+            if depth == 0:
+                return src[j + 1:k]
+        k += 1
+
+
+def fingerprint(text):
+    import hashlib
+    return hashlib.sha256(re.sub(r"\s+", " ", text).strip().encode()).hexdigest()[:12]
+
+
+def pin(pinned):
+    """`pinned` = {label: (swift_text, fingerprint)}. `--fingerprints` prints
+    the current ones; otherwise any mismatch ends the run."""
+    if "--fingerprints" in sys.argv:
+        for label, (text, _) in pinned.items():
+            print(label, fingerprint(text))
+        sys.exit(0)
+    bad = [f"{label} ({fingerprint(text)} != {want})"
+           for label, (text, want) in pinned.items() if fingerprint(text) != want]
+    if bad:
+        sys.exit(f"{pathlib.Path(sys.argv[0]).name}: hand-ported Swift changed at iOS {SHORT}: "
+                 + "; ".join(bad) + " — re-port the twin(s), then update the fingerprint(s)")
+
+
+def ts_template(s):
+    """Text for the inside of a TS template literal."""
+    return s.replace("\\", "\\\\").replace("`", "\\`").replace("${", "\\${")
+
+
+def ts(segs, interp):
+    """Segments (from `literal_at`) as the inside of a TS template literal,
+    each interpolation mapped through `interp` (whitespace-normalized key);
+    an unmapped one fails the run."""
+    out = []
+    for kind, v in segs:
+        if kind == "t":
+            out.append(ts_template(v))
+        else:
+            key = re.sub(r"\s+", " ", v).strip()
+            if key not in interp:
+                sys.exit(f"unmapped interpolation in {pathlib.Path(sys.argv[0]).name}: {key}")
+            out.append(interp[key])
+    return "".join(out)

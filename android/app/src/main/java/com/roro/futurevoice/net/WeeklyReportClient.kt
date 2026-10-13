@@ -5,6 +5,8 @@ import com.roro.futurevoice.core.Config
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.data.CoreVocabulary
+import com.roro.futurevoice.data.JapaneseMorph
+import com.roro.futurevoice.data.WordSplitter
 import com.roro.futurevoice.data.LearnedExpression
 import com.roro.futurevoice.data.RepeatedMistake
 import com.roro.futurevoice.data.SuggestedExpression
@@ -139,10 +141,19 @@ object WeeklyReportEngine {
         val pairs = LinkedHashMap<String, Pair<String, String>>()
         for (s in window) {
             for (t in s.turns) {
-                val sug = t.suggestion ?: continue
                 // A misheard turn's correction fixes a line nobody said.
-                if (t.role != TurnRole.USER || t.excludedFromScoring) continue
-                pairs.putIfAbsent(key(t.transcript, sug.alternative), t.transcript to sug.alternative)
+                if (t.excludedFromScoring) continue
+                val sug = t.suggestion ?: continue
+                // A MISTAKE is what recurs, so feed the fixes. Since iOS
+                // 2026-09-27 `alternative` is the whole turn re-said, which
+                // mixes style with grammar; a turn from before `fixes` keeps
+                // the old pair, whose alternative WAS the correction.
+                val fixes = sug.fixes
+                if (fixes != null) {
+                    for (f in fixes) pairs.putIfAbsent(key(f.was, f.now), f.was to f.now)
+                } else {
+                    pairs.putIfAbsent(key(t.transcript, sug.alternative), t.transcript to sug.alternative)
+                }
             }
             for (p in s.summary?.phrasesUsed.orEmpty()) {
                 pairs.putIfAbsent(key(p.userSaid, p.fluentAlternative),
@@ -224,13 +235,21 @@ object WeeklyReportEngine {
         val per100 = if (metrics.userWordCount > 0)
             slips.toDouble() / metrics.userWordCount * 100 else 0.0
         val reads = window.mapNotNull { it.summary?.scorecard?.cefrLevel?.uppercase() }
-        return """
-        - articulation_rate_wpm: ${metrics.articulationRate.roundToInt()} (words per minute of VOICED speech, pauses removed; 0 = no timing data. Learner bands: <60 A1, 60-85 A2, 85-105 B1, 105-125 B2, 125-145 C1, 145+ C2)
-        - avg_words_per_turn: ${metrics.avgWordsPerUserTurn.roundToInt()}
-        - verified_grammar_slips_per_10_turns: ${"%.1f".format(per10)} (transcript-verified real grammar errors only — STT artifacts and style nudges excluded)
-        - verified_grammar_slips_per_100_words: ${"%.1f".format(per100)} (same slips normalized by words spoken — fairer to long turns. Rough control bands: <1 C1+, 1-2 B2, 2-4 B1, 4-7 A2, 7+ A1)
-        - per_talk_ai_reads: ${if (reads.isEmpty()) "(none)" else reads.joinToString(", ")}
-        """.trimIndent()
+        // Structural range per talk (a1…c2, written by the summary since iOS
+        // 2026-09-24). Without it the slip density was the only grammar
+        // evidence, and a beginner in short accurate sentences read C1+.
+        val ranges = window.mapNotNull { s ->
+            val raw = s.summary?.scorecard?.grammarRange?.lowercase() ?: return@mapNotNull null
+            CefrLevel.entries.firstOrNull { it.code == raw }?.code?.uppercase()
+        }
+        return WeeklyEvidenceText.deliveryEvidence(
+            articulationWpm = metrics.articulationRate.roundToInt(),
+            avgWordsPerTurn = metrics.avgWordsPerUserTurn.roundToInt(),
+            slipsPer10Turns = per10,
+            slipsPer100Words = per100,
+            rangeReads = ranges,
+            talkReads = reads,
+        )
     }
 
     /**
@@ -242,9 +261,15 @@ object WeeklyReportEngine {
         val counts = HashMap<CefrLevel, Int>()
         val seen = HashSet<String>()
         for (line in utterances) {
-            for (token in line.lowercase().split(Regex("[^\\p{L}\\p{N}]+"))) {
+            // Headwords for Japanese — a segment on its own can't tell 行き
+            // the noun from 行き + ました (iOS `vocabProfileLine`).
+            val tokens = if (WordSplitter.spaced(language))
+                line.lowercase().split(Regex("[^\\p{L}\\p{N}]+"))
+            else JapaneseMorph.headwords(line, CoreVocabulary.set(language),
+                CoreVocabulary.forms(language)).map { it.first }.distinct()
+            for (token in tokens) {
                 if (token.isEmpty() || !seen.add(token)) continue
-                CoreVocabulary.level(token, language)?.let {
+                CoreVocabulary.levelOfSurface(token, language)?.let {
                     counts[it] = (counts[it] ?: 0) + 1
                 }
             }

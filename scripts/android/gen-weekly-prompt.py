@@ -1,104 +1,135 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Extract WeeklyReportEngine's system prompt into the edge function.
+"""Lift WeeklyReportEngine into the Android-only `weekly-report` edge function
+and the Android client that feeds it.
 
 The prompt is the PRODUCT — the rules by which a learner's level is judged —
-and it is far too long and too load-bearing to retype. It is read out of the
-Swift source and written into `supabase/functions/weekly-report/prompt.ts`,
-so the two can only differ by someone editing the generated file, which the
-banner tells them not to do.
+and it is far too long and too load-bearing to retype. iOS builds it
+client-side and calls `gemini`; Android sends the evidence to `weekly-report`,
+which builds the same prompt server-side. Everything is read from the Swift
+source at the pinned ref (promptgen/IOS_REF).
 
-iOS still builds it client-side and calls `gemini`; nothing here switches it.
-Re-run after editing `WeeklyReportEngine.swift`.
+    python3 scripts/android/gen-weekly-prompt.py [--check] [--ref <sha>] [--fingerprints]
 
-    python3 scripts/android/gen-weekly-prompt.py [--check] [--ref <sha>]
+GENERATED:
+  - `supabase/functions/weekly-report/prompt.ts`: the `systemPrompt` literal
+    and the `userPrompt` literal (its caps and fallbacks are pinned code);
+    the coaching contract and language names come from the generated
+    `session-summary/prompt.ts`.
+  - `android/.../net/WeeklyEvidenceText.kt`: the MEASURED DELIVERY block
+    (`deliveryEvidence`), the evidence the judge reads its bands from — it
+    is prompt text, built on the client because only the client has the
+    numbers.
+HAND-PORTED and PINNED (the run fails when the Swift changes): the rest of
+`generate` (window, suggestion pairs, the numbers) and `vocabProfileLine`,
+both in Android `WeeklyReportEngine`; `systemPrompt`'s wrapper; `userPrompt`'s
+caps.
 """
 import pathlib
-import re
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / "promptgen"))
-from iosref import ROOT, show, emit  # noqa: E402  iOS at promptgen/IOS_REF; --check
+from iosref import (ROOT, REF, show, emit, literal_at, func_body, pin, ts,  # noqa: E402
+                    kotlin)
 
 SRC = "FutureVoice/Services/WeeklyReportEngine.swift"
 OUT = ROOT / "supabase/functions/weekly-report/prompt.ts"
+KT = ROOT / "android/app/src/main/java/com/roro/futurevoice/net/WeeklyEvidenceText.kt"
+ENGINE = show(SRC)
 
-# The multi-line Swift string literal inside `systemPrompt`, up to the closing
-# delimiter that ends the `var s = """ … """` assignment.
-BLOCK = re.compile(r'var s = """\n(.*?)\n        """', re.S)
+sp = func_body(ENGINE, "systemPrompt")
+up = func_body(ENGINE, "userPrompt")
+pin({
+    "generate": (func_body(ENGINE, "generate"), "24ce4ccf42d5"),
+    "vocabProfileLine": (func_body(ENGINE, "vocabProfileLine"), "e01771edce07"),
+    "systemPrompt (wrapper)": (sp[:sp.index('var s = """')] + sp[sp.index('\n        """'):], "2b2e93b77725"),
+    "userPrompt (caps)": (up[:up.index('return """')], "5ce49ee9e906"),
+})
 
+system = ts(literal_at(ENGINE, 'var s = """', ENGINE.index("static func systemPrompt(")), {
+    "targetName": "${targetName}",
+    "nativeName": "${nativeName}",
+    "CoachingLanguage.contract(target: targetLanguage, native: nativeLanguage)": "${contract}",
+})
+user = ts(literal_at(ENGINE, 'return """', ENGINE.index("static func userPrompt(")), {
+    "prior": "${prior}",
+    "window": "${window}",
+    "vocabProfileLine(windowTranscripts)": "${vocabProfile}",
+    "deliveryEvidence": "${deliveryEvidence}",
+    "pairs": "${pairs}",
+})
+evidence = kotlin(literal_at(ENGINE, 'let deliveryEvidence = """'), {
+    "Int(metrics.articulationRate.rounded())": "articulationWpm.toString()",
+    "Int(metrics.avgWordsPerUserTurn.rounded())": "avgWordsPerTurn.toString()",
+    'String(format: "%.1f", slipsPer10)': "fmt1(slipsPer10Turns)",
+    'String(format: "%.1f", metrics.userWordCount > 0 ? Double(slipCount) / Double(metrics.userWordCount) * 100 : 0)':
+        "fmt1(slipsPer100Words)",
+    'rangeReads.isEmpty ? "(none)" : rangeReads.joined(separator: ", ")': "list(rangeReads)",
+    'talkReads.isEmpty ? "(none)" : talkReads.joined(separator: ", ")': "list(talkReads)",
+}, "            ")
 
-def dedent(body: str) -> str:
-    """Swift strips the closing delimiter's indentation from a multi-line
-    literal. The extract keeps it, so it is removed here — otherwise every
-    line of the prompt ships with eight leading spaces the model reads past.
-    """
-    lines = body.split("\n")
-    indents = [len(l) - len(l.lstrip()) for l in lines if l.strip()]
-    cut = min(indents) if indents else 0
-    return "\n".join(l[cut:] if len(l) >= cut else l.lstrip() for l in lines)
-
-
-def join_continuations(body: str) -> str:
-    """A trailing backslash inside a Swift multi-line literal joins the next
-    line. Left alone it becomes a literal backslash in the TS template —
-    visible to the model, in the middle of a sentence.
-    """
-    return re.sub(r"\\\n\s*", " ", body)
-
-
-def to_ts(body: str) -> str:
-    """Swift interpolation → TS template placeholders.
-
-    Only four names are interpolated, and each maps to a parameter of the
-    generated builder. Anything else interpolated is a change the generator
-    has not been taught, so it fails loudly rather than shipping a literal
-    `\\(something)` into a prompt.
-    """
-    known = {
-        r"\(targetName)": "${targetName}",
-        r"\(nativeName)": "${nativeName}",
-        r"\(CoachingLanguage.contract(target: targetLanguage, native: nativeLanguage))":
-            "${contract}",
-    }
-    for swift, ts in known.items():
-        body = body.replace(swift, ts)
-    leftover = re.findall(r"\\\([^)]*\)", body)
-    if leftover:
-        raise SystemExit(f"unhandled Swift interpolation: {sorted(set(leftover))}")
-    # Escape what a TS template literal treats specially. Backslashes first.
-    body = body.replace("\\", "\\\\").replace("`", "\\`")
-    # Restore the placeholders the escape pass just broke.
-    return body.replace("\\${", "${")
-
-
-def main() -> None:
-    m = BLOCK.search(show(SRC))
-    if not m:
-        raise SystemExit("systemPrompt literal not found in WeeklyReportEngine.swift")
-    body = to_ts(dedent(join_continuations(m.group(1))))
-    emit(OUT, f'''// GENERATED by `scripts/android/gen-weekly-prompt.py` from
-// `FutureVoice/Services/WeeklyReportEngine.swift`. Do not edit by hand —
-// edit the Swift source and re-run, or the two platforms start judging the
-// same learner by different rules.
+emit(OUT, f'''// GENERATED by `scripts/android/gen-weekly-prompt.py` from the iOS source at
+// `{REF}` (WeeklyReportEngine.systemPrompt, .userPrompt). Do not edit by
+// hand — edit the Swift source and re-run, or the two platforms start
+// judging the same learner by different rules.
 //
 // This is the PRODUCT: the rules a learner's level is assessed by. Every
 // clause in it was argued for once, so nothing here is decoration.
 
+export {{ coachingContract, englishName }} from "../session-summary/prompt.ts"
+
+/** `WeeklyReportEngine.systemPrompt`, verbatim. */
 export function systemPrompt(
   targetName: string,
   nativeName: string,
   contract: string,
   previousSummary?: string | null,
 ): string {{
-  let s = `{body}`
+  let s = `{system}`
   if (previousSummary) {{
     s += `\\n\\nPrevious report summary (for trend comparison):\\n${{previousSummary}}`
   }}
   return s
 }}
+
+/** `WeeklyReportEngine.userPrompt`, same sections and same caps. */
+export function userPrompt(
+  priorCorpusLines: string[],
+  windowTranscripts: string[],
+  suggestionPairs: {{ said: string; alt: string }}[],
+  vocabProfile: string,
+  deliveryEvidence: string,
+): string {{
+  const prior = priorCorpusLines.length === 0 ? "(none — first report)"
+    : priorCorpusLines.slice(0, 500).join("\\n")
+  const window = windowTranscripts.slice(0, 500).join("\\n")
+  const pairs = suggestionPairs.length === 0 ? "(none)"
+    : suggestionPairs.slice(0, 100).map((p) => `- user said: "${{p.said}}"\\n  fluent: "${{p.alt}}"`).join("\\n")
+  return `{user}`
+}}
 ''')
 
+emit(KT, f'''package com.roro.futurevoice.net
 
-if __name__ == "__main__":
-    main()
+// GENERATED by scripts/android/gen-weekly-prompt.py --ref {REF} — do not edit.
+// Source: FutureVoice/Services/WeeklyReportEngine.swift (generate → deliveryEvidence).
+
+import java.util.Locale
+
+/** The MEASURED DELIVERY block the weekly judge reads its bands from. */
+object WeeklyEvidenceText {{
+    /** Swift `String(format: "%.1f")` — POSIX, never the device's comma. */
+    private fun fmt1(v: Double): String = String.format(Locale.ROOT, "%.1f", v)
+    private fun list(xs: List<String>): String = if (xs.isEmpty()) "(none)" else xs.joinToString(", ")
+
+    fun deliveryEvidence(
+        articulationWpm: Int,
+        avgWordsPerTurn: Int,
+        slipsPer10Turns: Double,
+        slipsPer100Words: Double,
+        rangeReads: List<String>,
+        talkReads: List<String>,
+    ): String =
+            {evidence}
+}}
+''')

@@ -124,6 +124,12 @@ object CoreVocabulary {
      * cannot say it is 疲れる.
      */
     fun levelOfSurface(token: String, language: String): CefrLevel? {
+        // Korean surfaces carry particles and endings: grade the dictionary
+        // form, as iOS `level(ofSurface:)` does (KoreanMorph, ranked).
+        if (language.substringBefore('-') == "ko") {
+            val head = KoreanMorph.dictionaryForm(token, set("ko"), ::koreanRank) ?: return null
+            return level(head, "ko")
+        }
         if (language.substringBefore('-') != "ja") return level(token, language)
         val head = JapaneseMorph.headwords(token, set(language), forms(language))
             .firstOrNull()?.first ?: return null
