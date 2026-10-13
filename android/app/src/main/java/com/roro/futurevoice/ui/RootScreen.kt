@@ -529,12 +529,34 @@ fun RootScreen() {
         }
         checkWelcome = false
     }
-    // The ElevenLabs → Cartesia voice move (iOS `offerVoiceMove`): a beat
-    // after the app is up, never over the welcome, once a day until moved.
+    // What's new in this release, once (iOS `offerWhatsNew`): a beat after
+    // the tabs are up, never over another sheet, ahead of the voice move,
+    // which waits for it to close.
+    var showWhatsNew by remember { mutableStateOf(false) }
     var showVoiceMove by remember { mutableStateOf(false) }
-    LaunchedEffect(state.voiceId, state.signedIn) {
+    LaunchedEffect(tabsArrived) {
+        if (!tabsArrived) return@LaunchedEffect
+        delay(1200)
+        val anotherSheetUp = showAgeCheck || paywalled || welcomeMinutes != null || showIntroPreview ||
+            showVoiceMove || inCall || state.levelUp != null || referralJoin != null ||
+            com.roro.futurevoice.data.AppUpdateService.pending.value != null
+        if (!showWhatsNew && !anotherSheetUp && WhatsNew.isDue(context, state.setupComplete)) showWhatsNew = true
+    }
+    if (showWhatsNew) {
+        WhatsNewSheet(
+            // The talk settings sheet the goal lives in (iOS
+            // `DiscoverSettingsSheet`) arrives with the learning-purpose port.
+            onChooseGoal = {},
+            onDismiss = { showWhatsNew = false },
+        )
+    }
+    // The ElevenLabs → Cartesia voice move (iOS `offerVoiceMove`): a beat
+    // after the app is up, never over the welcome or What's new (offered
+    // again when that card closes), once a day until moved.
+    LaunchedEffect(state.voiceId, state.signedIn, showWhatsNew) {
+        if (showWhatsNew) return@LaunchedEffect
         delay(2500)
-        if (welcomeMinutes == null &&
+        if (welcomeMinutes == null && !showWhatsNew &&
             VoiceMove.isDue(context, state.voiceId, state.signedIn, state.voiceIsStandIn)) showVoiceMove = true
     }
     if (showVoiceMove) {
@@ -595,7 +617,7 @@ fun RootScreen() {
         ready = state.setupComplete && state.voiceId != null && tabsArrived,
         blocked = inCall || paywalled || showIntroPreview || state.levelUp != null ||
             referralJoin != null || welcomeMinutes != null || updatePending != null || guideUp ||
-            showAgeCheck,
+            showAgeCheck || showWhatsNew,
         level = state.level,
     )
 
