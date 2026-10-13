@@ -2,10 +2,14 @@ package com.roro.futurevoice.net
 
 import com.roro.futurevoice.core.Config
 import com.roro.futurevoice.data.AuthRepository
+import com.roro.futurevoice.data.AvatarStore
+import com.roro.futurevoice.data.CounterpartPhotoStore
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.JsonObject
@@ -72,6 +76,48 @@ class PublicPersonaClient(private val auth: AuthRepository) {
         /** The voice the learner picked for their public profile
          *  ([com.roro.futurevoice.ui.ProfileVoiceRows]) — iOS `chosenVoiceKey`. */
         const val CHOSEN_VOICE_KEY = "futurevoice.publicIntro.voice"
+
+        /** The application context the photo reads and writes need — set
+         *  once from `FutureVoiceApplication`, like [PublicIntroComposer]. */
+        @Volatile private var appContext: android.content.Context? = null
+        fun init(context: android.content.Context) { appContext = context.applicationContext }
+
+        /**
+         * Fire-and-forget [pushMyPhoto] for a store that has no scope of its
+         * own (an avatar change): a published profile wears this face too;
+         * no row, no write.
+         */
+        fun pushMyPhotoLater() {
+            photoScope.launch { runCatching { PublicPersonaClient(AuthRepository()).pushMyPhoto() } }
+        }
+        private val photoScope = kotlinx.coroutines.CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+
+        /** Which people's photos came from the pool — iOS `adoptedPhotosKey`. */
+        const val POOL_PHOTOS_KEY = "futurevoice.poolPhotos"
+
+        /**
+         * ~96 px, re-encoded through a fresh bitmap so nothing of the original
+         * file survives; base64 in the row, never Supabase Storage.
+         */
+        fun publicPhoto(img: android.graphics.Bitmap): String? {
+            val side = minOf(img.width, img.height)
+            if (side <= 0) return null
+            val target = 96
+            val out = android.graphics.Bitmap.createBitmap(target, target, android.graphics.Bitmap.Config.ARGB_8888)
+            val scale = target.toFloat() / side
+            val w = img.width * scale
+            val h = img.height * scale
+            val left = (target - w) / 2
+            val top = (target - h) / 2
+            android.graphics.Canvas(out).drawBitmap(img, null,
+                android.graphics.RectF(left, top, left + w, top + h),
+                android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG))
+            val bytes = java.io.ByteArrayOutputStream().use {
+                out.compress(android.graphics.Bitmap.CompressFormat.JPEG, 70, it); it.toByteArray()
+            }
+            return android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+        }
 
         fun prefs(context: android.content.Context): android.content.SharedPreferences =
             context.getSharedPreferences("futurevoice", 0)
@@ -255,6 +301,7 @@ class PublicPersonaClient(private val auth: AuthRepository) {
         Edge.client.newCall(req).execute().use { resp ->
             if (resp.code !in 200..299) throw EdgeError.Http(resp.code, resp.body.string().take(512))
         }
+        pushMyPhoto()
     }
 
     /**
@@ -300,7 +347,13 @@ class PublicPersonaClient(private val auth: AuthRepository) {
      * not thousands), so one fetch beats server-side pagination. Your own
      * published row is filtered out: you don't meet yourself.
      */
-    suspend fun fetchPool(language: String): List<PublicPersona> = withContext(Dispatchers.IO) {
+    suspend fun fetchPool(language: String): List<PublicPersona> {
+        val rows = fetchPoolRows(language)
+        adoptPhotos(rows)
+        return rows
+    }
+
+    private suspend fun fetchPoolRows(language: String): List<PublicPersona> = withContext(Dispatchers.IO) {
         val url = "${Config.supabaseUrl.trimEnd('/')}/rest/v1/public_personas" +
             "?select=$columns&language=eq.$language&is_active=eq.true"
         val request = Request.Builder().url(url)
@@ -315,6 +368,96 @@ class PublicPersonaClient(private val auth: AuthRepository) {
                 .filterNot { it.owner_user_id?.lowercase() == mine }
         }
     }
+
+    // MARK: - Faces
+
+    /**
+     * Put the learner's current photo on every row they own (every target
+     * language), or take it off when they have none. A learner with no row
+     * updates nothing, so this is safe to call on any avatar change.
+     *
+     * The photo (2026-10-13, founder: publishing the profile already means it
+     * is public) rides in its OWN read and its OWN write, never in [columns]
+     * or the publish row: a select or update naming a column the database
+     * hasn't got fails the WHOLE request, and the pool would come back empty
+     * or the publish would fail — here a missing column just means initials.
+     */
+    suspend fun pushMyPhoto() = withContext(Dispatchers.IO) {
+        val context = appContext ?: return@withContext
+        val uid = auth.userId ?: return@withContext
+        val photo = AvatarStore.load(context)?.let(::publicPhoto)
+        val patch = buildJsonObject { put("photo", photo) }
+        val body = Edge.json.encodeToString(JsonObject.serializer(), patch)
+            .toRequestBody("application/json".toMediaType())
+        val req = Request.Builder()
+            .url("${Config.supabaseUrl.trimEnd('/')}/rest/v1/public_personas?owner_user_id=eq.$uid")
+            .header("Authorization", "Bearer ${auth.accessToken()}")
+            .header("apikey", Config.supabaseAnonKey)
+            .header("Prefer", "return=minimal")
+            .patch(body)
+            .build()
+        runCatching { Edge.client.newCall(req).execute().close() }
+    }
+
+    /**
+     * Save the pool's learner photos into [CounterpartPhotoStore] under each
+     * person's local id (on Android the remote id itself, [asCounterpart]) —
+     * the one every face on screen already reads — so nothing that draws a
+     * person needed to change. [POOL_PHOTOS_KEY] remembers which came from
+     * the pool (remote id → a fingerprint of the photo), so a re-load
+     * rewrites nothing that hasn't changed and a photo the author took down
+     * is deleted — without ever touching a photo the learner picked for
+     * someone themselves.
+     */
+    private suspend fun adoptPhotos(rows: List<PublicPersona>) {
+        val context = appContext ?: return
+        val ids = rows.filter { it.owner_user_id != null }.map { it.id }
+        if (ids.isEmpty()) return
+        val got: List<PhotoRow> = withContext(Dispatchers.IO) {
+            runCatching {
+                val url = "${Config.supabaseUrl.trimEnd('/')}/rest/v1/public_personas" +
+                    "?select=id,photo&id=in.(${ids.joinToString(",")})"
+                val req = Request.Builder().url(url)
+                    .header("Authorization", "Bearer ${auth.accessToken()}")
+                    .header("apikey", Config.supabaseAnonKey)
+                    .build()
+                Edge.client.newCall(req).execute().use { resp ->
+                    val raw = resp.body.string()
+                    if (resp.code !in 200..299) null
+                    else Edge.json.decodeFromString(ListSerializer(PhotoRow.serializer()), raw)
+                }
+            }.getOrNull()
+        } ?: return
+        val prefs = prefs(context)
+        val adopted = runCatching {
+            Edge.json.decodeFromString(
+                poolPhotosSerializer,
+                prefs.getString(POOL_PHOTOS_KEY, null) ?: "{}")
+        }.getOrDefault(emptyMap()).toMutableMap()
+        for (row in got) {
+            val b64 = row.photo
+            if (!b64.isNullOrEmpty()) {
+                val mark = "${b64.length}:${b64.takeLast(24)}"
+                if (adopted[row.id] == mark) continue
+                val bytes = runCatching { android.util.Base64.decode(b64, android.util.Base64.DEFAULT) }
+                    .getOrNull() ?: continue
+                val bmp = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: continue
+                CounterpartPhotoStore.save(context, row.id, bmp)
+                adopted[row.id] = mark
+            } else if (adopted[row.id] != null) {
+                CounterpartPhotoStore.delete(context, row.id)
+                adopted.remove(row.id)
+            }
+        }
+        prefs.edit().putString(POOL_PHOTOS_KEY, Edge.json.encodeToString(
+            poolPhotosSerializer,
+            adopted)).apply()
+    }
+
+    private val poolPhotosSerializer = kotlinx.serialization.builtins.MapSerializer(String.serializer(), String.serializer())
+
+    @Serializable
+    private data class PhotoRow(val id: String, val photo: String? = null)
 
     /**
      * Local substring search. A real learner's intro is NOT shown on their

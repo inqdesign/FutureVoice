@@ -46,11 +46,14 @@ object AvatarStore {
             file(context).outputStream().use { square.compress(Bitmap.CompressFormat.JPEG, 85, it) }
         }.onFailure { return@withContext false }
         _revision.value += 1
+        // A published profile wears this face too; no row, no write.
+        com.roro.futurevoice.net.PublicPersonaClient.pushMyPhotoLater()
         true
     }
 
     fun clear(context: Context) {
         file(context).delete()
         _revision.value += 1
+        com.roro.futurevoice.net.PublicPersonaClient.pushMyPhotoLater()
     }
 }

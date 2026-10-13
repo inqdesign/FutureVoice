@@ -468,13 +468,15 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
         }
     }
 
-    fun syncPublicPersona() {
+    /** [withPhoto]: the launch pass (iOS `RootTabView`) — a row published
+     *  before rows carried a face (or by hand, which the mirror never
+     *  touches) gets the photo here. */
+    fun syncPublicPersona(withPhoto: Boolean = false) {
         viewModelScope.launch {
             val s = _state.value
-            runCatching {
-                com.roro.futurevoice.net.PublicPersonaClient(auth)
-                    .autoSyncMyPersona(appContext, s.persona, s.targetLanguage)
-            }
+            val client = com.roro.futurevoice.net.PublicPersonaClient(auth)
+            runCatching { client.autoSyncMyPersona(appContext, s.persona, s.targetLanguage) }
+            if (withPhoto) runCatching { client.pushMyPhoto() }
         }
     }
 

@@ -399,6 +399,7 @@ fun FindPeopleScreen(
                                     seated = badges[pool.firstOrNull { it.id == c.remoteId }
                                         ?.owner_user_id?.lowercase()]?.seated == true,
                                     bookmarked = c.remoteId != null && bookmarks.contains(c.remoteId),
+                                    photoId = c.id,
                                     onClick = { openMet(c) },
                                 )
                             }
@@ -743,6 +744,7 @@ private fun PoolRow(
     PersonListRow(
         name = p.display_name,
         isMine = isMine,
+        photoId = p.id,
         caption = listOf(p.occupation, p.location).filter { it.isNotBlank() }.joinToString(" · "),
         // Characters we wrote ARE their intro; a real learner's row shows the
         // three facets a stranger has any business seeing.
@@ -767,6 +769,8 @@ private fun PersonListRow(
     seated: Boolean = false,
     bookmarked: Boolean = false,
     isMine: Boolean = false,
+    /** The pool's learner photo, adopted under the person's id. */
+    photoId: String? = null,
     onClick: () -> Unit,
 ) {
     Row(
@@ -775,7 +779,8 @@ private fun PersonListRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        if (isMine) ProfileAvatar(name, 44.dp) else PersonBubble(name, 44.dp)
+        if (isMine) ProfileAvatar(name, 44.dp)
+        else com.roro.futurevoice.ui.PersonBubble(name, photoId, size = 44.dp)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)) {

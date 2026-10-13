@@ -23,6 +23,7 @@ class FutureVoiceApplication : Application() {
         com.roro.futurevoice.talk.VoicePreset.init(this)
         com.roro.futurevoice.data.VoiceParking.init(this)
         com.roro.futurevoice.net.PublicIntroComposer.init(this)
+        com.roro.futurevoice.net.PublicPersonaClient.init(this)
         // Billing builds the Supabase client, whose HTTP stack pulls in
         // kotlin-reflect (via postgrest-kt) — seconds of class loading on a
         // slow device, and in onCreate that is a startup ANR (seen on the

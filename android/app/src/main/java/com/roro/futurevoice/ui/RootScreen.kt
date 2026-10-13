@@ -267,7 +267,7 @@ fun RootScreen() {
     // current composition or taken down. Gated on a real account: an
     // anonymous session's data dies with the install.
     LaunchedEffect(state.signedIn, state.isAnonymous, state.persona, state.targetLanguage) {
-        if (state.signedIn && !state.isAnonymous) app.syncPublicPersona()
+        if (state.signedIn && !state.isAnonymous) app.syncPublicPersona(withPhoto = true)
     }
     val localActivity = androidx.compose.ui.platform.LocalContext.current as? android.app.Activity
     var showPeople by remember { mutableStateOf(false) }
