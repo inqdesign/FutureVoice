@@ -1,19 +1,9 @@
 New
-• Your voice moves to a new voice engine: more natural, more like you, and faster replies. You'll see a note when you open the app. Pick an accent and rebuild your voice from your recording in one tap.
-• The Watch tab is now a map of people. You're in the middle, and the people closest to you sit nearest. Bring someone to the middle and they greet you in their own voice; start a scene or a call right from their card. Your profile and the introduction others see now live on one page.
-• Everyone in Find people now speaks in a voice of their own, with the accent of where they're from. The default voices are native speakers of the language you're learning.
-• On your Find people profile, pick the voice that plays you from voices of your own country. Rewrite your introduction from what you've told your fluent self lately, and get a greeting to match.
-• Challenges in the Speech tab: everyone reads the same script and competes for the top score. Only takes recorded with the camera on count, and the leaderboard shows just your name and score.
-• Choose why you're learning (an exam, work, travel and more) and the Talk tab's topics follow it, with a routine suggested for you.
-• Tap “Your effort” on the Progress tab to see what you practised, and how much, over a week or a month.
-• In Me → Accent, choose "Original" to go back to your voice with no accent.
+• Tutor mode, in call settings. Turn it on and your fluent self runs a lesson: after everything you say, you hear the right sentence or a more natural way to put it, then a question you can answer by using it.
+• When you publish your profile in Find people, your photo goes with it.
 
 Fixed
-• Sign in with Apple did nothing on the welcome screen. It works again.
-• Automatic greetings were cut off halfway. They're whole now.
-• In a call, replies now appear one sentence at a time, together with the voice.
-• Shadowing and Speech scores are more accurate: Korean is compared by word group, Japanese by word, and anything you skipped is shown as it's written in the script.
-• In My routine, a day counts once you've started every block, and review blocks fill up with every card and word you studied.
-• The limit of one voice change every 30 days is gone.
-• Fixed the app closing when you opened the Me tab.
-• The voice recording script is a little shorter.
+• Speech takes read all the way through were scored as if the last sentence was skipped.
+• Speech challenge takes from learners without a photo never reached the leaderboard.
+• Taking the weekly test the day after it opened broke your streak in My routine. Days lost this way are restored.
+• With the new voice, the greeting at the start of a call could sound jumbled.
