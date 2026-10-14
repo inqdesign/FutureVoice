@@ -13,6 +13,10 @@ import SwiftUI
 struct ShadowDrillView: View {
     let turn: Turn
     let targetLanguage: String
+    /// Word timings that came with `turn.audioURL` from somewhere other than
+    /// the turn and phrase stores — a Speech script's voiceover, whose
+    /// alignment was measured when it was made. Nil everywhere else.
+    var presetTimings: [WordTiming]? = nil
 
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var appState: AppState
@@ -1720,7 +1724,8 @@ struct ShadowDrillView: View {
             }
         }
 
-        var storedTimings = TurnAudioStore.shared.timings(for: turn.id)
+        var storedTimings = presetTimings
+            ?? TurnAudioStore.shared.timings(for: turn.id)
             ?? PhraseAudioStore.shared.timings(text: turn.transcript, voiceId: voiceId)
             ?? []
         // Earlier builds cached ElevenLabs' NORMALIZED alignment, whose words

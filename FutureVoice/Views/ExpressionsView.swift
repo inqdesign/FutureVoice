@@ -299,6 +299,9 @@ struct ExpressionCard: View {
     struct Context: Equatable {
         var note: String
         var example: String?
+        /// The section's title. Nil = "In this scene" (a Watch book); a
+        /// Speech script's study note passes its own.
+        var heading: String? = nil
     }
 
     let phrase: String
@@ -359,7 +362,7 @@ struct ExpressionCard: View {
                 }
 
                 if let c = context, !c.note.isEmpty || !(c.example ?? "").isEmpty {
-                    section("In this scene") {
+                    section(c.heading ?? "In this scene") {
                         VStack(alignment: .leading, spacing: 8) {
                             if !c.note.isEmpty {
                                 Text(c.note)
