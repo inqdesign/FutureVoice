@@ -64,6 +64,65 @@ final class SpeechAnalyzerTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(m.overall, 95)
     }
 
+    // MARK: Coverage (2026-10-14): stopping early scales the delivery half.
+
+    private let longScript = "Sound is a wave. It travels through the air. It moves faster in water. It moves fastest in steel."
+
+    func testFullReadIsTheOldWeighting() {
+        let env = SpeechAnalyzer.Envelope(firstVoice: 0, lastVoice: 8, silences: [0.4, 0.4, 0.4],
+                                          phrases: [(-20, -21), (-20, -22)])
+        let m = SpeechAnalyzer.analyze(script: longScript,
+                                       transcript: "Sound is a wave it travels through the air it moves faster in water it moves fastest in steel",
+                                       language: "en", envelope: env)
+        XCTAssertEqual(m.coverage, 1)
+        let old = Int((0.40 * Double(m.accuracy) + 0.20 * Double(m.paceScore) + 0.15 * Double(m.pauseScore)
+                       + 0.10 * Double(m.fillerScore) + 0.15 * Double(m.steadiness)).rounded())
+        XCTAssertEqual(m.overall, old)
+    }
+
+    func testStoppingHalfwayScoresBelowTheFullRead() {
+        // Same voice and pace; the half read breathes at the one break it reached.
+        let fullEnv = SpeechAnalyzer.Envelope(firstVoice: 0, lastVoice: 8, silences: [0.4, 0.4, 0.4],
+                                              phrases: [(-20, -21), (-20, -22)])
+        let halfEnv = SpeechAnalyzer.Envelope(firstVoice: 0, lastVoice: 4, silences: [0.4],
+                                              phrases: [(-20, -21), (-20, -22)])
+        let full = SpeechAnalyzer.analyze(script: longScript,
+                                          transcript: "Sound is a wave it travels through the air it moves faster in water it moves fastest in steel",
+                                          language: "en", envelope: fullEnv)
+        let half = SpeechAnalyzer.analyze(script: longScript, transcript: "Sound is a wave it travels through the air",
+                                          language: "en", envelope: halfEnv)
+        XCTAssertEqual(half.coverage ?? 0, 9.0 / 19.0, accuracy: 1e-9)
+        XCTAssertLessThan(half.overall, full.overall)
+        // Exactly the formula: accuracy 40%, delivery scaled by coverage.
+        XCTAssertEqual(half.overall, SpeechAnalyzer.overall(accuracy: half.accuracy, pace: half.paceScore,
+                                                            pause: half.pauseScore, filler: half.fillerScore,
+                                                            steadiness: half.steadiness, coverage: 9.0 / 19.0))
+        // The old weighting would have handed it ~75.
+        XCTAssertLessThan(half.overall, 60)
+    }
+
+    func testCoverageIgnoresMiddleSkipsAndAWordSaidAfterStopping() {
+        func cov(_ said: String, _ lang: String = "en", _ script: String = "one two three four five six seven eight nine ten") -> Double {
+            SpeechAnalyzer.coverage(ShadowEngine.analyze(target: script, learner: said, language: lang).steps)
+        }
+        // Skipping in the middle but reaching the end is accuracy's job.
+        XCTAssertEqual(cov("one two six seven eight nine ten"), 1)
+        // A misread last word is still the end.
+        XCTAssertEqual(cov("one two three four five six seven eight nine tin"), 1)
+        // Stopping at four, then "sorry": the alignment pairs it with "ten".
+        XCTAssertEqual(cov("one two three four sorry"), 0.4, accuracy: 1e-9)
+        XCTAssertEqual(cov(""), 0)
+        // Korean counts syllables, like the diff.
+        XCTAssertEqual(cov("소리는", "ko", "소리는 파동"), 0.6, accuracy: 1e-9)
+    }
+
+    func testOldTakesDecodeWithoutCoverage() throws {
+        let json = #"{"accuracy":90,"rate":130,"rateLow":120,"rateHigh":160,"paceScore":100,"pausesAtBreaks":1,"breaks":1,"hesitations":0,"pauseScore":100,"fillers":0,"fillerScore":100,"steadiness":90,"missed":[],"overall":95}"#
+        let m = try JSONDecoder().decode(SpeechMetrics.self, from: Data(json.utf8))
+        XCTAssertNil(m.coverage)
+        XCTAssertEqual(m.overall, 95)
+    }
+
     func testSkippedWordsAreListedInScriptOrder() {
         let m = SpeechAnalyzer.analyze(script: "Sound is a wave of tiny changes in pressure.",
                                        transcript: "Sound is a wave in pressure",

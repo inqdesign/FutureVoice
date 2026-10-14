@@ -66,13 +66,9 @@ enum SpeechAnalyzer {
 
         let steadiness = steadinessScore(envelope?.phrases ?? [])
 
-        let overall = clamp(Int((
-            0.40 * Double(diff.score)
-            + 0.20 * Double(paceScore)
-            + 0.15 * Double(pauseScore)
-            + 0.10 * Double(fillerScore)
-            + 0.15 * Double(steadiness)
-        ).rounded()))
+        let coverage = Self.coverage(diff.steps)
+        let overall = Self.overall(accuracy: diff.score, pace: paceScore, pause: pauseScore,
+                                   filler: fillerScore, steadiness: steadiness, coverage: coverage)
 
         return SpeechMetrics(
             accuracy: diff.score,
@@ -83,8 +79,55 @@ enum SpeechAnalyzer {
             fillers: fillerCount, fillerScore: fillerScore,
             steadiness: steadiness,
             missed: missed,
-            overall: overall
+            overall: overall,
+            coverage: coverage
         )
+    }
+
+    /// The one weighting (2026-10-14): accuracy 40%, and the delivery half
+    /// scaled by how far into the script the reader got — delivery is
+    /// measured only on what was said, so three sentences of a long script
+    /// read beautifully used to score like the whole thing. Coverage 1 is
+    /// the old weighting exactly. The server's check
+    /// (`submit_speech_challenge_take`) accepts anything from the accuracy
+    /// part alone up to that full weighting.
+    static func overall(accuracy: Int, pace: Int, pause: Int, filler: Int, steadiness: Int,
+                        coverage: Double) -> Int {
+        let delivery = 0.20 * Double(pace) + 0.15 * Double(pause)
+            + 0.10 * Double(filler) + 0.15 * Double(steadiness)
+        return clamp(Int((0.40 * Double(accuracy) + coverage * delivery).rounded()))
+    }
+
+    /// How far into the script the reader got, 0…1, over the diff's own
+    /// script tokens (words, or syllables for CJK): the last script token
+    /// MATCHED, carried on through the substitutions right after it (a
+    /// misread last word is still the end), plus one, over the script's
+    /// token count. Words skipped in the middle are accuracy's business; this
+    /// is only about stopping early. A substitution with no match before it
+    /// doesn't count: the alignment pairs any word said after stopping
+    /// ("sorry") with the script's LAST token, which would read as finished.
+    static func coverage(_ steps: [ShadowEngine.DiffStep]) -> Double {
+        var index = -1          // script tokens seen so far, minus one
+        var reached = -1        // last script token reached
+        var extending = false   // still in the run right after a match
+        var total = 0
+        for step in steps {
+            switch step.op {
+            case .ins:
+                continue
+            case .match:
+                index += 1; total += 1
+                reached = index; extending = true
+            case .sub:
+                index += 1; total += 1
+                if extending { reached = index }
+            case .del:
+                index += 1; total += 1
+                extending = false
+            }
+        }
+        guard total > 0 else { return 1 }
+        return Double(reached + 1) / Double(total)
     }
 
     // MARK: - Pieces (internal for tests)

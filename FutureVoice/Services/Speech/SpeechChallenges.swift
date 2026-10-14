@@ -212,11 +212,13 @@ final class SpeechChallenges: ObservableObject {
         let improved: Bool
     }
 
-    private func submit(take: SpeechTake, challengeId: UUID, name: String) async {
+    /// `overall` is the take's own unless the caller re-scored it.
+    private func submit(take: SpeechTake, overall: Int? = nil, challengeId: UUID, name: String) async {
         let m = take.metrics
+        let overall = overall ?? m.overall
         let params = SubmitParams(p_challenge: challengeId, p_display_name: name,
                                   p_avatar: Self.avatarPayload(),
-                                  p_overall: m.overall, p_accuracy: m.accuracy,
+                                  p_overall: overall, p_accuracy: m.accuracy,
                                   p_pace: m.paceScore, p_pause: m.pauseScore,
                                   p_filler: m.fillerScore, p_steadiness: m.steadiness,
                                   p_seconds: max(1, Int(take.durationSeconds.rounded())))
@@ -242,7 +244,7 @@ final class SpeechChallenges: ObservableObject {
             standings[challengeId] = standing
             if let language = loadedLanguage { writeCache(language) }
             Analytics.capture("speech_challenge_entered", [
-                "overall": m.overall, "rank": row.rank, "entrants": row.entrants,
+                "overall": overall, "rank": row.rank, "entrants": row.entrants,
                 "improved": row.improved,
             ])
         } catch {
@@ -275,16 +277,28 @@ final class SpeechChallenges: ObservableObject {
             guard !candidates.isEmpty else { continue }
             importing.insert(challengeId)
             defer { importing.remove(challengeId) }
+            // Re-scored against today's script with today's weighting: a take
+            // stored before 2026-10-14 that stopped early carries the old,
+            // higher overall, and only the number sent changes — the take on
+            // the phone stays as it was.
+            var best: (take: SpeechTake, overall: Int)?
             for take in candidates {
                 let body = script.body, transcript = take.transcript, language = script.language
-                let accuracy = await Task.detached {
+                let diff = await Task.detached {
                     ShadowEngine.analyze(target: body, learner: SpeechAnalyzer.removingFillers(transcript, language: language, keepingThoseIn: body),
-                                         language: language).score
+                                         language: language)
                 }.value
-                guard abs(accuracy - take.metrics.accuracy) <= 5 else { continue }
-                await submit(take: take, challengeId: challengeId, name: Self.displayName ?? "")
-                Analytics.capture("speech_challenge_imported", ["overall": take.metrics.overall])
-                break
+                guard abs(diff.score - take.metrics.accuracy) <= 5 else { continue }
+                let m = take.metrics
+                let overall = SpeechAnalyzer.overall(accuracy: m.accuracy, pace: m.paceScore, pause: m.pauseScore,
+                                                     filler: m.fillerScore, steadiness: m.steadiness,
+                                                     coverage: SpeechAnalyzer.coverage(diff.steps))
+                if overall > onBoard, overall > (best?.overall ?? -1) { best = (take, overall) }
+            }
+            if let best {
+                await submit(take: best.take, overall: best.overall, challengeId: challengeId,
+                             name: Self.displayName ?? "")
+                Analytics.capture("speech_challenge_imported", ["overall": best.overall])
             }
         }
     }

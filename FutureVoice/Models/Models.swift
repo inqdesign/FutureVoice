@@ -2206,6 +2206,10 @@ struct SpeechMetrics: Codable, Hashable {
     /// Script words skipped or said differently, in script order (capped).
     var missed: [String]
     var overall: Int
+    /// How far into the script the take got, 0…1 (`SpeechAnalyzer.coverage`);
+    /// the delivery parts of `overall` are scaled by it. Nil on takes made
+    /// before 2026-10-14, which were scored as if read to the end.
+    var coverage: Double? = nil
 }
 
 /// The model's notes on a take, in the NATIVE language, anchored to the
