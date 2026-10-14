@@ -31,10 +31,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.drawWithContent
 import com.roro.futurevoice.ui.brand.IosGlassButton
 import com.roro.futurevoice.ui.brand.IosGlassTextButton
 import androidx.compose.material.icons.outlined.IosShare
+import androidx.compose.material.icons.outlined.PhotoCamera
+import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.layer.drawLayer
@@ -79,6 +84,13 @@ fun DayCardSheet(data: DayCardData, onDismiss: () -> Unit) {
     // be replaced — the topic of a news talk is a sentence, and the learner
     // is the one who knows what the day was about.
     var headline by remember(data.date) { mutableStateOf(data.topics.firstOrNull().orEmpty()) }
+    /** The field holds the learner's OWN words only (iOS `headlineText`). */
+    var ownText by remember(data.date) { mutableStateOf("") }
+    val targetLanguage = remember { com.roro.futurevoice.data.LanguageScope.active(context) }
+    val nativeLanguage = remember {
+        context.getSharedPreferences("futurevoice", 0)
+            .getString("futurevoice.nativeLanguage", null) ?: "en"
+    }
     val theme = remember { FutureselfTheme.stored(context).ordinal }
     LaunchedEffect(data.date) { photo = DayCardStore.photo(context, data.date) }
 
@@ -181,7 +193,8 @@ fun DayCardSheet(data: DayCardData, onDismiss: () -> Unit) {
     // Fully expanded: the card is 450dp tall and a half-height sheet cut it
     // off, so the learner saw a black slab with no footer and no date.
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, dragHandle = null) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, dragHandle = null,
+        containerColor = com.roro.futurevoice.ui.brand.AppSurfaces.ground) {
         // iOS: an inline nav bar — Done leading, the title centred, Share
         // trailing. "Today's card" is a claim about WHICH day — say it only
         // when it is true, and name the day otherwise.
@@ -200,103 +213,148 @@ fun DayCardSheet(data: DayCardData, onDismiss: () -> Unit) {
             },
             modifier = Modifier.padding(horizontal = 16.dp).padding(top = 12.dp, bottom = 8.dp),
         )
+        // iOS `DayCardSheet` is a Form: the card, the format picker, then
+        // three grouped sections — Save to Photos · Headline · Photo.
         Column(
             Modifier.fillMaxWidth().bottomBarInsets().verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp).padding(top = 16.dp, bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .padding(horizontal = 16.dp).padding(top = 8.dp, bottom = 32.dp),
         ) {
             DayCard(
                 data = data.copy(topics = listOfNotNull(headline.takeIf { it.isNotBlank() })),
                 photo = photo?.asImageBitmap(), format = format, theme = theme,
-                // Same corner as iOS's preview; the export records inside it,
-                // so the shared picture stays square-cornered like iOS's render.
-                modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(26.dp)).drawWithContent {
-                    // Record the card as it is drawn, so the exported picture
-                    // is exactly what the learner is looking at.
-                    layer.record { this@drawWithContent.drawContent() }
-                    drawLayer(layer)
-                },
+                // Same corner and shadow as iOS's preview; the export records
+                // inside the clip, so the shared picture stays square-cornered
+                // like iOS's render.
+                modifier = Modifier.align(Alignment.CenterHorizontally).padding(vertical = 8.dp)
+                    .shadow(10.dp, androidx.compose.foundation.shape.RoundedCornerShape(26.dp),
+                        ambientColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.18f),
+                        spotColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.18f))
+                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(26.dp)).drawWithContent {
+                        // Record the card as it is drawn, so the exported picture
+                        // is exactly what the learner is looking at.
+                        layer.record { this@drawWithContent.drawContent() }
+                        drawLayer(layer)
+                    },
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(format == DayCardFormat.FEED,
-                    onClick = { format = DayCardFormat.FEED },
-                    label = { Text(stringResource(R.string.feed_4_5)) })
-                FilterChip(format == DayCardFormat.SQUARE,
-                    onClick = { format = DayCardFormat.SQUARE },
-                    label = { Text(stringResource(R.string.square)) })
-            }
+            com.roro.futurevoice.ui.brand.IosSegmented(
+                options = listOf(stringResource(R.string.feed_4_5), stringResource(R.string.square)),
+                selected = if (format == DayCardFormat.FEED) 0 else 1,
+                onSelect = { format = if (it == 0) DayCardFormat.FEED else DayCardFormat.SQUARE },
+                modifier = Modifier.fillMaxWidth().padding(top = 20.dp),
+            )
+
             // The card straight into the gallery (iOS `704cc4a`). The share
             // sheet's own "save" is easy to miss among the apps, and keeping
             // the day is the commonest thing to do with it.
-            OutlinedButton(
-                onClick = {
+            FormSection(header = null) {
+                FormActionRow(
+                    icon = if (saveState == SaveState.SAVED) androidx.compose.material.icons.Icons.Filled.Check
+                        else androidx.compose.material.icons.Icons.Filled.Download,
+                    text = stringResource(if (saveState == SaveState.SAVED) R.string.saved_to_photos
+                        else R.string.save_to_photos),
+                    enabled = saveState == SaveState.IDLE,
+                ) {
                     val needsPermission = android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q &&
                         androidx.core.content.ContextCompat.checkSelfPermission(context,
                             android.Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
                         android.content.pm.PackageManager.PERMISSION_GRANTED
                     if (needsPermission) storagePermission.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
                     else save()
-                },
-                enabled = saveState == SaveState.IDLE,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                androidx.compose.material3.Icon(
-                    if (saveState == SaveState.SAVED) androidx.compose.material.icons.Icons.Filled.Check
-                    else androidx.compose.material.icons.Icons.Filled.Download,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 6.dp).size(18.dp))
-                Text(stringResource(if (saveState == SaveState.SAVED) R.string.saved_to_photos
-                    else R.string.save_to_photos))
-            }
-            // Headline — the day's talks to pick from, or write your own.
-            if (data.topics.size > 1) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    data.topics.forEach { t ->
-                        FilterChip(headline == t, onClick = { headline = t },
-                            label = { Text(t, maxLines = 1) })
-                    }
                 }
             }
-            OutlinedTextField(
-                value = headline,
-                onValueChange = { headline = it },
-                label = { Text(stringResource(R.string.headline)) },
-                placeholder = { Text(stringResource(R.string.or_write_your_own)) },
-                modifier = Modifier.fillMaxWidth(),
-            )
 
-            OutlinedButton(
-                onClick = { cameraPermission.launch(android.Manifest.permission.CAMERA) },
-                modifier = Modifier.fillMaxWidth(),
+            // Headline — the day's talks to pick from (the automatic pick is
+            // the first), then a field for the learner's OWN words. A picked
+            // talk shows as a checkmark on its row, never in the field.
+            FormSection(
+                header = stringResource(R.string.headline),
+                // Material, so the language being learned — like the talk
+                // titles it stands in for.
+                footer = stringResource(R.string.write_it_in,
+                    com.roro.futurevoice.data.LanguageCatalog.ownName(targetLanguage, nativeLanguage)),
             ) {
-                Text(stringResource(R.string.take_a_photo))
-            }
-            OutlinedButton(
-                onClick = { imagePicker.launch("image/*") },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.choose_a_photo))
-            }
-            if (photo != null) {
-                TextButton(
-                    onClick = {
-                        photo = null
-                        DayCardStore.removePhoto(context, data.date)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(stringResource(R.string.remove_photo),
-                        color = MaterialTheme.colorScheme.error)
+                data.topics.forEach { t ->
+                    Row(
+                        Modifier.fillMaxWidth().clickable {
+                            ownText = ""
+                            headline = t
+                        }.padding(horizontal = 16.dp, vertical = 11.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(t, style = MaterialTheme.typography.bodyLarge, maxLines = 2,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f))
+                        if (t == headline) {
+                            androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.Check,
+                                contentDescription = null, tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(start = 8.dp).size(20.dp))
+                        }
+                    }
+                    FormDivider()
                 }
+                FormTextRow(
+                    value = ownText,
+                    onChange = { text ->
+                        ownText = text
+                        // Typing takes the headline; clearing the field hands
+                        // it back to the automatic pick.
+                        headline = text.trim().ifEmpty { data.topics.firstOrNull().orEmpty() }
+                    },
+                    placeholder = stringResource(R.string.or_write_your_own),
+                )
             }
+
             // Said plainly because it is the whole privacy story of this
             // feature: the photo is the place, and nothing else about where
             // the learner was is kept.
-            Text(stringResource(R.string.where_you_studied_that_day_the_photo_is_the_place_nothing_el_642592),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            FormSection(
+                header = stringResource(R.string.photo),
+                footer = stringResource(R.string.where_you_studied_that_day_the_photo_is_the_place_nothing_el_642592),
+            ) {
+                FormActionRow(androidx.compose.material.icons.Icons.Outlined.PhotoCamera,
+                    stringResource(R.string.take_a_photo)) {
+                    cameraPermission.launch(android.Manifest.permission.CAMERA)
+                }
+                FormDivider(inset = 52.dp)
+                FormActionRow(androidx.compose.material.icons.Icons.Outlined.PhotoLibrary,
+                    stringResource(R.string.choose_a_photo)) { imagePicker.launch("image/*") }
+                if (photo != null) {
+                    FormDivider(inset = 52.dp)
+                    FormActionRow(androidx.compose.material.icons.Icons.Outlined.Delete,
+                        stringResource(R.string.remove_photo), destructive = true) {
+                        photo = null
+                        DayCardStore.removePhoto(context, data.date)
+                    }
+                }
+            }
         }
+    }
+}
+
+/** A Form button row as iOS draws `Label(_, systemImage:)` in a Form: icon
+ *  and title both in the tint (red when destructive, grey when disabled). */
+@Composable
+private fun FormActionRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    text: String,
+    enabled: Boolean = true,
+    destructive: Boolean = false,
+    onClick: () -> Unit,
+) {
+    val tint = when {
+        !enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+        destructive -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.primary
+    }
+    Row(
+        Modifier.fillMaxWidth().clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 11.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        androidx.compose.material3.Icon(icon, contentDescription = null, tint = tint,
+            modifier = Modifier.size(22.dp))
+        Text(text, style = MaterialTheme.typography.bodyLarge, color = tint)
     }
 }
 
