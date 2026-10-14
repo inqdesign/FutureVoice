@@ -10307,6 +10307,98 @@
         }
       }
     },
+    "%lld words per minute of voiced speech — pauses and think-time removed." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Wörter pro Minute, gemessen nur über die Zeit, in der du sprichst. Pausen und Denkzeit zählen nicht."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld palabras por minuto, contando solo el tiempo en que hablas. Las pausas y el tiempo para pensar no cuentan."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld mots par minute, sur le seul temps où tu parles. Les pauses et le temps de réflexion ne comptent pas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "声が出ている時間で1分あたり%lld語です。間や考えている時間は除いています。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목소리가 난 시간 기준 분당 %lld단어예요. 멈춘 시간과 생각하는 시간은 빼고 쟀어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按出声说话的时间算，每分钟%lld个字，停顿和思考的时间不算在内。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按出聲說話的時間算，每分鐘%lld個字，停頓和思考的時間不算在內。"
+          }
+        }
+      }
+    },
+    "%lld words per minute, capped at ≈%@ by how long your turns are — quick short answers don't make a level." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld Wörter pro Minute, aber durch die Länge deiner Beiträge auf ≈%2$@ begrenzt. Kurze, schnelle Antworten machen noch keine Stufe."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld palabras por minuto, pero limitado a ≈%2$@ por lo largos que son tus turnos: las respuestas cortas y rápidas no hacen un nivel."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld mots par minute, mais plafonné à ≈%2$@ par la longueur de tes prises de parole : des réponses courtes et rapides ne font pas un niveau."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1分あたり%1$lld語ですが、1回に話す長さに合わせて≈%2$@までとしました。短い返事は速くてもレベルにはなりません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "분당 %1$lld단어지만, 한 번에 말하는 길이에 맞춰 ≈%2$@까지로 잡았어요. 짧은 대답은 빨라도 레벨이 되지 않아요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每分钟%1$lld个字，但按你每次说话的长度先定在 ≈%2$@。简短的回答说得再快，也不代表等级。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每分鐘%1$lld個字，但按你每次說話的長度先定在 ≈%2$@。簡短的回答說得再快，也不代表等級。"
+          }
+        }
+      }
+    },
     "%lld words to study" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -53659,6 +53751,52 @@
         }
       }
     },
+    "Keep talking past the first answer — say a little more in each turn, and the pace is read from longer stretches." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hör nach der ersten Antwort nicht auf und sag jedes Mal etwas mehr. Dann wird dein Tempo über längere Stücke gemessen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No te quedes en la primera respuesta: di un poco más en cada turno y tu ritmo se medirá en tramos más largos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ne t’arrête pas à la première réponse : dis-en un peu plus à chaque fois, et ton rythme sera mesuré sur des passages plus longs."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最初の返事で止めずに、毎回もうひと言足してみましょう。長く話した部分から速さを読みます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "첫 대답에서 멈추지 말고 한마디씩 더 붙여 보세요. 길게 말한 구간에서 속도를 읽어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "别停在第一句回答，每次多说一点，速度就会从更长的段落里读出来。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "別停在第一句回答，每次多說一點，速度就會從更長的段落裡讀出來。"
+          }
+        }
+      }
+    },
     "Keep this voice" : {
       "localizations" : {
         "de" : {
@@ -61925,6 +62063,52 @@
     },
     "nawana.app" : {
       "shouldTranslate" : false
+    },
+    "Needs about %lld more min of your own speech outside practice calls before it reads a band." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sprich außerhalb von Übungsgesprächen noch etwa %lld Min., dann bekommt das eine Stufe."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Habla unos %lld min más fuera de las conversaciones de práctica y aquí aparecerá tu nivel."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Parle encore environ %lld min en dehors des conversations d’entraînement, et ton niveau s’affichera ici."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "練習の会話以外で、あと%lld分ほど話すとレベルが出ます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "연습 대화가 아닌 통화에서 %lld분쯤 더 말하면 레벨이 나와요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在练习对话以外再说大约%lld分钟，这里就会显示等级。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在練習對話以外再說大約%lld分鐘，這裡就會顯示等級。"
+          }
+        }
+      }
     },
     "Neither" : {
       "extractionState" : "stale",
@@ -118687,6 +118871,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "以實際出聲的時間計算，每分鐘的單字數。停頓和思考的時間不算在內。"
+          }
+        }
+      }
+    },
+    "Words per minute of voiced speech — pauses and think-time removed." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wörter pro Minute, nur über die Zeit, in der du sprichst. Pausen und Denkzeit zählen nicht."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Palabras por minuto contando solo el tiempo en que hablas. Las pausas y el tiempo para pensar no cuentan."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mots par minute, sur le seul temps où tu parles. Les pauses et le temps de réflexion ne comptent pas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "声が出ている時間だけで測った1分あたりの語数です。間や考えている時間は含みません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목소리가 난 시간만으로 잰 분당 단어 수예요. 멈춘 시간과 생각하는 시간은 빼요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只按你出声说话的时间算出的每分钟字数，停顿和思考的时间不算在内。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只按你出聲說話的時間算出的每分鐘字數，停頓和思考的時間不算在內。"
           }
         }
       }

@@ -46,6 +46,9 @@ struct ProgressTab: View {
     @State private var pausesPerMin = 0.0
     @State private var talkMinutes = 0
     @State private var wordsPerTurn = 0
+    /// The learner's own speaking seconds across the talks pace and turn
+    /// length are averaged over — the evidence a fluency band needs.
+    @State private var recentSpeakingSeconds = 0.0
     /// Average of the recent talks' 0–100 grammar scores — the SAME number
     /// each talk's scorecard shows (anchored on verified grammar slips),
     /// higher is better. Replaces the old suggestion-rate proxy, which also
@@ -913,10 +916,59 @@ struct ProgressTab: View {
     /// fall back to wall-clock WPM, which runs ~20 WPM lower (think-time and
     /// VAD wait included) — shift it up before banding, same correction
     /// `fluencyBand` applies, so old data doesn't read 1–2 levels too low.
-    private var fluencyCEFR: CEFRLevel? {
-        guard effectivePace > 0 else { return nil }
-        let adjusted = articulationWpm > 0 ? effectivePace : effectivePace + 20
-        return Self.band(for: Double(adjusted), in: Self.fluencyBands)
+    ///
+    /// Two guards, both from a B1 learner who read ≈C2 fluency on 2026-10-14
+    /// after a few plain calls of short answers (the rest coached, and so
+    /// rightly out of the measurement):
+    /// - EVIDENCE: under `minFluencySpeakingSeconds` of the learner's own
+    ///   voice in the window, there is no band — a pace read off a minute of
+    ///   "yes, I think so" is a number about three phrases.
+    /// - TURN LENGTH caps it, the same way range caps grammar. Pace alone
+    ///   rewards short answers: a few words come out quickly and the voiced
+    ///   time divides small. Fluency at a level is ease across stretches of
+    ///   speech, so the band may sit at most one above the length of the
+    ///   turns it was measured on (the ≈Expression band).
+    /// Pure so the rule is testable; the view reads the wrappers below.
+    static func fluencyBand(pace: Int, isArticulation: Bool,
+                            speakingSeconds: Double, wordsPerTurn: Int)
+        -> (level: CEFRLevel, cappedAt: CEFRLevel?)? {
+        guard pace > 0, speakingSeconds >= minFluencySpeakingSeconds else { return nil }
+        let adjusted = isArticulation ? pace : pace + 20
+        guard let byPace = band(for: Double(adjusted), in: fluencyBands) else { return nil }
+        guard wordsPerTurn > 0,
+              let turns = band(for: Double(wordsPerTurn), in: expressionBands) else {
+            return (byPace, nil)
+        }
+        let all = CEFRLevel.allCases
+        let cap = all[min(CoreVocabulary.levelRank(turns) + 1, all.count - 1)]
+        return CoreVocabulary.levelRank(cap) < CoreVocabulary.levelRank(byPace)
+            ? (cap, cap) : (byPace, nil)
+    }
+
+    /// The learner's own voiced seconds a fluency band needs (3 min).
+    static let minFluencySpeakingSeconds: Double = 180
+
+    private var fluencyRead: (level: CEFRLevel, cappedAt: CEFRLevel?)? {
+        Self.fluencyBand(pace: effectivePace, isArticulation: articulationWpm > 0,
+                         speakingSeconds: recentSpeakingSeconds, wordsPerTurn: wordsPerTurn)
+    }
+
+    private var fluencyCEFR: CEFRLevel? { fluencyRead?.level }
+
+    /// The one line under the ≈Fluency band: what held it, or what it needs.
+    private var fluencyDetail: String {
+        guard effectivePace > 0 else {
+            return explain("Words per minute of voiced speech — pauses and think-time removed.")
+        }
+        if recentSpeakingSeconds < Self.minFluencySpeakingSeconds {
+            let left = max(1, Int(((Self.minFluencySpeakingSeconds - recentSpeakingSeconds) / 60).rounded(.up)))
+            return String(format: explain("Needs about %lld more min of your own speech outside practice calls before it reads a band."), left)
+        }
+        if let cap = fluencyRead?.cappedAt {
+            return String(format: explain("%lld words per minute, capped at ≈%@ by how long your turns are — quick short answers don't make a level."),
+                          effectivePace, cap.rawValue.uppercased())
+        }
+        return explain("\(effectivePace) words per minute of voiced speech — pauses and think-time removed.")
     }
 
     /// What held the ≈Grammar band below its accuracy read, if anything.
@@ -1221,9 +1273,7 @@ struct ProgressTab: View {
                                     : "Graded from the words you've used in the last \(Self.vocabWindowDays) days, against the CEFR word list. Fully objective.")
                     assessedRow(name: "Fluency",
                                 level: fluencyCEFR.map { "≈" + $0.rawValue.uppercased() },
-                                detail: effectivePace > 0
-                                    ? "\(effectivePace) words per minute of voiced speech — pauses and think-time removed."
-                                    : "Words per minute of voiced speech — pauses and think-time removed.")
+                                detail: fluencyDetail)
                     assessedRow(name: "Grammar",
                                 level: grammarCEFR.map { "≈" + $0.rawValue.uppercased() },
                                 detail: grammarDetail)
@@ -1393,16 +1443,20 @@ struct ProgressTab: View {
             dim: .fluency,
             big: effectivePace > 0 ? "\(effectivePace)" : "—",
             bigUnit: articulationWpm > 0 ? "words / min speaking" : "words / min",
-            band: fluencyBand,
+            // Under a cap the pace label ("Very fluent") is the reading the
+            // band no longer follows.
+            band: fluencyRead?.cappedAt == nil ? fluencyBand : nil,
             measuredLine: effectivePace > 0
-                ? String(format: "%.1f pauses/min · ", pausesPerMin) + "\(talkMinutes)m per talk · \(wordsPerTurn) words/turn"
+                ? (fluencyRead?.cappedAt != nil || fluencyRead == nil
+                    ? fluencyDetail
+                    : String(format: "%.1f pauses/min · ", pausesPerMin) + "\(talkMinutes)m per talk · \(wordsPerTurn) words/turn")
                 : nil,
             measures: "Pace measured from voiced speech only — pauses and think-time don't drag it down.",
             improve: "Talk more often and a little longer. Aim past your daily speaking goal; longer turns build flow.",
             action: startTalkAction,
             trend: fluencyTrend,
             trendCaption: "Words per minute of voiced speech — one point per talk. Background zones are the ≈CEFR pace bands.",
-            trendBands: Self.fluencyBands
+            trendBands: fluencyRead?.cappedAt == nil ? Self.fluencyBands : []
         )
     }
 
@@ -1714,7 +1768,9 @@ struct ProgressTab: View {
         }
         if lags(fluencyCEFR) {
             tips.append(FocusTip(icon: "gauge.with.needle",
-                                 text: explain("Your pace is \(effectivePace) words/min — talk more often and a little longer; longer turns build flow."),
+                                 text: fluencyRead?.cappedAt != nil
+                                    ? explain("Keep talking past the first answer — say a little more in each turn, and the pace is read from longer stretches.")
+                                    : explain("Your pace is \(effectivePace) words/min — talk more often and a little longer; longer turns build flow."),
                                  action: startTalkAction))
         }
         if lags(expressionCEFR) {
@@ -1810,6 +1866,7 @@ struct ProgressTab: View {
         var pausesPerMin = 0.0
         var talkMinutes = 0
         var wordsPerTurn = 0
+        var recentSpeakingSeconds = 0.0
         var grammarScore = 0
         var slipsPer100Words = 0.0
         var grammarRange: CEFRLevel?
@@ -1890,6 +1947,7 @@ struct ProgressTab: View {
         pausesPerMin = result.pausesPerMin
         talkMinutes = result.talkMinutes
         wordsPerTurn = result.wordsPerTurn
+        recentSpeakingSeconds = result.recentSpeakingSeconds
         grammarScore = result.grammarScore
         slipsPer100Words = result.slipsPer100Words
         grammarRange = result.grammarRange
@@ -2062,6 +2120,7 @@ struct ProgressTab: View {
         out.pausesPerMin = mean(mets.map(\.pausesPerMinute).filter { $0 > 0 })
         out.talkMinutes = Int((mean(mets.map(\.totalUserSpeakingSeconds)) / 60).rounded())
         out.wordsPerTurn = Int(mean(mets.map(\.avgWordsPerUserTurn)).rounded())
+        out.recentSpeakingSeconds = mets.reduce(0) { $0 + $1.totalUserSpeakingSeconds }
         // Grammar = the per-talk scorecard score (anchored on verified slips),
         // NOT suggestionRate — that also counts style rephrases and STT noise,
         // so it saturates and contradicts the score each talk shows.

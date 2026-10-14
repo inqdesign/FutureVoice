@@ -156,7 +156,9 @@ enum WeeklyReportEngine {
         let deliveryEvidence = """
         - articulation_rate_wpm: \(Int(metrics.articulationRate.rounded())) \
         (words per minute of VOICED speech, pauses removed; 0 = no timing data. \
-        Learner bands: <60 A1, 60-85 A2, 85-105 B1, 105-125 B2, 125-145 C1, 145+ C2)
+        Learner bands: <60 A1, 60-85 A2, 85-105 B1, 105-125 B2, 125-145 C1, 145+ C2. \
+        Short answers come out fast, so pace over short turns proves nothing: \
+        read it with avg_words_per_turn, and never let pace alone raise the level)
         - avg_words_per_turn: \(Int(metrics.avgWordsPerUserTurn.rounded()))
         - verified_grammar_slips_per_10_turns: \(String(format: "%.1f", slipsPer10)) \
         (transcript-verified real grammar errors only — STT artifacts and style nudges excluded)
