@@ -417,7 +417,9 @@ struct SpeechScriptSheet: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Toggle(isOn: $studying) {
-                        Text("Study")
+                        // Its own key: the catalog's "Study" is a noun
+                        // (공부, Lernzeit); this is the act (공부하기).
+                        Text(explain(key: "speech.study.toggle", default: "Study"))
                     }
                     .toggleStyle(.switch)
                     .fixedSize()
@@ -559,6 +561,8 @@ struct SpeechTakeRow: View {
 /// button. Plus and up — the caller checks before presenting.
 struct SpeechComposerSheet: View {
     var onWritten: (SpeechScript) -> Void
+    /// Opens with "Also make it in my voice" on (screenshot captures).
+    var voiceoverOn = false
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
     @AppStorage("speech.composer.genre") private var genreRaw = SpeechGenre.explainer.rawValue
@@ -624,7 +628,10 @@ struct SpeechComposerSheet: View {
             }
             .disabled(writing)
             .talkWall($wall, source: "speech_composer_voiceover")
-            .onAppear { gate.warm() }
+            .onAppear {
+                gate.warm()
+                if voiceoverOn { voiceover = true }
+            }
             .navigationTitle("New script")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -710,6 +717,9 @@ struct SpeechComposerSheet: View {
 struct SpeechOwnScriptSheet: View {
     let existing: SpeechScript?
     var onSave: (SpeechScript) -> Void
+    /// A draft to open with, and the voiceover choice on (screenshot captures).
+    var draft: String? = nil
+    var voiceoverOn = false
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
     @State private var title = ""
@@ -793,9 +803,12 @@ struct SpeechOwnScriptSheet: View {
                 if let existing {
                     title = existing.title
                     text = existing.body
+                } else if let draft {
+                    text = draft
                 } else {
                     bodyFocused = true
                 }
+                if voiceoverOn { voiceover = true }
             }
         }
     }

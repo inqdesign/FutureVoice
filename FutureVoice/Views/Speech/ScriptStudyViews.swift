@@ -90,7 +90,7 @@ struct ScriptStudyLegend: View {
                 let n = study.count(kind)
                 if n > 0 {
                     HStack(spacing: 5) {
-                        Text("ab")
+                        Text(verbatim: "ab")
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(.clear)
                             .background(ScriptStudyStyle.fill(kind) ?? .clear)

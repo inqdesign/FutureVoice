@@ -205,6 +205,38 @@ enum DebugCapture {
         store.save(take)
     }
 
+    /// The approved mockup's script (2026-10-14), with its study notes.
+    static func studySampleScript(_ language: String) -> SpeechScript {
+        SpeechScript(
+            id: UUID(uuidString: "5EED0000-0000-4000-8000-0000000000D1")!,
+            title: "Why practise out loud?", genre: .explainer, topic: "",
+            body: """
+            Have you ever had the perfect sentence in your head, only to watch it fall apart the moment you said it?
+            Speaking is a skill, not just knowledge. You can know the words and the grammar, but if your mouth has never actually built the sentence, it tends to let you down when it matters.
+            Saying things aloud also helps them stick. Research suggests we remember what we've said better than what we've only read.
+            """,
+            summary: "", keyTerms: [], sources: [], language: language, targetSeconds: 60,
+            createdAt: Date(), isBuiltIn: false)
+    }
+
+    static func studySample(_ script: SpeechScript) -> ScriptStudy {
+        let found = ScriptStudy.locate([
+            .init(text: "only to", kind: .grammar, note: "기대와 달리 결과가 실망스러울 때 써요. ‘…했는데 결국 …하고 말았다’는 흐름이에요.", example: "I ran to the station, only to miss the train."),
+            .init(text: "fall apart", kind: .expression, note: "계획이나 말이 버티지 못하고 무너질 때 써요. 여기서는 준비한 문장이 말하는 순간 흐트러지는 느낌이에요.", example: "Our weekend plans fell apart when it started raining."),
+            .init(text: "not just", kind: .grammar, note: "‘단지 …만이 아니라’ — 뒤에 더 중요한 걸 덧붙일 때 써요."),
+            .init(text: "tends to", kind: .grammar, note: "‘…하는 경향이 있다’ — 늘 그렇다고 단정하지 않고 부드럽게 말할 때 써요."),
+            .init(text: "let you down", kind: .expression, note: "기대를 저버리다, 실망시키다. 여기서는 입이 말을 안 들어준다는 뜻이에요."),
+            .init(text: "when it matters", kind: .expression, note: "정말 중요한 순간에."),
+            .init(text: "stick", kind: .word, lemma: "stick", note: "머리에 남다, 기억되다."),
+            .init(text: "Research suggests", kind: .expression, note: "근거를 소개할 때 쓰는 말이에요. ‘연구에 따르면’."),
+        ], in: ScriptStudy.paragraphs(script.body), spaced: true)
+        return ScriptStudy(highlights: found, paragraphNotes: [
+            "머릿속엔 완벽했던 문장이 입 밖으로 나오는 순간 무너진 경험을 물으며 시작해요.",
+            "핵심 주장이에요. 단어와 문법을 알아도 입으로 직접 만들어 본 적이 없으면 중요한 순간에 안 나온다는 거예요.",
+            "근거를 하나 더해요. 소리 내어 말한 건 눈으로 읽기만 한 것보다 더 오래 기억에 남아요.",
+        ])
+    }
+
     /// Two published challenges with boards full of other learners, and one
     /// take of the first on the board.
     private static func seedSpeechChallenges(_ appState: AppState) -> SpeechScript {
@@ -804,6 +836,33 @@ enum DebugCapture {
                 return AnyView(SpeechOwnScriptSheet(existing: script) { _ in }.environmentObject(appState))
             }
             return AnyView(SpeechScriptSheet(script: script).environmentObject(appState))
+        case "speech-study-off", "speech-study-on", "speech-study-card", "speech-voiceover",
+             "speech-composer-voiceover", "speech-own-voiceover":
+            // Study mode + "Hear it in my voice" (2026-10-14). The Light
+            // sample account so the price line shows the pool it comes from.
+            if appState.voiceCloneId == nil { appState.voiceCloneId = "capture-voice" }
+            BillingGate.shared.debugSetAccount(Self.sampleLightAccount)
+            let script = Self.studySampleScript(appState.targetLanguage)
+            switch name {
+            case "speech-composer-voiceover":
+                return AnyView(SpeechComposerSheet(onWritten: { _ in }, voiceoverOn: true)
+                    .environmentObject(appState))
+            case "speech-own-voiceover":
+                return AnyView(SpeechOwnScriptSheet(existing: nil, onSave: { _ in },
+                                                    draft: script.body, voiceoverOn: true)
+                    .environmentObject(appState))
+            default:
+                UserDefaults.standard.set(name != "speech-study-off" && name != "speech-voiceover",
+                                          forKey: "speech.script.study")
+                let study = Self.studySample(script)
+                let sheet = SpeechScriptSheet(script: script, study: study).environmentObject(appState)
+                if name == "speech-study-card", let h = study.highlights.first(where: { $0.text == "fall apart" }) {
+                    return AnyView(sheet.sheet(isPresented: .constant(true)) {
+                        ScriptStudyCardSheet(highlight: h, study: study).environmentObject(appState)
+                    })
+                }
+                return AnyView(sheet)
+            }
         case "speech-own":
             return AnyView(SpeechOwnScriptSheet(existing: nil) { _ in }.environmentObject(appState))
         case "speech-open":
