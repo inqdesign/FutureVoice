@@ -19,6 +19,7 @@ import com.roro.futurevoice.data.DrillIngest
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.net.ElevenLabsClient
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.CircularProgressIndicator
@@ -368,7 +369,10 @@ fun DrillDeckScreen(
                                 CardPill(Icons.Filled.GraphicEq, stringResource(R.string.shadow)) {
                                     onShadow(top.targetPhrase)
                                 }
-                                CardPill(Icons.Filled.MenuBook, stringResource(R.string.examples)) {
+                                // iOS `books.vertical` → `.fill` once the card
+                                // carries its examples.
+                                CardPill(if (top.enrichment != null) Icons.Filled.MenuBook
+                                    else Icons.Outlined.MenuBook, stringResource(R.string.examples)) {
                                     enrichFor = top
                                 }
                             }
@@ -563,6 +567,8 @@ fun DrillDeckScreen(
             persona = persona,
             targetLanguage = language,
             nativeLanguage = nativeLanguage,
+            voiceId = voiceId,
+            onEnriched = { updated -> deck = deck.map { if (it.id == updated.id) updated else it } },
             onDismiss = { enrichFor = null },
         )
     }

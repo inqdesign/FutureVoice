@@ -14,7 +14,8 @@ import kotlinx.serialization.json.putJsonArray
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.util.UUID
+import com.roro.futurevoice.data.DrillCardEnrichment
+import com.roro.futurevoice.data.DrillEnrichmentStore
 
 /**
  * A thin drill card turned into something a learner can internalize: three
@@ -47,7 +48,7 @@ class EnrichmentClient(private val auth: AuthRepository) {
         persona: UserPersona?,
         targetLanguage: String,
         nativeLanguage: String,
-    ): Enrichment = withContext(Dispatchers.IO) {
+    ): DrillCardEnrichment = withContext(Dispatchers.IO) {
         val body = buildJsonObject {
             put("target_phrase", card.targetPhrase)
             card.sourcePhrase.takeIf { it.isNotBlank() }?.let { put("source_phrase", it) }
@@ -59,7 +60,10 @@ class EnrichmentClient(private val auth: AuthRepository) {
         val request = Request.Builder()
             .url(Config.functionUrl("drill-enrichment"))
             .header("Authorization", "Bearer ${auth.accessToken()}")
-            .header("X-Idempotency-Key", UUID.randomUUID().toString())
+            // Keyed by the PHRASE, like iOS: the same correction opened from a
+            // card that no longer exists, or twice at once, is one charge.
+            .header("X-Idempotency-Key", "enrichment:" + DrillEnrichmentStore.key(
+                card.targetPhrase, targetLanguage, nativeLanguage))
             .post(body.toString().toRequestBody("application/json".toMediaType()))
             .build()
         Edge.client.newCall(request).execute().use { resp ->
@@ -69,7 +73,13 @@ class EnrichmentClient(private val auth: AuthRepository) {
                 .candidates?.firstOrNull()?.content?.parts?.mapNotNull { it.text }
                 ?.joinToString("").orEmpty()
             val json = Edge.extractJson(joined) ?: throw EdgeError.JsonNotFound(joined)
-            GeminiJson.decode(Enrichment.serializer(), json)
+            val p = GeminiJson.decode(Enrichment.serializer(), json)
+            DrillCardEnrichment(
+                examples = p.examples.map { DrillCardEnrichment.Example(it.situation, it.sentence) },
+                variants = p.variants.map { DrillCardEnrichment.Variant(it.phrase, it.note) },
+                memoryHook = p.memory_hook,
+                generatedAt = DrillCardEnrichment.now(),
+            )
         }
     }
 
