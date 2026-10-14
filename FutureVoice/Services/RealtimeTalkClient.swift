@@ -515,7 +515,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             // failure here falls through to the inline build below, which
             // either succeeds or takes the usual retry.
             let prepared = try? await Task.detached(priority: .userInitiated) {
-                try Self.prepareAudio()
+                try Self.prepareAudio(hfpGrace: 2.0)
             }.value
             guard !isTornDown else {
                 if prepared != nil {
@@ -617,13 +617,33 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 Self.step("pre-flight: a line is already playing — leaving it to the watchdog")
                 return
             }
+            // A route rebuild is already on it (the earphone's HFP link
+            // engaging under the first build, typically) — a second owner
+            // stopping and starting the same stack is what built an engine on
+            // top of the one playing the greeting (device log 2026-09-30).
+            // Wait for it instead, then look again.
+            if isRebuildingAudio {
+                Self.step("pre-flight: route rebuild in progress — waiting for it")
+                while isRebuildingAudio, !isTornDown {
+                    try? await Task.sleep(nanoseconds: 100_000_000)
+                }
+                continue
+            }
             Self.step("pre-flight: no mic buffers — rebuilding before the call opens")
+            isRebuildingAudio = true
             stopAudio()
             try? await Task.sleep(nanoseconds: 300_000_000)
-            guard !isTornDown else { return }
+            guard !isTornDown else { isRebuildingAudio = false; return }
             do { try startAudio() } catch {
+                isRebuildingAudio = false
                 Self.step("pre-flight: rebuild failed \(error)")
                 return
+            }
+            isRebuildingAudio = false
+            // A route event that landed during this rebuild was parked, not
+            // run — run it now, as the route path itself would have.
+            if routeRebuildPending {
+                await rebuildForRoute(label: "pending after pre-flight")
             }
         }
         Self.step("pre-flight: opening the call with a silent tap — watchdog owns it now")
@@ -916,6 +936,14 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// background thread; a rebuild mid-call passes nothing and does it all
     /// inline, as it always has.
     private func startAudio(prepared: PreparedAudio? = nil) throws {
+        // Never over a live engine. Building here replaces `engine` and
+        // `player` without stopping the ones running, so whatever they were
+        // playing — the greeting, on 2026-09-30 — dies unheard, and their tap
+        // keeps the input. Stopping first also queues a cut greeting again.
+        if engineRunning {
+            Self.step("audio: build requested over a running engine — stopping it first")
+            stopAudio()
+        }
         // Fresh graph every time — see the `engine` declaration.
         let built = try prepared ?? Self.prepareAudio(voiceProcessing: !voiceProcessingRefused)
         engine = built.engine
@@ -937,7 +965,8 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// no pill, no indicator, then the voice. Touches nothing of the
     /// client's, so the first build runs it detached; `AVAudioSession` is
     /// thread-safe and an engine that isn't running yet belongs to no one.
-    nonisolated static func prepareAudio(voiceProcessing: Bool = true) throws -> PreparedAudio {
+    nonisolated static func prepareAudio(voiceProcessing: Bool = true,
+                                         hfpGrace: TimeInterval = 0) throws -> PreparedAudio {
         let engine = AVAudioEngine()
         let session = AVAudioSession.sharedInstance()
         // Same category/options as a Talk call: whatever the learner is
@@ -1036,6 +1065,25 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 try? session.setActive(false, options: .notifyOthersOnDeactivation)
                 try session.setActive(true, options: .notifyOthersOnDeactivation)
                 try? session.setPreferredInput(mic)
+            }
+            // Earphones that joined while no call was up sit on A2DP, and the
+            // switch to HFP takes ~1–1.5 s after it is asked for. Checked at
+            // once, it read as "refused": the call was built on the speaker,
+            // HFP engaged a second later anyway, and the route event that
+            // followed rebuilt the stack under the greeting — the first call
+            // after putting earphones in had no voice and no mic, the next
+            // one (HFP already up) was fine (device log 2026-09-30, reported
+            // again 2026-10-14). Only the first build waits; it runs off the
+            // main thread, beside the gateway's own start-up.
+            var waited: TimeInterval = 0
+            while hfpGrace > 0, waited < hfpGrace,
+                  session.currentRoute.inputs.first?.portType != .bluetoothHFP {
+                Thread.sleep(forTimeInterval: 0.1)
+                waited += 0.1
+            }
+            if waited > 0 {
+                Self.step("audio: waited \(Int(waited * 1000))ms for HFP — "
+                    + "in=\(session.currentRoute.inputs.first?.portType.rawValue ?? "none")")
             }
             if session.currentRoute.inputs.first?.portType != .bluetoothHFP {
                 // Still refused. A Receiver call is the one truly broken
@@ -1256,34 +1304,44 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                     self.routeRebuildPending = true
                     return
                 }
-                self.isRebuildingAudio = true
-                defer { self.isRebuildingAudio = false }
-                repeat {
-                    self.routeRebuildPending = false
-                    Self.step("route changed (\(reason.rawValue)) — rebuilding audio")
-                    self.stopAudio()
-                    // Let the route SETTLE before building on it: Bluetooth
-                    // joins the route seconds after the notification, and a
-                    // graph built mid-transition was today's crash.
-                    try? await Task.sleep(nanoseconds: 1_200_000_000)
-                    guard !self.isTornDown else { return }
-                    do { try self.startAudio() } catch {
-                        // The seconds right after a Bluetooth detach leave the
-                        // session in a transient state where setCategory can
-                        // throw (observed 2026-09-01 — one throw ended a call
-                        // that a second attempt would have saved). One more
-                        // try after a beat before declaring the call lost.
-                        Self.step("route rebuild: startAudio threw (\(error)) — retrying once")
-                        try? await Task.sleep(nanoseconds: 1_000_000_000)
-                        guard !self.isTornDown else { return }
-                        do { try self.startAudio() } catch {
-                            self.fail("route", "The audio route changed and the call couldn't recover.")
-                            return
-                        }
-                    }
-                } while self.routeRebuildPending && !self.isTornDown
+                await self.rebuildForRoute(label: "\(reason.rawValue)")
             }
         }
+    }
+
+    /// The route's rebuild, serialized: one runs at a time under
+    /// `isRebuildingAudio`, and an event that lands meanwhile marks the route
+    /// dirty and is run once more at the end, so the LAST event wins. The
+    /// mic pre-flight hands its pending events here too — two owners
+    /// rebuilding at once is how a second engine was built on top of the one
+    /// playing the greeting (device log 2026-09-30).
+    private func rebuildForRoute(label: String) async {
+        isRebuildingAudio = true
+        defer { isRebuildingAudio = false }
+        repeat {
+            self.routeRebuildPending = false
+            Self.step("route changed (\(label)) — rebuilding audio")
+            self.stopAudio()
+            // Let the route SETTLE before building on it: Bluetooth
+            // joins the route seconds after the notification, and a
+            // graph built mid-transition was today's crash.
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+            guard !self.isTornDown else { return }
+            do { try self.startAudio() } catch {
+                // The seconds right after a Bluetooth detach leave the
+                // session in a transient state where setCategory can
+                // throw (observed 2026-09-01 — one throw ended a call
+                // that a second attempt would have saved). One more
+                // try after a beat before declaring the call lost.
+                Self.step("route rebuild: startAudio threw (\(error)) — retrying once")
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                guard !self.isTornDown else { return }
+                do { try self.startAudio() } catch {
+                    self.fail("route", "The audio route changed and the call couldn't recover.")
+                    return
+                }
+            }
+        } while self.routeRebuildPending && !self.isTornDown
     }
 
     /// Every engine build gets 2 s to produce its first tap buffer, or the
