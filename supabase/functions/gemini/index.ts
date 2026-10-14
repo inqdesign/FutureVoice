@@ -55,6 +55,7 @@ const DAILY_CAPS: Record<string, number> = {
   "brief": 20,                 // a scenario's attached material, read once
   "daily-call-script": 20,
   "clone-script": 20,
+  "script-study": 60,          // a Speech script's study notes, cached per script
 }
 const DEFAULT_DAILY_CAP = 300
 

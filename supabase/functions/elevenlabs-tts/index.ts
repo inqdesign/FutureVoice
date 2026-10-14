@@ -137,6 +137,12 @@ Deno.serve(async (req) => {
     // by ear (scripts/tts-korean-probe.sh). Absent = the model guesses, as
     // every build before it does.
     language_code?: string
+    // A Speech script's voiceover ("Hear it in my voice", 2026-10-14). With
+    // `purpose: "script-voiceover"` the line is not metered per character:
+    // it is claimed against the reservation the app made with
+    // `reserve_script_voiceover`, and the whole voiceover is charged once,
+    // in talk minutes, by `charge_script_voiceover` after it was made.
+    voiceover_key?: string
   }
   try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
 
@@ -263,6 +269,14 @@ Deno.serve(async (req) => {
   // so this is one synthesis per voice, ever.
   const isFreeVoiceCheck = body.purpose === "voice_comparison" && body.text.length <= 200
   const isFreeEntry = isFreeGreeting || isFreeVoiceCheck
+  // A script voiceover line rides on its reservation (see the migration
+  // `20261014150000_script_voiceover`): timestamped only, a key required, and
+  // the line's characters must fit what the reservation covers. Without one
+  // it is refused rather than metered, so the tag is never free synthesis.
+  const isVoiceover = body.purpose === "script-voiceover"
+  if (isVoiceover && (!body.voiceover_key || body.with_timestamps !== true)) {
+    return errorResponse(400, "voiceover_key and with_timestamps required")
+  }
 
   // Daily character pooling — credits debit only when the day's running
   // char total crosses a rate boundary, so short lines stop costing a full
@@ -316,7 +330,9 @@ Deno.serve(async (req) => {
     // path is cold. The legacy scene call (purpose "scene", no scene_key —
     // an un-updated app) keeps its tts_scene action and seconds pool here,
     // exactly as before.
-    const chargePromise = isFreeEntry
+    const chargePromise = isVoiceover
+      ? claimVoiceoverLine(user.id, body.voiceover_key!, body.text.length, idemKey)
+      : isFreeEntry
       ? Promise.resolve({ ok: true as const, balanceAfter: -1, charged: 0, idempotencyKey: idemKey })
       : FREE_PURPOSES.has(body.purpose ?? "")
       ? chargeFreePooledTTS({ ...chargeArgs, action: baseAction })
@@ -369,7 +385,7 @@ Deno.serve(async (req) => {
     return errorResponse(503, "voice is being prepared, retry shortly")
   }
   if (onCartesia) {
-    return await speakOnCartesia({
+    return await noteVoiceoverSeconds(isVoiceover, user.id, body.voiceover_key, await speakOnCartesia({
       // Cartesia gets the line as written: its "!" is +0.6–1.7 dB, not
       // ElevenLabs' shout (measured 2026-10-12, en/de/ko/ja).
       voiceId: body.voice_id, text: body.text, originalText: body.text,
@@ -385,7 +401,7 @@ Deno.serve(async (req) => {
         }
       },
       balanceAfter: ch.balanceAfter,
-    })
+    }))
   }
 
   const fetchOptions: RequestInit = {
@@ -501,11 +517,49 @@ Deno.serve(async (req) => {
     const json = await upstream.json()
     restoreCharacters(json?.alignment?.characters, body.text, spokenText)
     restoreCharacters(json?.normalized_alignment?.characters, body.text, spokenText)
-    return new Response(JSON.stringify(json), { status: 200, headers })
+    return await noteVoiceoverSeconds(isVoiceover, user.id, body.voiceover_key,
+      new Response(JSON.stringify(json), { status: 200, headers }))
   }
 
-  return new Response(upstream.body, { status: 200, headers })
+  return await noteVoiceoverSeconds(isVoiceover, user.id, body.voiceover_key,
+    new Response(upstream.body, { status: 200, headers }))
 })
+
+/** A script voiceover line may be synthesized only under its reservation.
+ *  Shaped like a charge so the hot path's gates and refunds treat it alike;
+ *  it never charges anything (the voiceover is charged whole, afterwards). */
+async function claimVoiceoverLine(userId: string, key: string, chars: number,
+                                  idempotencyKey: string) {
+  const { data, error } = await billingClient().rpc("claim_script_voiceover_chars", {
+    p_user_id: userId, p_key: key, p_chars: chars,
+  })
+  if (error) return { ok: false as const, reason: "db_error" as const, detail: error.message }
+  if (data !== true) {
+    return { ok: false as const, reason: "insufficient_credits" as const, detail: "voiceover_not_reserved" }
+  }
+  return { ok: true as const, balanceAfter: -1, charged: 0, idempotencyKey }
+}
+
+/** Records how many seconds of audio a voiceover line came out as — the
+ *  server's own measure, which `charge_script_voiceover` charges at least.
+ *  Read off the alignment's last character; a failure records nothing (the
+ *  app's own measure then stands) and never changes the reply. */
+async function noteVoiceoverSeconds(isVoiceover: boolean, userId: string,
+                                    key: string | undefined, resp: Response): Promise<Response> {
+  if (!isVoiceover || !key || !resp.ok) return resp
+  try {
+    const json = await resp.clone().json()
+    const a = json?.alignment ?? json?.normalized_alignment
+    const ends: number[] = a?.character_end_times_seconds ?? []
+    const seconds = ends.length ? Math.max(...ends) : 0
+    if (seconds > 0) {
+      await billingClient().rpc("note_script_voiceover_seconds", {
+        p_user_id: userId, p_key: key, p_seconds: seconds,
+      })
+    }
+  } catch { /* the reply stands */ }
+  return resp
+}
 
 // The learner's target language, remembered per edge instance — it names the
 // language of every Cartesia line that isn't in Hangul or kana. A miss reads
