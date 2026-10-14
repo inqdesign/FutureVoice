@@ -352,6 +352,25 @@ struct SpeechScriptSheet: View {
     var body: some View {
         NavigationStack {
             List {
+                // Its own row, not the toolbar (founder, 2026-10-14): a switch
+                // beside the title and Done crowded the header, and in longer
+                // languages the label had nowhere to go.
+                Section {
+                    Toggle(isOn: $studying) {
+                        Label {
+                            // Its own key: the catalog's "Study" is a noun
+                            // (공부, Lernzeit); this is the act (공부하기).
+                            Text(explain(key: "speech.study.toggle", default: "Study"))
+                        } icon: {
+                            Image(systemName: "highlighter")
+                        }
+                    }
+                } footer: {
+                    if studying, study != nil {
+                        Text("Tap for an explanation")
+                    }
+                }
+
                 Section {
                     VStack(alignment: .leading, spacing: 10) {
                         Text(script.title)
@@ -415,15 +434,6 @@ struct SpeechScriptSheet: View {
             .navigationTitle("Script")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Toggle(isOn: $studying) {
-                        // Its own key: the catalog's "Study" is a noun
-                        // (공부, Lernzeit); this is the act (공부하기).
-                        Text(explain(key: "speech.study.toggle", default: "Study"))
-                    }
-                    .toggleStyle(.switch)
-                    .fixedSize()
-                }
                 // The bundled sample is everyone's and stays as shipped;
                 // changing it would make it a script of your own, which is
                 // the Plus side of the tab.

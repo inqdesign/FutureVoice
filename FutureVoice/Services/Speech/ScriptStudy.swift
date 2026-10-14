@@ -3,12 +3,14 @@ import Foundation
 
 /// "Study" on a Speech script (2026-10-14, founder decision): the script's
 /// most useful expressions, grammar patterns and words marked IN the text,
-/// and under each paragraph a short note in the learner's own language on
-/// what that paragraph says or does — never a translation.
+/// and under each paragraph its translation into the learner's own language
+/// (founder, same day: a one-line summary of what the paragraph "does" told
+/// a reader nothing they needed — the translation is what they reach for).
 ///
 /// MATERIAL vs NOTES: every highlighted span is the script's own text (target
 /// language, verbatim — `locate` drops any span that isn't); every `note` and
-/// paragraph note is coaching, in the native language.
+/// paragraph translation is in the native language, and a learner whose
+/// native language IS the target gets no translation at all.
 ///
 /// Written once per (script text, target, native, level) by one call on the
 /// default model (`purpose: "script-study"`) and kept on disk, so reopening a
@@ -128,7 +130,7 @@ struct ScriptStudy: Codable, Equatable {
     // MARK: - Cache key
 
     /// Bumped whenever the prompt changes what a study is.
-    static let promptVersion = 1
+    static let promptVersion = 2
 
     static func textHash(_ body: String) -> String {
         sha(body.trimmingCharacters(in: .whitespacesAndNewlines))
@@ -196,6 +198,16 @@ enum ScriptStudyEngine {
         guard !paragraphs.isEmpty else { throw StudyError.empty }
         let target = LanguageCatalog.englishName(script.language)
         let nativeName = LanguageCatalog.englishName(native)
+        let sameLanguage = LanguageCatalog.sameLanguage(native, script.language)
+        let paragraphRule = sameLanguage
+            ? "PARAGRAPH NOTES — return an empty list: the learner reads \(target) natively."
+            : """
+            PARAGRAPH NOTES — exactly one per numbered paragraph, in order: that
+            paragraph TRANSLATED into \(nativeName). The whole paragraph, every
+            sentence, faithful to its meaning and tone, written the way a native
+            \(nativeName) speaker would say it — not word for word, not a summary,
+            nothing added or left out.
+            """
         let system = """
         You are a language teacher preparing a script for a learner
         (\(level.rawValue.uppercased())) who will read it aloud in \(target).
@@ -221,16 +233,13 @@ enum ScriptStudyEngine {
         - "example": \(target). One new short sentence using it, not from the
           script. Omit when you have none.
 
-        PARAGRAPH NOTES — exactly one per numbered paragraph, in order.
-        \(nativeName). ONE short sentence on what that paragraph says or does
-        in the talk (opens with a question, makes the main claim, adds a
-        reason…). Never a translation of the paragraph.
+        \(paragraphRule)
         """
         let numbered = paragraphs.enumerated().map { "\($0.offset + 1). \($0.element)" }.joined(separator: "\n")
         let user = "SCRIPT (\(paragraphs.count) paragraphs):\n\(numbered)"
         let payload: Payload = try await GeminiClient.shared.sendJSON(
             system: system, messages: [.init(role: .user, content: user)],
-            model: .flash36, maxTokens: 4096, purpose: "script-study", requestTimeout: 60)
+            model: .flash36, maxTokens: 8192, purpose: "script-study", requestTimeout: 90)
         let candidates: [ScriptStudy.Candidate] = (payload.highlights ?? []).compactMap { item in
             guard let text = item.text, let kind = ScriptStudy.Kind(rawValue: (item.kind ?? "").lowercased()) else { return nil }
             func clean(_ s: String?) -> String? {

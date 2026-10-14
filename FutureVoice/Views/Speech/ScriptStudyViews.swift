@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - Study mode
 
 /// The script's paragraphs with the study highlights drawn IN the text and a
-/// native-language note under each paragraph (Script sheet, Study on).
+/// native-language translation under each paragraph (Script sheet, Study on).
 /// Tapping a highlight opens the app's own cards — the word card for a word,
 /// the expression card for an expression or a grammar pattern (with the
 /// study note as its "In this script" section). Never on the prompter.
@@ -80,7 +80,8 @@ enum ScriptStudyStyle {
     }
 }
 
-/// Kind · count for each kind present, and how to use them.
+/// Kind · count for each kind present (how to use them is the study
+/// switch's footer, so the row never truncates in a long language).
 struct ScriptStudyLegend: View {
     let study: ScriptStudy
 
@@ -101,9 +102,7 @@ struct ScriptStudyLegend: View {
                     }
                 }
             }
-            Spacer(minLength: 4)
-            Text("Tap for an explanation")
-                .foregroundStyle(.secondary)
+            Spacer(minLength: 0)
         }
         .font(.footnote)
         .textCase(nil)
