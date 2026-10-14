@@ -1,5 +1,13 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.pointer.pointerInput
+import kotlinx.coroutines.flow.filterNotNull
 import android.content.Context
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -296,30 +304,49 @@ fun <T> CenteredStrip(
     cell: @Composable (T, Boolean) -> Unit,
 ) {
     val state = rememberLazyListState(initialFirstVisibleItemIndex = selected.coerceAtLeast(0))
-    val haptic = LocalHapticFeedback.current
+    val context = androidx.compose.ui.platform.LocalContext.current
     val currentSelected by rememberUpdatedState(selected)
     val select by rememberUpdatedState(onSelect)
-    // The item in the middle once a scroll settles is the selection.
+    fun centered(): Int? {
+        val info = state.layoutInfo
+        val center = (info.viewportStartOffset + info.viewportEndOffset) / 2
+        return info.visibleItemsInfo.minByOrNull { kotlin.math.abs(it.offset + it.size / 2 - center) }?.index
+    }
+    // Whatever sits in the middle IS the selection, live while the row moves,
+    // and each new one ticks like a picker wheel (iOS: scrollPosition +
+    // sensoryFeedback(.selection)). Only a drag or fling the learner made
+    // drives it; a programmatic scroll lands where it was told to.
+    var userScrolling by remember { mutableStateOf(false) }
     LaunchedEffect(state) {
-        snapshotFlow { state.isScrollInProgress to state.firstVisibleItemIndex }
-            .filter { !it.first }
+        snapshotFlow { state.isScrollInProgress }.collect { moving ->
+            if (!moving) userScrolling = false
+        }
+    }
+    LaunchedEffect(state) {
+        snapshotFlow { centered() }
+            .filterNotNull()
             .distinctUntilChanged()
-            .collect { (_, _) ->
-                val info = state.layoutInfo
-                val center = (info.viewportStartOffset + info.viewportEndOffset) / 2
-                val mid = info.visibleItemsInfo.minByOrNull { kotlin.math.abs(it.offset + it.size / 2 - center) }
-                if (mid != null && mid.index != currentSelected) {
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    select(mid.index)
+            .collect { mid ->
+                if (userScrolling && mid != currentSelected) {
+                    HapticEngine.selection(context)
+                    select(mid)
                 }
             }
     }
-    // A selection made elsewhere (a tap, a swipe of the day below) scrolls here.
+    // A selection made elsewhere (a tap, "Today", a swipe of the day below)
+    // glides that item to the middle, never while the learner is dragging.
     LaunchedEffect(selected) {
-        val info = state.layoutInfo
-        val center = (info.viewportStartOffset + info.viewportEndOffset) / 2
-        val mid = info.visibleItemsInfo.minByOrNull { kotlin.math.abs(it.offset + it.size / 2 - center) }
-        if (mid?.index != selected && selected in items.indices) state.animateScrollToItem(selected)
+        if (userScrolling || selected !in items.indices || centered() == selected) return@LaunchedEffect
+        val target = state.layoutInfo.visibleItemsInfo.firstOrNull { it.index == selected }
+        if (target != null) {
+            val info = state.layoutInfo
+            val center = (info.viewportStartOffset + info.viewportEndOffset) / 2
+            state.animateScrollBy((target.offset + target.size / 2 - center).toFloat(),
+                androidx.compose.animation.core.spring(dampingRatio = 1f,
+                    stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow))
+        } else {
+            state.animateScrollToItem(selected)
+        }
     }
     BoxWithConstraints(Modifier.fillMaxWidth().height(76.dp)) {
         val side = ((maxWidth - cellWidth) / 2).coerceAtLeast(0.dp)
@@ -329,6 +356,17 @@ fun <T> CenteredStrip(
             contentPadding = PaddingValues(horizontal = side),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier.fillMaxSize()
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        userScrolling = true
+                        // A touch that never moved the row (a tap on the
+                        // margin) hands control back at once; a fling keeps
+                        // it until the row settles.
+                        do { val e = awaitPointerEvent() } while (e.changes.any { it.pressed })
+                        if (!state.isScrollInProgress) userScrolling = false
+                    }
+                }
                 .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
                 .drawWithContent {
                     drawContent()
@@ -345,7 +383,10 @@ fun <T> CenteredStrip(
                         .background(if (isSel) AppSurfaces.card else Color.Transparent)
                         .border(0.5.dp, if (isSel) MaterialTheme.colorScheme.outlineVariant else Color.Transparent,
                             RoundedCornerShape(16.dp))
-                        .clickable { if (i != selected) { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); select(i) } },
+                        .clickable(interactionSource = null, indication = null) {
+                            userScrolling = false
+                            if (i != selected) { HapticEngine.selection(context); select(i) }
+                        },
                     contentAlignment = Alignment.Center,
                 ) { cell(item, isSel) }
             }
@@ -426,7 +467,9 @@ fun DayMarkCircle(number: String, mark: DayMark, size: Dp = 32.dp) {
                         .dashPathEffect(floatArrayOf(3.dp.toPx(), 3.dp.toPx()))))
             }
         }
-        Text(number, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold,
+        // iOS footnote semibold, tabular: 13, not labelLarge's 17.
+        Text(number, style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
+            fontWeight = FontWeight.SemiBold,
             color = when (mark) {
                 DayMark.Kept -> Color.White
                 DayMark.Rest -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)

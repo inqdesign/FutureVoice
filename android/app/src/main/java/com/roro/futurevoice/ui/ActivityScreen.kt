@@ -63,6 +63,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.roro.futurevoice.R
 import com.roro.futurevoice.data.DailyCallStore
@@ -255,6 +256,7 @@ fun ActivityScreen(
                         verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(SimpleDateFormat("EEEEE", Locale.getDefault()).format(Date(d)),
                             style = MaterialTheme.typography.labelSmall,
+                            fontSize = 11.sp, // iOS caption2
                             fontWeight = if (isSel) FontWeight.SemiBold else FontWeight.Normal,
                             color = if (isSel) MaterialTheme.colorScheme.onSurface
                             else MaterialTheme.colorScheme.onSurfaceVariant)
