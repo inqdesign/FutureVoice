@@ -113,6 +113,11 @@ struct PracticeTab: View {
     /// Sentence cards due now, by the talk they came from — a book's
     /// "to review" count.
     @State private var dueDrillBySession: [UUID: Int] = [:]
+    /// Words and expressions due now, lowercased — read by `studyingFeed`,
+    /// which runs twice per render (the page and its chip's count). Asking
+    /// `ReviewQueue.dueItems()` there pruned the whole schedule on every
+    /// render; reload (on appear and on every deck's dismiss) is often enough.
+    @State private var dueItemTexts: Set<String> = []
     /// A pinned book's chapter button was tapped — its deck, as a sheet.
     @State private var chapterStudy: ChapterStudy?
 
@@ -831,9 +836,7 @@ struct PracticeTab: View {
     /// Every unfinished, unarchived book, newest first by when it was MADE —
     /// the order never shifts as items are mastered.
     private var studyingFeed: [BookPreview] {
-        let due = ReviewQueue.dueItems().reduce(into: Set<String>()) {
-            $0.insert($1.text.lowercased())
-        }
+        let due = dueItemTexts
         let talkBooks: [BookPreview] = talks.compactMap { s in
             let snap = talkSnapshots[s.id]
             if snap?.isMastered == true { return nil }
@@ -1200,7 +1203,9 @@ struct PracticeTab: View {
                   let id = card.sourceSessionId else { return }
             acc[id, default: 0] += 1
         }
-        dueReviewCount = DueReviewView.dueDeck().count
+        let dueDeck = DueReviewView.dueDeck()
+        dueItemTexts = Set(dueDeck.map { $0.text.lowercased() })
+        dueReviewCount = dueDeck.count
             + DrillStore.putOffCards().filter { $0.nextReviewAt <= Date() }.count
         putOffCount = DueReviewView.putOffDeck().count
         // Same rule as the Watch shelf: newest talk first, by when it was

@@ -10,6 +10,15 @@ final class DrillStore: LanguageScopedStore {
     private let filename: String
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
+    /// The repaired list as last read, and which file state it was read from.
+    /// `load()` decodes the whole file and normalizes every card, ~30 ms for
+    /// 400 cards, and the Review tab alone asked for it four times per tap —
+    /// the stutter on switching to it (2026-10-14). Keyed on the file's path,
+    /// modification date and size rather than invalidated by our own writes,
+    /// because sync writes this file BY PATH without going through the store.
+    private let lock = NSLock()
+    private var cache: (stamp: FileStamp, cards: [DrillCard])?
+    private struct FileStamp: Equatable { let path: String; let modified: Date?; let size: Int? }
 
     init(filename: String = "drills.json") {
         self.filename = filename
@@ -26,12 +35,34 @@ final class DrillStore: LanguageScopedStore {
     }
 
     func languageScopeDidChange() {
+        lock.lock(); defer { lock.unlock() }
         fileURL = LanguageScope.activeDirectory.appendingPathComponent(filename)
+        cache = nil
     }
 
     // MARK: - CRUD
 
     func load() -> [DrillCard] {
+        lock.lock()
+        let url = fileURL
+        lock.unlock()
+        let values = try? url.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey])
+        let stamp = FileStamp(path: url.path, modified: values?.contentModificationDate,
+                              size: values?.fileSize)
+        lock.lock()
+        if let cache, cache.stamp == stamp {
+            lock.unlock()
+            return cache.cards
+        }
+        lock.unlock()
+        let cards = loadFromDisk(url)
+        lock.lock()
+        cache = (stamp, cards)
+        lock.unlock()
+        return cards
+    }
+
+    private func loadFromDisk(_ fileURL: URL) -> [DrillCard] {
         guard let data = try? Data(contentsOf: fileURL),
               let cards = try? decoder.decode([DrillCard].self, from: data) else {
             return []
@@ -470,6 +501,7 @@ final class DrillStore: LanguageScopedStore {
     private func write(_ cards: [DrillCard]) {
         guard let data = try? encoder.encode(cards) else { return }
         try? data.write(to: fileURL, options: [.atomic])
+        lock.lock(); cache = nil; lock.unlock()
         // Every mutation funnels through here — keep the home-screen widget's
         // snapshot of the due queue in sync.
         StudyWidgetRefresher.schedule()
