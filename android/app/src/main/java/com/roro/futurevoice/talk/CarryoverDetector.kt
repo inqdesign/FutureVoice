@@ -42,7 +42,7 @@ object CarryoverDetector {
         language: String = "en",
         now: Long = System.currentTimeMillis(),
     ): List<Carryover> {
-        val userTurns = turns.filter { it.role == TurnRole.USER && !it.excludedFromScoring }
+        val userTurns = turns.filter { it.isEvidence }
         if (userTurns.isEmpty()) return emptyList()
 
         val out = mutableListOf<Carryover>()

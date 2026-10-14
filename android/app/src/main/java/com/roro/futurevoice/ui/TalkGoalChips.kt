@@ -314,7 +314,7 @@ object TalkGoalPicker {
      * learner.
      */
     fun hits(turn: Turn, items: List<TalkGoalItem>): Set<String> {
-        if (turn.role != com.roro.futurevoice.talk.TurnRole.USER || turn.excludedFromScoring ||
+        if (!turn.isEvidence ||
             turn.transcript.isBlank() || items.isEmpty()) return emptySet()
         val out = HashSet<String>()
         var lemmas: Set<String>? = null   // one pass per turn, at most

@@ -323,7 +323,7 @@ private fun GuidePage(page: Page, i: Int) {
                 listOf(c(R.string.guide_try_saying, R.string.guide_each_time_your_fluent_self_speaks),
                     c(R.string.guide_try_using, R.string.guide_now_and_then_it_asks_something),
                     c(R.string.guide_this_calls_grammar_focus, R.string.guide_the_mistake_you_make_most_like)),
-                note = R.string.guide_a_coached_call_counts_as_a,
+                note = R.string.answers_in_your_own_words_count_toward_your_level_sentences_451d80,
             ) { CoachMock() }
         }
         Page.SPEECH -> when (i) {

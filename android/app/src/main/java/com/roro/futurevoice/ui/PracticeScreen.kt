@@ -368,18 +368,29 @@ private fun TalkCard(t: Session, onOpen: (String) -> Unit,
         title = t.displayTitle ?: stringResource(R.string.conversation),
         // iOS `bubble.left.and.bubble.right.fill` — two bubbles, a conversation.
         icon = Icons.Filled.Forum,
-        origin = when (t.origin?.name?.lowercase()) {
-            "news" -> stringResource(R.string.news)
-            "scenario" -> stringResource(R.string.scenarios)
-            else -> stringResource(R.string.free_talk)
+        origin = run {
+            val source = when (t.origin?.name?.lowercase()) {
+                "news" -> stringResource(R.string.news)
+                "scenario" -> stringResource(R.string.scenarios)
+                else -> stringResource(R.string.free_talk)
+            }
+            // A coach-mode call says so in place of "Free talk" (after "News" /
+            // "Scenario"). A practice call (`Session.coached` — tutor mode, or
+            // coach mode before 2026-10-14) carries no score, so it is named
+            // that (iOS `OriginTag`).
+            val coached = t.turns.any { it.coachLine != null }
+            if (!t.isPractice && !coached) return@run source
+            val coach = stringResource(if (t.isPractice) R.string.practice_call else R.string.coach_mode)
+            when (t.origin?.name?.lowercase()) {
+                "news", "scenario" -> "$source · $coach"
+                else -> coach
+            }
         },
         accent = if (t.origin?.name?.lowercase() == "news") Books.topics else Books.talks,
         // WHEN it was last worked, said as recency — it keeps advancing as
         // the book is studied, which a fixed date does not.
-        detail = stringResource(R.string.studied, Recency.label(t.endedAt ?: t.startedAt)) +
-            // Where the score would be, a practice call says what it was.
-            (if (t.isPractice) " · " + stringResource(R.string.practice_call) else ""),
-        // A practice (coach mode) call has no score to headline.
+        detail = stringResource(R.string.studied, Recency.label(t.endedAt ?: t.startedAt)),
+        // A practice call has no score to headline.
         score = t.summary?.scorecard?.overall?.takeIf { !t.isPractice },
         // The book's mastery strip, as iOS's TalkBookCard carries it.
         progress = progress?.takeIf { it.second > 0 }?.let { it.first / it.second.toFloat() },

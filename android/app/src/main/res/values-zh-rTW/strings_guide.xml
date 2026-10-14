@@ -64,7 +64,6 @@
     <string name="guide_now_and_then_it_asks_something">"有時會問一個能用你正在複習的單字回答的問題，並顯示那個單字。用上了就會打勾。"</string>
     <string name="guide_this_calls_grammar_focus">"這次通話的文法重點"</string>
     <string name="guide_the_mistake_you_make_most_like">"你最常犯的錯，例如過去式，會固定在上方。流利的自己會問需要用到它的問題，同樣的錯再出現時，會在修正上標示出來。"</string>
-    <string name="guide_a_coached_call_counts_as_a">"開啟教練模式的通話會記錄為練習通話。通話時間、連續紀錄和教材都會照常保留，但不會用來評估程度，那通通話裡用到的單字也不算學會。"</string>
     <string name="guide_a_job_interview_a_call_to">"面試、打給房東、和另一半的爸媽吃晚餐。話其實會說一些，但一開口該說什麼、要問什麼、尷尬的時候怎麼化解，就是想不出來。"</string>
     <string name="guide_watch_shows_that_situation_played_out">"情境分頁會讓流利的自己用你的聲音演出那個情境。看完你會得到點子：怎麼開口、要問什麼、哪些用語好用。接著再練到變成自己的。"</string>
     <string name="guide_people_your_own_cast">"人物：專屬你的對話對象"</string>

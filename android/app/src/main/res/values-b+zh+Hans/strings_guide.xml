@@ -64,7 +64,6 @@
     <string name="guide_now_and_then_it_asks_something">"它不时会问一个你能用正在学习的单词回答的问题，并把那个单词显示出来。用上了就会打勾。"</string>
     <string name="guide_this_calls_grammar_focus">"本次通话的语法重点"</string>
     <string name="guide_the_mistake_you_make_most_like">"你最常犯的错误，比如过去时，会固定在顶部。流利的自己会提出需要用到它的问题；同样的错误再出现时，那条纠正会被标出来。"</string>
-    <string name="guide_a_coached_call_counts_as_a">"开启教练模式的通话会记为练习通话。通话时长、连续记录和教材都照常计入，但不用于测定水平，通话中用到的单词也不算已掌握。"</string>
     <string name="guide_a_job_interview_a_call_to">"求职面试、给房东打电话、和伴侣父母吃饭。语言你会得差不多，难的是第一句说什么、该问什么、尴尬的时候怎么接下去。"</string>
     <string name="guide_watch_shows_that_situation_played_out">"情境会让流利的自己用你的声音把那个情况演一遍。你会得到思路：怎么开口、问什么、哪些用语管用。然后反复练习，直到变成你自己的。"</string>
     <string name="guide_people_your_own_cast">"人物：你自己的角色阵容"</string>

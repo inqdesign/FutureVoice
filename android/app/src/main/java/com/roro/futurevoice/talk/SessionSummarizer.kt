@@ -233,7 +233,7 @@ object SessionSummarizer {
         // Verbatim guards — the same normalization CarryoverDetector uses.
         // A turn marked misheard is out of every assessment path — the vocab
         // pool and the verified expressions included (iOS `userTexts`).
-        val userTexts = turns.filter { it.role == TurnRole.USER && !it.excludedFromScoring }
+        val userTexts = turns.filter { it.isEvidence }
             .map { it.transcript }
         val haystack = normalized(userTexts.joinToString(" "))
         val verifiedUsed = computed.expressionsUsed.filter { p ->
@@ -490,10 +490,21 @@ object SessionSummarizer {
         polite_setting_line = politeSettingLine,
     )
 
-    /** `ConversationEngine.formatTranscript` — role-labelled lines. */
+    /**
+     * `ConversationEngine.formatTranscript` — role-labelled lines. A line the
+     * learner read off coach mode's suggestion is labelled `USER_READ`
+     * ([Turn.readFromCoach]); `session-summary` then adds the note saying
+     * what that means (iOS `ConversationEngine.readLineNote`). A transcript
+     * without one is byte-identical to before.
+     */
     fun formatTranscript(turns: List<Turn>): String =
         turns.joinToString("\n") { t ->
-            "[${if (t.role == TurnRole.USER) "USER" else "FLUENT_SELF"}] ${t.transcript}"
+            val label = when {
+                t.role == TurnRole.FLUENT_SELF -> "FLUENT_SELF"
+                t.readFromCoach -> "USER_READ"
+                else -> "USER"
+            }
+            "[$label] ${t.transcript}"
         }
 
     /** `CarryoverDetector.normalized`: letters/digits/spaces only, lowercase, single-spaced. */

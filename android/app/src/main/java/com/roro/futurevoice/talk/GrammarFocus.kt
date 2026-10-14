@@ -100,7 +100,7 @@ data class GrammarFocus(
             return sessions.count { s ->
                 s.archivedAt == null && (s.endedAt ?: s.startedAt) >= fresh &&
                     s.turns.any { t ->
-                        t.role == TurnRole.USER && !t.excludedFromScoring &&
+                        t.isEvidence &&
                             SpokenWords.quotes(pattern.mistake, t.transcript)
                     }
             }

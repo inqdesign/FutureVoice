@@ -53,7 +53,7 @@ data class ScorecardMetrics(
 
     companion object {
         fun compute(turns: List<Turn>): ScorecardMetrics {
-            val userTurns = turns.filter { it.role == TurnRole.USER && !it.excludedFromScoring }
+            val userTurns = turns.filter { it.isEvidence }
             val allWords = userTurns.flatMap { tokens(it.transcript) }
             val userWordCount = allWords.size
             val uniqueWords = allWords.map { it.lowercase() }.toSet()

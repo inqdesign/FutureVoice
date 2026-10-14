@@ -226,9 +226,6 @@ class TalkViewModel(context: Context) : ViewModel() {
     private var coachPool: List<com.roro.futurevoice.ui.TalkGoalItem> = emptyList()
     private var usedGoalKeys: Set<String> = emptySet()
     private var focusJob: Job? = null
-    /** Coach mode was on at some point in this call — the whole call is then
-     *  a practice call (`Session.coached`). */
-    private var coachWasOn = false
     /** Tutor mode for THIS call (iOS `tutorThisCall`), read once when the
      *  call opens: it lives in the system prompt the gateway caches for the
      *  whole call, so a flip mid-call applies from the next one. A tutored
@@ -309,7 +306,6 @@ class TalkViewModel(context: Context) : ViewModel() {
         _state.value = TalkUiState(phase = TalkPhase.CONNECTING,
             turns = resume?.turns.orEmpty(), resumedTurnCount = resume?.turns?.size ?: 0)
         coachOn = CoachMode.resolve(CoachMode.choice(appContext), config.level.code)
-        coachWasOn = coachOn
         tutorThisCall = TutorMode.isOn(appContext)
         coachPlan = CoachPlan()
         coachSteerSent = ""
@@ -467,8 +463,10 @@ class TalkViewModel(context: Context) : ViewModel() {
             // a silent one must not count as a clean call.
             grammarFocus = if (learnerSpokeThisCall)
                 _state.value.grammarFocus?.record(_state.value.focusRepeatTurns.size) else null,
-            // Coach mode on at any point makes the whole call practice.
-            coached = if (coachWasOn || tutorThisCall) true else null,
+            // Tutor mode makes the whole call practice; coach mode is judged
+            // per line (`Turn.readFromCoach`). A resumed practice call stays
+            // one (below).
+            coached = if (tutorThisCall) true else null,
         )
         // Saved from the app scope on purpose: the ViewModel may be cleared
         // (screen left) before a viewModelScope job gets to run. The summary
@@ -764,7 +762,8 @@ class TalkViewModel(context: Context) : ViewModel() {
             // Measured off the take (iOS 55088c28): realtime turns used to
             // carry no fluency, so articulation rate read 0 for every call.
             val turn = Turn(role = TurnRole.USER, transcript = said, durationMs = ms,
-                audioURL = wav?.let { keepTurnAudio(it) }, fluency = fluency)
+                audioURL = wav?.let { keepTurnAudio(it) }, fluency = fluency,
+                coachLine = shownCoachLine())
             _state.update { it.copy(turns = it.turns + turn, partial = "") }
             // The learner's first words open the steer (nothing before them).
             viewModelScope.launch { syncCoachSteer() }
@@ -1303,6 +1302,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             transcript = spoken,
             durationMs = (System.currentTimeMillis() - turnStartedAt).toInt(),
             fluency = fluency,
+            coachLine = shownCoachLine(),
         )
         _state.update { it.copy(turns = it.turns + userTurn, partial = "") }
 
@@ -1458,11 +1458,26 @@ class TalkViewModel(context: Context) : ViewModel() {
     // ------------------------------------------------------------------
     // Coach mode
 
+    /**
+     * The "try saying" on screen for the line being answered right now (iOS
+     * `shownCoachLine`) — kept on the learner's turn so a line read off it
+     * isn't scored (`Turn.readFromCoach`). Only while it still belongs to the
+     * latest fluent-self line: a late or stale one was not what they were
+     * looking at.
+     */
+    private fun shownCoachLine(): String? {
+        val st = _state.value
+        val reply = st.coachReply ?: return null
+        if (!coachOn) return null
+        if (reply.turnId != st.turns.lastOrNull { it.role == TurnRole.FLUENT_SELF }?.id) return null
+        return reply.say
+    }
+
     /** The call settings toggle (the learner's flip is saved by the sheet). */
     fun setCoachMode(on: Boolean) {
         if (coachOn == on) return
         coachOn = on
-        if (on) { coachWasOn = true; config?.let { loadGrammarFocus(it) } }
+        if (on) config?.let { loadGrammarFocus(it) }
         else _state.update { it.copy(coachHint = null, coachReply = null, coachStale = false) }
         syncCoachSteer()
     }
