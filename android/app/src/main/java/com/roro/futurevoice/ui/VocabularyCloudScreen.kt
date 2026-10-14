@@ -45,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
@@ -319,12 +320,18 @@ private fun NotebookPeek(
     androidx.compose.material3.Surface(
         modifier = modifier.padding(horizontal = 8.dp).padding(bottom = 8.dp)
             .fillMaxWidth().height(220.dp)
+            // iOS's sheet casts a faint, even halo on every side, not
+            // Material's key-light shadow pooled under the bottom edge: the
+            // ambient half only, the spot half switched off.
+            .shadow(24.dp, shape, ambientColor = Color.Black, spotColor = Color.Transparent)
             .then(if (word != null) Modifier.clickable(
                 interactionSource = remember { MutableInteractionSource() }, indication = null,
             ) { onOpen(word) } else Modifier),
         shape = shape,
         color = if (dark) Color(0xFF1C1C1E) else Color(0xFFFBFBFB),
-        shadowElevation = 12.dp,
+        // The glass rim iOS draws round a sheet.
+        border = androidx.compose.foundation.BorderStroke(0.5.dp,
+            if (dark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.06f)),
     ) {
         Column(Modifier.fillMaxSize()) {
             Box(Modifier.fillMaxWidth().padding(top = 6.dp), contentAlignment = Alignment.Center) {
