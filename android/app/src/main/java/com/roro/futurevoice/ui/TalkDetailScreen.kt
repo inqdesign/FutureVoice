@@ -458,12 +458,12 @@ private fun TalkDetailPage(
                             })
                         }
                         if (s.isPractice) {
-                            // A practice call is never scored on the page: the
-                            // answers were read off coach mode's suggestions
-                            // (`Session.coached`, iOS `practiceBlock`).
+                            // A practice call (`Session.coached`: tutor mode, or
+                            // coach mode before 2026-10-14) is never scored on
+                            // the page (iOS `practiceBlock`).
                             HorizontalDivider(Modifier.padding(start = 20.dp))
                             GroupLabel(Icons.Outlined.Lightbulb, stringResource(R.string.practice_call))
-                            Text(stringResource(R.string.you_practiced_with_suggestions_on_screen_calls_without_coach_f72398),
+                            Text(stringResource(R.string.your_minutes_streak_and_book_from_this_call_all_count_as_a_p_a87a3a),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 8.dp))

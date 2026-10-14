@@ -15,6 +15,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.produceState
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Translate
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.AlertDialog
@@ -821,7 +822,10 @@ fun TalkScreen(
                             DialogueLine(turn, scale = DialogueScale.CALL, otherName = cast?.name,
                                 showsCorrections = showsCorrections,
                                 focusRepeatLabel = if (coachMode && turn.id in state.focusRepeatTurns)
-                                    state.grammarFocus?.label else null)
+                                    state.grammarFocus?.label else null,
+                                meaningLanguage = nativeLanguage.takeUnless {
+                                    com.roro.futurevoice.data.LanguageCatalog.sameLanguage(targetLanguage, it)
+                                })
                         }
                     }
                     // The learner's turn, drawn where it will land (iOS
@@ -1107,8 +1111,37 @@ fun DialogueLine(turn: Turn, isCurrent: Boolean = false,
                  showsCorrections: Boolean = true,
                  /** The grammar focus's name when this turn's correction is
                   *  that slip coming back (coach mode) — worn as a badge. */
-                 focusRepeatLabel: String? = null) {
+                 focusRepeatLabel: String? = null,
+                 /** The learner's language when a line's "Meaning" may be
+                  *  asked for (iOS `TurnView.translates`) — null when the
+                  *  target IS that language, or on a surface without it. */
+                 meaningLanguage: String? = null) {
     val isUser = turn.role == TurnRole.USER
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    // Keyed on the text: a late transcription upgrade rewrites the line, and
+    // a meaning fetched for the OLD wording must not sit under the new one.
+    var translation by remember(turn.id, turn.transcript) {
+        mutableStateOf(meaningLanguage?.let {
+            com.roro.futurevoice.net.Translator.cached(context, turn.transcript, it)
+        })
+    }
+    var showingMeaning by remember(turn.id) { mutableStateOf(false) }
+    var loadingMeaning by remember(turn.id) { mutableStateOf(false) }
+    fun fetchMeaning(lang: String) {
+        if (translation != null || loadingMeaning) return
+        loadingMeaning = true
+        val text = turn.transcript
+        scope.launch {
+            val t = com.roro.futurevoice.net.Translator.translate(context, text, lang)
+            if (text == turn.transcript) translation = t
+            loadingMeaning = false
+            if (t == null) showingMeaning = false
+        }
+    }
+    LaunchedEffect(turn.transcript) {
+        if (showingMeaning && meaningLanguage != null) fetchMeaning(meaningLanguage)
+    }
     DialogueLine(
         speaker = if (isUser) DialogueSpeaker.USER else DialogueSpeaker.OTHER,
         // The other side is the fluent self — unless the call was cast as a
@@ -1118,12 +1151,39 @@ fun DialogueLine(turn: Turn, isCurrent: Boolean = false,
         scale = scale,
         isCurrent = isCurrent,
         accessory = {
-            if (showsCorrections) turn.suggestion?.let { suggestion ->
-                Column {
-                    focusRepeatLabel?.let {
-                        Box(Modifier.padding(top = 4.dp)) { GrammarFocusRepeatBadge(it) }
+            // Nothing to translate or correct until there is a line.
+            if (turn.transcript.isNotEmpty()) Column(
+                horizontalAlignment = if (isUser) Alignment.End else Alignment.Start,
+                verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                meaningLanguage?.let { lang ->
+                    Row(verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.padding(top = 4.dp).clickable {
+                            if (showingMeaning) { showingMeaning = false; return@clickable }
+                            showingMeaning = true
+                            fetchMeaning(lang)
+                        }) {
+                        if (loadingMeaning) CircularProgressIndicator(Modifier.size(12.dp), strokeWidth = 1.5.dp)
+                        else androidx.compose.material3.Icon(
+                            androidx.compose.material.icons.Icons.Outlined.Translate,
+                            contentDescription = null, Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(if (showingMeaning) R.string.hide_meaning else R.string.meaning),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    SuggestionChip(suggestion, original = turn.transcript)
+                    if (showingMeaning) translation?.let {
+                        Text(it, style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                if (showsCorrections) turn.suggestion?.let { suggestion ->
+                    Column {
+                        focusRepeatLabel?.let {
+                            Box(Modifier.padding(top = 4.dp)) { GrammarFocusRepeatBadge(it) }
+                        }
+                        SuggestionChip(suggestion, original = turn.transcript)
+                    }
                 }
             }
         },

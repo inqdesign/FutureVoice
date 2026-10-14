@@ -171,6 +171,61 @@ data class CoachReply(
 }
 
 /**
+ * Whether a learner's line was READ off the coach's "try saying" (iOS
+ * `CoachRead`, 2026-10-14, founder: "even with coach mode on, if they don't
+ * use the suggested sentence as is, it doesn't matter"). A coached call used
+ * to be a practice call as a whole; now only the lines read off the
+ * suggestion are left out of the score, the level and "used in a talk". A
+ * line built around the WORD hint counts in full — making the sentence is the
+ * practice (founder, same day).
+ *
+ * Read = most of the suggestion's own words came out ([MIN_COVERAGE]) and
+ * they are most of what was said ([MIN_SHARE]), so reading it and then
+ * carrying on in their own words counts as their own line. The faded
+ * "[example]" and the "___" blank are theirs to fill, so they are not part of
+ * the comparison. A suggestion with fewer than [MIN_FIXED_WORDS] words of its
+ * own ("Yes, [I do].") can't be told apart from answering, and never counts as
+ * read.
+ */
+object CoachRead {
+    const val MIN_COVERAGE = 0.8
+    const val MIN_SHARE = 0.6
+    const val MIN_FIXED_WORDS = 3
+
+    private val EXAMPLE = Regex("""\[[^\]]*\]""")
+
+    fun isRead(said: String, line: String?): Boolean {
+        if (line.isNullOrEmpty()) return false
+        val fixed = words(line.replace(EXAMPLE, " "))
+        if (fixed.size < MIN_FIXED_WORDS) return false
+        val spoken = words(said)
+        if (spoken.isEmpty()) return false
+        val fixedSet = fixed.toSet()
+        val spokenSet = spoken.toSet()
+        val coverage = fixedSet.intersect(spokenSet).size.toDouble() / fixedSet.size
+        val share = spoken.count { it in fixedSet }.toDouble() / spoken.size
+        return coverage >= MIN_COVERAGE && share >= MIN_SHARE
+    }
+
+    /**
+     * iOS splits with `WordSplitter`, which reads the ACTIVE target language.
+     * A [Turn] carries no language here, so an unspaced line is told by its
+     * script: kana or kanji means Japanese, the only unspaced target.
+     */
+    private fun words(text: String): List<String> {
+        val language = if (text.any { unspacedScript(it) }) "ja" else "en"
+        return com.roro.futurevoice.data.WordSplitter
+            .words(CarryoverDetector.normalized(text), language).filter { it.isNotEmpty() }
+    }
+
+    private fun unspacedScript(c: Char): Boolean = when (Character.UnicodeScript.of(c.code)) {
+        Character.UnicodeScript.HIRAGANA, Character.UnicodeScript.KATAKANA,
+        Character.UnicodeScript.HAN -> true
+        else -> false
+    }
+}
+
+/**
  * Writes the "try saying" for the line just spoken (iOS `CoachSuggester`,
  * which replaced `CoachJudge` 2026-10-01). One call per fluent-self line, the
  * opener included; when studied items ride along and the answer naturally

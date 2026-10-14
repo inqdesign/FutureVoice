@@ -300,7 +300,7 @@ object WeekRecapBuilder {
         val fixes = LinkedHashMap<String, WeekRecap.Stumble>()
         for (session in week) {
             for (turn in session.turns) {
-                if (turn.role != TurnRole.USER || turn.excludedFromScoring) continue
+                if (!turn.isEvidence) continue
                 for (fix in turn.suggestion?.fixes.orEmpty()) {
                     val key = CarryoverDetector.normalized(fix.now)
                     if (key.isEmpty()) continue

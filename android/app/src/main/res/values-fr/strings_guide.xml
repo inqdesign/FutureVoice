@@ -64,7 +64,6 @@
     <string name="guide_now_and_then_it_asks_something">"De temps en temps, il pose une question à laquelle tu peux répondre avec un mot que tu étudies, et te montre le mot. Emploie-le et il est coché."</string>
     <string name="guide_this_calls_grammar_focus">"Le point de grammaire de cet appel"</string>
     <string name="guide_the_mistake_you_make_most_like">"L’erreur que tu fais le plus, comme le passé, est épinglée en haut. Ton moi fluide pose des questions qui l’exigent, et si la même erreur revient, sa correction est signalée."</string>
-    <string name="guide_a_coached_call_counts_as_a">"Un appel en mode coach compte comme un appel d’entraînement. Tes minutes, ta série et ton carnet comptent quand même, mais il ne sert pas à mesurer ton niveau, et les mots que tu y emploies ne sont pas marqués comme appris."</string>
     <string name="guide_a_job_interview_a_call_to">"Un entretien d’embauche, un appel à ton propriétaire, un dîner avec les parents de ton partenaire. Tu connais assez la langue. Ce que tu ne sais pas, c’est quoi dire en premier, quoi demander et comment passer le moment gênant."</string>
     <string name="guide_watch_shows_that_situation_played_out">"Scènes te montre cette situation jouée par ton moi fluide, avec ta voix. Tu en ressors avec des idées : comment commencer, quoi demander, quelles expressions marchent. Puis tu les pratiques jusqu’à ce qu’elles soient à toi."</string>
     <string name="guide_people_your_own_cast">"Personnes : tes interlocuteurs"</string>

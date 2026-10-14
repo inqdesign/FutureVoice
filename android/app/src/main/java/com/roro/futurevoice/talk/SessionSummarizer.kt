@@ -228,12 +228,11 @@ object SessionSummarizer {
             parse(client.summarize(body, key))
         }
         var computed = toDomain(payload)
-        report { it.copy(phrases = computed.phrasesUsed.count()) }
 
         // Verbatim guards — the same normalization CarryoverDetector uses.
         // A turn marked misheard is out of every assessment path — the vocab
         // pool and the verified expressions included (iOS `userTexts`).
-        val userTexts = turns.filter { it.role == TurnRole.USER && !it.excludedFromScoring }
+        val userTexts = turns.filter { it.isEvidence }
             .map { it.transcript }
         val haystack = normalized(userTexts.joinToString(" "))
         val verifiedUsed = computed.expressionsUsed.filter { p ->
@@ -260,19 +259,22 @@ object SessionSummarizer {
         // talk had them, which kept bumping the grammar focus so it never
         // retired.
         val normalizedTurns = userTexts.map(::normalized)
-        fun isTheirs(quote: String): Boolean {
-            val needle = normalized(quote)
-            if (needle.isEmpty()) return false
-            if (normalizedTurns.any { it.contains(needle) }) return true
-            val words = needle.split(" ").toSet()
-            if (words.size < 3) return false
-            return normalizedTurns.any { turn ->
-                val have = turn.split(" ").toSet()
-                words.intersect(have).size.toDouble() / words.size >= 0.75
-            }
+        // phrases_used become correction cards, so they get the two checks
+        // the live suggestion already has: the quote has to be something the
+        // learner actually said (contained in a turn, or three words in four
+        // shared with one — the model quotes loosely), and the fix has to
+        // change something a mouth can hear ("I am" → "I'm", a digit, Korean
+        // spacing, Japanese kanji vs kana are the transcriber's; a Korean
+        // reorder is the speaker's own word order). iOS `keptPhrases`.
+        val kept = keptPhrases(computed.phrasesUsed, userTexts, session.targetLanguage)
+        if (kept.size != computed.phrasesUsed.size) {
+            Log.i(TAG, "phrases_used dropped ${computed.phrasesUsed.size - kept.size} of " +
+                "${computed.phrasesUsed.size} (not theirs, or no audible change)")
         }
+        computed = computed.copy(phrasesUsed = kept)
+        report { it.copy(phrases = computed.phrasesUsed.count()) }
         computed = computed.copy(
-            newPatternsDetected = computed.newPatternsDetected.filter { isTheirs(it.mistake) },
+            newPatternsDetected = computed.newPatternsDetected.filter { isTheirs(it.mistake, normalizedTurns) },
             expressionsUsed = priorUsed + verifiedUsed.filter { it !in priorUsed },
             expressionsOffered = priorOffered + verifiedOffered.filter { it !in priorOffered },
             grammarIssues = grammar,
@@ -490,11 +492,51 @@ object SessionSummarizer {
         polite_setting_line = politeSettingLine,
     )
 
-    /** `ConversationEngine.formatTranscript` — role-labelled lines. */
+    /**
+     * `ConversationEngine.formatTranscript` — role-labelled lines. A line the
+     * learner read off coach mode's suggestion is labelled `USER_READ`
+     * ([Turn.readFromCoach]); `session-summary` then adds the note saying
+     * what that means (iOS `ConversationEngine.readLineNote`). A transcript
+     * without one is byte-identical to before.
+     */
     fun formatTranscript(turns: List<Turn>): String =
         turns.joinToString("\n") { t ->
-            "[${if (t.role == TurnRole.USER) "USER" else "FLUENT_SELF"}] ${t.transcript}"
+            val label = when {
+                t.role == TurnRole.FLUENT_SELF -> "FLUENT_SELF"
+                t.readFromCoach -> "USER_READ"
+                else -> "USER"
+            }
+            "[$label] ${t.transcript}"
         }
+
+    /**
+     * Was [quote] said by the learner? Contained in one of their (normalized)
+     * turns, or sharing three words in four with one — the model quotes
+     * loosely (iOS `isTheirs`).
+     */
+    internal fun isTheirs(quote: String, normalizedTurns: List<String>): Boolean {
+        val needle = normalized(quote)
+        if (needle.isEmpty()) return false
+        if (normalizedTurns.any { it.contains(needle) }) return true
+        val words = needle.split(" ").toSet()
+        if (words.size < 3) return false
+        return normalizedTurns.any { turn ->
+            val have = turn.split(" ").toSet()
+            words.intersect(have).size.toDouble() / words.size >= 0.75
+        }
+    }
+
+    /** The phrases_used that may become cards: the learner's own quote, and
+     *  a fix a mouth can hear (iOS `keptPhrases`). */
+    internal fun keptPhrases(phrases: List<PhraseFeedback>, userTexts: List<String>,
+                             language: String): List<PhraseFeedback> {
+        val normalizedTurns = userTexts.map(::normalized)
+        return phrases.filter {
+            isTheirs(it.userSaid, normalizedTurns) &&
+                !SpokenWords.saysTheSameThing(it.userSaid, it.fluentAlternative, language) &&
+                !SpokenWords.changesOnlyWordOrder(it.userSaid, it.fluentAlternative, language)
+        }
+    }
 
     /** `CarryoverDetector.normalized`: letters/digits/spaces only, lowercase, single-spaced. */
     fun normalized(text: String): String =

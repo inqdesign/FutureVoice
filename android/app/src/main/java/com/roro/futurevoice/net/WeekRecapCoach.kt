@@ -81,7 +81,7 @@ object WeekRecapCoach {
                 val lines = ArrayList<String>()
                 val seen = HashSet<String>()
                 for (session in sessions) for (turn in session.turns) {
-                    if (turn.role != TurnRole.USER || turn.excludedFromScoring) continue
+                    if (!turn.isEvidence) continue
                     val text = turn.transcript.trim()
                     if (text.isEmpty() || !seen.add(text)) continue
                     lines.add(text.take(400))
@@ -96,7 +96,7 @@ object WeekRecapCoach {
                 }
                 for (session in sessions) {
                     for (turn in session.turns) {
-                        if (turn.role != TurnRole.USER || turn.excludedFromScoring) continue
+                        if (!turn.isEvidence) continue
                         turn.suggestion?.fixes.orEmpty().forEach { addFix(it.was, it.now, it.why) }
                     }
                     session.summary?.grammarIssues.orEmpty().forEach { addFix(it.quote, it.correction, it.note) }

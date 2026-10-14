@@ -26,14 +26,14 @@ object SpokenWords {
      * happens to contract still survives.
      */
     fun saysTheSameThing(a: String, b: String, language: String = "en"): Boolean {
-        if (language.startsWith("ja")) {
-            // The SCRIPT is the transcriber's choice, like punctuation. This
-            // folds what it can — katakana against hiragana, a romaji name
-            // against its kana — but not kanji against kana (分かった /
-            // わかった), which needs a reading Android has no way to produce.
-            // The prompt's own ASR SCRIPT GUARD carries that half.
-            val ja = com.roro.futurevoice.data.JapaneseMorph::soundSpelling
-            return ja(a.filter { it.isLetterOrDigit() }) == ja(b.filter { it.isLetterOrDigit() })
+        if (language.substringBefore('-') == "ja") {
+            // Japanese has no contractions to expand; what the transcriber
+            // chooses there is the SCRIPT — 分かった or わかった, 下さい or
+            // ください, which kanji. Compared by reading, a rewrite that only
+            // re-spells what was said collapses the same way "I am" / "I'm"
+            // does. Any change of sound survives (iOS `saysTheSameThing`).
+            val left = JapaneseReading.of(a)
+            return left.isNotEmpty() && left == JapaneseReading.of(b)
         }
         // Digits spelled out (the recognizer writes "3" for "three") and, in
         // Korean, word spacing folded away: 띄어쓰기 is the transcriber's
@@ -184,4 +184,132 @@ object SpokenWords {
         if (start >= 0) out.add(start until flags.size)
         return out
     }
+}
+
+/**
+ * A Japanese line as it SOUNDS — the Android stand-in for iOS
+ * `JapaneseMorph.reading(of:)`.
+ *
+ * iOS reads every token through `CFStringTokenizer`'s Latin transcription,
+ * which knows how any kanji is read. Android has nothing like it: ICU's only
+ * Han transliterator (`Han-Latin`) is Mandarin pinyin, and `BreakIterator`
+ * hands back boundaries alone. So the readings come from the app's own
+ * Japanese list instead — `cefr_words_ja.tsv`'s third column (分かる →
+ * わかる, 一緒 → いっしょ) and `ja_forms.tsv`'s other spellings (下さい →
+ * ください, 綺麗 → きれい, 判る → 分かる) — plus each inflecting word's STEM
+ * (分か → わか, so 分かった meets わかった), replaced longest-first over
+ * the text. Kana and romaji fold through [JapaneseMorph.soundSpelling], as
+ * before.
+ *
+ * Conservative by construction: a spelling with two readings (辛い, からい・
+ * つらい; 行 as the stem of both 行く and 行う) is never replaced, and a
+ * kanji the list doesn't carry stays a kanji — the two lines then simply
+ * read as different, which is what this path answered before. It costs
+ * recall against iOS (an off-list kanji word re-spelled in kana still shows
+ * as a correction), never a real correction thrown away.
+ */
+object JapaneseReading {
+
+    /** [text] as hiragana where the list can say how it is read. Punctuation
+     *  never takes part (iOS joins token readings, and tokens carry none). */
+    fun of(text: String, table: Table = table()): String {
+        val s = fold(text.filter { it.isLetterOrDigit() })
+        if (table.byKey.isEmpty()) return s
+        val out = StringBuilder(s.length)
+        var i = 0
+        while (i < s.length) {
+            var matched = false
+            var len = minOf(table.maxKey, s.length - i)
+            while (len >= 1) {
+                val reading = table.byKey[s.substring(i, i + len)]
+                if (reading != null) {
+                    out.append(reading); i += len; matched = true
+                    break
+                }
+                len--
+            }
+            if (!matched) { out.append(s[i]); i++ }
+        }
+        return out.toString()
+    }
+
+    class Table(val byKey: Map<String, String>) {
+        val maxKey: Int = byKey.keys.maxOfOrNull { it.length } ?: 0
+    }
+
+    /**
+     * Builds the spelling → reading table from the list's headword readings
+     * and its other-spelling forms. Only spellings with a kanji in them are
+     * keys (kana already spells its sound). Every reading a spelling is ever
+     * given is collected, and a key with more than one is dropped outright —
+     * 今日 (きょう・こんにち), 私 (わたし・わたくし), 行 (the stem of both 行く
+     * and 行う) are left as written rather than guessed.
+     */
+    fun build(readings: Map<String, String>, forms: Map<String, String>): Table {
+        val candidates = HashMap<String, MutableSet<String>>()
+        fun add(spelling: String, reading: String) {
+            if (!spelling.any(::isKanji)) return
+            if (reading.isEmpty() || reading.any(::isKanji)) return
+            val key = fold(spelling)
+            val sound = fold(reading)
+            candidates.getOrPut(key) { HashSet() }.add(sound)
+            // An inflecting word ends in the kana its reading ends in: drop
+            // it from both and the stem still matches after conjugation —
+            // 分か|った, 下さ|い, 食べ|ました. Only a verb or adjective ending:
+            // 今日は / こんにちは share a は and are no stem of anything.
+            val last = key.last()
+            if (key.length >= 2 && sound.length >= 2 && last == sound.last() && last in INFLECTING) {
+                val stem = key.dropLast(1)
+                if (stem.any(::isKanji)) candidates.getOrPut(stem) { HashSet() }.add(sound.dropLast(1))
+            }
+        }
+        fun readingsOf(headword: String): List<String> =
+            readings[headword]?.split('・')?.filter { it.isNotBlank() }
+                ?: listOfNotNull(headword.takeIf { h -> h.isNotEmpty() && h.none(::isKanji) })
+        // The list's own readings, every one of them.
+        for ((headword, reading) in readings) reading.split('・').forEach { add(headword, it) }
+        for ((spelling, headword) in forms) {
+            if (spelling.any(::isKanji)) {
+                // Another way to WRITE the headword (下さい → ください, 判る →
+                // 分かる): it reads as the headword does.
+                readingsOf(headword).forEach { add(spelling, it) }
+            } else if (headword.any(::isKanji) && readings[headword].isNullOrBlank() &&
+                !(spelling.endsWith("する") && !headword.endsWith("する"))) {
+                // A kana spelling of a kanji headword IS its reading
+                // (べんきょう → 勉強) — the list leaves many readings blank,
+                // and only those are filled: where it has one, the forms'
+                // casual spellings (だいじょぶ, めんどくさい) would only make
+                // it ambiguous. あいさつする → 挨拶 is the noun with する.
+                add(headword, spelling)
+            }
+        }
+        // An ambiguous spelling stays in the table AS ITSELF, so the longest
+        // match still claims it whole: 本当 is left as 本当, never read as
+        // 本 + 当 (ほん + the stem of 当たる).
+        val out = HashMap<String, String>()
+        for ((key, sounds) in candidates) out[key] = if (sounds.size == 1) sounds.first() else key
+        return Table(out)
+    }
+
+    /** Kana a dictionary-form verb or i-adjective ends in. */
+    private const val INFLECTING = "うくぐすつぬぶむるい"
+
+    /** Test seam: the table a JVM builds from the TSVs, which the app reads
+     *  through `CoreVocabulary` (assets need a context). */
+    @Volatile internal var override: Table? = null
+    @Volatile private var cached: Table? = null
+
+    fun table(): Table {
+        override?.let { return it }
+        cached?.let { return it }
+        val lexicon = com.roro.futurevoice.data.CoreVocabulary.set("ja")
+        if (lexicon.isEmpty()) return Table(emptyMap())   // no context yet: don't cache empty
+        val readings = HashMap<String, String>()
+        for (h in lexicon) com.roro.futurevoice.data.CoreVocabulary.reading(h, "ja")?.let { readings[h] = it }
+        return build(readings, com.roro.futurevoice.data.CoreVocabulary.forms("ja")).also { cached = it }
+    }
+
+    private fun fold(text: String): String = com.roro.futurevoice.data.JapaneseMorph.soundSpelling(text)
+
+    private fun isKanji(ch: Char): Boolean = ch.code in 0x4E00..0x9FFF || ch.code == 0x3005
 }

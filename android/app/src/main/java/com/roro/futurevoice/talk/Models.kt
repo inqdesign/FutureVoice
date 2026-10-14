@@ -3,6 +3,7 @@ package com.roro.futurevoice.talk
 import com.roro.futurevoice.audio.FluencyStats
 import com.roro.futurevoice.data.IsoDateMillisSerializer
 import com.roro.futurevoice.data.StoreJson
+import com.roro.futurevoice.data.WordSplitter
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -64,7 +65,24 @@ data class Turn(
     @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
     val talkedOver: Boolean = false,
-)
+    /**
+     * Coach mode's "try saying" that was on screen when the learner said this
+     * line (`CoachReply.say`, iOS `Turn.coachLine`, 2026-10-14). Kept rather
+     * than a verdict so the judgment follows the transcript when the
+     * audio-grounded rewrite lands ([readFromCoach]). Encoded only when set.
+     */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val coachLine: String? = null,
+) {
+    /** The line was read off coach mode's suggestion ([CoachRead]): practice,
+     *  not evidence — out of the score, the level and "used in a talk". */
+    val readFromCoach: Boolean get() = role == TurnRole.USER && CoachRead.isRead(transcript, coachLine)
+
+    /** A learner line every assessment path may read: not marked misheard,
+     *  not read off the coach's suggestion. */
+    val isEvidence: Boolean get() = role == TurnRole.USER && !excludedFromScoring && !readFromCoach
+}
 
 @Serializable
 data class TurnSuggestion(
@@ -136,13 +154,17 @@ data class Session(
      */
     val grammarFocus: GrammarFocusRecord? = null,
     /**
-     * The call ran with coach mode on at some point — a PRACTICE call (iOS
-     * `Session.coached`, `6e9eb92`). The learner was answering with a
-     * suggested sentence in front of them, so nothing said in it is evidence
-     * of their level: it is left out of the weekly assessment, its unlock
-     * gate and every Progress measurement, and what they said is credited as
-     * practice, never as "used in a talk". Minutes, streak, corrections →
-     * cards and the book all stand. Null on old rows (same key as iOS).
+     * A PRACTICE call (iOS `Session.coached`, `6e9eb92`): nothing said in it
+     * is evidence of their level — it is left out of the weekly assessment,
+     * its unlock gate and every Progress measurement, and what they said is
+     * credited as practice, never as "used in a talk". Minutes, streak,
+     * corrections → cards and the book all stand. Null on old rows (same key
+     * as iOS).
+     *
+     * Since 2026-10-14 only TUTOR mode makes one (every turn is corrected and
+     * answered back). Coach mode is judged per line instead
+     * ([Turn.readFromCoach]); calls saved before that with coach mode on keep
+     * the flag.
      */
     val coached: Boolean? = null,
 ) {
@@ -161,8 +183,10 @@ data class Session(
             topic?.trim()?.takeIf { it.isNotEmpty() }?.let { return it }
             val first = turns.firstOrNull { it.role == TurnRole.USER }?.transcript?.trim()
                 ?.takeIf { it.isNotEmpty() } ?: return null
-            val words = first.split(' ')
-            return "\u201C" + words.take(6).joinToString(" ") + (if (words.size > 6) "…" else "") + "\u201D"
+            // iOS `WordSplitter.snippet(first, words: 6, characters: 14)`:
+            // a Japanese line has no spaces, so "six words" was the whole turn.
+            val snippet = WordSplitter.snippet(first, targetLanguage, maxWords = 6, maxChars = 14)
+            return "\u201C" + snippet + "\u201D"
         }
 }
 

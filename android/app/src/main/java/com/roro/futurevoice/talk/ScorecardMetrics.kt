@@ -1,5 +1,9 @@
 package com.roro.futurevoice.talk
 
+import com.roro.futurevoice.data.CoreVocabulary
+import com.roro.futurevoice.data.JapaneseMorph
+import com.roro.futurevoice.data.VocabLemmas
+import com.roro.futurevoice.data.WordSplitter
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -13,9 +17,8 @@ import java.util.Locale
  * Side-effect-free; a number that differs from iOS on the same turns is a
  * bug on whichever side is newer (`android-launch-roadmap.md` §0.3).
  *
- * Known gap: `distinct_words_by_cefr_level` is EMPTY until the core word list
- * (`cefr_words*.tsv`) is bundled — the prompt then leans on the other
- * evidence, exactly as iOS does for a language with no list.
+ * `distinct_words_by_cefr_level` is empty for a language with no graded
+ * list — the prompt then leans on the other evidence, exactly as iOS does.
  */
 data class ScorecardMetrics(
     val userTurnCount: Int,
@@ -48,13 +51,17 @@ data class ScorecardMetrics(
         put("articulation_rate_wpm", Math.round(articulationRate).toInt())
         put("pauses_per_minute", fmt(pausesPerMinute, 1))
         put("pause_ratio", fmt(pauseRatio, 2))
-        put("distinct_words_by_cefr_level", JsonObject(vocabLevelCounts.mapValues { JsonPrimitive(it.value) }))
+        put("distinct_words_by_cefr_level",
+            JsonObject(vocabLevelCounts.toSortedMap().mapValues { JsonPrimitive(it.value) }))
     }
 
     companion object {
-        fun compute(turns: List<Turn>): ScorecardMetrics {
-            val userTurns = turns.filter { it.role == TurnRole.USER && !it.excludedFromScoring }
-            val allWords = userTurns.flatMap { tokens(it.transcript) }
+        /** [language] is the target the turns were said in — iOS reads the
+         *  active one, which is what the default does. */
+        fun compute(turns: List<Turn>,
+                    language: String? = CoreVocabulary.activeLanguage()): ScorecardMetrics {
+            val userTurns = turns.filter { it.isEvidence }
+            val allWords = userTurns.flatMap { tokens(it.transcript, language) }
             val userWordCount = allWords.size
             val uniqueWords = allWords.map { it.lowercase() }.toSet()
             val ttr = if (userWordCount > 0) uniqueWords.size.toDouble() / userWordCount else 0.0
@@ -64,6 +71,19 @@ data class ScorecardMetrics(
             val suggestionCount = userTurns.count { it.suggestion != null }
             val suggestionRate = if (userTurns.isEmpty()) 0.0 else suggestionCount.toDouble() / userTurns.size
             val selfCorrections = userTurns.sumOf { selfCorrectionMatches(it.transcript) }
+
+            // Graded per HEADWORD. A spaced language's surface tokens grade
+            // directly; Japanese segments carry their inflection separately, so
+            // the headwords are read off the turns whole (行き + ました → 行く).
+            val levelCounts = HashMap<String, Int>()
+            if (language != null) {
+                val gradable = if (WordSplitter.spaced(language)) uniqueWords
+                    else VocabLemmas.lemmas(userTurns.map { it.transcript }, language)
+                for (word in gradable) {
+                    val lv = CoreVocabulary.levelOfSurface(word, language) ?: continue
+                    levelCounts[lv.code] = (levelCounts[lv.code] ?: 0) + 1
+                }
+            }
 
             val fl = userTurns.mapNotNull { it.fluency }
             val voiced = fl.sumOf { it.speakingSeconds }
@@ -88,13 +108,17 @@ data class ScorecardMetrics(
                 pausesPerMinute = pausesPerMin,
                 pauseRatio = pauseRatio,
                 articulationRate = articulation,
-                vocabLevelCounts = emptyMap(),
+                vocabLevelCounts = levelCounts,
             )
         }
 
-        /** Swift: split on `CharacterSet.alphanumerics.inverted`. */
-        private fun tokens(text: String): List<String> =
-            text.split(Regex("[^\\p{L}\\p{N}]+")).filter { it.isNotEmpty() }
+        /** Japanese is segmented (particles count as words, which is what
+         *  "words per minute" can mean without spaces); everything else
+         *  splits on non-letters (Swift: `CharacterSet.alphanumerics.inverted`). */
+        private fun tokens(text: String, language: String?): List<String> {
+            if (language != null && !WordSplitter.spaced(language)) return JapaneseMorph.segments(text)
+            return text.split(Regex("[^\\p{L}\\p{N}]+")).filter { it.isNotEmpty() }
+        }
 
         private val selfCorrectionPatterns = listOf(
             "I mean", "i mean", "uh ", " uh,", " um ", " um,", "you know,", "like,", "wait,",

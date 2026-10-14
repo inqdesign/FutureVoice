@@ -126,7 +126,7 @@ object WeeklyReportEngine {
 
         fun userLines(list: List<Session>) = list
             .flatMap { it.turns }
-            .filter { it.role == TurnRole.USER && !it.excludedFromScoring }
+            .filter { it.isEvidence }
             .map { it.transcript }
 
         val windowLines = userLines(window)

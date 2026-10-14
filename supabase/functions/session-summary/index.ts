@@ -40,6 +40,16 @@ const HOURLY_REQUEST_LIMIT = 120
 const DAILY_CAP = 60            // = gemini's "summary" cap
 const MAX_TOKENS = 8192         // see SessionSummarizer.swift for why this large
 
+// `ConversationEngine.readLineNote` (iOS, 2026-10-14), verbatim: a line the
+// learner read off coach mode's "try saying" is labelled `[USER_READ]` by the
+// client (`Turn.readFromCoach`) and is practice, not evidence.
+const READ_LINE_NOTE =
+  "[USER_READ] lines were read aloud from a suggestion shown on screen. They " +
+  "are part of the conversation, but they are NOT evidence of the learner's " +
+  "level: judge the scorecard (every score, the level, the grammar range) on " +
+  "the [USER] lines only, and quote nothing from a [USER_READ] line in " +
+  "expressions_used, phrases_used, new_patterns_detected or grammar issues."
+
 Deno.serve(async (req) => {
   const pre = handlePreflight(req)
   if (pre) return pre
@@ -113,8 +123,11 @@ Deno.serve(async (req) => {
     knownAboutUser, rememberedNotes, shareCorrections, expressionBudget,
     talkDate, utcOffsetMinutes, relationshipRegisterLine, politeSettingLine,
   })
-  // Same user message SessionSummarizer.swift builds.
-  const userMessage = `transcript:\n${transcript}\n\nmetrics:\n${metricsJSON}`
+  // Same user message SessionSummarizer.swift builds: the read-line note
+  // rides under the metrics only when a `[USER_READ]` line is in the
+  // transcript, so every other message is byte-identical to before.
+  let userMessage = `transcript:\n${transcript}\n\nmetrics:\n${metricsJSON}`
+  if (/^\[USER_READ\] /m.test(transcript)) userMessage += "\n\n" + READ_LINE_NOTE
   const geminiBody = {
     system_instruction: { parts: [{ text: system }] },
     contents: [{ role: "user", parts: [{ text: userMessage }] }],

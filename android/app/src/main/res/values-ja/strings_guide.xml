@@ -64,7 +64,6 @@
     <string name="guide_now_and_then_it_asks_something">"ときどき、復習中の単語で答えられる質問をして、その単語を表示します。使えばチェックがつきます。"</string>
     <string name="guide_this_calls_grammar_focus">"今回のトークの文法ポイント"</string>
     <string name="guide_the_mistake_you_make_most_like">"よくする間違いがひとつ、上に固定されます。過去形などです。流暢な自分がその文法が必要な質問をし、同じ間違いが出たら添削に印をつけます。"</string>
-    <string name="guide_a_coached_call_counts_as_a">"コーチモードでのトークは練習トークとして記録されます。トーク時間・連続記録・教材はそのまま残りますが、レベルの測定には使われず、そのトークで使った単語も覚えたことにはなりません。"</string>
     <string name="guide_a_job_interview_a_call_to">"面接、大家さんへの電話、恋人の両親との食事。言葉はある程度話せても、最初に何を言えばいいか、何を聞けばいいか、気まずい瞬間をどう乗り切るかはなかなか浮かびませんよね。"</string>
     <string name="guide_watch_shows_that_situation_played_out">"シーン練習では、その状況を流暢な自分が自分の声でこなすシーンを見せます。どう切り出し、何を聞き、どんな表現を使うかのアイデアをもらったら、練習して自分のものにしましょう。"</string>
     <string name="guide_people_your_own_cast">"人物：自分だけの会話相手"</string>
