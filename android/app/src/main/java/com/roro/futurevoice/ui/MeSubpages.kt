@@ -344,7 +344,7 @@ fun VoicePage(
                     Text(stringResource(
                         R.string.the_name_your_voice_goes_by_in_the_app_leave_it_empty_to_go_f9c525))
                     androidx.compose.material3.OutlinedTextField(draft, { draft = it },
-                        singleLine = true, placeholder = { Text("Future Self") })
+                        singleLine = true, placeholder = { Text(stringResource(R.string.future_self_16c9c6)) })
                 }
             },
             confirmButton = {

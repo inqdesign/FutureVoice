@@ -346,10 +346,16 @@ object DailyCallScheduler {
 
     fun ensureChannel(context: Context) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (nm.getNotificationChannel(CHANNEL_ID) != null) return
+        // A channel's name is set once at creation, so a later change of app
+        // language renames it here (the only setting that may change).
+        nm.getNotificationChannel(CHANNEL_ID)?.let {
+            it.name = com.roro.futurevoice.core.UILanguage.localized(context).getString(R.string.daily_call)
+            nm.createNotificationChannel(it)
+            return
+        }
         val sound = Uri.parse("android.resource://${context.packageName}/${R.raw.ringtone}")
         nm.createNotificationChannel(NotificationChannel(
-            CHANNEL_ID, "Daily call", NotificationManager.IMPORTANCE_HIGH).apply {
+            CHANNEL_ID, com.roro.futurevoice.core.UILanguage.localized(context).getString(R.string.daily_call), NotificationManager.IMPORTANCE_HIGH).apply {
             setSound(sound, AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
                 .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build())
@@ -359,9 +365,15 @@ object DailyCallScheduler {
 
     private fun ensureRingChannel(context: Context) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (nm.getNotificationChannel(RING_CHANNEL_ID) != null) return
+        // A channel's name is set once at creation, so a later change of app
+        // language renames it here (the only setting that may change).
+        nm.getNotificationChannel(RING_CHANNEL_ID)?.let {
+            it.name = com.roro.futurevoice.core.UILanguage.localized(context).getString(R.string.daily_call)
+            nm.createNotificationChannel(it)
+            return
+        }
         nm.createNotificationChannel(NotificationChannel(
-            RING_CHANNEL_ID, "Daily call", NotificationManager.IMPORTANCE_HIGH).apply {
+            RING_CHANNEL_ID, com.roro.futurevoice.core.UILanguage.localized(context).getString(R.string.daily_call), NotificationManager.IMPORTANCE_HIGH).apply {
             setSound(null, null)
             enableVibration(true)
             vibrationPattern = longArrayOf(0, 800, 600, 800, 600, 800)
