@@ -95,6 +95,11 @@ export interface SetMessage {
    *  been spoken. Length-capped here; an older gateway ignores the field, and
    *  the app's hint then simply appears without a question built for it. */
   steer?: string
+  /** A new system prompt for every reply from now on (2026-10-14): a setting
+   *  that lives in the prompt (tutor mode) flipped mid-call. The reply cache
+   *  is rebuilt for it; the turns so far stay. An older gateway ignores the
+   *  field, and the setting then applies from the next call as it used to. */
+  system?: string
 }
 
 export type ClientMessage = StartMessage | SayMessage | EndMessage | SetMessage

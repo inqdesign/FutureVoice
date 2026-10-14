@@ -846,6 +846,15 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         sendControl(["type": "set", "steer": steer])
     }
 
+    /// A new system prompt for the rest of the call — a setting that lives in
+    /// the prompt (tutor mode) flipped mid-call. The gateway rebuilds its
+    /// reply cache for it; one older than the field ignores it, and the
+    /// setting then applies from the next call as it used to.
+    func setSystem(_ system: String) {
+        guard !isTornDown else { return }
+        sendControl(["type": "set", "system": system])
+    }
+
     /// Hang up: tells the gateway, then tears the local side down.
     func hangUp() {
         guard !isTornDown else { return }

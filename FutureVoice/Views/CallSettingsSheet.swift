@@ -95,14 +95,14 @@ struct CallSettingsSheet: View {
                     Text(explain("Now and then your future self asks something you can answer with a word you're studying, and the mistake you make most becomes the call's focus."))
                 }
 
-                // Fixed for a call: it is part of the prompt the gateway
-                // caches when the call opens (`TutorMode`).
+                // Part of the conversation prompt; a flip mid-call sends the
+                // gateway the new prompt (`TutorMode`).
                 Section {
                     Toggle(isOn: $tutorMode) {
                         Label("Tutor mode", systemImage: "graduationcap")
                     }
                 } footer: {
-                    Text(explain("When you make a mistake, your future self says it the right way out loud, then carries on. Starts with your next call."))
+                    Text(explain("When you make a mistake, your future self says it the right way out loud, then carries on."))
                 }
 
                 Section {

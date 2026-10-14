@@ -643,11 +643,16 @@ struct ConversationView: View {
     /// Coach mode was on at some point in this call — the whole call is then
     /// a practice call (`Session.coached`).
     @State private var coachWasOn = false
-    /// Tutor mode for THIS call (`TutorMode`), read once when the call opens:
-    /// it lives in the system prompt the gateway caches for the whole call,
-    /// so a flip mid-call applies from the next one — a reconnect must not
-    /// quietly change the rules halfway. A tutored call is a practice call.
+    /// Tutor mode as the conversation prompt has it right now (`TutorMode`).
+    /// It lives in the system prompt, so a flip mid-call sends the gateway a
+    /// new one (`RealtimeTalkClient.setSystem`, 2026-10-14 — it used to wait
+    /// for the next call); the classic path rebuilds the prompt every turn.
     @State private var tutorThisCall = TutorMode.isOn
+    /// Tutor mode was on at some point in this call — the whole call is then
+    /// a practice call, as with `coachWasOn`.
+    @State private var tutorWasOn = TutorMode.isOn
+    /// Watched only to tell a live call when the sheet flips tutor mode.
+    @AppStorage(TutorMode.key) private var tutorModeChoice = false
     /// Coach mode's grammar focus for this call (`GrammarFocus`): picked from
     /// the learner's recurring mistakes on appear, named in their language,
     /// and watched on every correction. nil = none this call.
@@ -967,6 +972,14 @@ struct ConversationView: View {
                 // `SpeechSpeed.current` at each synthesis.
                 guard RealtimeMode.isEnabled, phoneCallActive else { return }
                 realtime.setSpeed(SpeechSpeed(rawValue: new) ?? .default)
+            }
+            .onChange(of: tutorModeChoice) { _, on in
+                guard on != tutorThisCall else { return }
+                tutorThisCall = on
+                if on { tutorWasOn = true }
+                // The classic path reads `tutorThisCall` at its next turn.
+                guard RealtimeMode.isEnabled, phoneCallActive else { return }
+                realtime.setSystem(systemPrompt())
             }
             .sheet(item: $goalDetail) { item in
                 TalkGoalSheet(item: item, used: usedGoalKeys.contains(item.key))
@@ -4331,7 +4344,7 @@ struct ConversationView: View {
             grammarFocus: learnerSpokeThisCall
                 ? grammarFocus?.record(repeats: focusRepeatTurns.count) : nil,
             // A resumed practice call stays one: its earlier half was coached.
-            coached: (coachWasOn || tutorThisCall || prior?.isPractice == true) ? true : nil
+            coached: (coachWasOn || tutorWasOn || tutorThisCall || prior?.isPractice == true) ? true : nil
         )
         SessionStore.shared.save(draft)
         didSaveCurrentSession = true
@@ -4474,6 +4487,7 @@ struct ConversationView: View {
         turns = []
         pinPromptClock()
         tutorThisCall = TutorMode.isOn
+        tutorWasOn = tutorThisCall
         learnerSpokeThisCall = false
         learnerStartedThisCall = false
         didSaveCurrentSession = false

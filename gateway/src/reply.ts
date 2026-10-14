@@ -326,6 +326,7 @@ export class ReplyEngine {
     }
     this.cacheState = "creating"
     const startedAt = Date.now()
+    const version = this.systemVersion
     void fetch(`${API_HOST}/v1beta/cachedContents?key=${this.config.apiKey}`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -335,7 +336,7 @@ export class ReplyEngine {
       }),
     }).then(async (r) => {
       const j: any = await r.json().catch(() => null)
-      if (this.disposed) {
+      if (this.disposed || version !== this.systemVersion) {
         if (j?.name) void this.deleteCache(j.name)
         return
       }
@@ -357,6 +358,21 @@ export class ReplyEngine {
   }
 
   private disposed = false
+  /** Bumped by `setSystem`, so a cache made for the old prompt — still being
+   *  created when the prompt changed — is thrown away when it lands. */
+  private systemVersion = 0
+
+  /** A new system prompt for every reply from now on (tutor mode flipped
+   *  mid-call). The old cache is deleted; the next generation runs uncached
+   *  and makes the new one, exactly as a call's first does. */
+  setSystem(system: string): void {
+    if (system === this.config.system) return
+    this.config = { ...this.config, system }
+    this.systemVersion += 1
+    if (this.cache) void this.deleteCache(this.cache.name)
+    this.cache = null
+    if (this.cacheState !== "off") this.cacheState = "none"
+  }
 
   /** The call is over: delete the cache rather than pay storage until its
    *  TTL runs out. */

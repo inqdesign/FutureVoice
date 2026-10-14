@@ -200,6 +200,8 @@ export class CallSession implements DurableObject {
   /** Coach mode's steer, kept so one that arrives before `start` has built
    *  the reply engine still applies. */
   private pendingSteer = ""
+  /** A `set.system` that arrived before `start` built the reply engine. */
+  private pendingSystem: string | null = null
 
   /** Sliding window of what the fluent self RECENTLY said out loud — the
    *  reference the echo judgement compares against. The server is the one
@@ -638,6 +640,10 @@ export class CallSession implements DurableObject {
         this.pendingSteer = steer
         if (this.replyEngine) this.replyEngine.steer = steer
       }
+      if (typeof msg.system === "string" && msg.system.trim()) {
+        if (this.replyEngine) this.replyEngine.setSystem(msg.system)
+        else this.pendingSystem = msg.system
+      }
       return
     }
     if (msg.type !== "start" || this.started) return
@@ -729,7 +735,7 @@ export class CallSession implements DurableObject {
       // Hedge target when the primary stalls or errors (reply.ts). Set the
       // var to the primary's own name to turn the hedge off.
       fallbackModel: this.env.GEMINI_REPLY_FALLBACK_MODEL ?? DEFAULT_REPLY_FALLBACK_MODEL,
-      system: msg.system,
+      system: this.pendingSystem ?? msg.system,
     })
     this.replyEngine.steer = this.pendingSteer
     // Once per call, not per turn: during an outage every turn falls back,

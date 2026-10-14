@@ -2856,48 +2856,48 @@
         }
       }
     },
-    "When you make a mistake, your future self says it the right way out loud, then carries on. Starts with your next call." : {
+    "When you make a mistake, your future self says it the right way out loud, then carries on." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wenn dir ein Fehler passiert, sagt dir dein fließendes Ich gleich, wie es richtig heißt, und redet dann weiter. Gilt ab dem nächsten Anruf."
+            "value" : "Wenn dir ein Fehler passiert, sagt dir dein fließendes Ich gleich, wie es richtig heißt, und redet dann weiter."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cuando te equivocas, tu yo fluido te dice en voz alta cómo se dice bien y sigue la conversación. Empieza en tu próxima llamada."
+            "value" : "Cuando te equivocas, tu yo fluido te dice en voz alta cómo se dice bien y sigue la conversación."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Quand tu fais une erreur, ton moi fluide te dit à voix haute comment le dire, puis la conversation continue. À partir de ton prochain appel."
+            "value" : "Quand tu fais une erreur, ton moi fluide te dit à voix haute comment le dire, puis la conversation continue."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "言い間違えると、流暢な自分がすぐ正しい言い方を声で教えて、そのまま話を続けます。次の通話から使えます。"
+            "value" : "言い間違えると、流暢な自分がすぐ正しい言い方を声で教えて、そのまま話を続けます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "틀리게 말하면 유창해진 내가 바로 맞는 말로 다시 들려주고 대화를 이어가요. 다음 통화부터 적용돼요."
+            "value" : "틀리게 말하면 유창해진 내가 바로 맞는 말로 다시 들려주고 대화를 이어가요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "说错的时候，流利的自己会马上念出正确的说法，然后接着聊。下次通话开始生效。"
+            "value" : "说错的时候，流利的自己会马上念出正确的说法，然后接着聊。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "說錯的時候，流利的自己會馬上唸出正確的說法，然後接著聊。下次通話開始生效。"
+            "value" : "說錯的時候，流利的自己會馬上唸出正確的說法，然後接著聊。"
           }
         }
       }

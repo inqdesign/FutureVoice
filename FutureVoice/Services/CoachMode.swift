@@ -65,11 +65,11 @@ enum CoachMode {
 /// corrected mistakes inside a free chat read as no mode at all.)
 ///
 /// It lives in the conversation's SYSTEM prompt
-/// (`ConversationEngine.tutorBlock`), so it is fixed for a call: the gateway
-/// caches that prompt for the whole call, and every reply — speculative ones
-/// included — has to be written under the same rules. Flipped mid-call it
-/// applies from the next call. Off by default for everyone; with it off the
-/// prompt is byte-identical to before (`TutorModeTests`).
+/// (`ConversationEngine.tutorBlock`). Flipped mid-call, the app sends the
+/// gateway the rebuilt prompt (`set.system`, 2026-10-14) and the gateway
+/// remakes its reply cache, so the next reply is already under the new rules
+/// — it used to apply only from the next call. Off by default for everyone;
+/// with it off the prompt is byte-identical to before (`TutorModeTests`).
 ///
 /// A tutored call is a PRACTICE call, like a coached one (`Session.coached`):
 /// a line said right after being corrected is a repeat, not evidence.
