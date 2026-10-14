@@ -1955,6 +1955,7 @@ internal fun HomeScreen(
                     // are reusable templates — a tap writes a fresh take.
                     HomeTab.WATCH -> WatchTabBody(
                         language = state.targetLanguage,
+                        visible = tab == HomeTab.WATCH,
                         enabled = state.voiceId != null,
                         onWatch = onWatch,
                         meName = state.persona?.displayName.orEmpty(),

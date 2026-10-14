@@ -141,6 +141,10 @@ internal object WatchCreation {
 internal fun WatchTabBody(
     language: String,
     enabled: Boolean,
+    /** This tab is the one on screen. A hidden tab stays composed, so its
+     *  onDispose never runs on a tab switch — iOS stops the voice in
+     *  `.onDisappear`, and this is that moment. */
+    visible: Boolean = true,
     onWatch: (String) -> Unit,
     meName: String = "",
     /** The learner in the middle — their page. */
@@ -199,9 +203,11 @@ internal fun WatchTabBody(
     var panningUntil by remember { mutableStateOf(0L) }
     var bubbleJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     var previewJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    val isVisible by androidx.compose.runtime.rememberUpdatedState(visible)
     /** Greetings written this visit for strangers (people on file keep theirs). */
     val strangerGreetings = remember { mutableMapOf<String, String>() }
     val previewPlayer = remember { com.roro.futurevoice.audio.Mp3Player(context.cacheDir, source = "voice_preview") }
+    LaunchedEffect(visible) { if (!visible) { previewJob?.cancel(); previewPlayer.stop() } }
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { previewPlayer.stop() } }
     val imeVisible = WindowInsets.isImeVisible
     val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
@@ -270,6 +276,7 @@ internal fun WatchTabBody(
      *  sample; a voice with no clip stays silent rather than paying for one. */
     fun playVoicePreview(person: Counterpart) {
         previewJob?.cancel(); previewPlayer.stop()
+        if (!isVisible) return
         val lang = language.substringBefore('-')
         fun asset(path: String) = runCatching { context.assets.open(path).use { it.readBytes() } }.getOrNull()
         var bytes: ByteArray? = null
