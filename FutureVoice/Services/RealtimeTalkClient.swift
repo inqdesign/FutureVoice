@@ -333,6 +333,21 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// 2026-10-04: every call's first line cut at ~3 s). Cleared once the
     /// device leaves the list, so a later real attach is still noticed.
     private var hfpRefusedAtBuild = false
+    /// The learner took the earphones OUT mid-call. Builds after that stay
+    /// off Bluetooth: an earbud in the hand (or in an open case) is still
+    /// connected and still listed as an HFP input, so the rebuild put the
+    /// call straight back on it — the reply went to the earphones on the
+    /// table and the phone said nothing (device log 2026-10-14, "answer me
+    /// anymore"). Cleared when a device is connected again.
+    private var earphoneRemoved = false
+    /// Bumped by every `stopAudio`. A reply chunk's completion from a player
+    /// that a rebuild stopped belongs to the old engine: run normally, it
+    /// marked the cut line as heard and flipped the call to listening.
+    private var playerGeneration = 0
+    /// The last reply, whole, while it is still draining through the player
+    /// after `audio_end` handed it over — so a rebuild that cuts it can play
+    /// it again on the new engine instead of dropping it.
+    private var replyInAir: LocalOpener?
     /// The engine would not START with voice processing on, so this call runs
     /// without it — every rebuild too. Measured 2026-10-10 on the iPhone app
     /// running on a Mac: VPIO turns the built-in mic into 9 input channels
@@ -405,6 +420,10 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         /// again from the top: the bubble is already up under this context
         /// and the buffer is already levelled.
         var context: String? = nil
+        /// A streamed REPLY being replayed: its text and audio were already
+        /// handed over at `audio_end`, so playing it must not hand it over
+        /// (or own `replyContext`) a second time.
+        var handedOver = false
     }
     /// The greeting while it is on the speaker, kept until it has played to
     /// its end. The local opener is ONE buffer with no bytes arriving, so the
@@ -457,6 +476,8 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         linesStarted = 0
         localOpener = nil
         openerInAir = nil
+        replyInAir = nil
+        earphoneRemoved = false
         playedBuffers = 0
         replyBytesReceived = 0
         tapWatchdogStrikes = 0
@@ -945,7 +966,8 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             stopAudio()
         }
         // Fresh graph every time — see the `engine` declaration.
-        let built = try prepared ?? Self.prepareAudio(voiceProcessing: !voiceProcessingRefused)
+        let built = try prepared ?? Self.prepareAudio(voiceProcessing: !voiceProcessingRefused,
+                                                      avoidBluetooth: earphoneRemoved)
         engine = built.engine
         hfpRefusedAtBuild = built.hfpRefused
         player = AVAudioPlayerNode()
@@ -966,7 +988,13 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// client's, so the first build runs it detached; `AVAudioSession` is
     /// thread-safe and an engine that isn't running yet belongs to no one.
     nonisolated static func prepareAudio(voiceProcessing: Bool = true,
-                                         hfpGrace: TimeInterval = 0) throws -> PreparedAudio {
+                                         hfpGrace: TimeInterval = 0,
+                                         avoidBluetooth: Bool = false) throws -> PreparedAudio {
+        // Earphones taken out mid-call: no `.allowBluetooth` (nor A2DP), so a
+        // bud still connected in the learner's hand can't take the route
+        // back. See `earphoneRemoved`.
+        let categoryOptions: AVAudioSession.CategoryOptions = avoidBluetooth
+            ? [.duckOthers] : AudioSessionRouting.recordOptions
         let engine = AVAudioEngine()
         let session = AVAudioSession.sharedInstance()
         // Same category/options as a Talk call: whatever the learner is
@@ -1001,7 +1029,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         // earphones is HFP or it is inaudible, so it is HFP: mic and output
         // both on the earphone, like every phone call ever made.
         try session.setCategory(.playAndRecord, mode: .default,
-                                options: AudioSessionRouting.recordOptions)
+                                options: categoryOptions)
         try session.setActive(true, options: .notifyOthersOnDeactivation)
         // Pin the input to MONO before the engine is built.
         //
@@ -1049,8 +1077,12 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         // skipped entirely and the input is put on the car's mic.
         let carPlay = AudioSessionRouting.isCarPlayConnected(session)
         if carPlay { AudioSessionRouting.preferCarMic(session) }
-        var bluetoothMic = carPlay
+        var bluetoothMic = carPlay || avoidBluetooth
             ? nil : session.availableInputs?.first { $0.portType == .bluetoothHFP }
+        if avoidBluetooth {
+            Self.step("audio: earphones were taken out — staying off Bluetooth")
+            AudioSessionRouting.preferBuiltInMic(session)
+        }
         var hfpRefused = false
         if let mic = bluetoothMic {
             try? session.setPreferredInput(mic)
@@ -1115,7 +1147,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             // observer nor the poll could ever see it (device log
             // 2026-09-01). Same reason the first setCategory above ignores
             // the preference on this path.
-            var options = AudioSessionRouting.recordOptions
+            var options = categoryOptions
             options.insert(.defaultToSpeaker)
             try session.setCategory(.playAndRecord, mode: .default, options: options)
         }
@@ -1159,7 +1191,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         let probeFormat = input.outputFormat(forBus: 0)
         Self.step("audio: session sr=\(session.sampleRate) inCh=\(session.inputNumberOfChannels) "
             + "inputAvail=\(session.isInputAvailable) probe=\(probeFormat.sampleRate)/\(probeFormat.channelCount)")
-        return PreparedAudio(engine: engine, hfpRefused: hfpRefused)
+        return PreparedAudio(engine: engine, hfpRefused: hfpRefused || avoidBluetooth)
     }
 
     /// The fast half: player, tap, start — on the main thread, where the
@@ -1269,11 +1301,31 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         ) { [weak self] note in
             let raw = note.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt ?? 0
             guard let reason = AVAudioSession.RouteChangeReason(rawValue: raw) else { return }
+            let previous = note.userInfo?[AVAudioSessionRouteChangePreviousRouteKey] as? AVAudioSessionRouteDescription
+            let wasOnEarphones = previous?.outputs.contains {
+                AudioSessionRouting.externalOutputPorts.contains($0.portType)
+            } ?? false
             Task { @MainActor [weak self] in
                 guard let self, !self.isTornDown, self.engineRunning else { return }
-                let nowOut = AVAudioSession.sharedInstance().currentRoute.outputs
-                    .first?.portType.rawValue ?? "none"
+                let session = AVAudioSession.sharedInstance()
+                let nowOut = session.currentRoute.outputs.first?.portType.rawValue ?? "none"
                 Self.step("route event (\(raw)) out=\(nowOut) built=\(self.builtOutput)")
+                // The learner took the earphones out: the device left a route
+                // the call was playing on, and nothing external is left.
+                // Not during our own rebuild, whose session cycle drops the
+                // HFP link for a moment and fires the same reason (observed
+                // 2026-09-01) — and not in a build's first seconds, when the
+                // link is still forming.
+                if reason == .oldDeviceUnavailable, wasOnEarphones,
+                   !AudioSessionRouting.hasExternalOutput(session),
+                   !self.isRebuildingAudio,
+                   Date().timeIntervalSince(self.lastAudioBuildAt) > 2 {
+                    Self.step("route: earphones taken out — moving the call to the speaker")
+                    self.earphoneRemoved = true
+                } else if reason == .newDeviceAvailable, self.earphoneRemoved {
+                    Self.step("route: a device connected — earphones allowed again")
+                    self.earphoneRemoved = false
+                }
                 switch reason {
                 case .newDeviceAvailable, .oldDeviceUnavailable:
                     // A device joined or left — always rebuild (the route may
@@ -1439,6 +1491,9 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 try? await Task.sleep(nanoseconds: 2_000_000_000)
                 guard !Task.isCancelled, let self, !self.isTornDown else { return }
                 guard self.engineRunning, !self.isRebuildingAudio else { continue }
+                // Earphones taken out: the call stays on the speaker; a bud
+                // still listed is not an attach (see `earphoneRemoved`).
+                guard !self.earphoneRemoved else { continue }
                 // Same rule as the tap watchdog: never tear the stack down
                 // while a line is in the air — a rebuild drops the rest of
                 // it. The check waits for the silence after the line.
@@ -1599,8 +1654,12 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         let isReplay = opener.context != nil
 
         let context = opener.context ?? "opener-\(UUID().uuidString)"
-        replyContext = context
-        replyText = opener.text
+        // A replayed reply was handed over already; owning `replyContext`
+        // again would hand it over twice (a second bubble, a second turn).
+        if !opener.handedOver {
+            replyContext = context
+            replyText = opener.text
+        }
         if !isReplay {
             linesStarted += 1
             replyPCM = Data()
@@ -1636,7 +1695,8 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             replyPCM = ints.withUnsafeBufferPointer { Data(buffer: $0) }
         }
         openerInAir = (LocalOpener(text: opener.text, buffer: buffer,
-                                   rate: opener.rate, context: context),
+                                   rate: opener.rate, context: context,
+                                   handedOver: opener.handedOver),
                        Date().addingTimeInterval(Double(frames) / opener.rate + 0.5))
 
         pendingBuffers += 1
@@ -1651,6 +1711,12 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                     self.pendingBuffers = max(0, self.pendingBuffers - 1)
                     self.playedBuffers += 1
                     if self.openerInAir?.opener.context == context { self.openerInAir = nil }
+                    if opener.handedOver {
+                        self.level = 0
+                        self.closeEchoGateAfterTail()
+                        if self.state == .speaking { self.state = .listening }
+                        return
+                    }
                     guard self.replyContext == context else { return }
                     self.level = 0
                     self.closeEchoGateAfterTail()
@@ -1699,12 +1765,20 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         // it again, whole, for the rebuilt engine (`startAudio`). Set BEFORE
         // `player.stop()`, whose completion must see it and not hand the
         // line over as heard.
-        if !endingCall, let inAir = openerInAir,
-           replyContext == inAir.opener.context, state == .speaking {
+        playerGeneration += 1
+        if !endingCall, let inAir = openerInAir, state == .speaking,
+           inAir.opener.handedOver || replyContext == inAir.opener.context {
             localOpener = inAir.opener
             Self.step("opener: cut by a rebuild — replaying it on the new engine")
+        } else if !endingCall, let cut = replyInAir, state == .speaking, pendingBuffers > 0 {
+            // A reply still draining when the stack goes down — the learner
+            // taking the earphones out mid-sentence is exactly this moment.
+            // Its chunks die with the player; play the whole line again.
+            localOpener = cut
+            Self.step("reply: cut by a rebuild — replaying it on the new engine")
         }
         openerInAir = nil
+        replyInAir = nil
         engine.inputNode.removeTap(onBus: 0)
         player.stop()
         engine.stop()
@@ -2061,6 +2135,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             // learner watches the reply arrive rather than waiting for it.
             lines.append(Line(isUser: false, text: ""))
             serverAudioEnded = false
+            replyInAir = nil
             state = .speaking
             if let context = replyContext { beginReveal(context) }
         case "reply_delta":
@@ -2110,6 +2185,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             // gateway has already stopped generating. Anything still in the
             // player is a voice arguing with them.
             openerInAir = nil
+            replyInAir = nil
             Self.avGuard("interrupt.stop") { self.player.stop() }
             pendingBuffers = 0
             // `play()` RAISES if the engine died underneath us (a route blip
@@ -2351,6 +2427,32 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         let url = Self.saveWAV(pcm: pcm, sampleRate: replySampleRate)
         let ms = Int(Double(pcm.count / 2) / replySampleRate * 1000)
         onReplyFinished?(context, text, url, ms)
+        // Still draining: keep it playable, so a rebuild in the next seconds
+        // replays it rather than dropping it (`stopAudio`).
+        if pendingBuffers > 0, state == .speaking,
+           let buffer = Self.playbackBuffer(pcm: pcm, rate: replySampleRate, gain: streamGain) {
+            replyInAir = LocalOpener(text: text, buffer: buffer, rate: replySampleRate,
+                                     context: context, handedOver: true)
+        }
+    }
+
+    /// Int16 PCM → a mono float buffer at `rate`, levelled by `gain` the way
+    /// its chunks were when they were scheduled.
+    private static func playbackBuffer(pcm: Data, rate: Double, gain: Float) -> AVAudioPCMBuffer? {
+        let frames = pcm.count / MemoryLayout<Int16>.size
+        guard frames > 0,
+              let format = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: rate,
+                                         channels: 1, interleaved: false),
+              let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(frames)),
+              let out = buffer.floatChannelData?[0] else { return nil }
+        buffer.frameLength = AVAudioFrameCount(frames)
+        pcm.withUnsafeBytes { raw in
+            let samples = raw.bindMemory(to: Int16.self)
+            for i in 0..<frames {
+                out[i] = max(-0.985, min(0.985, Float(Int16(littleEndian: samples[i])) / 32768.0 * gain))
+            }
+        }
+        return buffer
     }
 
     /// Cut the quiet off both ends of a take.
@@ -2523,10 +2625,13 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         }
         pendingBuffers += 1
         mic.markPlaybackStarted()
+        let generation = playerGeneration
         let scheduled = Self.avGuard("scheduleBuffer") {
             self.player.scheduleBuffer(buffer, completionCallbackType: .dataPlayedBack) { [weak self] _ in
                 Task { @MainActor [weak self] in
                     guard let self else { return }
+                    // Released by a rebuild's `player.stop()`, not heard.
+                    guard self.playerGeneration == generation else { return }
                     self.pendingBuffers = max(0, self.pendingBuffers - 1)
                     // Monotonic, and the only honest proof that audio is
                     // reaching the speaker: a wedged engine still accepts
@@ -2534,6 +2639,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                     // none of them, so the watchdogs below measure progress
                     // here rather than in the queue depth.
                     self.playedBuffers += 1
+                    if self.pendingBuffers == 0 { self.replyInAir = nil }
                     if self.pendingBuffers == 0, self.serverAudioEnded {
                         // The last scheduled audio has been HEARD — only now
                         // may the echo gate come down (plus the room's tail).

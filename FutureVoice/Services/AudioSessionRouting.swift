@@ -148,7 +148,7 @@ enum AudioSessionRouting {
 
     /// Output ports that mean "the user is listening through something other
     /// than the phone's own speakers" — so we must not override to the speaker.
-    private static let externalOutputPorts: Set<AVAudioSession.Port> = [
+    static let externalOutputPorts: Set<AVAudioSession.Port> = [
         .headphones, .bluetoothA2DP, .bluetoothLE, .bluetoothHFP,
         .usbAudio, .carAudio, .airPlay, .lineOut, .HDMI
     ]
