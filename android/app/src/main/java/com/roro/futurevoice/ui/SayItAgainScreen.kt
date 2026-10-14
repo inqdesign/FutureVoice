@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -907,17 +908,34 @@ private fun ReadingPanel(step: SayItAgainScript.Step?, onSkip: () -> Unit) {
                     .padding(horizontal = 4.dp, vertical = 2.dp))
         }
         if (step != null) {
-            Text(if (step.isCorrected) highlightedCorrection(step.text, step.said)
-                else buildAnnotatedString { append(step.text) },
-                style = MaterialTheme.typography.headlineSmall.copy(
-                    lineHeight = MaterialTheme.typography.headlineSmall.lineHeight * 1.1f),
-                fontWeight = FontWeight.SemiBold, color = lineInk,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                modifier = Modifier.fillMaxWidth())
-            if (step.note.isNotBlank()) {
-                Text(step.note, style = MaterialTheme.typography.bodySmall,
-                    color = ink.copy(alpha = 0.7f),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            // A long turn re-said whole is taller than the screen, and the
+            // bar under the transcript can't scroll — so the line and its
+            // note scroll INSIDE the card, capped at a share of the screen;
+            // a short line sizes to itself as before. Keyed by the step so a
+            // new line starts at its top.
+            val screenHeight = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp
+            val maxLine = androidx.compose.ui.unit.max(140.dp, (screenHeight * 0.38f).dp)
+            androidx.compose.runtime.key(step.id) {
+                Column(
+                    Modifier.fillMaxWidth()
+                        .heightIn(max = maxLine)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(if (step.isCorrected) highlightedCorrection(step.text, step.said)
+                        else buildAnnotatedString { append(step.text) },
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            lineHeight = MaterialTheme.typography.headlineSmall.lineHeight * 1.1f),
+                        fontWeight = FontWeight.SemiBold, color = lineInk,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth())
+                    if (step.note.isNotBlank()) {
+                        Text(step.note, style = MaterialTheme.typography.bodySmall,
+                            color = ink.copy(alpha = 0.7f),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    }
+                }
             }
         }
         // Says how the take ends, since nothing on the card does it.
