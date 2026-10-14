@@ -7,6 +7,10 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.foundation.border
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -167,6 +171,31 @@ fun StudyDeckScreen(
 
     val top = queue.firstOrNull()
 
+    // Hear it (iOS `StudyDeckView.speak`): the learner's own voice saying the
+    // item, cache-first so the same text is never billed twice.
+    val voiceId = rememberCloneVoiceId()
+    val mp3 = remember { com.roro.futurevoice.audio.Mp3Player(context.cacheDir, source = "library") }
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { mp3.stop() } }
+    var hearing by remember { mutableStateOf(false) }
+    fun hear(text: String) {
+        val id = voiceId ?: return
+        if (hearing) return
+        hearing = true
+        scope.launch {
+            runCatching {
+                val audio = com.roro.futurevoice.data.cachedSynthesis(
+                    context, voiceId = id, text = text,
+                    idempotencyKey = com.roro.futurevoice.core.InstallSalt.ttsKey(text, id, timestamps = false),
+                    purpose = "library")
+                mp3.play(audio)
+            }.onFailure { e ->
+                if (e === com.roro.futurevoice.net.EdgeError.InsufficientCredits)
+                    com.roro.futurevoice.data.BillingGate.showPaywall.value = true
+            }
+            hearing = false
+        }
+    }
+
     suspend fun refreshFolders() {
         val now = System.currentTimeMillis()
         // Scoped to the KINDS this deck was dealt: a Words session listing
@@ -272,6 +301,8 @@ fun StudyDeckScreen(
                         revealed = revealed,
                         loading = loading,
                         entry = entry,
+                        hearing = hearing,
+                        onHear = if (voiceId != null) ({ hear(top.text) }) else null,
                         modifier = Modifier
                             .fillMaxSize()
                             .onGloballyPositioned {
@@ -325,7 +356,11 @@ fun StudyDeckScreen(
                 // says the DRAG, always: the tap is already written on the
                 // card's own face, and saying it twice made the deck look
                 // like it was insisting.
-                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                // Gone mid-drag, keeping its height (iOS `.opacity(isDragging
+                // ? 0 : 1)`): the panel says where the card is headed, and the
+                // hint would draw through the dragged card's floor.
+                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                    .alpha(if (dragging) 0f else 1f),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.TouchApp, contentDescription = null,
@@ -469,6 +504,9 @@ private fun StudyCard(
     revealed: Boolean,
     loading: Boolean,
     entry: WordLore.Entry?,
+    hearing: Boolean = false,
+    /** Null without a cloned voice: the pill is absent, not dead (iOS). */
+    onHear: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val onCard = Color.White
@@ -525,6 +563,9 @@ private fun StudyCard(
                     Text(stringResource(R.string.tap_to_reveal),
                         style = MaterialTheme.typography.bodyLarge, color = onCardSecondary)
                 }
+            } else if (onHear != null) {
+                Spacer(Modifier.weight(1f))
+                HearItPill(hearing, onHear)
             }
             return@Column
         }
@@ -543,7 +584,10 @@ private fun StudyCard(
             // card is a fixed slab and the gloss is trimmed to it (iOS does
             // the same, via a bounded proposal and ViewThatFits).
             Column(
-                Modifier.weight(1f, fill = false).clipToBounds(),
+                // With the pill at the card's foot, the gloss takes the rest
+                // of the slab and the pill sits on the floor (iOS: content,
+                // Spacer(minLength: 12), the pill).
+                Modifier.weight(1f, fill = onHear != null).clipToBounds(),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 when {
@@ -574,6 +618,7 @@ private fun StudyCard(
                     }
                 }
             }
+            if (onHear != null) HearItPill(hearing, onHear)
         } else {
             Spacer(Modifier.weight(1f))
             // Centred on the floor of the card, like the sentence deck's: the
@@ -587,6 +632,31 @@ private fun StudyCard(
                     style = MaterialTheme.typography.bodyLarge, color = onCardSecondary)
             }
         }
+    }
+}
+
+/**
+ * iOS `StudyDeckView.pillButton`: the full-width capsule on the revealed
+ * card's floor, a white 18% fill, the speaker glyph and "Hear it" — or a
+ * spinner and "Loading…" while the take is being made.
+ */
+@Composable
+private fun HearItPill(hearing: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth()
+            .background(Color.White.copy(alpha = 0.18f), ContinuousShape(999.dp))
+            .clip(ContinuousShape(999.dp))
+            .clickable(enabled = !hearing, onClick = onClick)
+            .padding(vertical = 10.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (hearing) CircularProgressIndicator(Modifier.size(12.dp), strokeWidth = 1.5.dp, color = Color.White)
+        else Icon(androidx.compose.material.icons.Icons.AutoMirrored.Filled.VolumeUp,
+            contentDescription = null, tint = Color.White, modifier = Modifier.size(15.dp))
+        Spacer(Modifier.size(5.dp))
+        Text(stringResource(if (hearing) R.string.loading else R.string.hear_it),
+            fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1)
     }
 }
 

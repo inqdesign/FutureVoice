@@ -809,6 +809,25 @@ private fun VerdictButton(
 }
 
 /**
+ * The learner's clone id for a pronounce control off the card (the study
+ * deck's Hear it): the same once-per-process lookup the card uses, null
+ * until it lands or when there is no voice.
+ */
+@Composable
+internal fun rememberCloneVoiceId(): String? {
+    var voiceId by remember {
+        mutableStateOf(com.roro.futurevoice.capture.flags.PracticeCaptureFlags.voiceId ?: cachedVoiceId)
+    }
+    LaunchedEffect(Unit) {
+        if (voiceId != null) return@LaunchedEffect
+        val uid = AuthRepository().userId ?: return@LaunchedEffect
+        voiceId = runCatching { VoiceCloneRepository().activeVoiceId(uid) }
+            .getOrNull()?.also { cachedVoiceId = it }
+    }
+    return voiceId
+}
+
+/**
  * The pronounce circle on its own, for a surface that isn't the card (the
  * cloud's notebook peek — iOS shows the same button at the resting height).
  * Absent without a cloned voice, as on the card. Cache first: a word is

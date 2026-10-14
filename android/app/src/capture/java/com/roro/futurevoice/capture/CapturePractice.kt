@@ -359,6 +359,13 @@ object CapturePractice {
             PracticeCaptureFlags.stubWordEntry = CaptureSeed.fatWordEntry
             PracticeCaptureFlags.previewStudyTray = true
         }) { DailyDeck(it, StudyScheduleStore.Kind.WORD) },
+        // The deck with a cloned voice: tap the card and "Hear it" sits on
+        // its floor (iOS `StudyDeckView.cardSurface`, revealed).
+        "daily-words-hear" to mode({
+            seedVocab(it, fresh = true)
+            PracticeCaptureFlags.stubWordEntry = CaptureSeed.fatWordEntry
+            PracticeCaptureFlags.voiceId = "capture-voice"
+        }) { DailyDeck(it, StudyScheduleStore.Kind.WORD) },
         "daily-words-full" to mode({
             seedVocab(it, fresh = true)
             PracticeCaptureFlags.stubWordEntry = CaptureSeed.fatWordEntry

@@ -57,6 +57,7 @@ object CaptureRouter {
         "daily-expressions",
         "daily-words",
         "daily-words-full",
+        "daily-words-hear",
         "daily-words-tray",
         "day-spent",
         "day-spent-invite",
