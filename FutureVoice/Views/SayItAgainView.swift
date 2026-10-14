@@ -164,6 +164,11 @@ struct SayItAgainView: View {
     /// Set once a line has waited the full `rewriteWait`: the rest of the
     /// run doesn't wait again, and takes whatever lands when it lands.
     @State private var stoppedWaiting = false
+    /// The sheet's own height, read off the NavigationStack (which the
+    /// prompter bar can't shrink, so the cap below can't feed back on itself).
+    @State private var pageHeight: CGFloat = 0
+    /// The prompter line's natural height, measured inside its scroll view.
+    @State private var lineHeight: CGFloat = 0
     /// How long one line may wait for its rewrite before it is read as it
     /// was said. A single request lands in ~2–4 s; this only covers a
     /// network that has gone away.
@@ -224,6 +229,7 @@ struct SayItAgainView: View {
             }
             .fadingBottomBar { prompterPanel }
         }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { pageHeight = $0 }
         // A swipe-down mid-take leaves the mic hot and the run half torn
         // down — the trap `ShadowDrillView` documents. Close is explicit.
         .interactiveDismissDisabled(phase == .reading)
@@ -452,25 +458,39 @@ struct SayItAgainView: View {
                     .foregroundStyle(theme.ink.opacity(0.7))
             }
             if let step = promptStep {
-                Group {
-                    if step.isCorrected {
-                        Text(highlightedCorrection(step.text, original: step.said,
-                                                   baseFont: .title2.weight(.semibold)))
-                    } else {
-                        Text(step.text)
-                    }
-                }
-                .font(.title2.weight(.semibold))
-                .foregroundStyle(lineInk)
-                .multilineTextAlignment(.center)
-                .lineSpacing(4)
-                .frame(maxWidth: .infinity)
-                .fixedSize(horizontal: false, vertical: true)
-                if !step.note.isEmpty {
-                    Text(step.note).font(.footnote).foregroundStyle(theme.ink.opacity(0.7))
+                // A long turn (a minute of talking re-said whole) is taller
+                // than the screen, and a bar attached under the page can't
+                // scroll — so the line and its note scroll INSIDE the card,
+                // capped at a share of the sheet, and the card never grows
+                // past it. A short line sizes to itself as before.
+                ScrollView {
+                    VStack(spacing: 14) {
+                        Group {
+                            if step.isCorrected {
+                                Text(highlightedCorrection(step.text, original: step.said,
+                                                           baseFont: .title2.weight(.semibold)))
+                            } else {
+                                Text(step.text)
+                            }
+                        }
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(lineInk)
                         .multilineTextAlignment(.center)
+                        .lineSpacing(4)
+                        .frame(maxWidth: .infinity)
                         .fixedSize(horizontal: false, vertical: true)
+                        if !step.note.isEmpty {
+                            Text(step.note).font(.footnote).foregroundStyle(theme.ink.opacity(0.7))
+                                .multilineTextAlignment(.center)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { lineHeight = $0 }
                 }
+                .id(step.id)      // a new line starts at its top
+                .scrollBounceBehavior(.basedOnSize)
+                .scrollIndicatorsFlash(onAppear: true)
+                .frame(height: lineHeight > 0 ? min(lineHeight, maxLineHeight) : nil)
             }
             // Says how the take ends, since nothing on the card does it.
             HStack(spacing: 6) {
@@ -490,6 +510,12 @@ struct SayItAgainView: View {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .strokeBorder(theme.tint.opacity(washOpacity * 2), lineWidth: 1)
         }
+    }
+
+    /// How tall the prompter's line may get before it scrolls: enough for
+    /// a few sentences at title size, while the transcript keeps the rest.
+    private var maxLineHeight: CGFloat {
+        pageHeight > 0 ? max(140, pageHeight * 0.38) : 280
     }
 
     private var theme: FutureselfTheme { FutureselfTheme(rawValue: storedTheme) ?? .blue }
