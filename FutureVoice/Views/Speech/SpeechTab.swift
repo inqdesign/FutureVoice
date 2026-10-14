@@ -366,8 +366,15 @@ struct SpeechScriptSheet: View {
                         }
                     }
                 } footer: {
-                    if studying, study != nil {
-                        Text("Tap for an explanation")
+                    // Right under the switch, where the eye is: below a long
+                    // script the "Preparing…" row was off screen, and the
+                    // switch read as doing nothing.
+                    if studying {
+                        if study != nil {
+                            Text("Tap for an explanation")
+                        } else {
+                            studyStatus
+                        }
                     }
                 }
 
@@ -391,9 +398,6 @@ struct SpeechScriptSheet: View {
                             }
                         }
                         .padding(.top, 4)
-                        if studying && study == nil {
-                            studyStatus
-                        }
                     }
                     .padding(.vertical, 6)
                 } header: {
