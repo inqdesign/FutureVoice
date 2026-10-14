@@ -9,11 +9,10 @@ import android.content.Context
  * rather than grading against English words.
  *
  * Parity note: iOS looks words up by LEMMA (NLTagger). Android has no
- * platform lemmatizer, so lookups here receive surface tokens
- * (`VocabLemmas`) — the lists carry many inflected forms, so most hits
- * still land, but the two platforms' counts are NOT comparable yet and
- * `ScorecardMetrics` deliberately keeps `distinct_words_by_cefr_level`
- * empty until they are.
+ * platform lemmatizer, so English resolves through the forms table, Korean
+ * and Japanese through their morphology (`VocabLemmas`), and everything else
+ * by surface token — the lists carry many inflected forms, so most hits
+ * still land.
  */
 object CoreVocabulary {
 
@@ -37,6 +36,21 @@ object CoreVocabulary {
     private val pools = HashMap<String, Pool>()
 
     fun init(context: Context) { appContext = context.applicationContext }
+
+    /**
+     * A JVM unit test's stand-in for the bundled TSVs, which live in the
+     * app's assets and can't be read without a Context. Never called by the app.
+     */
+    internal fun installForTest(language: String, levels: Map<String, CefrLevel>,
+                                forms: Map<String, String> = emptyMap(),
+                                readings: Map<String, String> = emptyMap()) {
+        synchronized(pools) {
+            pools[language] = Pool(levels.mapKeys { it.key.lowercase() }, readings,
+                levels.keys.associateBy { it.lowercase() })
+        }
+        synchronized(formsCache) { formsCache[language] = forms }
+        VocabLemmas.clearMemos()
+    }
 
     /** The learner's active target language, for callers that don't pass one. */
     fun activeLanguage(): String? = appContext?.let { LanguageScope.active(it) }
@@ -260,6 +274,7 @@ object VocabLemmas {
     fun lemmas(texts: List<String>, language: String? = null): Set<String> {
         val lang = language ?: CoreVocabulary.activeLanguage()
         if (lang == "ko") return koreanLemmas(texts)
+        if (lang == "ja") return japaneseLemmas(texts)
         val forms = if (lang == "en") CoreVocabulary.forms("en") else emptyMap()
         val out = HashSet<String>()
         for (text in texts) {
@@ -275,14 +290,55 @@ object VocabLemmas {
     }
 
     /** One surface token's headword (English forms table, Korean through
-     *  [KoreanMorph]; others as written). */
+     *  [KoreanMorph], Japanese through [JapaneseMorph]; others as written). */
     fun lemma(token: String, language: String): String {
         val t = token.lowercase()
         return when (language) {
             "en" -> CoreVocabulary.forms("en")[t] ?: t
             "ko" -> KoreanMorph.dictionaryForm(t, CoreVocabulary.set("ko"), CoreVocabulary::koreanRank) ?: t
+            // iOS `lookupKey`: the whole CHUNK, not one segment — 疲れた is
+            // 疲れ + た, and only the た says the 疲れ is the verb and not the
+            // noun. The first headword spoken in it, else the text as written.
+            // A word that already IS a headword stays itself — what iOS's cut
+            // gives back too, and it keeps the stored notebook keys this is
+            // also asked of from being re-cut by a different segmenter.
+            "ja" -> t.trim { it.category.code.startsWith("P") }.let { w ->
+                val lexicon = CoreVocabulary.set("ja")
+                if (w in lexicon) w
+                else JapaneseMorph.headwords(w, lexicon, CoreVocabulary.forms("ja"))
+                    .firstOrNull()?.first ?: w
+            }
             else -> t
         }
+    }
+
+    /**
+     * Japanese headwords in [texts] — segment, then map each stem to a
+     * wordlist headword (行きました → 行く, わかりません → 分かる). Lexicon hits
+     * only, like Korean (iOS `japaneseLemmas`): the same guess-versus-word
+     * line. Memoized per TEXT for the same reason as [koreanLemmas].
+     */
+    private fun japaneseLemmas(texts: List<String>): Set<String> {
+        val out = HashSet<String>()
+        for (text in texts) {
+            out += synchronized(japaneseMemo) { japaneseMemo[text] } ?: run {
+                val lexicon = CoreVocabulary.set("ja")
+                val found = JapaneseMorph.headwords(text, lexicon, CoreVocabulary.forms("ja"))
+                    .mapTo(HashSet()) { it.first }
+                if (lexicon.isNotEmpty()) synchronized(japaneseMemo) { japaneseMemo[text] = found }
+                found
+            }
+        }
+        return out
+    }
+
+    private val japaneseMemo = object : LinkedHashMap<String, Set<String>>(256, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Set<String>>?) = size > 2_000
+    }
+
+    internal fun clearMemos() {
+        synchronized(koreanMemo) { koreanMemo.clear() }
+        synchronized(japaneseMemo) { japaneseMemo.clear() }
     }
 
     /**

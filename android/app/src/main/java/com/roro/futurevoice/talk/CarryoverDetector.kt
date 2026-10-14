@@ -2,8 +2,10 @@ package com.roro.futurevoice.talk
 
 import com.roro.futurevoice.data.CoreVocabulary
 import com.roro.futurevoice.data.DrillIngest
+import com.roro.futurevoice.data.JapaneseMorph
 import com.roro.futurevoice.data.StoreJson
 import com.roro.futurevoice.data.VocabLemmas
+import com.roro.futurevoice.data.WordSplitter
 
 /**
  * Port of `CarryoverDetector.swift` — catches the moment a learner PRODUCES
@@ -39,7 +41,7 @@ object CarryoverDetector {
         knownExpressions: List<String> = emptyList(),
         sessionId: String,
         sessionStartedAt: Long,
-        language: String = "en",
+        language: String = CoreVocabulary.activeLanguage() ?: "en",
         now: Long = System.currentTimeMillis(),
     ): List<Carryover> {
         val userTurns = turns.filter { it.isEvidence }
@@ -65,7 +67,7 @@ object CarryoverDetector {
             // Repeating the card's mistake inside a match is no credit — and
             // under used-outranks-known it would retire the card as confirmed.
             val hit = firstMatch(card.targetPhrase, userTurns,
-                rejectingMistake = card.sourcePhrase.takeIf { it.isNotBlank() }) ?: continue
+                rejectingMistake = card.sourcePhrase.takeIf { it.isNotBlank() }, language = language) ?: continue
             if (!free(hit)) continue
             claim(key, hit, Carryover.Source.DRILL_CARD, card.targetPhrase, card.id)
         }
@@ -74,7 +76,8 @@ object CarryoverDetector {
         for (item in curriculumItems) {
             val key = normalized(item.text)
             if (!available(key)) continue
-            val hit = (if (item.isWord) firstLemmaMatch(key, userTurns) else firstMatch(item.text, userTurns))
+            val hit = (if (item.isWord) firstLemmaMatch(key, userTurns)
+                else firstMatch(item.text, userTurns, language = language))
                 ?: continue
             if (!free(hit)) continue
             claim(key, hit, Carryover.Source.CURRICULUM_ITEM, item.text, item.id)
@@ -84,7 +87,7 @@ object CarryoverDetector {
         for (phrase in studyingExpressions) {
             val key = normalized(phrase)
             if (!available(key)) continue
-            val hit = firstMatch(phrase, userTurns) ?: continue
+            val hit = firstMatch(phrase, userTurns, language = language) ?: continue
             if (!free(hit)) continue
             claim(key, hit, Carryover.Source.STUDYING_EXPRESSION, phrase, null)
         }
@@ -96,7 +99,7 @@ object CarryoverDetector {
         for (phrase in knownExpressions) {
             val key = normalized(phrase)
             if (!available(key)) continue
-            val hit = firstMatch(phrase, userTurns) ?: continue
+            val hit = firstMatch(phrase, userTurns, language = language) ?: continue
             if (!free(hit)) continue
             claim(key, hit, Carryover.Source.KNOWN_EXPRESSION, phrase, null)
         }
@@ -112,15 +115,15 @@ object CarryoverDetector {
             // the card it became and rejecting a span that still carries the
             // mistake. Older turns keep the old one-sentence rule.
             val adoptable: List<Pair<String?, String>> = suggestion.fixes?.map { fix ->
-                val (source, target) = DrillIngest.cardPair(fix, turn.transcript)
+                val (source, target) = DrillIngest.cardPair(fix, turn.transcript, language)
                 source to target
             } ?: listOf(null to suggestion.alternative)
             for ((source, target) in adoptable) {
                 val key = normalized(target)
                 if (!available(key)) continue
                 // Already saying it in the turn that EARNED it isn't adoption.
-                if (firstMatch(target, listOf(turn), rejectingMistake = source) != null) continue
-                val hit = firstMatch(target, later, rejectingMistake = source) ?: continue
+                if (firstMatch(target, listOf(turn), rejectingMistake = source, language = language) != null) continue
+                val hit = firstMatch(target, later, rejectingMistake = source, language = language) ?: continue
                 if (!free(hit)) continue
                 claim(key, hit, Carryover.Source.SUGGESTION, target, turn.id)
             }
@@ -128,7 +131,7 @@ object CarryoverDetector {
 
         // ── Notebook words, by lemma; skipped inside credited phrases; hardest
         // first, display-capped.
-        val claimedWords = claimed.flatMap { it.split(' ') }.toHashSet()
+        val claimedWords = claimed.flatMap { tokens(it, language) }.toHashSet()
         data class WordHit(val word: String, val hit: Hit, val rank: Int)
         val wordHits = mutableListOf<WordHit>()
         for (word in studyingWords) {
@@ -185,16 +188,16 @@ object CarryoverDetector {
         // learner's, the expression is the same. Never for a correction card:
         // there the speech level can be the fix itself.
         val politeFree = korean && rejectingMistake == null
-        val needle = tokens(item).map { if (politeFree) strippingPolite(it) else it }
-        val core = if (politeFree) needle else contentTokens(item)
+        val needle = tokens(item, language).map { if (politeFree) strippingPolite(it) else it }
+        val core = if (politeFree) needle else contentTokens(item, language)
         if (needle.size < minTokens(language) || core.size < minContentTokens(language)) return null
         val koreanNeedle = if (korean) koreanKey(item, politeFree) else ""
         if (korean && koreanNeedle.length < MIN_KOREAN_SYLLABLES) return null
         for (turn in userTurns) {
-            val hay = tokens(turn.transcript).map { if (politeFree) strippingPolite(it) else it }
-            val span = matchedSpan(needle, core, hay, minTokens(language))
+            val hay = tokens(turn.transcript, language).map { if (politeFree) strippingPolite(it) else it }
+            val span = matchedSpan(needle, core, hay, minTokens(language), language)
             if (span != null) {
-                if (rejectingMistake != null && !showsTheFix(rejectingMistake, item, span)) continue
+                if (rejectingMistake != null && !showsTheFix(rejectingMistake, item, span, language)) continue
             } else if (korean && koreanKey(turn.transcript, politeFree).contains(koreanNeedle)) {
                 // Same syllables, spaced differently. The match is the phrase
                 // itself, contiguous — a correction's fix is in it by
@@ -202,14 +205,15 @@ object CarryoverDetector {
             } else {
                 continue
             }
-            return Hit(DrillIngest.relevantFragment(turn.transcript, item), turn.id)
+            return Hit(DrillIngest.relevantFragment(turn.transcript, item, language = language), turn.id)
         }
         return null
     }
 
     /** Every token the correction ADDED is in the span; every one it REMOVED is not. */
-    fun showsTheFix(source: String, target: String, span: List<String>): Boolean {
-        val before = tokens(source); val after = tokens(target)
+    fun showsTheFix(source: String, target: String, span: List<String>,
+                    language: String? = CoreVocabulary.activeLanguage()): Boolean {
+        val before = tokens(source, language); val after = tokens(target, language)
         if (before.isEmpty() || before == after) return true
         val added = after.toSet() - before.toSet()
         val removed = before.toSet() - after.toSet()
@@ -218,41 +222,58 @@ object CarryoverDetector {
     }
 
     /** [showsTheFix] over free text (the weekly test's rewrite answer). */
-    fun showsTheFixInText(source: String, target: String, text: String): Boolean =
-        showsTheFix(source, target, tokens(text))
+    fun showsTheFixInText(source: String, target: String, text: String,
+                          language: String? = CoreVocabulary.activeLanguage()): Boolean =
+        showsTheFix(source, target, tokens(text, language), language)
 
     /** Does the fix add or drop a word, or only move them? */
-    fun fixChangesWords(source: String, target: String): Boolean =
-        tokens(source).toSet() != tokens(target).toSet()
+    fun fixChangesWords(source: String, target: String,
+                        language: String? = CoreVocabulary.activeLanguage()): Boolean =
+        tokens(source, language).toSet() != tokens(target, language).toSet()
 
     /** The fix's added words in the target's order, as written in it. */
-    fun addedWords(source: String, target: String): List<String> {
-        val before = tokens(source).toSet()
+    fun addedWords(source: String, target: String,
+                   language: String? = CoreVocabulary.activeLanguage()): List<String> {
+        val before = tokens(source, language).toSet()
         val seen = HashSet<String>()
-        return tokens(target).filter { it !in before && seen.add(it) }
+        return tokens(target, language).filter { it !in before && seen.add(it) }
     }
 
     /** Share of [reference]'s words that appear in [text]. */
-    fun sharedWordRatio(reference: String, text: String): Double {
-        val ref = tokens(reference).toSet()
+    fun sharedWordRatio(reference: String, text: String,
+                        language: String? = CoreVocabulary.activeLanguage()): Double {
+        val ref = tokens(reference, language).toSet()
         if (ref.isEmpty()) return 0.0
-        return ref.intersect(tokens(text).toSet()).size.toDouble() / ref.size
+        return ref.intersect(tokens(text, language).toSet()).size.toDouble() / ref.size
     }
 
     fun isCreditable(phrase: String, language: String? = CoreVocabulary.activeLanguage()): Boolean =
-        tokens(phrase).size >= minTokens(language) && contentTokens(phrase).size >= minContentTokens(language) &&
+        tokens(phrase, language).size >= minTokens(language) &&
+            contentTokens(phrase, language).size >= minContentTokens(language) &&
             (language != "ko" || koreanKey(phrase, politeFree = false).length >= MIN_KOREAN_SYLLABLES)
 
     /**
-     * Korean takes a floor of one word instead of three (iOS `bee9052d`): an
-     * eojeol is a word WITH its particles and endings, so a two-eojeol phrase
-     * is a whole expression (잘 모르겠어, 그럴 리가) and the three-word bar
-     * left most Korean expressions uncreditable. Its floor is
-     * [MIN_KOREAN_SYLLABLES] instead — and there is no filler list, so every
-     * eojeol must land, in order.
+     * The bars above are written for a spaced language, where a single word
+     * has its own matcher ([firstLemmaMatch]) and three words are the
+     * shortest thing worth calling a phrase. In Japanese a token is a
+     * segment — なるほど, ただいま, 気をつけて are one, one and four — and a
+     * segment has no other way in, so the floor is one word and one
+     * meaning-carrying token (iOS `minTokensNow`).
+     *
+     * Korean is spaced but takes the same floor, for a different reason
+     * (iOS `bee9052d`): an eojeol is a word WITH its particles and endings,
+     * so a two-eojeol phrase is a whole expression (잘 모르겠어, 그럴 리가)
+     * and the three-word bar left most Korean expressions uncreditable. Its
+     * floor is [MIN_KOREAN_SYLLABLES] instead — and there is no filler list,
+     * so every eojeol must land, in order.
      */
-    private fun minTokens(language: String?) = if (language == "ko") 1 else MIN_TOKENS
-    private fun minContentTokens(language: String?) = if (language == "ko") 1 else MIN_CONTENT_TOKENS
+    private fun minTokens(language: String?) = if (relaxedFloor(language)) 1 else MIN_TOKENS
+    private fun minContentTokens(language: String?) = if (relaxedFloor(language)) 1 else MIN_CONTENT_TOKENS
+    private fun relaxedFloor(language: String?) = language == "ko" || !spaced(language)
+
+    /** A missing language (no app context: a unit test) reads as spaced,
+     *  which is what every caller assumed before Japanese. */
+    private fun spaced(language: String?) = language == null || WordSplitter.spaced(language)
 
     /** Shortest Korean phrase worth crediting, in syllables (spaces ignored).
      *  잘 가 (2) is small talk; 그러게 / 잘 모르겠어 are not. */
@@ -261,7 +282,7 @@ object CarryoverDetector {
     /** A Korean phrase as one comparable string: tokens joined with NO space,
      *  because 띄어쓰기 is the recognizer's (할수 있어 / 할 수 있어). */
     private fun koreanKey(text: String, politeFree: Boolean): String =
-        tokens(text).joinToString("") { if (politeFree) strippingPolite(it) else it }
+        tokens(text, "ko").joinToString("") { if (politeFree) strippingPolite(it) else it }
 
     private fun strippingPolite(token: String): String =
         if (token.length > 1 && token.endsWith("요")) token.dropLast(1) else token
@@ -279,7 +300,7 @@ object CarryoverDetector {
      * in order (function words may slip — that's what [MIN_COVERAGE] is for).
      */
     private fun matchedSpan(needle: List<String>, core: List<String>, hay: List<String>,
-                            minHay: Int = MIN_TOKENS): List<String>? {
+                            minHay: Int, language: String?): List<String>? {
         if (needle.isEmpty() || hay.size < minHay) return null
         val window = needle.size * 2 + 4
         val required = Math.ceil(needle.size * MIN_COVERAGE).toInt()
@@ -287,7 +308,7 @@ object CarryoverDetector {
         for (start in 0..(hay.size - required)) {
             val slice = hay.subList(start, minOf(hay.size, start + window))
             if (lcsLength(needle, slice) < required) continue
-            if (lcsLength(core, slice.filter { it !in FILLER }) != core.size) continue
+            if (lcsLength(core, slice.filter { !isFiller(it, language) }) != core.size) continue
             // Trim to the phrase: from where its first word lands to its last.
             val lo = slice.indexOf(needle.first()).takeIf { it >= 0 } ?: 0
             val hi = slice.lastIndexOf(needle.last()).takeIf { it >= 0 }?.let { maxOf(it, lo) } ?: (slice.size - 1)
@@ -317,13 +338,33 @@ object CarryoverDetector {
         text.filter { it.isLetterOrDigit() || it.isWhitespace() }
             .lowercase().split(Regex("\\s+")).filter { it.isNotEmpty() }.joinToString(" ")
 
-    private fun tokens(text: String): List<String> =
-        normalized(text).split(' ').filter { it.isNotEmpty() }
+    /**
+     * Words, normalized. An unspaced language is segmented FIRST and each
+     * segment normalized after — [normalized] keeps letters and spaces, and a
+     * Japanese sentence has neither space nor case to lose, so the two orders
+     * agree; segmenting the raw text just lets the tokenizer see its
+     * punctuation, which is how it tells clauses apart (iOS `tokens`).
+     */
+    private fun tokens(text: String, language: String?): List<String> =
+        if (spaced(language)) normalized(text).split(' ').filter { it.isNotEmpty() }
+        else segmenter(text).map(::normalized).filter { it.isNotEmpty() }
 
-    private fun contentTokens(text: String): List<String> =
-        tokens(text).filter { it !in FILLER }
+    /**
+     * The Japanese segmenter. `BreakIterator` is the platform's (`android.icu`)
+     * and does not exist on a JVM, so a unit test feeds the tokens the Swift
+     * side cuts instead — the same arrangement as `JapaneseMorphVectorTest`.
+     */
+    @Volatile internal var segmenter: (String) -> List<String> = { JapaneseMorph.segments(it) }
 
-    /** English-only by design — for other targets nothing is dropped. */
+    private fun contentTokens(text: String, language: String?): List<String> =
+        tokens(text, language).filter { !isFiller(it, language) }
+
+    /** Japanese has its own list — the particles and auxiliaries
+     *  [JapaneseMorph] already knows (iOS `isFiller`). */
+    private fun isFiller(token: String, language: String?): Boolean =
+        if (spaced(language)) token in FILLER else JapaneseMorph.isFunctionToken(token)
+
+    /** English-only by design — for other spaced targets nothing is dropped. */
     private val FILLER = setOf(
         "a", "an", "the", "and", "or", "but", "so", "if", "of", "to", "in", "on",
         "at", "for", "with", "is", "am", "are", "was", "were", "be", "been",

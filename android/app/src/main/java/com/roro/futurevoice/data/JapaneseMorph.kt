@@ -27,6 +27,7 @@ object JapaneseMorph {
     /** Words in [text], in order, punctuation and whitespace skipped. */
     fun words(text: String): List<Token> {
         if (text.isEmpty()) return emptyList()
+        segmenterOverride?.let { return it(text) }
         val it = android.icu.text.BreakIterator.getWordInstance(java.util.Locale.JAPANESE)
         it.setText(text)
         val out = ArrayList<Token>()
@@ -42,6 +43,12 @@ object JapaneseMorph {
         }
         return out
     }
+
+    /**
+     * Stands in for `BreakIterator` in a JVM unit test, where `android.icu`
+     * is a stub that throws. Never set in the app.
+     */
+    @Volatile internal var segmenterOverride: ((String) -> List<Token>)? = null
 
     /** Surface words only — the drop-in for splitting on spaces. */
     fun segments(text: String): List<String> = words(text).map { it.surface }

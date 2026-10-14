@@ -3,6 +3,7 @@ package com.roro.futurevoice.talk
 import com.roro.futurevoice.audio.FluencyStats
 import com.roro.futurevoice.data.IsoDateMillisSerializer
 import com.roro.futurevoice.data.StoreJson
+import com.roro.futurevoice.data.WordSplitter
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -182,8 +183,10 @@ data class Session(
             topic?.trim()?.takeIf { it.isNotEmpty() }?.let { return it }
             val first = turns.firstOrNull { it.role == TurnRole.USER }?.transcript?.trim()
                 ?.takeIf { it.isNotEmpty() } ?: return null
-            val words = first.split(' ')
-            return "\u201C" + words.take(6).joinToString(" ") + (if (words.size > 6) "…" else "") + "\u201D"
+            // iOS `WordSplitter.snippet(first, words: 6, characters: 14)`:
+            // a Japanese line has no spaces, so "six words" was the whole turn.
+            val snippet = WordSplitter.snippet(first, targetLanguage, maxWords = 6, maxChars = 14)
+            return "\u201C" + snippet + "\u201D"
         }
 }
 

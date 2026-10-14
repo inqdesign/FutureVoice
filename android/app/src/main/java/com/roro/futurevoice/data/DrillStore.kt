@@ -124,9 +124,7 @@ object DrillIngest {
     fun cardPair(fix: com.roro.futurevoice.talk.TurnFix, transcript: String,
                  language: String? = CoreVocabulary.activeLanguage()): Pair<String, String> {
         if (com.roro.futurevoice.talk.CarryoverDetector.isCreditable(fix.now, language)) return fix.was to fix.now
-        val sentences = transcript.split(Regex("[.!?。！？\\n]"))
-            .map { it.trim() }.filter { it.isNotEmpty() }
-        for (sentence in sentences) {
+        for (sentence in sentences(transcript)) {
             val at = sentence.indexOf(fix.was, ignoreCase = true)
             if (at < 0) continue
             val widened = sentence.replaceRange(at, at + fix.was.length, fix.now)
@@ -137,14 +135,15 @@ object DrillIngest {
     }
 
     /** Keep the sentence that corresponds to the correction; prefix-cut otherwise. */
-    fun relevantFragment(source: String, target: String, maxChars: Int = 160): String {
+    fun relevantFragment(source: String, target: String, maxChars: Int = 160,
+                         language: String? = CoreVocabulary.activeLanguage()): String {
         val trimmed = source.trim()
         if (trimmed.length <= maxChars) return trimmed
-        val sentences = trimmed.split(Regex("[.!?\n]")).map { it.trim() }.filter { it.isNotEmpty() }
-        val targetWords = normalizedForMatch(target).split(' ').filter { it.isNotEmpty() }.toSet()
+        val sentences = sentences(trimmed)
+        val targetWords = words(normalizedForMatch(target), language).toSet()
         if (sentences.size > 1 && targetWords.isNotEmpty()) {
-            val best = sentences.maxByOrNull { overlap(it, targetWords) }
-            if (best != null && overlap(best, targetWords) > 0) {
+            val best = sentences.maxByOrNull { overlap(it, targetWords, language) }
+            if (best != null && overlap(best, targetWords, language) > 0) {
                 return if (best.length > maxChars) best.take(maxChars) + "…" else best
             }
         }
@@ -152,26 +151,40 @@ object DrillIngest {
     }
 
     /** Target-side twin — never ellipsis-cut (the result is spoken by TTS). */
-    fun coreSentence(target: String, source: String, maxChars: Int = 140): String {
+    fun coreSentence(target: String, source: String, maxChars: Int = 140,
+                     language: String? = CoreVocabulary.activeLanguage()): String {
         val trimmed = target.trim()
         if (trimmed.length <= maxChars) return trimmed
-        val sentences = trimmed.split(Regex("[.!?\n]")).map { it.trim() }.filter { it.isNotEmpty() }
-        val sourceWords = normalizedForMatch(source).split(' ').filter { it.isNotEmpty() }.toSet()
+        val sentences = sentences(trimmed)
+        val sourceWords = words(normalizedForMatch(source), language).toSet()
         if (sentences.size <= 1 || sourceWords.isEmpty()) return trimmed
-        val best = sentences.maxByOrNull { overlap(it, sourceWords) } ?: return trimmed
-        if (overlap(best, sourceWords) == 0) return trimmed
-        // Restore terminal punctuation the split ate — a dropped "?" flattens a question.
+        val best = sentences.maxByOrNull { overlap(it, sourceWords, language) } ?: return trimmed
+        if (overlap(best, sourceWords, language) == 0) return trimmed
+        // Restore terminal punctuation the split ate — a dropped "?" (or
+        // "？") flattens a question.
         val idx = trimmed.indexOf(best)
         if (idx >= 0) {
             val after = idx + best.length
-            if (after < trimmed.length && trimmed[after] in ".!?") return best + trimmed[after]
+            if (after < trimmed.length && trimmed[after] in TERMINATORS) return best + trimmed[after]
         }
         return best
     }
 
-    private fun overlap(sentence: String, targetWords: Set<String>): Int =
-        normalizedForMatch(sentence).split(' ').filter { it.isNotEmpty() }.toSet()
-            .intersect(targetWords).size
+    /** Sentence ends, Japanese included (iOS `".!?。！？\n"`). */
+    private const val TERMINATORS = ".!?。！？"
+
+    private fun sentences(text: String): List<String> =
+        text.split(Regex("[.!?。！？\\n]")).map { it.trim() }.filter { it.isNotEmpty() }
+
+    private fun overlap(sentence: String, targetWords: Set<String>, language: String?): Int =
+        words(normalizedForMatch(sentence), language).toSet().intersect(targetWords).size
+
+    /** iOS `WordSplitter.words`: spaces for a spaced language, the segmenter
+     *  for Japanese — the SAME seam [CarryoverDetector] cuts with, so a unit
+     *  test can feed it tokens a JVM has no tokenizer to produce. */
+    private fun words(text: String, language: String?): List<String> =
+        if (language == null || WordSplitter.spaced(language)) text.split(' ').filter { it.isNotEmpty() }
+        else com.roro.futurevoice.talk.CarryoverDetector.segmenter(text)
 
     fun normalizedForMatch(text: String): String =
         text.filter { it.isLetterOrDigit() || it.isWhitespace() }

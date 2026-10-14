@@ -121,7 +121,8 @@ object TalkGoalPicker {
                 // A multi-word entry can land in the notebook (a learner taps
                 // a two-word chunk in a transcript); it can't be lemma-matched,
                 // so it goes through the phrase rules instead.
-                TalkGoalItem(CarryoverDetector.normalized(it), it, isWord = !it.contains(" "))
+                TalkGoalItem(CarryoverDetector.normalized(it), it,
+                    isWord = com.roro.futurevoice.data.WordSplitter.isSingleWord(it, language))
             }
             .filter { it.isWord || CarryoverDetector.isCreditable(it.text) }
 
@@ -133,7 +134,8 @@ object TalkGoalPicker {
             .map { TalkGoalItem(CarryoverDetector.normalized(it), it, isWord = false, claimedKnown = true) } +
             vocab.unconfirmedKnownWords(language)
                 .map { TalkGoalItem(CarryoverDetector.normalized(it), it,
-                    isWord = !it.contains(" "), claimedKnown = true) }
+                    isWord = com.roro.futurevoice.data.WordSplitter.isSingleWord(it, language),
+                    claimedKnown = true) }
                 .filter { it.isWord || CarryoverDetector.isCreditable(it.text) })
 
         // Interleave so the row opens with something short: a phrase first
