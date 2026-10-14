@@ -1603,6 +1603,7 @@
     <string name="practice_language">"Idioma que practicas: %s"</string>
     <!-- 'Practice while you watch yourself,\nuntil you feel sure, until it feels natural.' -->
     <string name="practice_while_you_watch_yourself_until_you_feel_sure_until_5d1614">"Practica mientras te ves.\nHasta ganar confianza,\nhasta que salga natural."</string>
+    <string name="practiced">"Practicadas"</string>
     <string name="practicing_the_selected_phrase">"Practicando la frase elegida"</string>
     <string name="practicing_your_rhythm">"Practicando tu ritmo al hablar…"</string>
     <!-- 'Practise on your iPhone, pick it up on your iPad. Everything is stored in your own iCloud, audio included, so it can use a few gigabytes there.' -->

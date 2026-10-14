@@ -1298,8 +1298,9 @@ fun RootScreen() {
 
         RootRoute.ShadowBrowser -> ShadowBrowserScreen(
             language = state.targetLanguage,
+            // iOS presents the drill as a sheet OVER the list: closing it
+            // returns here, so the list stays under the hand.
             onShadow = { turn ->
-                showShadowBrowser = false
                 shadowHand = listOf(com.roro.futurevoice.data.ShadowPicks.Pick(turn, "")); shadowAt = 0
             },
             onBack = { showShadowBrowser = false },

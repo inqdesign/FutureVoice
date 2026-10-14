@@ -438,6 +438,27 @@ object CapturePractice {
                 FinishedBooksScreen(books = CaptureSeed.sampleFinishedBooks, onOpen = {}, onBack = {})
             }
         },
+        // Android-only mode: the Shadowing list (iOS `ShadowBrowserView`,
+        // pushed from Practice's Shadowing tile). Talks + Watch books, one
+        // line saved, one line practiced so the To study / Practiced split shows.
+        "shadow-browser" to mode(
+            seed = { c -> CaptureSeed.once("shadow-browser") {
+                CaptureSeed.seedSessions(c); CaptureSeed.seedScenarios(c)
+                val first = com.roro.futurevoice.data.SessionStore.shared(c).load(lang(c))
+                    .flatMap { it.turns }.filter { it.role == com.roro.futurevoice.talk.TurnRole.FLUENT_SELF }
+                first.getOrNull(1)?.let { t ->
+                    val saved = com.roro.futurevoice.data.SavedLineStore.shared(c)
+                    if (!saved.isSaved(t.id)) saved.toggle(com.roro.futurevoice.data.SavedLine(id = t.id, text = t.transcript))
+                }
+                first.firstOrNull()?.let { t ->
+                    com.roro.futurevoice.data.ShadowAttemptStore.shared(c).add(
+                        com.roro.futurevoice.data.ShadowAttempt(turnId = t.id, targetText = t.transcript,
+                            learnerTranscript = t.transcript, matchScore = 90), lang(c))
+                }
+            } },
+        ) { c ->
+            com.roro.futurevoice.ui.ShadowBrowserScreen(language = lang(c), onShadow = {}, onBack = {})
+        },
         "finished-empty" to mode { _ ->
             Box(Modifier.fillMaxSize().background(AppSurfaces.ground)) {
                 FinishedBooksScreen(books = emptyList(), onOpen = {}, onBack = {})
