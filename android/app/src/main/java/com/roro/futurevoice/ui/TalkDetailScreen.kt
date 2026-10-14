@@ -1115,7 +1115,7 @@ private fun GrammarReviewSheet(
     onMisheard: ((GrammarIssue) -> Unit)? = null,
 ) {
     ModalBottomSheet(
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
+        sheetState = com.roro.futurevoice.ui.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
         Column(
             Modifier.sheetBody()
                 .padding(horizontal = 20.dp).padding(bottom = 28.dp),

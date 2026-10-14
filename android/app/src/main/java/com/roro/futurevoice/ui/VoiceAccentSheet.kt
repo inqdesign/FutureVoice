@@ -273,7 +273,7 @@ fun VoiceAccentSheet(
     // the remix takes ~30 s, and a swipe would throw the request away.
     val busy by rememberUpdatedState(generating || saving || removing)
     ModalBottomSheet(
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(
+        sheetState = com.roro.futurevoice.ui.rememberModalBottomSheetState(
             skipPartiallyExpanded = true,
             confirmValueChange = { it != SheetValue.Hidden || !busy }),
         onDismissRequest = { if (!busy) { player.stop(); onDismiss() } },

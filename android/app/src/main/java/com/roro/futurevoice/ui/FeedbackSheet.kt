@@ -227,7 +227,7 @@ fun FeedbackSheet(context: FeedbackContext, onDismiss: () -> Unit) {
     // trailing — then the title block, the two star rows in one card, and
     // "Anything you want to say" over its own field.
     ModalBottomSheet(
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        sheetState = com.roro.futurevoice.ui.rememberModalBottomSheetState(skipPartiallyExpanded = true),
         onDismissRequest = { if (!sending) onDismiss() },
         containerColor = AppSurfaces.ground) {
         SheetHeader(

@@ -930,7 +930,7 @@ fun HowAssessedSheet(
 ) {
     val secondary = MaterialTheme.colorScheme.onSurfaceVariant
     androidx.compose.material3.ModalBottomSheet(
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        sheetState = com.roro.futurevoice.ui.rememberModalBottomSheetState(skipPartiallyExpanded = true),
         onDismissRequest = onDismiss,
         containerColor = com.roro.futurevoice.ui.brand.AppSurfaces.ground,
     ) {

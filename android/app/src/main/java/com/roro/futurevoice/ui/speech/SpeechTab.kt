@@ -53,7 +53,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
+import com.roro.futurevoice.ui.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -850,14 +850,13 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
     }
     SpeechSheet(onDismiss) {
         SheetHeader(stringResource(R.string.script),
+            // Edit on the left, Done alone on the right (founder, 2026-10-14).
+            // The bundled sample is everyone's and stays as shipped.
+            leading = if (!shown.isBuiltIn && !shown.isChallenge) ({
+                IosGlassTextButton(stringResource(R.string.edit), onClick = { editing = true })
+            }) else null,
             trailing = {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // The bundled sample is everyone's and stays as shipped.
-                    if (!shown.isBuiltIn && !shown.isChallenge) {
-                        IosGlassTextButton(stringResource(R.string.edit), onClick = { editing = true })
-                    }
-                    IosGlassTextButton(stringResource(R.string.done), onClick = onDismiss, bold = true)
-                }
+                IosGlassTextButton(stringResource(R.string.done), onClick = onDismiss, bold = true)
             })
         val shownStudy = study
         // Its own row under the header, not in it (iOS 18f1fbf7): a switch

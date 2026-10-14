@@ -426,7 +426,7 @@ fun StudyDeckScreen(
 
     verdictFor?.let { item ->
         ModalBottomSheet(
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = { verdictFor = null }) {
+        sheetState = com.roro.futurevoice.ui.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = { verdictFor = null }) {
             Column(Modifier.sheetBody().padding(20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(item.text, style = MaterialTheme.typography.titleMedium)
                 Text(stringResource(R.string.when_should_it_come_back),
@@ -455,7 +455,7 @@ fun StudyDeckScreen(
             if (bin == DrillBin.GOT_IT) finished.map { it.text to null }
             else (scheduled[bin] ?: emptyList()).map { it.item.text to it.at }
         ModalBottomSheet(
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = { openFolder = null }) {
+        sheetState = com.roro.futurevoice.ui.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = { openFolder = null }) {
             Column(Modifier.bottomBarInsets().padding(20.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(stringResource(bin.folderTitleRes),
