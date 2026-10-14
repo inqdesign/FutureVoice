@@ -435,17 +435,31 @@ internal fun ScriptStudyStatus(failed: Boolean, onRetry: () -> Unit) {
     Spacer(Modifier.height(0.dp))
 }
 
-/** The learner's voice, as the app holds it (iOS `appState.voiceCloneId`). */
+/** The learner's voice, as the app holds it (iOS `appState.voiceCloneId`).
+ *  The ACTIVITY's AppViewModel, named explicitly — a sheet resolving its own
+ *  owner could build a second, empty one, and then "make it in my voice"
+ *  vanished from every Speech sheet. If the app's copy is still empty, the
+ *  server is asked directly (the word card's once-per-process lookup). */
 @Composable
 internal fun rememberCloneVoiceId(): String? {
-    com.roro.futurevoice.capture.flags.SpeechCaptureFlags.voiceId?.let { return it }
+    val captured = com.roro.futurevoice.capture.flags.SpeechCaptureFlags.voiceId
     val context = LocalContext.current
-    val app: com.roro.futurevoice.ui.AppViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
-        factory = androidx.lifecycle.viewmodel.viewModelFactory {
-            initializer { com.roro.futurevoice.ui.AppViewModel(context.applicationContext) }
-        })
-    val state by app.state.collectAsStateWithLifecycle()
-    return state.voiceId
+    val activity = remember(context) {
+        var c: android.content.Context? = context
+        while (c is android.content.ContextWrapper && c !is androidx.activity.ComponentActivity) c = c.baseContext
+        c as? androidx.activity.ComponentActivity
+    }
+    val fromApp = if (activity != null) {
+        val app: com.roro.futurevoice.ui.AppViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+            viewModelStoreOwner = activity,
+            factory = androidx.lifecycle.viewmodel.viewModelFactory {
+                initializer { com.roro.futurevoice.ui.AppViewModel(context.applicationContext) }
+            })
+        val state by app.state.collectAsStateWithLifecycle()
+        state.voiceId
+    } else null
+    val fromServer = com.roro.futurevoice.ui.rememberCloneVoiceId()
+    return captured ?: fromApp ?: fromServer
 }
 
 /** The learner's level for the active language (iOS `appState.proficiency`). */
