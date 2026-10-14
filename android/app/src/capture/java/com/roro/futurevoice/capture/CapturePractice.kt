@@ -419,6 +419,20 @@ object CapturePractice {
         "talkdetail-mid" to talkDetail(null, "mid"),
         "talkdetail-low" to talkDetail(null, "low"),
         "talkdetail-words" to talkDetail("WORDS"),
+        // A word tapped in the Words chapter: its card, with the pronounce
+        // circle drawn (iOS `-futurevoice.voiceCloneId` on `wordcard`).
+        "talkdetail-wordcard" to mode({ c ->
+            seedVocab(c)
+            PracticeCaptureFlags.talkDetailSession = CaptureSeed.talkDetailSession
+            PracticeCaptureFlags.talkDetailChapter = "WORDS"
+            // A word the fluent self said in this talk, so "From your talks"
+            // shows its line (Listen · Shadow) under the entry.
+            PracticeCaptureFlags.talkDetailWord = "initiative"
+            PracticeCaptureFlags.voiceId = "capture-voice"
+        }) { c ->
+            TalkDetailScreen(sessionId = CaptureSeed.talkDetailSession.id, language = lang(c),
+                level = level(c), onBack = {}, onContinue = { _ -> })
+        },
         "talkdetail-expressions" to talkDetail("EXPRESSIONS"),
         "talkdetail-lines" to talkDetail("LINES"),
         "talkdetail-cards" to talkDetail("CARDS"),

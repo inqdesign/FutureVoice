@@ -151,6 +151,7 @@ object CaptureRouter {
         "talkdetail-low",
         "talkdetail-mid",
         "talkdetail-words",
+        "talkdetail-wordcard",
         "themes",
         "transcript",
         "transcript-ja",
