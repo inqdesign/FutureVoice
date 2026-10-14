@@ -1,5 +1,6 @@
 package com.roro.futurevoice.ui.speech
 
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import android.Manifest
@@ -319,10 +320,16 @@ private fun SpeechTakeLayout(
                                 size = 36.dp) { showTakes = true }
                             val count = takes.count { it.scriptId == script.id }
                             if (count > 0) {
-                                Text("$count", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                                // iOS caption2 in a capsule: the line height is the
+                                // text's own (the theme's 24 sp made "1" a tall
+                                // sliver), and one digit is at least as wide as tall.
+                                Text("$count", color = Color.White, fontSize = 11.sp, lineHeight = 13.sp,
+                                    fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
+                                    style = LocalTextStyle.current.copy(fontFeatureSettings = "tnum"),
                                     modifier = Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-4).dp)
                                         .background(MaterialTheme.colorScheme.primary, CircleShape)
-                                        .padding(horizontal = 5.dp, vertical = 1.dp))
+                                        .padding(horizontal = 5.dp, vertical = 1.dp)
+                                        .widthIn(min = 7.dp))
                             }
                         }
                         Box {
