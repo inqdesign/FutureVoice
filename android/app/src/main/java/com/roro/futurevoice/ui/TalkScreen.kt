@@ -504,7 +504,11 @@ fun TalkScreen(
     // animation — the stand-in for iOS's bottom anchor, which keeps the end
     // in place in the same frame — and everything else still eases.
     val streamingReply = state.turns.lastOrNull()?.takeIf { it.role == TurnRole.FLUENT_SELF }
-    val contentSize = Triple(state.turns.size, state.partial.length + state.phase.ordinal * 100_000, 0) to state.turns.sumOf {
+    // The learner's live dictation grows a word at a time, like a streaming
+    // reply: an animated scroll restarted on every partial made the call
+    // screen flicker while they spoke (2026-10-14). It is followed without
+    // animation below, so only the phase and the lines move this one.
+    val contentSize = Triple(state.turns.size, state.phase.ordinal * 100_000, 0) to state.turns.sumOf {
         if (it === streamingReply) 0 else it.transcript.length
     }
     LaunchedEffect(contentSize) {
@@ -527,6 +531,12 @@ fun TalkScreen(
         if (state.turns.isNotEmpty() && followBottom) {
             val last = (listState.layoutInfo.totalItemsCount - 1).coerceAtLeast(0)
             listState.animateScrollToItem(last, Int.MAX_VALUE)
+        }
+    }
+    LaunchedEffect(state.partial.length) {
+        if (state.partial.isNotEmpty() && followBottom && !listState.isScrollInProgress) {
+            val last = (listState.layoutInfo.totalItemsCount - 1).coerceAtLeast(0)
+            listState.scrollToItem(last, Int.MAX_VALUE)
         }
     }
     LaunchedEffect(streamingReply?.id, streamingReply?.transcript?.length) {
