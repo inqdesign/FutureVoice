@@ -17,9 +17,9 @@ nawana가 안드로이드로 나옵니다. 정식 출시 전에, 실제로 써 �
 **참여 방법**
 1. 안드로이드 폰에서 이 링크를 열고 "테스터 되기"를 눌러 주세요: https://play.google.com/apps/testing/com.roro.futurevoice
 2. 같은 화면의 플레이 스토어 링크에서 nawana를 설치합니다.
-3. 앱에서 목소리를 녹음하고, Google 계정으로 가입합니다.
-4. 무료 20분을 쓰신 뒤 요금제 화면이 나오면 아래쪽 **"코드가 있나요?"**에 이 코드를 넣어 주세요. 한 달 동안 Plus를 무료로 쓰실 수 있습니다.
+3. 앱을 열면 첫 화면 아래쪽에 **"초대 코드가 있나요?"**가 있습니다. 눌러서 이 코드를 넣어 주세요.
    코드: **{CODE}**
+4. 목소리를 녹음하고 Google 계정으로 가입하시면, Light 요금제가 한 달 동안 무료로 열립니다.
 
 **봐 주셨으면 하는 것**
 - 첫 통화까지 막히는 곳이 있는지
@@ -45,9 +45,9 @@ nawana is coming to Android, and before it launches I'm looking for people to us
 **How to join**
 1. On your Android phone, open this link and tap "Become a tester": https://play.google.com/apps/testing/com.roro.futurevoice
 2. Install nawana from the Play Store link on the same page.
-3. Record your voice in the app and sign up with your Google account.
-4. After your 20 free minutes, when the plans appear, tap **"Have a code?"** and enter this code for a free month of Plus.
+3. When the app opens, tap **"Have an invite code?"** at the bottom of the first screen and enter this code.
    Code: **{CODE}**
+4. Record your voice and sign up with your Google account. The Light plan is then yours, free for a month.
 
 **What I'd love you to look at**
 - Anything that stops you before your first call
