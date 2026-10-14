@@ -177,6 +177,13 @@ private fun TalkDetailPage(
         WordCardSheet(terms = list, initialTerm = term, kind = LibraryKind.WORDS,
             language = language, onShadow = onShadow, onDismiss = { wordCard = null })
     }
+    // The expression card opened from the Expressions chapter (iOS
+    // `phraseSheet`): the same card the Expressions library opens.
+    var phraseCard by remember { mutableStateOf<Pair<String, List<String>>?>(null) }
+    phraseCard?.let { (term, list) ->
+        WordCardSheet(terms = list, initialTerm = term, kind = LibraryKind.EXPRESSIONS,
+            language = language, onShadow = onShadow, onDismiss = { phraseCard = null })
+    }
     var chapter by remember { mutableStateOf(
         TalkChapter.entries.firstOrNull { it.name == com.roro.futurevoice.capture.flags.PracticeCaptureFlags.talkDetailChapter }
             ?: TalkChapter.INTRO) }
@@ -554,10 +561,31 @@ private fun TalkDetailPage(
                             val (used, offered) = curriculum.expressions.partition {
                                 com.roro.futurevoice.talk.CarryoverDetector.normalized(it.text) in mine
                             }
-                            offered.forEach { MasteryRow(it.text, it.masteredAt != null) }
+                            // iOS `expressionsPage`: a header over each group, and a
+                            // row opens that phrase's card.
+                            val all = (offered + used).map { it.text }
+                            if (offered.isNotEmpty()) {
+                                Text(stringResource(R.string.from_your_fluent_self),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(top = 12.dp))
+                                offered.forEach { item ->
+                                    MasteryRow(item.text, item.masteredAt != null,
+                                        onClick = { phraseCard = item.text to all })
+                                }
+                            }
                             if (used.isNotEmpty()) {
                                 if (offered.isNotEmpty()) HorizontalDivider(Modifier.padding(vertical = 4.dp))
-                                used.forEach { MasteryRow(it.text, it.masteredAt != null) }
+                                Text(stringResource(R.string.you_said_these),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(top = 12.dp))
+                                used.forEach { item ->
+                                    MasteryRow(item.text, item.masteredAt != null,
+                                        onClick = { phraseCard = item.text to all })
+                                }
                             }
                         }
                         PageFooter(stringResource(

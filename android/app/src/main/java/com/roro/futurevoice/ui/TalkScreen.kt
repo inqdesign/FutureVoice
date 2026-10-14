@@ -603,12 +603,22 @@ fun TalkScreen(
             showBook = true
         }
     }
+    // The book's own shadow taps (Shadow chapter, a word card's Shadow)
+    // open the shadow screen over it, as iOS presents ShadowDrillView over
+    // the wrap-up's book — the book here had no handler, so a tap did nothing.
+    var bookShadowLine by remember { mutableStateOf<String?>(null) }
     if (showBook && endedId != null) {
+        bookShadowLine?.let { line ->
+            ShadowScreen(line = line, voiceId = voiceId, targetLanguage = targetLanguage,
+                onBack = { bookShadowLine = null })
+            return
+        }
         TalkDetailScreen(
             sessionId = endedId,
             language = targetLanguage,
             level = level,
             onBack = {},
+            onShadow = { bookShadowLine = it },
             onDone = { pitchThenLeave() },
         )
         return
