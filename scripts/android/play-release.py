@@ -40,7 +40,20 @@ spec.loader.exec_module(pl)
 ANDROID = os.path.join(pl.ROOT, "android")
 GRADLE_FILE = os.path.join(ANDROID, "app/build.gradle.kts")
 AAB = os.path.join(ANDROID, "app/build/outputs/bundle/release/app-release.aab")
-JAVA_HOME = "/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+def _java_home() -> str:
+    """Android Studio's JBR, else $JAVA_HOME, else a JDK Gradle provisioned
+    (Android Studio's JBR went missing on 2026-10-13 and the release build
+    stopped at the first line)."""
+    import glob
+    for c in ["/Applications/Android Studio.app/Contents/jbr/Contents/Home",
+              os.environ.get("JAVA_HOME", ""),
+              *sorted(glob.glob(os.path.expanduser("~/.gradle/jdks/*/*/Contents/Home")), reverse=True)]:
+        if c and os.path.exists(os.path.join(c, "bin/java")):
+            return c
+    return "/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+
+
+JAVA_HOME = _java_home()
 
 # Play release-notes language → metadata folder (same map as the listing).
 NOTE_LOCALES = pl.LOCALES
