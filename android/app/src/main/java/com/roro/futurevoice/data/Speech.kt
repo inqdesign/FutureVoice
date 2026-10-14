@@ -81,6 +81,9 @@ data class SpeechMetrics(
     val steadiness: Int,
     val missed: List<String> = emptyList(),
     val overall: Int,
+    /** How far into the script the take got, 0…1; the delivery parts of
+     *  `overall` are scaled by it. Null on takes made before 2026-10-14. */
+    val coverage: Double? = null,
 )
 
 /** The model's notes on a take, in the NATIVE language. */

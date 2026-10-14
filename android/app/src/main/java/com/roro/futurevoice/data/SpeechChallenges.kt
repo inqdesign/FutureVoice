@@ -237,16 +237,25 @@ class SpeechChallenges private constructor(private val context: Context) {
                 val candidates = store.takes(script.id)
                     .filter { it.videoFilename != null && it.metrics.overall > onBoard }
                     .sortedByDescending { it.metrics.overall }
+                // Re-scored with today's weighting (iOS): only the number sent
+                // changes, the take on the phone stays as it was.
+                var best: Pair<SpeechTake, Int>? = null
                 for (take in candidates) {
-                    val accuracy = withContext(Dispatchers.Default) {
+                    val diff = withContext(Dispatchers.Default) {
                         com.roro.futurevoice.talk.ShadowScore.analyze(script.body,
                             com.roro.futurevoice.talk.SpeechAnalyzer.removingFillers(take.transcript, script.language, script.body),
-                            script.language).score
+                            script.language)
                     }
-                    if (kotlin.math.abs(accuracy - take.metrics.accuracy) > 5) continue
-                    submit(take, challengeId, name)
-                    Analytics.capture("speech_challenge_imported", mapOf("overall" to take.metrics.overall))
-                    break
+                    if (kotlin.math.abs(diff.score - take.metrics.accuracy) > 5) continue
+                    val m = take.metrics
+                    val overall = com.roro.futurevoice.talk.SpeechAnalyzer.overall(m.accuracy, m.paceScore,
+                        m.pauseScore, m.fillerScore, m.steadiness,
+                        com.roro.futurevoice.talk.SpeechAnalyzer.coverage(diff.steps))
+                    if (overall > onBoard && overall > (best?.second ?: -1)) best = take to overall
+                }
+                best?.let { (take, overall) ->
+                    submit(take, challengeId, name, overall)
+                    Analytics.capture("speech_challenge_imported", mapOf("overall" to overall))
                 }
             } finally {
                 importing.remove(challengeId)
@@ -285,14 +294,15 @@ class SpeechChallenges private constructor(private val context: Context) {
         val improved: Boolean,
     )
 
-    private suspend fun submit(take: SpeechTake, challengeId: String, name: String) {
+    /** `overall` is the take's own unless the caller re-scored it. */
+    private suspend fun submit(take: SpeechTake, challengeId: String, name: String, overall: Int = take.metrics.overall) {
         val m = take.metrics
         try {
             val raw = rpc("submit_speech_challenge_take", buildJsonObject {
                 put("p_challenge", challengeId)
                 put("p_display_name", name)
                 put("p_avatar", avatarPayload(context))
-                put("p_overall", m.overall)
+                put("p_overall", overall)
                 put("p_accuracy", m.accuracy)
                 put("p_pace", m.paceScore)
                 put("p_pause", m.pauseScore)
@@ -316,7 +326,7 @@ class SpeechChallenges private constructor(private val context: Context) {
             ))
             loadedLanguage?.let { writeCache(it) }
             Analytics.capture("speech_challenge_entered", mapOf(
-                "overall" to m.overall, "rank" to row.rank, "entrants" to row.entrants,
+                "overall" to overall, "rank" to row.rank, "entrants" to row.entrants,
                 "improved" to row.improved,
             ))
         } catch (e: Exception) {

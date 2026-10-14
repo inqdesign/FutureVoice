@@ -65,16 +65,52 @@ object SpeechAnalyzer {
 
         val steadiness = steadinessScore(envelope?.phrases.orEmpty())
 
-        val overall = clamp((
-            0.40 * diff.score + 0.20 * paceScore + 0.15 * pauseScore + 0.10 * fillerScore + 0.15 * steadiness
-        ).roundToInt())
+        val coverage = coverage(diff.steps)
+        val overall = overall(diff.score, paceScore, pauseScore, fillerScore, steadiness, coverage)
 
         return SpeechMetrics(
             accuracy = diff.score, rate = rate, rateLow = band.first, rateHigh = band.last,
             paceScore = paceScore, pausesAtBreaks = pausesAtBreaks, breaks = breaks,
             hesitations = hesitations, pauseScore = pauseScore, fillers = fillerCount,
             fillerScore = fillerScore, steadiness = steadiness, missed = missed, overall = overall,
+            coverage = coverage,
         )
+    }
+
+    /**
+     * The one weighting (2026-10-14, iOS `SpeechAnalyzer.overall`): accuracy
+     * 40%, and the delivery half scaled by how far into the script the reader
+     * got. Coverage 1 is the old weighting exactly; the server accepts
+     * anything from the accuracy part alone up to that full weighting.
+     */
+    fun overall(accuracy: Int, pace: Int, pause: Int, filler: Int, steadiness: Int, coverage: Double): Int {
+        val delivery = 0.20 * pace + 0.15 * pause + 0.10 * filler + 0.15 * steadiness
+        return clamp((0.40 * accuracy + coverage * delivery).roundToInt())
+    }
+
+    /**
+     * How far into the script the reader got, 0…1, over the diff's own script
+     * tokens (iOS `SpeechAnalyzer.coverage`): the last script token MATCHED,
+     * carried on through the substitutions right after it, plus one, over the
+     * script's token count. A substitution with no match before it doesn't
+     * count: the alignment pairs a word said after stopping with the script's
+     * LAST token.
+     */
+    fun coverage(steps: List<ShadowScore.DiffStep>): Double {
+        var index = -1
+        var reached = -1
+        var extending = false
+        var total = 0
+        for (step in steps) {
+            when (step.op) {
+                ShadowScore.DiffOp.INS -> continue
+                ShadowScore.DiffOp.MATCH -> { index += 1; total += 1; reached = index; extending = true }
+                ShadowScore.DiffOp.SUB -> { index += 1; total += 1; if (extending) reached = index }
+                ShadowScore.DiffOp.DEL -> { index += 1; total += 1; extending = false }
+            }
+        }
+        if (total == 0) return 1.0
+        return (reached + 1).toDouble() / total
     }
 
     /** 100 inside the band; 2 points per percent outside it. */

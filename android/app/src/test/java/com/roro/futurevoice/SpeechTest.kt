@@ -3,6 +3,8 @@ package com.roro.futurevoice
 import com.roro.futurevoice.data.SpeechGenre
 import com.roro.futurevoice.data.SpeechLibrary
 import com.roro.futurevoice.talk.PrompterMotion
+import com.roro.futurevoice.data.SpeechMetrics
+import com.roro.futurevoice.talk.ShadowScore
 import com.roro.futurevoice.talk.SpeechAnalyzer
 import com.roro.futurevoice.talk.SpeechPrompterTrack
 import org.junit.Assert.assertEquals
@@ -11,6 +13,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.floor
+import kotlin.math.roundToInt
 import kotlin.random.Random
 
 /** iOS `SpeechTests.swift` (HEAD `8f135c24`), test for test. */
@@ -64,6 +67,51 @@ class SpeechAnalyzerTest {
         assertTrue(m.missed.isEmpty())
         assertEquals(135, m.rate)
         assertTrue(m.overall >= 95)
+    }
+
+    // Coverage (2026-10-14): stopping early scales the delivery half (iOS SpeechAnalyzerTests).
+
+    private val longScript = "Sound is a wave. It travels through the air. It moves faster in water. It moves fastest in steel."
+    private val phrases = listOf(SpeechAnalyzer.Phrase(-20f, -21f), SpeechAnalyzer.Phrase(-20f, -22f))
+
+    @Test fun fullReadIsTheOldWeighting() {
+        val env = SpeechAnalyzer.Envelope(0.0, 8.0, listOf(0.4, 0.4, 0.4), phrases)
+        val m = SpeechAnalyzer.analyze(longScript,
+            "Sound is a wave it travels through the air it moves faster in water it moves fastest in steel", "en", env)
+        assertEquals(1.0, m.coverage!!, 0.0)
+        val old = (0.40 * m.accuracy + 0.20 * m.paceScore + 0.15 * m.pauseScore +
+            0.10 * m.fillerScore + 0.15 * m.steadiness).roundToInt()
+        assertEquals(old, m.overall)
+    }
+
+    @Test fun stoppingHalfwayScoresBelowTheFullRead() {
+        val full = SpeechAnalyzer.analyze(longScript,
+            "Sound is a wave it travels through the air it moves faster in water it moves fastest in steel", "en",
+            SpeechAnalyzer.Envelope(0.0, 8.0, listOf(0.4, 0.4, 0.4), phrases))
+        val half = SpeechAnalyzer.analyze(longScript, "Sound is a wave it travels through the air", "en",
+            SpeechAnalyzer.Envelope(0.0, 4.0, listOf(0.4), phrases))
+        assertEquals(9.0 / 19.0, half.coverage!!, 1e-9)
+        assertTrue(half.overall < full.overall)
+        assertEquals(SpeechAnalyzer.overall(half.accuracy, half.paceScore, half.pauseScore, half.fillerScore,
+            half.steadiness, 9.0 / 19.0), half.overall)
+        assertTrue(half.overall < 60)
+    }
+
+    @Test fun coverageIgnoresMiddleSkipsAndAWordSaidAfterStopping() {
+        fun cov(said: String, lang: String = "en", script: String = "one two three four five six seven eight nine ten") =
+            SpeechAnalyzer.coverage(ShadowScore.analyze(script, said, lang).steps)
+        assertEquals(1.0, cov("one two six seven eight nine ten"), 0.0)
+        assertEquals(1.0, cov("one two three four five six seven eight nine tin"), 0.0)
+        assertEquals(0.4, cov("one two three four sorry"), 1e-9)
+        assertEquals(0.0, cov(""), 0.0)
+        assertEquals(0.6, cov("소리는", "ko", "소리는 파동"), 1e-9)
+    }
+
+    @Test fun oldTakesDecodeWithoutCoverage() {
+        val json = """{"accuracy":90,"rate":130,"rateLow":120,"rateHigh":160,"paceScore":100,"pausesAtBreaks":1,"breaks":1,"hesitations":0,"pauseScore":100,"fillers":0,"fillerScore":100,"steadiness":90,"missed":[],"overall":95}"""
+        val m = kotlinx.serialization.json.Json.decodeFromString(SpeechMetrics.serializer(), json)
+        assertEquals(null, m.coverage)
+        assertEquals(95, m.overall)
     }
 
     @Test fun skippedWordsAreListedInScriptOrder() {
