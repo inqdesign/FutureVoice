@@ -53,7 +53,7 @@ fun AgeCheckSheet(onDismiss: () -> Unit) {
     // Fully expanded, always: half-open, the sheet put Continue below the
     // screen's edge on a short phone, under the navigation bar.
     ModalBottomSheet(onDismissRequest = onDismiss,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        sheetState = com.roro.futurevoice.ui.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
             Modifier.sheetBody().padding(horizontal = 24.dp).padding(bottom = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,

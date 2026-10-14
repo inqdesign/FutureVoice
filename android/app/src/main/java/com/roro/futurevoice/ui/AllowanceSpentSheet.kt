@@ -137,7 +137,7 @@ fun AllowanceSpentSheet(
     val packLeads = TopUpOffer.leads(packOffered, packOnSale)
 
     ModalBottomSheet(
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
+        sheetState = com.roro.futurevoice.ui.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
         Column(
             Modifier.sheetBody()
                 .padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 20.dp),

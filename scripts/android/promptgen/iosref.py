@@ -19,6 +19,17 @@ PIN = ROOT / "scripts/android/promptgen/IOS_REF"
 
 CHECK = "--check" in sys.argv
 REF = PIN.read_text().strip()
+# A generator whose iOS source is NEWER than the shared pin, while moving the
+# pin would drag in an unrelated port that is still owed (the pin at a9a80ed7
+# can't move to 3ebadf10 until WeeklyReportEngine.generate is re-ported and
+# its edge function redeployed). One line per generator: `<file> <sha>`.
+# Fold an entry back into IOS_REF the day the shared pin passes it.
+LOCAL_PINS = ROOT / "scripts/android/promptgen/LOCAL_PINS"
+if LOCAL_PINS.exists():
+    for _line in LOCAL_PINS.read_text().splitlines():
+        _parts = _line.split("#")[0].split()
+        if len(_parts) == 2 and _parts[0] == pathlib.Path(sys.argv[0]).name:
+            REF = _parts[1]
 if "--ref" in sys.argv:
     REF = sys.argv[sys.argv.index("--ref") + 1]
 SHORT = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--short", REF],

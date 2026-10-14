@@ -229,11 +229,19 @@ class TalkViewModel(context: Context) : ViewModel() {
     /** Coach mode was on at some point in this call — the whole call is then
      *  a practice call (`Session.coached`). */
     private var coachWasOn = false
-    /** Tutor mode for THIS call (iOS `tutorThisCall`), read once when the
-     *  call opens: it lives in the system prompt the gateway caches for the
-     *  whole call, so a flip mid-call applies from the next one. A tutored
-     *  call is a practice call. */
+    /** Tutor mode as the conversation prompt has it right now (iOS
+     *  `tutorThisCall`). It lives in the system prompt, so a flip mid-call
+     *  sends the gateway a new one ([setTutorMode], iOS 88cc3b33 — it used
+     *  to wait for the next call); the classic path reads the rebuilt prompt
+     *  at its next turn. */
     private var tutorThisCall = false
+    /** Tutor mode was on at some point in this call — the whole call is then
+     *  a practice call, as with [coachWasOn] (iOS `tutorWasOn`). */
+    private var tutorWasOn = false
+    /** This call's conversation prompt with tutor mode on or off — every
+     *  other input pinned when the call opened, so a flip changes the tutor
+     *  block and nothing else. Null until the prompt is first built. */
+    private var promptForTutor: ((Boolean) -> String)? = null
     /** Where a scenario call takes place and who the other side is, for the
      *  "try saying" — "What can I get you?" only has one natural answer once
      *  it knows it is a café (iOS `coachSituation`). Null on every other call. */
@@ -311,6 +319,8 @@ class TalkViewModel(context: Context) : ViewModel() {
         coachOn = CoachMode.resolve(CoachMode.choice(appContext), config.level.code)
         coachWasOn = coachOn
         tutorThisCall = TutorMode.isOn(appContext)
+        tutorWasOn = tutorThisCall
+        promptForTutor = null
         coachPlan = CoachPlan()
         coachSteerSent = ""
         coachSituation = null
@@ -373,21 +383,27 @@ class TalkViewModel(context: Context) : ViewModel() {
                 // in the caller: the profile read is a disk hop.
                 val profile = ProfileStore.shared(appContext)
                     .load(config.targetLanguage, config.level.code)
-                systemPrompt = ConversationEngine.conversationSystemPrompt(
-                    targetLanguage = config.targetLanguage,
-                    nativeLanguage = config.nativeLanguage,
-                    level = config.level,
-                    topPatterns = profile.recurringMistakes,
-                    weakVocabAreas = profile.weakVocabAreas,
-                    topic = config.composedTopic,
-                    persona = config.persona,
-                    newsFacts = config.newsFacts,
-                    counterpart = config.cast?.person,
-                    brief = scenarioBrief(config),
-                    clock = pinPromptClock(config),
-                    tutor = tutorThisCall,
-                ) + ConversationEngine.turnOutputInstruction(config.targetLanguage, config.nativeLanguage,
-                    counterpart = config.cast?.person, inScene = config.scenarioId != null)
+                val brief = scenarioBrief(config)
+                val clock = pinPromptClock(config)
+                val build = { tutor: Boolean ->
+                    ConversationEngine.conversationSystemPrompt(
+                        targetLanguage = config.targetLanguage,
+                        nativeLanguage = config.nativeLanguage,
+                        level = config.level,
+                        topPatterns = profile.recurringMistakes,
+                        weakVocabAreas = profile.weakVocabAreas,
+                        topic = config.composedTopic,
+                        persona = config.persona,
+                        newsFacts = config.newsFacts,
+                        counterpart = config.cast?.person,
+                        brief = brief,
+                        clock = clock,
+                        tutor = tutor,
+                    ) + ConversationEngine.turnOutputInstruction(config.targetLanguage, config.nativeLanguage,
+                        counterpart = config.cast?.person, inScene = config.scenarioId != null)
+                }
+                promptForTutor = build
+                systemPrompt = build(tutorThisCall)
                 if (BuildConfig.DEBUG) Log.d(TAG, "prompt: patterns=${profile.recurringMistakes.size}" +
                     " weak=${profile.weakVocabAreas} first='${profile.recurringMistakes.firstOrNull()?.mistake}'")
                 // Continue from the loaded transcript: open the mic so the
@@ -468,7 +484,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             grammarFocus = if (learnerSpokeThisCall)
                 _state.value.grammarFocus?.record(_state.value.focusRepeatTurns.size) else null,
             // Coach mode on at any point makes the whole call practice.
-            coached = if (coachWasOn || tutorThisCall) true else null,
+            coached = if (coachWasOn || tutorWasOn || tutorThisCall) true else null,
         )
         // Saved from the app scope on purpose: the ViewModel may be cleared
         // (screen left) before a viewModelScope job gets to run. The summary
@@ -527,25 +543,31 @@ class TalkViewModel(context: Context) : ViewModel() {
                 // The same prompt the classic path builds, minus the JSON
                 // packaging: on this path the reply is PROSE Gemini Live
                 // speaks, and the correction is a separate, later request.
-                realtimeSystem = ConversationEngine.conversationSystemPrompt(
-                    targetLanguage = config.targetLanguage,
-                    nativeLanguage = config.nativeLanguage,
-                    level = config.level,
-                    topPatterns = profile.recurringMistakes,
-                    weakVocabAreas = profile.weakVocabAreas,
-                    topic = config.composedTopic,
-                    persona = config.persona,
-                    // Free talk only: a scenario casts the model as the
-                    // barista and a Find-people call as a stranger; neither
-                    // can run an introduction without breaking what it was
-                    // launched as.
-                    firstMeeting = freeTalk && config.persona?.metAt == null,
-                    newsFacts = config.newsFacts,
-                    counterpart = config.cast?.person,
-                    brief = scenarioBrief(config),
-                    clock = pinPromptClock(config),
-                    tutor = tutorThisCall,
-                ) + ConversationPrompt.REALTIME_STYLE_RULES
+                val brief = scenarioBrief(config)
+                val clock = pinPromptClock(config)
+                val build = { tutor: Boolean ->
+                    ConversationEngine.conversationSystemPrompt(
+                        targetLanguage = config.targetLanguage,
+                        nativeLanguage = config.nativeLanguage,
+                        level = config.level,
+                        topPatterns = profile.recurringMistakes,
+                        weakVocabAreas = profile.weakVocabAreas,
+                        topic = config.composedTopic,
+                        persona = config.persona,
+                        // Free talk only: a scenario casts the model as the
+                        // barista and a Find-people call as a stranger; neither
+                        // can run an introduction without breaking what it was
+                        // launched as.
+                        firstMeeting = freeTalk && config.persona?.metAt == null,
+                        newsFacts = config.newsFacts,
+                        counterpart = config.cast?.person,
+                        brief = brief,
+                        clock = clock,
+                        tutor = tutor,
+                    ) + ConversationPrompt.REALTIME_STYLE_RULES
+                }
+                promptForTutor = build
+                realtimeSystem = build(tutorThisCall)
                 // A resumed talk carries its history so the fluent self knows
                 // what was already said, and opens on the learner's mic — no
                 // opener, no "you go first".
@@ -1465,6 +1487,26 @@ class TalkViewModel(context: Context) : ViewModel() {
         if (on) { coachWasOn = true; config?.let { loadGrammarFocus(it) } }
         else _state.update { it.copy(coachHint = null, coachReply = null, coachStale = false) }
         syncCoachSteer()
+    }
+
+    /** Tutor mode flipped in the call settings (iOS `onChange(of:
+     *  tutorModeChoice)`, 88cc3b33): the prompt is rebuilt with the new
+     *  setting. On the realtime path the gateway is sent it (`set.system`)
+     *  and remakes its reply cache, so the next reply is already under the
+     *  new rules, and a reconnect opens on it too; the classic path reads it
+     *  at its next turn. Once on, the call is a practice call. */
+    fun setTutorMode(on: Boolean) {
+        if (on == tutorThisCall) return
+        tutorThisCall = on
+        if (on) tutorWasOn = true
+        val build = promptForTutor ?: return   // not built yet: it reads tutorThisCall
+        if (REALTIME) {
+            realtimeSystem = build(on)
+            val phase = _state.value.phase
+            if (phase != TalkPhase.IDLE && phase != TalkPhase.ENDED) realtime.setSystem(realtimeSystem)
+        } else {
+            systemPrompt = build(on)
+        }
     }
 
     /** What coach mode may steer toward: the chip row, then the talk-kept

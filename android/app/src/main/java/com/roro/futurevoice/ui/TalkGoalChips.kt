@@ -436,7 +436,7 @@ fun TalkGoalSheet(
     }
 
     androidx.compose.material3.ModalBottomSheet(
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
+        sheetState = com.roro.futurevoice.ui.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
         androidx.compose.foundation.layout.Column(
             Modifier.sheetBody()
                 .padding(horizontal = 20.dp)

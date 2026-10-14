@@ -96,6 +96,10 @@ class ElevenLabsClient(private val auth: AuthRepository) {
          *  `previousText`/`nextText`) — so a scene line lands MID-conversation. */
         val previous_text: String? = null,
         val next_text: String? = null,
+        /** A Speech script's voiceover (iOS `synthesizeVoiceoverLine`): with
+         *  `purpose: "script-voiceover"` the line is claimed against the
+         *  reservation, never metered per character. */
+        val voiceover_key: String? = null,
     )
 
     /** Buffered synthesis → MP3 bytes. */
@@ -193,6 +197,42 @@ class ElevenLabsClient(private val auth: AuthRepository) {
     }
 
     /**
+     * One line of a Speech script's voiceover ("Hear it in my voice", iOS
+     * `synthesizeVoiceoverLine`). Never metered per character: the edge
+     * function claims it against the reservation [com.roro.futurevoice.data.ScriptVoiceoverCenter]
+     * made, and the whole voiceover is charged once afterwards. Deliberately
+     * WITHOUT the plain-synthesis fallback [synthesizeWithTimestamps] has —
+     * that request would carry no key and be metered as an ordinary line.
+     * Audio is MP3 (or WAV for a Cartesia voice); timings may be empty when
+     * the alignment doesn't describe the text.
+     */
+    suspend fun synthesizeVoiceoverLine(
+        voiceId: String, text: String, language: String, voiceoverKey: String, index: Int,
+    ): Pair<ByteArray, List<com.roro.futurevoice.talk.WordTiming>> = withContext(Dispatchers.IO) {
+        val request = buildRequest(
+            voiceId, text, CLONE_MODEL_ID, withTimestamps = true, stream = false,
+            purpose = "script-voiceover", idempotencyKey = "$voiceoverKey:$index",
+            accept = "application/json", voiceoverKey = voiceoverKey,
+        )
+        Edge.client.newCall(request).execute().use { response ->
+            val raw = response.body.string()
+            if (response.code !in 200..299) {
+                if (response.code == 402) throw EdgeError.wall(raw)
+                throw EdgeError.Http(response.code, raw.take(512))
+            }
+            val decoded = Edge.json.decodeFromString(TimestampsResponse.serializer(), raw)
+            val audio = android.util.Base64.decode(decoded.audio_base64, android.util.Base64.DEFAULT)
+            val align = decoded.alignment ?: decoded.normalized_alignment
+            val timings = align?.let {
+                com.roro.futurevoice.talk.TtsAlignment.wordTimings(
+                    it.characters, it.character_start_times_seconds, it.character_end_times_seconds, language)
+            }.orEmpty()
+            audio to if (com.roro.futurevoice.talk.TtsAlignment.alignmentMatches(text, timings)) timings
+            else emptyList()
+        }
+    }
+
+    /**
      * Streaming TTS: playback starts on the first chunk instead of after the
      * full file. Chunks arrive in order via [onPcmChunk] — 16-bit LE mono PCM
      * at 22.05 kHz, ~8 KB each (~0.18 s).
@@ -278,7 +318,8 @@ class ElevenLabsClient(private val auth: AuthRepository) {
         sceneKey: String? = null,
         speed: Double? = null,
         previousText: String? = null,
-        nextText: String? = null,): Request {
+        nextText: String? = null,
+        voiceoverKey: String? = null,): Request {
         // A parked voice no longer exists upstream (see `VoiceParking`).
         // Refused before the network with the error every surface already
         // answers with its paywall; the revival happens at a launcher's tap.
@@ -299,6 +340,7 @@ class ElevenLabsClient(private val auth: AuthRepository) {
             language_code = pinnedLanguage(text, com.roro.futurevoice.data.CoreVocabulary.activeLanguage()),
             previous_text = previousText?.takeIf { it.isNotEmpty() },
             next_text = nextText?.takeIf { it.isNotEmpty() },
+            voiceover_key = voiceoverKey,
         )
         val builder = Request.Builder()
             .url(Config.functionUrl("elevenlabs-tts"))

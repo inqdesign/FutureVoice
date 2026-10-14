@@ -359,6 +359,13 @@ object CapturePractice {
             PracticeCaptureFlags.stubWordEntry = CaptureSeed.fatWordEntry
             PracticeCaptureFlags.previewStudyTray = true
         }) { DailyDeck(it, StudyScheduleStore.Kind.WORD) },
+        // The deck with a cloned voice: tap the card and "Hear it" sits on
+        // its floor (iOS `StudyDeckView.cardSurface`, revealed).
+        "daily-words-hear" to mode({
+            seedVocab(it, fresh = true)
+            PracticeCaptureFlags.stubWordEntry = CaptureSeed.fatWordEntry
+            PracticeCaptureFlags.voiceId = "capture-voice"
+        }) { DailyDeck(it, StudyScheduleStore.Kind.WORD) },
         "daily-words-full" to mode({
             seedVocab(it, fresh = true)
             PracticeCaptureFlags.stubWordEntry = CaptureSeed.fatWordEntry
@@ -414,11 +421,54 @@ object CapturePractice {
         "book" to book(null),
         "book-words" to book("WORDS"),
         "book-lines" to book("SHADOW"),
+        // A row tapped: the word's card, and the phrase's card with the
+        // scene's own note + example as "In this scene" (iOS `wordSheet` /
+        // `expressionSheet`).
+        "book-wordcard" to mode({
+            PracticeCaptureFlags.bookScenario = CaptureSeed.bookScenario
+            PracticeCaptureFlags.bookChapter = "WORDS"
+            PracticeCaptureFlags.bookCard = "appreciate"
+            PracticeCaptureFlags.stubWordEntry = hesitateEntry
+            PracticeCaptureFlags.voiceId = "capture-voice"
+        }) { c ->
+            ScenarioBookScreen(scenarioId = CaptureSeed.bookScenario.id, language = lang(c),
+                onWatch = {}, onTalk = {}, onShadow = {}, onBack = {})
+        },
+        "book-expressioncard" to mode({
+            val sc = CaptureSeed.bookScenario
+            val cur = sc.curriculum!!
+            PracticeCaptureFlags.bookScenario = sc.copy(curriculum = cur.copy(
+                expressions = cur.expressions.map {
+                    if (it.text == "catch up on") it.copy(
+                        note = "Sarah opens with it — say what you've been doing since.",
+                        example = "We should catch up on everything over coffee.") else it
+                }))
+            PracticeCaptureFlags.bookChapter = "EXPRESSIONS"
+            PracticeCaptureFlags.bookCard = "catch up on"
+            PracticeCaptureFlags.voiceId = "capture-voice"
+        }) { c ->
+            ScenarioBookScreen(scenarioId = CaptureSeed.bookScenario.id, language = lang(c),
+                onWatch = {}, onTalk = {}, onShadow = {}, onBack = {})
+        },
 
         "talkdetail" to talkDetail(null),
         "talkdetail-mid" to talkDetail(null, "mid"),
         "talkdetail-low" to talkDetail(null, "low"),
         "talkdetail-words" to talkDetail("WORDS"),
+        // A word tapped in the Words chapter: its card, with the pronounce
+        // circle drawn (iOS `-futurevoice.voiceCloneId` on `wordcard`).
+        "talkdetail-wordcard" to mode({ c ->
+            seedVocab(c)
+            PracticeCaptureFlags.talkDetailSession = CaptureSeed.talkDetailSession
+            PracticeCaptureFlags.talkDetailChapter = "WORDS"
+            // A word the fluent self said in this talk, so "From your talks"
+            // shows its line (Listen · Shadow) under the entry.
+            PracticeCaptureFlags.talkDetailWord = "initiative"
+            PracticeCaptureFlags.voiceId = "capture-voice"
+        }) { c ->
+            TalkDetailScreen(sessionId = CaptureSeed.talkDetailSession.id, language = lang(c),
+                level = level(c), onBack = {}, onContinue = { _ -> })
+        },
         "talkdetail-expressions" to talkDetail("EXPRESSIONS"),
         "talkdetail-lines" to talkDetail("LINES"),
         "talkdetail-cards" to talkDetail("CARDS"),
@@ -437,6 +487,27 @@ object CapturePractice {
             Box(Modifier.fillMaxSize().background(AppSurfaces.ground)) {
                 FinishedBooksScreen(books = CaptureSeed.sampleFinishedBooks, onOpen = {}, onBack = {})
             }
+        },
+        // Android-only mode: the Shadowing list (iOS `ShadowBrowserView`,
+        // pushed from Practice's Shadowing tile). Talks + Watch books, one
+        // line saved, one line practiced so the To study / Practiced split shows.
+        "shadow-browser" to mode(
+            seed = { c -> CaptureSeed.once("shadow-browser") {
+                CaptureSeed.seedSessions(c); CaptureSeed.seedScenarios(c)
+                val first = com.roro.futurevoice.data.SessionStore.shared(c).load(lang(c))
+                    .flatMap { it.turns }.filter { it.role == com.roro.futurevoice.talk.TurnRole.FLUENT_SELF }
+                first.getOrNull(1)?.let { t ->
+                    val saved = com.roro.futurevoice.data.SavedLineStore.shared(c)
+                    if (!saved.isSaved(t.id)) saved.toggle(com.roro.futurevoice.data.SavedLine(id = t.id, text = t.transcript))
+                }
+                first.firstOrNull()?.let { t ->
+                    com.roro.futurevoice.data.ShadowAttemptStore.shared(c).add(
+                        com.roro.futurevoice.data.ShadowAttempt(turnId = t.id, targetText = t.transcript,
+                            learnerTranscript = t.transcript, matchScore = 90), lang(c))
+                }
+            } },
+        ) { c ->
+            com.roro.futurevoice.ui.ShadowBrowserScreen(language = lang(c), onShadow = {}, onBack = {})
         },
         "finished-empty" to mode { _ ->
             Box(Modifier.fillMaxSize().background(AppSurfaces.ground)) {

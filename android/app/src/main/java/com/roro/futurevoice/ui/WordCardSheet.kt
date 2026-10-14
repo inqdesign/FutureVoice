@@ -1,6 +1,8 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material.icons.filled.PlayCircleOutline
 import com.roro.futurevoice.ui.brand.ContinuousShape
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.PaddingValues
@@ -40,7 +42,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import com.roro.futurevoice.ui.brand.IosOutlinedButton as OutlinedButton
-import androidx.compose.material3.rememberModalBottomSheetState
+import com.roro.futurevoice.ui.rememberModalBottomSheetState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -125,6 +127,13 @@ fun WordCardSheet(
      *  `WordCard`'s title off a dealt list): the count is the notebook's,
      *  not a position. Null titles by position — "3 / 10". */
     notebookTitle: String? = null,
+    /** A scenario book's own note + example line per phrase (iOS
+     *  `ExpressionCard.Context`): written WITH the scene, so it says what a
+     *  dictionary can't. Shown as "In this scene" above the meaning. */
+    sceneContext: Map<String, Pair<String, String?>> = emptyMap(),
+    /** That section's title. Null = "In this scene" (a Watch book); a Speech
+     *  script's study note passes "In this script" (iOS `Context.heading`). */
+    contextHeading: String? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -149,10 +158,10 @@ fun WordCardSheet(
      *  a failed round trip rather than "no entry" — it has a retry attached. */
     var failed by remember { mutableStateOf(false) }
     var attempt by remember { mutableIntStateOf(0) }
-    var sentences by remember { mutableStateOf<List<String>>(emptyList()) }
+    var sentences by remember { mutableStateOf<List<SourceLine>>(emptyList()) }
     var kept by remember { mutableStateOf(false) }
     var known by remember { mutableStateOf(false) }
-    var voiceId by remember { mutableStateOf(cachedVoiceId) }
+    var voiceId by remember { mutableStateOf(com.roro.futurevoice.capture.flags.PracticeCaptureFlags.voiceId ?: cachedVoiceId) }
     var speaking by remember { mutableStateOf(false) }
     /** Sentences already on file, read once — an example's long-press says
      *  "Saved" instead of offering it again (iOS 71c5e2da). */
@@ -294,9 +303,17 @@ fun WordCardSheet(
                 .padding(horizontal = 22.dp).padding(bottom = 12.dp),
             verticalArrangement = Arrangement.spacedBy(26.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // iOS: the title beside the pronounce circle, 14 pt apart and
+            // centred on it; a phrase a size down (30 vs 34) because it is
+            // several words and still has to fit. The line height is set with
+            // the size — inherited, it was body text's and a wrapped phrase's
+            // lines ran into each other.
+            Row(verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Text(term, fontSize = 34.sp, fontWeight = FontWeight.Bold,
+                    val titleSize = if (isWord) 34.sp else 30.sp
+                    Text(term, fontSize = titleSize, lineHeight = titleSize * 1.2f,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface)
                     // A kanji headword has to print its reading, or the card
                     // teaches a word nobody can say out loud. Several where
@@ -319,6 +336,20 @@ fun WordCardSheet(
                 // is nothing to play, so the button is absent rather than dead.
                 if (voiceId != null) PronounceCircle(speaking) { speak() }
             }
+
+            sceneContext[term]?.takeIf { (note, ex) -> note.isNotBlank() || !ex.isNullOrBlank() }
+                ?.let { (note, ex) ->
+                    CardSection(contextHeading ?: stringResource(R.string.in_this_scene)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (note.isNotBlank()) Text(note, fontSize = 16.sp,
+                                color = MaterialTheme.colorScheme.onSurface)
+                            ex?.takeIf { it.isNotBlank() }?.let {
+                                Text("\u201C$it\u201D", fontSize = 16.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
 
             CardSection(stringResource(R.string.meaning)) {
                 val senses = entry?.senses.orEmpty().filter { it.meaning.isNotBlank() }
@@ -383,7 +414,11 @@ fun WordCardSheet(
             if (sentences.isNotEmpty()) {
                 CardSection(stringResource(R.string.from_your_talks)) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        sentences.forEach { SourceRow(it) }
+                        sentences.forEach { line ->
+                            SourceRow(line,
+                                onListen = line.audio?.let { f -> { scope.launch { mp3.play(f) } } },
+                                onShadow = { onShadow(line.text) })
+                        }
                     }
                 }
             }
@@ -409,9 +444,9 @@ fun WordCardSheet(
                 icon = if (known) Icons.Filled.CheckCircle else Icons.Outlined.CheckCircle,
                 on = known, onColor = Color(0xFF34C759),
                 modifier = Modifier.weight(1f), onClick = { toggleKnown() })
-            // Saying it is the point of keeping it — the same screen the book
-            // pages open, one line long.
-            StepButton(Icons.Filled.GraphicEq, stringResource(R.string.shadow), true) { onShadow(term) }
+            // iOS's bar is Keep · I know · ↑ · ↓ and nothing else. Shadowing
+            // lives on the lines (an example's long-press, a talk line's
+            // Shadow button); a waveform here read as the listen button.
             StepButton(Icons.Filled.KeyboardArrowUp, stringResource(R.string.previous_item),
                 index > 0) { index -= 1 }
             StepButton(Icons.Filled.KeyboardArrowDown, stringResource(R.string.next_item),
@@ -429,26 +464,32 @@ fun WordCardSheet(
  * pick up came from), while an expression is evidence — the learner's own
  * turns are what put it in the library in the first place.
  */
+/** One line from a talk, with that turn's own recording when it is on disk
+ *  (iOS `VocabStore.SourceSentence`). */
+private class SourceLine(val text: String, val audio: java.io.File?)
+
 private suspend fun ownLines(
     context: android.content.Context,
     language: String,
     term: String,
     isWord: Boolean,
-): List<String> {
+): List<SourceLine> {
     val needle = term.trim().lowercase()
     if (needle.isEmpty()) return emptyList()
-    val out = ArrayList<String>()
+    val out = ArrayList<SourceLine>()
     for (session in SessionStore.shared(context).load(language)) {
         for (turn in session.turns) {
             if (turn.transcript.isBlank()) continue
             if (isWord) {
                 if (turn.role != TurnRole.FLUENT_SELF) continue
                 if (!VocabLemmas.lemmas(listOf(turn.transcript)).contains(needle)) continue
-                out.add(turn.transcript.trim())
+                out.add(SourceLine(turn.transcript.trim(),
+                    com.roro.futurevoice.data.WeeklyTestEngine.turnAudio(context, turn)))
             } else {
                 if (turn.role != TurnRole.USER) continue
                 if (!turn.transcript.lowercase().contains(needle)) continue
-                out.add(snippet(needle, turn.transcript))
+                out.add(SourceLine(snippet(needle, turn.transcript),
+                    com.roro.futurevoice.data.WeeklyTestEngine.turnAudio(context, turn)))
             }
             if (out.size >= MAX_SOURCE_LINES) return out
         }
@@ -677,15 +718,43 @@ private fun PhraseRow(phrase: String, meaning: String) {
     }
 }
 
+/** iOS `sentenceRow`: the line, then where it came from on the left and
+ *  Listen (when the turn's audio is on disk) · Shadow on the right. */
 @Composable
-private fun SourceRow(text: String) {
-    Text(
-        text,
-        style = MaterialTheme.typography.bodyMedium,
-        modifier = Modifier.fillMaxWidth()
+private fun SourceRow(line: SourceLine, onListen: (() -> Unit)?, onShadow: () -> Unit) {
+    Column(
+        Modifier.fillMaxWidth()
             .background(MaterialTheme.colorScheme.surfaceVariant, ContinuousShape(12.dp))
             .padding(10.dp),
-    )
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(line.text, style = MaterialTheme.typography.bodyMedium)
+        Row(verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Text(stringResource(R.string.talk), fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.weight(1f))
+            if (onListen != null) SourceAction(Icons.Filled.PlayCircleOutline,
+                stringResource(R.string.listen), onListen)
+            SourceAction(Icons.Filled.GraphicEq, stringResource(R.string.shadow), onShadow)
+        }
+    }
+}
+
+@Composable
+private fun SourceAction(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onClick: () -> Unit,
+) {
+    Row(Modifier.clip(CircleShape).clickable(onClick = onClick).padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(15.dp))
+        Text(label, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary)
+    }
 }
 
 /**
@@ -751,6 +820,25 @@ private fun VerdictButton(
 }
 
 /**
+ * The learner's clone id for a pronounce control off the card (the study
+ * deck's Hear it): the same once-per-process lookup the card uses, null
+ * until it lands or when there is no voice.
+ */
+@Composable
+internal fun rememberCloneVoiceId(): String? {
+    var voiceId by remember {
+        mutableStateOf(com.roro.futurevoice.capture.flags.PracticeCaptureFlags.voiceId ?: cachedVoiceId)
+    }
+    LaunchedEffect(Unit) {
+        if (voiceId != null) return@LaunchedEffect
+        val uid = AuthRepository().userId ?: return@LaunchedEffect
+        voiceId = runCatching { VoiceCloneRepository().activeVoiceId(uid) }
+            .getOrNull()?.also { cachedVoiceId = it }
+    }
+    return voiceId
+}
+
+/**
  * The pronounce circle on its own, for a surface that isn't the card (the
  * cloud's notebook peek — iOS shows the same button at the resting height).
  * Absent without a cloned voice, as on the card. Cache first: a word is
@@ -761,7 +849,7 @@ internal fun WordPronounceButton(term: String) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val mp3 = remember { Mp3Player(context.cacheDir, source = "library") }
-    var voiceId by remember { mutableStateOf(cachedVoiceId) }
+    var voiceId by remember { mutableStateOf(com.roro.futurevoice.capture.flags.PracticeCaptureFlags.voiceId ?: cachedVoiceId) }
     var speaking by remember { mutableStateOf(false) }
     DisposableEffect(Unit) { onDispose { mp3.stop() } }
     LaunchedEffect(Unit) {

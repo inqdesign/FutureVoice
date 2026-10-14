@@ -23,6 +23,7 @@ import com.roro.futurevoice.data.SpeechMetrics
 import com.roro.futurevoice.data.SpeechScript
 import com.roro.futurevoice.data.SpeechStore
 import com.roro.futurevoice.data.SpeechTake
+import com.roro.futurevoice.data.ScriptStudy
 import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.ui.HomeTab
 import com.roro.futurevoice.ui.brand.AppSurfaces
@@ -48,6 +49,11 @@ import com.roro.futurevoice.ui.speech.SpeechScriptSheet
  *   speech-script-edit    its editor
  *   speech-own            "Add my own script"
  *   speech-result         a scored take, coach notes landed
+ *   speech-study-off/-on  the Script sheet, Study off / on (iOS 38d34fcd)
+ *   speech-study-card     a highlight's card ("fall apart") over it
+ *   speech-voiceover      the "Hear it in my voice" price under the script
+ *   speech-composer-voiceover / speech-own-voiceover
+ *                         the two creation flows with "Also make it in my voice" on
  */
 object CaptureSpeech {
     private fun native(context: Context) = context.getSharedPreferences("futurevoice", 0)
@@ -112,7 +118,66 @@ object CaptureSpeech {
         }
     }
 
-    val wired: Map<String, @Composable (Context) -> Unit> = mapOf(
+    /** iOS `studySampleScript`: the approved mockup's script. */
+    private fun studyScript(language: String) = SpeechScript(
+        id = "5EED0000-0000-4000-8000-0000000000D1", title = "Why practise out loud?",
+        genre = SpeechGenre.EXPLAINER,
+        body = "Have you ever had the perfect sentence in your head, only to watch it fall apart the moment you said it?\n" +
+            "Speaking is a skill, not just knowledge. You can know the words and the grammar, but if your mouth has never actually built the sentence, it tends to let you down when it matters.\n" +
+            "Saying things aloud also helps them stick. Research suggests we remember what we've said better than what we've only read.",
+        language = language, targetSeconds = 60, createdAt = System.currentTimeMillis())
+
+    /** iOS `studySample`. */
+    private fun studySample(script: SpeechScript): ScriptStudy {
+
+        val found = ScriptStudy.locate(listOf(
+            ScriptStudy.Candidate("only to", ScriptStudy.Kind.GRAMMAR, note = "기대와 달리 결과가 실망스러울 때 써요. ‘…했는데 결국 …하고 말았다’는 흐름이에요.", example = "I ran to the station, only to miss the train."),
+            ScriptStudy.Candidate("fall apart", ScriptStudy.Kind.EXPRESSION, note = "계획이나 말이 버티지 못하고 무너질 때 써요. 여기서는 준비한 문장이 말하는 순간 흐트러지는 느낌이에요.", example = "Our weekend plans fell apart when it started raining."),
+            ScriptStudy.Candidate("not just", ScriptStudy.Kind.GRAMMAR, note = "‘단지 …만이 아니라’ — 뒤에 더 중요한 걸 덧붙일 때 써요."),
+            ScriptStudy.Candidate("tends to", ScriptStudy.Kind.GRAMMAR, note = "‘…하는 경향이 있다’ — 늘 그렇다고 단정하지 않고 부드럽게 말할 때 써요."),
+            ScriptStudy.Candidate("let you down", ScriptStudy.Kind.EXPRESSION, note = "기대를 저버리다, 실망시키다. 여기서는 입이 말을 안 들어준다는 뜻이에요."),
+            ScriptStudy.Candidate("when it matters", ScriptStudy.Kind.EXPRESSION, note = "정말 중요한 순간에."),
+            ScriptStudy.Candidate("stick", ScriptStudy.Kind.WORD, lemma = "stick", note = "머리에 남다, 기억되다."),
+            ScriptStudy.Candidate("Research suggests", ScriptStudy.Kind.EXPRESSION, note = "근거를 소개할 때 쓰는 말이에요. ‘연구에 따르면’."),
+        ), ScriptStudy.paragraphs(script.body), spaced = true)
+        return ScriptStudy(found, listOf(
+            "머릿속엔 완벽했던 문장이 입 밖으로 나오는 순간 무너진 경험을 물으며 시작해요.",
+            "핵심 주장이에요. 단어와 문법을 알아도 입으로 직접 만들어 본 적이 없으면 중요한 순간에 안 나온다는 거예요.",
+            "근거를 하나 더해요. 소리 내어 말한 건 눈으로 읽기만 한 것보다 더 오래 기억에 남아요.",
+        ))
+    }
+
+    /** Study + voiceover modes: a voice and the Light sample account so the
+     *  price line shows the pool it comes from (iOS 38d34fcd). */
+    private fun studyFlags(mode: String, script: SpeechScript) {
+        SpeechCaptureFlags.voiceId = SpeechCaptureFlags.voiceId ?: "capture-voice"
+        SpeechCaptureFlags.account = CaptureSeed.sampleLightAccount
+        val study = studySample(script)
+        SpeechCaptureFlags.study = study
+        SpeechCaptureFlags.studyOn = mode != "speech-study-off" && mode != "speech-voiceover"
+        SpeechCaptureFlags.studyCard = if (mode == "speech-study-card")
+            study.highlights.firstOrNull { it.text == "fall apart" }?.id else null
+        SpeechCaptureFlags.voiceoverOn = mode.endsWith("-voiceover") && mode != "speech-voiceover"
+        SpeechCaptureFlags.ownDraft = if (mode == "speech-own-voiceover") script.body else null
+    }
+
+    private fun studyMode(mode: String): @Composable (Context) -> Unit = { ctx ->
+        val script = remember { studyScript(LanguageScope.active(ctx)).also { studyFlags(mode, it) } }
+        Seeded(ctx) {
+            when (mode) {
+                "speech-composer-voiceover" ->
+                    SpeechComposerSheet(script.language, native(ctx), CefrLevel.B1, onWritten = {}, onDismiss = {})
+                "speech-own-voiceover" ->
+                    SpeechOwnScriptSheet(null, script.language, native(ctx), onSave = {}, onDismiss = {})
+                else -> SpeechScriptSheet(script, native(ctx), onEdited = {}, onDismiss = {})
+            }
+        }
+    }
+
+    val wired: Map<String, @Composable (Context) -> Unit> = listOf(
+        "speech-study-off", "speech-study-on", "speech-study-card", "speech-voiceover",
+        "speech-composer-voiceover", "speech-own-voiceover",
+    ).associateWith { studyMode(it) } + mapOf(
         "speech" to { ctx -> CaptureTalk.TabShot(ctx, HomeTab.SPEECH) { seed(ctx) } },
         "speech-composer" to { ctx ->
             Seeded(ctx) {

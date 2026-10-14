@@ -73,10 +73,12 @@ object CoachMode {
  * it was stiff, one step up if it was fine — then a practice question built to
  * use it ([TutorPrompt]).
  *
- * It lives in the conversation's SYSTEM prompt, so it is fixed for a call:
- * the gateway caches that prompt for the whole call. Flipped mid-call it
- * applies from the next call. Off by default for everyone. A tutored call is
- * a PRACTICE call, like a coached one (`Session.coached`).
+ * It lives in the conversation's SYSTEM prompt. Flipped mid-call, the app
+ * sends the gateway the rebuilt prompt (`set.system`, iOS 88cc3b33) and the
+ * gateway remakes its reply cache, so the next reply is already under the
+ * new rules — it used to apply only from the next call. Off by default for
+ * everyone. A tutored call is a PRACTICE call, like a coached one
+ * (`Session.coached`).
  */
 object TutorMode {
     /** Same name as iOS's defaults key. */

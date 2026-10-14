@@ -55,7 +55,7 @@ fun FreeTalkWelcomeSheet(minutes: Int, onStart: () -> Unit, onDismiss: () -> Uni
     LaunchedEffect(Unit) { revealed = true }
     val reveal by animateFloatAsState(if (revealed) 1f else 0f, tween(500), label = "reveal")
     ModalBottomSheet(
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
+        sheetState = com.roro.futurevoice.ui.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
         Column(
             Modifier.sheetBody()
                 .padding(horizontal = 24.dp).padding(top = 12.dp, bottom = 28.dp),

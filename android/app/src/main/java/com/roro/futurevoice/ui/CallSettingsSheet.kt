@@ -71,7 +71,8 @@ fun CallSettingsSheet(
     /** Coach mode as it resolves now (the learner's flip, else the level's). */
     coachMode: Boolean,
     onCoachMode: (Boolean) -> Unit,
-    /** Tutor mode (`TutorMode`, default off) — applies from the next call. */
+    /** Tutor mode (`TutorMode`, default off) — a flip mid-call applies from
+     *  the next reply. */
     tutorMode: Boolean,
     onTutorMode: (Boolean) -> Unit,
     onFlag: (key: String, value: Boolean) -> Unit,
@@ -83,7 +84,7 @@ fun CallSettingsSheet(
     // iOS: an inset-grouped Form — rounded cards on the grouped ground, a
     // centred title with Done at the trailing edge.
     ModalBottomSheet(
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        sheetState = com.roro.futurevoice.ui.rememberModalBottomSheetState(skipPartiallyExpanded = true),
         onDismissRequest = onDismiss, containerColor = AppSurfaces.ground) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).navigationBarsPadding()
             .verticalScroll(rememberScrollState())) {
@@ -121,15 +122,15 @@ fun CallSettingsSheet(
             }
             GroupedFooter(stringResource(R.string.cm_coach_mode_footer))
 
-            // Fixed for a call: it is part of the prompt the gateway caches
-            // when the call opens (`TutorMode`).
+            // Part of the conversation prompt; a flip mid-call sends the
+            // gateway the new prompt (`TutorMode`).
             GroupedSectionSpacer()
             GroupedCard {
                 ToggleRow(Icons.Outlined.School, stringResource(R.string.tutor_mode), tutorMode) {
                     onTutorMode(it)
                 }
             }
-            GroupedFooter(stringResource(R.string.when_you_make_a_mistake_your_future_self_says_it_the_right_w_458e22))
+            GroupedFooter(stringResource(R.string.when_you_make_a_mistake_your_future_self_says_it_the_right_w_c45516))
 
             GroupedSectionHeader(stringResource(R.string.screen))
             GroupedCard {

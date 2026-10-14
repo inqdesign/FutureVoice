@@ -175,7 +175,7 @@ fun DrillEnrichmentSheet(
     ModalBottomSheet(
         // iOS `.fittingDetents([.medium, .large])`: opens at half height
         // with a grabber, drags up to full.
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = false),
+        sheetState = com.roro.futurevoice.ui.rememberModalBottomSheetState(skipPartiallyExpanded = false),
         containerColor = AppSurfaces.card,
         onDismissRequest = onDismiss,
     ) {

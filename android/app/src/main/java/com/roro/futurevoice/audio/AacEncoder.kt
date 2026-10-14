@@ -25,6 +25,10 @@ object AacEncoder {
         samples: ShortArray,
         sampleRate: Int,
         bitrate: Int = 32_000,
+        /** How long each buffer dequeue may wait. A long file (a script's
+         *  voiceover) spends most of its encode in these waits, so it asks
+         *  for a shorter one; the default is what the takes always used. */
+        pollUs: Long = 10_000,
         onFormat: (MediaFormat) -> Unit = {},
         onSample: (ByteBuffer, MediaCodec.BufferInfo) -> Unit,
     ): Boolean {
@@ -48,7 +52,7 @@ object AacEncoder {
             var spins = 0
             while (!outputDone) {
                 if (!inputDone) {
-                    val inIndex = codec.dequeueInputBuffer(10_000)
+                    val inIndex = codec.dequeueInputBuffer(pollUs)
                     if (inIndex >= 0) {
                         val buf = codec.getInputBuffer(inIndex)!!
                         buf.clear()
@@ -67,7 +71,7 @@ object AacEncoder {
                         }
                     }
                 }
-                val outIndex = codec.dequeueOutputBuffer(info, 10_000)
+                val outIndex = codec.dequeueOutputBuffer(info, pollUs)
                 when {
                     outIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> onFormat(codec.outputFormat)
                     outIndex >= 0 -> {
@@ -80,7 +84,7 @@ object AacEncoder {
                         if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) outputDone = true
                         spins = 0
                     }
-                    else -> if (inputDone && ++spins > 500) outputDone = true   // a stuck encoder
+                    else -> if (inputDone && ++spins > 500 * (10_000 / maxOf(1L, pollUs)).toInt()) outputDone = true   // a stuck encoder
                 }
             }
             true

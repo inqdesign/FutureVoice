@@ -209,7 +209,7 @@ fun VoiceMoveSheet(
     // Not optional (iOS 2026-10-13, founder): every voice moves, so the sheet
     // has no Later and can't be swiped or backed away until it is done.
     ModalBottomSheet(
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true,
+        sheetState = com.roro.futurevoice.ui.rememberModalBottomSheetState(skipPartiallyExpanded = true,
             confirmValueChange = { it != androidx.compose.material3.SheetValue.Hidden || done }),
         onDismissRequest = { if (done) onDismiss() },
         properties = androidx.compose.material3.ModalBottomSheetProperties(shouldDismissOnBackPress = false),

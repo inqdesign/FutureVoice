@@ -218,6 +218,12 @@ fun ShadowScreen(
     onNext: (() -> Unit)? = null,
     /** Capture only. */
     seed: ShadowSeed? = null,
+    /** Audio that came with the line from somewhere other than the phrase
+     *  store — a Speech script's voiceover, whose word timings were measured
+     *  when it was made (iOS `ShadowDrillView(presetTimings:)`). Nothing is
+     *  synthesized for it. */
+    presetAudio: java.io.File? = null,
+    presetTimings: List<WordTiming>? = null,
 ) {
     NavCoverGuard()
     val context = LocalContext.current
@@ -335,6 +341,31 @@ fun ShadowScreen(
             timings = ws.mapIndexed { i, w -> WordTiming(w, i * 380, (i + 1) * 380 - 60) }
             targetDurationMs = ws.size * 380
             if (ws.size >= 5) selection = 2..4
+            // A target take pushed beside the app (`capture-shadow-target.m4a`
+            // in files/) puts the trimmer on screen, its words spread over
+            // the take; `capture-whole-line` (an empty file) selects them all.
+            val take = File(context.filesDir, "capture-shadow-target.m4a")
+            if (take.exists()) {
+                val d = withContext(Dispatchers.IO) { mediaDurationMs(take) }
+                val per = d.toDouble() / maxOf(ws.size, 1)
+                timings = ws.mapIndexed { i, w -> WordTiming(w, (i * per).toInt(), ((i + 1) * per).toInt() - 60) }
+                targetDurationMs = d
+                if (File(context.filesDir, "capture-whole-line").exists()) selection = 0..ws.lastIndex
+                targetFile = take
+                phase = ShadowPhase.IDLE
+            }
+            return@LaunchedEffect
+        }
+        if (presetAudio != null) {
+            val duration = withContext(Dispatchers.IO) { mediaDurationMs(presetAudio) }
+            targetDurationMs = duration
+            val stored = presetTimings.orEmpty()
+            timings = if (TtsAlignment.alignmentMatches(line, stored) && WordTimings.fits(stored, duration) &&
+                WordTimings.cutMatches(stored, line, targetLanguage)) stored
+            else WordTimings.estimate(line, duration, targetLanguage)
+            targetFile = presetAudio
+            targetPcm = scope.async(Dispatchers.Default) { AudioDecode.decode(presetAudio.readBytes()) }
+            phase = ShadowPhase.IDLE
             return@LaunchedEffect
         }
         val store = PhraseAudioStore.shared(context)
@@ -381,7 +412,7 @@ fun ShadowScreen(
         phase = ShadowPhase.IDLE
     }
     LaunchedEffect(lineId) {
-        saved = turnId != null && SavedLineStore.shared(context).isSaved(turnId)
+        saved = SavedLineStore.shared(context).isSaved(lineId)
     }
     LaunchedEffect(lineId, reload) {
         if (seed != null) return@LaunchedEffect
@@ -727,15 +758,20 @@ fun ShadowScreen(
                         onClick = { if (!recordingNow) { target.stop(); onBack() } },
                         modifier = Modifier.alpha(if (recordingNow) 0.4f else 1f))
                 },
-                trailing = if (turnId != null) ({
+                // iOS draws the bookmark on EVERY shadow screen — its line
+                // always carries a Turn id. A line opened here without one
+                // (a scene, a book page, a word card) is saved under the same
+                // stable id its attempts are filed under, so reopening it
+                // shows it saved and its takes stay attached.
+                trailing = {
                     IosGlassButton(onClick = {
-                        scope.launch { saved = SavedLineStore.shared(context).toggle(SavedLine(id = turnId, text = line)) }
+                        scope.launch { saved = SavedLineStore.shared(context).toggle(SavedLine(id = lineId, text = line)) }
                     }, circle = true) {
                         Icon(if (saved) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
                             contentDescription = stringResource(if (saved) R.string.remove_from_saved_lines else R.string.save_line),
                             tint = MaterialTheme.colorScheme.primary)
                     }
-                }) else null,
+                },
                 modifier = Modifier.statusBarsPadding().padding(horizontal = 16.dp).padding(top = 8.dp, bottom = 4.dp),
             )
             Column(

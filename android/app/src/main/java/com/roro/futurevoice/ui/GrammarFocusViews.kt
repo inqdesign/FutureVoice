@@ -143,7 +143,7 @@ fun GrammarFocusPair(mistake: String, correction: String, maxLines: Int = 1) {
 @Composable
 fun GrammarFocusSheet(focus: GrammarFocus, repeats: Int, onDismiss: () -> Unit) {
     ModalBottomSheet(
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
+        sheetState = com.roro.futurevoice.ui.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
         Column(Modifier.sheetBody().padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

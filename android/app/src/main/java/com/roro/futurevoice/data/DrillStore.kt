@@ -232,8 +232,25 @@ class DrillStore private constructor(context: Context) {
     suspend fun load(language: String = LanguageScope.active(appContext)): List<DrillCard> =
         mutex.withLock { loadLocked(language) }
 
+    /**
+     * The repaired list as last read, and which file state it was read from
+     * (iOS `2f40e7d9`). A read decodes the whole file and normalizes every
+     * card, and the Review tab asks for it several times per visit. Keyed on
+     * the file's path, modification time and size rather than invalidated by
+     * our own writes alone, because a restore writes this file BY PATH
+     * without going through the store.
+     */
+    private data class FileStamp(val path: String, val modified: Long, val size: Long)
+    @Volatile private var cache: Pair<FileStamp, List<DrillCard>>? = null
+
     private suspend fun loadLocked(language: String): List<DrillCard> = withContext(Dispatchers.IO) {
         val f = file(language)
+        val stamp = FileStamp(f.path, f.lastModified(), f.length())
+        cache?.let { (cached, cards) -> if (cached == stamp) return@withContext cards }
+        loadFromDisk(f).also { cache = stamp to it }
+    }
+
+    private fun loadFromDisk(f: File): List<DrillCard> =
         if (!f.exists()) emptyList()
         else runCatching {
             StoreJson.json.decodeFromString(ListSerializer(DrillCard.serializer()), f.readText())
@@ -247,7 +264,6 @@ class DrillStore private constructor(context: Context) {
                 DrillIngest.retired(
                     it.copy(targetPhrase = DrillIngest.coreSentence(it.targetPhrase, it.sourcePhrase)))
             }
-    }
 
     suspend fun clearUnreviewedCards(sessionId: String, language: String = LanguageScope.active(appContext)) =
         mutex.withLock {
@@ -433,5 +449,6 @@ class DrillStore private constructor(context: Context) {
         val tmp = File(target.parentFile, "$FILE_NAME.tmp")
         tmp.writeText(StoreJson.json.encodeToString(ListSerializer(DrillCard.serializer()), cards))
         if (!tmp.renameTo(target)) { target.delete(); tmp.renameTo(target) }
+        cache = null
     }
 }

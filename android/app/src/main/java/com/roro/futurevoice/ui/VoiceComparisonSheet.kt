@@ -183,7 +183,7 @@ fun VoiceComparisonSheet(
     // iOS: a List under an inline title with Done — the two voices and the
     // line they both say in one card, then the verdict in its own.
     ModalBottomSheet(
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        sheetState = com.roro.futurevoice.ui.rememberModalBottomSheetState(skipPartiallyExpanded = true),
         onDismissRequest = { stopAll(); onDismiss() },
         containerColor = AppSurfaces.ground,
     ) {

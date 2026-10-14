@@ -1,5 +1,6 @@
 package com.roro.futurevoice.ui.speech
 
+import androidx.compose.material.icons.outlined.BorderColor
 import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -52,7 +53,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
+import com.roro.futurevoice.ui.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -84,6 +85,8 @@ import com.roro.futurevoice.data.SpeechLibrary
 import com.roro.futurevoice.data.SpeechScript
 import com.roro.futurevoice.data.SpeechStore
 import com.roro.futurevoice.data.SpeechTake
+import com.roro.futurevoice.data.ScriptVoiceover
+import com.roro.futurevoice.data.ScriptVoiceoverCenter
 import com.roro.futurevoice.data.StoreJson
 import com.roro.futurevoice.net.SpeechScriptEngine
 import com.roro.futurevoice.ui.FormCard
@@ -482,17 +485,40 @@ internal fun SpeechComposerSheet(language: String, native: String, level: CefrLe
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val failed = stringResource(R.string.the_script_couldn_t_be_written_try_again)
+    // "Also make it in my voice" — optional, priced before anything is
+    // written, made right after (iOS 3ebadf10).
+    val voiceId = rememberCloneVoiceId()
+    var voiceover by remember { mutableStateOf(com.roro.futurevoice.capture.flags.SpeechCaptureFlags.voiceoverOn) }
+    var wall by remember { mutableStateOf<VoiceoverWall?>(null) }
+    val account = rememberGateAccount()
+    val quote = ScriptVoiceover.quoteMinutes(seconds)
 
     fun write() {
         writing = true
         prefs.edit().putString("speech.composer.genre", genre.raw).putInt("speech.composer.seconds", seconds).apply()
         val avoid = SpeechStore.shared(context).scripts.value.map { it.title }
+        val quoted = quote
+        val vid = if (voiceover) voiceId else null
         scope.launch {
+            // The minutes are asked about BEFORE the script is written, so
+            // nobody waits for a script whose voiceover they can't have.
+            if (vid != null) {
+                if (voiceoverBlocked()) { writing = false; wall = VoiceoverWall.PAYWALL; return@launch }
+                ScriptVoiceoverCenter.wall(quoted)?.let { refused ->
+                    writing = false
+                    val w = refused.voiceoverWall()
+                    if (w != null) wall = w else error = refused.message
+                    return@launch
+                }
+            }
             try {
                 val script = SpeechScriptEngine.write(genre, topic, seconds, language, native, level, avoid)
                 Analytics.capture("speech_script_written", mapOf(
                     "genre" to genre.raw, "seconds" to seconds, "topic" to topic.isNotBlank()))
                 writing = false
+                // Made in the background; the Script sheet shows its progress,
+                // and a failure there is a button to try again.
+                if (vid != null) ScriptVoiceoverCenter.makeInBackground(context, script, vid, quoted)
                 onDismiss()
                 onWritten(script)
             } catch (_: Exception) {
@@ -538,6 +564,11 @@ internal fun SpeechComposerSheet(language: String, native: String, level: CefrLe
                             modifier = Modifier.fillMaxWidth())
                     }
                 }
+                if (voiceId != null) {
+                    FormSection(null, footer = voiceoverPriceLine(quote, account)) {
+                        VoiceoverToggleRow(voiceover, enabled = !writing) { voiceover = it }
+                    }
+                }
             }
             if (writing) {
                 Column(Modifier.align(Alignment.Center)
@@ -556,6 +587,19 @@ internal fun SpeechComposerSheet(language: String, native: String, level: CefrLe
             confirmButton = { TextButton(onClick = { error = null }) { Text(stringResource(R.string.ok)) } },
             title = { Text(stringResource(R.string.couldn_t_write_the_script)) },
             text = { Text(msg) })
+    }
+    VoiceoverWallHost(wall) { wall = null }
+}
+
+/** "Also make it in my voice" — one switch row in a form card. */
+@Composable
+private fun VoiceoverToggleRow(on: Boolean, enabled: Boolean = true, onChange: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable(enabled = enabled) { onChange(!on) }
+        .padding(horizontal = 16.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(stringResource(R.string.also_make_it_in_my_voice), style = MaterialTheme.typography.bodyLarge,
+            color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f))
+        com.roro.futurevoice.ui.brand.IosSwitch(on, onCheckedChange = if (enabled) onChange else null, enabled = enabled)
     }
 }
 
@@ -585,11 +629,21 @@ internal fun SpeechOwnScriptSheet(existing: SpeechScript?, language: String, nat
                                   onSave: (SpeechScript) -> Unit, onDismiss: () -> Unit) {
     val context = LocalContext.current
     var title by remember { mutableStateOf(existing?.title.orEmpty()) }
-    var text by remember { mutableStateOf(existing?.body.orEmpty()) }
+    var text by remember { mutableStateOf(existing?.body
+        ?: com.roro.futurevoice.capture.flags.SpeechCaptureFlags.ownDraft.orEmpty()) }
     val lang = existing?.language ?: language.substringBefore('-')
     val trimmed = text.trim()
+    // "Also make it in my voice", priced live from what is typed — the same
+    // function the Script sheet's button reads (iOS 3ebadf10).
+    val voiceId = rememberCloneVoiceId()
+    var voiceover by remember { mutableStateOf(com.roro.futurevoice.capture.flags.SpeechCaptureFlags.voiceoverOn) }
+    var wall by remember { mutableStateOf<VoiceoverWall?>(null) }
+    var checking by remember { mutableStateOf(false) }
+    val account = rememberGateAccount()
+    val scope = rememberCoroutineScope()
+    val quote = ScriptVoiceover.quoteMinutes(trimmed.ifEmpty { " " }, lang)
 
-    fun save() {
+    fun save(): SpeechScript {
         val given = title.trim()
         val script = SpeechScript(
             id = existing?.id ?: StoreJson.newId(),
@@ -608,14 +662,35 @@ internal fun SpeechOwnScriptSheet(existing: SpeechScript?, language: String, nat
         if (existing == null) Analytics.capture("speech_script_added", mapOf("seconds" to script.targetSeconds))
         onDismiss()
         onSave(script)
+        return script
+    }
+
+    fun saveTapped() {
+        val vid = voiceId
+        if (!voiceover || vid == null || quote > ScriptVoiceover.MAX_MINUTES) { save(); return }
+        val quoted = quote
+        checking = true
+        scope.launch {
+            try {
+                if (voiceoverBlocked()) { wall = VoiceoverWall.PAYWALL; return@launch }
+                ScriptVoiceoverCenter.wall(quoted)?.let { refused ->
+                    refused.voiceoverWall()?.let { wall = it }
+                    return@launch
+                }
+                val script = save()
+                ScriptVoiceoverCenter.makeInBackground(context, script, vid, quoted)
+            } finally {
+                checking = false
+            }
+        }
     }
 
     SpeechSheet(onDismiss) {
         SheetHeader(stringResource(if (existing == null) R.string.my_script else R.string.edit_script),
             leading = { IosGlassTextButton(stringResource(R.string.cancel), onClick = onDismiss) },
             trailing = {
-                IosGlassTextButton(stringResource(R.string.save), onClick = { save() },
-                    bold = trimmed.isNotEmpty(), enabled = trimmed.isNotEmpty())
+                IosGlassTextButton(stringResource(R.string.save), onClick = { saveTapped() },
+                    bold = trimmed.isNotEmpty(), enabled = trimmed.isNotEmpty() && !checking)
             })
         FormSection(null) {
             PlainField(title, { title = it }, stringResource(R.string.title_optional))
@@ -654,7 +729,17 @@ internal fun SpeechOwnScriptSheet(existing: SpeechScript?, language: String, nat
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 7.dp))
         }
+        // Only once there IS a script: the price is measured from it (iOS,
+        // founder 2026-10-14 — the length first, then the cost).
+        if (voiceId != null && trimmed.isNotEmpty()) {
+            val tooLong = quote > ScriptVoiceover.MAX_MINUTES
+            FormSection(null, footer = if (tooLong) stringResource(R.string.this_script_is_too_long_to_make_in_your_voice)
+                else voiceoverPriceLine(quote, account)) {
+                VoiceoverToggleRow(voiceover, enabled = !tooLong) { voiceover = it }
+            }
+        }
     }
+    VoiceoverWallHost(wall) { wall = null }
 }
 
 // MARK: - Plus only
@@ -741,14 +826,74 @@ private fun PlusFeature(icon: ImageVector, title: String, detail: String) {
 internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (SpeechScript) -> Unit,
                                onDismiss: () -> Unit) {
     val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("futurevoice", Context.MODE_PRIVATE) }
     var shown by remember { mutableStateOf(script) }
     var editing by remember { mutableStateOf(false) }
+    val capture = com.roro.futurevoice.capture.flags.SpeechCaptureFlags
+    // Study mode (iOS 3ebadf10): the script's expressions, grammar and words
+    // marked in the text, a note under each paragraph. Remembered across
+    // scripts — someone who studies keeps studying.
+    var studying by remember { mutableStateOf(capture.studyOn ?: prefs.getBoolean("speech.script.study", false)) }
+    var study by remember { mutableStateOf(capture.study) }
+    var studyFailed by remember { mutableStateOf(false) }
+    var studyAttempt by remember { mutableStateOf(0) }
+    var card by remember { mutableStateOf(capture.studyCard?.let { id -> capture.study?.highlights?.firstOrNull { it.id == id } }) }
+    val level = rememberLevel()
+    val voiceId = rememberCloneVoiceId()
+    val paragraphs = remember(shown.body) { com.roro.futurevoice.data.ScriptStudy.paragraphs(shown.body) }
+    LaunchedEffect(studying, shown.body, studyAttempt) {
+        if (!studying || study != null) return@LaunchedEffect
+        studyFailed = false
+        study = try {
+            com.roro.futurevoice.data.ScriptStudyEngine.study(context, shown, native, level)
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) {
+            studyFailed = true; null
+        }
+    }
     SpeechSheet(onDismiss) {
         SheetHeader(stringResource(R.string.script),
+            // Edit on the left, Done alone on the right (founder, 2026-10-14).
+            // The bundled sample is everyone's and stays as shipped.
             leading = if (!shown.isBuiltIn && !shown.isChallenge) ({
                 IosGlassTextButton(stringResource(R.string.edit), onClick = { editing = true })
             }) else null,
-            trailing = { IosGlassTextButton(stringResource(R.string.done), onClick = onDismiss, bold = true) })
+            trailing = {
+                IosGlassTextButton(stringResource(R.string.done), onClick = onDismiss, bold = true)
+            })
+        val shownStudy = study
+        // Its own row under the header, not in it (iOS 18f1fbf7): a switch
+        // beside the title and Done crowded the header, and in longer
+        // languages the label had nowhere to go.
+        FormCard {
+            Row(Modifier.fillMaxWidth()
+                .clickable {
+                    studying = !studying
+                    prefs.edit().putBoolean("speech.script.study", studying).apply()
+                }
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Icon(Icons.Outlined.BorderColor, contentDescription = null, modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.speech_study_toggle), style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f))
+                com.roro.futurevoice.ui.brand.IosSwitch(studying, onCheckedChange = null)
+            }
+        }
+        // Right under the switch, where the eye is: below a long script the
+        // "Preparing…" row was off screen, and the switch read as doing nothing.
+        if (studying && shownStudy != null) {
+            Text(stringResource(R.string.tap_for_an_explanation), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 7.dp))
+            ScriptStudyLegend(shownStudy, Modifier.padding(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 8.dp))
+        } else if (studying) {
+            Box(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 14.dp)) {
+                ScriptStudyStatus(studyFailed) { studyAttempt += 1 }
+            }
+        } else {
+            Spacer(Modifier.padding(top = 22.dp))
+        }
         FormCard {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(shown.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
@@ -756,10 +901,15 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
                     Text(shown.summary, style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                SelectionContainer {
-                    Text(shown.body, style = MaterialTheme.typography.bodyLarge.copy(
-                        lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.2f),
-                        modifier = Modifier.padding(top = 4.dp))
+                Box(Modifier.padding(top = 4.dp)) {
+                    if (studying && shownStudy != null) {
+                        ScriptStudyText(paragraphs, shownStudy) { card = it }
+                    } else {
+                        SelectionContainer {
+                            Text(shown.body, style = MaterialTheme.typography.bodyLarge.copy(
+                                lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.2f))
+                        }
+                    }
                 }
             }
         }
@@ -767,6 +917,7 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
             .joinToString("  ·  "), style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 16.dp, top = 7.dp))
+        voiceId?.let { ScriptVoiceoverSection(shown, it) }
         if (shown.keyTerms.isNotEmpty()) {
             FormSection(stringResource(R.string.key_terms)) {
                 shown.keyTerms.forEachIndexed { i, t ->
@@ -791,8 +942,12 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
             onSave = { updated ->
                 SpeechStore.shared(context).add(updated)
                 shown = updated
+                study = null
                 onEdited(updated)
             }, onDismiss = { editing = false })
+    }
+    card?.let { h ->
+        study?.let { st -> ScriptStudyCard(h, st, shown.language, onDismiss = { card = null }) }
     }
 }
 

@@ -1,6 +1,8 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.foundation.layout.Arrangement
@@ -172,10 +174,18 @@ private fun TalkDetailPage(
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
     var session by remember { mutableStateOf<Session?>(null) }
     // The word card opened from the Words chapter: (term, the list it walks).
-    var wordCard by remember { mutableStateOf<Pair<String, List<String>>?>(null) }
+    var wordCard by remember { mutableStateOf<Pair<String, List<String>>?>(
+        com.roro.futurevoice.capture.flags.PracticeCaptureFlags.talkDetailWord?.let { it to listOf(it) }) }
     wordCard?.let { (term, list) ->
         WordCardSheet(terms = list, initialTerm = term, kind = LibraryKind.WORDS,
             language = language, onShadow = onShadow, onDismiss = { wordCard = null })
+    }
+    // The expression card opened from the Expressions chapter (iOS
+    // `phraseSheet`): the same card the Expressions library opens.
+    var phraseCard by remember { mutableStateOf<Pair<String, List<String>>?>(null) }
+    phraseCard?.let { (term, list) ->
+        WordCardSheet(terms = list, initialTerm = term, kind = LibraryKind.EXPRESSIONS,
+            language = language, onShadow = onShadow, onDismiss = { phraseCard = null })
     }
     var chapter by remember { mutableStateOf(
         TalkChapter.entries.firstOrNull { it.name == com.roro.futurevoice.capture.flags.PracticeCaptureFlags.talkDetailChapter }
@@ -533,9 +543,40 @@ private fun TalkDetailPage(
                                 Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                // iOS `wordChip`: a capsule — bookmark + fill when
+                                // it's in the notebook, a green check + fill when
+                                // known, an outline otherwise.
+                                val revisionNow by StoreEvents.revision.collectAsStateWithLifecycle()
+                                var states by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+                                LaunchedEffect(mine, revisionNow) {
+                                    val v = com.roro.futurevoice.data.VocabStore.shared(context)
+                                    states = mine.associateWith { w ->
+                                        when {
+                                            v.isStudying(w, language) -> 1
+                                            v.state(w, language) != null -> 2
+                                            else -> 0
+                                        }
+                                    }
+                                }
                                 mine.forEach { w ->
-                                    androidx.compose.material3.AssistChip(
-                                        onClick = { wordCard = w to mine }, label = { Text(w) })
+                                    val st = states[w] ?: 0
+                                    val shape = androidx.compose.foundation.shape.RoundedCornerShape(50)
+                                    Row(
+                                        Modifier.clip(shape)
+                                            .then(if (st != 0) Modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest, shape)
+                                                else Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape))
+                                            .clickable { wordCard = w to mine }
+                                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                    ) {
+                                        if (st == 1) Icon(Icons.Filled.Bookmark, contentDescription = null,
+                                            modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.primary)
+                                        else if (st == 2) Icon(Icons.Filled.CheckCircle, contentDescription = null,
+                                            modifier = Modifier.size(14.dp), tint = androidx.compose.ui.graphics.Color(0xFF34C759))
+                                        Text(w, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium,
+                                            color = MaterialTheme.colorScheme.onSurface)
+                                    }
                                 }
                             }
                         }
@@ -554,10 +595,31 @@ private fun TalkDetailPage(
                             val (used, offered) = curriculum.expressions.partition {
                                 com.roro.futurevoice.talk.CarryoverDetector.normalized(it.text) in mine
                             }
-                            offered.forEach { MasteryRow(it.text, it.masteredAt != null) }
+                            // iOS `expressionsPage`: a header over each group, and a
+                            // row opens that phrase's card.
+                            val all = (offered + used).map { it.text }
+                            if (offered.isNotEmpty()) {
+                                Text(stringResource(R.string.from_your_fluent_self),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(top = 12.dp))
+                                offered.forEach { item ->
+                                    MasteryRow(item.text, item.masteredAt != null,
+                                        onClick = { phraseCard = item.text to all })
+                                }
+                            }
                             if (used.isNotEmpty()) {
                                 if (offered.isNotEmpty()) HorizontalDivider(Modifier.padding(vertical = 4.dp))
-                                used.forEach { MasteryRow(it.text, it.masteredAt != null) }
+                                Text(stringResource(R.string.you_said_these),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(top = 12.dp))
+                                used.forEach { item ->
+                                    MasteryRow(item.text, item.masteredAt != null,
+                                        onClick = { phraseCard = item.text to all })
+                                }
                             }
                         }
                         PageFooter(stringResource(
@@ -1053,7 +1115,7 @@ private fun GrammarReviewSheet(
     onMisheard: ((GrammarIssue) -> Unit)? = null,
 ) {
     ModalBottomSheet(
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
+        sheetState = com.roro.futurevoice.ui.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
         Column(
             Modifier.sheetBody()
                 .padding(horizontal = 20.dp).padding(bottom = 28.dp),

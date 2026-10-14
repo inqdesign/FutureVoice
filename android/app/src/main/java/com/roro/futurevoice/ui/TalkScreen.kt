@@ -360,7 +360,7 @@ fun TalkScreen(
         mutableStateOf(com.roro.futurevoice.talk.CoachMode.resolve(
             com.roro.futurevoice.talk.CoachMode.choice(context), level.code))
     }
-    // Tutor mode: read by the NEXT call when it opens (`TutorMode`).
+    // Tutor mode: a flip mid-call reaches the live call (`TutorMode`).
     var tutorMode by remember { mutableStateOf(com.roro.futurevoice.talk.TutorMode.isOn(context)) }
     if (showingCallSettings) {
         CallSettingsSheet(
@@ -371,6 +371,7 @@ fun TalkScreen(
             onTutorMode = {
                 com.roro.futurevoice.talk.TutorMode.set(context, it)
                 tutorMode = it
+                vm.setTutorMode(it)
             },
             onCoachMode = {
                 com.roro.futurevoice.talk.CoachMode.setChoice(context, it)
@@ -504,7 +505,11 @@ fun TalkScreen(
     // animation — the stand-in for iOS's bottom anchor, which keeps the end
     // in place in the same frame — and everything else still eases.
     val streamingReply = state.turns.lastOrNull()?.takeIf { it.role == TurnRole.FLUENT_SELF }
-    val contentSize = Triple(state.turns.size, state.partial.length + state.phase.ordinal * 100_000, 0) to state.turns.sumOf {
+    // The learner's live dictation grows a word at a time, like a streaming
+    // reply: an animated scroll restarted on every partial made the call
+    // screen flicker while they spoke (2026-10-14). It is followed without
+    // animation below, so only the phase and the lines move this one.
+    val contentSize = Triple(state.turns.size, state.phase.ordinal * 100_000, 0) to state.turns.sumOf {
         if (it === streamingReply) 0 else it.transcript.length
     }
     LaunchedEffect(contentSize) {
@@ -527,6 +532,12 @@ fun TalkScreen(
         if (state.turns.isNotEmpty() && followBottom) {
             val last = (listState.layoutInfo.totalItemsCount - 1).coerceAtLeast(0)
             listState.animateScrollToItem(last, Int.MAX_VALUE)
+        }
+    }
+    LaunchedEffect(state.partial.length) {
+        if (state.partial.isNotEmpty() && followBottom && !listState.isScrollInProgress) {
+            val last = (listState.layoutInfo.totalItemsCount - 1).coerceAtLeast(0)
+            listState.scrollToItem(last, Int.MAX_VALUE)
         }
     }
     LaunchedEffect(streamingReply?.id, streamingReply?.transcript?.length) {
@@ -593,12 +604,22 @@ fun TalkScreen(
             showBook = true
         }
     }
+    // The book's own shadow taps (Shadow chapter, a word card's Shadow)
+    // open the shadow screen over it, as iOS presents ShadowDrillView over
+    // the wrap-up's book — the book here had no handler, so a tap did nothing.
+    var bookShadowLine by remember { mutableStateOf<String?>(null) }
     if (showBook && endedId != null) {
+        bookShadowLine?.let { line ->
+            ShadowScreen(line = line, voiceId = voiceId, targetLanguage = targetLanguage,
+                onBack = { bookShadowLine = null })
+            return
+        }
         TalkDetailScreen(
             sessionId = endedId,
             language = targetLanguage,
             level = level,
             onBack = {},
+            onShadow = { bookShadowLine = it },
             onDone = { pitchThenLeave() },
         )
         return
@@ -1206,7 +1227,13 @@ private fun SuggestionChip(suggestion: com.roro.futurevoice.talk.TurnSuggestion,
         correctionLine(suggestion.alternative, original, language,
             SpanStyle(color = tint, fontWeight = FontWeight.SemiBold))
     }
-    Column(Modifier.fillMaxWidth().padding(top = 4.dp),
+    // iOS `SuggestionChip`: a rounded card filled secondarySystemBackground
+    // (#F2F2F7 / #1C1C1E), 12 × 8 padding — Android drew the text bare.
+    val chipFill = if (androidx.compose.foundation.isSystemInDarkTheme())
+        MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainer
+    Column(Modifier.fillMaxWidth().padding(top = 4.dp)
+            .background(chipFill, com.roro.futurevoice.ui.brand.ContinuousShape(12.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(line, style = MaterialTheme.typography.bodyMedium)
         Text(suggestion.reason, style = MaterialTheme.typography.bodySmall,
