@@ -300,9 +300,17 @@ fun WordCardSheet(
                 .padding(horizontal = 22.dp).padding(bottom = 12.dp),
             verticalArrangement = Arrangement.spacedBy(26.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // iOS: the title beside the pronounce circle, 14 pt apart and
+            // centred on it; a phrase a size down (30 vs 34) because it is
+            // several words and still has to fit. The line height is set with
+            // the size — inherited, it was body text's and a wrapped phrase's
+            // lines ran into each other.
+            Row(verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Text(term, fontSize = 34.sp, fontWeight = FontWeight.Bold,
+                    val titleSize = if (isWord) 34.sp else 30.sp
+                    Text(term, fontSize = titleSize, lineHeight = titleSize * 1.2f,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface)
                     // A kanji headword has to print its reading, or the card
                     // teaches a word nobody can say out loud. Several where
