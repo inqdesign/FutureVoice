@@ -23,6 +23,11 @@ import com.roro.futurevoice.ui.WelcomeScreen
  */
 object CaptureOnboarding {
     val wired: Map<String, @Composable (Context) -> Unit> = mapOf<String, @Composable (Context) -> Unit>(
+        // The first-run "About you" cards (iOS `PersonaIntakeView`, `-intakeStep <n>`
+        // with "Eunggyu" / "Munich" stand-ins): 0 name · 1 home · 2 interests.
+        "persona-intake" to { c -> PersonaIntakeShot(c, 0) },
+        "persona-intake-1" to { c -> PersonaIntakeShot(c, 1) },
+        "persona-intake-2" to { c -> PersonaIntakeShot(c, 2) },
         // The first screen, primary path — with the sign-in link RootScreen
         // gives it (no invite path on Android, so that button is absent there too).
         // `--es welcomePage <n>` holds on one beat of the film, as iOS's
@@ -103,4 +108,15 @@ private fun SheetPage(sheet: @Composable () -> Unit) {
     androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize()
         .background(com.roro.futurevoice.ui.brand.AppSurfaces.ground))
     sheet()
+}
+
+@Composable
+private fun PersonaIntakeShot(c: Context, step: Int) {
+    androidx.compose.runtime.remember {
+        com.roro.futurevoice.ui.PersonaDraft.save(c,
+            com.roro.futurevoice.talk.UserPersona(displayName = "Eunggyu", city = "Munich"), step)
+    }
+    com.roro.futurevoice.ui.PersonaIntakeScreen(
+        initial = com.roro.futurevoice.talk.UserPersona(), targetLanguage = "en", nativeLanguage = "ko",
+        onBackToSetup = {}, onFinish = {})
 }

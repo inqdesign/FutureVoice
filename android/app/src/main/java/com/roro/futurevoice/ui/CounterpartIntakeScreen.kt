@@ -386,11 +386,11 @@ private enum class Step { WHO, RELATIONSHIP, SPEECH, NARRATIVE1, NARRATIVE2, NAR
 /** iOS `secondarySystemBackground`: the grey an intake card or field sits
  *  on, over the white page. */
 @Composable
-private fun cardFill() = iosFill()
+internal fun cardFill() = iosFill()
 
 /** `ProgressView(value:total:)` — a 4 pt capsule track, the accent fill. */
 @Composable
-private fun IntakeProgress(fraction: Float, modifier: Modifier = Modifier) {
+internal fun IntakeProgress(fraction: Float, modifier: Modifier = Modifier) {
     Box(modifier.fillMaxWidth().height(4.dp).clip(CircleShape).background(iosFill())) {
         Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).height(4.dp).clip(CircleShape)
             .background(MaterialTheme.colorScheme.primary))
@@ -399,7 +399,7 @@ private fun IntakeProgress(fraction: Float, modifier: Modifier = Modifier) {
 
 /** iOS `IntakeStepHeader`: `.title2.bold()` and a `.callout` grey line. */
 @Composable
-private fun IntakeStepHeader(question: String, detail: String) {
+internal fun IntakeStepHeader(question: String, detail: String) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(question, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         if (detail.isNotEmpty()) Text(detail, style = MaterialTheme.typography.bodyLarge.copy(
@@ -410,7 +410,7 @@ private fun IntakeStepHeader(question: String, detail: String) {
 
 /** The grey rounded card chips and an inline field sit in (padding 14, r 12). */
 @Composable
-private fun IntakeCard(content: @Composable () -> Unit) {
+internal fun IntakeCard(content: @Composable () -> Unit) {
     Column(Modifier.fillMaxWidth().clip(ContinuousShape(12.dp)).background(cardFill()).padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)) { content() }
 }
@@ -446,7 +446,7 @@ private fun FilledField(
 
 /** A bare `TextField` inside a card: text and placeholder, nothing drawn around it. */
 @Composable
-private fun InlineField(value: String, onChange: (String) -> Unit, placeholder: String,
+internal fun InlineField(value: String, onChange: (String) -> Unit, placeholder: String,
                         onDone: (() -> Unit)? = null) {
     val style = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface)
     BasicTextField(
@@ -469,7 +469,7 @@ private fun InlineField(value: String, onChange: (String) -> Unit, placeholder: 
 /** iOS `IntakeChipLabel`: `.subheadline` in a capsule, 12 × 6 padding —
  *  the accent with a white label when picked, the grey fill otherwise. */
 @Composable
-private fun IntakeChipLabel(text: String, isOn: Boolean, onClick: () -> Unit) {
+internal fun IntakeChipLabel(text: String, isOn: Boolean, onClick: () -> Unit) {
     Text(
         intakeLabel(text),
         style = MaterialTheme.typography.bodyMedium,
@@ -514,13 +514,13 @@ private fun ChipGrid(items: List<String>, selection: Set<String>, onToggle: (Str
 }
 
 /**
- * iOS `ChipPickerField`: the chip grid in a grey card, and — with
+ * iOS `ChipPickerField`: the chips, flowing, in a grey card, and — with
  * [allowsCustom] — a bare "Add your own (comma-separated)" line under it.
  * What is typed there is folded in on Done and when the card leaves (Next),
  * split on commas; custom picks show as chips beside the presets.
  */
 @Composable
-private fun ChipPickerField(presets: List<String>, selection: Set<String>, allowsCustom: Boolean,
+internal fun ChipPickerField(presets: List<String>, selection: Set<String>, allowsCustom: Boolean,
                             onToggle: (String) -> Unit) {
     var draft by remember { mutableStateOf("") }
     val currentSelection by rememberUpdatedState(selection)
@@ -532,7 +532,16 @@ private fun ChipPickerField(presets: List<String>, selection: Set<String>, allow
     }
     DisposableEffect(Unit) { onDispose { merge() } }
     IntakeCard {
-        ChipGrid(presets + selection.filter { it !in presets }, selection, onToggle)
+        // iOS `FlowLayout(spacing: 8, lineSpacing: 8)`: chips flow like words
+        // (the adaptive 110 pt grid is the relationship card's, not this one).
+        @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+        androidx.compose.foundation.layout.FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            (presets + selection.filter { it !in presets }).forEach { tag ->
+                IntakeChipLabel(tag, tag in selection) { onToggle(tag) }
+            }
+        }
         if (allowsCustom) {
             InlineField(draft, { draft = it }, stringResource(R.string.add_your_own_comma_separated),
                 onDone = { merge() })
@@ -546,7 +555,7 @@ private fun ChipPickerField(presets: List<String>, selection: Set<String>, allow
  * Next shows a spinner and "Sorting it out…" while the parse runs.
  */
 @Composable
-private fun IntakeBottomBar(
+internal fun IntakeBottomBar(
     backVisible: Boolean,
     nextTitle: String,
     nextEnabled: Boolean,
@@ -588,7 +597,7 @@ private fun IntakeBottomBar(
 }
 
 @Composable
-private fun RowScope.CapsuleButton(enabled: Boolean, fill: androidx.compose.ui.graphics.Color,
+internal fun RowScope.CapsuleButton(enabled: Boolean, fill: androidx.compose.ui.graphics.Color,
                                    onClick: () -> Unit, content: @Composable RowScope.() -> Unit) {
     Row(
         Modifier.weight(1f).height(50.dp).clip(CircleShape).background(fill)
@@ -779,7 +788,7 @@ private val INTAKE_LABELS: Map<String, Int> = mapOf(
 )
 
 @Composable
-private fun intakeLabel(tag: String): String =
+internal fun intakeLabel(tag: String): String =
     INTAKE_LABELS[tag]?.let { stringResource(it) } ?: presetLabel(tag)
 
 private val STYLE_PRESETS = listOf(

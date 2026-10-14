@@ -1,51 +1,52 @@
 package com.roro.futurevoice.ui
 
-import com.roro.futurevoice.data.AvatarStore
-import kotlinx.coroutines.launch
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.clickable
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import com.roro.futurevoice.ui.brand.IosButton as Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import com.roro.futurevoice.ui.brand.IosOutlinedButton as OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.roro.futurevoice.R
-import com.roro.futurevoice.ui.brand.AppSurfaces
-import com.roro.futurevoice.data.LanguageCatalog
+import com.roro.futurevoice.data.AvatarStore
 import com.roro.futurevoice.talk.UserPersona
+import com.roro.futurevoice.ui.brand.ContinuousShape
+import kotlinx.coroutines.launch
 
 /**
  * First-run persona collection — `PersonaIntakeView`, three light cards only:
@@ -61,7 +62,6 @@ import com.roro.futurevoice.talk.UserPersona
  * Chip VALUES stay English on purpose (they are prompt material and the
  * selection match key); only labels would localize.
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun PersonaIntakeScreen(
     initial: UserPersona,
@@ -104,100 +104,126 @@ fun PersonaIntakeScreen(
         else -> true
     }
 
-    Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.about_you)) }) },
-        bottomBar = {
-            Row(Modifier.fillMaxWidth().bottomBarInsets().padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(
-                    onClick = { back() },
-                    modifier = Modifier.weight(1f),
-                ) { Text(stringResource(R.string.back)) }
-                Button(
-                    enabled = canAdvance,
-                    onClick = {
-                        if (step < lastStep) { step += 1; saveDraft() }
-                        else {
-                            PersonaDraft.clear(context)
-                            onFinish(draft())
-                        }
-                    },
-                    modifier = Modifier.weight(1f),
-                ) { Text(stringResource(R.string.next)) }
-            }
-        },
-    ) { padding ->
+    // iOS: a NavigationStack with the inline title "About you" (no buttons),
+    // the progress capsule, the card in a ScrollView (20 pt sides, 20 between
+    // blocks) and `IntakeBottomBar` — the same pieces the people intake uses.
+    val page = MaterialTheme.colorScheme.surface
+    Column(Modifier.fillMaxSize().background(page)) {
+        SheetHeader(stringResource(R.string.about_you),
+            modifier = Modifier.statusBarsPadding().padding(horizontal = 16.dp).padding(top = 8.dp, bottom = 4.dp))
+        IntakeProgress((step + 1f) / (lastStep + 1f), Modifier.padding(horizontal = 20.dp).padding(top = 8.dp))
         Column(
-            Modifier.padding(padding).fillMaxSize().background(AppSurfaces.ground).padding(16.dp).verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp).padding(top = 16.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            LinearProgressIndicator(progress = { (step + 1) / (lastStep + 1f) }, modifier = Modifier.fillMaxWidth())
-            when (step) {
+            // Keyed by card, so the interests card's unsubmitted "add your
+            // own" text is folded in as it leaves (iOS `.onDisappear`).
+            androidx.compose.runtime.key(step) { when (step) {
                 0 -> {
-                    Header(stringResource(R.string.what_should_i_call_you),
+                    IntakeStepHeader(stringResource(R.string.what_should_i_call_you),
                         stringResource(R.string.we_re_building_your_fluent_self_it_ll_speak_in_your_own_voic_e7ccbb))
                     // The picture is the learner's to pick: neither sign-in
                     // hands one over.
                     val scope = rememberCoroutineScope()
-                    val context = LocalContext.current
                     val pick = rememberLauncherForActivityResult(
                         ActivityResultContracts.PickVisualMedia()) { uri ->
                         uri?.let { scope.launch { AvatarStore.save(context, it) } }
                     }
-                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Box(Modifier.clip(CircleShape).clickable {
-                            pick.launch(PickVisualMediaRequest(
-                                ActivityResultContracts.PickVisualMedia.ImageOnly))
-                        }) { ProfileAvatar(initials = name, size = 88.dp) }
+                    // iOS: the avatar (88) with `pencil.circle.fill` at its
+                    // bottom-trailing edge, and a centred `.title3` name field,
+                    // in one grey card (padding 20 × 14, r 12).
+                    Column(Modifier.fillMaxWidth().clip(ContinuousShape(12.dp)).background(cardFill())
+                        .padding(vertical = 20.dp, horizontal = 14.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Box(Modifier.clickable(
+                            interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                            pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                        }, contentAlignment = Alignment.BottomEnd) {
+                            ProfileAvatar(initials = name, size = 88.dp)
+                            Box(Modifier.size(28.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
+                                contentAlignment = Alignment.Center) {
+                                Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.onPrimary)
+                            }
+                        }
+                        BareField(name, { name = it }, stringResource(R.string.your_name),
+                            style = MaterialTheme.typography.titleLarge, center = true,
+                            capitalization = KeyboardCapitalization.Words)
                     }
-                    OutlinedTextField(value = name, onValueChange = { name = it },
-                        label = { Text(stringResource(R.string.your_name)) },
-                        singleLine = true, modifier = Modifier.fillMaxWidth())
                 }
                 1 -> {
-                    Header(stringResource(R.string.where_s_home_these_days),
+                    IntakeStepHeader(stringResource(R.string.where_s_home_these_days),
                         stringResource(R.string.real_places_make_your_conversations_concrete_no_small_talk_a_d2fe54))
-                    OutlinedTextField(value = city, onValueChange = { city = it },
-                        label = { Text(stringResource(R.string.city)) },
-                        singleLine = true, modifier = Modifier.fillMaxWidth())
                     // City only (iOS 2026-10-08, founder): this card tells the
                     // fluent self where they live, and a city says that —
                     // typing the country too was effort for nothing. The
                     // field stays on the persona and in Me → Profile.
-                    OutlinedTextField(value = stay, onValueChange = { stay = it },
-                        label = { Text(stringResource(R.string.how_long_have_you_been_there_optional)) },
-                        singleLine = true, modifier = Modifier.fillMaxWidth())
+                    Column(Modifier.fillMaxWidth().clip(ContinuousShape(12.dp)).background(cardFill())) {
+                        BareField(city, { city = it }, stringResource(R.string.city),
+                            capitalization = KeyboardCapitalization.Words, modifier = Modifier.padding(14.dp))
+                        // iOS `CardDivider(inset: 14)`: a 45% hairline, inset both sides.
+                        HorizontalDivider(Modifier.padding(horizontal = 14.dp), thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+                        BareField(stay, { stay = it }, stringResource(R.string.how_long_have_you_been_there_optional),
+                            modifier = Modifier.padding(14.dp))
+                    }
                 }
-                2 -> {
-                    Header(stringResource(R.string.what_are_you_into),
+                else -> {
+                    IntakeStepHeader(stringResource(R.string.what_are_you_into),
                         stringResource(R.string.tap_what_fits_these_pick_your_news_stories_and_fuel_conversa_369fbd))
-                    ChipGrid(PERSONA_INTEREST_PRESETS, interests) { tag ->
+                    ChipPickerField(PERSONA_INTEREST_PRESETS, interests, allowsCustom = true) { tag ->
                         interests = if (tag in interests) interests - tag else interests + tag
                     }
                 }
+            } }
+        }
+        IntakeBottomBar(
+            backVisible = true,
+            // Voice clone follows this flow, so the last card is a "Next",
+            // not the app entrance.
+            nextTitle = stringResource(R.string.next),
+            nextEnabled = canAdvance,
+            working = false,
+            onBack = { back() },
+            onNext = {
+                if (step < lastStep) { step += 1; saveDraft() }
+                else {
+                    PersonaDraft.clear(context)
+                    onFinish(draft())
+                }
+            },
+        )
+    }
+}
+
+/** iOS `TextField` with no chrome: the text, the prompt as placeholder. */
+@Composable
+private fun BareField(
+    value: String,
+    onChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier,
+    style: TextStyle = MaterialTheme.typography.bodyLarge,
+    center: Boolean = false,
+    capitalization: KeyboardCapitalization = KeyboardCapitalization.Sentences,
+) {
+    val s = style.copy(color = MaterialTheme.colorScheme.onSurface,
+        textAlign = if (center) TextAlign.Center else TextAlign.Start)
+    BasicTextField(
+        value = value, onValueChange = onChange, textStyle = s, singleLine = true,
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        keyboardOptions = KeyboardOptions(capitalization = capitalization),
+        modifier = modifier.fillMaxWidth(),
+        decorationBox = { inner ->
+            Box(Modifier.fillMaxWidth(), contentAlignment = if (center) Alignment.Center else Alignment.CenterStart) {
+                if (value.isEmpty()) Text(placeholder, style = s,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.28f), maxLines = 1)
+                inner()
             }
-        }
-    }
-}
-
-@Composable
-private fun Header(question: String, detail: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(question, style = MaterialTheme.typography.titleMedium)
-        Text(detail, style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun ChipGrid(presets: List<String>, selection: Set<String>, onToggle: (String) -> Unit) {
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        presets.forEach { tag ->
-            FilterChip(selected = tag in selection, onClick = { onToggle(tag) },
-                label = { Text(presetLabel(tag)) })
-        }
-    }
+        },
+    )
 }
 
 /**
