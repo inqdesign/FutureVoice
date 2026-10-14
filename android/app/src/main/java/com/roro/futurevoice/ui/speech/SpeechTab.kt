@@ -879,11 +879,17 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
                 com.roro.futurevoice.ui.brand.IosSwitch(studying, onCheckedChange = null)
             }
         }
+        // Right under the switch, where the eye is: below a long script the
+        // "Preparing…" row was off screen, and the switch read as doing nothing.
         if (studying && shownStudy != null) {
             Text(stringResource(R.string.tap_for_an_explanation), style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 7.dp))
             ScriptStudyLegend(shownStudy, Modifier.padding(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 8.dp))
+        } else if (studying) {
+            Box(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 14.dp)) {
+                ScriptStudyStatus(studyFailed) { studyAttempt += 1 }
+            }
         } else {
             Spacer(Modifier.padding(top = 22.dp))
         }
@@ -903,9 +909,6 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
                                 lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.2f))
                         }
                     }
-                }
-                if (studying && shownStudy == null) {
-                    ScriptStudyStatus(studyFailed) { studyAttempt += 1 }
                 }
             }
         }
