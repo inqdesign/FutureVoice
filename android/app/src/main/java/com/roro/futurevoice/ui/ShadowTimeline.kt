@@ -15,16 +15,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
-import androidx.compose.material.icons.filled.PauseCircle
-import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
-import androidx.compose.material.icons.filled.RepeatOn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -40,6 +40,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -70,6 +75,11 @@ private object TL {
     val trackHeight = 54.dp
     val handleW = 14.dp
     val grab = 24.dp
+    val playheadW = 2.5.dp
+    /** SF Symbols' `*.circle` buttons at 44 pt: the circle IS the button. */
+    val glyphButton = 44.dp
+    /** The ring of an outlined `*.circle` symbol (measured: 3.7 pt at 44). */
+    val ring = 3.5.dp
     /** Played past a selection's last word so its release isn't clipped. */
     const val TAIL_RELEASE_MS = 140
 }
@@ -210,9 +220,23 @@ fun ShadowTimeline(
                         .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)))
                     Handle(sxd); Handle(exd)
                 }
-                val maxX = with(density) { (wPx).toDp() } - 2.5.dp
-                Box(Modifier.offset(x = minOf(maxX, maxOf(0.dp, xOf(position))), y = (-4).dp)
-                    .width(2.5.dp).height(TL.trackHeight + 8.dp).clip(CircleShape)
+                // Playhead — iOS: a 2.5-wide capsule, 8 taller than the track
+                // and CENTRED on it (4 over, 4 under), its left edge at the
+                // time, kept inside the track, ringed in the page colour.
+                // `requiredHeight`, not `height`: the track box caps its
+                // children at its own 54, which squashed the capsule to the
+                // track's height and the -4 then lifted it off the bottom.
+                val maxX = with(density) { (wPx).toDp() } - TL.playheadW
+                val halo = MaterialTheme.colorScheme.surface
+                Box(Modifier.offset(x = minOf(maxX, maxOf(0.dp, xOf(position))))
+                    .width(TL.playheadW).requiredHeight(TL.trackHeight + 8.dp)
+                    .drawBehind {
+                        val r = 1.dp.toPx()
+                        drawRoundRect(halo.copy(alpha = 0.8f), topLeft = Offset(-r, -r),
+                            size = Size(size.width + 2 * r, size.height + 2 * r),
+                            cornerRadius = CornerRadius(size.width / 2 + r))
+                    }
+                    .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.onSurface))
             }
         }
@@ -230,23 +254,25 @@ fun ShadowTimeline(
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                Icon(if (playing) Icons.Filled.PauseCircle else Icons.Filled.PlayCircle,
-                    contentDescription = null, tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(44.dp).clip(CircleShape).clickable {
-                        if (player.isPlaying) { player.pause(); return@clickable }
-                        if (!player.isLoaded) player.load(audio)
-                        player.rate = rate
-                        val s = selectionMs(selection, timings)
-                        if (s != null) player.playSegment(s.first, playbackEnd(s.second, selection, timings, player), loop)
-                        else {
-                            val start = if (player.positionMs < player.durationMs - 50) player.positionMs else 0
-                            player.playSegment(start, null, loop)
-                        }
-                    })
-                Icon(if (loop) Icons.Filled.RepeatOn else Icons.Filled.Repeat, contentDescription = null,
-                    tint = if (loop) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(44.dp).clip(CircleShape)
-                        .clickable { loop = !loop; player.loop = loop }.padding(6.dp))
+                // `play.circle.fill` / `pause.circle.fill`: a filled accent
+                // circle, the glyph cut out of it.
+                CircleGlyph(if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                    filled = true, color = MaterialTheme.colorScheme.primary, glyph = if (playing) 26.dp else 30.dp) {
+                    if (player.isPlaying) { player.pause(); return@CircleGlyph }
+                    if (!player.isLoaded) player.load(audio)
+                    player.rate = rate
+                    val s = selectionMs(selection, timings)
+                    if (s != null) player.playSegment(s.first, playbackEnd(s.second, selection, timings, player), loop)
+                    else {
+                        val start = if (player.positionMs < player.durationMs - 50) player.positionMs else 0
+                        player.playSegment(start, null, loop)
+                    }
+                }
+                // `repeat.circle.fill` (accent) when on, `repeat.circle`
+                // (secondary ring) when off — the same circle as play.
+                CircleGlyph(Icons.Filled.Repeat, filled = loop,
+                    color = if (loop) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    glyph = 30.dp) { loop = !loop; player.loop = loop }
                 Spacer(Modifier.weight(1f))
                 Box {
                     Text(speedLabel(rate), style = MaterialTheme.typography.titleSmall,
@@ -262,20 +288,42 @@ fun ShadowTimeline(
                     }
                 }
                 val canUndo = history.isNotEmpty()
-                Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = stringResource(R.string.previous_selection),
-                    tint = if (canUndo) MaterialTheme.colorScheme.onSurfaceVariant
-                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
-                    modifier = Modifier.size(44.dp).clip(CircleShape)
-                        .clickable(enabled = canUndo) {
-                            val prev = history.removeAt(history.lastIndex)
-                            suppress = true
-                            onSelection(prev)
-                        }.border(2.dp, if (canUndo) MaterialTheme.colorScheme.onSurfaceVariant
-                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f), CircleShape)
-                        .padding(9.dp))
+                // `arrow.uturn.backward.circle`: a secondary ring, tertiary
+                // until there is a region to step back to.
+                CircleGlyph(Icons.AutoMirrored.Filled.Undo, filled = false,
+                    color = if (canUndo) MaterialTheme.colorScheme.onSurfaceVariant
+                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                    glyph = 26.dp, enabled = canUndo,
+                    contentDescription = stringResource(R.string.previous_selection)) {
+                    val prev = history.removeAt(history.lastIndex)
+                    suppress = true
+                    onSelection(prev)
+                }
             }
             mic()
         }
+    }
+}
+
+/** An SF `*.circle` / `*.circle.fill` symbol at 44 pt: a 44 circle, filled
+ *  with [color] and the glyph white, or a [color] ring around a [color]
+ *  glyph. Play, loop and undo all draw through it so the row matches. */
+@Composable
+private fun CircleGlyph(
+    icon: ImageVector,
+    filled: Boolean,
+    color: Color,
+    glyph: Dp,
+    enabled: Boolean = true,
+    contentDescription: String? = null,
+    onClick: () -> Unit,
+) {
+    Box(Modifier.size(TL.glyphButton).clip(CircleShape)
+        .then(if (filled) Modifier.background(color) else Modifier.border(TL.ring, color, CircleShape))
+        .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center) {
+        Icon(icon, contentDescription = contentDescription,
+            tint = if (filled) Color.White else color, modifier = Modifier.size(glyph))
     }
 }
 
