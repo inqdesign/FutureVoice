@@ -158,6 +158,23 @@ fun ScenarioBookScreen(
     }
     val sc = scenario ?: return
     val cur = sc.curriculum
+    // A row opens the app's ONE card for it (iOS `wordSheet` /
+    // `expressionSheet`): the chevrons walk this chapter's list, and an
+    // expression carries the scene's own note + example.
+    val captureCard = com.roro.futurevoice.capture.flags.PracticeCaptureFlags.bookCard
+    var wordCard by remember(scenarioId) { mutableStateOf(captureCard?.takeIf { chapter == Chapter.WORDS }) }
+    var phraseCard by remember(scenarioId) { mutableStateOf(captureCard?.takeIf { chapter == Chapter.EXPRESSIONS }) }
+    wordCard?.let { term ->
+        WordCardSheet(terms = cur?.words.orEmpty().map { it.text }, initialTerm = term,
+            kind = LibraryKind.WORDS, language = language, onShadow = onShadow,
+            onDismiss = { wordCard = null; StoreEvents.bump() })
+    }
+    phraseCard?.let { term ->
+        WordCardSheet(terms = cur?.expressions.orEmpty().map { it.text }, initialTerm = term,
+            kind = LibraryKind.EXPRESSIONS, language = language, onShadow = onShadow,
+            onDismiss = { phraseCard = null; StoreEvents.bump() },
+            sceneContext = cur?.expressions.orEmpty().reversed().associate { it.text to (it.note to it.example) })
+    }
     // Say it again — the scene run again with the learner reading their own
     // side (the Shadow chapter, in order, between the counterpart's lines).
     // No gate: the counterpart's lines play from the cache the scene's first
@@ -354,11 +371,13 @@ fun ScenarioBookScreen(
                     }
                     Chapter.WORDS -> cur?.let { c ->
                         ChapterTitle(stringResource(R.string.words_d26d55))
-                        c.words.forEach { ItemRow(it, it.id in wordMastered) }
+                        c.words.forEach { ItemRow(it, it.id in wordMastered, onClick = { wordCard = it.text }) }
                     }
                     Chapter.EXPRESSIONS -> cur?.let { c ->
                         ChapterTitle(stringResource(R.string.expressions))
-                        c.expressions.forEach { ItemRow(it, it.id in exprMastered, showExample = true) }
+                        c.expressions.forEach {
+                            ItemRow(it, it.id in exprMastered, showExample = true, onClick = { phraseCard = it.text })
+                        }
                     }
                     Chapter.SHADOW -> cur?.let { c ->
                         ChapterTitle(stringResource(R.string.your_lines))

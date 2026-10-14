@@ -52,8 +52,19 @@ object PracticeCaptureFlags {
      *  is reached (iOS captures `TalkTranscriptView` on its own). */
     @JvmField var talkDetailTranscript = false
 
+    /** The talk book opens with this word's card already up. */
+    @JvmField var talkDetailWord: String? = null
+
+    /** The word card treats this as the learner's cloned voice, so its
+     *  pronounce button is drawn (a capture run has no session to ask). */
+    @JvmField var voiceId: String? = null
+
     /** The scenario book reads this scenario instead of the store. */
     @JvmField var bookScenario: Scenario? = null
+
+    /** The scenario book opens with this word's (WORDS chapter) or
+     *  phrase's (EXPRESSIONS chapter) card already up. */
+    @JvmField var bookCard: String? = null
 
     /** The scenario book opens on this chapter (`Chapter` name). */
     @JvmField var bookChapter: String? = null

@@ -902,6 +902,7 @@
     <!-- 'In the Speech tab, everyone reads the same script. Read it with the camera on and you land on the leaderboard.' -->
     <string name="in_the_speech_tab_everyone_reads_the_same_script_read_it_wit_932336">"En la pestaña Discurso, todos leen el mismo guion. Léelo con la cámara encendida y entras en la clasificación."</string>
     <string name="in_this_book">"En este cuaderno"</string>
+    <string name="in_this_scene">"En esta escena"</string>
     <string name="in_your_life">"De tu día a día"</string>
     <!-- 'In your own words (optional) — e.g. switches to English when excited' -->
     <string name="in_your_own_words_optional_e_g_switches_to_english_when_exci_e08d84">"A tu manera (opcional) — ej.: cambia al inglés cuando se emociona"</string>

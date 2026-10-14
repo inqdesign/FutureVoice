@@ -172,7 +172,8 @@ private fun TalkDetailPage(
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
     var session by remember { mutableStateOf<Session?>(null) }
     // The word card opened from the Words chapter: (term, the list it walks).
-    var wordCard by remember { mutableStateOf<Pair<String, List<String>>?>(null) }
+    var wordCard by remember { mutableStateOf<Pair<String, List<String>>?>(
+        com.roro.futurevoice.capture.flags.PracticeCaptureFlags.talkDetailWord?.let { it to listOf(it) }) }
     wordCard?.let { (term, list) ->
         WordCardSheet(terms = list, initialTerm = term, kind = LibraryKind.WORDS,
             language = language, onShadow = onShadow, onDismiss = { wordCard = null })
