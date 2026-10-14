@@ -122,8 +122,9 @@ fun IosSegmented(
     ) {
         val w = maxWidth / options.size
         Box(
+            // Flat, as iOS draws it: an elevation shadow inside the clipped
+            // track was cut at the track's edge and read as a smudge.
             Modifier.offset(x = w * index).width(w).fillMaxHeight()
-                .shadow(if (dark) 0.dp else 2.dp, CircleShape)
                 .background(if (dark) Color(0xFF636366) else Color.White, CircleShape),
         )
         Row(Modifier.fillMaxSize()) {
