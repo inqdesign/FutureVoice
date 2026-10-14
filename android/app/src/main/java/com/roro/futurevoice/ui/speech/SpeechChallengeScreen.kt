@@ -62,6 +62,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -152,7 +153,10 @@ internal fun SpeechChallengeFace(face: SpeechChallenges.Face, size: androidx.com
             androidx.compose.foundation.Image(bitmap.asImageBitmap(), contentDescription = null,
                 contentScale = ContentScale.Crop, modifier = Modifier.size(size))
         } else {
-            Text(face.display_name.take(1).uppercase(), fontSize = (size.value * 0.45f).sp,
+            // Without the font's extra top/bottom padding, so the letter sits
+            // at the circle's centre (iOS centres the glyph).
+            Text(face.display_name.take(1).uppercase(),
+                style = TightText.copy(fontSize = (size.value * 0.45f).sp, lineHeight = (size.value * 0.45f).sp),
                 fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
@@ -377,7 +381,6 @@ private fun BoardRow(row: SpeechChallenges.BoardRow) {
     val accent = MaterialTheme.colorScheme.primary
     Row(
         Modifier.fillMaxWidth()
-            .background(if (row.is_me) accent.copy(alpha = 0.12f) else Color.Transparent)
             .padding(horizontal = 16.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -385,14 +388,19 @@ private fun BoardRow(row: SpeechChallenges.BoardRow) {
         Text("${row.rank}", modifier = Modifier.widthIn(min = 28.dp),
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         SpeechChallengeFace(row.face, 28.dp)
-        Text(row.display_name, maxLines = 1, overflow = TextOverflow.Ellipsis,
-            fontWeight = if (row.is_me) FontWeight.SemiBold else FontWeight.Normal,
-            modifier = Modifier.weight(1f, fill = false))
-        if (row.is_me) {
-            Text(stringResource(R.string.you), style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold, color = accent)
+        // Name and "You" take the leading space; the score sits at the trailing
+        // edge (iOS `Spacer()`). Two weights split the row in half, so the score
+        // stopped wherever the name's unused half ended.
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(row.display_name, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                fontWeight = if (row.is_me) FontWeight.SemiBold else FontWeight.Normal,
+                modifier = Modifier.weight(1f, fill = false))
+            if (row.is_me) {
+                Text(stringResource(R.string.you), style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold, color = accent)
+            }
         }
-        Spacer(Modifier.weight(1f))
         Text("${row.score}", fontWeight = FontWeight.SemiBold, color = scoreColor(row.score))
     }
 }
@@ -406,19 +414,20 @@ private fun PodiumRow(row: SpeechChallenges.BoardRow) {
     val size = if (row.rank == 1) 56.dp else 48.dp
     Row(
         Modifier.fillMaxWidth()
-            .background(if (row.is_me) accent.copy(alpha = 0.12f) else Color.Transparent)
             .padding(horizontal = 16.dp, vertical = if (row.rank == 1) 14.dp else 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Box {
             SpeechChallengeFace(row.face, size)
-            Text("#${row.rank}", fontSize = 11.sp, fontWeight = FontWeight.Black,
+            // iOS: caption2 heavy on a capsule, 5 × 2 pt padding, a 2 pt ring.
+            Text("#${row.rank}", fontWeight = FontWeight.ExtraBold,
+                style = TightText.copy(fontSize = 10.sp, lineHeight = 12.sp),
                 color = if (row.rank == 1) Color.Black else Color.White,
                 modifier = Modifier.align(Alignment.TopEnd).offset(x = 8.dp, y = (-4).dp)
-                    .border(2.dp, AppSurfaces.card, CircleShape)
-                    .background(medal, CircleShape)
-                    .padding(horizontal = 5.dp, vertical = 1.dp))
+                    .border(2.dp, AppSurfaces.card, RoundedCornerShape(50))
+                    .background(medal, RoundedCornerShape(50))
+                    .padding(horizontal = 6.dp, vertical = 3.dp))
         }
         Column(Modifier.weight(1f)) {
             Text(row.display_name, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -647,3 +656,12 @@ internal fun SpeechChallengeMomentSheet(moment: SpeechChallenges.Moment, onSeeBo
         TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.done)) }
     }
 }
+
+/** Text with no font padding and a centred line box, for a glyph that must sit
+ *  exactly in the middle of a small shape. */
+private val TightText = androidx.compose.ui.text.TextStyle(
+    platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false),
+    lineHeightStyle = androidx.compose.ui.text.style.LineHeightStyle(
+        alignment = androidx.compose.ui.text.style.LineHeightStyle.Alignment.Center,
+        trim = androidx.compose.ui.text.style.LineHeightStyle.Trim.Both),
+)
