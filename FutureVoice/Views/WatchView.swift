@@ -169,7 +169,7 @@ struct WatchSetupSheet: View {
         } catch {
             outOfCredits = error.isOutOfCredits
             self.error = outOfCredits
-                ? "You're out of credits — fresh scenarios need a top-up."
+                ? explain("You're out of credits — fresh scenarios need a top-up.")
                 : error.localizedDescription
         }
     }
@@ -216,7 +216,7 @@ struct WatchView: View {
         /// "Study this" when the book is somewhere the viewer hasn't been;
         /// "Back to the book" when they came FROM it (pushing it again would
         /// stack the same page twice).
-        let title: String
+        let title: LocalizedStringKey
         let action: () -> Void
     }
 
@@ -434,7 +434,7 @@ struct WatchView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                LevelHeaderTitle(title: "Watching",
+                LevelHeaderTitle(title: explain("Watching"),
                                  level: appState.proficiency,
                                  surface: .watch)
                     .environmentObject(appState)
@@ -587,7 +587,7 @@ struct WatchView: View {
         // The user's side of a watched scene is performed by the fluent
         // self — label it that way, since the user is watching, not speaking.
         DialogueLine(speaker: isUser ? .user : .other,
-                     name: isUser ? "Future self" : counterpart.name,
+                     name: isUser ? chrome("Future self") : counterpart.name,
                      avatar: isUser ? nil : CounterpartPhotoStore.shared.image(for: counterpart.id),
                      isCurrent: isCurrent) {
             Text(turn.text)
@@ -769,7 +769,7 @@ struct WatchView: View {
         } catch {
             outOfCredits = error.isOutOfCredits
             self.error = outOfCredits
-                ? "You're out of credits — generating this dialogue needs a top-up."
+                ? explain("You're out of credits — generating this dialogue needs a top-up.")
                 : error.localizedDescription
         }
     }

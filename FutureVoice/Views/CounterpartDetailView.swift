@@ -213,7 +213,7 @@ struct CounterpartDetailView: View {
             updated.setSavedScenarios(fresh, in: appState.targetLanguage)
             appState.saveCounterpart(updated)
         } catch {
-            self.scenarioError = "Couldn't refresh scenarios: \(error.localizedDescription)"
+            self.scenarioError = explain("Couldn't refresh scenarios: \(error.localizedDescription)")
         }
     }
 
@@ -256,7 +256,7 @@ struct CounterpartDetailView: View {
     // MARK: - Helpers
 
     @ViewBuilder
-    private func sectionIfAny<Content: View>(_ title: String,
+    private func sectionIfAny<Content: View>(_ title: LocalizedStringKey,
                                               has: Bool,
                                               @ViewBuilder content: () -> Content) -> some View {
         if has {
@@ -265,7 +265,7 @@ struct CounterpartDetailView: View {
     }
 
     @ViewBuilder
-    private func row(_ text: String, label: String? = nil) -> some View {
+    private func row(_ text: String, label: LocalizedStringKey? = nil) -> some View {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmed.isEmpty {
             VStack(alignment: .leading, spacing: 4) {

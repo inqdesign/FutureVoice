@@ -146,8 +146,11 @@ struct ProgressTab: View {
         case overall, vocabulary, grammar, fluency, expressiveness
         var title: String {
             switch self {
-            case .overall: return "Overall"
-            default:       return rawValue.capitalized
+            case .overall:        return explain("Overall")
+            case .vocabulary:     return explain("Vocabulary")
+            case .grammar:        return explain("Grammar")
+            case .fluency:        return explain("Fluency")
+            case .expressiveness: return explain("Expressiveness")
             }
         }
         var short: String { title }
@@ -1029,13 +1032,13 @@ struct ProgressTab: View {
             lv.map { (approx ? "≈" : "") + $0.rawValue.uppercased() } ?? "—"
         }
         return [
-            .init(name: "Vocab", level: label(vocabLevel, approx: false),
+            .init(name: explain("Vocab"), level: label(vocabLevel, approx: false),
                   lit: lit(vocabLevel), color: Color(.systemBlue)),
-            .init(name: "Fluency", level: label(fluencyCEFR, approx: true),
+            .init(name: explain("Fluency"), level: label(fluencyCEFR, approx: true),
                   lit: lit(fluencyCEFR), color: Color(.systemGreen)),
-            .init(name: "Grammar", level: label(grammarCEFR, approx: true),
+            .init(name: explain("Grammar"), level: label(grammarCEFR, approx: true),
                   lit: lit(grammarCEFR), color: Color(.systemOrange)),
-            .init(name: "Express", level: label(expressionCEFR, approx: true),
+            .init(name: explain("Express"), level: label(expressionCEFR, approx: true),
                   lit: lit(expressionCEFR), color: Color(.systemPurple)),
         ]
     }
@@ -1165,7 +1168,7 @@ struct ProgressTab: View {
         }
     }
 
-    private func unlockConditionRow(icon: String, met: Bool, text: String) -> some View {
+    private func unlockConditionRow(icon: String, met: Bool, text: LocalizedStringKey) -> some View {
         HStack(spacing: 8) {
             Image(systemName: met ? "checkmark.circle.fill" : icon)
                 .font(.subheadline)
@@ -1217,21 +1220,21 @@ struct ProgressTab: View {
                     assessedRow(name: "Vocabulary",
                                 level: vocabLevel.map { $0.rawValue.uppercased() },
                                 detail: usedTotal > 0
-                                    ? "\(usedTotal) distinct words you've used in the last \(Self.vocabWindowDays) days, each graded against the CEFR word list. Fully objective."
-                                    : "Graded from the words you've used in the last \(Self.vocabWindowDays) days, against the CEFR word list. Fully objective.")
+                                    ? explain("\(usedTotal) distinct words you've used in the last \(Self.vocabWindowDays) days, each graded against the CEFR word list. Fully objective.")
+                                    : explain("Graded from the words you've used in the last \(Self.vocabWindowDays) days, against the CEFR word list. Fully objective."))
                     assessedRow(name: "Fluency",
                                 level: fluencyCEFR.map { "≈" + $0.rawValue.uppercased() },
                                 detail: effectivePace > 0
-                                    ? "\(effectivePace) words per minute of voiced speech — pauses and think-time removed."
-                                    : "Words per minute of voiced speech — pauses and think-time removed.")
+                                    ? explain("\(effectivePace) words per minute of voiced speech — pauses and think-time removed.")
+                                    : explain("Words per minute of voiced speech — pauses and think-time removed."))
                     assessedRow(name: "Grammar",
                                 level: grammarCEFR.map { "≈" + $0.rawValue.uppercased() },
                                 detail: grammarDetail)
                     assessedRow(name: "Expression",
                                 level: expressionCEFR.map { "≈" + $0.rawValue.uppercased() },
                                 detail: wordsPerTurn > 0
-                                    ? "\(wordsPerTurn) words per turn — how far ideas get developed."
-                                    : "Words per turn — how far ideas get developed.")
+                                    ? explain("\(wordsPerTurn) words per turn — how far ideas get developed.")
+                                    : explain("Words per turn — how far ideas get developed."))
                 } header: {
                     Text("What's measured")
                 } footer: {
@@ -1255,7 +1258,7 @@ struct ProgressTab: View {
         .fittingDetents([.medium, .large])
     }
 
-    private func assessedRow(name: String, level: String?, detail: String) -> some View {
+    private func assessedRow(name: LocalizedStringKey, level: String?, detail: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(name).font(.subheadline.weight(.medium))
@@ -1392,16 +1395,16 @@ struct ProgressTab: View {
         measuredContent(
             dim: .fluency,
             big: effectivePace > 0 ? "\(effectivePace)" : "—",
-            bigUnit: articulationWpm > 0 ? "words / min speaking" : "words / min",
+            bigUnit: articulationWpm > 0 ? explain("words / min speaking") : explain("words / min"),
             band: fluencyBand,
             measuredLine: effectivePace > 0
-                ? String(format: "%.1f pauses/min · ", pausesPerMin) + "\(talkMinutes)m per talk · \(wordsPerTurn) words/turn"
+                ? explain("\(String(format: "%.1f", pausesPerMin)) pauses/min · \(talkMinutes)m per talk · \(wordsPerTurn) words/turn")
                 : nil,
-            measures: "Pace measured from voiced speech only — pauses and think-time don't drag it down.",
-            improve: "Talk more often and a little longer. Aim past your daily speaking goal; longer turns build flow.",
+            measures: explain("Pace measured from voiced speech only — pauses and think-time don't drag it down."),
+            improve: explain("Talk more often and a little longer. Aim past your daily speaking goal; longer turns build flow."),
             action: startTalkAction,
             trend: fluencyTrend,
-            trendCaption: "Words per minute of voiced speech — one point per talk. Background zones are the ≈CEFR pace bands.",
+            trendCaption: explain("Words per minute of voiced speech — one point per talk. Background zones are the ≈CEFR pace bands."),
             trendBands: Self.fluencyBands
         )
     }
@@ -1413,25 +1416,25 @@ struct ProgressTab: View {
         measuredContent(
             dim: .grammar,
             big: grammarCEFR.map { "≈" + $0.rawValue.uppercased() } ?? "—",
-            bigUnit: "grammatical control",
+            bigUnit: explain("grammatical control"),
             band: nil,
             measuredLine: grammarCeiling != nil
                 ? grammarDetail
                 : (slipsPer100Words > 0
-                    ? String(format: "%.1f verified grammar slips per 100 spoken words across your assessed talks%@.",
+                    ? String(format: explain("%.1f verified grammar slips per 100 spoken words across your assessed talks%@."),
                              slipsPer100Words, grammarTargetHint)
-                    : "Verified grammar slips per 100 spoken words — fewer reads higher."),
-            measures: "Two reads, the lower wins: the structures you actually build in a talk, and transcript-verified slips per 100 words — STT artifacts and style suggestions excluded. Short correct sentences read low, not high.",
+                    : explain("Verified grammar slips per 100 spoken words — fewer reads higher.")),
+            measures: explain("Two reads, the lower wins: the structures you actually build in a talk, and transcript-verified slips per 100 words — STT artifacts and style suggestions excluded. Short correct sentences read low, not high."),
             improve: grammarCeiling == nil
-                ? "Run your review cards — they're built from your own slips and target exactly these."
-                : "Say more in one sentence — a reason, a condition, what happened before. Longer sentences are what move this band.",
+                ? explain("Run your review cards — they're built from your own slips and target exactly these.")
+                : explain("Say more in one sentence — a reason, a condition, what happened before. Longer sentences are what move this band."),
             action: grammarCeiling == nil ? reviewSlipsAction : startTalkAction,
             trend: grammarTrend,
             // Under a ceiling the accuracy zones would label the curve with a
             // band the headline doesn't follow ("C2" behind a ≈A2 page).
             trendCaption: grammarCeiling == nil
-                ? "Verified slips per 100 words, one point per talk — DOWN is progress. Background zones are the ≈CEFR bands; the dashed line is the next one."
-                : "Verified slips per 100 words, one point per talk — your accuracy. The band above comes from the structures you build, so this curve alone can't move it.",
+                ? explain("Verified slips per 100 words, one point per talk — DOWN is progress. Background zones are the ≈CEFR bands; the dashed line is the next one.")
+                : explain("Verified slips per 100 words, one point per talk — your accuracy. The band above comes from the structures you build, so this curve alone can't move it."),
             trendTarget: grammarNextBandThreshold,
             trendBands: grammarCeiling == nil ? Self.grammarBands : []
         )
@@ -1460,14 +1463,14 @@ struct ProgressTab: View {
         measuredContent(
             dim: .expressiveness,
             big: wordsPerTurn > 0 ? "\(wordsPerTurn)" : "—",
-            bigUnit: "words per turn",
+            bigUnit: explain("words per turn"),
             band: nil,
-            measuredLine: "Longer, richer turns usually mean you're elaborating more.",
-            measures: "How vividly and naturally you get your meaning across.",
-            improve: "Tell stories, react, and add detail — describe how things felt, not just what happened.",
+            measuredLine: explain("Longer, richer turns usually mean you're elaborating more."),
+            measures: explain("How vividly and naturally you get your meaning across."),
+            improve: explain("Tell stories, react, and add detail — describe how things felt, not just what happened."),
             action: startTalkAction,
             trend: expressionTrend,
-            trendCaption: "Average words per turn — one point per talk. Background zones are the ≈CEFR bands.",
+            trendCaption: explain("Average words per turn — one point per talk. Background zones are the ≈CEFR bands."),
             trendBands: Self.expressionBands
         )
     }
@@ -1755,10 +1758,10 @@ struct ProgressTab: View {
         // removed), so the bands shift up when it's available.
         let (low, mid, high) = articulationWpm > 0 ? (90, 130, 170) : (70, 110, 150)
         switch effectivePace {
-        case ..<low:      return "Finding your flow"
-        case low..<mid:   return "Conversational"
-        case mid..<high:  return "Fluent"
-        default:          return "Very fluent"
+        case ..<low:      return explain("Finding your flow")
+        case low..<mid:   return explain("Conversational")
+        case mid..<high:  return explain("Fluent")
+        default:          return explain("Very fluent")
         }
     }
 

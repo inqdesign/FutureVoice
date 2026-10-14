@@ -202,8 +202,8 @@ final class LiveTranscriber: ObservableObject {
         case engineFailed
         var errorDescription: String? {
             switch self {
-            case .unavailable:   return "Speech recognizer unavailable for this locale"
-            case .engineFailed:  return "Audio engine failed to start"
+            case .unavailable:   return explain("Speech recognizer unavailable for this locale")
+            case .engineFailed:  return explain("Audio engine failed to start")
             }
         }
     }

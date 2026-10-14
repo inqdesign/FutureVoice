@@ -953,7 +953,7 @@ enum GeminiError: Error, LocalizedError {
         case .invalidResponse:               return "Gemini: invalid response"
         case .httpError(let status, let body): return "Gemini HTTP \(status): \(body)"
         case .jsonNotFound(let raw):         return "Gemini: no JSON found in reply: \(raw.prefix(200))"
-        case .insufficientCredits:           return "You're out of credits. Check your plan under Me → Account."
+        case .insufficientCredits:           return explain("You're out of credits. Check your plan under Me → Account.")
         case .truncated:                     return "Gemini: reply hit the token ceiling before it finished"
         case .malformedJSON(let detail, _):  return "Gemini: reply could not be read (\(detail))"
         }

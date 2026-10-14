@@ -487,7 +487,7 @@ struct ConversationDetailView: View {
         case .words:
             pageTitle(chrome("Words"))
             wordsPage
-            pageFooter("Tap a word for its card — meaning, pronunciation, your sentences. It's mastered once you use it in a talk or mark it known.")
+            pageFooter(explain("Tap a word for its card — meaning, pronunciation, your sentences. It's mastered once you use it in a talk or mark it known."))
         case .expressions:
             pageTitle(chrome("Expressions"))
             expressionsPage

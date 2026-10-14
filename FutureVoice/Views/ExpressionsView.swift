@@ -141,8 +141,8 @@ struct ExpressionsView: View {
 
     private var emptyTitle: String {
         switch filter {
-        case .toStudy: return "Nothing to study yet"
-        case .known:   return "Nothing marked known"
+        case .toStudy: return explain("Nothing to study yet")
+        case .known:   return explain("Nothing marked known")
         }
     }
     private var emptyMessage: String {
@@ -692,9 +692,9 @@ struct ExpressionCard: View {
     }
 
     @ViewBuilder
-    private func section(_ title: String, @ViewBuilder _ content: () -> some View) -> some View {
+    private func section(_ title: String.LocalizationValue, @ViewBuilder _ content: () -> some View) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(title.uppercased())
+            Text(explain(title).uppercased())
                 .font(.caption2.weight(.bold))
                 .tracking(0.6)
                 .foregroundStyle(.tertiary)

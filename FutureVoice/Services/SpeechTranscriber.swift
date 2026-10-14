@@ -18,9 +18,9 @@ final class SpeechTranscriber {
 
         var errorDescription: String? {
             switch self {
-            case .permissionDenied: return "Speech recognition permission denied"
-            case .recognizerUnavailable: return "Speech recognizer unavailable for this locale"
-            case .noResult: return "No transcription result"
+            case .permissionDenied: return explain("Speech recognition permission denied")
+            case .recognizerUnavailable: return explain("Speech recognizer unavailable for this locale")
+            case .noResult: return explain("No transcription result")
             case .underlying(let e): return e.localizedDescription
             }
         }

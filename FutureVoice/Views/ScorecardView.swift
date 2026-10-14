@@ -59,7 +59,7 @@ struct ScorecardView: View {
     }
 
     @ViewBuilder
-    private func axisRow(label: String, axis: AxisScore, icon: String,
+    private func axisRow(label: LocalizedStringKey, axis: AxisScore, icon: String,
                          detailCount: Int? = nil) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
@@ -117,7 +117,7 @@ struct ScorecardView: View {
                         .foregroundStyle(.tertiary)
                 }
             }
-            Text(scorecard.pronunciation?.note ?? "Practice shadow drills to track this.")
+            Text(scorecard.pronunciation?.note ?? explain("Practice shadow drills to track this."))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }

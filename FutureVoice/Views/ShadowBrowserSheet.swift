@@ -28,8 +28,8 @@ struct ShadowBrowserView: View {
         var id: String { rawValue }
         var label: String {
             switch self {
-            case .toStudy: return "To study"
-            case .practiced: return "Practiced"
+            case .toStudy: return explain("To study")
+            case .practiced: return explain("Practiced")
             }
         }
     }

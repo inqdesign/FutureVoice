@@ -590,8 +590,8 @@ struct ConversationHome: View {
         // that isn't on screen.
         .accessibilityLabel(account.flatMap { a -> String? in
             a.isUncappedTalk ? nil
-                         : "Profile & settings, \(a.balanceLabel) of \(a.tankMinutes) minutes of talk left"
-        } ?? "Profile & settings")
+                         : explain("Profile & settings, \(a.balanceLabel) of \(a.tankMinutes) minutes of talk left")
+        } ?? explain("Profile & settings"))
     }
 
     /// The glass circle's diameter — the height iOS 26 gives every other
