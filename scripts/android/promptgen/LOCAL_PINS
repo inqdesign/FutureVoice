@@ -1,2 +1,3 @@
-# <generator> <iOS sha> — see iosref.py. Speech script Study (iOS 3ebadf10).
+# <generator> <iOS sha> — see iosref.py. Speech script Study (iOS 3ebadf10, on
+# feat/script-study, not yet merged into the IOS_REF branch).
 gen-script-study-prompt.py 3ebadf10
