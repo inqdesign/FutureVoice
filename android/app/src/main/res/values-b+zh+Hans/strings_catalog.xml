@@ -1607,6 +1607,7 @@
     <string name="practice_language">"练习语言：%s"</string>
     <!-- 'Practice while you watch yourself,\nuntil you feel sure, until it feels natural.' -->
     <string name="practice_while_you_watch_yourself_until_you_feel_sure_until_5d1614">"看着自己练吧。\n练到有自信，\n练到自然为止。"</string>
+    <string name="practiced">"已练习"</string>
     <string name="practicing_the_selected_phrase">"正在练习选中的短语"</string>
     <string name="practicing_your_rhythm">"正在练习说话的节奏…"</string>
     <!-- 'Practise on your iPhone, pick it up on your iPad. Everything is stored in your own iCloud, audio included, so it can use a few gigabytes there.' -->
