@@ -1,5 +1,6 @@
 package com.roro.futurevoice.ui.speech
 
+import androidx.compose.material.icons.outlined.BorderColor
 import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -849,16 +850,6 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
     }
     SpeechSheet(onDismiss) {
         SheetHeader(stringResource(R.string.script),
-            leading = {
-                IosGlassButton(onClick = {
-                    studying = !studying
-                    prefs.edit().putBoolean("speech.script.study", studying).apply()
-                }) {
-                    Text(stringResource(R.string.speech_study_toggle), style = MaterialTheme.typography.bodyLarge)
-                    Spacer(Modifier.width(8.dp))
-                    com.roro.futurevoice.ui.brand.IosSwitch(studying, onCheckedChange = null)
-                }
-            },
             trailing = {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     // The bundled sample is everyone's and stays as shipped.
@@ -869,8 +860,32 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
                 }
             })
         val shownStudy = study
+        // Its own row under the header, not in it (iOS 18f1fbf7): a switch
+        // beside the title and Done crowded the header, and in longer
+        // languages the label had nowhere to go.
+        FormCard {
+            Row(Modifier.fillMaxWidth()
+                .clickable {
+                    studying = !studying
+                    prefs.edit().putBoolean("speech.script.study", studying).apply()
+                }
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Icon(Icons.Outlined.BorderColor, contentDescription = null, modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.speech_study_toggle), style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f))
+                com.roro.futurevoice.ui.brand.IosSwitch(studying, onCheckedChange = null)
+            }
+        }
         if (studying && shownStudy != null) {
-            ScriptStudyLegend(shownStudy, Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp))
+            Text(stringResource(R.string.tap_for_an_explanation), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 7.dp))
+            ScriptStudyLegend(shownStudy, Modifier.padding(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 8.dp))
+        } else {
+            Spacer(Modifier.padding(top = 22.dp))
         }
         FormCard {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {

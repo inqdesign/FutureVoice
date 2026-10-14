@@ -3,7 +3,7 @@
 of the Swift source, and pin the hand-ported rules around it.
 
 Study mode marks 7–8 expressions / grammar patterns / words IN a script and
-writes a native-language note under each paragraph — one call, purpose
+writes each paragraph's translation into the native language under it — one call, purpose
 "script-study". The prompt is extracted, never retyped. The code that is
 ported by hand (span verification, the cache key, the voiceover's price, keys,
 lines and assembly) is fingerprinted here: the day iOS changes any of it, this
@@ -14,6 +14,7 @@ run fails and names what to re-port.
 Read at its own pin (promptgen/LOCAL_PINS) — the shared IOS_REF predates it.
 """
 import pathlib
+import re
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / "promptgen"))
@@ -29,6 +30,17 @@ system = kotlin(literal_at(study, 'let system = """', gen_at), {
     "target": "target",
     "nativeName": "nativeName",
     "CoachingLanguage.contract(target: script.language, native: native)": "contract",
+    "paragraphRule": "paragraphRule(target, nativeName, sameLanguage)",
+}, "            ")
+
+# The paragraph rule: a translation under each paragraph, or none at all when
+# the learner's native language IS the target (iOS 18f1fbf7).
+rule_at = study.index("let paragraphRule = sameLanguage", gen_at)
+same_m = re.compile(r'\? "((?:[^"\\]|\\.)*)"').search(study, rule_at)
+same_rule = " + target + ".join(kotlin([("t", part)], {}) for part in same_m.group(1).split("\\(target)"))
+translate_rule = kotlin(literal_at(study, ': """', rule_at), {
+    "target": "target",
+    "nativeName": "nativeName",
 }, "            ")
 
 # The user message is one line of Swift; held by fingerprint with the rest.
@@ -37,7 +49,7 @@ if USER_LINE not in study:
     sys.exit("gen-script-study-prompt.py: the user message changed at iOS — re-port ScriptStudyPrompt.user")
 
 pin({
-    "ScriptStudy.generate": (func_body(study, "generate"), "b204873c7aaa"),
+    "ScriptStudy.generate": (func_body(study, "generate"), "5392cccfdf7b"),
     "ScriptStudy.locate": (func_body(study, "locate"), "8738e0518b25"),
     "ScriptStudy.occurrences": (func_body(study, "occurrences"), "a43791fd36fc"),
     "ScriptStudy.onBoundary": (func_body(study, "onBoundary"), "6ef473c7d617"),
@@ -60,13 +72,19 @@ emit(OUT, f'''package com.roro.futurevoice.talk
 
 /**
  * The Speech script Study prompt: highlights copied verbatim from the script
- * (MATERIAL, target language) and one native-language note per paragraph
- * (coaching). The spans are verified in code ([com.roro.futurevoice.data.ScriptStudy.locate]).
+ * (MATERIAL, target language) and each paragraph translated into the native
+ * language (none when native == target). The spans are verified in code ([com.roro.futurevoice.data.ScriptStudy.locate]).
  */
 object ScriptStudyPrompt {{
-    fun system(level: String, target: String, nativeName: String, contract: String): String {{
+    fun system(level: String, target: String, nativeName: String, contract: String,
+               sameLanguage: Boolean = false): String {{
         return {system}
     }}
+
+    /** One translation per paragraph; none when native == target. */
+    fun paragraphRule(target: String, nativeName: String, sameLanguage: Boolean): String =
+        if (sameLanguage) {same_rule}
+        else {translate_rule}
 
     fun user(paragraphs: List<String>): String {{
         val numbered = paragraphs.mapIndexed {{ i, p -> "${{i + 1}}. $p" }}.joinToString("\\n")

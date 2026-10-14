@@ -13,14 +13,16 @@ import java.io.File
 import java.security.MessageDigest
 
 /**
- * "Study" on a Speech script (iOS `ScriptStudy`, 3ebadf10, 2026-10-14): the
- * script's most useful expressions, grammar patterns and words marked IN the
- * text, and under each paragraph a short note in the learner's own language on
- * what that paragraph says or does — never a translation.
+ * "Study" on a Speech script (iOS `ScriptStudy`, 3ebadf10 + 18f1fbf7,
+ * 2026-10-14): the script's most useful expressions, grammar patterns and
+ * words marked IN the text, and under each paragraph its translation into the
+ * learner's own language (a one-line summary of what the paragraph "does" told
+ * a reader nothing they needed).
  *
  * MATERIAL vs NOTES: every highlighted span is the script's own text (target
  * language, verbatim — [locate] drops any span that isn't); every `note` and
- * paragraph note is coaching, in the native language.
+ * paragraph translation is in the native language, and a learner whose
+ * native language IS the target gets no translation at all.
  *
  * Written once per (script text, target, native, level) by one call on the
  * default model (`purpose: "script-study"`) and kept on disk, so reopening a
@@ -140,7 +142,7 @@ data class ScriptStudy(
         }
 
         /** Bumped whenever the prompt changes what a study is. */
-        const val PROMPT_VERSION = 1
+        const val PROMPT_VERSION = 2
 
         fun textHash(body: String) = sha(body.trim())
 
@@ -200,16 +202,17 @@ object ScriptStudyEngine {
             target = LanguageCatalog.englishName(script.language),
             nativeName = LanguageCatalog.englishName(native),
             contract = SpeechPrompts.contract(script.language, native),
+            sameLanguage = LanguageCatalog.sameLanguage(native, script.language),
         )
         // The streaming door only for its long read timeout (iOS gives this
-        // call 60 s; the shared client's per-read guard is 40 s). The decoded
+        // call 90 s; the shared client's per-read guard is 40 s). The decoded
         // payload is the same.
         val payload = GeminiClient(AuthRepository()).sendJsonStreamAccumulating(
             system = system,
             messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER, ScriptStudyPrompt.user(paragraphs))),
             serializer = Payload.serializer(),
             model = GeminiClient.Model.FLASH_36,
-            maxTokens = 4096,
+            maxTokens = 8192,
             purpose = "script-study",
             onPartial = {},
         )

@@ -109,7 +109,7 @@ internal object ScriptStudyStyle {
 
 /**
  * The script's paragraphs with the study highlights drawn IN the text and a
- * native-language note under each paragraph (Script sheet, Study on) — iOS
+ * native-language translation under each paragraph (Script sheet, Study on) — iOS
  * `ScriptStudyText`. Tapping a highlight opens the app's own cards. Never on
  * the prompter.
  */
@@ -179,7 +179,8 @@ private fun HighlightedParagraph(para: String, highlights: List<ScriptStudy.High
     )
 }
 
-/** Kind · count for each kind present, and how to use them (iOS `ScriptStudyLegend`). */
+/** Kind · count for each kind present (iOS `ScriptStudyLegend`); how to use
+ *  them is the study switch's footer, so this row never truncates. */
 @Composable
 internal fun ScriptStudyLegend(study: ScriptStudy, modifier: Modifier = Modifier) {
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
@@ -201,10 +202,6 @@ internal fun ScriptStudyLegend(study: ScriptStudy, modifier: Modifier = Modifier
                     color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
             }
         }
-        Spacer(Modifier.weight(1f))
-        Text(stringResource(R.string.tap_for_an_explanation), style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), maxLines = 1,
-            overflow = TextOverflow.Ellipsis)
     }
 }
 
