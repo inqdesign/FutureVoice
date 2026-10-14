@@ -343,6 +343,7 @@ final class SpeechTakeSession: ObservableObject {
                               videoFilename: nil, transcript: transcript,
                               metrics: metrics, coaching: nil)
         SpeechStore.shared.save(take)
+        SyncEngine.noteChanged(.blobSpeechAudio)
         // A saved take is what a Speech block in the routine asks for.
         ActivityEventLog.shared.record(.speech)
         // A challenge's board takes only what the camera recorded; the score
@@ -372,6 +373,8 @@ final class SpeechTakeSession: ObservableObject {
             values.isExcludedFromBackup = true
             try? url.setResourceValues(values)
             self.update(id) { $0.videoFilename = name }
+            // Its iCloud copy, if the learner picked a quality.
+            SpeechVideoSync.shared.ensureCopies()
             return true
         }
 

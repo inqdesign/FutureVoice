@@ -473,6 +473,98 @@ final class SyncTests: XCTestCase {
         XCTAssertEqual(b.engine.blobState(kind: .blobTurn, key: "T1.mp3"), .local)
     }
 
+    // MARK: - Speech
+
+    private func speechTake(_ id: UUID) -> SpeechTake {
+        SpeechTake(id: id, scriptId: UUID(), createdAt: Date(), durationSeconds: 30,
+                   audioFilename: "take-\(id.uuidString).wav", videoFilename: "take-\(id.uuidString).mov",
+                   transcript: "hello",
+                   metrics: SpeechMetrics(accuracy: 90, rate: 140, rateLow: 120, rateHigh: 160, paceScore: 90,
+                                          pausesAtBreaks: 2, breaks: 2, hesitations: 0, pauseScore: 90,
+                                          fillers: 0, fillerScore: 100, steadiness: 80, missed: [], overall: 88),
+                   coaching: nil)
+    }
+
+    /// A take, its voice and its standard copy reach the other device by
+    /// themselves; the original is known there but fetched only when asked,
+    /// and not having it is never read as a deletion.
+    func testSpeechOriginalVideoIsDownloadedOnlyWhenAsked() async throws {
+        let cloud = InMemorySyncTransport()
+        let a = device(cloud)
+        let id = UUID()
+        try SyncFiles.write([speechTake(id)], to: SyncFiles.url("speech_takes.json", lang: "en"),
+                            encoder: SyncFiles.storeEncoder)
+        let speech = a.root.appendingPathComponent("Speech", isDirectory: true)
+        let copies = a.root.appendingPathComponent(SpeechVideoSync.folder, isDirectory: true)
+        try FileManager.default.createDirectory(at: copies, withIntermediateDirectories: true)
+        try Data([1]).write(to: speech.appendingPathComponent("take-\(id.uuidString).wav"))
+        try Data([2]).write(to: speech.appendingPathComponent("take-\(id.uuidString).mov"))
+        let sd = SpeechVideoSync.standardName(id), hq = SpeechVideoSync.originalName(id)
+        try Data([3, 3]).write(to: copies.appendingPathComponent(sd))
+        try Data([4, 4, 4]).write(to: copies.appendingPathComponent(hq))
+        try await a.engine.enable()
+        await a.engine.waitUntilIdle()
+
+        let b = device(cloud)
+        try await b.engine.enable()
+        await b.engine.waitUntilIdle()
+        let bTakes = SyncFiles.read([SpeechTake].self, at: SyncFiles.url("speech_takes.json", lang: "en"),
+                                    decoder: SyncFiles.storeDecoder, empty: []) ?? []
+        XCTAssertEqual(bTakes.map(\.id), [id])
+        XCTAssertEqual(b.engine.blobState(kind: .blobSpeechAudio, key: "take-\(id.uuidString).wav"), .local)
+        XCTAssertEqual(b.engine.blobState(kind: .blobSpeechAudio, key: "take-\(id.uuidString).mov"), .absent,
+                       "the camera's own file never travels")
+        XCTAssertEqual(b.engine.blobState(kind: .blobSpeechVideo, key: sd), .local)
+        XCTAssertEqual(b.engine.blobState(kind: .blobSpeechVideo, key: hq), .absent)
+        XCTAssertEqual(b.engine.remoteBlobSize(kind: .blobSpeechVideo, key: hq), 3)
+
+        // Another pass on B must not tombstone the original it never fetched.
+        await sync(b)
+        await sync(a)
+        on(a.root)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: copies.appendingPathComponent(hq).path))
+
+        on(b.root)
+        b.engine.requestBlob(kind: .blobSpeechVideo, key: hq)
+        await b.engine.waitUntilIdle()
+        XCTAssertEqual(try Data(contentsOf: b.root.appendingPathComponent(SpeechVideoSync.folder).appendingPathComponent(hq)),
+                       Data([4, 4, 4]))
+    }
+
+    /// A take deleted on one device takes its voice and video copies with it
+    /// on the other.
+    func testDeletingASpeechTakeRemovesItsFilesEverywhere() async throws {
+        let cloud = InMemorySyncTransport()
+        let a = device(cloud)
+        let id = UUID()
+        try SyncFiles.write([speechTake(id)], to: SyncFiles.url("speech_takes.json", lang: "en"),
+                            encoder: SyncFiles.storeEncoder)
+        let speech = a.root.appendingPathComponent("Speech", isDirectory: true)
+        let copies = a.root.appendingPathComponent(SpeechVideoSync.folder, isDirectory: true)
+        try FileManager.default.createDirectory(at: copies, withIntermediateDirectories: true)
+        try Data([1]).write(to: speech.appendingPathComponent("take-\(id.uuidString).wav"))
+        try Data([3]).write(to: copies.appendingPathComponent(SpeechVideoSync.standardName(id)))
+        try await a.engine.enable()
+        await a.engine.waitUntilIdle()
+        let b = device(cloud)
+        try await b.engine.enable()
+        await b.engine.waitUntilIdle()
+        XCTAssertEqual(b.engine.blobState(kind: .blobSpeechVideo, key: SpeechVideoSync.standardName(id)), .local)
+
+        on(a.root)
+        try SyncFiles.write([SpeechTake](), to: SyncFiles.url("speech_takes.json", lang: "en"),
+                            encoder: SyncFiles.storeEncoder)
+        try FileManager.default.removeItem(at: speech.appendingPathComponent("take-\(id.uuidString).wav"))
+        try FileManager.default.removeItem(at: copies.appendingPathComponent(SpeechVideoSync.standardName(id)))
+        await sync(a)
+        await sync(b)
+        on(b.root)
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: b.root.appendingPathComponent("Speech/take-\(id.uuidString).wav").path))
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: b.root.appendingPathComponent(SpeechVideoSync.folder).appendingPathComponent(SpeechVideoSync.standardName(id)).path))
+    }
+
     // MARK: - iCloud full
 
     /// A full iCloud is remembered: talks still go up, audio is not retried

@@ -15,6 +15,9 @@ struct SpeechResultView: View {
 
     @ObservedObject private var store = SpeechStore.shared
     @ObservedObject private var challenges = SpeechChallenges.shared
+    /// Re-renders as a video copy lands or goes up.
+    @ObservedObject private var sync = SyncEngine.shared
+    @ObservedObject private var videoSync = SpeechVideoSync.shared
     @StateObject private var audio = AudioPlayer()
     @State private var player: AVPlayer?
     /// The video's own width ÷ height, read from the file, so the player is
@@ -151,6 +154,12 @@ struct SpeechResultView: View {
                 player = nil
                 store.deleteVideo(takeId: take.id)
             }
+        } message: {
+            // The take record syncs whatever the video setting, so a
+            // deletion here reaches the device that recorded it.
+            if sync.isEnabled {
+                Text("It's deleted on your other devices too.")
+            }
         }
         .alert("Couldn't save to Photos", isPresented: Binding(
             get: { photoError != nil }, set: { if !$0 { photoError = nil } })) {
@@ -162,7 +171,7 @@ struct SpeechResultView: View {
 
     @ViewBuilder
     private func playbackSection(_ take: SpeechTake) -> some View {
-        if let video = take.videoFilename {
+        if take.videoFilename != nil, let url = SpeechVideoSync.playableURL(take) {
             Section {
                 SpeechTakeVideo(player: player)
                     .aspectRatio(videoAspect ?? 9 / 19.5, contentMode: .fit)
@@ -170,29 +179,29 @@ struct SpeechResultView: View {
                     .frame(maxWidth: .infinity)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
-                    .onAppear {
-                        if player == nil {
-                            preparePlayback()
-                            player = AVPlayer(url: SpeechStore.mediaURL(video))
-                        }
-                    }
-                    .task(id: video) {
-                        videoAspect = await Self.aspect(of: SpeechStore.mediaURL(video))
+                    // Keyed on the file: when the original lands in place of
+                    // the standard copy, the player moves to it.
+                    .task(id: url) {
+                        preparePlayback()
+                        player?.pause()
+                        player = AVPlayer(url: url)
+                        videoAspect = await Self.aspect(of: url)
                     }
                 Button {
-                    saveToPhotos(SpeechStore.mediaURL(video))
+                    saveToPhotos(url)
                 } label: {
                     Label(savedToPhotos ? "Saved to Photos" : "Save to Photos",
                           systemImage: savedToPhotos ? "checkmark" : "square.and.arrow.down")
                 }
                 .disabled(savedToPhotos)
+                cloudRow(take)
                 Button(role: .destructive) {
                     confirmDeleteVideo = true
                 } label: {
                     Label("Delete video", systemImage: "trash")
                 }
             } footer: {
-                Text("Videos stay on this phone and aren't backed up. Save the ones you want to keep.")
+                Text(videoFooter(take))
             }
         } else if store.videoPending.contains(take.id) {
             Section {
@@ -209,7 +218,103 @@ struct SpeechResultView: View {
                     Label(audio.isPlaying ? "Stop" : "Play your take",
                           systemImage: audio.isPlaying ? "stop.fill" : "play.fill")
                 }
+                if take.videoFilename != nil {
+                    remoteVideoRow(take)
+                }
+            } footer: {
+                if take.videoFilename != nil, remoteVideo(take) == nil {
+                    Text("The video is on the device you recorded it on.")
+                }
             }
+        }
+    }
+
+    /// The iCloud copy this device could download for a take it holds no
+    /// picture of — the standard one first, since it is the smaller.
+    private func remoteVideo(_ take: SpeechTake) -> (name: String, bytes: Int)? {
+        for name in [SpeechVideoSync.standardName(take.id), SpeechVideoSync.originalName(take.id)] {
+            if let bytes = sync.remoteBlobSize(kind: .blobSpeechVideo, key: name) { return (name, bytes) }
+        }
+        return nil
+    }
+
+    @ViewBuilder
+    private func remoteVideoRow(_ take: SpeechTake) -> some View {
+        if let remote = remoteVideo(take) {
+            downloadButton(name: remote.name, bytes: remote.bytes,
+                           title: explain("Download the video"),
+                           busy: explain("Downloading the video…"))
+        }
+    }
+
+    /// What iCloud holds of a video this device is showing.
+    @ViewBuilder
+    private func cloudRow(_ take: SpeechTake) -> some View {
+        let original = SpeechVideoSync.originalName(take.id)
+        if SpeechVideoSync.isRecordedHere(take) {
+            // Recorded here, on standard: one tap sends this one at full size.
+            if sync.isEnabled, videoSync.quality == .standard {
+                if SpeechVideoSync.hasOriginalCopy(take) {
+                    Label(sync.blobUploaded(kind: .blobSpeechVideo, key: original)
+                              ? explain("The original is in iCloud")
+                              : explain("Sending the original to iCloud…"),
+                          systemImage: "checkmark.icloud")
+                        .foregroundStyle(.secondary)
+                } else {
+                    Button {
+                        videoSync.sendOriginal(take)
+                    } label: {
+                        Label("Send the original to iCloud", systemImage: "icloud.and.arrow.up")
+                    }
+                }
+            }
+        } else if !SpeechVideoSync.hasOriginalCopy(take),
+                  let bytes = sync.remoteBlobSize(kind: .blobSpeechVideo, key: original) {
+            // Watching the standard copy: the original is a tap away.
+            downloadButton(name: original, bytes: bytes,
+                           title: explain("Download the original"),
+                           busy: explain("Downloading the original…"))
+        }
+    }
+
+    @ViewBuilder
+    private func downloadButton(name: String, bytes: Int, title: String, busy: String) -> some View {
+        if sync.blobState(kind: .blobSpeechVideo, key: name) == .queued {
+            Label {
+                Text(busy)
+            } icon: {
+                ProgressView()
+            }
+            .foregroundStyle(.secondary)
+        } else {
+            Button {
+                sync.requestBlob(kind: .blobSpeechVideo, key: name)
+            } label: {
+                Label {
+                    Text("\(title) · \(ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file))")
+                } icon: {
+                    Image(systemName: "icloud.and.arrow.down")
+                }
+            }
+        }
+    }
+
+    private func videoFooter(_ take: SpeechTake) -> String {
+        guard SpeechVideoSync.isRecordedHere(take) else {
+            return explain("This video came from your other device.")
+        }
+        guard sync.isEnabled else {
+            return explain("Videos stay on this phone and aren't backed up. Save the ones you want to keep.")
+        }
+        switch videoSync.quality {
+        case .off:
+            return explain("Videos stay on this device. Choose a quality in Me → Devices to send them to iCloud.")
+        case .standard:
+            return SpeechVideoSync.hasOriginalCopy(take)
+                ? explain("A standard copy and the original are in your iCloud.")
+                : explain("A standard copy goes to your iCloud. The original stays on this device.")
+        case .original:
+            return explain("The original goes to your iCloud.")
         }
     }
 

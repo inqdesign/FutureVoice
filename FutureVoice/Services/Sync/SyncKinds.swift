@@ -328,6 +328,12 @@ struct BlobKind: SyncKindHandler {
     let directory: URL
     /// Which files in the folder are this kind's (nil = every regular file).
     var accepts: (String) -> Bool = { _ in true }
+    /// Files another device downloads only when the learner asks for them
+    /// (`SyncEngine.requestBlob`) — everything else is fetched as it appears.
+    var onDemand: (String) -> Bool = { _ in false }
+    /// Downloaded copies stay out of the device backup: iCloud already
+    /// holds them.
+    var excludeFromBackup = false
 
     func fileURL(_ key: String) -> URL { directory.appendingPathComponent(key) }
 

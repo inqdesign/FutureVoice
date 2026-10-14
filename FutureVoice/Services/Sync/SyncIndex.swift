@@ -40,6 +40,11 @@ final class SyncIndex {
         /// is carried so the progress row can count bytes.
         var wanted: Bool = false
         var size: Int = 0
+        /// The server has this blob and this device fetches it only when the
+        /// learner asks (a Speech video's original). Not here is then not a
+        /// deletion, so the diff never tombstones it. Optional so an index
+        /// written before the field decodes.
+        var onDemand: Bool?
 
         var isDeleted: Bool { deletedAt != nil }
         var recordName: String { SyncRecord.recordName(kind: kind, lang: lang, key: key) }

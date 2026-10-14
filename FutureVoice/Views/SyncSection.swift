@@ -6,6 +6,7 @@ import SwiftUI
 /// their call. Modelled on `MeTab.dailyCallSection`.
 struct SyncSection: View {
     @ObservedObject private var engine = SyncEngine.shared
+    @ObservedObject private var speechVideos = SpeechVideoSync.shared
     @EnvironmentObject private var auth: AuthService
     @State private var enabled = SyncEngine.shared.isEnabled
     @State private var cellular = SyncStore.cellularForAudio
@@ -43,6 +44,7 @@ struct SyncSection: View {
                 Toggle(isOn: $cellular) {
                     Label("Move audio over cellular too", systemImage: "antenna.radiowaves.left.and.right")
                 }
+                speechVideoRow
                 Button(role: .destructive) {
                     confirmingCloudDelete = true
                 } label: {
@@ -86,6 +88,39 @@ struct SyncSection: View {
             Button("OK") { cloudDeleteError = nil }
         } message: {
             Text(cloudDeleteError ?? "")
+        }
+    }
+
+    /// Speech camera takes are the one thing whose size the learner picks.
+    private var speechVideoRow: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Picker(selection: $speechVideos.quality) {
+                Text("Off").tag(SpeechVideoSync.Quality.off)
+                Text("Standard").tag(SpeechVideoSync.Quality.standard)
+                Text("Original").tag(SpeechVideoSync.Quality.original)
+            } label: {
+                Label("Speech videos", systemImage: "video")
+            }
+            Text(speechVideoCaption)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            if !speechVideos.encoding.isEmpty {
+                Label {
+                    Text("Making standard copies… \(speechVideos.encoding.count) left")
+                } icon: {
+                    ProgressView().controlSize(.small)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var speechVideoCaption: String {
+        switch speechVideos.quality {
+        case .off: return explain("Videos stay on this device.")
+        case .standard: return explain("A smaller copy, about 12 MB a minute. Send an original from its take.")
+        case .original: return explain("Full quality. Your other devices download one when you tap it.")
         }
     }
 
@@ -241,6 +276,7 @@ struct SyncSection: View {
         defer { enabling = false }
         do {
             try await engine.enable()
+            SpeechVideoSync.shared.ensureCopies()
         } catch {
             enableError = error.localizedDescription
             enabled = false

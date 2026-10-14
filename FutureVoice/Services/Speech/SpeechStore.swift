@@ -2,9 +2,12 @@ import Foundation
 
 /// Scripts and takes for the Speech tab. JSON per target language
 /// (`Documents/lang/<code>/speech_*.json`), media global under
-/// `Documents/Speech/` like the shadow recordings. Local only — no sync kind:
-/// a camera take is hundreds of megabytes, and the learner decides what
-/// happens to it (keep · save to Photos · delete).
+/// `Documents/Speech/` like the shadow recordings. With sync on, scripts,
+/// takes and each take's voice go to the learner's other devices
+/// (`speechScript` / `speechTake` / `blobSpeechAudio`). The camera's file
+/// does not: a camera take is hundreds of megabytes, so what iCloud gets of
+/// it is the learner's pick (`SpeechVideoSync` — off, a standard copy, or
+/// the original).
 @MainActor
 final class SpeechStore: ObservableObject {
     static let shared = SpeechStore()
@@ -102,8 +105,10 @@ final class SpeechStore: ObservableObject {
         if let video = take.videoFilename {
             try? FileManager.default.removeItem(at: Self.mediaURL(video))
         }
+        SpeechVideoSync.removeCopies(of: id)
         takes.removeAll { $0.id == id }
         writeTakes()
+        SyncEngine.noteChanged(.blobSpeechAudio)
     }
 
     /// Drops the camera take and keeps everything else — the voice, the
@@ -111,6 +116,7 @@ final class SpeechStore: ObservableObject {
     func deleteVideo(takeId: UUID) {
         guard var take = takes.first(where: { $0.id == takeId }), let video = take.videoFilename else { return }
         try? FileManager.default.removeItem(at: Self.mediaURL(video))
+        SpeechVideoSync.removeCopies(of: takeId)
         take.videoFilename = nil
         save(take)
     }
@@ -119,10 +125,12 @@ final class SpeechStore: ObservableObject {
         let own = scripts.filter { !$0.isBuiltIn }
         guard let data = try? encoder.encode(own) else { return }
         try? data.write(to: scriptsURL, options: .atomic)
+        SyncEngine.noteChanged(.speechScript)
     }
 
     private func writeTakes() {
         guard let data = try? encoder.encode(takes) else { return }
         try? data.write(to: takesURL, options: .atomic)
+        SyncEngine.noteChanged(.speechTake)
     }
 }

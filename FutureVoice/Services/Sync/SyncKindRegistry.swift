@@ -53,6 +53,11 @@ enum SyncKindRegistry {
         ArrayKind<WeeklyTest>(kind: .weeklyTest, filename: "weekly-tests.json", mergeRule: SyncMerge.lww,
                               sortForFile: { $0.sorted { $0.createdAt > $1.createdAt } }),
         scenarioKind,
+        ArrayKind<SpeechScript>(kind: .speechScript, filename: "speech_scripts.json",
+                                mergeRule: SyncMerge.lww,
+                                sortForFile: { $0.filter { !$0.isBuiltIn }.sorted { $0.createdAt > $1.createdAt } },
+                                afterWrite: reloadSpeech),
+        speechTakeKind,
         DictKind<PracticeLog.Day>(kind: .practiceDay, filename: "practice-log.json",
                                   encoder: SyncFiles.bareEncoder, decoder: SyncFiles.bareDecoder,
                                   mergeRule: { SyncMerge.union($0, $1, combine: SyncMerge.typed(maxDay)) },
@@ -69,6 +74,16 @@ enum SyncKindRegistry {
         BlobKind(kind: .blobVoiceSample,
                  directory: SyncFiles.documents.appendingPathComponent(VoiceSampleStore.syncFolder, isDirectory: true),
                  accepts: { $0.hasSuffix(".wav") }),
+        // Only the voice: the camera's own `.mov` sits in the same folder and
+        // never travels — its iCloud copy is `blobSpeechVideo`'s.
+        BlobKind(kind: .blobSpeechAudio,
+                 directory: SyncFiles.documents.appendingPathComponent("Speech", isDirectory: true),
+                 accepts: { $0.hasSuffix(".wav") }),
+        BlobKind(kind: .blobSpeechVideo,
+                 directory: SyncFiles.documents.appendingPathComponent(SpeechVideoSync.folder, isDirectory: true),
+                 accepts: SpeechVideoSync.isCopy,
+                 onDemand: SpeechVideoSync.isOriginalCopy,
+                 excludeFromBackup: true),
     ] }
 
     static func handler(for kind: SyncKind) -> (any SyncKindHandler)? {
@@ -177,6 +192,37 @@ enum SyncKindRegistry {
             cascadeRule: { _, _, previous in
                 guard let name = previous?.recordingFilename else { return [] }
                 return [.deleteFile(kind: .blobRecording, key: name)]
+            })
+    }
+
+    // MARK: - Speech
+
+    @MainActor
+    private static func reloadSpeech(_ lang: String?) {
+        if isActive(lang) { SpeechStore.shared.reload() }
+    }
+
+    private static var speechTakeKind: ArrayKind<SpeechTake> {
+        ArrayKind<SpeechTake>(
+            kind: .speechTake, filename: "speech_takes.json",
+            mergeRule: SyncMerge.lww,
+            sortForFile: { $0.sorted { $0.createdAt > $1.createdAt } },
+            cascadeRule: { _, _, previous in
+                guard let take = previous else { return [] }
+                // The voice, both iCloud copies, and — through the audio
+                // kind's folder, which is where it lives — the camera's own
+                // file, which no kind carries.
+                var out: [SyncCascade] = [.deleteFile(kind: .blobSpeechAudio, key: take.audioFilename)]
+                if let video = take.videoFilename {
+                    out.append(.deleteFile(kind: .blobSpeechAudio, key: video))
+                }
+                out += SpeechVideoSync.copyNames(for: take.id).map { .deleteFile(kind: .blobSpeechVideo, key: $0) }
+                return out
+            },
+            afterWrite: { lang in
+                // A video deleted on the other device: its files go here too.
+                SpeechVideoSync.shared.dropVideosNoLongerOnFile(lang: lang)
+                reloadSpeech(lang)
             })
     }
 

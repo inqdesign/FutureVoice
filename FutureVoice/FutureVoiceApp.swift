@@ -137,6 +137,8 @@ struct FutureVoiceApp: App {
             // Pull the other devices' practice, then push ours.
             if phase == .active {
                 SyncEngine.shared.foregrounded()
+                // Speech videos at the picked quality (a no-op when off).
+                SpeechVideoSync.shared.ensureCopies()
                 // Told once, outside a call (see `SyncEngine.quotaFull`).
                 SyncQuotaNotice.presentIfNeeded()
             }

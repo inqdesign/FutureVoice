@@ -205,6 +205,20 @@ reasons are the design:
 - **Never synced:** every cache (PhraseAudio, DrillEnrichment, topics, news,
   translations, openers), the daily call (two devices must not ring at once),
   consent, and `BackupService.excludedDefaults`.
+- **Speech syncs, and its VIDEO is the learner's pick** (2026-10-14,
+  `SpeechVideoSync`). Scripts, takes and each take's voice ride like any
+  other kind (`speechScript` / `speechTake` / `blobSpeechAudio`). The
+  camera's own 1080p file never travels; Me → Devices → Speech videos picks
+  what iCloud gets: **Off** (default) · **Standard** (a 720p HEVC copy,
+  ~12 MB a minute, in `Documents/Speech/Synced/*.sd.mov`, downloaded by the
+  other device as it appears) · **Original** (the camera file hard-linked
+  as `*.hq.mov`, no extra space here). An original is fetched on another
+  device ONLY when tapped (`BlobKind.onDemand`, `Entry.onDemand`, and the
+  diff never tombstones an on-demand file that isn't here), and on Standard
+  one take's original can be sent from its page. A video deleted on any
+  device goes everywhere: the take record says `videoFilename == nil` and
+  `dropVideosNoLongerOnFile` removes the files. Switching the setting off
+  deletes nothing, here or in iCloud.
 - **The voice recording IS synced** (2026-10-01, founder decision, kind
   `.blobVoiceSample`): a learner reinstalled, paid, and was sent to record
   again because `voice_sample.wav` lived on one install. `VoiceSampleStore`

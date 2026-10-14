@@ -27,6 +27,10 @@ enum SyncKind: String, Codable, CaseIterable, Hashable {
     case dialogue
     case weekly
     case weeklyTest
+    /// The Speech tab's own scripts and its takes (score, transcript, notes).
+    /// Small; the recordings travel as `blobSpeechAudio` / `blobSpeechVideo`.
+    case speechScript
+    case speechTake
     // Global (Documents root / UserDefaults).
     case practiceDay
     case talkDay
@@ -47,6 +51,16 @@ enum SyncKind: String, Codable, CaseIterable, Hashable {
     /// founder decision). An older build can't name this kind and skips the
     /// record (`CloudKitTransport.makeSyncRecord`), so no schema bump.
     case blobVoiceSample
+    /// A Speech take's voice (`Documents/Speech/*.wav`), like a shadow take.
+    case blobSpeechAudio
+    /// The COPY of a Speech camera take that goes to iCloud
+    /// (`Documents/Speech/Synced/`), made only when the learner picked a
+    /// video quality (`SpeechVideoSync`). The camera's own file never
+    /// travels: at 1080p a three-minute take is hundreds of megabytes, so
+    /// the learner chooses what iCloud gets — a standard copy, or the
+    /// original, and the original is downloaded on another device only when
+    /// asked for (`BlobKind.onDemand`).
+    case blobSpeechVideo
 
     /// Whether items live under `Documents/lang/<code>/` (one set per
     /// enrolled language) or once per install.
@@ -55,11 +69,13 @@ enum SyncKind: String, Codable, CaseIterable, Hashable {
         case .session, .drill, .vocabRecord, .vocabExpression, .vocabStudying,
              .vocabStudyingExpression, .vocabRemovedByHand, .vocabAutoKept,
              .vocabDismissed, .vocabIngested, .vocabExpressionIngested,
-             .schedule, .shadow, .savedLine, .scenario, .dialogue, .weekly, .weeklyTest:
+             .schedule, .shadow, .savedLine, .scenario, .dialogue, .weekly, .weeklyTest,
+             .speechScript, .speechTake:
             return true
         case .practiceDay, .talkDay, .usageDay, .persona, .personaNote, .profile,
              .counterpart, .dayCard, .defaults,
-             .blobTurn, .blobRecording, .blobDayCard, .blobAvatar, .blobVoiceSample:
+             .blobTurn, .blobRecording, .blobDayCard, .blobAvatar, .blobVoiceSample,
+             .blobSpeechAudio, .blobSpeechVideo:
             return false
         }
     }
@@ -68,7 +84,8 @@ enum SyncKind: String, Codable, CaseIterable, Hashable {
     /// only a fingerprint (size + mtime), never the bytes.
     var isBlob: Bool {
         switch self {
-        case .blobTurn, .blobRecording, .blobDayCard, .blobAvatar, .blobVoiceSample: return true
+        case .blobTurn, .blobRecording, .blobDayCard, .blobAvatar, .blobVoiceSample,
+             .blobSpeechAudio, .blobSpeechVideo: return true
         default: return false
         }
     }

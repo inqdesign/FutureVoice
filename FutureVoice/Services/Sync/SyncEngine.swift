@@ -709,7 +709,11 @@ final class SyncEngine: ObservableObject {
                 entry.pushedAt = now
             } else {
                 entry.deletedAt = nil
-                entry.wanted = true
+                // An on-demand file (a Speech video's original) is known,
+                // not fetched; `requestBlob` is what asks for it.
+                let onDemand = blob.onDemand(key)
+                entry.onDemand = onDemand ? true : nil
+                entry.wanted = !onDemand
                 entry.needsPush = false
                 entry.pushedAt = now
                 // When the audio was made, not when this device heard of it
@@ -904,7 +908,8 @@ final class SyncEngine: ObservableObject {
             }
         }
         for var entry in index.entries(kind: handler.kind, lang: lang)
-        where snapshot[entry.key] == nil && !entry.isDeleted && !entry.frozen && !entry.wanted {
+        where snapshot[entry.key] == nil && !entry.isDeleted && !entry.frozen && !entry.wanted
+            && entry.onDemand != true {
             entry.deletedAt = now
             entry.observedAt = now
             entry.hash = ""
@@ -938,6 +943,12 @@ final class SyncEngine: ObservableObject {
             progress = Progress(phase: .downloadingAudio, done: done, total: total)
             let slice = Array(wanted[cursor..<min(cursor + Self.blobFetchBatch, wanted.count)])
             cursor += slice.count
+            // A file the learner tapped for is theirs to fetch on whatever
+            // network they're on; the Wi-Fi rule is for what moves by itself.
+            let cloudKit = transport as? CloudKitTransport
+            let asked = slice.contains { requested.contains($0.recordName) }
+            if asked { cloudKit?.allowsCellularForBlobs = true }
+            defer { if asked { cloudKit?.allowsCellularForBlobs = SyncStore.cellularForAudio } }
             let fetched: [String: SyncRecord]
             do {
                 fetched = try await transport.fetch(recordNames: slice.map(\.recordName), in: zone)
@@ -974,6 +985,12 @@ final class SyncEngine: ObservableObject {
         } catch {
             return
         }
+        if blob.excludeFromBackup {
+            var values = URLResourceValues()
+            values.isExcludedFromBackup = true
+            var url = dest
+            try? url.setResourceValues(values)
+        }
         var e = entry
         e.wanted = false
         e.needsPush = false
@@ -998,12 +1015,34 @@ final class SyncEngine: ObservableObject {
         return .absent
     }
 
-    /// Move one blob to the front of the download queue.
+    /// Move one blob to the front of the download queue — and, for an
+    /// on-demand file, into it.
     func requestBlob(kind: SyncKind, key: String) {
         let name = SyncRecord.recordName(kind: kind, lang: nil, key: key)
+        if let index, var entry = index[name], !entry.isDeleted, !entry.wanted,
+           blobState(kind: kind, key: key) != .local {
+            entry.wanted = true
+            index[name] = entry
+            index.save()
+            refreshCounts()
+        }
         requestedBlobs.removeAll { $0 == name }
         requestedBlobs.insert(name, at: 0)
         requestSync(kinds: [])
+    }
+
+    /// Bytes of a blob the server holds and this device hasn't got — what a
+    /// "Download" button can promise. Nil when it isn't known to be there.
+    func remoteBlobSize(kind: SyncKind, key: String) -> Int? {
+        guard let entry = index?.entry(kind: kind, lang: nil, key: key), !entry.isDeleted,
+              entry.pushedAt != nil, blobState(kind: kind, key: key) != .local else { return nil }
+        return entry.size
+    }
+
+    /// Whether a blob this device made is on the server as it is now.
+    func blobUploaded(kind: SyncKind, key: String) -> Bool {
+        guard let entry = index?.entry(kind: kind, lang: nil, key: key) else { return false }
+        return !entry.isDeleted && !entry.needsPush && entry.pushedAt != nil
     }
 
     /// The voice recording from iCloud, now — for a phone that has to rebuild
