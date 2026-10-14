@@ -442,7 +442,9 @@ struct SpeechScriptSheet: View {
                 // changing it would make it a script of your own, which is
                 // the Plus side of the tab.
                 if !script.isBuiltIn && !script.isChallenge {
-                    ToolbarItem(placement: .topBarTrailing) {
+                    // Edit on the left, Done alone on the right (founder,
+                    // 2026-10-14).
+                    ToolbarItem(placement: .topBarLeading) {
                         Button("Edit") { editing = true }
                     }
                 }
