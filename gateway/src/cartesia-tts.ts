@@ -68,22 +68,36 @@ export async function withGermanDefault(apiKey: string | undefined, voiceId: str
   if (!m) return voiceId
   const uuid = m[1].toLowerCase()
   const accent = m[2]?.toLowerCase()
-  if (accent && ACCENT_LANGUAGE[accent] === "de") return voiceId
-  let ready = germanReady.get(uuid)
-  if (ready === undefined) {
-    try {
-      const r = await fetch(`https://api.cartesia.ai/voices/${uuid}`, {
-        headers: { "X-API-Key": apiKey, "Cartesia-Version": VERSION },
+  // The id's own German accent is checked too, not trusted: a voice moved to
+  // Cartesia was saved as `<uuid>:standard-german` while the accent had never
+  // been added, and every line of its calls was refused (2026-10-14).
+  const want = accent && ACCENT_LANGUAGE[accent] === "de" ? accent : "standard-german"
+  const key = `${uuid}:${want}`
+  if (germanReady.get(key)) return key
+  try {
+    const h = { "X-API-Key": apiKey, "Cartesia-Version": VERSION }
+    const r = await fetch(`https://api.cartesia.ai/voices/${uuid}`, { headers: h })
+    if (!r.ok) return uuid
+    const v = await r.json() as { accents?: { accent: string; is_native?: boolean }[] | null }
+    let ready = (v.accents ?? []).some((a) => a.accent === want)
+    // Missing but addable (the voice has its native base): add it here, so
+    // the call is in standard German now rather than after the next line the
+    // edge function speaks. Anything odder is the edge function's
+    // `ensureAccent`, which knows the base rules.
+    if (!ready && (v.accents ?? []).some((a) => a.is_native)) {
+      const add = await fetch(`https://api.cartesia.ai/voices/${uuid}/accents`, {
+        method: "PATCH", headers: { ...h, "Content-Type": "application/json" },
+        body: JSON.stringify({ accents: [want] }),
       })
-      if (!r.ok) return voiceId
-      const v = await r.json() as { accents?: { accent: string }[] | null }
-      ready = (v.accents ?? []).some((a) => a.accent === "standard-german")
-      if (ready) germanReady.set(uuid, true)
-    } catch {
-      return voiceId
+      ready = add.ok
+      if (!add.ok) console.warn("german accent add failed", uuid, add.status, (await add.text()).slice(0, 200))
     }
+    if (!ready) return uuid
+    germanReady.set(key, true)
+    return key
+  } catch {
+    return uuid
   }
-  return ready ? `${uuid}:standard-german` : voiceId
 }
 
 /** Each accent's language — an accent is applied only to a line in it. */

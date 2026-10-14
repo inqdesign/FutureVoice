@@ -120,11 +120,17 @@ Deno.serve(async (req) => {
     const made = await cartesia.cloneVoice(clip, active.name ?? `Future ${userId.slice(0, 8)}`,
       cartesia.lineLanguage("", target))
     if (!made.ok) return json({ ...plan, result: "failed", detail: made.detail }, 502)
-    if (accent && accent !== cartesia.GERMAN_DEFAULT) {
-      const ok = await cartesia.ensureAccent(made.voiceId, accent)
+    // EVERY accent the id will name is put on the voice first — standard
+    // German included. It was left to the clone's own background add, which
+    // can fail, and a voice saved as `<uuid>:standard-german` without the
+    // accent had every line refused (2026-10-14: no greeting, no call).
+    // German is also added when the id names another accent: every German
+    // line is spoken in standard German (`withDefaultAccent`).
+    for (const a of new Set([cartesia.GERMAN_DEFAULT, ...(accent ? [accent] : [])])) {
+      const ok = await cartesia.ensureAccent(made.voiceId, a)
       if (!ok.ok) {
         await cartesia.deleteVoice(made.voiceId)
-        return json({ ...plan, result: "failed", detail: ok.detail }, 502)
+        return json({ ...plan, result: "failed", detail: `${a}: ${ok.detail}` }, 502)
       }
     }
     const id = accent ? `${made.voiceId}:${accent}` : made.voiceId
@@ -170,6 +176,7 @@ Deno.serve(async (req) => {
     const id = accent ? `${uuid}:${accent}` : uuid
     if (dry) return json({ user_id: userId, result: "cartesia", from: active.elevenlabs_voice_id, to: id })
     const de = await cartesia.ensureAccent(uuid, cartesia.GERMAN_DEFAULT)
+    if (!de.ok) return json({ user_id: userId, result: "failed", detail: `german: ${de.detail}` }, 502)
     if (accent && accent !== cartesia.GERMAN_DEFAULT) {
       const ok = await cartesia.ensureAccent(uuid, accent)
       if (!ok.ok) return json({ user_id: userId, result: "failed", detail: ok.detail }, 502)

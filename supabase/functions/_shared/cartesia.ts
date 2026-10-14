@@ -75,25 +75,44 @@ export function accentFromDescription(description: string): string | null {
  *  per line rather than stored. */
 export const GERMAN_DEFAULT = "standard-german"
 
-const germanReady = new Map<string, boolean>()
+/** Per isolate: does voice `uuid` carry `accent` (`<uuid>:<accent>`)? */
+const accentReady = new Map<string, boolean>()
 
-/** The line with the German default applied — only once the voice is known
- *  to carry the accent (added here if it doesn't; a request naming an accent
- *  the voice lacks fails). Never throws: any doubt speaks the line plain. */
+/** Whether the voice can speak `accent`, adding it if it can't yet. Only a
+ *  YES is cached: a failed add is tried again on the next line, because the
+ *  plain fallback is not neutral — a German clone's base accent is Austrian
+ *  (BASE_ACCENT), and every German learner is to hear standard German
+ *  (founder, 2026-10-14). */
+async function hasAccent(uuid: string, accent: string): Promise<boolean> {
+  const key = `${uuid}:${accent}`
+  if (accentReady.get(key)) return true
+  if (await isStockVoice(uuid)) return false
+  const r = await ensureAccent(uuid, accent)
+  if (r.ok) accentReady.set(key, true)
+  else console.warn("accent not on voice", key, r.detail)
+  return r.ok
+}
+
+/** The line with its accent made SAFE to send, and the German default
+ *  applied. A request naming an accent the voice lacks fails outright, so an
+ *  accent is only sent once the voice is known to carry it (added here if it
+ *  doesn't). That covers the accent the id itself names too: a voice moved
+ *  to Cartesia was saved as `<uuid>:standard-german` while the background
+ *  add of that accent had failed, and every line it spoke — the greeting,
+ *  the whole call — was refused with "this voice does not support accent
+ *  'standard-german'" (2026-10-13/14). Never throws: any doubt speaks the
+ *  line plain. */
 export async function withDefaultAccent(line: CartesiaLine): Promise<CartesiaLine> {
-  if (line.language !== "de") return line
   const { uuid, accent } = parseVoice(line.voiceId)
-  if (accent && ACCENT_LANGUAGE[accent] === "de") return line
   try {
-    let ready = germanReady.get(uuid)
-    if (ready === undefined) {
-      if (await isStockVoice(uuid)) ready = false
-      else ready = (await ensureAccent(uuid, GERMAN_DEFAULT)).ok
-      germanReady.set(uuid, ready)
+    if (accent && ACCENT_LANGUAGE[accent] === line.language) {
+      return (await hasAccent(uuid, accent)) ? line : { ...line, voiceId: uuid }
     }
-    return ready ? { ...line, voiceId: `${uuid}:${GERMAN_DEFAULT}` } : line
+    if (line.language !== "de") return line
+    return (await hasAccent(uuid, GERMAN_DEFAULT))
+      ? { ...line, voiceId: `${uuid}:${GERMAN_DEFAULT}` } : { ...line, voiceId: uuid }
   } catch {
-    return line
+    return { ...line, voiceId: uuid }
   }
 }
 
@@ -392,7 +411,7 @@ export async function cloneVoice(
   // withDefaultAccent adds it later if this fails.
   const voiceId = json.id
   const addGerman = ensureAccent(voiceId, GERMAN_DEFAULT)
-    .then((de) => { if (de.ok) germanReady.set(voiceId, true); else console.warn("german accent at clone failed", de.detail) })
+    .then((de) => { if (de.ok) accentReady.set(`${voiceId}:${GERMAN_DEFAULT}`, true); else console.warn("german accent at clone failed", de.detail) })
     .catch((e) => console.warn("german accent at clone failed", String(e)))
   // deno-lint-ignore no-explicit-any
   const runtime = (globalThis as any).EdgeRuntime
