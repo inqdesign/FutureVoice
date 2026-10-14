@@ -1,6 +1,8 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.foundation.layout.Arrangement
@@ -541,9 +543,40 @@ private fun TalkDetailPage(
                                 Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                // iOS `wordChip`: a capsule — bookmark + fill when
+                                // it's in the notebook, a green check + fill when
+                                // known, an outline otherwise.
+                                val revisionNow by StoreEvents.revision.collectAsStateWithLifecycle()
+                                var states by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+                                LaunchedEffect(mine, revisionNow) {
+                                    val v = com.roro.futurevoice.data.VocabStore.shared(context)
+                                    states = mine.associateWith { w ->
+                                        when {
+                                            v.isStudying(w, language) -> 1
+                                            v.state(w, language) != null -> 2
+                                            else -> 0
+                                        }
+                                    }
+                                }
                                 mine.forEach { w ->
-                                    androidx.compose.material3.AssistChip(
-                                        onClick = { wordCard = w to mine }, label = { Text(w) })
+                                    val st = states[w] ?: 0
+                                    val shape = androidx.compose.foundation.shape.RoundedCornerShape(50)
+                                    Row(
+                                        Modifier.clip(shape)
+                                            .then(if (st != 0) Modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest, shape)
+                                                else Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape))
+                                            .clickable { wordCard = w to mine }
+                                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                    ) {
+                                        if (st == 1) Icon(Icons.Filled.Bookmark, contentDescription = null,
+                                            modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.primary)
+                                        else if (st == 2) Icon(Icons.Filled.CheckCircle, contentDescription = null,
+                                            modifier = Modifier.size(14.dp), tint = androidx.compose.ui.graphics.Color(0xFF34C759))
+                                        Text(w, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium,
+                                            color = MaterialTheme.colorScheme.onSurface)
+                                    }
                                 }
                             }
                         }
