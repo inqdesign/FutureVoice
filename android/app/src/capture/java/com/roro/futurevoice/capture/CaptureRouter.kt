@@ -40,6 +40,8 @@ object CaptureRouter {
         "book",
         "book-lines",
         "book-words",
+        "book-wordcard",
+        "book-expressioncard",
         "call-coach",
         "call-feed-fade",
         "call-focus",

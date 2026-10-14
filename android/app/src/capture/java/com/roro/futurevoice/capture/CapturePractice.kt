@@ -414,6 +414,35 @@ object CapturePractice {
         "book" to book(null),
         "book-words" to book("WORDS"),
         "book-lines" to book("SHADOW"),
+        // A row tapped: the word's card, and the phrase's card with the
+        // scene's own note + example as "In this scene" (iOS `wordSheet` /
+        // `expressionSheet`).
+        "book-wordcard" to mode({
+            PracticeCaptureFlags.bookScenario = CaptureSeed.bookScenario
+            PracticeCaptureFlags.bookChapter = "WORDS"
+            PracticeCaptureFlags.bookCard = "appreciate"
+            PracticeCaptureFlags.stubWordEntry = hesitateEntry
+            PracticeCaptureFlags.voiceId = "capture-voice"
+        }) { c ->
+            ScenarioBookScreen(scenarioId = CaptureSeed.bookScenario.id, language = lang(c),
+                onWatch = {}, onTalk = {}, onShadow = {}, onBack = {})
+        },
+        "book-expressioncard" to mode({
+            val sc = CaptureSeed.bookScenario
+            val cur = sc.curriculum!!
+            PracticeCaptureFlags.bookScenario = sc.copy(curriculum = cur.copy(
+                expressions = cur.expressions.map {
+                    if (it.text == "catch up on") it.copy(
+                        note = "Sarah opens with it — say what you've been doing since.",
+                        example = "We should catch up on everything over coffee.") else it
+                }))
+            PracticeCaptureFlags.bookChapter = "EXPRESSIONS"
+            PracticeCaptureFlags.bookCard = "catch up on"
+            PracticeCaptureFlags.voiceId = "capture-voice"
+        }) { c ->
+            ScenarioBookScreen(scenarioId = CaptureSeed.bookScenario.id, language = lang(c),
+                onWatch = {}, onTalk = {}, onShadow = {}, onBack = {})
+        },
 
         "talkdetail" to talkDetail(null),
         "talkdetail-mid" to talkDetail(null, "mid"),

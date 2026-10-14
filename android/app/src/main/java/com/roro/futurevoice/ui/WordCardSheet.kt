@@ -127,6 +127,10 @@ fun WordCardSheet(
      *  `WordCard`'s title off a dealt list): the count is the notebook's,
      *  not a position. Null titles by position — "3 / 10". */
     notebookTitle: String? = null,
+    /** A scenario book's own note + example line per phrase (iOS
+     *  `ExpressionCard.Context`): written WITH the scene, so it says what a
+     *  dictionary can't. Shown as "In this scene" above the meaning. */
+    sceneContext: Map<String, Pair<String, String?>> = emptyMap(),
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -321,6 +325,20 @@ fun WordCardSheet(
                 // is nothing to play, so the button is absent rather than dead.
                 if (voiceId != null) PronounceCircle(speaking) { speak() }
             }
+
+            sceneContext[term]?.takeIf { (note, ex) -> note.isNotBlank() || !ex.isNullOrBlank() }
+                ?.let { (note, ex) ->
+                    CardSection(stringResource(R.string.in_this_scene)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (note.isNotBlank()) Text(note, fontSize = 16.sp,
+                                color = MaterialTheme.colorScheme.onSurface)
+                            ex?.takeIf { it.isNotBlank() }?.let {
+                                Text("\u201C$it\u201D", fontSize = 16.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
 
             CardSection(stringResource(R.string.meaning)) {
                 val senses = entry?.senses.orEmpty().filter { it.meaning.isNotBlank() }

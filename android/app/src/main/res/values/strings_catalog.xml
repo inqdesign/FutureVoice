@@ -908,6 +908,7 @@
     <!-- 'In the Speech tab, everyone reads the same script. Read it with the camera on and you land on the leaderboard.' -->
     <string name="in_the_speech_tab_everyone_reads_the_same_script_read_it_wit_932336">"In the Speech tab, everyone reads the same script. Read it with the camera on and you land on the leaderboard."</string>
     <string name="in_this_book">"In this book"</string>
+    <string name="in_this_scene">"In this scene"</string>
     <string name="in_your_life">"In your life"</string>
     <!-- 'In your own words (optional) — e.g. switches to English when excited' -->
     <string name="in_your_own_words_optional_e_g_switches_to_english_when_exci_e08d84">"In your own words (optional) — e.g. switches to English when excited"</string>
