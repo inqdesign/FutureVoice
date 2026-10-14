@@ -2210,6 +2210,9 @@ struct SpeechMetrics: Codable, Hashable {
     /// the delivery parts of `overall` are scaled by it. Nil on takes made
     /// before 2026-10-14, which were scored as if read to the end.
     var coverage: Double? = nil
+    /// `SpeechAnalyzer.scoringVersion` the take was scored by; nil = before
+    /// 2026-10-14, when every part was lenient.
+    var scoring: Int? = nil
 }
 
 /// The model's notes on a take, in the NATIVE language, anchored to the

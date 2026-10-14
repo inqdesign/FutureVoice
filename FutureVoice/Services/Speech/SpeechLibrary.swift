@@ -20,16 +20,18 @@ enum SpeechLibrary {
         }
     }
 
-    /// A comfortable presentation pace, low…high, in `rateUnit`s per minute.
-    /// Broadcast pace sits at the top of each band; a learner reading for
-    /// clarity is right anywhere inside it.
+    /// A comfortable presentation pace, low…high, in `rateUnit`s per minute —
+    /// the full marks of the pace score. It was twice this wide until
+    /// 2026-10-14 (en 120–160), and a slow, laboured read sat inside it at
+    /// 100; it is now the middle half of that band, so the midpoint — what a
+    /// script's length is written to — did not move.
     static func rateBand(_ language: String) -> ClosedRange<Int> {
         switch LanguageCatalog.base(language) {
-        case "ko": return 240...330
-        case "ja": return 260...340
-        case "de": return 105...140
-        case "fr", "es", "it", "pt": return 130...170
-        default: return 120...160
+        case "ko": return 263...307
+        case "ja": return 280...320
+        case "de": return 114...131
+        case "fr", "es", "it", "pt": return 140...160
+        default: return 130...150
         }
     }
 

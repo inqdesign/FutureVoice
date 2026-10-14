@@ -34,8 +34,12 @@ enum SpeechAnalyzer {
         let spoken = removingFillers(transcript, language: language, keepingThoseIn: script)
 
         // Accuracy: the shadow diff, which already handles CJK by syllable,
-        // digits and contractions.
+        // digits and contractions — but its PLAIN share, not the sqrt-curved
+        // score. The curve keeps one slip from cratering a short shadow line;
+        // over a 150-word script it turned 96% of the words into 98 and 81%
+        // into 90, so a read full of mistakes still scored in the 90s.
         let diff = ShadowEngine.analyze(target: script, learner: spoken, language: language)
+        let accuracy = Self.accuracy(diff)
         let missed = missedRuns(diff.steps, script: script, language: language)
 
         // Pace.
@@ -55,9 +59,12 @@ enum SpeechAnalyzer {
         let pauses = silences.filter { $0 >= pauseSeconds }.count
         let hesitations = silences.filter { $0 >= hesitationSeconds }.count
         let pausesAtBreaks = min(pauses, breaks)
-        let choppy = max(0, pauses - (breaks + clauses) - 2)
+        // Every breath past one per sentence end and comma (plus one) is a
+        // phrase broken in the middle. A slow, word-by-word read used to
+        // satisfy "a pause at every break" trivially and lose little else.
+        let choppy = max(0, pauses - (breaks + clauses) - 1)
         var pauseScore = breaks > 0 ? 100 * pausesAtBreaks / breaks : 100
-        pauseScore -= 5 * choppy + 8 * hesitations
+        pauseScore -= 6 * choppy + 10 * hesitations
         pauseScore = clamp(pauseScore)
 
         // Fillers per minute of speaking.
@@ -67,11 +74,11 @@ enum SpeechAnalyzer {
         let steadiness = steadinessScore(envelope?.phrases ?? [])
 
         let coverage = Self.coverage(diff.steps)
-        let overall = Self.overall(accuracy: diff.score, pace: paceScore, pause: pauseScore,
+        let overall = Self.overall(accuracy: accuracy, pace: paceScore, pause: pauseScore,
                                    filler: fillerScore, steadiness: steadiness, coverage: coverage)
 
         return SpeechMetrics(
-            accuracy: diff.score,
+            accuracy: accuracy,
             rate: rate, rateLow: band.lowerBound, rateHigh: band.upperBound,
             paceScore: paceScore,
             pausesAtBreaks: pausesAtBreaks, breaks: breaks,
@@ -80,7 +87,8 @@ enum SpeechAnalyzer {
             steadiness: steadiness,
             missed: missed,
             overall: overall,
-            coverage: coverage
+            coverage: coverage,
+            scoring: scoringVersion
         )
     }
 
@@ -130,15 +138,30 @@ enum SpeechAnalyzer {
         return Double(reached + 1) / Double(total)
     }
 
+    /// Which rules a take was scored by, stored on its metrics. 2 = the
+    /// 2026-10-14 tightening (plain accuracy share, the narrower pace band
+    /// with slow reads costing more, choppy pauses costing more). A take
+    /// scored by older rules never goes onto a board
+    /// (`SpeechChallenges.importLocalBests`): its parts were all lenient.
+    static let scoringVersion = 2
+
+    /// The plain share of the script said as written, 0–100.
+    static func accuracy(_ diff: ShadowEngine.ShadowAnalysis) -> Int {
+        clamp(Int((diff.ratio * 100).rounded()))
+    }
+
     // MARK: - Pieces (internal for tests)
 
-    /// 100 inside the band; 2 points per percent outside it.
+    /// 100 inside the band; outside it, 3 points per percent too slow and 2
+    /// per percent too fast — a laboured read is the commoner fault, and
+    /// the one a listener tires of first.
     static func paceScore(rate: Int, band: ClosedRange<Int>) -> Int {
         guard rate > 0 else { return 0 }
         if band.contains(rate) { return 100 }
-        let edge = Double(rate < band.lowerBound ? band.lowerBound : band.upperBound)
+        let slow = rate < band.lowerBound
+        let edge = Double(slow ? band.lowerBound : band.upperBound)
         let percentOff = abs(Double(rate) - edge) / edge * 100
-        return clamp(100 - Int((percentOff * 2).rounded()))
+        return clamp(100 - Int((percentOff * (slow ? 3 : 2)).rounded()))
     }
 
     /// Sentence ends inside the script — the last one is the end of the

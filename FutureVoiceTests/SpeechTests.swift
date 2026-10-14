@@ -4,10 +4,41 @@ import XCTest
 final class SpeechAnalyzerTests: XCTestCase {
 
     func testPaceInsideBandIsFullMarks() {
-        XCTAssertEqual(SpeechAnalyzer.paceScore(rate: 140, band: 120...160), 100)
-        XCTAssertEqual(SpeechAnalyzer.paceScore(rate: 0, band: 120...160), 0)
-        // 10% too fast → 80.
-        XCTAssertEqual(SpeechAnalyzer.paceScore(rate: 176, band: 120...160), 80)
+        XCTAssertEqual(SpeechAnalyzer.paceScore(rate: 140, band: 130...150), 100)
+        XCTAssertEqual(SpeechAnalyzer.paceScore(rate: 0, band: 130...150), 0)
+        // 10% too fast → 80; 10% too slow costs more → 70.
+        XCTAssertEqual(SpeechAnalyzer.paceScore(rate: 165, band: 130...150), 80)
+        XCTAssertEqual(SpeechAnalyzer.paceScore(rate: 117, band: 130...150), 70)
+    }
+
+    // MARK: 2026-10-14: a slow, laboured read with mistakes scored 99.
+
+    private let speech = "Sound is a wave of tiny changes in pressure. It travels through the air to your ears. "
+        + "In water it moves about four times faster. In steel it is faster still. "
+        + "That is why you can hear a train in the rails before you hear it in the air."
+
+    func testMistakesInALongScriptAreNotRoundedAway() {
+        // 6 of 50 words wrong or skipped: 88%, not the curve's 94.
+        let said = "Sound is a wave of tiny change in pressure it travel through the air to your ear "
+            + "in water it move about four time faster in steel it is faster still "
+            + "that is why you hear a train in the rails before you hear it in the air"
+        let m = SpeechAnalyzer.analyze(script: speech, transcript: said, language: "en", envelope: nil)
+        XCTAssertLessThanOrEqual(m.accuracy, 90)
+        XCTAssertEqual(m.scoring, SpeechAnalyzer.scoringVersion)
+    }
+
+    func testSlowChoppyReadIsFarFromFullMarks() {
+        // Every word right, but 50 words in 34 s (~88 wpm) with a breath
+        // after nearly every other word.
+        let slow = SpeechAnalyzer.Envelope(firstVoice: 0, lastVoice: 34,
+                                           silences: Array(repeating: 0.6, count: 22) + [1.8, 1.7],
+                                           phrases: [(-20, -21), (-20, -22)])
+        let said = speech.lowercased().filter { $0.isLetter || $0 == " " }
+        let m = SpeechAnalyzer.analyze(script: speech, transcript: said, language: "en", envelope: slow)
+        XCTAssertEqual(m.accuracy, 100)
+        XCTAssertEqual(m.paceScore, 0)
+        XCTAssertLessThan(m.pauseScore, 20)
+        XCTAssertLessThan(m.overall, 70)
     }
 
     func testSentenceBreaksExcludeTheLastSentence() {

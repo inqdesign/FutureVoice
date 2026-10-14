@@ -26,6 +26,10 @@ enum ShadowEngine {
 
     struct ShadowAnalysis {
         let score: Int                  // 0–100, deterministic
+        /// The share matched before the sqrt curve, 0…1. The curve is right
+        /// for one short line; a long speech script needs the plain share,
+        /// or ten wrong words cost one point (`SpeechAnalyzer`).
+        var ratio: Double = 0
         let steps: [DiffStep]
         let targetTokenCount: Int
         let learnerTokenCount: Int
@@ -58,6 +62,7 @@ enum ShadowEngine {
         let score = max(0, min(100, Int((curved * 100).rounded())))
         return ShadowAnalysis(
             score: score,
+            ratio: raw,
             steps: steps,
             targetTokenCount: targetTokens.count,
             learnerTokenCount: learnerTokens.count,

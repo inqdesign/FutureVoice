@@ -272,7 +272,8 @@ final class SpeechChallenges: ObservableObject {
                   !isPast(challengeId) else { continue }
             let onBoard = standings[challengeId]?.myBest ?? -1
             let candidates = SpeechStore.shared.takes(for: script.id)
-                .filter { $0.videoFilename != nil && $0.metrics.overall > onBoard }
+                .filter { $0.videoFilename != nil && $0.metrics.overall > onBoard
+                    && ($0.metrics.scoring ?? 1) >= SpeechAnalyzer.scoringVersion }
                 .sorted { $0.metrics.overall > $1.metrics.overall }
             guard !candidates.isEmpty else { continue }
             importing.insert(challengeId)
@@ -288,7 +289,7 @@ final class SpeechChallenges: ObservableObject {
                     ShadowEngine.analyze(target: body, learner: SpeechAnalyzer.removingFillers(transcript, language: language, keepingThoseIn: body),
                                          language: language)
                 }.value
-                guard abs(diff.score - take.metrics.accuracy) <= 5 else { continue }
+                guard abs(SpeechAnalyzer.accuracy(diff) - take.metrics.accuracy) <= 5 else { continue }
                 let m = take.metrics
                 let overall = SpeechAnalyzer.overall(accuracy: m.accuracy, pace: m.paceScore, pause: m.pauseScore,
                                                      filler: m.fillerScore, steadiness: m.steadiness,
