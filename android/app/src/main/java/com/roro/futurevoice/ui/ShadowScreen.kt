@@ -335,6 +335,19 @@ fun ShadowScreen(
             timings = ws.mapIndexed { i, w -> WordTiming(w, i * 380, (i + 1) * 380 - 60) }
             targetDurationMs = ws.size * 380
             if (ws.size >= 5) selection = 2..4
+            // A target take pushed beside the app (`capture-shadow-target.m4a`
+            // in files/) puts the trimmer on screen, its words spread over
+            // the take; `capture-whole-line` (an empty file) selects them all.
+            val take = File(context.filesDir, "capture-shadow-target.m4a")
+            if (take.exists()) {
+                val d = withContext(Dispatchers.IO) { mediaDurationMs(take) }
+                val per = d.toDouble() / maxOf(ws.size, 1)
+                timings = ws.mapIndexed { i, w -> WordTiming(w, (i * per).toInt(), ((i + 1) * per).toInt() - 60) }
+                targetDurationMs = d
+                if (File(context.filesDir, "capture-whole-line").exists()) selection = 0..ws.lastIndex
+                targetFile = take
+                phase = ShadowPhase.IDLE
+            }
             return@LaunchedEffect
         }
         val store = PhraseAudioStore.shared(context)
