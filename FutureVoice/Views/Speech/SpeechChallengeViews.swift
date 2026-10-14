@@ -76,6 +76,9 @@ struct SpeechChallengeFace: View {
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Color(.tertiarySystemFill))
+                    // The fill is translucent: on its own, the face behind it
+                    // in an overlapping stack showed through (2026-10-14).
+                    .background(Color(.secondarySystemGroupedBackground))
             }
         }
         .frame(width: size, height: size)
@@ -289,7 +292,6 @@ struct SpeechChallengeView: View {
     private func boardRow(_ row: SpeechChallenges.BoardRow) -> some View {
         if row.rank <= 3 {
             SpeechPodiumRow(row: row)
-                .listRowBackground(row.is_me ? Color.accentColor.opacity(0.12) : nil)
         } else {
             HStack(spacing: 12) {
                 Text("\(row.rank)")
@@ -310,7 +312,6 @@ struct SpeechChallengeView: View {
                     .font(.body.monospacedDigit().weight(.semibold))
                     .foregroundStyle(SpeechScoreColor.color(row.score))
             }
-            .listRowBackground(row.is_me ? Color.accentColor.opacity(0.12) : nil)
         }
     }
 }
@@ -596,7 +597,6 @@ struct SpeechChallengeMomentSheet: View {
                     SpeechBoardRowView(row: row)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 11)
-                        .background(row.is_me ? Color.accentColor.opacity(0.12) : .clear)
                 }
             }
             .background(Color(.secondarySystemGroupedBackground))
