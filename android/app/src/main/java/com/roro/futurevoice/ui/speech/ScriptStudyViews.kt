@@ -304,6 +304,7 @@ internal fun ScriptVoiceoverSection(script: SpeechScript, voiceId: String) {
     val account = rememberGateAccount()
     val player = remember { Mp3Player(context.cacheDir, source = "speech_voiceover") }
     var playing by remember { mutableStateOf(false) }
+    var resumeAt by remember { mutableStateOf(0) }
     var wall by remember { mutableStateOf<VoiceoverWall?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var shadowing by remember { mutableStateOf<ScriptVoiceoverStore.Stored?>(null) }
@@ -338,12 +339,19 @@ internal fun ScriptVoiceoverSection(script: SpeechScript, voiceId: String) {
                 stored != null -> {
                     VoiceoverRow(if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                         stringResource(if (playing) R.string.pause else R.string.play_in_my_voice), accent) {
-                        if (playing) { player.stop(); playing = false }
-                        else scope.launch { playing = true; runCatching { player.play(stored.file) }; playing = false }
+                        // Pause keeps the place, as iOS's pause does; the
+                        // next play picks up there, and the end starts over.
+                        if (playing) { resumeAt = player.positionMs; player.stop(); playing = false }
+                        else scope.launch {
+                            playing = true
+                            val finished = runCatching { player.play(stored.file, resumeAt) }.isSuccess
+                            if (playing && finished) resumeAt = 0
+                            playing = false
+                        }
                     }
                     FormDivider()
                     VoiceoverRow(Icons.Filled.GraphicEq, stringResource(R.string.shadow_it), accent) {
-                        player.stop(); playing = false; shadowing = stored
+                        player.stop(); playing = false; resumeAt = 0; shadowing = stored
                     }
                 }
                 job is ScriptVoiceoverCenter.Job.Making -> Row(Modifier.fillMaxWidth().padding(16.dp),

@@ -53,13 +53,14 @@ class Mp3Player(private val cacheDir: File, private val source: String? = null) 
         }
     }
 
-    /** Play a file already on disk — a recorded take, kept as it was. */
-    suspend fun play(file: File) {
+    /** Play a file already on disk — a recorded take, kept as it was.
+     *  [fromMs] resumes where a pause left it. */
+    suspend fun play(file: File, fromMs: Int = 0) {
         source?.let { Analytics.capture("audio_played", mapOf("source" to it)) }
-        playFile(file)
+        playFile(file, fromMs)
     }
 
-    private suspend fun playFile(file: File) = suspendCancellableCoroutine { cont ->
+    private suspend fun playFile(file: File, fromMs: Int = 0) = suspendCancellableCoroutine { cont ->
         stop()
         val mp = MediaPlayer().apply {
             setAudioAttributes(
@@ -78,6 +79,7 @@ class Mp3Player(private val cacheDir: File, private val source: String? = null) 
             }
             setVolume(volume, volume)
             prepare()
+            if (fromMs > 0) seekTo(fromMs)
             start()
         }
         player = mp
