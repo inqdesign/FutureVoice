@@ -14,6 +14,11 @@ func daysAgo(_ d: Int) -> Date { now.addingTimeInterval(-Double(d) * 86_400) }
 /// 2026-10-13 08:14 UTC = 10:14 in Berlin.
 let callStart = Date(timeIntervalSince1970: 1_791_879_240)
 let berlin = TimeZone(identifier: "Europe/Berlin")!
+/// A talk N days before the CALL — the clock measures `before` from
+/// `callStart`, so it must never come from the real clock (`daysAgo`), or the
+/// vector's "last talk was 3 days ago (Saturday)" moves with the date it is
+/// generated on.
+func daysBeforeCall(_ d: Int) -> Date { callStart.addingTimeInterval(-Double(d) * 86_400) }
 
 let notes: [PersonaNote] = [
     PersonaNote(text: "works as a nurse on night shifts", learnedAt: daysAgo(90), share: .all, kind: .fact),
@@ -119,7 +124,7 @@ let fixtures: [Fixture] = [
     Fixture(name: "free_ko_a2_full_tutor", target: "ko", native: "en", level: .a2,
             patterns: patterns, weak: ["food", "work"], topic: "Weekend plans", persona: fullPersona,
             news: ["The city opened a new tram line", "Fares stay the same"],
-            clock: clock(2, lastToday: callStart.addingTimeInterval(-3 * 3600), before: daysAgo(3)),
+            clock: clock(2, lastToday: callStart.addingTimeInterval(-3 * 3600), before: daysBeforeCall(3)),
             tutor: true),
     Fixture(name: "first_ja_a1_tutor", target: "ja", native: "ko", level: .a1, persona: thinPersona,
             firstMeeting: true, clock: clock(0, lastToday: nil, before: nil), tutor: true),
@@ -128,11 +133,11 @@ let fixtures: [Fixture] = [
             clock: clock(1, lastToday: callStart.addingTimeInterval(-20 * 60), before: nil,
                          resumed: callStart.addingTimeInterval(-2 * 86_400)), tutor: true),
     Fixture(name: "cast_own_close_ko", target: "ko", native: "en", level: .b2, persona: fullPersona,
-            counterpart: closeFriend, clock: clock(1, lastToday: callStart.addingTimeInterval(-3600), before: daysAgo(10))),
+            counterpart: closeFriend, clock: clock(1, lastToday: callStart.addingTimeInterval(-3600), before: daysBeforeCall(10))),
     Fixture(name: "cast_own_manager_en", target: "en", native: "ko", level: .b1, persona: fullPersona,
             counterpart: manager),
     Fixture(name: "cast_stranger_en_tutor", target: "en", native: "ko", level: .b1, persona: fullPersona,
-            counterpart: stranger, clock: clock(0, lastToday: nil, before: daysAgo(1)), tutor: true),
+            counterpart: stranger, clock: clock(0, lastToday: nil, before: daysBeforeCall(1)), tutor: true),
     Fixture(name: "cast_stranger_fr_noground", target: "fr", native: "en", level: .c2, counterpart: strangerNoGround),
     Fixture(name: "cast_public_figure_ko", target: "ko", native: "en", level: .a2, persona: thinPersona,
             counterpart: publicFigure),

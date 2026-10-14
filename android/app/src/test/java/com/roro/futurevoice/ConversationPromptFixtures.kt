@@ -22,6 +22,9 @@ object ConversationPromptFixtures {
     /** 2026-10-13 08:14 UTC = 10:14 in Berlin. */
     const val CALL_START = 1_791_879_240_000L
     val berlin: ZoneId = ZoneId.of("Europe/Berlin")
+    /** A talk N days before the CALL (the clock measures from [CALL_START]);
+     *  never the real clock, or the vector moves with the date. */
+    fun daysBeforeCall(d: Int) = CALL_START - d * 86_400_000L
 
     val notes = listOf(
         PersonaNote(text = "works as a nurse on night shifts", learnedAt = daysAgo(90), share = PersonaNote.Share.ALL, kind = PersonaNote.Kind.FACT),
@@ -89,17 +92,17 @@ object ConversationPromptFixtures {
         Fixture("free_ko_a2_full_tutor", "ko", "en", CefrLevel.A2, patterns = patterns, weak = listOf("food", "work"),
             topic = "Weekend plans", persona = fullPersona,
             news = listOf("The city opened a new tram line", "Fares stay the same"),
-            clock = clock(2, CALL_START - 3 * 3_600_000L, daysAgo(3)), tutor = true),
+            clock = clock(2, CALL_START - 3 * 3_600_000L, daysBeforeCall(3)), tutor = true),
         Fixture("first_ja_a1_tutor", "ja", "ko", CefrLevel.A1, persona = thinPersona, firstMeeting = true,
             clock = clock(0, null, null), tutor = true),
         Fixture("brief_de_c1", "de", "en", CefrLevel.C1, topic = "Job interview at Siemens. Practice the interview.",
             persona = fullPersona, brief = brief,
             clock = clock(1, CALL_START - 20 * 60_000L, null, resumed = CALL_START - 2 * 86_400_000L), tutor = true),
         Fixture("cast_own_close_ko", "ko", "en", CefrLevel.B2, persona = fullPersona, counterpart = closeFriend,
-            clock = clock(1, CALL_START - 3_600_000L, daysAgo(10))),
+            clock = clock(1, CALL_START - 3_600_000L, daysBeforeCall(10))),
         Fixture("cast_own_manager_en", "en", "ko", CefrLevel.B1, persona = fullPersona, counterpart = manager),
         Fixture("cast_stranger_en_tutor", "en", "ko", CefrLevel.B1, persona = fullPersona, counterpart = stranger,
-            clock = clock(0, null, daysAgo(1)), tutor = true),
+            clock = clock(0, null, daysBeforeCall(1)), tutor = true),
         Fixture("cast_stranger_fr_noground", "fr", "en", CefrLevel.C2, counterpart = strangerNoGround),
         Fixture("cast_public_figure_ko", "ko", "en", CefrLevel.A2, persona = thinPersona, counterpart = publicFigure),
         Fixture("first_counterpart_ignored_es", "es", "en", CefrLevel.B2, persona = null, counterpart = manager,
