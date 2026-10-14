@@ -394,7 +394,7 @@ fun ShadowScreen(
         phase = ShadowPhase.IDLE
     }
     LaunchedEffect(lineId) {
-        saved = turnId != null && SavedLineStore.shared(context).isSaved(turnId)
+        saved = SavedLineStore.shared(context).isSaved(lineId)
     }
     LaunchedEffect(lineId, reload) {
         if (seed != null) return@LaunchedEffect
@@ -740,15 +740,20 @@ fun ShadowScreen(
                         onClick = { if (!recordingNow) { target.stop(); onBack() } },
                         modifier = Modifier.alpha(if (recordingNow) 0.4f else 1f))
                 },
-                trailing = if (turnId != null) ({
+                // iOS draws the bookmark on EVERY shadow screen — its line
+                // always carries a Turn id. A line opened here without one
+                // (a scene, a book page, a word card) is saved under the same
+                // stable id its attempts are filed under, so reopening it
+                // shows it saved and its takes stay attached.
+                trailing = {
                     IosGlassButton(onClick = {
-                        scope.launch { saved = SavedLineStore.shared(context).toggle(SavedLine(id = turnId, text = line)) }
+                        scope.launch { saved = SavedLineStore.shared(context).toggle(SavedLine(id = lineId, text = line)) }
                     }, circle = true) {
                         Icon(if (saved) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
                             contentDescription = stringResource(if (saved) R.string.remove_from_saved_lines else R.string.save_line),
                             tint = MaterialTheme.colorScheme.primary)
                     }
-                }) else null,
+                },
                 modifier = Modifier.statusBarsPadding().padding(horizontal = 16.dp).padding(top = 8.dp, bottom = 4.dp),
             )
             Column(
