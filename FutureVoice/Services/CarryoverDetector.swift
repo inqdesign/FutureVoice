@@ -76,7 +76,7 @@ enum CarryoverDetector {
         sessionStartedAt: Date,
         now: Date = Date()
     ) -> [Carryover] {
-        let userTurns = turns.filter { $0.role == .user && !$0.excludedFromScoring }
+        let userTurns = turns.filter { $0.isEvidence }
         guard !userTurns.isEmpty else { return [] }
 
         var out: [Carryover] = []

@@ -188,8 +188,8 @@ struct ConversationDetailView: View {
         missingSummaryBlock
         if curriculum.isMastered && archivedAt == nil { masteredBanner }
         if session.isPractice {
-            // A practice call is never scored on the page: the answers were
-            // read off coach mode's suggestions (`Session.coached`).
+            // A practice call (`Session.coached`: tutor mode, or coach mode
+            // before 2026-10-14) is never scored on the page.
             Divider().padding(.leading, 20)
             practiceBlock
         } else if let sc = session.summary?.scorecard {
@@ -526,7 +526,7 @@ struct ConversationDetailView: View {
     private var practiceBlock: some View {
         VStack(alignment: .leading, spacing: 4) {
             groupLabel("Practice call", icon: "lightbulb")
-            Text(explain("You practiced with suggestions on screen. Calls without coach mode are the ones that measure your level."))
+            Text(explain("Your minutes, streak and book from this call all count. As a practice call, it has no score."))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

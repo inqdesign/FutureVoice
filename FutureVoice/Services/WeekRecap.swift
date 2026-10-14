@@ -250,7 +250,7 @@ enum WeekRecapBuilder {
         // Stumbles: the same fix, more than once.
         var fixes: [String: WeekRecap.Stumble] = [:]
         for session in sessions {
-            for turn in session.turns where turn.role == .user && !turn.excludedFromScoring {
+            for turn in session.turns where turn.isEvidence {
                 for fix in turn.suggestion?.fixes ?? [] {
                     let key = CarryoverDetector.normalized(fix.now)
                     guard !key.isEmpty else { continue }
@@ -599,7 +599,7 @@ enum WeekRecapCoach {
             var lines: [String] = []
             var seen = Set<String>()
             for session in sessions {
-                for turn in session.turns where turn.role == .user && !turn.excludedFromScoring {
+                for turn in session.turns where turn.isEvidence {
                     let text = turn.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
                     guard !text.isEmpty, seen.insert(text).inserted else { continue }
                     lines.append(String(text.prefix(400)))
@@ -614,7 +614,7 @@ enum WeekRecapCoach {
                 corrections.append("- \"\(was)\" → \"\(now)\"" + (why.isEmpty ? "" : " (\(why))"))
             }
             for session in sessions {
-                for turn in session.turns where turn.role == .user && !turn.excludedFromScoring {
+                for turn in session.turns where turn.isEvidence {
                     for fix in turn.suggestion?.fixes ?? [] { addFix(fix.was, fix.now, fix.why) }
                 }
                 for issue in session.summary?.grammarIssues ?? [] { addFix(issue.quote, issue.correction, issue.note) }

@@ -27,7 +27,7 @@ struct ScorecardMetrics: Codable {
     static func compute(turns: [Turn]) -> ScorecardMetrics {
         // Turns the user flagged as misheard by speech-to-text carry garbage
         // transcripts — leave them out of every measurement.
-        let userTurns = turns.filter { $0.role == .user && !$0.excludedFromScoring }
+        let userTurns = turns.filter { $0.isEvidence }
         let allWords = userTurns
             .flatMap { tokens(in: $0.transcript) }
 

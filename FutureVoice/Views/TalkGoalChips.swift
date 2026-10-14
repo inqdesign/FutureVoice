@@ -277,7 +277,7 @@ enum TalkGoalPicker {
     /// disappears mid-call reads as the app changing its mind about the
     /// learner.
     static func hits(in turn: Turn, among items: [TalkGoalItem]) -> Set<String> {
-        guard turn.role == .user, !turn.excludedFromScoring,
+        guard turn.isEvidence,
               !turn.transcript.isEmpty, !items.isEmpty else { return [] }
         var out = Set<String>()
         var lemmas: Set<String>?          // one NLTagger pass per turn, at most

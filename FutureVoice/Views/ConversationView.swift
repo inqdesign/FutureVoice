@@ -640,16 +640,13 @@ struct ConversationView: View {
     /// two together read as the list jumping up and back down (2026-10-05).
     /// The slot keeps its height until the next suggestion replaces it.
     @State private var coachStale = false
-    /// Coach mode was on at some point in this call — the whole call is then
-    /// a practice call (`Session.coached`).
-    @State private var coachWasOn = false
     /// Tutor mode as the conversation prompt has it right now (`TutorMode`).
     /// It lives in the system prompt, so a flip mid-call sends the gateway a
     /// new one (`RealtimeTalkClient.setSystem`, 2026-10-14 — it used to wait
     /// for the next call); the classic path rebuilds the prompt every turn.
     @State private var tutorThisCall = TutorMode.isOn
     /// Tutor mode was on at some point in this call — the whole call is then
-    /// a practice call, as with `coachWasOn`.
+    /// a practice call (`Session.coached`).
     @State private var tutorWasOn = TutorMode.isOn
     /// Watched only to tell a live call when the sheet flips tutor mode.
     @AppStorage(TutorMode.key) private var tutorModeChoice = false
@@ -1158,7 +1155,6 @@ struct ConversationView: View {
             }
             .task { refreshDashboard() }
             .task {
-                if coachMode { coachWasOn = true }
                 goalItems = pickGoalItems()
                 coachExtras = TalkGoalPicker.coachExtras(excluding: Set(goalItems.map(\.key)))
                 await loadGrammarFocus()
@@ -1166,7 +1162,6 @@ struct ConversationView: View {
             .onChange(of: coachMode) { _, on in
                 if on, grammarFocus == nil { Task { await loadGrammarFocus() } }
                 syncCoachSteer()
-                if on { coachWasOn = true }
                 if !on { coachHint = nil; coachReply = nil; coachStale = false }
             }
             .task {
@@ -2707,6 +2702,7 @@ struct ConversationView: View {
                             transcript: text, durationMs: ms, timestamp: Date(),
                             suggestion: nil)
             turn.fluency = fluency
+            turn.coachLine = shownCoachLine
             // `TurnAudioStore` owns the file from here; the client wrote it to
             // a temp path precisely so this move is the only copy.
             if let url, let data = try? Data(contentsOf: url) {
@@ -3127,6 +3123,7 @@ struct ConversationView: View {
             suggestion: nil,
             fluency: fluency
         )
+        userTurn.coachLine = shownCoachLine
         // Keep the user's own audio so they can listen back to how they
         // actually sounded (temp AAC from the mic tap → TurnAudioStore).
         // `.m4a`, NOT the store's MP3 default: this file gets re-decoded for
@@ -3659,6 +3656,16 @@ struct ConversationView: View {
         guard steer != coachSteerSent else { return }
         coachSteerSent = steer
         realtime.setSteer(steer)
+    }
+
+    /// The "try saying" on screen for the line being answered right now —
+    /// kept on the learner's turn so a line read off it isn't scored
+    /// (`Turn.readFromCoach`). Only while it still belongs to the latest
+    /// fluent-self line: a late or stale one was not what they were looking at.
+    private var shownCoachLine: String? {
+        guard coachMode, let reply = coachReply,
+              reply.turnId == turns.last(where: { $0.role == .fluentSelf })?.id else { return nil }
+        return reply.say
     }
 
     /// Coach mode's one step per fluent-self line: ask `CoachSuggester` for
@@ -4343,8 +4350,9 @@ struct ConversationView: View {
             // an empty one must not count as a clean call and retire it.
             grammarFocus: learnerSpokeThisCall
                 ? grammarFocus?.record(repeats: focusRepeatTurns.count) : nil,
-            // A resumed practice call stays one: its earlier half was coached.
-            coached: (coachWasOn || tutorWasOn || tutorThisCall || prior?.isPractice == true) ? true : nil
+            // Tutor mode makes the whole call practice; coach mode is judged
+            // per line (`Turn.readFromCoach`). A resumed practice call stays one.
+            coached: (tutorWasOn || tutorThisCall || prior?.isPractice == true) ? true : nil
         )
         SessionStore.shared.save(draft)
         didSaveCurrentSession = true

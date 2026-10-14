@@ -934,6 +934,52 @@
         }
       }
     },
+    "Answers in your own words count toward your level, sentences built around a word you're studying included. Lines read straight from a suggestion count as practice." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine eigenen Antworten zählen für dein Niveau, auch Sätze mit einem Wort, das du gerade lernst. Was du direkt vom Vorschlag abliest, zählt als Übung."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lo que respondes con tus propias palabras cuenta para tu nivel, también las frases con una palabra que estás estudiando. Lo que lees tal cual de una sugerencia cuenta como práctica."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tes réponses avec tes propres mots comptent pour ton niveau, y compris les phrases construites autour d’un mot que tu apprends. Ce que tu lis tel quel dans une suggestion compte comme entraînement."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分の言葉で答えた分はレベルに反映されます。勉強中の単語で作った文も同じです。提案をそのまま読んだ分は練習として記録されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 말로 한 대답은 레벨에 반영돼요. 공부 중인 단어로 만든 문장도 마찬가지예요. 제안 문장을 그대로 읽은 부분만 연습으로 쳐요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用自己的话回答会计入你的水平，用正在学的单词造的句子也一样。照着建议直接念的句子算作练习。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用自己的話回答會計入你的程度，用正在學的單字造的句子也一樣。照著建議直接唸的句子算作練習。"
+          }
+        }
+      }
+    },
     "Average" : {
       "localizations" : {
         "de" : {
@@ -3918,6 +3964,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "身邊的人"
+          }
+        }
+      }
+    },
+    "Your minutes, streak and book from this call all count. As a practice call, it has no score." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minuten, Serie und Buch aus diesem Gespräch zählen wie immer. Als Übungsgespräch bekommt es keine Bewertung."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los minutos, la racha y el cuaderno de esta conversación cuentan igual. Como es una conversación de práctica, no tiene puntuación."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tes minutes, ta série et ton carnet comptent comme d’habitude. Comme c’est une conversation d’entraînement, elle n’a pas de score."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このトークの時間・連続記録・教材はそのまま残ります。練習の会話なので、スコアはつきません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 대화의 통화 시간, 연속 기록, 교재는 모두 그대로 남아요. 연습 대화라서 점수는 없어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这次对话的通话时长、连续记录和教材都照常计入。这是练习对话，所以没有评分。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這次對話的通話時間、連續紀錄和教材都會照常保留。這是練習對話，所以沒有評分。"
           }
         }
       }

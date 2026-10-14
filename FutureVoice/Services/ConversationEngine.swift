@@ -1580,12 +1580,25 @@ enum ConversationEngine {
     ]
 
     /// Formats the running transcript for the summary user message.
+    /// A line the learner read off coach mode's suggestion is labelled
+    /// `USER_READ` (`Turn.readFromCoach`) and `readLineNote` says what that
+    /// means; a transcript without one is byte-identical to before.
     static func formatTranscript(_ turns: [Turn]) -> String {
         turns.map { turn in
-            let label = turn.role == .user ? "USER" : "FLUENT_SELF"
+            let label = turn.role == .fluentSelf ? "FLUENT_SELF"
+                : turn.readFromCoach ? "USER_READ" : "USER"
             return "[\(label)] \(turn.transcript)"
         }.joined(separator: "\n")
     }
+
+    /// Rides under the transcript only when a `USER_READ` line is in it.
+    static let readLineNote = """
+    [USER_READ] lines were read aloud from a suggestion shown on screen. They \
+    are part of the conversation, but they are NOT evidence of the learner's \
+    level: judge the scorecard (every score, the level, the grammar range) on \
+    the [USER] lines only, and quote nothing from a [USER_READ] line in \
+    expressions_used, phrases_used, new_patterns_detected or grammar issues.
+    """
 
     /// Maps prior `Turn`s into the role-tagged Claude message history.
     static func messages(from turns: [Turn]) -> [ClaudeClient.Message] {

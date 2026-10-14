@@ -178,6 +178,44 @@ struct CoachReply: Equatable {
     var heading: String? = nil
 }
 
+/// Whether a learner's line was READ off the coach's "try saying"
+/// (2026-10-14, founder: "even with coach mode on, if they don't use the
+/// suggested sentence as is, it doesn't matter"). A coached call used to be
+/// a practice call as a whole; now only the lines read off the suggestion
+/// are left out of the score, the level and "used in a talk". A line built
+/// around the WORD hint counts in full — making the sentence is the practice
+/// (founder, same day).
+///
+/// Read = most of the suggestion's own words came out (`minCoverage`) and
+/// they are most of what was said (`minShare`), so reading it and then
+/// carrying on in their own words counts as their own line. The faded
+/// "[example]" and the "___" blank are theirs to fill, so they are not part
+/// of the comparison. A suggestion with fewer than `minFixedWords` words of
+/// its own ("Yes, [I do].") can't be told apart from answering, and never
+/// counts as read.
+enum CoachRead {
+    static let minCoverage = 0.8
+    static let minShare = 0.6
+    static let minFixedWords = 3
+
+    static func isRead(_ said: String, line: String?) -> Bool {
+        guard let line, !line.isEmpty else { return false }
+        let fixed = words(line.replacingOccurrences(of: #"\[[^\]]*\]"#, with: " ",
+                                                    options: .regularExpression))
+        guard fixed.count >= minFixedWords else { return false }
+        let spoken = words(said)
+        guard !spoken.isEmpty else { return false }
+        let fixedSet = Set(fixed), spokenSet = Set(spoken)
+        let coverage = Double(fixedSet.intersection(spokenSet).count) / Double(fixedSet.count)
+        let share = Double(spoken.filter { fixedSet.contains($0) }.count) / Double(spoken.count)
+        return coverage >= minCoverage && share >= minShare
+    }
+
+    private static func words(_ text: String) -> [String] {
+        WordSplitter.words(CarryoverDetector.normalized(text)).filter { !$0.isEmpty }
+    }
+}
+
 @MainActor
 enum CoachSuggester {
     private struct Payload: Decodable {

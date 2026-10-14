@@ -347,7 +347,7 @@ struct PageIntroSheet: View {
                     .init(title: explain("This call's grammar focus"),
                           detail: explain("The mistake you make most, like the past tense, is pinned at the top. Your fluent self asks questions that need it, and if the same mistake comes back, its correction is marked.")),
                 ],
-                note: explain("A coached call counts as a practice call. Your minutes, streak and book all count, but it isn't used to measure your level, and words you use in it aren't marked as learned.")) { CoachMock() }
+                note: explain("Answers in your own words count toward your level, sentences built around a word you're studying included. Lines read straight from a suggestion count as practice.")) { CoachMock() }
 
         // MARK: Speech
         case (.speech, 0):

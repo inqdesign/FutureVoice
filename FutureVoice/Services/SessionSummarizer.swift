@@ -139,13 +139,16 @@ enum SessionSummarizer {
         )
         let transcript = ConversationEngine.formatTranscript(turns)
         let metrics = ScorecardMetrics.compute(turns: turns)
-        let userMessage = """
+        var userMessage = """
         transcript:
         \(transcript)
 
         metrics:
         \(metrics.promptJSON())
         """
+        if turns.contains(where: \.readFromCoach) {
+            userMessage += "\n\n" + ConversationEngine.readLineNote
+        }
         // Stable idempotency key: retrying — by re-tapping End, or from the
         // book days later — re-runs the SAME logical request without a
         // second charge, as long as the transcript hasn't grown.
@@ -227,7 +230,7 @@ enum SessionSummarizer {
         // They were the one place still reading it, so the transcriber's
         // words could still end up collected as the learner's.
         let userTexts = turns
-            .filter { $0.role == .user && !$0.excludedFromScoring }
+            .filter { $0.isEvidence }
             .map { $0.transcript }
 
         // phrases_used become correction cards, so they get the two checks

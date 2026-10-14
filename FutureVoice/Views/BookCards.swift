@@ -61,12 +61,23 @@ struct OriginTag: View {
     /// show no source rather than mislabel a free talk as News. `showActivity`
     /// prefixes "Talk ·" for the Studying grid.
     init?(session: Session, showActivity: Bool = false) {
-        let source: String?
+        var source: String?
         switch session.origin {
         case .free:     source = explain("Free talk")
         case .news:     source = explain("News")
         case .scenario: source = explain("Scenario")
         case .none:     source = (session.topic?.isEmpty ?? true) ? explain("Free talk") : nil
+        }
+        // A coach-mode call says so in place of "Free talk" (after "News" /
+        // "Scenario"). A practice call (`Session.coached` — tutor mode, or
+        // coach mode before 2026-10-14) carries no score, so it is named that.
+        let coached = session.turns.contains { $0.coachLine != nil }
+        if session.isPractice || coached {
+            let coach = session.isPractice ? explain("Practice call") : explain("Coach mode")
+            switch session.origin {
+            case .news, .scenario: source = [source, coach].compactMap { $0 }.joined(separator: " · ")
+            default:               source = coach
+            }
         }
         guard showActivity || source != nil else { return nil }
         text = Self.join(activity: showActivity ? explain("Talk") : nil, source: source)

@@ -570,7 +570,7 @@ final class VocabStore: ObservableObject {
         // callers must hand it identical lists.
         for s in SessionStore.shared.load() where s.endedAt != nil && !s.isPractice {
             let userTexts = s.turns
-                .filter { $0.role == .user && !$0.excludedFromScoring }
+                .filter { $0.isEvidence }
                 .map { $0.transcript }
             ingest(sessionId: s.id, userTexts: userTexts, at: s.endedAt ?? s.startedAt)
         }

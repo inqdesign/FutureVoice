@@ -2487,13 +2487,24 @@ eleven words on file, all auto-kept, and the chip row alone was empty.
   listening bubble — it lands a beat late and the bubble grew out of view.
   A suggestion not in the target script is dropped (`TextScript`): a
   Hangul name in the line once turned the whole suggestion Korean.
-- **A coached call is a PRACTICE call** (`Session.coached`, 2026-10-01,
-  founder decision): coach mode on at any point = the whole call. It is out
-  of the weekly assessment, its unlock gate and every Progress measurement,
-  its page shows "Practice call" instead of a score, and NOTHING said in it
-  is credited as used (words, expressions, drill cards, book items) — a
-  studied item said there is a practice rep. Minutes, streak, the Core,
-  corrections → cards and the book all stand.
+- **A coached call is judged LINE BY LINE** (2026-10-14, founder: "even
+  with coach mode on, if they don't use the suggested sentence as is, it
+  doesn't matter"; it was a whole-call practice flag from 2026-10-01). Each
+  learner turn keeps the "try saying" that was on screen (`Turn.coachLine`),
+  and `CoachRead` calls it READ when most of the suggestion's own words came
+  out and they are most of what was said (the `[example]` and `___` are
+  theirs to fill; a suggestion under 3 words of its own never counts).
+  `Turn.isEvidence` (not misheard, not read) is what every assessment reader
+  filters on — scorecard metrics, the summary's credit paths, carryovers, the
+  live chip ticks, the weekly report/recap, the grammar focus evidence — and
+  the summary transcript labels read lines `USER_READ` with a note to score
+  only `USER` lines (byte-identical when there are none). A sentence built
+  around the WORD hint is the learner's own and counts in full (founder:
+  making the sentence is the practice). **Tutor mode still makes the whole
+  call practice** (`Session.coached`; every turn is corrected and answered
+  back), as do coached calls saved before this date: out of the assessment,
+  "Practice call" on the page and the book card, nothing credited as used.
+  A coach-mode call reads "Coach mode" in place of "Free talk" on its card.
 - **A beginner is asked ONE concrete question** (2026-10-03, founder: "not
   'tell me about yourself' — 'what's your name?', 'where do you live?'";
   `ConversationEngine.beginnerQuestions`, A1/A2 only, last in the prompt and

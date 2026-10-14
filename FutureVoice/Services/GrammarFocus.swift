@@ -65,7 +65,7 @@ struct GrammarFocus: Equatable {
         return sessions.filter { s in
             guard s.archivedAt == nil, (s.endedAt ?? s.startedAt) >= fresh else { return false }
             return s.turns.contains { t in
-                t.role == .user && !t.excludedFromScoring
+                t.isEvidence
                     && ConversationEngine.quotes(pattern.mistake, from: t.transcript)
             }
         }.count

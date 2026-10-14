@@ -95,12 +95,12 @@ enum WeeklyReportEngine {
         let priorUserUtterances = endedSessions
             .filter { ($0.endedAt ?? .distantPast) <= windowStart }
             .flatMap { $0.turns }
-            .filter { $0.role == .user && !$0.excludedFromScoring }
+            .filter { $0.isEvidence }
             .map { $0.transcript }
 
         let windowUserUtterances = windowSessions
             .flatMap { $0.turns }
-            .filter { $0.role == .user && !$0.excludedFromScoring }
+            .filter { $0.isEvidence }
             .map { $0.transcript }
 
         guard !windowUserUtterances.isEmpty else { throw WeeklyReportError.noSessions }

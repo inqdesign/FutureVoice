@@ -165,12 +165,25 @@ struct Turn: Codable, Identifiable {
     /// instead of showing the learner words they didn't say. Never persisted:
     /// a turn is only pending while its own reply is in flight.
     var transcriptPending: Bool = false
+    /// Coach mode's "try saying" that was on screen when the learner said
+    /// this line (`CoachReply.say`). Kept rather than a verdict so the
+    /// judgment follows the transcript when the audio-grounded rewrite lands
+    /// (`readFromCoach`). Encoded only when set.
+    var coachLine: String? = nil
 }
 
 extension Turn {
+    /// The line was read off coach mode's suggestion (`CoachRead`): practice,
+    /// not evidence — out of the score, the level and "used in a talk".
+    var readFromCoach: Bool { role == .user && CoachRead.isRead(transcript, line: coachLine) }
+
+    /// A learner line every assessment path may read: not marked misheard,
+    /// not read off the coach's suggestion.
+    var isEvidence: Bool { role == .user && !excludedFromScoring && !readFromCoach }
+
     enum CodingKeys: String, CodingKey {
         case id, role, audioURL, transcript, durationMs, timestamp
-        case suggestion, fluency, excludedFromScoring, talkedOver
+        case suggestion, fluency, excludedFromScoring, talkedOver, coachLine
     }
 
     func encode(to encoder: Encoder) throws {
@@ -185,6 +198,7 @@ extension Turn {
         try c.encodeIfPresent(fluency, forKey: .fluency)
         try c.encode(excludedFromScoring, forKey: .excludedFromScoring)
         if talkedOver { try c.encode(true, forKey: .talkedOver) }
+        try c.encodeIfPresent(coachLine, forKey: .coachLine)
     }
 
     // Custom decode so turns saved before `excludedFromScoring` existed still
@@ -201,6 +215,7 @@ extension Turn {
         fluency = try c.decodeIfPresent(FluencyStats.self, forKey: .fluency)
         excludedFromScoring = try c.decodeIfPresent(Bool.self, forKey: .excludedFromScoring) ?? false
         talkedOver = try c.decodeIfPresent(Bool.self, forKey: .talkedOver) ?? false
+        coachLine = try c.decodeIfPresent(String.self, forKey: .coachLine)
     }
 }
 
@@ -316,14 +331,17 @@ struct Session: Codable, Identifiable {
     /// (`GrammarFocus`). Optional so old rows decode unchanged; also what the
     /// next call reads to retire a focus the learner has stopped tripping on.
     var grammarFocus: GrammarFocusRecord? = nil
-    /// The call ran with coach mode on at some point — a PRACTICE call
-    /// (2026-10-01, founder decision). The learner was answering with a
-    /// suggested sentence in front of them, so nothing said in it is evidence
-    /// of their level: it is left out of the weekly assessment and every
-    /// Progress measurement, and what they said is credited as practice, never
-    /// as "used in a talk". Everything else about a talk stands — minutes,
-    /// streak, corrections → cards, the book. Optional so old rows decode
-    /// unchanged; an older build ignores it.
+    /// A PRACTICE call (2026-10-01, founder decision): nothing said in it is
+    /// evidence of their level — it is left out of the weekly assessment and
+    /// every Progress measurement, and what they said is credited as
+    /// practice, never as "used in a talk". Everything else about a talk
+    /// stands — minutes, streak, corrections → cards, the book. Optional so
+    /// old rows decode unchanged; an older build ignores it.
+    ///
+    /// Since 2026-10-14 only TUTOR mode makes one (every turn is corrected and
+    /// answered back). Coach mode is judged per line instead
+    /// (`Turn.readFromCoach`); calls saved before that with coach mode on
+    /// keep the flag.
     var coached: Bool? = nil
 
     /// See `coached`.
@@ -334,7 +352,7 @@ struct Session: Codable, Identifiable {
     /// (Archiving is checked by the caller — it is the change being made.)
     var isLevelEvidence: Bool {
         !isPractice && turns.contains {
-            $0.role == .user && !$0.excludedFromScoring
+            $0.isEvidence
                 && !$0.transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
     }
