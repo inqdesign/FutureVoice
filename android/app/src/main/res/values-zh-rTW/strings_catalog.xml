@@ -176,6 +176,7 @@
     <string name="almost">"差不多"</string>
     <string name="almost_there">"快好了…"</string>
     <string name="already_have_an_account_sign_in">"已經有帳號？登入"</string>
+    <string name="also_make_it_in_my_voice">"同時用我的聲音生成"</string>
     <string name="always_free">"永遠免費"</string>
     <string name="am_i_actually_getting_better">"真的有進步嗎？"</string>
     <string name="an_airline_agent">"航空公司人員"</string>
@@ -416,6 +417,8 @@
     <string name="couldn_t_load_people_check_your_connection">"無法載入人物名單，請確認網路連線。"</string>
     <string name="couldn_t_load_stories">"無法載入新聞"</string>
     <string name="couldn_t_load_this_one">"這一個載入失敗。"</string>
+    <string name="couldn_t_make_it_in_your_voice">"沒能用你的聲音生成"</string>
+    <string name="couldn_t_make_it_in_your_voice_nothing_was_charged">"沒能用你的聲音生成，沒有扣除通話時間。"</string>
     <string name="couldn_t_make_your_voice">"無法製作你的聲音"</string>
     <string name="couldn_t_open_pick_it_again">"無法開啟，請重新選擇"</string>
     <string name="couldn_t_open_that_file">"無法開啟這個檔案。"</string>
@@ -682,6 +685,7 @@
     <string name="expressions_from_your_calls_yours_and_your_fluent_self_s_and_c2c203">"通話裡出現的用語都會集中在這裡：自己說的、流利的自己說的，還有看過的情境練習交給你的。"</string>
     <!-- "Expressions from your calls — yours and your fluent self's — will collect here." -->
     <string name="expressions_from_your_calls_yours_and_your_fluent_self_s_wil_52f30a">"通話裡出現的用語會集中在這裡：自己說的，還有流利的自己說的。"</string>
+    <string name="expressions_lld">"表達 %d"</string>
     <string name="expressions_you_marked_known">"標為「我會了」的用語"</string>
     <string name="expressions_you_ve_used">"我用過的所有用語"</string>
     <!-- 'Extra' -->
@@ -791,6 +795,7 @@
     <string name="grammar">"文法"</string>
     <!-- "Grammar and vocabulary don't turn into speaking until you actually speak. In front of a native speaker you worry about mistakes, and booking a tutor every day is hard to keep up." -->
     <string name="grammar_and_vocabulary_don_t_turn_into_speaking_until_you_ac_d48053">"單字和文法再熟，不實際開口說，口說還是不會進步。在母語人士面前怕說錯，每天約家教也很難持續。"</string>
+    <string name="grammar_lld">"文法 %d"</string>
     <string name="grammar_review">"文法複習"</string>
     <string name="grammar_that_keeps_slipping">"老是出錯的文法"</string>
     <string name="grammatical_control">"文法準確度"</string>
@@ -810,6 +815,7 @@
     <string name="health">"健康"</string>
     <string name="hear_it">"聽聽看"</string>
     <string name="hear_it_again">"再聽一次"</string>
+    <string name="hear_it_in_my_voice_lld_min">"用我的聲音聽 · %d分鐘"</string>
     <string name="hear_it_in_the_app_write_it_here">"在 App 裡聽，在這裡寫"</string>
     <string name="hear_my_attempt">"聽我的錄音"</string>
     <string name="hear_target">"聽範本"</string>
@@ -906,6 +912,7 @@
     <string name="in_the_speech_tab_everyone_reads_the_same_script_read_it_wit_932336">"在演講分頁，大家讀同一篇講稿。開著相機讀，就會登上排行榜。"</string>
     <string name="in_this_book">"本冊內容"</string>
     <string name="in_this_scene">"在這個場景裡"</string>
+    <string name="in_this_script">"在這篇講稿裡"</string>
     <string name="in_your_life">"你的日常"</string>
     <!-- 'In your own words (optional) — e.g. switches to English when excited' -->
     <string name="in_your_own_words_optional_e_g_switches_to_english_when_exci_e08d84">"自由描述（選填）。例如：一興奮就切換成英文"</string>
@@ -1106,6 +1113,7 @@
     <string name="lld_min_of_talk_lld_talk_inflect_true">"聊了%1$d分鐘 · %2$d次"</string>
     <!-- '%lld min of talk over %lld days. See how it went, then take the test.' -->
     <string name="lld_min_of_talk_over_lld_days_see_how_it_went_then_take_the_dcd06c">"這週你在%2$d天裡聊了%1$d分鐘。看看這一週，再來做個測驗吧。"</string>
+    <string name="lld_min_of_talk_time_left">"剩餘通話時間 %d 分鐘"</string>
     <string name="lld_min_other_practice">"其他練習 %d 分鐘"</string>
     <string name="lld_min_talked">"通話%d分鐘"</string>
     <string name="lld_min_talked_this_month">"本月已通話%d分鐘"</string>
@@ -1196,6 +1204,7 @@
     <string name="make_a_situation">"建立情境"</string>
     <string name="make_it_yours">"變成自己的"</string>
     <string name="making_a_few_takes_about_half_a_minute_keep_this_open">"正在唸幾個版本，大約需要30秒。請不要關閉這個畫面。"</string>
+    <string name="making_it_in_your_voice">"正在用你的聲音生成…"</string>
     <string name="making_it_yours">"變成自己的"</string>
     <!-- 'Making voices is briefly unavailable right now. Your recording is saved, so open the app after then and your fluent self speaks in your voice. Until then, pick one of the voices below to practice with.' -->
     <string name="making_voices_is_briefly_unavailable_right_now_your_recordin_f306d0">"目前建立聲音暫時出了點問題。錄音已經存好了，那之後打開 App，流利的自己就會用你的聲音說話。在那之前，請從下面選一個聲音來練習。"</string>
@@ -1590,6 +1599,7 @@
     <string name="plan_your_week_once_here_each_day_then_shows_whether_you_did_83c5d3">"在這裡規劃一次一週的安排，每天都會顯示有沒有做到。"</string>
     <string name="planned">"計畫"</string>
     <string name="play">"播放"</string>
+    <string name="play_in_my_voice">"用我的聲音播放"</string>
     <string name="play_the_line">"播放句子"</string>
     <string name="play_the_line_in_the_app_s_shadow_chapter">"在 App 的跟讀章節播放句子"</string>
     <string name="play_what_you_said">"播放我說的"</string>
@@ -1612,6 +1622,7 @@
     <string name="practicing_your_rhythm">"正在練習說話的節奏…"</string>
     <!-- 'Practise on your iPhone, pick it up on your iPad. Everything is stored in your own iCloud, audio included, so it can use a few gigabytes there.' -->
     <string name="practise_on_your_iphone_pick_it_up_on_your_ipad_everything_i_80dce1">"在 iPhone 上練習，在 iPad 上接著做。包含音訊在內的所有內容都存在你自己的 iCloud，可能會用掉幾 GB。"</string>
+    <string name="preparing_study_notes">"正在準備學習筆記…"</string>
     <string name="preparing_the_file">"正在準備檔案…"</string>
     <string name="preparing_your_video">"正在準備影片…"</string>
     <string name="present_a_real_product_or_invention">"介紹真實的產品或發明"</string>
@@ -1932,6 +1943,7 @@
     <string name="shadow">"跟讀"</string>
     <string name="shadow_any_line_get_a_real_score_watch_the_weekly_trend">"任何句子都能跟讀，拿到真實分數，看每週的變化。"</string>
     <string name="shadow_avg_lld_this_week">"本週跟讀平均 %d"</string>
+    <string name="shadow_it">"跟讀"</string>
     <!-- 'shadow %lld' -->
     <string name="shadow_lld_0a5b8c">"跟讀 %d"</string>
     <!-- 'shadow +%lld' -->
@@ -2027,6 +2039,7 @@
     <string name="speech_genre_product">"產品"</string>
     <!-- 'Speech is a teleprompter. Read a script aloud while it scrolls with your voice, with your camera on or off, and get scored on what you said, your pace and your pauses. Every script teaches you something worth knowing, too.' -->
     <string name="speech_is_a_teleprompter_read_a_script_aloud_while_it_scroll_fa7b33">"把講稿放上螢幕，大聲唸出來，畫面會跟著你往下走。想錄下自己的樣子就開相機，不開也可以。唸完會幫你看照稿唸得準不準、速度和停頓如何，講稿的主題也都有趣又實用，邊唸邊長知識。"</string>
+    <string name="speech_study_toggle">"學習模式"</string>
     <string name="speed">"速度"</string>
     <string name="spend_it_however_you_like_there_s_no_daily_limit">"沒有每日上限，想怎麼用就怎麼用。"</string>
     <string name="sports">"運動"</string>
@@ -2154,6 +2167,7 @@
     <string name="tap_an_empty_spot_to_add_hold_a_block_and_drag_to_move_it">"點一下空白處即可新增，長按時段並拖曳即可移動。"</string>
     <string name="tap_edit_at_the_top_right_days_run_across_hours_run_down">"點一下右上角的「編輯」。橫向是星期，直向是時間。"</string>
     <string name="tap_end_session_after_a_conversation_and_it_ll_show_up_here">"對話結束後點 End session，就會出現在這裡。"</string>
+    <string name="tap_for_an_explanation">"點一下看說明"</string>
     <string name="tap_it_once_more_your_voice_didn_t_move_this_time">"請再點一次。這次沒能搬移你的聲音。"</string>
     <!-- "Tap Let's talk — or a scenario or story below — to have your first conversation. Everything you meet ends up in Review." -->
     <string name="tap_let_s_talk_or_a_scenario_or_story_below_to_have_your_fir_acaae8">"點下方的「開始說」開始第一次對話，點情境或新聞也可以。在這裡遇到的一切都會累積到複習分頁裡當複習材料。"</string>
@@ -2310,6 +2324,7 @@
     <string name="the_settings_button">"設定按鈕"</string>
     <!-- 'The slider button next to the mic opens them. The call keeps going while you change things.' -->
     <string name="the_slider_button_next_to_the_mic_opens_them_the_call_keeps_331b07">"點一下麥克風旁的滑桿按鈕就能打開。調整時通話也會繼續。"</string>
+    <string name="the_study_notes_couldn_t_be_prepared_try_again">"沒能準備好學習筆記，請再試一次。"</string>
     <string name="the_sweet_spot_for_steady_progress">"最容易穩定進步的地方"</string>
     <!-- "The test is made from your week's talks. After the next one, it writes itself." -->
     <string name="the_test_is_made_from_your_week_s_talks_after_the_next_one_i_0a9c48">"測驗是用這週的對話做成的。再聊一次，它就會自動準備好。"</string>
@@ -2385,6 +2400,7 @@
     <!-- 'This permanently deletes your voice clone, talk time, and account. It cannot be undone. An active App Store subscription must be canceled separately in Settings → Apple ID → Subscriptions.' -->
     <string name="this_permanently_deletes_your_voice_clone_talk_time_and_acco_9e99be">"你的聲音、通話時間和帳號會被永久刪除，無法復原。如果App Store訂閱還在，請另外到「設定 → Apple ID → 訂閱」取消。"</string>
     <string name="this_person_has_been_deleted">"這個人已經刪除了"</string>
+    <string name="this_script_is_too_long_to_make_in_your_voice">"這篇講稿太長，沒辦法用你的聲音生成。"</string>
     <string name="this_signs_you_out_your_answers_stay_on_this_device">"會登出。你填的答案會留在這台裝置上。"</string>
     <string name="this_take_couldn_t_reach_the_board">"這次的成績沒能送上排行榜。"</string>
     <string name="this_takes_a_few_seconds">"只要幾秒鐘。"</string>
@@ -2490,6 +2506,7 @@
     <string name="used_it">"用到了"</string>
     <string name="used_lld_time">"用過%1$d次 · %3$s"</string>
     <string name="useful_information_clearly_told">"把實用資訊講清楚"</string>
+    <string name="uses_lld_min_of_talk_time">"使用 %d 分鐘通話時間"</string>
     <string name="uses_talk_time">"會用到通話時間"</string>
     <string name="uses_your_icloud">"使用你的 iCloud"</string>
     <string name="variants">"換個說法"</string>
@@ -2720,6 +2737,7 @@
     <!-- 'Words, expressions, shadowing and grammar. Tap one to practice just that part, card by card.' -->
     <string name="words_expressions_shadowing_and_grammar_tap_one_to_practice_97c8e6">"單字、用語、跟讀和文法。點一下其中一項，就能用卡片只練那個部分。"</string>
     <string name="words_from_your_notebook_to_keep_studying">"收在筆記裡、要繼續學的單字。"</string>
+    <string name="words_lld">"單字 %d"</string>
     <string name="words_only">"僅單字"</string>
     <!-- "Words per minute of voiced speech — pauses and think-time don't drag it down." -->
     <string name="words_per_minute_of_voiced_speech_pauses_and_think_time_don_e12672">"以實際出聲的時間計算，每分鐘的單字數。停頓和思考的時間不算在內。"</string>
@@ -3055,4 +3073,5 @@
     <string name="your_week_is_ready">"你的一週回顧來了"</string>
     <string name="your_weekly_test_is_ready">"每週測驗準備好了"</string>
     <string name="your_world">"我的%s生活"</string>
+    <string name="yours_to_replay_and_shadow_free">"之後重聽和跟讀都免費。"</string>
 </resources>

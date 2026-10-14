@@ -218,6 +218,12 @@ fun ShadowScreen(
     onNext: (() -> Unit)? = null,
     /** Capture only. */
     seed: ShadowSeed? = null,
+    /** Audio that came with the line from somewhere other than the phrase
+     *  store — a Speech script's voiceover, whose word timings were measured
+     *  when it was made (iOS `ShadowDrillView(presetTimings:)`). Nothing is
+     *  synthesized for it. */
+    presetAudio: java.io.File? = null,
+    presetTimings: List<WordTiming>? = null,
 ) {
     NavCoverGuard()
     val context = LocalContext.current
@@ -348,6 +354,18 @@ fun ShadowScreen(
                 targetFile = take
                 phase = ShadowPhase.IDLE
             }
+            return@LaunchedEffect
+        }
+        if (presetAudio != null) {
+            val duration = withContext(Dispatchers.IO) { mediaDurationMs(presetAudio) }
+            targetDurationMs = duration
+            val stored = presetTimings.orEmpty()
+            timings = if (TtsAlignment.alignmentMatches(line, stored) && WordTimings.fits(stored, duration) &&
+                WordTimings.cutMatches(stored, line, targetLanguage)) stored
+            else WordTimings.estimate(line, duration, targetLanguage)
+            targetFile = presetAudio
+            targetPcm = scope.async(Dispatchers.Default) { AudioDecode.decode(presetAudio.readBytes()) }
+            phase = ShadowPhase.IDLE
             return@LaunchedEffect
         }
         val store = PhraseAudioStore.shared(context)

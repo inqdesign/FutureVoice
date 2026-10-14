@@ -131,6 +131,9 @@ fun WordCardSheet(
      *  `ExpressionCard.Context`): written WITH the scene, so it says what a
      *  dictionary can't. Shown as "In this scene" above the meaning. */
     sceneContext: Map<String, Pair<String, String?>> = emptyMap(),
+    /** That section's title. Null = "In this scene" (a Watch book); a Speech
+     *  script's study note passes "In this script" (iOS `Context.heading`). */
+    contextHeading: String? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -336,7 +339,7 @@ fun WordCardSheet(
 
             sceneContext[term]?.takeIf { (note, ex) -> note.isNotBlank() || !ex.isNullOrBlank() }
                 ?.let { (note, ex) ->
-                    CardSection(stringResource(R.string.in_this_scene)) {
+                    CardSection(contextHeading ?: stringResource(R.string.in_this_scene)) {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             if (note.isNotBlank()) Text(note, fontSize = 16.sp,
                                 color = MaterialTheme.colorScheme.onSurface)

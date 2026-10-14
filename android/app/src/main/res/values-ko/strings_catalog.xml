@@ -176,6 +176,7 @@
     <string name="almost">"거의"</string>
     <string name="almost_there">"거의 다 됐어요…"</string>
     <string name="already_have_an_account_sign_in">"이미 계정이 있나요? 로그인"</string>
+    <string name="also_make_it_in_my_voice">"내 목소리로도 만들기"</string>
     <string name="always_free">"언제나 무료"</string>
     <string name="am_i_actually_getting_better">"정말 늘고 있는 걸까요?"</string>
     <string name="an_airline_agent">"항공사 직원"</string>
@@ -417,6 +418,8 @@
     <string name="couldn_t_load_people_check_your_connection">"사람 목록을 불러오지 못했어요 — 연결을 확인해 주세요."</string>
     <string name="couldn_t_load_stories">"기사를 불러오지 못했어요"</string>
     <string name="couldn_t_load_this_one">"이건 불러오지 못했어요."</string>
+    <string name="couldn_t_make_it_in_your_voice">"내 목소리로 만들지 못했어요"</string>
+    <string name="couldn_t_make_it_in_your_voice_nothing_was_charged">"내 목소리로 만들지 못했어요. 통화 시간은 쓰지 않았어요."</string>
     <string name="couldn_t_make_your_voice">"목소리를 만들지 못했어요"</string>
     <string name="couldn_t_open_pick_it_again">"열지 못했어요. 다시 골라 주세요"</string>
     <string name="couldn_t_open_that_file">"그 파일을 열지 못했어요."</string>
@@ -683,6 +686,7 @@
     <string name="expressions_from_your_calls_yours_and_your_fluent_self_s_and_c2c203">"통화에서 나온 표현이 여기 모여요. 내가 쓴 것, 유창해진 내가 쓴 것, 그리고 본 상황연습이 건네준 것까지요."</string>
     <!-- "Expressions from your calls — yours and your fluent self's — will collect here." -->
     <string name="expressions_from_your_calls_yours_and_your_fluent_self_s_wil_52f30a">"통화에서 나온 표현이 여기 모여요. 내가 쓴 것도, 유창해진 내가 쓴 것도요."</string>
+    <string name="expressions_lld">"표현 %d"</string>
     <string name="expressions_you_marked_known">"안다고 한 표현"</string>
     <string name="expressions_you_ve_used">"내가 써 온 표현"</string>
     <!-- 'Extra' -->
@@ -792,6 +796,7 @@
     <string name="grammar">"문법"</string>
     <!-- "Grammar and vocabulary don't turn into speaking until you actually speak. In front of a native speaker you worry about mistakes, and booking a tutor every day is hard to keep up." -->
     <string name="grammar_and_vocabulary_don_t_turn_into_speaking_until_you_ac_d48053">"단어와 문법을 알아도 실제로 말해 보지 않으면 말은 늘지 않아요. 원어민 앞에서는 틀릴까 봐 긴장되고, 매일 수업을 잡기도 쉽지 않죠."</string>
+    <string name="grammar_lld">"문법 %d"</string>
     <string name="grammar_review">"문법 복습"</string>
     <string name="grammar_that_keeps_slipping">"자꾸 틀리는 문법"</string>
     <string name="grammatical_control">"문법 정확도"</string>
@@ -811,6 +816,7 @@
     <string name="health">"건강"</string>
     <string name="hear_it">"들어보기"</string>
     <string name="hear_it_again">"다시 듣기"</string>
+    <string name="hear_it_in_my_voice_lld_min">"내 목소리로 듣기 · %d분"</string>
     <string name="hear_it_in_the_app_write_it_here">"앱에서 듣고 여기에 쓰기"</string>
     <string name="hear_my_attempt">"내 녹음 듣기"</string>
     <string name="hear_target">"원본 듣기"</string>
@@ -907,6 +913,7 @@
     <string name="in_the_speech_tab_everyone_reads_the_same_script_read_it_wit_932336">"스피치 탭에서 모두 같은 원고를 읽어요. 카메라를 켜고 읽으면 순위표에 올라가요."</string>
     <string name="in_this_book">"이 책에는"</string>
     <string name="in_this_scene">"이 장면에서"</string>
+    <string name="in_this_script">"이 원고에서"</string>
     <string name="in_your_life">"내 일상에서"</string>
     <!-- 'In your own words (optional) — e.g. switches to English when excited' -->
     <string name="in_your_own_words_optional_e_g_switches_to_english_when_exci_e08d84">"자유롭게 (선택) — 예: 신나면 영어로 바꿔 말함"</string>
@@ -1107,6 +1114,7 @@
     <string name="lld_min_of_talk_lld_talk_inflect_true">"%1$d분 대화 · %2$d번"</string>
     <!-- '%lld min of talk over %lld days. See how it went, then take the test.' -->
     <string name="lld_min_of_talk_over_lld_days_see_how_it_went_then_take_the_dcd06c">"%2$d일 동안 %1$d분 이야기했어요. 어떤 한 주였는지 보고, 테스트도 풀어봐요."</string>
+    <string name="lld_min_of_talk_time_left">"남은 통화 시간 %d분"</string>
     <string name="lld_min_other_practice">"그 밖의 연습 %d분"</string>
     <string name="lld_min_talked">"통화 %d분"</string>
     <string name="lld_min_talked_this_month">"이번 달 %d분 통화"</string>
@@ -1197,6 +1205,7 @@
     <string name="make_a_situation">"상황 만들기"</string>
     <string name="make_it_yours">"내 것으로 만들기"</string>
     <string name="making_a_few_takes_about_half_a_minute_keep_this_open">"여러 번 읽어보는 중이에요. 30초쯤 걸리니 이 화면을 닫지 말고 기다려 주세요."</string>
+    <string name="making_it_in_your_voice">"내 목소리로 만들고 있어요…"</string>
     <string name="making_it_yours">"내 것으로 만들기"</string>
     <!-- 'Making voices is briefly unavailable right now. Your recording is saved, so open the app after then and your fluent self speaks in your voice. Until then, pick one of the voices below to practice with.' -->
     <string name="making_voices_is_briefly_unavailable_right_now_your_recordin_f306d0">"지금 목소리를 만드는 데 잠시 문제가 있어요. 녹음은 저장해 뒀으니, 그 뒤에 앱을 열면 유창해진 내가 내 목소리로 말해요. 그때까지는 아래 목소리 중 하나를 골라 연습하세요."</string>
@@ -1591,6 +1600,7 @@
     <string name="plan_your_week_once_here_each_day_then_shows_whether_you_did_83c5d3">"여기서 한 주를 한 번만 계획해 두세요. 그러면 날마다 했는지가 표시돼요."</string>
     <string name="planned">"계획"</string>
     <string name="play">"재생"</string>
+    <string name="play_in_my_voice">"내 목소리로 재생"</string>
     <string name="play_the_line">"문장 듣기"</string>
     <string name="play_the_line_in_the_app_s_shadow_chapter">"앱의 섀도잉 장에서 문장 재생하기"</string>
     <string name="play_what_you_said">"내가 말한 것 재생"</string>
@@ -1613,6 +1623,7 @@
     <string name="practicing_your_rhythm">"말의 리듬을 연습하는 중…"</string>
     <!-- 'Practise on your iPhone, pick it up on your iPad. Everything is stored in your own iCloud, audio included, so it can use a few gigabytes there.' -->
     <string name="practise_on_your_iphone_pick_it_up_on_your_ipad_everything_i_80dce1">"아이폰에서 연습하고 아이패드에서 이어서 해요. 오디오까지 전부 내 iCloud에 저장돼서, 거기 몇 GB를 쓸 수 있어요."</string>
+    <string name="preparing_study_notes">"공부할 내용을 준비하고 있어요…"</string>
     <string name="preparing_the_file">"파일을 준비하는 중…"</string>
     <string name="preparing_your_video">"영상을 준비하고 있어요…"</string>
     <string name="present_a_real_product_or_invention">"실제 제품이나 발명품 소개"</string>
@@ -1933,6 +1944,7 @@
     <string name="shadow">"섀도잉"</string>
     <string name="shadow_any_line_get_a_real_score_watch_the_weekly_trend">"어떤 문장이든 섀도잉하고 실제 점수와 주간 추이를 확인하세요."</string>
     <string name="shadow_avg_lld_this_week">"이번 주 섀도잉 평균 %d"</string>
+    <string name="shadow_it">"섀도잉하기"</string>
     <!-- 'shadow %lld' -->
     <string name="shadow_lld_0a5b8c">"섀도잉 %d"</string>
     <!-- 'shadow +%lld' -->
@@ -2028,6 +2040,7 @@
     <string name="speech_genre_product">"제품"</string>
     <!-- 'Speech is a teleprompter. Read a script aloud while it scrolls with your voice, with your camera on or off, and get scored on what you said, your pace and your pauses. Every script teaches you something worth knowing, too.' -->
     <string name="speech_is_a_teleprompter_read_a_script_aloud_while_it_scroll_fa7b33">"화면에 원고를 띄워 두고 소리 내어 읽어 보세요. 읽는 만큼 원고가 따라 올라가고, 카메라는 켜도 꺼도 돼요. 다 읽으면 원고대로 읽었는지, 속도와 쉼은 어땠는지 점수로 알려줘요. 원고마다 알아 두면 좋은 이야기가 담겨 있어서 읽는 재미도 있어요."</string>
+    <string name="speech_study_toggle">"공부하기"</string>
     <string name="speed">"속도"</string>
     <string name="spend_it_however_you_like_there_s_no_daily_limit">"하루 제한 없이 원하는 대로 쓰면 돼요."</string>
     <string name="sports">"스포츠"</string>
@@ -2155,6 +2168,7 @@
     <string name="tap_an_empty_spot_to_add_hold_a_block_and_drag_to_move_it">"빈 곳을 누르면 추가돼요. 칸을 길게 눌러 끌면 옮겨져요."</string>
     <string name="tap_edit_at_the_top_right_days_run_across_hours_run_down">"오른쪽 위 편집을 누르세요. 가로는 요일, 세로는 시간이에요."</string>
     <string name="tap_end_session_after_a_conversation_and_it_ll_show_up_here">"대화 후 End session을 누르면 여기에 나타나요."</string>
+    <string name="tap_for_an_explanation">"탭하면 설명"</string>
     <string name="tap_it_once_more_your_voice_didn_t_move_this_time">"한 번 더 눌러 주세요. 이번엔 목소리를 옮기지 못했어요."</string>
     <!-- "Tap Let's talk — or a scenario or story below — to have your first conversation. Everything you meet ends up in Review." -->
     <string name="tap_let_s_talk_or_a_scenario_or_story_below_to_have_your_fir_acaae8">"아래 Let's talk을 눌러 첫 대화를 시작해 보세요. 상황이나 뉴스를 눌러도 돼요. 여기서 만난 건 전부 복습 탭에 복습거리로 쌓여요."</string>
@@ -2311,6 +2325,7 @@
     <string name="the_settings_button">"설정 버튼"</string>
     <!-- 'The slider button next to the mic opens them. The call keeps going while you change things.' -->
     <string name="the_slider_button_next_to_the_mic_opens_them_the_call_keeps_331b07">"마이크 옆 슬라이더 버튼을 누르면 열려요. 바꾸는 동안에도 통화는 계속돼요."</string>
+    <string name="the_study_notes_couldn_t_be_prepared_try_again">"공부할 내용을 준비하지 못했어요. 다시 시도해 주세요."</string>
     <string name="the_sweet_spot_for_steady_progress">"꾸준히 늘기 좋은 지점"</string>
     <!-- "The test is made from your week's talks. After the next one, it writes itself." -->
     <string name="the_test_is_made_from_your_week_s_talks_after_the_next_one_i_0a9c48">"테스트는 이번 주 대화로 만들어져요. 다음 대화를 마치면 저절로 준비돼요."</string>
@@ -2386,6 +2401,7 @@
     <!-- 'This permanently deletes your voice clone, talk time, and account. It cannot be undone. An active App Store subscription must be canceled separately in Settings → Apple ID → Subscriptions.' -->
     <string name="this_permanently_deletes_your_voice_clone_talk_time_and_acco_9e99be">"내 목소리와 통화 시간, 계정이 영영 지워지고 되돌릴 수 없어요. App Store 구독이 살아 있다면 설정 → Apple ID → 구독에서 따로 해지해 주세요."</string>
     <string name="this_person_has_been_deleted">"삭제된 사람이에요"</string>
+    <string name="this_script_is_too_long_to_make_in_your_voice">"이 원고는 너무 길어서 내 목소리로 만들 수 없어요."</string>
     <string name="this_signs_you_out_your_answers_stay_on_this_device">"로그아웃됩니다. 입력한 답변은 이 기기에 남아요."</string>
     <string name="this_take_couldn_t_reach_the_board">"이번 기록을 순위에 올리지 못했어요."</string>
     <string name="this_takes_a_few_seconds">"몇 초면 돼요."</string>
@@ -2491,6 +2507,7 @@
     <string name="used_it">"썼어요"</string>
     <string name="used_lld_time">"%1$d번 사용 · %3$s"</string>
     <string name="useful_information_clearly_told">"쓸모 있는 정보를 또렷하게"</string>
+    <string name="uses_lld_min_of_talk_time">"통화 시간 %d분 사용"</string>
     <string name="uses_talk_time">"통화 시간을 써요"</string>
     <string name="uses_your_icloud">"내 iCloud 사용"</string>
     <string name="variants">"다르게 말하면"</string>
@@ -2721,6 +2738,7 @@
     <!-- 'Words, expressions, shadowing and grammar. Tap one to practice just that part, card by card.' -->
     <string name="words_expressions_shadowing_and_grammar_tap_one_to_practice_97c8e6">"단어, 표현, 섀도잉, 문법. 하나를 누르면 그 부분만 카드로 연습해요."</string>
     <string name="words_from_your_notebook_to_keep_studying">"노트에 모아 둔, 계속 공부할 단어들."</string>
+    <string name="words_lld">"단어 %d"</string>
     <string name="words_only">"단어만"</string>
     <!-- "Words per minute of voiced speech — pauses and think-time don't drag it down." -->
     <string name="words_per_minute_of_voiced_speech_pauses_and_think_time_don_e12672">"실제로 소리 낸 시간 기준 분당 단어 수예요 — 멈칫한 시간은 빼고 재요."</string>
@@ -3056,4 +3074,5 @@
     <string name="your_week_is_ready">"지난 한 주를 정리했어요"</string>
     <string name="your_weekly_test_is_ready">"주간 테스트가 준비됐어요"</string>
     <string name="your_world">"내 %s 생활"</string>
+    <string name="yours_to_replay_and_shadow_free">"다시 듣기와 섀도잉은 무료예요."</string>
 </resources>

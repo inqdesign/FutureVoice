@@ -65,6 +65,10 @@ data class AccountStatus(
      *  a query of its OWN so a failure costs only the "move up" offers, never
      *  the entitlement. Empty = couldn't read it, and then nothing is offered. */
     val tiersOnSale: Set<String> = emptySet(),
+    /** Invite / top-up minutes on top of a plan's pool, in seconds
+     *  (`talk_allowance().bonus`, iOS `bonusSeconds`) — spent before the pool.
+     *  Read so a price can say how much talk time is left in all. */
+    val bonusSeconds: Int = 0,
 ) {
     val isEntitled: Boolean
         get() = subscriptionStatus in setOf("trialing", "active", "grace")
@@ -180,6 +184,7 @@ data class AccountStatus(
             val period_end: String? = null,
             val free_used: Int? = null,
             val free_cap: Int? = null,
+            val bonus: Int? = null,
         )
 
         /**
@@ -214,7 +219,7 @@ data class AccountStatus(
                 // A null cap on an entitled plan is "uncapped", not "no plan";
                 // `used` is real either way.
                 out = out.copy(secondsUsedPeriod = it.used, monthlyCapSeconds = it.cap,
-                    periodEnd = it.period_end)
+                    periodEnd = it.period_end, bonusSeconds = it.bonus ?: out.secondsBalance)
             }
             rpc(auth, "scene_allowance")?.let {
                 out = out.copy(scenesUsedPeriod = it.used, monthlyScenesCap = it.cap,

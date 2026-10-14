@@ -176,6 +176,7 @@
     <string name="almost">"fast"</string>
     <string name="almost_there">"Fast geschafft…"</string>
     <string name="already_have_an_account_sign_in">"Schon ein Konto? Anmelden"</string>
+    <string name="also_make_it_in_my_voice">"Auch in meiner Stimme erstellen"</string>
     <string name="always_free">"Immer kostenlos"</string>
     <string name="am_i_actually_getting_better">"Werde ich wirklich besser?"</string>
     <string name="an_airline_agent">"eine Mitarbeiterin der Airline"</string>
@@ -413,6 +414,8 @@
     <string name="couldn_t_load_people_check_your_connection">"Leute konnten nicht geladen werden — prüfe deine Verbindung."</string>
     <string name="couldn_t_load_stories">"Artikel konnten nicht geladen werden"</string>
     <string name="couldn_t_load_this_one">"Konnte nicht geladen werden."</string>
+    <string name="couldn_t_make_it_in_your_voice">"In deiner Stimme hat es nicht geklappt"</string>
+    <string name="couldn_t_make_it_in_your_voice_nothing_was_charged">"In deiner Stimme hat es nicht geklappt. Es wurde keine Sprechzeit verbraucht."</string>
     <string name="couldn_t_make_your_voice">"Deine Stimme konnte nicht erstellt werden"</string>
     <string name="couldn_t_open_pick_it_again">"Konnte nicht geöffnet werden. Wähle es nochmal aus"</string>
     <string name="couldn_t_open_that_file">"Die Datei konnte nicht geöffnet werden."</string>
@@ -678,6 +681,7 @@
     <string name="expressions_from_your_calls_yours_and_your_fluent_self_s_and_c2c203">"Hier sammeln sich die Wendungen aus deinen Anrufen, deine und die deines fließenden Ichs, dazu die aus deinen Szenen."</string>
     <!-- "Expressions from your calls — yours and your fluent self's — will collect here." -->
     <string name="expressions_from_your_calls_yours_and_your_fluent_self_s_wil_52f30a">"Hier sammeln sich die Wendungen aus deinen Anrufen, deine und die deines fließenden Ichs."</string>
+    <string name="expressions_lld">"Wendungen %d"</string>
     <string name="expressions_you_marked_known">"Als gewusst markierte Wendungen"</string>
     <string name="expressions_you_ve_used">"Bisher verwendete Wendungen"</string>
     <!-- 'Extra' -->
@@ -787,6 +791,7 @@
     <string name="grammar">"Grammatik"</string>
     <!-- "Grammar and vocabulary don't turn into speaking until you actually speak. In front of a native speaker you worry about mistakes, and booking a tutor every day is hard to keep up." -->
     <string name="grammar_and_vocabulary_don_t_turn_into_speaking_until_you_ac_d48053">"Grammatik und Wortschatz werden erst zum Sprechen, wenn du wirklich sprichst. Vor Muttersprachlern hast du Angst vor Fehlern, und jeden Tag eine Nachhilfestunde zu buchen hält kaum jemand durch."</string>
+    <string name="grammar_lld">"Grammatik %d"</string>
     <string name="grammar_review">"Grammatik-Rückblick"</string>
     <string name="grammar_that_keeps_slipping">"Grammatik, die immer wieder hakt"</string>
     <string name="grammatical_control">"Grammatische Sicherheit"</string>
@@ -806,6 +811,7 @@
     <string name="health">"Gesundheit"</string>
     <string name="hear_it">"Anhören"</string>
     <string name="hear_it_again">"Nochmal anhören"</string>
+    <string name="hear_it_in_my_voice_lld_min">"In meiner Stimme hören · %d Min."</string>
     <string name="hear_it_in_the_app_write_it_here">"In der App hören, hier schreiben"</string>
     <string name="hear_my_attempt">"Eigene Aufnahme anhören"</string>
     <string name="hear_target">"Original anhören"</string>
@@ -902,6 +908,7 @@
     <string name="in_the_speech_tab_everyone_reads_the_same_script_read_it_wit_932336">"Im Tab „Rede“ lesen alle denselben Text. Lies ihn mit eingeschalteter Kamera, und du landest in der Rangliste."</string>
     <string name="in_this_book">"In diesem Buch"</string>
     <string name="in_this_scene">"In dieser Szene"</string>
+    <string name="in_this_script">"In diesem Skript"</string>
     <string name="in_your_life">"In deinem Alltag"</string>
     <!-- 'In your own words (optional) — e.g. switches to English when excited' -->
     <string name="in_your_own_words_optional_e_g_switches_to_english_when_exci_e08d84">"In eigenen Worten (optional) — z. B. wechselt ins Englische, wenn aufgeregt"</string>
@@ -1102,6 +1109,7 @@
     <string name="lld_min_of_talk_lld_talk_inflect_true">"%1$d Min. gesprochen · ^[%2$d Gespräch](inflect: true)"</string>
     <!-- '%lld min of talk over %lld days. See how it went, then take the test.' -->
     <string name="lld_min_of_talk_over_lld_days_see_how_it_went_then_take_the_dcd06c">"%1$d Min. gesprochen, an %2$d von 7 Tagen dabei. Schau zurück, dann mach den Test."</string>
+    <string name="lld_min_of_talk_time_left">"Noch %d Min. Sprechzeit"</string>
     <string name="lld_min_other_practice">"%d Min. andere Übungen"</string>
     <string name="lld_min_talked">"%d Min. gesprochen"</string>
     <string name="lld_min_talked_this_month">"%d Min. diesen Monat gesprochen"</string>
@@ -1192,6 +1200,7 @@
     <string name="make_a_situation">"Situation bauen"</string>
     <string name="make_it_yours">"Mach es zu deinem"</string>
     <string name="making_a_few_takes_about_half_a_minute_keep_this_open">"Ich mache ein paar Aufnahmen, das dauert etwa eine halbe Minute. Lass diesen Bildschirm offen."</string>
+    <string name="making_it_in_your_voice">"Wird in deiner Stimme erstellt…"</string>
     <string name="making_it_yours">"Damit es deins wird"</string>
     <!-- 'Making voices is briefly unavailable right now. Your recording is saved, so open the app after then and your fluent self speaks in your voice. Until then, pick one of the voices below to practice with.' -->
     <string name="making_voices_is_briefly_unavailable_right_now_your_recordin_f306d0">"Gerade gibt es beim Erstellen von Stimmen ein kurzes Problem. Deine Aufnahme ist gespeichert: Öffne die App danach, und dein fließendes Ich spricht mit deiner Stimme. Bis dahin such dir unten eine Stimme aus und übe mit ihr."</string>
@@ -1586,6 +1595,7 @@
     <string name="plan_your_week_once_here_each_day_then_shows_whether_you_did_83c5d3">"Plane deine Woche hier einmal. Jeder Tag zeigt dann, ob du es gemacht hast."</string>
     <string name="planned">"Geplant"</string>
     <string name="play">"Abspielen"</string>
+    <string name="play_in_my_voice">"In meiner Stimme abspielen"</string>
     <string name="play_the_line">"Satz anhören"</string>
     <string name="play_the_line_in_the_app_s_shadow_chapter">"Spiel den Satz im Kapitel Nachsprechen der App ab"</string>
     <string name="play_what_you_said">"Abspielen, was du gesagt hast"</string>
@@ -1608,6 +1618,7 @@
     <string name="practicing_your_rhythm">"Wir üben deinen Sprechrhythmus …"</string>
     <!-- 'Practise on your iPhone, pick it up on your iPad. Everything is stored in your own iCloud, audio included, so it can use a few gigabytes there.' -->
     <string name="practise_on_your_iphone_pick_it_up_on_your_ipad_everything_i_80dce1">"Auf dem iPhone üben, auf dem iPad weitermachen. Alles liegt in deiner eigenen iCloud, Audio inklusive – das kann dort einige Gigabyte belegen."</string>
+    <string name="preparing_study_notes">"Lernhinweise werden vorbereitet…"</string>
     <string name="preparing_the_file">"Datei wird vorbereitet …"</string>
     <string name="preparing_your_video">"Dein Video wird vorbereitet…"</string>
     <string name="present_a_real_product_or_invention">"Stell ein echtes Produkt oder eine Erfindung vor"</string>
@@ -1928,6 +1939,7 @@
     <string name="shadow">"Nachsprechen"</string>
     <string name="shadow_any_line_get_a_real_score_watch_the_weekly_trend">"Sprich jeden Satz nach, bekomm eine echte Punktzahl und verfolge den Wochentrend."</string>
     <string name="shadow_avg_lld_this_week">"Nachsprechen Ø %d diese Woche"</string>
+    <string name="shadow_it">"Nachsprechen"</string>
     <!-- 'shadow %lld' -->
     <string name="shadow_lld_0a5b8c">"Nachsprechen %d"</string>
     <!-- 'shadow +%lld' -->
@@ -2023,6 +2035,7 @@
     <string name="speech_genre_product">"Produkt"</string>
     <!-- 'Speech is a teleprompter. Read a script aloud while it scrolls with your voice, with your camera on or off, and get scored on what you said, your pace and your pauses. Every script teaches you something worth knowing, too.' -->
     <string name="speech_is_a_teleprompter_read_a_script_aloud_while_it_scroll_fa7b33">"Du liest ein Skript laut vom Bildschirm, und es läuft mit dir mit. Die Kamera kannst du dazuschalten. Danach siehst du, wie genau du gelesen hast, wie dein Tempo war und wie du Pausen gesetzt hast. Und weil die Skripte spannende Themen behandeln, lernst du beim Lesen gleich etwas dazu."</string>
+    <string name="speech_study_toggle">"Lernen"</string>
     <string name="speed">"Tempo"</string>
     <string name="spend_it_however_you_like_there_s_no_daily_limit">"Teil sie dir ein, wie du willst. Es gibt kein Tageslimit."</string>
     <string name="sports">"Sport"</string>
@@ -2150,6 +2163,7 @@
     <string name="tap_an_empty_spot_to_add_hold_a_block_and_drag_to_move_it">"Tippe auf eine freie Stelle zum Hinzufügen. Halte einen Block und zieh ihn zum Verschieben."</string>
     <string name="tap_edit_at_the_top_right_days_run_across_hours_run_down">"Tipp oben rechts auf Bearbeiten. Die Tage laufen nach rechts, die Stunden nach unten."</string>
     <string name="tap_end_session_after_a_conversation_and_it_ll_show_up_here">"Tippe nach einem Gespräch auf End session, dann erscheint es hier."</string>
+    <string name="tap_for_an_explanation">"Tippen für Erklärung"</string>
     <string name="tap_it_once_more_your_voice_didn_t_move_this_time">"Tipp noch einmal darauf. Diesmal konnte deine Stimme nicht umziehen."</string>
     <!-- "Tap Let's talk — or a scenario or story below — to have your first conversation. Everything you meet ends up in Review." -->
     <string name="tap_let_s_talk_or_a_scenario_or_story_below_to_have_your_fir_acaae8">"Tippe auf Let's talk — oder unten auf eine Situation oder einen Artikel — für dein erstes Gespräch. Alles, was dir dabei begegnet, landet unter Wiederholen."</string>
@@ -2306,6 +2320,7 @@
     <string name="the_settings_button">"Der Einstellungs-Button"</string>
     <!-- 'The slider button next to the mic opens them. The call keeps going while you change things.' -->
     <string name="the_slider_button_next_to_the_mic_opens_them_the_call_keeps_331b07">"Der Regler-Button neben dem Mikrofon öffnet sie. Der Anruf läuft weiter, während du etwas änderst."</string>
+    <string name="the_study_notes_couldn_t_be_prepared_try_again">"Die Lernhinweise konnten nicht erstellt werden. Versuch es noch einmal."</string>
     <string name="the_sweet_spot_for_steady_progress">"Der ideale Punkt für stetigen Fortschritt"</string>
     <!-- "The test is made from your week's talks. After the next one, it writes itself." -->
     <string name="the_test_is_made_from_your_week_s_talks_after_the_next_one_i_0a9c48">"Der Test entsteht aus den Gesprächen deiner Woche. Nach dem nächsten Gespräch ist er von selbst fertig."</string>
@@ -2381,6 +2396,7 @@
     <!-- 'This permanently deletes your voice clone, talk time, and account. It cannot be undone. An active App Store subscription must be canceled separately in Settings → Apple ID → Subscriptions.' -->
     <string name="this_permanently_deletes_your_voice_clone_talk_time_and_acco_9e99be">"Damit werden Stimmklon, Sprechzeit und Konto dauerhaft gelöscht. Das lässt sich nicht rückgängig machen. Ein aktives App-Store-Abo musst du separat unter Einstellungen → Apple-ID → Abonnements kündigen."</string>
     <string name="this_person_has_been_deleted">"Diese Person wurde gelöscht"</string>
+    <string name="this_script_is_too_long_to_make_in_your_voice">"Dieses Skript ist zu lang, um es in deiner Stimme zu erstellen."</string>
     <string name="this_signs_you_out_your_answers_stay_on_this_device">"Damit meldest du dich ab. Deine Antworten bleiben auf diesem Gerät."</string>
     <string name="this_take_couldn_t_reach_the_board">"Dieser Versuch konnte nicht eingetragen werden."</string>
     <string name="this_takes_a_few_seconds">"Das dauert nur ein paar Sekunden."</string>
@@ -2486,6 +2502,7 @@
     <string name="used_it">"Verwendet"</string>
     <string name="used_lld_time">"%1$d-mal verwendet · %3$s"</string>
     <string name="useful_information_clearly_told">"Nützliches, klar erzählt"</string>
+    <string name="uses_lld_min_of_talk_time">"Verbraucht %d Min. Sprechzeit"</string>
     <string name="uses_talk_time">"Verbraucht Sprechzeit"</string>
     <string name="uses_your_icloud">"Nutzt deine iCloud"</string>
     <string name="variants">"Varianten"</string>
@@ -2716,6 +2733,7 @@
     <!-- 'Words, expressions, shadowing and grammar. Tap one to practice just that part, card by card.' -->
     <string name="words_expressions_shadowing_and_grammar_tap_one_to_practice_97c8e6">"Wörter, Wendungen, Shadowing und Grammatik. Tipp auf eins, um nur diesen Teil Karte für Karte zu üben."</string>
     <string name="words_from_your_notebook_to_keep_studying">"Wörter aus deinem Notizbuch zum Weiterlernen."</string>
+    <string name="words_lld">"Wörter %d"</string>
     <string name="words_only">"nur Wörter"</string>
     <!-- "Words per minute of voiced speech — pauses and think-time don't drag it down." -->
     <string name="words_per_minute_of_voiced_speech_pauses_and_think_time_don_e12672">"Wörter pro Minute, gemessen nur an der Zeit, in der du sprichst. Pausen zum Nachdenken zählen nicht."</string>
@@ -3051,4 +3069,5 @@
     <string name="your_week_is_ready">"Deine Woche im Rückblick"</string>
     <string name="your_weekly_test_is_ready">"Dein Wochentest ist bereit"</string>
     <string name="your_world">"Dein Leben auf %s"</string>
+    <string name="yours_to_replay_and_shadow_free">"Anhören und Nachsprechen kosten ab jetzt nichts."</string>
 </resources>
