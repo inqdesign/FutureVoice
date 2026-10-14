@@ -649,9 +649,18 @@ internal fun PeopleSkyMap(
                     }
 
                     // The ringed one and the speaking one draw over their
-                    // neighbours (iOS `zIndex`).
-                    val ordered = nodes.sortedBy { if (it.id == focusedId || it.id == bubbleId) 1 else 0 }
+                    // neighbours AND over "me" (iOS `zIndex(1)`; "me" sits at
+                    // zIndex 0 after the rest), so a bubble below the middle
+                    // is never covered by my face.
+                    val front: (Node) -> Boolean = { it.id == focusedId || it.id == bubbleId }
+                    val ordered = nodes.sortedBy { if (front(it)) 1 else 0 }
+                    var meDrawn = false
                     for (n in ordered) {
+                        if (!meDrawn && front(n)) {
+                            meDrawn = true
+                            SkyMe(size = geometry.me, name = meName, onClick = onTapMe,
+                                modifier = Modifier.centerAt(c.dp, (c + 8).dp))
+                        }
                         androidx.compose.runtime.key(n.id) {
                             val on = n.shows(lens)
                             val focused = n.id == focusedId
@@ -701,7 +710,7 @@ internal fun PeopleSkyMap(
                             }
                         }
                     }
-                    SkyMe(size = geometry.me, name = meName, onClick = onTapMe,
+                    if (!meDrawn) SkyMe(size = geometry.me, name = meName, onClick = onTapMe,
                         modifier = Modifier.centerAt(c.dp, (c + 8).dp))
                 }
             }
