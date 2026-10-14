@@ -1211,6 +1211,14 @@ fun RootScreen() {
             persona = state.persona,
             onEditProfile = { editProfileStep = 0; editProfile = true },
             onOpenPerson = { personDetailId = it },
+            // iOS WatchTab's `onCompose`: close the page, open Watch's
+            // writing door with this person and nothing written yet.
+            onCompose = { person ->
+                WatchComposeRequest.pending.value = person to ""
+                showPeople = false; tab = HomeTab.WATCH
+            },
+            // A past talk on a card pushes its book; back returns to the card.
+            onOpenTalk = { detailSessionId = it },
             onTalk = { p, meet ->
                 callCastVoice = p.voice_preset_id.takeIf { it.isNotBlank() }
                 // The talk saves as an ordinary Session carrying this, so the
@@ -3059,7 +3067,10 @@ internal fun rootPushes(from: RootRoute, to: RootRoute, deckPushed: Boolean): Bo
     return when (to) {
         // Books: `navigationDestination` from a shelf card, Activity, a
         // person, the finished shelf, a scene book's study record.
-        is RootRoute.TalkBook, is RootRoute.ScenarioBook -> from !is RootRoute.People && from !is RootRoute.Me
+        is RootRoute.TalkBook, is RootRoute.ScenarioBook -> from !is RootRoute.Me &&
+            // Find people pushes a talk book only from a person's card
+            // ("Your talks together", a `NavigationLink` inside the sheet).
+            (from !is RootRoute.People || to is RootRoute.TalkBook)
         // A scene: `SceneWatchView` / `WatchView` are pushed (Watch tab, book).
         is RootRoute.Watch -> from is RootRoute.Tabs || from is RootRoute.ScenarioBook || from is RootRoute.Person
         // "Review this talk" (book) and a Sentences row push `DrillView`;

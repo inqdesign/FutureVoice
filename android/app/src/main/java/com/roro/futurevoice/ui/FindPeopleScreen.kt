@@ -80,7 +80,7 @@ import com.roro.futurevoice.net.PublicPersonaClient
 import com.roro.futurevoice.talk.Session
 import com.roro.futurevoice.talk.StockPerson
 import com.roro.futurevoice.talk.VoicePreset
-import com.roro.futurevoice.talk.identityIn
+import com.roro.futurevoice.talk.nameIn
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.ui.brand.CoreSeal
 import kotlinx.coroutines.async
@@ -121,6 +121,12 @@ fun FindPeopleScreen(
      *  and calls [meet] only after the gate (iOS `startScene { onWatch(savedPerson()) }`). */
     onWatch: (meet: () -> Counterpart) -> Unit = {},
     onOpenPerson: (String) -> Unit,
+    /** "Make a situation" on a card (iOS `FindPeopleSheet(onCompose:)`): the
+     *  host closes this page and opens Watch's composer with the person. */
+    onCompose: ((Counterpart) -> Unit)? = null,
+    /** A row under "Your talks together" — the regular talk book (iOS
+     *  `NavigationLink { ConversationDetailView(session:) }`). */
+    onOpenTalk: (String) -> Unit = {},
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -154,7 +160,18 @@ fun FindPeopleScreen(
     var group by remember { mutableStateOf(PoolGroup.USER) }
     var bookmarks by remember { mutableStateOf(bookmarkedIds(context)) }
     /** The stranger whose card is open, if any. */
-    var card by remember { mutableStateOf<PublicPersonaClient.PublicPersona?>(null) }
+    // Saveable: a talk opened from the card is a page pushed above this one,
+    // and back from it must land on the card again (iOS pops to it), not on
+    // the list — plain `remember` is dropped while the page is covered.
+    var card by androidx.compose.runtime.saveable.rememberSaveable(
+        stateSaver = androidx.compose.runtime.saveable.Saver<PublicPersonaClient.PublicPersona?, String>(
+            save = { it?.let { p -> com.roro.futurevoice.net.Edge.json.encodeToString(
+                PublicPersonaClient.PublicPersona.serializer(), p) } ?: "" },
+            restore = { raw -> if (raw.isEmpty()) null else runCatching {
+                com.roro.futurevoice.net.Edge.json.decodeFromString(
+                    PublicPersonaClient.PublicPersona.serializer(), raw) }.getOrNull() },
+        ),
+    ) { mutableStateOf<PublicPersonaClient.PublicPersona?>(null) }
     var reloadToken by remember { mutableStateOf(0) }
     /** The learner's OWN published row. The pool leaves it out on purpose —
      *  you don't meet yourself — but this page is the only place the pool is
@@ -196,6 +213,9 @@ fun FindPeopleScreen(
         }.getOrDefault(emptyMap())
     }
     LaunchedEffect(language, reloadToken) { loadPool() }
+    /** iOS `loadMine`: back from your profile page re-reads your own row
+     *  only — publishing or taking down changed it, nothing else did. */
+    fun refreshMine() { scope.launch { mine = runCatching { client.fetchMine(language) }.getOrNull() } }
 
     // Back on the list closes the page; a card or the intro is a PUSH (iOS
     // `navigationDestination` in FindPeopleSheet), popped by the host.
@@ -226,7 +246,7 @@ fun FindPeopleScreen(
     }
     IosNavStack(stack = peopleStack, onPop = {
         if (card != null) card = null
-        else if (editingProfile) { editingProfile = false; reloadToken++ }
+        else if (editingProfile) { editingProfile = false; refreshMine() }
     }) { page ->
     if (page == "profile") {
         // Your profile page, where the profile the paragraph is written
@@ -236,9 +256,9 @@ fun FindPeopleScreen(
             targetLanguage = language,
             // Publishing or taking down changes the row — re-read it on the
             // way back so the page doesn't keep the old face.
-            onBack = { editingProfile = false; reloadToken++ },
+            onBack = { editingProfile = false; refreshMine() },
             onEditProfile = onEditProfile,
-            onPublicChange = { scope.launch { mine = runCatching { client.fetchMine(language) }.getOrNull() } },
+            onPublicChange = { refreshMine() },
         )
         return@IosNavStack
     }
@@ -247,13 +267,14 @@ fun FindPeopleScreen(
         FindPersonCard(
             person = open,
             language = language,
-            seated = badges[open.owner_user_id?.lowercase()]?.seated == true,
             bookmarked = bookmarks.contains(open.id),
             onToggleBookmark = { bookmarks = toggleBookmark(context, open.id) },
             onTalk = onTalk,
             onWatch = onWatch,
             onPersonSaved = { scope.launch { reloadOwn(); StoreEvents.bump() } },
             onBack = { card = null },
+            onCompose = onCompose,
+            onOpenTalk = onOpenTalk,
         )
         return@IosNavStack
     }
@@ -285,7 +306,6 @@ fun FindPeopleScreen(
                 top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp,
                 bottom = 110.dp),
         ) {
-            if (loading && pool.isNotEmpty()) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
             val me = mine
             if (!searching) {
                 // You, as the pool has you — the same row everyone else
@@ -531,7 +551,6 @@ fun FindPeopleScreen(
 internal fun FindPersonCard(
     person: PublicPersonaClient.PublicPersona,
     language: String,
-    seated: Boolean,
     bookmarked: Boolean,
     onToggleBookmark: () -> Unit,
     onTalk: (PublicPersonaClient.PublicPersona, () -> Counterpart) -> Unit,
@@ -543,6 +562,8 @@ internal fun FindPersonCard(
     onCompose: ((Counterpart) -> Unit)? = null,
     /** iOS shows the bookmark only for someone from the pool (`remoteId`). */
     showsBookmark: Boolean = true,
+    /** A past talk's row opens its book. */
+    onOpenTalk: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -639,14 +660,12 @@ internal fun FindPersonCard(
                 Row(Modifier.fillMaxWidth().padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    PersonBubble(person.display_name, 64.dp)
+                    // The pool's photo, adopted under the person's id (iOS
+                    // `PersonBubble(name:photoId:)`) — initials only without one.
+                    com.roro.futurevoice.ui.PersonBubble(person.display_name, person.id, size = 64.dp)
                     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(person.display_name, style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold)
-                            if (seated) CoreSeal()
-                        }
+                        Text(person.display_name, style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold)
                         if (person.location.isNotBlank()) {
                             Text(person.location, style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -681,7 +700,8 @@ internal fun FindPersonCard(
                     verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(R.string.voice), style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.weight(1f))
-                    Text(VoicePreset.known(voiceId)?.identityIn(language) ?: stringResource(R.string.their_own),
+                    // iOS `displayName`: the slot's name in this language.
+                    Text(VoicePreset.known(voiceId)?.nameIn(language) ?: stringResource(R.string.their_own),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -712,13 +732,18 @@ internal fun FindPersonCard(
                 GroupedCard {
                     talks.forEachIndexed { i, s ->
                         if (i > 0) GroupedRowDivider(inset = false)
-                        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+                        Row(Modifier.fillMaxWidth().clickable { onOpenTalk(s.id) }
+                            .padding(start = 16.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
                             Text(s.displayTitle ?: stringResource(R.string.conversation),
                                 style = MaterialTheme.typography.bodyLarge,
                                 maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(shortDateTime(s.startedAt),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        FormChevron()
                         }
                     }
                 }
@@ -875,25 +900,6 @@ private fun SearchCapsule(query: String, onQuery: (String) -> Unit, placeholder:
                 tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
                 modifier = Modifier.size(20.dp).clip(CircleShape).clickable { onQuery("") })
         }
-    }
-}
-
-/** iOS `PersonBubble` — initials in a tinted, ringed circle. */
-@Composable
-private fun PersonBubble(name: String, size: androidx.compose.ui.unit.Dp) {
-    Box(
-        Modifier.size(size)
-            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape)
-            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), CircleShape),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            initials(name),
-            style = if (size >= 56.dp) MaterialTheme.typography.titleMedium
-            else MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.primary,
-        )
     }
 }
 
