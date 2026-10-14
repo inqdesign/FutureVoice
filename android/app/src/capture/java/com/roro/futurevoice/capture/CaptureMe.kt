@@ -82,6 +82,13 @@ object CaptureMe {
             PaywallScreen(onDismiss = {}, preselectTier = "pack")
         },
         "me" to { context -> Me(context) },
+        // Me → Add a language (iOS `AddLanguageSheet`).
+        "me-add-language" to { _ ->
+            Box(Modifier.fillMaxSize().background(AppSurfaces.ground)) {
+                com.roro.futurevoice.ui.AddLanguageSheet(nativeLanguage = "ko", targetLanguage = "en", enrolled = listOf("en"),
+                    onAdd = { _, _ -> }, onDismiss = {})
+            }
+        },
         "plan" to { _ ->
             MeCaptureFlags.previewAccount = CaptureSeed.sampleLightAccount
             MeCaptureFlags.previewReceipt = CaptureSeed.sampleLightReceipt

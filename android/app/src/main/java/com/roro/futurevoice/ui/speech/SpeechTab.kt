@@ -421,19 +421,31 @@ internal fun scoreColor(score: Int): Color =
     if (score >= 85) Color(0xFF34C759) else if (score >= 65) Color(0xFFFF9500) else Color(0xFFFF3B30)
 
 /**
- * A sheet on the page ground. iOS presents these with `.sheet` and no
- * detents — the LARGE detent, the whole screen below the status bar — so
- * [fullHeight] fills the screen however short the content; only the Plus
- * sheet (iOS `.height(560)`) hugs its content. Capture runs draw it inline,
- * as iOS's harness returns the view itself rather than presenting it.
+ * The app's iOS form sheet: a `.sheet` holding a `NavigationStack` + `Form`.
+ * The page ground, no drag handle, a [SheetHeader] (inline title, Cancel /
+ * confirm in the toolbar) and `FormSection` cards are the caller's content.
+ * iOS presents most of these with no detents — the LARGE detent, the whole
+ * screen below the status bar — so [fullHeight] fills the screen however
+ * short the content; [medium] is iOS's `.medium` detent (half the screen,
+ * the Form's ground below a short form); the Plus sheet (iOS `.height(560)`)
+ * passes neither and hugs its content. Capture runs draw it inline, as iOS's
+ * harness returns the view itself rather than presenting it.
+ *
+ * Used outside Speech too (Me → Add a language), so every iOS form sheet
+ * Android draws looks like one.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SpeechSheet(onDismiss: () -> Unit, dismissible: Boolean = true, fullHeight: Boolean = true,
+                         medium: Boolean = false,
                          content: @Composable ColumnScope.() -> Unit) {
     val body: @Composable (Modifier) -> Unit = { m ->
         Column(
-            m.fillMaxWidth().then(if (fullHeight) Modifier.fillMaxHeight() else Modifier)
+            m.fillMaxWidth().then(when {
+                medium -> Modifier.fillMaxHeight(0.5f)
+                fullHeight -> Modifier.fillMaxHeight()
+                else -> Modifier
+            })
                 .bottomBarInsets().verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp).padding(bottom = 32.dp),
             content = content,

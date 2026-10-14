@@ -726,6 +726,7 @@ fun MeScreen(
     if (addingLanguage) {
         AddLanguageSheet(
             nativeLanguage = nativeLanguage,
+            targetLanguage = targetLanguage,
             enrolled = enrolledLanguages,
             onAdd = { code, level -> addingLanguage = false; onAddLanguage(code, level) },
             onDismiss = { addingLanguage = false },
@@ -778,10 +779,10 @@ private fun ProfileHeader(persona: UserPersona?, onClick: () -> Unit) {
  * speaker, and carrying the level across would pitch every reply and every
  * scene at the wrong band from the first turn.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AddLanguageSheet(
+internal fun AddLanguageSheet(
     nativeLanguage: String,
+    targetLanguage: String,
     enrolled: List<String>,
     onAdd: (String, CefrLevel) -> Unit,
     onDismiss: () -> Unit,
@@ -796,54 +797,53 @@ private fun AddLanguageSheet(
     }
     var code by remember { mutableStateOf<String?>(null) }
     var level by remember { mutableStateOf(CefrLevel.A2) }
+    var levelMenu by remember { mutableStateOf(false) }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-    ) {
-        Column(
-            Modifier.fillMaxWidth().bottomBarInsets().padding(horizontal = 20.dp).padding(bottom = 32.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(stringResource(R.string.add_a_language),
-                style = MaterialTheme.typography.titleLarge)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                choices.forEach { c ->
-                    FilterChip(
-                        selected = code == c,
-                        onClick = { code = c },
-                        label = { Text(LanguageCatalog.endonym(c)) },
-                    )
+    // iOS `AddLanguageSheet`: a NavigationStack Form, inline title, Cancel
+    // leading and Start trailing; the languages as rows with a checkmark,
+    // then the level as a menu Picker once one is picked.
+    com.roro.futurevoice.ui.speech.SpeechSheet(onDismiss) {
+        SheetHeader(stringResource(R.string.add_a_language),
+            leading = { com.roro.futurevoice.ui.brand.IosGlassTextButton(stringResource(R.string.cancel),
+                onClick = onDismiss) },
+            trailing = { com.roro.futurevoice.ui.brand.IosGlassTextButton(stringResource(R.string.start),
+                enabled = code != null, onClick = { code?.let { onAdd(it, level) } }) })
+        FormSection(stringResource(R.string.which_language_next),
+            footer = if (choices.isEmpty()) stringResource(
+                R.string.you_re_already_learning_every_language_we_support_today_more_b0cd8f) else null) {
+            choices.forEachIndexed { i, c ->
+                if (i > 0) FormDivider()
+                Row(Modifier.fillMaxWidth().clickable { code = c }
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(LanguageCatalog.endonym(c), style = MaterialTheme.typography.bodyLarge)
+                        Text(LanguageCatalog.englishName(c), style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    if (code == c) Icon(Icons.Filled.Check, contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary)
                 }
             }
-            if (choices.isEmpty()) {
-                Text(stringResource(R.string.youre_learning_everything_we_offer),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-
-            code?.let { picked ->
-                Text(stringResource(R.string.where_are_you_in_lls,
-                    LanguageCatalog.endonym(picked)),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(top = 8.dp))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    CefrLevel.entries.forEach { l ->
-                        FilterChip(
-                            selected = level == l,
-                            onClick = { level = l },
-                            label = { Text(l.code.uppercase()) },
-                        )
+        }
+        code?.let { picked ->
+            FormSection(null, footer = stringResource(
+                R.string.your_cloned_voice_already_speaks_no_new_recording_needed_you_a3e05d,
+                LanguageCatalog.englishName(picked), LanguageCatalog.englishName(targetLanguage))) {
+                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { levelMenu = true }
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.starting_level), style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.weight(1f))
+                    Box {
+                        MePickerValue(LanguageCatalog.levelLabel(level, picked))
+                        com.roro.futurevoice.ui.brand.IosPickerMenu(
+                            expanded = levelMenu, onDismissRequest = { levelMenu = false },
+                            options = CefrLevel.entries.map { it to LanguageCatalog.levelLabel(it, picked) },
+                            selected = level, onPick = { level = it; levelMenu = false })
                     }
                 }
             }
-
-            Button(
-                onClick = { code?.let { onAdd(it, level) } },
-                enabled = code != null,
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            ) { Text(stringResource(R.string.start_learning)) }
         }
     }
 }

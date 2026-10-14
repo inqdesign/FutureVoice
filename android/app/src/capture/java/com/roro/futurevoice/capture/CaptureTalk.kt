@@ -564,7 +564,8 @@ object CaptureTalk {
             showsGoalChips = CallSettings.flag(context, CallSettings.SHOWS_GOAL_CHIPS),
             coachMode = com.roro.futurevoice.talk.CoachMode.resolve(
                 com.roro.futurevoice.talk.CoachMode.choice(context), CefrLevel.B1.code),
-            onCoachMode = {}, onFlag = { _, _ -> }, onSpeedChange = {}, onDismiss = {},
+            onCoachMode = {}, tutorMode = false, onTutorMode = {},
+            onFlag = { _, _ -> }, onSpeedChange = {}, onDismiss = {},
         )
     }
 

@@ -539,6 +539,16 @@ fun RootScreen() {
         }
         checkWelcome = false
     }
+    var showAddLanguage by remember { mutableStateOf(false) }
+    if (showAddLanguage) {
+        AddLanguageSheet(
+            nativeLanguage = state.nativeLanguage,
+            targetLanguage = state.targetLanguage,
+            enrolled = state.enrolledLanguages,
+            onAdd = { code, level -> showAddLanguage = false; app.addLanguage(code, level) },
+            onDismiss = { showAddLanguage = false },
+        )
+    }
     // What's new in this release, once (iOS `offerWhatsNew`): a beat after
     // the tabs are up, never over another sheet, ahead of the voice move,
     // which waits for it to close.
@@ -1463,9 +1473,9 @@ fun RootScreen() {
             // A book's Grammar chapter: that talk's sentence cards.
             onOpenSessionDeck = { deckSessionId = it; showDeck = true },
             onSwitchLanguage = app::switchLanguage,
-            // Adding one asks for a level, which is Me's sheet — the home
-            // header is not the place for a form.
-            onAddLanguage = { showMe = true },
+            // iOS `ConversationHome`: the header's "Add a language" presents
+            // `AddLanguageSheet` right here, over the home.
+            onAddLanguage = { showAddLanguage = true },
             deepenPending = deepenPending,
             onDeepenConsumed = { deepenPending = false },
             // A tab's first-visit guide never rises over a sheet the root owns.

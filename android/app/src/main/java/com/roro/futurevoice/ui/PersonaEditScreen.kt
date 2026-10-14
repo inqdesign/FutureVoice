@@ -173,7 +173,12 @@ fun PersonaEditScreen(
                         }
                         Box(Modifier.fillMaxWidth().padding(vertical = 16.dp),
                             contentAlignment = Alignment.Center) {
-                            Box(Modifier.clip(CircleShape).clickable {
+                            // iOS: a `ZStack(alignment: .bottomTrailing)` as the
+                            // PhotosPicker's label — the avatar is round, the
+                            // pencil badge sits ON its edge, never clipped by it.
+                            Box(Modifier.clickable(
+                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                indication = null) {
                                 pick.launch(PickVisualMediaRequest(
                                     ActivityResultContracts.PickVisualMedia.ImageOnly))
                             }, contentAlignment = Alignment.BottomEnd) {

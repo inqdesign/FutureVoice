@@ -755,6 +755,10 @@ internal fun FormTextRow(
     minLines: Int = 1,
     maxLines: Int = 1,
     capitalization: KeyboardCapitalization = KeyboardCapitalization.Sentences,
+    autoCorrect: Boolean = true,
+    /** The row's own padding by default; a row that puts the field beside
+     *  something else (an avatar) passes its own weight and no padding. */
+    modifier: Modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 11.dp),
 ) {
     val style = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface)
     BasicTextField(
@@ -763,8 +767,8 @@ internal fun FormTextRow(
         singleLine = maxLines == 1,
         minLines = minLines, maxLines = maxOf(minLines, maxLines),
         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-        keyboardOptions = KeyboardOptions(capitalization = capitalization),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 11.dp),
+        keyboardOptions = KeyboardOptions(capitalization = capitalization, autoCorrectEnabled = autoCorrect),
+        modifier = modifier,
         decorationBox = { inner ->
             Box {
                 if (value.isEmpty()) Text(placeholder, style = style,
