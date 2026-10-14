@@ -652,7 +652,7 @@ internal fun PeopleSkyMap(
                     // neighbours AND over "me" (iOS `zIndex(1)`; "me" sits at
                     // zIndex 0 after the rest), so a bubble below the middle
                     // is never covered by my face.
-                    val front: (Node) -> Boolean = { it.id == focusedId || it.id == bubbleId }
+                    val front: (PeopleSky.Node) -> Boolean = { it.id == focusedId || it.id == bubbleId }
                     val ordered = nodes.sortedBy { if (front(it)) 1 else 0 }
                     var meDrawn = false
                     for (n in ordered) {
