@@ -787,7 +787,8 @@ private fun FocusTips(
     }
     if (lags(m.fluencyLevel)) {
         tips += Tip(Icons.Outlined.Speed,
-            stringResource(R.string.your_pace_is_lld_words_min_talk_more_often_and_a_little_long_608384,
+            if (m.fluencyCap != null) stringResource(R.string.fluency_tip_capped)
+            else stringResource(R.string.your_pace_is_lld_words_min_talk_more_often_and_a_little_long_608384,
                 m.effectivePace), talk)
     }
     if (lags(m.expressionLevel)) {

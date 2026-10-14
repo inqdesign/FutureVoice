@@ -220,6 +220,10 @@
     <string name="distinct_words_from_your_talks">Palabras distintas de tus conversaciones.</string>
     <string name="assessed_detail_vocabulary">%1$d palabras distintas que usaste, cada una evaluada según la lista de palabras CEFR. Totalmente objetivo.</string>
     <string name="assessed_detail_fluency">%1$d palabras por minuto de habla, sin contar pausas ni tiempo de pensar.</string>
+    <string name="fluency_detail_none">Palabras por minuto contando solo el tiempo en que hablas. Las pausas y el tiempo para pensar no cuentan.</string>
+    <string name="fluency_detail_needs_more">Habla unos %1$d min más fuera de las conversaciones de práctica y aquí aparecerá tu nivel.</string>
+    <string name="fluency_detail_capped">%1$d palabras por minuto, pero limitado a ≈%2$s por lo largos que son tus turnos: las respuestas cortas y rápidas no hacen un nivel.</string>
+    <string name="fluency_tip_capped">No te quedes en la primera respuesta: di un poco más en cada turno y tu ritmo se medirá en tramos más largos.</string>
     <string name="assessed_detail_grammar_density">%1$s errores de gramática confirmados cada 100 palabras habladas — la misma densidad que usa la evaluación.</string>
     <string name="assessed_detail_grammar_score">%1$d/100 en promedio en tus conversaciones recientes — cada una evaluada por los errores de gramática confirmados en lo que dijiste.</string>
     <string name="assessed_detail_expression">%1$d palabras por turno — cuánto desarrollas una idea.</string>

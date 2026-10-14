@@ -220,6 +220,10 @@
     <string name="distinct_words_from_your_talks">Distinct words from your talks.</string>
     <string name="assessed_detail_vocabulary">%1$d distinct words you\'ve used, each graded against the CEFR word list. Fully objective.</string>
     <string name="assessed_detail_fluency">%1$d words per minute of voiced speech — pauses and think-time removed.</string>
+    <string name="fluency_detail_none">Words per minute of voiced speech — pauses and think-time removed.</string>
+    <string name="fluency_detail_needs_more">Needs about %1$d more min of your own speech outside practice calls before it reads a band.</string>
+    <string name="fluency_detail_capped">%1$d words per minute, capped at ≈%2$s by how long your turns are — quick short answers don\'t make a level.</string>
+    <string name="fluency_tip_capped">Keep talking past the first answer — say a little more in each turn, and the pace is read from longer stretches.</string>
     <string name="assessed_detail_grammar_density">%1$s verified grammar slips per 100 spoken words — the same density the assessment weighs.</string>
     <string name="assessed_detail_grammar_score">Scoring %1$d/100 across recent talks — each talk graded from the verified grammar slips in what you said.</string>
     <string name="assessed_detail_expression">%1$d words per turn — how far ideas get developed.</string>

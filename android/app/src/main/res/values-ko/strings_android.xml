@@ -204,6 +204,10 @@
     <string name="distinct_words_from_your_talks">대화에서 쓴 서로 다른 단어예요.</string>
     <string name="assessed_detail_vocabulary">실제로 쓴 서로 다른 단어 %1$d개를 CEFR 단어 목록으로 채점해요. 완전히 객관적이에요.</string>
     <string name="assessed_detail_fluency">말한 시간 기준 분당 %1$d단어. 멈춤과 생각하는 시간은 빼요.</string>
+    <string name="fluency_detail_none">목소리가 난 시간만으로 잰 분당 단어 수예요. 멈춘 시간과 생각하는 시간은 빼요.</string>
+    <string name="fluency_detail_needs_more">연습 대화가 아닌 통화에서 %1$d분쯤 더 말하면 레벨이 나와요.</string>
+    <string name="fluency_detail_capped">분당 %1$d단어지만, 한 번에 말하는 길이에 맞춰 ≈%2$s까지로 잡았어요. 짧은 대답은 빨라도 레벨이 되지 않아요.</string>
+    <string name="fluency_tip_capped">첫 대답에서 멈추지 말고 한마디씩 더 붙여 보세요. 길게 말한 구간에서 속도를 읽어요.</string>
     <string name="assessed_detail_grammar_density">100단어당 확인된 문법 실수 %1$s개. 레벨 판정이 보는 밀도와 같아요.</string>
     <string name="assessed_detail_grammar_score">최근 대화 평균 %1$d/100점. 대화마다 실제로 말한 문장에서 확인된 실수로 채점해요.</string>
     <string name="assessed_detail_expression">한 턴에 %1$d단어. 생각을 얼마나 펼치는지예요.</string>

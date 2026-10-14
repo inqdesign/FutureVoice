@@ -28,9 +28,25 @@ object LevelBands {
     private fun band(value: Double, specs: List<Band>): CefrLevel =
         specs.firstOrNull { value >= it.from && value < it.to }?.level ?: specs.last().level
 
-    fun fluencyBand(wpm: Double, fromVoicedSpeech: Boolean): CefrLevel? {
-        if (wpm <= 0) return null
-        return band(if (fromVoicedSpeech) wpm else wpm + 20, fluency)
+    /** The learner's own voiced seconds a fluency band needs (3 min). */
+    const val MIN_FLUENCY_SPEAKING_SECONDS = 180.0
+
+    /**
+     * Pace → band, with iOS's two guards (2026-10-14: a B1 learner read ≈C2
+     * after a few plain calls of short answers). Under three minutes of the
+     * learner's own voice there is no band; and pace alone rewards short
+     * answers, so turn length caps it at one band above the ≈Expression band
+     * — the way range caps grammar. Returns the band and, when the cap
+     * decided it, the cap.
+     */
+    fun fluencyRead(wpm: Double, fromVoicedSpeech: Boolean,
+                    speakingSeconds: Double, wordsPerTurn: Double): Pair<CefrLevel, CefrLevel?>? {
+        if (wpm <= 0 || speakingSeconds < MIN_FLUENCY_SPEAKING_SECONDS) return null
+        val byPace = band(if (fromVoicedSpeech) wpm else wpm + 20, fluency)
+        if (wordsPerTurn <= 0) return byPace to null
+        val all = CefrLevel.entries
+        val cap = all[minOf(all.indexOf(band(wordsPerTurn, expression)) + 1, all.size - 1)]
+        return if (all.indexOf(cap) < all.indexOf(byPace)) cap to cap else byPace to null
     }
 
     fun expressionBand(wordsPerTurn: Double): CefrLevel? =

@@ -207,6 +207,10 @@
     <string name="distinct_words_from_your_talks">Mots distincts de tes conversations.</string>
     <string name="assessed_detail_vocabulary">%1$d mots distincts que tu as utilisés, chacun noté selon la liste de mots CECR. Entièrement objectif.</string>
     <string name="assessed_detail_fluency">%1$d mots par minute de parole active — pauses et temps de réflexion exclus.</string>
+    <string name="fluency_detail_none">Mots par minute, sur le seul temps où tu parles. Les pauses et le temps de réflexion ne comptent pas.</string>
+    <string name="fluency_detail_needs_more">Parle encore environ %1$d min en dehors des conversations d’entraînement, et ton niveau s’affichera ici.</string>
+    <string name="fluency_detail_capped">%1$d mots par minute, mais plafonné à ≈%2$s par la longueur de tes prises de parole : des réponses courtes et rapides ne font pas un niveau.</string>
+    <string name="fluency_tip_capped">Ne t’arrête pas à la première réponse : dis-en un peu plus à chaque fois, et ton rythme sera mesuré sur des passages plus longs.</string>
     <string name="assessed_detail_grammar_density">%1$s erreurs de grammaire vérifiées pour 100 mots parlés — la même densité que celle prise en compte par l’évaluation.</string>
     <string name="assessed_detail_grammar_score">Score de %1$d/100 sur tes appels récents — chaque appel est noté à partir des erreurs de grammaire vérifiées dans ce que tu as dit.</string>
     <string name="assessed_detail_expression">%1$d mots par tour — jusqu’où les idées sont développées.</string>

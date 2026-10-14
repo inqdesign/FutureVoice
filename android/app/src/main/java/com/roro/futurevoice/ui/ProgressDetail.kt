@@ -128,6 +128,9 @@ data class ProgressMetrics(
     val pausesPerMin: Double = 0.0,
     val talkMinutes: Int = 0,
     val wordsPerTurn: Int = 0,
+    /** The learner's own speaking seconds over the talks pace and turn
+     *  length are averaged across — the evidence a fluency band needs. */
+    val recentSpeakingSeconds: Double = 0.0,
     val grammarScore: Int = 0,
     val slipsPer100Words: Double = 0.0,
     /** Median structural range over the same window (null: no talk has one). */
@@ -147,8 +150,14 @@ data class ProgressMetrics(
      *  old talks recorded before mic-energy stats existed. */
     val effectivePace: Int get() = if (articulationWpm > 0) articulationWpm else wpm
 
-    val fluencyLevel: CefrLevel?
-        get() = LevelBands.fluencyBand(effectivePace.toDouble(), articulationWpm > 0)
+    val fluencyLevel: CefrLevel? get() = fluencyRead?.first
+
+    /** Non-null when turn length, not pace, decided the band. */
+    val fluencyCap: CefrLevel? get() = fluencyRead?.second
+
+    val fluencyRead: Pair<CefrLevel, CefrLevel?>?
+        get() = LevelBands.fluencyRead(effectivePace.toDouble(), articulationWpm > 0,
+            recentSpeakingSeconds, wordsPerTurn.toDouble())
 
     /** Slip density first, the 0–100 score only when no slips were ever
      *  captured — absent data must not read as perfect grammar. */
@@ -283,6 +292,7 @@ object ProgressMath {
             pausesPerMin = mean(mets.map { it.pausesPerMinute }.filter { it > 0 }),
             talkMinutes = Math.round(mean(mets.map { it.totalUserSpeakingSeconds }) / 60.0).toInt(),
             wordsPerTurn = Math.round(mean(mets.map { it.avgWordsPerUserTurn })).toInt(),
+            recentSpeakingSeconds = mets.sumOf { it.totalUserSpeakingSeconds },
             grammarScore = Math.round(mean(
                 recent.mapNotNull { it.summary?.scorecard?.grammar?.score }
                     .filter { it in 0..100 }.map { it.toDouble() })).toInt(),
@@ -589,12 +599,14 @@ fun ProgressSkillPage(
             unit = stringResource(
                 if (m.articulationWpm > 0) R.string.unit_words_min_speaking
                 else R.string.unit_words_min),
-            band = fluencyBandLabel(m),
-            measured = if (m.effectivePace > 0)
-                stringResource(R.string.fluency_measured_line,
+            // Under a cap the pace label ("Very fluent") is the reading the
+            // band no longer follows.
+            band = if (m.fluencyCap == null) fluencyBandLabel(m) else null,
+            measured = if (m.effectivePace <= 0) null
+            else if (m.fluencyRead == null || m.fluencyCap != null) fluencyDetail(m)
+            else stringResource(R.string.fluency_measured_line,
                     String.format(Locale.getDefault(), "%.1f", m.pausesPerMin),
-                    m.talkMinutes, m.wordsPerTurn)
-            else null,
+                    m.talkMinutes, m.wordsPerTurn),
             measures = stringResource(
                 R.string.words_per_minute_of_voiced_speech_pauses_and_think_time_don_e12672),
             improve = stringResource(R.string.talk_more_often_and_a_little_longer),
@@ -603,7 +615,7 @@ fun ProgressSkillPage(
             trend = m.fluencyTrend,
             trendCaption = stringResource(
                 R.string.one_point_per_talk_with_cefr_pace_bands_behind_the_curve),
-            bands = ProgressBands.fluency,
+            bands = if (m.fluencyCap == null) ProgressBands.fluency else emptyList(),
         )
         Dim.GRAMMAR -> MeasuredPage(
             dim = dim, m = m,
@@ -655,6 +667,21 @@ fun ProgressSkillPage(
         )
         Dim.OVERALL -> Unit
     }
+}
+
+/** The one line under the ≈Fluency band: what held it, or what it needs. */
+@Composable
+private fun fluencyDetail(m: ProgressMetrics): String {
+    if (m.effectivePace <= 0) return stringResource(R.string.fluency_detail_none)
+    if (m.recentSpeakingSeconds < LevelBands.MIN_FLUENCY_SPEAKING_SECONDS) {
+        val left = maxOf(1, Math.ceil(
+            (LevelBands.MIN_FLUENCY_SPEAKING_SECONDS - m.recentSpeakingSeconds) / 60.0).toInt())
+        return stringResource(R.string.fluency_detail_needs_more, left)
+    }
+    m.fluencyCap?.let {
+        return stringResource(R.string.fluency_detail_capped, m.effectivePace, it.code.uppercase())
+    }
+    return stringResource(R.string.assessed_detail_fluency, m.effectivePace)
 }
 
 /** Pace in words, not a band letter — the one place this page speaks plainly. */
@@ -980,7 +1007,7 @@ fun HowAssessedSheet(
                 FormDivider()
                 AssessedRow(stringResource(R.string.fluency),
                     m.fluencyLevel?.let { "≈" + it.code.uppercase() },
-                    stringResource(R.string.assessed_detail_fluency, m.effectivePace))
+                    fluencyDetail(m))
                 FormDivider()
                 AssessedRow(stringResource(R.string.grammar),
                     m.grammarLevel?.let { "≈" + it.code.uppercase() },

@@ -198,6 +198,10 @@
     <string name="distinct_words_from_your_talks">Verschiedene Wörter aus deinen Gesprächen.</string>
     <string name="assessed_detail_vocabulary">%1$d verschiedene Wörter, die du verwendet hast, jedes an der GER-Wortliste gemessen. Völlig objektiv.</string>
     <string name="assessed_detail_fluency">%1$d Wörter pro Minute gesprochener Sprache – Pausen und Denkzeit abgezogen.</string>
+    <string name="fluency_detail_none">Wörter pro Minute, nur über die Zeit, in der du sprichst. Pausen und Denkzeit zählen nicht.</string>
+    <string name="fluency_detail_needs_more">Sprich außerhalb von Übungsgesprächen noch etwa %1$d Min., dann bekommt das eine Stufe.</string>
+    <string name="fluency_detail_capped">%1$d Wörter pro Minute, aber durch die Länge deiner Beiträge auf ≈%2$s begrenzt. Kurze, schnelle Antworten machen noch keine Stufe.</string>
+    <string name="fluency_tip_capped">Hör nach der ersten Antwort nicht auf und sag jedes Mal etwas mehr. Dann wird dein Tempo über längere Stücke gemessen.</string>
     <string name="assessed_detail_grammar_density">%1$s bestätigte Grammatikfehler pro 100 gesprochene Wörter – dieselbe Dichte, die die Einstufung gewichtet.</string>
     <string name="assessed_detail_grammar_score">%1$d/100 über die letzten Gespräche – jedes Gespräch bewertet nach den bestätigten Grammatikfehlern in dem, was du gesagt hast.</string>
     <string name="assessed_detail_expression">%1$d Wörter pro Redebeitrag – wie weit Gedanken ausgebaut werden.</string>

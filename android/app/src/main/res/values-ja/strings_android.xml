@@ -204,6 +204,10 @@
     <string name="distinct_words_from_your_talks">トークで使った異なり語です。</string>
     <string name="assessed_detail_vocabulary">実際に使った異なり語 %1$d 語を、CEFRの語彙リストで採点します。完全に客観的です。</string>
     <string name="assessed_detail_fluency">発話時間あたり %1$d 語/分。ポーズと考える時間は除きます。</string>
+    <string name="fluency_detail_none">声が出ている時間だけで測った1分あたりの語数です。間や考えている時間は含みません。</string>
+    <string name="fluency_detail_needs_more">練習の会話以外で、あと%1$d分ほど話すとレベルが出ます。</string>
+    <string name="fluency_detail_capped">1分あたり%1$d語ですが、1回に話す長さに合わせて≈%2$sまでとしました。短い返事は速くてもレベルにはなりません。</string>
+    <string name="fluency_tip_capped">最初の返事で止めずに、毎回もうひと言足してみましょう。長く話した部分から速さを読みます。</string>
     <string name="assessed_detail_grammar_density">100語あたり確認済みの文法ミス %1$s 件。レベル判定が見る密度と同じです。</string>
     <string name="assessed_detail_grammar_score">最近のトークで %1$d/100点。トークごとに、実際に話した文から確認できたミスで採点します。</string>
     <string name="assessed_detail_expression">1ターン %1$d 語。考えをどこまで広げているかです。</string>

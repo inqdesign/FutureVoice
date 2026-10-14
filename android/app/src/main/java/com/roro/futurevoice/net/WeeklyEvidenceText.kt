@@ -21,7 +21,7 @@ object WeeklyEvidenceText {
     ): String =
             "- articulation_rate_wpm: " +
             articulationWpm.toString() +
-            " (words per minute of VOICED speech, pauses removed; 0 = no timing data. Learner bands: <60 A1, 60-85 A2, 85-105 B1, 105-125 B2, 125-145 C1, 145+ C2)\n- avg_words_per_turn: " +
+            " (words per minute of VOICED speech, pauses removed; 0 = no timing data. Learner bands: <60 A1, 60-85 A2, 85-105 B1, 105-125 B2, 125-145 C1, 145+ C2. Short answers come out fast, so pace over short turns proves nothing: read it with avg_words_per_turn, and never let pace alone raise the level)\n- avg_words_per_turn: " +
             avgWordsPerTurn.toString() +
             "\n- verified_grammar_slips_per_10_turns: " +
             fmt1(slipsPer10Turns) +

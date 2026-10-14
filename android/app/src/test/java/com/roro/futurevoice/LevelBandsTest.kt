@@ -14,12 +14,27 @@ import org.junit.Test
  * `GrammarBandTest`.)
  */
 class LevelBandsTest {
+    private fun pace(wpm: Double, voiced: Boolean = true, secs: Double = 600.0, turn: Double = 0.0) =
+        LevelBands.fluencyRead(wpm, voiced, secs, turn)?.first
+
     @Test fun fluency() {
-        assertNull(LevelBands.fluencyBand(0.0, true))
-        assertEquals(CefrLevel.A1, LevelBands.fluencyBand(59.9, true))
-        assertEquals(CefrLevel.A2, LevelBands.fluencyBand(60.0, true))
-        assertEquals(CefrLevel.B1, LevelBands.fluencyBand(70.0, false))   // 70 + 20 = 90
-        assertEquals(CefrLevel.C2, LevelBands.fluencyBand(250.0, true))   // past the table
+        assertNull(pace(0.0))
+        assertEquals(CefrLevel.A1, pace(59.9))
+        assertEquals(CefrLevel.A2, pace(60.0))
+        assertEquals(CefrLevel.B1, pace(70.0, voiced = false))   // 70 + 20 = 90
+        assertEquals(CefrLevel.C2, pace(250.0))                  // past the table
+    }
+
+    /** iOS `FluencyBandTests`: too little speech reads no band, and turn
+     *  length caps a fast pace at one band above the ≈Expression band. */
+    @Test fun fluencyGuards() {
+        assertNull(pace(160.0, secs = 90.0))
+        assertEquals(CefrLevel.C2, pace(160.0, secs = LevelBands.MIN_FLUENCY_SPEAKING_SECONDS))
+        val capped = LevelBands.fluencyRead(160.0, true, 600.0, 8.0)   // ≈A2 turns
+        assertEquals(CefrLevel.B1, capped?.first)
+        assertEquals(CefrLevel.B1, capped?.second)
+        assertEquals(CefrLevel.C2, pace(160.0, turn = 40.0))
+        assertEquals(CefrLevel.A2, pace(70.0, turn = 40.0))      // a ceiling, not a floor
     }
 
     @Test fun expression() {

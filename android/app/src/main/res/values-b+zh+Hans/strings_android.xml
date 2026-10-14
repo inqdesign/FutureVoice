@@ -204,6 +204,10 @@
     <string name="distinct_words_from_your_talks">对话里用过的不重复单词。</string>
     <string name="assessed_detail_vocabulary">实际用过的 %1$d 个不重复单词，逐一对 CEFR 单词表分级。完全客观。</string>
     <string name="assessed_detail_fluency">只算说话时间，每分钟 %1$d 个字，停顿和思考时间都扣掉。</string>
+    <string name="fluency_detail_none">只按你出声说话的时间算出的每分钟字数，停顿和思考的时间不算在内。</string>
+    <string name="fluency_detail_needs_more">在练习对话以外再说大约%1$d分钟，这里就会显示等级。</string>
+    <string name="fluency_detail_capped">每分钟%1$d个字，但按你每次说话的长度先定在 ≈%2$s。简短的回答说得再快，也不代表等级。</string>
+    <string name="fluency_tip_capped">别停在第一句回答，每次多说一点，速度就会从更长的段落里读出来。</string>
     <string name="assessed_detail_grammar_density">每 100 个字有 %1$s 个确认过的语法失误，和等级评定看的密度一样。</string>
     <string name="assessed_detail_grammar_score">最近几次对话平均 %1$d/100 分，每次都从真正说出口的句子里确认的失误来评分。</string>
     <string name="assessed_detail_expression">每轮 %1$d 个字——想法展开到哪里。</string>
