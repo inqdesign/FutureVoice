@@ -2,9 +2,9 @@ package com.roro.futurevoice.ui
 
 import android.content.Context
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.EaseOut
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.VectorConverter
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -79,6 +79,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.hypot
 import kotlin.math.max
@@ -484,6 +485,42 @@ private const val CULL_QUANTUM = 96f
  */
 private const val FLICK_CARRY = 0.2f
 
+/**
+ * The release spring: critically damped at ω = 1 / FLICK_CARRY, so with the
+ * finger's own velocity as its start it IS an exponential decay that travels
+ * exactly `v * FLICK_CARRY` — the cloud leaves the finger at the finger's
+ * speed instead of restarting at half of it, which is what read as a stutter
+ * at the end of every drag.
+ */
+private const val RELEASE_STIFFNESS = (1f / FLICK_CARRY) * (1f / FLICK_CARRY)
+
+/**
+ * Settle from where the finger left the cloud. Per axis, the start velocity is
+ * the finger's unless the canvas edge clamps the target nearer than the flick
+ * would carry — then it's the velocity whose decay lands exactly on the edge,
+ * so the cloud eases into the bound instead of stopping dead against it.
+ */
+private suspend fun settle(
+    pan: Animatable<Offset, *>,
+    from: Offset,
+    velocity: Offset,
+    viewport: Offset,
+    cloud: CloudLayout.Cloud,
+) {
+    val target = clampPan(from + velocity * FLICK_CARRY, viewport, cloud)
+    fun axis(v: Float, d: Float): Float {
+        val fits = d / FLICK_CARRY
+        return if (abs(v) > abs(fits) || v * d <= 0f) fits else v
+    }
+    val start = Offset(axis(velocity.x, target.x - from.x), axis(velocity.y, target.y - from.y))
+    pan.snapTo(from)
+    pan.animateTo(
+        target,
+        spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = RELEASE_STIFFNESS),
+        initialVelocity = start,
+    )
+}
+
 @Composable
 private fun Cloud(
     modifier: Modifier,
@@ -543,19 +580,18 @@ private fun Cloud(
                         onDragEnd = {
                             // Carry a fraction of the flick so the cloud keeps
                             // drifting briefly after the finger lifts, then
-                            // eases to rest inside the canvas bounds.
+                            // eases to rest inside the canvas bounds. Start
+                            // from `raw`, not `pan.value`: the last move's
+                            // snapTo may not have run yet.
                             val v = tracker.calculateVelocity()
-                            val target = clampPan(
-                                pan.value + Offset(v.x * FLICK_CARRY, v.y * FLICK_CARRY),
-                                viewport, cloud,
-                            )
-                            raw = target
-                            scope.launch { pan.animateTo(target, tween(600, easing = EaseOut)) }
+                            val from = rubberBanded(raw, viewport, cloud)
+                            raw = clampPan(from + Offset(v.x, v.y) * FLICK_CARRY, viewport, cloud)
+                            scope.launch { settle(pan, from, Offset(v.x, v.y), viewport, cloud) }
                         },
                         onDragCancel = {
-                            val target = clampPan(pan.value, viewport, cloud)
-                            raw = target
-                            scope.launch { pan.animateTo(target, tween(250, easing = EaseOut)) }
+                            val from = rubberBanded(raw, viewport, cloud)
+                            raw = clampPan(from, viewport, cloud)
+                            scope.launch { settle(pan, from, Offset.Zero, viewport, cloud) }
                         },
                     )
                 },
