@@ -254,7 +254,7 @@ object CapturePractice {
         TalkDetailScreen(sessionId = CaptureSeed.talkDetailSession.id, language = lang(c),
             level = level(c), onBack = {},
             onDone = if (chapter == null) ({}) else null,
-            onContinue = if (chapter == null) null else ({ _: String -> }))
+            onContinue = if (chapter == null) null else ({ _ -> }))
     }
 
     private fun sayAgain(stage: String) = mode(

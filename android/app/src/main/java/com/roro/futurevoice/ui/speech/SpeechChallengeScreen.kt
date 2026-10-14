@@ -36,7 +36,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -74,6 +73,9 @@ import com.roro.futurevoice.data.SpeechLibrary
 import com.roro.futurevoice.data.SpeechScript
 import com.roro.futurevoice.ui.FormDivider
 import com.roro.futurevoice.ui.FormSection
+import com.roro.futurevoice.ui.FormTextRow
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import com.roro.futurevoice.ui.NavPageBackHandler
 import com.roro.futurevoice.ui.SheetHeader
 import com.roro.futurevoice.ui.brand.AppSurfaces
@@ -490,7 +492,11 @@ internal fun SpeechChallengeNameSheet(suggested: String, onDismiss: (saved: Bool
     val photo = remember { com.roro.futurevoice.data.AvatarStore.load(context) }
     val scope = rememberCoroutineScope()
     val clean = name.trim()
-    SpeechSheet({ onDismiss(false) }, fullHeight = false) {
+    // iOS: `.presentationDetents([.medium])` — a NavigationStack Form with
+    // Cancel / Save in the toolbar, the field focused on appear.
+    val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    SpeechSheet({ onDismiss(false) }, fullHeight = false, medium = true) {
         SheetHeader(stringResource(R.string.your_name_on_the_board),
             leading = { IosGlassTextButton(stringResource(R.string.cancel), onClick = { onDismiss(false) }) },
             trailing = {
@@ -503,14 +509,17 @@ internal fun SpeechChallengeNameSheet(suggested: String, onDismiss: (saved: Bool
                 })
             })
         FormSection(null, footer = stringResource(R.string.shown_beside_your_score_on_every_challenge_board)) {
-            Row(Modifier.padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            // A Form row: the face, then a plain TextField (no box) — iOS
+            // `HStack(spacing: 12)`.
+            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 SpeechChallengeFace(SpeechChallenges.Face(clean.ifEmpty { "?" }), 44.dp,
                     localBitmap = if (showsPhoto) photo else null)
-                OutlinedTextField(value = name,
-                    onValueChange = { name = it.take(SpeechChallenges.MAX_NAME_LENGTH) },
-                    placeholder = { Text(stringResource(R.string.name)) },
-                    singleLine = true,
-                    modifier = Modifier.weight(1f).padding(8.dp))
+                FormTextRow(name, { name = it.take(SpeechChallenges.MAX_NAME_LENGTH) },
+                    stringResource(R.string.name),
+                    capitalization = KeyboardCapitalization.Words, autoCorrect = false,
+                    modifier = Modifier.weight(1f).focusRequester(focus))
             }
             if (photo != null) {
                 FormDivider()

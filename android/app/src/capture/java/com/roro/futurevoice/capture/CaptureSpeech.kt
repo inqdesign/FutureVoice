@@ -26,6 +26,7 @@ import com.roro.futurevoice.data.SpeechTake
 import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.ui.HomeTab
 import com.roro.futurevoice.ui.brand.AppSurfaces
+import com.roro.futurevoice.ui.speech.SpeechChallengeNameSheet
 import com.roro.futurevoice.ui.speech.SpeechComposerSheet
 import com.roro.futurevoice.ui.speech.SpeechOwnScriptSheet
 import com.roro.futurevoice.ui.speech.SpeechPlusSheet
@@ -120,6 +121,8 @@ object CaptureSpeech {
         },
         "speech-prompter" to { ctx -> Prompter(ctx, 24) },
         "speech-open" to { ctx -> Prompter(ctx, null) },
+        // The name on the boards (iOS `SpeechChallengeNameSheet`, medium detent).
+        "speech-name" to { ctx -> Seeded(ctx, inline = false) { SpeechChallengeNameSheet("Eunggyu", onDismiss = {}) } },
         "speech-plus" to { ctx -> Seeded(ctx, inline = false) { SpeechPlusSheet(isLight = true, onDismiss = {}) } },
         "speech-script-sheet" to { ctx ->
             Seeded(ctx) {
