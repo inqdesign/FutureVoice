@@ -2651,8 +2651,8 @@
     <string name="when_something_goes_wrong">"出问题的时候"</string>
     <!-- 'When you hang up, the words you used and the sentences you fixed become your own study book in Review.' -->
     <string name="when_you_hang_up_the_words_you_used_and_the_sentences_you_fi_494463">"挂断后，你用过的单词和纠正过的句子会变成你自己的教材，放进复习。"</string>
-    <!-- 'When you make a mistake, your future self says it the right way out loud, then carries on. Starts with your next call.' -->
-    <string name="when_you_make_a_mistake_your_future_self_says_it_the_right_w_458e22">"说错的时候，流利的自己会马上念出正确的说法，然后接着聊。下次通话开始生效。"</string>
+    <!-- 'When you make a mistake, your future self says it the right way out loud, then carries on.' -->
+    <string name="when_you_make_a_mistake_your_future_self_says_it_the_right_w_c45516">"说错的时候，流利的自己会马上念出正确的说法，然后接着聊。"</string>
     <!-- 'When you send a card to 10 minutes, tomorrow or 3 days, this is what brings it back. One reminder at a time, at the earliest thing waiting.' -->
     <string name="when_you_send_a_card_to_10_minutes_tomorrow_or_3_days_this_i_dc4513">"把卡片送到10分钟后、明天或3天后，到时候把它叫回来的就是这个通知。一次只响一次，对准最早等着的那一张。"</string>
     <!-- 'When you stop speaking, your fluent self answers. Take your time to think.' -->

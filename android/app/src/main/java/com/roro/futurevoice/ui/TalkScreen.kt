@@ -360,7 +360,7 @@ fun TalkScreen(
         mutableStateOf(com.roro.futurevoice.talk.CoachMode.resolve(
             com.roro.futurevoice.talk.CoachMode.choice(context), level.code))
     }
-    // Tutor mode: read by the NEXT call when it opens (`TutorMode`).
+    // Tutor mode: a flip mid-call reaches the live call (`TutorMode`).
     var tutorMode by remember { mutableStateOf(com.roro.futurevoice.talk.TutorMode.isOn(context)) }
     if (showingCallSettings) {
         CallSettingsSheet(
@@ -371,6 +371,7 @@ fun TalkScreen(
             onTutorMode = {
                 com.roro.futurevoice.talk.TutorMode.set(context, it)
                 tutorMode = it
+                vm.setTutorMode(it)
             },
             onCoachMode = {
                 com.roro.futurevoice.talk.CoachMode.setChoice(context, it)

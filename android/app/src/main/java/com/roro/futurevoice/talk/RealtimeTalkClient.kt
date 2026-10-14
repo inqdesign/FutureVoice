@@ -417,6 +417,19 @@ class RealtimeTalkClient(private val context: Context) {
         runCatching { socket?.send(body.toString()) }
     }
 
+    /** A new system prompt for the rest of the call (iOS `setSystem`) — a
+     *  setting that lives in the prompt (tutor mode) flipped mid-call. The
+     *  gateway rebuilds its reply cache for it; one older than the field
+     *  ignores it, and the setting then applies from the next call. */
+    fun setSystem(system: String) {
+        if (tornDown) return
+        val body = kotlinx.serialization.json.buildJsonObject {
+            put("type", kotlinx.serialization.json.JsonPrimitive("set"))
+            put("system", kotlinx.serialization.json.JsonPrimitive(system))
+        }
+        runCatching { socket?.send(body.toString()) }
+    }
+
     fun hangUp() {
         if (tornDown) return
         tornDown = true
