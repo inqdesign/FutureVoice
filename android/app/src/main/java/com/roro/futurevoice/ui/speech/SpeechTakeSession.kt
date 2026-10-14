@@ -134,14 +134,18 @@ class SpeechTakeSession(
         val language = _script.value.language
         try {
             MicPreference.applyInputRoute(context)
-            // The recognizer FIRST: where a device can't feed two mic users,
-            // the later one wins, and the take must be the one that does.
+            // The recognizer hears the TAKE's own audio (fed from the capture
+            // below, iOS's one-tap shape): it never opens the mic, so nothing
+            // silences it and it plays no earcon. On Android < 13 it still
+            // opens the mic itself, so it starts FIRST: where a device can't
+            // feed two mic users, the later one wins, and the take must be
+            // the one that does.
             liveDropped = false
             lastPartialAtMs = 0L
             follows = 0; partials = 0
             live = runCatching {
                 LiveTranscriber(context).also { t ->
-                    t.start(LanguageCatalog.sttLocale(language)) { text -> heard(text) }
+                    t.start(LanguageCatalog.sttLocale(language), fed = true) { text -> heard(text) }
                 }
             }.getOrNull()
         } catch (_: Exception) {
@@ -167,6 +171,7 @@ class SpeechTakeSession(
             android.util.Log.w("SpeechTake", "capture silenced by the system — dropping the recognizer")
             if (!liveDropped) { liveDropped = true; stopLive() }
         }
+        live?.takeIf { it.acceptsFeed }?.let { t -> cap.tap = { buf, n -> t.feed(buf, n) } }
         try {
             cap.start(out, File(context.cacheDir, "speech-pieces"))
         } catch (_: Exception) {

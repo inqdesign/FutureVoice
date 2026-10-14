@@ -26,6 +26,11 @@ class WavRecorder {
     @Volatile var level: Float = 0f; private set
     @Volatile var elapsedSeconds: Double = 0.0; private set
 
+    /** Every buffer as it is recorded (on the capture thread) — how the live
+     *  recognizer hears the SAME audio instead of opening the mic a second
+     *  time ([LiveTranscriber.feed]). Must not block. */
+    @Volatile var tap: ((ShortArray, Int) -> Unit)? = null
+
     private var record: AudioRecord? = null
     private var worker: Thread? = null
 
@@ -51,6 +56,7 @@ class WavRecorder {
                 while (isRecording) {
                     val n = rec.read(buf, 0, buf.size)
                     if (n <= 0) continue
+                    tap?.invoke(buf, n)
                     bytes.clear()
                     for (i in 0 until n) bytes.putShort(buf[i])
                     raf.write(bytes.array(), 0, n * 2)

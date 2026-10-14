@@ -490,15 +490,18 @@ fun ShadowScreen(
             // the file afterwards (iOS records from the go beat — the 3-2-1
             // never reaches the scored audio or the take played back).
             // The live recognizer, for ending the attempt on CONTENT (iOS
-            // `a4fa2dc6`). Opened BEFORE the recorder: where a device can't
-            // feed two mic users, the later one wins, and the scored file
-            // must be the one that does.
+            // `a4fa2dc6`). Opened BEFORE the recorder: on Android < 13 it
+            // opens the mic itself, and where a device can't feed two mic
+            // users the later one wins — the scored file must be that one.
             var heard = ""
             val live = runCatching {
                 com.roro.futurevoice.audio.LiveTranscriber(context).also {
-                    it.start(com.roro.futurevoice.data.LanguageCatalog.sttLocale(targetLanguage)) { t -> heard = t }
+                    it.start(com.roro.futurevoice.data.LanguageCatalog.sttLocale(targetLanguage), fed = true) { t -> heard = t }
                 }
             }.getOrNull()
+            // On Android 13+ the recognizer hears the recorder's own buffers
+            // and never opens the mic (no earcon, nothing silenced).
+            recorder.tap = live?.takeIf { it.acceptsFeed }?.let { t -> { buf: ShortArray, n: Int -> t.feed(buf, n) } }
             // A take cancelled mid-count (closing the screen) must not leave
             // the recognizer listening. Stopping twice is harmless.
             kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]?.invokeOnCompletion {

@@ -34,6 +34,7 @@ object CaptureShadow {
 
     val wired: Map<String, @Composable (Context) -> Unit> = mapOf(
         "probe-asr" to { c -> ProbeAsr(c) },
+        "probe-live" to { c -> ProbeLive(c) },
         "shadow-result" to { _ -> Result(pending = false, timed = true) },
         "shadow-result-pending" to { _ -> Result(pending = true, timed = true) },
         "shadow-words-only" to { _ -> Result(pending = false, timed = false) },
@@ -131,6 +132,60 @@ object CaptureShadow {
                     r.parts.forEach { say("   ${it.startMs}ms ${it.text}") }
                 }
             }
+            say("done")
+        }
+        Column(Modifier.fillMaxSize().background(Color.White).padding(16.dp)
+            .verticalScroll(rememberScrollState())) {
+            Text(log, fontSize = 12.sp, color = Color.Black)
+        }
+    }
+
+    /**
+     * The live recognizer fed a recording at real time, the way a Speech take
+     * feeds it (`LiveTranscriber(fed = true)`), then 10 s on its own mic —
+     * logs every transcript change and whether it ever restarted. Logcat tag
+     * `CaptureShadow`; the recognizer's own beeps show as `AudioPlayer`.
+     */
+    @Composable
+    private fun ProbeLive(c: Context) {
+        var log by remember { mutableStateOf("probing live…\n") }
+        LaunchedEffect(Unit) {
+            fun say(s: String) { Log.i(TAG, s); log += s + "\n" }
+            val lang = (c as? android.app.Activity)?.intent?.getStringExtra("langs") ?: "en"
+            val f = File(c.cacheDir, "probe-$lang.wav")
+            c.assets.open("probe/$lang.wav").use { i -> f.outputStream().use { o -> i.copyTo(o) } }
+            val pcm = com.roro.futurevoice.audio.WavPcm.read(f)!!
+            say("fed: ${pcm.samples.size / pcm.sampleRate.toDouble()} s at ${pcm.sampleRate} Hz")
+            val t0 = System.currentTimeMillis()
+            val live = com.roro.futurevoice.audio.LiveTranscriber(c)
+            live.start(com.roro.futurevoice.data.LanguageCatalog.sttLocale(lang), fed = true) { t ->
+                say("+${System.currentTimeMillis() - t0}ms '$t'")
+            }
+            say("acceptsFeed=${live.acceptsFeed}")
+            val samples = pcm.samples
+            val step = pcm.sampleRate / 10
+            // 1 s of silence, the recording, 2 s of silence — at real time.
+            val silence = ShortArray(step)
+            repeat(10) { live.feed(silence, step); kotlinx.coroutines.delay(100) }
+            var i = 0
+            while (i < samples.size) {
+                val n = minOf(step, samples.size - i)
+                val chunk = ShortArray(n) { samples[i + it].toInt().toShort() }
+                live.feed(chunk, n); i += n
+                kotlinx.coroutines.delay(100)
+            }
+            repeat(20) { live.feed(silence, step); kotlinx.coroutines.delay(100) }
+            say("fed stop -> '${live.stop()}' level-ok")
+            val own = com.roro.futurevoice.audio.LiveTranscriber(c)
+            val t1 = System.currentTimeMillis()
+            own.start(com.roro.futurevoice.data.LanguageCatalog.sttLocale(lang)) { t ->
+                say("own +${System.currentTimeMillis() - t1}ms '$t'")
+            }
+            repeat(100) {
+                kotlinx.coroutines.delay(100)
+                if (it % 10 == 0) say("own level=${"%.2f".format(own.level)}")
+            }
+            say("own stop -> '${own.stop()}'")
             say("done")
         }
         Column(Modifier.fillMaxSize().background(Color.White).padding(16.dp)
