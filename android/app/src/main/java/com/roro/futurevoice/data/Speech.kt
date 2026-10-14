@@ -84,6 +84,9 @@ data class SpeechMetrics(
     /** How far into the script the take got, 0…1; the delivery parts of
      *  `overall` are scaled by it. Null on takes made before 2026-10-14. */
     val coverage: Double? = null,
+    /** `SpeechAnalyzer.SCORING_VERSION` the take was scored by; null = before
+     *  2026-10-14, when every part was lenient. */
+    val scoring: Int? = null,
 )
 
 /** The model's notes on a take, in the NATIVE language. */
@@ -125,12 +128,14 @@ object SpeechLibrary {
     }
 
     /** A comfortable presentation pace, low…high, in [rateUnit]s per minute. */
+    /** Full marks of the pace score: the middle half of the old band since
+     *  2026-10-14 (iOS), so the midpoint a script is written to is unchanged. */
     fun rateBand(language: String): IntRange = when (base(language)) {
-        "ko" -> 240..330
-        "ja" -> 260..340
-        "de" -> 105..140
-        "fr", "es", "it", "pt" -> 130..170
-        else -> 120..160
+        "ko" -> 263..307
+        "ja" -> 280..320
+        "de" -> 114..131
+        "fr", "es", "it", "pt" -> 140..160
+        else -> 130..150
     }
 
     /** The midpoint — what a script's length is written to. */

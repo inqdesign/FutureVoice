@@ -19,9 +19,10 @@ import kotlin.random.Random
 /** iOS `SpeechTests.swift` (HEAD `8f135c24`), test for test. */
 class SpeechAnalyzerTest {
     @Test fun paceInsideBandIsFullMarks() {
-        assertEquals(100, SpeechAnalyzer.paceScore(140, 120..160))
-        assertEquals(0, SpeechAnalyzer.paceScore(0, 120..160))
-        assertEquals(80, SpeechAnalyzer.paceScore(176, 120..160))
+        assertEquals(100, SpeechAnalyzer.paceScore(140, 130..150))
+        assertEquals(0, SpeechAnalyzer.paceScore(0, 130..150))
+        assertEquals(80, SpeechAnalyzer.paceScore(165, 130..150))
+        assertEquals(70, SpeechAnalyzer.paceScore(117, 130..150))
     }
 
     @Test fun sentenceBreaksExcludeTheLastSentence() {

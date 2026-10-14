@@ -235,7 +235,8 @@ class SpeechChallenges private constructor(private val context: Context) {
             try {
                 val onBoard = _standings.value[challengeId]?.myBest ?: -1
                 val candidates = store.takes(script.id)
-                    .filter { it.videoFilename != null && it.metrics.overall > onBoard }
+                    .filter { it.videoFilename != null && it.metrics.overall > onBoard &&
+                        (it.metrics.scoring ?: 1) >= com.roro.futurevoice.talk.SpeechAnalyzer.SCORING_VERSION }
                     .sortedByDescending { it.metrics.overall }
                 // Re-scored with today's weighting (iOS): only the number sent
                 // changes, the take on the phone stays as it was.
@@ -246,7 +247,7 @@ class SpeechChallenges private constructor(private val context: Context) {
                             com.roro.futurevoice.talk.SpeechAnalyzer.removingFillers(take.transcript, script.language, script.body),
                             script.language)
                     }
-                    if (kotlin.math.abs(diff.score - take.metrics.accuracy) > 5) continue
+                    if (kotlin.math.abs(com.roro.futurevoice.talk.SpeechAnalyzer.accuracy(diff) - take.metrics.accuracy) > 5) continue
                     val m = take.metrics
                     val overall = com.roro.futurevoice.talk.SpeechAnalyzer.overall(m.accuracy, m.paceScore,
                         m.pauseScore, m.fillerScore, m.steadiness,

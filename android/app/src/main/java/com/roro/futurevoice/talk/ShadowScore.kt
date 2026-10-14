@@ -23,6 +23,8 @@ object ShadowScore {
         val targetTokenCount: Int,
         val learnerTokenCount: Int,
         val matchCount: Int,
+        /** The share matched before the sqrt curve, 0…1 (iOS `ratio`). */
+        val ratio: Double = 0.0,
     )
 
     /** en spell-out for the JVM tests; Android swaps in ICU at app start. */
@@ -48,7 +50,7 @@ object ShadowScore {
         else if (denom > 0) matches.toDouble() / denom else 0.0
         // sqrt curve: single-word slips don't crater a good attempt.
         val score = (sqrt(raw) * 100).let { Math.round(it) }.toInt().coerceIn(0, 100)
-        return Analysis(score, steps, targetTokens.size, learnerTokens.size, matches)
+        return Analysis(score, steps, targetTokens.size, learnerTokens.size, matches, raw)
     }
 
     /**

@@ -39,7 +39,9 @@ object SpeechAnalyzer {
         val spoken = removingFillers(transcript, language, script)
 
         // Accuracy: the shadow diff (CJK by syllable, digits, contractions).
+        // The PLAIN share, not the sqrt-curved shadow score (iOS 2026-10-14).
         val diff = ShadowScore.analyze(script, spoken, language)
+        val accuracy = accuracy(diff)
         val missed = missedRuns(diff.steps, script, language)
 
         val band = SpeechLibrary.rateBand(language)
@@ -55,9 +57,9 @@ object SpeechAnalyzer {
         val pauses = silences.count { it >= PAUSE_SECONDS }
         val hesitations = silences.count { it >= HESITATION_SECONDS }
         val pausesAtBreaks = minOf(pauses, breaks)
-        val choppy = maxOf(0, pauses - (breaks + clauses) - 2)
+        val choppy = maxOf(0, pauses - (breaks + clauses) - 1)
         var pauseScore = if (breaks > 0) 100 * pausesAtBreaks / breaks else 100
-        pauseScore -= 5 * choppy + 8 * hesitations
+        pauseScore -= 6 * choppy + 10 * hesitations
         pauseScore = clamp(pauseScore)
 
         val perMinute = if (minutes > 0.05) fillerCount / minutes else fillerCount.toDouble()
@@ -66,14 +68,14 @@ object SpeechAnalyzer {
         val steadiness = steadinessScore(envelope?.phrases.orEmpty())
 
         val coverage = coverage(diff.steps)
-        val overall = overall(diff.score, paceScore, pauseScore, fillerScore, steadiness, coverage)
+        val overall = overall(accuracy, paceScore, pauseScore, fillerScore, steadiness, coverage)
 
         return SpeechMetrics(
-            accuracy = diff.score, rate = rate, rateLow = band.first, rateHigh = band.last,
+            accuracy = accuracy, rate = rate, rateLow = band.first, rateHigh = band.last,
             paceScore = paceScore, pausesAtBreaks = pausesAtBreaks, breaks = breaks,
             hesitations = hesitations, pauseScore = pauseScore, fillers = fillerCount,
             fillerScore = fillerScore, steadiness = steadiness, missed = missed, overall = overall,
-            coverage = coverage,
+            coverage = coverage, scoring = SCORING_VERSION,
         )
     }
 
@@ -113,13 +115,22 @@ object SpeechAnalyzer {
         return (reached + 1).toDouble() / total
     }
 
-    /** 100 inside the band; 2 points per percent outside it. */
+    /** Which rules a take was scored by (iOS `scoringVersion`); an older
+     *  take never goes onto a board. */
+    const val SCORING_VERSION = 2
+
+    /** The plain share of the script said as written, 0–100. */
+    fun accuracy(diff: ShadowScore.Analysis): Int = clamp((diff.ratio * 100).roundToInt())
+
+    /** 100 inside the band; outside it, 3 points per percent too slow and 2
+     *  per percent too fast. */
     fun paceScore(rate: Int, band: IntRange): Int {
         if (rate <= 0) return 0
         if (rate in band) return 100
-        val edge = (if (rate < band.first) band.first else band.last).toDouble()
+        val slow = rate < band.first
+        val edge = (if (slow) band.first else band.last).toDouble()
         val percentOff = kotlin.math.abs(rate - edge) / edge * 100
-        return clamp(100 - (percentOff * 2).roundToInt())
+        return clamp(100 - (percentOff * (if (slow) 3 else 2)).roundToInt())
     }
 
     /** Sentence ends inside the script — the last one ends the speech. */
