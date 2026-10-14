@@ -789,7 +789,10 @@ struct SpeechOwnScriptSheet: View {
                     }
                 }
 
-                if appState.voiceCloneId != nil {
+                // Only once there IS a script: the price is measured from it,
+                // and before a word is typed there is nothing to price
+                // (founder, 2026-10-14 — the length first, then the cost).
+                if appState.voiceCloneId != nil && !trimmed.isEmpty {
                     Section {
                         Toggle("Also make it in my voice", isOn: $voiceover)
                             .disabled(quote > ScriptVoiceover.maxMinutes)
