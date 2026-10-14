@@ -312,7 +312,11 @@ private fun PublicSection(
                 if (persona != null) {
                     // iOS `ComposedIntroLoader`: the portrait, written once
                     // and cached; the wait is shown rather than the notes.
-                    val composed by produceState<String?>(null, persona, targetLanguage) {
+                    // Keyed like iOS's `.task(id:)`: on the inputs' hash, so a
+                    // persona re-emitted with the same intro inputs does not
+                    // restart the wait.
+                    val introKey = PublicIntroComposer.sources(persona, targetLanguage).key
+                    val composed by produceState<String?>(null, introKey) {
                         value = null
                         value = PublicIntroComposer.compose(persona, targetLanguage)
                     }

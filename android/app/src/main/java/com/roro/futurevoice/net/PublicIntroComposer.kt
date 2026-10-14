@@ -6,8 +6,11 @@ import com.roro.futurevoice.data.LanguageCatalog
 import com.roro.futurevoice.talk.CoachingLanguage
 import com.roro.futurevoice.talk.UserPersona
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.ensureActive
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
@@ -82,17 +85,35 @@ object PublicIntroComposer {
         }
         cached(s)?.let { return it }
         if (s.isEmpty) return ""
-        return coroutineScope {
-            val job = synchronized(inflight) {
-                inflight[s.key] ?: async {
-                    runCatching { write(s) }.onSuccess { save(s, it) }.getOrElse { fallback(s) }
-                }.also { inflight[s.key] = it }
+        // iOS runs the write in an UNSTRUCTURED `Task`, so a caller that goes
+        // away (a sheet dismissed, a screen recomposed onto a new persona)
+        // never cancels it. Here it used to be `async` inside the CALLER's
+        // scope: a cancelled caller cancelled the shared write, the cancelled
+        // Deferred stayed in [inflight] (its removal sat after an `await` that
+        // threw), and every later caller for the same inputs awaited it, threw
+        // CancellationException and left its screen on "Writing your
+        // introduction…" for good. The write now belongs to the app's scope,
+        // leaves [inflight] when it finishes however it finishes, and a
+        // waiter that finds it cancelled gets the fallback, like iOS on failure.
+        val job = synchronized(inflight) {
+            inflight[s.key] ?: writer.async {
+                runCatching { write(s) }.onSuccess { save(s, it) }.getOrElse { fallback(s) }
+            }.also { d ->
+                inflight[s.key] = d
+                d.invokeOnCompletion { synchronized(inflight) { if (inflight[s.key] === d) inflight.remove(s.key) } }
             }
-            val result = job.await()
-            synchronized(inflight) { inflight.remove(s.key) }
-            result
+        }
+        return try {
+            job.await()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // Our own caller being cancelled propagates; a write that was
+            // cancelled under us is a failure, answered with the fallback.
+            kotlin.coroutines.coroutineContext.ensureActive()
+            cached(s) ?: fallback(s)
         }
     }
+
+    private val writer = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     fun fallback(s: Sources): String {
         val parts = ArrayList<String>()
