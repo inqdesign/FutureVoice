@@ -666,11 +666,12 @@ final class DrillStore: LanguageScopedStore {
         // Sentence-fragments that point at grammar concepts rather than
         // anything you'd actually say in a conversation.
         let bannedSubstrings = [
-            // Korean / Japanese / German names for the same categories — the
+            // Korean / Japanese / German / Spanish names for the same categories — the
             // list below is English, and a meta-rule written in the coaching
             // language slipped past it.
             "문법", "조사를", "시제", "관사", "올바르게", "정확하게",
             "文法", "助詞", "時制", "正しく", "grammatik",
+            "gramática", "conjugación", "concordancia",
             "correctly",            // "using X correctly"
             "properly",
             "appropriately",

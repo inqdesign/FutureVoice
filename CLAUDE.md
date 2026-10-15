@@ -1954,6 +1954,36 @@ has one, and the harder half was everything that assumed spaces.
 - Captures: `-capture transcript-ja` / `talkdetail-ja` / `wordcard-ja` /
   `shadow-ja` with `-futurevoice.targetLanguage ja`.
 
+## Spanish as a TARGET language (2026-10-15)
+
+Spanish was wired for STT, the clone script and the openers from the start
+and hidden for want of a wordlist. Two facts shaped the rest:
+
+- **No CEFR-graded Spanish list can ship.** ELELex, the only one, is CC
+  BY-NC-SA. `cefr_words_es.tsv` is FREQUENCY bands (geometric mean of the
+  rank in OpenSubtitles and in Tatoeba) under a hand-written A1/A2 core
+  (`scripts/es-core-a1a2.txt`, which caps a word's level, never raises it),
+  every headword passing macOS's Spanish spell checker. The header line says
+  so. Built by `scripts/build-es-wordlist.swift` (inputs are downloads, see
+  its header). Band sizes copy the English list's shape.
+- **iOS has no Spanish lemma model** (measured: `NLTagger` returns nil for
+  every Spanish word on the simulator; `requestAssets` offers lexical class
+  only). The Mac does, so the build tags Tatoeba IN CONTEXT and writes
+  `es_forms.tsv` (form → headword + class), and `SpanishMorph` reads it
+  wherever `VocabStore` would have asked the tagger. The headwords ARE those
+  lemmas, so speech and list can't disagree. Reflexive lemmas (comerse) and
+  feminine adjectives fold into their base; -a/-o NOUNS never do
+  (casa/caso, puerta/puerto). Never put Spanish back on the tagger path.
+- Correction prompt measured with `scripts/correction-probe.py es`: 0/94
+  false corrections, 0/24 missed, 0 fragments — no guard, like German.
+- Presets speak the four Spanish voices Find people already used
+  (Carolina · Jorge · Carmen · Javier). **No default accent remix yet**: a
+  clone recorded in Korean speaks Spanish with whatever accent the engine
+  invents, the problem German had; needs a Cartesia accent and an ear.
+- Exams: DELE, SIELE, OPIc. Speech challenges `…009` (the bundled sample)
+  and `…00a` (ageing), `20261015160000`.
+- Tests: `SpanishTargetTests`.
+
 ## A call does not die quietly (2026-09-13)
 
 Talk runs on the realtime gateway (`gateway/`, a Worker + Durable Object) —

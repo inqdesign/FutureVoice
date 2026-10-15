@@ -1430,7 +1430,16 @@ struct VoicePreset: Hashable, Identifiable {
             "FF59babHL8N8gfTgtBMT": "7be83d14-4707-43ad-9774-e24eb38320f0",  // 陽菜 ← Rin (F)
             "L0Dsvb3SLTyegXwtm47J": "6b92f628-be90-497c-8f4c-3b035002df71",  // 健太 ← Kenji (M)
         ]
-        return ["en": english, "de": german, "ko": korean, "ja": japanese]
+        // Spanish (2026-10-15): the four Spanish voices Find people already
+        // casts for Spanish-speaking profiles (`ProfileVoice`), slot for slot
+        // by gender. Not yet listened to as scene partners.
+        let spanish = [
+            "NDTYOmYEjbDIVCKB35i3": "3797b3c0-ab71-40dc-bfa0-a8c6ff9c1e8b",  // Carolina (F)
+            "UgBBYS2sOqTuMpoF3BR0": "7b001dff-b8b2-4da7-92e4-5c794798effa",  // Jorge (M)
+            "FF59babHL8N8gfTgtBMT": "727f663b-0e90-4031-90f2-558b7334425b",  // Carmen (F)
+            "L0Dsvb3SLTyegXwtm47J": "e9f0368b-3662-4a01-b037-e13ca5203c74",  // Javier (M)
+        ]
+        return ["en": english, "de": german, "ko": korean, "ja": japanese, "es": spanish]
     }()
 
     /// The voice that speaks a stored voice id in `language`. Anything that
@@ -1454,6 +1463,8 @@ struct VoicePreset: Hashable, Identifiable {
                "FF59babHL8N8gfTgtBMT": "한별", "L0Dsvb3SLTyegXwtm47J": "준호"],
         "ja": ["NDTYOmYEjbDIVCKB35i3": "美咲", "UgBBYS2sOqTuMpoF3BR0": "翔太",
                "FF59babHL8N8gfTgtBMT": "陽菜", "L0Dsvb3SLTyegXwtm47J": "健太"],
+        "es": ["NDTYOmYEjbDIVCKB35i3": "Carolina", "UgBBYS2sOqTuMpoF3BR0": "Jorge",
+               "FF59babHL8N8gfTgtBMT": "Carmen", "L0Dsvb3SLTyegXwtm47J": "Javier"],
     ]
 
     func name(in language: String) -> String {

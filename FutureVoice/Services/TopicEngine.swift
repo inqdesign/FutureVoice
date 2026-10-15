@@ -613,6 +613,18 @@ private struct FallbackText {
             catchUpBlurb: "Fang damit an, was dir in letzter Zeit im Kopf herumgeht.",
             onYourMind: "Etwas, das dir auf der Seele liegt und das du ansprechen wolltest",
             onYourMindBlurb: "Nimm etwas Echtes, wozu du wirklich ihre Meinung hören willst."),
+        "es": FallbackText(
+            yourCity: "tu ciudad",
+            weekCatchUp: "Ponerse al día: un amigo te pregunta qué tal tu semana",
+            weekCatchUpBlurb: "Empieza por lo que hiciste de verdad, no por frases hechas.",
+            explainWorkFormat: "Explicarle a alguien que acabas de conocer en %@ a qué te dedicas",
+            explainWorkBlurb: "Tiene curiosidad. Nada de tecnicismos: busca el lado humano.",
+            smallProblem: "Un pequeño problema que tienes que plantear con educación",
+            smallProblemBlurb: "Algo del trabajo o del barrio que te molesta.",
+            catchUpWithFormat: "Ponerte al día un momento con %@",
+            catchUpBlurb: "Empieza por lo que te ronda la cabeza últimamente.",
+            onYourMind: "Algo que te preocupa y que hace tiempo quieres comentar",
+            onYourMindBlurb: "Elige algo real sobre lo que de verdad quieras su opinión."),
         "ja": FallbackText(
             yourCity: "住んでいる街",
             weekCatchUp: "近況を話す。友達に今週どうだったか聞かれる",

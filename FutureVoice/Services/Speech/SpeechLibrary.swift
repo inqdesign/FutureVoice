@@ -112,6 +112,7 @@ enum SpeechLibrary {
         case "ko": suffix = "000000000002"
         case "ja": suffix = "000000000003"
         case "de": suffix = "000000000004"
+        case "es": suffix = "000000000009"
         default:   suffix = "000000000001"
         }
         return UUID(uuidString: "5BEEC000-0000-4000-8000-\(suffix)")!
@@ -128,6 +129,7 @@ enum SpeechLibrary {
         "ko": "왜 소리 내어 연습해야 할까",
         "ja": "声に出して話そう",
         "de": "Sprecht es laut aus",
+        "es": "¿Por qué practicar en voz alta?",
     ]
 
     private static let builtInBodies: [String: String] = [
@@ -174,6 +176,17 @@ enum SpeechLibrary {
         Nehmt euch dabei auf. Dann hört ihr, was euch allein nicht auffällt: wie schnell ihr wirklich sprecht, wie oft ihr „äh“ oder „ähm“ sagt, und ob eure Stimme am Satzende leiser wird.
 
         Präsentationen, Vorstellungsgespräche, sogar ein Gespräch mit jemand Neuem: Mit Übung wird das alles leichter. Und die Minute, in der ihr das gerade laut gelesen habt? Das war eure erste Übung.
+        """,
+        "es": """
+        ¿Te ha pasado alguna vez? Tienes la frase perfecta en la cabeza, y en cuanto la dices en voz alta, se viene abajo.
+
+        Hablar es una habilidad, no solo un conocimiento. Puedes saber las palabras y la gramática, pero si tu boca nunca ha armado esa frase, te va a fallar justo cuando más la necesitas. Por eso hay que practicar en voz alta.
+
+        Decir las cosas en voz alta también ayuda a recordarlas. Hay estudios que indican que recordamos mejor lo que hemos dicho que lo que solo hemos leído.
+
+        Y si te grabas, notas cosas que de otra forma nunca descubrirías: lo rápido que hablas de verdad, cuántas veces dices «eh» o «mmm», y si la voz se te apaga al final de las frases.
+
+        Las presentaciones, las entrevistas, incluso una primera conversación con alguien nuevo: todo se vuelve más fácil con práctica. ¿Y el minuto que acabas de pasar leyendo esto en voz alta? Esa fue tu primera repetición.
         """,
     ]
 }

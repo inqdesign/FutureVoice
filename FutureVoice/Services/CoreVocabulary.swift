@@ -78,7 +78,14 @@ enum CoreVocabulary {
                "hey", "ok", "okay", "alright"],
         "de": ["können", "müssen", "sollen", "dürfen", "mögen",
                "alles", "etwas", "nichts", "jemand", "niemand", "jeder",
-               "halt", "eben", "ja", "nee", "naja", "ähm", "hmm", "okay"]
+               "halt", "eben", "ja", "nee", "naja", "ähm", "hmm", "okay"],
+        // Mirrors the build's own list (scripts/build-es-wordlist.swift).
+        "es": ["ser", "estar", "haber", "tener", "ir", "hacer", "poder", "deber",
+               "querer", "soler", "mucho", "poco", "tanto", "otro", "todo", "nada",
+               "algo", "alguien", "nadie", "cada", "mismo", "tal", "más", "menos",
+               "muy", "así", "también", "tampoco", "tan", "sí", "no", "ya",
+               "bueno", "vale", "eh", "em", "este", "pues", "oye", "mira",
+               "okay", "ok", "hola", "adiós", "gracias", "hmm", "ah", "oh", "ay"]
     ]
 
     /// True when the word's absence from the pool is a decision rather than a
@@ -103,6 +110,9 @@ enum CoreVocabulary {
                                                      forms: JapaneseMorph.bundledForms).first?.headword
             else { return nil }
             return level(of: head)
+        case "es":
+            // No lemma model on iOS — the bundled form table instead.
+            return level(of: SpanishMorph.lemma(of: token))
         default:
             return level(of: token)
         }

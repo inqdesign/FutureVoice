@@ -182,7 +182,7 @@ enum LearningPurposeStore {
 /// Speaking exams per target language. A language with none of its own falls
 /// back to OPIc, which is offered in most.
 enum ExamKind: String, CaseIterable, Identifiable {
-    case ielts, toefl, opic, toeicSpeaking, goethe, telc, topik, bjt
+    case ielts, toefl, opic, toeicSpeaking, goethe, telc, topik, bjt, dele, siele
     var id: String { rawValue }
 
     var name: String {
@@ -195,6 +195,8 @@ enum ExamKind: String, CaseIterable, Identifiable {
         case .telc: return "telc"
         case .topik: return "TOPIK"
         case .bjt: return "BJT"
+        case .dele: return "DELE"
+        case .siele: return "SIELE"
         }
     }
 
@@ -204,6 +206,7 @@ enum ExamKind: String, CaseIterable, Identifiable {
         case "de": return [.goethe, .telc, .opic]
         case "ko": return [.topik, .opic]
         case "ja": return [.opic, .bjt]
+        case "es": return [.dele, .siele, .opic]
         default:   return [.opic]
         }
     }
@@ -269,6 +272,14 @@ enum ExamTopics {
                     ExamTopic(title: "よく行くカフェについて", part: "Survey"),
                     ExamTopic(title: "予約が取れなかったときの対応", part: "Role-play"),
                 ]
+            case "es":
+                return [
+                    ExamTopic(title: "Describa su casa", part: "Survey"),
+                    ExamTopic(title: "Su último viaje", part: "Survey"),
+                    ExamTopic(title: "¿Qué hace normalmente los fines de semana?", part: "Survey"),
+                    ExamTopic(title: "Una cafetería a la que va a menudo", part: "Survey"),
+                    ExamTopic(title: "Llame a una tienda por un producto que llegó roto", part: "Role-play"),
+                ]
             case "de":
                 return [
                     ExamTopic(title: "Beschreiben Sie Ihre Wohnung", part: "Survey"),
@@ -323,6 +334,25 @@ enum ExamTopics {
                 ExamTopic(title: "取引先に納期の遅れを伝える", part: "Business"),
                 ExamTopic(title: "上司に休みを相談する", part: "Business"),
                 ExamTopic(title: "新しい企画を短く説明する", part: "Business"),
+            ]
+        case .dele:
+            return [
+                ExamTopic(title: "Hable de una persona que ha sido importante en su vida", part: "Tarea 1",
+                          points: ["quién es", "cómo la conoció", "qué ha aprendido de ella"]),
+                ExamTopic(title: "Describa una fotografía: una familia en un parque", part: "Tarea 2"),
+                ExamTopic(title: "Organice con un amigo una cena para celebrar algo", part: "Tarea 3"),
+                ExamTopic(title: "¿Es mejor vivir en el centro o en las afueras?", part: "Tarea 1",
+                          points: ["ventajas", "inconvenientes", "su preferencia y por qué"]),
+                ExamTopic(title: "Describa una fotografía: personas trabajando en una oficina", part: "Tarea 2"),
+                ExamTopic(title: "Quéjese en un hotel porque la habitación no es la que reservó", part: "Tarea 3"),
+            ]
+        case .siele:
+            return [
+                ExamTopic(title: "Preséntese: dónde vive, a qué se dedica y por qué estudia español", part: "Tarea 1"),
+                ExamTopic(title: "Describa una foto: una calle llena de gente", part: "Tarea 2"),
+                ExamTopic(title: "Llame a un compañero para cambiar el día de una reunión", part: "Tarea 3"),
+                ExamTopic(title: "Cuente una experiencia que le hizo cambiar de opinión", part: "Tarea 4"),
+                ExamTopic(title: "¿Deberían los estudiantes llevar uniforme? Dé su opinión", part: "Tarea 5"),
             ]
         }
     }

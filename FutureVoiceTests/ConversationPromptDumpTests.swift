@@ -15,7 +15,7 @@ final class ConversationPromptDumpTests: XCTestCase {
         }
         let url = URL(fileURLWithPath: dir, isDirectory: true)
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
-        for lang in ["en", "ko", "ja", "de"] {
+        for lang in ["en", "ko", "ja", "de", "es"] {
             for level in [CEFRLevel.a1, .a2, .b1] {
                 for first in [false, true] {
                     let prompt = ConversationEngine.conversationSystemPrompt(

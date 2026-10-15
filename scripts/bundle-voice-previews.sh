@@ -17,7 +17,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$ROOT/FutureVoice/Resources/VoicePreviews"
-LANGS="${LANGS:-en de ja ko}"   # the selectable targets
+LANGS="${LANGS:-en de ja ko es}"   # the selectable targets
 MODEL="sonic-3.6"
 SPEED="1.1667"   # SpeechSpeed's default rung (0.9) on Cartesia's scale (cartesia.ts cartesiaSpeed)
 
@@ -43,6 +43,10 @@ voice_for() {  # $1 lang, $2 slot  → the voice that speaks that slot (Cartesia
     ja:UgBBYS2sOqTuMpoF3BR0) echo b8e1169c-f16a-4064-a6e0-95054169e553 ;;
     ja:FF59babHL8N8gfTgtBMT) echo 7be83d14-4707-43ad-9774-e24eb38320f0 ;;
     ja:L0Dsvb3SLTyegXwtm47J) echo 6b92f628-be90-497c-8f4c-3b035002df71 ;;
+    es:NDTYOmYEjbDIVCKB35i3) echo 3797b3c0-ab71-40dc-bfa0-a8c6ff9c1e8b ;;
+    es:UgBBYS2sOqTuMpoF3BR0) echo 7b001dff-b8b2-4da7-92e4-5c794798effa ;;
+    es:FF59babHL8N8gfTgtBMT) echo 727f663b-0e90-4031-90f2-558b7334425b ;;
+    es:L0Dsvb3SLTyegXwtm47J) echo e9f0368b-3662-4a01-b037-e13ca5203c74 ;;
   esac
 }
 

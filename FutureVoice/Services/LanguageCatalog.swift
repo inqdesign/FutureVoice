@@ -88,7 +88,10 @@ enum LanguageCatalog {
     /// Languages offered as a practice target (order = setup picker order).
     static let targets: [Language] = [
         Language(code: "en", sttLocale: "en-US", tokenStyle: .word, wordlistResource: "cefr_words"),
-        Language(code: "es", sttLocale: "es-ES", tokenStyle: .word, wordlistResource: nil),
+        // Spanish wordlist (2026-10-15): frequency bands over OpenSubtitles +
+        // Tatoeba under a hand-written A1/A2 core — no CEFR-graded Spanish
+        // list can ship commercially. See scripts/build-es-wordlist.swift.
+        Language(code: "es", sttLocale: "es-ES", tokenStyle: .word, wordlistResource: "cefr_words_es"),
         // German wordlist: Goethe-Institut A1–B1 vocabulary (content words)
         // plus curated B2–C2 — cased headwords (nouns capitalized), matched
         // case-insensitively by CoreVocabulary.

@@ -59,6 +59,8 @@ FIRST = {
         [("m", "やあ、未来のきみだよ。日本語、もうすらすら話せるようになったんだ。で、最近どうしてる？"), ("u", "はじめまして。")]],
  "de": [[("m", "Hallo. Ich bin das zukünftige Du — das, das fließend Deutsch spricht. Also — was machst du gerade so?"), ("u", "Hallo. Äh... ich bin Minji.")],
         [("m", "Hallo. Ich bin das zukünftige Du — das, das fließend Deutsch spricht. Also — was machst du gerade so?"), ("u", "Freut mich.")]],
+ "es": [[("m", "Hola. Soy tu yo del futuro, el que habla español con fluidez. Bueno, ¿en qué andas estos días?"), ("u", "Hola. Eh... soy Minji.")],
+        [("m", "Hola. Soy tu yo del futuro, el que habla español con fluidez. Bueno, ¿en qué andas estos días?"), ("u", "Mucho gusto.")]],
 }
 
 # Short-answer beginner calls. "m" = fluent self, "u" = learner.
@@ -91,6 +93,13 @@ CASES = {
   [("m", "Was gibt's Neues bei dir?"), ("u", "Ich mag Kaffee.")],
   [("m", "Wie war dein Wochenende?"), ("u", "음... 잘 모르겠어.")],
  ],
+ "es": [
+  [("m", "¡Hola! Qué bueno hablar contigo. ¿Qué haces estos días?"), ("u", "Eh... trabajo. Mucho.")],
+  [("m", "¡Hola! ¿Qué tal tu día?"), ("u", "Bien. Estoy cansado.")],
+  [("m", "¿Qué hiciste hoy?"), ("u", "Yo voy trabajo. Después casa.")],
+  [("m", "¿Qué hay de nuevo?"), ("u", "Me gusta café.")],
+  [("m", "¿Qué tal el fin de semana?"), ("u", "음... 잘 모르겠어.")],
+ ],
 }
 
 OPEN = {
@@ -98,6 +107,7 @@ OPEN = {
  "ko": r"얘기해|이야기해|어땠|어떻게 생각|왜|어떤 느낌|뭐 하고 지냈|무슨 일 있|어떤 거|어떤 게",
  "ja": r"教えて|どうだった|どう思う|なんで|どうして|どんな感じ|何かあった|どんな",
  "de": r"erzähl|wie war|warum|was denkst|wie findest|wie fühlst|was gibt's neues|was für",
+ "es": r"cuéntame|cómo (te )?fue|qué tal (te fue|estuvo)|por qué|qué (piensas|opinas)|cómo te sientes|qué hay de nuevo|qué tipo de|cómo es",
 }
 
 key = dict(l.split("=", 1) for l in open(os.path.join(ROOT, "gateway/.dev.vars")) if "=" in l)["GEMINI_API_KEY"].strip().strip('"')
@@ -124,7 +134,7 @@ def measure(lang, text):
     questions = [s for s in sentences if s.rstrip().endswith(("?", "？"))]
     opened = any(re.search(OPEN[lang], q, re.I) for q in questions)
     last = questions[-1] if questions else ""
-    size = len(last.split()) if lang in ("en", "de") else len(re.sub(r"\s", "", last))
+    size = len(last.split()) if lang in ("en", "de", "es") else len(re.sub(r"\s", "", last))
     return {"q": qs, "multi": qs >= 2, "open": opened, "noq": qs == 0, "qsize": size if questions else None}
 
 jobs = []

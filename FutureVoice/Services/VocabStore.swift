@@ -723,6 +723,7 @@ final class VocabStore: ObservableObject {
     /// above cannot even be asked.
     nonisolated static func offListContentWords(in texts: [String]) -> [String: Int] {
         guard !Self.matchesKorean, !Self.matchesJapanese else { return [:] }
+        if Self.matchesSpanish { return spanishOffListContentWords(in: texts) }
         let language = Self.taggerLanguage
         let content: Set<String> = [
             NLTag.noun.rawValue, NLTag.verb.rawValue,
@@ -768,6 +769,30 @@ final class VocabStore: ObservableObject {
         return out
     }
 
+    /// Spanish: the same four filters, with the class read from `SpanishMorph`'s
+    /// table instead of a tagger iOS doesn't have. A word missing from the
+    /// table has no class and is left out — the conservative answer.
+    nonisolated private static func spanishOffListContentWords(in texts: [String]) -> [String: Int] {
+        var out: [String: Int] = [:]
+        for text in texts {
+            let seenHere = offListMemo.value(for: text, language: .spanish) {
+                var found = Set<String>()
+                for (word, range) in SpanishMorph.words(in: text) {
+                    guard let entry = SpanishMorph.entry(for: word) else { continue }
+                    let lemma = entry.lemma
+                    guard lemma.count >= 3,
+                          !CoreVocabulary.set.contains(lemma),
+                          !CoreVocabulary.isUngraded(lemma),
+                          !Self.isCapitalizedMidSentence(text, range) else { continue }
+                    found.insert(lemma)
+                }
+                return found
+            }
+            for lemma in seenHere { out[lemma, default: 0] += 1 }
+        }
+        return out
+    }
+
     /// Capitalized, and not because it opens a sentence.
     nonisolated private static func isCapitalizedMidSentence(_ text: String,
                                                               _ range: Range<String.Index>) -> Bool {
@@ -799,6 +824,12 @@ final class VocabStore: ObservableObject {
             // the た says the 疲れ is the verb and not the noun.
             return JapaneseMorph.headwords(in: w, lexicon: CoreVocabulary.set,
                                            forms: JapaneseMorph.bundledForms).first?.headword ?? w
+        }
+        if Self.matchesSpanish {
+            // Same rule as the tagger path below, from the bundled table.
+            let lemma = SpanishMorph.lemma(of: w)
+            if CoreVocabulary.set.contains(lemma) || !CoreVocabulary.set.contains(w) { return lemma }
+            return w
         }
         // Memoized per word: a fresh NLTagger per call, and every book build
         // asks this of each of its pickup words, every list row of its word.
@@ -838,6 +869,12 @@ final class VocabStore: ObservableObject {
         LanguageCatalog.language(LanguageScope.active)?.code == "ja"
     }
 
+    /// Spanish: iOS has no Spanish lemma model, so `SpanishMorph`'s table
+    /// stands in for the tagger.
+    nonisolated private static var matchesSpanish: Bool {
+        LanguageCatalog.language(LanguageScope.active)?.code == "es"
+    }
+
     /// NLTagger language for the current target. NLLanguage raw values ARE
     /// bare BCP-47 codes ("en", "de"), so the active code maps directly;
     /// an unsupported code just yields nil tags → surface-token fallback.
@@ -855,6 +892,7 @@ final class VocabStore: ObservableObject {
     nonisolated static func lemmas(in texts: [String]) -> Set<String> {
         if Self.matchesKorean { return koreanLemmas(in: texts) }
         if Self.matchesJapanese { return japaneseLemmas(in: texts) }
+        if Self.matchesSpanish { return spanishLemmas(in: texts) }
         let language = Self.taggerLanguage
         var out = Set<String>()
         var tagger: NLTagger?
@@ -901,6 +939,24 @@ final class VocabStore: ObservableObject {
                                                              rank: CoreVocabulary.koreanRank) {
                         found.insert(head)
                     }
+                }
+                return found
+            })
+        }
+        return out
+    }
+
+    /// Spanish: every word through the bundled form table (comí → comer).
+    /// Unlike Korean and Japanese, a form the table doesn't know still comes
+    /// back as itself, the way the tagger path returns an unknown word.
+    nonisolated private static func spanishLemmas(in texts: [String]) -> Set<String> {
+        var out = Set<String>()
+        for text in texts {
+            out.formUnion(lemmaMemo.value(for: text, language: .spanish) {
+                var found = Set<String>()
+                for (word, _) in SpanishMorph.words(in: text) {
+                    let lemma = SpanishMorph.lemma(of: word)
+                    if lemma.count > 1 { found.insert(lemma) }
                 }
                 return found
             })
