@@ -856,8 +856,12 @@ fun TalkScreen(
                         // (iOS 2026-10-08). It arrives with a fade, no slide.
                         Box(Modifier.animateItem(fadeInSpec = tween(250), placementSpec = tween(250),
                             fadeOutSpec = tween(250))
+                            // Both sides grow smoothly: the fluent self's bubble used to
+                            // jump a whole line at a time as its reveal wrapped (founder,
+                            // 2026-10-15); with the words now fading in, the jump was
+                            // the one hard edge left.
                             .then(if (turn.role == TurnRole.USER) Modifier.animateContentSize(tween(250))
-                                else Modifier)) {
+                                else Modifier.animateContentSize(tween(220)))) {
                             DialogueLine(turn, scale = DialogueScale.CALL, otherName = cast?.name,
                                 fadesIn = turn.role == TurnRole.FLUENT_SELF,
                                 showsCorrections = showsCorrections,
