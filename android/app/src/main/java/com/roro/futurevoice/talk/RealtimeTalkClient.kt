@@ -317,12 +317,31 @@ class RealtimeTalkClient(private val context: Context) {
         gateActive = active
     }
 
-    private fun markPlaybackStarted() = synchronized(gateLock) { gatePlaying = true }
+    /** Called from the MIC thread once the track's play head has moved —
+     *  the reply is audible, not just queued (2026-10-15). It used to be
+     *  called when the first chunk was WRITTEN; the 0.5 s ring buffer takes
+     *  it at once, so the floor was learned on the room before the voice
+     *  came out, the bar sat below the real echo, and on any line where that
+     *  happened the fluent self's own voice went upstream as a barge-in.
+     *  The mic frame being read when it flips straddles silence and voice,
+     *  so it is skipped (`gateLearned = -1`) rather than learned from. */
+    private fun markPlaybackStarted() = synchronized(gateLock) {
+        if (gateActive && !gatePlaying) { gatePlaying = true; gateLearned = -1 }
+    }
+
+    private fun gateWaitingForSound(): Boolean = synchronized(gateLock) { gateActive && !gatePlaying }
+
+    /** This line's track exists. `audio_start` opens the gate on the socket
+     *  thread and (re)starts the track on the audio thread a moment later;
+     *  in between, `player` is still the LAST line's track, whose play head
+     *  is long past zero. */
+    @Volatile private var lineTrackStarted = false
 
     /** True = this mic buffer is the speaker coming back: forward silence. */
     private fun echoMuted(rms: Float): Boolean = synchronized(gateLock) {
         if (!gateActive) return false
         if (gateHalfDuplex || !gatePlaying) return true
+        if (gateLearned < 0) { gateLearned = 0; return true }
         if (gateLearned < ECHO_LEARN_FRAMES) {
             gateFloor = max(gateFloor, rms); gateLearned += 1
             return true
@@ -448,7 +467,6 @@ class RealtimeTalkClient(private val context: Context) {
                     // On THIS thread, never hopping off it: frames must reach
                     // the track in the order they came (see `writeNow`).
                     p.writeNow(chunk)
-                    markPlaybackStarted()
                     // The first buffer in the player: the voice is audible,
                     // and the line's first sentence goes up with it.
                     var step = false
@@ -640,6 +658,7 @@ class RealtimeTalkClient(private val context: Context) {
                 serverAudioEnded = false
                 finishReveal()
                 linesStarted += 1
+                lineTrackStarted = false
                 setEchoGate(true, halfDuplex = linesStarted == 1 && outputIsSpeaker())
                 val rate = replyRate
                 scope.launch(audioThread) {
@@ -649,6 +668,7 @@ class RealtimeTalkClient(private val context: Context) {
                         ?: PcmStreamPlayer(rate).also { player?.stop(); player = it }
                     p.volume = com.roro.futurevoice.data.AudioPrefs.talkVoiceVolume(context)
                     p.start()
+                    lineTrackStarted = true
                 }
                 ctx?.let { onReplyBegan?.invoke(it) }
                 state = State.SPEAKING
@@ -858,6 +878,7 @@ class RealtimeTalkClient(private val context: Context) {
                 // Continuous, paced by the read itself — roughly realtime,
                 // which is what Gemini Live's own VAD wants.
                 if (micGated) { level = 0f; continue }
+                if (lineTrackStarted && gateWaitingForSound() && player?.hasStartedSounding == true) markPlaybackStarted()
                 if (echoMuted(kotlin.math.sqrt(sumSq / n).toFloat())) {
                     // Silence, not a gap: the transcriber is streaming.
                     level = 0f

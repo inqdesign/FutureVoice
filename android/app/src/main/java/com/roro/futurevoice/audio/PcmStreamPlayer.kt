@@ -30,6 +30,12 @@ class PcmStreamPlayer(val sampleRate: Int = 22_050) {
 
     val isPlaying: Boolean get() = track?.playState == AudioTrack.PLAYSTATE_PLAYING
 
+    /** The DAC has started on this line's audio — sound is coming out, not
+     *  merely queued. `write` returns as soon as the ring buffer takes the
+     *  bytes, a few hundred ms before anything is audible. */
+    val hasStartedSounding: Boolean
+        get() = runCatching { (track?.playbackHeadPosition ?: 0) > 0 }.getOrDefault(false)
+
     fun start() {
         stop()
         val minBuffer = AudioTrack.getMinBufferSize(
