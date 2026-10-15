@@ -4697,15 +4697,20 @@ private struct TurnView: View {
                 Text(explain("Writing down what you said…"))
                     .foregroundStyle(.secondary)
                     .italic()
-            } else {
+            } else if turn.role == .user {
                 Text(turn.transcript)
                     // For the learner's line only: a better transcription
                     // replacing the first one. A fluent-self reply streams in
                     // dozens of deltas, and an animation per delta fought the
                     // feed's bottom anchor — the bubble grew with a wobble
                     // (2026-10-08).
-                    .animation(turn.role == .user ? .easeInOut(duration: 0.2) : nil,
-                               value: turn.transcript)
+                    .animation(.easeInOut(duration: 0.2), value: turn.transcript)
+            } else {
+                // The fluent self's line: each word the reveal adds fades in
+                // rather than popping (founder, 2026-10-15, "like Grok") —
+                // opacity only, so the layout and the bottom anchor are
+                // untouched.
+                FadeInText(text: turn.transcript)
             }
         } accessory: {
             // Nothing to translate or correct until there is a line.
@@ -4774,6 +4779,68 @@ private struct TurnView: View {
             loading = false
             if t == nil { showing = false }
         }
+    }
+}
+
+/// Text whose newly APPENDED characters fade in over `fade`. Characters on
+/// screen when it appears, and a line rewritten rather than extended, show at
+/// once — only growth fades. Opacity only, never size: the bubble's height
+/// still follows the text the instant it grows. Android twin: `FadeInText`
+/// in TalkScreen.kt.
+private struct FadeInText: View {
+    let text: String
+    private static let fade: TimeInterval = 0.32
+
+    @State private var shown = ""
+    /// When each Character appeared (0 = was already there).
+    @State private var born: [TimeInterval] = []
+    @State private var animating = false
+    @State private var stopTask: Task<Void, Never>?
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: nil, paused: !animating)) { ctx in
+            Text(attributed(now: ctx.date.timeIntervalSinceReferenceDate))
+        }
+        .onAppear {
+            shown = text
+            born = Array(repeating: 0, count: text.count)
+        }
+        .onChange(of: text) { _, new in
+            let now = Date().timeIntervalSinceReferenceDate
+            if new.hasPrefix(shown) {
+                born += Array(repeating: now, count: max(0, new.count - shown.count))
+            } else {
+                born = Array(repeating: 0, count: new.count)
+            }
+            shown = new
+            animating = true
+            stopTask?.cancel()
+            stopTask = Task { @MainActor in
+                try? await Task.sleep(nanoseconds: UInt64((Self.fade + 0.05) * 1_000_000_000))
+                if !Task.isCancelled { animating = false }
+            }
+        }
+    }
+
+    private func attributed(now: TimeInterval) -> AttributedString {
+        let chars = Array(text)
+        guard born.count == chars.count else { return AttributedString(text) }
+        var out = AttributedString()
+        var i = 0
+        while i < chars.count {
+            let b = born[i]
+            var j = i + 1
+            while j < chars.count, born[j] == b { j += 1 }
+            var run = AttributedString(String(chars[i..<j]))
+            if b != 0 {
+                let p = min(1, max(0, (now - b) / Self.fade))
+                let alpha = 1 - (1 - p) * (1 - p)   // ease-out
+                if alpha < 1 { run.foregroundColor = Color.primary.opacity(alpha) }
+            }
+            out += run
+            i = j
+        }
+        return out
     }
 }
 
