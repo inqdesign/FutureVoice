@@ -1,5 +1,6 @@
 package com.roro.futurevoice.ui
 
+import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.ui.text.withStyle
 import androidx.compose.runtime.withFrameMillis
@@ -526,12 +527,18 @@ fun TalkScreen(
     // And whenever the content has grown below the viewport after layout —
     // a new bubble, a longer one — follow it, the stand-in for iOS's bottom
     // anchor. Measured after layout, so it never aims at a stale index.
+    // A SAFETY NET, not a second follower: it acts only once the layout has
+    // held still for a beat. Acting at once, it scrolled in the middle of a
+    // correction card's own 0.25 s growth — the very sway the card's settle
+    // pass below waits out — and the screen flickered when a card appeared.
     LaunchedEffect(listState) {
         androidx.compose.runtime.snapshotFlow { listState.canScrollForward to listState.layoutInfo.totalItemsCount }
-            .collect { (more, _) ->
-                if (more && followBottom && !listState.isScrollInProgress) {
+            .collectLatest { (more, _) ->
+                if (!more) return@collectLatest
+                kotlinx.coroutines.delay(320)
+                if (listState.canScrollForward && followBottom && !listState.isScrollInProgress) {
                     val last = (listState.layoutInfo.totalItemsCount - 1).coerceAtLeast(0)
-                    listState.scrollToItem(last, Int.MAX_VALUE)
+                    listState.animateScrollToItem(last, Int.MAX_VALUE)
                 }
             }
     }
