@@ -1,6 +1,7 @@
 Neu
 • Schalte bei einem Redetext „Lernen“ ein: Grammatik und Wendungen werden erklärt, und jeder Absatz steht übersetzt in deiner Sprache daneben.
 • Lass dir deinen Text in deiner eigenen Stimme vorlesen und hör ihn dir an.
+• Schalte im Anruf „Mit Senden antworten“ ein, dann endet dein Zug nicht mehr, wenn du kurz stockst. Lass dir Zeit und tippe zum Schluss auf den mittleren Knopf.
 
 Behoben
 • Kleinere Fehler behoben, alles läuft jetzt stabiler.

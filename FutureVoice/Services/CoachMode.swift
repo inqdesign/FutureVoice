@@ -79,6 +79,34 @@ enum TutorMode {
     static var isOn: Bool { UserDefaults.standard.bool(forKey: key) }
 }
 
+/// Send-to-answer turns (2026-10-15, founder: "for beginners — the question
+/// comes, the learner talks, presses send, and only then the next turn").
+///
+/// A pause never ends the learner's turn; the Send button above the pill
+/// does (`RealtimeTalkClient.sendTurn`), and Clear throws the turn away. The
+/// gateway holds everything the transcriber hears until then
+/// (`StartMessage.manualTurns`). Training wheels, not a second kind of call:
+/// the screen, the voice and the transcript are unchanged — only who decides
+/// the turn is over.
+///
+/// ON by default for A1 only; the learner's own flip always wins, like
+/// `CoachMode` (the key is written only by the toggle). Realtime path only.
+enum SendToAnswer {
+    static let key = "futurevoice.call.sendToAnswer"
+
+    static func defaultOn(for level: CEFRLevel) -> Bool { level == .a1 }
+
+    static func resolve(choice: Bool?, levelRaw: String) -> Bool {
+        choice ?? defaultOn(for: CEFRLevel(rawValue: levelRaw) ?? .b1)
+    }
+
+    static var isOn: Bool {
+        let d = UserDefaults.standard
+        return resolve(choice: d.object(forKey: key) as? Bool,
+                       levelRaw: d.string(forKey: AppState.proficiencyKey) ?? "")
+    }
+}
+
 /// The ration, as a value so it can be reasoned about (and tested) apart
 /// from the call screen.
 struct CoachPlan: Equatable {

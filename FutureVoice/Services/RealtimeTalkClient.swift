@@ -63,6 +63,9 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     }
     /// Live transcript of the utterance in progress (empty between turns).
     @Published private(set) var partial = ""
+    /// Send-to-answer: the learner pressed Send and the gateway has not
+    /// committed the turn yet (it may be waiting on the last final).
+    @Published private(set) var sendPending = false
     @Published private(set) var lines: [Line] = []
     /// Speech-end → first reply audio, in ms, for the last completed turn.
     /// The number this whole path exists to move.
@@ -131,6 +134,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// capture (reported 2026-09-01). Capped at ~2 min so a monologue cannot
     /// grow it without bound.
     private var userPCM = Data()
+    private var sendPendingSince: Date?
     /// The last committed turn's audio, kept until the next turn commits: a
     /// turn the gateway re-opens (`continues`) is handed over as ONE take.
     private var lastTurnPCM = Data()
@@ -855,6 +859,45 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         sendControl(["type": "set", "system": system])
     }
 
+    /// Send-to-answer (`SendToAnswer`): what has been said is the turn —
+    /// answer it. The gateway commits it, waiting at most a beat for the
+    /// last words to be finalized.
+    func sendTurn() {
+        guard !isTornDown, !sendPending else { return }
+        sendPending = true
+        Self.step("send")
+        sendControl(["type": "send"])
+        // The gateway answers with `user_turn`, or an empty partial when
+        // there was nothing to send; never leave the button spinning on a
+        // gateway that said neither.
+        let pendingSince = Date()
+        sendPendingSince = pendingSince
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(5))
+            guard let self, self.sendPending, self.sendPendingSince == pendingSince else { return }
+            self.sendPending = false
+        }
+    }
+
+    /// Send-to-answer: throw this turn away and start it again.
+    func discardTurn() {
+        guard !isTornDown else { return }
+        Self.step("discard")
+        sendControl(["type": "discard"])
+        sendPending = false
+        partial = ""
+        userPCM = Data()
+        if state == .hearing { state = .listening }
+    }
+
+    /// Send-to-answer switched mid-call. Off with words held: the gateway
+    /// commits them by the usual pause rule.
+    func setManualTurns(_ on: Bool) {
+        guard !isTornDown else { return }
+        if !on { sendPending = false }
+        sendControl(["type": "set", "manualTurns": on])
+    }
+
     /// Hang up: tells the gateway, then tears the local side down.
     func hangUp() {
         guard !isTornDown else { return }
@@ -929,6 +972,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         handOverReply()
         finishReveal()
         isTornDown = true
+        sendPending = false
         heldWallTask?.cancel()
         heldWallTask = nil
         routePollTask?.cancel()
@@ -1973,6 +2017,9 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         // kept as said and answered as such, instead of the re-read inventing
         // a target-language sentence for it. A gateway before this ignores it.
         payload["native"] = LanguageCatalog.currentNative
+        // Send-to-answer (`SendToAnswer`): a pause never ends the turn. A
+        // gateway before this ignores it and the call ends turns by pauses.
+        payload["manualTurns"] = SendToAnswer.isOn
         if let opener, !opener.isEmpty { payload["opener"] = opener }
         if !history.isEmpty {
             payload["history"] = history.map { ["role": $0.role, "text": $0.text] }
@@ -2076,6 +2123,8 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             // line runs is exactly the thing being debugged (2026-09-04).
             if text != partial { Self.step("partial(\(text.count)): \(text.suffix(40))") }
             partial = text
+            // An empty partial is also the gateway's "nothing to send".
+            if text.isEmpty { sendPending = false }
             if state != .speaking { state = partial.isEmpty ? .listening : .hearing }
         case "user_turn":
             let said = json["text"] as? String ?? ""
@@ -2098,6 +2147,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 userPCM = Data()
             }
             partial = ""
+            sendPending = false
             turnCommittedAt = Date()
             if flags.continues, !said.isEmpty,
                let idx = lines.lastIndex(where: { $0.isUser }) {

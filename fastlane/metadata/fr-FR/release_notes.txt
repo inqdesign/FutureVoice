@@ -1,6 +1,7 @@
 Nouveautés
 • Active Étudier sur un texte de discours : la grammaire et les expressions sont expliquées, et chaque paragraphe est traduit dans ta langue.
 • Crée un audio de ton texte lu avec ta propre voix.
+• Active Répondre avec Envoyer pendant un appel : une pause ne termine plus ton tour. Prends ton temps, puis touche le bouton du milieu quand tu as fini.
 
 Corrections
 • Petits bugs corrigés, l’app est plus stable.

@@ -114,6 +114,15 @@ struct ConversationView: View {
         _ = proficiencyRaw
         return CoachMode.isOn
     }
+    /// nil until the learner flips it — the level decides (`SendToAnswer`).
+    @AppStorage(SendToAnswer.key) private var sendToAnswerChoice: Bool?
+    /// Send-to-answer: a pause never ends the learner's turn, their Send
+    /// does. Read like `coachMode`, for the same captured-closure reason.
+    private var sendToAnswer: Bool {
+        _ = sendToAnswerChoice
+        _ = proficiencyRaw
+        return SendToAnswer.isOn
+    }
     /// Watched only to tell a live call when the rung moves (the sheet
     /// writes it) — see the `CallSettingsSheet` presentation.
     @AppStorage(SpeechSpeed.key) private var speechSpeedRaw = SpeechSpeed.default.rawValue
@@ -769,9 +778,13 @@ struct ConversationView: View {
             // learner audibly mid-utterance. An open screen in a quiet room
             // still bills nothing.
             switch realtime.state {
-            case .speaking, .hearing, .thinkingReply: return true
-            case .listening:                          return realtime.level > 0.25
-            default:                                  return false
+            case .speaking, .thinkingReply: return true
+            // Send-to-answer holds words on screen while the learner thinks;
+            // holding them is not someone talking — their voice is.
+            case .hearing where sendToAnswer:   return realtime.level > 0.25
+            case .hearing:                      return true
+            case .listening:                    return realtime.level > 0.25
+            default:                            return false
             }
         }
         if phase == .thinking || phase == .speaking { return true }
@@ -969,6 +982,10 @@ struct ConversationView: View {
                 // `SpeechSpeed.current` at each synthesis.
                 guard RealtimeMode.isEnabled, phoneCallActive else { return }
                 realtime.setSpeed(SpeechSpeed(rawValue: new) ?? .default)
+            }
+            .onChange(of: sendToAnswer) { _, on in
+                guard RealtimeMode.isEnabled, phoneCallActive else { return }
+                realtime.setManualTurns(on)
             }
             .onChange(of: tutorModeChoice) { _, on in
                 guard on != tutorThisCall else { return }
@@ -1648,9 +1665,32 @@ struct ConversationView: View {
             // The shader paints the whole surface theme-aware in a pure-blue
             // mosaic: airy white with blue pixels in light mode, near-black
             // with sky pixels in dark.
-            Button { Task { await handleMicTap() } } label: {
+            Button {
+                // Send-to-answer: while it is the learner's turn the pill IS
+                // Send. Outside the turn it is the pill it always was.
+                if sendModeActive {
+                    guard hasHeldWords, !realtime.sendPending else { return }
+                    HapticEngine.selection()
+                    realtime.sendTurn()
+                    return
+                }
+                Task { await handleMicTap() }
+            } label: {
                 ZStack {
                     Futureself(mode: glowMode, level: voiceLevel)
+                    if sendModeActive {
+                        Group {
+                            if realtime.sendPending {
+                                ProgressView()
+                            } else {
+                                Image(systemName: "paperplane.fill")
+                                    .font(.system(size: 22, weight: .semibold))
+                                    .foregroundStyle(.primary)
+                                    .opacity(hasHeldWords ? 1 : 0.3)
+                            }
+                        }
+                        .transition(.opacity)
+                    }
                     // Glyph ONLY while the conversation is stopped — an
                     // invitation to talk. During the call the living surface
                     // itself is the state display (ignites with your voice,
@@ -1677,8 +1717,16 @@ struct ConversationView: View {
             HStack {
                 callSettingsButton
                 Spacer(minLength: 0)
+                // Send-to-answer's reset, mirroring the settings button.
+                // Held in place (hidden, not removed) for the whole call so
+                // nothing shifts when the turn changes hands.
+                if sendToAnswer && RealtimeMode.isEnabled && phoneCallActive {
+                    clearTurnButton
+                        .opacity(sendModeActive ? 1 : 0)
+                        .allowsHitTesting(sendModeActive)
+                }
             }
-            .padding(.leading, 24)
+            .padding(.horizontal, 24)
             }
 
             Text(micHint)
@@ -1708,6 +1756,38 @@ struct ConversationView: View {
             voiceLevel = new
         }
         .onChange(of: phase) { _, _ in voiceLevel = 0 }
+    }
+
+    /// Send-to-answer and it is the learner's turn: the pill sends.
+    private var sendModeActive: Bool {
+        guard sendToAnswer, RealtimeMode.isEnabled, phoneCallActive else { return false }
+        switch realtime.state {
+        case .listening, .hearing: return true
+        default:                   return realtime.sendPending
+        }
+    }
+
+    private var hasHeldWords: Bool {
+        !realtime.partial.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// Throw this turn away and say it again. Same shape as the settings
+    /// button on the other side of the pill.
+    private var clearTurnButton: some View {
+        Button {
+            realtime.discardTurn()
+        } label: {
+            Image(systemName: "arrow.counterclockwise")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 44, height: 44)
+                .background(Color(.secondarySystemBackground), in: Circle())
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!hasHeldWords || realtime.sendPending)
+        .opacity(hasHeldWords && !realtime.sendPending ? 1 : 0.4)
+        .accessibilityLabel(Text(explain("Clear")))
     }
 
     /// Adjust the call while it runs — speed, subtitles, corrections, chips.
@@ -1754,6 +1834,7 @@ struct ConversationView: View {
     }
 
     private var micA11yLabel: String {
+        if sendModeActive { return explain("Send") }
         if phoneCallActive {
             switch phase {
             case .listening: return explain("Listening — tap to hang up")
@@ -1813,6 +1894,10 @@ struct ConversationView: View {
                 return explain("You can start — go ahead")
             }
             switch phase {
+            case .listening where sendModeActive:
+                return hasHeldWords
+                    ? explain("Take your time · tap to send")
+                    : explain("Speak, then tap to send")
             case .listening: return explain("Listening · pause to send · tap to stop")
             case .thinking:  return explain("Thinking… · tap to stop")
             case .speaking:
@@ -1921,6 +2006,7 @@ struct ConversationView: View {
     /// still an unusual pause, and the recovery is one tap on a screen that
     /// never lost the conversation.
     private static let idlePauseSeconds: Double = 30
+    private static let idlePauseHoldingSeconds: Double = 120
     /// Coarse on purpose: nothing here needs to be precise to the second. It
     /// also bounds the overshoot — the pause lands within a tick of the bar.
     private static let idleWatchTickSeconds: Double = 5
@@ -1949,7 +2035,11 @@ struct ConversationView: View {
                 // it bills nothing for, but a first answer still in progress
                 // is someone being here.
                 if somethingIsHappening() { lastActivityAt = Date(); continue }
-                guard Date().timeIntervalSince(lastActivityAt) >= Self.idlePauseSeconds else { continue }
+                // Send-to-answer with words held: they are composing, not
+                // gone — a longer wait before the call puts itself down.
+                let bar = sendToAnswer && !realtime.partial.isEmpty
+                    ? Self.idlePauseHoldingSeconds : Self.idlePauseSeconds
+                guard Date().timeIntervalSince(lastActivityAt) >= bar else { continue }
                 isPausedForIdle = true
                 await pauseCall()
                 return

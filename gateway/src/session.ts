@@ -345,6 +345,26 @@ export class CallSession implements DurableObject {
   private finalsChain: Promise<void> = Promise.resolve()
   private pendingTimer: number | null = null
   private static readonly pendingHoldMs = 4000
+
+  /** Send-to-answer turns (2026-10-15, `StartMessage.manualTurns`): a pause
+   *  never commits the turn — the learner's `send` does. Everything else
+   *  (the hold, the merge, speculation, the re-read) runs as usual; only the
+   *  hold's clock is never armed. */
+  private manualTurns = false
+  /** A `send` is waiting for the transcriber to finalize the last words. */
+  private sendRequested = false
+  private sendTimer: number | null = null
+  /** How long a `send` waits for a final still on its way (finals land
+   *  ~0.6–1.4 s into the silence) before committing what is on screen. */
+  private static readonly sendWaitMs = 2500
+  /** When the last final arrived, against `lastInterimAt`: an interim newer
+   *  than the last final is speech the transcriber has not finalized. */
+  private lastFinalAt = 0
+  private lastInterimText = ""
+  /** The next final belongs to words the learner already sent or threw
+   *  away (the commit took them from the interim) — skip it. */
+  private dropNextFinal = false
+  private sends = 0
   /** EVERY final is held this long before it becomes a turn — not only
    *  the hanging-word ones. The transcriber's final is not "the learner
    *  stopped": it segments a long monologue mid-stream (a 36 s sentence
@@ -644,6 +664,39 @@ export class CallSession implements DurableObject {
         if (this.replyEngine) this.replyEngine.setSystem(msg.system)
         else this.pendingSystem = msg.system
       }
+      if (typeof msg.manualTurns === "boolean" && msg.manualTurns !== this.manualTurns) {
+        this.manualTurns = msg.manualTurns
+        if (this.manualTurns) {
+          // Words already held stay held, now for the learner's send.
+          if (this.pendingTimer !== null) { clearTimeout(this.pendingTimer); this.pendingTimer = null }
+        } else {
+          this.cancelSend()
+          // Back to pauses: anything held goes out on the usual short clock.
+          if (this.pendingUtterance !== null) this.armPending(CallSession.continuationMs)
+        }
+      }
+      return
+    }
+    if (msg.type === "send") {
+      if (!this.started || !this.manualTurns) return
+      this.sends += 1
+      this.sendRequested = true
+      if (this.sendTimer !== null) clearTimeout(this.sendTimer)
+      this.sendTimer = setTimeout(() => this.finishSend(true), CallSession.sendWaitMs) as unknown as number
+      // A final already being handled (a re-read can take a second) lands
+      // first; `maybeFinishSend` then decides whether anything is still out.
+      void this.finalsChain.then(() => this.maybeFinishSend())
+      return
+    }
+    if (msg.type === "discard") {
+      if (!this.started || !this.manualTurns) return
+      this.cancelSend()
+      this.clearPending()
+      this.dropSpec()
+      if (this.lastInterimAt > this.lastFinalAt) this.dropNextFinal = true
+      this.lastInterimText = ""
+      this.emit({ type: "user_partial", text: "" })
+      console.log("discard: turn cleared")
       return
     }
     if (msg.type !== "start" || this.started) return
@@ -723,6 +776,7 @@ export class CallSession implements DurableObject {
 
     this.history = msg.history ? [...msg.history] : []
     this.language = msg.language || "en"
+    this.manualTurns = msg.manualTurns === true
     const base = (code: string) => code.toLowerCase().split("-")[0]
     this.native = msg.native && base(msg.native) !== base(this.language) ? msg.native : null
     this.replyEngine = new ReplyEngine({
@@ -815,6 +869,7 @@ export class CallSession implements DurableObject {
       {
         onInterim: (text) => {
           this.lastInterimAt = Date.now()
+          this.lastInterimText = text
           if (!this.learnerSpoke && this.firstInterimAt === 0 && text.trim().length > 0) {
             this.firstInterimAt = Date.now()
           }
@@ -847,7 +902,10 @@ export class CallSession implements DurableObject {
           // reply grounded in what was actually heard. Unless the "speech"
           // is our own line coming back through the speaker: an interim
           // that reads as a fragment of the playing reply must not cut it.
-          if (this.activeContext && !this.isLikelyEcho(text)) this.interrupt()
+          // Send-to-answer: the turn is the learner's to hand over, so
+          // starting to answer over the end of a line doesn't cut it — what
+          // they say is held for their next send.
+          if (this.activeContext && !this.manualTurns && !this.isLikelyEcho(text)) this.interrupt()
           // A changed interim invalidates any speculation answering older
           // words (matching the app's rule: only the TEXT moving on cancels,
           // never audio energy). A settled one re-arms the fire timer — on
@@ -867,9 +925,16 @@ export class CallSession implements DurableObject {
           const audio = this.utteranceAudio
           this.utteranceAudio = []
           this.utteranceAudioBytes = 0
+          this.lastFinalAt = Date.now()
+          if (this.dropNextFinal) {
+            this.dropNextFinal = false
+            console.log(`final dropped (already sent or discarded): "${text.slice(0, 60)}"`)
+            return
+          }
           this.finalsChain = this.finalsChain
             .then(() => this.acceptFinal(text, audio))
             .catch((e) => this.warn("script_mismatch", `final handling failed: ${String(e).slice(0, 120)}`))
+            .then(() => this.maybeFinishSend())
         },
         // Survived: the socket is being replaced and mic audio is buffered
         // meanwhile. Recorded as a warning so the console can count how often
@@ -1199,6 +1264,9 @@ export class CallSession implements DurableObject {
    *  what they DID say. */
   private armPending(ms: number): void {
     if (this.pendingTimer !== null) clearTimeout(this.pendingTimer)
+    this.pendingTimer = null
+    // Send-to-answer: no clock ends the turn; the learner's send does.
+    if (this.manualTurns) return
     this.pendingTimer = setTimeout(() => {
       const held = this.pendingUtterance
       const native = this.pendingNative
@@ -1206,6 +1274,48 @@ export class CallSession implements DurableObject {
       this.clearPending()
       if (held) this.commitTurn(held, native, reopened)
     }, ms) as unknown as number
+  }
+
+  /** A `send` is waiting: commit once no unfinalized speech is left. */
+  private maybeFinishSend(): void {
+    if (!this.sendRequested || this.ended) return
+    if (this.lastInterimAt > this.lastFinalAt) return   // a final is still coming
+    this.finishSend(false)
+  }
+
+  /** Commit the turn the learner sent. `force`: the wait for the last final
+   *  ran out — its words are taken from the newest interim instead, and the
+   *  final, if it ever lands, is skipped. */
+  private finishSend(force: boolean): void {
+    if (!this.sendRequested || this.ended) return
+    this.cancelSend()
+    let text = this.pendingUtterance ?? ""
+    let native = this.pendingNative
+    const reopened = this.pendingReopened
+    if (force && this.lastInterimAt > this.lastFinalAt) {
+      const tail = this.lastInterimText.trim()
+      if (tail.length > 0 && CallSession.inTargetScript(tail, this.language)) {
+        const joint = CallSession.writesSpaces(this.language) ? " " : ""
+        text = text.length > 0 ? text + joint + tail : tail
+        native = native || this.hasNativeScript(tail)
+      }
+      this.dropNextFinal = true
+    }
+    this.clearPending()
+    this.lastInterimText = ""
+    if (text.trim().length === 0) {
+      // Nothing to answer: say so, so the app's button stops waiting.
+      this.emit({ type: "user_partial", text: "" })
+      console.log(`send: nothing held${force ? " (timed out)" : ""}`)
+      return
+    }
+    console.log(`send: committing${force ? " (timed out on the last final)" : ""}`)
+    this.commitTurn(text, native, reopened)
+  }
+
+  private cancelSend(): void {
+    this.sendRequested = false
+    if (this.sendTimer !== null) { clearTimeout(this.sendTimer); this.sendTimer = null }
   }
 
   private clearPending(): void {
@@ -1777,9 +1887,12 @@ export class CallSession implements DurableObject {
       cutoffs: this.cutoffs,
       merges: this.merges,
       mergeGapMs: this.mergeGapMs.slice(0, 200),
+      manualTurns: this.manualTurns,
+      sends: this.sends,
     })
     this.ended = true
     this.billing?.stop()   // final flush — the last partial batch still bills
+    this.cancelSend()
     if (this.statsTimer !== null) clearInterval(this.statsTimer)
     if (this.idleTimer !== null) clearTimeout(this.idleTimer)
     if (this.wallTimer !== null) clearTimeout(this.wallTimer)

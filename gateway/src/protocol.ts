@@ -49,6 +49,24 @@ export interface StartMessage {
    *  bubble shows what was said. Absent (an app build before this) = the
    *  old behaviour, unchanged. */
   native?: string
+  /** Send-to-answer turns (2026-10-15): the learner's turn is never
+   *  committed by a pause, only by a `send` from the app. For beginners, who
+   *  stop to find a word and were answered mid-sentence. Absent = the usual
+   *  pause-ends-the-turn call. */
+  manualTurns?: boolean
+}
+
+/** Send-to-answer mode: what the learner has said so far is their turn —
+ *  answer it. If the transcriber has not finalized the last words yet, the
+ *  gateway waits for that final (a short, capped wait) before committing. */
+export interface SendMessage {
+  type: "send"
+}
+
+/** Send-to-answer mode: throw away what the learner has said this turn and
+ *  start the turn over. */
+export interface DiscardMessage {
+  type: "discard"
 }
 
 /** Speak a line the app chose, after the call is already up.
@@ -100,9 +118,14 @@ export interface SetMessage {
    *  is rebuilt for it; the turns so far stay. An older gateway ignores the
    *  field, and the setting then applies from the next call as it used to. */
   system?: string
+  /** Send-to-answer turns switched on or off mid-call (see
+   *  `StartMessage.manualTurns`). Switched off with words held, those words
+   *  are committed by the usual pause rule. */
+  manualTurns?: boolean
 }
 
 export type ClientMessage = StartMessage | SayMessage | EndMessage | SetMessage
+  | SendMessage | DiscardMessage
 
 // ---------------------------------------------------------------------------
 // Gateway -> client events.
@@ -160,7 +183,10 @@ export type ServerMessage =
       /** Turn-taking evidence (2026-09-15): barge-ins right after a commit,
        *  finals merged into a held one, and the learner's measured pause on
        *  each caught continuation. A client older than this ignores them. */
-      cutoffs: number; merges: number; mergeGapMs: number[] }
+      cutoffs: number; merges: number; mergeGapMs: number[]
+      /** Send-to-answer (2026-10-15): whether the call ended in that mode,
+       *  and how many sends the learner made. */
+      manualTurns?: boolean; sends?: number }
   | { type: "error"; code: string; message: string }
 
 export function send(ws: WebSocket, msg: ServerMessage): void {

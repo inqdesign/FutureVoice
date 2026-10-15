@@ -54,6 +54,11 @@ struct CallSettingsSheet: View {
     @AppStorage(CoachMode.key) private var coachModeChoice: Bool?
     @AppStorage(AppState.proficiencyKey) private var proficiencyRaw = CEFRLevel.b1.rawValue
     @AppStorage(TutorMode.key) private var tutorMode = false
+    @AppStorage(SendToAnswer.key) private var sendToAnswerChoice: Bool?
+    private var sendToAnswer: Binding<Bool> {
+        Binding(get: { SendToAnswer.resolve(choice: sendToAnswerChoice, levelRaw: proficiencyRaw) },
+                set: { sendToAnswerChoice = $0 })
+    }
     private var coachMode: Binding<Bool> {
         Binding(get: { CoachMode.resolve(choice: coachModeChoice, levelRaw: proficiencyRaw) },
                 set: { coachModeChoice = $0 })
@@ -93,6 +98,16 @@ struct CallSettingsSheet: View {
                     }
                 } footer: {
                     Text(explain("Now and then your future self asks something you can answer with a word you're studying, and the mistake you make most becomes the call's focus."))
+                }
+
+                // Who ends the learner's turn: a pause, or their own Send
+                // (`SendToAnswer`). A flip mid-call reaches the gateway.
+                Section {
+                    Toggle(isOn: sendToAnswer) {
+                        Label("Answer with Send", systemImage: "paperplane")
+                    }
+                } footer: {
+                    Text(explain("Take your time. Your future self waits until you press Send."))
                 }
 
                 // Part of the conversation prompt; a flip mid-call sends the
