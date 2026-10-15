@@ -1,9 +1,2 @@
-New
-• Tutor mode, in call settings. Turn it on and your fluent self runs a lesson: after everything you say, you hear the right sentence or a more natural way to put it, then a question you can answer by using it.
-• When you publish your profile in Find people, your photo goes with it.
-
 Fixed
-• Speech takes read all the way through were scored as if the last sentence was skipped.
-• Speech challenge takes from learners without a photo never reached the leaderboard.
-• Taking the weekly test the day after it opened broke your streak in My routine. Days lost this way are restored.
-• With the new voice, the greeting at the start of a call could sound jumbled.
+• Minor bug fixes and stability improvements.

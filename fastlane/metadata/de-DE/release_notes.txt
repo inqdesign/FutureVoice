@@ -1,9 +1,2 @@
-Neu
-• Tutor-Modus in den Anruf-Einstellungen. Schalte ihn ein, und dein fließendes Ich gibt dir Unterricht: Nach allem, was du sagst, hörst du den richtigen Satz oder eine natürlichere Formulierung und danach eine Frage, die du genau damit beantworten kannst.
-• Wenn du dein Profil unter „Leute finden“ veröffentlichst, ist jetzt auch dein Foto dabei.
-
 Behoben
-• Reden, die du bis zum Ende vorgelesen hast, wurden bewertet, als hättest du den letzten Satz ausgelassen.
-• Challenge-Versuche ohne Profilfoto kamen nicht in die Bestenliste.
-• Wer den Wochentest erst am Tag danach gemacht hat, verlor seine Serie in „Meine Routine“. So verlorene Tage zählen wieder.
-• Mit der neuen Stimme klang die Begrüßung am Anfang eines Anrufs manchmal durcheinander.
+• Kleinere Fehler behoben, alles läuft jetzt stabiler.

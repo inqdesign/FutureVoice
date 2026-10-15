@@ -1,9 +1,2 @@
-Nouveautés
-• Mode tuteur, dans les réglages de l’appel. Active-le et ton moi fluide te donne un cours : après chaque chose que tu dis, tu entends la bonne phrase ou une tournure plus naturelle, puis une question à laquelle tu réponds en l’utilisant.
-• Quand tu publies ton profil dans Trouver des gens, ta photo l’accompagne.
-
 Corrections
-• Les lectures dans Discours lues jusqu’au bout étaient notées comme si tu avais sauté la dernière phrase.
-• Les essais de défi sans photo de profil n’arrivaient pas au classement.
-• Passer le test hebdo le lendemain cassait ta série dans Ma routine. Les jours perdus ainsi comptent de nouveau.
-• Avec la nouvelle voix, la salutation en début d’appel pouvait sembler brouillée.
+• Petits bugs corrigés, l’app est plus stable.

@@ -1,9 +1,2 @@
-Novedades
-• Modo tutor, en los ajustes de la llamada. Actívalo y tu yo fluido te da una clase: después de cada cosa que dices, escuchas la frase correcta o una forma más natural de decirlo, y luego una pregunta que puedes responder usándola.
-• Cuando publicas tu perfil en Buscar personas, tu foto se muestra con él.
-
 Correcciones
-• Las lecturas en Discurso que leías hasta el final se calificaban como si te hubieras saltado la última frase.
-• Los intentos de reto sin foto de perfil no llegaban a la clasificación.
-• Hacer el test semanal al día siguiente rompía tu racha en Mi rutina. Los días perdidos así vuelven a contar.
-• Con la voz nueva, el saludo al empezar una llamada a veces sonaba entrecortado.
+• Corregimos pequeños errores y la app funciona de forma más estable.
