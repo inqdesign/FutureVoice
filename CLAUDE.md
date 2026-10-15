@@ -1977,9 +1977,14 @@ and hidden for want of a wordlist. Two facts shaped the rest:
 - Correction prompt measured with `scripts/correction-probe.py es`: 0/94
   false corrections, 0/24 missed, 0 fragments — no guard, like German.
 - Presets speak the four Spanish voices Find people already used
-  (Carolina · Jorge · Carmen · Javier). **No default accent remix yet**: a
-  clone recorded in Korean speaks Spanish with whatever accent the engine
-  invents, the problem German had; needs a Cartesia accent and an ear.
+  (Carolina · Jorge · Carmen · Javier).
+- **Two accents, Mexican the default** (`VoiceAccentCatalog` "es": Mexican ·
+  Castilian — the only two Spanish accents Cartesia marks `is_localizable`).
+  Like German, a Spanish LINE is spoken in Mexican unless the id names a
+  Spanish accent (`LANGUAGE_DEFAULT_ACCENT`, edge function and gateway
+  both), because the id carries one accent and it is usually the English
+  one. The server reads the pick from the prompt's words ("mexican spanish",
+  "castilian spanish"); `SpanishTargetTests` pins that.
 - Exams: DELE, SIELE, OPIc. Speech challenges `…009` (the bundled sample)
   and `…00a` (ageing), `20261015160000`.
 - Tests: `SpanishTargetTests`.

@@ -85,6 +85,16 @@ enum VoiceAccentCatalog {
             VoiceAccent(id: "de-DE", label: "Standard German",
                         prompt: prompt("Standard German accent (Hochdeutsch) as spoken in Germany")),
         ],
+        // The two Spanish accents Cartesia can put on a learner's voice
+        // (`is_localizable`, 2026-10-15). Mexican first, so it is the default:
+        // the larger half of the language, and the neutral tú Spanish the
+        // app's own lines are written in.
+        "es": [
+            VoiceAccent(id: "es-MX", label: "Mexican",
+                        prompt: prompt("Mexican Spanish accent as spoken in Mexico City")),
+            VoiceAccent(id: "es-ES", label: "Castilian",
+                        prompt: prompt("Castilian Spanish accent as spoken in Madrid, Spain")),
+        ],
     ]
 
     private static let samples: [String: String] = [
@@ -98,5 +108,9 @@ enum VoiceAccentCatalog {
         // vowel onsets.
         "de": "Morgen früh hole ich zwei Brötchen beim Bäcker, danach fahre ich "
             + "mit dem Zug nach München. Ich rufe dich später an, okay?",
+        // Accent tells: the Castilian z/ce/ci (zapatos, cerveza, Valencia),
+        // seseo vs distinción, the ll/y, and a final s held or softened.
+        "es": "Mañana voy a comprar unos zapatos y una cerveza en la plaza de "
+            + "Valencia. Te llamo luego, ¿de acuerdo? Si no, nos vemos el lunes.",
     ]
 }

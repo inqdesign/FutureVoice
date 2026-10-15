@@ -55,7 +55,7 @@ export async function isStockVoice(apiKey: string | undefined, voiceId: string):
 }
 
 /** A German call speaks standard German unless the voice id names another
- *  German accent (2026-10-13; mirror of withDefaultAccent in
+ *  German accent, and a Spanish call Mexican Spanish the same way (2026-10-13; mirror of withDefaultAccent in
  *  supabase/functions/_shared/cartesia.ts). The id usually carries the
  *  English accent, so this is decided per call. Only applied when the voice
  *  already carries the accent — the edge function adds it on the first
@@ -63,7 +63,9 @@ export async function isStockVoice(apiKey: string | undefined, voiceId: string):
  *  an accent the voice lacks fails. Never throws. */
 const germanReady = new Map<string, boolean>()
 export async function withGermanDefault(apiKey: string | undefined, voiceId: string, language: string): Promise<string> {
-  if (!apiKey || language.toLowerCase().split("-")[0] !== "de") return voiceId
+  const lang = language.toLowerCase().split("-")[0]
+  const fallback = LANGUAGE_DEFAULT_ACCENT[lang]
+  if (!apiKey || !fallback) return voiceId
   const m = VOICE.exec(voiceId)
   if (!m) return voiceId
   const uuid = m[1].toLowerCase()
@@ -71,7 +73,7 @@ export async function withGermanDefault(apiKey: string | undefined, voiceId: str
   // The id's own German accent is checked too, not trusted: a voice moved to
   // Cartesia was saved as `<uuid>:standard-german` while the accent had never
   // been added, and every line of its calls was refused (2026-10-14).
-  const want = accent && ACCENT_LANGUAGE[accent] === "de" ? accent : "standard-german"
+  const want = accent && ACCENT_LANGUAGE[accent] === lang ? accent : fallback
   const key = `${uuid}:${want}`
   if (germanReady.get(key)) return key
   try {
@@ -90,7 +92,7 @@ export async function withGermanDefault(apiKey: string | undefined, voiceId: str
         body: JSON.stringify({ accents: [want] }),
       })
       ready = add.ok
-      if (!add.ok) console.warn("german accent add failed", uuid, add.status, (await add.text()).slice(0, 200))
+      if (!add.ok) console.warn(`${lang} accent add failed`, uuid, add.status, (await add.text()).slice(0, 200))
     }
     if (!ready) return uuid
     germanReady.set(key, true)
@@ -104,6 +106,15 @@ export async function withGermanDefault(apiKey: string | undefined, voiceId: str
 const ACCENT_LANGUAGE: Record<string, string> = {
   "general-american": "en", "british": "en", "australian": "en", "indian-english": "en", "southern-us": "en",
   "standard-german": "de", "standard-japanese": "ja", "korean": "ko",
+  "mexican": "es", "castilian": "es",
+}
+
+/** The accent a call in each language is spoken in unless the id names
+ *  another of that language — mirror of LANGUAGE_DEFAULT_ACCENT in
+ *  supabase/functions/_shared/cartesia.ts. Spanish since 2026-10-15. */
+const LANGUAGE_DEFAULT_ACCENT: Record<string, string> = {
+  de: "standard-german",
+  es: "mexican",
 }
 
 /** Languages Cartesia is told a line is in — it reads a line in whatever

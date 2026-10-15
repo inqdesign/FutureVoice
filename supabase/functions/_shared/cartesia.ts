@@ -43,6 +43,7 @@ export function parseVoice(voiceId: string): { uuid: string; accent: string | nu
 export const ACCENT_LANGUAGE: Record<string, string> = {
   "general-american": "en", "british": "en", "australian": "en", "indian-english": "en", "southern-us": "en",
   "standard-german": "de", "standard-japanese": "ja", "korean": "ko",
+  "mexican": "es", "castilian": "es",
 }
 
 /** A voice's own accent, required before others can be added — deliberately
@@ -53,6 +54,7 @@ export const ACCENT_LANGUAGE: Record<string, string> = {
  *  ja/ko have one accent each and no picker. */
 const BASE_ACCENT: Record<string, string> = {
   en: "new-zealand", de: "austrian-german", ja: "standard-japanese", ko: "korean",
+  es: "united-states-spanish",
 }
 
 /** The app's accent picks arrive as ElevenLabs remix PROMPTS
@@ -63,6 +65,8 @@ export function accentFromDescription(description: string): string | null {
   if (d.includes("british")) return "british"
   if (d.includes("australian")) return "australian"
   if (d.includes("standard german") || d.includes("hochdeutsch")) return "standard-german"
+  if (d.includes("mexican spanish")) return "mexican"
+  if (d.includes("castilian spanish")) return "castilian"
   if (d.includes("japanese")) return "standard-japanese"
   if (d.includes("korean")) return "korean"
   return null
@@ -74,6 +78,14 @@ export function accentFromDescription(description: string): string | null {
  *  The id carries ONE accent, usually the English one, so this is decided
  *  per line rather than stored. */
 export const GERMAN_DEFAULT = "standard-german"
+
+/** The same rule for every language that has one: the accent a line in it
+ *  is spoken in unless the id names another of that language. Spanish
+ *  (2026-10-15) defaults to Mexican, the app's first Spanish option. */
+export const LANGUAGE_DEFAULT_ACCENT: Record<string, string> = {
+  de: GERMAN_DEFAULT,
+  es: "mexican",
+}
 
 /** Per isolate: does voice `uuid` carry `accent` (`<uuid>:<accent>`)? */
 const accentReady = new Map<string, boolean>()
@@ -101,16 +113,18 @@ async function hasAccent(uuid: string, accent: string): Promise<boolean> {
  *  add of that accent had failed, and every line it spoke — the greeting,
  *  the whole call — was refused with "this voice does not support accent
  *  'standard-german'" (2026-10-13/14). Never throws: any doubt speaks the
- *  line plain. */
+ *  line plain. Spanish lines get the same default treatment as German
+ *  (`LANGUAGE_DEFAULT_ACCENT`). */
 export async function withDefaultAccent(line: CartesiaLine): Promise<CartesiaLine> {
   const { uuid, accent } = parseVoice(line.voiceId)
   try {
     if (accent && ACCENT_LANGUAGE[accent] === line.language) {
       return (await hasAccent(uuid, accent)) ? line : { ...line, voiceId: uuid }
     }
-    if (line.language !== "de") return line
-    return (await hasAccent(uuid, GERMAN_DEFAULT))
-      ? { ...line, voiceId: `${uuid}:${GERMAN_DEFAULT}` } : { ...line, voiceId: uuid }
+    const fallback = LANGUAGE_DEFAULT_ACCENT[line.language]
+    if (!fallback) return line
+    return (await hasAccent(uuid, fallback))
+      ? { ...line, voiceId: `${uuid}:${fallback}` } : { ...line, voiceId: uuid }
   } catch {
     return { ...line, voiceId: uuid }
   }

@@ -72,6 +72,19 @@ final class SpanishTargetTests: XCTestCase {
         XCTAssertTrue(WordClass.classes(of: "rojo", language: "es").contains(.adjective))
     }
 
+    /// Two accents, Mexican the default. The server reads the accent out of
+    /// the prompt's wording (`accentFromDescription` in
+    /// supabase/functions/_shared/cartesia.ts), so the words it looks for
+    /// have to be in there.
+    func testSpanishAccentsAreOfferedAndReadableByTheServer() {
+        let options = VoiceAccentCatalog.options(for: "es")
+        XCTAssertEqual(options.map(\.id), ["es-MX", "es-ES"])
+        XCTAssertEqual(VoiceAccentCatalog.defaultAccent(for: "es")?.id, "es-MX")
+        XCTAssertTrue(options[0].prompt.lowercased().contains("mexican spanish"))
+        XCTAssertTrue(options[1].prompt.lowercased().contains("castilian spanish"))
+        XCTAssertTrue(VoiceAccentCatalog.sampleText(for: "es").contains("zapatos"))
+    }
+
     func testSpanishPresetsSpeakSpanish() {
         let slot = VoicePreset.catalog[0].id
         XCTAssertNotEqual(VoicePreset.speaking(slot, in: "es"), slot)
