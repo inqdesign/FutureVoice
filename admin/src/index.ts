@@ -556,7 +556,7 @@ async function speechRows(env: Env): Promise<Array<Record<string, any>>> {
     where event in ('speech_take', 'speech_take_cancelled', 'speech_script_written',
                     'speech_script_added', 'speech_plus_sheet')
       and timestamp > now() - interval 180 day
-      and properties.app = 'nawana'
+      and (properties.app = 'nawana' or properties.product = 'nawana')
     order by timestamp
     limit 50000`;
   const r = await fetch(`https://eu.posthog.com/api/projects/${project}/query/`, {
@@ -578,7 +578,8 @@ async function speechRows(env: Env): Promise<Array<Record<string, any>>> {
 }
 
 // ---- PostHog: where people are, and whether the app is open --------------
-// The iOS SDK stamps every event with a GeoIP city (PostHog's default) and
+// The iOS SDK (app = nawana) and Android (product = nawana, plain capture API)
+// both get a GeoIP city on every event (PostHog's default), and iOS also
 // sends "Application Opened" / "Application Backgrounded". One HogQL query
 // reads the latest of each per account. distinct_id is the Supabase UUID
 // UPPERCASED (Swift uuidString), so it is lowered to join.
@@ -606,7 +607,7 @@ async function posthogPresence(env: Env): Promise<{ rows: Record<string, PhRow>;
       max(timestamp)
     from events
     where timestamp > now() - interval 30 day
-      and properties.app = 'nawana'
+      and (properties.app = 'nawana' or properties.product = 'nawana')
     group by distinct_id
     limit 10000`;
   try {
