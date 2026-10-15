@@ -1,5 +1,11 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.ui.text.withStyle
+import androidx.compose.runtime.withFrameMillis
+import androidx.compose.ui.graphics.isSpecified
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalTextStyle
 import kotlinx.coroutines.flow.first
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.Offset
@@ -853,6 +859,7 @@ fun TalkScreen(
                             .then(if (turn.role == TurnRole.USER) Modifier.animateContentSize(tween(250))
                                 else Modifier)) {
                             DialogueLine(turn, scale = DialogueScale.CALL, otherName = cast?.name,
+                                fadesIn = turn.role == TurnRole.FLUENT_SELF,
                                 showsCorrections = showsCorrections,
                                 focusRepeatLabel = if (coachMode && turn.id in state.focusRepeatTurns)
                                     state.grammarFocus?.label else null,
@@ -1139,6 +1146,10 @@ fun DialogueLine(turn: Turn) {
 @Composable
 fun DialogueLine(turn: Turn, isCurrent: Boolean = false,
                  scale: DialogueScale = DialogueScale.STANDARD,
+                 /** The live call's fluent-self line: each word that comes up
+                  *  fades in rather than popping (founder, 2026-10-15, "like
+                  *  Grok"). Off everywhere a line is read, not revealed. */
+                 fadesIn: Boolean = false,
                  otherName: String? = null,
                  selfName: String? = null,
                  showsCorrections: Boolean = true,
@@ -1220,7 +1231,62 @@ fun DialogueLine(turn: Turn, isCurrent: Boolean = false,
                 }
             }
         },
-    ) { Text(turn.transcript) }
+    ) { if (fadesIn) FadeInText(turn.transcript) else Text(turn.transcript) }
+}
+
+/** How long a newly revealed word takes to go from clear to solid. */
+private const val FADE_IN_MS = 320L
+
+/**
+ * Text whose newly APPENDED characters fade in. The reveal adds a word at a
+ * time in step with the voice; this only softens each arrival. Characters on
+ * screen at the first composition, and a line rewritten rather than extended,
+ * are shown at once — only growth fades.
+ */
+@Composable
+private fun FadeInText(text: String) {
+    val base = LocalTextStyle.current.color.takeIf { it.isSpecified } ?: LocalContentColor.current
+    // Per character: when it appeared (0 = was already there).
+    val born = remember { mutableListOf<Long>() }
+    var shownText by remember { mutableStateOf(text) }
+    var clock by remember { mutableLongStateOf(0L) }
+    if (text != shownText) {
+        val now = System.nanoTime() / 1_000_000
+        if (text.startsWith(shownText)) {
+            repeat(text.length - shownText.length) { born.add(now) }
+        } else {
+            born.clear(); repeat(text.length) { born.add(0L) }
+        }
+        shownText = text
+    } else if (born.size != text.length) {
+        born.clear(); repeat(text.length) { born.add(0L) }
+    }
+    // Tick frames only while something is still fading.
+    LaunchedEffect(text) {
+        while (true) {
+            val t = withFrameMillis { System.nanoTime() / 1_000_000 }
+            clock = t
+            if (born.none { it != 0L && t - it < FADE_IN_MS }) break
+        }
+    }
+    val now = if (clock == 0L) System.nanoTime() / 1_000_000 else clock
+    val annotated = androidx.compose.ui.text.buildAnnotatedString {
+        var i = 0
+        while (i < text.length) {
+            val b = born.getOrElse(i) { 0L }
+            var j = i + 1
+            while (j < text.length && born.getOrElse(j) { 0L } == b) j++
+            val alpha = if (b == 0L) 1f else {
+                val p = ((now - b).toFloat() / FADE_IN_MS).coerceIn(0f, 1f)
+                1f - (1f - p) * (1f - p)   // ease-out
+            }
+            withStyle(androidx.compose.ui.text.SpanStyle(color = base.copy(alpha = base.alpha * alpha))) {
+                append(text.substring(i, j))
+            }
+            i = j
+        }
+    }
+    Text(annotated)
 }
 
 @Composable
