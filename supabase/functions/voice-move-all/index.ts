@@ -127,7 +127,14 @@ Deno.serve(async (req) => {
     // German is also added when the id names another accent: every German
     // line is spoken in standard German (`withDefaultAccent`).
     for (const a of new Set([cartesia.GERMAN_DEFAULT, ...(accent ? [accent] : [])])) {
-      const ok = await cartesia.ensureAccent(made.voiceId, a)
+      // The clone's own background German add can still be settling the
+      // voice's base (400 "Set the voice's accent…", 2026-10-15) — give it
+      // a few seconds before calling it a failure.
+      let ok = await cartesia.ensureAccent(made.voiceId, a)
+      for (let i = 0; !ok.ok && i < 3; i++) {
+        await new Promise((r) => setTimeout(r, 2500))
+        ok = await cartesia.ensureAccent(made.voiceId, a)
+      }
       if (!ok.ok) {
         await cartesia.deleteVoice(made.voiceId)
         return json({ ...plan, result: "failed", detail: `${a}: ${ok.detail}` }, 502)
