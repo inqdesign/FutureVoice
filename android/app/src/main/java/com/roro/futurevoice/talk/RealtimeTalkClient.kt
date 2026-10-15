@@ -92,6 +92,13 @@ class RealtimeTalkClient(private val context: Context) {
         const val CUT_IN_WINDOW_MS = 2_500L
         /** Mic frames per socket message — ~128 ms, the same size iOS taps. */
         private const val MIC_FRAMES = 2048
+        /** iOS `echoLearnFrames`: ~0.4 s of playback measured before the
+         *  echo gate judges — at the top of a line the learner has not
+         *  started talking, so whatever the mic hears then IS the echo. */
+        private const val ECHO_LEARN_FRAMES = 4
+        /** iOS `echoMargin`: how much louder than the echo a voice must be to
+         *  count as the learner (~5 dB) — rejects the speaker, keeps barge-in. */
+        private const val ECHO_MARGIN = 1.8f
 
         /**
          * Voiced time and mid-speech pauses, read off the learner's own take
@@ -281,6 +288,81 @@ class RealtimeTalkClient(private val context: Context) {
      */
     @Volatile var micGated: Boolean = false
 
+    // ---- Echo gate (iOS `RealtimeTalkClient` "Echo gate", 2026-09-01/02/11) --
+    // The reply plays on the speaker while the mic is open, and the platform
+    // echo canceller does not remove all of it — on a Galaxy S24 on
+    // speakerphone the fluent self's own line came back as the learner's
+    // turn and was answered (reported 2026-10-15). So while a line is
+    // playing, the mic is measured against the echo it hears and only audio
+    // clearly LOUDER than that goes up; the rest is sent as SILENCE (never a
+    // gap: the transcriber is streaming). The first line of a call on the
+    // open speaker is half-duplex: an adaptive canceller has cancelled
+    // nothing until it has heard the voice once.
+    private val gateLock = Any()
+    private var gateActive = false
+    /** The first reply buffer reached the track: until then a floor would
+     *  be measured on the ROOM, and every line's echo would clear it. */
+    private var gatePlaying = false
+    private var gateHalfDuplex = false
+    private var gateFloor = 0f
+    private var gateLearned = 0
+    @Volatile private var echoHoldUntil = 0L
+    private var linesStarted = 0
+
+    private fun setEchoGate(active: Boolean, halfDuplex: Boolean = false) = synchronized(gateLock) {
+        if (active && !gateActive) {
+            gateFloor = 0f; gateLearned = 0; gatePlaying = false; gateHalfDuplex = halfDuplex
+        }
+        if (!active) gateHalfDuplex = false
+        gateActive = active
+    }
+
+    private fun markPlaybackStarted() = synchronized(gateLock) { gatePlaying = true }
+
+    /** True = this mic buffer is the speaker coming back: forward silence. */
+    private fun echoMuted(rms: Float): Boolean = synchronized(gateLock) {
+        if (!gateActive) return false
+        if (gateHalfDuplex || !gatePlaying) return true
+        if (gateLearned < ECHO_LEARN_FRAMES) {
+            gateFloor = max(gateFloor, rms); gateLearned += 1
+            return true
+        }
+        val muted = rms < gateFloor * ECHO_MARGIN
+        // Echo under the bar raises the bar for the rest of the line; only
+        // judged echo feeds it, so a real barge-in never mutes its own tail.
+        if (muted) gateFloor = max(gateFloor, rms)
+        muted
+    }
+
+    /** The room keeps speaking after the speaker stops — longer on the open
+     *  speaker than in earphones (iOS `closeEchoGateAfterTail`). */
+    private fun closeEchoGateAfterTail() {
+        val tail = if (outputIsSpeaker()) 700L else 400L
+        val deadline = System.currentTimeMillis() + tail
+        echoHoldUntil = deadline
+        scope.launch {
+            kotlinx.coroutines.delay(tail)
+            if (echoHoldUntil <= deadline) setEchoGate(false)
+        }
+    }
+
+    /** No earphones of any kind on the output: the reply comes out of the
+     *  phone's own speaker, into its own mic. */
+    private fun outputIsSpeaker(): Boolean {
+        val am = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+        val worn = setOf(
+            android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET,
+            android.media.AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+            android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
+            android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO,
+            android.media.AudioDeviceInfo.TYPE_USB_HEADSET,
+            android.media.AudioDeviceInfo.TYPE_BLE_HEADSET,
+            android.media.AudioDeviceInfo.TYPE_BLE_SPEAKER,
+            android.media.AudioDeviceInfo.TYPE_HEARING_AID,
+        )
+        return am.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS).none { it.type in worn }
+    }
+
     /** Set when the gateway named a wall; read by the view after failure. */
     @Volatile var wallCode: String? = null
         private set
@@ -315,6 +397,7 @@ class RealtimeTalkClient(private val context: Context) {
         lastErrorCode = null
         replyPCM.reset(); userPCM.reset(); lastTurnPCM = ByteArray(0)
         micBytesSent = 0; warningsThisCall = 0; turnsThisCall = 0
+        linesStarted = 0; setEchoGate(false)
         state = State.CONNECTING
 
         val start = buildJsonObject {
@@ -361,6 +444,7 @@ class RealtimeTalkClient(private val context: Context) {
                     // On THIS thread, never hopping off it: frames must reach
                     // the track in the order they came (see `writeNow`).
                     p.writeNow(chunk)
+                    markPlaybackStarted()
                     // The first buffer in the player: the voice is audible,
                     // and the line's first sentence goes up with it.
                     var step = false
@@ -528,6 +612,8 @@ class RealtimeTalkClient(private val context: Context) {
                 replyText.setLength(0)
                 serverAudioEnded = false
                 finishReveal()
+                linesStarted += 1
+                setEchoGate(true, halfDuplex = linesStarted == 1 && outputIsSpeaker())
                 val rate = replyRate
                 scope.launch(audioThread) {
                     // The rate can change between replies; a player is bound
@@ -589,14 +675,20 @@ class RealtimeTalkClient(private val context: Context) {
                 ctx?.let { onReplyEnded?.invoke(it, text) }
                 if (text.isEmpty()) finishReveal() else stepReveal()
                 // Let the track drain what it holds, then hand the mic back.
+                // The gate closes only once the SPEAKER has finished — "sent"
+                // is not "heard" (iOS, build 29).
                 scope.launch(audioThread) {
                     runCatching { player?.drain() }
+                    closeEchoGateAfterTail()
                     if (state == State.SPEAKING) state = State.LISTENING
                 }
             }
             "interrupted" -> {
                 // Stop local playback NOW and drop what was buffered.
                 scope.launch(audioThread) { runCatching { player?.stop() }; player = null }
+                // A barge-in means the learner IS talking — the gate would
+                // only stand in their way now.
+                setEchoGate(false)
                 if (msg["reopened"]?.jsonPrimitive?.booleanOrNull == true) {
                     // Withdrawn: the turn it answered isn't over. Nothing of
                     // the line is kept — not its bubble, not its audio.
@@ -724,12 +816,14 @@ class RealtimeTalkClient(private val context: Context) {
                 val n = rec.read(buf, 0, buf.size)
                 if (n <= 0) { Log.w(TAG, "mic read returned $n"); if (n < 0) break else continue }
                 var peak = 0f
+                var sumSq = 0.0
                 bytes.clear()
                 for (i in 0 until n) {
                     val v = buf[i]
                     bytes.putShort(v)
                     val a = abs(v.toInt()) / 32768f
                     if (a > peak) peak = a
+                    sumSq += (v.toDouble() / 32768.0) * (v.toDouble() / 32768.0)
                 }
                 level = peak
                 val frame = bytes.array().copyOf(n * 2)
@@ -737,6 +831,13 @@ class RealtimeTalkClient(private val context: Context) {
                 // Continuous, paced by the read itself — roughly realtime,
                 // which is what Gemini Live's own VAD wants.
                 if (micGated) { level = 0f; continue }
+                if (echoMuted(kotlin.math.sqrt(sumSq / n).toFloat())) {
+                    // Silence, not a gap: the transcriber is streaming.
+                    level = 0f
+                    socket?.send(ByteArray(frame.size).toByteString())
+                    micBytesSent += frame.size
+                    continue
+                }
                 socket?.send(frame.toByteString())
                 micBytesSent += frame.size
             }
