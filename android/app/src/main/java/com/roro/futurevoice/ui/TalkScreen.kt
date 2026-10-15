@@ -1,5 +1,6 @@
 package com.roro.futurevoice.ui
 
+import kotlinx.coroutines.flow.first
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -496,9 +497,37 @@ fun TalkScreen(
         ?.let { it.role == TurnRole.FLUENT_SELF && it.transcript.isEmpty() } == true
     val visibleTurns = if (replyHasNoWordsYet) state.turns.dropLast(1) else state.turns
     var followBottom by remember { mutableStateOf(true) }
+    // Only the LEARNER's own drag decides whether the list follows the end.
+    // Reading it off every scroll stop let the app's own scroll — aimed at a
+    // last index read before the new line was laid out — stop short, look
+    // like "scrolled up", and switch following off for the rest of the call:
+    // from the third turn on the newest line stayed hidden below (founder,
+    // 2026-10-15).
     LaunchedEffect(listState) {
-        androidx.compose.runtime.snapshotFlow { listState.isScrollInProgress }
-            .collect { scrolling -> if (!scrolling) followBottom = !listState.canScrollForward }
+        listState.interactionSource.interactions.collect { i ->
+            when (i) {
+                is androidx.compose.foundation.interaction.DragInteraction.Start -> followBottom = false
+                is androidx.compose.foundation.interaction.DragInteraction.Stop,
+                is androidx.compose.foundation.interaction.DragInteraction.Cancel -> {
+                    // Let the fling settle before judging where it ended.
+                    androidx.compose.runtime.snapshotFlow { listState.isScrollInProgress }
+                        .first { !it }
+                    followBottom = !listState.canScrollForward
+                }
+            }
+        }
+    }
+    // And whenever the content has grown below the viewport after layout —
+    // a new bubble, a longer one — follow it, the stand-in for iOS's bottom
+    // anchor. Measured after layout, so it never aims at a stale index.
+    LaunchedEffect(listState) {
+        androidx.compose.runtime.snapshotFlow { listState.canScrollForward to listState.layoutInfo.totalItemsCount }
+            .collect { (more, _) ->
+                if (more && followBottom && !listState.isScrollInProgress) {
+                    val last = (listState.layoutInfo.totalItemsCount - 1).coerceAtLeast(0)
+                    listState.scrollToItem(last, Int.MAX_VALUE)
+                }
+            }
     }
     // A streaming reply changes its text on every delta. An animated scroll
     // restarted per delta was a second motion on another curve (iOS
@@ -777,7 +806,11 @@ fun TalkScreen(
                     // scrolls on underneath and dissolves into the wash.
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp,
                         bottom = 16.dp + with(LocalDensity.current) { floatingBarHeight.toDp() }),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    // Bubbles stack up from the BOTTOM, as iOS's transcript
+                    // does (bottom anchor); the "starting" line keeps its place
+                    // at the top while nothing has been said.
+                    verticalArrangement = if (state.turns.isEmpty()) Arrangement.spacedBy(12.dp)
+                        else Arrangement.spacedBy(12.dp, Alignment.Bottom),
                 ) {
                     // The first seconds of a call have nothing on them yet: say
                     // what is happening, where the first line will appear (iOS
