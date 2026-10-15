@@ -125,6 +125,14 @@ final class BillingGate: ObservableObject {
         }
     }
 
+    #if DEBUG
+    /// Screenshot captures: an account to draw prices and pools against.
+    func debugSetAccount(_ account: AccountStatus?) {
+        self.account = account
+        fetchedAt = account == nil ? nil : Date().addingTimeInterval(3600 * 24)
+    }
+    #endif
+
     private var isStale: Bool {
         guard let fetchedAt else { return true }
         return Date().timeIntervalSince(fetchedAt) >= Self.freshFor

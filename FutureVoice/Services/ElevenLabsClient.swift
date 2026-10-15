@@ -612,12 +612,27 @@ final class ElevenLabsClient {
         }
     }
 
+    /// One line of a Speech script's voiceover ("Hear it in my voice"). Never
+    /// metered per character: the edge function claims it against the
+    /// reservation `ScriptVoiceoverCenter` made, and the whole voiceover is
+    /// charged once afterwards. Deliberately WITHOUT the plain-synthesis
+    /// fallback `synthesizeWithTimestamps` has — that request would carry no
+    /// key and be metered as an ordinary line.
+    func synthesizeVoiceoverLine(voiceId: String, text: String, voiceoverKey: String,
+                                 index: Int) async throws -> (Data, [WordTiming]) {
+        try await synthesizeWithTimestampsInner(
+            voiceId: voiceId, text: text, modelId: Self.cloneModelId,
+            idempotencyKey: "\(voiceoverKey):\(index)", purpose: "script-voiceover",
+            extraBody: ["voiceover_key": voiceoverKey])
+    }
+
     private func synthesizeWithTimestampsInner(
         voiceId: String,
         text: String,
         modelId: String,
         idempotencyKey: String? = nil,
-        purpose: String? = nil
+        purpose: String? = nil,
+        extraBody: [String: Any] = [:]
     ) async throws -> (Data, [WordTiming]) {
         // A parked voice no longer exists upstream (see `VoiceParking`).
         // Refused here, before the network, with the error every surface
@@ -650,6 +665,7 @@ final class ElevenLabsClient {
         body["speed"] = SpeechSpeed.current.multiplier
         if let purpose { body["purpose"] = purpose }
         if let code = Self.pinnedLanguage(for: text) { body["language_code"] = code }
+        for (k, v) in extraBody { body[k] = v }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
         let (data, response) = try await session.dataWithRetry(for: request)

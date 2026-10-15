@@ -331,14 +331,53 @@ struct SpeechScriptSheet: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var appState: AppState
 
-    init(script: SpeechScript, onEdited: @escaping (SpeechScript) -> Void = { _ in }) {
+    /// Study mode (2026-10-14): the script's expressions, grammar and words
+    /// marked in the text, a note under each paragraph. Remembered across
+    /// scripts — someone who studies keeps studying.
+    @AppStorage("speech.script.study") private var studying = false
+    @State private var study: ScriptStudy?
+    @State private var studyFailed = false
+    @State private var studyLoading = false
+    @State private var card: ScriptStudy.Highlight?
+
+    init(script: SpeechScript, onEdited: @escaping (SpeechScript) -> Void = { _ in },
+         study: ScriptStudy? = nil) {
         _script = State(initialValue: script)
+        _study = State(initialValue: study)
         self.onEdited = onEdited
     }
+
+    private var paragraphs: [String] { ScriptStudy.paragraphs(script.body) }
 
     var body: some View {
         NavigationStack {
             List {
+                // Its own row, not the toolbar (founder, 2026-10-14): a switch
+                // beside the title and Done crowded the header, and in longer
+                // languages the label had nowhere to go.
+                Section {
+                    Toggle(isOn: $studying) {
+                        Label {
+                            // Its own key: the catalog's "Study" is a noun
+                            // (공부, Lernzeit); this is the act (공부하기).
+                            Text(explain(key: "speech.study.toggle", default: "Study"))
+                        } icon: {
+                            Image(systemName: "highlighter")
+                        }
+                    }
+                } footer: {
+                    // Right under the switch, where the eye is: below a long
+                    // script the "Preparing…" row was off screen, and the
+                    // switch read as doing nothing.
+                    if studying {
+                        if study != nil {
+                            Text("Tap for an explanation")
+                        } else {
+                            studyStatus
+                        }
+                    }
+                }
+
                 Section {
                     VStack(alignment: .leading, spacing: 10) {
                         Text(script.title)
@@ -348,13 +387,23 @@ struct SpeechScriptSheet: View {
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
-                        Text(script.body)
-                            .font(.body)
-                            .lineSpacing(4)
-                            .padding(.top, 4)
-                            .textSelection(.enabled)
+                        Group {
+                            if studying, let study {
+                                ScriptStudyText(paragraphs: paragraphs, study: study) { card = $0 }
+                            } else {
+                                Text(script.body)
+                                    .font(.body)
+                                    .lineSpacing(4)
+                                    .textSelection(.enabled)
+                            }
+                        }
+                        .padding(.top, 4)
                     }
                     .padding(.vertical, 6)
+                } header: {
+                    if studying, let study {
+                        ScriptStudyLegend(study: study)
+                    }
                 } footer: {
                     HStack(spacing: 6) {
                         Label(script.genre.title, systemImage: script.genre.symbol)
@@ -362,6 +411,8 @@ struct SpeechScriptSheet: View {
                         Text(SpeechFormat.length(SpeechLibrary.estimatedSeconds(script.body, language: script.language)))
                     }
                 }
+
+                ScriptVoiceoverSection(script: script)
 
                 if !script.keyTerms.isEmpty {
                     Section("Key terms") {
@@ -391,7 +442,9 @@ struct SpeechScriptSheet: View {
                 // changing it would make it a script of your own, which is
                 // the Plus side of the tab.
                 if !script.isBuiltIn && !script.isChallenge {
-                    ToolbarItem(placement: .cancellationAction) {
+                    // Edit on the left, Done alone on the right (founder,
+                    // 2026-10-14).
+                    ToolbarItem(placement: .topBarLeading) {
                         Button("Edit") { editing = true }
                     }
                 }
@@ -403,10 +456,52 @@ struct SpeechScriptSheet: View {
                 SpeechOwnScriptSheet(existing: script) { updated in
                     SpeechStore.shared.add(updated)
                     script = updated
+                    study = nil
                     onEdited(updated)
                 }
                 .environmentObject(appState)
             }
+            .sheet(item: $card) { h in
+                if let study {
+                    ScriptStudyCardSheet(highlight: h, study: study)
+                        .environmentObject(appState)
+                }
+            }
+            .task(id: studyTaskId) { await loadStudy() }
+        }
+    }
+
+    private var studyTaskId: String { "\(studying)|\(script.body.hashValue)" }
+
+    @ViewBuilder private var studyStatus: some View {
+        if studyFailed {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(ScriptStudyEngine.StudyError.empty.localizedDescription)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Button("Try again") { Task { await loadStudy(force: true) } }
+                    .buttonStyle(.bordered)
+            }
+        } else {
+            HStack(spacing: 8) {
+                ProgressView()
+                Text("Preparing study notes…")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func loadStudy(force: Bool = false) async {
+        guard studying, study == nil, !studyLoading || force else { return }
+        studyLoading = true
+        studyFailed = false
+        defer { studyLoading = false }
+        do {
+            study = try await ScriptStudyEngine.study(for: script, native: appState.nativeLanguage,
+                                                      level: appState.proficiency)
+        } catch {
+            if !(error is CancellationError) { studyFailed = true }
         }
     }
 }
@@ -482,6 +577,8 @@ struct SpeechTakeRow: View {
 /// button. Plus and up — the caller checks before presenting.
 struct SpeechComposerSheet: View {
     var onWritten: (SpeechScript) -> Void
+    /// Opens with "Also make it in my voice" on (screenshot captures).
+    var voiceoverOn = false
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
     @AppStorage("speech.composer.genre") private var genreRaw = SpeechGenre.explainer.rawValue
@@ -489,8 +586,14 @@ struct SpeechComposerSheet: View {
     @State private var topic = ""
     @State private var writing = false
     @State private var error: String?
+    /// "Also make it in my voice" — optional, priced before anything is
+    /// written, made right after (`ScriptVoiceoverCenter`).
+    @State private var voiceover = false
+    @State private var wall: TalkWall?
+    @ObservedObject private var gate = BillingGate.shared
 
     private var genre: SpeechGenre { SpeechGenre(rawValue: genreRaw) ?? .explainer }
+    private var quote: Int { ScriptVoiceover.quoteMinutes(targetSeconds: seconds) }
 
     var body: some View {
         NavigationStack {
@@ -530,8 +633,21 @@ struct SpeechComposerSheet: View {
                     }
                     .pickerStyle(.segmented)
                 }
+
+                if appState.voiceCloneId != nil {
+                    Section {
+                        Toggle("Also make it in my voice", isOn: $voiceover)
+                    } footer: {
+                        Text(ScriptVoiceover.priceLine(minutes: quote, account: gate.account))
+                    }
+                }
             }
             .disabled(writing)
+            .talkWall($wall, source: "speech_composer_voiceover")
+            .onAppear {
+                gate.warm()
+                if voiceoverOn { voiceover = true }
+            }
             .navigationTitle("New script")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -568,7 +684,23 @@ struct SpeechComposerSheet: View {
     private func write() {
         writing = true
         let avoid = SpeechStore.shared.scripts.map(\.title)
+        let quoted = quote
+        let voiceId = voiceover ? appState.voiceCloneId : nil
         Task {
+            // The minutes are asked about BEFORE the script is written, so
+            // nobody waits for a script whose voiceover they can't have.
+            if voiceId != nil {
+                if await BillingGate.shared.blocks() {
+                    writing = false
+                    wall = .paywall(tier: nil)
+                    return
+                }
+                if let refused = await ScriptVoiceoverCenter.shared.wall(forMinutes: quoted) {
+                    writing = false
+                    if let w = await TalkWall.resolve(refused) { wall = w } else { error = refused.localizedDescription }
+                    return
+                }
+            }
             do {
                 let script = try await SpeechScriptEngine.write(
                     genre: genre, topic: topic, seconds: seconds,
@@ -578,6 +710,12 @@ struct SpeechComposerSheet: View {
                     "genre": genre.rawValue, "seconds": seconds, "topic": !topic.isEmpty,
                 ])
                 writing = false
+                if let voiceId {
+                    // Made in the background; the Script sheet shows its
+                    // progress, and a failure there is a button to try again.
+                    Task { try? await ScriptVoiceoverCenter.shared.make(script: script, voiceId: voiceId,
+                                                                         quotedMinutes: quoted) }
+                }
                 dismiss()
                 onWritten(script)
             } catch {
@@ -595,11 +733,19 @@ struct SpeechComposerSheet: View {
 struct SpeechOwnScriptSheet: View {
     let existing: SpeechScript?
     var onSave: (SpeechScript) -> Void
+    /// A draft to open with, and the voiceover choice on (screenshot captures).
+    var draft: String? = nil
+    var voiceoverOn = false
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
     @State private var title = ""
     @State private var text = ""
     @FocusState private var bodyFocused: Bool
+    /// "Also make it in my voice", priced live from what is typed.
+    @State private var voiceover = false
+    @State private var wall: TalkWall?
+    @State private var checking = false
+    @ObservedObject private var gate = BillingGate.shared
 
     private var language: String { existing?.language ?? LanguageCatalog.base(appState.targetLanguage) }
     private var trimmed: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -642,7 +788,25 @@ struct SpeechOwnScriptSheet: View {
                         Text("Write it in \(LanguageCatalog.name(language, in: appState.nativeLanguage)).")
                     }
                 }
+
+                // Only once there IS a script: the price is measured from it,
+                // and before a word is typed there is nothing to price
+                // (founder, 2026-10-14 — the length first, then the cost).
+                if appState.voiceCloneId != nil && !trimmed.isEmpty {
+                    Section {
+                        Toggle("Also make it in my voice", isOn: $voiceover)
+                            .disabled(quote > ScriptVoiceover.maxMinutes)
+                    } footer: {
+                        if quote > ScriptVoiceover.maxMinutes {
+                            Text(ScriptVoiceoverCenter.VoiceoverError.tooLong.localizedDescription)
+                        } else {
+                            Text(ScriptVoiceover.priceLine(minutes: quote, account: gate.account))
+                        }
+                    }
+                }
             }
+            .talkWall($wall, source: "speech_own_voiceover")
+            .onAppear { gate.warm() }
             .navigationTitle(existing == nil ? Text("My script") : Text("Edit script"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -650,22 +814,51 @@ struct SpeechOwnScriptSheet: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { save() }
-                        .disabled(trimmed.isEmpty)
+                    Button("Save") { saveTapped() }
+                        .disabled(trimmed.isEmpty || checking)
                 }
             }
             .onAppear {
                 if let existing {
                     title = existing.title
                     text = existing.body
+                } else if let draft {
+                    text = draft
                 } else {
                     bodyFocused = true
                 }
+                if voiceoverOn { voiceover = true }
             }
         }
     }
 
-    private func save() {
+    /// The voiceover's price for what is typed so far — the same function
+    /// the Script sheet's button reads.
+    private var quote: Int {
+        ScriptVoiceover.quoteMinutes(text: trimmed.isEmpty ? " " : trimmed, language: language)
+    }
+
+    private func saveTapped() {
+        guard voiceover, let voiceId = appState.voiceCloneId, quote <= ScriptVoiceover.maxMinutes else {
+            save(); return
+        }
+        let quoted = quote
+        checking = true
+        Task {
+            defer { checking = false }
+            if await BillingGate.shared.blocks() { wall = .paywall(tier: nil); return }
+            if let refused = await ScriptVoiceoverCenter.shared.wall(forMinutes: quoted) {
+                if let w = await TalkWall.resolve(refused) { wall = w }
+                return
+            }
+            let script = save()
+            Task { try? await ScriptVoiceoverCenter.shared.make(script: script, voiceId: voiceId,
+                                                                 quotedMinutes: quoted) }
+        }
+    }
+
+    @discardableResult
+    private func save() -> SpeechScript {
         let givenTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         // Editing keeps what the script already was — an AI script stays an
         // AI script with its summary and sources; only key terms the new text
@@ -689,6 +882,7 @@ struct SpeechOwnScriptSheet: View {
         }
         dismiss()
         onSave(script)
+        return script
     }
 
     /// The first sentence, cut to a title's length.
