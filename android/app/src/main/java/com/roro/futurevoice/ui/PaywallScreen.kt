@@ -320,8 +320,22 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
                                 is PlanChange.Route.PlayChange -> if (activity != null && chosen != null)
                                     billing.changePlan(activity, chosen, currentPlanId, route.replacement,
                                         onNoPurchase = { uri.openUri(PLAY_SUBSCRIPTIONS_URL) })
-                                PlanChange.Route.NewPurchase -> if (activity != null && chosen != null)
-                                    billing.purchase(activity, chosen)
+                                PlanChange.Route.NewPurchase -> if (activity != null && chosen != null) {
+                                    // iOS `paywall_purchase_tapped` + the owner's ping;
+                                    // the result is reported where Play answers.
+                                    val trialFlow = showsTrial && trialDaysOf(chosen.details) > 0
+                                    val facts = BillingService.FlowFacts(plan = chosen.plan.id,
+                                        price = chosen.details.subscriptionOfferDetails?.lastOrNull()
+                                            ?.pricingPhases?.pricingPhaseList?.lastOrNull()?.formattedPrice,
+                                        trial = trialFlow, source = "paywall", step = "plans")
+                                    val props = mapOf("plan" to facts.plan, "trial" to if (trialFlow) "1" else "0",
+                                        "source" to facts.source, "step" to facts.step)
+                                    com.roro.futurevoice.core.Telemetry.log("paywall_purchase_tapped", props)
+                                    com.roro.futurevoice.core.Analytics.capture("paywall_purchase_tapped", props)
+                                    com.roro.futurevoice.core.OwnerPing.paywall(phase = "tapped", plan = facts.plan,
+                                        price = facts.price, trial = trialFlow, source = facts.source, step = facts.step)
+                                    billing.purchase(activity, chosen, facts)
+                                }
                             }
                         }
                     }

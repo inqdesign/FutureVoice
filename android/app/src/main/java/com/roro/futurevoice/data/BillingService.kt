@@ -249,10 +249,28 @@ class BillingService private constructor(context: Context) : PurchasesUpdatedLis
      *  the purchase, never the offer it was bought on. */
     private var pendingTrialDays = 0
 
-    fun purchase(activity: Activity, offer: Offer) {
+    /** The flow in flight, for its result's funnel row and owner ping
+     *  (iOS `paywall_purchase_result` + `OwnerPing`). */
+    data class FlowFacts(val plan: String, val price: String?, val trial: Boolean,
+                         val source: String, val step: String)
+    @Volatile private var flowFacts: FlowFacts? = null
+
+    private fun reportResult(outcome: String) {
+        val f = flowFacts ?: return
+        flowFacts = null
+        val props = mapOf("plan" to f.plan, "trial" to if (f.trial) "1" else "0",
+            "outcome" to outcome, "source" to f.source, "step" to f.step)
+        com.roro.futurevoice.core.Telemetry.log("paywall_purchase_result", props)
+        com.roro.futurevoice.core.Analytics.capture("paywall_purchase_result", props)
+        com.roro.futurevoice.core.OwnerPing.paywall(phase = "result", outcome = outcome, plan = f.plan,
+            price = f.price, trial = f.trial, source = f.source, step = f.step)
+    }
+
+    fun purchase(activity: Activity, offer: Offer, facts: FlowFacts? = null) {
         val userId = auth.userId ?: return
         val offerToken = offer.details.subscriptionOfferDetails?.firstOrNull()?.offerToken ?: return
         pendingTrialDays = trialDays(offer)
+        flowFacts = facts
         val params = BillingFlowParams.newBuilder()
             .setProductDetailsParamsList(listOf(
                 BillingFlowParams.ProductDetailsParams.newBuilder()
@@ -330,6 +348,8 @@ class BillingService private constructor(context: Context) : PurchasesUpdatedLis
 
     override fun onPurchasesUpdated(result: BillingResult, purchases: MutableList<Purchase>?) {
         if (result.responseCode != BillingClient.BillingResponseCode.OK || purchases == null) {
+            reportResult(if (result.responseCode == BillingClient.BillingResponseCode.USER_CANCELED)
+                "cancelled" else "failed")
             // The flow ended without a purchase. Only a pack flow has a state
             // to settle; a cancelled subscription flow changes nothing.
             if (_packState.value == PackState.Purchasing) {
@@ -345,6 +365,7 @@ class BillingService private constructor(context: Context) : PurchasesUpdatedLis
                 continue
             }
             if (purchase.purchaseState != Purchase.PurchaseState.PURCHASED) continue
+            reportResult("purchased")
             // What the account may spend just changed: the gate's cached
             // answer is stale, and a PARKED voice is re-read (iOS invalidate).
             BillingGate.invalidate()
