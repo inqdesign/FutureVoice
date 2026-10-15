@@ -127,6 +127,9 @@ data class TalkUiState(
      * screen reads "paused" instead of wondering what broke.
      */
     val pausedForIdle: Boolean = false,
+    /** Send-to-answer: the learner pressed Send and the gateway has not
+     *  committed the turn yet (it may be waiting on the last final). */
+    val sendPending: Boolean = false,
     /** Set when the call ended with something said — the wrap-up's subject. */
     val endedSessionId: String? = null,
     /** How many of [turns] came from the resumed talk (iOS `isResuming` +
@@ -232,6 +235,10 @@ class TalkViewModel(context: Context) : ViewModel() {
      *  to wait for the next call); the classic path reads the rebuilt prompt
      *  at its next turn. A tutored call is a practice call. */
     private var tutorThisCall = false
+    /** Send-to-answer for this call (iOS `SendToAnswer`); a flip mid-call
+     *  reaches the gateway ([setSendToAnswer]). */
+    private var sendToAnswerOn = false
+    private var sendPendingJob: Job? = null
     /** Tutor mode was on at some point in this call — the whole call is then
      *  a practice call (iOS `tutorWasOn`). Coach mode is judged per line. */
     private var tutorWasOn = false
@@ -316,6 +323,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         coachOn = CoachMode.resolve(CoachMode.choice(appContext), config.level.code)
         tutorThisCall = TutorMode.isOn(appContext)
         tutorWasOn = tutorThisCall
+        sendToAnswerOn = SendToAnswer.resolve(SendToAnswer.choice(appContext), config.level.code)
         promptForTutor = null
         coachPlan = CoachPlan()
         coachSteerSent = ""
@@ -740,6 +748,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             opener = opener,
             history = history,
             native = cfg.nativeLanguage,
+            manualTurns = sendToAnswerOn,
         )
         syncCoachSteer()
     }
@@ -762,9 +771,15 @@ class TalkViewModel(context: Context) : ViewModel() {
                 updateCallNotification(cfg, phase)
             }
         }
-        realtime.onPartial = { text -> _state.update { it.copy(partial = text, level = realtime.level) } }
+        realtime.onPartial = { text ->
+            // An empty partial is also the gateway's "nothing to send".
+            _state.update { it.copy(partial = text, level = realtime.level,
+                sendPending = it.sendPending && text.isNotEmpty()) }
+        }
         realtime.onUserTurn = turn@{ said, wav, ms, fluency, flags ->
             markLearnerSpoke()
+            sendPendingJob?.cancel()
+            _state.update { it.copy(sendPending = false) }
             // The rest of a turn the gateway re-opened after cutting the
             // learner off (iOS 2026-10-08): it joins the bubble it belongs to
             // — one turn, one take, one correction.
@@ -1107,6 +1122,39 @@ class TalkViewModel(context: Context) : ViewModel() {
     }.getOrNull()
 
     /** The one tap: put the call down, or pick it back up. */
+    /** Send-to-answer: the pill while it is the learner's turn (iOS
+     *  `sendModeActive`). The gateway commits what was said. */
+    fun sendHeldTurn() {
+        if (!sendToAnswerOn || _state.value.sendPending || _state.value.partial.isBlank()) return
+        _state.update { it.copy(sendPending = true) }
+        realtime.sendTurn()
+        // Never leave the pill spinning on a gateway that answered nothing.
+        sendPendingJob?.cancel()
+        sendPendingJob = viewModelScope.launch {
+            delay(5000)
+            _state.update { it.copy(sendPending = false) }
+        }
+    }
+
+    /** Send-to-answer: throw this turn away and say it again. */
+    fun discardTurn() {
+        sendPendingJob?.cancel()
+        _state.update { it.copy(sendPending = false, partial = "") }
+        realtime.discardTurn()
+    }
+
+    /** Send-to-answer flipped in the call settings (iOS `onChange(of:
+     *  sendToAnswer)`): reaches a live call at once. */
+    fun setSendToAnswer(on: Boolean) {
+        if (on == sendToAnswerOn) return
+        sendToAnswerOn = on
+        if (!on) { sendPendingJob?.cancel(); _state.update { it.copy(sendPending = false) } }
+        val phase = _state.value.phase
+        if (REALTIME && phase != TalkPhase.IDLE && phase != TalkPhase.ENDED && phase != TalkPhase.PAUSED) {
+            realtime.setManualTurns(on)
+        }
+    }
+
     fun togglePause() {
         if (REALTIME) {
             // Pausing IS hanging up on this path; resuming reconnects with
@@ -1186,7 +1234,11 @@ class TalkViewModel(context: Context) : ViewModel() {
                 // first speaks, and read here it paused the call in the
                 // middle of the opener or of their first answer (iOS `366266a`).
                 if (somethingIsHappening()) { lastActivityAt = System.currentTimeMillis(); continue }
-                if (System.currentTimeMillis() - lastActivityAt < IDLE_PAUSE_SECONDS * 1000L) continue
+                // Send-to-answer with words held: they are composing, not
+                // gone — a longer wait before the call puts itself down.
+                val bar = if (sendToAnswerOn && _state.value.partial.isNotBlank())
+                    IDLE_PAUSE_HOLDING_SECONDS else IDLE_PAUSE_SECONDS
+                if (System.currentTimeMillis() - lastActivityAt < bar * 1000L) continue
                 pauseCall(forIdle = true)
                 return@launch
             }
@@ -1709,7 +1761,8 @@ class TalkViewModel(context: Context) : ViewModel() {
         val now = System.currentTimeMillis()
         val phase = _state.value.phase
         if (REALTIME) return TalkMeter.Companion.Moment(learnerSpoke, phase,
-            realtime = realtime.state, realtimeLevel = realtime.level)
+            realtime = realtime.state, realtimeLevel = realtime.level,
+            sendToAnswer = sendToAnswerOn)
         return TalkMeter.Companion.Moment(learnerSpoke, phase,
             audioPlaying = pcm.isPlaying || mp3.isPlaying,
             voicedAgoMs = live.lastVoicedAtMs?.let { now - it },
@@ -1771,6 +1824,7 @@ class TalkViewModel(context: Context) : ViewModel() {
          * lost the conversation.
          */
         private const val IDLE_PAUSE_SECONDS = 30
+        private const val IDLE_PAUSE_HOLDING_SECONDS = 120
 
         /** Coarse on purpose — the pause lands within a tick of the bar. */
         private const val IDLE_WATCH_TICK_SECONDS = 5

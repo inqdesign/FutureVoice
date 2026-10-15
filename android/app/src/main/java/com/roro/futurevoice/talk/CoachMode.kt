@@ -67,6 +67,40 @@ object CoachMode {
 }
 
 /**
+ * Send-to-answer turns (iOS `SendToAnswer`, 4c6b9ae5): a pause never ends the
+ * learner's turn; the pill does — while it is their turn it IS Send, and the
+ * reset button opposite the settings button throws the turn away. The gateway
+ * holds everything it hears until then (`start.manualTurns`, `send`,
+ * `discard`). Training wheels, not a second kind of call: only who decides
+ * the turn is over changes.
+ *
+ * ON by default for A1 only; the learner's own flip always wins, like
+ * [CoachMode]. Realtime path only.
+ */
+object SendToAnswer {
+    /** Same name as iOS's defaults key. */
+    const val KEY = "futurevoice.call.sendToAnswer"
+
+    fun defaultOn(level: CefrLevel): Boolean = level == CefrLevel.A1
+
+    fun resolve(choice: Boolean?, levelRaw: String?): Boolean =
+        choice ?: defaultOn(CefrLevel.from(levelRaw?.takeIf { it.isNotBlank() } ?: "b1"))
+
+    private fun prefs(context: Context) =
+        context.applicationContext.getSharedPreferences("futurevoice", Context.MODE_PRIVATE)
+
+    fun choice(context: Context): Boolean? =
+        prefs(context).takeIf { it.contains(KEY) }?.getBoolean(KEY, false)
+
+    fun setChoice(context: Context, on: Boolean) = prefs(context).edit().putBoolean(KEY, on).apply()
+
+    fun isOn(context: Context): Boolean {
+        val lang = LanguageScope.active(context)
+        return resolve(choice(context), LanguageScope.level(context, lang, ""))
+    }
+}
+
+/**
  * Tutor mode (iOS `TutorMode`, b3a6d30f + 234e77cf): the call becomes a
  * LESSON. The fluent self leads one practical theme at a time and every turn
  * teaches — their sentence said right if it was wrong, the more natural way if

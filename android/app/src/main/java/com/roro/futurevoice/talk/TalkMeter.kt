@@ -251,6 +251,10 @@ class TalkMeter(
             val voicedAgoMs: Long? = null,
             val heardAgoMs: Long? = null,
             val voicedSeconds: Double = 0.0,
+            /** Send-to-answer (iOS `SendToAnswer`): words held on screen
+             *  while the learner thinks are not someone talking — their
+             *  voice is. */
+            val sendToAnswer: Boolean = false,
         )
 
         const val MIN_VOICED_SECONDS_PER_TURN = 1.5
@@ -268,8 +272,8 @@ class TalkMeter(
             m.realtime?.let { st ->
                 return when (st) {
                     RealtimeTalkClient.State.SPEAKING,
-                    RealtimeTalkClient.State.HEARING,
                     RealtimeTalkClient.State.THINKING -> true
+                    RealtimeTalkClient.State.HEARING -> !m.sendToAnswer || m.realtimeLevel > 0.25f
                     RealtimeTalkClient.State.LISTENING -> m.realtimeLevel > 0.25f
                     else -> false
                 }

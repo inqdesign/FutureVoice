@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.School
+import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -75,6 +76,9 @@ fun CallSettingsSheet(
      *  the next reply. */
     tutorMode: Boolean,
     onTutorMode: (Boolean) -> Unit,
+    /** Send-to-answer (`SendToAnswer`): a pause never ends the turn. */
+    sendToAnswer: Boolean,
+    onSendToAnswer: (Boolean) -> Unit,
     onFlag: (key: String, value: Boolean) -> Unit,
     onSpeedChange: (SpeechSpeed) -> Unit,
     onDismiss: () -> Unit,
@@ -121,6 +125,16 @@ fun CallSettingsSheet(
                 }
             }
             GroupedFooter(stringResource(R.string.cm_coach_mode_footer))
+
+            // Who ends the learner's turn: a pause, or their own Send
+            // (`SendToAnswer`). A flip mid-call reaches the gateway.
+            GroupedSectionSpacer()
+            GroupedCard {
+                ToggleRow(Icons.AutoMirrored.Outlined.Send, stringResource(R.string.answer_with_send), sendToAnswer) {
+                    onSendToAnswer(it)
+                }
+            }
+            GroupedFooter(stringResource(R.string.take_your_time_your_future_self_waits_until_you_press_send))
 
             // Part of the conversation prompt; a flip mid-call sends the
             // gateway the new prompt (`TutorMode`).

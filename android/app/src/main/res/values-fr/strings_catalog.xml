@@ -188,6 +188,7 @@
     <string name="another_you_already_fluent">"Un autre toi.\nDéjà fluide."</string>
     <string name="answer">"Répondre"</string>
     <string name="answer_in">"Langue de réponse"</string>
+    <string name="answer_with_send">"Répondre avec Envoyer"</string>
     <!-- "Answers in your own words count toward your level, sentences built around a word you're studying included. Lines read straight from a suggestion count as practice." -->
     <string name="answers_in_your_own_words_count_toward_your_level_sentences_451d80">"Tes réponses avec tes propres mots comptent pour ton niveau, y compris les phrases construites autour d’un mot que tu apprends. Ce que tu lis tel quel dans une suggestion compte comme entraînement."</string>
     <string name="any">"Libre"</string>
@@ -2013,6 +2014,7 @@
     <string name="source">"Source"</string>
     <string name="sources">"Sources"</string>
     <string name="speak_every_day_and_keep_everything_it_teaches_you">"Parle chaque jour — et garde tout ce que ça t’apprend."</string>
+    <string name="speak_then_tap_to_send">"Parle, puis touche pour envoyer"</string>
     <string name="speak_when_0_hits">"Parle quand ça atteint 0"</string>
     <string name="speaking">"En train de parler…"</string>
     <!-- "Speaking once is easy. Every day is the hard part — so I'll call you. One question a day, answered out loud, and that day is done." -->
@@ -2120,6 +2122,8 @@
     <string name="take_your_airpods_out_before_recording">"Enlève tes AirPods avant d’enregistrer"</string>
     <!-- 'Take your intro out of the pool? Learners who already met your persona keep their own past talks.' -->
     <string name="take_your_intro_out_of_the_pool_learners_who_already_met_you_863b54">"Retirer ta présentation du pool partagé ? Les personnes qui ont déjà rencontré ton personnage gardent leurs propres appels passés."</string>
+    <string name="take_your_time_tap_to_send">"Prends ton temps · touche pour envoyer"</string>
+    <string name="take_your_time_your_future_self_waits_until_you_press_send">"Prends ton temps. Ton moi fluide attend que tu touches Envoyer."</string>
     <string name="takes">"Prises"</string>
     <string name="takes_this_week">"prises cette semaine"</string>
     <string name="talk">"Parler"</string>

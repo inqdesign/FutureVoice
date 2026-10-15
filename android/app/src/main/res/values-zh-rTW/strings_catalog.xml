@@ -188,6 +188,7 @@
     <string name="another_you_already_fluent">"已經很流利的\n另一個你"</string>
     <string name="answer">"接聽"</string>
     <string name="answer_in">"回答語言"</string>
+    <string name="answer_with_send">"按傳送再回答"</string>
     <!-- "Answers in your own words count toward your level, sentences built around a word you're studying included. Lines read straight from a suggestion count as practice." -->
     <string name="answers_in_your_own_words_count_toward_your_level_sentences_451d80">"用自己的話回答會計入你的程度，用正在學的單字造的句子也一樣。照著建議直接唸的句子算作練習。"</string>
     <string name="any">"隨時"</string>
@@ -2016,6 +2017,7 @@
     <string name="source">"來源"</string>
     <string name="sources">"資料來源"</string>
     <string name="speak_every_day_and_keep_everything_it_teaches_you">"每天開口說，把學到的全部留下來。"</string>
+    <string name="speak_then_tap_to_send">"說完再點一下傳送"</string>
     <string name="speak_when_0_hits">"數到0就開口"</string>
     <string name="speaking">"說話中…"</string>
     <!-- "Speaking once is easy. Every day is the hard part — so I'll call you. One question a day, answered out loud, and that day is done." -->
@@ -2123,6 +2125,8 @@
     <string name="take_your_airpods_out_before_recording">"錄音前請先拿下 AirPods"</string>
     <!-- 'Take your intro out of the pool? Learners who already met your persona keep their own past talks.' -->
     <string name="take_your_intro_out_of_the_pool_learners_who_already_met_you_863b54">"要把自我介紹從人物池撤下嗎？已經和你的角色聊過的學習者，會保留他們自己的過往通話。"</string>
+    <string name="take_your_time_tap_to_send">"慢慢說 · 說完點一下傳送"</string>
+    <string name="take_your_time_your_future_self_waits_until_you_press_send">"慢慢說沒關係。按下傳送之前，流利的自己會一直等你。"</string>
     <string name="takes">"版本"</string>
     <string name="takes_this_week">"本週次數"</string>
     <string name="talk">"對話"</string>

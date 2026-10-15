@@ -390,6 +390,8 @@ class RealtimeTalkClient(private val context: Context) {
         history: List<Pair<String, String>>,
         /** The learner's own language (iOS sends `LanguageCatalog.currentNative`). */
         native: String? = null,
+        /** Send-to-answer (`SendToAnswer`): a pause never ends the turn. */
+        manualTurns: Boolean = false,
     ) {
         if (state != State.IDLE && state != State.FAILED) return
         tornDown = false
@@ -411,6 +413,8 @@ class RealtimeTalkClient(private val context: Context) {
             // The learner's own language: a line they say in it is kept as
             // said and answered as such. An older gateway ignores it.
             native?.takeIf { it.isNotBlank() }?.let { put("native", it) }
+            // Send-to-answer: an older gateway ignores it and ends turns by pauses.
+            if (manualTurns) put("manualTurns", true)
             opener?.takeIf { it.isNotBlank() }?.let { put("opener", it) }
             if (history.isNotEmpty()) {
                 put("history", buildJsonArray {
@@ -512,6 +516,29 @@ class RealtimeTalkClient(private val context: Context) {
             put("system", kotlinx.serialization.json.JsonPrimitive(system))
         }
         runCatching { socket?.send(body.toString()) }
+    }
+
+    /** Send-to-answer: what has been said is the turn — answer it. The
+     *  gateway waits at most a beat for the last words to be finalized. */
+    fun sendTurn() {
+        if (tornDown) return
+        runCatching { socket?.send("""{"type":"send"}""") }
+    }
+
+    /** Send-to-answer: throw this turn away and start it again. */
+    fun discardTurn() {
+        if (tornDown) return
+        runCatching { socket?.send("""{"type":"discard"}""") }
+        userPCM.reset()
+        onPartial?.invoke("")
+        if (state == State.HEARING) state = State.LISTENING
+    }
+
+    /** Send-to-answer switched mid-call; off with words held, the gateway
+     *  commits them by the usual pause rule. */
+    fun setManualTurns(on: Boolean) {
+        if (tornDown) return
+        runCatching { socket?.send("""{"type":"set","manualTurns":$on}""") }
     }
 
     fun hangUp() {

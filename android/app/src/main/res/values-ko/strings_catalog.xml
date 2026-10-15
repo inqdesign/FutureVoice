@@ -188,6 +188,7 @@
     <string name="another_you_already_fluent">"이미 유창한\n또 하나의 나"</string>
     <string name="answer">"받기"</string>
     <string name="answer_in">"답변 언어"</string>
+    <string name="answer_with_send">"보내기로 답하기"</string>
     <!-- "Answers in your own words count toward your level, sentences built around a word you're studying included. Lines read straight from a suggestion count as practice." -->
     <string name="answers_in_your_own_words_count_toward_your_level_sentences_451d80">"내 말로 한 대답은 레벨에 반영돼요. 공부 중인 단어로 만든 문장도 마찬가지예요. 제안 문장을 그대로 읽은 부분만 연습으로 쳐요."</string>
     <string name="any">"언제든"</string>
@@ -2017,6 +2018,7 @@
     <string name="source">"출처"</string>
     <string name="sources">"출처"</string>
     <string name="speak_every_day_and_keep_everything_it_teaches_you">"매일 말하고, 거기서 배운 건 전부 남겨두세요."</string>
+    <string name="speak_then_tap_to_send">"말하고 나서 눌러서 보내기"</string>
     <string name="speak_when_0_hits">"0이 되면 말하세요"</string>
     <string name="speaking">"말하는 중…"</string>
     <!-- "Speaking once is easy. Every day is the hard part — so I'll call you. One question a day, answered out loud, and that day is done." -->
@@ -2124,6 +2126,8 @@
     <string name="take_your_airpods_out_before_recording">"녹음 전에 에어팟을 빼 주세요"</string>
     <!-- 'Take your intro out of the pool? Learners who already met your persona keep their own past talks.' -->
     <string name="take_your_intro_out_of_the_pool_learners_who_already_met_you_863b54">"소개를 풀에서 내릴까요? 이미 내 페르소나를 만난 학습자의 지난 대화는 그 사람에게 남아 있어요."</string>
+    <string name="take_your_time_tap_to_send">"천천히 · 다 말하면 눌러서 보내기"</string>
+    <string name="take_your_time_your_future_self_waits_until_you_press_send">"천천히 말해도 돼요. 보내기를 누를 때까지 유창해진 내가 기다려요."</string>
     <string name="takes">"테이크"</string>
     <string name="takes_this_week">"이번 주 녹음"</string>
     <string name="talk">"대화"</string>

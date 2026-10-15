@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.produceState
 import androidx.compose.material.icons.filled.Close
@@ -371,6 +373,11 @@ fun TalkScreen(
     }
     // Tutor mode: a flip mid-call reaches the live call (`TutorMode`).
     var tutorMode by remember { mutableStateOf(com.roro.futurevoice.talk.TutorMode.isOn(context)) }
+    // Send-to-answer: the learner's flip, else on for A1 (`SendToAnswer.resolve`).
+    var sendToAnswer by remember {
+        mutableStateOf(com.roro.futurevoice.talk.SendToAnswer.resolve(
+            com.roro.futurevoice.talk.SendToAnswer.choice(context), level.code))
+    }
     if (showingCallSettings) {
         CallSettingsSheet(
             showsTranscript = showsTranscript, showsCorrections = showsCorrections,
@@ -381,6 +388,12 @@ fun TalkScreen(
                 com.roro.futurevoice.talk.TutorMode.set(context, it)
                 tutorMode = it
                 vm.setTutorMode(it)
+            },
+            sendToAnswer = sendToAnswer,
+            onSendToAnswer = {
+                com.roro.futurevoice.talk.SendToAnswer.setChoice(context, it)
+                sendToAnswer = it
+                vm.setSendToAnswer(it)
             },
             onCoachMode = {
                 com.roro.futurevoice.talk.CoachMode.setChoice(context, it)
@@ -1010,6 +1023,11 @@ fun TalkScreen(
                                         onTap = { if (!state.coachStale) openGoal = hint })
                                 }
                             }
+                            // Send-to-answer and it is the learner's turn: the
+                            // pill IS Send (iOS `sendModeActive`).
+                            val sendMode = sendToAnswer && onCall &&
+                                (state.phase == TalkPhase.LISTENING || state.sendPending)
+                            val hasHeldWords = state.partial.isNotBlank()
                             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                             // Quiet on purpose: the one primary action here is the pill.
                             IconButton(onClick = { showingCallSettings = true },
@@ -1024,7 +1042,14 @@ fun TalkScreen(
                                     .onGloballyPositioned {
                                         TalkMorph.pillRect = it.boundsInWindow(); TalkMorph.pillPresent = true }
                                     .clip(CircleShape)
-                                    .clickable { vm.togglePause() },
+                                    .clickable {
+                                        if (sendMode) {
+                                            if (hasHeldWords && !state.sendPending) {
+                                                HapticEngine.selection(context)
+                                                vm.sendHeldTurn()
+                                            }
+                                        } else vm.togglePause()
+                                    },
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Futureself(
@@ -1045,6 +1070,17 @@ fun TalkScreen(
                                 // line of its own.
                                 // Only while it matters (iOS: ≤10 min), and orange
                                 // in the last three — the one moment a figure helps.
+                                if (sendMode) {
+                                    if (state.sendPending) {
+                                        CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.5.dp,
+                                            color = MaterialTheme.colorScheme.onSurface)
+                                    } else {
+                                        Icon(Icons.AutoMirrored.Filled.Send,
+                                            contentDescription = stringResource(R.string.send),
+                                            tint = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.size(24.dp).alpha(if (hasHeldWords) 1f else 0.3f))
+                                    }
+                                } else
                                 state.minutesRemaining?.takeIf { it <= 10 }?.let { minutes ->
                                     Text(
                                         stringResource(R.string.lld_min_left, minutes),
@@ -1054,10 +1090,26 @@ fun TalkScreen(
                                     )
                                 }
                             }
+                            // Send-to-answer's reset, mirroring the settings
+                            // button. Held in place (hidden, not removed) for
+                            // the whole call so nothing shifts when the turn
+                            // changes hands.
+                            if (sendToAnswer && onCall) {
+                                val canClear = sendMode && hasHeldWords && !state.sendPending
+                                IconButton(onClick = { vm.discardTurn() }, enabled = canClear,
+                                    modifier = Modifier.align(Alignment.CenterEnd).padding(end = 16.dp)
+                                        .alpha(if (!sendMode) 0f else if (canClear) 1f else 0.4f)) {
+                                    Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.clear),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
                             }
                             // The phase, quietly, where the hand is.
                             Text(
-                                phaseHint(state.phase, paused, state.pausedForIdle),
+                                if (sendToAnswer && onCall && state.phase == TalkPhase.LISTENING && !paused)
+                                    stringResource(if (state.partial.isNotBlank()) R.string.take_your_time_tap_to_send
+                                        else R.string.speak_then_tap_to_send)
+                                else phaseHint(state.phase, paused, state.pausedForIdle),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

@@ -188,6 +188,7 @@
     <string name="another_you_already_fluent">"Otro tú.\nYa fluido."</string>
     <string name="answer">"Contestar"</string>
     <string name="answer_in">"Idioma de respuesta"</string>
+    <string name="answer_with_send">"Responder con Enviar"</string>
     <!-- "Answers in your own words count toward your level, sentences built around a word you're studying included. Lines read straight from a suggestion count as practice." -->
     <string name="answers_in_your_own_words_count_toward_your_level_sentences_451d80">"Lo que respondes con tus propias palabras cuenta para tu nivel, también las frases con una palabra que estás estudiando. Lo que lees tal cual de una sugerencia cuenta como práctica."</string>
     <string name="any">"Libre"</string>
@@ -2013,6 +2014,7 @@
     <string name="source">"Fuente"</string>
     <string name="sources">"Fuentes"</string>
     <string name="speak_every_day_and_keep_everything_it_teaches_you">"Habla cada día y quédate con todo lo que aprendas."</string>
+    <string name="speak_then_tap_to_send">"Habla y luego toca para enviar"</string>
     <string name="speak_when_0_hits">"Habla cuando llegue a 0"</string>
     <string name="speaking">"Hablando…"</string>
     <!-- "Speaking once is easy. Every day is the hard part — so I'll call you. One question a day, answered out loud, and that day is done." -->
@@ -2120,6 +2122,8 @@
     <string name="take_your_airpods_out_before_recording">"Quítate los AirPods antes de grabar"</string>
     <!-- 'Take your intro out of the pool? Learners who already met your persona keep their own past talks.' -->
     <string name="take_your_intro_out_of_the_pool_learners_who_already_met_you_863b54">"¿Quitar tu presentación del grupo compartido? Quienes ya conocieron tu personaje conservan sus propias llamadas anteriores."</string>
+    <string name="take_your_time_tap_to_send">"Sin prisa · toca para enviar"</string>
+    <string name="take_your_time_your_future_self_waits_until_you_press_send">"Tómate tu tiempo. Tu yo fluido espera hasta que toques Enviar."</string>
     <string name="takes">"Tomas"</string>
     <string name="takes_this_week">"grabaciones esta semana"</string>
     <string name="talk">"Hablar"</string>

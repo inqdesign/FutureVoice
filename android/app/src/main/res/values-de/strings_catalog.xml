@@ -188,6 +188,7 @@
     <string name="another_you_already_fluent">"Ein zweites Ich.\nSchon fließend."</string>
     <string name="answer">"Annehmen"</string>
     <string name="answer_in">"Antworten auf"</string>
+    <string name="answer_with_send">"Mit Senden antworten"</string>
     <!-- "Answers in your own words count toward your level, sentences built around a word you're studying included. Lines read straight from a suggestion count as practice." -->
     <string name="answers_in_your_own_words_count_toward_your_level_sentences_451d80">"Deine eigenen Antworten zählen für dein Niveau, auch Sätze mit einem Wort, das du gerade lernst. Was du direkt vom Vorschlag abliest, zählt als Übung."</string>
     <string name="any">"Frei"</string>
@@ -2012,6 +2013,7 @@
     <string name="source">"Quelle"</string>
     <string name="sources">"Quellen"</string>
     <string name="speak_every_day_and_keep_everything_it_teaches_you">"Sprich jeden Tag und behalte alles, was du dabei lernst."</string>
+    <string name="speak_then_tap_to_send">"Sprich, dann tippen zum Senden"</string>
     <string name="speak_when_0_hits">"Sprich bei 0"</string>
     <string name="speaking">"Spricht…"</string>
     <!-- "Speaking once is easy. Every day is the hard part — so I'll call you. One question a day, answered out loud, and that day is done." -->
@@ -2119,6 +2121,8 @@
     <string name="take_your_airpods_out_before_recording">"Nimm die AirPods vor der Aufnahme heraus"</string>
     <!-- 'Take your intro out of the pool? Learners who already met your persona keep their own past talks.' -->
     <string name="take_your_intro_out_of_the_pool_learners_who_already_met_you_863b54">"Vorstellung aus dem Pool nehmen? Wer dein Persona schon getroffen hat, behält die eigenen bisherigen Gespräche."</string>
+    <string name="take_your_time_tap_to_send">"Lass dir Zeit · tippen zum Senden"</string>
+    <string name="take_your_time_your_future_self_waits_until_you_press_send">"Lass dir Zeit. Dein fließendes Ich wartet, bis du auf Senden tippst."</string>
     <string name="takes">"Aufnahmen"</string>
     <string name="takes_this_week">"Aufnahmen diese Woche"</string>
     <string name="talk">"Sprechen"</string>
