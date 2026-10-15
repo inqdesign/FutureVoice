@@ -1,2 +1,6 @@
+Novedades
+• Activa Estudiar en un guion de discurso y verás explicadas la gramática y las expresiones, con cada párrafo traducido a tu idioma.
+• Crea un audio de tu guion leído con tu propia voz.
+
 Correcciones
 • Corregimos pequeños errores y la app funciona de forma más estable.

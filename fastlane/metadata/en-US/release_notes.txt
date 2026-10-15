@@ -1,2 +1,6 @@
+New
+• Turn on Study in a speech script to see its grammar and expressions explained, with each paragraph translated into your language.
+• Make an audio version of your script read in your own voice.
+
 Fixed
 • Minor bug fixes and stability improvements.

@@ -1,2 +1,6 @@
+Neu
+• Schalte bei einem Redetext „Lernen“ ein: Grammatik und Wendungen werden erklärt, und jeder Absatz steht übersetzt in deiner Sprache daneben.
+• Lass dir deinen Text in deiner eigenen Stimme vorlesen und hör ihn dir an.
+
 Behoben
 • Kleinere Fehler behoben, alles läuft jetzt stabiler.

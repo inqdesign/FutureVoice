@@ -1,2 +1,6 @@
+Nouveautés
+• Active Étudier sur un texte de discours : la grammaire et les expressions sont expliquées, et chaque paragraphe est traduit dans ta langue.
+• Crée un audio de ton texte lu avec ta propre voix.
+
 Corrections
 • Petits bugs corrigés, l’app est plus stable.
