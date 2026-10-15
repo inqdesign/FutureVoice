@@ -1701,7 +1701,7 @@ struct ShadowDrillView: View {
         }
         #endif
         guard let voiceId = appState.voiceCloneId else {
-            self.error = "No voice clone yet — record yours under Me → Re-record voice."
+            self.error = explain("No voice clone yet — record yours under Me → Re-record voice.")
             return
         }
 
@@ -1781,8 +1781,8 @@ struct ShadowDrillView: View {
             outOfCredits = error.isOutOfCredits
             phase = .idle
             self.error = outOfCredits
-                ? "You're out of credits — synthesizing this line needs a top-up."
-                : "Couldn't load audio for this line: \(error.localizedDescription)"
+                ? explain("You're out of credits — synthesizing this line needs a top-up.")
+                : explain("Couldn't load audio for this line: \(error.localizedDescription)")
         }
     }
 

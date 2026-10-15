@@ -1262,7 +1262,7 @@ struct ConversationView: View {
             // time — a visible meter is exactly the anxiety the minutes model
             // removed. The clock joins the subtitle for the last stretch so
             // the wall never lands as a surprise.
-            LevelHeaderTitle(title: topic.isEmpty ? "Let's talk" : topic,
+            LevelHeaderTitle(title: topic.isEmpty ? explain("Let's talk") : topic,
                              level: appState.proficiency,
                              surface: .talk,
                              minutesLeft: meter.minutesRemaining.flatMap { $0 <= 10 ? $0 : nil },
@@ -1757,13 +1757,13 @@ struct ConversationView: View {
         if phoneCallActive {
             switch phase {
             case .listening: return explain("Listening — tap to hang up")
-            case .thinking:  return "Thinking"
+            case .thinking:  return explain("Thinking")
             case .speaking:  return explain("Future self speaking — tap to hang up")
-            case .idle:      return "Hang up"
+            case .idle:      return explain("Hang up")
             }
         }
         if isPausedForIdle { return explain("Call paused — tap to pick it back up") }
-        return turns.isEmpty ? "Start phone-call mode" : "Resume phone-call mode"
+        return turns.isEmpty ? explain("Start phone-call mode") : explain("Resume phone-call mode")
     }
 
     /// Where a scenario call takes place and who the other side is, for the
@@ -1828,7 +1828,7 @@ struct ConversationView: View {
         // identical to one the learner stopped on purpose, and the only clue
         // that three minutes passed is that nothing is happening.
         if isPausedForIdle { return explain("Paused — tap to pick it back up") }
-        return turns.isEmpty ? "Tap to start a phone-call" : "Tap to continue"
+        return turns.isEmpty ? explain("Tap to start a phone-call") : explain("Tap to continue")
     }
 
     // MARK: - Bindings
@@ -4684,7 +4684,7 @@ private struct TurnView: View {
 
     var body: some View {
         DialogueLine(speaker: speaker,
-                     name: turn.role == .user ? "You" : "Future self",
+                     name: turn.role == .user ? chrome("You") : chrome("Future self"),
                      scale: .call) {
             // The learner's line goes up the instant they stop talking — it is
             // the text they were already watching build on screen, so there is
@@ -4931,7 +4931,7 @@ private struct PartialTurnView: View {
     /// The in-progress user line — same slot and fill as the finished turn it
     /// becomes, so nothing jumps sideways when the final transcript lands.
     var body: some View {
-        DialogueLine(speaker: .user, name: "You", scale: .call) {
+        DialogueLine(speaker: .user, name: chrome("You"), scale: .call) {
             Text(text.isEmpty ? "Listening…" : text)
                 .foregroundStyle(.secondary)
                 .italic(text.isEmpty)
@@ -5100,7 +5100,7 @@ private struct TopicPickerSheet: View {
             suggestions = fresh
             appState.updateTopicSuggestions(fresh)
         } catch {
-            self.error = "Couldn't fetch topics: \(error.localizedDescription)"
+            self.error = explain("Couldn't fetch topics: \(error.localizedDescription)")
         }
     }
 }

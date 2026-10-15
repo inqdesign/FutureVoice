@@ -11,9 +11,9 @@ struct AudioSampleQuality {
 
         var label: String {
             switch self {
-            case .good: return "Great sample"
-            case .okay: return "Usable — could be better"
-            case .poor: return "Re-record recommended"
+            case .good: return explain("Great sample")
+            case .okay: return explain("Usable — could be better")
+            case .poor: return explain("Re-record recommended")
             }
         }
         /// SF Symbol + semantic tint for the summary row.

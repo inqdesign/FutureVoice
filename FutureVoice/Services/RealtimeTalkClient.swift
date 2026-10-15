@@ -2785,7 +2785,7 @@ enum RealtimeError: LocalizedError {
     case audioUnavailable
     var errorDescription: String? {
         switch self {
-        case .audioUnavailable: return "Couldn't open the microphone."
+        case .audioUnavailable: return explain("Couldn't open the microphone.")
         }
     }
 }

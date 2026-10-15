@@ -913,7 +913,7 @@ struct ScenarioComposerSheet: View {
             // tap away. Typing is language-agnostic regardless.
             SpeakOrTypeField(text: $situation,
                              locale: $dictationLocale,
-                             placeholder: "Describe the scenario — or tap the mic and say it",
+                             placeholder: explain("Describe the scenario — or tap the mic and say it"),
                              showsLocalePicker: true,
                              lineRange: 2...6,
                              externalFocus: $situationFocused,
@@ -988,7 +988,7 @@ struct ScenarioComposerSheet: View {
                     } label: {
                         HStack(spacing: 5) {
                             if let icon = crumb.icon { glyph(icon, font: .caption2) }
-                            Text(crumb.label).font(.subheadline.weight(.medium)).lineLimit(1)
+                            Text(explain(String.LocalizationValue(crumb.label))).font(.subheadline.weight(.medium)).lineLimit(1)
                         }
                         .padding(.horizontal, 11).padding(.vertical, 6)
                         .background(Capsule().fill(i == path.count - 1
@@ -1031,7 +1031,7 @@ struct ScenarioComposerSheet: View {
                 ForEach(allCategories) { c in
                     choiceCard(title: c.title, icon: c.icon) { pickCategory(c) }
                 }
-                choiceCard(title: "Custom", icon: "plus") {
+                choiceCard(title: explain("Custom"), icon: "plus") {
                     withAnimation { addingCustom.toggle() }
                 }
             }
@@ -1106,7 +1106,10 @@ struct ScenarioComposerSheet: View {
         Button(action: action) {
             HStack(spacing: 8) {
                 if let icon { glyph(icon, font: .subheadline).foregroundStyle(.tint) }
-                Text(title)
+                // A preset category's title is its English KEY (it is stored on
+                // the scenario); anything else (a model's idea, a custom
+                // category) isn't in the catalog and comes back as written.
+                Text(explain(String.LocalizationValue(title)))
                     .font(.subheadline)
                     .multilineTextAlignment(.leading)
                     .lineLimit(2)
@@ -1386,7 +1389,7 @@ struct ScenarioComposerSheet: View {
                 withAnimation(.easeOut(duration: 0.2)) { options = result }
             }
         } catch {
-            optionsError = "Couldn't fetch ideas — type your own, or tap More to retry."
+            optionsError = explain("Couldn't fetch ideas — type your own, or tap More to retry.")
         }
     }
 

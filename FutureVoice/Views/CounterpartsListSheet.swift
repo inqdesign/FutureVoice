@@ -368,7 +368,7 @@ struct VoicePresetPickerView: View {
                 playingId = nil
             }
         } catch {
-            self.error = "Couldn't play the sample. Check your connection."
+            self.error = explain("Couldn't play the sample. Check your connection.")
             playingId = nil
         }
     }

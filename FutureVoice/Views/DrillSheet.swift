@@ -939,7 +939,7 @@ private extension DrillView {
     static var onCardSecondary: Color { .white.opacity(0.72) }
 
     @ViewBuilder
-    func pillButton(systemImage: String?, text: String, showSpinner: Bool = false, action: @escaping () -> Void) -> some View {
+    func pillButton(systemImage: String?, text: LocalizedStringKey, showSpinner: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 5) {
                 if showSpinner {

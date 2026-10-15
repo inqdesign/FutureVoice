@@ -243,7 +243,7 @@ struct ScenarioDetailView: View {
                     // card's I-know-it lands on the record mastery reads.
                     wordSheet = WordRef(value: VocabStore.lookupKey(for: item.text))
                 }
-                pageFooter("Tap a word for its card — meaning, pronunciation, your sentences. It's mastered once you use it in a talk or mark it known.")
+                pageFooter(explain("Tap a word for its card — meaning, pronunciation, your sentences. It's mastered once you use it in a talk or mark it known."))
             }
         case .expressions:
             if let c = s.curriculum {
@@ -251,7 +251,7 @@ struct ScenarioDetailView: View {
                 itemRows(c.expressions, showExample: true) { item in
                     expressionSheet = WordRef(value: item.text)
                 }
-                pageFooter("Tap an expression for its card. It's mastered once you actually use it in a talk.")
+                pageFooter(explain("Tap an expression for its card. It's mastered once you actually use it in a talk."))
             }
         case .shadow:
             if let c = s.curriculum {

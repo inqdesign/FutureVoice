@@ -460,7 +460,7 @@ struct PracticeTab: View {
         case .watch:
             shelfPage {
                 scenarioShelf(watchBooks, archived: archivedWatchBooks,
-                              emptyText: "Watch a situation or a news story on Home — it becomes a book here: a scene to watch, words and lines to master.")
+                              emptyText: explain("Watch a situation or a news story on Home — it becomes a book here: a scene to watch, words and lines to master."))
             }
         case .finished:
             shelfPage { finishedShelf }
@@ -813,7 +813,7 @@ struct PracticeTab: View {
                     .fill(Color(.secondarySystemGroupedBackground)))
             }
             if books.isEmpty {
-                shelfHint("Nothing here yet. Have a talk or watch a scene on Home — the material it generates becomes books here; open one and master your first word or line.")
+                shelfHint(explain("Nothing here yet. Have a talk or watch a scene on Home — the material it generates becomes books here; open one and master your first word or line."))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1043,7 +1043,7 @@ struct PracticeTab: View {
     @ViewBuilder
     private var talksShelf: some View {
         if talks.isEmpty && archivedTalks.isEmpty {
-            shelfHint("Finish a talk and it lands here as a book — replay it, pick up its words, shadow the smoother versions of your own lines.")
+            shelfHint(explain("Finish a talk and it lands here as a book — replay it, pick up its words, shadow the smoother versions of your own lines."))
         } else {
             LazyVGrid(columns: columns, spacing: 14) {
                 ForEach(talks) { session in

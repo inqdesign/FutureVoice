@@ -44,8 +44,8 @@ struct PersonaDeepenSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     IntakeStepHeader(
-                        question: "Make me sound more like you",
-                        detail: "The more I know your life, the more real every talk feels. Just talk — your native language is fine.")
+                        question: explain("Make me sound more like you"),
+                        detail: explain("The more I know your life, the more real every talk feels. Just talk — your native language is fine."))
 
                     HStack {
                         Text("Answer in")
@@ -65,20 +65,20 @@ struct PersonaDeepenSheet: View {
                         .frame(width: 170)
                     }
 
-                    field(title: "What do you do?",
+                    field(title: explain("What do you do?"),
                           text: $occupation,
                           usedVoice: $workVoiced,
-                          placeholder: "Work, study, or your main project — what a typical day looks like")
+                          placeholder: explain("Work, study, or your main project — what a typical day looks like"))
 
-                    field(title: "Who's in your daily life?",
+                    field(title: explain("Who's in your daily life?"),
                           text: $household,
                           usedVoice: $peopleVoiced,
-                          placeholder: "Who you live with, kids, pets — people you end up talking about")
+                          placeholder: explain("Who you live with, kids, pets — people you end up talking about"))
 
-                    field(title: "Anything else?",
+                    field(title: explain("Anything else?"),
                           text: $freeNotes,
                           usedVoice: $extrasVoiced,
-                          placeholder: "Quirks, goals, pet peeves — whatever helps me sound like you")
+                          placeholder: explain("Quirks, goals, pet peeves — whatever helps me sound like you"))
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 16)

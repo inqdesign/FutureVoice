@@ -68,9 +68,9 @@ struct PracticeSessionView: View {
     }
 
     private var stageTitle: String {
-        if stage == 0 { return "Review" }
-        if isDone { return saidSomething ? "Session done" : "Nothing said" }
-        return shadowPicks.count > 1 ? "Shadow \(stage) of \(shadowPicks.count)" : "Shadow"
+        if stage == 0 { return explain("Review") }
+        if isDone { return saidSomething ? explain("Session done") : explain("Nothing said") }
+        return shadowPicks.count > 1 ? explain("Shadow \(stage) of \(shadowPicks.count)") : explain("Shadow")
     }
 
     // MARK: - Shadow stage

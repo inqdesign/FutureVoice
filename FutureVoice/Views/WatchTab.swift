@@ -849,7 +849,7 @@ struct WatchTab: View {
         s.isMeeting = true
         s.category = Self.meetingCategory
         s.categoryIcon = "person.2.wave.2"
-        s.summary = "Free talk with \(person.name)"
+        s.summary = explain("Free talk with \(person.name)")
         appState.saveScenario(s)
         return s
     }

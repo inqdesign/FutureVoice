@@ -50,10 +50,10 @@ struct CounterpartVoiceIntakeView: View {
     /// so it rides along to the form and is saved with them.
     @State private var photo: UIImage?
 
-    private static let stylePresets = [
-        "Direct", "Playful", "Sarcastic", "Formal", "Warm",
-        "Talkative", "Quiet", "Blunt", "Fast talker", "Careful"
-    ]
+    private static var stylePresets: [String] { [
+        explain("Direct"), explain("Playful"), explain("Sarcastic"), explain("Formal"), explain("Warm"),
+        explain("Talkative"), explain("Quiet"), explain("Blunt"), explain("Fast talker"), explain("Careful")
+    ] }
 
     var body: some View {
         NavigationStack {
@@ -152,8 +152,8 @@ struct CounterpartVoiceIntakeView: View {
     private var whoStep: some View {
         VStack(alignment: .leading, spacing: 20) {
             IntakeStepHeader(
-                question: "Who are we adding?",
-                detail: "Someone you actually talk to — dialogues get simulated with them, in their manner.")
+                question: explain("Who are we adding?"),
+                detail: explain("Someone you actually talk to — dialogues get simulated with them, in their manner."))
             // Their face, optional. Photo library, camera, or a file; saved
             // small and square with the person, never sent anywhere.
             VStack(spacing: 8) {
@@ -185,8 +185,8 @@ struct CounterpartVoiceIntakeView: View {
     private var relationshipStep: some View {
         VStack(alignment: .leading, spacing: 20) {
             IntakeStepHeader(
-                question: "Who are they to you?",
-                detail: "This shapes what I ask next — a manager and a best friend live in different worlds.")
+                question: explain("Who are they to you?"),
+                detail: explain("This shapes what I ask next — a manager and a best friend live in different worlds."))
             VStack(alignment: .leading, spacing: 10) {
                 let columns = [GridItem(.adaptive(minimum: 110), spacing: 8)]
                 LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
@@ -194,7 +194,7 @@ struct CounterpartVoiceIntakeView: View {
                         Button {
                             kind = k
                         } label: {
-                            IntakeChipLabel(text: k.rawValue, isOn: kind == k)
+                            IntakeChipLabel(text: k.title, isOn: kind == k)
                         }
                         .buttonStyle(.plain)
                     }
@@ -286,15 +286,15 @@ struct CounterpartVoiceIntakeView: View {
             SpeakOrTypeField(
                 text: $narrativeAnswers[index],
                 locale: $locale,
-                placeholder: "Anything more? Type — or tap the mic and talk.")
+                placeholder: explain("Anything more? Type — or tap the mic and talk."))
         }
     }
 
     private var interestsStep: some View {
         VStack(alignment: .leading, spacing: 20) {
             IntakeStepHeader(
-                question: name.isEmpty ? "What are they into?" : "What's \(name) into?",
-                detail: "Tap what fits — these become what you two talk about.")
+                question: name.isEmpty ? explain("What are they into?") : explain("What's \(name) into?"),
+                detail: explain("Tap what fits — these become what you two talk about."))
             ChipPickerField(
                 presets: PersonaOnboardingView.interestPresets,
                 selection: $interests)
@@ -304,8 +304,10 @@ struct CounterpartVoiceIntakeView: View {
     private var styleStep: some View {
         VStack(alignment: .leading, spacing: 20) {
             IntakeStepHeader(
-                question: name.isEmpty ? "How do they talk?" : "How does \(name) talk?",
-                detail: "Tap what fits — the simulated \(name.isEmpty ? "person" : name) should sound like the real one.")
+                question: name.isEmpty ? explain("How do they talk?") : explain("How does \(name) talk?"),
+                detail: name.isEmpty
+                    ? explain("Tap what fits — the simulated person should sound like the real one.")
+                    : explain("Tap what fits — the simulated \(name) should sound like the real one."))
             ChipPickerField(
                 presets: Self.stylePresets,
                 selection: $styleTraits,
@@ -373,7 +375,7 @@ struct CounterpartVoiceIntakeView: View {
         if kind == .publicFigure {
             var draft = Counterpart.empty
             draft.name = name
-            draft.relationship = kindDetail.isEmpty ? RelationshipKind.publicFigure.rawValue : kindDetail
+            draft.relationship = kindDetail.isEmpty ? RelationshipKind.publicFigure.title : kindDetail
             draft.relationshipKind = RelationshipKind.publicFigure.rawValue
             draft.isPublicFigure = true
             do {
@@ -381,7 +383,7 @@ struct CounterpartVoiceIntakeView: View {
                     name: name, nativeLanguage: appState.nativeLanguage)
                 draft.factsRefreshedAt = Date()
             } catch {
-                self.error = "Couldn't look them up: \(error.localizedDescription)"
+                self.error = explain("Couldn't look them up: \(error.localizedDescription)")
                 return
             }
             prefilled = draft
@@ -419,7 +421,7 @@ struct CounterpartVoiceIntakeView: View {
             // Nothing to extract — skip the LLM and go straight to the form.
             var draft = Counterpart.empty
             draft.name = name
-            draft.relationship = kindDetail.isEmpty ? (kind?.rawValue ?? "") : kindDetail
+            draft.relationship = kindDetail.isEmpty ? (kind?.title ?? "") : kindDetail
             draft.conversationStyle = styleLine
             draft.commonTopics = interests.joined(separator: ", ")
             applySpeech(to: &draft)
@@ -440,12 +442,12 @@ struct CounterpartVoiceIntakeView: View {
             // The form's Save needs a relationship, so an empty one left Save
             // greyed out and the only exit threw the person away.
             if draft.relationship.trimmingCharacters(in: .whitespaces).isEmpty {
-                draft.relationship = kindDetail.isEmpty ? (kind?.rawValue ?? "") : kindDetail
+                draft.relationship = kindDetail.isEmpty ? (kind?.title ?? "") : kindDetail
             }
             applySpeech(to: &draft)
             prefilled = draft
         } catch {
-            self.error = "Couldn't parse: \(error.localizedDescription)"
+            self.error = explain("Couldn't parse: \(error.localizedDescription)")
         }
     }
 
@@ -485,6 +487,23 @@ private enum RelationshipKind: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    /// The chip's label. `rawValue` is the stored KEY (`relationshipKind`,
+    /// read by PeopleSky and the register defaults) and stays English.
+    var title: String {
+        switch self {
+        case .friend:       return explain("Friend")
+        case .family:       return explain("Family")
+        case .partner:      return explain("Partner")
+        case .coworker:     return explain("Coworker")
+        case .manager:      return explain("Manager")
+        case .fellowParent: return explain("Fellow parent")
+        case .neighbor:     return explain("Neighbor")
+        case .teacher:      return explain("Teacher")
+        case .publicFigure: return explain("Public figure")
+        case .other:        return explain("Other")
+        }
+    }
+
     struct NarrativeCard {
         let question: String
         let detail: String
@@ -493,131 +512,131 @@ private enum RelationshipKind: String, CaseIterable, Identifiable {
         let chips: [String]
     }
 
-    private static let tapOrTalk = "Tap what fits, add your own — or just talk, your native language is fine."
+    private static var tapOrTalk: String { explain("Tap what fits, add your own — or just talk, your native language is fine.") }
 
     var cards: [NarrativeCard] {
         switch self {
         case .friend: return [
-            .init(question: "How did you two meet?",
+            .init(question: explain("How did you two meet?"),
                   detail: Self.tapOrTalk,
-                  chips: ["From school", "From work", "Through friends",
-                          "Online", "Childhood friends", "Met recently"]),
-            .init(question: "What's their life like right now?",
+                  chips: [explain("From school"), explain("From work"), explain("Through friends"),
+                          explain("Online"), explain("Childhood friends"), explain("Met recently")]),
+            .init(question: explain("What's their life like right now?"),
                   detail: "",
-                  chips: ["Works full-time", "Studying", "Recently moved",
-                          "Raising kids", "Lives nearby", "Lives abroad"]),
-            .init(question: "What's just between you two?",
-                  detail: "This is what makes the dialogues feel real.",
-                  chips: ["Inside jokes", "We tease each other", "Deep talks",
-                          "Mostly banter", "Shared hobby",
-                          "They know everything about me"])
+                  chips: [explain("Works full-time"), explain("Studying"), explain("Recently moved"),
+                          explain("Raising kids"), explain("Lives nearby"), explain("Lives abroad")]),
+            .init(question: explain("What's just between you two?"),
+                  detail: explain("This is what makes the dialogues feel real."),
+                  chips: [explain("Inside jokes"), explain("We tease each other"), explain("Deep talks"),
+                          explain("Mostly banter"), explain("Shared hobby"),
+                          explain("They know everything about me")])
         ]
         case .family: return [
-            .init(question: "Who are they in your family?",
+            .init(question: explain("Who are they in your family?"),
                   detail: Self.tapOrTalk,
-                  chips: ["Older sibling", "Younger sibling", "Parent",
-                          "Grandparent", "Cousin", "In-law"]),
-            .init(question: "What's going on in their life?",
+                  chips: [explain("Older sibling"), explain("Younger sibling"), explain("Parent"),
+                          explain("Grandparent"), explain("Cousin"), explain("In-law")]),
+            .init(question: explain("What's going on in their life?"),
                   detail: "",
-                  chips: ["Busy with work", "Retired", "New hobby",
-                          "Just moved", "Raising kids", "Health ups and downs"]),
-            .init(question: "What do you two usually talk about?",
-                  detail: "This is what makes the dialogues feel real.",
-                  chips: ["Family news", "Food and recipes", "Health",
-                          "Old memories", "Money and plans",
-                          "They nag me lovingly"])
+                  chips: [explain("Busy with work"), explain("Retired"), explain("New hobby"),
+                          explain("Just moved"), explain("Raising kids"), explain("Health ups and downs")]),
+            .init(question: explain("What do you two usually talk about?"),
+                  detail: explain("This is what makes the dialogues feel real."),
+                  chips: [explain("Family news"), explain("Food and recipes"), explain("Health"),
+                          explain("Old memories"), explain("Money and plans"),
+                          explain("They nag me lovingly")])
         ]
         case .partner: return [
-            .init(question: "How did your story start?",
+            .init(question: explain("How did your story start?"),
                   detail: Self.tapOrTalk,
-                  chips: ["Together for years", "Newly dating", "Met through friends",
-                          "Met online", "Living together", "Long distance"]),
-            .init(question: "What fills your conversations these days?",
+                  chips: [explain("Together for years"), explain("Newly dating"), explain("Met through friends"),
+                          explain("Met online"), explain("Living together"), explain("Long distance")]),
+            .init(question: explain("What fills your conversations these days?"),
                   detail: "",
-                  chips: ["Daily logistics", "Future plans", "Food and cooking",
-                          "Travel plans", "Work stories", "Our pets"]),
-            .init(question: "What's your dynamic like?",
-                  detail: "This is what makes the dialogues feel real.",
-                  chips: ["Playful teasing", "Pet names", "Lots of inside jokes",
-                          "Calm and cozy", "We debate everything",
-                          "They call me out"])
+                  chips: [explain("Daily logistics"), explain("Future plans"), explain("Food and cooking"),
+                          explain("Travel plans"), explain("Work stories"), explain("Our pets")]),
+            .init(question: explain("What's your dynamic like?"),
+                  detail: explain("This is what makes the dialogues feel real."),
+                  chips: [explain("Playful teasing"), explain("Pet names"), explain("Lots of inside jokes"),
+                          explain("Calm and cozy"), explain("We debate everything"),
+                          explain("They call me out")])
         ]
         case .coworker: return [
-            .init(question: "How do you work together?",
+            .init(question: explain("How do you work together?"),
                   detail: Self.tapOrTalk,
-                  chips: ["Same team", "Cross-team", "We share projects",
-                          "Desk neighbors", "Worked together for years",
-                          "They're new"]),
-            .init(question: "What do your work chats look like?",
+                  chips: [explain("Same team"), explain("Cross-team"), explain("We share projects"),
+                          explain("Desk neighbors"), explain("Worked together for years"),
+                          explain("They're new")]),
+            .init(question: explain("What do your work chats look like?"),
                   detail: "",
-                  chips: ["Daily standups", "Reviews", "Lunch together",
-                          "Coffee breaks", "Mostly chat apps", "Casual between us"]),
-            .init(question: "What's the context around you two?",
-                  detail: "This is what makes the dialogues feel real.",
-                  chips: ["Deadline crunch", "Office jokes", "New project starting",
-                          "We vent together", "After-work drinks",
-                          "Company changes going on"])
+                  chips: [explain("Daily standups"), explain("Reviews"), explain("Lunch together"),
+                          explain("Coffee breaks"), explain("Mostly chat apps"), explain("Casual between us")]),
+            .init(question: explain("What's the context around you two?"),
+                  detail: explain("This is what makes the dialogues feel real."),
+                  chips: [explain("Deadline crunch"), explain("Office jokes"), explain("New project starting"),
+                          explain("We vent together"), explain("After-work drinks"),
+                          explain("Company changes going on")])
         ]
         case .manager: return [
-            .init(question: "What's your working relationship?",
+            .init(question: explain("What's your working relationship?"),
                   detail: Self.tapOrTalk,
-                  chips: ["My direct manager", "Weekly 1:1s", "Manager for years",
-                          "New to me", "Skip-level", "We talk daily"]),
-            .init(question: "What do you usually discuss?",
+                  chips: [explain("My direct manager"), explain("Weekly 1:1s"), explain("Manager for years"),
+                          explain("New to me"), explain("Skip-level"), explain("We talk daily")]),
+            .init(question: explain("What do you usually discuss?"),
                   detail: "",
-                  chips: ["Project updates", "Feedback", "Career growth",
-                          "Priorities", "Pretty formal", "Fairly casual"]),
-            .init(question: "What else should I know about them?",
-                  detail: "This is what makes the dialogues feel real.",
-                  chips: ["Direct style", "Supportive", "Detail-oriented",
-                          "Big-picture person", "Busy calendar",
-                          "Knows my life a bit"])
+                  chips: [explain("Project updates"), explain("Feedback"), explain("Career growth"),
+                          explain("Priorities"), explain("Pretty formal"), explain("Fairly casual")]),
+            .init(question: explain("What else should I know about them?"),
+                  detail: explain("This is what makes the dialogues feel real."),
+                  chips: [explain("Direct style"), explain("Supportive"), explain("Detail-oriented"),
+                          explain("Big-picture person"), explain("Busy calendar"),
+                          explain("Knows my life a bit")])
         ]
         case .fellowParent: return [
-            .init(question: "How are your families connected?",
+            .init(question: explain("How are your families connected?"),
                   detail: Self.tapOrTalk,
-                  chips: ["Same Kita", "Same school", "Same class",
-                          "Playground friends", "Kids are best friends",
-                          "Known for years"]),
-            .init(question: "Where do you usually run into each other?",
+                  chips: [explain("Same Kita"), explain("Same school"), explain("Same class"),
+                          explain("Playground friends"), explain("Kids are best friends"),
+                          explain("Known for years")]),
+            .init(question: explain("Where do you usually run into each other?"),
                   detail: "",
-                  chips: ["Drop-off", "Pick-up", "Playdates",
-                          "Birthday parties", "School events", "The playground"]),
-            .init(question: "What do you two talk about?",
-                  detail: "This is what makes the dialogues feel real.",
-                  chips: ["The kids", "School news", "Logistics and schedules",
-                          "Weekend plans", "Parenting tips", "Neighborhood news"])
+                  chips: [explain("Drop-off"), explain("Pick-up"), explain("Playdates"),
+                          explain("Birthday parties"), explain("School events"), explain("The playground")]),
+            .init(question: explain("What do you two talk about?"),
+                  detail: explain("This is what makes the dialogues feel real."),
+                  chips: [explain("The kids"), explain("School news"), explain("Logistics and schedules"),
+                          explain("Weekend plans"), explain("Parenting tips"), explain("Neighborhood news")])
         ]
         case .neighbor: return [
-            .init(question: "How did you become neighbors?",
+            .init(question: explain("How did you become neighbors?"),
                   detail: Self.tapOrTalk,
-                  chips: ["Next door", "Same building", "Same street",
-                          "Neighbors for years", "I moved in recently",
-                          "They moved in recently"]),
-            .init(question: "Where do your chats happen?",
+                  chips: [explain("Next door"), explain("Same building"), explain("Same street"),
+                          explain("Neighbors for years"), explain("I moved in recently"),
+                          explain("They moved in recently")]),
+            .init(question: explain("Where do your chats happen?"),
                   detail: "",
-                  chips: ["Hallway", "Elevator", "Garden or yard",
-                          "On the street", "Neighborhood events",
-                          "Walking the dog"]),
-            .init(question: "What do you usually talk about?",
-                  detail: "This is what makes the dialogues feel real.",
-                  chips: ["Neighborhood news", "The weather", "Their family",
-                          "Pets", "Home projects", "We trade favors"])
+                  chips: [explain("Hallway"), explain("Elevator"), explain("Garden or yard"),
+                          explain("On the street"), explain("Neighborhood events"),
+                          explain("Walking the dog")]),
+            .init(question: explain("What do you usually talk about?"),
+                  detail: explain("This is what makes the dialogues feel real."),
+                  chips: [explain("Neighborhood news"), explain("The weather"), explain("Their family"),
+                          explain("Pets"), explain("Home projects"), explain("We trade favors")])
         ]
         case .teacher: return [
-            .init(question: "Whose teacher — and of what?",
+            .init(question: explain("Whose teacher — and of what?"),
                   detail: Self.tapOrTalk,
-                  chips: ["My teacher", "My kid's teacher", "Language teacher",
-                          "Music teacher", "Sports coach", "Known for a while"]),
-            .init(question: "When do you talk with them?",
+                  chips: [explain("My teacher"), explain("My kid's teacher"), explain("Language teacher"),
+                          explain("Music teacher"), explain("Sports coach"), explain("Known for a while")]),
+            .init(question: explain("When do you talk with them?"),
                   detail: "",
-                  chips: ["In class", "Office hours", "Parent meetings",
-                          "Over messages", "Pretty formal", "Fairly relaxed"]),
-            .init(question: "What else should I know about them?",
-                  detail: "This is what makes the dialogues feel real.",
-                  chips: ["Strict but fair", "Encouraging", "Patient",
-                          "Talks fast", "Recent school events",
-                          "I want to ask more questions"])
+                  chips: [explain("In class"), explain("Office hours"), explain("Parent meetings"),
+                          explain("Over messages"), explain("Pretty formal"), explain("Fairly relaxed")]),
+            .init(question: explain("What else should I know about them?"),
+                  detail: explain("This is what makes the dialogues feel real."),
+                  chips: [explain("Strict but fair"), explain("Encouraging"), explain("Patient"),
+                          explain("Talks fast"), explain("Recent school events"),
+                          explain("I want to ask more questions")])
         ]
         // No cards: the model already knows a public figure, so their name
         // is the whole intake (see `steps`). Cards asking where you'd meet
@@ -627,19 +646,19 @@ private enum RelationshipKind: String, CaseIterable, Identifiable {
         // model's job.
         case .publicFigure: return []
         case .other: return [
-            .init(question: "How do you know each other?",
+            .init(question: explain("How do you know each other?"),
                   detail: Self.tapOrTalk,
-                  chips: ["Through friends", "From work", "From a hobby",
-                          "From the neighborhood", "Online", "Met recently"]),
-            .init(question: "What's their life like?",
+                  chips: [explain("Through friends"), explain("From work"), explain("From a hobby"),
+                          explain("From the neighborhood"), explain("Online"), explain("Met recently")]),
+            .init(question: explain("What's their life like?"),
                   detail: "",
-                  chips: ["Works full-time", "Studying", "Raising kids",
-                          "Lives nearby", "Lives abroad", "Busy lately"]),
-            .init(question: "What's the context between you?",
-                  detail: "This is what makes the dialogues feel real.",
-                  chips: ["Recurring topics", "Inside jokes", "We meet regularly",
-                          "Mostly texting", "They know my life well",
-                          "Still getting to know each other"])
+                  chips: [explain("Works full-time"), explain("Studying"), explain("Raising kids"),
+                          explain("Lives nearby"), explain("Lives abroad"), explain("Busy lately")]),
+            .init(question: explain("What's the context between you?"),
+                  detail: explain("This is what makes the dialogues feel real."),
+                  chips: [explain("Recurring topics"), explain("Inside jokes"), explain("We meet regularly"),
+                          explain("Mostly texting"), explain("They know my life well"),
+                          explain("Still getting to know each other")])
         ]
         }
     }

@@ -531,7 +531,7 @@ final class VocabStore: ObservableObject {
                 if t.transcript.lowercased().contains(needle) {
                     out.append(SourceSentence(
                         text: Self.snippet(around: needle, in: t.transcript),
-                        audioURL: t.audioURL, source: "Talk"))
+                        audioURL: t.audioURL, source: explain("Talk")))
                 }
             }
         }
@@ -609,14 +609,14 @@ final class VocabStore: ObservableObject {
         for s in SessionStore.shared.load() {
             for t in s.turns where t.role == .fluentSelf {
                 if Self.lemmas(in: [t.transcript]).contains(word) {
-                    out.append(SourceSentence(text: t.transcript, audioURL: t.audioURL, source: "Talk"))
+                    out.append(SourceSentence(text: t.transcript, audioURL: t.audioURL, source: explain("Talk")))
                 }
             }
         }
         for d in WatchDialogueStore.shared.load() {
             for turn in d.turns where turn.speaker == "user" {
                 if Self.lemmas(in: [turn.text]).contains(word) {
-                    out.append(SourceSentence(text: turn.text, audioURL: nil, source: "Watch"))
+                    out.append(SourceSentence(text: turn.text, audioURL: nil, source: explain("Watch")))
                 }
             }
         }

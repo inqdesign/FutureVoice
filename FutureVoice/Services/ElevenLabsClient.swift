@@ -846,13 +846,13 @@ enum ElevenLabsError: Error, LocalizedError {
             // on. Everything else keeps the raw body: it's the only diagnostic
             // a beta tester can screenshot.
             if Self.isVoiceLimitBody(body) {
-                return "We've hit our voice-creation limit right now — nothing you did wrong. We've been alerted; please try again a bit later."
+                return explain("We've hit our voice-creation limit right now — nothing you did wrong. We've been alerted; please try again a bit later.")
             }
             if let until = VoiceQuota.availableAt(inBody: body) {
                 return VoiceQuota.pausedLine(until: until)
             }
             return "ElevenLabs HTTP \(status): \(body)"
-        case .insufficientCredits: return "You're out of credits. Check your plan under Me → Account."
+        case .insufficientCredits: return explain("You're out of credits. Check your plan under Me → Account.")
         case .sceneCapReached:
             return explain("You've watched today's scenes. New ones unlock at midnight — replaying the ones you have is always free.")
         case .dailyCapReached:

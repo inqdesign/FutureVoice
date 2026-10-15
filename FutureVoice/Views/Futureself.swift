@@ -10,12 +10,12 @@ enum FutureselfTheme: Int, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .blue:    return "Blue"
-        case .mono:    return "Mono"
-        case .emerald: return "Emerald"
-        case .amber:   return "Amber"
-        case .coral:   return "Coral"
-        case .aqua:    return "Aqua"
+        case .blue:    return explain("Blue")
+        case .mono:    return explain("Mono")
+        case .emerald: return explain("Emerald")
+        case .amber:   return explain("Amber")
+        case .coral:   return explain("Coral")
+        case .aqua:    return explain("Aqua")
         }
     }
 
