@@ -874,8 +874,14 @@ fun TalkScreen(
                         // streams in dozens of deltas, and animating each
                         // fought the follow — the bubble grew with a wobble
                         // (iOS 2026-10-08). It arrives with a fade, no slide.
-                        Box(Modifier.animateItem(fadeInSpec = tween(250), placementSpec = tween(250),
-                            fadeOutSpec = tween(250))
+                        // The fluent self's bubble does NOT fade in as a whole: it
+                        // replaces the thinking line, which leaves at once, so a
+                        // 250 ms fade from clear left an empty beat between the two
+                        // — a blink every reply (founder, 2026-10-15). Its words
+                        // already fade in one by one.
+                        Box(Modifier.animateItem(
+                            fadeInSpec = if (turn.role == TurnRole.FLUENT_SELF) null else tween(250),
+                            placementSpec = tween(250), fadeOutSpec = tween(250))
                             // Both sides grow smoothly: the fluent self's bubble used to
                             // jump a whole line at a time as its reveal wrapped (founder,
                             // 2026-10-15); with the words now fading in, the jump was
