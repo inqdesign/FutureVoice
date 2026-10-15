@@ -964,14 +964,14 @@ export class CallSession implements DurableObject {
       // own and came back a clipped word ("the first sentence is a mess").
       // Live replies stay one sentence per request: that is their latency.
       this.recentReplyText = (this.recentReplyText + " " + text).slice(-600)
-      this.emit({ type: "reply_delta", context, text })
+      this.emit({ type: "reply_delta", context, text: this.flatLine(text) })
       this.voice(context, text)
     } else {
       this.routeDelta(context, text)
     }
     this.history.push({ role: "model", text })
     this.finishVoice(context)
-    this.emit({ type: "reply", context, text })
+    this.emit({ type: "reply", context, text: this.flatLine(text) })
   }
 
   /** Fire a reply generation against a SETTLED interim, before the turn is
@@ -1411,7 +1411,7 @@ export class CallSession implements DurableObject {
     })
     this.routeDelta(retryContext, line)
     this.finishVoice(retryContext)
-    this.emit({ type: "reply", context: retryContext, text: line })
+    this.emit({ type: "reply", context: retryContext, text: this.flatLine(line) })
   }
 
   /** What the fluent self says when it could not answer. Informal — it is
@@ -1439,11 +1439,31 @@ export class CallSession implements DurableObject {
     this.emit({ type: "warning", code, message: message.slice(0, 300) })
   }
 
+  /** A spoken line is ONE paragraph on screen. The model breaks its reply
+   *  into paragraphs ("\n\n" between a remark and the question) — measured
+   *  2026-10-15: 5/6 Japanese replies, 2/6 Korean, 0/6 English — and the
+   *  bubble drew every one as a blank line. Line breaks become a space where
+   *  the language writes spaces and nothing where it doesn't. Only what the
+   *  APP is sent changes; the history keeps the model's own text. */
+  private flatLine(text: string): string {
+    return text.replace(/[ \t]*\n+[ \t]*/g, CallSession.writesSpaces(this.language) ? " " : "")
+  }
+
+  /** The same, per streamed delta: a break split across two deltas must not
+   *  leave a double space where one paragraph ended and the next began. */
+  private lastDeltaEndedInSpace = new Map<string, boolean>()
+  private flatDelta(context: string, delta: string): string {
+    let out = this.flatLine(delta)
+    if (this.lastDeltaEndedInSpace.get(context) && /^\s/.test(out)) out = out.replace(/^\s+/, "")
+    if (out.length > 0) this.lastDeltaEndedInSpace.set(context, /\s$/.test(out))
+    return out
+  }
+
   private routeDelta(context: string, delta: string): void {
     // Echo reference: everything routed to the voice is what the room can
     // hear. Sliding window — echo only ever quotes the last few seconds.
     this.recentReplyText = (this.recentReplyText + " " + delta).slice(-600)
-    this.emit({ type: "reply_delta", context, text: delta })
+    this.emit({ type: "reply_delta", context, text: this.flatDelta(context, delta) })
     const pending = (this.voiceBuffer.get(context) ?? "") + delta
     const [sentences, rest] = CallSession.splitCompleteSentences(pending)
     this.voiceBuffer.set(context, rest)
@@ -1641,7 +1661,8 @@ export class CallSession implements DurableObject {
     }
     this.history.push({ role: "model", text: full })
     this.finishVoice(context)
-    this.emit({ type: "reply", context, text: full })
+    this.lastDeltaEndedInSpace.delete(context)
+    this.emit({ type: "reply", context, text: this.flatLine(full) })
   }
 
   /** Barge-in: stop the voice and the generation for the active turn. */
