@@ -15,6 +15,13 @@ voices has one, else the active remix's sample with its accent prompt.
       again from its original recording (now cleaned before cloning)
   python3 scripts/voice-move-all.py --send --reclone <user_id> ...   # same, these only
 
+A learner who is talking, watching a scene or hearing their voice right now
+(any talk tick, scene or TTS ledger row in the last BUSY_MINUTES) is skipped
+and reported as "busy"; run again later for them. The old voice keeps
+working anyway (nothing checks is_active, nothing is deleted), but a voice
+that changes between two lines of one scene or call is not something to do
+to someone mid-sentence.
+
 Results are appended to /tmp/voice-move-all-<date>.jsonl.
 """
 
@@ -30,6 +37,17 @@ import urllib.request
 REF = "chhzjtigzdotacutwcyo"
 ARCHIVE = os.path.expanduser("~/Desktop/beta audio/voices")
 UA = {"User-Agent": "nawana-ops/1.0"}
+BUSY_MINUTES = 5
+BUSY_ACTIONS = ("talk_time", "tts", "tts_scene", "tts_timestamps")
+
+
+def busy(uid: str) -> bool:
+    acts = ",".join(f"'{a}'" for a in BUSY_ACTIONS)
+    rows = query(f"""
+        select 1 from usage_ledger where user_id = '{uid}'
+          and created_at > now() - interval '{BUSY_MINUTES} minutes'
+          and (action in ({acts}) or source_fn = 'gateway') limit 1""")
+    return bool(rows)
 
 
 def service_key() -> str:
@@ -118,6 +136,12 @@ def main():
     for uid in users:
         info = by_user.get(uid)
         if not info or not info["active"]:
+            continue
+        if send and busy(uid):
+            res = {"user_id": uid, "result": "busy"}
+            print(json.dumps(res), flush=True)
+            with open(out, "a") as f:
+                f.write(json.dumps(res) + "\n")
             continue
         payload = {"user_id": uid, "dry": not send}
         if reclone and "-" in info["active"]:
