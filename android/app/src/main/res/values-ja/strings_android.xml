@@ -242,6 +242,8 @@
     <string name="accent_british">英国</string>
     <string name="accent_australian">豪州</string>
     <string name="accent_standard_german">標準ドイツ語</string>
+    <string name="accent_mexican">メキシコ</string>
+    <string name="accent_castilian">スペイン</string>
     <string name="which_accent">話したいアクセントは？</string>
     <string name="which_accent_do_you_want_to_speak_with">どのアクセントで話したいですか？</string>
     <string name="your_fluent_self_speaks_with_this_accent_in_your_own_voice">流暢な自分が、自分の声でこのアクセントで話します。実際に聞いてから変えることもできます。</string>

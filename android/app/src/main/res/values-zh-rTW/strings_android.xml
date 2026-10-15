@@ -242,6 +242,8 @@
     <string name="accent_british">英式</string>
     <string name="accent_australian">澳式</string>
     <string name="accent_standard_german">標準德語</string>
+    <string name="accent_mexican">墨西哥式</string>
+    <string name="accent_castilian">西班牙式</string>
     <string name="which_accent">想要哪種口音？</string>
     <string name="which_accent_do_you_want_to_speak_with">想用哪種口音說？</string>
     <string name="your_fluent_self_speaks_with_this_accent_in_your_own_voice">流利的自己會用你的聲音、帶著這個口音說話。聽過之後也能再換。</string>

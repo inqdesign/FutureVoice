@@ -601,5 +601,7 @@ internal fun accentLabel(accent: VoiceAccent): String = when (accent.id) {
     "en-GB" -> stringResource(R.string.accent_british)
     "en-AU" -> stringResource(R.string.accent_australian)
     "de-DE" -> stringResource(R.string.accent_standard_german)
+    "es-MX" -> stringResource(R.string.accent_mexican)
+    "es-ES" -> stringResource(R.string.accent_castilian)
     else -> accent.label
 }

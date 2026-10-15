@@ -258,6 +258,8 @@
     <string name="accent_british">British</string>
     <string name="accent_australian">Australian</string>
     <string name="accent_standard_german">Standard German</string>
+    <string name="accent_mexican">Mexican</string>
+    <string name="accent_castilian">Castilian</string>
     <string name="which_accent">Which accent?</string>
     <string name="which_accent_do_you_want_to_speak_with">Which accent do you want to speak with?</string>
     <string name="your_fluent_self_speaks_with_this_accent_in_your_own_voice">Your fluent self speaks with this accent, in your own voice. You can change it once you\'ve heard it.</string>

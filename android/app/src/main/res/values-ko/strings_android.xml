@@ -242,6 +242,8 @@
     <string name="accent_british">영국식</string>
     <string name="accent_australian">호주식</string>
     <string name="accent_standard_german">표준 독일어</string>
+    <string name="accent_mexican">멕시코식</string>
+    <string name="accent_castilian">스페인식</string>
     <string name="which_accent">원하는 억양은?</string>
     <string name="which_accent_do_you_want_to_speak_with">어떤 억양으로 말하고 싶으세요?</string>
     <string name="your_fluent_self_speaks_with_this_accent_in_your_own_voice">유창해진 내가 내 목소리로, 이 억양으로 말해요. 직접 들어본 뒤에 바꿀 수도 있어요.</string>

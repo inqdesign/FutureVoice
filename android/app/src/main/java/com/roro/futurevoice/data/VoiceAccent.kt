@@ -48,6 +48,8 @@ object VoiceAccentCatalog {
         VoiceAccent("en", "en-GB", "British", prompt("British English accent with standard Southern British pronunciation")),
         VoiceAccent("en", "en-AU", "Australian", prompt("Australian English accent")),
         VoiceAccent("de", "de-DE", "Standard German", prompt("Standard German accent (Hochdeutsch) as spoken in Germany")),
+        VoiceAccent("es", "es-MX", "Mexican", prompt("Mexican Spanish accent as spoken in Mexico City")),
+        VoiceAccent("es", "es-ES", "Castilian", prompt("Castilian Spanish accent as spoken in Madrid, Spain")),
     )
 
     /** Accent choices for a target language. Empty = the picker never shows
@@ -65,6 +67,7 @@ object VoiceAccentCatalog {
     private val samples = mapOf(
         "en" to "I'll grab a bottle of water and a coffee around half past eight. I can't be late again, the bus leaves at nine, doesn't it?",
         "de" to "Morgen früh hole ich zwei Brötchen beim Bäcker, danach fahre ich mit dem Zug nach München. Ich rufe dich später an, okay?",
+        "es" to "Mañana voy a comprar unos zapatos y una cerveza en la plaza de Valencia. Te llamo luego, ¿de acuerdo? Si no, nos vemos el lunes.",
     )
 
     /**

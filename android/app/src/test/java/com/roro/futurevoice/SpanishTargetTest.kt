@@ -4,6 +4,7 @@ import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.data.CoreVocabulary
 import com.roro.futurevoice.data.LanguageCatalog
 import com.roro.futurevoice.data.SpanishMorph
+import com.roro.futurevoice.data.VoiceAccentCatalog
 import com.roro.futurevoice.data.VocabLemmas
 import com.roro.futurevoice.data.VocabStore
 import com.roro.futurevoice.data.WordClass
@@ -104,5 +105,17 @@ class SpanishTargetTest {
         assertNotEquals(slot.voiceId, VoicePreset.speaking(slot.voiceId, "es"))
         assertFalse(slot.nameIn("es").isEmpty())
         assertEquals(listOf("Carolina", "Jorge", "Carmen", "Javier"), StockPerson.catalog.map { it.nameIn("es") })
+    }
+
+    /** Two accents, Mexican the default; the server reads the pick from the
+     *  prompt's words (`accentFromDescription`). Mirrors iOS
+     *  `testSpanishAccentsAreOfferedAndReadableByTheServer`. */
+    @Test fun spanishAccentsAreOfferedAndReadableByTheServer() {
+        val options = VoiceAccentCatalog.options("es")
+        assertEquals(listOf("es-MX", "es-ES"), options.map { it.id })
+        assertEquals("es-MX", options.first().id)
+        assertTrue(options[0].prompt.lowercase().contains("mexican spanish"))
+        assertTrue(options[1].prompt.lowercase().contains("castilian spanish"))
+        assertTrue(VoiceAccentCatalog.sampleText("es").contains("zapatos"))
     }
 }
