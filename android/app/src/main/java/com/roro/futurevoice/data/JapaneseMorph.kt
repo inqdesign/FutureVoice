@@ -5,13 +5,15 @@ package com.roro.futurevoice.data
  * `JapaneseMorph.swift`, vector-tested against the real Swift
  * (`docs/contracts/vectors`, section `japanese`).
  *
- * **One platform difference, and it is honest rather than hidden.** iOS
- * segments with `CFStringTokenizer`, which also hands back a READING for each
- * token, so a kana spelling can meet a kanji headword through the tokenizer
- * itself. Android's `BreakIterator` gives boundaries and nothing else, so a
- * token here carries no reading: the forms table (`ja_forms.tsv`, which maps
- * わかる → 分かる) does that work instead, and a kanji spelling the table does
- * not carry simply isn't resolved. It costs recall, never correctness.
+ * **Where the cuts come from.** iOS segments with `CFStringTokenizer`. Here
+ * it is Sudachi in mode B (`JapaneseDictionary`), whose cuts match iOS's on
+ * 86 of 88 measured sentences (the headwords below on 87) — but its
+ * dictionary is an on-demand download, so until
+ * it is loaded (or on an install with no Play asset packs) the cut is ICU's
+ * `BreakIterator`, which agreed with iOS on 6 of 40. That fallback gives
+ * boundaries and nothing else, so its tokens carry no reading: the forms
+ * table (`ja_forms.tsv`, わかる → 分かる) does that work instead. It costs
+ * recall, never correctness.
  */
 object JapaneseMorph {
 
@@ -28,6 +30,14 @@ object JapaneseMorph {
     fun words(text: String): List<Token> {
         if (text.isEmpty()) return emptyList()
         segmenterOverride?.let { return it(text) }
+        // Sudachi once its dictionary is loaded. Its surfaces, never its
+        // dictionaryForm: the headword rules below were written for iOS's
+        // cuts, and fed Sudachi's surfaces they match iOS (dictionaryForm
+        // measured worse).
+        JapaneseDictionary.morphs(text)?.let { morphs ->
+            return morphs.filter { m -> m.surface.any { it.isLetterOrDigit() } }
+                .map { Token(it.surface, it.start, it.end) }
+        }
         val it = android.icu.text.BreakIterator.getWordInstance(java.util.Locale.JAPANESE)
         it.setText(text)
         val out = ArrayList<Token>()
@@ -49,6 +59,20 @@ object JapaneseMorph {
      * is a stub that throws. Never set in the app.
      */
     @Volatile internal var segmenterOverride: ((String) -> List<Token>)? = null
+
+    /**
+     * The whole line as hiragana, punctuation dropped — what it SOUNDS like,
+     * whatever script the transcriber chose (iOS `reading(of:)`, the token
+     * readings joined). Null while Sudachi isn't loaded: ICU gives no
+     * readings, and the caller has its own table for that case. A token the
+     * dictionary has no reading for (an unknown word) stands as written.
+     */
+    fun reading(text: String): String? {
+        if (segmenterOverride != null) return null
+        val morphs = JapaneseDictionary.morphs(text) ?: return null
+        return morphs.filter { m -> m.surface.any { it.isLetterOrDigit() } }
+            .joinToString("") { it.reading.ifEmpty { JapaneseDictionary.hiragana(it.surface) } }
+    }
 
     /** Surface words only — the drop-in for splitting on spaces. */
     fun segments(text: String): List<String> = words(text).map { it.surface }

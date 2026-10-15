@@ -22,3 +22,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "FutureVoice"
 include(":app")
+// On-demand Play asset pack: the Sudachi dictionary for Japanese learners.
+include(":ja_dict")

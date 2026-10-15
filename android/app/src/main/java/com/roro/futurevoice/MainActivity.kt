@@ -75,6 +75,9 @@ class MainActivity : ComponentActivity() {
         // Has this phone's voice been PARKED since? Learned here, acted on at
         // the next metered tap (`VoiceRevival`). Throttled inside.
         com.roro.futurevoice.data.VoiceParking.requestRecheck()
+        // Play's own cellular-data prompt, if it is holding the Japanese
+        // dictionary's download for one (once per process).
+        com.roro.futurevoice.data.JapaneseDictionary.confirmIfNeeded(this)
         // Friends who joined with my code since last time — polled here
         // because there is no push infrastructure.
         lifecycleScope.launch { com.roro.futurevoice.data.ReferralJoins.announce(this@MainActivity) }

@@ -19,6 +19,10 @@ ktor = "3.5.2"
 coroutines = "1.11.0"
 # The Speech tab's camera: a preview and per-frame analysis on one camera.
 camerax = "1.5.1"
+# Japanese segmentation (Sudachi, mode B) — the dictionary rides in the
+# on-demand asset pack `:ja_dict`, delivered to Japanese learners only.
+sudachi = "0.7.5"
+assetDelivery = "2.3.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -56,6 +60,8 @@ camera-core = { group = "androidx.camera", name = "camera-core", version.ref = "
 camera-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "camerax" }
 camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }
 camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
+sudachi = { group = "com.worksap.nlp", name = "sudachi", version.ref = "sudachi" }
+play-asset-delivery = { group = "com.google.android.play", name = "asset-delivery", version.ref = "assetDelivery" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

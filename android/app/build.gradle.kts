@@ -90,6 +90,29 @@ android {
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
     }
+
+    // The Sudachi dictionary, delivered on demand to Japanese learners only
+    // (`JapaneseDictionary`). Asset packs exist only in the bundle: an APK
+    // built for a direct install has none, and Japanese falls back to ICU.
+    assetPacks += listOf(":ja_dict")
+
+    testOptions {
+        unitTests.all {
+            // `JapaneseSudachiTest` runs real Sudachi over the downloaded
+            // dictionary — the same file the asset pack ships.
+            it.dependsOn(":ja_dict:fetchSudachiDict")
+            it.systemProperty("sudachi.dic",
+                rootProject.file("ja_dict/src/main/assets/sudachi/system_small.dic").absolutePath)
+        }
+    }
+}
+
+// Nothing may package the asset pack before the dictionary is in it.
+tasks.configureEach {
+    // assetPack<Variant>PreBundleTask is what reads the pack's files.
+    if (name.startsWith("assetPack") && name.endsWith("PreBundleTask")) {
+        dependsOn(":ja_dict:fetchSudachiDict")
+    }
 }
 
 kotlin {
@@ -128,6 +151,11 @@ dependencies {
     implementation(libs.camera.camera2)
     implementation(libs.camera.lifecycle)
     implementation(libs.camera.view)
+
+    // Japanese word segmentation + readings (iOS cuts with CFStringTokenizer;
+    // Sudachi mode B reproduces it). Pure Java; its dictionary is the asset pack.
+    implementation(libs.sudachi)
+    implementation(libs.play.asset.delivery)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.serialization.json)

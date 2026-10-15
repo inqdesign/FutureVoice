@@ -99,11 +99,23 @@ object CoreVocabulary {
 
     /**
      * How a headword is read, for display beside it — null when the word
-     * already spells its sound (no kanji), or when the list doesn't carry it.
-     * Android has no kanji→kana on its own, so unlike iOS there is no guess
-     * behind this: an off-list word simply shows no reading.
+     * already spells its sound (no kanji). The list's readings first, all of
+     * them for a word that has several (からい・つらい); for anything off the
+     * list, Sudachi's reading once its dictionary is loaded (iOS falls back
+     * to the system tokenizer's guess the same way). Without Sudachi an
+     * off-list word simply shows no reading.
      */
-    fun reading(headword: String, language: String): String? =
+    fun reading(headword: String, language: String): String? {
+        listedReading(headword, language)?.let { return it }
+        if (language.substringBefore('-') != "ja") return null
+        if (headword.none { it.code in 0x4E00..0x9FFF || it.code == 0x3005 }) return null
+        val guess = JapaneseMorph.reading(headword) ?: return null
+        return guess.takeIf { it.isNotEmpty() && it != headword }
+    }
+
+    /** The list's own reading(s) and nothing else — what the reading TABLE
+     *  is built from, so it never depends on whether Sudachi is loaded. */
+    fun listedReading(headword: String, language: String): String? =
         pool(language).readings[headword]
 
     /**

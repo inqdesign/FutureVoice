@@ -26,6 +26,10 @@ object LanguageScope {
     fun setActive(context: Context, code: String) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putString(ACTIVE_KEY, code).apply()
+        // Setup, a language switch and adding a language all land here: a
+        // Japanese learner fetches the segmentation dictionary now (an
+        // on-demand asset pack — nobody else ever downloads it).
+        if (code.substringBefore('-') == "ja") JapaneseDictionary.ensure(context)
     }
 
     /** `filesDir/lang/<code>/`, created on demand. */

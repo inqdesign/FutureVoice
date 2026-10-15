@@ -32,8 +32,11 @@ object SpokenWords {
             // ください, which kanji. Compared by reading, a rewrite that only
             // re-spells what was said collapses the same way "I am" / "I'm"
             // does. Any change of sound survives (iOS `saysTheSameThing`).
-            val left = JapaneseReading.of(a)
-            return left.isNotEmpty() && left == JapaneseReading.of(b)
+            // One reader for both sides, so a dictionary that finishes
+            // loading between the two calls can't compare two methods.
+            val read = JapaneseReading.reader()
+            val left = read(a)
+            return left.isNotEmpty() && left == read(b)
         }
         // Digits spelled out (the recognizer writes "3" for "three") and, in
         // Korean, word spacing folded away: 띄어쓰기 is the transcriber's
@@ -210,6 +213,19 @@ object SpokenWords {
  */
 object JapaneseReading {
 
+    /**
+     * How lines are read right now: Sudachi's readings once its dictionary
+     * is loaded (iOS joins its tokenizer's readings — `JapaneseMorph.reading`),
+     * otherwise the list's table below.
+     */
+    fun reader(): (String) -> String {
+        if (override == null && com.roro.futurevoice.data.JapaneseDictionary.isReady) {
+            return { text -> com.roro.futurevoice.data.JapaneseMorph.reading(text)?.let(::fold) ?: of(text, table()) }
+        }
+        val table = table()
+        return { text -> of(text, table) }
+    }
+
     /** [text] as hiragana where the list can say how it is read. Punctuation
      *  never takes part (iOS joins token readings, and tokens carry none). */
     fun of(text: String, table: Table = table()): String {
@@ -305,7 +321,7 @@ object JapaneseReading {
         val lexicon = com.roro.futurevoice.data.CoreVocabulary.set("ja")
         if (lexicon.isEmpty()) return Table(emptyMap())   // no context yet: don't cache empty
         val readings = HashMap<String, String>()
-        for (h in lexicon) com.roro.futurevoice.data.CoreVocabulary.reading(h, "ja")?.let { readings[h] = it }
+        for (h in lexicon) com.roro.futurevoice.data.CoreVocabulary.listedReading(h, "ja")?.let { readings[h] = it }
         return build(readings, com.roro.futurevoice.data.CoreVocabulary.forms("ja")).also { cached = it }
     }
 
