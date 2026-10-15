@@ -225,10 +225,34 @@ object DailyCallScheduler {
                 am.setAlarmClock(AlarmManager.AlarmClockInfo(whenMs, contentIntent(context)),
                     firePendingIntent(context, slot))
             } else {
-                am.setWindow(AlarmManager.RTC_WAKEUP, whenMs, INEXACT_WINDOW_MS,
+                // Not `setWindow`: Doze holds that until its next maintenance
+                // window, which can be hours. This one may run in Doze (the
+                // system still drifts it a little), so the call is late at
+                // worst, never silent.
+                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, whenMs,
                     firePendingIntent(context, slot))
             }
         }
+    }
+
+    /**
+     * Put the rings back from the stored plan (iOS's `scenePhase == .active`
+     * safety net). Android drops every alarm on a reboot, on a force-stop and
+     * on reinstalling the app, and revoking the exact-alarm permission drops
+     * them too — and until this, nothing re-armed after any of those: the
+     * call was armed only when the settings or the routine changed, or by the
+     * ring before it, so one lost alarm meant no call ever again. Runs on
+     * every foreground and from [DailyCallRearmReceiver]; a no-op when off.
+     */
+    fun rearm(context: Context) {
+        if (!DailyCallStore.isEnabled(context)) return
+        VoiceParking.init(context)
+        // A day already settled (answered, or every slot declined) is not
+        // rung again today.
+        val now = System.currentTimeMillis()
+        val settledToday = DailyCallStore.history(context).lastOrNull()
+            ?.let { dayOf(it.first) == dayOf(now) } == true
+        schedule(context, fromTomorrow = settledToday)
     }
 
     // MARK: - A call already in progress
@@ -297,11 +321,6 @@ object DailyCallScheduler {
         val manager = am ?: (context?.getSystemService(Context.ALARM_SERVICE) as? AlarmManager)
         return manager?.canScheduleExactAlarms() == true
     }
-
-    /** How far the system may drift an inexact call. Ten minutes: late enough
-     *  for the OS to batch it with other work, early enough that the learner
-     *  still reads it as "my 8 o'clock call". */
-    private const val INEXACT_WINDOW_MS = 10L * 60 * 1000
 
     fun cancel(context: Context) {
         cancelAlarms(context)
@@ -419,6 +438,19 @@ class DailyCallDeclineReceiver : BroadcastReceiver() {
         DailyCallScheduler.dismissRing(context)
         DailyCallStore.onDeclined(context)
         com.roro.futurevoice.core.Analytics.capture("daily_call_declined")
+    }
+}
+
+/**
+ * The moments Android drops alarms on its own: a reboot, the app replaced by
+ * an update, the clock or time zone moved, and the exact-alarm permission
+ * changing (revoking it cancels every exact alarm; granting it is when an
+ * inexact call can become exact). Each re-arms from the stored plan.
+ */
+class DailyCallRearmReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        DailyCallScheduler.rearm(context)
+        PlanReminder.reschedule(context)
     }
 }
 

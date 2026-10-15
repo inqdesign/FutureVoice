@@ -70,6 +70,9 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         // An untouched ring can't be noticed when it happens — nothing runs.
         com.roro.futurevoice.data.DailyCallStore.settleIfRangOut(this)
+        // Android drops alarms on a reboot, a force-stop and a reinstall;
+        // put the call's rings back every time the app is opened.
+        com.roro.futurevoice.data.DailyCallScheduler.rearm(this)
         // The routine's own reminders, rebuilt so a past week never lingers.
         com.roro.futurevoice.data.PlanReminder.reschedule(this)
         // Has this phone's voice been PARKED since? Learned here, acted on at
