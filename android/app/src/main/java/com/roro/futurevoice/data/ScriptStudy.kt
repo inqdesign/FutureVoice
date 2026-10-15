@@ -2,6 +2,8 @@ package com.roro.futurevoice.data
 
 import android.content.Context
 import com.roro.futurevoice.core.Analytics
+import com.roro.futurevoice.core.Config
+import com.roro.futurevoice.net.Edge
 import com.roro.futurevoice.net.GeminiClient
 import com.roro.futurevoice.talk.ScriptStudyPrompt
 import com.roro.futurevoice.talk.SpeechPrompts
@@ -9,6 +11,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
 import java.security.MessageDigest
 
@@ -183,17 +190,47 @@ object ScriptStudyEngine {
     @Serializable private data class Payload(
         val highlights: List<Item>? = null,
         @SerialName("paragraph_notes") val paragraphNotes: List<String>? = null,
+        val shared: Boolean? = null,
     )
 
-    /** From disk when it was made before; otherwise one model call. */
+    /** From disk when it was made before; otherwise a challenge's notes come
+     *  from the shared cache (`script-study`, made once per native language
+     *  and level for every learner), and a learner's own script is one model
+     *  call on this phone. A failed shared read falls back to the phone. */
     suspend fun study(context: Context, script: SpeechScript, native: String, level: CefrLevel): ScriptStudy {
         val key = ScriptStudy.cacheKey(script.body, script.language, native, level.code)
         withContext(Dispatchers.IO) { ScriptStudyStore.load(context, key) }?.let { return it }
-        val made = generate(script, native, level)
+        val made = script.challengeId?.let { id -> runCatching { shared(script, id, native, level) }.getOrNull() }
+            ?: generate(script, native, level)
         withContext(Dispatchers.IO) { ScriptStudyStore.save(context, made, key) }
         return made
     }
 
+    /** A challenge's notes from the shared cache. The function reads the
+     *  challenge text itself and holds the prompt; what comes back is the
+     *  model's raw answer, placed here like any other. */
+    private suspend fun shared(script: SpeechScript, challengeId: String,
+                               native: String, level: CefrLevel): ScriptStudy {
+        val payload = withContext(Dispatchers.IO) {
+            val body = buildJsonObject {
+                put("challenge_id", challengeId.lowercase()); put("native", native); put("level", level.code)
+            }
+            val request = Request.Builder()
+                .url(Config.functionUrl("script-study"))
+                .header("Authorization", "Bearer ${AuthRepository().accessToken()}")
+                .post(body.toString().toRequestBody("application/json".toMediaType()))
+                .build()
+            Edge.client.newCall(request).execute().use { resp ->
+                val raw = resp.body.string()
+                if (resp.code !in 200..299) throw StudyError()
+                Edge.json.decodeFromString(Payload.serializer(), raw)
+            }
+        }
+        return build(payload, script, shared = payload.shared ?: true)
+    }
+
+    /** KEEP IN STEP with `supabase/functions/script-study` — challenges are
+     *  studied with that copy of this prompt. */
     private suspend fun generate(script: SpeechScript, native: String, level: CefrLevel): ScriptStudy {
         val paragraphs = ScriptStudy.paragraphs(script.body)
         if (paragraphs.isEmpty()) throw StudyError()
@@ -216,6 +253,12 @@ object ScriptStudyEngine {
             purpose = "script-study",
             onPartial = {},
         )
+        return build(payload, script, shared = false)
+    }
+
+    /** Places the model's spans in the script and pads the paragraph notes. */
+    private fun build(payload: Payload, script: SpeechScript, shared: Boolean): ScriptStudy {
+        val paragraphs = ScriptStudy.paragraphs(script.body)
         fun clean(s: String?) = s?.trim()?.takeIf { it.isNotEmpty() }
         val candidates = payload.highlights.orEmpty().mapNotNull { item ->
             val text = item.text ?: return@mapNotNull null
@@ -227,7 +270,7 @@ object ScriptStudyEngine {
         if (notes.size > paragraphs.size) notes = notes.take(paragraphs.size)
         notes = notes + List(paragraphs.size - notes.size) { "" }
         if (highlights.isEmpty() && notes.none { it.isNotEmpty() }) throw StudyError()
-        Analytics.capture("speech_study_made", mapOf("highlights" to highlights.size))
+        Analytics.capture("speech_study_made", mapOf("highlights" to highlights.size, "shared" to shared))
         return ScriptStudy(highlights, notes)
     }
 }
