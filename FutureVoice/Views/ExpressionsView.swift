@@ -362,7 +362,7 @@ struct ExpressionCard: View {
                 }
 
                 if let c = context, !c.note.isEmpty || !(c.example ?? "").isEmpty {
-                    section(c.heading ?? "In this scene") {
+                    section(c.heading.map { String.LocalizationValue($0) } ?? "In this scene") {
                         VStack(alignment: .leading, spacing: 8) {
                             if !c.note.isEmpty {
                                 Text(c.note)
