@@ -470,6 +470,12 @@ verify_jwt = true
 import_map = "./functions/word-entry/deno.json"
 entrypoint = "./functions/word-entry/index.ts"
 
+[functions.script-study]
+enabled = true
+verify_jwt = true
+import_map = "./functions/script-study/deno.json"
+entrypoint = "./functions/script-study/index.ts"
+
 [functions.stripe-checkout]
 enabled = true
 verify_jwt = true

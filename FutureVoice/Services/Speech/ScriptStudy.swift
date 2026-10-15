@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import Supabase   // FunctionInvokeOptions for the shared challenge study
 
 /// "Study" on a Speech script (2026-10-14, founder decision): the script's
 /// most useful expressions, grammar patterns and words marked IN the text,
@@ -172,28 +173,55 @@ enum ScriptStudyEngine {
         var errorDescription: String? { explain("The study notes couldn't be prepared. Try again.") }
     }
 
-    /// From disk when it was made before; otherwise one model call.
+    /// From disk when it was made before; otherwise a challenge's notes come
+    /// from the shared cache (`script-study`, made once per native language
+    /// and level for every learner), and a learner's own script is one model
+    /// call on this phone. A failed shared read falls back to the phone, so
+    /// the feature never depends on the function being up.
     static func study(for script: SpeechScript, native: String, level: CEFRLevel) async throws -> ScriptStudy {
         let key = ScriptStudy.cacheKey(body: script.body, target: script.language,
                                        native: native, level: level.rawValue)
         if let cached = ScriptStudyStore.load(key: key) { return cached }
-        let made = try await generate(script: script, native: native, level: level)
+        var made: ScriptStudy?
+        if let challengeId = script.challengeId {
+            made = try? await shared(script: script, challengeId: challengeId, native: native, level: level)
+        }
+        if made == nil { made = try await generate(script: script, native: native, level: level) }
+        guard let made else { throw StudyError.empty }
         ScriptStudyStore.save(made, key: key)
         return made
     }
 
+    private struct Item: Decodable {
+        let text: String?
+        let kind: String?
+        let lemma: String?
+        let note: String?
+        let example: String?
+    }
+    private struct Payload: Decodable {
+        let highlights: [Item]?
+        let paragraph_notes: [String]?
+        let shared: Bool?
+    }
+
+    /// A challenge's notes from the shared cache. The function reads the
+    /// challenge text itself and holds the prompt (a copy of `generate`'s);
+    /// what comes back is the model's raw answer, placed here like any other.
+    private static func shared(script: SpeechScript, challengeId: UUID,
+                               native: String, level: CEFRLevel) async throws -> ScriptStudy {
+        struct Body: Encodable { let challenge_id: String; let native: String; let level: String }
+        let payload: Payload = try await SupabaseProvider.shared.functions.invoke(
+            "script-study",
+            options: FunctionInvokeOptions(body: Body(
+                challenge_id: challengeId.uuidString.lowercased(),
+                native: native, level: level.rawValue)))
+        return try build(payload, script: script, shared: payload.shared ?? true)
+    }
+
+    /// KEEP IN STEP with `supabase/functions/script-study` — challenges are
+    /// studied with that copy of this prompt.
     private static func generate(script: SpeechScript, native: String, level: CEFRLevel) async throws -> ScriptStudy {
-        struct Item: Decodable {
-            let text: String?
-            let kind: String?
-            let lemma: String?
-            let note: String?
-            let example: String?
-        }
-        struct Payload: Decodable {
-            let highlights: [Item]?
-            let paragraph_notes: [String]?
-        }
         let paragraphs = ScriptStudy.paragraphs(script.body)
         guard !paragraphs.isEmpty else { throw StudyError.empty }
         let target = LanguageCatalog.englishName(script.language)
@@ -240,6 +268,12 @@ enum ScriptStudyEngine {
         let payload: Payload = try await GeminiClient.shared.sendJSON(
             system: system, messages: [.init(role: .user, content: user)],
             model: .flash36, maxTokens: 8192, purpose: "script-study", requestTimeout: 90)
+        return try build(payload, script: script, shared: false)
+    }
+
+    /// Places the model's spans in the script and pads the paragraph notes.
+    private static func build(_ payload: Payload, script: SpeechScript, shared: Bool) throws -> ScriptStudy {
+        let paragraphs = ScriptStudy.paragraphs(script.body)
         let candidates: [ScriptStudy.Candidate] = (payload.highlights ?? []).compactMap { item in
             guard let text = item.text, let kind = ScriptStudy.Kind(rawValue: (item.kind ?? "").lowercased()) else { return nil }
             func clean(_ s: String?) -> String? {
@@ -255,7 +289,7 @@ enum ScriptStudyEngine {
         if notes.count > paragraphs.count { notes = Array(notes.prefix(paragraphs.count)) }
         while notes.count < paragraphs.count { notes.append("") }
         guard !highlights.isEmpty || notes.contains(where: { !$0.isEmpty }) else { throw StudyError.empty }
-        Analytics.capture("speech_study_made", ["highlights": highlights.count])
+        Analytics.capture("speech_study_made", ["highlights": highlights.count, "shared": shared])
         return ScriptStudy(highlights: highlights, paragraphNotes: notes)
     }
 }
