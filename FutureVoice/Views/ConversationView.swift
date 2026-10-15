@@ -1416,8 +1416,13 @@ struct ConversationView: View {
                                 .id(turn.id)
                                 // A reply arrives already growing; sliding it
                                 // up from below on top of that read as a jolt.
+                                // Nor does it fade in as a whole: it replaces
+                                // the thinking line, which leaves at once, and
+                                // a fade from clear left an empty beat between
+                                // the two — a blink every reply (2026-10-15).
+                                // Its words already fade in one by one.
                                 .transition(turn.role == .fluentSelf
-                                    ? AnyTransition.opacity
+                                    ? AnyTransition.identity
                                     : AnyTransition.opacity.combined(with: .move(edge: .bottom)))
                         }
                     }
