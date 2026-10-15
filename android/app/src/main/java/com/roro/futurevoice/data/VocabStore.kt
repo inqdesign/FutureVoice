@@ -112,6 +112,7 @@ class VocabStore private constructor(context: Context) {
          */
         fun offListContentWords(texts: List<String>, language: String): Map<String, Int> {
             if (language == "ko" || language == "ja") return emptyMap()
+            if (language == "es") return spanishOffListContentWords(texts)
             val pool = CoreVocabulary.set(language)
             val out = HashMap<String, Int>()
             for (text in texts) {
@@ -124,6 +125,29 @@ class VocabStore private constructor(context: Context) {
                     if (isCompoundPiece(text, m.range.first, m.range.last)) continue
                     if (seenHere.add(word)) out[word] = (out[word] ?: 0) + 1
                 }
+            }
+            return out
+        }
+
+        /**
+         * Spanish: the same filters, with the class read from [SpanishMorph]'s
+         * table instead of a tagger. A word missing from the table has no
+         * class and is left out — the conservative answer (iOS
+         * `spanishOffListContentWords`).
+         */
+        private fun spanishOffListContentWords(texts: List<String>): Map<String, Int> {
+            val pool = CoreVocabulary.set("es")
+            val out = HashMap<String, Int>()
+            for (text in texts) {
+                val seenHere = HashSet<String>()
+                for ((word, start) in SpanishMorph.words(text)) {
+                    val entry = SpanishMorph.entry(word) ?: continue
+                    val lemma = entry.lemma
+                    if (lemma.length < 3 || lemma in pool || CoreVocabulary.isUngraded(lemma, "es")) continue
+                    if (isCapitalizedMidSentence(text, start, word)) continue
+                    seenHere.add(lemma)
+                }
+                for (lemma in seenHere) out[lemma] = (out[lemma] ?: 0) + 1
             }
             return out
         }

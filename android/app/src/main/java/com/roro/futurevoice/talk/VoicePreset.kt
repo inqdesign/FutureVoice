@@ -56,7 +56,16 @@ object VoicePreset {
             EMMA to "7be83d14-4707-43ad-9774-e24eb38320f0",   // 陽菜 ← Rin (F)
             JAMES to "6b92f628-be90-497c-8f4c-3b035002df71",  // 健太 ← Kenji (M)
         )
-        mapOf("en" to english, "de" to german, "ko" to korean, "ja" to japanese)
+        // Spanish (2026-10-15): the four Spanish voices Find people already
+        // casts for Spanish-speaking profiles (`ProfileVoice`), slot for slot
+        // by gender. Not yet listened to as scene partners.
+        val spanish = mapOf(
+            PAIGE to "3797b3c0-ab71-40dc-bfa0-a8c6ff9c1e8b",  // Carolina (F)
+            MARK to "7b001dff-b8b2-4da7-92e4-5c794798effa",   // Jorge (M)
+            EMMA to "727f663b-0e90-4031-90f2-558b7334425b",   // Carmen (F)
+            JAMES to "e9f0368b-3662-4a01-b037-e13ca5203c74",  // Javier (M)
+        )
+        mapOf("en" to english, "de" to german, "ko" to korean, "ja" to japanese, "es" to spanish)
     }
 
     /**
@@ -69,6 +78,7 @@ object VoicePreset {
         "de" to mapOf(PAIGE to "Lea", MARK to "Jonas", EMMA to "Karin", JAMES to "Nico"),
         "ko" to mapOf(PAIGE to "시안", MARK to "민준", EMMA to "한별", JAMES to "준호"),
         "ja" to mapOf(PAIGE to "美咲", MARK to "翔太", EMMA to "陽菜", JAMES to "健太"),
+        "es" to mapOf(PAIGE to "Carolina", MARK to "Jorge", EMMA to "Carmen", JAMES to "Javier"),
     )
 
     @Volatile private var appContext: Context? = null

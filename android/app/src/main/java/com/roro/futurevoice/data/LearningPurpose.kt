@@ -197,7 +197,8 @@ object LearningPurposeStore {
 enum class ExamKind(val raw: String, val examName: String) {
     IELTS("ielts", "IELTS"), TOEFL("toefl", "TOEFL"), OPIC("opic", "OPIc"),
     TOEIC_SPEAKING("toeicSpeaking", "TOEIC Speaking"), GOETHE("goethe", "Goethe-Zertifikat"),
-    TELC("telc", "telc"), TOPIK("topik", "TOPIK"), BJT("bjt", "BJT");
+    TELC("telc", "telc"), TOPIK("topik", "TOPIK"), BJT("bjt", "BJT"),
+    DELE("dele", "DELE"), SIELE("siele", "SIELE");
 
     companion object {
         fun options(language: String): List<ExamKind> = when (LearningPurposeStore.base(language)) {
@@ -205,6 +206,7 @@ enum class ExamKind(val raw: String, val examName: String) {
             "de" -> listOf(GOETHE, TELC, OPIC)
             "ko" -> listOf(TOPIK, OPIC)
             "ja" -> listOf(OPIC, BJT)
+            "es" -> listOf(DELE, SIELE, OPIC)
             else -> listOf(OPIC)
         }
     }
@@ -263,6 +265,13 @@ object ExamTopics {
                 ExamTopic("よく行くカフェについて", "Survey"),
                 ExamTopic("予約が取れなかったときの対応", "Role-play"),
             )
+            "es" -> listOf(
+                ExamTopic("Describa su casa", "Survey"),
+                ExamTopic("Su último viaje", "Survey"),
+                ExamTopic("¿Qué hace normalmente los fines de semana?", "Survey"),
+                ExamTopic("Una cafetería a la que va a menudo", "Survey"),
+                ExamTopic("Llame a una tienda por un producto que llegó roto", "Role-play"),
+            )
             "de" -> listOf(
                 ExamTopic("Beschreiben Sie Ihre Wohnung", "Survey"),
                 ExamTopic("Ihre letzte Reise", "Survey"),
@@ -310,6 +319,23 @@ object ExamTopics {
             ExamTopic("取引先に納期の遅れを伝える", "Business"),
             ExamTopic("上司に休みを相談する", "Business"),
             ExamTopic("新しい企画を短く説明する", "Business"),
+        )
+        ExamKind.DELE -> listOf(
+            ExamTopic("Hable de una persona que ha sido importante en su vida", "Tarea 1",
+                listOf("quién es", "cómo la conoció", "qué ha aprendido de ella")),
+            ExamTopic("Describa una fotografía: una familia en un parque", "Tarea 2"),
+            ExamTopic("Organice con un amigo una cena para celebrar algo", "Tarea 3"),
+            ExamTopic("¿Es mejor vivir en el centro o en las afueras?", "Tarea 1",
+                listOf("ventajas", "inconvenientes", "su preferencia y por qué")),
+            ExamTopic("Describa una fotografía: personas trabajando en una oficina", "Tarea 2"),
+            ExamTopic("Quéjese en un hotel porque la habitación no es la que reservó", "Tarea 3"),
+        )
+        ExamKind.SIELE -> listOf(
+            ExamTopic("Preséntese: dónde vive, a qué se dedica y por qué estudia español", "Tarea 1"),
+            ExamTopic("Describa una foto: una calle llena de gente", "Tarea 2"),
+            ExamTopic("Llame a un compañero para cambiar el día de una reunión", "Tarea 3"),
+            ExamTopic("Cuente una experiencia que le hizo cambiar de opinión", "Tarea 4"),
+            ExamTopic("¿Deberían los estudiantes llevar uniforme? Dé su opinión", "Tarea 5"),
         )
     }
 }

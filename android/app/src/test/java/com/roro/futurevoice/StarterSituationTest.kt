@@ -54,18 +54,19 @@ class StarterSituationTest {
         val s = street.scenario(emptyList(), "de", "Auf der Straße", "einem Passanten")
         assertNull(s.openers)
         assertEquals("Entschuldigung, wie komme ich zum [Bahnhof]?", street.learnerFirstLine("de"))
-        assertEquals("Excuse me, how do I get to the [station]?", street.learnerFirstLine("es"))
+        assertEquals("Disculpe, ¿cómo llego a la [estación]?", street.learnerFirstLine("es"))
+        assertEquals("Excuse me, how do I get to the [station]?", street.learnerFirstLine("fr"))
         assertNull(cafe.learnerFirstLine("en"))
         assertEquals(street, StarterSituation.of(s))
         assertNull(StarterSituation.of(Scenario(environment = "mine")))
     }
 
-    @Test fun everyStarterHasFourLanguagesOfAWayIn() {
+    @Test fun everyStarterHasFiveLanguagesOfAWayIn() {
         assertEquals(10, StarterSituation.all.size)
         assertEquals(StarterSituation.all.size, StarterSituation.all.map { it.id }.toSet().size)
         for (st in StarterSituation.all) {
             val lines = st.learnerFirst ?: st.openers.mapValues { it.value.first() }
-            assertEquals(st.id, setOf("en", "ko", "ja", "de"), lines.keys)
+            assertEquals(st.id, setOf("en", "ko", "ja", "de", "es"), lines.keys)
         }
     }
 

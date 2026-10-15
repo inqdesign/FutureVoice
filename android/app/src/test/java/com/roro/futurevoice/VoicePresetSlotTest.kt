@@ -19,7 +19,7 @@ import org.junit.Test
 class VoicePresetSlotTest {
 
     @Test fun koreanAndJapaneseResolveEverySlot() {
-        for (lang in listOf("en", "de", "ko", "ja")) {
+        for (lang in listOf("en", "de", "ko", "ja", "es")) {
             val spoken = StockPerson.catalog.map { VoicePreset.speaking(it.voiceId, lang) }
             assertEquals(lang, StockPerson.catalog.size, spoken.toSet().size)
             StockPerson.catalog.zip(spoken).forEach { (slot, voice) ->
@@ -41,7 +41,7 @@ class VoicePresetSlotTest {
     }
 
     @Test fun languagesWithoutNativeVoicesKeepTheOriginals() {
-        for (lang in listOf("es", "fr")) {
+        for (lang in listOf("fr", "it")) {
             for (slot in StockPerson.catalog) {
                 assertEquals(slot.voiceId, VoicePreset.speaking(slot.voiceId, lang))
             }

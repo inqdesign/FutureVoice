@@ -19,6 +19,7 @@ class FutureVoiceApplication : Application() {
         com.roro.futurevoice.data.DebugBilling.init(this)
         CoreVocabulary.init(this)
         com.roro.futurevoice.data.WordClass.init(this)
+        com.roro.futurevoice.data.SpanishMorph.init(this)
         com.roro.futurevoice.data.SpeechSpeed.init(this)
         com.roro.futurevoice.talk.VoicePreset.init(this)
         com.roro.futurevoice.data.VoiceParking.init(this)

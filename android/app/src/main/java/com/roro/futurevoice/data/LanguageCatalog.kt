@@ -57,7 +57,7 @@ object LanguageCatalog {
 
     /** Targets offered in setup — everything with a graded word list. */
     val selectableTargets: List<Language>
-        get() = targets.filter { it.code in setOf("en", "de", "ko", "ja") }
+        get() = targets.filter { it.code in setOf("en", "es", "de", "ko", "ja") }
 
     /**
      * Languages a learner may name as NATIVE (`LanguageCatalog.swift`,

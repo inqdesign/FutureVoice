@@ -19,6 +19,10 @@ object CoreVocabulary {
     private val wordlistResource = mapOf(
         "en" to "cefr_words", "de" to "cefr_words_de", "ko" to "cefr_words_ko",
         "ja" to "cefr_words_ja",
+        // Spanish wordlist (iOS 2026-10-15): frequency bands over OpenSubtitles +
+        // Tatoeba under a hand-written A1/A2 core — no CEFR-graded Spanish
+        // list can ship commercially. See scripts/build-es-wordlist.swift.
+        "es" to "cefr_words_es",
     )
 
     private class Pool(
@@ -144,6 +148,8 @@ object CoreVocabulary {
             val head = KoreanMorph.dictionaryForm(token, set("ko"), ::koreanRank) ?: return null
             return level(head, "ko")
         }
+        // Spanish: no lemma model on either platform — the bundled form table.
+        if (language.substringBefore('-') == "es") return level(SpanishMorph.lemma(token), "es")
         if (language.substringBefore('-') != "ja") return level(token, language)
         val head = JapaneseMorph.headwords(token, set(language), forms(language))
             .firstOrNull()?.first ?: return null
@@ -227,6 +233,16 @@ object CoreVocabulary {
             "darf", "mögen", "möchte", "nicht", "auch", "noch", "schon",
             "sehr", "mal", "halt", "eben", "ja", "nee", "naja", "ähm",
             "hmm", "okay", "danke", "bitte"),
+        // Mirrors the build's own list (scripts/build-es-wordlist.swift) — the
+        // iOS list as is: Spanish off-list words come only from the form
+        // table, which holds content words alone, so no closed class needs
+        // naming here.
+        "es" to setOf("ser", "estar", "haber", "tener", "ir", "hacer", "poder", "deber",
+            "querer", "soler", "mucho", "poco", "tanto", "otro", "todo", "nada",
+            "algo", "alguien", "nadie", "cada", "mismo", "tal", "más", "menos",
+            "muy", "así", "también", "tampoco", "tan", "sí", "no", "ya",
+            "bueno", "vale", "eh", "em", "este", "pues", "oye", "mira",
+            "okay", "ok", "hola", "adiós", "gracias", "hmm", "ah", "oh", "ay"),
     )
 
     /** True when the word's absence from the pool is a decision rather than a
@@ -275,6 +291,7 @@ object VocabLemmas {
         val lang = language ?: CoreVocabulary.activeLanguage()
         if (lang == "ko") return koreanLemmas(texts)
         if (lang == "ja") return japaneseLemmas(texts)
+        if (lang == "es") return spanishLemmas(texts)
         val forms = if (lang == "en") CoreVocabulary.forms("en") else emptyMap()
         val out = HashSet<String>()
         for (text in texts) {
@@ -295,6 +312,13 @@ object VocabLemmas {
         val t = token.lowercase()
         return when (language) {
             "en" -> CoreVocabulary.forms("en")[t] ?: t
+            // iOS `lookupKey`: the same rule as the tagger path, from the
+            // bundled table — a surface the pool has as itself stays itself
+            // unless its lemma is in the pool too.
+            "es" -> SpanishMorph.lemma(t).let { lemma ->
+                val pool = CoreVocabulary.set("es")
+                if (lemma in pool || t !in pool) lemma else t
+            }
             "ko" -> KoreanMorph.dictionaryForm(t, CoreVocabulary.set("ko"), CoreVocabulary::koreanRank) ?: t
             // iOS `lookupKey`: the whole CHUNK, not one segment — 疲れた is
             // 疲れ + た, and only the た says the 疲れ is the verb and not the
@@ -310,6 +334,23 @@ object VocabLemmas {
             }
             else -> t
         }
+    }
+
+    /**
+     * Spanish: every word through the bundled form table (comí → comer).
+     * Unlike Korean and Japanese, a form the table doesn't know still comes
+     * back as itself, the way the tagger path returns an unknown word
+     * (iOS `spanishLemmas`).
+     */
+    private fun spanishLemmas(texts: List<String>): Set<String> {
+        val out = HashSet<String>()
+        for (text in texts) {
+            for ((word, _) in SpanishMorph.words(text)) {
+                val lemma = SpanishMorph.lemma(word)
+                if (lemma.length > 1) out.add(lemma)
+            }
+        }
+        return out
     }
 
     /**
