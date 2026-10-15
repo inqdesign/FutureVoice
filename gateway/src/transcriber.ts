@@ -335,7 +335,8 @@ export function languagePin(code: string): string {
  *  answer word 응 into a filler). The coach prompts carry the same rule for
  *  corrections (`registerGuard` in the app); the transcriber had nothing,
  *  and a polite ending is the likeliest completion for a model to prefer.
- *  Appended only for these two, so every other language's pin is unchanged.
+ *  Appended only for these two (and German's short answers, below), so
+ *  every other language's pin is unchanged.
  *  Not reproduced on clean synthesized audio (12/12 kept 반말 with and
  *  without it), so it guards a real recording's ambiguity, not a clean one. */
 export function speechLevelGuard(code: string): string | null {
@@ -344,6 +345,12 @@ export function speechLevelGuard(code: string): string | null {
       return "Korean marks the speech level in its endings, and the level they used is part of what they said: write 알겠어 as 알겠어 and 알겠어요 as 알겠어요. Never add or drop 요, never turn 반말 into 존댓말 or the other way. 응, 어 and 네 are answers (yes), not hesitation — write them as heard, never as 음."
     case "ja":
       return "Japanese marks the speech level in its endings, and the level they used is part of what they said: write わかった as わかった and わかりました as わかりました. Never add or drop です or ます, never turn plain speech into polite speech or the other way. うん and ええ are answers (yes), not hesitation — write them as heard."
+    case "de":
+      // 2026-10-15, founder: short German answers came back as English
+      // words that sound alike — "Nein" as "Nine". The general line above
+      // says short replies are the target language; this names the ones a
+      // German call is made of, and the English words they get taken for.
+      return "German and English share many sounds. A short answer is German: write Nein, never \"nine\"; Ja, never \"yeah\" or \"yes\"; Genau, Doch, Danke, Gut, Na ja, Also as German words. Never write an English word for a German one that sounds like it."
     default:
       return null
   }

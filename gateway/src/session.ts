@@ -527,6 +527,32 @@ export class CallSession implements DurableObject {
     return want.test(text)
   }
 
+  /** A final in a Latin-script target that reads as ENGLISH: German only
+   *  for now, where it was reported. The words are English-only — none of
+   *  them is a German word (so, was, will, also, man, die, in, am, okay
+   *  are left out on purpose) — so a real German line never has one, and a
+   *  short answer with one ("Nine", "Yeah") is the transcriber guessing the
+   *  language. A longer line needs a third of its words English: one
+   *  English word inside German is the learner reaching for it. A false
+   *  hit costs one re-read, which keeps the line as said. */
+  static readsAsEnglish(text: string, language: string): boolean {
+    if (language.toLowerCase().split("-")[0] !== "de") return false
+    const words = text.toLowerCase().split(/[^\p{L}]+/u).filter(Boolean)
+    if (words.length === 0) return false
+    const hits = words.filter((w) => CallSession.englishOnly.has(w)).length
+    return hits > 0 && (words.length <= 4 || hits * 3 >= words.length)
+  }
+
+  private static readonly englishOnly = new Set([
+    "nine", "yes", "yeah", "yep", "no", "nope", "the", "and", "but", "or",
+    "you", "your", "i", "me", "my", "we", "they", "she", "it", "its", "is",
+    "are", "that", "this", "what", "where", "how", "when", "why", "who",
+    "have", "has", "do", "does", "don", "didn", "can", "know", "think",
+    "good", "very", "because", "with", "of", "for", "to", "too", "on",
+    "thanks", "thank", "please", "well", "maybe", "sure", "right", "just",
+    "really", "like", "there", "here", "yet",
+  ])
+
   /** Nothing but hesitation sounds, in any Latin-script spelling: uh, um,
    *  er, ah, hm, mhm, oh, äh, ähm, öh, eh, euh — drawn out or not. Used only
    *  on a RE-READ of a wrong-script final, where the original was already
@@ -1105,7 +1131,12 @@ export class CallSession implements DurableObject {
    *  being answered on Hindi they never spoke. */
   private async acceptFinal(text: string, audio: ArrayBuffer[]): Promise<void> {
     if (this.ended) return
-    if (CallSession.inTargetScript(text, this.language)) {
+    // Same script is not the same language (2026-10-15, founder, German:
+    // "Nein" came back "Nine", and other short answers as English words).
+    // The pin can't stop it and no script check sees it, so a German final
+    // that reads as English goes through the same re-read from audio.
+    const englishInTarget = CallSession.readsAsEnglish(text, this.language)
+    if (CallSession.inTargetScript(text, this.language) && !englishInTarget) {
       // "I want to… 승진" — a native word inside a target line is the
       // learner reaching for one they don't have. The line is theirs as
       // written; the model is told which part they couldn't say.
@@ -1134,18 +1165,19 @@ export class CallSession implements DurableObject {
     )
     if (this.ended) return
     const ms = Date.now() - started
+    const tag = englishInTarget ? "english in target, " : ""
     // A hesitation the re-read wrote as a word: "अह" came back "Ah.", "Uh",
     // "Ähm." (2026-10-08, 14 days of finals). Those went through as turns and
     // the fluent self answered a filler. Same fate as an empty re-read.
     if (reread !== null && reread.spoken !== "none" && CallSession.isFillerOnly(reread.text)) {
-      this.warn("script_mismatch", `reread filler (${ms}ms): ${text.slice(0, 40)} → ${reread.text.slice(0, 40)}`)
+      this.warn("script_mismatch", `${tag}reread filler (${ms}ms): ${text.slice(0, 40)} → ${reread.text.slice(0, 40)}`)
       if (this.pendingUtterance !== null) this.armPending(CallSession.pendingHoldMs)
       return
     }
     if (reread !== null && reread.spoken === "none") {
       // Only a hesitation in the audio. Dropped, as before, and the hold's
       // clock moves (they are still going).
-      this.warn("script_mismatch", `reread empty (${ms}ms): ${text.slice(0, 40)}`)
+      this.warn("script_mismatch", `${tag}reread empty (${ms}ms): ${text.slice(0, 40)}`)
       if (this.pendingUtterance !== null) this.armPending(CallSession.pendingHoldMs)
       return
     }
@@ -1166,7 +1198,7 @@ export class CallSession implements DurableObject {
         return
       }
       if (!CallSession.inTargetScript(reread.text, this.language)) {
-        this.warn("script_mismatch", `reread other, dropped (${ms}ms): ${text.slice(0, 40)} → ${reread.text.slice(0, 40)}`)
+        this.warn("script_mismatch", `${tag}reread other, dropped (${ms}ms): ${text.slice(0, 40)} → ${reread.text.slice(0, 40)}`)
         if (this.pendingUtterance !== null) this.armPending(CallSession.pendingHoldMs)
         return
       }
@@ -1177,14 +1209,20 @@ export class CallSession implements DurableObject {
     // overruled by the script (2 of 88 in the probe).
     if (reread !== null && native !== null && (reread.spoken === "native"
         || (!CallSession.inTargetScript(reread.text, this.language) && this.hasNativeScript(reread.text, native)))) {
-      this.warn("script_mismatch", `native (${ms}ms): ${text.slice(0, 40)} → ${reread.text.slice(0, 80)}`)
+      this.warn("script_mismatch", `${tag}native (${ms}ms): ${text.slice(0, 40)} → ${reread.text.slice(0, 80)}`)
       if (this.native === null) this.inferredNative = native
       this.handleUtterance(reread.text, true)
       return
     }
     if (reread !== null && CallSession.inTargetScript(reread.text, this.language)) {
-      this.warn("script_mismatch", `reread (${ms}ms): ${text.slice(0, 40)} → ${reread.text.slice(0, 80)}`)
+      this.warn("script_mismatch", `${tag}reread (${ms}ms): ${text.slice(0, 40)} → ${reread.text.slice(0, 80)}`)
       this.handleUtterance(reread.text, this.hasNativeScript(reread.text))
+      return
+    }
+    // A target-script line that only LOOKED English: the re-read couldn't
+    // be made, so the line goes through as the transcriber wrote it.
+    if (englishInTarget && CallSession.inTargetScript(text, this.language)) {
+      this.handleUtterance(text, this.hasNativeScript(text))
       return
     }
     // The re-read failed or came back wrong too: the old behaviour.
