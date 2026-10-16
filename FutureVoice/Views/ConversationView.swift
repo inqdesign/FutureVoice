@@ -1715,6 +1715,13 @@ struct ConversationView: View {
                 // gone (on call) the label had NO tappable content and the
                 // hang-up tap silently died. Make the whole capsule the target.
                 .contentShape(Capsule())
+                .background {
+                    GeometryReader { g in
+                        Color.clear
+                            .onAppear { reportPillFrame(g.frame(in: .global)) }
+                            .onChange(of: g.frame(in: .global)) { _, f in reportPillFrame(f) }
+                    }
+                }
             }
             .buttonStyle(.plain)
             .accessibilityLabel(Text(micA11yLabel))
@@ -1761,6 +1768,15 @@ struct ConversationView: View {
             voiceLevel = new
         }
         .onChange(of: phase) { _, _ in voiceLevel = 0 }
+    }
+
+    /// Tell the free-talk morph where this pill really is, so its proxy
+    /// docks ON it (see `AppState.callPillFrame`). Only while that proxy is
+    /// up — a cover sliding in would report every frame of its slide.
+    private func reportPillFrame(_ frame: CGRect) {
+        guard appState.talkRingProxyActive, frame.width > 0,
+              appState.callPillFrame != frame else { return }
+        withAnimation(.easeOut(duration: 0.2)) { appState.callPillFrame = frame }
     }
 
     /// Send-to-answer and it is the learner's turn: the pill sends.
