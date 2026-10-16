@@ -21,11 +21,19 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.material.icons.outlined.DocumentScanner
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -36,7 +44,6 @@ import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
-import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Verified
@@ -45,7 +52,6 @@ import com.roro.futurevoice.ui.brand.IosButton as Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import com.roro.futurevoice.ui.brand.IosOutlinedButton as OutlinedButton
@@ -92,7 +98,6 @@ import com.roro.futurevoice.talk.ShadowScore
 import com.roro.futurevoice.talk.ShadowTranscriber
 import com.roro.futurevoice.talk.SpokenWords
 import com.roro.futurevoice.talk.StockPerson
-import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.ui.brand.Books
 import com.roro.futurevoice.ui.brand.DialogueLine
 import com.roro.futurevoice.ui.brand.DialogueSpeaker
@@ -634,25 +639,86 @@ fun SayItAgainScreen(
         }
     }
     val listState = rememberLazyListState()
-    LaunchedEffect(history.size, phase) {
-        if (history.isNotEmpty()) listState.animateScrollToItem(history.lastIndex)
+    // The feed is BOTTOM-ANCHORED (`reverseLayout`), the stand-in for iOS's
+    // `defaultScrollAnchor(.bottom)`: index 0 is the newest line and sits
+    // right above the prompter. Anchored at the top, the prompter growing
+    // from the one-line "is answering" row into the reading card pushed the
+    // fluent self's last line down under the bar, out of sight.
+    LaunchedEffect(history.size, phase, index) {
+        if (history.isNotEmpty()) listState.animateScrollToItem(0)
     }
+    // The plain page, not the grouped ground (iOS: the sheet's own
+    // `systemBackground`) — white in light, black in dark.
+    val page = MaterialTheme.colorScheme.surface
+    var barHeight by remember { mutableIntStateOf(0) }
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val barDp = with(density) { barHeight.toDp() }
 
     Scaffold(
-        containerColor = AppSurfaces.ground,
+        containerColor = page,
         topBar = {
             CenterAlignedTopAppBar(
-                colors = AppSurfaces.topBarColors(),
-                title = { Text(stringResource(R.string.say_it_again),
-                    style = MaterialTheme.typography.titleMedium) },
+                colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
+                    containerColor = page, scrolledContainerColor = page),
+                title = { com.roro.futurevoice.ui.brand.IosNavTitle(stringResource(R.string.say_it_again)) },
                 actions = {
                     TextButton(onClick = { close() }) { Text(stringResource(R.string.close)) }
                 },
             )
         },
-        bottomBar = {
-            Column(Modifier.fillMaxWidth().bottomBarInsets()) {
-                if (phase != SayPhase.INTRO) HorizontalDivider()
+    ) { padding ->
+      Box(Modifier.padding(top = padding.calculateTopPadding()).fillMaxSize()) {
+        if (phase == SayPhase.INTRO) {
+            // The cover sits at the bottom too, right over Start (iOS: the
+            // same bottom-anchored scroll view holds it).
+            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+                val minH = maxHeight
+                IntroHero(source, spokenCount, correctedCount,
+                    Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+                        .heightIn(min = minH).padding(bottom = barDp))
+            }
+        } else {
+            LazyColumn(
+                state = listState,
+                reverseLayout = true,
+                modifier = Modifier.fillMaxSize(),
+                // The newest line clears the floating prompter; everything
+                // above it scrolls on underneath and dissolves into the wash.
+                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 20.dp,
+                    bottom = 20.dp + barDp),
+                verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.Bottom),
+            ) {
+                val newestFirst = history.withIndex().reversed()
+                items(newestFirst.size, key = { newestFirst[it].value.id }) { n ->
+                    val (i, step) = newestFirst[n]
+                    HistoryRow(step, source.otherName, takes[step.id],
+                        isCurrent = phase == SayPhase.LISTENING && i == index,
+                        onRetry = { withMic { retry(step) } })
+                }
+            }
+        }
+        // The prompter FLOATS (iOS `fadingBottomBar`): no divider and no
+        // background of its own — a wash of the page colour sits behind it,
+        // and only while there are lines scrolled on underneath it does the
+        // wash fade out over the 36 dp above it (iOS's soft scroll edge), so
+        // those lines dissolve into the bar; the newest line, resting right
+        // above the bar, is never washed.
+        val scrolledUnder = phase != SayPhase.INTRO &&
+            (listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0)
+        Column(
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                .onSizeChanged { barHeight = it.height }
+                .drawBehind {
+                    if (scrolledUnder) {
+                        val fade = 36.dp.toPx()
+                        drawRect(Brush.verticalGradient(listOf(page.copy(alpha = 0f), page),
+                            startY = -fade, endY = 0f),
+                            topLeft = Offset(0f, -fade), size = Size(size.width, fade))
+                    }
+                    drawRect(page)
+                }
+                .bottomBarInsets()
+        ) {
                 Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     when (phase) {
@@ -676,26 +742,8 @@ fun SayItAgainScreen(
                             onDone = { close() })
                     }
                 }
-            }
-        },
-    ) { padding ->
-        if (phase == SayPhase.INTRO) {
-            IntroHero(source, spokenCount, correctedCount,
-                Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState()))
-        } else {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.padding(padding).fillMaxSize(),
-                contentPadding = PaddingValues(20.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                itemsIndexed(history, key = { _, s -> s.id }) { i, step ->
-                    HistoryRow(step, source.otherName, takes[step.id],
-                        isCurrent = phase == SayPhase.LISTENING && i == index,
-                        onRetry = { withMic { retry(step) } })
-                }
-            }
         }
+      }
     }
 
     micError?.let { message ->
@@ -736,7 +784,7 @@ private fun HistoryRow(
         if (step.isSpoken && score != null && score < ShadowPicks.RETRY_THRESHOLD &&
             take.heard.isNotEmpty()) {
             Text(stringResource(R.string.heard) + ": " + take.heard,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.End,
                 modifier = Modifier.fillMaxWidth())
@@ -754,32 +802,36 @@ private fun TakeAccessory(take: SayTake?, onRetry: () -> Unit) {
                 Icon(if (s >= TalkCurriculum.SHADOW_MASTERY_SCORE) Icons.Filled.CheckCircle
                     else Icons.Filled.GraphicEq, contentDescription = null,
                     modifier = Modifier.size(14.dp), tint = sayScoreColor(s))
-                Text("$s", style = MaterialTheme.typography.labelMedium,
+                Text("$s", style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold, color = sayScoreColor(s))
             }
             SayTake.Outcome.HEARD_NOTHING -> {
                 Icon(Icons.Filled.MicOff, contentDescription = null, modifier = Modifier.size(14.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(stringResource(R.string.didn_t_hear_that),
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             SayTake.Outcome.SKIPPED -> {
                 Icon(Icons.Filled.FastForward, contentDescription = null, modifier = Modifier.size(14.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(stringResource(R.string.skipped),
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             null -> CircularProgressIndicator(Modifier.size(12.dp), strokeWidth = 1.5.dp)
         }
+        // iOS `.bordered` + `.controlSize(.mini)`: a small capsule, caption
+        // semibold — not the large button the outlined style defaults to.
         if (take != null) {
             OutlinedButton(onClick = onRetry,
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
-                modifier = Modifier.padding(start = 2.dp)) {
-                Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(14.dp))
+                modifier = Modifier.height(26.dp)) {
+                Icon(Icons.Filled.Refresh, contentDescription = null,
+                    modifier = Modifier.size(12.dp).graphicsLayer { scaleX = -1f })
                 Spacer(Modifier.width(4.dp))
-                Text(stringResource(R.string.retry), style = MaterialTheme.typography.labelMedium)
+                Text(stringResource(R.string.retry), style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold)
             }
         }
     }
@@ -790,8 +842,8 @@ private fun TakeAccessory(take: SayTake?, onRetry: () -> Unit) {
 private fun IntroHero(source: SayItAgainSource, spoken: Int, corrected: Int, modifier: Modifier) {
     Column(modifier.padding(horizontal = 28.dp).padding(top = 48.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Icon(Icons.Filled.RecordVoiceOver, contentDescription = null,
+        verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.Bottom)) {
+        Icon(Icons.Outlined.DocumentScanner, contentDescription = null,
             tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(40.dp))
         Text(source.title, style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
@@ -805,10 +857,10 @@ private fun IntroHero(source: SayItAgainSource, spoken: Int, corrected: Int, mod
         if (corrected > 0) {
             Row(verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Icon(Icons.Filled.AutoAwesome, contentDescription = null, modifier = Modifier.size(14.dp),
+                Icon(Icons.Filled.AutoAwesome, contentDescription = null, modifier = Modifier.size(13.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(stringResource(R.string.lld_lines_lld_corrected, spoken, corrected),
-                    style = MaterialTheme.typography.labelLarge,
+                    style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -825,7 +877,7 @@ private fun IntroPanel(spoken: Int, onStart: () -> Unit) {
     } else {
         Button(onClick = onStart, modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(vertical = 14.dp)) {
-            Icon(Icons.Filled.RecordVoiceOver, contentDescription = null, modifier = Modifier.size(18.dp))
+            Icon(Icons.Outlined.DocumentScanner, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Text(stringResource(R.string.start))
         }
@@ -856,7 +908,11 @@ private fun ListeningPanel(otherName: String, onSkip: () -> Unit) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1, modifier = Modifier.weight(1f))
-        OutlinedButton(onClick = onSkip) { Text(stringResource(R.string.skip)) }
+        // iOS `.bordered` + `.controlSize(.small)`.
+        OutlinedButton(onClick = onSkip, modifier = Modifier.height(30.dp),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)) {
+            Text(stringResource(R.string.skip), style = MaterialTheme.typography.bodyMedium)
+        }
     }
 }
 
@@ -899,10 +955,10 @@ private fun ReadingPanel(step: SayItAgainScript.Step?, onSkip: () -> Unit) {
             Box(Modifier.size(8.dp).clip(CircleShape).background(Color(0xFFFF3B30)))
             Text(stringResource(if (step?.isCorrected == true) R.string.say_it_the_fixed_way
                 else R.string.say_your_line),
-                style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold,
                 color = ink.copy(alpha = 0.7f), modifier = Modifier.weight(1f))
             Text(stringResource(R.string.skip),
-                style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold,
                 color = ink.copy(alpha = 0.7f),
                 modifier = Modifier.clip(RoundedCornerShape(6.dp)).clickable(onClick = onSkip)
                     .padding(horizontal = 4.dp, vertical = 2.dp))
@@ -926,7 +982,9 @@ private fun ReadingPanel(step: SayItAgainScript.Step?, onSkip: () -> Unit) {
                     Text(if (step.isCorrected) highlightedCorrection(step.text, step.said)
                         else buildAnnotatedString { append(step.text) },
                         style = MaterialTheme.typography.headlineSmall.copy(
-                            lineHeight = MaterialTheme.typography.headlineSmall.lineHeight * 1.1f),
+                            // iOS `.lineSpacing(4)` on title2's 28 pt leading.
+                            lineHeight = androidx.compose.ui.unit.TextUnit(32f,
+                                androidx.compose.ui.unit.TextUnitType.Sp)),
                         fontWeight = FontWeight.SemiBold, color = lineInk,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                         modifier = Modifier.fillMaxWidth())
@@ -941,9 +999,9 @@ private fun ReadingPanel(step: SayItAgainScript.Step?, onSkip: () -> Unit) {
         // Says how the take ends, since nothing on the card does it.
         Row(verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Icon(Icons.Filled.GraphicEq, contentDescription = null, modifier = Modifier.size(14.dp),
+            Icon(Icons.Filled.GraphicEq, contentDescription = null, modifier = Modifier.size(12.dp),
                 tint = ink.copy(alpha = 0.5f))
-            Text(stringResource(R.string.moves_on_when_you_finish), style = MaterialTheme.typography.labelMedium,
+            Text(stringResource(R.string.moves_on_when_you_finish), style = MaterialTheme.typography.labelSmall,
                 color = ink.copy(alpha = 0.5f))
         }
     }
@@ -985,7 +1043,8 @@ private fun FinishedPanel(
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             OutlinedButton(onClick = onRunAgain, modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(vertical = 12.dp)) {
-                Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(Icons.Filled.Refresh, contentDescription = null,
+                    modifier = Modifier.size(18.dp).graphicsLayer { scaleX = -1f })
                 Spacer(Modifier.width(6.dp))
                 Text(stringResource(R.string.run_again), maxLines = 1)
             }
