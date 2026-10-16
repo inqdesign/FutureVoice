@@ -89,12 +89,13 @@ enum TutorMode {
 /// the screen, the voice and the transcript are unchanged — only who decides
 /// the turn is over.
 ///
-/// ON by default for A1 only; the learner's own flip always wins, like
+/// ON by default for A1 and A2 (A2 added 2026-10-16, founder: the same
+/// beginners coach mode is on for); the learner's own flip always wins, like
 /// `CoachMode` (the key is written only by the toggle). Realtime path only.
 enum SendToAnswer {
     static let key = "futurevoice.call.sendToAnswer"
 
-    static func defaultOn(for level: CEFRLevel) -> Bool { level == .a1 }
+    static func defaultOn(for level: CEFRLevel) -> Bool { level == .a1 || level == .a2 }
 
     static func resolve(choice: Bool?, levelRaw: String) -> Bool {
         choice ?? defaultOn(for: CEFRLevel(rawValue: levelRaw) ?? .b1)
