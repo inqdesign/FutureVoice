@@ -316,6 +316,11 @@ class TalkViewModel(context: Context) : ViewModel() {
         discardOnEnd = false
         stagedCall = false
         if (_state.value.phase != TalkPhase.IDLE && _state.value.phase != TalkPhase.ENDED) return
+        // The view model outlives a call, and a greeting parked for a call
+        // that ended before the gateway was ready would play on the NEXT
+        // call's first LISTENING — on top of that call's own opener (a free
+        // talk's "did you sleep well?" over a news story's first line).
+        localOpener = null
         this.config = config
         val resume = config.resume
         _state.value = TalkUiState(phase = TalkPhase.CONNECTING,
