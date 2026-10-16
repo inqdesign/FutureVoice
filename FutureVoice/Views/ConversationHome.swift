@@ -432,7 +432,8 @@ struct ConversationHome: View {
             personaName: appState.persona?.displayName,
             proficiency: appState.proficiency,
             voiceId: appState.voiceCloneId,
-            firstMeeting: appState.persona?.metAt == nil)
+            firstMeeting: appState.persona?.metAt == nil,
+            notes: appState.persona?.learnedNotes ?? [])
     }
 
     // MARK: - Actions (tap = start the call)

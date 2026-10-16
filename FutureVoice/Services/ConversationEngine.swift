@@ -242,10 +242,11 @@ enum ConversationEngine {
         let theyCalledBlock = (topic.isEmpty && counterpart == nil && !firstMeeting) ? """
 
 
-        THEY CALLED YOU. Your opening line was only a friend's hello for \
-        the time of day ("did you sleep well?", "what are you up to?", \
-        "how was your day?"), so whatever they bring first IS the call — go \
-        with it, and don't steer to something you'd rather ask about. If they \
+        THEY CALLED YOU. Your opening line was only a friend's hello — for \
+        the time of day ("what are you up to?", "how was your day?"), or one \
+        question about something they told you recently — so whatever they \
+        bring first IS the call: go with it, even if it isn't what you asked \
+        about, and don't steer to something you'd rather ask about. If they \
         only answer the greeting ("good, you?"), say how you are in a few \
         words and then ask \
         one short, plain question that hands them the floor ("what's new?", \

@@ -2615,11 +2615,15 @@ struct ConversationView: View {
                 // Gemini.
                 opener = FreeTalkOpeners.introOpener(language: appState.targetLanguage)
             } else if topic.isEmpty, counterpart == nil {
-                // Free talk: one light hello for the time of day, bundled
-                // (`FreeTalkOpeners.pickUpLines`) — the texts repeat
-                // verbatim, so the TTS content cache makes the voice free
-                // after each line's first play.
-                opener = FreeTalkOpeners.pickUpOpener(language: appState.targetLanguage)
+                // Free talk: a hello that asks about fresh news when the
+                // notebook has some (written and voiced ahead), else the
+                // bundled hello for the time of day
+                // (`FreeTalkOpeners.callOpener`).
+                let picked = FreeTalkOpeners.callOpener(
+                    language: appState.targetLanguage,
+                    notes: appState.persona?.learnedNotes ?? [])
+                opener = picked.line
+                if let noteId = picked.noteId { FreeTalkOpeners.markAsked(noteId) }
             } else if let line = learnerOpensLine {
                 // A starter the LEARNER opens (asking a stranger the way):
                 // the other side waits to be spoken to, and the coach's own
