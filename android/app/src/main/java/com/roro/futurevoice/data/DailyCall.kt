@@ -227,10 +227,30 @@ object DailyCallScheduler {
                 am.setAlarmClock(AlarmManager.AlarmClockInfo(whenMs, contentIntent(context)),
                     firePendingIntent(context, slot))
             } else {
-                am.setWindow(AlarmManager.RTC_WAKEUP, whenMs, INEXACT_WINDOW_MS,
+                // `setWindow` does not fire in Doze: a phone left on the
+                // nightstand held an 08:00 call until the next maintenance
+                // window, often hours later. AllowWhileIdle still rings while
+                // idle (a few minutes late at most), which is the promise.
+                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, whenMs,
                     firePendingIntent(context, slot))
             }
         }
+    }
+
+    /**
+     * Put the rings back from the stored plan (iOS re-arms on every
+     * `scenePhase == .active`). Android drops every alarm on a reboot and on
+     * a force stop, and nothing else re-armed them: the chain only continued
+     * from a ring, so one reboot silenced the call for good. Called on every
+     * resume and from [DailyCallBootReceiver]. A day already settled
+     * (answered, or every slot declined) rings again only tomorrow.
+     */
+    fun rearm(context: Context, now: Long = System.currentTimeMillis()) {
+        if (!DailyCallStore.isEnabled(context)) return
+        VoiceParking.init(context)
+        val settledToday = DailyCallStore.history(context).lastOrNull()
+            ?.let { dayOf(it.first) == dayOf(now) } == true
+        schedule(context, fromTomorrow = settledToday)
     }
 
     // MARK: - A call already in progress
@@ -424,6 +444,14 @@ object DailyCallScheduler {
         ringEnded.value += 1
         DailyCallRingService.stop(context)
         (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).cancel(REQUEST)
+    }
+}
+
+/** Alarms do not survive a reboot, a clock or zone change, or an update's
+ *  force stop; the call is put back without waiting for the app to open. */
+class DailyCallBootReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        DailyCallScheduler.rearm(context)
     }
 }
 
