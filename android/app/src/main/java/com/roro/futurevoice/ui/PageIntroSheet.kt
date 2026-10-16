@@ -5,6 +5,8 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -66,7 +68,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -82,8 +83,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -523,7 +522,11 @@ private fun ScreenPage(title: Int, subtitle: Int, callouts: List<PageIntro.Callo
     var focus by remember { mutableIntStateOf(1) }
     var steered by remember { mutableStateOf(false) }
     val scroll = rememberScrollState()
-    val rowTops = remember { mutableStateMapOf<Int, Int>() }
+    // iOS `proxy.scrollTo(n)` with no anchor: scroll only as far as it takes
+    // to show the lit row, and not at all when it is already on screen.
+    // Scrolling every row to the top made the list bounce up and down with
+    // each step of the walk.
+    val rowViews = remember(callouts.size) { List(callouts.size) { BringIntoViewRequester() } }
     val reduceMotion = remember {
         android.provider.Settings.Global.getFloat(context.contentResolver,
             android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
@@ -536,7 +539,7 @@ private fun ScreenPage(title: Int, subtitle: Int, callouts: List<PageIntro.Callo
             focus = focus % maxOf(callouts.size, 1) + 1
         }
     }
-    LaunchedEffect(focus) { rowTops[focus]?.let { scroll.animateScrollTo(it) } }
+    LaunchedEffect(focus) { rowViews.getOrNull(focus - 1)?.bringIntoView() }
 
     Column(Modifier.fillMaxSize()) {
         // The picture stays put; the explanations scroll under it, so the
@@ -560,7 +563,7 @@ private fun ScreenPage(title: Int, subtitle: Int, callouts: List<PageIntro.Callo
                     val n = index + 1
                     Row(
                         Modifier.fillMaxWidth()
-                            .onGloballyPositioned { rowTops[n] = it.positionInParent().y.toInt() }
+                            .bringIntoViewRequester(rowViews[index])
                             // The row of the lit spot is lit too, so the eye
                             // goes from the picture straight to its words
                             // (iOS 1a2b5e86).
