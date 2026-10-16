@@ -256,10 +256,16 @@ fun TalkScreen(
      * pitch: its dismissal (Save or Later) continues the exit.
      */
     var firstCallCheck by remember { mutableStateOf<(() -> Unit)?>(null) }
+    /** A learner line was added in THIS call (iOS `learnerSpokeThisCall`,
+     *  set where a user turn is appended) — a resumed talk's old lines don't
+     *  count. */
+    fun spokeThisCall(): Boolean = vm.state.value.let { st ->
+        st.turns.drop(st.resumedTurnCount).any { it.role == TurnRole.USER }
+    }
     fun pitchThenLeave() {
         if (firstCallCheck != null) return
         feedbackScope.launch {
-            val spoke = state.turns.any { it.role == TurnRole.USER }
+            val spoke = spokeThisCall()
             if (preview == null && FirstCallCheck.shouldShow(appContext, spoke)) {
                 FirstCallCheck.markShown(appContext)
                 firstCallCheck = { pitchCore() }
@@ -273,13 +279,19 @@ fun TalkScreen(
      * still asks about the first call when the learner spoke in it (iOS
      * `close()`: "the first call is asked about however it ended"). Its
      * dismissal is the exit; no plans pitch, which belongs to the summary.
+     * Every exit that doesn't go through the summary's Done comes here —
+     * the close button with nothing left to save (a summary that failed),
+     * "Go to Review" on the spent sheet — like every iOS exit runs `close()`.
      */
     fun exitAskingFirstCall() {
         if (firstCallCheck != null) return
-        val spoke = vm.state.value.turns.any { it.role == TurnRole.USER }
+        // Only what was said in THIS call (iOS `learnerSpokeThisCall`): a
+        // resumed talk carries old lines of the learner's.
+        val spoke = spokeThisCall()
         // Torn down first, like iOS `close()`: nothing listens or bills
-        // behind the sheet, and nothing is kept.
-        vm.discard()
+        // behind the sheet, and nothing unsaved is kept. A call already
+        // wrapped up is left as it is.
+        if (vm.state.value.phase != TalkPhase.ENDED) vm.discard()
         feedbackScope.launch {
             if (preview == null && FirstCallCheck.shouldShow(appContext, spoke)) {
                 FirstCallCheck.markShown(appContext)
@@ -357,7 +369,7 @@ fun TalkScreen(
             vm.end()
             // Nothing saved (set synchronously) → no board to wait on.
             if (vm.state.value.endedSessionId == null) onExit()
-        } else { vm.discard(); onExit() }
+        } else exitAskingFirstCall()
     }
     val listState = rememberLazyListState()
     // Call settings (iOS `CallSettingsSheet`): screen state the learner can
@@ -739,9 +751,9 @@ fun TalkScreen(
                         } else {
                             // Nothing new to keep: hang up without saving, or a
                             // resumed talk left untouched would be summarized
-                            // again on the way out (iOS `close()`).
-                            if (state.phase != TalkPhase.ENDED) vm.discard()
-                            onExit()
+                            // again on the way out (iOS `close()`, which also
+                            // asks about the first call however it ended).
+                            exitAskingFirstCall()
                         }
                     }, modifier = Modifier.padding(start = 8.dp).size(44.dp)
                         .background(MaterialTheme.colorScheme.surfaceContainerHighest, CircleShape)) {

@@ -6,6 +6,7 @@ import com.roro.futurevoice.talk.GrammarFocus
 import com.roro.futurevoice.talk.GrammarFocusRecord
 import com.roro.futurevoice.talk.LearnerPattern
 import com.roro.futurevoice.talk.LearnerProfile
+import com.roro.futurevoice.talk.SendToAnswer
 import com.roro.futurevoice.talk.Session
 import com.roro.futurevoice.talk.Turn
 import com.roro.futurevoice.talk.TurnRole
@@ -66,6 +67,16 @@ class CoachPlanTest {
         assertFalse(CoachMode.resolve(null, ""))
         assertFalse(CoachMode.resolve(false, "a1"))
         assertTrue(CoachMode.resolve(true, "c1"))
+    }
+
+    /** iOS `SendToAnswerDefaultTests`: on for A1 and A2 until the learner flips it. */
+    @Test fun sendToAnswerLevelDecidesUntilTheLearnerChooses() {
+        assertTrue(SendToAnswer.resolve(null, "a1"))
+        assertTrue(SendToAnswer.resolve(null, "a2"))
+        assertFalse(SendToAnswer.resolve(null, "b1"))
+        assertFalse(SendToAnswer.resolve(null, ""))
+        assertFalse(SendToAnswer.resolve(false, "a2"))
+        assertTrue(SendToAnswer.resolve(true, "c1"))
     }
 }
 
