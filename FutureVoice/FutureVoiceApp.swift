@@ -1668,12 +1668,10 @@ final class AppState: ObservableObject {
         let level = proficiency
         let voice = voiceCloneId
         let unmet = persona?.metAt == nil
-        let notes = persona?.learnedNotes ?? []
         Task.detached(priority: .utility) {
             await FreeTalkOpeners.shared.warmFirstCall(
                 language: language, personaName: personaName,
-                proficiency: level, voiceId: voice, firstMeeting: unmet,
-                notes: notes)
+                proficiency: level, voiceId: voice, firstMeeting: unmet)
         }
     }
 

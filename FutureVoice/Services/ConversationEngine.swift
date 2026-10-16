@@ -99,6 +99,50 @@ enum ConversationEngine {
         }
     }
 
+    /// What the fluent self brings when the learner answers the free talk's
+    /// hello with no subject of their own ("just chilling"). Drawn ONCE per
+    /// call by the call screen (`random`), never left to the model: told
+    /// "sometimes ask about their news", a model asks every time, and a
+    /// friend who opens every call on your move is the boredom the
+    /// time-of-day hello was meant to cure (founder, 2026-10-17: "좀
+    /// 랜덤이었으면"). The opener itself stays the plain hello in every case.
+    enum FreeTalkCue: String, CaseIterable {
+        case news, plainQuestion, ownThing
+
+        /// Half the calls ask about the news when there is some; the rest,
+        /// and every call without news, split between the other two.
+        static func random(hasRecentNews: Bool) -> FreeTalkCue {
+            if hasRecentNews, Bool.random() { return .news }
+            return Bool.random() ? .plainQuestion : .ownThing
+        }
+
+        var instruction: String {
+            switch self {
+            case .news:
+                return """
+                bring ONE thing they told you recently — the newest of what was \
+                going on with them — the way a friend would ("by the way, how's \
+                the move going?").
+                """
+            case .plainQuestion:
+                return """
+                ask one short, plain question that hands them the floor ("what's \
+                new?", 요즘 어때?) — plain means no qualifier on it (not "anything \
+                fun / interesting / exciting", not 재미있는 일) and no guessed topic.
+                """
+            case .ownThing:
+                return """
+                offer one small thing of YOUR OWN for them to react to — not \
+                their news this time: leave what they told you for later. Say \
+                what speaking THIS language fluently has been like lately (a \
+                phrase that finally clicked, a moment it got easy, something you \
+                caught yourself saying) in a sentence, then hand it back with a \
+                short question. Never invent facts about their life.
+                """
+            }
+        }
+    }
+
     /// System prompt for an in-conversation turn.
     static func conversationSystemPrompt(
         targetLanguage: String,
@@ -113,7 +157,8 @@ enum ConversationEngine {
         brief: ScenarioBrief? = nil,
         firstMeeting: Bool = false,
         clock: PromptClock? = nil,
-        tutor: Bool = false
+        tutor: Bool = false,
+        freeTalkCue: FreeTalkCue = .plainQuestion
     ) -> String {
         let languageName = LanguageCatalog.englishName(targetLanguage)
         let patterns = topPatterns.prefix(3).map { "- \($0.mistake) → \($0.correction) (\($0.context))" }
@@ -239,28 +284,26 @@ enum ConversationEngine {
         // lines are what YOU bring when they have nothing in particular — or
         // later, once their own subject has had its turn ("by the way, how's
         // that going?"). Not for the first meeting, whose block owns the call.
+        // 2026-10-17 (founder): the news is never the opener, and not every
+        // call's second line either — `freeTalkCue` is drawn once per call.
+        // 2026-10-17 (founder): the news is the SECOND line, never the
+        // opener — a hello first leaves them the floor; an answer with no
+        // subject in it is the cue to ask about the newest thing on file.
         let theyCalledBlock = (topic.isEmpty && counterpart == nil && !firstMeeting) ? """
 
 
-        THEY CALLED YOU. Your opening line was only a friend's hello — for \
-        the time of day ("what are you up to?", "how was your day?"), or one \
-        question about something they told you recently — so whatever they \
-        bring first IS the call: go with it, even if it isn't what you asked \
-        about, and don't steer to something you'd rather ask about. If they \
-        only answer the greeting ("good, you?"), say how you are in a few \
-        words and then ask \
-        one short, plain question that hands them the floor ("what's new?", \
-        요즘 어때?) — plain means no qualifier on it (not "anything fun / \
-        interesting / exciting", not 재미있는 일), no guessed topic, and \
+        THEY CALLED YOU. Your opening line was only a friend's hello for \
+        the time of day ("what are you up to?", "how was your day?"), so \
+        whatever they bring first IS the call — go with it, and don't steer \
+        to something you'd rather ask about. If their answer brings no \
+        subject of their own — they only answer the greeting ("good, you?", \
+        "just chilling", "not much") — that is your cue, in this very turn: \
+        say how you are in a few words if they asked, then \(freeTalkCue.instruction) \
+        Whatever you bring, it is one thing, not a menu of options, and \
         nothing that sounds worried or puzzled that they called ("is \
-        something wrong?", 무슨 일 있어?, 왜 전화했어?). If they say there's nothing in \
-        particular ("not much", "just because", "nothing special"), that's \
-        your cue to bring something: one thing you remember from earlier \
-        calls ("by the way, how's … going?"), or a small thing of your own \
-        to react to. One thing, not a menu of options. Later in the call, \
-        once their subject has run its course, the same move is how you \
-        keep it going.
-        """ : ""
+        something wrong?", 무슨 일 있어?, 왜 전화했어?). Later in the call, \
+        once their subject has run its course, bring something the same way.
+""" : ""
 
         // When this is (`PromptClock`). The history is left out for a cast
         // stranger (no shared past, by that block's own rule) and for the

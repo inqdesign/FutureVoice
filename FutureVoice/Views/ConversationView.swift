@@ -51,6 +51,9 @@ struct ConversationView: View {
     /// prompt is rebuilt every turn and the realtime gateway is handed it
     /// once, and both must describe the same call.
     @State private var promptClock: PromptClock?
+    /// How this call follows a hello answered with no subject — drawn with
+    /// the clock, once per call (`ConversationEngine.FreeTalkCue`).
+    @State private var freeTalkCue: ConversationEngine.FreeTalkCue = .plainQuestion
     /// Set when a reply (Gemini/TTS) fails for the latest user turn — drives
     /// an inline Retry button so a network blip doesn't lose what they said.
     @State private var failedTurnId: UUID?
@@ -2615,15 +2618,12 @@ struct ConversationView: View {
                 // Gemini.
                 opener = FreeTalkOpeners.introOpener(language: appState.targetLanguage)
             } else if topic.isEmpty, counterpart == nil {
-                // Free talk: a hello that asks about fresh news when the
-                // notebook has some (written and voiced ahead), else the
-                // bundled hello for the time of day
-                // (`FreeTalkOpeners.callOpener`).
-                let picked = FreeTalkOpeners.callOpener(
-                    language: appState.targetLanguage,
-                    notes: appState.persona?.learnedNotes ?? [])
-                opener = picked.line
-                if let noteId = picked.noteId { FreeTalkOpeners.markAsked(noteId) }
+                // Free talk: one light hello for the time of day, bundled
+                // (`FreeTalkOpeners.pickUpLines`) — the texts repeat
+                // verbatim, so the TTS content cache makes the voice free
+                // after each line's first play. Recent news is the call's
+                // second line, not its first (THEY CALLED YOU).
+                opener = FreeTalkOpeners.pickUpOpener(language: appState.targetLanguage)
             } else if let line = learnerOpensLine {
                 // A starter the LEARNER opens (asking a stranger the way):
                 // the other side waits to be spoken to, and the coach's own
@@ -4714,6 +4714,8 @@ struct ConversationView: View {
             excluding: sessionId,
             resumedFrom: isResuming ? turns.last?.timestamp : nil
         )
+        freeTalkCue = .random(hasRecentNews: appState.persona?.currentNotes()
+            .contains { $0.kind == .now } ?? false)
     }
 
     private func systemPrompt() -> String {
@@ -4736,7 +4738,8 @@ struct ConversationView: View {
             },
             firstMeeting: isFirstMeeting,
             clock: promptClock,
-            tutor: tutorThisCall
+            tutor: tutorThisCall,
+            freeTalkCue: freeTalkCue
         )
     }
 }
