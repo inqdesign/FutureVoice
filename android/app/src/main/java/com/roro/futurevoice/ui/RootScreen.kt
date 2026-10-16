@@ -646,6 +646,12 @@ fun RootScreen() {
         gate {
             fun open() {
                 callTopic = topic; callFacts = facts; callScenarioId = scenarioId; callBlurb = blurb
+                // A news story's title IS its opener — written by `news-topics`
+                // as a friend bringing it up ("Did you see the news about…?")
+                // and spoken verbatim, as iOS does (`openNewsConversation`).
+                // Left to a generated opener, the model read that question as
+                // the learner's and answered it ("Yes, I heard…").
+                callOpener = if (facts.isNotEmpty()) topic else ""
                 callFromHomeCard = topic.isNotEmpty() || scenarioId != null
                 // The FREE talk is the ring's own tap: its surface morphs
                 // into the call pill (iOS). Every other launcher opens flat.
