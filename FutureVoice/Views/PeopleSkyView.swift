@@ -378,6 +378,10 @@ struct PeopleSkyMap: View {
     var backToMeRequest: Int = 0
 
     @State private var centred: String?
+    /// Nobody is "in the middle" until the learner drags the map: opening
+    /// the tab, the pool landing and growing the map, a lens change or "Back
+    /// to me" all leave ME in focus, silent. Only a finger picks someone.
+    @State private var movedByHand = false
 
     @State private var awayFromMe = false
     /// The learner's own photo (the one on Home and in the profile).
@@ -485,11 +489,17 @@ struct PeopleSkyMap: View {
             .contentMargins(.horizontal, PeopleSky.dockEnabled ? 170 : 24, for: .scrollContent)
             .modifier(TrackDistanceFromCentre(side: side, away: $awayFromMe))
             .onChange(of: awayFromMe) { _, now in away?.wrappedValue = now }
+            // Opening the tab starts on ME, at the height "the middle" is
+            // judged at — so nobody else is in the middle, nobody's bubble
+            // rises and no voice plays until the learner moves the map.
+            .onAppear { proxy.scrollTo("centre", anchor: Self.meAnchor) }
             .onChange(of: backToMeRequest) { _, _ in
-                withAnimation(.smooth) { proxy.scrollTo("centre", anchor: .center) }
+                movedByHand = false
+                withAnimation(.smooth) { proxy.scrollTo("centre", anchor: Self.meAnchor) }
             }
             .onChange(of: lens) { _, _ in
-                withAnimation(.smooth(duration: 0.5)) { proxy.scrollTo("centre", anchor: .center) }
+                movedByHand = false
+                withAnimation(.smooth(duration: 0.5)) { proxy.scrollTo("centre", anchor: Self.meAnchor) }
             }
             .onChange(of: scrollTarget) { _, id in
                 guard let id else { return }
@@ -500,12 +510,21 @@ struct PeopleSkyMap: View {
             }
             // The pool can land after a pick and grow the map; stay on them.
             .onChange(of: side) { _, _ in
-                guard let id = scrollTarget else { return }
+                guard let id = scrollTarget else {
+                    if !movedByHand { proxy.scrollTo("centre", anchor: Self.meAnchor) }
+                    return
+                }
                 proxy.scrollTo("node-" + id, anchor: UnitPoint(x: 0.5, y: Self.focusLine))
             }
-            .modifier(CentreFocus(focusLine: Self.focusLine, positions: pos,
-                                  candidates: nodes.filter { $0.shows(in: lens) }.map(\.id),
-                                  onChange: { id in
+            // "Me" is a candidate too: when I am nearest the middle, nobody
+            // else is in it.
+            .modifier(CentreFocus(focusLine: Self.focusLine,
+                                  positions: pos.merging([Self.meId: CGPoint(x: c, y: c + 8)]) { a, _ in a },
+                                  candidates: nodes.filter { $0.shows(in: lens) }.map(\.id) + [Self.meId],
+                                  armed: movedByHand,
+                                  onDrag: { movedByHand = true },
+                                  onChange: { found in
+                                      let id = found == Self.meId ? nil : found
                                       guard id != centred else { return }
                                       centred = id
                                       onCenterChange?(id)
@@ -515,7 +534,8 @@ struct PeopleSkyMap: View {
                 // centred "New situation" button.
                 if awayFromMe, away == nil {
                     Button {
-                        withAnimation(.smooth) { proxy.scrollTo("centre", anchor: .center) }
+                        movedByHand = false
+                        withAnimation(.smooth) { proxy.scrollTo("centre", anchor: Self.meAnchor) }
                     } label: {
                         // Same size as "New situation" beside it: the glass
                         // button already pads its content, so a 48-pt frame
@@ -541,6 +561,10 @@ struct PeopleSkyMap: View {
     /// Where "the middle" is, as a share of the map's height: above the true
     /// centre, because the box covers the bottom.
     static let focusLine: CGFloat = 0.42
+    /// Where "me" is scrolled to: on the focus line, so I am the one in the
+    /// middle.
+    static let meAnchor = UnitPoint(x: 0.5, y: focusLine)
+    private static let meId = "me"
 
     private func me(size: CGFloat) -> some View {
         Button(action: onTapMe) {
@@ -625,6 +649,10 @@ private struct CentreFocus: ViewModifier {
     let focusLine: CGFloat
     let positions: [String: CGPoint]
     let candidates: [String]
+    /// False until the learner has dragged the map; until then nobody is
+    /// reported, so ME stays in focus.
+    let armed: Bool
+    let onDrag: () -> Void
     let onChange: (String?) -> Void
     /// The last visible rect. Kept so the middle is found again when the
     /// PEOPLE change (the pool lands after the first layout) and not only
@@ -640,6 +668,10 @@ private struct CentreFocus: ViewModifier {
                     find()
                 }
                 .onChange(of: candidates) { _, _ in find() }
+                .onChange(of: armed) { _, _ in find() }
+                .onScrollPhaseChange { _, phase in
+                    if phase == .interacting { onDrag() }
+                }
                 .onAppear { DispatchQueue.main.async { find() } }
         } else {
             content
@@ -647,6 +679,7 @@ private struct CentreFocus: ViewModifier {
     }
 
     private func find() {
+        guard armed else { onChange(nil); return }
         guard rect.width > 0 else { return }
         let focus = CGPoint(x: rect.midX, y: rect.minY + rect.height * focusLine)
         var best: (String, CGFloat)?
