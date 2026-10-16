@@ -50,6 +50,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"
 // apple-claim verifies a transaction the app hands over EXACTLY the way this
 // verifies a notification.
 import { verifyAppleJWS as verifyJWS } from "../_shared/apple-jws.ts"
+import { notifyOwner } from "../_shared/credits.ts"
 
 const SOURCE_FN = "apple-webhook"
 
@@ -218,6 +219,28 @@ Deno.serve(async (req) => {
     }, { onConflict: "transaction_id" })
     if (txErr) console.error("subscription_transactions upsert", txErr.message)
 
+    // The owner hears about a subscriber leaving the moment Apple says so
+    // (2026-10-16). Until then a cancellation only flipped
+    // `cancel_at_period_end`, and nobody saw it unless they went looking.
+    // Production only: Sandbox is TestFlight and our own test purchases.
+    const head = environment === "Production"
+      ? lossHeadline(payload.notificationType, payload.subtype)
+      : null
+    if (head) {
+      const { data: who } = await db.auth.admin.getUserById(userId)
+      await notifyOwner(composeLoss({
+        head,
+        email: who?.user?.email ?? `${userId.slice(0, 8)}`,
+        plan: plan.id,
+        storefront: tx.storefront ?? null,
+        price: typeof tx.price === "number" && tx.currency
+          ? `${tx.price / 1000} ${tx.currency}` : null,
+        until: tx.expiresDate ? iso(tx.expiresDate).slice(0, 10) : null,
+        trial: isTrial,
+        reason: renewal?.expirationIntent ?? null,
+      }))
+    }
+
     // Minutes-native model: the subscription row upserted above IS the
     // entitlement — an entitled status buys the plan's per-day allowance
     // (subscription_plans.daily_seconds), checked live by
@@ -337,6 +360,56 @@ function statusFor(type?: string, subtype?: string, isTrial?: boolean): string |
     default:
       return null
   }
+}
+
+/// Which notifications are worth a ping. Everything else (renewals,
+/// purchases, price consent) is either good news the paywall ping already
+/// covered or noise. Auto-renew turned back ON is included: a cancel ping
+/// with no way to hear the un-cancel would leave the owner believing
+/// someone left who stayed.
+function lossHeadline(type?: string, subtype?: string): string | null {
+  switch (type) {
+    case "DID_CHANGE_RENEWAL_STATUS":
+      return subtype === "AUTO_RENEW_DISABLED" ? "🚪 구독 취소(자동 갱신 끔)"
+        : subtype === "AUTO_RENEW_ENABLED" ? "↩️ 취소 철회(자동 갱신 다시 켬)"
+        : null
+    case "DID_FAIL_TO_RENEW":
+      return subtype === "GRACE_PERIOD" ? "⚠️ 갱신 결제 실패(유예 기간)" : "⚠️ 갱신 결제 실패"
+    case "EXPIRED":
+      return "⌛ 구독 만료"
+    case "GRACE_PERIOD_EXPIRED":
+      return "⌛ 유예 기간 끝, 구독 만료"
+    case "REFUND":
+      return "💸 환불됨"
+    case "REVOKE":
+      return "💸 구독 회수됨(가족 공유 해제 등)"
+    default:
+      return null
+  }
+}
+
+/// Apple's `expirationIntent`, in the owner's words.
+const EXPIRATION_INTENT: Record<number, string> = {
+  1: "본인이 취소",
+  2: "결제 문제",
+  3: "가격 인상에 동의 안 함",
+  4: "상품을 살 수 없게 됨",
+  5: "기타",
+}
+
+function composeLoss(p: {
+  head: string; email: string; plan: string; storefront: string | null
+  price: string | null; until: string | null; trial: boolean; reason: number | null
+}): string {
+  const what = [p.plan, p.trial ? "체험" : null, p.price, p.storefront]
+    .filter(Boolean).join(" · ")
+  return [
+    `[nawana] ${p.head}`,
+    `누구: ${p.email}`,
+    `무엇: ${what}`,
+    p.until ? `이용 기간 끝: ${p.until}` : null,
+    p.reason ? `이유: ${EXPIRATION_INTENT[p.reason] ?? p.reason}` : null,
+  ].filter(Boolean).join("\n")
 }
 
 function iso(epochMs: number): string {

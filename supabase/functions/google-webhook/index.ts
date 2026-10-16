@@ -20,6 +20,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"
 import { timingSafeEqual } from "../_shared/auth.ts"
+import { notifyOwner } from "../_shared/credits.ts"
 
 const PACKAGE_NAME = "com.roro.futurevoice"
 
@@ -144,12 +145,35 @@ Deno.serve(async (req) => {
       }
       throw new Error(`user_subscriptions upsert: ${error.message}`)
     }
+
+    // The owner hears about a subscriber leaving, as on apple-webhook
+    // (2026-10-16). RTDN types: developer.android.com/google/play/billing/rtdn-reference
+    const head = LOSS_HEADLINE[sub.notificationType ?? 0]
+    if (head) {
+      const { data: who } = await db.auth.admin.getUserById(userId)
+      await notifyOwner([
+        `[nawana] ${head} (Google Play)`,
+        `누구: ${who?.user?.email ?? userId.slice(0, 8)}`,
+        `무엇: ${[plan.id, isTrial ? "체험" : null].filter(Boolean).join(" · ")}`,
+        line?.expiryTime ? `이용 기간 끝: ${line.expiryTime.slice(0, 10)}` : null,
+      ].filter(Boolean).join("\n"))
+    }
     return json(200, { received: true })
   } catch (e) {
     console.error("google-webhook", e)
     return json(500, { error: "internal" })   // Pub/Sub retries
   }
 })
+
+/** RTDN subscription notification types worth a ping to the owner. */
+const LOSS_HEADLINE: Record<number, string> = {
+  3: "🚪 구독 취소(자동 갱신 끔)",
+  5: "⚠️ 갱신 결제 실패(보류)",
+  6: "⚠️ 갱신 결제 실패(유예 기간)",
+  7: "↩️ 취소 철회(다시 시작)",
+  12: "💸 구독 회수됨",
+  13: "⌛ 구독 만료",
+}
 
 /** Service-account OAuth token via a self-signed RS256 JWT (Web Crypto). */
 async function serviceAccountToken(email: string, keyPem: string): Promise<string> {
