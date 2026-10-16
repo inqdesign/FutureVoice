@@ -82,6 +82,11 @@ export const GERMAN_DEFAULT = "standard-german"
  *  is spoken in unless the id names another of that language. Spanish
  *  (2026-10-15) defaults to Mexican, the app's first Spanish option. */
 export const LANGUAGE_DEFAULT_ACCENT: Record<string, string> = {
+  // English since 2026-10-17: an id naming no English accent (an old build's
+  // clone, "Remove accent", a German learner's id) spoke English in the
+  // BASE accent, New Zealand — 4 of 145 live voices, the founder's included.
+  // Cartesia has no "as recorded"; the plain voice IS the base.
+  en: "general-american",
   de: GERMAN_DEFAULT,
   es: "mexican",
 }

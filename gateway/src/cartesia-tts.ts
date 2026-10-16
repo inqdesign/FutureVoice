@@ -83,8 +83,12 @@ export async function withGermanDefault(apiKey: string | undefined, voiceId: str
   if (germanReady.get(key)) return key
   try {
     const h = { "X-API-Key": apiKey, "Cartesia-Version": VERSION }
+    // A lookup that FAILS says nothing about the voice: keep an id that names
+    // this language's accent (English calls never went through here before
+    // 2026-10-17, and a blip must not drop them to the New Zealand base).
+    const asIs = accent && ACCENT_LANGUAGE[accent] === lang ? voiceId : uuid
     const r = await fetch(`https://api.cartesia.ai/voices/${uuid}`, { headers: h })
-    if (!r.ok) return uuid
+    if (!r.ok) return asIs
     const v = await r.json() as { accents?: { accent: string; is_native?: boolean }[] | null }
     let ready = (v.accents ?? []).some((a) => a.accent === want)
     // Missing but addable (the voice has its native base): add it here, so
@@ -103,7 +107,7 @@ export async function withGermanDefault(apiKey: string | undefined, voiceId: str
     germanReady.set(key, true)
     return key
   } catch {
-    return uuid
+    return accent && ACCENT_LANGUAGE[accent] === lang ? voiceId : uuid
   }
 }
 
@@ -116,8 +120,10 @@ const ACCENT_LANGUAGE: Record<string, string> = {
 
 /** The accent a call in each language is spoken in unless the id names
  *  another of that language — mirror of LANGUAGE_DEFAULT_ACCENT in
- *  supabase/functions/_shared/cartesia.ts. Spanish since 2026-10-15. */
+ *  supabase/functions/_shared/cartesia.ts. Spanish since 2026-10-15,
+ *  English since 2026-10-17 (the plain voice speaks the New Zealand base). */
 const LANGUAGE_DEFAULT_ACCENT: Record<string, string> = {
+  en: "general-american",
   de: "standard-german",
   es: "mexican",
 }
