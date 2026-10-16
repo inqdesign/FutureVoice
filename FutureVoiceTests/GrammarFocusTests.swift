@@ -129,3 +129,15 @@ final class CoachModeDefaultTests: XCTestCase {
         XCTAssertTrue(CoachMode.resolve(choice: true, levelRaw: "c1"))
     }
 }
+
+/// Send-to-answer defaults on for A1 and A2 until the learner flips it.
+final class SendToAnswerDefaultTests: XCTestCase {
+    func testLevelDecidesUntilTheLearnerChooses() {
+        XCTAssertTrue(SendToAnswer.resolve(choice: nil, levelRaw: "a1"))
+        XCTAssertTrue(SendToAnswer.resolve(choice: nil, levelRaw: "a2"))
+        XCTAssertFalse(SendToAnswer.resolve(choice: nil, levelRaw: "b1"))
+        XCTAssertFalse(SendToAnswer.resolve(choice: nil, levelRaw: ""))
+        XCTAssertFalse(SendToAnswer.resolve(choice: false, levelRaw: "a2"))
+        XCTAssertTrue(SendToAnswer.resolve(choice: true, levelRaw: "c1"))
+    }
+}
