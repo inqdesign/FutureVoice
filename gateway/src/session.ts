@@ -6,7 +6,7 @@
 //   mic PCM ──> gemini-3.5-transcribe-live ──utterance──> flash reply (SSE)
 //                     │                                        │ deltas
 //                     │ interim text                           ▼
-//                     ├──> client (bubble)              ElevenLabs multi-ctx WS
+//                     ├──> client (bubble)              Cartesia WS (cartesia-tts)
 //                     └──> barge-in witness                    │ PCM
 //                                                              ▼
 //                                                           client
@@ -22,17 +22,16 @@ import { SpeechGate } from "./speech-gate"
 import { rereadUtterance } from "./reread"
 import { nativeTurnText } from "./native-turn"
 import { ReplyEngine } from "./reply"
-import { ElevenTTS, type ElevenTTSCallbacks } from "./eleven-tts"
-import { CartesiaTTS, isCartesiaVoice, withGermanDefault } from "./cartesia-tts"
+import { CartesiaTTS, withGermanDefault, type TTSCallbacks } from "./cartesia-tts"
+import { presetVoice } from "./presets"
 import { send, type ClientMessage, type ServerMessage } from "./protocol"
-import { verifyUser, ownsVoice, speakAsVoice, recordGeminiUsage, type Env } from "./supabase"
+import { verifyUser, ownsVoice, recordGeminiUsage, type Env } from "./supabase"
 import { TalkBilling, type WallCode } from "./billing"
 
 const DEFAULT_TRANSCRIBE_MODEL = "models/gemini-3.5-transcribe-live"
 const DEFAULT_REPLY_MODEL = "gemini-3.6-flash"
 const DEFAULT_REPLY_FALLBACK_MODEL = "gemini-3.1-flash-lite"
 const DEFAULT_OUTPUT_FORMAT = "pcm_22050"
-const CONVERSATION_MODEL = "eleven_turbo_v2_5"
 
 /** Coach mode's steer is a sentence or two; anything longer is not what the
  *  app sends, and it rides straight into the system prompt. */
@@ -51,11 +50,11 @@ export class CallSession implements DurableObject {
   private client: WebSocket | null = null
   private transcriber: GeminiTranscriber | null = null
   private replyEngine: ReplyEngine | null = null
-  /** The call's voice: ElevenLabs, or Cartesia for a Cartesia clone (same interface). */
-  private eleven: ElevenTTS | CartesiaTTS | null = null
+  /** The call's voice (Cartesia). */
+  private tts: CartesiaTTS | null = null
   private started = false
-  /** The voice upstream speaks with — the app's own, or its default-accent
-   *  remix (`speakAsVoice`). */
+  /** The voice upstream speaks with — the app's own clone with the call's
+   *  default accent (`withGermanDefault`), or a preset slot's voice. */
   private upstreamVoiceId: string | null = null
   private ended = false
 
@@ -680,7 +679,7 @@ export class CallSession implements DurableObject {
     if (msg.type === "set") {
       // Mid-call settings. Nothing here may end a call: a setting the gateway
       // cannot honour is dropped, never raised.
-      if (msg.speed !== undefined) this.eleven?.setSpeed(clampSpeed(msg.speed))
+      if (msg.speed !== undefined) this.tts?.setSpeed(clampSpeed(msg.speed))
       if (typeof msg.steer === "string") {
         const steer = msg.steer.trim().slice(0, MAX_STEER_CHARS)
         this.pendingSteer = steer
@@ -778,8 +777,7 @@ export class CallSession implements DurableObject {
         ownsVoice(this.env, userId, msg.voiceId)
           .then((r) => { console.log(`start: ownsVoice ${Date.now() - gateAt}ms`); return r }),
         preflight,
-        speakAsVoice(this.env, userId, msg.voiceId, msg.language || "en")
-          .then((v) => withGermanDefault(this.env.CARTESIA_API_KEY, v, msg.language || "en")),
+        withGermanDefault(this.env.CARTESIA_API_KEY, msg.voiceId, msg.language || "en"),
       ])
       this.upstreamVoiceId = speakAs
       if (owns === "forbidden") {
@@ -827,8 +825,10 @@ export class CallSession implements DurableObject {
       this.warn("reply_fallback", detail)
     }
 
-    const voiceId = this.upstreamVoiceId ?? msg.voiceId
-    const voiceCallbacks: ElevenTTSCallbacks = {
+    // A preset slot (an older build's scene partner or stranger) speaks the
+    // language's own Cartesia voice (presets.ts).
+    const voiceId = presetVoice(msg.voiceId, this.language) ?? this.upstreamVoiceId ?? msg.voiceId
+    const voiceCallbacks: TTSCallbacks = {
         onAudio: (contextId, pcm) => {
           this.lastSpokeAt = Date.now()
           // Only the ACTIVE context reaches the speaker — a context closed by
@@ -843,7 +843,7 @@ export class CallSession implements DurableObject {
           // same "sent is not heard" gap the client's gate had). Model the
           // speaker instead: each chunk extends the projected end of
           // playback by its own duration.
-          const ms = pcm.byteLength / 2 / (this.eleven?.sampleRate ?? 22050) * 1000
+          const ms = pcm.byteLength / 2 / (this.tts?.sampleRate ?? 22050) * 1000
           this.playoutEndAt = Math.max(this.playoutEndAt, Date.now()) + ms
           const committedAt = this.commitAtByContext.get(contextId)
           if (committedAt !== undefined) {
@@ -866,27 +866,13 @@ export class CallSession implements DurableObject {
           if (context !== null) this.endLine(context)
         },
       }
-    this.eleven = isCartesiaVoice(voiceId) && this.env.CARTESIA_API_KEY
-      ? new CartesiaTTS({
-          apiKey: this.env.CARTESIA_API_KEY,
-          voiceId,
-          outputFormat: this.env.ELEVEN_OUTPUT_FORMAT ?? DEFAULT_OUTPUT_FORMAT,
-          language: this.language,
-          speed: clampSpeed(msg.speed),
-        }, voiceCallbacks)
-      : new ElevenTTS(
-      {
-        apiKey: this.env.ELEVENLABS_API_KEY,
-        voiceId,
-        modelId: CONVERSATION_MODEL,
-        outputFormat: this.env.ELEVEN_OUTPUT_FORMAT ?? DEFAULT_OUTPUT_FORMAT,
-        speed: clampSpeed(msg.speed),
-        // Korean replies are pinned to Korean (2026-10-05): a learner of
-        // Korean speaks through a clone recorded in another language, and the
-        // pinned take was preferred by ear over the unpinned one
-        // (scripts/tts-korean-probe.sh). Every other language is unchanged.
-        languageCode: this.language.toLowerCase().split("-")[0] === "ko" ? "ko" : undefined,
-      }, voiceCallbacks)
+    this.tts = new CartesiaTTS({
+      apiKey: this.env.CARTESIA_API_KEY,
+      voiceId,
+      outputFormat: this.env.TTS_OUTPUT_FORMAT ?? DEFAULT_OUTPUT_FORMAT,
+      language: this.language,
+      speed: clampSpeed(msg.speed),
+    }, voiceCallbacks)
 
     this.transcriber = new GeminiTranscriber(
       this.env.GEMINI_API_KEY,
@@ -983,13 +969,13 @@ export class CallSession implements DurableObject {
     // 2026-09-13: `start` → `ready` was 2.7–3.6 s, and the opener follows it),
     // and the greeting does not need it — nobody can answer a question that
     // has not been asked yet, and the line takes seconds to play. So it
-    // handshakes while ElevenLabs is rendering the opener.
+    // handshakes while the voice is rendering the opener.
     const transcriberAt = Date.now()
     const transcriberReady = this.transcriber.connect()
       .then(() => console.log(`start: transcriber ${Date.now() - transcriberAt}ms`))
-    // The first reply's TTS must not pay the ElevenLabs TLS + WS handshake
+    // The first reply's TTS must not pay the TLS + WS handshake
     // mid-turn — open the socket now, while the learner is still greeting.
-    this.eleven.warm()
+    this.tts.warm()
     this.started = true
     this.sessionStartedAt = Date.now()
     this.armIdleHangUp()
@@ -1046,9 +1032,9 @@ export class CallSession implements DurableObject {
     this.emit({
       type: "audio_start",
       context,
-      sampleRate: this.eleven?.sampleRate ?? 22050,
+      sampleRate: this.tts?.sampleRate ?? 22050,
     })
-    if (this.eleven instanceof CartesiaTTS) {
+    if (this.tts instanceof CartesiaTTS) {
       // Whole, on Cartesia (2026-10-13): the opener is known in full, and a
       // Cartesia line already pauses between its sentences (0.15–0.65 s,
       // measured) — split, the intro's "Hi." went out as a request of its
@@ -1478,7 +1464,7 @@ export class CallSession implements DurableObject {
       this.emit({
         type: "audio_start",
         context,
-        sampleRate: this.eleven?.sampleRate ?? 22050,
+        sampleRate: this.tts?.sampleRate ?? 22050,
       })
       spec.context = context
       const buffered = spec.buffered
@@ -1510,7 +1496,7 @@ export class CallSession implements DurableObject {
         this.emit({
           type: "audio_start",
           context,
-          sampleRate: this.eleven?.sampleRate ?? 22050,
+          sampleRate: this.tts?.sampleRate ?? 22050,
         })
       }
       this.routeDelta(context, delta)
@@ -1537,13 +1523,13 @@ export class CallSession implements DurableObject {
       // Whatever was voiced of the failed attempt is gone from the learner's
       // point of view; close its context so the retry starts a clean line.
       this.voiceBuffer.delete(context)
-      this.eleven?.closeContext(context)
+      this.tts?.closeContext(context)
       this.generateReply(context)
       return
     }
     this.warn("reply", `gave up: ${message}`)
     this.voiceBuffer.delete(context)
-    this.eleven?.closeContext(context)
+    this.tts?.closeContext(context)
     const line = CallSession.apologyLine(this.language)
     // The apology becomes the model's turn so the next reply knows it
     // asked the learner to repeat — otherwise it answers a question it
@@ -1555,7 +1541,7 @@ export class CallSession implements DurableObject {
     this.emit({
       type: "audio_start",
       context: retryContext,
-      sampleRate: this.eleven?.sampleRate ?? 22050,
+      sampleRate: this.tts?.sampleRate ?? 22050,
     })
     this.routeDelta(retryContext, line)
     this.finishVoice(retryContext)
@@ -1624,7 +1610,7 @@ export class CallSession implements DurableObject {
   private voice(context: string, text: string): void {
     const chunk = text.replace(/\s+$/, "") + " "
     if (chunk.trim().length === 0) return
-    this.eleven?.sendText(context, chunk)
+    this.tts?.sendText(context, chunk)
       .catch((e) => {
         // The voice could not be reached for this line — the socket
         // upgrade was refused (a 429 on the plan's concurrency, a 5xx), or
@@ -1647,7 +1633,7 @@ export class CallSession implements DurableObject {
     const rest = this.voiceBuffer.get(context) ?? ""
     this.voiceBuffer.delete(context)
     for (const sentence of CallSession.eachSentence(rest)) this.voice(context, sentence)
-    this.eleven?.flush(context)
+    this.tts?.flush(context)
     this.armLineEndFallback(context)
   }
 
@@ -1694,7 +1680,7 @@ export class CallSession implements DurableObject {
     // open forever: the sixth line of a call was refused, the socket errored,
     // and the rest of the call had no voice at all (prod, 2026-09-13).
     // No-op for a context that went final on its own.
-    this.eleven?.closeContext(context)
+    this.tts?.closeContext(context)
     this.emit({ type: "audio_end", context })
     this.activeContext = null
     if (this.pendingWall !== null) this.settleWall(this.pendingWall)
@@ -1841,7 +1827,7 @@ export class CallSession implements DurableObject {
     this.playoutEndAt = Date.now()
     this.activeReplyAbort?.abort()
     this.voiceBuffer.delete(context)
-    this.eleven?.closeContext(context)
+    this.tts?.closeContext(context)
     this.emit({ type: "interrupted", context, ...(reopened ? { reopened: true } : {}) })
     // What was already voiced still happened — keep the model's half honest
     // by not pretending the turn never existed. The aborted generate() call
@@ -1948,7 +1934,7 @@ export class CallSession implements DurableObject {
     }
     this.recordUsage()
     this.transcriber?.close()
-    this.eleven?.close()
+    this.tts?.close()
     try { this.client?.close(1000, "session ended") } catch { /* gone */ }
     this.client = null
   }

@@ -4,13 +4,12 @@
 // In Xcode:
 //   Project > Info > Configurations > Debug/Release > Set to FutureVoice
 //   Then values appear via Bundle.main.object(forInfoDictionaryKey:) after
-//   Info.plist references like $(ELEVENLABS_API_KEY).
+//   Info.plist references like $(GEMINI_API_KEY).
 //
 // For a quick spike, you can also just paste the keys directly into
 // FutureVoice/Config/Secrets.swift while iterating, then move them
 // here before any commit.
 
-ELEVENLABS_API_KEY =
 ANTHROPIC_API_KEY  =
 OPENAI_API_KEY     =
 SUPABASE_URL       =

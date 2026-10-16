@@ -1729,9 +1729,9 @@ struct VoiceCloneOnboardingView: View {
                     // character cost of one short line is the cheapest thing
                     // we spend money on. The extra latency lands inside the
                     // "Becoming…" act, which is already a wait.
-                    greetingData = try? await ElevenLabsClient.shared.synthesize(
+                    greetingData = try? await VoiceClient.shared.synthesize(
                         voiceId: voiceId, text: greetingLine,
-                        modelId: ElevenLabsClient.cloneModelId, purpose: "greeting")
+                        purpose: "greeting")
                     // The takes belong to the voice that spoke them — a new
                     // clone invalidates every one of them. They are NOT made
                     // here: see `audition`, which pays for a rung only once
@@ -1804,9 +1804,9 @@ struct VoiceCloneOnboardingView: View {
         paceTakes = [:]
         guard let voiceId = appState.voiceCloneId else { return }
         Task {
-            greetingData = try? await ElevenLabsClient.shared.synthesize(
+            greetingData = try? await VoiceClient.shared.synthesize(
                 voiceId: voiceId, text: greetingLine,
-                modelId: ElevenLabsClient.cloneModelId, purpose: "greeting")
+                purpose: "greeting")
             // The greeting IS replayed here, and only here: the voice itself
             // changed, so this is a first hearing of a different clone.
             playGreeting()
@@ -1850,9 +1850,9 @@ struct VoiceCloneOnboardingView: View {
         guard let voiceId = appState.voiceCloneId else { return }
         paceLoading = speed
         Task {
-            let data = try? await ElevenLabsClient.shared.synthesize(
+            let data = try? await VoiceClient.shared.synthesize(
                 voiceId: voiceId, text: paceLine,
-                modelId: ElevenLabsClient.cloneModelId, purpose: "greeting",
+                purpose: "greeting",
                 speed: speed)
             // Only the rung still being waited on may clear the spinner: a
             // learner who taps a second rung while the first is in flight is
@@ -1883,9 +1883,9 @@ struct VoiceCloneOnboardingView: View {
         let line = paceLine
         Task {
             for speed in SpeechSpeed.allCases where speed != tapped && paceTakes[speed] == nil {
-                if let data = try? await ElevenLabsClient.shared.synthesize(
+                if let data = try? await VoiceClient.shared.synthesize(
                     voiceId: voiceId, text: line,
-                    modelId: ElevenLabsClient.cloneModelId, purpose: "greeting",
+                    purpose: "greeting",
                     speed: speed) {
                     paceTakes[speed] = data
                 }

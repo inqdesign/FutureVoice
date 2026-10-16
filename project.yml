@@ -41,7 +41,13 @@ targets:
       - path: FutureVoice
         excludes:
           - "Resources/Info.plist"
+          - "Vendor/**"
     dependencies:
+      # DeepFilterNet noise removal for the clone recording, on the phone
+      # (`VoiceDenoiser`). A Rust static library with the model built in;
+      # rebuild with native/denoise/build-ios.sh.
+      - framework: FutureVoice/Vendor/FVDenoise.xcframework
+        embed: false
       - package: Supabase
         product: Supabase
       - package: PostHog

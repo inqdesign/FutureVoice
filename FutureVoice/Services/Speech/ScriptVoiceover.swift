@@ -251,17 +251,17 @@ final class ScriptVoiceoverCenter: ObservableObject {
     }
 
     /// Could this account pay `minutes` right now? Nil = yes, else the wall
-    /// (`ElevenLabsError.wall`). A failure to ask is a yes — the reservation
+    /// (`VoiceError.wall`). A failure to ask is a yes — the reservation
     /// asks again before anything is made.
-    func wall(forMinutes minutes: Int) async -> ElevenLabsError? {
+    func wall(forMinutes minutes: Int) async -> VoiceError? {
         struct Params: Encodable { let p_quoted_seconds: Int }
         guard let result: RPCResult = try? await SupabaseProvider.shared
             .rpc("script_voiceover_can_pay", params: Params(p_quoted_seconds: minutes * 60))
             .execute().value else { return nil }
-        return result.error.map { ElevenLabsError.wall(body: $0) }
+        return result.error.map { VoiceError.wall(body: $0) }
     }
 
-    /// Make (or finish paying for) the voiceover. Throws an `ElevenLabsError`
+    /// Make (or finish paying for) the voiceover. Throws an `VoiceError`
     /// wall when the account can't pay — before anything is synthesized.
     @discardableResult
     func make(script: SpeechScript, voiceId: String, quotedMinutes: Int) async throws -> ScriptVoiceoverStore.Stored {
@@ -279,7 +279,7 @@ final class ScriptVoiceoverCenter: ObservableObject {
             return paid
         }
 
-        let lines = ScriptVoiceover.lines(script.body, wholeParagraphs: VoiceMove.isCartesia(voiceId))
+        let lines = ScriptVoiceover.lines(script.body, wholeParagraphs: VoiceClient.isCartesiaVoice(voiceId))
         guard !lines.isEmpty else { throw VoiceoverError.failed }
         jobs[key] = .making(done: 0, total: lines.count)
         do {
@@ -302,7 +302,7 @@ final class ScriptVoiceoverCenter: ObservableObject {
             ])
             return paid
         } catch {
-            if let wall = error as? ElevenLabsError {
+            if let wall = error as? VoiceError {
                 jobs[key] = nil
                 throw wall
             }
@@ -347,7 +347,7 @@ final class ScriptVoiceoverCenter: ObservableObject {
         guard let error = result.error else { return }
         switch error {
         case "insufficient_credits", "daily_cap_reached", "fair_use_limit":
-            throw ElevenLabsError.wall(body: error)
+            throw VoiceError.wall(body: error)
         default:
             throw VoiceoverError.failed
         }
@@ -373,7 +373,7 @@ final class ScriptVoiceoverCenter: ObservableObject {
                 next += 1
                 let text = lines[i].text
                 group.addTask {
-                    let (data, timings) = try await ElevenLabsClient.shared.synthesizeVoiceoverLine(
+                    let (data, timings) = try await VoiceClient.shared.synthesizeVoiceoverLine(
                         voiceId: voiceId, text: text, voiceoverKey: key, index: i)
                     guard let (samples, rate) = ScriptVoiceoverAudio.decode(data) else {
                         throw VoiceoverError.failed

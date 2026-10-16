@@ -372,9 +372,9 @@ struct VoiceRevivalView: View {
         paceLoading = speed
         let line = paceLine
         Task {
-            let data = try? await ElevenLabsClient.shared.synthesize(
+            let data = try? await VoiceClient.shared.synthesize(
                 voiceId: voiceId, text: line,
-                modelId: ElevenLabsClient.cloneModelId, purpose: "greeting",
+                purpose: "greeting",
                 speed: speed)
             if paceLoading == speed { paceLoading = nil }
             guard let data else { return }

@@ -9,8 +9,6 @@ struct RootTabView: View {
     @ObservedObject private var watchCreation = WatchCreation.shared
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var auth: AuthService
-    /// The ElevenLabs → Cartesia move (VoiceMoveSheet), once a day until done.
-    @State private var showingVoiceMove = false
     @State private var showingWhatsNew = false
     @Environment(\.colorScheme) private var colorScheme
     @State private var selection: Tab = {
@@ -101,9 +99,6 @@ struct RootTabView: View {
 
     var body: some View {
         tabRoot
-        // The voice id is restored from the server after launch, often after
-        // the onAppear check has already run and found nothing to move.
-        .onChange(of: appState.voiceCloneId) { _, _ in offerVoiceMove() }
         // A Speech block's reminder or routine line: the Speech tab.
         .onAppear { consumeSpeechTap() }
         .onChange(of: callInbox.pendingSpeech) { _, _ in consumeSpeechTap() }
@@ -289,12 +284,8 @@ struct RootTabView: View {
         }
         .onAppear { offerWeekRecap() }
         .onAppear { offerWhatsNew() }
-        .onAppear { offerVoiceMove() }
-        .sheet(isPresented: $showingWhatsNew, onDismiss: { offerVoiceMove() }) {
+        .sheet(isPresented: $showingWhatsNew) {
             WhatsNewSheet().environmentObject(appState)
-        }
-        .sheet(isPresented: $showingVoiceMove) {
-            VoiceMoveSheet().fittingDetents([.large])
         }
         #if DEBUG
         .task {
@@ -312,7 +303,7 @@ struct RootTabView: View {
         }
         #endif
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { offerWeekRecap(); offerVoiceMove() }
+            if phase == .active { offerWeekRecap() }
         }
         .onChange(of: callInbox.pendingWeekRecap) { _, _ in offerWeekRecap() }
         .onChange(of: callInbox.debugWeekRecap) { _, recap in
@@ -520,7 +511,7 @@ struct RootTabView: View {
     /// silently, so it waits its turn instead.
     private var anotherSheetUp: Bool {
         showingAgeCheck || showingPaywall || showingWelcome || showingIntroPreview
-            || showingVoiceMove || showingWhatsNew || weekRecap != nil || freeTalkCallId != nil
+            || showingWhatsNew || weekRecap != nil || freeTalkCallId != nil
             || callInbox.pendingAnswer != nil || answeredCall != nil
             || appState.levelUpAnnouncement != nil
             || referralInbox.pendingJoin != nil || updates.pending != nil
@@ -533,17 +524,6 @@ struct RootTabView: View {
             try? await Task.sleep(for: .seconds(1.2))
             guard !showingWhatsNew, !anotherSheetUp, WhatsNew.isDue(appState) else { return }
             showingWhatsNew = true
-        }
-    }
-
-    /// The voice move (VoiceMoveSheet): a beat after the app is up, never
-    /// over another sheet or a call; at most once a day until they move.
-    private func offerVoiceMove() {
-        Task {
-            try? await Task.sleep(for: .seconds(2.5))
-            guard !showingVoiceMove, !anotherSheetUp,
-                  VoiceMove.isDue(appState, signedIn: auth.isSignedIn) else { return }
-            showingVoiceMove = true
         }
     }
 

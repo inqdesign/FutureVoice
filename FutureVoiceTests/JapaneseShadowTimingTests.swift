@@ -32,12 +32,12 @@ final class JapaneseShadowTimingTests: XCTestCase {
         let chars = line.map(String.init)
         let starts = chars.indices.map { Double($0) * 0.1 }
         let ends = starts.map { $0 + 0.1 }
-        let timings = ElevenLabsClient.wordTimings(from: chars, starts: starts, ends: ends)
+        let timings = VoiceClient.wordTimings(from: chars, starts: starts, ends: ends)
         XCTAssertEqual(timings.map(\.word), WordSplitter.timingWords(line))
         XCTAssertEqual(timings.first?.startMs, 0)
         XCTAssertEqual(timings.last?.endMs, chars.count * 100)
         XCTAssertTrue(timings.allSatisfy(\.isMeasured))
-        XCTAssertTrue(ElevenLabsClient.alignmentMatches(text: line, timings: timings))
+        XCTAssertTrue(VoiceClient.alignmentMatches(text: line, timings: timings))
     }
 
     /// The recognizer's segments are cut elsewhere; letters still line up,
@@ -75,7 +75,7 @@ final class JapaneseShadowTimingTests: XCTestCase {
         let target = "友達と映画を見に行きました"
         let chars = target.map(String.init)
         let starts = chars.indices.map { Double($0) * 0.2 }
-        let targetTimings = ElevenLabsClient.wordTimings(from: chars, starts: starts,
+        let targetTimings = VoiceClient.wordTimings(from: chars, starts: starts,
                                                          ends: starts.map { $0 + 0.2 })
         let learnerText = "友達と映画を見に行きました"
         let device: [WordTiming] = [

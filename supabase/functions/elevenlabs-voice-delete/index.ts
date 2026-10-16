@@ -1,4 +1,5 @@
-// ElevenLabs voice-delete proxy.
+// Voice delete (named for ElevenLabs, which is gone since 2026-10-15; the
+// store builds call it by this name). Deletes the Cartesia voice.
 //
 // Body: { voice_id: string }
 // Charges 0 credits — delete is free, but we still write a ledger row for
@@ -7,7 +8,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
 import { priceFor, charge, serviceRoleClient } from "../_shared/credits.ts"
-import { deleteSpeakAs } from "../_shared/default-accent.ts"
 import * as cartesia from "../_shared/cartesia.ts"
 
 const SOURCE_FN = "elevenlabs-voice-delete"
@@ -23,9 +23,6 @@ Deno.serve(async (req) => {
 
   const idemKey = req.headers.get("X-Idempotency-Key")
   if (!idemKey) return errorResponse(400, "missing X-Idempotency-Key header")
-
-  const apiKey = Deno.env.get("ELEVENLABS_API_KEY")
-  if (!apiKey) return errorResponse(500, "server missing ELEVENLABS_API_KEY")
 
   let body: { voice_id?: string }
   try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
@@ -49,11 +46,6 @@ Deno.serve(async (req) => {
     metadata: { voice_id: body.voice_id },
   })
 
-  // The default-accent remix this voice spoke through, if the server made
-  // one (_shared/default-accent.ts) — the app never knew its id, so this is
-  // the only place it can go with its source.
-  await deleteSpeakAs(serviceRoleClient(), apiKey, user.id, body.voice_id)
-
   if (cartesia.isCartesiaVoice(body.voice_id)) {
     // An accent pick hands the app a new id for the SAME Cartesia voice
     // ("<uuid>:<accent>", _shared/cartesia.ts), and the app then deletes the
@@ -67,25 +59,9 @@ Deno.serve(async (req) => {
       if (!gone.ok) return errorResponse(gone.status, "cartesia upstream error", gone.detail ?? "")
     }
   }
-  const upstream = cartesia.isCartesiaVoice(body.voice_id)
-    ? new Response(null, { status: 200 })
-    : await fetch(`https://api.elevenlabs.io/v1/voices/${body.voice_id}`, {
-        method: "DELETE",
-        headers: { "xi-api-key": apiKey },
-      })
-  if (!upstream.ok) {
-    const detail = await upstream.text()
-    // Already gone is the outcome the caller asked for. ElevenLabs answers a
-    // DELETE on a missing voice with 400 `voice_does_not_exist` (see
-    // cleanup-anonymous-voices) — a voice parked by park-idle-voices, or one
-    // an earlier attempt deleted before its row update landed. Passing that
-    // 400 through left the client retrying the same delete on every launch.
-    const alreadyGone = upstream.status === 404 ||
-      (upstream.status === 400 && detail.includes("voice_does_not_exist"))
-    if (!alreadyGone) {
-      return errorResponse(upstream.status, "elevenlabs upstream error", detail.slice(0, 500))
-    }
-  }
+  // An ElevenLabs id (a voice from before 2026-10-12) has nothing upstream
+  // left to delete: ElevenLabs is gone (2026-10-15), and its voices with it.
+  // Only the row is retired.
 
   await supabase
     .from("voice_clones")

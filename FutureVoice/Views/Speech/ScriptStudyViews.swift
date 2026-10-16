@@ -154,7 +154,7 @@ enum TalkWall: Identifiable {
     }
 
     /// Nil for a wall that is an alert, not a sheet (`fairUseLimit`).
-    @MainActor static func resolve(_ error: ElevenLabsError) async -> TalkWall? {
+    @MainActor static func resolve(_ error: VoiceError) async -> TalkWall? {
         switch error {
         case .insufficientCredits:
             BillingGate.shared.invalidate()
@@ -325,7 +325,7 @@ struct ScriptVoiceoverSection: View {
             center.clearFailure(for: script, voiceId: voiceId)
             do {
                 try await center.make(script: script, voiceId: voiceId, quotedMinutes: quote)
-            } catch let e as ElevenLabsError {
+            } catch let e as VoiceError {
                 if let w = await TalkWall.resolve(e) { wall = w } else { error = e.localizedDescription }
             } catch is CancellationError {
             } catch {

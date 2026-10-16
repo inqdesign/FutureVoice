@@ -1733,7 +1733,7 @@ struct ShadowDrillView: View {
         // "geureomyeon". Those caches are still on disk, and these words are
         // what the learner reads, so refuse any set that doesn't spell out the
         // line; the estimate + free local alignment rebuild it in real script.
-        if !ElevenLabsClient.alignmentMatches(text: turn.transcript, timings: storedTimings) {
+        if !VoiceClient.alignmentMatches(text: turn.transcript, timings: storedTimings) {
             storedTimings = []
         }
 
@@ -1767,7 +1767,7 @@ struct ShadowDrillView: View {
         // shadow open may bill — and it fetches timings in the same call.
         phase = .loadingAudio
         do {
-            let (data, newTimings) = try await ElevenLabsClient.shared
+            let (data, newTimings) = try await VoiceClient.shared
                 .synthesizeWithTimestamps(voiceId: voiceId, text: turn.transcript, purpose: "shadow")
             PhraseAudioStore.shared.save(data, text: turn.transcript, voiceId: voiceId, timings: newTimings)
             let saved = TurnAudioStore.shared.save(data, turnId: turn.id, timings: newTimings)

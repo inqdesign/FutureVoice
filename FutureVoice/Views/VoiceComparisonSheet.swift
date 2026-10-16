@@ -216,9 +216,9 @@ struct VoiceComparisonSheet: View {
             // judgement has to hear the clone at its best, and the result is
             // cached per line, so the fidelity model's higher per-character
             // cost is paid once.
-            let data = try await ElevenLabsClient.shared.synthesize(
+            let data = try await VoiceClient.shared.synthesize(
                 voiceId: voiceId, text: scriptOpening,
-                modelId: ElevenLabsClient.cloneModelId, purpose: "voice_comparison")
+                purpose: "voice_comparison")
             _ = PhraseAudioStore.shared.save(data, text: scriptOpening, voiceId: voiceId)
             cloneAudio = data
         } catch {

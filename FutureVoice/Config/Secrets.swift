@@ -11,7 +11,6 @@ import Foundation
 /// used in the DearMyChild project.
 enum Secrets {
     enum Key: String {
-        case elevenLabs = "ELEVENLABS_API_KEY"
         case anthropic  = "ANTHROPIC_API_KEY"
         case openAI     = "OPENAI_API_KEY"
         case gemini     = "GEMINI_API_KEY"
@@ -35,6 +34,6 @@ enum Secrets {
     }
 
     /// Local-only override. Leave empty. NEVER COMMIT values here.
-    /// Example (do NOT commit): ["ELEVENLABS_API_KEY": "sk_..."]
+    /// Example (do NOT commit): ["GEMINI_API_KEY": "..."]
     private static let devOverride: [String: String] = [:]
 }

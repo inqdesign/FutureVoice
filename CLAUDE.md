@@ -1954,6 +1954,55 @@ has one, and the harder half was everything that assumed spaces.
 - Captures: `-capture transcript-ja` / `talkdetail-ja` / `wordcard-ja` /
   `shadow-ja` with `-futurevoice.targetLanguage ja`.
 
+## ElevenLabs is gone (2026-10-15)
+
+Founder: "더이상 elevenlabs를 쓰는 코드가 없어야해". Every voice moved to
+Cartesia on 2026-10-12/13 (140 active, all Cartesia); this removed what was
+left. **No code calls ElevenLabs any more** — app, edge functions, gateway,
+admin, scripts. What stayed, on purpose:
+
+- **The endpoint NAMES** (`elevenlabs-tts`, `-voice-clone`, `-remix`,
+  `-delete`, `-rename`) and the ledger's `source_fn` for them: every build
+  in the store calls them by name. Inside, they are Cartesia only.
+- **The column `voice_clones.elevenlabs_voice_id`**: shipped builds read it.
+  It means "the provider's voice id".
+- **The preset SLOT ids** (four ElevenLabs-era ids, plus the four Korean
+  stand-ins builds from 2026-09-28 send): stored on people and scenarios.
+  The server maps them to the language's Cartesia voice
+  (`_shared/preset-voices.ts`, `gateway/src/presets.ts`, mirror of
+  `VoicePreset.voicedBySlot` — keep the three in step).
+- An ElevenLabs clone id that is somehow still active answers like a parked
+  voice (402 `voice_parked`), so every build offers the rebuild.
+- Historical comments that say "measured on ElevenLabs…" — history, not code.
+
+What went: the TTS fallback, the clone/remix/accent EL branches, the
+server-side default-accent remix (`_shared/default-accent.ts` and its
+backfill), the ElevenLabs voice quota and 30-day change limit (Cartesia has
+no slots), `park-idle-voices`, `voice-move` / `voice-move-all` and the app's
+move sheet, `PacedSpeech.synthesizePCM`, the request fields only ElevenLabs
+read (`model_id`, `previous_text`/`next_text`, `remove_background_noise`,
+`prompt_strength`, `accent_by_app` — the server ignores them from old
+builds), the admin console's ElevenLabs cost/slot panels, ~15 EL probes.
+`ElevenLabsClient` is `VoiceClient`, `ElevenLabsError` is `VoiceError`.
+
+**The clone recording is cleaned ON THE PHONE** (`VoiceDenoiser`): the
+server used ElevenLabs Audio Isolation and Cartesia has no denoiser. The
+founder compared by ear (`Desktop/beta audio/denoise-free-2026-10-15`):
+ElevenLabs > DeepFilterNet 30 dB ≈ the pick > Apple Sound Isolation (any
+mix). So DeepFilterNet3 (MIT/Apache) runs from `native/denoise` — a Rust
+crate, model built in, one call per take (`fv_denoise_48k`, 30 dB cap, the
+CLI's own thresholds −15/35/35 — the library defaults differ and that is
+what he did NOT hear). iOS: `FutureVoice/Vendor/FVDenoise.xcframework`
+(`native/denoise/build-ios.sh`); Android: `jniLibs/*/libfvdenoise.so`
+(`build-android.sh`, JNI `audio.VoiceDenoiser.nativeDenoise48k`). The take
+on disk stays the original; every re-clone cleans it again. Older builds'
+takes are cloned as recorded. ~1 s per minute of audio.
+
+Not done by code: the **privacy policy** still names ElevenLabs (legal text;
+old voices may still sit in that account until it is closed), the
+ElevenLabs API key secrets (Supabase, gateway) and the subscription — the
+founder's.
+
 ## Spanish as a TARGET language (2026-10-15)
 
 Spanish was wired for STT, the clone script and the openers from the start
@@ -2753,7 +2802,7 @@ Nothing here names a language. Adding German is a `de` column in the catalogs pl
 - Utility calls (Translator's pure translation, CounterpartParser, FreeTalkOpeners) run on `gemini-3.1-flash-lite`. Learner-facing coaching text stays on the default model.
 - `gemini-2.5-flash` remains in the enum as a rollback hatch only — the 2.5 family retires 2026-10-16.
 - Conversation turns: structured JSON, **streamed** via `sendJSONStream` (`stream: true` → the `gemini` Edge Function proxies `streamGenerateContent?alt=sse`). Field order is load-bearing — `{reply, suggestion}`, reply FIRST. Don't put a field before `reply` and don't reorder the prompt's schema line. `onEarlyField` fires up to **twice** for `reply`: once with its first complete sentence (`isComplete: false`, ≥25 chars, terminator + whitespace — `GeminiClient.firstSpeakableSentence`) and once at its closing quote. The opening sentence goes to TTS immediately and the remainder is fed into the SAME open PCM stream (`beginSplitSpeech` / `finishSplitSpeech`), so the model's remaining writing time overlaps the TTS round-trip. Every failure in that pair degrades to speaking the whole reply once. Analysis calls (shadow bullets, weekly report) stay on buffered `sendJSON`. **The summary is the one exception** (`sendJSONStreamAccumulating`, 2026-08-19) and NOT for latency — nothing there can be used before the payload closes, and the decoded result is identical. It streams so the wrap-up board can move while the model writes; **its schema field order is therefore load-bearing too** (`SessionSummarizer.Progress.absorb` reads which section is finished from which key has appeared next). Reordering the summary schema misreports a step, never a number. Temperature args still exist on the API for 2.5-era callers but are ignored on gen-3.
-- TTS: **speaker similarity is the product** — the user must believe the voice is theirs. Model choice ranks `eleven_multilingual_v2` > `eleven_turbo_v2_5` > `eleven_flash_v2_5` on similarity, and exactly the reverse on latency. Defaults:
+- TTS: **speaker similarity is the product** — the user must believe the voice is theirs. (The ElevenLabs model notes below are HISTORY: every voice is Cartesia `sonic-3.6` since 2026-10-12/15 — see "ElevenLabs is gone".) Model choice ranked `eleven_multilingual_v2` > `eleven_turbo_v2_5` > `eleven_flash_v2_5` on similarity, and exactly the reverse on latency. Defaults:
   - **Everything is `eleven_turbo_v2_5` since 2026-09-26.** Talk turns always were (`conversationModelId`, and the gateway's own `CONVERSATION_MODEL`); Watch scenes (the clone's lines), the daily-call voicemail, the onboarding greeting and the voice-comparison sheet moved onto it that day (`ElevenLabsClient.cloneModelId`). Flash was tried on turns and reverted: same price, less like the user.
   - **Why the fidelity tier lost.** `eleven_multilingual_v2` bills 2x per character and was on the clone's scene lines — 70% of a scene's bill (26,514 credits against the counterpart's 11,354 over the launch window) for half the lines. The founder A/B'd both models on their own clone (`scripts/tts-model-probe.sh`, production voice settings and speed, weighted to the cross-lingual case that is the only place 2x should show) and turbo held up, in places sounding BETTER. A scene went $0.112 → ~$0.073. The argument that retired it is one sentence: **Talk runs the same cloned voice on turbo and always has, so nothing can need a better model than the live call.** The once-per-user surfaces followed for a different reason — a greeting on a better model than every line after it is a demo, and the gap it hides is the disappointment it sets up.
   - `fidelityModelId` stays defined but **nothing in a release build speaks on it**; it is the DEBUG A/B target. The old rule ("only where `PhraseAudioStore` caches it") was already broken by `freshTake`, which writes new text every run — the rule is now "only where it fires once per user, ever", and today nothing qualifies.

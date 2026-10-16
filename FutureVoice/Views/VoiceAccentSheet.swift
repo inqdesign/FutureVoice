@@ -26,7 +26,7 @@ struct VoiceAccentSheet: View {
     @State private var playingVoice = false
 
     @State private var accent: VoiceAccent?
-    @State private var previews: [ElevenLabsClient.RemixPreview] = []
+    @State private var previews: [VoiceClient.RemixPreview] = []
     @State private var pickedPreviewId: String?
     @State private var generating = false
     @State private var saving = false
@@ -156,7 +156,7 @@ struct VoiceAccentSheet: View {
         let text = VoiceAccentCatalog.sampleText(for: appState.targetLanguage)
         playingVoice = true
         Task {
-            guard let data = try? await ElevenLabsClient.shared.synthesize(
+            guard let data = try? await VoiceClient.shared.synthesize(
                 voiceId: voiceId, text: text, purpose: "voice_comparison") else { playingVoice = false; return }
             try? player.play(data, source: "voice_accent") { playingVoice = false }
         }
@@ -237,7 +237,7 @@ struct VoiceAccentSheet: View {
         }
     }
 
-    private func takeRow(index: Int, preview: ElevenLabsClient.RemixPreview) -> some View {
+    private func takeRow(index: Int, preview: VoiceClient.RemixPreview) -> some View {
         let isCurrent = playingId == preview.id && player.isPlaying
         return Button { audition(preview) } label: {
             HStack(spacing: 12) {
@@ -328,11 +328,10 @@ struct VoiceAccentSheet: View {
                 // when they are gone (a reinstall) are takes made from the
                 // live voice — one generation of drift, against a voice.
                 guard let voiceId = appState.voiceCloneId else { return }
-                let takes = try await ElevenLabsClient.shared.remixVoicePreviews(
+                let takes = try await VoiceClient.shared.remixVoicePreviews(
                     voiceId: voiceId,
                     voiceDescription: option.prompt,
-                    text: VoiceAccentCatalog.sampleText(for: appState.targetLanguage),
-                    promptStrength: VoiceAccentCatalog.promptStrength)
+                    text: VoiceAccentCatalog.sampleText(for: appState.targetLanguage))
                 // The user may have tapped another accent while this ran.
                 appState.cacheRemixTakes(takes, for: option.id)
                 guard accent == option else { return }
@@ -355,7 +354,7 @@ struct VoiceAccentSheet: View {
 
     /// Listening IS selecting — tapping a take plays it and marks it as the
     /// one to keep; the explicit "Use this voice" button does the committing.
-    private func audition(_ preview: ElevenLabsClient.RemixPreview) {
+    private func audition(_ preview: VoiceClient.RemixPreview) {
         pickedPreviewId = preview.id
         if playingId == preview.id && player.isPlaying {
             player.stop()
@@ -396,7 +395,7 @@ struct VoiceAccentSheet: View {
         Task {
             defer { saving = false }
             do {
-                let newId = try await ElevenLabsClient.shared.saveRemixedVoice(
+                let newId = try await VoiceClient.shared.saveRemixedVoice(
                     generatedVoiceId: pickedPreviewId,
                     name: appState.voiceDisplayName,
                     voiceDescription: accent.prompt)
@@ -406,7 +405,7 @@ struct VoiceAccentSheet: View {
                 onApplied?()
                 dismiss()
             } catch {
-                if case ElevenLabsError.voiceChangeLimit = error {
+                if case VoiceError.voiceChangeLimit = error {
                     // Someone else's device used it first; say the date.
                     await appState.refreshVoiceChangeStatus()
                 } else {

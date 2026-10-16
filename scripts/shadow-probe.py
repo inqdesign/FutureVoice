@@ -10,8 +10,8 @@
 # Korean score (syllable alignment, eojeol credit). A slip is CAUGHT when
 # the score drops below the clean take.
 #
-# Keys: gateway/.dev.vars (GEMINI_API_KEY, ELEVENLABS_API_KEY) or
-# ~/keys/elevenlabs.txt. ~2 × len(CASES) syntheses + as many Gemini calls.
+# Keys: gateway/.dev.vars (GEMINI_API_KEY, CARTESIA_API_KEY) or
+# ~/keys/cartesia.txt. ~2 × len(CASES) syntheses + as many Gemini calls.
 #   scripts/shadow-probe.py <ko|ja|en|de> [out_dir]
 # Scoring ported: word diff for en/de, syllable alignment + eojeol credit for
 # ko, CHARACTER diff for ja (the probe has no segmenter — ja's word credit is
@@ -28,8 +28,8 @@ p = os.path.join(ROOT, "gateway/.dev.vars")
 if os.path.exists(p):
     env = {k.strip(): v.strip().strip('"') for k, v in (l.split("=", 1) for l in open(p) if "=" in l)}
 GKEY = env["GEMINI_API_KEY"]
-EKEY = os.environ.get("ELEVENLABS_API_KEY") or env.get("ELEVENLABS_API_KEY") or \
-    open(os.path.expanduser("~/keys/elevenlabs.txt")).read().strip()
+CKEY = os.environ.get("CARTESIA_API_KEY") or env.get("CARTESIA_API_KEY") or \
+    open(os.path.expanduser("~/keys/cartesia.txt")).read().strip()
 
 src = open(os.path.join(ROOT, "FutureVoice/Services/ShadowTranscriber.swift")).read()
 body = re.search(r'private static func prompt\(targetLanguage: String\) -> String \{.*?return """\n(.*?)\n\s*"""', src, re.S).group(1)
@@ -37,7 +37,8 @@ PROMPT = "\n".join(l[8:] if l.startswith("        ") else l for l in body.split(
 
 # "native" speaks the language natively where the account has such a voice;
 # "accent" is a speaker of ANOTHER language reading it — a learner's accent.
-KO_VOICE, EN_VOICE = "5n5gqmaQi9Ewevrz7bOS", "NDTYOmYEjbDIVCKB35i3"
+# Cartesia library voices: 시안 (Korean) and Layla (US English) — the app's first preset slot.
+KO_VOICE, EN_VOICE = "cac92886-4b7c-4bc1-a524-e0f79c0381be", "999df508-4de5-40a7-8bd3-8c12f678c284"
 VOICES = {"ko": {"native": KO_VOICE, "accent": EN_VOICE},
           "ja": {"ko-voice": KO_VOICE, "en-voice": EN_VOICE},
           "en": {"native": EN_VOICE, "accent": KO_VOICE},
@@ -104,11 +105,12 @@ CASES = {"ko": KO, "ja": JA, "en": EN, "de": DE}[LANG]
 
 def synth(text, voice):
     req = urllib.request.Request(
-        f"https://api.elevenlabs.io/v1/text-to-speech/{voice}?output_format=pcm_16000",
-        data=json.dumps({"text": text, "model_id": "eleven_turbo_v2_5", "language_code": LANG,
-                         "voice_settings": {"stability": 0.55, "similarity_boost": 0.9, "style": 0,
-                                            "use_speaker_boost": True}}).encode(),
-        headers={"xi-api-key": EKEY, "Content-Type": "application/json"})
+        "https://api.cartesia.ai/tts/bytes",
+        data=json.dumps({"model_id": "sonic-3.6", "transcript": text, "voice": {"mode": "id", "id": voice},
+                         "language": LANG,
+                         "output_format": {"container": "raw", "encoding": "pcm_s16le", "sample_rate": 16000}}).encode(),
+        headers={"Authorization": f"Bearer {CKEY}", "Cartesia-Version": "2026-08-14",
+                 "Content-Type": "application/json", "User-Agent": "nawana-probe"})
     pcm = urllib.request.urlopen(req, timeout=60).read()
     buf = io.BytesIO()
     with wave.open(buf, "wb") as w:

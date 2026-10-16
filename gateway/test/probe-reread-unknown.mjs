@@ -17,10 +17,10 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs"
 
 const vars = readFileSync(new URL("../.dev.vars", import.meta.url), "utf8")
 const env = (k) => process.env[k] ?? vars.match(new RegExp(`^${k}\\s*=\\s*"?([^"\\n]+)`, "m"))?.[1]
-const GEMINI = env("GEMINI_API_KEY"), ELEVEN = env("ELEVENLABS_API_KEY")
+const GEMINI = env("GEMINI_API_KEY"), CARTESIA = env("CARTESIA_API_KEY")
 const runs = Number(process.argv[2] ?? 2)
 const model = "gemini-3.1-flash-lite"
-const VOICES = ["NDTYOmYEjbDIVCKB35i3", "UgBBYS2sOqTuMpoF3BR0"]   // 시안, 민준
+const VOICES = ["cac92886-4b7c-4bc1-a524-e0f79c0381be", "537a82ae-4926-4bfb-9aec-aff0b80a12a5"]   // 시안, 민준
 
 // Same order and indices as probe-reread-native.mjs (the cache is keyed by
 // index); "native" there is "other" here. New cases go at the END, tagged.
@@ -137,9 +137,11 @@ async function audio(i, voice) {
   const tag = c[4] ? `-${c[4]}` : c[3] ? `-${c[3]}` : ""
   const f = new URL(`case${i}${tag}-${voice.slice(0, 4)}.wav`, dir)
   if (existsSync(f)) return readFileSync(f)
-  const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}?output_format=pcm_16000`, {
-    method: "POST", headers: { "xi-api-key": ELEVEN, "Content-Type": "application/json" },
-    body: JSON.stringify({ text: c[0], model_id: "eleven_turbo_v2_5", language_code: c[3] ?? "ko" }),
+  const res = await fetch("https://api.cartesia.ai/tts/bytes", {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${CARTESIA}`, "Cartesia-Version": "2026-08-14", "Content-Type": "application/json" },
+    body: JSON.stringify({ model_id: "sonic-3.6", transcript: c[0], voice: { mode: "id", id: voice },
+      language: c[3] ?? "ko", output_format: { container: "raw", encoding: "pcm_s16le", sample_rate: 16000 } }),
   })
   if (!res.ok) throw new Error(`tts ${res.status} ${await res.text()}`)
   const w = wav(Buffer.from(await res.arrayBuffer()))

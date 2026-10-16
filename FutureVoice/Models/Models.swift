@@ -7,7 +7,7 @@ struct User: Codable, Identifiable {
     var email: String
     var nativeLanguage: String          // BCP-47, e.g. "ko"
     var targetLanguages: [String]       // e.g. ["en", "de"]
-    var voiceCloneId: String?           // ElevenLabs voice_id
+    var voiceCloneId: String?           // Cartesia voice id
     var createdAt: Date
 }
 
@@ -1100,7 +1100,7 @@ struct Counterpart: Codable, Identifiable, Hashable {
     var commonTopics: String = ""          // "Tech, parenting, recent travel"
 
     // Voice
-    var voicePresetId: String              // ElevenLabs voice id (see VoicePreset.catalog)
+    var voicePresetId: String              // a preset SLOT id (see VoicePreset.catalog)
 
     // Catch-all
     var freeNotes: String = ""             // anything that doesn't fit above
@@ -1334,7 +1334,7 @@ extension Counterpart {
 /// used for counterpart voices. We deliberately keep the list small so the
 /// user can pick quickly instead of scrolling through hundreds.
 struct VoicePreset: Hashable, Identifiable {
-    let id: String           // ElevenLabs voice id
+    let id: String           // the slot id stored everywhere (ElevenLabs-era, kept)
     /// The English voice's own name. What screens show is `displayName`,
     /// which follows the target language (see `localNames`).
     let englishName: String

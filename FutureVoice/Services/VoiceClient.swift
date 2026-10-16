@@ -11,8 +11,15 @@ import Supabase
 /// Auth: each request carries the current Supabase user's access token in
 /// the `Authorization` header. The Edge Function verifies it before
 /// forwarding, so unauthenticated callers can't drain the account.
-final class ElevenLabsClient {
-    static let shared = ElevenLabsClient()
+final class VoiceClient {
+    /// A Cartesia voice id: a UUID, optionally carrying an accent
+    /// ("<uuid>:british"). Every voice is one since 2026-10-15.
+    static func isCartesiaVoice(_ id: String) -> Bool {
+        id.range(of: #"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(:[a-z-]+)?$"#,
+                 options: .regularExpression) != nil
+    }
+
+    static let shared = VoiceClient()
 
     private let session: URLSession
     /// Voice-clone sample uploads are megabytes, not kilobytes — they get a
@@ -50,12 +57,9 @@ final class ElevenLabsClient {
     ///   - name: display name for the voice (e.g. "Eunggyu — Future Self")
     ///   - sampleAudioURLs: one or more WAV/MP3 files. Total 30–60s recommended.
     ///   - description: optional human description
-    ///   - removeBackgroundNoise: run ElevenLabs' denoiser on the sample
-    ///     before cloning. Only pass `true` for a genuinely noisy take — see
-    ///     the call site in `AppState.regenerateVoiceClone`.
-    /// - Returns: ElevenLabs `voice_id`.
-    func cloneVoice(name: String, sampleAudioURLs: [URL], description: String? = nil,
-                    removeBackgroundNoise: Bool) async throws -> String {
+    ///   (cleaned on the phone first — `VoiceDenoiser`)
+    /// - Returns: the new Cartesia voice id.
+    func cloneVoice(name: String, sampleAudioURLs: [URL], description: String? = nil) async throws -> String {
         let url = functionsBaseURL.appendingPathComponent("elevenlabs-voice-clone")
         let boundary = "Boundary-\(UUID().uuidString)"
 
@@ -70,20 +74,6 @@ final class ElevenLabsClient {
         if let description {
             body.appendFormField(name: "description", value: description, boundary: boundary)
         }
-        // Denoise handles AC hum, distant traffic, keyboard taps — a clear win
-        // on a noisy take. But it is NOT free on a clean one: the denoiser
-        // also shaves breath, sibilance and high-end texture, i.e. the cues
-        // that make a clone recognizable as a specific person. This used to be
-        // hardcoded `true`, which meant the quiet-spot finder's whole job was
-        // to produce a clean sample that we then degraded anyway. Now the
-        // caller decides from the measured SNR.
-        body.appendFormField(name: "remove_background_noise",
-                             value: removeBackgroundNoise ? "true" : "false", boundary: boundary)
-        // This build applies the default accent itself (`AppState
-        // .applyDefaultAccent`) — and leaves a clone plain on purpose after
-        // "Remove accent". Without it the server would remix the clone for
-        // us at the speech side, as it does for older builds.
-        body.appendFormField(name: "accent_by_app", value: "true", boundary: boundary)
         for url in sampleAudioURLs {
             let data = try Data(contentsOf: url)
             let filename = url.lastPathComponent
@@ -116,29 +106,6 @@ final class ElevenLabsClient {
         try Self.validate(response: response, data: data)
     }
 
-    /// Moves the learner's voice to the new engine from the SERVER's copy of
-    /// their recording (`voice-move`, 2026-10-12) — for a phone with no saved
-    /// recording. Returns the new voice id, or nil when no original exists
-    /// upstream (an accent remix keeps none), in which case only a new
-    /// recording can move it.
-    func moveVoiceFromServer() async throws -> String? {
-        let url = functionsBaseURL.appendingPathComponent("voice-move")
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = Data("{}".utf8)
-        request.timeoutInterval = 90
-        let (data, response) = try await session.data(for: request)
-        if let http = response as? HTTPURLResponse, http.statusCode == 409,
-           String(data: data, encoding: .utf8)?.contains("no_original") == true {
-            return nil
-        }
-        try Self.validate(response: response, data: data)
-        struct Resp: Decodable { let voice_id: String }
-        return try JSONDecoder().decode(Resp.self, from: data).voice_id
-    }
-
     /// Renames an EXISTING clone upstream. The name is otherwise fixed at
     /// creation time, so without this a rename would only show up after the
     /// user's next re-record. Free — no credits are charged.
@@ -168,25 +135,21 @@ final class ElevenLabsClient {
     /// Generates accent-remix previews of an existing clone. Same person,
     /// instructed accent — see `VoiceAccentCatalog` for the descriptions.
     /// `text` is what the previews speak (upstream wants 100–1000 chars).
-    /// `promptStrength` (0…1) is how far the remix may leave the reference
-    /// audio; nil lets upstream pick, which is what the first version did
-    /// and what pulled the voice away from the speaker.
     func remixVoicePreviews(voiceId: String, voiceDescription: String,
-                            text: String, promptStrength: Double? = nil) async throws -> [RemixPreview] {
+                            text: String) async throws -> [RemixPreview] {
         // A remix is built FROM the voice; a parked one no longer exists.
-        if VoiceParking.isParked(voiceId) { throw ElevenLabsError.insufficientCredits }
+        if VoiceParking.isParked(voiceId) { throw VoiceError.insufficientCredits }
         let url = functionsBaseURL.appendingPathComponent("elevenlabs-voice-remix")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
         request.setValue(UUID().uuidString, forHTTPHeaderField: "X-Idempotency-Key")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        var body: [String: Any] = [
+        let body: [String: Any] = [
             "voice_id": voiceId,
             "voice_description": voiceDescription,
             "text": text,
         ]
-        if let promptStrength { body["prompt_strength"] = promptStrength }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         // Preview generation runs tens of seconds upstream and returns a few
         // MB of base64 audio — the roomier upload session, not the 60s one.
@@ -235,88 +198,6 @@ final class ElevenLabsClient {
 
     // MARK: - Text-to-Speech
 
-    /// Model for live conversation turns (Talk).
-    ///
-    /// This was Flash v2.5 for a while, on the reasoning that ~200ms lower
-    /// time-to-first-audio is the right trade in a phone-call loop. Reverted,
-    /// because that trade priced the wrong thing: Flash buys its latency by
-    /// cutting speaker similarity below turbo, and Talk is where users hear
-    /// their own cloned voice FAR more than anywhere else in the app — so the
-    /// tab with the most exposure was running the least similar model, and
-    /// users told us the clone didn't sound like them.
-    ///
-    /// Turbo costs the SAME per character as Flash, so this reverts for free:
-    /// the only thing we give back is the ~200ms, against a turn whose STT +
-    /// Gemini legs already dominate the wait. (Fidelity beyond turbo is a
-    /// different trade — see `fidelityModelId`, which is NOT free.)
-    ///
-    /// DEBUG builds run turns on the fidelity model as a LOCAL A/B: feel the
-    /// similarity gain against the extra time-to-first-audio on-device.
-    /// Release/TestFlight stays on turbo — promoting multilingual to live
-    /// turns is a standing pricing decision (2x upstream, absorbed; see
-    /// `fidelityModelId`), not something this toggle decides.
-    #if DEBUG
-    static let conversationModelId = fidelityModelId
-    #else
-    static let conversationModelId = "eleven_turbo_v2_5"
-    #endif
-
-    /// EVERYTHING the learner hears in their own cloned voice, outside the
-    /// live call's own path: Watch scene lines (both voices), the daily
-    /// call's voicemail, the onboarding greeting and the voice-comparison
-    /// sheet. Turbo, all of it (2026-09-26, founder's call, confirmed by
-    /// ear) — the same model the live call has always used.
-    ///
-    /// The clone's lines used to take `fidelityModelId` here. The argument
-    /// against it is one sentence: Talk runs the same cloned voice on turbo,
-    /// it is the surface with the most exposure by far, and nobody has said
-    /// the call doesn't sound like them — so a scene cannot need a better
-    /// model than the live conversation does. It is also the app's biggest
-    /// cost lever: the clone's half of the scene lines was 70% of a scene's
-    /// ElevenLabs bill (26,514 credits against the counterpart's 11,354 over
-    /// the launch window), so a scene goes from $0.112 to ~$0.073.
-    ///
-    /// And it was settled the way this app settles voice questions — by ear,
-    /// not by arithmetic. `scripts/tts-model-probe.sh` synthesized the same
-    /// scene lines both ways in the founder's own clone, with the production
-    /// voice settings and speed, weighted toward the cross-lingual case that
-    /// is the only place multilingual_v2 should earn its 2x (a clone recorded
-    /// in Korean speaking English and German). Verdict the same day: turbo
-    /// holds up, and in places sounds BETTER. Re-run the probe before moving
-    /// anything back.
-    ///
-    /// The ONCE-PER-USER surfaces went with it — the onboarding greeting and
-    /// the voice-comparison sheet — and their reason is not the money, which
-    /// was never more than a few cents. They are where the learner decides
-    /// "is that me?", so they must be a SAMPLE of what the app will actually
-    /// sound like. A greeting synthesized on a better model than every line
-    /// that follows is a demo, and the gap it hides is exactly the
-    /// disappointment it would be setting up.
-    static let cloneModelId = "eleven_turbo_v2_5"
-
-    /// The fidelity tier. **Nothing in a release build speaks on it any more**
-    /// (2026-09-26): its last three users — Watch scenes, the voicemail, the
-    /// onboarding greeting — all moved to `cloneModelId` after the founder
-    /// A/B'd the two on their own clone and turbo held up. It stays defined
-    /// as the DEBUG A/B target below (`conversationModelId`) and as the thing
-    /// to reach for if a future surface ever earns 2x per character.
-    ///
-    /// flash/turbo v2.5 are the latency tier — they trade speaker similarity
-    /// for time-to-first-audio. multilingual_v2 is the fidelity tier, and it
-    /// is also markedly better at cross-lingual transfer (a clone recorded in
-    /// one language speaking another), which is exactly what this app does.
-    ///
-    /// COST: multilingual_v2 bills ~2x per character upstream vs flash/turbo
-    /// v2.5, and `priceFor("tts")` in the edge function is character-based and
-    /// model-BLIND — the user is charged identically either way, so every
-    /// call on this model is margin we absorb. Only put a path on it when it
-    /// fires ONCE per user, ever. The old rule said "when `PhraseAudioStore`
-    /// caches the result", and scenes are what showed that isn't enough: a
-    /// fresh take writes new text every run, so nothing was reused and the
-    /// premium was paid on every play. Never use it for live conversation
-    /// turns either: new text every time, and too slow for a call.
-    static let fidelityModelId = "eleven_multilingual_v2"
-
     /// Deterministic fallback idempotency key for callers that don't pass
     /// one (drill / library / shadow / scene plays): the same (text, voice)
     /// from this install always sends the same key, so a double-fired play
@@ -348,33 +229,20 @@ final class ElevenLabsClient {
 
     /// Synthesizes speech in the cloned voice and returns MP3 data.
     /// - Parameters:
-    ///   - voiceId: ElevenLabs voice id from `cloneVoice`
+    ///   - voiceId: the learner's Cartesia voice, a library voice, or a preset slot
     ///   - text: text to speak. Should already be in the target language.
-    ///   - modelId: defaults to multilingual model that handles non-English well.
-    ///   - previousText/nextText: the lines that surround this one in a longer
-    ///     stretch of speech. NOT spoken — they only condition prosody, and
-    ///     ElevenLabs does not bill their characters. Without them every line
-    ///     is synthesized as a standalone utterance: full sentence-final fall
-    ///     at the end, cold "starting to talk" energy at the start. Across a
-    ///     scene that reads as a series of separate announcements rather than
-    ///     a conversation. Pass them wherever consecutive lines play back to
-    ///     back (Watch scenes), regardless of who speaks each one — the point
-    ///     is that this line lands mid-conversation, not who said the last one.
     func synthesize(
         voiceId: String,
         text: String,
-        modelId: String = "eleven_turbo_v2_5",
         idempotencyKey: String? = nil,
         purpose: String? = nil,
-        previousText: String? = nil,
-        nextText: String? = nil,
         sceneKey: String? = nil,
         speed: SpeechSpeed? = nil
     ) async throws -> Data {
         // A parked voice no longer exists upstream (see `VoiceParking`).
         // Refused here, before the network, with the error every surface
         // already turns into its paywall.
-        if VoiceParking.isParked(voiceId) { throw ElevenLabsError.insufficientCredits }
+        if VoiceParking.isParked(voiceId) { throw VoiceError.insufficientCredits }
         let url = functionsBaseURL.appendingPathComponent("elevenlabs-tts")
         // A preset slot speaks in the target language's own voice (see
         // `VoicePreset.speaking`); the idempotency key below follows the voice
@@ -398,7 +266,6 @@ final class ElevenLabsClient {
         var body: [String: Any] = [
             "voice_id": voiceId,
             "text": text,
-            "model_id": modelId,
             "with_timestamps": false,
         ]
         // Feature tag for the usage ledger (spend attribution) — the edge
@@ -422,10 +289,6 @@ final class ElevenLabsClient {
         // of the talk allowance. An edge deploy that predates this ignores it
         // and the scene meters in seconds exactly as it used to.
         if let sceneKey { body["scene_key"] = sceneKey }
-        // Prosody conditioning. An edge deploy that predates these simply
-        // drops them and the line synthesizes exactly as it used to.
-        if let previousText, !previousText.isEmpty { body["previous_text"] = previousText }
-        if let nextText, !nextText.isEmpty { body["next_text"] = nextText }
         if let code = Self.pinnedLanguage(for: text) { body["language_code"] = code }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
@@ -478,7 +341,6 @@ final class ElevenLabsClient {
     func synthesizeStreaming(
         voiceId: String,
         text: String,
-        modelId: String = "eleven_turbo_v2_5",
         idempotencyKey: String? = nil,
         purpose: String? = nil,
         sceneKey: String? = nil,
@@ -487,7 +349,7 @@ final class ElevenLabsClient {
         // A parked voice no longer exists upstream (see `VoiceParking`).
         // Refused here, before the network, with the error every surface
         // already turns into its paywall.
-        if VoiceParking.isParked(voiceId) { throw ElevenLabsError.insufficientCredits }
+        if VoiceParking.isParked(voiceId) { throw VoiceError.insufficientCredits }
         let url = functionsBaseURL.appendingPathComponent("elevenlabs-tts")
         // A preset slot speaks in the target language's own voice (see
         // `VoicePreset.speaking`); the idempotency key below follows the voice
@@ -504,7 +366,6 @@ final class ElevenLabsClient {
         var body: [String: Any] = [
             "voice_id": voiceId,
             "text": text,
-            "model_id": modelId,
             "with_timestamps": false,
             "stream": true,
             "stream_formats": Self.streamFormats,
@@ -531,14 +392,14 @@ final class ElevenLabsClient {
         }
         let (bytes, response) = opened
         guard let http = response as? HTTPURLResponse else {
-            throw ElevenLabsError.invalidResponse
+            throw VoiceError.invalidResponse
         }
         guard (200..<300).contains(http.statusCode) else {
             var errBody = Data()
             for try await b in bytes.prefix(512) { errBody.append(b) }
             let snippet = String(data: errBody, encoding: .utf8) ?? "<binary>"
-            if http.statusCode == 402 { throw ElevenLabsError.wall(body: snippet) }
-            throw ElevenLabsError.httpError(status: http.statusCode, body: snippet)
+            if http.statusCode == 402 { throw VoiceError.wall(body: snippet) }
+            throw VoiceError.httpError(status: http.statusCode, body: snippet)
         }
 
         // The PCM header is the protocol handshake: without it we're talking
@@ -594,19 +455,18 @@ final class ElevenLabsClient {
     func synthesizeWithTimestamps(
         voiceId: String,
         text: String,
-        modelId: String = "eleven_turbo_v2_5",
         idempotencyKey: String? = nil,
         purpose: String? = nil
     ) async throws -> (Data, [WordTiming]) {
         do {
             return try await synthesizeWithTimestampsInner(
-                voiceId: voiceId, text: text, modelId: modelId,
+                voiceId: voiceId, text: text,
                 idempotencyKey: idempotencyKey, purpose: purpose)
         } catch {
             // Fallback: at least play audio without karaoke. Reuses the same
             // idempotency key — one logical synthesis, one charge.
             let audio = try await synthesize(
-                voiceId: voiceId, text: text, modelId: modelId,
+                voiceId: voiceId, text: text,
                 idempotencyKey: idempotencyKey, purpose: purpose)
             return (audio, [])
         }
@@ -621,7 +481,7 @@ final class ElevenLabsClient {
     func synthesizeVoiceoverLine(voiceId: String, text: String, voiceoverKey: String,
                                  index: Int) async throws -> (Data, [WordTiming]) {
         try await synthesizeWithTimestampsInner(
-            voiceId: voiceId, text: text, modelId: Self.cloneModelId,
+            voiceId: voiceId, text: text,
             idempotencyKey: "\(voiceoverKey):\(index)", purpose: "script-voiceover",
             extraBody: ["voiceover_key": voiceoverKey])
     }
@@ -629,7 +489,6 @@ final class ElevenLabsClient {
     private func synthesizeWithTimestampsInner(
         voiceId: String,
         text: String,
-        modelId: String,
         idempotencyKey: String? = nil,
         purpose: String? = nil,
         extraBody: [String: Any] = [:]
@@ -637,7 +496,7 @@ final class ElevenLabsClient {
         // A parked voice no longer exists upstream (see `VoiceParking`).
         // Refused here, before the network, with the error every surface
         // already turns into its paywall.
-        if VoiceParking.isParked(voiceId) { throw ElevenLabsError.insufficientCredits }
+        if VoiceParking.isParked(voiceId) { throw VoiceError.insufficientCredits }
         let url = functionsBaseURL.appendingPathComponent("elevenlabs-tts")
         // A preset slot speaks in the target language's own voice (see
         // `VoicePreset.speaking`); the idempotency key below follows the voice
@@ -655,7 +514,6 @@ final class ElevenLabsClient {
         var body: [String: Any] = [
             "voice_id": voiceId,
             "text": text,
-            "model_id": modelId,
             "with_timestamps": true,
         ]
         // How fast the fluent self talks (Me → Voice). Always sent, because
@@ -683,7 +541,7 @@ final class ElevenLabsClient {
         }
         let decoded = try JSONDecoder().decode(Resp.self, from: data)
         guard let audio = Data(base64Encoded: decoded.audio_base64) else {
-            throw ElevenLabsError.invalidResponse
+            throw VoiceError.invalidResponse
         }
         // ElevenLabs returns TWO alignments: `alignment` indexes the text we
         // SENT, while `normalized_alignment` indexes ElevenLabs' own normalized
@@ -799,23 +657,23 @@ final class ElevenLabsClient {
 
     private static func validate(response: URLResponse, data: Data) throws {
         guard let http = response as? HTTPURLResponse else {
-            throw ElevenLabsError.invalidResponse
+            throw VoiceError.invalidResponse
         }
         guard (200..<300).contains(http.statusCode) else {
             let snippet = String(data: data.prefix(512), encoding: .utf8) ?? "<binary>"
-            if http.statusCode == 402 { throw ElevenLabsError.wall(body: snippet) }
+            if http.statusCode == 402 { throw VoiceError.wall(body: snippet) }
             if http.statusCode == 403, snippet.contains("voice_change_limit") {
                 struct Body: Decodable { let next_at: String? }
                 let next = (try? JSONDecoder().decode(Body.self, from: data))?.next_at
                     .flatMap { VoiceChangeStatus.parse($0) }
-                throw ElevenLabsError.voiceChangeLimit(nextAt: next)
+                throw VoiceError.voiceChangeLimit(nextAt: next)
             }
-            throw ElevenLabsError.httpError(status: http.statusCode, body: snippet)
+            throw VoiceError.httpError(status: http.statusCode, body: snippet)
         }
     }
 }
 
-enum ElevenLabsError: Error, LocalizedError {
+enum VoiceError: Error, LocalizedError {
     case invalidResponse
     case httpError(status: Int, body: String)
     case insufficientCredits
@@ -839,7 +697,7 @@ enum ElevenLabsError: Error, LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .invalidResponse: return "ElevenLabs: invalid response"
+        case .invalidResponse: return "Voice: invalid response"
         case .httpError(let status, let body):
             // The voice-slot ceiling is OUR capacity problem, not something the
             // user did — don't hand them a wall of upstream JSON they can't act
@@ -851,7 +709,7 @@ enum ElevenLabsError: Error, LocalizedError {
             if let until = VoiceQuota.availableAt(inBody: body) {
                 return VoiceQuota.pausedLine(until: until)
             }
-            return "ElevenLabs HTTP \(status): \(body)"
+            return "Voice HTTP \(status): \(body)"
         case .insufficientCredits: return explain("You're out of credits. Check your plan under Me → Account.")
         case .sceneCapReached:
             return explain("You've watched today's scenes. New ones unlock at midnight — replaying the ones you have is always free.")
@@ -872,7 +730,7 @@ enum ElevenLabsError: Error, LocalizedError {
     /// is "pay", "tomorrow", or "tomorrow, for Watch". Read the body in ONE
     /// place — the two request paths (streamed / buffered) drifted apart the
     /// first time this was written by hand twice.
-    static func wall(body: String) -> ElevenLabsError {
+    static func wall(body: String) -> VoiceError {
         if body.contains("scene_cap_reached") { return .sceneCapReached }
         if body.contains("fair_use_limit") { return .fairUseLimit }
         if body.contains("daily_cap_reached") { return .dailyCapReached }
@@ -936,12 +794,12 @@ enum VoiceQuota {
 extension Error {
     /// Convenience for call sites that only hold an `Error`.
     var isVoiceLimitReached: Bool {
-        (self as? ElevenLabsError)?.isVoiceLimitReached ?? false
+        (self as? VoiceError)?.isVoiceLimitReached ?? false
     }
 
     /// The monthly voice allowance refused this: .some(reset date, if known).
     var voiceQuotaFull: Date?? {
-        guard case .httpError(_, let body)? = self as? ElevenLabsError else { return nil }
+        guard case .httpError(_, let body)? = self as? VoiceError else { return nil }
         return VoiceQuota.availableAt(inBody: body)
     }
 
@@ -950,12 +808,12 @@ extension Error {
     /// Worth a helper because the obvious thing to log — `(error as NSError)
     /// .code` — is NOT the case's source order: Swift numbers the cases WITH
     /// payloads first, so `httpError` is 0 and `invalidResponse` is 1. Every
-    /// upstream failure therefore logged as a flat "ElevenLabsError:0" that
+    /// upstream failure therefore logged as a flat "VoiceError:0" that
     /// reads like a decode bug and says nothing about WHICH status came back
     /// (a dead voice id and a rate limit were indistinguishable). Log the
     /// status beside the code, and never read the code as an ordinal.
-    var elevenLabsStatus: String? {
-        if case .httpError(let status, _)? = self as? ElevenLabsError {
+    var voiceStatus: String? {
+        if case .httpError(let status, _)? = self as? VoiceError {
             return String(status)
         }
         return nil

@@ -32,28 +32,22 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   )
 
-  // 1) ElevenLabs clones — the voice must not outlive the account.
-  const elevenKey = Deno.env.get("ELEVENLABS_API_KEY")
+  // 1) The voice must not outlive the account. Cartesia voices only: an
+  // ElevenLabs one (from before 2026-10-12) went with ElevenLabs itself.
   const { data: clones } = await admin
     .from("voice_clones")
     .select("elevenlabs_voice_id")
     .eq("user_id", user.id)
-  if (elevenKey) {
-    for (const clone of clones ?? []) {
-      if (!clone.elevenlabs_voice_id) continue
-      const res = cartesia.isCartesiaVoice(clone.elevenlabs_voice_id)
-        ? await cartesia.deleteVoice(clone.elevenlabs_voice_id)
-            .then((r) => new Response(r.detail ?? null, { status: r.ok ? 200 : r.status }))
-        : await fetch(
-            `https://api.elevenlabs.io/v1/voices/${clone.elevenlabs_voice_id}`,
-            { method: "DELETE", headers: { "xi-api-key": elevenKey } },
-          )
-      // 404 = already gone (e.g. deleted after a re-record) — that's fine.
-      if (!res.ok && res.status !== 404) {
-        console.error("account-delete: voice delete failed",
-          clone.elevenlabs_voice_id, res.status, await res.text())
-      }
-    }
+  const deleted = new Set<string>()
+  for (const clone of clones ?? []) {
+    const id = clone.elevenlabs_voice_id as string | null
+    if (!id || !cartesia.isCartesiaVoice(id)) continue
+    // Accent ids ("<uuid>:<accent>") share one voice; delete it once.
+    const { uuid } = cartesia.parseVoice(id)
+    if (deleted.has(uuid)) continue
+    deleted.add(uuid)
+    const r = await cartesia.deleteVoice(id)
+    if (!r.ok) console.error("account-delete: voice delete failed", id, r.status, r.detail)
   }
 
   // 1b) The recordings those clones were built from. Storage does NOT cascade

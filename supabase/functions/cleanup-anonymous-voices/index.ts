@@ -48,7 +48,6 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   )
-  const elevenKey = Deno.env.get("ELEVENLABS_API_KEY")
 
   // Anonymous users past the grace window. `is_anonymous` lives on auth.users
   // and is not exposed through PostgREST, so this goes through the RPC that
@@ -73,32 +72,18 @@ Deno.serve(async (req) => {
       .select("elevenlabs_voice_id")
       .eq("user_id", row.user_id)
 
+    // Cartesia voices only: an ElevenLabs id (from before 2026-10-12) has
+    // nothing upstream left to delete since ElevenLabs is gone (2026-10-15).
     let upstreamOK = true
-    if (elevenKey) {
-      for (const clone of clones ?? []) {
-        if (!clone.elevenlabs_voice_id) continue
-        const res = cartesia.isCartesiaVoice(clone.elevenlabs_voice_id)
-          ? await cartesia.deleteVoice(clone.elevenlabs_voice_id)
-              .then((r) => new Response(r.detail ?? null, { status: r.ok ? 200 : r.status }))
-          : await fetch(
-              `https://api.elevenlabs.io/v1/voices/${clone.elevenlabs_voice_id}`,
-              { method: "DELETE", headers: { "xi-api-key": elevenKey } },
-            )
-        // Already gone (a re-record during onboarding replaces one). ElevenLabs
-        // answers a DELETE on a missing voice with 400 `voice_does_not_exist`,
-        // NOT 404 — observed 2026-09-23, when two abandoned sessions from 09-15
-        // and 09-17 had been re-scanned every 15 min for a week because their
-        // replaced voices came back 400 and read as "delete failed".
-        const body = res.ok ? "" : await res.text()
-        const alreadyGone = res.status === 404 ||
-          (res.status === 400 && body.includes("voice_does_not_exist"))
-        if (res.ok || alreadyGone) {
-          deletedVoices++
-        } else {
-          upstreamOK = false
-          console.error("cleanup-anonymous-voices: voice delete failed",
-            clone.elevenlabs_voice_id, res.status, body.slice(0, 300))
-        }
+    for (const clone of clones ?? []) {
+      const id = clone.elevenlabs_voice_id as string | null
+      if (!id || !cartesia.isCartesiaVoice(id)) continue
+      const r = await cartesia.deleteVoice(id)   // a voice already gone counts as deleted
+      if (r.ok) {
+        deletedVoices++
+      } else {
+        upstreamOK = false
+        console.error("cleanup-anonymous-voices: voice delete failed", id, r.status, (r.detail ?? "").slice(0, 300))
       }
     }
 

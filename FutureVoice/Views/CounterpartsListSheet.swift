@@ -398,7 +398,7 @@ struct VoicePresetPickerView: View {
         if let cached = PhraseAudioStore.shared.data(text: text, voiceId: voiceId, allowLineage: false) {
             return cached
         }
-        let data = try await ElevenLabsClient.shared.synthesize(
+        let data = try await VoiceClient.shared.synthesize(
             voiceId: voiceId, text: text, purpose: "voice_preview")
         _ = PhraseAudioStore.shared.save(data, text: text, voiceId: voiceId)
         return data

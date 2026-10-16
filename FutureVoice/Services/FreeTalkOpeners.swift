@@ -239,26 +239,13 @@ final class FreeTalkOpeners {
                                                     allowLineage: false) == nil else { return }
         let audio: Data
         do {
-            // A line of several sentences is made sentence by sentence so it
-            // breathes like the answers after it (see `PacedSpeech`); a
-            // one-sentence line, or an edge with no streaming, takes the
-            // ordinary single synthesis.
-            //
+            // Whole: a Cartesia line already pauses between its sentences.
             // Billed as "opener", not "turn" (2026-10-02): the edge prices
             // the two identically (`TALK_PURPOSES`), but a warm-up filed as
             // "turn" was indistinguishable in the ledger from a call's reply,
             // and the admin console read a language switch as a 6-minute call.
-            if let paced = try await PacedSpeech.synthesizePCM(
-                voiceId: voiceId, text: line,
-                modelId: ElevenLabsClient.conversationModelId, purpose: "opener") {
-                audio = AudioLoudness.wavData(fromPCM16: paced.pcm,
-                                              sampleRate: Int(paced.sampleRate))
-            } else {
-                audio = try await ElevenLabsClient.shared.synthesize(
-                    voiceId: voiceId, text: line,
-                    modelId: ElevenLabsClient.conversationModelId,
-                    purpose: "opener")
-            }
+            audio = try await VoiceClient.shared.synthesize(
+                voiceId: voiceId, text: line, purpose: "opener")
         } catch {
             Self.report("opener_audio_failed", language: nil, error: error)
             throw error
@@ -310,7 +297,7 @@ final class FreeTalkOpeners {
 
     private func needsBake(_ line: String, voiceId: String) -> Bool {
         let defaults = UserDefaults.standard
-        if VoiceMove.isCartesia(voiceId), !defaults.bool(forKey: Self.cartesiaWholeKey) {
+        if VoiceClient.isCartesiaVoice(voiceId), !defaults.bool(forKey: Self.cartesiaWholeKey) {
             defaults.set(true, forKey: Self.cartesiaWholeKey)
             defaults.removeObject(forKey: Self.bakedLinesKey)
             return true

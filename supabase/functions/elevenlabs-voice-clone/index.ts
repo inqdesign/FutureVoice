@@ -1,6 +1,8 @@
-// ElevenLabs voice-clone proxy.
+// Voice-clone endpoint: the learner's recording becomes a Cartesia voice,
+// mirrored into voice_clones. (Named for ElevenLabs, which made the clones
+// until 2026-10-12 and is gone since 2026-10-15; every build in the store
+// calls it by this name.)
 //
-// Multipart pass-through, then mirrors the new voice_id into voice_clones.
 // Clones cost NOTHING (minutes-native model: the meter is talk minutes and
 // nothing else) — churn is bounded by a daily re-clone cap instead, with the
 // onboarding window fully exempt: getting a voice the user believes is
@@ -8,8 +10,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
-import { reservedForNewLearners, reservedResponse, quotaSpent, spentResponse } from "../_shared/voice-quota.ts"
-import { changesLeft, recordVoiceChange, changeLimitResponse, type VoiceChangeKind } from "../_shared/voice-changes.ts"
+import { recordVoiceChange } from "../_shared/voice-changes.ts"
 import {
   recordFreeUsage, rateLimitedResponse, billingClient, serviceRoleClient, background,
 } from "../_shared/credits.ts"
@@ -28,9 +29,6 @@ Deno.serve(async (req) => {
 
   const idemKey = req.headers.get("X-Idempotency-Key")
   if (!idemKey) return errorResponse(400, "missing X-Idempotency-Key header")
-
-  const apiKey = Deno.env.get("ELEVENLABS_API_KEY")
-  if (!apiKey) return errorResponse(500, "server missing ELEVENLABS_API_KEY")
 
   const contentType = req.headers.get("Content-Type") ?? ""
   if (!contentType.includes("multipart/form-data")) {
@@ -71,35 +69,8 @@ Deno.serve(async (req) => {
     Date.now() - firstCloneAt < ONBOARDING_GRACE_MS
   const isFree = isFirstClone || withinOnboardingGrace
 
-  // The month's last voice creations are kept for learners making their
-  // FIRST voice (_shared/voice-quota.ts). A re-record waits for the reset.
-  // Where this clone is made (_shared/cartesia.ts). Cartesia keeps clones
-  // without a limit, so ElevenLabs' monthly voice allowance doesn't apply.
-  const onCartesia = cartesia.clonesOnCartesia(user.id)
-  if (!onCartesia) {
-    if (!isFirstClone && await reservedForNewLearners(apiKey)) {
-      return reservedResponse(cors())
-    }
-    // Nothing left at all: say so with the reset date instead of letting the
-    // upload fail upstream with a raw error (2026-10-10).
-    if (await quotaSpent(apiKey)) return spentResponse(cors())
-  }
-
-  // One change per 30 days after the first voice (_shared/voice-changes.ts).
-  // A parked voice coming back is a rebuild of what we took, not a change.
-  let changeKind: VoiceChangeKind = "first"
-  // A clone made on Cartesia spends no ElevenLabs allowance and no slot, so
-  // the 30-day change limit doesn't apply to it (and it isn't counted).
-  const cloningOnCartesia = cartesia.clonesOnCartesia(user.id)
-  if (!isFirstClone && !cloningOnCartesia) {
-    const { data: parked } = await billingClient().from("voice_clones")
-      .select("id").eq("user_id", user.id).not("parked_at", "is", null).limit(1)
-    changeKind = parked && parked.length > 0 ? "revival" : "change"
-    if (changeKind === "change") {
-      const status = await changesLeft(user.id)
-      if (status && status.left < 1) return changeLimitResponse(status.nextAt, cors())
-    }
-  }
+  // Cartesia keeps clones without a limit, so neither ElevenLabs' monthly
+  // voice allowance nor its 30-day change limit applies any more.
 
   // Minutes-native model: clones are never PRICED — the meter is talk
   // minutes and nothing else. Re-clones past the onboarding window are
@@ -127,9 +98,9 @@ Deno.serve(async (req) => {
     const rec = await recordFreeUsage({
       supabase, userId: user.id, action, purpose: "voice_clone",
       // Cartesia keeps clones without a limit and charges nothing for one,
-      // so its cap is only a runaway guard; 5 was ElevenLabs' slot economy,
-      // and it left a learner trying accents on a spinner (2026-10-12).
-      dailyCap: onCartesia ? 30 : 5, sourceFn: SOURCE_FN, idempotencyKey: idemKey,
+      // so the cap is only a runaway guard (it was 5 under ElevenLabs' slot
+      // economy, and left a learner trying accents on a spinner, 2026-10-12).
+      dailyCap: 30, sourceFn: SOURCE_FN, idempotencyKey: idemKey,
       metadata: { reclone: true },
     })
     if (!rec.ok) {
@@ -145,51 +116,23 @@ Deno.serve(async (req) => {
   }
 
   const incoming = await req.formData()
-  const outgoing = new FormData()
-  // Builds from 1.1.5 remix every new clone into the language's default
-  // accent themselves and say so here; a clone without it is an older
-  // build's, and the server applies the accent for it at the speech side
-  // (_shared/default-accent.ts). Ours, not ElevenLabs' — never forwarded.
-  const accentByApp = incoming.get("accent_by_app") === "true"
-  for (const [key, value] of incoming.entries()) {
-    if (key === "accent_by_app") continue
-    if (value instanceof File) outgoing.append(key, value, value.name)
-    else outgoing.append(key, value)
-  }
 
   // Mirrored into voice_clones below. The name is otherwise known only to
-  // ElevenLabs and to the device that chose it, so nothing on our side can
-  // say which user a voice in the library belongs to.
+  // the voice provider and to the device that chose it, so nothing on our
+  // side could say which user a voice in the library belongs to.
   const voiceName = ((incoming.get("name") as string | null) ?? "").trim() || null
 
-  let json: { voice_id: string }
-  if (onCartesia) {
-    // One clip — the take the phone recorded (the app sends one file). Its
-    // language is the learner's target: the read-aloud script is written in it.
-    const clip = incoming.getAll("files").find((v): v is File => v instanceof File)
-    if (!clip) return errorResponse(400, "no recording in files")
-    const { data: profile } = await billingClient().from("profiles")
-      .select("target_language").eq("id", user.id).maybeSingle()
-    const language = cartesia.lineLanguage("", (profile as { target_language?: string } | null)?.target_language)
-    const made = await cartesia.cloneVoice(clip, voiceName ?? `Future ${user.id.slice(0, 8)}`, language)
-    if (!made.ok) return errorResponse(made.status >= 400 ? made.status : 502, "cartesia upstream error", made.detail)
-    json = { voice_id: made.voiceId }
-  } else {
-    const upstream = await fetch("https://api.elevenlabs.io/v1/voices/add", {
-      method: "POST",
-      headers: { "xi-api-key": apiKey },
-      body: outgoing,
-    })
-
-    if (!upstream.ok) {
-      const detail = await upstream.text()
-      // The allowance may have run out between the check above and the upload.
-      if (await quotaSpent(apiKey, true)) return spentResponse(cors())
-      return errorResponse(upstream.status, "elevenlabs upstream error", detail.slice(0, 500))
-    }
-
-    json = await upstream.json() as { voice_id: string }
-  }
+  // One clip — the take the phone recorded (the app sends one file), cleaned
+  // on the phone by builds from 2026-10-15. Its language is the learner's
+  // target: the read-aloud script is written in it.
+  const clip = incoming.getAll("files").find((v): v is File => v instanceof File)
+  if (!clip) return errorResponse(400, "no recording in files")
+  const { data: profile } = await billingClient().from("profiles")
+    .select("target_language").eq("id", user.id).maybeSingle()
+  const language = cartesia.lineLanguage("", (profile as { target_language?: string } | null)?.target_language)
+  const made = await cartesia.cloneVoice(clip, voiceName ?? `Future ${user.id.slice(0, 8)}`, language)
+  if (!made.ok) return errorResponse(made.status >= 400 ? made.status : 502, "cartesia upstream error", made.detail)
+  const json = { voice_id: made.voiceId }
 
   // Free clone: stamp a 0-credit ledger row NOW (post-success) — the first
   // one anchors the grace window, the rest keep usage analytics honest about
@@ -227,22 +170,12 @@ Deno.serve(async (req) => {
     .select("id")
     .maybeSingle()
   if (insErr) console.error("voice_clones insert failed", insErr)
-  if (!onCartesia || changeKind === "first") await recordVoiceChange(user.id, changeKind)
-  // Its own update, so a database without the column (deploy order) loses
-  // only the default accent, never the clone.
-  // A Cartesia clone speaks every language it is told to; there is no remix
-  // for the server to make (_shared/cartesia.ts).
-  if (cloneRow?.id && !accentByApp && !onCartesia) {
-    const { error: flagErr } = await supabase.from("voice_clones")
-      .update({ accent_by_server: true }).eq("id", cloneRow.id)
-    if (flagErr) console.error("accent_by_server flag failed", flagErr.message)
-  }
+  if (isFirstClone) await recordVoiceChange(user.id, "first")
 
   // Keep the recording for a DAY. This function is the ONLY place it exists
-  // on our side — the multipart body is forwarded upstream and then forgotten
-  // — and ElevenLabs' own copy dies with the voice, which the app deletes
-  // seconds after an accent pick, so a clone that came out wrong could not be
-  // listened to minutes after the complaint. `purge-voice-originals` removes
+  // on our side — the multipart body is sent upstream and then forgotten —
+  // so a clone that came out wrong could not otherwise be listened to
+  // minutes after the complaint. `purge-voice-originals` removes
   // it 24h later. See 20260914120000_voice_originals.sql.
   //
   // Backgrounded on purpose: onboarding is waiting on this response, and a

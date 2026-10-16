@@ -283,7 +283,7 @@ struct DrillEnrichmentSheet: View {
         synthesizingExample = true
         defer { synthesizingExample = false }
         do {
-            let audio = try await ElevenLabsClient.shared.synthesize(voiceId: voiceId, text: text, purpose: "drill")
+            let audio = try await VoiceClient.shared.synthesize(voiceId: voiceId, text: text, purpose: "drill")
             PhraseAudioStore.shared.save(audio, text: text, voiceId: voiceId)
             playingExample = idx
             try player.play(audio) {

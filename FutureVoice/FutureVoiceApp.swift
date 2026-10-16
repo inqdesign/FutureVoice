@@ -330,7 +330,7 @@ final class AppState: ObservableObject {
         didSet { UserDefaults.standard.set(voiceWasReclaimed, forKey: Self.voiceWasReclaimedKey) }
     }
     /// The phone's voice is PARKED (see `VoiceParking`). A mirror of the
-    /// defaults key, which stays the truth because `ElevenLabsClient` reads it
+    /// defaults key, which stays the truth because `VoiceClient` reads it
     /// off the main actor; every write goes through `setParkedVoice` so the
     /// two can't disagree.
     @Published private(set) var voiceIsParked = VoiceParking.parkedVoiceId != nil
@@ -569,7 +569,7 @@ final class AppState: ObservableObject {
         let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
         voiceName = trimmed
         guard let voiceId = voiceCloneId else { return }
-        try await ElevenLabsClient.shared.renameVoice(voiceId: voiceId, name: voiceDisplayName)
+        try await VoiceClient.shared.renameVoice(voiceId: voiceId, name: voiceDisplayName)
     }
 
     private static let voiceCloneIdKey = "futurevoice.voiceCloneId"
@@ -1560,27 +1560,27 @@ final class AppState: ObservableObject {
             "native_language": nativeLanguage,
             "level": proficiency.rawValue
         ])
-        let normalized = AudioLoudness.peakNormalizedWAV(at: sampleURL)
-        // Denoise only a take that actually needs it. The threshold matches
-        // AudioSampleQuality's own "some background noise" line, so anything
-        // it would flag to the user still gets cleaned, and only a take it
-        // calls clean is passed through untouched (where the denoiser could
-        // only strip voice texture). Measured here rather than in the view so
-        // the Settings → Voice regeneration path gets the same decision.
-        // Unreadable sample → denoise, matching the previous behaviour.
-        let snr = AudioSampleQuality.analyze(url: normalized)?.estimatedSNRdB
-        let denoise = (snr ?? 0) < 22
-        Analytics.capture("voice_clone_denoise", ["applied": denoise,
+        let levelled = AudioLoudness.peakNormalizedWAV(at: sampleURL)
+        // Cleaned HERE, on the phone, since ElevenLabs left (2026-10-15,
+        // `VoiceDenoiser`): DeepFilterNet capped at 30 dB, on every take —
+        // the server's ElevenLabs isolation also ran on every take, and the
+        // cap is what keeps a clean one from losing texture. Levelled again
+        // after, because removing noise lowers the peak. A failure uploads
+        // the take as it was. The server no longer denoises anything.
+        let snr = AudioSampleQuality.analyze(url: levelled)?.estimatedSNRdB
+        let cleaned = VoiceDenoiser.cleaned(levelled)
+        let normalized = cleaned.map { AudioLoudness.peakNormalizedWAV(at: $0) } ?? levelled
+        Analytics.capture("voice_clone_denoise", ["applied": cleaned != nil,
+                                                  "on_device": true,
                                                   "snr_db": Int(snr ?? -1)])
         let newId: String
         do {
-            newId = try await ElevenLabsClient.shared.cloneVoice(
+            newId = try await VoiceClient.shared.cloneVoice(
                 // The user's chosen name (or the persona-derived default) —
                 // every clone used to land upstream as the same "Future Self".
                 // Never put a language in it: one clone speaks all of them.
                 name: voiceDisplayName,
-                sampleAudioURLs: [normalized],
-                removeBackgroundNoise: denoise
+                sampleAudioURLs: [normalized]
             )
         } catch where error.isVoiceLimitReached && pendingDeleteVoiceId != nil {
             // The account's voice slots are full AND this user is re-recording,
@@ -1591,9 +1591,8 @@ final class AppState: ObservableObject {
             Analytics.capture("voice_clone_slot_reclaimed", ["first_time": isFirstClone])
             await cleanupPreviousVoiceClone()
             do {
-                newId = try await ElevenLabsClient.shared.cloneVoice(
-                    name: voiceDisplayName, sampleAudioURLs: [normalized],
-                    removeBackgroundNoise: denoise)
+                newId = try await VoiceClient.shared.cloneVoice(
+                    name: voiceDisplayName, sampleAudioURLs: [normalized])
             } catch {
                 reportCloneFailure(error, isFirstClone: isFirstClone, afterReclaim: true)
                 throw error
@@ -1702,7 +1701,7 @@ final class AppState: ObservableObject {
     /// middle of choosing threw the in-memory copy away and the same accent
     /// was made again on the next open (reported the same day). Caches
     /// directory: if iOS clears it, the cost is one regeneration.
-    private var remixTakeCache: (recording: String, takes: [String: [ElevenLabsClient.RemixPreview]])?
+    private var remixTakeCache: (recording: String, takes: [String: [VoiceClient.RemixPreview]])?
 
     /// Which recording the voice is made from: the sample file's size and
     /// date, which change with every new take.
@@ -1721,7 +1720,7 @@ final class AppState: ObservableObject {
 
     private struct StoredTake: Codable { let id: String; let file: String }
 
-    func cachedRemixTakes(for accentId: String) -> [ElevenLabsClient.RemixPreview]? {
+    func cachedRemixTakes(for accentId: String) -> [VoiceClient.RemixPreview]? {
         guard let key = recordingKey else { return nil }
         if let cache = remixTakeCache, cache.recording == key, let takes = cache.takes[accentId] {
             return takes
@@ -1732,7 +1731,7 @@ final class AppState: ObservableObject {
               let stored = try? JSONDecoder().decode([StoredTake].self, from: data) else { return nil }
         let takes = stored.compactMap { t in
             (try? Data(contentsOf: dir.appendingPathComponent(t.file)))
-                .map { ElevenLabsClient.RemixPreview(id: t.id, audio: $0) }
+                .map { VoiceClient.RemixPreview(id: t.id, audio: $0) }
         }
         guard takes.count == stored.count, !takes.isEmpty else { return nil }
         if remixTakeCache?.recording != key { remixTakeCache = (key, [:]) }
@@ -1740,7 +1739,7 @@ final class AppState: ObservableObject {
         return takes
     }
 
-    func cacheRemixTakes(_ takes: [ElevenLabsClient.RemixPreview], for accentId: String) {
+    func cacheRemixTakes(_ takes: [VoiceClient.RemixPreview], for accentId: String) {
         guard let key = recordingKey else { return }
         if remixTakeCache?.recording != key { remixTakeCache = (key, [:]) }
         remixTakeCache?.takes[accentId] = takes.isEmpty ? nil : takes
@@ -1787,17 +1786,16 @@ final class AppState: ObservableObject {
         // the clone rebuilt first — a whole voice spent just to LISTEN. With
         // these on file a later accent change is one save, nothing else.
         let text = VoiceAccentCatalog.sampleText(for: targetLanguage)
-        let made: [String: [ElevenLabsClient.RemixPreview]] = await withTaskGroup(
-            of: (String, [ElevenLabsClient.RemixPreview]?).self) { group in
+        let made: [String: [VoiceClient.RemixPreview]] = await withTaskGroup(
+            of: (String, [VoiceClient.RemixPreview]?).self) { group in
             for option in options {
                 group.addTask {
-                    let takes = try? await ElevenLabsClient.shared.remixVoicePreviews(
-                        voiceId: voiceId, voiceDescription: option.prompt, text: text,
-                        promptStrength: VoiceAccentCatalog.promptStrength)
+                    let takes = try? await VoiceClient.shared.remixVoicePreviews(
+                        voiceId: voiceId, voiceDescription: option.prompt, text: text)
                     return (option.id, takes)
                 }
             }
-            var all: [String: [ElevenLabsClient.RemixPreview]] = [:]
+            var all: [String: [VoiceClient.RemixPreview]] = [:]
             for await (id, takes) in group { if let takes, !takes.isEmpty { all[id] = takes } }
             return all
         }
@@ -1805,7 +1803,7 @@ final class AppState: ObservableObject {
         do {
             guard let take = made[accent.id]?.first else { throw URLError(.zeroByteResource) }
             // "default": part of the clone it follows, not the learner's change.
-            let newId = try await ElevenLabsClient.shared.saveRemixedVoice(
+            let newId = try await VoiceClient.shared.saveRemixedVoice(
                 generatedVoiceId: take.id, name: voiceDisplayName,
                 voiceDescription: accent.prompt, purpose: "default")
             await adoptRemixedVoice(newId, accentId: accent.id, source: "default")
@@ -1834,7 +1832,7 @@ final class AppState: ObservableObject {
     /// landed. Reported to analytics so failures are triageable without a
     /// device in hand.
     private static func failureStatus(_ error: Error) -> Int {
-        if let e = error as? ElevenLabsError {
+        if let e = error as? VoiceError {
             switch e {
             // Both walls are 402 on the wire; a clone can only ever hit the
             // credit one, but the status has to stay faithful to what the
@@ -1863,12 +1861,12 @@ final class AppState: ObservableObject {
             pendingDeleteVoiceId = nil; return
         }
         do {
-            try await ElevenLabsClient.shared.deleteVoice(voiceId: oldId)
+            try await VoiceClient.shared.deleteVoice(voiceId: oldId)
             pendingDeleteVoiceId = nil
         } catch {
             // 403 "not owned" / 404 means it's already gone upstream — stop
             // retrying. Anything else stays queued for the next launch.
-            if let e = error as? ElevenLabsError, case .httpError(let status, _) = e,
+            if let e = error as? VoiceError, case .httpError(let status, _) = e,
                status == 403 || status == 404 {
                 pendingDeleteVoiceId = nil
             }

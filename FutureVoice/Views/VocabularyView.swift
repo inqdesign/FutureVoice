@@ -707,7 +707,7 @@ struct WordCard: View {
         speaking = true
         defer { speaking = false }
         do {
-            let data = try await ElevenLabsClient.shared.synthesize(voiceId: voiceId, text: word, purpose: "library")
+            let data = try await VoiceClient.shared.synthesize(voiceId: voiceId, text: word, purpose: "library")
             PhraseAudioStore.shared.save(data, text: word, voiceId: voiceId)
             try? player.play(data, forceSessionReset: true)
         } catch {

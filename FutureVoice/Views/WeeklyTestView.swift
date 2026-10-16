@@ -1254,7 +1254,7 @@ struct WeeklyTestView: View {
         loadingLineAudio = true
         defer { loadingLineAudio = false }
         do {
-            let (data, timings) = try await ElevenLabsClient.shared
+            let (data, timings) = try await VoiceClient.shared
                 .synthesizeWithTimestamps(voiceId: voiceId, text: item.answer, purpose: "shadow")
             PhraseAudioStore.shared.save(data, text: item.answer, voiceId: voiceId, timings: timings)
             if let turnId = item.turnId {

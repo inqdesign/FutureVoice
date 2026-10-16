@@ -101,13 +101,6 @@ function numOrNull(v: unknown): number | null {
   return typeof v === "number" && Number.isFinite(v) ? v : null;
 }
 
-async function eleven(path: string, key: string): Promise<any> {
-  const r = await fetch(`https://api.elevenlabs.io${path}`, { headers: { "xi-api-key": key } });
-  if (!r.ok) throw new Error(`elevenlabs ${path.split("?")[0]} ${r.status}: ${(await r.text()).slice(0, 200)}`);
-  return r.json();
-}
-
-/** The ledger's TTS rows in the window: one thin row per synthesis, paged. */
 async function ledgerTts(env: { SUPABASE_URL: string; SUPABASE_SERVICE_ROLE_KEY: string }, since: string) {
   const page = 1000;
   const byPurpose: Record<string, { credits: number; rows: number; model: string }> = {};
@@ -145,66 +138,4 @@ async function ledgerTts(env: { SUPABASE_URL: string; SUPABASE_SERVICE_ROLE_KEY:
     if (batch.length < page) break;
   }
   return { byPurpose, byDay, total };
-}
-
-export async function elevenTruth(
-  env: { ELEVENLABS_API_KEY?: string; SUPABASE_URL: string; SUPABASE_SERVICE_ROLE_KEY: string },
-  windowStart: string,
-): Promise<Truth | null> {
-  const key = env.ELEVENLABS_API_KEY;
-  if (!key) return null;
-  if (held && held.key === windowStart && Date.now() - held.at < HOLD_MS) return held.value;
-
-  const startMs = Date.parse(windowStart + "T00:00:00Z");
-  const endMs = Date.now();
-  const [sub, stats, rates, ledger] = await Promise.all([
-    eleven("/v1/user/subscription", key),
-    eleven(`/v1/usage/character-stats?start_unix=${startMs}&end_unix=${endMs}&breakdown_type=model&aggregation_interval=day`, key),
-    fx(),
-    ledgerTts(env, windowStart).catch((e) => { console.log(`ledgerTts: ${(e as Error).message}`); return null; }),
-  ]);
-
-  const tier = String(sub.tier ?? "unknown").toLowerCase();
-  const t = TIERS[tier] ?? TIERS.pro;
-  const days: Truth["days"] = [];
-  const models: TruthModelDay = {};
-  const times: number[] = stats.time ?? [];
-  const usage: Record<string, number[]> = stats.usage ?? {};
-  times.forEach((ms, i) => {
-    const d = new Date(ms).toISOString().slice(0, 10);
-    const row: TruthModelDay = {};
-    for (const [model, arr] of Object.entries(usage)) {
-      const v = Number(arr[i] ?? 0);
-      if (!v) continue;
-      row[model] = v;
-      models[model] = (models[model] ?? 0) + v;
-    }
-    if (Object.keys(row).length) days.push({ d, models: row });
-  });
-
-  const resetUnix = Number(sub.next_character_count_reset_unix ?? 0);
-  const value: Truth = {
-    fetchedAt: new Date().toISOString(),
-    tier,
-    cycle: {
-      used: Number(sub.character_count ?? 0),
-      limit: Number(sub.character_limit ?? t.credits),
-      resetAt: resetUnix ? new Date(resetUnix * 1000).toISOString() : null,
-      // Monthly cycle: the reset a month before the next one.
-      startedAt: resetUnix ? new Date(new Date(resetUnix * 1000).setUTCMonth(new Date(resetUnix * 1000).getUTCMonth() - 1)).toISOString() : null,
-    },
-    rate: t.credits ? t.price / t.credits : 0,
-    tierPrice: t.price,
-    tierCredits: t.credits,
-    windowStart,
-    days, models, ledger, fx: rates,
-    voices: {
-      used: numOrNull(sub.voice_slots_used),
-      limit: numOrNull(sub.voice_limit),
-      addEdits: numOrNull(sub.voice_add_edit_counter),
-      maxAddEdits: numOrNull(sub.max_voice_add_edits),
-    },
-  };
-  held = { at: Date.now(), key: windowStart, value };
-  return value;
 }

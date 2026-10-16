@@ -11,7 +11,7 @@ iPhone ──(1 WebSocket per call)── CallSession DO
                                     ├── gemini-3.6-flash streamGenerateContent (reply text,
                                     │     thinkingLevel "minimal", speculative fire on
                                     │     settled interim — adopted only on word match)
-                                    ├── ElevenLabs multi-context WS (cloned voice, turbo,
+                                    ├── Cartesia WebSocket (the learner's clone, sonic,
                                     │     pre-warmed at session start)
                                     └── Supabase (auth + voice ownership, ONCE per call)
 ```
@@ -19,7 +19,7 @@ iPhone ──(1 WebSocket per call)── CallSession DO
 Why not a Gemini Live half-cascade session: as of 2026-08-31 every
 conversational Live model on the Gemini API is audio-output only (probed —
 `test/probe-live-setup.mjs`), and this product's voice must be the learner's
-ElevenLabs clone. So the gateway runs its own cascade; the transcribe-live
+own clone. So the gateway runs its own cascade; the transcribe-live
 model still gives us server-side semantic-ish endpointing.
 
 **Measured (local `wrangler dev`, 2026-08-31): speech-end → cloned voice
@@ -43,7 +43,7 @@ unable to HEAR is fatal.**
   into a teardown — the learner said something and the fluent self went
   silent for good. The apology is spoken in the learner's language, informal,
   and pushed into `history` so the next reply knows it asked them to repeat.
-- **A refused or dropped ElevenLabs socket ends the LINE, not the call**
+- **A refused or dropped voice socket ends the LINE, not the call**
   (`warn("tts")` + `endLine`). The text is already on screen, and
   `ensureConnected` reopens on the next line.
 - **A transcriber failure stays fatal** — with no ASR the call is deaf. The
@@ -90,7 +90,7 @@ npx wrangler secret put SUPABASE_URL
 npx wrangler secret put SUPABASE_ANON_KEY
 npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 npx wrangler secret put GEMINI_API_KEY
-npx wrangler secret put ELEVENLABS_API_KEY
+npx wrangler secret put CARTESIA_API_KEY
 npm run deploy
 ```
 
@@ -103,10 +103,8 @@ Local dev: put the same keys in `.dev.vars` (gitignored), plus
   (verified available on the production key 2026-08-31 via
   `test/check-live-models.py`; re-run it when Live model names churn). We
   need the half-cascade (TEXT response modality), never native-audio,
-  because the voice must be the learner's ElevenLabs clone.
-- `ELEVEN_OUTPUT_FORMAT` — `pcm_22050` default; `pcm_44100` needs the Pro
-  plan (the edge function's format ladder learned this per-instance; here
-  it's explicit config).
+  because the voice must be the learner's own clone.
+- `TTS_OUTPUT_FORMAT` — `pcm_22050` default.
 
 ## Smoke test (no app build)
 

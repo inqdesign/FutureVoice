@@ -1,9 +1,9 @@
-// ElevenLabs voice-rename proxy.
+// Voice rename (named for ElevenLabs, gone since 2026-10-15; the store
+// builds call it by this name).
 //
 // Body: { voice_id: string, name: string }
-// Renames an EXISTING clone in place (POST /v1/voices/{id}/edit). The name is
-// otherwise only settable at creation time, so without this a user who renames
-// their voice would see it stay "Future Self" upstream until their next
+// Renames an EXISTING Cartesia clone in place, so a user who renames their
+// voice doesn't see it stay "Future Self" upstream until their next
 // re-record.
 //
 // Free — no credits, no ledger row. Nothing is generated; this is a metadata
@@ -24,9 +24,6 @@ Deno.serve(async (req) => {
   if (authed instanceof Response) return authed
   const { user, supabase } = authed
 
-  const apiKey = Deno.env.get("ELEVENLABS_API_KEY")
-  if (!apiKey) return errorResponse(500, "server missing ELEVENLABS_API_KEY")
-
   let body: { voice_id?: string; name?: string }
   try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
   if (!body.voice_id) return errorResponse(400, "voice_id required")
@@ -45,25 +42,14 @@ Deno.serve(async (req) => {
     .maybeSingle()
   if (!owned) return errorResponse(403, "voice not owned by caller")
 
-  // The edit endpoint is multipart even when only the name changes; omitting
-  // `files` leaves the existing samples untouched.
-  const form = new FormData()
-  form.append("name", name)
-
-  const upstream = cartesia.isCartesiaVoice(body.voice_id)
-    ? await cartesia.renameVoice(body.voice_id, name)
-        .then((r) => new Response(r.detail ?? null, { status: r.ok ? 200 : r.status }))
-    : await fetch(
-        `https://api.elevenlabs.io/v1/voices/${body.voice_id}/edit`,
-        { method: "POST", headers: { "xi-api-key": apiKey }, body: form },
-      )
-  if (!upstream.ok) {
-    const detail = await upstream.text()
-    return errorResponse(upstream.status, "elevenlabs upstream error", detail.slice(0, 500))
+  // An ElevenLabs id has nothing upstream any more; only our copy is renamed.
+  if (cartesia.isCartesiaVoice(body.voice_id)) {
+    const r = await cartesia.renameVoice(body.voice_id, name)
+    if (!r.ok) return errorResponse(r.status, "cartesia upstream error", (r.detail ?? "").slice(0, 500))
   }
 
   // Keep our copy in step with upstream. Written AFTER the upstream edit, so
-  // a row never claims a name ElevenLabs refused; a failure here is logged and
+  // a row never claims a name the provider refused; a failure here is logged and
   // swallowed, because the rename itself already succeeded.
   const { error: nameErr } = await supabase
     .from("voice_clones")

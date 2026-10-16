@@ -2,6 +2,7 @@
 // ownership once. This is the whole point of the gateway vs the per-turn
 // edge functions — these round trips happen ONCE per call, not per line.
 import { isCartesiaVoice, isStockVoice } from "./cartesia-tts"
+import { isPresetSlot } from "./presets"
 
 export interface Env {
   CALL_SESSION: DurableObjectNamespace
@@ -11,13 +12,12 @@ export interface Env {
    *  the same query the elevenlabs-tts edge function makes. */
   SUPABASE_SERVICE_ROLE_KEY: string
   GEMINI_API_KEY: string
-  ELEVENLABS_API_KEY: string
   /** Half-cascade Live model ("models/..."); see README before changing. */
   GEMINI_LIVE_MODEL?: string
   /** off (default) · all · comma-separated user ids — see session.ts gateQuietFrames. */
   TRANSCRIBE_GATE?: string
   /** Cartesia key — a Cartesia clone's call voice (cartesia-tts.ts). */
-  CARTESIA_API_KEY?: string
+  CARTESIA_API_KEY: string
   /** Model that re-reads an utterance the live transcriber wrote in the
    *  wrong script (see reread.ts). Default gemini-3.1-flash-lite. */
   GEMINI_REREAD_MODEL?: string
@@ -26,23 +26,12 @@ export interface Env {
   GEMINI_REPLY_MODEL?: string
   /** Hedge target when the reply model stalls (default flash-lite). */
   GEMINI_REPLY_FALLBACK_MODEL?: string
-  /** ElevenLabs streaming output format; pcm_44100 needs a Pro plan. */
-  ELEVEN_OUTPUT_FORMAT?: string
+  /** Streaming PCM format for the call's voice (default pcm_22050). */
+  TTS_OUTPUT_FORMAT?: string
   /** "1" allows unauthenticated sessions — `wrangler dev` ONLY, never set
    *  on the deployed worker. */
   DEV_ALLOW_ANON?: string
 }
-
-/** The four counterpart preset voices (VoicePreset.catalog) — mirror of the
- *  allowlist in supabase/functions/elevenlabs-tts. Keep in sync. */
-const PRESET_VOICE_IDS = new Set([
-  "NDTYOmYEjbDIVCKB35i3", "UgBBYS2sOqTuMpoF3BR0",
-  "FF59babHL8N8gfTgtBMT", "L0Dsvb3SLTyegXwtm47J",
-  // The same four slots voiced natively for Korean and Japanese learners
-  // (VoicePreset.speaking, 2026-09-28): Sian, KO-Calm, Han, Joon.
-  "5n5gqmaQi9Ewevrz7bOS", "L4az9Gb378GIycFl2nAB",
-  "8jHHF8rMqMlg8if2mOUe", "AKF7f2y1L8ktV5vxXILw",
-])
 
 /** Resolve the Supabase access token to a user id, or null. */
 export async function verifyUser(env: Env, token: string): Promise<string | null> {
@@ -63,7 +52,7 @@ export async function verifyUser(env: Env, token: string): Promise<string | null
  *  nobody was paying for it (park-idle-voices): answered as a spent pool, not
  *  as a forbidden voice, so the app shows its paywall. */
 export async function ownsVoice(env: Env, userId: string, voiceId: string): Promise<"ok" | "forbidden" | "parked"> {
-  if (PRESET_VOICE_IDS.has(voiceId)) return "ok"
+  if (isPresetSlot(voiceId)) return "ok"
   if (await isStockVoice(env.CARTESIA_API_KEY, voiceId)) return "ok"
   const url = `${env.SUPABASE_URL}/rest/v1/voice_clones` +
     `?user_id=eq.${encodeURIComponent(userId)}` +
@@ -78,38 +67,9 @@ export async function ownsVoice(env: Env, userId: string, voiceId: string): Prom
   if (!r.ok) return "forbidden"
   const rows = (await r.json()) as { parked_at?: string | null }[]
   if (!Array.isArray(rows) || rows.length === 0) return "forbidden"
-  return rows[0]?.parked_at ? "parked" : "ok"
-}
-
-/** The voice a call actually speaks with (2026-10-08). An old build's plain
- *  clone speaks its target language through the default-accent remix the
- *  `elevenlabs-tts` function made on its first English/German line
- *  (supabase/functions/_shared/default-accent.ts); the gateway only USES one
- *  that exists, it never makes one — by the time a call starts, the
- *  greeting and the openers have spoken. A separate query from `ownsVoice`
- *  on purpose: a database without the columns answers with an error, and
- *  that must be "the plain voice", never a refused call. */
-export async function speakAsVoice(env: Env, userId: string, voiceId: string, language: string): Promise<string> {
-  if (PRESET_VOICE_IDS.has(voiceId) || isCartesiaVoice(voiceId)) return voiceId
-  try {
-    const url = `${env.SUPABASE_URL}/rest/v1/voice_clones` +
-      `?user_id=eq.${encodeURIComponent(userId)}` +
-      `&elevenlabs_voice_id=eq.${encodeURIComponent(voiceId)}` +
-      `&select=speak_as_voice_id,speak_as_language&limit=1`
-    const r = await fetch(url, {
-      headers: {
-        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-      },
-    })
-    if (!r.ok) return voiceId
-    const rows = (await r.json()) as { speak_as_voice_id?: string | null; speak_as_language?: string | null }[]
-    const row = Array.isArray(rows) ? rows[0] : undefined
-    const base = language.toLowerCase().split("-")[0]
-    return row?.speak_as_voice_id && row.speak_as_language === base ? row.speak_as_voice_id : voiceId
-  } catch {
-    return voiceId
-  }
+  // An ElevenLabs clone (2026-10-15) can't speak any more either — the same
+  // answer as a parked voice, and the same way back (a rebuild).
+  return rows[0]?.parked_at || !isCartesiaVoice(voiceId) ? "parked" : "ok"
 }
 
 /** One 0-delta `usage_ledger` row with what a call cost upstream (2026-10-08).

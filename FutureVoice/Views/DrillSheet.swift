@@ -1215,7 +1215,7 @@ private extension DrillView {
         isLoadingAudio = true
         defer { isLoadingAudio = false }
         do {
-            let audio = try await ElevenLabsClient.shared.synthesize(
+            let audio = try await VoiceClient.shared.synthesize(
                 voiceId: voiceId,
                 text: card.targetPhrase,
                 purpose: "drill"

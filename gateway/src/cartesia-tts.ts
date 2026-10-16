@@ -1,8 +1,7 @@
-// Cartesia WebSocket TTS — the live call's voice for a Cartesia clone
-// (2026-10-12; why Cartesia: supabase/functions/_shared/cartesia.ts).
+// Cartesia WebSocket TTS — the live call's voice (every voice since
+// 2026-10-15; why Cartesia: supabase/functions/_shared/cartesia.ts).
 //
-// Same shape as ElevenTTS so CallSession drives either without knowing which:
-// one socket per call, one CONTEXT per line, sentences streamed into it as
+// One socket per call, one CONTEXT per line, sentences streamed into it as
 // the model writes them, `flush` when the reply is complete. Measured on a
 // warm socket (test/probe-tts-ttfb.mjs): first audio 100 ms median against
 // ElevenLabs' 148 ms, word timings on every line.
@@ -10,8 +9,7 @@
 // Each SENTENCE is its own Cartesia request (`continue: false`), played in
 // order under the line's context. Streaming them into one context with
 // `continue: true` held the first audio back to ~316 ms against ~90 ms
-// (measured 2026-10-12) — and a sentence per generation is also what the
-// ElevenLabs path does, where the generation boundary is the pause between
+// (measured 2026-10-12) — and the generation boundary is the pause between
 // sentences (CallSession.eachSentence). So:
 //   sendText  → a new sub-context for that sentence
 //   flush     → the line is complete; done once every sentence is
@@ -19,7 +17,14 @@
 // Audio of a later sentence that arrives early is held until the ones before
 // it are done, so the line always plays in order.
 
-import type { ElevenTTSCallbacks } from "./eleven-tts"
+/** What a call hears back from its voice. */
+export interface TTSCallbacks {
+  /** PCM audio for a context. */
+  onAudio(contextId: string, pcm: Uint8Array): void
+  /** No more audio will arrive for this context. */
+  onContextDone(contextId: string): void
+  onError(message: string): void
+}
 
 const URL_WS = "wss://api.cartesia.ai/tts/websocket"
 const VERSION = "2026-08-14"
@@ -143,7 +148,7 @@ export class CartesiaTTS {
   private seq = 0
   private queue: Promise<void> = Promise.resolve()
 
-  constructor(private config: CartesiaTTSConfig, private callbacks: ElevenTTSCallbacks) {}
+  constructor(private config: CartesiaTTSConfig, private callbacks: TTSCallbacks) {}
 
   private enqueue(fn: () => Promise<void> | void): Promise<void> {
     const run = this.queue.then(fn)

@@ -19,12 +19,12 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs"
 
 const vars = readFileSync(new URL("../.dev.vars", import.meta.url), "utf8")
 const env = (k) => vars.match(new RegExp(`^${k}\\s*=\\s*"?([^"\\n]+)`, "m"))?.[1]
-const GEMINI = env("GEMINI_API_KEY"), ELEVEN = env("ELEVENLABS_API_KEY")
+const GEMINI = env("GEMINI_API_KEY"), CARTESIA = env("CARTESIA_API_KEY")
 const runs = Number(process.argv[2] ?? 3)
 const MODEL = "models/gemini-3.5-transcribe-live"
 const dir = new URL("./.reread-native/live/", import.meta.url)
 mkdirSync(dir, { recursive: true })
-const VOICES = ["NDTYOmYEjbDIVCKB35i3", "UgBBYS2sOqTuMpoF3BR0"]
+const VOICES = ["cac92886-4b7c-4bc1-a524-e0f79c0381be", "537a82ae-4926-4bfb-9aec-aff0b80a12a5"]
 
 // [kind, spoken (Hangul, read by a Korean voice), targets, expected words]
 const CLIPS = [
@@ -73,9 +73,12 @@ function wav(pcm) {
 async function clip(i, voice) {
   const f = new URL(`c${i}-${voice.slice(0, 4)}.wav`, dir)
   if (existsSync(f)) return readFileSync(f).subarray(44)
-  const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}?output_format=pcm_16000`, {
-    method: "POST", headers: { "xi-api-key": ELEVEN, "Content-Type": "application/json" },
-    body: JSON.stringify({ text: CLIPS[i][1], model_id: "eleven_turbo_v2_5", language_code: "ko" }) })
+  const res = await fetch("https://api.cartesia.ai/tts/bytes", {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${CARTESIA}`, "Cartesia-Version": "2026-08-14", "Content-Type": "application/json" },
+    body: JSON.stringify({ model_id: "sonic-3.6", transcript: CLIPS[i][1], voice: { mode: "id", id: voice },
+      language: "ko", output_format: { container: "raw", encoding: "pcm_s16le", sample_rate: 16000 } }),
+  })
   if (!res.ok) throw new Error(`tts ${res.status}`)
   const pcm = Buffer.from(await res.arrayBuffer())
   writeFileSync(f, wav(pcm))

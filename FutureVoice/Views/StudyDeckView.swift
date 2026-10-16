@@ -728,7 +728,7 @@ struct StudyDeckView: View {
         loadingAudio = true
         defer { loadingAudio = false }
         do {
-            let data = try await ElevenLabsClient.shared.synthesize(voiceId: voiceId, text: text, purpose: "library")
+            let data = try await VoiceClient.shared.synthesize(voiceId: voiceId, text: text, purpose: "library")
             PhraseAudioStore.shared.save(data, text: text, voiceId: voiceId)
             try? player.play(data, forceSessionReset: true)
         } catch {

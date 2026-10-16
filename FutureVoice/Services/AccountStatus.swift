@@ -11,7 +11,7 @@ extension Error {
     /// deliberately NOT this — that user already paid.
     var isOutOfCredits: Bool {
         if let g = self as? GeminiError, case .insufficientCredits = g { return true }
-        if let e = self as? ElevenLabsError, case .insufficientCredits = e { return true }
+        if let e = self as? VoiceError, case .insufficientCredits = e { return true }
         return false
     }
 
@@ -20,14 +20,14 @@ extension Error {
     /// ending on schedule is the plan working, not a failure, and the word
     /// "credits" is wrong for an account that has already paid.
     var isDailyCapReached: Bool {
-        if let e = self as? ElevenLabsError, case .dailyCapReached = e { return true }
+        if let e = self as? VoiceError, case .dailyCapReached = e { return true }
         return false
     }
 
     /// Either spent-allowance wall — today's scenes or today's minutes. Both
     /// land on `DailyAllowanceSheet`, and neither is ever a paywall.
     var isDayCapped: Bool {
-        if let e = self as? ElevenLabsError, case .sceneCapReached = e { return true }
+        if let e = self as? VoiceError, case .sceneCapReached = e { return true }
         return isDailyCapReached
     }
 }

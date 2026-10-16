@@ -362,8 +362,6 @@ struct WatchView: View {
     private struct SpeechRequest {
         let text: String
         let voiceId: String
-        let previousText: String?
-        let nextText: String?
     }
 
     private func speechRequest(at index: Int) -> SpeechRequest {
@@ -372,12 +370,7 @@ struct WatchView: View {
             text: turn.text,
             voiceId: turn.speaker == .user
                 ? (appState.voiceCloneId ?? "")
-                : counterpart.voicePresetId,
-            // Both neighbours regardless of who speaks them: the point is that
-            // this line lands MID-conversation. `nextText` is simply absent for
-            // the line at the frontier of a still-streaming scene.
-            previousText: index > 0 ? turns[index - 1].text : nil,
-            nextText: index + 1 < turns.count ? turns[index + 1].text : nil
+                : counterpart.voicePresetId
         )
     }
 
@@ -918,30 +911,11 @@ struct WatchView: View {
         if let cached = PhraseAudioStore.shared.data(text: text, voiceId: voiceId) {
             return cached
         }
-        // Turbo, both voices (2026-09-26). The fluent self used to get the
-        // fidelity model here, on the argument that a scene is the screen
-        // where the learner listens hardest for "is that me?" — but TALK is
-        // that screen, it has always run turbo, and nobody has ever said the
-        // call doesn't sound like them. A scene cannot need a better model
-        // than the live conversation in the same voice. The founder's call,
-        // and it is the biggest single cost lever in the app: measured over
-        // the launch window the clone's half of the scene lines was 26,514
-        // credits against the counterpart's 11,354 — the same line count at
-        // twice the rate, i.e. 70% of a scene's bill — so a scene drops from
-        // $0.112 to about $0.073.
-        //
-        // The caching argument for the 2x had also stopped being true:
-        // `freshTake` writes new text every run, so nothing is reused and
-        // the premium was paid on every play, which `fidelityModelId`'s own
-        // rule forbids. Lines already cached keep playing as they were made
-        // (the key is (voiceId, speed, text), not the model) — nothing is
-        // orphaned and nothing is re-billed.
-        let audio = try await ElevenLabsClient.shared.synthesize(
+        // Lines already cached keep playing as they were made (the key is
+        // (voiceId, speed, text)) — nothing is orphaned and nothing re-billed.
+        let audio = try await VoiceClient.shared.synthesize(
             voiceId: voiceId, text: text,
-            modelId: ElevenLabsClient.cloneModelId,
             purpose: "scene",
-            previousText: request.previousText,
-            nextText: request.nextText,
             sceneKey: sceneRunKey)
         PhraseAudioStore.shared.save(audio, text: text, voiceId: voiceId)
         return audio
@@ -964,10 +938,9 @@ struct WatchView: View {
         guard !request.voiceId.isEmpty else { return false }
         let latch = PlaybackLatch()
         var started = false
-        let result = try await ElevenLabsClient.shared.synthesizeStreaming(
+        let result = try await VoiceClient.shared.synthesizeStreaming(
             voiceId: request.voiceId,
             text: request.text,
-            modelId: ElevenLabsClient.cloneModelId,
             purpose: "scene",
             sceneKey: sceneRunKey
         ) { chunk, sampleRate in

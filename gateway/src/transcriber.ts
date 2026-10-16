@@ -3,9 +3,9 @@
 // Why this model and not a conversational Live session: as of 2026-08-31 the
 // Gemini API's Live models are audio-output only (probed — TEXT modality is
 // rejected by every conversational live model; see test/probe-live-setup.mjs),
-// and the voice here must be the learner's ElevenLabs clone. So the gateway
+// and the voice here must be the learner's own clone. So the gateway
 // runs its own cascade: this transcriber decides WHEN a turn ends and WHAT
-// was said; reply.ts writes the answer; eleven-tts.ts speaks it.
+// was said; reply.ts writes the answer; cartesia-tts.ts speaks it.
 //
 // Observed message shapes (test/probe-transcribe.mjs, 2026-08-31):
 //   serverContent.interimInputTranscription.text — cumulative interim for the

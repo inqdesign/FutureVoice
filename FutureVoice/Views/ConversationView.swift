@@ -688,7 +688,7 @@ struct ConversationView: View {
         case idle
         case listening      // mic open, partial STT streaming
         case thinking       // Gemini reply in flight
-        case speaking       // ElevenLabs TTS playing
+        case speaking       // the fluent self's voice playing
     }
 
     /// Is this second of the open call actually a second of TALKING? The
@@ -2729,7 +2729,7 @@ struct ConversationView: View {
             phase = .idle
             // A spent day is not a failed opener — same rule as the meter's
             // own wall, so it lands on the same sheet.
-            if case ElevenLabsError.fairUseLimit = error { fairUseHalted = true; return }
+            if case VoiceError.fairUseLimit = error { fairUseHalted = true; return }
             if error.isDailyCapReached { dailyCapReached = true; return }
             outOfCredits = error.isOutOfCredits
             self.error = error.localizedDescription
@@ -3494,7 +3494,7 @@ struct ConversationView: View {
             // paywall instead of a retry loop that can never succeed.
             Telemetry.log("talk_turn_error", [
                 "error": (error as NSError).domain + ":\((error as NSError).code)",
-                "status": error.elevenLabsStatus ?? "",
+                "status": error.voiceStatus ?? "",
                 "out_of_credits": error.isOutOfCredits ? "1" : "0",
             ])
             phase = .idle
@@ -3505,7 +3505,7 @@ struct ConversationView: View {
             // Today's allowance, not a blip: no Retry row (retrying can only
             // fail again today) and no error alert — the sheet says what
             // happened and what's left to do.
-            if case ElevenLabsError.fairUseLimit = error { fairUseHalted = true; return }
+            if case VoiceError.fairUseLimit = error { fairUseHalted = true; return }
             if error.isDailyCapReached { dailyCapReached = true; return }
             outOfCredits = error.isOutOfCredits
             failedTurnId = turnId
@@ -4009,9 +4009,8 @@ struct ConversationView: View {
         let ttsStarted = Date()
         var streamId: UUID?
         do {
-            let result = try await ElevenLabsClient.shared.synthesizeStreaming(
+            let result = try await VoiceClient.shared.synthesizeStreaming(
                 voiceId: voiceId, text: prefix,
-                modelId: ElevenLabsClient.conversationModelId,
                 idempotencyKey: "tts-turn:\(turnId.uuidString):open",
                 purpose: "turn"
             ) { chunk, sampleRate in
@@ -4053,7 +4052,7 @@ struct ConversationView: View {
         } catch {
             Telemetry.log("talk_tts_split_open_failed", [
                 "error": (error as NSError).domain + ":\((error as NSError).code)",
-                "status": error.elevenLabsStatus ?? "",
+                "status": error.voiceStatus ?? "",
                 "mid_stream": streamId != nil ? "1" : "0",
             ])
             if let id = streamId {
@@ -4096,9 +4095,8 @@ struct ConversationView: View {
         var pcm = split.pcm
         var spoken = fullText
         do {
-            let result = try await ElevenLabsClient.shared.synthesizeStreaming(
+            let result = try await VoiceClient.shared.synthesizeStreaming(
                 voiceId: voiceId, text: rest,
-                modelId: ElevenLabsClient.conversationModelId,
                 idempotencyKey: "tts-turn:\(turnId.uuidString):rest",
                 purpose: "turn"
             ) { chunk, _ in
@@ -4180,9 +4178,8 @@ struct ConversationView: View {
         var streamTurnId: UUID?         // set once playback actually started
         var receivedAnyChunk = false
         do {
-            let result = try await ElevenLabsClient.shared.synthesizeStreaming(
+            let result = try await VoiceClient.shared.synthesizeStreaming(
                 voiceId: voiceId, text: text,
-                modelId: ElevenLabsClient.conversationModelId,
                 idempotencyKey: idempotencyKey,
                 purpose: "turn"
             ) { chunk, sampleRate in
@@ -4260,7 +4257,7 @@ struct ConversationView: View {
         } catch {
             Telemetry.log("talk_tts_stream_fallback", [
                 "error": (error as NSError).domain + ":\((error as NSError).code)",
-                "status": error.elevenLabsStatus ?? "",
+                "status": error.voiceStatus ?? "",
                 "mid_stream": streamTurnId != nil ? "1" : "0",
             ])
             if let id = streamTurnId {
@@ -4280,9 +4277,8 @@ struct ConversationView: View {
             // No audio reached the speaker → silent fallback.
         }
 
-        let (newAudio, newTimings) = try await ElevenLabsClient.shared
+        let (newAudio, newTimings) = try await VoiceClient.shared
             .synthesizeWithTimestamps(voiceId: voiceId, text: text,
-                                      modelId: ElevenLabsClient.conversationModelId,
                                       idempotencyKey: idempotencyKey,
                                       purpose: "turn")
         PhraseAudioStore.shared.save(newAudio, text: text, voiceId: voiceId, timings: newTimings)

@@ -10,14 +10,14 @@ import Foundation
 ///   `AppState.voiceCloneId`, because every cache lookup (PhraseAudioStore,
 ///   the voicemail, a scene line) is keyed by it — nil would hide audio that
 ///   is sitting on disk, and would walk the learner into re-recording.
-/// - **Nothing new is synthesized.** `ElevenLabsClient` refuses a parked id
+/// - **Nothing new is synthesized.** `VoiceClient` refuses a parked id
 ///   before the network with `.insufficientCredits`, the error every surface
 ///   already answers with its paywall.
 /// - **It comes back by itself** when there is something to spend it with —
 ///   a subscription, or free minutes left — rebuilt from the recording on the
 ///   phone (`AppState.refreshParkedVoice`).
 ///
-/// A plain defaults key, not app state: `ElevenLabsClient` is not on the main
+/// A plain defaults key, not app state: `VoiceClient` is not on the main
 /// actor and must be able to ask.
 enum VoiceParking {
     private static let key = "futurevoice.parkedVoiceId"

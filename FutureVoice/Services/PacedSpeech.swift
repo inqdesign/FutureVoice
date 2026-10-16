@@ -56,32 +56,6 @@ enum PacedSpeech {
                   .filter { !$0.isEmpty }
     }
 
-    /// Synthesize `text` sentence by sentence and join the takes with
-    /// `sentenceGapSeconds` between them. Returns 16-bit mono PCM, or nil
-    /// when the text is a single sentence or the voice is a Cartesia clone
-    /// (the caller's ordinary path is already right) or the server answered in MP3 (an edge deploy with no
-    /// streaming — nothing to join; the caller falls back).
-    @MainActor
-    static func synthesizePCM(voiceId: String, text: String, modelId: String,
-                              purpose: String) async throws -> (pcm: Data, sampleRate: Double)? {
-        guard !VoiceMove.isCartesia(voiceId) else { return nil }
-        let parts = sentences(in: text)
-        guard parts.count > 1 else { return nil }
-        var takes: [Data] = []
-        var rate: Double = 0
-        for part in parts {
-            try Task.checkCancellation()
-            let audio = try await ElevenLabsClient.shared.synthesizeStreaming(
-                voiceId: voiceId, text: part, modelId: modelId, purpose: purpose,
-                onPCMChunk: { _, _ in })
-            guard case .pcm(let pcm, let sampleRate) = audio,
-                  rate == 0 || sampleRate == rate else { return nil }
-            rate = sampleRate
-            takes.append(pcm)
-        }
-        return (joined(takes, sampleRate: rate), rate)
-    }
-
     /// Join takes: each INNER edge trimmed to its voice (the line's own
     /// start and end are left as synthesized), one fixed gap between.
     static func joined(_ takes: [Data], sampleRate: Double) -> Data {

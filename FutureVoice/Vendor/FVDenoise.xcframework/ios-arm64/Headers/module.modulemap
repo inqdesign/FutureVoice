@@ -1,0 +1,5 @@
+module FVDenoise {
+    header "fvdenoise.h"
+    link "fvdenoise"
+    export *
+}
