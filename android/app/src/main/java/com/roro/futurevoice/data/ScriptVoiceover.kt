@@ -45,47 +45,62 @@ import kotlin.math.sqrt
  * Speech script read whole in the learner's own cloned voice, which they can
  * then shadow from. There is deliberately NO native or preset voice option.
  *
- * PRICE — talk minutes, 3x the audio length, rounded UP to whole minutes:
- *     minutes = ceil(audioSeconds × 3 / 60)
- * The button shows it BEFORE the tap, from the script's estimated length, and
- * the learner is never charged more than that number: the final charge is
- *     min(minutes(actual audio), minutes shown)
- * — the server enforces the same cap (`charge_script_voiceover`). Charged once
- * per (account, script text, voice); every replay after is free, and a failed
- * synthesis is never charged.
+ * PRICE — talk minutes, by the CHARACTERS the voice will say (iOS, 2026-10-16;
+ * founder: "1분에 3분" was wrong). A talk minute carries ~300 characters of
+ * fluent-self speech and a voiceover is sold at 3x that rate:
+ *     minutes = ceil(characters / 100)
+ * (an English one-minute script, ~800 characters → 8 min; Korean ~430 → 5).
+ * The characters are known once the script is written, so the price on the
+ * button is the price charged — the server charges
+ *     min(price(characters), minutes shown)
+ * (`charge_script_voiceover`, 20261016150000). Charged once per (account,
+ * script text, voice); every replay after is free, and a failed synthesis is
+ * never charged.
  *
  * Every place a price appears reads it from HERE, so two screens can never
  * quote two numbers.
  */
 object ScriptVoiceover {
+    /** Characters of fluent-self speech one talk minute carries, and the
+     *  premium on it: 300 / 3 = one talk minute per 100 characters. Keep in
+     *  step with `script_voiceover_char_price` (server) and iOS. */
+    const val CHARACTERS_PER_TALK_MINUTE = 300
     const val MULTIPLIER = 3
+    const val CHARACTERS_PER_MINUTE = CHARACTERS_PER_TALK_MINUTE / MULTIPLIER
     /** The longest voiceover sold: the server meters at most an hour of talk
-     *  time per charge. */
+     *  time per charge (6,000 characters). */
     const val MAX_MINUTES = 60
     const val PARAGRAPH_GAP_SECONDS = 0.8
 
-    /** Talk minutes for [audioSeconds] of voiceover. */
-    fun chargeMinutes(audioSeconds: Double): Int {
-        if (audioSeconds <= 0) return 0
-        return ceil(audioSeconds * MULTIPLIER / 60).toInt()
+    /** The characters a script is charged for: its text as synthesized. */
+    fun chargeableCharacters(body: String): Int = body.trim().length
+
+    /** Talk minutes for [characters] of voiceover, never less than one. */
+    fun chargeMinutes(characters: Int): Int {
+        if (characters <= 0) return 1
+        return (characters + CHARACTERS_PER_MINUTE - 1) / CHARACTERS_PER_MINUTE
     }
 
-    /** What is actually charged once the voiceover exists: the real price,
-     *  never more than what was shown, never less than a minute. */
-    fun cappedChargeMinutes(actualAudioSeconds: Double, quotedMinutes: Int): Int =
-        maxOf(1, minOf(chargeMinutes(actualAudioSeconds), quotedMinutes))
+    /** The price shown for a text — and charged. */
+    @Suppress("UNUSED_PARAMETER")
+    fun quoteMinutes(text: String, language: String): Int = chargeMinutes(chargeableCharacters(text))
 
-    /** The audio a text is expected to come out as — the Speech tab's own
-     *  reading-length basis. */
-    fun estimatedAudioSeconds(text: String, language: String): Int =
-        SpeechLibrary.estimatedSeconds(text, language)
+    /** The price shown for a length not yet written (the composer): the
+     *  characters a script of that length is written to. */
+    fun quoteMinutes(targetSeconds: Int, language: String): Int {
+        val units = SpeechLibrary.plannedUnits(targetSeconds, language)
+        return chargeMinutes(Math.round(units * charactersPerUnit(language)).toInt())
+    }
 
-    /** The price shown for a text. */
-    fun quoteMinutes(text: String, language: String): Int =
-        maxOf(1, chargeMinutes(estimatedAudioSeconds(text, language).toDouble()))
-
-    /** The price shown for a length not yet written (the composer). */
-    fun quoteMinutes(targetSeconds: Int): Int = maxOf(1, chargeMinutes(targetSeconds.toDouble()))
+    /** Characters per rate unit, spaces and punctuation included — measured
+     *  on the bundled scripts (en 5.6, ko 1.5, ja 1.1, de 6.0, es 5.5). */
+    fun charactersPerUnit(language: String): Double = when (language.substringBefore('-').lowercase()) {
+        "ko" -> 1.5
+        "ja", "zh" -> 1.15
+        "de" -> 6.0
+        "fr", "es", "it", "pt" -> 5.5
+        else -> 5.6
+    }
 
     /** Talk minutes this account could put toward a voiceover now: the plan's
      *  pool plus invite minutes, or the balance with no plan. Null where
@@ -296,7 +311,7 @@ object ScriptVoiceoverCenter {
         if (lines.isEmpty()) throw VoiceoverFailed()
         setJob(key, Job.Making(0, lines.size))
         try {
-            reserve(key, quotedMinutes, script.body.length)
+            reserve(key, quotedMinutes, ScriptVoiceover.chargeableCharacters(script.body))
             val assembled = synthesize(app, lines, voiceId, script.language, key)
             val meta = ScriptVoiceoverStore.Meta(
                 scriptHash = hash, voiceId = voiceId, speedTag = SpeechSpeed.currentCacheTag(),
@@ -310,7 +325,7 @@ object ScriptVoiceoverCenter {
             BillingGate.invalidate()
             Analytics.capture("speech_voiceover_made", mapOf(
                 "seconds" to assembled.seconds.toInt(), "quoted_min" to quotedMinutes,
-                "charged_min" to ScriptVoiceover.cappedChargeMinutes(assembled.seconds, quotedMinutes)))
+                "charged_min" to minOf(ScriptVoiceover.quoteMinutes(script.body, script.language), quotedMinutes)))
             return paid
         } catch (e: Exception) {
             if (e is EdgeError && (e === EdgeError.InsufficientCredits || e === EdgeError.DailyCapReached ||

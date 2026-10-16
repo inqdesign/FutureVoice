@@ -491,7 +491,7 @@ internal fun SpeechComposerSheet(language: String, native: String, level: CefrLe
     var voiceover by remember { mutableStateOf(com.roro.futurevoice.capture.flags.SpeechCaptureFlags.voiceoverOn) }
     var wall by remember { mutableStateOf<VoiceoverWall?>(null) }
     val account = rememberGateAccount()
-    val quote = ScriptVoiceover.quoteMinutes(seconds)
+    val quote = ScriptVoiceover.quoteMinutes(seconds, language)
 
     fun write() {
         writing = true
@@ -518,7 +518,10 @@ internal fun SpeechComposerSheet(language: String, native: String, level: CefrLe
                 writing = false
                 // Made in the background; the Script sheet shows its progress,
                 // and a failure there is a button to try again.
-                if (vid != null) ScriptVoiceoverCenter.makeInBackground(context, script, vid, quoted)
+                // The written script's own price, never more than the estimate
+                // the toggle showed.
+                if (vid != null) ScriptVoiceoverCenter.makeInBackground(context, script, vid,
+                    minOf(quoted, ScriptVoiceover.quoteMinutes(script.body, script.language)))
                 onDismiss()
                 onWritten(script)
             } catch (_: Exception) {

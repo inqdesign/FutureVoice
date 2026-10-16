@@ -114,31 +114,24 @@ class ScriptStudyVoiceoverTest {
     // MARK: Price
 
     @Test fun chargeRounding() {
-        assertEquals(2, ScriptVoiceover.chargeMinutes(40.0))
-        assertEquals(3, ScriptVoiceover.chargeMinutes(41.0))
-        assertEquals(3, ScriptVoiceover.chargeMinutes(60.0))
-        assertEquals(4, ScriptVoiceover.chargeMinutes(80.0))
-        assertEquals(5, ScriptVoiceover.chargeMinutes(80.5))
-        assertEquals(0, ScriptVoiceover.chargeMinutes(0.0))
+        assertEquals(1, ScriptVoiceover.chargeMinutes(1))
+        assertEquals(1, ScriptVoiceover.chargeMinutes(100))
+        assertEquals(2, ScriptVoiceover.chargeMinutes(101))
+        assertEquals(9, ScriptVoiceover.chargeMinutes(850))
+        assertEquals(60, ScriptVoiceover.chargeMinutes(6000))
+        assertEquals(1, ScriptVoiceover.chargeMinutes(0))
     }
 
-    @Test fun composerQuotesThreeTimesTheLength() {
-        assertEquals(3, ScriptVoiceover.quoteMinutes(60))
-        assertEquals(9, ScriptVoiceover.quoteMinutes(180))
-        assertEquals(15, ScriptVoiceover.quoteMinutes(300))
-        assertEquals(2, ScriptVoiceover.quoteMinutes(30))
+    @Test fun scriptIsPricedByItsCharacters() {
+        val text = List(140) { "word" }.joinToString(" ")   // 699 characters
+        assertEquals(7, ScriptVoiceover.quoteMinutes(text, "en"))
+        assertEquals(6, ScriptVoiceover.chargeableCharacters("  Hello.\n\n"))
     }
 
-    @Test fun chargeIsCappedAtTheQuote() {
-        assertEquals(3, ScriptVoiceover.cappedChargeMinutes(75.0, 3))
-        assertEquals(2, ScriptVoiceover.cappedChargeMinutes(30.0, 3))
-        assertEquals(1, ScriptVoiceover.cappedChargeMinutes(0.1, 3))
-    }
-
-    @Test fun scriptQuoteUsesTheReadingEstimate() {
-        val text = List(140) { "word" }.joinToString(" ")
-        assertEquals(60, ScriptVoiceover.estimatedAudioSeconds(text, "en"))
-        assertEquals(3, ScriptVoiceover.quoteMinutes(text, "en"))
+    @Test fun composerQuotesTheCharactersOfThatLength() {
+        assertEquals(8, ScriptVoiceover.quoteMinutes(60, "en"))
+        assertEquals(5, ScriptVoiceover.quoteMinutes(60, "ko"))
+        assertEquals(24, ScriptVoiceover.quoteMinutes(180, "en"))
     }
 
     @Test fun remainingMinutesCountsPoolPlusBonus() {
