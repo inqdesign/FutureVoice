@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -238,7 +237,12 @@ fun PageIntroContent(page: Page, initialStep: Int = 0, onDismiss: () -> Unit) {
     val pager = rememberPagerState(initialPage = initialStep.coerceIn(0, count - 1)) { count }
     val scope = rememberCoroutineScope()
     val isLast = pager.currentPage == count - 1
-    Column(Modifier.fillMaxWidth().fillMaxHeight(0.94f).navigationBarsPadding()) {
+    // A FIXED height from the screen, never a fraction of what the sheet
+    // offers: the sheet's room changes as it is dragged under the status
+    // bar, a fraction followed it, the sheet's resting place moved with the
+    // content, and one swipe up set the whole card bouncing up and down.
+    val height = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.9f).dp
+    Column(Modifier.fillMaxWidth().height(height).navigationBarsPadding()) {
         HorizontalPager(state = pager, modifier = Modifier.weight(1f).fillMaxWidth(),
             verticalAlignment = Alignment.Top) { i ->
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
