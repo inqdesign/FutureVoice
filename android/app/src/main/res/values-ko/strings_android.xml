@@ -280,7 +280,7 @@
     <string name="rel_public_figure_look_up_footer">누구인지 찾아본 뒤 확인해 주세요.</string>
     <!-- iOS ede039e/45b397e: coach mode and the call's grammar focus. -->
     <string name="cm_coach_mode">코치 모드</string>
-    <string name="cm_coach_mode_footer">유창해진 내가 가끔 공부 중인 단어로 답할 수 있는 질문을 하고, 가장 자주 하는 실수를 통화의 초점으로 잡아 줘요.</string>
+    <string name="cm_coach_mode_footer">유창해진 내가 말할 때마다 이렇게 답해 보라는 문장이 떠요. 공부 중인 단어가 들어가기도 하고, 가장 자주 하는 실수는 통화의 초점이 돼요.</string>
     <string name="cm_try_using">써 볼 단어</string>
     <string name="cm_used_it">썼어요</string>
     <string name="cm_this_calls_focus">이번 통화 초점</string>

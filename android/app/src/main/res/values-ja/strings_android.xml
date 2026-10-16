@@ -280,7 +280,7 @@
     <string name="rel_public_figure_look_up_footer">検索して誰なのかを確かめてください。</string>
     <!-- iOS ede039e/45b397e: coach mode and the call's grammar focus. -->
     <string name="cm_coach_mode">コーチモード</string>
-    <string name="cm_coach_mode_footer">流暢な自分がときどき、勉強中の単語で答えられる質問をして、いちばんよくするミスをこの通話のポイントにします。</string>
+    <string name="cm_coach_mode_footer">流暢な自分が話すたびに、答え方の例が出ます。勉強中の単語が入ることもあり、いちばんよくするミスがこの通話のポイントになります。</string>
     <string name="cm_try_using">使ってみよう</string>
     <string name="cm_used_it">使えた</string>
     <string name="cm_this_calls_focus">この通話のポイント</string>

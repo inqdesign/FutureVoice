@@ -280,7 +280,7 @@
     <string name="rel_public_figure_look_up_footer">先查出是誰，再確認。</string>
     <!-- iOS ede039e/45b397e: coach mode and the call's grammar focus. -->
     <string name="cm_coach_mode">教練模式</string>
-    <string name="cm_coach_mode_footer">流利的自己偶爾會問你能用正在學的單字回答的問題，並把你最常犯的錯誤當作這次通話的重點。</string>
+    <string name="cm_coach_mode_footer">流利的自己每說一句，就會出現一個回答的例句。有時會用到你正在學的單字，你最常犯的錯誤也會成為這次通話的重點。</string>
     <string name="cm_try_using">試著用</string>
     <string name="cm_used_it">用到了</string>
     <string name="cm_this_calls_focus">本次通話重點</string>

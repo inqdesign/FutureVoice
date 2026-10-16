@@ -283,7 +283,7 @@
     <string name="rel_public_figure_look_up_footer">Lance la recherche pour savoir qui c’est, puis confirme.</string>
     <!-- iOS ede039e/45b397e: coach mode and the call's grammar focus. -->
     <string name="cm_coach_mode">Mode coach</string>
-    <string name="cm_coach_mode_footer">De temps en temps, ton moi fluide te pose une question à laquelle tu peux répondre avec un mot que tu étudies, et l’erreur que tu fais le plus devient l’objectif de l’appel.</string>
+    <string name="cm_coach_mode_footer">Après chaque réplique de ton moi fluide, tu vois une façon de répondre. Parfois, elle utilise un mot que tu étudies, et ton erreur la plus fréquente devient l’objectif de l’appel.</string>
     <string name="cm_try_using">Essaie d’utiliser</string>
     <string name="cm_used_it">Tu l’as utilisé</string>
     <string name="cm_this_calls_focus">Objectif de cet appel</string>

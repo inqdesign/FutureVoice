@@ -269,7 +269,7 @@
     <string name="rel_public_figure_look_up_footer">Such, wer das ist, und bestätige dann.</string>
     <!-- iOS ede039e/45b397e: coach mode and the call's grammar focus. -->
     <string name="cm_coach_mode">Coach-Modus</string>
-    <string name="cm_coach_mode_footer">Ab und zu stellt dir dein fließendes Ich eine Frage, die du mit einem Wort beantworten kannst, das du gerade lernst, und dein häufigster Fehler wird zum Fokus des Anrufs.</string>
+    <string name="cm_coach_mode_footer">Nach jedem Satz deines fließenden Ichs siehst du, wie du antworten kannst. Manchmal steckt ein Wort darin, das du gerade lernst, und dein häufigster Fehler wird zum Fokus des Anrufs.</string>
     <string name="cm_try_using">Probier mal</string>
     <string name="cm_used_it">Verwendet</string>
     <string name="cm_this_calls_focus">Fokus dieses Anrufs</string>
