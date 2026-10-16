@@ -973,7 +973,14 @@ fun TalkScreen(
                             onDispose { TalkMorph.pillPresent = false }
                         }
                         Column(
-                            Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 20.dp),
+                            // The bar's height eases (iOS changes it inside an
+                            // animation): the feed's bottom padding is this
+                            // bar's measured height, so a "try saying" of a
+                            // new length snapped the padding and the whole
+                            // list jolted down or up at once (founder,
+                            // 2026-10-16). Eased, the feed follows it.
+                            Modifier.fillMaxWidth().animateContentSize(tween(250))
+                                .padding(top = 14.dp, bottom = 20.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
