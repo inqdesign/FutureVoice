@@ -1,0 +1,9 @@
+New
+• Learn Spanish, with a Mexican or a Castilian accent.
+• Japanese words are split more accurately.
+• At A2, "Answer with Send" is now on by default.
+
+Fixed
+• The call screen no longer flickers or jumps while you talk.
+• Tab guide cards no longer bounce up and down.
+• Settings text is easier on the eye.

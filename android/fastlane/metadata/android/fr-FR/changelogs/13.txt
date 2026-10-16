@@ -1,0 +1,9 @@
+Nouveautés
+• Tu peux apprendre l’espagnol, avec un accent mexicain ou castillan.
+• Les mots japonais sont découpés plus précisément.
+• Au niveau A2, « Répondre avec Envoyer » est activé d’office.
+
+Corrections
+• L’écran d’appel ne clignote plus et ne saute plus pendant que tu parles.
+• Les cartes guides des onglets ne montent et ne descendent plus.
+• Les textes des Réglages sont plus reposants à lire.

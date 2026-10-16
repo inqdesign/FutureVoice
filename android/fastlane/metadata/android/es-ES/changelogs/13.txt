@@ -1,0 +1,9 @@
+Novedades
+• Ya puedes aprender español, con acento mexicano o castellano.
+• Las palabras en japonés se separan con más precisión.
+• En el nivel A2, «Responder con Enviar» viene activado.
+
+Corregido
+• La pantalla de llamada ya no parpadea ni salta mientras hablas.
+• Las tarjetas de guía de las pestañas ya no suben y bajan.
+• Los textos de Ajustes se leen con más calma.
