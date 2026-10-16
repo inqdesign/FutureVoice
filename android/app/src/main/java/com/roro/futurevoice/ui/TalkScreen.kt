@@ -1,6 +1,5 @@
 package com.roro.futurevoice.ui
 
-import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.ui.text.withStyle
 import androidx.compose.runtime.withFrameMillis
@@ -528,13 +527,16 @@ fun TalkScreen(
     val replyHasNoWordsYet = state.turns.lastOrNull()
         ?.let { it.role == TurnRole.FLUENT_SELF && it.transcript.isEmpty() } == true
     val visibleTurns = if (replyHasNoWordsYet) state.turns.dropLast(1) else state.turns
+    // The feed is BOTTOM-ANCHORED (`reverseLayout` below), the stand-in for
+    // iOS's `defaultScrollAnchor(.bottom)`: index 0 is the newest line, and a
+    // line growing at the end keeps its bottom edge in place in the same
+    // frame, with no scroll at all. It replaced five followers — two that
+    // snapped per delta, three that eased, one a beat late — each chasing a
+    // bubble that was itself animating its height, so the list wobbled and
+    // blinked through every reply (founder, 2026-10-16).
     var followBottom by remember { mutableStateOf(true) }
-    // Only the LEARNER's own drag decides whether the list follows the end.
-    // Reading it off every scroll stop let the app's own scroll — aimed at a
-    // last index read before the new line was laid out — stop short, look
-    // like "scrolled up", and switch following off for the rest of the call:
-    // from the third turn on the newest line stayed hidden below (founder,
-    // 2026-10-15).
+    // Only the LEARNER's own drag decides whether the list follows the end:
+    // dragging up stops following, coming back down to the end resumes it.
     LaunchedEffect(listState) {
         listState.interactionSource.interactions.collect { i ->
             when (i) {
@@ -544,74 +546,31 @@ fun TalkScreen(
                     // Let the fling settle before judging where it ended.
                     androidx.compose.runtime.snapshotFlow { listState.isScrollInProgress }
                         .first { !it }
-                    followBottom = !listState.canScrollForward
+                    followBottom = !listState.canScrollBackward
                 }
             }
         }
     }
-    // And whenever the content has grown below the viewport after layout —
-    // a new bubble, a longer one — follow it, the stand-in for iOS's bottom
-    // anchor. Measured after layout, so it never aims at a stale index.
-    // A SAFETY NET, not a second follower: it acts only once the layout has
-    // held still for a beat. Acting at once, it scrolled in the middle of a
-    // correction card's own 0.25 s growth — the very sway the card's settle
-    // pass below waits out — and the screen flickered when a card appeared.
-    LaunchedEffect(listState) {
-        androidx.compose.runtime.snapshotFlow { listState.canScrollForward to listState.layoutInfo.totalItemsCount }
-            .collectLatest { (more, _) ->
-                if (!more) return@collectLatest
-                kotlinx.coroutines.delay(320)
-                if (listState.canScrollForward && followBottom && !listState.isScrollInProgress) {
-                    val last = (listState.layoutInfo.totalItemsCount - 1).coerceAtLeast(0)
-                    listState.animateScrollToItem(last, Int.MAX_VALUE)
-                }
-            }
+    // A NEW line at the end (a bubble, a placeholder replaced by the bubble
+    // it stood for) is inserted at index 0, and a lazy list keeps the item
+    // that WAS first in view — the new line would land just below the screen.
+    // So, while following, the end is asked for in the same measure pass the
+    // line is laid out in: no frame where it is missing, no animated chase.
+    // Growth needs nothing; the anchor holds it.
+    val bottomKey: Any? = when {
+        !showsTranscript -> "subtitles-off"
+        replyHasNoWordsYet ||
+            (state.phase == TalkPhase.THINKING && state.turns.lastOrNull()?.role == TurnRole.USER) ->
+            "partial-thinking"
+        state.phase == TalkPhase.LISTENING && (state.turns.isNotEmpty() || state.partial.isNotBlank()) ->
+            "partial-listening"
+        else -> visibleTurns.lastOrNull()?.id ?: "starting"
     }
-    // A streaming reply changes its text on every delta. An animated scroll
-    // restarted per delta was a second motion on another curve (iOS
-    // 2026-10-08), so the growing fluent-self line is followed WITHOUT
-    // animation — the stand-in for iOS's bottom anchor, which keeps the end
-    // in place in the same frame — and everything else still eases.
-    val streamingReply = state.turns.lastOrNull()?.takeIf { it.role == TurnRole.FLUENT_SELF }
-    // The learner's live dictation grows a word at a time, like a streaming
-    // reply: an animated scroll restarted on every partial made the call
-    // screen flicker while they spoke (2026-10-14). It is followed without
-    // animation below, so only the phase and the lines move this one.
-    val contentSize = Triple(state.turns.size, state.phase.ordinal * 100_000, 0) to state.turns.sumOf {
-        if (it === streamingReply) 0 else it.transcript.length
-    }
-    LaunchedEffect(contentSize) {
-        if (state.turns.isNotEmpty() && followBottom) {
-            val last = (listState.layoutInfo.totalItemsCount - 1).coerceAtLeast(0)
-            listState.animateScrollToItem(last, Int.MAX_VALUE)
-        }
-    }
-    // A correction card grows the LEARNER's bubble, mid-list, often while the
-    // reply below it is still being revealed — on its own 0.25 s height
-    // animation. Scrolling inside it aimed at a layout still moving and
-    // corrected again once it stopped: the whole list swayed on every card.
-    // So the card's settle pass waits the animation out (iOS 1c25820d).
-    val suggestionsSize = state.turns.sumOf {
-        (it.suggestion?.alternative?.length ?: 0) + (it.suggestion?.reason?.length ?: 0)
-    }
-    LaunchedEffect(suggestionsSize) {
-        if (suggestionsSize == 0) return@LaunchedEffect
-        kotlinx.coroutines.delay(300)
-        if (state.turns.isNotEmpty() && followBottom) {
-            val last = (listState.layoutInfo.totalItemsCount - 1).coerceAtLeast(0)
-            listState.animateScrollToItem(last, Int.MAX_VALUE)
-        }
-    }
-    LaunchedEffect(state.partial.length) {
-        if (state.partial.isNotEmpty() && followBottom && !listState.isScrollInProgress) {
-            val last = (listState.layoutInfo.totalItemsCount - 1).coerceAtLeast(0)
-            listState.scrollToItem(last, Int.MAX_VALUE)
-        }
-    }
-    LaunchedEffect(streamingReply?.id, streamingReply?.transcript?.length) {
-        if (streamingReply != null && followBottom) {
-            val last = (listState.layoutInfo.totalItemsCount - 1).coerceAtLeast(0)
-            listState.scrollToItem(last, Int.MAX_VALUE)
+    val seenBottomKey = remember { arrayOf<Any?>(null) }
+    androidx.compose.runtime.SideEffect {
+        if (bottomKey != seenBottomKey[0]) {
+            seenBottomKey[0] = bottomKey
+            if (followBottom) listState.requestScrollToItem(0)
         }
     }
 
@@ -835,6 +794,9 @@ fun TalkScreen(
               Box(Modifier.weight(1f).fillMaxWidth()) {
                     LazyColumn(
                     state = listState,
+                    // Bottom-anchored: the first item is drawn at the BOTTOM,
+                    // so the items below are emitted newest first.
+                    reverseLayout = true,
                     modifier = Modifier
                         .fillMaxSize()
                         // A paused call is picked back up by tapping the
@@ -850,32 +812,56 @@ fun TalkScreen(
                     verticalArrangement = if (state.turns.isEmpty()) Arrangement.spacedBy(12.dp)
                         else Arrangement.spacedBy(12.dp, Alignment.Bottom),
                 ) {
-                    // The first seconds of a call have nothing on them yet: say
-                    // what is happening, where the first line will appear (iOS
-                    // `feed`: top of the transcript, centred, 40 pt down, the
-                    // grey wheel — it sat in the bottom bar, left, in Material).
-                    if (state.turns.isEmpty()) item(key = "starting") {
-                        Row(Modifier.fillMaxWidth().padding(top = 24.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)) {
-                            com.roro.futurevoice.ui.brand.IosActivityIndicator()
-                            Text(stringResource(
-                                if (topic.isBlank()) R.string.starting_your_conversation
-                                else R.string.setting_the_scene),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    // The reply has begun but has no words yet: the thinking
+                    // line keeps its place (same key) until the bubble that
+                    // replaces it has text to be drawn with (iOS 8b3b45f2).
+                    // Subtitles off means NO words in the feed: the pill
+                    // already scans while the reply is written, and this line
+                    // flashing for a second and going read as a glitch
+                    // (iOS c8675f6c, reported 2026-10-09).
+                    if (showsTranscript &&
+                        ((state.phase == TalkPhase.THINKING && state.turns.lastOrNull()?.role == TurnRole.USER) ||
+                            replyHasNoWordsYet)) {
+                        item(key = "partial-thinking") {
+                            Row(Modifier.animateItem(fadeInSpec = tween(250), placementSpec = null, fadeOutSpec = null),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
+                                Text(stringResource(R.string.future_self_is_thinking),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
                     }
-                    // Subtitles off: the call is audio only, like a phone call —
-                    // the pill still shows whose turn it is.
-                    if (!showsTranscript && state.turns.isNotEmpty()) item(key = "subtitles-off") {
-                        Text(stringResource(R.string.subtitles_are_off),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth().padding(top = 24.dp))
+                    // The learner's turn, drawn where it will land (iOS
+                    // `PartialTurnView`): the You bubble appears EMPTY the moment
+                    // it is their turn — that empty bubble is the "your turn"
+                    // signal — and fills with the words as they are heard. Not
+                    // before the first line exists: the call opens with the
+                    // fluent self, and an empty bubble would flash and vanish.
+                    if (showsTranscript && state.phase == TalkPhase.LISTENING &&
+                        (state.turns.isNotEmpty() || state.partial.isNotBlank())) {
+                        // A placeholder is REPLACED by the bubble that follows
+                        // it, so it leaves at once (iOS c95242cc): faded out,
+                        // it kept its height while the new bubble came in and
+                        // the list rose and dropped a little every turn.
+                        item(key = "partial-listening") {
+                            com.roro.futurevoice.ui.brand.DialogueLine(
+                                modifier = Modifier.animateItem(fadeInSpec = tween(250), placementSpec = null,
+                                    fadeOutSpec = null),
+                                speaker = com.roro.futurevoice.ui.brand.DialogueSpeaker.USER,
+                                name = stringResource(R.string.you),
+                                scale = DialogueScale.CALL,
+                            ) {
+                                Text(
+                                    state.partial.ifBlank { stringResource(R.string.listening) },
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontStyle = if (state.partial.isBlank()) FontStyle.Italic else FontStyle.Normal,
+                                )
+                            }
+                        }
                     }
-                    if (showsTranscript) items(visibleTurns, key = { it.id }) { turn ->
+                    if (showsTranscript) items(visibleTurns.asReversed(), key = { it.id }) { turn ->
                         // Everything that changes the feed's height — a bubble
                         // arriving, a correction card a second after the line —
                         // moves on one easing instead of jumping the content
@@ -910,53 +896,29 @@ fun TalkScreen(
                                 })
                         }
                     }
-                    // The learner's turn, drawn where it will land (iOS
-                    // `PartialTurnView`): the You bubble appears EMPTY the moment
-                    // it is their turn — that empty bubble is the "your turn"
-                    // signal — and fills with the words as they are heard. Not
-                    // before the first line exists: the call opens with the
-                    // fluent self, and an empty bubble would flash and vanish.
-                    if (showsTranscript && state.phase == TalkPhase.LISTENING &&
-                        (state.turns.isNotEmpty() || state.partial.isNotBlank())) {
-                        // A placeholder is REPLACED by the bubble that follows
-                        // it, so it leaves at once (iOS c95242cc): faded out,
-                        // it kept its height while the new bubble came in and
-                        // the list rose and dropped a little every turn.
-                        item(key = "partial-listening") {
-                            com.roro.futurevoice.ui.brand.DialogueLine(
-                                modifier = Modifier.animateItem(fadeInSpec = tween(250), placementSpec = null,
-                                    fadeOutSpec = null),
-                                speaker = com.roro.futurevoice.ui.brand.DialogueSpeaker.USER,
-                                name = stringResource(R.string.you),
-                                scale = DialogueScale.CALL,
-                            ) {
-                                Text(
-                                    state.partial.ifBlank { stringResource(R.string.listening) },
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontStyle = if (state.partial.isBlank()) FontStyle.Italic else FontStyle.Normal,
-                                )
-                            }
-                        }
+                    // Subtitles off: the call is audio only, like a phone call —
+                    // the pill still shows whose turn it is.
+                    if (!showsTranscript && state.turns.isNotEmpty()) item(key = "subtitles-off") {
+                        Text(stringResource(R.string.subtitles_are_off),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth().padding(top = 24.dp))
                     }
-                    // The reply has begun but has no words yet: the thinking
-                    // line keeps its place (same key) until the bubble that
-                    // replaces it has text to be drawn with (iOS 8b3b45f2).
-                    // Subtitles off means NO words in the feed: the pill
-                    // already scans while the reply is written, and this line
-                    // flashing for a second and going read as a glitch
-                    // (iOS c8675f6c, reported 2026-10-09).
-                    if (showsTranscript &&
-                        ((state.phase == TalkPhase.THINKING && state.turns.lastOrNull()?.role == TurnRole.USER) ||
-                            replyHasNoWordsYet)) {
-                        item(key = "partial-thinking") {
-                            Row(Modifier.animateItem(fadeInSpec = tween(250), placementSpec = null, fadeOutSpec = null),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
-                                Text(stringResource(R.string.future_self_is_thinking),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
+                    // The first seconds of a call have nothing on them yet: say
+                    // what is happening, where the first line will appear (iOS
+                    // `feed`: top of the transcript, centred, 40 pt down, the
+                    // grey wheel — it sat in the bottom bar, left, in Material).
+                    if (state.turns.isEmpty()) item(key = "starting") {
+                        Row(Modifier.fillMaxWidth().padding(top = 24.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)) {
+                            com.roro.futurevoice.ui.brand.IosActivityIndicator()
+                            Text(stringResource(
+                                if (topic.isBlank()) R.string.starting_your_conversation
+                                else R.string.setting_the_scene),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
