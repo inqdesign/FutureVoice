@@ -137,14 +137,17 @@ fun CallSettingsSheet(
             GroupedFooter(stringResource(R.string.take_your_time_your_future_self_waits_until_you_press_send))
 
             // Part of the conversation prompt; a flip mid-call sends the
-            // gateway the new prompt (`TutorMode`).
-            GroupedSectionSpacer()
-            GroupedCard {
-                ToggleRow(Icons.Outlined.School, stringResource(R.string.tutor_mode), tutorMode) {
-                    onTutorMode(it)
+            // gateway the new prompt (`TutorMode`). Hidden while
+            // `TutorMode.IS_AVAILABLE` is off.
+            if (com.roro.futurevoice.talk.TutorMode.IS_AVAILABLE) {
+                GroupedSectionSpacer()
+                GroupedCard {
+                    ToggleRow(Icons.Outlined.School, stringResource(R.string.tutor_mode), tutorMode) {
+                        onTutorMode(it)
+                    }
                 }
+                GroupedFooter(stringResource(R.string.when_you_make_a_mistake_your_future_self_says_it_the_right_w_c45516))
             }
-            GroupedFooter(stringResource(R.string.when_you_make_a_mistake_your_future_self_says_it_the_right_w_c45516))
 
             GroupedSectionHeader(stringResource(R.string.screen))
             GroupedCard {

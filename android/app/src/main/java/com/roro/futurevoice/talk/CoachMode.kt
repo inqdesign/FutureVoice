@@ -122,7 +122,12 @@ object TutorMode {
     private fun prefs(context: Context) =
         context.applicationContext.getSharedPreferences("futurevoice", Context.MODE_PRIVATE)
 
-    fun isOn(context: Context): Boolean = prefs(context).getBoolean(KEY, false)
+    /** Hidden for now (iOS `TutorMode.isAvailable`, 2026-10-16): no toggle,
+     *  and a learner who had it on gets ordinary calls. Their choice stays
+     *  stored, so flipping this back restores it. */
+    const val IS_AVAILABLE = false
+
+    fun isOn(context: Context): Boolean = IS_AVAILABLE && prefs(context).getBoolean(KEY, false)
 
     fun set(context: Context, on: Boolean) = prefs(context).edit().putBoolean(KEY, on).apply()
 }
