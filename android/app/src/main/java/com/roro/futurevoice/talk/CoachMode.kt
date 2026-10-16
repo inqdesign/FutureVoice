@@ -74,14 +74,15 @@ object CoachMode {
  * `discard`). Training wheels, not a second kind of call: only who decides
  * the turn is over changes.
  *
- * ON by default for A1 only; the learner's own flip always wins, like
+ * ON by default for A1 and A2 (A2 added 2026-10-16, founder); the
+ * learner's own flip always wins, like
  * [CoachMode]. Realtime path only.
  */
 object SendToAnswer {
     /** Same name as iOS's defaults key. */
     const val KEY = "futurevoice.call.sendToAnswer"
 
-    fun defaultOn(level: CefrLevel): Boolean = level == CefrLevel.A1
+    fun defaultOn(level: CefrLevel): Boolean = level == CefrLevel.A1 || level == CefrLevel.A2
 
     fun resolve(choice: Boolean?, levelRaw: String?): Boolean =
         choice ?: defaultOn(CefrLevel.from(levelRaw?.takeIf { it.isNotBlank() } ?: "b1"))
