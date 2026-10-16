@@ -17,7 +17,7 @@ import com.roro.futurevoice.data.ProfileStore
 import com.roro.futurevoice.data.SessionStore
 import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.data.StoreJson
-import com.roro.futurevoice.net.ElevenLabsClient
+import com.roro.futurevoice.net.VoiceClient
 import com.roro.futurevoice.net.EdgeError
 import com.roro.futurevoice.net.GeminiClient
 import kotlinx.coroutines.CancellationException
@@ -164,7 +164,7 @@ class TalkViewModel(context: Context) : ViewModel() {
     private val appContext = context.applicationContext
     private val auth = AuthRepository()
     private val gemini = GeminiClient(auth)
-    private val eleven = ElevenLabsClient(auth)
+    private val voiceClient = VoiceClient(auth)
     private val live = LiveTranscriber(context)
     private val meter = TalkMeter(auth, viewModelScope, appContext)
 
@@ -180,7 +180,7 @@ class TalkViewModel(context: Context) : ViewModel() {
     /** Reply context → the fluent-self turn its deltas patch. */
     private val realtimeReplyTurns = HashMap<String, String>()
     private var realtimeSystem: String = ""
-    private val pcm = PcmStreamPlayer(ElevenLabsClient.STREAM_SAMPLE_RATE).apply {
+    private val pcm = PcmStreamPlayer(VoiceClient.STREAM_SAMPLE_RATE).apply {
         volume = com.roro.futurevoice.data.AudioPrefs.talkVoiceVolume(appContext)
     }
     private val mp3 = Mp3Player(appContext.cacheDir).apply {
@@ -1464,12 +1464,9 @@ class TalkViewModel(context: Context) : ViewModel() {
         val startedAt = System.currentTimeMillis()
         try {
             pcm.start()
-            val result = eleven.synthesizeStreaming(
+            val result = voiceClient.synthesizeStreaming(
                 voiceId = activeVoiceId,
                 text = text,
-                // Turbo, never flash: same price, better speaker similarity, and
-                // this is the surface where the clone is heard most.
-                modelId = ElevenLabsClient.CONVERSATION_MODEL_ID,
                 purpose = "turn",
             ) { chunk ->
                 if (firstChunkAt[0] == 0L) {
@@ -1479,12 +1476,12 @@ class TalkViewModel(context: Context) : ViewModel() {
                 pcm.write(chunk)
             }
             when (result) {
-                is ElevenLabsClient.StreamedAudio.Pcm22050 -> {
+                is VoiceClient.StreamedAudio.Pcm22050 -> {
                     turnTiming["tts"] = "stream"
                     pcm.drain()
                     pcm.stop()
                 }
-                is ElevenLabsClient.StreamedAudio.Mp3 -> {
+                is VoiceClient.StreamedAudio.Mp3 -> {
                     turnTiming["tts"] = "buffered"
                     pcm.stop()
                     mp3.play(result.data)

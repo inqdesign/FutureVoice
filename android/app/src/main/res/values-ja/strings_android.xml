@@ -95,8 +95,6 @@
     <string name="your_voice_model_is_built_by_the_most_trusted_service">音声モデルはもっとも信頼できるサービスで作ります。語学の練習にだけ使われます。</string>
     <string name="given_lld">同意した日: %1$s</string>
     <string name="your_voice_model_is_biometric_data">音声モデルは生体情報です。練習の文を自分の声で聞かせるためだけに使います。売ることも、他人に渡すことも、ほかのモデルの学習に使うこともありません。</string>
-    <string name="your_voice_model_is_deleted_here_and_at_elevenlabs">音声モデルはアプリとElevenLabsの両方から削除され、元に戻せません。次の通話の前に、新しく録音するよう求められます。</string>
-    <string name="this_deletes_your_voice_model_here_and_at_elevenlabs">アプリとElevenLabsの両方から音声モデルを削除します。すでに作られた音声は、アカウントを削除するまでそのまま再生されます。声がないと通話ができないので、新しく録音するよう求められます。アカウントごと削除することもできます。</string>
     <string name="write_to_us_to_see_or_correct_what_we_hold">同意した日付を含め、保管中の情報の確認や修正はお問い合わせください。</string>
     <string name="this_permanently_deletes_your_voice_clone_talk_time_and_account">自分の声と通話時間、アカウントが完全に削除され、元に戻せません。Google Playのサブスクリプションが有効な場合は、Playストアで別途解約してください。</string>
     <string name="couldnt_delete_account">アカウントを削除できませんでした</string>

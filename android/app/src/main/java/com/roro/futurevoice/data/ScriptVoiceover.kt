@@ -11,7 +11,7 @@ import com.roro.futurevoice.core.Config
 import com.roro.futurevoice.core.Telemetry
 import com.roro.futurevoice.net.Edge
 import com.roro.futurevoice.net.EdgeError
-import com.roro.futurevoice.net.ElevenLabsClient
+import com.roro.futurevoice.net.VoiceClient
 import com.roro.futurevoice.talk.PacedSpeech
 import com.roro.futurevoice.talk.WordTiming
 import kotlinx.coroutines.Dispatchers
@@ -292,7 +292,7 @@ object ScriptVoiceoverCenter {
             return paid
         }
 
-        val lines = ScriptVoiceover.lines(script.body, wholeParagraphs = com.roro.futurevoice.ui.VoiceMove.isCartesia(voiceId))
+        val lines = ScriptVoiceover.lines(script.body, wholeParagraphs = com.roro.futurevoice.net.VoiceClient.isCartesiaVoice(voiceId))
         if (lines.isEmpty()) throw VoiceoverFailed()
         setJob(key, Job.Making(0, lines.size))
         try {
@@ -367,7 +367,7 @@ object ScriptVoiceoverCenter {
 
     private suspend fun synthesize(context: Context, lines: List<ScriptVoiceover.Line>, voiceId: String,
                                    language: String, key: String): Assembled {
-        val client = ElevenLabsClient(AuthRepository())
+        val client = VoiceClient(AuthRepository())
         val gate = Semaphore(3)
         var done = 0
         val takes = coroutineScope {

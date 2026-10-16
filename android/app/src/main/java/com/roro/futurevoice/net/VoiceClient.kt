@@ -13,14 +13,24 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
 /**
- * ElevenLabs via the `elevenlabs-tts` Edge Function. The app never holds an
- * ElevenLabs key; voice settings are fixed server-side.
+ * Speech in the learner's voice (Cartesia since 2026-10-15) via the
+ * `elevenlabs-tts` Edge Function — the endpoint keeps its old name because
+ * shipped builds call it. The app never holds a provider key; voice settings
+ * are fixed server-side (iOS `VoiceClient`).
  *
  * Wire contract: `docs/contracts/edge-api.md` §POST /elevenlabs-tts.
  */
-class ElevenLabsClient(private val auth: AuthRepository) {
+class VoiceClient(private val auth: AuthRepository) {
 
     companion object {
+        private val CARTESIA = Regex(
+            "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(:[a-z-]+)?$")
+
+        /** A Cartesia voice id: a UUID, optionally carrying an accent
+         *  ("<uuid>:british"). Every voice is one since 2026-10-15 (iOS
+         *  `VoiceClient.isCartesiaVoice`). */
+        fun isCartesiaVoice(id: String) = CARTESIA.matches(id)
+
         /**
          * The language a line is pinned to upstream (`language_code`), or null
          * to let the model guess as it always has (iOS `pinnedLanguage`,
@@ -36,32 +46,6 @@ class ElevenLabsClient(private val auth: AuthRepository) {
             if (!com.roro.futurevoice.data.TextScript.isInTargetScript(text, "ko")) return null
             return "ko"
         }
-
-        /**
-         * Live Talk turns. Flash was tried here and reverted: same price per
-         * character, but it buys latency by cutting speaker similarity — on the
-         * surface where users hear their own clone most. Speaker similarity IS
-         * the product.
-         */
-        const val CONVERSATION_MODEL_ID = "eleven_turbo_v2_5"
-
-        /**
-         * Fidelity tier — Watch scenes and the onboarding greeting. Bills ~2x
-         * per character upstream while pricing here is model-BLIND, so that 2x
-         * is pure margin absorbed. Only for CACHED lines or once-per-user paths.
-         * NEVER for live turns.
-         */
-        const val FIDELITY_MODEL_ID = "eleven_multilingual_v2"
-
-        /**
-         * Every line in the learner's CLONED voice — scene lines, the
-         * greeting, the comparison — speaks on the same model the call does
-         * (iOS `cloneModelId`, 2026-09-26). Talk has always run the clone on
-         * turbo, so nothing can need a better model than the live call; the
-         * fidelity tier billed 2x per character and was 70% of a scene's
-         * cost. FIDELITY stays defined for A/B only.
-         */
-        const val CLONE_MODEL_ID = CONVERSATION_MODEL_ID
 
         /** Server streams 16-bit LE mono PCM at this rate. */
         const val STREAM_SAMPLE_RATE = 22_050
@@ -82,7 +66,6 @@ class ElevenLabsClient(private val auth: AuthRepository) {
     private data class TtsBody(
         val voice_id: String,
         val text: String,
-        val model_id: String,
         val with_timestamps: Boolean = false,
         val stream: Boolean? = null,
         val purpose: String? = null,
@@ -92,10 +75,6 @@ class ElevenLabsClient(private val auth: AuthRepository) {
         val speed: Double? = null,
         /** Pins the line's language upstream — Korean only ([pinnedLanguage]). */
         val language_code: String? = null,
-        /** The lines around this one in a longer exchange (iOS
-         *  `previousText`/`nextText`) — so a scene line lands MID-conversation. */
-        val previous_text: String? = null,
-        val next_text: String? = null,
         /** A Speech script's voiceover (iOS `synthesizeVoiceoverLine`): with
          *  `purpose: "script-voiceover"` the line is claimed against the
          *  reservation, never metered per character. */
@@ -106,21 +85,17 @@ class ElevenLabsClient(private val auth: AuthRepository) {
     suspend fun synthesize(
         voiceId: String,
         text: String,
-        modelId: String = CONVERSATION_MODEL_ID,
         idempotencyKey: String? = null,
         purpose: String? = null,
         sceneKey: String? = null,
         /** An explicit rung — the onboarding pills audition one before it is
          *  the setting. Null = the learner's current speed. */
         speed: Double? = null,
-        previousText: String? = null,
-        nextText: String? = null,
     ): ByteArray = withContext(Dispatchers.IO) {
         val request = buildRequest(
-            voiceId, text, modelId, withTimestamps = false, stream = false,
+            voiceId, text, withTimestamps = false, stream = false,
             purpose = purpose, idempotencyKey = idempotencyKey, accept = "audio/mpeg",
             sceneKey = sceneKey, speed = speed,
-            previousText = previousText, nextText = nextText,
         )
         Edge.client.newCall(request).execute().use { response ->
             val bytes = response.body.bytes()
@@ -159,14 +134,13 @@ class ElevenLabsClient(private val auth: AuthRepository) {
         voiceId: String,
         text: String,
         language: String,
-        modelId: String = CONVERSATION_MODEL_ID,
         idempotencyKey: String? = null,
         purpose: String? = null,
     ): Pair<ByteArray, List<com.roro.futurevoice.talk.WordTiming>> = withContext(Dispatchers.IO) {
         val key = idempotencyKey ?: InstallSalt.ttsKey(text, voiceId, true)
         val viaTimestamps = runCatching {
             val request = buildRequest(
-                voiceId, text, modelId, withTimestamps = true, stream = false,
+                voiceId, text, withTimestamps = true, stream = false,
                 purpose = purpose, idempotencyKey = key, accept = "application/json",
             )
             Edge.client.newCall(request).execute().use { response ->
@@ -178,7 +152,7 @@ class ElevenLabsClient(private val auth: AuthRepository) {
                 val decoded = Edge.json.decodeFromString(TimestampsResponse.serializer(), raw)
                 val audio = android.util.Base64.decode(decoded.audio_base64, android.util.Base64.DEFAULT)
                 // RAW alignment first, always: `normalized_alignment` indexes
-                // ElevenLabs' own normalized text, which romanizes Korean.
+                // the synthesizer's own normalized text, which romanizes Korean.
                 val align = decoded.alignment ?: decoded.normalized_alignment
                 val timings = align?.let {
                     com.roro.futurevoice.talk.TtsAlignment.wordTimings(
@@ -192,7 +166,7 @@ class ElevenLabsClient(private val auth: AuthRepository) {
             // A wall is a wall on either endpoint — never retried as plain.
             if (e === EdgeError.InsufficientCredits || e === EdgeError.DailyCapReached ||
                 e === EdgeError.SceneCapReached || e === EdgeError.FairUseLimit) throw e
-            synthesize(voiceId, text, modelId, idempotencyKey = key, purpose = purpose) to emptyList()
+            synthesize(voiceId, text, idempotencyKey = key, purpose = purpose) to emptyList()
         }
     }
 
@@ -210,7 +184,7 @@ class ElevenLabsClient(private val auth: AuthRepository) {
         voiceId: String, text: String, language: String, voiceoverKey: String, index: Int,
     ): Pair<ByteArray, List<com.roro.futurevoice.talk.WordTiming>> = withContext(Dispatchers.IO) {
         val request = buildRequest(
-            voiceId, text, CLONE_MODEL_ID, withTimestamps = true, stream = false,
+            voiceId, text, withTimestamps = true, stream = false,
             purpose = "script-voiceover", idempotencyKey = "$voiceoverKey:$index",
             accept = "application/json", voiceoverKey = voiceoverKey,
         )
@@ -240,7 +214,6 @@ class ElevenLabsClient(private val auth: AuthRepository) {
     suspend fun synthesizeStreaming(
         voiceId: String,
         text: String,
-        modelId: String = CONVERSATION_MODEL_ID,
         idempotencyKey: String? = null,
         purpose: String? = null,
         /** One key per SCENE (Watch) — the server claims the scene count once on it. */
@@ -248,7 +221,7 @@ class ElevenLabsClient(private val auth: AuthRepository) {
         onPcmChunk: suspend (ByteArray) -> Unit,
     ): StreamedAudio = withContext(Dispatchers.IO) {
         val request = buildRequest(
-            voiceId, text, modelId, withTimestamps = false, stream = true,
+            voiceId, text, withTimestamps = false, stream = true,
             purpose = purpose, idempotencyKey = idempotencyKey, accept = null,
             sceneKey = sceneKey,
         )
@@ -309,7 +282,6 @@ class ElevenLabsClient(private val auth: AuthRepository) {
     private suspend fun buildRequest(
         voiceId: String,
         text: String,
-        modelId: String,
         withTimestamps: Boolean,
         stream: Boolean,
         purpose: String?,
@@ -317,8 +289,6 @@ class ElevenLabsClient(private val auth: AuthRepository) {
         accept: String?,
         sceneKey: String? = null,
         speed: Double? = null,
-        previousText: String? = null,
-        nextText: String? = null,
         voiceoverKey: String? = null,): Request {
         // A parked voice no longer exists upstream (see `VoiceParking`).
         // Refused before the network with the error every surface already
@@ -331,15 +301,12 @@ class ElevenLabsClient(private val auth: AuthRepository) {
         val body = TtsBody(
             voice_id = voiceId,
             text = text,
-            model_id = modelId,
             with_timestamps = withTimestamps,
             stream = if (stream) true else null,
             purpose = purpose,
             scene_key = sceneKey,
             speed = speed ?: com.roro.futurevoice.data.SpeechSpeed.currentMultiplier(),
             language_code = pinnedLanguage(text, com.roro.futurevoice.data.CoreVocabulary.activeLanguage()),
-            previous_text = previousText?.takeIf { it.isNotEmpty() },
-            next_text = nextText?.takeIf { it.isNotEmpty() },
             voiceover_key = voiceoverKey,
         )
         val builder = Request.Builder()
@@ -356,41 +323,13 @@ class ElevenLabsClient(private val auth: AuthRepository) {
         if (accept != null) builder.header("Accept", accept)
         return builder.build()
     }
-
-    @Serializable
-    private data class MovedResponse(val voice_id: String)
-
-    /**
-     * Moves the learner's voice to the new engine from the SERVER's copy of
-     * their recording (`voice-move`, iOS `moveVoiceFromServer`, 2026-10-12)
-     * — for a phone with no saved recording. Returns the new voice id, or
-     * null when no original exists upstream (an accent remix keeps none), in
-     * which case only a new recording can move it.
-     */
-    suspend fun moveVoiceFromServer(): String? = withContext(Dispatchers.IO) {
-        val req = Request.Builder()
-            .url(Config.functionUrl("voice-move"))
-            .header("Authorization", "Bearer ${auth.accessToken()}")
-            .post("{}".toRequestBody("application/json".toMediaType()))
-            .build()
-        val client = Edge.client.newBuilder()
-            .readTimeout(90, java.util.concurrent.TimeUnit.SECONDS)
-            .callTimeout(90, java.util.concurrent.TimeUnit.SECONDS)
-            .build()
-        client.newCall(req).execute().use { resp ->
-            val raw = resp.body.string()
-            if (resp.code == 409 && raw.contains("no_original")) return@use null
-            if (resp.code !in 200..299) throw EdgeError.Http(resp.code, raw.take(512))
-            Edge.json.decodeFromString(MovedResponse.serializer(), raw).voice_id
-        }
-    }
 }
 
 /**
  * Accent remixing: audition a few takes of the learner's OWN clone speaking
  * with an instructed accent, then promote the one they keep.
  *
- * Separate from [ElevenLabsClient] because it is a different shape of call —
+ * Separate from [VoiceClient] because it is a different shape of call —
  * preview generation runs tens of seconds upstream and comes back as a few MB
  * of base64 audio, so it needs its own roomier timeout rather than the call
  * loop's.
@@ -424,8 +363,6 @@ class VoiceRemixClient(private val auth: com.roro.futurevoice.data.AuthRepositor
      */
     suspend fun previews(
         voiceId: String, voiceDescription: String, text: String,
-        promptStrength: Double =
-            com.roro.futurevoice.data.VoiceAccentCatalog.PROMPT_STRENGTH,
     ): List<Preview> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         // A remix is built FROM the voice; a parked one no longer exists.
         if (com.roro.futurevoice.data.VoiceParking.isParked(voiceId)) throw EdgeError.InsufficientCredits
@@ -433,11 +370,6 @@ class VoiceRemixClient(private val auth: com.roro.futurevoice.data.AuthRepositor
             put("voice_id", voiceId)
             put("voice_description", voiceDescription)
             put("text", text)
-            // How far the remix may leave the RECORDING. The prompt asks for
-            // the same person; this is the parameter that decides it, and
-            // sending nothing let upstream choose — every accent came back
-            // recognisably less like the speaker (iOS `84795b6`).
-            put("prompt_strength", promptStrength)
         }
         val raw = post(body.toString())
         Edge.json.decodeFromString(PreviewsResponse.serializer(), raw).previews.mapNotNull { p ->

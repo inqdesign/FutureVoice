@@ -131,7 +131,7 @@ fun VoiceAccentSheet(
         playingVoice = true
         scope.launch {
             runCatching {
-                val data = com.roro.futurevoice.net.ElevenLabsClient(AuthRepository()).synthesize(
+                val data = com.roro.futurevoice.net.VoiceClient(AuthRepository()).synthesize(
                     voiceId = voiceId, text = VoiceAccentCatalog.sampleText(targetLanguage),
                     purpose = "voice_comparison")
                 player.play(data)
@@ -248,7 +248,6 @@ fun VoiceAccentSheet(
                     name = com.roro.futurevoice.data.VoiceName.display(context,
                         com.roro.futurevoice.data.PersonaStore.shared(context).load()?.displayName),
                     sample = VoiceComparison.sampleFile(context.filesDir),
-                    removeBackgroundNoise = false,
                 )
             }.onSuccess { newId ->
                 HapticEngine.success(context)
@@ -567,7 +566,7 @@ internal suspend fun remixIntoDefaultAccent(
         VoiceAccentCatalog.options(targetLanguage).map { option ->
             async {
                 option.id to runCatching {
-                    client.previews(voiceId, option.prompt, text, VoiceAccentCatalog.PROMPT_STRENGTH)
+                    client.previews(voiceId, option.prompt, text)
                 }.getOrNull()
             }
         }.awaitAll()

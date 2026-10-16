@@ -17,7 +17,7 @@ import androidx.compose.animation.core.Animatable
 import com.roro.futurevoice.ui.brand.IosButton as Button
 import com.roro.futurevoice.data.DrillIngest
 import com.roro.futurevoice.data.AuthRepository
-import com.roro.futurevoice.net.ElevenLabsClient
+import com.roro.futurevoice.net.VoiceClient
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.filled.GraphicEq

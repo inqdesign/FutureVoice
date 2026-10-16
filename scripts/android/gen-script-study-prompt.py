@@ -61,7 +61,7 @@ pin({
     "ScriptVoiceover.chargeKey": (func_body(voiceover, "chargeKey"), "a33fe3abc0f7"),
     "ScriptVoiceover.fileKey": (func_body(voiceover, "fileKey"), "63222c7e1f69"),
     "ScriptVoiceover.lines": (func_body(voiceover, "lines"), "d9124b2ddcaa"),
-    "ScriptVoiceoverCenter.make": (func_body(voiceover, "make"), "056fd8f5b3ea"),
+    "ScriptVoiceoverCenter.make": (func_body(voiceover, "make"), "c0268cc1658a"),
     "ScriptVoiceoverAudio.join": (func_body(voiceover, "join"), "b1066336957e"),
 })
 

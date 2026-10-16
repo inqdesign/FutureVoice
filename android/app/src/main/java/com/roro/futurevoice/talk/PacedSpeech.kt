@@ -1,13 +1,8 @@
 package com.roro.futurevoice.talk
 
-import com.roro.futurevoice.audio.WavPcm
-import com.roro.futurevoice.data.AuthRepository
-import com.roro.futurevoice.net.ElevenLabsClient
-import kotlinx.coroutines.ensureActive
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.regex.Pattern
-import kotlin.coroutines.coroutineContext
 import kotlin.math.sqrt
 
 /**
@@ -66,38 +61,6 @@ object PacedSpeech {
         }
         out.add(text.substring(start))
         return out.map { it.trim() }.filter { it.isNotEmpty() }
-    }
-
-    /**
-     * Synthesize `text` sentence by sentence and join the takes with
-     * [SENTENCE_GAP_SECONDS] between them, as a WAV. Null when the text is a
-     * single sentence or the voice is a Cartesia clone (the caller's
-     * ordinary path is already right; a Cartesia line already pauses between
-     * its sentences, and split, its one-word first sentence came back a
-     * clipped word — iOS 2026-10-13) or the
-     * server answered in MP3 (an edge deploy with no streaming — nothing to
-     * join; the caller falls back).
-     */
-    suspend fun synthesizeWav(voiceId: String, text: String, modelId: String, purpose: String): ByteArray? {
-        if (com.roro.futurevoice.ui.VoiceMove.isCartesia(voiceId)) return null
-        val parts = sentences(text)
-        if (parts.size <= 1) return null
-        val client = ElevenLabsClient(AuthRepository())
-        val takes = mutableListOf<ByteArray>()
-        for (part in parts) {
-            coroutineContext.ensureActive()
-            val audio = client.synthesizeStreaming(
-                voiceId = voiceId, text = part, modelId = modelId, purpose = purpose,
-                onPcmChunk = {},
-            )
-            if (audio !is ElevenLabsClient.StreamedAudio.Pcm22050) return null
-            takes.add(audio.data)
-        }
-        val rate = ElevenLabsClient.STREAM_SAMPLE_RATE
-        val pcm = joined(takes, rate.toDouble())
-        val shorts = ShortArray(pcm.size / 2)
-        ByteBuffer.wrap(pcm).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(shorts)
-        return WavPcm.wav(shorts, rate)
     }
 
     /** Join 16-bit LE mono takes: each INNER edge trimmed to its voice (the

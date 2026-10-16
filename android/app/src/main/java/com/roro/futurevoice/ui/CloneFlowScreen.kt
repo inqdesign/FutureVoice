@@ -77,7 +77,7 @@ import androidx.compose.foundation.layout.size
 import com.roro.futurevoice.audio.WavRecorder
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.net.EdgeError
-import com.roro.futurevoice.net.ElevenLabsClient
+import com.roro.futurevoice.net.VoiceClient
 import com.roro.futurevoice.net.VoiceCloneClient
 import com.roro.futurevoice.talk.CloneScriptStore
 import com.roro.futurevoice.talk.VoiceCloneScript
@@ -471,7 +471,7 @@ fun CloneFlowScreen(
         greeting = null
         scope.launch {
             greeting = runCatching {
-                ElevenLabsClient(AuthRepository()).synthesize(
+                VoiceClient(AuthRepository()).synthesize(
                     voiceId = newId,
                     text = VoiceCloneScript.greeting(targetLanguage),
                     purpose = "greeting",
@@ -494,7 +494,6 @@ fun CloneFlowScreen(
                     // iOS sends `voiceDisplayName` — the library entry says whose it is.
                     name = com.roro.futurevoice.data.VoiceName.display(context, com.roro.futurevoice.data.PersonaStore.shared(context).load()?.displayName),
                     sample = sampleFile,
-                    removeBackgroundNoise = false,
                 )
             }.onSuccess { adoptVoice(it, null, greet = true) }
                 .onFailure { e ->
@@ -519,17 +518,13 @@ fun CloneFlowScreen(
                 // A sign-up that adopted an existing account rebuilds from the
                 // recording already kept; everything else from the fresh take.
                 val source = if (takeFile.exists()) takeFile else sampleFile
-                // Boost-only normalize; denoise only a take the quality gate
-                // itself would flag (SNR < 22) — a clean take passed through
-                // the denoiser loses the cues that make it recognizable.
-                val normalized = SampleQuality.peakNormalized(source)
-                val snr = SampleQuality.analyze(normalized)?.estimatedSnrDb
+                // Levelled and cleaned on the phone inside cloneVoice
+                // (`VoiceDenoiser`, iOS `regenerateVoiceClone`).
                 val auth = AuthRepository()
                 val voiceId = VoiceCloneClient(auth).cloneVoice(
                     // iOS sends `voiceDisplayName` — the library entry says whose it is.
             name = com.roro.futurevoice.data.VoiceName.display(context, com.roro.futurevoice.data.PersonaStore.shared(context).load()?.displayName),
-                    sample = normalized,
-                    removeBackgroundNoise = (snr ?: 0f) < 22f,
+                    sample = source,
                 )
                 // Keep the original so the clone can be rebuilt later
                 // without recording again (iOS `VoiceSampleStore`).
@@ -580,7 +575,7 @@ fun CloneFlowScreen(
                 // synthesis opens the act silent, never blocks. Said once, at
                 // the default rung; the pills below are how speed is heard.
                 greeting = runCatching {
-                    ElevenLabsClient(auth).synthesize(
+                    VoiceClient(auth).synthesize(
                         voiceId = greetVoice,
                         text = VoiceCloneScript.greeting(targetLanguage),
                         purpose = "greeting",
@@ -1555,7 +1550,7 @@ internal fun SpeedAudition(
         takes[s]?.let { return it }
         val id = voiceId ?: return null
         return runCatching {
-            ElevenLabsClient(com.roro.futurevoice.data.AuthRepository()).synthesize(
+            VoiceClient(com.roro.futurevoice.data.AuthRepository()).synthesize(
                 voiceId = id, text = line, purpose = "greeting", speed = s.multiplier(context))
         }.getOrNull()?.also { takes[s] = it }
     }

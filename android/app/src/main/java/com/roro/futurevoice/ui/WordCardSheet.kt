@@ -80,7 +80,7 @@ import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.data.VocabLemmas
 import com.roro.futurevoice.data.VocabStore
 import com.roro.futurevoice.data.VoiceCloneRepository
-import com.roro.futurevoice.net.ElevenLabsClient
+import com.roro.futurevoice.net.VoiceClient
 import com.roro.futurevoice.net.WordLore
 import com.roro.futurevoice.talk.TurnRole
 import com.roro.futurevoice.ui.brand.AppSurfaces

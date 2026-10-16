@@ -89,7 +89,7 @@ sealed class EdgeError(message: String) : Exception(message) {
     /**
      * 402 `fair_use_limit` — an UNCAPPED plan crossed the abuse line. Not a
      * spent allowance and never a paywall: nothing ran out, a person is
-     * reading the admin console (iOS `ElevenLabsError.fairUseLimit`). Until
+     * reading the admin console (iOS `VoiceError.fairUseLimit`). Until
      * this existed the body fell through to [InsufficientCredits] and showed
      * a paying subscriber the plans.
      */
@@ -99,7 +99,7 @@ sealed class EdgeError(message: String) : Exception(message) {
     companion object {
         /**
          * The ONE place a 402 body is read. iOS learned this the hard way
-         * (`ElevenLabsError.wall(body:)`): the streamed and buffered paths each
+         * (`VoiceError.wall(body:)`): the streamed and buffered paths each
          * parsed the body separately, and the one that forgot told a paying
          * subscriber they were out of credits.
          */

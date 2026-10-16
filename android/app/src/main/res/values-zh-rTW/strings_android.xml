@@ -95,8 +95,6 @@
     <string name="your_voice_model_is_built_by_the_most_trusted_service">聲音模型由最值得信任的服務建立，只用在語言練習上。</string>
     <string name="given_lld">於 %1$s 同意</string>
     <string name="your_voice_model_is_biometric_data">聲音模型是生物辨識資料。只用來把練習句子用我自己的聲音唸出來，不會販售、不會分享，也不會拿去訓練別人的模型。</string>
-    <string name="your_voice_model_is_deleted_here_and_at_elevenlabs">這裡和 ElevenLabs 兩邊都會刪除，而且無法復原。下次通話前要重新錄一次。</string>
-    <string name="this_deletes_your_voice_model_here_and_at_elevenlabs">這會在這裡和 ElevenLabs 兩邊刪除聲音模型。已經產生的音訊會留到刪除帳號為止。沒有聲音就沒辦法通話，所以會請你重新錄音，也可以直接把帳號整個刪掉。</string>
     <string name="write_to_us_to_see_or_correct_what_we_hold">想查看或修正我們保管的資料，寫信給我們就可以，包含同意的日期。</string>
     <string name="this_permanently_deletes_your_voice_clone_talk_time_and_account">這會永久刪除聲音複製、通話時間和帳號，無法復原。訂閱中的話，要另外在 Play 商店取消。</string>
     <string name="couldnt_delete_account">無法刪除帳號</string>

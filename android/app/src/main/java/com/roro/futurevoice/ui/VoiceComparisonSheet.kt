@@ -45,7 +45,7 @@ import com.roro.futurevoice.ui.brand.IosGlassTextButton
 import com.roro.futurevoice.R
 import com.roro.futurevoice.audio.Mp3Player
 import com.roro.futurevoice.data.AuthRepository
-import com.roro.futurevoice.net.ElevenLabsClient
+import com.roro.futurevoice.net.VoiceClient
 import com.roro.futurevoice.talk.VoiceCloneScript
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -143,8 +143,8 @@ fun VoiceComparisonSheet(
         if (cache.length() > 0) { cloneAudio = withContext(Dispatchers.IO) { cache.readBytes() }; return@LaunchedEffect }
         loading = true
         runCatching {
-            ElevenLabsClient(AuthRepository()).synthesize(voiceId, opening,
-                modelId = ElevenLabsClient.CLONE_MODEL_ID, purpose = "voice_comparison")
+            VoiceClient(AuthRepository()).synthesize(voiceId, opening,
+                purpose = "voice_comparison")
         }.onSuccess { data ->
             cloneAudio = data
             withContext(Dispatchers.IO) { cache.parentFile?.mkdirs(); cache.writeBytes(data) }

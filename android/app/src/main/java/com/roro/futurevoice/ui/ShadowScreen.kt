@@ -105,7 +105,7 @@ import com.roro.futurevoice.data.ShadowAttemptStore
 import com.roro.futurevoice.data.StoreJson
 import com.roro.futurevoice.data.WordSplitter
 import com.roro.futurevoice.net.EdgeError
-import com.roro.futurevoice.net.ElevenLabsClient
+import com.roro.futurevoice.net.VoiceClient
 import com.roro.futurevoice.net.GeminiClient
 import com.roro.futurevoice.talk.ShadowCoachPrompt
 import com.roro.futurevoice.talk.ShadowScore
@@ -376,7 +376,7 @@ fun ShadowScreen(
             // may bill — fetches its timings in the same call.
             phase = ShadowPhase.LOADING_AUDIO
             try {
-                val (a, t) = ElevenLabsClient(AuthRepository()).synthesizeWithTimestamps(
+                val (a, t) = VoiceClient(AuthRepository()).synthesizeWithTimestamps(
                     voiceId = voiceId, text = line, language = targetLanguage,
                     idempotencyKey = InstallSalt.ttsKey(line, voiceId, timestamps = true),
                     purpose = "shadow")

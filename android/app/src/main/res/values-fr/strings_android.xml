@@ -95,8 +95,6 @@
     <string name="your_voice_model_is_built_by_the_most_trusted_service">Ton modèle vocal est créé par le service le plus fiable qui soit, et utilisé uniquement pour ta pratique de la langue.</string>
     <string name="given_lld">Donné le %1$s</string>
     <string name="your_voice_model_is_biometric_data">Ton modèle vocal est une donnée biométrique. Il sert uniquement à te faire entendre tes phrases d’entraînement dans ta propre voix — jamais vendu, jamais partagé, jamais utilisé pour entraîner le modèle de quelqu’un d’autre.</string>
-    <string name="your_voice_model_is_deleted_here_and_at_elevenlabs">Ton modèle vocal est supprimé ici et chez ElevenLabs, et c’est irréversible. On te demandera d’en enregistrer un nouveau avant ton prochain appel.</string>
-    <string name="this_deletes_your_voice_model_here_and_at_elevenlabs">Ça supprime ton modèle vocal ici et chez ElevenLabs. Les audios déjà générés restent lisibles jusqu’à la suppression de ton compte. L’app ne peut pas passer d’appel sans voix, donc elle te demandera d’en enregistrer une nouvelle — ou tu peux supprimer ton compte entièrement.</string>
     <string name="write_to_us_to_see_or_correct_what_we_hold">Écris-nous pour voir ou corriger ce qu’on garde sur toi, y compris la date à laquelle tu as donné ton consentement.</string>
     <string name="this_permanently_deletes_your_voice_clone_talk_time_and_account">Ça supprime définitivement ton clone vocal, ton temps de parole et ton compte. C’est irréversible. Un abonnement Google Play actif doit être annulé séparément dans le Play Store.</string>
     <string name="couldnt_delete_account">Impossible de supprimer le compte</string>

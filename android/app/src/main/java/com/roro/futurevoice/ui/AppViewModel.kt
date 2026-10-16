@@ -658,7 +658,6 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
                     name = com.roro.futurevoice.data.VoiceName.display(appContext,
                         PersonaStore.shared(appContext).load()?.displayName),
                     sample = sample,
-                    removeBackgroundNoise = false,
                 )
                 endStandIn()
                 com.roro.futurevoice.data.PhraseAudioStore.shared(appContext).registerOwnVoice(newId)
@@ -753,7 +752,6 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
             com.roro.futurevoice.net.VoiceCloneClient(auth).cloneVoice(
                 name = "Future Self",
                 sample = sample,
-                removeBackgroundNoise = false,
             )
         }
         result.onSuccess { newId ->

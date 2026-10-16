@@ -4,7 +4,7 @@ import com.roro.futurevoice.data.WordSplitter
 
 /**
  * ElevenLabs' character alignment (`with-timestamps`) → one timed window per
- * word of the line — port of iOS `ElevenLabsClient.wordTimings(from:…)`,
+ * word of the line — port of iOS `VoiceClient.wordTimings(from:…)`,
  * `groupedIntoWords` and `alignmentMatches`. These are the MEASURED onsets a
  * shadow take is graded against: the synthesizer reports where each
  * character of the audio it made actually falls.

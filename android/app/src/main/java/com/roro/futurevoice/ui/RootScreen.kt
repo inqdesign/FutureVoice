@@ -550,17 +550,15 @@ fun RootScreen() {
         )
     }
     // What's new in this release, once (iOS `offerWhatsNew`): a beat after
-    // the tabs are up, never over another sheet, ahead of the voice move,
-    // which waits for it to close.
+    // the tabs are up, never over another sheet.
     var showWhatsNew by remember { mutableStateOf(false) }
-    var showVoiceMove by remember { mutableStateOf(false) }
     LaunchedEffect(tabsArrived) {
         if (!tabsArrived) return@LaunchedEffect
         delay(1200)
         // The tab's guide counts as a sheet too: on iOS a second `.sheet`
         // over the page intro is dropped by SwiftUI, here both would stack.
         val anotherSheetUp = showAgeCheck || paywalled || welcomeMinutes != null || showIntroPreview ||
-            showVoiceMove || inCall || state.levelUp != null || referralJoin != null ||
+            inCall || state.levelUp != null || referralJoin != null ||
             com.roro.futurevoice.data.AppUpdateService.pending.value != null ||
             com.roro.futurevoice.data.PageIntroStore.showing.value
         if (!showWhatsNew && !anotherSheetUp && WhatsNew.isDue(context, state.setupComplete)) showWhatsNew = true
@@ -581,31 +579,6 @@ fun RootScreen() {
             onDismiss = { whatsNewGoals = false },
             // The Talk row re-reads its chips on a store revision.
             onSaved = { StoreEvents.bump() },
-        )
-    }
-    // The ElevenLabs → Cartesia voice move (iOS `offerVoiceMove`): a beat
-    // after the app is up, never over the welcome or What's new (offered
-    // again when that card closes), once a day until moved.
-    LaunchedEffect(state.voiceId, state.signedIn, showWhatsNew, guideUp) {
-        if (showWhatsNew || guideUp) return@LaunchedEffect
-        delay(2500)
-        if (welcomeMinutes == null && !showWhatsNew &&
-            !com.roro.futurevoice.data.PageIntroStore.showing.value &&
-            VoiceMove.isDue(context, state.voiceId, state.signedIn, state.voiceIsStandIn)) showVoiceMove = true
-    }
-    if (showVoiceMove) {
-        VoiceMoveSheet(
-            targetLanguage = state.targetLanguage,
-            currentAccentId = state.voiceAccentId,
-            onRebuilt = { app.adoptRemixedVoice(it, "") },
-            onAccentApplied = app::adoptRemixedVoice,
-            currentVoiceId = { app.state.value.voiceId },
-            onMoved = app::adoptMovedVoice,
-            // The recording screen on its own, over the sheet (iOS
-            // `fromSettings`); the sheet then finishes the move.
-            nativeLanguage = state.nativeLanguage,
-            onVoiceRecorded = app::adoptRecordedVoice,
-            onDismiss = { showVoiceMove = false },
         )
     }
     // The voice queued at signup (the month's voices were spent) was just
@@ -1490,7 +1463,7 @@ fun RootScreen() {
             // A tab's first-visit guide never rises over a sheet the root owns.
             guideBlocked = paywalled || showIntroPreview || state.levelUp != null ||
                 referralJoin != null || welcomeMinutes != null || updatePending != null || showAgeCheck ||
-                showWhatsNew || showVoiceMove,
+                showWhatsNew,
         )
             },
           )
@@ -1673,7 +1646,7 @@ internal fun HomeScreen(
 
     // The call's first word, on disk before the tap. Synthesizing the
     // openers here costs one round trip per NEW line, once, and takes the
-    // gateway's own ElevenLabs round trip out of the front of every call
+    // gateway's own synthesis round trip out of the front of every call
     // (iOS `26a246c`). A line already cached costs nothing.
     LaunchedEffect(state.voiceId, state.targetLanguage, tab) {
         if (tab != HomeTab.TALK) return@LaunchedEffect

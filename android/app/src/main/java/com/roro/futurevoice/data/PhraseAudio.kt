@@ -1,7 +1,7 @@
 package com.roro.futurevoice.data
 
 import android.content.Context
-import com.roro.futurevoice.net.ElevenLabsClient
+import com.roro.futurevoice.net.VoiceClient
 
 /**
  * Say a line in a voice, paying for it at most once — the one door every
@@ -9,14 +9,13 @@ import com.roro.futurevoice.net.ElevenLabsClient
  * library rows, scene lines).
  *
  * The cache ([PhraseAudioStore]) is asked first; only genuinely new text
- * reaches ElevenLabs, and what comes back is kept. A surface that calls the
+ * reaches the synthesizer, and what comes back is kept. A surface that calls the
  * client directly re-bills the learner for audio they already own.
  */
 suspend fun cachedSynthesis(
     context: Context,
     voiceId: String,
     text: String,
-    modelId: String = ElevenLabsClient.CONVERSATION_MODEL_ID,
     purpose: String? = null,
     sceneKey: String? = null,
     idempotencyKey: String? = null,
@@ -29,8 +28,8 @@ suspend fun cachedSynthesis(
     DebugBilling.consume402()?.let { throw it }
     val store = PhraseAudioStore.shared(context)
     store.data(text, voiceId, allowLineage)?.let { return it }
-    val audio = ElevenLabsClient(AuthRepository()).synthesize(
-        voiceId = voiceId, text = text, modelId = modelId,
+    val audio = VoiceClient(AuthRepository()).synthesize(
+        voiceId = voiceId, text = text,
         idempotencyKey = idempotencyKey, purpose = purpose, sceneKey = sceneKey)
     store.save(audio, text, voiceId)
     return audio

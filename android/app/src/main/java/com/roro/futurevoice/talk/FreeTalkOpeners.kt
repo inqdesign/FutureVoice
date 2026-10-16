@@ -106,15 +106,11 @@ class FreeTalkOpeners(private val context: Context) {
         // `needsBake`, 2026-09-25).
         if (store.data(line, voiceId) != null && !needsBake(line, voiceId)) return true
         val audio = try {
-            // A line of several sentences is made sentence by sentence so it
-            // breathes like the answers after it (see `PacedSpeech`). Billed
-            // as "opener", not "turn" (iOS 2026-10-02): priced the same, but
-            // a warm-up filed as "turn" read in the ledger as a call's reply.
-            PacedSpeech.synthesizeWav(
-                voiceId = voiceId, text = line,
-                modelId = com.roro.futurevoice.net.ElevenLabsClient.CONVERSATION_MODEL_ID,
-                purpose = "opener",
-            ) ?: com.roro.futurevoice.net.ElevenLabsClient(com.roro.futurevoice.data.AuthRepository())
+            // Whole: a Cartesia line already pauses between its sentences.
+            // Billed as "opener", not "turn" (iOS 2026-10-02): priced the
+            // same, but a warm-up filed as "turn" read in the ledger as a
+            // call's reply.
+            com.roro.futurevoice.net.VoiceClient(com.roro.futurevoice.data.AuthRepository())
                 .synthesize(voiceId = voiceId, text = line, purpose = "opener")
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
@@ -132,7 +128,7 @@ class FreeTalkOpeners(private val context: Context) {
     private fun needsBake(line: String, voiceId: String): Boolean {
         // A Cartesia voice's openers made before 2026-10-13 were split
         // sentence by sentence (`PacedSpeech`): re-made whole, once.
-        if (com.roro.futurevoice.ui.VoiceMove.isCartesia(voiceId) && !bakePrefs.getBoolean(CARTESIA_WHOLE_KEY, false)) {
+        if (com.roro.futurevoice.net.VoiceClient.isCartesiaVoice(voiceId) && !bakePrefs.getBoolean(CARTESIA_WHOLE_KEY, false)) {
             bakePrefs.edit().putBoolean(CARTESIA_WHOLE_KEY, true).remove(BAKED_LINES_KEY).apply()
             return true
         }

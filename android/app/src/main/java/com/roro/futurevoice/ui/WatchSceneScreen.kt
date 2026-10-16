@@ -66,7 +66,7 @@ import com.roro.futurevoice.data.ScenarioStore
 import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.net.CurriculumClient
 import com.roro.futurevoice.net.EdgeError
-import com.roro.futurevoice.net.ElevenLabsClient
+import com.roro.futurevoice.net.VoiceClient
 import com.roro.futurevoice.talk.DialogueEngineTurn
 import com.roro.futurevoice.talk.DrillCard
 import com.roro.futurevoice.talk.Scenario
@@ -215,16 +215,13 @@ fun WatchSceneScreen(
 
     /** Everything needed to synthesize one line, read before any concurrency
      *  so a prefetch can't race the list growing under a streamed scene. */
-    data class SpeechRequest(val text: String, val voiceId: String,
-                             val previousText: String?, val nextText: String?)
+    data class SpeechRequest(val text: String, val voiceId: String)
 
     fun speechRequest(index: Int): SpeechRequest {
         val turn = turns[index]
         return SpeechRequest(
             text = turn.text,
             voiceId = if (turn.speaker == "user") voiceId else castVoiceId(),
-            previousText = if (index > 0) turns[index - 1].text else null,
-            nextText = if (index + 1 < turns.size) turns[index + 1].text else null,
         )
     }
 
@@ -233,11 +230,9 @@ fun WatchSceneScreen(
         com.roro.futurevoice.data.DebugBilling.consume402()?.let { throw it }
         val store = PhraseAudioStore.shared(context)
         store.data(request.text, request.voiceId)?.let { return it }
-        val audio = ElevenLabsClient(AuthRepository()).synthesize(
+        val audio = VoiceClient(AuthRepository()).synthesize(
             voiceId = request.voiceId, text = request.text,
-            modelId = ElevenLabsClient.CLONE_MODEL_ID,
-            purpose = "scene", sceneKey = sceneRunKey,
-            previousText = request.previousText, nextText = request.nextText)
+            purpose = "scene", sceneKey = sceneRunKey)
         store.save(audio, request.text, request.voiceId)
         return audio
     }
@@ -264,9 +259,8 @@ fun WatchSceneScreen(
         var feeding = true
         var started = false
         val result = SceneAudioScope.async {
-            val r = ElevenLabsClient(AuthRepository()).synthesizeStreaming(
+            val r = VoiceClient(AuthRepository()).synthesizeStreaming(
                 voiceId = request.voiceId, text = request.text,
-                modelId = ElevenLabsClient.CLONE_MODEL_ID,
                 purpose = "scene", sceneKey = sceneRunKey,
             ) { chunk ->
                 if (!feeding) return@synthesizeStreaming
@@ -275,11 +269,11 @@ fun WatchSceneScreen(
             }
             val store = PhraseAudioStore.shared(context)
             when (r) {
-                is ElevenLabsClient.StreamedAudio.Mp3 -> store.save(r.data, request.text, request.voiceId)
-                is ElevenLabsClient.StreamedAudio.Pcm22050 -> {
+                is VoiceClient.StreamedAudio.Mp3 -> store.save(r.data, request.text, request.voiceId)
+                is VoiceClient.StreamedAudio.Pcm22050 -> {
                     val shorts = ShortArray(r.data.size / 2)
                     ByteBuffer.wrap(r.data).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(shorts)
-                    store.save(WavPcm.wav(shorts, ElevenLabsClient.STREAM_SAMPLE_RATE),
+                    store.save(WavPcm.wav(shorts, VoiceClient.STREAM_SAMPLE_RATE),
                         request.text, request.voiceId)
                 }
             }
@@ -287,8 +281,8 @@ fun WatchSceneScreen(
         }
         try {
             return when (val r = result.await()) {
-                is ElevenLabsClient.StreamedAudio.Mp3 -> false
-                is ElevenLabsClient.StreamedAudio.Pcm22050 -> {
+                is VoiceClient.StreamedAudio.Mp3 -> false
+                is VoiceClient.StreamedAudio.Pcm22050 -> {
                     if (!started) false else { pcm.drain(); pcm.stop(); true }
                 }
             }

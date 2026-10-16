@@ -148,7 +148,6 @@ internal fun VoiceRevivalScreen(
                 com.roro.futurevoice.net.VoiceCloneClient(AuthRepository()).cloneVoice(
                     name = "Future Self",
                     sample = VoiceComparison.sampleFile(context.filesDir),
-                    removeBackgroundNoise = false,
                 )
             }.onSuccess { app.adoptRemixedVoice(it, "") }
             removingAccent = false

@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
  *   every cache lookup ([PhraseAudioStore], the voicemail, a scene line) is
  *   keyed by it, and null would hide audio on disk and walk the learner into
  *   onboarding.
- * - **Nothing new is synthesized.** [com.roro.futurevoice.net.ElevenLabsClient]
+ * - **Nothing new is synthesized.** [com.roro.futurevoice.net.VoiceClient]
  *   refuses a parked id before the network with
  *   [com.roro.futurevoice.net.EdgeError.InsufficientCredits], the error every
  *   surface already answers with its paywall.

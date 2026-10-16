@@ -95,8 +95,6 @@
     <string name="your_voice_model_is_built_by_the_most_trusted_service">Dein Stimmmodell erstellt der vertrauenswürdigste Dienst, den es gibt, und es wird nur für dein Sprachtraining verwendet.</string>
     <string name="given_lld">Erteilt am %1$s</string>
     <string name="your_voice_model_is_biometric_data">Dein Stimmmodell sind biometrische Daten. Es wird nur verwendet, um deine Übungssätze mit deiner eigenen Stimme zu sprechen – nie verkauft, nie weitergegeben, nie zum Trainieren fremder Modelle genutzt.</string>
-    <string name="your_voice_model_is_deleted_here_and_at_elevenlabs">Dein Stimmmodell wird hier und bei ElevenLabs gelöscht, und das lässt sich nicht rückgängig machen. Vor deinem nächsten Anruf wirst du gebeten, ein neues aufzunehmen.</string>
-    <string name="this_deletes_your_voice_model_here_and_at_elevenlabs">Damit wird dein Stimmmodell hier und bei ElevenLabs gelöscht. Bereits erzeugtes Audio spielt weiter, bis du dein Konto löschst. Ohne Stimme kann die App keinen Anruf führen, deshalb bittet sie dich, eine neue aufzunehmen – oder du löschst dein Konto ganz.</string>
     <string name="write_to_us_to_see_or_correct_what_we_hold">Schreib uns, um einzusehen oder zu korrigieren, was wir über dich speichern – auch das Datum deiner Einwilligung.</string>
     <string name="this_permanently_deletes_your_voice_clone_talk_time_and_account">Damit werden dein Stimmklon, deine Sprechzeit und dein Konto endgültig gelöscht. Das lässt sich nicht rückgängig machen. Ein laufendes Google-Play-Abo musst du separat im Play Store kündigen.</string>
     <string name="couldnt_delete_account">Konto konnte nicht gelöscht werden</string>

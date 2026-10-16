@@ -10,7 +10,7 @@ import java.util.UUID
  * Android mirror of iOS `Secrets.swift`.
  *
  * Only Supabase values live here. Every provider call goes through an Edge
- * Function, so the app never holds a Google or ElevenLabs key — see
+ * Function, so the app never holds a provider key — see
  * `docs/contracts/edge-api.md`.
  */
 object Config {

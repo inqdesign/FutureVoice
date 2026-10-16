@@ -399,7 +399,6 @@ fun VoicePage(
                                 .cloneVoice(
                                     name = com.roro.futurevoice.data.VoiceName.display(context, personaName),
                                     sample = VoiceComparison.sampleFile(context.filesDir),
-                                    removeBackgroundNoise = false,
                                 )
                         }.onSuccess { onRebuilt(it); onApplyDefaultAccent() }
                             .onFailure {
