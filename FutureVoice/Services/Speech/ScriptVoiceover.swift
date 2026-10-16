@@ -7,53 +7,72 @@ import Supabase
 /// whole in the learner's own cloned voice, which they can then shadow from.
 /// There is deliberately NO native or preset voice option.
 ///
-/// PRICE — talk minutes, 3x the audio length, rounded UP to whole minutes:
-///     minutes = ceil(audioSeconds × 3 / 60)
-/// (60 s → 3 min, 40 s → 2 min, 80 s → 4 min, 41 s → 3 min). The button shows
-/// it BEFORE the tap, from the script's estimated length, and the learner is
-/// never charged more than that number: the final charge is
-///     min(minutes(actual audio), minutes shown)
-/// — the server enforces the same cap (`charge_script_voiceover`). Charged
-/// once per (account, script text, voice); every replay after is free, and
-/// a failed synthesis is never charged.
+/// PRICE — talk minutes, by the CHARACTERS the voice will say (2026-10-16,
+/// founder: "1분에 3분" was wrong). A talk minute carries ~300 characters
+/// of fluent-self speech (measured 2026-09-26: 145–159 credits a call
+/// minute), and a voiceover is sold at 3x that rate, so:
+///     minutes = ceil(characters / 100)
+/// (an English one-minute script, ~800 characters → 8 min; Korean ~430 → 5).
+/// It replaced 3x the AUDIO length, which charged a minute of script like
+/// about one talk minute's worth of voice: a call minute is mostly the
+/// learner talking and thinking, and the fluent self speaks ~20 s of it.
+/// The characters are known the moment the script is written, so the price
+/// on the button is the price charged — the server charges
+///     min(price(characters), minutes shown)
+/// (`charge_script_voiceover`), so a build that still quotes the old, lower
+/// number pays what it showed. Charged once per (account, script text,
+/// voice); every replay after is free, and a failed synthesis is never
+/// charged.
 ///
 /// Every place a price appears (the Script sheet's button, the composer's
 /// "also make it in my voice", the own-script editor's estimate) reads it
 /// from HERE, so two screens can never quote two numbers.
 enum ScriptVoiceover {
+    /// Characters of fluent-self speech one talk minute carries, and the
+    /// premium on it: 300 / 3 = one talk minute per 100 characters. Keep in
+    /// step with `script_voiceover_char_price` (server) and Android.
+    static let charactersPerTalkMinute = 300
     static let multiplier = 3
+    static let charactersPerMinute = charactersPerTalkMinute / multiplier
     /// The longest voiceover sold: the server meters at most an hour of talk
-    /// time per charge.
+    /// time per charge (6,000 characters).
     static let maxMinutes = 60
 
     // MARK: - Price
 
-    /// Talk minutes for `audioSeconds` of voiceover.
-    static func chargeMinutes(audioSeconds: Double) -> Int {
-        guard audioSeconds > 0 else { return 0 }
-        return Int((audioSeconds * Double(multiplier) / 60).rounded(.up))
+    /// The characters a script is charged for: its text as synthesized.
+    static func chargeableCharacters(_ body: String) -> Int {
+        body.trimmingCharacters(in: .whitespacesAndNewlines).count
     }
 
-    /// What is actually charged once the voiceover exists: the real price,
-    /// never more than what was shown, never less than a minute.
-    static func cappedChargeMinutes(actualAudioSeconds: Double, quotedMinutes: Int) -> Int {
-        max(1, min(chargeMinutes(audioSeconds: actualAudioSeconds), quotedMinutes))
+    /// Talk minutes for `characters` of voiceover, never less than one.
+    static func chargeMinutes(characters: Int) -> Int {
+        guard characters > 0 else { return 1 }
+        return (characters + charactersPerMinute - 1) / charactersPerMinute
     }
 
-    /// The audio a text is expected to come out as — the Speech tab's own
-    /// reading-length basis (`SpeechLibrary.estimatedSeconds`).
-    static func estimatedAudioSeconds(text: String, language: String) -> Int {
-        SpeechLibrary.estimatedSeconds(text, language: language)
-    }
-
-    /// The price shown for a text.
+    /// The price shown for a text — and charged.
     static func quoteMinutes(text: String, language: String) -> Int {
-        max(1, chargeMinutes(audioSeconds: Double(estimatedAudioSeconds(text: text, language: language))))
+        chargeMinutes(characters: chargeableCharacters(text))
     }
 
-    /// The price shown for a length not yet written (the composer).
-    static func quoteMinutes(targetSeconds: Int) -> Int {
-        max(1, chargeMinutes(audioSeconds: Double(targetSeconds)))
+    /// The price shown for a length not yet written (the composer): the
+    /// characters a script of that length is written to.
+    static func quoteMinutes(targetSeconds: Int, language: String) -> Int {
+        let units = SpeechLibrary.plannedUnits(seconds: targetSeconds, language: language)
+        return chargeMinutes(characters: Int((Double(units) * charactersPerUnit(language)).rounded()))
+    }
+
+    /// Characters per rate unit, spaces and punctuation included — measured
+    /// on the bundled scripts (en 5.6, ko 1.5, ja 1.1, de 6.0, es 5.5).
+    static func charactersPerUnit(_ language: String) -> Double {
+        switch LanguageCatalog.base(language) {
+        case "ko": return 1.5
+        case "ja", "zh": return 1.15
+        case "de": return 6.0
+        case "fr", "es", "it", "pt": return 5.5
+        default: return 5.6
+        }
     }
 
     /// "Hear it in my voice · 3 min"
@@ -283,7 +302,7 @@ final class ScriptVoiceoverCenter: ObservableObject {
         guard !lines.isEmpty else { throw VoiceoverError.failed }
         jobs[key] = .making(done: 0, total: lines.count)
         do {
-            try await reserve(key: key, minutes: quotedMinutes, chars: script.body.count)
+            try await reserve(key: key, minutes: quotedMinutes, chars: ScriptVoiceover.chargeableCharacters(script.body))
             let assembled = try await synthesize(lines: lines, voiceId: voiceId, key: key)
             let meta = ScriptVoiceoverStore.Meta(
                 scriptHash: hash, voiceId: voiceId, speedTag: SpeechSpeed.current.cacheTag,
@@ -297,8 +316,8 @@ final class ScriptVoiceoverCenter: ObservableObject {
             BillingGate.shared.invalidate()
             Analytics.capture("speech_voiceover_made", [
                 "seconds": Int(assembled.seconds), "quoted_min": quotedMinutes,
-                "charged_min": ScriptVoiceover.cappedChargeMinutes(actualAudioSeconds: assembled.seconds,
-                                                                   quotedMinutes: quotedMinutes),
+                "charged_min": min(ScriptVoiceover.quoteMinutes(text: script.body, language: script.language),
+                                   quotedMinutes),
             ])
             return paid
         } catch {

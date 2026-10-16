@@ -101,37 +101,39 @@ final class ScriptStudyVoiceoverTests: XCTestCase {
 
     // MARK: - Price
 
-    /// minutes = ceil(audioSeconds × 3 / 60)
+    /// minutes = ceil(characters / 100): 3x the ~300 characters a talk
+    /// minute carries.
     func testChargeRounding() {
-        XCTAssertEqual(ScriptVoiceover.chargeMinutes(audioSeconds: 40), 2)   // 120 s → exactly 2
-        XCTAssertEqual(ScriptVoiceover.chargeMinutes(audioSeconds: 41), 3)   // 123 s → 3
-        XCTAssertEqual(ScriptVoiceover.chargeMinutes(audioSeconds: 60), 3)
-        XCTAssertEqual(ScriptVoiceover.chargeMinutes(audioSeconds: 80), 4)   // ceil(240/60) = 4
-        XCTAssertEqual(ScriptVoiceover.chargeMinutes(audioSeconds: 80.5), 5)
-        XCTAssertEqual(ScriptVoiceover.chargeMinutes(audioSeconds: 0), 0)
+        XCTAssertEqual(ScriptVoiceover.chargeMinutes(characters: 1), 1)
+        XCTAssertEqual(ScriptVoiceover.chargeMinutes(characters: 100), 1)
+        XCTAssertEqual(ScriptVoiceover.chargeMinutes(characters: 101), 2)
+        XCTAssertEqual(ScriptVoiceover.chargeMinutes(characters: 850), 9)
+        XCTAssertEqual(ScriptVoiceover.chargeMinutes(characters: 6000), 60)
+        XCTAssertEqual(ScriptVoiceover.chargeMinutes(characters: 0), 1)
     }
 
-    func testComposerQuotesThreeTimesTheLength() {
-        XCTAssertEqual(ScriptVoiceover.quoteMinutes(targetSeconds: 60), 3)
-        XCTAssertEqual(ScriptVoiceover.quoteMinutes(targetSeconds: 180), 9)
-        XCTAssertEqual(ScriptVoiceover.quoteMinutes(targetSeconds: 300), 15)
-        XCTAssertEqual(ScriptVoiceover.quoteMinutes(targetSeconds: 30), 2)
+    /// A one-minute script is NOT three minutes: it is the characters.
+    func testOneMinuteScriptIsPricedByItsCharacters() {
+        for code in ["en", "ko", "ja", "de", "es"] {
+            let script = SpeechLibrary.builtIn(for: code)!
+            let chars = ScriptVoiceover.chargeableCharacters(script.body)
+            XCTAssertEqual(ScriptVoiceover.quoteMinutes(text: script.body, language: code),
+                           (chars + 99) / 100, code)
+        }
+        // The English sample (~800 characters) is 9 minutes, not 3.
+        XCTAssertGreaterThan(ScriptVoiceover.quoteMinutes(text: SpeechLibrary.builtIn(for: "en")!.body,
+                                                          language: "en"), 3)
     }
 
-    /// Never charged more than the number shown.
-    func testChargeIsCappedAtTheQuote() {
-        // A "1 min" script that came out 75 s: 4 min by the formula, 3 shown.
-        XCTAssertEqual(ScriptVoiceover.cappedChargeMinutes(actualAudioSeconds: 75, quotedMinutes: 3), 3)
-        // Shorter than estimated: the smaller real price.
-        XCTAssertEqual(ScriptVoiceover.cappedChargeMinutes(actualAudioSeconds: 30, quotedMinutes: 3), 2)
-        // Never zero.
-        XCTAssertEqual(ScriptVoiceover.cappedChargeMinutes(actualAudioSeconds: 0.1, quotedMinutes: 3), 1)
+    func testChargeableCharactersIgnoreOuterWhitespace() {
+        XCTAssertEqual(ScriptVoiceover.chargeableCharacters("  Hello.\n\n"), 6)
     }
 
-    func testScriptQuoteUsesTheReadingEstimate() {
-        let text = Array(repeating: "word", count: 140).joined(separator: " ")   // 1 min at 140 wpm
-        XCTAssertEqual(ScriptVoiceover.estimatedAudioSeconds(text: text, language: "en"), 60)
-        XCTAssertEqual(ScriptVoiceover.quoteMinutes(text: text, language: "en"), 3)
+    /// The composer quotes what a script of that length is written to hold.
+    func testComposerQuotesTheCharactersOfThatLength() {
+        XCTAssertEqual(ScriptVoiceover.quoteMinutes(targetSeconds: 60, language: "en"), 8)   // 140 × 5.6 = 784
+        XCTAssertEqual(ScriptVoiceover.quoteMinutes(targetSeconds: 60, language: "ko"), 5)   // 285 × 1.5 = 428
+        XCTAssertEqual(ScriptVoiceover.quoteMinutes(targetSeconds: 180, language: "en"), 24)
     }
 
     // MARK: - Assembly

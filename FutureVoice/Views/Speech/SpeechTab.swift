@@ -593,7 +593,9 @@ struct SpeechComposerSheet: View {
     @ObservedObject private var gate = BillingGate.shared
 
     private var genre: SpeechGenre { SpeechGenre(rawValue: genreRaw) ?? .explainer }
-    private var quote: Int { ScriptVoiceover.quoteMinutes(targetSeconds: seconds) }
+    private var quote: Int {
+        ScriptVoiceover.quoteMinutes(targetSeconds: seconds, language: appState.targetLanguage)
+    }
 
     var body: some View {
         NavigationStack {
@@ -713,8 +715,12 @@ struct SpeechComposerSheet: View {
                 if let voiceId {
                     // Made in the background; the Script sheet shows its
                     // progress, and a failure there is a button to try again.
+                    // The written script's own price, never more than the
+                    // estimate the toggle showed.
+                    let price = min(quoted, ScriptVoiceover.quoteMinutes(text: script.body,
+                                                                         language: script.language))
                     Task { try? await ScriptVoiceoverCenter.shared.make(script: script, voiceId: voiceId,
-                                                                         quotedMinutes: quoted) }
+                                                                         quotedMinutes: price) }
                 }
                 dismiss()
                 onWritten(script)
