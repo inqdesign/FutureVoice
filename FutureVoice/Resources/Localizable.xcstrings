@@ -998,6 +998,52 @@
         }
       }
     },
+    "After each thing your future self says, you see a way to answer. Sometimes it uses a word you're studying, and your most common mistake becomes the call's focus." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nach jedem Satz deines fließenden Ichs siehst du, wie du antworten kannst. Manchmal steckt ein Wort darin, das du gerade lernst, und dein häufigster Fehler wird zum Fokus des Anrufs."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Después de cada frase de tu yo fluido, ves una forma de responder. A veces usa una palabra que estás estudiando, y tu error más frecuente se vuelve el enfoque de la llamada."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Après chaque réplique de ton moi fluide, tu vois une façon de répondre. Parfois, elle utilise un mot que tu étudies, et ton erreur la plus fréquente devient l’objectif de l’appel."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流暢な自分が話すたびに、答え方の例が出ます。勉強中の単語が入ることもあり、いちばんよくするミスがこの通話のポイントになります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "유창해진 내가 말할 때마다 이렇게 답해 보라는 문장이 떠요. 공부 중인 단어가 들어가기도 하고, 가장 자주 하는 실수는 통화의 초점이 돼요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流利的自己每说一句，就会出现一个回答的例句。有时会用到你正在学的单词，你最常犯的错误也会成为这次通话的重点。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流利的自己每說一句，就會出現一個回答的例句。有時會用到你正在學的單字，你最常犯的錯誤也會成為這次通話的重點。"
+          }
+        }
+      }
+    },
     "All activity" : {
       "localizations" : {
         "de" : {
@@ -78736,52 +78782,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "未來的自己偶爾會問你能用正在學的單字回答的問題，你思考時會出現提示。"
-          }
-        }
-      }
-    },
-    "Now and then your future self asks something you can answer with a word you're studying, and the mistake you make most becomes the call's focus." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ab und zu stellt dir dein fließendes Ich eine Frage, die du mit einem Wort beantworten kannst, das du gerade lernst, und dein häufigster Fehler wird zum Fokus des Anrufs."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "De vez en cuando, tu yo fluido te pregunta algo que puedes responder con una palabra que estás estudiando, y el error que más cometes se vuelve el enfoque de la llamada."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "De temps en temps, ton moi fluide te pose une question à laquelle tu peux répondre avec un mot que tu étudies, et l’erreur que tu fais le plus devient l’objectif de l’appel."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "流暢な自分がときどき、勉強中の単語で答えられる質問をして、いちばんよくするミスをこの通話のポイントにします。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "유창해진 내가 가끔 공부 중인 단어로 답할 수 있는 질문을 하고, 가장 자주 하는 실수를 통화의 초점으로 잡아 줘요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "流利的自己偶尔会问你能用正在学的单词回答的问题，并把你最常犯的错误当作这次通话的重点。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "流利的自己偶爾會問你能用正在學的單字回答的問題，並把你最常犯的錯誤當作這次通話的重點。"
           }
         }
       }

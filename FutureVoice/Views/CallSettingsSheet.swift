@@ -90,14 +90,15 @@ struct CallSettingsSheet: View {
                     Text(explain("Applies from the next thing your future self says."))
                 }
 
-                // Off by default: it trades a little of the call's pace for
-                // being walked toward the words being studied (`CoachMode`).
+                // On by default for A1/A2 (`CoachMode.resolve`). What it is,
+                // first: a "try saying" under every line; the word hint and
+                // the grammar focus ride on top of it.
                 Section {
                     Toggle(isOn: coachMode) {
                         Label("Coach mode", systemImage: "lightbulb")
                     }
                 } footer: {
-                    Text(explain("Now and then your future self asks something you can answer with a word you're studying, and the mistake you make most becomes the call's focus."))
+                    Text(explain("After each thing your future self says, you see a way to answer. Sometimes it uses a word you're studying, and your most common mistake becomes the call's focus."))
                 }
 
                 // Who ends the learner's turn: a pause, or their own Send
