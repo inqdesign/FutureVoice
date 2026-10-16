@@ -506,6 +506,11 @@ internal fun PeopleSkyMap(
         val sx = remember { Animatable(0f) }
         val sy = remember { Animatable(0f) }
         var moved by remember { mutableStateOf(false) }
+        // Nobody is "in the middle" until the learner drags the map: opening
+        // the tab, the pool landing and growing the map, a lens change or
+        // "Back to me" all leave ME in focus, silent. Only a finger picks
+        // someone (a tap still picks through its own path).
+        var byHand by remember { mutableStateOf(false) }
         val scope = rememberCoroutineScope()
         val marginXPx = with(density) { marginX.dp.toPx() }
         val marginYPx = with(density) { marginY.dp.toPx() }
@@ -519,18 +524,28 @@ internal fun PeopleSkyMap(
             return Offset((px - viewW / 2).coerceIn(0f, maxX), (py - focusY).coerceIn(0f, maxY))
         }
 
-        // Starts on the centre (iOS `defaultScrollAnchor(.center)`); until
-        // the learner has moved it, a map that grows stays centred. The pool
-        // can land after a pick and grow the map: then it stays on them.
+        /** The scroll offset that puts ME on the focus line, so I am the one in the middle. */
+        fun meOffset(): Offset {
+            val c = side / 2
+            val px = with(density) { c.dp.toPx() } + marginXPx
+            val py = with(density) { (c + 8).dp.toPx() } + marginYPx
+            return Offset((px - viewW / 2).coerceIn(0f, maxX), (py - focusY).coerceIn(0f, maxY))
+        }
+
+        // Starts on ME at the focus line; until the learner has moved it, a
+        // map that grows stays on me. The pool can land after a pick and
+        // grow the map: then it stays on them.
         LaunchedEffect(maxX, maxY) {
             sx.updateBounds(0f, maxX); sy.updateBounds(0f, maxY)
             val held = scrollTarget?.let { offsetFor(it.id) }
             if (held != null) { sx.snapTo(held.x); sy.snapTo(held.y) }
-            else if (!moved) { sx.snapTo(maxX / 2); sy.snapTo(maxY / 2) }
+            else if (!moved) { val m = meOffset(); sx.snapTo(m.x); sy.snapTo(m.y) }
         }
         fun toCentre() {
-            scope.launch { sx.animateTo(maxX / 2, tween(500)) }
-            scope.launch { sy.animateTo(maxY / 2, tween(500)) }
+            byHand = false
+            val m = meOffset()
+            scope.launch { sx.animateTo(m.x, tween(500)) }
+            scope.launch { sy.animateTo(m.y, tween(500)) }
         }
         // A new lens brings the map back to the learner.
         var firstLens by remember { mutableStateOf(true) }
@@ -554,13 +569,15 @@ internal fun PeopleSkyMap(
             }.distinctUntilChanged().collect { awayChange(it) }
         }
 
-        // Who sits nearest the focus line as the map scrolls — and again when
-        // the PEOPLE change (the pool lands after the first layout), so the
-        // middle is found without a drag.
+        // Who sits nearest the focus line as the map scrolls — once the
+        // learner has dragged it. "Me" is a candidate too: when I am nearest,
+        // nobody else is in the middle.
         val candidates = remember(nodes, lens) { nodes.filter { it.shows(lens) }.map { it.id } }
-        LaunchedEffect(candidates, positions, viewW, viewH) {
+        LaunchedEffect(candidates, positions, viewW, viewH, side) {
             if (viewW <= 0f) return@LaunchedEffect
+            val me = Offset(side / 2, side / 2 + 8)
             snapshotFlow {
+                if (!byHand) return@snapshotFlow null
                 val fx = with(density) { (sx.value + viewW / 2 - marginXPx).toDp().value }
                 val fy = with(density) { (sy.value + focusY - marginYPx).toDp().value }
                 var best: String? = null
@@ -570,7 +587,7 @@ internal fun PeopleSkyMap(
                     val d = hypot(p.x - fx, p.y - fy)
                     if (d < 130f && d < bestD) { best = id; bestD = d }
                 }
-                best
+                if (best != null && hypot(me.x - fx, me.y - fy) < bestD) null else best
             }.distinctUntilChanged().collect { centerChange(it) }
         }
 
@@ -583,6 +600,7 @@ internal fun PeopleSkyMap(
                     detectDragGestures(
                         onDragStart = {
                             moved = true
+                            byHand = true
                             tracker.resetTracking()
                             scope.launch { sx.stop() }; scope.launch { sy.stop() }
                         },
