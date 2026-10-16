@@ -260,11 +260,6 @@ final class AppState: ObservableObject {
     /// reported by ConversationHome — RootTabView's free-talk proxy morphs
     /// from exactly this pose down into the call's mic pill.
     @Published var talkRingFrame: CGRect = .zero
-    /// The call screen's mic pill, GLOBAL, as the call measured it — where
-    /// the proxy docks. The hard-coded dock pose drifted off the real pill
-    /// (2026-10-16: 24 pt high on device), and two pills a hair apart read
-    /// as a glitch, so the measured frame wins whenever there is one.
-    @Published var callPillFrame: CGRect = .zero
     /// True while that proxy owns the surface (morphing or on call). The
     /// home ring hides itself then, so the surface never shows twice.
     @Published var talkRingProxyActive = false

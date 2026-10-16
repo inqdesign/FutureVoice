@@ -422,12 +422,9 @@ struct RootTabView: View {
         GeometryReader { geo in
             // The ring frame is GLOBAL; convert into this container.
             let container = geo.frame(in: .global)
-            let measured = appState.callPillFrame
-            let dock = measured == .zero
-                ? CGRect(x: geo.size.width / 2 - 78,
-                         y: geo.size.height - 46 - 64,
-                         width: 156, height: 64)
-                : measured.offsetBy(dx: -container.minX, dy: -container.minY)
+            let dock = CGRect(x: geo.size.width / 2 - 78,
+                              y: geo.size.height - 46 - 64,
+                              width: 156, height: 64)
             let ringGlobal = appState.talkRingFrame
             let start = ringGlobal == .zero
                 ? dock   // no measured ring (cold widget launch) — no fly-in
@@ -689,9 +686,8 @@ struct RootTabView: View {
             guard pillDocked, !freeTalkClosing else { return }   // closed mid-open
             RealtimeTalkClient.step("ui: call view mounting")
             withAnimation(.easeOut(duration: 0.2)) { freeTalkCallId = UUID() }
-            // Stage 3 — proxy hands off to the call's own identical mic pill
-            // (by now it has measured the pill and slid onto it).
-            try? await Task.sleep(nanoseconds: 300_000_000)
+            // Stage 3 — proxy hands off to the call's own identical mic pill.
+            try? await Task.sleep(nanoseconds: 250_000_000)
             guard freeTalkCallId != nil else { return }
             withAnimation(.easeOut(duration: 0.15)) { pillHidden = true }
         }
