@@ -35,8 +35,11 @@ import com.roro.futurevoice.ui.brand.IosPickerMenu
  *
  * - A NavigationLink ([MeRowKind.NAV]) keeps primary ink and gets the grey
  *   chevron — it opens a page.
- * - A Button ([MeRowKind.ACTION]) is tinted WHOLE: the title in the accent,
- *   the subtitle in the accent at secondary strength, no chevron — it acts.
+ * - A Button ([MeRowKind.ACTION]) acts, so it has no chevron, and only its
+ *   ICON carries the accent; title and subtitle stay in ordinary ink and grey.
+ *   (It used to be tinted whole, as a SwiftUI Button is, and a page of action
+ *   rows — the voice page — read as a wall of highlighted text; founder,
+ *   2026-10-16: never put plain text in the highlight colour.)
  * - A destructive Button ([MeRowKind.DESTRUCTIVE]) is the same in red —
  *   but its icon keeps the accent, because iOS's `row(…)` tints the glyph
  *   explicitly (Re-record voice, Withdraw consent).
@@ -67,14 +70,13 @@ fun MeRow(
     val secondary = MaterialTheme.colorScheme.onSurfaceVariant
     val ink = MaterialTheme.colorScheme.onSurface
     val tint: Color = when (kind) {
-        MeRowKind.ACTION -> accent
         MeRowKind.DESTRUCTIVE, MeRowKind.DESTRUCTIVE_LABEL -> MaterialTheme.colorScheme.error
         else -> ink
     }
     val label = kind == MeRowKind.DESTRUCTIVE_LABEL
     val alpha = if (enabled) 1f else 0.4f
     val subColor = when (kind) {
-        MeRowKind.ACTION, MeRowKind.DESTRUCTIVE, MeRowKind.DESTRUCTIVE_LABEL -> tint.copy(alpha = 0.6f)
+        MeRowKind.DESTRUCTIVE, MeRowKind.DESTRUCTIVE_LABEL -> tint.copy(alpha = 0.6f)
         else -> secondary
     }
     Row(
@@ -103,7 +105,7 @@ fun MeRow(
         value?.takeIf { it.isNotBlank() }?.let {
             Spacer(Modifier.width(8.dp))
             Text(it, style = MaterialTheme.typography.bodyLarge,
-                color = if (kind == MeRowKind.ACTION) accent.copy(alpha = 0.6f) else secondary)
+                color = secondary)
         }
         trailing?.let { Spacer(Modifier.width(8.dp)); it() }
         if (kind == MeRowKind.NAV && onClick != null) {
