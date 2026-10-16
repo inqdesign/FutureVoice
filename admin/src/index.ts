@@ -202,6 +202,30 @@ async function fetchData(env: Env) {
       if (u) { u.referredAt = r.at; u.referredBy = r.inviter; }
     }
   }
+  // Beta testers (2026-10-16): anyone handed a tester comp code — by the
+  // code's redemption, or by the email the code's note says it was sent to
+  // (a tester who hasn't typed the code yet is still a tester). The people
+  // tab groups them apart from real learners. Optional.
+  const testers = await testerRows(env).catch((e) => {
+    console.log(`testers: ${(e as Error).message}`);
+    return [] as Array<{ note: string; comp_redemptions: { user_id: string }[] }>;
+  });
+  {
+    const byId = new Map((data.users as { id: string }[]).map((u) => [u.id, u]));
+    const byEmail = new Map<string, any>();
+    for (const u of data.users as any[]) {
+      for (const e of [u.email, u.realEmail]) if (e) byEmail.set(String(e).toLowerCase(), u);
+    }
+    for (const t of testers) {
+      const kind = /^android/i.test(t.note) ? "android" : "ios";
+      const hits = new Set<any>();
+      for (const r of t.comp_redemptions || []) { const u = byId.get(r.user_id); if (u) hits.add(u); }
+      for (const m of t.note.match(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g) || []) {
+        const u = byEmail.get(m.toLowerCase()); if (u) hits.add(u);
+      }
+      for (const u of hits) u.tester = kind;
+    }
+  }
   // Say it again (다시 말하기, 2026-09-27): one row per FINISHED run
   // (`say_again_run`) and, from the build that added it, one per run
   // STARTED (`say_again_start`), so the funnel card can say how many got
@@ -227,6 +251,19 @@ async function referralRows(env: Env): Promise<Array<{ u: string; at: string; in
     },
   });
   if (!r.ok) throw new Error(`usage_ledger ${r.status}`);
+  return await r.json();
+}
+
+async function testerRows(env: Env): Promise<Array<{ note: string; comp_redemptions: { user_id: string }[] }>> {
+  const url = `${env.SUPABASE_URL}/rest/v1/comp_codes`
+    + `?select=note,comp_redemptions(user_id)&note=ilike.*tester*&limit=1000`;
+  const r = await fetch(url, {
+    headers: {
+      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+    },
+  });
+  if (!r.ok) throw new Error(`comp_codes ${r.status}`);
   return await r.json();
 }
 

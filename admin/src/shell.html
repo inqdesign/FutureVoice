@@ -314,6 +314,7 @@ td.num, th.num{text-align:right; font-variant-numeric:tabular-nums}
 .verchip{display:inline-block; font-size:10.5px; font-weight:500; color:var(--muted); margin-left:6px;
   font-variant-numeric:tabular-nums; white-space:nowrap}
 .verchip.old{color:var(--warn); font-weight:600}
+tr.grouphead td{background:var(--page); font-size:12.5px; padding:14px 10px 8px; border-top:2px solid var(--ring)}
 .devchip{font-size:10.5px; font-weight:600; color:var(--muted); border:1px solid var(--ring);
   border-radius:4px; padding:0 5px; margin-left:6px; vertical-align:1px}
 .ok{color:var(--good-text); font-weight:600}
@@ -2810,7 +2811,13 @@ const langsOf = idx => forUser(DATA.userLangs, idx).slice()
   .sort((a,b)=> b.secs-a.secs || String(a.lang).localeCompare(String(b.lang)));
 const langLabel = code => LANG_KO[code] || code;
 /** "영어 9분 · 한국어 2분" — the subtitle under a name. */
+  ['tester','베타 테스터', u=>!!u.tester],
 function langSummary(idx){
+/* Beta testers (index.ts testerRows): grouped apart in the people table so
+   they don't read as real learners. */
+const TESTER_KO = {android:'안드로이드 테스터', ios:'iOS 테스터'};
+const testerChip = u => u && u.tester
+  ? `<span class="devchip" title="${TESTER_KO[u.tester]||'테스터'}">베타</span>` : '';
   const rows = langsOf(idx);
   if(!rows.length) return '';
   return rows.map(r => `${langLabel(r.lang)}${r.secs?` ${fmtMin(r.secs)}`:''}`).join(' · ');
@@ -3149,7 +3156,13 @@ function renderPeople(users){
       + `</td></tr></tbody>`; return; }
   let html = `<thead><tr><th>유저</th><th>가입</th><th>클론</th><th class="num">통화</th>`
     + `<th class="num">시간</th><th class="num">장면</th><th>구독</th><th>마지막</th><th>신호</th></tr></thead><tbody>`;
-  for(const u of rows){
+  // Testers go last, under their own heading, whatever the filter.
+  const regular = rows.filter(u=>!u.tester), testers = rows.filter(u=>u.tester);
+  const ordered = peopleFilter==='tester' ? rows : [...regular, ...testers];
+  for(const u of ordered){
+    if(peopleFilter!=='tester' && testers.length && u===testers[0])
+      html += `<tr class="grouphead"><td colspan="9">베타 테스터 <b>${testers.length}</b>명`
+        + ` <span class="muted">· 테스터 코드를 받은 사람</span></td></tr>`;
     const errs = failuresOf(u.idx);
     const dropped = forUser(DATA.rtSessions, u.idx).filter(isDroppedCall).length;
     const sig = [];
@@ -3160,7 +3173,7 @@ function renderPeople(users){
     const last = u.lastTalkAt ? `통화 ${ago(u.lastTalkAt)}`
       : u.lastSignIn ? `<span class="muted">로그인 ${ago(u.lastSignIn)}</span>` : '—';
     html += `<tr class="xrow" data-u="${u.idx}" aria-expanded="false" title="${esc(u.realEmail||u.email||'')}">
-      <td>${prospectFor(u) ? prospectStar(prospectFor(u), 'margin-right:4px') : ''}<span class="uname"${whoAttr(u)}>${esc(nameOf(u))}</span>${badge(u)}${langPair(u.idx)}
+      <td>${prospectFor(u) ? prospectStar(prospectFor(u), 'margin-right:4px') : ''}<span class="uname"${whoAttr(u)}>${esc(nameOf(u))}</span>${badge(u)}${testerChip(u)}${langPair(u.idx)}
         <div class="usub">${(()=>{ const c=chosenLang(u.idx), used=langSummary(u.idx);
           if(c && used) return `${langLabel(c)} 선택 · ${used}`;
           if(c) return `${langLabel(c)} 선택 <span class="muted">(아직 안 씀)</span>`;
