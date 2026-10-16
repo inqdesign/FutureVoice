@@ -99,7 +99,12 @@ Deno.serve(async (req) => {
       user_id: user.id, event: "paywall_owner_ping", properties: props,
     })
 
-    if ((count ?? 0) < MAX_PINGS_PER_DAY) {
+    // The owner's own admin accounts tap through the paywall to test it.
+    const { data: credits } = await svc
+      .from("user_credits").select("unlimited").eq("user_id", user.id).maybeSingle()
+    const isAdmin = credits?.unlimited === true
+
+    if (!isAdmin && (count ?? 0) < MAX_PINGS_PER_DAY) {
       await notifyOwner(compose({ ...props, email: user.email, userId: user.id }))
     }
   } catch (e) {
