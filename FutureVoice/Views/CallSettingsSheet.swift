@@ -112,13 +112,16 @@ struct CallSettingsSheet: View {
                 }
 
                 // Part of the conversation prompt; a flip mid-call sends the
-                // gateway the new prompt (`TutorMode`).
-                Section {
-                    Toggle(isOn: $tutorMode) {
-                        Label("Tutor mode", systemImage: "graduationcap")
+                // gateway the new prompt (`TutorMode`). Hidden while
+                // `TutorMode.isAvailable` is off.
+                if TutorMode.isAvailable {
+                    Section {
+                        Toggle(isOn: $tutorMode) {
+                            Label("Tutor mode", systemImage: "graduationcap")
+                        }
+                    } footer: {
+                        Text(explain("When you make a mistake, your future self says it the right way out loud, then carries on."))
                     }
-                } footer: {
-                    Text(explain("When you make a mistake, your future self says it the right way out loud, then carries on."))
                 }
 
                 Section {

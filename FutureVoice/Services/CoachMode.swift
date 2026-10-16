@@ -76,7 +76,12 @@ enum CoachMode {
 enum TutorMode {
     static let key = "futurevoice.call.tutorMode"
 
-    static var isOn: Bool { UserDefaults.standard.bool(forKey: key) }
+    /// Hidden for now (2026-10-16, founder): no toggle in Call settings, and
+    /// a learner who had it on gets ordinary calls. Their choice stays on
+    /// disk, so flipping this back restores it.
+    static let isAvailable = false
+
+    static var isOn: Bool { isAvailable && UserDefaults.standard.bool(forKey: key) }
 }
 
 /// Send-to-answer turns (2026-10-15, founder: "for beginners — the question
