@@ -513,8 +513,12 @@
     <!-- "Distinct graded words you've used, accumulating from the day each was first said." -->
     <string name="distinct_graded_words_you_ve_used_accumulating_from_the_day_188d71">"Les mots distincts que tu as employés, comptés par niveau, cumulés depuis le jour où tu as dit chacun pour la première fois."</string>
     <string name="distinct_words_from_your_talks_in_the_last_lld_days">"Mots distincts employés dans tes appels des %d derniers jours."</string>
+    <!-- "Do this scene again from the start, and say every line out loud, yours and the other side's." -->
+    <string name="do_this_scene_again_from_the_start_and_say_every_line_out_lo_9794c6">"Refais cette scène depuis le début et dis toutes les répliques à voix haute, les tiennes comme celles de l’autre."</string>
     <!-- 'Do this scene again from the start, and say your part out loud. The other side plays just as it did.' -->
     <string name="do_this_scene_again_from_the_start_and_say_your_part_out_lou_3f2c37">"Refais cette scène depuis le début, en disant ta part à voix haute. L’autre personne est jouée comme la première fois."</string>
+    <!-- "Do this talk again from the start, and say every line out loud: yours the corrected way, and your fluent self's too." -->
+    <string name="do_this_talk_again_from_the_start_and_say_every_line_out_lou_0cfb37">"Refais cette conversation depuis le début et dis toutes les répliques à voix haute : les tiennes, corrigées, et aussi celles de ton moi fluide."</string>
     <!-- 'Do this talk again from the start, and say your part the corrected way. The answers play just as they did.' -->
     <string name="do_this_talk_again_from_the_start_and_say_your_part_the_corr_5ece3b">"Refais cette conversation depuis le début, en disant ta part comme elle a été corrigée. Les réponses sont jouées comme la première fois."</string>
     <string name="doctor_clinic">"Médecin / clinique"</string>
@@ -1675,6 +1679,7 @@
     <string name="re_synthesize_every_line_learning_data_untouched">"On refait toutes les phrases. Ton historique d’apprentissage reste intact"</string>
     <string name="read">"Lu le %s"</string>
     <string name="read_again">"Relire"</string>
+    <string name="read_both_sides">"Lire les deux rôles"</string>
     <!-- 'Read from the structures you actually build and from verified grammar slips per 100 spoken words — the lower of the two.' -->
     <string name="read_from_the_structures_you_actually_build_and_from_verifie_7599b1">"Calculé sur les structures que tu construis vraiment et sur les fautes de grammaire confirmées pour 100 mots parlés : le plus bas des deux."</string>
     <!-- 'Read from your real talks — vocabulary, grammar, fluency and expression together.' -->
@@ -1883,6 +1888,7 @@
     <string name="say_it_the_fixed_way">"Dis-le avec la correction"</string>
     <string name="say_it_then_check">"Dis-le, puis vérifie"</string>
     <string name="say_it_yourself">"Dis-le toi-même"</string>
+    <string name="say_s_line">"Dis la réplique de %s"</string>
     <string name="say_the_word_out_loud">"Dis le mot à voix haute"</string>
     <!-- 'Say the word out loud first. Then tap the card to see its meaning and an example.' -->
     <string name="say_the_word_out_loud_first_then_tap_the_card_to_see_its_mea_72e3b6">"Dis d’abord le mot à voix haute. Puis touche la carte pour voir son sens et un exemple."</string>

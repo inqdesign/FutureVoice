@@ -517,8 +517,12 @@
     <!-- "Distinct graded words you've used, accumulating from the day each was first said." -->
     <string name="distinct_graded_words_you_ve_used_accumulating_from_the_day_188d71">"내가 실제로 쓴 단어를 등급별로 센 거예요. 각 단어를 처음 말한 날부터 쌓여요."</string>
     <string name="distinct_words_from_your_talks_in_the_last_lld_days">"최근 %d일간의 대화에서 쓴 서로 다른 단어 수예요."</string>
+    <!-- "Do this scene again from the start, and say every line out loud, yours and the other side's." -->
+    <string name="do_this_scene_again_from_the_start_and_say_every_line_out_lo_9794c6">"이 장면을 처음부터 다시 해요. 내 대사도 상대 대사도 전부 소리 내어 말해요."</string>
     <!-- 'Do this scene again from the start, and say your part out loud. The other side plays just as it did.' -->
     <string name="do_this_scene_again_from_the_start_and_say_your_part_out_lou_3f2c37">"이 장면을 처음부터 다시 해요. 내 차례엔 내 줄을 소리 내어 말해 보세요. 상대의 말은 그때 그대로 나와요."</string>
+    <!-- "Do this talk again from the start, and say every line out loud: yours the corrected way, and your fluent self's too." -->
+    <string name="do_this_talk_again_from_the_start_and_say_every_line_out_lou_0cfb37">"이 대화를 처음부터 다시 해요. 내 말은 고친 대로, 미래의 내 말까지 전부 소리 내어 말해요."</string>
     <!-- 'Do this talk again from the start, and say your part the corrected way. The answers play just as they did.' -->
     <string name="do_this_talk_again_from_the_start_and_say_your_part_the_corr_5ece3b">"이 대화를 처음부터 다시 해요. 내 차례엔 교정된 말로 말해 보세요. 대답은 그때 그대로 나와요."</string>
     <string name="doctor_clinic">"병원"</string>
@@ -1679,6 +1683,7 @@
     <string name="re_synthesize_every_line_learning_data_untouched">"모든 문장을 다시 만들어요. 학습 기록은 그대로예요"</string>
     <string name="read">"%s에 읽음"</string>
     <string name="read_again">"다시 읽기"</string>
+    <string name="read_both_sides">"양쪽 대사 모두 읽기"</string>
     <!-- 'Read from the structures you actually build and from verified grammar slips per 100 spoken words — the lower of the two.' -->
     <string name="read_from_the_structures_you_actually_build_and_from_verifie_7599b1">"실제로 만드는 문장 구조와 말한 100단어당 확인된 문법 실수로 읽어요 — 둘 중 낮은 쪽이에요."</string>
     <!-- 'Read from your real talks — vocabulary, grammar, fluency and expression together.' -->
@@ -1887,6 +1892,7 @@
     <string name="say_it_the_fixed_way">"고친 대로 말해 보세요"</string>
     <string name="say_it_then_check">"먼저 말해 보고 확인하기"</string>
     <string name="say_it_yourself">"직접 말해 보기"</string>
+    <string name="say_s_line">"%s 대사예요"</string>
     <string name="say_the_word_out_loud">"단어를 소리 내어 말하기"</string>
     <!-- 'Say the word out loud first. Then tap the card to see its meaning and an example.' -->
     <string name="say_the_word_out_loud_first_then_tap_the_card_to_see_its_mea_72e3b6">"단어를 먼저 소리 내어 말해 봐요. 그다음 카드를 누르면 뜻과 예문이 나와요."</string>

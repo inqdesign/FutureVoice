@@ -513,8 +513,12 @@
     <!-- "Distinct graded words you've used, accumulating from the day each was first said." -->
     <string name="distinct_graded_words_you_ve_used_accumulating_from_the_day_188d71">"Palabras distintas con nivel que ya has usado, acumuladas desde el día en que dijiste cada una por primera vez."</string>
     <string name="distinct_words_from_your_talks_in_the_last_lld_days">"Palabras distintas de tus llamadas de los últimos %d días."</string>
+    <!-- "Do this scene again from the start, and say every line out loud, yours and the other side's." -->
+    <string name="do_this_scene_again_from_the_start_and_say_every_line_out_lo_9794c6">"Repite esta escena desde el principio y di en voz alta todas las frases, las tuyas y las de la otra persona."</string>
     <!-- 'Do this scene again from the start, and say your part out loud. The other side plays just as it did.' -->
     <string name="do_this_scene_again_from_the_start_and_say_your_part_out_lou_3f2c37">"Vuelve a hacer esta escena desde el principio y di tu parte en voz alta. La otra persona suena igual que entonces."</string>
+    <!-- "Do this talk again from the start, and say every line out loud: yours the corrected way, and your fluent self's too." -->
+    <string name="do_this_talk_again_from_the_start_and_say_every_line_out_lou_0cfb37">"Repite esta conversación desde el principio y di en voz alta todas las frases: las tuyas, ya corregidas, y también las de tu yo fluido."</string>
     <!-- 'Do this talk again from the start, and say your part the corrected way. The answers play just as they did.' -->
     <string name="do_this_talk_again_from_the_start_and_say_your_part_the_corr_5ece3b">"Vuelve a hacer esta conversación desde el principio y di tu parte como quedó corregida. Las respuestas suenan igual que entonces."</string>
     <string name="doctor_clinic">"Médico / clínica"</string>
@@ -1675,6 +1679,7 @@
     <string name="re_synthesize_every_line_learning_data_untouched">"Vuelve a generar todas las frases — tu historial de aprendizaje queda igual"</string>
     <string name="read">"Leído el %s"</string>
     <string name="read_again">"Leer de nuevo"</string>
+    <string name="read_both_sides">"Leer las dos partes"</string>
     <!-- 'Read from the structures you actually build and from verified grammar slips per 100 spoken words — the lower of the two.' -->
     <string name="read_from_the_structures_you_actually_build_and_from_verifie_7599b1">"Se lee de las estructuras que construyes de verdad y de los fallos de gramática confirmados por cada 100 palabras: el menor de los dos."</string>
     <!-- 'Read from your real talks — vocabulary, grammar, fluency and expression together.' -->
@@ -1883,6 +1888,7 @@
     <string name="say_it_the_fixed_way">"Dilo con la corrección"</string>
     <string name="say_it_then_check">"Dilo y luego comprueba"</string>
     <string name="say_it_yourself">"Dilo tú"</string>
+    <string name="say_s_line">"Di la frase de %s"</string>
     <string name="say_the_word_out_loud">"Di la palabra en voz alta"</string>
     <!-- 'Say the word out loud first. Then tap the card to see its meaning and an example.' -->
     <string name="say_the_word_out_loud_first_then_tap_the_card_to_see_its_mea_72e3b6">"Primero di la palabra en voz alta. Luego toca la tarjeta para ver su significado y un ejemplo."</string>

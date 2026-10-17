@@ -516,8 +516,12 @@
     <!-- "Distinct graded words you've used, accumulating from the day each was first said." -->
     <string name="distinct_graded_words_you_ve_used_accumulating_from_the_day_188d71">"你实际用过的单词，依等级计算，从每个字第一次说出口那天开始累积。"</string>
     <string name="distinct_words_from_your_talks_in_the_last_lld_days">"最近%d天的通话里用过的不同单词数。"</string>
+    <!-- "Do this scene again from the start, and say every line out loud, yours and the other side's." -->
+    <string name="do_this_scene_again_from_the_start_and_say_every_line_out_lo_9794c6">"从头再演一次这个场景，自己的台词和对方的台词都大声说出来。"</string>
     <!-- 'Do this scene again from the start, and say your part out loud. The other side plays just as it did.' -->
     <string name="do_this_scene_again_from_the_start_and_say_your_part_out_lou_3f2c37">"从头再演一次这个场景。轮到你时，把你的台词说出来。对方的话会照当时播放。"</string>
+    <!-- "Do this talk again from the start, and say every line out loud: yours the corrected way, and your fluent self's too." -->
+    <string name="do_this_talk_again_from_the_start_and_say_every_line_out_lou_0cfb37">"从头再进行一次这段对话，自己的话照修改后的说，流利的自己的话也全部大声说出来。"</string>
     <!-- 'Do this talk again from the start, and say your part the corrected way. The answers play just as they did.' -->
     <string name="do_this_talk_again_from_the_start_and_say_your_part_the_corr_5ece3b">"从头再进行一次这场对话。轮到你时，用修正后的说法说出来。回答会照当时播放。"</string>
     <string name="doctor_clinic">"看医生"</string>
@@ -1678,6 +1682,7 @@
     <string name="re_synthesize_every_line_learning_data_untouched">"重新合成每一句，学习记录不受影响"</string>
     <string name="read">"%s 已读"</string>
     <string name="read_again">"重新读取"</string>
+    <string name="read_both_sides">"两边的台词都念"</string>
     <!-- 'Read from the structures you actually build and from verified grammar slips per 100 spoken words — the lower of the two.' -->
     <string name="read_from_the_structures_you_actually_build_and_from_verifie_7599b1">"以你实际组成的句子结构，和每说 100 个字中确认到的语法错误来读，取两者较低的一个。"</string>
     <!-- 'Read from your real talks — vocabulary, grammar, fluency and expression together.' -->
@@ -1886,6 +1891,7 @@
     <string name="say_it_the_fixed_way">"照修正后的说法念"</string>
     <string name="say_it_then_check">"先说，再看答案"</string>
     <string name="say_it_yourself">"自己说出来"</string>
+    <string name="say_s_line">"%s的台词"</string>
     <string name="say_the_word_out_loud">"大声念出单词"</string>
     <!-- 'Say the word out loud first. Then tap the card to see its meaning and an example.' -->
     <string name="say_the_word_out_loud_first_then_tap_the_card_to_see_its_mea_72e3b6">"先把单词大声说出来，再点一下卡片看释义和例句。"</string>

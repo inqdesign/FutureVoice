@@ -2288,6 +2288,98 @@
         }
       }
     },
+    "Do this scene again from the start, and say every line out loud, yours and the other side's." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spiel diese Szene noch einmal von vorn und sag jeden Satz laut, deine und die der anderen Seite."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repite esta escena desde el principio y di en voz alta todas las frases, las tuyas y las de la otra persona."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refais cette scène depuis le début et dis toutes les répliques à voix haute, les tiennes comme celles de l’autre."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このシーンを最初からもう一度。自分のセリフも相手のセリフも、全部声に出して言います。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 장면을 처음부터 다시 해요. 내 대사도 상대 대사도 전부 소리 내어 말해요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从头再演一次这个场景，自己的台词和对方的台词都大声说出来。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "從頭再演一次這個場景，自己的台詞和對方的台詞都大聲說出來。"
+          }
+        }
+      }
+    },
+    "Do this talk again from the start, and say every line out loud: yours the corrected way, and your fluent self's too." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Führ dieses Gespräch noch einmal von vorn und sag jeden Satz laut: deine in der korrigierten Form und auch die deines fließenden Ichs."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repite esta conversación desde el principio y di en voz alta todas las frases: las tuyas, ya corregidas, y también las de tu yo fluido."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refais cette conversation depuis le début et dis toutes les répliques à voix haute : les tiennes, corrigées, et aussi celles de ton moi fluide."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このトークを最初からもう一度。自分の言葉は直した形で、流暢な自分のセリフも全部声に出して言います。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 대화를 처음부터 다시 해요. 내 말은 고친 대로, 미래의 내 말까지 전부 소리 내어 말해요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从头再进行一次这段对话，自己的话照修改后的说，流利的自己的话也全部大声说出来。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "從頭再進行一次這段對話，自己的話照修正後的說，流利的自己的話也全部大聲說出來。"
+          }
+        }
+      }
+    },
     "Every word, expression and card you studied, shadow take, run and scene — one block each." : {
       "comment" : "iOS EffortDetailView / EffortHistory (ce099149) — not yet extracted into the iOS catalog, so English everywhere, as on iOS.",
       "extractionState" : "manual",
@@ -3180,6 +3272,98 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ 整理好"
+          }
+        }
+      }
+    },
+    "Read both sides" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beide Seiten lesen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leer las dos partes"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lire les deux rôles"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "両方のセリフを読む"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "양쪽 대사 모두 읽기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "两边的台词都念"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "兩邊的台詞都念"
+          }
+        }
+      }
+    },
+    "Say %@'s line" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sag den Satz von %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Di la frase de %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dis la réplique de %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@のセリフです"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 대사예요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@的台词"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@的台詞"
           }
         }
       }

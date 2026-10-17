@@ -516,8 +516,12 @@
     <!-- "Distinct graded words you've used, accumulating from the day each was first said." -->
     <string name="distinct_graded_words_you_ve_used_accumulating_from_the_day_188d71">"実際に使った単語をレベル別に数えたものです。それぞれ初めて言った日から積み上がります。"</string>
     <string name="distinct_words_from_your_talks_in_the_last_lld_days">"直近%d日間の通話で使った、異なる単語の数です。"</string>
+    <!-- "Do this scene again from the start, and say every line out loud, yours and the other side's." -->
+    <string name="do_this_scene_again_from_the_start_and_say_every_line_out_lo_9794c6">"このシーンを最初からもう一度。自分のセリフも相手のセリフも、全部声に出して言います。"</string>
     <!-- 'Do this scene again from the start, and say your part out loud. The other side plays just as it did.' -->
     <string name="do_this_scene_again_from_the_start_and_say_your_part_out_lou_3f2c37">"このシーンを最初からもう一度。自分の番では、自分のセリフを声に出して言ってみましょう。相手の言葉はあのときのまま流れます。"</string>
+    <!-- "Do this talk again from the start, and say every line out loud: yours the corrected way, and your fluent self's too." -->
+    <string name="do_this_talk_again_from_the_start_and_say_every_line_out_lou_0cfb37">"このトークを最初からもう一度。自分の言葉は直した形で、流暢な自分のセリフも全部声に出して言います。"</string>
     <!-- 'Do this talk again from the start, and say your part the corrected way. The answers play just as they did.' -->
     <string name="do_this_talk_again_from_the_start_and_say_your_part_the_corr_5ece3b">"このトークを最初からもう一度。自分の番では、直した言い方で話してみましょう。返事はあのときのまま流れます。"</string>
     <string name="doctor_clinic">"病院"</string>
@@ -1678,6 +1682,7 @@
     <string name="re_synthesize_every_line_learning_data_untouched">"すべての文を作り直します。学習記録はそのままです"</string>
     <string name="read">"%s に読了"</string>
     <string name="read_again">"もう一度読む"</string>
+    <string name="read_both_sides">"両方のセリフを読む"</string>
     <!-- 'Read from the structures you actually build and from verified grammar slips per 100 spoken words — the lower of the two.' -->
     <string name="read_from_the_structures_you_actually_build_and_from_verifie_7599b1">"実際に組み立てている文の構造と、話した100語あたりの確認済み文法ミスから読みます。低いほうを取ります。"</string>
     <!-- 'Read from your real talks — vocabulary, grammar, fluency and expression together.' -->
@@ -1886,6 +1891,7 @@
     <string name="say_it_the_fixed_way">"直したとおりに言ってみましょう"</string>
     <string name="say_it_then_check">"まず言ってから確認"</string>
     <string name="say_it_yourself">"自分で言ってみる"</string>
+    <string name="say_s_line">"%sのセリフです"</string>
     <string name="say_the_word_out_loud">"単語を声に出して言う"</string>
     <!-- 'Say the word out loud first. Then tap the card to see its meaning and an example.' -->
     <string name="say_the_word_out_loud_first_then_tap_the_card_to_see_its_mea_72e3b6">"まず単語を声に出して言ってみましょう。それからカードをタップすると、意味と例文が出ます。"</string>
