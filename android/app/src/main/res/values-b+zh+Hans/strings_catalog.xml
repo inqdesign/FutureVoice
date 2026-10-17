@@ -755,6 +755,7 @@
     <string name="from_now_on_your_fluent_self_speaks_in_your_own_voice">"从现在起，流利的自己会用你自己的声音说话。"</string>
     <string name="from_scenarios">"来自情境"</string>
     <string name="from_talks">"来自对话"</string>
+    <string name="from_the_situation">"由情境决定"</string>
     <string name="from_your_coach">"教练的话"</string>
     <string name="from_your_fluent_self">"流利的自己说过的话"</string>
     <string name="from_your_recent_conversations">"依最近%s次对话评出的等级"</string>
@@ -2716,6 +2717,7 @@
     <string name="who_you_live_with_optional">"同住的人（选填）"</string>
     <string name="who_you_re_talking_to">"对话对象"</string>
     <string name="whoever_qualified_first_takes_it">"先取得资格的人先坐。"</string>
+    <string name="whoever_the_situation_calls_for">"情境里会出现的人就是对方"</string>
     <string name="whole_script">"完整讲稿"</string>
     <string name="why">"原因"</string>
     <string name="why_are_you_learning">"为什么想学？"</string>

@@ -757,6 +757,7 @@
     <string name="from_now_on_your_fluent_self_speaks_in_your_own_voice">"From now on your fluent self speaks in your own voice."</string>
     <string name="from_scenarios">"From scenarios"</string>
     <string name="from_talks">"From talks"</string>
+    <string name="from_the_situation">"From the situation"</string>
     <string name="from_your_coach">"From your coach"</string>
     <string name="from_your_fluent_self">"From your fluent self"</string>
     <string name="from_your_recent_conversations">"From your recent %s conversations"</string>
@@ -2719,6 +2720,7 @@
     <string name="who_you_live_with_optional">"Who you live with (optional)"</string>
     <string name="who_you_re_talking_to">"Who you're talking to"</string>
     <string name="whoever_qualified_first_takes_it">"Whoever qualified first takes it."</string>
+    <string name="whoever_the_situation_calls_for">"Whoever the situation calls for"</string>
     <string name="whole_script">"Whole script"</string>
     <string name="why">"Why"</string>
     <string name="why_are_you_learning">"Why are you learning?"</string>

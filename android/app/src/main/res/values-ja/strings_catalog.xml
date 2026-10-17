@@ -755,6 +755,7 @@
     <string name="from_now_on_your_fluent_self_speaks_in_your_own_voice">"これからは流暢な自分が自分の声で話します。"</string>
     <string name="from_scenarios">"シチュエーションから"</string>
     <string name="from_talks">"通話から"</string>
+    <string name="from_the_situation">"状況に合う相手"</string>
     <string name="from_your_coach">"コーチからひと言"</string>
     <string name="from_your_fluent_self">"流暢な自分が使った言葉"</string>
     <string name="from_your_recent_conversations">"最近の%s回の通話をもとに判定したレベルです"</string>
@@ -2716,6 +2717,7 @@
     <string name="who_you_live_with_optional">"一緒に住んでいる人（任意）"</string>
     <string name="who_you_re_talking_to">"話し相手"</string>
     <string name="whoever_qualified_first_takes_it">"先に資格を得た人が先に座ります。"</string>
+    <string name="whoever_the_situation_calls_for">"状況に出てくる人が相手になります"</string>
     <string name="whole_script">"原稿全体"</string>
     <string name="why">"理由"</string>
     <string name="why_are_you_learning">"なぜ学んでいますか？"</string>

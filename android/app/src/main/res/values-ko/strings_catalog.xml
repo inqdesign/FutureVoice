@@ -756,6 +756,7 @@
     <string name="from_now_on_your_fluent_self_speaks_in_your_own_voice">"이제부터 유창해진 내가 내 목소리로 말해요."</string>
     <string name="from_scenarios">"상황에서"</string>
     <string name="from_talks">"대화에서"</string>
+    <string name="from_the_situation">"상황에 맞는 사람"</string>
     <string name="from_your_coach">"코치의 한마디"</string>
     <string name="from_your_fluent_self">"유창해진 내가 쓴 말"</string>
     <string name="from_your_recent_conversations">"최근 %s 대화를 보고 매긴 레벨이에요"</string>
@@ -2717,6 +2718,7 @@
     <string name="who_you_live_with_optional">"함께 사는 사람 (선택)"</string>
     <string name="who_you_re_talking_to">"대화 상대"</string>
     <string name="whoever_qualified_first_takes_it">"자격을 먼저 갖춘 사람이 먼저 앉아요."</string>
+    <string name="whoever_the_situation_calls_for">"상황에 나오는 사람이 상대가 돼요"</string>
     <string name="whole_script">"원고 전체"</string>
     <string name="why">"이유"</string>
     <string name="why_are_you_learning">"왜 배워요?"</string>

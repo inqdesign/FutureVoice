@@ -751,6 +751,7 @@
     <string name="from_now_on_your_fluent_self_speaks_in_your_own_voice">"Ab jetzt spricht dein fließendes Ich mit deiner eigenen Stimme."</string>
     <string name="from_scenarios">"Aus Situationen"</string>
     <string name="from_talks">"Aus Gesprächen"</string>
+    <string name="from_the_situation">"Passend zur Situation"</string>
     <string name="from_your_coach">"Von deinem Coach"</string>
     <string name="from_your_fluent_self">"Von deinem fließenden Ich"</string>
     <string name="from_your_recent_conversations">"Aus deinen letzten %s Gesprächen"</string>
@@ -2712,6 +2713,7 @@
     <string name="who_you_live_with_optional">"Mit wem du lebst (optional)"</string>
     <string name="who_you_re_talking_to">"Mit wem du sprichst"</string>
     <string name="whoever_qualified_first_takes_it">"Wer sich zuerst qualifiziert hat, rückt nach."</string>
+    <string name="whoever_the_situation_calls_for">"Wer in der Situation vorkommt, spricht mit dir"</string>
     <string name="whole_script">"Ganzes Skript"</string>
     <string name="why">"Warum"</string>
     <string name="why_are_you_learning">"Warum lernst du?"</string>
