@@ -18,8 +18,8 @@ import PhotosUI
 struct ScenarioComposerSheet: View {
     /// Which surface the CTA serves. Talk offers "Future self" (a call with
     /// no one attached is a call with your own fluent voice — the product's
-    /// core); Watch doesn't — a scene always needs an other person, so its
-    /// default partner is a character.
+    /// core); Watch offers "From the situation" — nobody picked, and the
+    /// scene casts the other side from what was written.
     enum Host { case talk, watch }
 
     /// Which door the sheet opens on. `.browse` is the Form with the
@@ -324,13 +324,16 @@ struct ScenarioComposerSheet: View {
                         // bubble): start on them, never on the default first —
                         // the map would fly to that one and back.
                         partner = held
-                    } else if host == .watch {
-                        // A scene needs an other person. Legacy scenarios keep
-                        // the character whose voice they already play in; new
-                        // ones open on the default character.
-                        partner = StockPerson.by(voiceId: editing?.voicePresetId)
-                            .asCounterpart(existing: appState.counterparts)
                     }
+                    // Watch + nobody picked stays nil: the situation decides
+                    // who the other side is (an empty `Scenario.role`, the
+                    // scene's preset voice). It used to open on the first
+                    // built-in character, which was harmless while the slot
+                    // picked a VOICE and wrong once a person came with it —
+                    // a job interview played by someone with their own job
+                    // and manner. A legacy scenario with no person keeps its
+                    // voice the same way (`commit()` carries voicePresetId).
+                    //
                     // Talk + no attached person stays "future self" (nil) even
                     // when a legacy voicePresetId exists: that field was only
                     // ever the WATCH voice, and mapping it to a partner here
@@ -723,7 +726,7 @@ struct ScenarioComposerSheet: View {
                 // down to 22 didn't shrink the circle, it just cropped the
                 // slot — so the disc drew straight through the pill's edge.
                 partnerAvatar(size: 28)
-                Text(partner?.name ?? chrome("Future self"))
+                Text(partner?.name ?? noPartnerName)
                     .font(.subheadline.weight(.medium))
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -1237,7 +1240,7 @@ struct ScenarioComposerSheet: View {
                 HStack(spacing: 12) {
                     partnerAvatar()
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(partner?.name ?? chrome("Future self"))
+                        Text(partner?.name ?? noPartnerName)
                             .font(.body.weight(.medium))
                             .foregroundStyle(.primary)
                         Text(partnerCaption)
@@ -1268,7 +1271,7 @@ struct ScenarioComposerSheet: View {
                     .font(.system(size: size * 0.34, weight: .semibold))
                     .foregroundStyle(.tint)
             } else {
-                Image(systemName: "waveform")
+                Image(systemName: host == .watch ? "person.fill.questionmark" : "waveform")
                     .font(.system(size: size * 0.4, weight: .semibold))
                     .foregroundStyle(.tint)
             }
@@ -1276,8 +1279,18 @@ struct ScenarioComposerSheet: View {
         .frame(width: size, height: size)
     }
 
+    /// Nobody picked: Talk's call is with the future self; a Watch scene is
+    /// with whoever the situation calls for.
+    private var noPartnerName: String {
+        host == .watch ? chrome("From the situation") : chrome("Future self")
+    }
+
     private var partnerCaption: String {
-        guard let p = partner else { return explain("Your own voice, already fluent") }
+        guard let p = partner else {
+            return host == .watch
+                ? explain("Whoever the situation calls for")
+                : explain("Your own voice, already fluent")
+        }
         return PartnerPickerSheet.caption(for: p)
     }
 
@@ -1516,7 +1529,7 @@ struct PartnerPickerSheet: View {
     var body: some View {
         NavigationStack {
             List {
-                if host == .talk { futureSelfSection }
+                noPartnerSection
                 peopleSection(Text("Your people"), mine, addPerson: true)
                 if !users.isEmpty || poolLoading {
                     peopleSection(Text("People"), users, loading: poolLoading && users.isEmpty)
@@ -1587,17 +1600,26 @@ struct PartnerPickerSheet: View {
 
     // MARK: Rows
 
-    private var futureSelfSection: some View {
+    /// The "nobody" row: Talk's future self, or Watch's "from the
+    /// situation" — the scene casts the other side itself, with no persona.
+    private var noPartnerSection: some View {
         Section {
             HStack(spacing: 12) {
                 ZStack {
                     Circle().fill(Color.accentColor.opacity(0.15)).frame(width: 36, height: 36)
-                    Image(systemName: "waveform").font(.subheadline.weight(.semibold)).foregroundStyle(.tint)
+                    Image(systemName: host == .watch ? "person.fill.questionmark" : "waveform")
+                        .font(.subheadline.weight(.semibold)).foregroundStyle(.tint)
                 }
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Future self").font(.body.weight(.medium))
-                    Text(explain("Your own voice, already fluent"))
-                        .font(.caption).foregroundStyle(.secondary)
+                    if host == .watch {
+                        Text("From the situation").font(.body.weight(.medium))
+                        Text(explain("Whoever the situation calls for"))
+                            .font(.caption).foregroundStyle(.secondary)
+                    } else {
+                        Text("Future self").font(.body.weight(.medium))
+                        Text(explain("Your own voice, already fluent"))
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                 }
                 Spacer()
                 if current == nil {
