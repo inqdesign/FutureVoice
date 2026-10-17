@@ -110,6 +110,88 @@ final class TurnFixTests: XCTestCase {
         }
     }
 
+    /// Reported 2026-10-17: was "Seit drei Jahre" was found inside "Seit drei
+    /// Jahren" — the learner had said it right — and the splice gave the
+    /// weekly test the answer "Seit drei Jahrenn".
+    func testAFixInsideALongerWordIsNotTheLearnersAndIsNeverSpliced() {
+        withActiveLanguage("de") {
+            let said = "Seit drei Jahren wohne ich hier in Deutschland und habe ich"
+            XCTAssertFalse(ConversationEngine.quotes("Seit drei Jahre", from: said))
+            XCTAssertTrue(ConversationEngine.quotes("Seit drei Jahren", from: said))
+            let fix = TurnFix(was: "drei Jahre", now: "drei Jahren", why: "Dativ")
+            let pair = DrillStore.cardPair(for: fix, in: said)
+            XCTAssertFalse(pair.target.contains("Jahrenn"))
+            XCTAssertEqual(pair.target, "drei Jahren")
+        }
+    }
+
+    /// Every other place a quoted span is put back into a line goes through
+    /// the same whole-word lookup.
+    func testEverySpliceSiteRespectsWordBoundariesOutsideKoreanAndJapanese() {
+        withActiveLanguage("de") {
+            let said = "Seit drei Jahren wohne ich hier in Deutschland"
+            XCTAssertNil(DrillStore.wholeWordRange(of: "drei Jahre", in: said))
+            XCTAssertNotNil(DrillStore.wholeWordRange(of: "drei Jahren", in: said))
+            // Say it again: a summary fix found only inside a word is left out.
+            let run = SayItAgainScript.applyPhraseFixes(
+                to: said, fixes: [PhraseFeedback(userSaid: "drei Jahre", fluentAlternative: "drei Jahren",
+                                                 reason: "")])
+            XCTAssertEqual(run.text, said)
+            XCTAssertFalse(run.changed)
+            // Weekly test gap: never blanks half a word.
+            XCTAssertNil(WeeklyTestEngine.blank("Jahre", in: said))
+            XCTAssertEqual(WeeklyTestEngine.blank("Jahren", in: said),
+                           "Seit drei ______ wohne ich hier in Deutschland")
+            // The live funnel's no-op path splices only whole words.
+            let p = payload(#"{"reply":"ok","suggestion":{"alternative":"Seit drei Jahren wohne ich hier in Deutschland","reason":"","fixes":[{"was":"drei Jahre","now":"drei Jahren","why":"Dativ"}]}}"#)
+            XCTAssertNil(p.turnSuggestion(for: said))
+        }
+        withActiveLanguage("ko") {
+            // A Korean stem fix inside an eojeol is right and still lands.
+            let fix = TurnFix(was: "춥어", now: "추워", why: "ㅂ 불규칙")
+            let pair = DrillStore.cardPair(for: fix, in: "오늘 너무 춥어서 집에 있었어. 너는?")
+            XCTAssertEqual(pair.target, "오늘 너무 추워서 집에 있었어")
+        }
+    }
+
+    /// What phones already hold: the reported turn, its bogus fix, and the
+    /// "Jahrenn" card it minted. A real fix on the same turn survives.
+    func testTheRepairDropsAMidWordFixAndItsCardButKeepsARealOne() {
+        let said = "Seit drei Jahren wohne ich hier in Deutschland und habe ich"
+        let bogus = TurnFix(was: "Seit drei Jahre", now: "Seit drei Jahren", why: "Plural")
+        let real = TurnFix(was: "und habe ich", now: "und ich habe", why: "Wortstellung")
+        let id = UUID()
+        let session = Session(id: UUID(), userId: UUID(), targetLanguage: "de",
+                              mode: .conversation, topic: "", startedAt: Date(), endedAt: Date(),
+                              turns: [turn(said, suggestion: TurnSuggestion(
+                                alternative: "Seit drei Jahren wohne ich hier und habe gelernt",
+                                reason: "", fixes: [bogus, real]), id: id)])
+        guard let repaired = DrillStore.midWordRepair(of: session, language: "de") else {
+            return XCTFail("the mid-word fix was not found")
+        }
+        XCTAssertEqual(repaired.session.turns[0].suggestion?.fixes?.map(\.was), ["und habe ich"])
+        XCTAssertEqual(repaired.session.turns[0].suggestion?.alternative,
+                       "Seit drei Jahren wohne ich hier und habe gelernt")
+        func card(_ target: String) -> DrillCard {
+            DrillCard(sourcePhrase: said, targetPhrase: target, reason: "", createdAt: Date(),
+                      nextReviewAt: Date(), box: 0, sourceTurnId: id)
+        }
+        // The card the bogus fix minted is the short pair; the "Jahrenn"
+        // sentence was the weekly test's own splice of it (below).
+        let bogusCard = card("Seit drei Jahren")
+        let good = card("und ich habe")
+        XCTAssertEqual(DrillStore.cards([bogusCard, good], without: repaired.doomed).map(\.id), [good.id])
+        withActiveLanguage("de") {
+            var source = bogusCard
+            source.sourcePhrase = bogus.was
+            source.sourceSessionId = session.id
+            let item = WeeklyTestEngine.rewriteItem(from: source, sessions: [session.id: session], language: "de")
+            XCTAssertFalse(item?.answer.contains("Jahrenn") ?? false)
+        }
+        XCTAssertNil(DrillStore.midWordRepair(of: repaired.session, language: "de"))
+        XCTAssertNil(DrillStore.midWordRepair(of: session, language: "ko"))
+    }
+
     // MARK: - Adoption later in the call
 
     /// Nobody repeats a whole turn word for word, so matching `alternative`

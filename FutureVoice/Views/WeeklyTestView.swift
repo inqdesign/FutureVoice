@@ -335,7 +335,7 @@ struct WeeklyTestView: View {
     /// word or span the item is about.
     private func marked(_ text: String, focus: String?) -> Text {
         guard let focus, !focus.isEmpty,
-              let range = text.range(of: focus, options: [.caseInsensitive, .diacriticInsensitive]) else {
+              let range = DrillStore.wholeWordRange(of: focus, in: text) else {
             return Text(text)
         }
         return Text(text[..<range.lowerBound])

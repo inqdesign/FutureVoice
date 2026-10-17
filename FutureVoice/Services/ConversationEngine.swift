@@ -1419,9 +1419,12 @@ enum ConversationEngine {
         let needle = CarryoverDetector.normalized(quote)
         let hay = CarryoverDetector.normalized(line)
         guard !needle.isEmpty else { return false }
-        if hay.contains(needle) { return true }
+        // Whole words only: "Seit drei Jahre" is not a quote of "Seit drei
+        // Jahren" — that fix accuses the learner of a word they said right
+        // (reported 2026-10-17 from a weekly test).
+        if " \(hay) ".contains(" \(needle) ") { return true }
         let squeezedNeedle = needle.replacingOccurrences(of: " ", with: "")
-        if !squeezedNeedle.isEmpty,
+        if ["ko", "ja"].contains(LanguageScope.active), !squeezedNeedle.isEmpty,
            hay.replacingOccurrences(of: " ", with: "").contains(squeezedNeedle) { return true }
         let words = Set(needle.split(separator: " ").map(String.init))
         guard words.count >= 3 else { return false }
@@ -1750,9 +1753,7 @@ struct ConversationTurnPayload: Decodable {
             guard !fixes.isEmpty else { return nil }
             var line = original
             for fix in fixes {
-                guard let range = line.range(of: fix.was,
-                                             options: [.caseInsensitive, .diacriticInsensitive])
-                else { continue }
+                guard let range = DrillStore.wholeWordRange(of: fix.was, in: line) else { continue }
                 line.replaceSubrange(range, with: fix.now)
             }
             return TurnSuggestion(alternative: line, reason: fixes[0].why, fixes: fixes)

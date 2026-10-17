@@ -249,7 +249,7 @@ enum SayItAgainScript {
             let better = fix.fluentAlternative.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !said.isEmpty, !better.isEmpty,
                   CarryoverDetector.normalized(said) != CarryoverDetector.normalized(better),
-                  let range = text.range(of: said, options: [.caseInsensitive, .diacriticInsensitive])
+                  let range = DrillStore.wholeWordRange(of: said, in: text)
             else { continue }
             text.replaceSubrange(range, with: better)
             if note.isEmpty { note = fix.reason }

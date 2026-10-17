@@ -496,7 +496,7 @@ enum WeeklyTestEngine {
                 candidates.append(Candidate(phrase: entry.text, sentence: hit.sentence,
                                             session: hit.session, turn: hit.turn))
             } else if let example = sceneExamples[entry.key],
-                      example.range(of: entry.text, options: [.caseInsensitive]) != nil,
+                      DrillStore.wholeWordRange(of: entry.text, in: example) != nil,
                       isInTargetScript(example) {
                 candidates.append(Candidate(phrase: entry.text, sentence: example, session: nil, turn: nil))
             }
@@ -542,10 +542,9 @@ enum WeeklyTestEngine {
     private static func firstSentence(
         containing phrase: String, in turns: [(session: Session, turn: Turn)]
     ) -> (sentence: String, session: Session, turn: Turn)? {
-        let needle = phrase.lowercased()
         for entry in turns {
             for sentence in TalkCurriculum.sentences(in: entry.turn.transcript) {
-                guard sentence.lowercased().contains(needle) else { continue }
+                guard DrillStore.wholeWordRange(of: phrase, in: sentence) != nil else { continue }
                 let n = WordSplitter.count(sentence)
                 guard n >= 4, n <= 30, isInTargetScript(sentence) else { continue }
                 return (sentence, entry.session, entry.turn)
@@ -559,9 +558,7 @@ enum WeeklyTestEngine {
     /// `sentence` with the first case-insensitive occurrence of `phrase`
     /// replaced by the blank mark.
     static func blank(_ phrase: String, in sentence: String) -> String? {
-        guard let range = sentence.range(of: phrase, options: [.caseInsensitive, .diacriticInsensitive]) else {
-            return nil
-        }
+        guard let range = DrillStore.wholeWordRange(of: phrase, in: sentence) else { return nil }
         return sentence.replacingCharacters(in: range, with: blankMark)
     }
 
@@ -620,13 +617,11 @@ enum WeeklyTestEngine {
         if let sid = card.sourceSessionId, let tid = card.sourceTurnId,
            let turn = sessions[sid]?.turns.first(where: { $0.id == tid }) {
             for sentence in TalkCurriculum.sentences(in: turn.transcript) {
-                guard let range = sentence.range(of: was, options: [.caseInsensitive, .diacriticInsensitive])
-                else { continue }
+                guard let range = DrillStore.wholeWordRange(of: was, in: sentence) else { continue }
                 let span = WordSplitter.count(sentence) > rewriteClauseFrom
                     ? clauseRange(around: range, in: sentence) : sentence.startIndex..<sentence.endIndex
                 var clause = String(sentence[span])
-                guard let local = clause.range(of: was, options: [.caseInsensitive, .diacriticInsensitive])
-                else { continue }
+                guard let local = DrillStore.wholeWordRange(of: was, in: clause) else { continue }
                 said = clause
                 clause.replaceSubrange(local, with: now)
                 answer = clause
@@ -942,7 +937,7 @@ enum WeeklyTestEngine {
         guard !needle.isEmpty else { return nil }
         for entry in userTurns {
             for sentence in TalkCurriculum.sentences(in: entry.turn.transcript) {
-                guard let range = sentence.range(of: needle, options: [.caseInsensitive, .diacriticInsensitive]) else { continue }
+                guard let range = DrillStore.wholeWordRange(of: needle, in: sentence) else { continue }
                 let n = WordSplitter.count(sentence)
                 guard n >= 3, n <= maxWords, isInTargetScript(sentence) else { continue }
                 return (sentence, range, entry.session, entry.turn)

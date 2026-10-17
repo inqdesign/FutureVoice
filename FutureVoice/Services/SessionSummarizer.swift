@@ -239,17 +239,11 @@ enum SessionSummarizer {
         // in a turn, or sharing three words in four with one — the model
         // quotes loosely), and the fix has to change something a mouth can
         // hear ("I am" → "I'm", a digit, Korean spacing are the transcriber's).
-        let normalizedTurns = userTexts.map(CarryoverDetector.normalized)
+        // The same rule as the live funnel (`ConversationEngine.quotes`),
+        // whole words included: "Seit drei Jahre" is not a quote of "Seit
+        // drei Jahren".
         func isTheirs(_ quote: String) -> Bool {
-            let needle = CarryoverDetector.normalized(quote)
-            guard !needle.isEmpty else { return false }
-            if normalizedTurns.contains(where: { $0.contains(needle) }) { return true }
-            let words = Set(needle.split(separator: " ").map(String.init))
-            guard words.count >= 3 else { return false }
-            return normalizedTurns.contains { turn in
-                let have = Set(turn.split(separator: " ").map(String.init))
-                return Double(words.intersection(have).count) / Double(words.count) >= 0.75
-            }
+            userTexts.contains { ConversationEngine.quotes(quote, from: $0) }
         }
         let keptPhrases = computed.phrasesUsed.filter {
             isTheirs($0.userSaid)

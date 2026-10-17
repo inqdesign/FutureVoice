@@ -559,15 +559,35 @@ final class DrillStore: LanguageScopedStore {
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
         for sentence in sentences {
-            guard let range = sentence.range(of: fix.was,
-                                             options: [.caseInsensitive, .diacriticInsensitive])
-            else { continue }
+            guard let range = wholeWordRange(of: fix.was, in: sentence) else { continue }
             var widened = sentence
             widened.replaceSubrange(range, with: fix.now)
             guard CarryoverDetector.isCreditable(widened) else { break }
             return (sentence, widened)
         }
         return (fix.was, fix.now)
+    }
+
+    /// `fix.was` inside `sentence`, on word boundaries. A plain substring hit
+    /// splices mid-word: was "Seit drei Jahre" inside "Seit drei Jahren"
+    /// came out "Seit drei Jahrenn" and became a weekly-test answer
+    /// (2026-10-17). Korean and Japanese are left as substring matches: a
+    /// Korean stem fix inside an eojeol (춥어서 → 추워서) is right, and
+    /// Japanese has no boundaries to check.
+    static func wholeWordRange(of quote: String, in sentence: String,
+                               language: String = LanguageScope.active) -> Range<String.Index>? {
+        let options: String.CompareOptions = [.caseInsensitive, .diacriticInsensitive]
+        let checkBounds = !["ko", "ja", "zh"].contains(language)
+        var from = sentence.startIndex
+        while let range = sentence.range(of: quote, options: options, range: from..<sentence.endIndex) {
+            let before = range.lowerBound == sentence.startIndex
+                ? nil : sentence[sentence.index(before: range.lowerBound)]
+            let after = range.upperBound == sentence.endIndex ? nil : sentence[range.upperBound]
+            let isWordChar: (Character?) -> Bool = { $0.map { $0.isLetter || $0.isNumber } ?? false }
+            if !checkBounds || (!isWordChar(before) && !isWordChar(after)) { return range }
+            from = sentence.index(after: range.lowerBound)
+        }
+        return nil
     }
 
     /// Target-side twin of `relevantFragment`. Gemini sometimes rewrites a
@@ -703,5 +723,112 @@ final class DrillStore: LanguageScopedStore {
         if quotedItems >= 4 { return true }
 
         return false
+    }
+}
+
+// MARK: - Repair: fixes found inside a longer word (2026-10-17)
+
+extension DrillStore {
+    /// Undoes what the substring match left on phones before
+    /// `wholeWordRange`. A fix whose `was` sits in the turn only INSIDE a
+    /// longer word ("Seit drei Jahre" in "Seit drei Jahren") accused the
+    /// learner of a slip they didn't make, and its card was spliced mid-word
+    /// ("Seit drei Jahrenn"), which then graded a correct weekly-test answer
+    /// as wrong. Such a fix is dropped from its turn and the card it minted is
+    /// deleted; a weekly-test item on that card leaves the paper with it.
+    /// Once per language; Korean and Japanese never had the bug.
+    static func repairMidWordFixes(language: String = LanguageScope.active) {
+        guard !["ko", "ja", "zh"].contains(language) else { return }
+        let key = "futurevoice.repair.midWordFixes.\(language)"
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+        defer { UserDefaults.standard.set(true, forKey: key) }
+
+        var doomed: [UUID: Set<String>] = [:]
+        for session in SessionStore.shared.load() {
+            guard let repaired = midWordRepair(of: session, language: language) else { continue }
+            SessionStore.shared.save(repaired.session)
+            doomed.merge(repaired.doomed) { $0.union($1) }
+        }
+        guard !doomed.isEmpty else { return }
+        let all = shared.load()
+        let keep = cards(all, without: doomed)
+        if keep.count != all.count { shared.write(keep) }
+    }
+
+    /// The session with its mid-word fixes taken out, and — per turn — the
+    /// match keys of the cards those fixes minted. nil when nothing changed.
+    static func midWordRepair(of session: Session, language: String)
+        -> (session: Session, doomed: [UUID: Set<String>])? {
+        var session = session
+        var doomed: [UUID: Set<String>] = [:]
+        for i in session.turns.indices where session.turns[i].role == .user {
+            guard var s = session.turns[i].suggestion, let fixes = s.fixes else { continue }
+            let transcript = session.turns[i].transcript
+            let bad = fixes.filter { fix in
+                transcript.range(of: fix.was, options: [.caseInsensitive, .diacriticInsensitive]) != nil
+                    && wholeWordRange(of: fix.was, in: transcript, language: language) == nil
+            }
+            guard !bad.isEmpty else { continue }
+            let badIds = Set(bad.map(\.id))
+            let kept = fixes.filter { !badIds.contains($0.id) }
+            doomed[session.turns[i].id] = Set(bad.flatMap { fix in
+                [matchKey(substringCardPair(for: fix, in: transcript).target), matchKey(fix.now)]
+            })
+            // The no-op path built `alternative` by splicing every fix into
+            // the turn, so it carries the same artefact.
+            if s.alternative == substringSplice(fixes, into: transcript) {
+                guard !kept.isEmpty else {
+                    session.turns[i].suggestion = nil
+                    continue
+                }
+                var line = transcript
+                for fix in kept {
+                    guard let range = wholeWordRange(of: fix.was, in: line, language: language) else { continue }
+                    line.replaceSubrange(range, with: fix.now)
+                }
+                s.alternative = line
+                s.reason = kept[0].why
+            }
+            s.fixes = kept
+            session.turns[i].suggestion = s
+        }
+        return doomed.isEmpty ? nil : (session, doomed)
+    }
+
+    /// `all` minus the cards a repaired turn no longer has a fix for.
+    static func cards(_ all: [DrillCard], without doomed: [UUID: Set<String>]) -> [DrillCard] {
+        all.filter { card in
+            guard let tid = card.sourceTurnId, let keys = doomed[tid] else { return true }
+            return !keys.contains(matchKey(card.targetPhrase))
+        }
+    }
+
+    /// `cardPair` as it was before `wholeWordRange` — only to recognize the
+    /// cards it made.
+    private static func substringCardPair(for fix: TurnFix, in transcript: String) -> (source: String, target: String) {
+        guard !CarryoverDetector.isCreditable(fix.now) else { return (fix.was, fix.now) }
+        let sentences = transcript
+            .split(whereSeparator: { ".!?。！？\n".contains($0) })
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        for sentence in sentences {
+            guard let range = sentence.range(of: fix.was, options: [.caseInsensitive, .diacriticInsensitive])
+            else { continue }
+            var widened = sentence
+            widened.replaceSubrange(range, with: fix.now)
+            guard CarryoverDetector.isCreditable(widened) else { break }
+            return (sentence, widened)
+        }
+        return (fix.was, fix.now)
+    }
+
+    private static func substringSplice(_ fixes: [TurnFix], into line: String) -> String {
+        var line = line
+        for fix in fixes {
+            guard let range = line.range(of: fix.was, options: [.caseInsensitive, .diacriticInsensitive])
+            else { continue }
+            line.replaceSubrange(range, with: fix.now)
+        }
+        return line
     }
 }

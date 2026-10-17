@@ -632,6 +632,7 @@ final class AppState: ObservableObject {
                 SessionStore.shared.save(s)
             }
         }
+        DrillStore.repairMidWordFixes()
         counterparts = CounterpartStore.shared.load()
         watchDialogues = WatchDialogueStore.shared.load()
         scenarios = ScenarioStore.shared.load()
@@ -2044,6 +2045,7 @@ final class AppState: ObservableObject {
     /// Everything published that a language-scoped store backs. Persona and
     /// counterparts are global — a switch leaves them alone.
     private func reloadLanguageScopedState() {
+        DrillStore.repairMidWordFixes()
         learnerProfile = ProfileStore.shared.load(targetLanguage: targetLanguage, proficiency: proficiency)
         proficiency = learnerProfile.proficiencyLevel
         topicSuggestions = TopicStore.shared.load()
