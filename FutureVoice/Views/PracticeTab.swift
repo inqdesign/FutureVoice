@@ -256,7 +256,8 @@ struct PracticeTab: View {
             .sheet(isPresented: $showingPaywall) { PaywallView(source: "practice") }
             .fullScreenCover(item: $talkLaunch, onDismiss: reload) { s in
                 ConversationView(initialTopic: s.displayTitle, initialBlurb: s.promptBlurb,
-                                 initialOrigin: .scenario, initialScenarioId: s.id)
+                                 initialOrigin: .scenario, initialScenarioId: s.id,
+                                 entry: .practiceBook)
                     .environmentObject(appState)
             }
             .sheet(isPresented: $showingDrills, onDismiss: reload) {
@@ -332,7 +333,7 @@ struct PracticeTab: View {
                 weekRecapAction = nil
                 switch action {
                 case .test: showingWeeklyTest = true
-                case .talk: appState.pendingFreeTalk = true
+                case .talk: appState.requestFreeTalk(from: .weekRecap)
                 }
             }) {
                 WeekRecapArchiveView { weekRecapAction = $0 }

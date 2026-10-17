@@ -125,6 +125,30 @@ enum SessionOrigin: String, Codable {
     case scenario  // Launched from a scenario (see `Session.originScenarioId`)
 }
 
+/// Which SCREEN a call was started from — telemetry only, never stored on the
+/// session. `SessionOrigin` says what kind of talk it is; a free talk can come
+/// from the Talk ring, the daily call, a widget or a Progress tip, and a
+/// scenario talk from Talk's list or a book page, and only this tells them
+/// apart (`conversation_started.entry`, 2026-10-18).
+enum TalkEntry: String {
+    case talkRing = "talk_ring"
+    case talkScenario = "talk_scenario"
+    case talkNews = "talk_news"
+    case talkExam = "talk_exam"
+    case talkField = "talk_field"
+    case dailyCall = "daily_call"
+    case widget
+    case welcome
+    case weekRecap = "week_recap"
+    case progressTip = "progress_tip"
+    case routine
+    case scenarioBook = "scenario_book"
+    case practiceBook = "practice_book"
+    case watchPerson = "watch_person"
+    case resume
+    case other
+}
+
 enum TurnRole: String, Codable {
     case user
     case fluentSelf

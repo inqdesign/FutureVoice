@@ -32,6 +32,8 @@ struct RootTabView: View {
     /// ConversationView a clean view identity each time (same reason
     /// ConversationHome presents by item, not Bool).
     @State private var freeTalkCallId: UUID?
+    /// Which door opened the free talk now on screen — telemetry only.
+    @State private var freeTalkEntry: TalkEntry = .other
     /// The floating pill is a PROXY that RootTabView animates between two
     /// explicit poses — resting above the tab bar, and docked exactly on the
     /// call screen's mic-pill frame. (Cross-hierarchy matchedGeometryEffect
@@ -157,6 +159,7 @@ struct RootTabView: View {
             // welcome cover.
             .fullScreenCover(item: $answeredCall) { plan in
                 ConversationView(initialOpener: plan.script,
+                                 entry: .dailyCall,
                                  onClose: { answeredCall = nil })
                     .environmentObject(appState)
             }
@@ -174,7 +177,7 @@ struct RootTabView: View {
             // The free-talk call: fades in around the pill while the pill
             // slides down into its mic-pill pose.
             if let id = freeTalkCallId {
-                ConversationView(onClose: closeFreeTalk)
+                ConversationView(entry: freeTalkEntry, onClose: closeFreeTalk)
                     .id(id)
                     .transition(.opacity)
                     .zIndex(1)
@@ -214,7 +217,7 @@ struct RootTabView: View {
                    if startTalkAfterWelcome {
                        startTalkAfterWelcome = false
                        selection = .home
-                       startFreeTalk()
+                       startFreeTalk(from: .welcome)
                    }
                }) {
             FreeTalkWelcomeSheet(minutes: welcomeMinutes) {
@@ -347,7 +350,7 @@ struct RootTabView: View {
             switch url.host {
             case "freetalk":
                 selection = .home
-                appState.pendingFreeTalk = true
+                appState.requestFreeTalk(from: .widget)
             case "talk":
                 // Streak widget: open the Talk tab so the user does an activity.
                 selection = .home
@@ -478,7 +481,7 @@ struct RootTabView: View {
         guard appState.pendingFreeTalk else { return }
         appState.pendingFreeTalk = false
         guard freeTalkCallId == nil, !freeTalkClosing else { return }
-        startFreeTalk()
+        startFreeTalk(from: appState.pendingFreeTalkEntry)
     }
 
     // MARK: - Your week
@@ -604,7 +607,7 @@ struct RootTabView: View {
             appState.pendingPracticeRoute = .weeklyTest
         case .talk:
             selection = .home
-            startFreeTalk()
+            startFreeTalk(from: .weekRecap)
         }
     }
 
@@ -650,7 +653,8 @@ struct RootTabView: View {
         appState.pendingPracticeRoute = .review
     }
 
-    private func startFreeTalk() {
+    private func startFreeTalk(from entry: TalkEntry) {
+        freeTalkEntry = entry
         // Both ways into a free talk — the home's ring and the widget's deep
         // link — land here, so this is the one place the account has to be
         // asked. An account that can't pay gets the plans instead of a call

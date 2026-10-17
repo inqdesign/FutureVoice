@@ -290,7 +290,7 @@ struct WatchTab: View {
                     .environmentObject(appState)
             }
             .fullScreenCover(item: $callPerson) { person in
-                ConversationView(initialCounterpart: person)
+                ConversationView(initialCounterpart: person, entry: .watchPerson)
                     .environmentObject(appState)
             }
             .navigationDestination(item: $watchScene) { t in

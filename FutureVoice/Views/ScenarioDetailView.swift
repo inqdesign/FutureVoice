@@ -95,7 +95,8 @@ struct ScenarioDetailView: View {
                 // `kind`. Without it (as until 2026-09-25) the talk was a
                 // plain topic call tied to the book by its title only.
                 ConversationView(initialTopic: s.displayTitle, initialBlurb: s.promptBlurb,
-                                 initialOrigin: .scenario, initialScenarioId: s.id)
+                                 initialOrigin: .scenario, initialScenarioId: s.id,
+                                 entry: .scenarioBook)
                     .environmentObject(appState)
             }
         }

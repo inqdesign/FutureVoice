@@ -1706,7 +1706,7 @@ struct ProgressTab: View {
     /// Staging it brings the Talk tab along and passes the billing gate there.
     private var startTalkAction: TipAction {
         TipAction(title: chrome("Start a talk"), icon: "waveform") {
-            appState.pendingFreeTalk = true
+            appState.requestFreeTalk(from: .progressTip)
         }
     }
 
