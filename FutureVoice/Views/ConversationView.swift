@@ -1282,7 +1282,11 @@ struct ConversationView: View {
             // time — a visible meter is exactly the anxiety the minutes model
             // removed. The clock joins the subtitle for the last stretch so
             // the wall never lands as a surprise.
-            LevelHeaderTitle(title: topic.isEmpty ? explain("Let's talk") : topic,
+            // A news call is titled "News": its topic is a whole spoken line
+            // ("Did you see the news about…?"), which only ever fit the bar
+            // cut off with an ellipsis.
+            LevelHeaderTitle(title: topicIsNews ? explain("News")
+                                 : topic.isEmpty ? explain("Let's talk") : topic,
                              level: appState.proficiency,
                              surface: .talk,
                              minutesLeft: meter.minutesRemaining.flatMap { $0 <= 10 ? $0 : nil },
