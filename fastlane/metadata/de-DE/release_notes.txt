@@ -1,7 +1,13 @@
 Neu
-• Schalte bei einem Redetext „Lernen“ ein: Grammatik und Wendungen werden erklärt, und jeder Absatz steht übersetzt in deiner Sprache daneben.
-• Lass dir deinen Text in deiner eigenen Stimme vorlesen und hör ihn dir an.
-• Schalte im Anruf „Mit Senden antworten“ ein, dann endet dein Zug nicht mehr, wenn du kurz stockst. Lass dir Zeit und tippe zum Schluss auf den mittleren Knopf.
+• Du kannst jetzt Spanisch lernen, mit mexikanischem oder kastilischem Akzent.
+• Stell gleich zu Beginn deine Routine zusammen: Leg fest, wann dein täglicher Anruf kommt und wie viel du lernst, und alles steht sofort in deinem Wochenplan.
+• Dein fließendes Ich weiß, was bei dir gerade los ist, und fragt schon bei der Begrüßung danach.
+• Eine Person hinzufügen geht auf einem einzigen Bildschirm, und du kannst direkt bei der Auswahl jemand Neues anlegen.
+• Blättere durch die Rede-Challenges als Karten und starte den Wochentest direkt unter Wiederholen.
+• Beim Erstellen deiner Stimme wird das Rauschen in der Aufnahme gründlicher entfernt.
 
 Behoben
-• Kleinere Fehler behoben, alles läuft jetzt stabiler.
+• Die Sprechblase deines fließenden Ichs flackert nicht mehr beim Erscheinen.
+• Titel von Nachrichten-Anrufen werden nicht mehr abgeschnitten.
+• „In meiner Stimme hören“ verbraucht nicht mehr Zeit, als der Text lang ist.
+• Korrigierte Wörter in Wiederholen landen nicht mehr mitten in anderen Wörtern.
