@@ -241,6 +241,9 @@ struct SpeechChallengeView: View {
         }
         .navigationTitle(script.title)
         .navigationBarTitleDisplayMode(.inline)
+        // A page pushed into the tab, like a book page: the tab bar goes,
+        // and the glass panel's buttons take the foot.
+        .toolbar(.hidden, for: .tabBar)
         .refreshable { await reload() }
         .task { await reload() }
         // The board first; the script and the way in together at the foot
@@ -531,6 +534,7 @@ struct SpeechChallengeListView: View {
         }
         .navigationTitle("All challenges")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .refreshable { await challenges.refresh(language: appState.targetLanguage) }
     }
 
