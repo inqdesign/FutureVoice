@@ -26,6 +26,11 @@ struct SpeechTab: View {
 
     private var canWrite: Bool { gate.account?.canWriteSpeechScripts ?? false }
     static let challengesOnTab = 3
+    /// The inset-grouped list's side margin, where its cards start.
+    static let listMargin: CGFloat = 16
+    static let challengeSpacing: CGFloat = 10
+    /// How much of the third card shows at the right edge.
+    static let challengePeek: CGFloat = 28
 
     private var ownScripts: [SpeechScript] {
         store.scripts.filter { challenges.script(id: $0.id) == nil }
@@ -43,59 +48,83 @@ struct SpeechTab: View {
         }
     }
 
+    /// How far the list's header sits in from the screen's leading edge,
+    /// measured, so the challenge row can bleed back out to the edge.
+    @State private var challengeBleed: CGFloat = 32
+
+    /// One row that scrolls sideways (2026-10-17, founder: three stacked
+    /// cards took most of the screen). Two cards across and the third cut at
+    /// the screen's edge, so it reads as a row that scrolls; the row runs to
+    /// both screen edges rather than stopping at the list's margins.
+    private var challengeRow: some View {
+        let bleed = challengeBleed
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(alignment: .top, spacing: Self.challengeSpacing) {
+                ForEach(challenges.live.prefix(Self.challengesOnTab)) { script in
+                    NavigationLink {
+                        SpeechChallengeView(script: script)
+                            .environmentObject(appState)
+                    } label: {
+                        SpeechChallengeRow(script: script, standing: challenges.standings[script.id])
+                            .frame(maxHeight: .infinity, alignment: .top)
+                    }
+                    .buttonStyle(.plain)
+                    .containerRelativeFrame(.horizontal) { width, _ in
+                        // margin + two cards + two gaps + a sliver of the third
+                        (width - Self.listMargin - 2 * Self.challengeSpacing - Self.challengePeek) / 2
+                    }
+                }
+            }
+            .scrollTargetLayout()
+        }
+        // The first card lines up with the list's own cards below.
+        .contentMargins(.horizontal, Self.listMargin, for: .scrollContent)
+        .scrollTargetBehavior(.viewAligned)
+        .padding(.horizontal, -bleed)
+        .background {
+            // The header's own slot: its leading edge is how far it sits in
+            // from the screen.
+            Color.clear.onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minX } action: {
+                challengeBleed = max(0, $0)
+            }
+        }
+        .padding(.top, 4)
+        // A header greys its content; the cards are not header text.
+        .foregroundStyle(Color.primary)
+    }
+
     var body: some View {
         NavigationStack {
             List {
                 if !challenges.scripts.isEmpty {
                     Section {
+                    } header: {
                         // The newest three on the tab; everything else, past
-                        // ones included, one tap away — the tab is for
-                        // practising, not for an ever-growing list.
-                        // One row that scrolls sideways (2026-10-17, founder:
-                        // three stacked cards took most of the screen). The
-                        // next card peeks in at the edge so the row reads as
-                        // more than one.
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(alignment: .top, spacing: 10) {
-                                ForEach(challenges.live.prefix(Self.challengesOnTab)) { script in
+                        // ones included, one tap away from the title. The
+                        // cards live in the HEADER (2026-10-17): a List row
+                        // is masked to the section's margins, so a row that
+                        // should run to both screen edges was cut short.
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text("Challenges")
+                                Spacer()
+                                if challenges.live.count > Self.challengesOnTab || !challenges.past.isEmpty {
                                     NavigationLink {
-                                        SpeechChallengeView(script: script)
+                                        SpeechChallengeListView()
                                             .environmentObject(appState)
                                     } label: {
-                                        SpeechChallengeRow(script: script, standing: challenges.standings[script.id])
-                                            .frame(maxHeight: .infinity, alignment: .top)
+                                        HStack(spacing: 4) {
+                                            Text("All challenges")
+                                            Text(verbatim: "\(challenges.scripts.count)").monospacedDigit()
+                                        }
+                                        .font(.subheadline)
                                     }
-                                    .buttonStyle(.plain)
-                                    .containerRelativeFrame(.horizontal) { width, _ in
-                                        challenges.live.count > 1 ? width * 0.82 : width
-                                    }
+                                    .textCase(nil)
                                 }
                             }
-                            .scrollTargetLayout()
+                            challengeRow
                         }
-                        .scrollTargetBehavior(.viewAligned)
-                        .scrollClipDisabled()
-                        .speechCardRow()
-                    } header: {
-                        // The rest is one tap away from the header now: a
-                        // plain row under the cards read as a fourth card.
-                        HStack {
-                            Text("Challenges")
-                            Spacer()
-                            if challenges.live.count > Self.challengesOnTab || !challenges.past.isEmpty {
-                                NavigationLink {
-                                    SpeechChallengeListView()
-                                        .environmentObject(appState)
-                                } label: {
-                                    HStack(spacing: 4) {
-                                        Text("All challenges")
-                                        Text(verbatim: "\(challenges.scripts.count)").monospacedDigit()
-                                    }
-                                    .font(.subheadline)
-                                }
-                                .textCase(nil)
-                            }
-                        }
+                        .textCase(nil)
                     } footer: {
                         Text("Everyone reads the same script. Your best take goes on the board.")
                     }

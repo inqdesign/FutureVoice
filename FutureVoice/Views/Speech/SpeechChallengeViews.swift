@@ -29,15 +29,18 @@ struct SpeechChallengeRow: View {
             }
             Spacer(minLength: 8)
             VStack(alignment: .leading, spacing: 3) {
+                // Half a screen wide in the row: room for a longer title,
+                // and the meta line may wrap rather than lose its length.
                 Text(script.title)
                     .font(.headline)
                     .foregroundStyle(.primary)
-                    .lineLimit(2)
+                    .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(metaLine)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             if let faces = standing?.topThree, !faces.isEmpty {
                 SpeechChallengeFaces(faces: faces, size: 30)
@@ -134,6 +137,7 @@ struct SpeechChallengeView: View {
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var challenges = SpeechChallenges.shared
     @ObservedObject private var gate = BillingGate.shared
+    @ObservedObject private var store = SpeechStore.shared
     @Environment(\.dismiss) private var dismiss
     @State private var board: [SpeechChallenges.BoardRow]?
     @State private var loadFailed = false
@@ -269,8 +273,10 @@ struct SpeechChallengeView: View {
         }
     }
 
-    /// One container at the foot: what the script is, then Read the script
-    /// beside the start button.
+    /// One container at the foot: what the script is, then three buttons —
+    /// your takes (the prompter's own clock-and-count, no label), Read the
+    /// script, and the start button (2026-10-17, founder). Glass, so the
+    /// board shows through as it scrolls under.
     private var actionBar: some View {
         VStack(alignment: .leading, spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
@@ -289,6 +295,28 @@ struct SpeechChallengeView: View {
                 .foregroundStyle(.secondary)
             }
             HStack(spacing: 10) {
+                Button {
+                    showingTakes = true
+                } label: {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.headline)
+                        .frame(width: 28)
+                        .padding(.vertical, 6)
+                }
+                .buttonStyle(.bordered)
+                .overlay(alignment: .topTrailing) {
+                    let count = store.takes(for: script.id).count
+                    if count > 0 {
+                        Text("\(count)")
+                            .font(.caption2.weight(.bold).monospacedDigit())
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(Color.accentColor, in: Capsule())
+                            .offset(x: 4, y: -4)
+                    }
+                }
+                .accessibilityLabel(Text("Takes"))
                 Button {
                     showingScript = true
                 } label: {
@@ -315,9 +343,8 @@ struct SpeechChallengeView: View {
                 }
             }
         }
-        .padding(14)
-        .background(RoundedRectangle(cornerRadius: 18).fill(Color(.secondarySystemGroupedBackground)))
-        .shadow(color: .black.opacity(0.08), radius: 12, y: 2)
+        .padding(16)
+        .modifier(GlassPanel(cornerRadius: 28))
         .padding(.horizontal, 16)
         .padding(.bottom, 8)
     }
@@ -387,6 +414,22 @@ struct SpeechChallengeView: View {
                     .font(.body.monospacedDigit().weight(.semibold))
                     .foregroundStyle(SpeechScoreColor.color(row.score))
             }
+        }
+    }
+}
+
+/// Liquid Glass on iOS 26, a material below it: either way the content
+/// behind shows through.
+private struct GlassPanel: ViewModifier {
+    let cornerRadius: CGFloat
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.glassEffect(.regular, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        } else {
+            content
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+                .shadow(color: .black.opacity(0.08), radius: 12, y: 2)
         }
     }
 }
