@@ -57,23 +57,39 @@ enum PublicPersonaService {
     private static let columns =
         "id,owner_user_id,display_name,intro,location,occupation,interests,conversation_style,language,voice_preset_id,kind,greeting"
 
-    /// The whole active pool for one target language. The pool is curated-
-    /// catalog sized (tens, not thousands), so one fetch + local shuffle/
-    /// filter beats server-side pagination for now. The user's own published
-    /// intro is filtered out — you don't meet yourself.
+    /// The whole active pool, EVERY language (2026-10-18, founder: me, my
+    /// people, users and characters all show, whatever is being learned).
+    /// It was one target language's rows, and a language nobody had seeded —
+    /// Japanese, Spanish — had nobody in it to meet at all. `language` now
+    /// only decides which row wins: a user published in several languages is
+    /// ONE person, shown by the row in the language being learned, else the
+    /// first. Rows in that language come first. The pool is curated-catalog
+    /// sized (tens, not thousands), so one fetch beats pagination. The user's
+    /// own published intro is filtered out — you don't meet yourself.
     static func fetchPool(language: String) async throws -> [PublicPersona] {
         var rows: [PublicPersona] = try await SupabaseProvider.shared
             .from("public_personas")
             .select(columns)
-            .eq("language", value: language)
             .eq("is_active", value: true)
             .execute()
             .value
         if let uid = await myUserId() {
             rows.removeAll { $0.owner_user_id?.lowercased() == uid }
         }
+        rows = onePerPerson(rows, language: language)
         await adoptPhotos(for: rows)
         return rows
+    }
+
+    /// Target-language rows first; a user's rows in other languages dropped
+    /// once one of theirs is kept (curated rows have no owner and all stay).
+    static func onePerPerson(_ rows: [PublicPersona], language: String) -> [PublicPersona] {
+        let ordered = rows.filter { $0.language == language } + rows.filter { $0.language != language }
+        var owners: Set<String> = []
+        return ordered.filter { row in
+            guard let owner = row.owner_user_id?.lowercased() else { return true }
+            return owners.insert(owner).inserted
+        }
     }
 
     // MARK: - Faces
