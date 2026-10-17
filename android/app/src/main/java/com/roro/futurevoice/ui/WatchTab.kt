@@ -319,7 +319,10 @@ internal fun WatchTabBody(
         dockBubble = line
         // Felt as they speak: one firm tap as the bubble rises.
         HapticEngine.medium(context)
-        playVoicePreview(person)
+        // Silent for now (2026-10-17, founder): every bundled clip opens on
+        // the same "hi, good to see you", and hearing it from person after
+        // person reads strange. The bubble stays; the voice waits for a
+        // better idea. Re-enable with `playVoicePreview(person)`.
     }
 
     /** Someone came to the middle of the screen (or nobody is there now).

@@ -63,6 +63,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.UnfoldMore
 import com.roro.futurevoice.ui.brand.IosButton as Button
@@ -1541,6 +1542,16 @@ private fun PartnerPickerSheet(
     var known by remember { mutableStateOf<List<Counterpart>>(emptyList()) }
     var pool by remember { mutableStateOf<List<PublicPersonaClient.PublicPersona>>(emptyList()) }
     var poolLoading by remember { mutableStateOf(true) }
+    // "New person" from inside the picker — the scene usually IS about
+    // someone not on file yet. Whoever the intake saves is picked (iOS
+    // `PartnerPickerSheet.showingNewPerson`), hosted the way Find people
+    // hosts it: the one-card intake, then its draft in the person form.
+    val scope = rememberCoroutineScope()
+    var showingNewPerson by remember { mutableStateOf(false) }
+    var idsBeforeNewPerson by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var newPersonDraft by remember { mutableStateOf<Counterpart?>(null) }
+    var newPersonPhoto by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+    var newPersonIsNew by remember { mutableStateOf(false) }
     LaunchedEffect(language) {
         known = CounterpartStore.shared(context).load()
         pool = runCatching { PublicPersonaClient(AuthRepository()).fetchPool(language) }
@@ -1583,13 +1594,27 @@ private fun PartnerPickerSheet(
                     ) { onPick(null) }
                 }
             }
-            if (own.isNotEmpty()) {
-                GroupedSectionHeader(stringResource(R.string.your_people))
-                GroupedCard {
-                    own.forEachIndexed { i, p ->
-                        if (i > 0) GroupedRowDivider()
-                        PickerRow(p.name, partnerCaptionOf(p), p, current?.id == p.id) { onPick(p) }
+            GroupedSectionHeader(stringResource(R.string.your_people))
+            GroupedCard {
+                own.forEachIndexed { i, p ->
+                    if (i > 0) GroupedRowDivider()
+                    PickerRow(p.name, partnerCaptionOf(p), p, current?.id == p.id) { onPick(p) }
+                }
+                if (own.isNotEmpty()) GroupedRowDivider()
+                Row(
+                    Modifier.fillMaxWidth().clickable {
+                        idsBeforeNewPerson = known.filter { it.remoteId == null }.map { it.id }.toSet()
+                        showingNewPerson = true
+                    }.padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Filled.AddCircle, contentDescription = null,
+                            modifier = Modifier.size(26.dp), tint = MaterialTheme.colorScheme.primary)
                     }
+                    Spacer(Modifier.width(12.dp))
+                    Text(stringResource(R.string.new_person), style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.primary)
                 }
             }
             if (users.isNotEmpty() || poolLoading) {
@@ -1621,6 +1646,49 @@ private fun PartnerPickerSheet(
                 }
             }
         }
+    }
+
+    if (showingNewPerson) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showingNewPerson = false },
+            properties = androidx.compose.ui.window.DialogProperties(
+                usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+        ) {
+            DialogSystemBarsLikeActivity()
+            CounterpartIntakeScreen(
+                nativeLanguage = com.roro.futurevoice.core.UILanguage.current(context) ?: "en",
+                targetLanguage = language,
+                onDraft = { draft, photo ->
+                    showingNewPerson = false
+                    newPersonPhoto = photo
+                    newPersonIsNew = draft == null
+                    newPersonDraft = draft ?: Counterpart()
+                },
+                // Cancelling returns to the picker unchanged.
+                onCancel = { showingNewPerson = false },
+            )
+        }
+    }
+    newPersonDraft?.let { draft ->
+        PersonEditor(
+            person = draft,
+            onSave = { saved ->
+                newPersonDraft = null; newPersonPhoto = null
+                scope.launch {
+                    val store = CounterpartStore.shared(context)
+                    store.save(saved)
+                    StoreEvents.bump()
+                    val all = store.load()
+                    known = all
+                    // Whoever the intake saved is picked, and the picker closes.
+                    val made = all.firstOrNull { it.remoteId == null && it.id !in idsBeforeNewPerson }
+                    if (made != null) onPick(made)
+                }
+            },
+            onDismiss = { newPersonDraft = null; newPersonPhoto = null },
+            initialPhoto = newPersonPhoto,
+            isNew = newPersonIsNew,
+        )
     }
 }
 
