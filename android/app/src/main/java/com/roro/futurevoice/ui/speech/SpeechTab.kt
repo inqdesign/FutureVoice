@@ -22,6 +22,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
@@ -202,9 +204,25 @@ internal fun SpeechTabBody(language: String, native: String, level: CefrLevel,
                     }
                 }
             }
-            // Each challenge is a card standing alone (iOS `SpeechCardLink`).
-            live.take(CHALLENGES_ON_TAB).forEach { script ->
-                SpeechChallengeRow(script, standings[script.id], onClick = { onOpenChallenge(script) })
+            // One row that scrolls sideways (iOS 2026-10-17: three stacked
+            // cards took most of the screen). The next card peeks in at the
+            // edge so the row reads as more than one; all cards share the
+            // tallest one's height.
+            val shown = live.take(CHALLENGES_ON_TAB)
+            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val cardWidth = if (live.size > 1) maxWidth * 0.82f else maxWidth
+                Row(
+                    Modifier.fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .height(androidx.compose.foundation.layout.IntrinsicSize.Max),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    shown.forEach { script ->
+                        SpeechChallengeRow(script, standings[script.id],
+                            modifier = Modifier.width(cardWidth).fillMaxHeight(),
+                            onClick = { onOpenChallenge(script) })
+                    }
+                }
             }
             GroupedFooter(stringResource(R.string.everyone_reads_the_same_script_your_best_take_goes_on_the_bo_281410))
         }

@@ -104,10 +104,11 @@ import kotlinx.coroutines.launch
  *  three at the foot. A card standing alone: no row fill, no separator, no
  *  chevron, a 6 pt gap above and below (iOS `speechCardRow`). */
 @Composable
-internal fun SpeechChallengeRow(script: SpeechScript, standing: SpeechChallenges.Standing?, onClick: () -> Unit) {
+internal fun SpeechChallengeRow(script: SpeechScript, standing: SpeechChallenges.Standing?,
+                                modifier: Modifier = Modifier, onClick: () -> Unit) {
     val accent = MaterialTheme.colorScheme.primary
     Column(
-        Modifier.fillMaxWidth().padding(vertical = 6.dp)
+        modifier.fillMaxWidth().padding(vertical = 6.dp)
             .clip(ContinuousShape(18.dp))
             .background(AppSurfaces.card)
             .clickable(onClick = onClick)
