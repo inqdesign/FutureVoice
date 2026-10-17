@@ -294,12 +294,14 @@ struct SpeechScriptsEmptyState: View {
     var onOwn: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: "doc.badge.plus")
-                    .font(.title2)
-                    .foregroundStyle(.tint)
-                    .frame(width: 32)
+        // The buttons sit in the TEXT column, the icon's column left empty
+        // below it; stacked, so neither label is cut and both are one size.
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "doc.badge.plus")
+                .font(.title2)
+                .foregroundStyle(.tint)
+                .frame(width: 32)
+            VStack(alignment: .leading, spacing: 14) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Write your first script")
                         .font(.body.weight(.semibold))
@@ -307,25 +309,26 @@ struct SpeechScriptsEmptyState: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
-            }
-            HStack(spacing: 10) {
-                Button(action: onWrite) {
-                    Label("Write with AI", systemImage: "sparkles")
-                        .frame(maxWidth: .infinity)
+                VStack(spacing: 8) {
+                    Button(action: onWrite) {
+                        Label("Write with AI", systemImage: "sparkles")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    Button(action: onOwn) {
+                        Label("Add my own script", systemImage: "pencil.line")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
                 }
-                .buttonStyle(.borderedProminent)
-                Button(action: onOwn) {
-                    Label("Add my own script", systemImage: "pencil.line")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
+                .labelStyle(.titleAndIcon)
+                .font(.subheadline.weight(.semibold))
+                .controlSize(.large)
+                .buttonBorderShape(.capsule)
+                .lineLimit(1)
             }
-            .labelStyle(.titleAndIcon)
-            .font(.subheadline.weight(.semibold))
-            .lineLimit(1)
-            .minimumScaleFactor(0.8)
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, 8)
     }
 }
 

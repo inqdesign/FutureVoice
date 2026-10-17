@@ -730,6 +730,22 @@ enum DebugCapture {
                                                     standings: standings, boards: [first.id: []])
             }
             return AnyView(SpeechTab().environmentObject(appState))
+        case "speech-challenge-new":
+            // A challenge nobody has taken yet, beside ones with faces: the
+            // cards share a height and the new one has no foot.
+            once("speech") { seedSpeech(appState) }
+            let first = seedSpeechChallenges(appState)
+            let newId = UUID(uuidString: "C4A11E00-0000-4000-8000-000000000200")!
+            let fresh = SpeechScript(id: newId, title: "Nervous? Say you're excited", genre: .explainer,
+                                     topic: "", body: first.body, summary: "", keyTerms: [], sources: [],
+                                     language: first.language, targetSeconds: 75, createdAt: Date(),
+                                     isBuiltIn: false, challengeId: newId)
+            var standings = SpeechChallenges.shared.standings
+            standings[newId] = .init(entrants: 0, topScore: nil, myBest: nil, myRank: nil, myAttempts: nil)
+            SpeechChallenges.shared.seedPreview(language: first.language,
+                                                scripts: [fresh] + SpeechChallenges.shared.scripts,
+                                                standings: standings, boards: [first.id: []])
+            return AnyView(SpeechTab().environmentObject(appState))
         case "speech-challenges-many":
             // Eight live challenges: what the tab does when they pile up.
             once("speech") { seedSpeech(appState) }

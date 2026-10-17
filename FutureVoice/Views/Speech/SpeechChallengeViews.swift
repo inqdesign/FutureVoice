@@ -27,7 +27,9 @@ struct SpeechChallengeRow: View {
                     }
                 }
             }
-            Spacer(minLength: 8)
+            // The title hangs under the disc and the slack goes BELOW it:
+            // cards in a row share the tallest one's height, and a card with
+            // no faces yet had its title pushed down to the foot.
             VStack(alignment: .leading, spacing: 3) {
                 // Half a screen wide in the row: room for a longer title,
                 // and the meta line may wrap rather than lose its length.
@@ -42,20 +44,31 @@ struct SpeechChallengeRow: View {
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            .padding(.top, 14)
+            Spacer(minLength: 16)
+            // The foot: the board's top three, or, on a board nobody is on
+            // yet, an invitation in the same slot so every card ends alike.
             if let faces = standing?.topThree, !faces.isEmpty {
                 SpeechChallengeFaces(faces: faces, size: 30)
-                    .padding(.top, 12)
+            } else {
+                Label("Be the first", systemImage: "flag.fill")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tint)
+                    .frame(height: 30)
             }
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18)
+        .frame(maxWidth: .infinity, minHeight: 220, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 18).fill(Color(.secondarySystemGroupedBackground)))
         .contentShape(Rectangle())
     }
 
     private var metaLine: String {
         let length = SpeechFormat.length(SpeechLibrary.estimatedSeconds(script.body, language: script.language))
-        return [explain("\(standing?.entrants ?? 0) taking part"), length].joined(separator: " · ")
+        // "0 taking part" says the same thing as the foot, only sadder.
+        let entrants = standing?.entrants ?? 0
+        guard entrants > 0 else { return length }
+        return [explain("\(entrants) taking part"), length].joined(separator: " · ")
     }
 }
 
