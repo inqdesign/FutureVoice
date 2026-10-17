@@ -33,11 +33,17 @@ struct FirstCallCheckSheet: View {
 
     enum Feeling: CaseIterable { case easy, right, hard }
 
+    /// Which exit raised it: after the summary sheet, or from `close()` on a
+    /// call that ended with no summary (closed unsaved, a failed summary).
+    enum Trigger: String { case summary, close }
+    var trigger: Trigger = .summary
+
     @State var feeling: Feeling? = nil
     @State private var level: CEFRLevel = .b1
     @State private var speed: SpeechSpeed = .default
     @State private var coach = false
     @State private var loaded = false
+    @State private var saved = false
 
     var body: some View {
         NavigationStack {
@@ -134,7 +140,26 @@ struct FirstCallCheckSheet: View {
                 .background(Color(.systemGroupedBackground))
             }
         }
-        .onAppear(perform: load)
+        .onAppear {
+            load()
+            report("first_call_check_shown")
+        }
+        .onDisappear {
+            // "Later", a swipe down: the same shown → saved | dismissed pair
+            // FeedbackSheet keeps, so the answer rate can be read. Until
+            // 2026-10-17 only a Save left a row.
+            if !saved {
+                report("first_call_check_dismissed",
+                       ["feeling": feeling.map { "\($0)" } ?? "none"])
+            }
+        }
+    }
+
+    private func report(_ event: String, _ extra: [String: String] = [:]) {
+        var props = ["trigger": trigger.rawValue, "level_before": appState.proficiency.rawValue]
+        props.merge(extra) { _, new in new }
+        Telemetry.log(event, props)
+        Analytics.capture(event, props)
     }
 
     @ViewBuilder
@@ -214,7 +239,9 @@ struct FirstCallCheckSheet: View {
         // Always written: the learner saw the switch and confirmed it, and an
         // unset choice would follow the NEW level's default instead.
         UserDefaults.standard.set(coach, forKey: CoachMode.key)
-        Telemetry.log("first_call_check", [
+        saved = true
+        // Event name kept: rows since 2026-10-06 are under it.
+        report("first_call_check", [
             "feeling": feeling.map { "\($0)" } ?? "none",
             "level": level.rawValue, "speed": speed.rawValue, "coach": coach ? "on" : "off",
         ])

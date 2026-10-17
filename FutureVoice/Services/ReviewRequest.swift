@@ -48,10 +48,15 @@ enum ReviewRequest {
     @MainActor
     static func ask() {
         UserDefaults.standard.set(appVersion, forKey: askedVersionKey)
-        Analytics.capture("review_requested", [
+        let props = [
             "talk_seconds": TalkTimeLog.totalSeconds(),
             "talk_days": TalkTimeLog.daysWithTalk(),
-        ])
+        ]
+        Analytics.capture("review_requested", props)
+        // Also into client_events, beside the feedback sheet's rows, so the
+        // console can line the two asks up. iOS decides whether the prompt
+        // actually appears, so this is "requested", never "shown".
+        Telemetry.log("review_requested", props.mapValues(String.init))
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(1.2))
             guard let scene = UIApplication.shared.connectedScenes

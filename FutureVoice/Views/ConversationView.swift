@@ -151,6 +151,7 @@ struct ConversationView: View {
     /// The check was raised by `close()` (an exit with no summary sheet), so
     /// its dismissal finishes closing rather than continuing the wrap-up.
     @State private var closeAfterFirstCallCheck = false
+    @State private var firstCallCheckTrigger: FirstCallCheckSheet.Trigger = .summary
     /// Today's talk allowance is spent. Its own SHEET, not the error alert —
     /// a finished day is not something going wrong.
     @State private var dailyCapReached = false
@@ -1045,6 +1046,7 @@ struct ConversationView: View {
                     // Its own onDismiss continues the exit, so the plans
                     // pitch still comes — after it, never on top of it.
                     FirstCallCheckSheet.markShown()
+                    firstCallCheckTrigger = .summary
                     showingFirstCallCheck = true
                 } else {
                     endAndClose()
@@ -1150,7 +1152,7 @@ struct ConversationView: View {
                     endAndClose()
                 }
             }) {
-                FirstCallCheckSheet().environmentObject(appState)
+                FirstCallCheckSheet(trigger: firstCallCheckTrigger).environmentObject(appState)
             }
             .sheet(item: $feedbackContext, onDismiss: {
                 if dismissAfterFeedback { dismissAfterFeedback = false; close() }
@@ -4524,6 +4526,7 @@ struct ConversationView: View {
         if FirstCallCheckSheet.shouldShow(learnerSpoke: learnerSpokeThisCall) {
             FirstCallCheckSheet.markShown()
             closeAfterFirstCallCheck = true
+            firstCallCheckTrigger = .close
             Task { @MainActor in
                 try? await Task.sleep(nanoseconds: 350_000_000)
                 showingFirstCallCheck = true
