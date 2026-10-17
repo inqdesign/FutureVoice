@@ -759,7 +759,7 @@ internal fun ScenarioComposer(
                             style = MaterialTheme.typography.bodyMedium)
                         OutlinedTextField(
                             value = linkText, onValueChange = { linkText = it },
-                            placeholder = { Text("https://…") }, singleLine = true,
+                            placeholder = { Text("https://…", color = com.roro.futurevoice.ui.brand.iosPlaceholder()) }, singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                             modifier = Modifier.fillMaxWidth())
                     }
@@ -1115,7 +1115,7 @@ private fun AttachMenuButton(actions: AttachActions) {
         FilledTonalIconButton(
             onClick = { open = true },
             colors = IconButtonDefaults.filledTonalIconButtonColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                containerColor = com.roro.futurevoice.ui.brand.iosFill(),
                 contentColor = MaterialTheme.colorScheme.onSurface),
         ) {
             Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.attach_material))
@@ -1148,7 +1148,7 @@ private fun AttachMenuButton(actions: AttachActions) {
 private fun PersonChip(p: Counterpart?, fixed: Boolean, onClick: () -> Unit) {
     Row(
         Modifier.height(40.dp).clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(com.roro.futurevoice.ui.brand.iosFill())
             .then(if (fixed) Modifier else Modifier.clickable(onClick = onClick))
             .padding(start = 6.dp, end = 12.dp)
             .widthIn(max = 160.dp),
@@ -1177,7 +1177,7 @@ private fun DictationLanguagePill(current: String, onPick: (String) -> Unit) {
     Box {
         Row(
             Modifier.height(36.dp).clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .background(com.roro.futurevoice.ui.brand.iosFill())
                 .clickable { open = true }.padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(2.dp),
@@ -1201,7 +1201,7 @@ private fun DictationLanguagePill(current: String, onPick: (String) -> Unit) {
 private fun AttachmentChip(src: ScenarioBrief.Source, onRemove: () -> Unit) {
     Row(
         Modifier.clip(ContinuousShape(10.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(com.roro.futurevoice.ui.brand.iosFill())
             .padding(start = 10.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),

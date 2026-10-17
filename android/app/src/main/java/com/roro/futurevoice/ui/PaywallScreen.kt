@@ -1118,7 +1118,7 @@ private fun RedeemCodeDialog(onDismiss: () -> Unit, onComp: () -> Unit) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 androidx.compose.material3.OutlinedTextField(
                     value = code, onValueChange = { code = it.uppercase(); note = null },
-                    placeholder = { Text(stringResource(R.string.enter_invite_code)) },
+                    placeholder = { Text(stringResource(R.string.enter_invite_code), color = com.roro.futurevoice.ui.brand.iosPlaceholder()) },
                     singleLine = true,
                     textStyle = androidx.compose.material3.LocalTextStyle.current.copy(
                         fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),

@@ -220,7 +220,7 @@ fun PublicIntroScreen(
                 androidx.compose.material3.OutlinedTextField(
                     value = greeting,
                     onValueChange = { greeting = it },
-                    placeholder = { Text(stringResource(R.string.what_you_say_when_someone_meets_you)) },
+                    placeholder = { Text(stringResource(R.string.what_you_say_when_someone_meets_you), color = com.roro.futurevoice.ui.brand.iosPlaceholder()) },
                     maxLines = 3,
                     colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
                         unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,

@@ -613,7 +613,7 @@ private fun PlainField(value: String, onChange: (String) -> Unit, placeholder: S
                        modifier: Modifier = Modifier) {
     OutlinedTextField(
         value = value, onValueChange = onChange, enabled = enabled,
-        placeholder = { Text(placeholder) }, minLines = minLines, maxLines = maxLines,
+        placeholder = { Text(placeholder, color = com.roro.futurevoice.ui.brand.iosPlaceholder()) }, minLines = minLines, maxLines = maxLines,
         colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
             focusedBorderColor = Color.Transparent, unfocusedBorderColor = Color.Transparent,
             disabledBorderColor = Color.Transparent,

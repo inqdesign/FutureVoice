@@ -213,7 +213,7 @@ fun InviteScreen(onBack: () -> Unit) {
                     OutlinedTextField(
                         value = codeInput,
                         onValueChange = { codeInput = it.uppercase() },
-                        placeholder = { Text(stringResource(R.string.enter_invite_code)) },
+                        placeholder = { Text(stringResource(R.string.enter_invite_code), color = com.roro.futurevoice.ui.brand.iosPlaceholder()) },
                         textStyle = LocalTextStyle.current.copy(fontFamily = FontFamily.Monospace),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(

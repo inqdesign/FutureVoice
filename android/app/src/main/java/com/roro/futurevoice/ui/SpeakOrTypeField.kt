@@ -123,7 +123,7 @@ fun SpeakOrTypeField(
                 listening -> IconButtonDefaults.filledTonalIconButtonColors(
                     containerColor = MaterialTheme.colorScheme.errorContainer)
                 plainMic -> IconButtonDefaults.filledTonalIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    containerColor = com.roro.futurevoice.ui.brand.iosFill(),
                     contentColor = MaterialTheme.colorScheme.onSurface)
                 else -> IconButtonDefaults.filledTonalIconButtonColors()
             },
@@ -156,7 +156,7 @@ fun SpeakOrTypeField(
                     onText(it)
                     if (!listening && usedVoice) onUsedVoice(false)
                 },
-                placeholder = { Text(placeholder, style = MaterialTheme.typography.bodyLarge) },
+                placeholder = { Text(placeholder, style = MaterialTheme.typography.bodyLarge, color = com.roro.futurevoice.ui.brand.iosPlaceholder()) },
                 maxLines = 5,
                 minLines = if (ownCard) 2 else 1,
                 colors = TextFieldDefaults.colors(

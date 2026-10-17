@@ -57,6 +57,12 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 @Composable
 private fun isDark() = MaterialTheme.colorScheme.background.luminance() < 0.5f
 
+/** iOS `placeholderText` — a text field's hint. Lighter than `secondaryLabel`
+ *  (Material's default, `onSurfaceVariant`), which read as typed text. */
+@Composable
+fun iosPlaceholder(): Color = if (isDark()) Color(0xFFEBEBF5).copy(alpha = 0.3f)
+    else Color(0xFF3C3C43).copy(alpha = 0.3f)
+
 /** iOS `tertiarySystemFill` — the grey a segmented track and a filled field sit on. */
 @Composable
 fun iosFill(): Color = if (isDark()) Color(0xFF767680).copy(alpha = 0.24f)
