@@ -5,6 +5,7 @@ Nouveautés
 • Ajouter une personne se fait sur un seul écran, et tu peux créer quelqu’un directement depuis le choix de la personne.
 • Fais défiler les défis de discours en cartes et ouvre le test hebdo directement depuis Révision.
 • À la création de ta voix, les bruits de fond de l’enregistrement sont mieux nettoyés.
+• Dans Redire, tu peux maintenant dire aussi les répliques de ton moi fluide. Active Lire les deux rôles depuis le bouton en haut à gauche.
 
 Corrections
 • La bulle de ton moi fluide ne clignote plus quand elle apparaît.

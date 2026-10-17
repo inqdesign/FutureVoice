@@ -5,6 +5,7 @@ Neu
 • Eine Person hinzufügen geht auf einem einzigen Bildschirm, und du kannst direkt bei der Auswahl jemand Neues anlegen.
 • Blättere durch die Rede-Challenges als Karten und starte den Wochentest direkt unter Wiederholen.
 • Beim Erstellen deiner Stimme wird das Rauschen in der Aufnahme gründlicher entfernt.
+• Bei „Nochmal sagen“ kannst du jetzt auch die Sätze deines fließenden Ichs sprechen. Schalte oben links „Beide Seiten lesen“ ein.
 
 Behoben
 • Die Sprechblase deines fließenden Ichs flackert nicht mehr beim Erscheinen.

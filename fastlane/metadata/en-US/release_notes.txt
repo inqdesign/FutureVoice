@@ -5,6 +5,7 @@ New
 • Adding a person takes one screen, and you can create someone new right from the person picker.
 • Swipe through speech challenges as cards, and find the weekly test right on the Review screen.
 • Your voice recording is cleaned of background noise more thoroughly when your voice is made.
+• In Say it again, you can now say your fluent self's lines too. Turn on Read both sides from the button at the top left.
 
 Fixed
 • Your fluent self's bubble no longer flickers when it appears.
