@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.Badge
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -58,6 +60,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.compose.ui.layout.onSizeChanged
+import com.roro.futurevoice.data.SpeechStore
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.asImageBitmap
@@ -133,13 +137,13 @@ internal fun SpeechChallengeRow(script: SpeechScript, standing: SpeechChallenges
         Spacer(Modifier.height(8.dp))
         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(script.title, style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                fontWeight = FontWeight.SemiBold, maxLines = 3, overflow = TextOverflow.Ellipsis)
             val parts = listOf(
                 stringResource(R.string.lld_taking_part, standing?.entrants ?: 0),
                 lengthLabel(SpeechLibrary.estimatedSeconds(script.body, script.language)),
             )
             Text(parts.joinToString(" · "), style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         val faces = standing?.topThree.orEmpty()
         if (faces.isNotEmpty()) {
@@ -211,6 +215,11 @@ internal fun SpeechChallengeScreen(
     var startAfterNaming by remember { mutableStateOf(false) }
     var showingScript by remember { mutableStateOf(false) }
     var showingTakes by remember { mutableStateOf(false) }
+    val takes by SpeechStore.shared(context).takes.collectAsStateWithLifecycle()
+    val takeCount = takes.count { it.scriptId == challengeId }
+    // The bar floats over the board; the board scrolls clear of it.
+    var barHeightPx by remember { mutableStateOf(0) }
+    val density = androidx.compose.ui.platform.LocalDensity.current
     var menu by remember { mutableStateOf(false) }
     var confirmRetire by remember { mutableStateOf(false) }
 
@@ -257,23 +266,16 @@ internal fun SpeechChallengeScreen(
                 },
             )
         },
-        // The board first; the script and the way in together at the foot
-        // (iOS 2026-10-16: the board sat under a summary and a script row,
-        // and the start button was a bar of its own).
-        bottomBar = {
-            if (script != null) {
-                ChallengeActionBar(script, isPast = isPast, hasBest = standing?.myBest != null,
-                    onRead = { showingScript = true }, onStart = { start() })
-            }
-        },
     ) { padding ->
+        Box(Modifier.fillMaxSize()) {
         PullToRefreshBox(
             isRefreshing = refreshing,
             onRefresh = { scope.launch { refreshing = true; reload(); refreshing = false } },
-            modifier = Modifier.padding(padding).fillMaxSize(),
+            modifier = Modifier.padding(top = padding.calculateTopPadding()).fillMaxSize(),
         ) {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
+                .padding(horizontal = 16.dp)
+                .padding(bottom = with(density) { barHeightPx.toDp() } + 24.dp)) {
                 FormSection(
                     stringResource(R.string.leaderboard),
                     footer = if (isPast) stringResource(R.string.this_challenge_has_ended_these_are_the_final_standings)
@@ -332,6 +334,18 @@ internal fun SpeechChallengeScreen(
                 }
             }
         }
+        // The board first; the script and the way in together at the foot,
+        // floating over the board so it shows through as it scrolls under
+        // (iOS 2026-10-17, glass).
+        if (script != null) {
+            ChallengeActionBar(script, isPast = isPast, hasBest = standing?.myBest != null,
+                takeCount = takeCount,
+                onTakes = { showingTakes = true },
+                onRead = { showingScript = true }, onStart = { start() },
+                modifier = Modifier.align(Alignment.BottomCenter)
+                    .onSizeChanged { barHeightPx = it.height })
+        }
+        }
     }
 
     if (naming) {
@@ -372,21 +386,25 @@ internal fun SpeechChallengeScreen(
     }
 }
 
-/** One container at the foot: what the script is, then Read the script
- *  beside the start button — iOS `actionBar`. A past challenge keeps only
- *  Read the script. */
+/** One container at the foot: what the script is, then three buttons — your
+ *  takes (the prompter's own clock-and-count, no label), Read the script,
+ *  and the start button — iOS `actionBar` (2026-10-17). A past challenge
+ *  keeps the takes and Read the script. iOS draws it in Liquid Glass; here a
+ *  translucent card, so the board still shows through as it scrolls under. */
 @Composable
 private fun ChallengeActionBar(script: SpeechScript, isPast: Boolean, hasBest: Boolean,
-                               onRead: () -> Unit, onStart: () -> Unit) {
-    val shape = ContinuousShape(18.dp)
+                               takeCount: Int, onTakes: () -> Unit,
+                               onRead: () -> Unit, onStart: () -> Unit,
+                               modifier: Modifier = Modifier) {
+    val shape = ContinuousShape(28.dp)
     Column(
-        Modifier.fillMaxWidth().navigationBarsPadding()
+        modifier.fillMaxWidth().navigationBarsPadding()
             .padding(start = 16.dp, end = 16.dp, bottom = 8.dp)
             .shadow(12.dp, shape, ambientColor = Color.Black.copy(alpha = 0.08f),
                 spotColor = Color.Black.copy(alpha = 0.08f))
             .clip(shape)
-            .background(AppSurfaces.card)
-            .padding(14.dp),
+            .background(AppSurfaces.card.copy(alpha = 0.8f))
+            .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -399,7 +417,26 @@ private fun ChallengeActionBar(script: SpeechScript, isPast: Boolean, hasBest: B
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.height(androidx.compose.foundation.layout.IntrinsicSize.Min)) {
+            Box {
+                IosOutlinedButton(onClick = onTakes, modifier = Modifier.fillMaxHeight(),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 15.dp, vertical = 12.dp)) {
+                    Icon(Icons.Outlined.History, contentDescription = stringResource(R.string.takes),
+                        modifier = Modifier.size(22.dp))
+                }
+                if (takeCount > 0) {
+                    // The prompter's own count badge (iOS caption2 in an
+                    // accent capsule at the top-right).
+                    Text("$takeCount", color = Color.White, fontSize = 11.sp, lineHeight = 13.sp,
+                        fontWeight = FontWeight.Bold, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        style = androidx.compose.material3.LocalTextStyle.current.copy(fontFeatureSettings = "tnum"),
+                        modifier = Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-4).dp)
+                            .background(MaterialTheme.colorScheme.primary, CircleShape)
+                            .padding(horizontal = 5.dp, vertical = 1.dp)
+                            .widthIn(min = 7.dp))
+                }
+            }
             IosOutlinedButton(onClick = onRead, modifier = Modifier.weight(1f),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 12.dp)) {
                 Icon(Icons.Outlined.Description, null, modifier = Modifier.size(18.dp))

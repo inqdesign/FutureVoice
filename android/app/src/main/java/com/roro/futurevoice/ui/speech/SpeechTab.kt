@@ -72,6 +72,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -205,17 +206,35 @@ internal fun SpeechTabBody(language: String, native: String, level: CefrLevel,
                 }
             }
             // One row that scrolls sideways (iOS 2026-10-17: three stacked
-            // cards took most of the screen). The next card peeks in at the
-            // edge so the row reads as more than one; all cards share the
-            // tallest one's height.
+            // cards took most of the screen). Two cards across and a sliver
+            // of the third at the screen's edge, so it reads as a row that
+            // scrolls; the row runs to both screen edges rather than stopping
+            // at the page's margins, and the first card lines up with the
+            // list's cards below. All cards share the tallest one's height;
+            // a fling settles on a card (iOS `.viewAligned`).
             val shown = live.take(CHALLENGES_ON_TAB)
-            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
-                val cardWidth = if (live.size > 1) maxWidth * 0.82f else maxWidth
+            val margin = SPEECH_PAGE_MARGIN
+            val gap = 10.dp
+            val peek = 28.dp
+            androidx.compose.foundation.layout.BoxWithConstraints(
+                Modifier.fillMaxWidth()
+                    // Bleed out over the page's own side padding.
+                    .bleedHorizontally(margin)
+            ) {
+                // maxWidth is the screen's width here: margin + two cards +
+                // two gaps + a sliver of the third.
+                val cardWidth = (maxWidth - margin - gap * 2 - peek) / 2
+                val scroll = rememberScrollState()
+                val density = androidx.compose.ui.platform.LocalDensity.current
+                val stridePx = with(density) { (cardWidth + gap).toPx() }
+                val snap = remember(scroll, stridePx) { CardSnap(scroll, stridePx) }
                 Row(
                     Modifier.fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
+                        .horizontalScroll(scroll,
+                            flingBehavior = androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior(snap))
+                        .padding(horizontal = margin)
                         .height(androidx.compose.foundation.layout.IntrinsicSize.Max),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(gap),
                 ) {
                     shown.forEach { script ->
                         SpeechChallengeRow(script, standings[script.id],
@@ -1050,4 +1069,44 @@ internal fun takeDateLabel(at: Long): String {
     val locale = java.util.Locale.getDefault()
     val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "MMMdjmm")
     return java.text.SimpleDateFormat(pattern, locale).format(Date(at))
+}
+
+/** The page's side padding (RootScreen's scrolling tab column): where the
+ *  list's cards start, and how far the challenge row bleeds back out. */
+private val SPEECH_PAGE_MARGIN = 20.dp
+
+/** Widen past the parent's horizontal padding by [by] on each side, so a
+ *  row can run to the screen's edges. */
+private fun Modifier.bleedHorizontally(by: androidx.compose.ui.unit.Dp): Modifier =
+    this.layout { measurable, constraints ->
+        val extra = by.roundToPx() * 2
+        val wide = constraints.copy(
+            minWidth = (constraints.minWidth + extra),
+            maxWidth = if (constraints.hasBoundedWidth) constraints.maxWidth + extra else constraints.maxWidth)
+        val placeable = measurable.measure(wide)
+        layout(placeable.width - extra, placeable.height) { placeable.place(-by.roundToPx(), 0) }
+    }
+
+/** Settles a fling on a card edge (iOS `.scrollTargetBehavior(.viewAligned)`):
+ *  the next card in the fling's direction, the nearest when it has none. */
+@OptIn(ExperimentalFoundationApi::class)
+private class CardSnap(
+    private val scroll: androidx.compose.foundation.ScrollState,
+    private val stride: Float,
+) : androidx.compose.foundation.gestures.snapping.SnapLayoutInfoProvider {
+    override fun calculateApproachOffset(velocity: Float, decayOffset: Float): Float = 0f
+    override fun calculateSnapOffset(velocity: Float): Float {
+        if (stride <= 0f) return 0f
+        val current = scroll.value.toFloat()
+        val max = scroll.maxValue.toFloat()
+        val lower = kotlin.math.floor(current / stride) * stride
+        val upper = kotlin.math.min(lower + stride, max)
+        val target = when {
+            velocity > 0f -> upper
+            velocity < 0f -> lower
+            current - lower < upper - current -> lower
+            else -> upper
+        }
+        return target.coerceIn(0f, max) - current
+    }
 }
