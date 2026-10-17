@@ -215,14 +215,14 @@ internal fun SpeechTabBody(language: String, native: String, level: CefrLevel,
             val shown = live.take(CHALLENGES_ON_TAB)
             val margin = SPEECH_PAGE_MARGIN
             val gap = 10.dp
-            val peek = 28.dp
+            val peek = 20.dp
             androidx.compose.foundation.layout.BoxWithConstraints(
                 Modifier.fillMaxWidth()
                     // Bleed out over the page's own side padding.
                     .bleedHorizontally(margin)
             ) {
                 // maxWidth is the screen's width here: margin + two cards +
-                // two gaps + a sliver of the third.
+                // two gaps + a sliver of the third (iOS, 2026-10-18: 20).
                 val cardWidth = (maxWidth - margin - gap * 2 - peek) / 2
                 val scroll = rememberScrollState()
                 val density = androidx.compose.ui.platform.LocalDensity.current
@@ -381,30 +381,32 @@ private fun startNewScript(scope: kotlinx.coroutines.CoroutineScope, kind: Speec
  *  ways to fill it — iOS `SpeechScriptsEmptyState`. */
 @Composable
 private fun SpeechScriptsEmptyState(onWrite: () -> Unit, onOwn: () -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(verticalAlignment = Alignment.Top) {
-            Icon(Icons.Outlined.NoteAdd, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
-            Spacer(Modifier.width(12.dp))
+    // The buttons sit in the TEXT column, the icon's column left empty below
+    // it; stacked, so neither label is cut and both are one size.
+    Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.Top) {
+        Icon(Icons.Outlined.NoteAdd, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+        Spacer(Modifier.width(12.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(stringResource(R.string.write_your_first_script), style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold)
                 Text(stringResource(R.string.choose_a_topic_and_ai_writes_it_for_your_level_or_paste_a_te_d4a75b),
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            IosButton(onClick = onWrite, modifier = Modifier.weight(1f)) {
-                Icon(Icons.Filled.AutoAwesome, null, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(stringResource(R.string.write_with_ai), fontWeight = FontWeight.SemiBold, maxLines = 1)
-            }
-            IosButton(onClick = onOwn, modifier = Modifier.weight(1f),
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                    contentColor = MaterialTheme.colorScheme.primary)) {
-                Icon(Icons.Outlined.EditNote, null, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(stringResource(R.string.add_my_own_script), fontWeight = FontWeight.SemiBold, maxLines = 1)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                IosButton(onClick = onWrite, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Filled.AutoAwesome, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.write_with_ai), fontWeight = FontWeight.SemiBold, maxLines = 1)
+                }
+                IosButton(onClick = onOwn, modifier = Modifier.fillMaxWidth(),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                        contentColor = MaterialTheme.colorScheme.primary)) {
+                    Icon(Icons.Outlined.EditNote, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.add_my_own_script), fontWeight = FontWeight.SemiBold, maxLines = 1)
+                }
             }
         }
     }

@@ -252,6 +252,7 @@
     <string name="back_to_the_welcome_screen">"처음 화면으로 돌아갈까요?"</string>
     <string name="back_tomorrow">"내일 다시 나와요"</string>
     <string name="basic_simple_everyday_exchanges">"기초 — 짧은 일상 대화 정도"</string>
+    <string name="be_the_first">"첫 도전자 되기"</string>
     <string name="becoming_you">"나를 익히는 중"</string>
     <string name="best">"최고 점수"</string>
     <!-- "Best of all, say it in a call: a word you use in a real talk counts as learned. Each week there's also a short test made from that week's own talks." -->
@@ -2029,6 +2030,7 @@
     <string name="speaks_at_this_speed">"이 속도로 말해요"</string>
     <!-- 'Specific enough — %@ it, or tap a breadcrumb to explore more.' -->
     <string name="specific_enough_it_or_tap_a_breadcrumb_to_explore_more">"충분히 구체적이에요 — %s 하거나, 위 경로를 눌러 더 탐색하세요."</string>
+    <string name="speech_challenge_new">"새 챌린지"</string>
     <string name="speech_challenges">"스피치 챌린지"</string>
     <!-- 'Speech' -->
     <string name="speech_d00d85">"스피치"</string>
