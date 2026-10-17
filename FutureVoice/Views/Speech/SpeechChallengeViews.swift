@@ -1,44 +1,85 @@
 import SwiftUI
 
-// MARK: - Row on the Speech tab
+// MARK: - Card on the Speech tab
 
+/// One challenge as a card, the review page's book card anatomy
+/// (2026-10-16, founder): the trophy in a tinted disc top-left, the
+/// learner's standing top-right, the title large, one quiet line under it,
+/// and the board's top three at the foot.
 struct SpeechChallengeRow: View {
     let script: SpeechScript
     let standing: SpeechChallenges.Standing?
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "trophy")
-                .font(.title3)
-                .foregroundStyle(.tint)
-                .frame(width: 32)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(script.title)
-                    .font(.body.weight(.medium))
-                    .lineLimit(2)
-                HStack(spacing: 6) {
-                    if let faces = standing?.topThree, !faces.isEmpty {
-                        SpeechChallengeFaces(faces: faces)
-                    }
-                    Text("\(standing?.entrants ?? 0) taking part")
-                    Text("·")
-                    Text(SpeechFormat.length(SpeechLibrary.estimatedSeconds(script.body, language: script.language)))
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top) {
+                BookIconDisc {
+                    Image(systemName: "trophy.fill").font(.title3).foregroundStyle(.tint)
                 }
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+                Spacer()
+                if let rank = standing?.myRank, let best = standing?.myBest {
+                    VStack(alignment: .trailing, spacing: 1) {
+                        Text("#\(rank)")
+                            .font(.headline.monospacedDigit())
+                        Text("\(best)")
+                            .font(.caption.weight(.semibold).monospacedDigit())
+                            .foregroundStyle(SpeechScoreColor.color(best))
+                    }
+                }
             }
             Spacer(minLength: 8)
-            if let rank = standing?.myRank, let best = standing?.myBest {
-                VStack(alignment: .trailing, spacing: 1) {
-                    Text("#\(rank)")
-                        .font(.headline.monospacedDigit())
-                    Text("\(best)")
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(SpeechScoreColor.color(best))
-                }
+            VStack(alignment: .leading, spacing: 3) {
+                Text(script.title)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(metaLine)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            if let faces = standing?.topThree, !faces.isEmpty {
+                SpeechChallengeFaces(faces: faces, size: 30)
+                    .padding(.top, 12)
             }
         }
-        .padding(.vertical, 2)
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 18).fill(Color(.secondarySystemGroupedBackground)))
+        .contentShape(Rectangle())
+    }
+
+    private var metaLine: String {
+        let length = SpeechFormat.length(SpeechLibrary.estimatedSeconds(script.body, language: script.language))
+        return [explain("\(standing?.entrants ?? 0) taking part"), length].joined(separator: " · ")
+    }
+}
+
+extension View {
+    /// A card standing alone in a List: no row fill, no separator, a gap
+    /// above and below, and the push without the row's chevron.
+    func speechCardRow() -> some View {
+        self
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
+    }
+}
+
+/// A NavigationLink drawn as its card alone — a List would add a chevron
+/// and a row fill around it.
+struct SpeechCardLink<Destination: View, Label: View>: View {
+    @ViewBuilder var destination: () -> Destination
+    @ViewBuilder var label: () -> Label
+
+    var body: some View {
+        ZStack {
+            NavigationLink(destination: destination) { EmptyView() }
+                .opacity(0)
+            label()
+        }
+        .speechCardRow()
     }
 }
 
@@ -101,6 +142,7 @@ struct SpeechChallengeView: View {
     /// The name sheet was raised by the start button: start once it's saved.
     @State private var startAfterNaming = false
     @State private var showingScript = false
+    @State private var showingTakes = false
     @State private var confirmRetire = false
 
     private var standing: SpeechChallenges.Standing? { challenges.standings[script.id] }
@@ -109,45 +151,6 @@ struct SpeechChallengeView: View {
 
     var body: some View {
         List {
-            Section {
-                VStack(alignment: .leading, spacing: 8) {
-                    if !script.summary.isEmpty {
-                        Text(script.summary)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    HStack(spacing: 6) {
-                        Text(SpeechFormat.length(SpeechLibrary.estimatedSeconds(script.body, language: script.language)))
-                        Text("·")
-                        Text(script.genre.title)
-                    }
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                }
-                Button {
-                    showingScript = true
-                } label: {
-                    Label("Read the script", systemImage: "doc.text")
-                }
-            }
-
-            if let best = standing?.myBest, let rank = standing?.myRank {
-                Section("You") {
-                    LabeledContent("Best") {
-                        Text("\(best)")
-                            .font(.body.monospacedDigit().weight(.semibold))
-                            .foregroundStyle(SpeechScoreColor.color(best))
-                    }
-                    LabeledContent("Place") {
-                        Text("#\(rank) of \(standing?.entrants ?? rank)")
-                            .monospacedDigit()
-                    }
-                    if let attempts = standing?.myAttempts {
-                        LabeledContent("Takes") { Text("\(attempts)").monospacedDigit() }
-                    }
-                }
-            }
-
             Section {
                 if let board {
                     if board.isEmpty {
@@ -176,27 +179,43 @@ struct SpeechChallengeView: View {
                     Text("Only takes with the camera on go on the board, and your best one stands. The board shows your name and score — your video and voice stay on your phone.")
                 }
             }
+
+            if let best = standing?.myBest, let rank = standing?.myRank {
+                Section("You") {
+                    LabeledContent("Best") {
+                        Text("\(best)")
+                            .font(.body.monospacedDigit().weight(.semibold))
+                            .foregroundStyle(SpeechScoreColor.color(best))
+                    }
+                    LabeledContent("Place") {
+                        Text("#\(rank) of \(standing?.entrants ?? rank)")
+                            .monospacedDigit()
+                    }
+                    if let attempts = standing?.myAttempts {
+                        // Tapping the count lists them (2026-10-16, founder).
+                        Button { showingTakes = true } label: {
+                            LabeledContent("Takes") {
+                                HStack(spacing: 6) {
+                                    Text("\(attempts)").monospacedDigit()
+                                    Image(systemName: "chevron.right")
+                                        .font(.footnote.weight(.semibold))
+                                        .foregroundStyle(.tertiary)
+                                }
+                            }
+                        }
+                        .tint(.primary)
+                    }
+                }
+            }
         }
         .navigationTitle(script.title)
         .navigationBarTitleDisplayMode(.inline)
         .refreshable { await reload() }
         .task { await reload() }
-        .safeAreaInset(edge: .bottom) {
-            if !isPast {
-            Button {
-                start()
-            } label: {
-                Text(standing?.myBest == nil ? LocalizedStringKey("Take the challenge") : LocalizedStringKey("Go again"))
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
-            }
-            .buttonStyle(.borderedProminent)
-            .padding(.horizontal, 16)
-            .padding(.bottom, 8)
-            .background(.bar)
-            }
-        }
+        // The board first; the script and the way in together at the foot
+        // (2026-10-16, founder: the board sat under a summary and a
+        // script row, and the start button was a bar of its own).
+        .safeAreaInset(edge: .bottom) { actionBar }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
@@ -229,6 +248,9 @@ struct SpeechChallengeView: View {
         .sheet(isPresented: $showingScript) {
             SpeechScriptSheet(script: script)
         }
+        .sheet(isPresented: $showingTakes) {
+            SpeechTakesSheet(scriptId: script.id)
+        }
         .fullScreenCover(isPresented: $practicing, onDismiss: {
             Task { await reload() }
         }) {
@@ -245,6 +267,59 @@ struct SpeechChallengeView: View {
                 }
             }
         }
+    }
+
+    /// One container at the foot: what the script is, then Read the script
+    /// beside the start button.
+    private var actionBar: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                if !script.summary.isEmpty {
+                    Text(script.summary)
+                        .font(.subheadline)
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                }
+                HStack(spacing: 6) {
+                    Text(SpeechFormat.length(SpeechLibrary.estimatedSeconds(script.body, language: script.language)))
+                    Text("·")
+                    Text(script.genre.title)
+                }
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            }
+            HStack(spacing: 10) {
+                Button {
+                    showingScript = true
+                } label: {
+                    Label("Read the script", systemImage: "doc.text")
+                        .font(.headline)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                }
+                .buttonStyle(.bordered)
+                if !isPast {
+                    Button {
+                        start()
+                    } label: {
+                        Text(standing?.myBest == nil ? LocalizedStringKey("Take the challenge") : LocalizedStringKey("Go again"))
+                            .font(.headline)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 6)
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+            }
+        }
+        .padding(14)
+        .background(RoundedRectangle(cornerRadius: 18).fill(Color(.secondarySystemGroupedBackground)))
+        .shadow(color: .black.opacity(0.08), radius: 12, y: 2)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 8)
     }
 
     /// Nothing goes on a public board until the learner has seen the name.
@@ -390,7 +465,7 @@ struct SpeechChallengeListView: View {
     }
 
     private func row(_ script: SpeechScript) -> some View {
-        NavigationLink {
+        SpeechCardLink {
             SpeechChallengeView(script: script).environmentObject(appState)
         } label: {
             SpeechChallengeRow(script: script, standing: challenges.standings[script.id])

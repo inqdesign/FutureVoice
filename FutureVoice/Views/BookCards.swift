@@ -41,26 +41,40 @@ enum Books {
     }
 }
 
-/// A quiet source label for a book — "Free talk", "News", "Scenario", with an
-/// optional activity prefix ("Talk ·" / "Watch ·") for the mixed Studying grid
-/// where the shelf no longer says which activity a card came from. Plain gray
-/// text, no glyph or fill, so it names the source without pulling the eye off
-/// the title. `nil` when a legacy talk's source can't be known.
+/// A quiet source label for a book — "Free talk", "News", "Scenario". Plain
+/// gray text, no glyph or fill, so it names the source without pulling the
+/// eye off the title. `nil` when a legacy talk's source can't be known. The
+/// "Talk ·" / "Watch ·" activity prefix the Studying grid used to put in
+/// front was dropped (2026-10-16, founder): beside the source it read as the
+/// same label twice ("대화 · 자유 대화").
 struct OriginTag: View {
-    let text: String
+    var text: String
 
     var body: some View {
         Text(text)
-            .font(.caption2.weight(.medium))
+            .font(.footnote)
             .foregroundStyle(.secondary)
             .lineLimit(1)
     }
 
+    /// The source with the card's one fact after it — "Free talk · 11 hours
+    /// ago", "Scenario · Sarah" — on ONE line under the title (2026-10-16,
+    /// founder). A nil source leaves the fact alone.
+    func with(_ detail: String?) -> OriginTag {
+        var copy = self
+        copy.text = [text.isEmpty ? nil : text, detail].compactMap { $0 }.joined(separator: " · ")
+        return copy
+    }
+
+    private init(text: String) { self.text = text }
+
+    /// Just the fact, for a legacy talk whose source can't be known.
+    static func detail(_ detail: String) -> OriginTag { OriginTag(text: detail) }
+
     /// Talk book. Legacy rows (no stored origin) only claim "Free talk" when
     /// they carried no topic; otherwise the source is genuinely unknown and we
-    /// show no source rather than mislabel a free talk as News. `showActivity`
-    /// prefixes "Talk ·" for the Studying grid.
-    init?(session: Session, showActivity: Bool = false) {
+    /// show no source rather than mislabel a free talk as News.
+    init?(session: Session) {
         var source: String?
         switch session.origin {
         case .free:     source = explain("Free talk")
@@ -79,18 +93,13 @@ struct OriginTag: View {
             default:               source = coach
             }
         }
-        guard showActivity || source != nil else { return nil }
-        text = Self.join(activity: showActivity ? explain("Talk") : nil, source: source)
+        guard let source else { return nil }
+        text = source
     }
 
     /// Watch book — a scenario is a news-born topic or a built situation.
-    init(scenario: Scenario, showActivity: Bool = false) {
-        let source = scenario.isTopic == true ? explain("News") : explain("Scenario")
-        text = Self.join(activity: showActivity ? explain("Watch") : nil, source: source)
-    }
-
-    private static func join(activity: String?, source: String?) -> String {
-        [activity, source].compactMap { $0 }.joined(separator: " · ")
+    init(scenario: Scenario) {
+        text = scenario.isTopic == true ? explain("News") : explain("Scenario")
     }
 }
 
@@ -126,9 +135,6 @@ struct ScenarioBookCard: View {
     let scenario: Scenario
     /// Linked persona's name when the scenario points at a real person.
     let personaName: String?
-    /// Prefix the source line with the activity ("Watch ·") for the mixed
-    /// Studying grid, where the shelf no longer names the activity.
-    var showActivity: Bool = false
     /// The whole-book progress strip. Off on the Studying page, where each
     /// chapter button under the card carries its own bar.
     var showsProgress: Bool = true
@@ -144,17 +150,15 @@ struct ScenarioBookCard: View {
                 }
             }
             Spacer(minLength: 8)
-            VStack(alignment: .leading, spacing: 2) {
-                OriginTag(scenario: scenario, showActivity: showActivity)
-                // The tidy summary (not the raw prompt); topic headlines are
-                // full sentences so give them a second line.
-                Text(scenario.cardTitle).font(.subheadline.weight(.semibold))
+            VStack(alignment: .leading, spacing: 3) {
+                // The tidy summary (not the raw prompt). Title first and
+                // large, then ONE quiet line — the source and who it's with
+                // (2026-10-16, founder: the activity prefix "Watch ·" said
+                // the same thing as the source beside it).
+                Text(scenario.cardTitle).font(.headline)
                     .foregroundStyle(.primary)
-                    .lineLimit(scenario.isTopic == true || partnerLabel == nil ? 2 : 1)
-                if let partnerLabel {
-                    Text("with \(partnerLabel)")
-                        .font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                }
+                    .lineLimit(2)
+                OriginTag(scenario: scenario).with(partnerLabel)
             }
             .padding(.bottom, showsProgress ? 8 : 0)
             if showsProgress { progressStrip }
@@ -217,8 +221,6 @@ struct ScenarioBookCard: View {
 struct TalkBookCard: View {
     let session: Session
     let snapshot: TalkCurriculum.Snapshot?
-    /// Prefix the source line with "Talk ·" for the mixed Studying grid.
-    var showActivity: Bool = false
     /// The whole-book progress strip. Off on the Studying page, where each
     /// chapter button under the card carries its own bar.
     var showsProgress: Bool = true
@@ -229,6 +231,12 @@ struct TalkBookCard: View {
     private var lastStudiedAt: Date {
         [snapshot?.lastStudiedAt, session.endedAt, session.startedAt]
             .compactMap { $0 }.max() ?? session.startedAt
+    }
+
+    private var metaLine: OriginTag {
+        let when = lastStudiedAt.formatted(Date.RelativeFormatStyle(
+            presentation: .named, locale: Locale(identifier: UILanguage.chromeLanguage)))
+        return OriginTag(session: session)?.with(when) ?? .detail(when)
     }
 
     var body: some View {
@@ -250,16 +258,14 @@ struct TalkBookCard: View {
                 }
             }
             Spacer(minLength: 8)
-            VStack(alignment: .leading, spacing: 2) {
-                OriginTag(session: session, showActivity: showActivity)
-                Text(session.displayTitle).font(.subheadline.weight(.semibold))
+            VStack(alignment: .leading, spacing: 3) {
+                Text(session.displayTitle).font(.headline)
                     .foregroundStyle(.primary).lineLimit(2)
-                // When you last WORKED this book, not when the chat happened —
-                // the most recent of a mastery event or talking/continuing it,
-                // so it keeps advancing as you study. Relative ("2 days ago")
-                // reads as recency, which is the point.
-                Text("Studied \(lastStudiedAt.formatted(Date.RelativeFormatStyle(presentation: .named, locale: Locale(identifier: UILanguage.chromeLanguage))))")
-                    .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                // The source, then when you last WORKED this book — the most
+                // recent of a mastery event or talking/continuing it, so it
+                // keeps advancing as you study — on one line: "Free talk ·
+                // 11 hours ago" (2026-10-16, founder).
+                metaLine
             }
             .padding(.bottom, showsProgress ? 8 : 0)
             if showsProgress { progressStrip }

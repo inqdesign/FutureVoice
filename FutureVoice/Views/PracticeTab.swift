@@ -726,35 +726,6 @@ struct PracticeTab: View {
                 .tint(Color(.label))
             }
         }
-        // The test on its own, at the far right — a different kind of thing
-        // from the two lists beside it.
-        if #available(iOS 26.0, *) {
-            ToolbarSpacer(.fixed, placement: .topBarTrailing)
-        }
-        ToolbarItem(placement: .topBarTrailing) {
-            // The weekly test is its host's face — the same eyes the test
-            // itself is run by, so the door looks like who is behind it.
-            Button { showingWeeklyTest = true } label: {
-                WeeklyTestCharacter(mood: .waiting, since: .distantPast, tile: Color(.tertiarySystemFill))
-                    .scaleEffect(32 / WeeklyTestCharacter.size)
-                    .frame(width: 32, height: 32)
-                    .overlay(alignment: .topTrailing) {
-                        if weeklyTestNeedsYou { headerDot(.accentColor) }
-                    }
-            }
-            .accessibilityLabel(Text("Weekly test"))
-            .accessibilityValue(Text(weeklyTestValue.text))
-            .accessibilityIdentifier("practice.weeklyTest")
-        }
-    }
-
-    /// The test is waiting on the learner: open and not started, or started
-    /// and not finished.
-    private var weeklyTestNeedsYou: Bool {
-        switch weeklyTestState {
-        case .ready, .inProgress: return true
-        case .done, .thin: return false
-        }
     }
 
     private func headerIcon(_ name: String, dot: Color?) -> some View {
@@ -774,7 +745,7 @@ struct PracticeTab: View {
         case .ready: return (explain("Start"), .accentColor)
         case let .inProgress(test): return ("\(test.answers.count)/\(test.total)", .accentColor)
         case let .done(test, _): return ("\(test.score)/\(test.total)", .primary)
-        case let .thin(next): return (explain("Next one \(Self.weekdayName(next, .abbreviated))"), nil)
+        case .thin: return (explain("Preparing"), nil)
         }
     }
 
@@ -801,6 +772,7 @@ struct PracticeTab: View {
             // off (2026-10-03, user decision: an index at the bottom of a
             // long feed was nowhere).
             libraryList
+            weeklyTestBanner
                 .padding(.bottom, 8)
             ForEach(books) { book in
                 // The shelf's own card, with its chapter buttons under it on
@@ -822,8 +794,8 @@ struct PracticeTab: View {
     @ViewBuilder
     private func bookCard(_ book: BookPreview) -> some View {
         switch book.source {
-        case .talk(let s): talkCard(s, showActivity: true, showsProgress: false)
-        case .scenario(let sc): scenarioCard(sc, showActivity: true, showsProgress: false)
+        case .talk(let s): talkCard(s, showsProgress: false)
+        case .scenario(let sc): scenarioCard(sc, showsProgress: false)
         }
     }
 
@@ -938,6 +910,57 @@ struct PracticeTab: View {
         .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
     }
 
+    /// The weekly test as a full-width banner under the four lists
+    /// (2026-10-16, founder): the host's face, what the week's test is
+    /// waiting on, and its number at the right. It is the test's ONLY door
+    /// on this page — the header no longer carries it. A thin week reads
+    /// "Preparing" and opens nothing: there is no paper to show.
+    private var weeklyTestBanner: some View {
+        Button { showingWeeklyTest = true } label: {
+            HStack(spacing: 12) {
+                WeeklyTestCharacter(mood: .waiting, since: .distantPast, tile: Color(.tertiarySystemFill))
+                    .scaleEffect(44 / WeeklyTestCharacter.size)
+                    .frame(width: 44, height: 44)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Weekly test")
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                    Text(weeklyTestBannerLine)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 8)
+                Text(weeklyTestValue.text)
+                    .font(.subheadline.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(weeklyTestValue.tint ?? .secondary)
+                if weeklyTestState.opensNow {
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .padding(.vertical, 12)
+            .padding(.horizontal, 14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!weeklyTestState.opensNow)
+        .accessibilityValue(Text(weeklyTestValue.text))
+        .accessibilityIdentifier("practice.weeklyTestBanner")
+    }
+
+    private var weeklyTestBannerLine: String {
+        switch weeklyTestState {
+        case .ready: return explain("Your weekly test is ready")
+        case .inProgress: return explain("Continue the test")
+        case let .done(_, next), let .thin(next):
+            return explain("Next one \(Self.weekdayName(next, .wide))")
+        }
+    }
+
     /// Grouped in the APP language — `formatted()` follows the phone's
     /// region, which printed "8.424" on a Korean screen.
     private static var appNumber: IntegerFormatStyle<Int> {
@@ -996,14 +1019,14 @@ struct PracticeTab: View {
 
     /// One talk book card + its navigation and management actions — shared by
     /// the Talks shelf and the Studying grid.
-    private func talkCard(_ session: Session, showActivity: Bool = false,
+    private func talkCard(_ session: Session,
                           showsProgress: Bool = true) -> some View {
         NavigationLink {
             ConversationDetailView(session: session)
                 .environmentObject(appState)
         } label: {
             TalkBookCard(session: session, snapshot: talkSnapshots[session.id],
-                         showActivity: showActivity, showsProgress: showsProgress)
+                         showsProgress: showsProgress)
         }
         .buttonStyle(.plain)
         .contextMenu {
@@ -1021,9 +1044,9 @@ struct PracticeTab: View {
 
     /// One scenario/topic book card + actions — shared by the Topics and
     /// Scenarios shelves and the Studying grid.
-    private func scenarioCard(_ s: Scenario, showActivity: Bool = false,
+    private func scenarioCard(_ s: Scenario,
                               showsProgress: Bool = true) -> some View {
-        ScenarioBookCard(scenario: s, personaName: linkedPersonaName(s), showActivity: showActivity,
+        ScenarioBookCard(scenario: s, personaName: linkedPersonaName(s),
                          showsProgress: showsProgress)
             .onTapGesture { openScenario = s }
             .contextMenu {
@@ -1440,5 +1463,13 @@ struct WeeklyTestSettingsSection: View {
         notifications = status
         settings.reminderOn = status.canRing
         await WeeklyTestReminder.reschedule()
+    }
+}
+
+private extension WeeklyTestSchedule.State {
+    /// There is a test to open or a score to show — not a thin week.
+    var opensNow: Bool {
+        if case .thin = self { return false }
+        return true
     }
 }

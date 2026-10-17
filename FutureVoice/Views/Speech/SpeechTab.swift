@@ -52,25 +52,33 @@ struct SpeechTab: View {
                         // ones included, one tap away — the tab is for
                         // practising, not for an ever-growing list.
                         ForEach(challenges.live.prefix(Self.challengesOnTab)) { script in
-                            NavigationLink {
+                            SpeechCardLink {
                                 SpeechChallengeView(script: script)
                                     .environmentObject(appState)
                             } label: {
                                 SpeechChallengeRow(script: script, standing: challenges.standings[script.id])
                             }
                         }
-                        if challenges.live.count > Self.challengesOnTab || !challenges.past.isEmpty {
-                            NavigationLink {
-                                SpeechChallengeListView()
-                                    .environmentObject(appState)
-                            } label: {
-                                LabeledContent("All challenges") {
-                                    Text("\(challenges.scripts.count)").monospacedDigit()
+                    } header: {
+                        // The rest is one tap away from the header now: a
+                        // plain row under the cards read as a fourth card.
+                        HStack {
+                            Text("Challenges")
+                            Spacer()
+                            if challenges.live.count > Self.challengesOnTab || !challenges.past.isEmpty {
+                                NavigationLink {
+                                    SpeechChallengeListView()
+                                        .environmentObject(appState)
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Text("All challenges")
+                                        Text(verbatim: "\(challenges.scripts.count)").monospacedDigit()
+                                    }
+                                    .font(.subheadline)
                                 }
+                                .textCase(nil)
                             }
                         }
-                    } header: {
-                        Text("Challenges")
                     } footer: {
                         Text("Everyone reads the same script. Your best take goes on the board.")
                     }
@@ -280,11 +288,11 @@ struct SpeechScriptRow: View {
     let best: Int?
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(alignment: .top, spacing: 12) {
             Image(systemName: script.genre.symbol)
                 .font(.title3)
                 .foregroundStyle(.tint)
-                .frame(width: 32)
+                .frame(width: 32, height: 24, alignment: .center)
             VStack(alignment: .leading, spacing: 3) {
                 Text(script.title)
                     .font(.body.weight(.medium))
