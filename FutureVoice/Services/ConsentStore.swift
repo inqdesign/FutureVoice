@@ -11,10 +11,10 @@ import Foundation
 ///
 /// Two SEPARATE facts, though, deliberately not collapsed into one flag:
 ///
-/// - **Age.** ElevenLabs — the sub-processor that actually builds the voice
-///   model — forbids making its Services available to anyone under 13 at all,
-///   and to 13–17-year-olds without a parent or guardian's consent, and
-///   separately forbids passing its Services on to end users "on terms less
+/// - **Age.** The voice provider when this was written — the sub-processor
+///   that builds the voice model — forbade making its Services available to
+///   anyone under 13 at all, and to 13–17-year-olds without a parent or
+///   guardian's consent, and separately forbade passing its Services on to end users "on terms less
 ///   restrictive or more permissive" than the ones we received them under.
 ///   There is no in-app way to verify a real parent, so the minimum here is
 ///   16: clear of the 13–17 consent band, and equal to the GDPR Art. 8 age of

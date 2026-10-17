@@ -67,7 +67,7 @@ struct ShadowTimelinePlayer<MicControl: View>: View {
 
     /// The track's right edge is where the SPEECH ends, not where the file
     /// does. A render carries a silent tail, and the word timings stop at the
-    /// last word (`LocalAlignment.fill` by design, ElevenLabs by nature), so
+    /// last word (`LocalAlignment.fill` by design, the synthesizer by nature), so
     /// a track scaled to the file left a dead strip after the whole-line
     /// band — a third of the width on a short line, which read as the
     /// timeline not filling the row. Playback still runs the file out past

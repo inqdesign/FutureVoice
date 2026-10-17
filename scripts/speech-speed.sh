@@ -14,7 +14,7 @@
 # ends and stay in the build, where an ear can be put on them first. A learner
 # who deliberately picked a rung keeps the rung; its speed is what changes.
 #
-# Range is ElevenLabs' own 0.7–1.2, and the app DROPS anything outside rather
+# Range is the app's own 0.7–1.2, and the app DROPS anything outside rather
 # than clamping — out of range means the row is wrong, and guessing which edge
 # was meant is how a typo becomes a voice nobody recognises.
 #
@@ -52,7 +52,7 @@ else
 import sys
 try: v = float(sys.argv[1])
 except ValueError: sys.exit(f"not a number: {sys.argv[1]}")
-if not (0.7 <= v <= 1.2): sys.exit(f"{v} is outside ElevenLabs' 0.7–1.2 — the app would drop it")
+if not (0.7 <= v <= 1.2): sys.exit(f"{v} is outside the app's 0.7–1.2 — the app would drop it")
 PY
   VALUE="$ARG"
 fi

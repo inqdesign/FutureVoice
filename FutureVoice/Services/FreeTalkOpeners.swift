@@ -207,7 +207,7 @@ final class FreeTalkOpeners {
     }
 
     /// Synthesize the next `warmAhead` lines' audio that isn't cached yet, so
-    /// the next call opens on cached audio — no ElevenLabs round trip on the
+    /// the next call opens on cached audio — no synthesis round trip on the
     /// greeting. Called again after every call, so the window walks with the
     /// rotation. A failure aborts the sweep (the rest would fail the same
     /// way); the live call still falls back to on-demand TTS.

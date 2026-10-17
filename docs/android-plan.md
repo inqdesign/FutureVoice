@@ -24,7 +24,7 @@
 > scripted read with a fixed record bar → measured quality review →
 > SNR-driven denoise decision → multipart clone → greeting) are built and
 > verified on the emulator up to REVIEW — the upload itself is untested on
-> purpose (a real clone spends an ElevenLabs slot and would replace the dev
+> purpose (a real clone spends a provider voice and would replace the dev
 > account's voice; first real-device run covers it). The clone script is
 > EXTRACTED from `VoiceCloneScript.swift` by `scripts/android/
 > gen-clone-script.py`, never retyped. The Talk home now carries the day
@@ -123,9 +123,9 @@ M0 work and will drive `AppCompatDelegate.setApplicationLocales`.
 - **Gradual brain-lift**: whenever Android needs a piece of iOS-resident logic (prompt templates, SRS scheduling, curriculum generation), promote it to an Edge Function at that moment instead of re-implementing in Kotlin. Never maintain the same logic in Swift and Kotlin.
 
 ## What is shared for free (zero reimplementation)
-- **Gemini / ElevenLabs proxying** — same Edge Functions (`supabase/functions/`); the app never holds provider keys, same as iOS.
+- **Gemini / Cartesia proxying** — same Edge Functions (`supabase/functions/`); the app never holds provider keys, same as iOS.
 - **Auth** — `supabase-kt` (official Kotlin SDK) against the same project; same user accounts.
-- **Voice clone** — `voice_clones` table, one active clone per user. Android restores the same `elevenlabs_voice_id` on sign-in. *The magic moment: a user who cloned on iPhone hears their own voice on Android immediately — never rebuild cloning UX as a first step, restore is enough for v1.*
+- **Voice clone** — `voice_clones` table, one active clone per user. Android restores the same `voice_id` on sign-in. *The magic moment: a user who cloned on iPhone hears their own voice on Android immediately — never rebuild cloning UX as a first step, restore is enough for v1.*
 - **Subscription/credits** — `user_subscriptions` + `user_credits` + `charge_credits`. Android adds Google Play Billing → credit grant (mirror of `StoreKitService`); consumption paths are untouched.
 - **Multi-language contract** — see `multi-language-plan.md`: records belong to `(user, lang)`; Android materializes this as Room tables keyed by `lang` from day one (it never has a single-language legacy to migrate).
 
@@ -134,7 +134,7 @@ M0 work and will drive `AppCompatDelegate.setApplicationLocales`.
 |---|---|---|
 | UI | SwiftUI | Jetpack Compose |
 | Live STT | SFSpeechRecognizer (per-language locale) | `SpeechRecognizer` w/ locale, or same Whisper endpoint |
-| Audio capture | AVFoundation, 16kHz mono PCM WAV | `AudioRecord`, same format (contract: don't change without checking Whisper + ElevenLabs) |
+| Audio capture | AVFoundation, 16kHz mono PCM WAV | `AudioRecord`, same format (contract: don't change without checking Whisper + Cartesia) |
 | Playback | AVAudioPlayer | `AudioTrack`/ExoPlayer |
 | VAD turn-taking | in-app | reimplement (same thresholds — extract constants into the contract doc) |
 | Local persistence | JSON-on-disk stores | Room (or DataStore), `lang`-keyed |
@@ -146,7 +146,7 @@ M0 work and will drive `AppCompatDelegate.setApplicationLocales`.
 
 ### Phase A — Contract extraction (docs, no Android code)
 Extract from iOS into `docs/contracts/`:
-1. **Edge Function API contract** — request/response of each function (`gemini`, elevenlabs, …), including the structured turn `{reply, suggestion}` schema.
+1. **Edge Function API contract** — request/response of each function (`gemini`, `tts`, `voice-clone`, …), including the structured turn `{reply, suggestion}` schema.
 2. **Data contract** — Models.swift types that cross the wire or will sync in Phase 2 (Session, Turn, LearnerProfile, Drill, …) as language-neutral JSON schemas, `(user, lang)` scoping per the multi-language plan.
 3. **Behavior contract** — deterministic rules that must match across platforms: shadow scoring tokenization (word vs syllable), Leitner box scheduling, scorecard metric formulas, VAD thresholds, audio format (16kHz mono PCM WAV).
 

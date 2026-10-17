@@ -1,9 +1,10 @@
 import Foundation
 
 /// A voice nobody is paying for is PARKED (2026-09-28): the server deletes it
-/// from ElevenLabs after 7 days (`park-idle-voices`) and stamps `parked_at` on
-/// its row. The account voice ceiling (Pro: 160 for every learner together)
-/// was being held by people who had left.
+/// upstream after 7 days and stamps `parked_at` on its row. The provider of
+/// the day had an account-wide voice ceiling, and it was being held by
+/// people who had left. Parking stopped on 2026-10-12; voices parked before
+/// then still come back through this path.
 ///
 /// What the phone does about it, in three rules:
 /// - **Nothing already made stops playing.** The id stays in

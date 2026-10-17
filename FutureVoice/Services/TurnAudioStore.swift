@@ -1,7 +1,7 @@
 import Foundation
 
 /// On-disk cache for turn audio so the user can shadow past lines without
-/// re-spending ElevenLabs credits. Files live under
+/// re-spending synthesis credits. Files live under
 /// `Documents/TurnAudio/{turnId}.{ext}`. Phase 2 will move this behind a
 /// signed Supabase Storage URL.
 ///
@@ -30,8 +30,8 @@ final class TurnAudioStore {
     }
 
     /// Persist audio for a turn. Returns the file URL.
-    /// - Parameter fileExtension: MUST match the actual container — `mp3` for
-    ///   ElevenLabs TTS, `m4a` for the user's own AAC capture. See the type
+    /// - Parameter fileExtension: MUST match the actual container — `mp3`/`wav` for
+    ///   TTS, `m4a` for the user's own AAC capture. See the type
     ///   note on the class.
     @discardableResult
     func save(_ data: Data, turnId: UUID, timings: [WordTiming] = [],

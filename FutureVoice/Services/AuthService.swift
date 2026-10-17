@@ -354,7 +354,7 @@ final class AuthService: NSObject, ObservableObject {
     }
 
     /// Server-side account deletion (Apple Guideline 5.1.1(v)). The Edge
-    /// Function deletes the ElevenLabs clones, cancels any Stripe web
+    /// Function deletes the voice clones, cancels any Stripe web
     /// subscription, and destroys the auth user — every user table cascades
     /// from auth.users. On success the server-side user no longer exists, so
     /// we only clear the LOCAL session; a server sign-out would just 401.

@@ -27,8 +27,8 @@ final class JapaneseShadowTimingTests: XCTestCase {
         XCTAssertEqual(WordSplitter.timingWords("「はい」"), ["「はい」"])
     }
 
-    /// ElevenLabs times characters; they come back grouped into those words.
-    func testElevenLabsCharactersGroupIntoWords() {
+    /// The TTS times characters; they come back grouped into those words.
+    func testSynthesizedCharactersGroupIntoWords() {
         let chars = line.map(String.init)
         let starts = chars.indices.map { Double($0) * 0.1 }
         let ends = starts.map { $0 + 0.1 }
@@ -69,7 +69,7 @@ final class JapaneseShadowTimingTests: XCTestCase {
         XCTAssertTrue(ShadowDrillView.cutMatches(est, text: line))
     }
 
-    /// The whole chain on one Japanese line: target from ElevenLabs, learner
+    /// The whole chain on one Japanese line: target from the TTS, learner
     /// from Apple realigned onto the scored words — the rhythm is graded.
     func testRhythmIsGradedOnAJapaneseLine() {
         let target = "友達と映画を見に行きました"

@@ -2,7 +2,7 @@
 """Apology to the learners whose accent was blocked (2026-10-10).
 
 From 2026-10-08 22:16 UTC the voice-quota reserve (_shared/voice-quota.ts)
-refused every accent remix while the ElevenLabs account sat under 12 voice
+refused every accent remix while the voice provider account sat under 12 voice
 add/edits for the month. New English learners got a plain clone: two of them
 (Hanna, Jay) tapped an accent and saw a raw 503, three on 1.1.4 never knew.
 The founder picked four to write to; we remix them to American by hand after

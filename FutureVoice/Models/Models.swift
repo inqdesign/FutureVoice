@@ -228,7 +228,7 @@ struct FluencyStats: Codable, Hashable {
     var longestPauseSeconds: Double
 }
 
-/// Word-level alignment from ElevenLabs `with-timestamps` synthesis. Drives
+/// Word-level alignment from `with-timestamps` synthesis. Drives
 /// karaoke-style highlighting in shadow practice — the UI looks up which
 /// word's [startMs, endMs] contains the current playback time.
 struct WordTiming: Codable, Hashable {
@@ -1053,7 +1053,7 @@ struct WatchDialogue: Codable, Identifiable, Hashable {
     /// there's no saved Counterpart (scenario watches), and survives counterpart
     /// deletion. Optional for rows persisted before this existed.
     var speakerName: String?
-    /// ElevenLabs voice for the non-user turns, stored so replay works without
+    /// Preset voice for the non-user turns, stored so replay works without
     /// the Counterpart object.
     var voicePresetId: String?
 
@@ -1076,7 +1076,7 @@ struct DialogueEngineTurn: Codable, Hashable, Identifiable {
 
 /// A person from the user's actual life — best friend, Kita parent, manager.
 /// In Watch mode, the user's voice clone has a conversation WITH this
-/// counterpart (voiced by an ElevenLabs preset). Specificity here is what
+/// counterpart (voiced by a preset). Specificity here is what
 /// makes the dialogues feel real instead of generic.
 struct Counterpart: Codable, Identifiable, Hashable {
     var id: UUID = UUID()
@@ -1330,11 +1330,11 @@ extension Counterpart {
     }
 }
 
-/// Curated subset of ElevenLabs default voices (all stable, well-known IDs)
-/// used for counterpart voices. We deliberately keep the list small so the
+/// The four preset voices used for counterparts (stable SLOT ids, see
+/// `voicedBySlot` below). We deliberately keep the list small so the
 /// user can pick quickly instead of scrolling through hundreds.
 struct VoicePreset: Hashable, Identifiable {
-    let id: String           // the slot id stored everywhere (ElevenLabs-era, kept)
+    let id: String           // the slot id stored everywhere (from an earlier provider, kept)
     /// The English voice's own name. What screens show is `displayName`,
     /// which follows the target language (see `localNames`).
     let englishName: String
@@ -1342,13 +1342,9 @@ struct VoicePreset: Hashable, Identifiable {
     let accent: String
     let description: String
 
-    // Four voices, hand-picked from the ElevenLabs library (2026-07): one
-    // female + one male per accent, chosen for conversation. All four IDs
-    // are verified synthesizable with the production API key. The two
-    // British voices are library (shared) voices whose upstream names the
-    // voices API doesn't expose — display names for those are ours. Old
-    // stored IDs from the retired 8-voice premade list keep synthesizing
-    // fine but fall back to catalog[0] for display.
+    // Four slots (2026-07): one female + one male per accent, chosen for
+    // conversation. The display names are ours. Old stored IDs from a
+    // retired 8-voice list fall back to catalog[0] for display.
     static let catalog: [VoicePreset] = [
         VoicePreset(id: "NDTYOmYEjbDIVCKB35i3",
                     englishName: "Paige", gender: "Female", accent: "American",
@@ -1394,16 +1390,13 @@ struct VoicePreset: Hashable, Identifiable {
     // Nothing stored changes, and a person — who is shared by every target
     // language — speaks natively in each one.
     //
-    // Korean voices picked by ear by the founder from the ElevenLabs library
-    // (native ko speakers, added to the account 2026-09-28 — a library voice
-    // must be in "My Voices" to synthesize). Japanese uses the same four by
-    // the founder's decision; German and English keep the originals. Every id
-    // here must also be in the two server allowlists (gateway/src/supabase.ts,
-    // supabase/functions/elevenlabs-tts) or the server refuses it.
+    // Every slot here must also be in the two server maps
+    // (gateway/src/presets.ts, supabase/functions/_shared/preset-voices.ts)
+    // or the server can't voice it — keep the three in step.
     private static let voicedBySlot: [String: [String: String]] = {
         // Every selectable target language speaks from Cartesia's library
-        // since 2026-10-12 (the ElevenLabs voices above are now only the
-        // SLOT ids stored on people and scenarios). Picked from the
+        // since 2026-10-12 (the ids above are only the SLOT ids stored on
+        // people and scenarios). Picked from the
         // candidates in Desktop/beta audio/preset-candidates; English keeps
         // the slots' American/British split.
         let english = [

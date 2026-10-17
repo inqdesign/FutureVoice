@@ -99,7 +99,7 @@ enum DailyCallScheduler {
     /// Regenerates the script only when there isn't a usable one — a plan that
     /// still matches the learner's language and clone, hasn't been answered,
     /// and hasn't fired yet is reused as-is. Each regeneration costs a Gemini
-    /// call and an ElevenLabs synthesis, so "already have one" must be the
+    /// call and a synthesis, so "already have one" must be the
     /// common path.
     ///
     /// - Parameter force: rewrite even when a usable plan exists — the session
@@ -207,7 +207,7 @@ enum DailyCallScheduler {
     /// It was: once per sitting, when the app left the foreground, or within
     /// three hours of the ring — and measured over 30 days, 583 takes were
     /// made for 46 answered calls. Declined, missed, and never-noticed calls
-    /// heard none of it, and it was the third-largest ElevenLabs cost
+    /// heard none of it, and it was the third-largest TTS cost
     /// ($10/30 days, behind call replies and Watch scenes). Now only the
     /// SCRIPT is written ahead; picking up opens the talk with the script as
     /// its opener, finds no local take, and the gateway speaks it — one

@@ -2711,7 +2711,7 @@ struct ConversationView: View {
             // Speak the opener in the active voice — a call starts with the
             // other side TALKING, not a line to read. Repeated openers for
             // the same phrasing hit the content cache, and the idempotency
-            // key keeps a re-open from billing ElevenLabs twice.
+            // key keeps a re-open from billing the voice twice.
             if let voiceId = activeVoiceId {
                 do {
                     try await speakAndAppend(opener, voiceId: voiceId,
@@ -4154,7 +4154,7 @@ struct ConversationView: View {
     /// run a background `synthesizeWithTimestamps` on every line to get them,
     /// on the reasoning that the shared idempotency key made it free. It isn't
     /// free and it isn't correct:
-    ///   • it is a SECOND ElevenLabs render of audio we already have, which is
+    ///   • it is a SECOND render of audio we already have, which is
     ///     the exact thing the no-duplicate-TTS rule forbids;
     ///   • TTS is not deterministic, so that render's word onsets belong to
     ///     audio the learner never hears. Shadow then highlighted words
@@ -4166,7 +4166,7 @@ struct ConversationView: View {
     private func speakAndAppend(_ text: String, voiceId: String,
                                 idempotencyKey: String? = nil) async throws {
         guard !isTornDown else { return }
-        // Content-addressed cache hit avoids re-billing ElevenLabs for repeated
+        // Content-addressed cache hit avoids re-billing synthesis for repeated
         // fluent-self lines (greetings, short acknowledgements, etc.).
         // `allowLineage: false` — a LIVE call must sound like one take, so an
         // older clone's recording is never spliced in mid-conversation. Review

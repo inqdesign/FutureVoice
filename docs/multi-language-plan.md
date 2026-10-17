@@ -5,7 +5,7 @@
 
 ## Decisions locked
 - **Language switcher**: always visible in the Talk header (Duolingo-style chip). Adding/removing languages + per-language CEFR live in the Me tab.
-- **Voice clone**: ONE cloned voice reused across every language. No re-clone on "add language" — ElevenLabs voices are language-agnostic and the DB already enforces one active clone per user.
+- **Voice clone**: ONE cloned voice reused across every language. No re-clone on "add language" — cloned voices are language-agnostic and the DB already enforces one active clone per user.
 - **Subscription**: stays global. `user_subscriptions` + `user_credits` are per-user with no language column — "one subscription, many languages" is already satisfied. Credits are a shared pool across all languages.
 
 ## The contract (platform-neutral — this is the real spec)

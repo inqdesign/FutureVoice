@@ -376,7 +376,7 @@ struct VoicePresetPickerView: View {
     /// One neutral greeting per target language — phrasings chosen to avoid
     /// speaker-gender agreement so any voice can say them naturally.
     ///
-    /// The `<break>` is ElevenLabs' pause tag. The synthesizer pauses at
+    /// The `<break>` is the synthesizer's pause tag. The synthesizer pauses at
     /// punctuation only loosely, and measured on the Korean line the period
     /// after 반가워요 gave NO pause at all — the question ran straight on. The
     /// tag is spoken as silence (~0.5 s), never read out; this line is audio
@@ -384,8 +384,8 @@ struct VoicePresetPickerView: View {
     /// The preview clip for a preset voice in a target language. The clips
     /// SHIP with the app (`Resources/VoicePreviews`, made once by
     /// `scripts/bundle-voice-previews.sh`): the line and the voice are the
-    /// same for everyone, so synthesizing them per learner paid ElevenLabs
-    /// for the same few seconds over and over. A clip the bundle lacks (a new
+    /// same for everyone, so synthesizing them per learner paid for the
+    /// same few seconds over and over. A clip the bundle lacks (a new
     /// voice, a new language) falls back to the phone's cache, then to one
     /// live synthesis kept in that cache.
     static func previewAudio(voiceId: String, language: String) async throws -> Data {

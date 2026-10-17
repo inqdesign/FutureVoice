@@ -53,7 +53,7 @@ enum Telemetry {
     /// on PostHog's `Analytics.capture`). Added 2026-09-28: retention fell
     /// by self-reported level (A1 8% came back, B2+ 57%) and nothing on the
     /// server could say whether the slower voice or coach mode changed that —
-    /// the speed rode to ElevenLabs and was written nowhere, and `talk_coach`
+    /// the speed rode to the TTS and was written nowhere, and `talk_coach`
     /// exists only for calls that drew a hint, so "on, no hint" and "off"
     /// looked the same. `speed_picked` separates a learner who chose a rung
     /// (onboarding or Me) from one who never touched the default.
@@ -101,7 +101,7 @@ enum Telemetry {
 }
 
 /// Networking defaults for the Supabase Edge Function clients (Gemini,
-/// ElevenLabs). Two cellular-hardening pieces:
+/// TTS). Two cellular-hardening pieces:
 ///
 /// 1. `URLSession.edgeFunctions` — waits out short connectivity blips
 ///    (radio handoffs, Wi-Fi↔cellular transitions) instead of failing the
@@ -135,7 +135,7 @@ extension URLSession {
     /// URLSession keeps its connection pool per instance, so the ~100 KB
     /// base64 audio upload this carries gets its own connection instead of
     /// sharing one HTTP/2 connection's stream window and send buffer with the
-    /// turn reply and the ElevenLabs stream — which both live on
+    /// turn reply and the TTS stream — which both live on
     /// `edgeFunctions` and both point at the same Supabase host. Measured
     /// same-day, turns that carried the upload reached the reply's first
     /// sentence 0.8–2.2 s later than turns that didn't.

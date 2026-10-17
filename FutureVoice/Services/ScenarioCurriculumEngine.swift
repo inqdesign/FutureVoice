@@ -143,7 +143,7 @@ enum ScenarioCurriculumEngine {
     ///
     /// **And length is where the money is.** Measured on those two watches:
     /// 8 lines for $0.090 against 9 lines for $0.401 — ONE more line and
-    /// 4.4x the ElevenLabs bill, because the band was expressed as length
+    /// 4.4x the TTS bill, because the band was expressed as length
     /// and a scene's cost is its characters. That made one scene from the
     /// plan's pool mean four different things depending on who played it,
     /// and put the $0.12-per-scene arithmetic `docs/launch-billing.md`

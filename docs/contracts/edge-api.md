@@ -2,7 +2,7 @@
 
 > Base URL: `<SUPABASE_URL>/functions/v1`
 > Every client (iOS, Android) talks to providers ONLY through these. No client
-> ever holds a Google or ElevenLabs key.
+> ever holds a Google or Cartesia key.
 
 ## Common to every function
 
@@ -16,7 +16,7 @@
 
 | Status | Meaning | Client behavior |
 |---|---|---|
-| `402` | A wall. The body's `error` field says WHICH — read it in ONE place per client (iOS `ElevenLabsError.wall(body:)`, Android `EdgeError.wall(body)`): `insufficient_credits` = a FREE account's pool is spent → paywall; `daily_cap_reached` = a SUBSCRIBER's allowance is spent → "this call is saved, it refills with your plan", **never a paywall** (they already paid). Both stop the call gracefully; neither is an error. |
+| `402` | A wall. The body's `error` field says WHICH — read it in ONE place per client (iOS `VoiceError.wall(body:)`, Android `EdgeError.wall(body)`): `insufficient_credits` = a FREE account's pool is spent → paywall; `daily_cap_reached` = a SUBSCRIBER's allowance is spent → "this call is saved, it refills with your plan", **never a paywall** (they already paid). Both stop the call gracefully; neither is an error. |
 | `4xx/5xx` | Upstream or auth failure | Body's first 512 bytes are the only diagnostic a beta tester can screenshot — keep them in the error. |
 
 ### Idempotency key shapes used by iOS (mirror them)
@@ -116,50 +116,45 @@ Degradation ladder for a broken stream:
 
 ---
 
-## `POST /elevenlabs-tts`
+## `POST /tts`
+
+(Old name `/elevenlabs-tts`, kept as an alias for builds from before
+2026-10-17. New clients call `/tts`.)
 
 ### Request
 
 ```jsonc
 {
-  "voice_id": "<elevenlabs voice id>",
+  "voice_id": "<Cartesia voice id, optionally \"<uuid>:<accent>\", or a preset slot id>",
   "text": "<already in the target language>",
-  "model_id": "eleven_turbo_v2_5",
   "with_timestamps": false,
   "stream": false,
   "purpose": "turn"        // "turn"|"scene"|"shadow"|"drill"|"library"|"greeting"
 }
 ```
 
-Voice settings are fixed **server-side** (`stability 0.55`, `similarity_boost 0.90`,
-`style 0`, `use_speaker_boost true`) so they can be tuned without a client
-release. **`style` MUST stay 0** — any exaggeration pulls output away from the
-reference speaker, which is the one thing this product sells.
+`model_id`, `previous_text` and `next_text` are fields older builds still send;
+the server ignores them. Voice settings are fixed **server-side**
+(`emotion: "neutral"`, the app's speed rung mapped onto Cartesia's scale) so
+they can be tuned without a client release. Neutral is the rule for the same
+reason as ever: anything expressive pulls output away from the reference
+speaker, which is the one thing this product sells.
 
 `purpose: "greeting"` with `text.length <= 120` is **free** (the clone's first
 words are part of onboarding, not usage). Length-capped so the tag can't smuggle
 real synthesis.
 
-### Model choice (this is a product decision, not a perf knob)
-
-| Path | model_id | Why |
-|---|---|---|
-| Live Talk turns | `eleven_turbo_v2_5` | Flash was tried and reverted: same price, lower speaker similarity, on the app's highest-exposure surface. |
-| Watch scenes (user's own voice), onboarding greeting | `eleven_multilingual_v2` | Fidelity tier; markedly better cross-lingual transfer. |
-| Shadow, drills, library, preset counterpart voices | `eleven_turbo_v2_5` | |
-
-`eleven_multilingual_v2` bills ~2x per character upstream while pricing here is
-character-based and **model-blind** — that 2x is margin absorbed. Only put a path
-on it when the result is **cached** (one-time per unique line) or it fires once
-per user, ever. **Never** for live turns.
+A preset slot id is swapped server-side for the target language's own voice
+(`_shared/preset-voices.ts`). A voice from before 2026-10-12 (not a Cartesia id)
+answers like a parked voice: `402 insufficient_credits`, `reason: voice_parked`.
 
 ### Responses
 
 | Mode | Accept | Response |
 |---|---|---|
 | Buffered | `audio/mpeg` | MP3 bytes |
-| Streaming (`stream: true`) | — | Raw **16-bit LE mono PCM @ 22050 Hz**, with header **`X-Audio-Format: pcm_22050`**. Absence of that header means an older deploy returned a whole MP3 — buffer it and take the classic path. |
-| `with_timestamps: true` | `application/json` | `{ "audio_base64": "...", "alignment": {...}, "normalized_alignment": {...} }` where an alignment is `{ characters: string[], character_start_times_seconds: number[], character_end_times_seconds: number[] }`. Prefer `normalized_alignment`. |
+| Streaming (`stream: true`) | — | Raw **16-bit LE mono PCM**, with header **`X-Audio-Format: pcm_<rate>`** — the first of the client's `stream_formats` ladder the server supports, else `pcm_22050`. Absence of that header means an older deploy returned a whole MP3 — buffer it and take the classic path. |
+| `with_timestamps: true` | `application/json` | `{ "audio_base64": "...", "alignment": {...} }` (WAV audio) where an alignment is `{ characters: string[], character_start_times_seconds: number[], character_end_times_seconds: number[] }`. Cartesia times words; each word's window is spread over its characters. |
 
 `stream` and `with_timestamps` are mutually exclusive (server ignores `stream`
 when timestamps are asked for).
@@ -177,7 +172,7 @@ array lengths → return no timings (never guess).
 
 ---
 
-## `POST /elevenlabs-voice-clone`
+## `POST /voice-clone`
 
 `multipart/form-data`:
 
@@ -185,16 +180,16 @@ array lengths → return no timings (never guess).
 |---|---|
 | `name` | display name, e.g. `"Eunggyu — Future Self"` |
 | `description` | optional |
-| `remove_background_noise` | `"true"` / `"false"` — decided from the MEASURED SNR of the take, never hardcoded. Denoising a *clean* take shaves breath/sibilance/high-end, i.e. exactly the cues that make a clone recognizable. |
-| `files` | one or more WAV/MP3 parts. Total 30–60 s recommended. |
+| `files` | the take, one WAV part. Cleaned ON THE PHONE first (`VoiceDenoiser`, DeepFilterNet at 30 dB); the server levels it and clones it as sent. |
 
 Response: `{ "voice_id": "..." }`.
 
-Failure to know about: upstream `400` whose body contains `voice_limit_reached`
-is OUR capacity problem — show a human message, not the upstream JSON.
+## `POST /voice-delete` — `{ "voice_id": "..." }`
+## `POST /voice-rename` — `{ "voice_id": "...", "name": "..." }` (free, no credits)
+## `POST /voice-remix` — the accent picker (free, daily-capped)
 
-## `POST /elevenlabs-voice-delete` — `{ "voice_id": "..." }`
-## `POST /elevenlabs-voice-rename` — `{ "voice_id": "...", "name": "..." }` (free, no credits)
+Old names `/elevenlabs-voice-clone`, `-voice-delete`, `-voice-rename`,
+`-voice-remix` are aliases for builds from before 2026-10-17.
 
 ---
 
@@ -319,7 +314,7 @@ persona?, proficiency?, target_language?, weak_vocab_areas?,
 recurring_mistakes?, avoid_titles?, stream? }`. Schema order is load-bearing
 (`turns` FIRST — playback starts while the study tail is written). Client
 idempotency key: `curriculum-v2:<scenario id>[:<run>]`. Playback then calls
-`/elevenlabs-tts` per line with purpose "scene" + ONE `scene_key` — one
+`/tts` per line with purpose "scene" + ONE `scene_key` — one
 count per scene.
 
 ---

@@ -152,7 +152,7 @@ Descriptions (match the paywall's own lines — one situation, then the size):
 ## Submission checklist — in dependency order
 
 ### 0. Blockers found in code — ALL FIXED 2026-07-23
-- [x] **Account deletion in-app** — MeTab "Delete account" → `account-delete` Edge Function (deletes ElevenLabs clones, cancels Stripe web sub, destroys auth user; all tables cascade) + `AppState.wipeLocalData()`. DEPLOYED 2026-07-28 (verified 401 without auth).
+- [x] **Account deletion in-app** — MeTab "Delete account" → `account-delete` Edge Function (deletes voice clones, cancels Stripe web sub, destroys auth user; all tables cascade) + `AppState.wipeLocalData()`. DEPLOYED 2026-07-28 (verified 401 without auth).
 - [x] **Privacy Policy page** — https://nawana.app/privacy.html + /privacy-ko.html LIVE (200) as of 2026-07-28.
 - [x] Info.plist mic + speech strings rebranded to nawana
 - [x] `CFBundleShortVersionString` → 1.0.0 (app + widget)
@@ -221,9 +221,10 @@ directions:
 
 - **The App Store rating** measures *content suitability*. Ours is 4+.
 - **`ConsentStore.minimumAge = 16`** measures *legal eligibility*. It exists
-  because ElevenLabs — the sub-processor that builds the voice model — bans
-  under-13s outright, requires parental consent for 13–17, and forbids passing
-  its Services on under terms more permissive than we received them. There is
+  because the voice sub-processor's terms (as read for the previous TTS
+  vendor) ban under-13s outright, require parental consent for 13–17, and
+  forbid passing the service on under terms more permissive than we received
+  them. There is
   no way to verify a real parent in-app, so the floor clears the 13–17 band
   entirely. GDPR Art. 8 (16 in Germany, where the seller is registered) lands
   on the same number for the voice consent, which is Art. 9 special-category
@@ -234,9 +235,10 @@ A 4+ rating alongside a 16+ eligibility gate is normal and not a contradiction
 do **not** drop the gate to match the rating: removing it means either building
 verifiable parental consent or breaching the provider terms.
 
-⚠️ The ElevenLabs clause above lives only in `ConsentStore`'s doc comment; no
-copy of the terms is in `docs/contracts`. The whole number rests on it — verify
-against the current ToS before submitting.
+⚠️ The provider clause above lives only in `ConsentStore`'s doc comment; no
+copy of the terms is in `docs/contracts`, and it was read for the previous
+vendor. The voice provider is Cartesia now — the whole number rests on this,
+so verify against Cartesia's current terms before submitting.
 
 #### Open, unrelated to the rating
 

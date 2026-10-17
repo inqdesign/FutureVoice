@@ -1,8 +1,8 @@
 # Billing & pricing — source of truth
 
 > Status: **2026-08-11 — pivoting to the minutes model (below). Phase 1 live.**  
-> Owner: product/marketing. Ops (ElevenLabs tier) is separate — upgrade EL
-> whenever real beta/paid usage warrants it; do not let capacity math block
+> Owner: product/marketing. Ops (the voice provider's plan) is separate —
+> upgrade it whenever real beta/paid usage warrants it; do not let capacity math block
 > product or pricing decisions.
 
 ---
@@ -35,15 +35,17 @@ people, which stays true. It is not a licence to price against under-use.
 
 ## 2026-09-26 revision — bounded plans, minute packs, 20 free minutes
 
-Founder decision, after two weeks of real numbers (`usage_ledger`, ElevenLabs
-usage API, the trial rows). Migrations `20260926100000_twenty_free_minutes`
+Founder decision, after two weeks of real numbers (`usage_ledger`, the TTS
+provider's usage API, the trial rows). Migrations `20260926100000_twenty_free_minutes`
 and `20260926110000_bounded_plans_and_topups`; app build 60+.
 
-**Unit costs** (ElevenLabs Pro $0.000165/cr; Apple Small Business 15%):
+**Unit costs** (the previous TTS vendor's Pro plan, $0.000165/cr; Apple Small
+Business 15%. Since 2026-10-12 every voice is Cartesia at ~$39 per million
+characters, about the same per character):
 talk 1 min ≈ **$0.03** all in (145–170 cr TTS + Gemini), scene ≈ **$0.12**
 — **and the scene is ~$0.07 from 2026-09-26**, when every clone-voice surface
-moved off the 2x fidelity model onto turbo after an A/B by ear
-(`scripts/tts-model-probe.sh`); scenes also lost one turn of eleven. Every
+moved off the 2x fidelity model onto the cheaper one after an A/B by ear;
+scenes also lost one of their 11 turns. Every
 scene figure below is the pre-change one, so each is a ceiling now.
 Net revenue: US list × 0.85; KR/EU list ÷ VAT × 0.85 (₩15,000 → ₩11,600 ≈
 $8.3; €9.99 → €7.14 ≈ $7.8).
@@ -308,7 +310,7 @@ forward from a daily cap, never a number anyone asked the cost of.
 ### Measured unit cost
 
 From `usage_cost_component` over 2026-08-14..23 (15 registered scene plays,
-140 talk minutes), at the seeded ElevenLabs Creator rate of $0.00022/credit:
+140 talk minutes), at the seeded rate of the previous TTS vendor's Creator plan, $0.00022/credit:
 
 | Unit | Measured | Upstream cost |
 |------|----------|---------------|
@@ -321,8 +323,8 @@ From `usage_cost_component` over 2026-08-14..23 (15 registered scene plays,
 `cost_per_scene` reports and what the earlier note recorded: the view's
 back-fill dates every `purpose = 'scene'` character to the fidelity model, but
 exactly HALF of a scene's characters are the COUNTERPART, whose preset voice
-has always run on turbo (`WatchView`: `isOwnVoice ? fidelityModelId :
-"eleven_turbo_v2_5"`). Measured split: 8,610 chars on the clone, 8,739 on
+always ran on the cheaper model (`WatchView` picked the fidelity model only
+for the clone's own lines). Measured split: 8,610 chars on the clone, 8,739 on
 presets. The back-fill only touches rows written before `model_id` began being
 recorded (2026-08-23) — but that is every row the 6.4 figure came from. **Fix
 the view before quoting scene cost again.**
@@ -358,7 +360,7 @@ price:
 
 | Lever | Saving | Where |
 |-------|--------|-------|
-| ElevenLabs Creator → Scale ($330/2M cr) | −25% | ops only, no code |
+| Provider plan Creator → Scale ($330/2M cr, previous vendor) | −25% | ops only, no code |
 | Scene length 82 s → 55 s | −33% | `ScenarioCurriculumEngine` prompt |
 | The clone half of a scene on turbo | −33% | quality call — but note `fidelityModelId`'s own rule is "only where `PhraseAudioStore` caches the result", and `SceneWatchView(freshTake:)` writes new text every run, so nothing caches and the 2× repeats forever. Currently in violation of that rule. |
 
@@ -498,7 +500,7 @@ v1 paywall default period: **monthly** — the smaller commitment; a paywall tha
 
 ### Unit definition
 
-- 1 internal credit ≈ 100 TTS chars (`eleven_turbo_v2_5`)
+- 1 internal credit ≈ 100 TTS chars (the cheaper TTS model of the time)
 - Typical conversation turn ≈ **3 credits** (TTS ~2 + Gemini 1)
 - 10-minute talk ≈ **~45 credits** (~4.5 cr / spoken minute)
 
@@ -542,7 +544,7 @@ Still worth watching in Supabase / Telegram:
 4. **Depletion alerts** — first-time empty balance (already wired)
 
 **Do not** change prices mid-beta without a written reason.  
-**Do** upgrade ElevenLabs when the usage dashboard says so — product stays put.
+**Do** upgrade the voice provider's plan when the usage dashboard says so — product stays put.
 
 ---
 

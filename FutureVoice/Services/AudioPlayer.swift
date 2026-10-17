@@ -1,7 +1,7 @@
 import AVFoundation
 import Foundation
 
-/// Plays MP3 audio data returned by ElevenLabs TTS.
+/// Plays audio data returned by TTS.
 /// Phase 1 keeps it dead simple: load full data → play to completion.
 /// Phase 2 should consume the streaming TTS endpoint to cut latency.
 @MainActor
@@ -198,7 +198,7 @@ final class AudioPlayer: NSObject, ObservableObject {
     ///   by the time it gets here (every path through this class runs
     ///   `AudioLoudness.normalized`), which is what makes "put the model
     ///   further back" a choice rather than a correction — a phone-mic take is
-    ///   otherwise far quieter than ElevenLabs speech.
+    ///   otherwise far quieter than synthesized speech.
     ///
     /// Pace is deliberately NOT matched. The drift IS the information; a
     /// time-stretch would erase the one thing this is for.

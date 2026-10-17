@@ -201,7 +201,7 @@ enum TalkGoalPicker {
     /// (`VocabStore.autoKept`) that the chip row leaves out. The row is about
     /// what the learner chose, but most notebooks fill this way, and a coach
     /// with nothing to coach is a switch that does nothing (the first device
-    /// test, 2026-09-28: eleven words on file, all auto-kept, no hint ever).
+    /// test, 2026-09-28: 11 words on file, all auto-kept, no hint ever).
     /// These are words the fluent self taught them — fair to steer toward.
     static func coachExtras(excluding keys: Set<String>,
                             now: Date = Date(),

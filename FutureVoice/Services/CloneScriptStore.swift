@@ -3,7 +3,7 @@ import Foundation
 /// The 60–90s read-aloud script for the voice clone — in whichever language
 /// the user can actually read WELL.
 ///
-/// Why two languages: ElevenLabs captures a voice, not a language. A learner
+/// Why two languages: an instant clone captures a voice, not a language. A learner
 /// who stumbles through an English paragraph hands the cloner halting,
 /// disfluent speech, and the clone inherits the stumble instead of the
 /// person. Beta takes bore this out — reading the native script produced an

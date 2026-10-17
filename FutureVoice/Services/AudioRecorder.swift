@@ -1,8 +1,8 @@
 import AVFoundation
 import Foundation
 
-/// Records mic audio to a 16kHz mono PCM WAV file — the format Whisper and
-/// ElevenLabs expect. Phase 1 keeps this simple: tap-to-start, tap-to-stop.
+/// Records mic audio to a 16kHz mono PCM WAV file — the format the speech
+/// recognizers expect. Phase 1 keeps this simple: tap-to-start, tap-to-stop.
 /// Phase 2 should add VAD so the user doesn't have to hold a button.
 @MainActor
 final class AudioRecorder: ObservableObject {
@@ -48,7 +48,7 @@ final class AudioRecorder: ObservableObject {
 
     /// Two-quality recording. STT-bound user speech can stay at 16 kHz / 16-bit
     /// since Whisper and SFSpeechRecognizer expect that anyway. Voice CLONING
-    /// samples should go higher — ElevenLabs IVC noticeably benefits from
+    /// samples should go higher — an instant clone noticeably benefits from
     /// 44.1 kHz / 24-bit input and our previous default was hurting quality.
     enum Quality {
         case sttOptimal       // 16 kHz mono 16-bit PCM WAV
@@ -108,11 +108,11 @@ final class AudioRecorder: ObservableObject {
         let session = AVAudioSession.sharedInstance()
         // `.measurement` flattens the iOS processing chain so we capture the
         // mic as-is for cloning — important to avoid the "compressed phone
-        // call" sound that ElevenLabs IVC otherwise picks up.
+        // call" sound that a clone otherwise picks up.
         let mode: AVAudioSession.Mode = (quality == .voiceCloneHigh) ? .measurement : .spokenAudio
 
         // For voice cloning, REFUSE Bluetooth mic. iOS routes Bluetooth mic
-        // input over HFP — 8 kHz mono telephony quality. ElevenLabs IVC clones
+        // input over HFP — 8 kHz mono telephony quality. An instant clone copies
         // exactly what it hears, so a Bluetooth-captured sample produces a
         // clone that doesn't sound like the speaker at all. Built-in iPhone
         // mic only, and the speaker for output since it never plays back
@@ -153,7 +153,7 @@ final class AudioRecorder: ObservableObject {
             ]
         case .voiceCloneHigh:
             // 16-bit (not 24-bit): the upload is peak-normalized to 16-bit PCM
-            // anyway, and 24-bit pushed ~1 min takes near ElevenLabs' 11 MB
+            // anyway, and 24-bit pushed ~1 min takes near the clone upload's 11 MB
             // limit on the fallback path. 44.1k/16-bit mono is ideal for IVC.
             settings = [
                 AVFormatIDKey: Int(kAudioFormatLinearPCM),

@@ -10,7 +10,7 @@ Three documents, one per kind of contract:
 
 | Doc | Answers | Extracted from |
 |---|---|---|
-| [`edge-api.md`](edge-api.md) | What goes over the wire to Supabase Edge Functions | `GeminiClient.swift`, `ElevenLabsClient.swift`, `supabase/functions/` |
+| [`edge-api.md`](edge-api.md) | What goes over the wire to Supabase Edge Functions | `GeminiClient.swift`, `VoiceClient.swift`, `supabase/functions/` |
 | [`data-model.md`](data-model.md) | What a record IS, and whether it is scoped to `user` or `(user, lang)` | `Models.swift`, `supabase/migrations/`, `docs/multi-language-plan.md` |
 | [`behavior.md`](behavior.md) | Deterministic rules that must produce the SAME result on every platform | `ConversationView.swift`, `LiveTranscriber.swift`, `ShadowEngine.swift`, `DrillStore.swift` |
 

@@ -89,7 +89,7 @@ final class GeminiClient {
     /// window so the TCP+TLS handshake (and a fresh cached auth token)
     /// happens BEFORE the turn request instead of on its critical path —
     /// on a cold cellular radio that handshake alone is 200–600ms. The
-    /// OPTIONS preflight needs no auth and bills nothing; ElevenLabs shares
+    /// OPTIONS preflight needs no auth and bills nothing; the TTS functions share
     /// the same host + session, so one warm-up covers both legs.
     func preconnect() {
         let url = functionsBaseURL.appendingPathComponent("gemini")

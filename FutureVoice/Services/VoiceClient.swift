@@ -2,11 +2,10 @@ import CryptoKit
 import Foundation
 import Supabase
 
-/// ElevenLabs client. As of TestFlight prep, this no longer talks to
-/// ElevenLabs directly — every call goes through Supabase Edge Functions
-/// (`elevenlabs-tts`, `elevenlabs-voice-clone`, `elevenlabs-voice-delete`).
-/// The server-side proxy injects the real `xi-api-key`. The iOS bundle no
-/// longer ships any ElevenLabs credentials.
+/// The voice client. Every call goes through Supabase Edge Functions
+/// (`tts`, `voice-clone`, `voice-delete`, `voice-rename`, `voice-remix`),
+/// which hold the provider's key (Cartesia); the app ships no voice
+/// credentials.
 ///
 /// Auth: each request carries the current Supabase user's access token in
 /// the `Authorization` header. The Edge Function verifies it before
@@ -60,7 +59,7 @@ final class VoiceClient {
     ///   (cleaned on the phone first — `VoiceDenoiser`)
     /// - Returns: the new Cartesia voice id.
     func cloneVoice(name: String, sampleAudioURLs: [URL], description: String? = nil) async throws -> String {
-        let url = functionsBaseURL.appendingPathComponent("elevenlabs-voice-clone")
+        let url = functionsBaseURL.appendingPathComponent("voice-clone")
         let boundary = "Boundary-\(UUID().uuidString)"
 
         var request = URLRequest(url: url)
@@ -90,11 +89,10 @@ final class VoiceClient {
         return decoded.voice_id
     }
 
-    /// Deletes a custom voice from the ElevenLabs account. Used to clean up
-    /// the previous clone after a successful re-record so the user doesn't
-    /// hit their plan's voice slot ceiling.
+    /// Deletes a custom voice upstream. Used to clean up the previous clone
+    /// after a successful re-record.
     func deleteVoice(voiceId: String) async throws {
-        let url = functionsBaseURL.appendingPathComponent("elevenlabs-voice-delete")
+        let url = functionsBaseURL.appendingPathComponent("voice-delete")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
@@ -110,7 +108,7 @@ final class VoiceClient {
     /// creation time, so without this a rename would only show up after the
     /// user's next re-record. Free — no credits are charged.
     func renameVoice(voiceId: String, name: String) async throws {
-        let url = functionsBaseURL.appendingPathComponent("elevenlabs-voice-rename")
+        let url = functionsBaseURL.appendingPathComponent("voice-rename")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
@@ -126,7 +124,7 @@ final class VoiceClient {
     // MARK: - Voice remixing (accent picker)
 
     /// One remix candidate: a voice that exists upstream only transiently
-    /// until saved. `id` is the ElevenLabs `generated_voice_id`.
+    /// until saved. `id` is the server's `generated_voice_id`.
     struct RemixPreview: Identifiable {
         let id: String
         let audio: Data
@@ -139,7 +137,7 @@ final class VoiceClient {
                             text: String) async throws -> [RemixPreview] {
         // A remix is built FROM the voice; a parked one no longer exists.
         if VoiceParking.isParked(voiceId) { throw VoiceError.insufficientCredits }
-        let url = functionsBaseURL.appendingPathComponent("elevenlabs-voice-remix")
+        let url = functionsBaseURL.appendingPathComponent("voice-remix")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
@@ -176,7 +174,7 @@ final class VoiceClient {
     /// voice change (`_shared/voice-changes.ts`).
     func saveRemixedVoice(generatedVoiceId: String, name: String,
                           voiceDescription: String, purpose: String? = nil) async throws -> String {
-        let url = functionsBaseURL.appendingPathComponent("elevenlabs-voice-remix")
+        let url = functionsBaseURL.appendingPathComponent("voice-remix")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
@@ -243,7 +241,7 @@ final class VoiceClient {
         // Refused here, before the network, with the error every surface
         // already turns into its paywall.
         if VoiceParking.isParked(voiceId) { throw VoiceError.insufficientCredits }
-        let url = functionsBaseURL.appendingPathComponent("elevenlabs-tts")
+        let url = functionsBaseURL.appendingPathComponent("tts")
         // A preset slot speaks in the target language's own voice (see
         // `VoicePreset.speaking`); the idempotency key below follows the voice
         // that actually speaks.
@@ -309,9 +307,8 @@ final class VoiceClient {
     }
 
     /// PCM formats we can play, best first. Sent to the edge function, which
-    /// walks down until the ElevenLabs plan accepts one (pcm_44100 is
-    /// Pro-tier) — so conversation audio rides the highest rate the account
-    /// allows instead of being pinned to the 22.05 kHz floor.
+    /// walks down until upstream accepts one — so conversation audio rides
+    /// the highest rate available instead of being pinned to the 22.05 kHz floor.
     /// The language a line is pinned to upstream (`language_code`), or nil
     /// to let the model guess as it always has.
     ///
@@ -350,7 +347,7 @@ final class VoiceClient {
         // Refused here, before the network, with the error every surface
         // already turns into its paywall.
         if VoiceParking.isParked(voiceId) { throw VoiceError.insufficientCredits }
-        let url = functionsBaseURL.appendingPathComponent("elevenlabs-tts")
+        let url = functionsBaseURL.appendingPathComponent("tts")
         // A preset slot speaks in the target language's own voice (see
         // `VoicePreset.speaking`); the idempotency key below follows the voice
         // that actually speaks.
@@ -405,8 +402,8 @@ final class VoiceClient {
         // The PCM header is the protocol handshake: without it we're talking
         // to an edge deploy that ignored `stream` and returned a whole MP3 —
         // buffer it and let the caller take the classic path. The header also
-        // carries the rate the server actually got from ElevenLabs
-        // ("pcm_44100" on Pro, lower otherwise).
+        // carries the rate the server actually got upstream
+        // ("pcm_44100", or lower).
         let format = http.value(forHTTPHeaderField: "X-Audio-Format") ?? ""
         guard format.hasPrefix("pcm_"),
               let sampleRate = Double(format.dropFirst("pcm_".count)) else {
@@ -497,7 +494,7 @@ final class VoiceClient {
         // Refused here, before the network, with the error every surface
         // already turns into its paywall.
         if VoiceParking.isParked(voiceId) { throw VoiceError.insufficientCredits }
-        let url = functionsBaseURL.appendingPathComponent("elevenlabs-tts")
+        let url = functionsBaseURL.appendingPathComponent("tts")
         // A preset slot speaks in the target language's own voice (see
         // `VoicePreset.speaking`); the idempotency key below follows the voice
         // that actually speaks.
@@ -543,8 +540,8 @@ final class VoiceClient {
         guard let audio = Data(base64Encoded: decoded.audio_base64) else {
             throw VoiceError.invalidResponse
         }
-        // ElevenLabs returns TWO alignments: `alignment` indexes the text we
-        // SENT, while `normalized_alignment` indexes ElevenLabs' own normalized
+        // The reply can carry TWO alignments: `alignment` indexes the text we
+        // SENT, while `normalized_alignment` indexes the provider's own normalized
         // form of it — which for non-Latin scripts is ROMANIZED ("그러면" →
         // "geureomyeon") and spells numbers out. Shadow practice renders these
         // timing words AS the target sentence, so preferring the normalized one
@@ -752,7 +749,7 @@ enum VoiceError: Error, LocalizedError {
 /// The account's monthly voice allowance (2026-10-10). The server answers
 /// `voice_quota_full` (a first voice can't be made: the month is spent) or
 /// `voice_quota_reserved` (what is left is kept for first voices), both with
-/// `available_at` = when ElevenLabs resets the allowance. The date moves every
+/// `available_at` = when the provider resets the allowance. The date moves every
 /// month, so it is always the server's, never a constant.
 enum VoiceQuota {
     /// nil = not a quota answer; .some(nil) = a quota answer with no date.
@@ -803,7 +800,7 @@ extension Error {
         return VoiceQuota.availableAt(inBody: body)
     }
 
-    /// Upstream HTTP status for telemetry, when this is an ElevenLabs failure.
+    /// Upstream HTTP status for telemetry, when this is an upstream failure.
     ///
     /// Worth a helper because the obvious thing to log — `(error as NSError)
     /// .code` — is NOT the case's source order: Swift numbers the cases WITH

@@ -1,6 +1,6 @@
 - Sign in with Apple is the only auth method and any Apple ID works, so there is no demo account to provide. Onboarding requires microphone and speech recognition permission and a 60-second recording before the main app unlocks.
 
-- That recording creates a personal text-to-speech voice (via ElevenLabs). The app can only clone the signed-in user's own voice; there is no way to import audio of another person. Consent is a separate screen shown before the microphone is requested. The voice or the entire account can be deleted in-app (Me tab).
+- That recording creates a personal text-to-speech voice (via Cartesia). The app can only clone the signed-in user's own voice; there is no way to import audio of another person. Consent is a separate screen shown before the microphone is requested. The voice or the entire account can be deleted in-app (Me tab).
 
 - There is no free tier: the voice clone and the first spoken greeting are free, and the first conversation reaches the paywall.
 

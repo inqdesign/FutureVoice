@@ -56,7 +56,7 @@
 			</array>
 		</dict>
 
-		<!-- The 60-second setup recording, from which ElevenLabs builds a
+		<!-- The 60-second setup recording, from which the voice provider builds a
 		     retained voice model. Speech during a conversation is transcribed
 		     per request and not retained, but the clone is, so audio counts as
 		     collected. -->

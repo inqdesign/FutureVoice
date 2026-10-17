@@ -4,8 +4,8 @@ import Foundation
 /// between them (2026-09-30).
 ///
 /// Reported: "the fluent self doesn't stop between sentences, especially in
-/// Korean". Measured on the founder's clone in ko/en/ja/de: ElevenLabs puts
-/// 0.08–0.29 s between sentences it is given in one text (one English take
+/// Korean". Measured on the founder's clone in ko/en/ja/de: the provider of the
+/// day put 0.08–0.29 s between sentences it is given in one text (one English take
 /// had no gap at all), against the 0.5–0.8 s people leave. The live call was
 /// fixed in the gateway by sending one sentence per generation
 /// (`CallSession.eachSentence`, ~0.35–0.50 s, picked by ear). This is the
@@ -20,9 +20,9 @@ import Foundation
 /// median, so the opener and the answers after it breathe alike.
 /// `<break>` tags are not an option: measured, they add seconds and noise.
 ///
-/// **ElevenLabs only** (2026-10-13). A Cartesia clone already breathes on a
-/// whole line — measured on the founder's clone, en/ko, two takes each:
-/// 0.15–0.65 s between sentences, ElevenLabs' problem never shows — and
+/// **Not for Cartesia** (2026-10-13), which every voice is now. A Cartesia
+/// clone already breathes on a whole line — measured on the founder's clone,
+/// en/ko, two takes each: 0.15–0.65 s between sentences — and
 /// split, its first sentence went alone: "Hi." / "안녕." as a request of
 /// its own, 0.7 s of a word with no line to belong to, cut where its voice
 /// still sounded. Reported by the founder as the intro's first sentence

@@ -212,8 +212,8 @@
 #pcard dl{display:grid; grid-template-columns:auto 1fr; gap:2px 10px; margin:8px 0 0}
 #pcard dt{color:var(--muted)} #pcard dd{margin:0}
 #pcard .pintro{margin-top:7px; color:var(--ink-2); font-size:12px; border-top:1px solid var(--grid); padding-top:6px}
-/* Supabase user id + ElevenLabs voice id under the row — the two handles a
-   log line, a ledger query or the ElevenLabs dashboard are searched by.
+/* Supabase user id + the provider's voice id under the row: the two handles a
+   log line, a ledger query or the voice provider's dashboard are searched by.
    Monospace, muted, select-all so a click grabs the whole id. */
 .tlrow .tid{grid-column:3 / -1; margin-top:-3px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
   font-size:10.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
@@ -314,6 +314,7 @@ td.num, th.num{text-align:right; font-variant-numeric:tabular-nums}
 .verchip{display:inline-block; font-size:10.5px; font-weight:500; color:var(--muted); margin-left:6px;
   font-variant-numeric:tabular-nums; white-space:nowrap}
 .verchip.old{color:var(--warn); font-weight:600}
+tr.grouphead td{background:var(--page); font-size:12.5px; padding:14px 10px 8px; border-top:2px solid var(--ring)}
 .devchip{font-size:10.5px; font-weight:600; color:var(--muted); border:1px solid var(--ring);
   border-radius:4px; padding:0 5px; margin-left:6px; vertical-align:1px}
 .ok{color:var(--good-text); font-weight:600}
@@ -465,19 +466,6 @@ svg text{font-family:inherit}
 .rec.no{background:#fbe3e3; color:var(--crit)}
 .rec.part{background:#fdf0d5; color:var(--warn)}
 .rec.yes{background:#e3f4e3; color:var(--good-text)}
-.pnlctl{display:grid; grid-template-columns:repeat(3,1fr); gap:12px 20px; margin-top:14px}
-.pnlctl label{display:flex; justify-content:space-between; font-size:12.5px; color:var(--ink-2); margin-bottom:3px}
-.pnlctl output{font-variant-numeric:tabular-nums; font-weight:600; color:var(--ink)}
-.pnlctl input[type=range]{width:100%; accent-color:var(--s1); margin:0}
-.pnlctl .chk{display:flex; align-items:center; gap:8px; align-self:end; font-size:12.5px; color:var(--ink-2); padding-bottom:2px}
-.pnlctl .chk input{accent-color:var(--s1); width:15px; height:15px; margin:0}
-@media (max-width:760px){.pnlctl{grid-template-columns:1fr 1fr}}
-@media (max-width:480px){.pnlctl{grid-template-columns:1fr}}
-.pnl-line{fill:none; stroke-width:2; stroke-linejoin:round}
-.pnl-target{stroke:var(--ink-2); stroke-width:1.5; stroke-dasharray:6 4}
-.pnl-zero{stroke:var(--baseline); stroke-width:1}
-.pnl-grid{stroke:var(--grid); stroke-width:1; stroke-dasharray:2 4}
-.pnl-lbl{font-size:11px; fill:var(--ink-2)}
 .tiercard{background:var(--surface); border:1px solid var(--ring); border-radius:10px;
   padding:15px 17px; display:flex; flex-direction:column; gap:10px}
 .tiercard.risk{border-color:var(--crit)}
@@ -743,7 +731,7 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   <b>구독 중인 줄은 초록</b>(해지 예정도 기간이 끝날 때까진 구독 중), <b>체험 중에 자동갱신을 끄고도 끈 날 이후에
   다시 온 사람은 금색</b>이에요. 금색 밑줄 칸이 자동갱신을 끈 날이라, 그 오른쪽에 불이 켜져 있으면 끄고도 온 거예요.
   이름 아래는 쓰는 언어 → 배우는 언어와 보이스 클론 이름,
-  맨 오른쪽은 <b>유저 ID</b>와 <b>ElevenLabs 보이스 ID</b>예요 — 클릭 한 번에 전체가 선택돼요.</p>
+  맨 오른쪽은 <b>유저 ID</b>와 <b>보이스 ID</b>예요 — 클릭 한 번에 전체가 선택돼요.</p>
   <div class="card scroll" id="heatmap"></div>
 </section>
 
@@ -887,14 +875,6 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   <b id="cancelShape"></b></p>
 </section>
 
-<section data-tab="money" hidden id="econHeadSec">
-  <h2>손익 한눈에 <span class="eurnote" id="econAsOf"></span></h2>
-  <p class="sub">여기서부터는 <b>ElevenLabs 계정이 직접 말하는 숫자</b>예요. 원장(usage_ledger)은 게이트웨이 통화 TTS를
-  기록하지 않아서 실제 크레딧의 절반쯤만 봅니다. 금액은 전부 €이고, 순매출은 Apple 수수료·VAT·런칭 코드를 뺀 값이에요.</p>
-  <div class="tiles" id="econTiles"></div>
-  <div id="econMissing" class="empty" hidden></div>
-</section>
-
 <section data-tab="money" hidden id="gemSec">
   <h2>Gemini — 어디에 쓰나 <span class="eurnote" id="gemAsOf"></span></h2>
   <p class="sub">원장(usage_ledger)이 센 Gemini 원가를 기능별로 나눈 것이에요. <b>10월 8일 전에는 통화의 답변과 실시간 전사가 원장 밖</b>이라
@@ -911,72 +891,6 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
     <p class="sub" style="margin-top:8px">3.6-flash·3.7·3.8은 같은 값이고 <b>2027-01-01에 두 배</b>가 돼요. Claude는 오디오 입력이 없어서
     실시간 전사·섀도잉/스피치 채점은 바꿀 수 없어요. 가격은 2026-10-08에 각 사의 가격표에서 읽은 것.</p>
   </details>
-</section>
-
-<section data-tab="money" hidden id="slotSec">
-  <h2>ElevenLabs 목소리 슬롯 <span class="eurnote" id="slotAsOf"></span></h2>
-  <p class="sub">커스텀 보이스 슬롯은 <b>계정 전체</b>가 나눠 써요 — 학습자 클론 하나가 한 칸. 보관(park)된 목소리는 ElevenLabs에서 지워져 칸을 안 차지하고,
-  다시 쓸 때 폰의 녹음으로 새로 만들어요(그때 월 추가·수정 횟수를 하나 씀). 구독·체험·관리자 무제한은 보관되지 않아요.</p>
-  <div class="tiles" id="slotTiles"></div>
-  <div class="card" style="margin-top:12px">
-    <div class="alloc" id="slotStack" style="height:24px"></div>
-    <div class="legend" id="slotLegend" style="margin-top:8px"></div>
-  </div>
-  <div id="slotMissing" class="empty" hidden></div>
-</section>
-
-<section data-tab="money" hidden id="econCatsSec">
-  <h2>크레딧은 어디로 갔나</h2>
-  <p class="sub">출시일부터 ElevenLabs가 센 크레딧을 활동별로 나눈 것. 통화 TTS는 ElevenLabs의 turbo 합계에서
-  원장이 다른 용도로 기록한 turbo를 뺀 값이라, 원장의 turn 행보다 큰 만큼이 게이트웨이의 미기록분이에요.</p>
-  <div class="card">
-    <div class="alloc" id="econStack" style="height:24px"></div>
-    <div class="legend" id="econLegend" style="margin-top:8px"></div>
-    <div class="scroll" style="margin-top:12px"><table id="econCats"></table></div>
-    <div class="notes" id="econNote" style="margin-top:12px"></div>
-  </div>
-</section>
-
-<section data-tab="money" hidden id="econDaySec">
-  <h2>일별: ElevenLabs가 센 것 vs 원장이 본 것</h2>
-  <p class="sub">연한 막대가 실제, 진한 막대가 원장. 둘의 차이가 그날 게이트웨이 통화와 악센트 미리듣기예요.
-  ElevenLabs의 하루는 UTC 기준.</p>
-  <div class="card" id="econDaily"></div>
-</section>
-
-<section data-tab="money" hidden id="econUnitSec">
-  <h2>단위 경제 — 구독자 한 명이 남기는 돈</h2>
-  <p class="sub" id="econUnitSub"></p>
-  <div class="card scroll"><table id="econPlans"></table></div>
-  <p class="sub" style="margin-top:10px" id="econUnitNote"></p>
-</section>
-
-<section data-tab="money" hidden id="pnlSec">
-  <h2>€3,000까지 — 계산기</h2>
-  <p class="sub">슬라이더를 움직이면 월 손익, 유지에 필요한 가입자 수, ElevenLabs 크레딧과 요금제가 같이 바뀌어요.
-  기본값은 위 실측 + 보수적 가정(해지 8%/월, 가입→유료 5%). 설정은 이 브라우저에 남아요.</p>
-  <div class="card">
-    <div class="seg" id="pnlPresets" role="group" aria-label="시나리오"></div>
-    <div class="pnlctl" id="pnlControls"></div>
-    <div class="tiles" id="pnlOut" style="margin-top:14px"></div>
-    <div id="pnlCurve" style="margin-top:12px"></div>
-    <p class="sub" id="pnlNote" style="margin:8px 0 0"></p>
-  </div>
-</section>
-
-<section data-tab="money" hidden id="growSec">
-  <h2>성장 경로 — 하루 가입자 수별 36개월</h2>
-  <p class="sub">계산기의 해지율·전환율·사용 가정을 그대로 두고 하루 가입자 수만 바꿔 돌린 것.
-  구독자 수는 매달 <b>남은 사람 + 가입 × 전환</b>. 지금의 하루 가입자 수가 첫 줄이에요.</p>
-  <div class="card">
-    <div id="pnlGrowth"></div>
-    <div class="scroll" style="margin-top:12px"><table id="pnlGrowRows"></table></div>
-  </div>
-</section>
-
-<section data-tab="money" hidden id="leverSec">
-  <h2>레버 — 숫자가 말하는 순서</h2>
-  <div class="card"><div class="notes"><ol id="pnlLevers" style="padding-left:20px;margin:0"></ol></div></div>
 </section>
 
 <section data-tab="money" hidden>
@@ -1006,14 +920,14 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
 <section data-tab="money" hidden>
   <h2>단가</h2>
   <p class="sub">통화 1분과 Watch 장면 1개가 각각 얼마인지, 그리고 둘의 비율.
-  비율은 요율 가정과 무관해서 가장 단단한 숫자예요. 장면은 전부 합성 음성인데 통화는 절반이 학습자 말이라
-  글자가 안 나가고, 게다가 장면만 fidelity 모델이라 글자당 2배예요.</p>
+  장면은 전부 합성 음성인데 통화는 절반이 학습자 말이라 글자가 덜 나가요.
+  통화 음성은 게이트웨이가 원장에 글자를 안 남겨서 분당 500자(실측)로 잡았어요.</p>
   <div class="tiles" id="unitTiles"></div>
 </section>
 
 <section data-tab="money" hidden>
   <h2>일별 소진</h2>
-  <p class="sub">ElevenLabs 글자를 요율로 환산한 값이에요. 여기만 출시 전부터 보여줘요 — 쓴 돈은 누적이라
+  <p class="sub">원장의 TTS 글자와 Gemini 토큰을 요율로 환산한 값이에요. 여기만 출시 전부터 보여줘요 — 쓴 돈은 누적이라
   출시일에 잘라 놓으면 비교할 대상이 없어요.</p>
   <div class="card" id="burn"></div>
 </section>
@@ -1361,8 +1275,8 @@ const badgeOnly = u => refIcon(u) + (u.owner ? '<span class="ownchip">본인</sp
   : u.dev ? '<span class="devchip">TEST</span>'
   // Cloned a voice, never reached Apple sign-in — not a signup. Swept 30 min
   // after creation, so one on screen is either mid-onboarding right now or
-  // the sweep is stuck (2026-09-23: it was, on ElevenLabs' 400 for a voice
-  // already gone).
+  // the sweep is stuck (2026-09-23: it was, on the provider's 400 for a
+  // voice already gone).
   : u.anonymous ? '<span class="devchip">미가입</span>' : '');
 const stateOf = u => u.subState || ({active:'paid', trialing:'trial'}[u.subStatus] || u.subStatus || 'none');
 const isSale = u => stateOf(u)!=='none' && stateOf(u)!=='comp' && u.subSource!=='comp';
@@ -1503,7 +1417,7 @@ const failuresOf = idx => forUser(DATA.recentEvents, idx)
 /** Signed up on or after launch day. The funnel and the cohort are claims
  *  ABOUT that intake, so they must not quietly include the beta accounts the
  *  legend says they exclude — the first version said "9월 12일 이후 가입 28명"
- *  while counting all 28 non-dev accounts, eleven of which predate the App
+ *  while counting all 28 non-dev accounts, 11 of which predate the App
  *  Store listing. */
 function launchUsers(){
   return visibleUsers().filter(u => DATA.days.includes((u.signedUpAt||'').slice(0,10) || u.signedUp));
@@ -1586,7 +1500,7 @@ function renderAttention(users){
         + `${ends?` · ${fmtD(ends)}에 끝나요`:''}`});
   }
   // 2. Signed up, cloned, never said a word. One row for all of them — as
-  //    eleven separate lines it was the whole list and said nothing new each
+  //    11 separate lines it was the whole list and said nothing new each
   //    time. Only accounts from the launch window; an August signup who never
   //    talked is not today's problem.
   {
@@ -2096,7 +2010,7 @@ function renderHeatmap(users){
                 : st.ko)
             : '<span class="muted">플랜 없음</span>'}</span>`
         + `<span class="ids"><span title="유저 ID — 클릭하면 전체 선택">${u.id}</span>`
-        + (u.voiceId ? `<span title="ElevenLabs 보이스 ID — 클릭하면 전체 선택"><i>voice</i>${u.voiceId}</span>` : '')
+        + (u.voiceId ? `<span title="보이스 ID, 클릭하면 전체 선택"><i>voice</i>${u.voiceId}</span>` : '')
         + `</span>`;
     }
     html += `</div>`;
@@ -2810,7 +2724,13 @@ const langsOf = idx => forUser(DATA.userLangs, idx).slice()
   .sort((a,b)=> b.secs-a.secs || String(a.lang).localeCompare(String(b.lang)));
 const langLabel = code => LANG_KO[code] || code;
 /** "영어 9분 · 한국어 2분" — the subtitle under a name. */
+  ['tester','베타 테스터', u=>!!u.tester],
 function langSummary(idx){
+/* Beta testers (index.ts testerRows): grouped apart in the people table so
+   they don't read as real learners. */
+const TESTER_KO = {android:'안드로이드 테스터', ios:'iOS 테스터'};
+const testerChip = u => u && u.tester
+  ? `<span class="devchip" title="${TESTER_KO[u.tester]||'테스터'}">베타</span>` : '';
   const rows = langsOf(idx);
   if(!rows.length) return '';
   return rows.map(r => `${langLabel(r.lang)}${r.secs?` ${fmtMin(r.secs)}`:''}`).join(' · ');
@@ -3149,7 +3069,13 @@ function renderPeople(users){
       + `</td></tr></tbody>`; return; }
   let html = `<thead><tr><th>유저</th><th>가입</th><th>클론</th><th class="num">통화</th>`
     + `<th class="num">시간</th><th class="num">장면</th><th>구독</th><th>마지막</th><th>신호</th></tr></thead><tbody>`;
-  for(const u of rows){
+  // Testers go last, under their own heading, whatever the filter.
+  const regular = rows.filter(u=>!u.tester), testers = rows.filter(u=>u.tester);
+  const ordered = peopleFilter==='tester' ? rows : [...regular, ...testers];
+  for(const u of ordered){
+    if(peopleFilter!=='tester' && testers.length && u===testers[0])
+      html += `<tr class="grouphead"><td colspan="9">베타 테스터 <b>${testers.length}</b>명`
+        + ` <span class="muted">· 테스터 코드를 받은 사람</span></td></tr>`;
     const errs = failuresOf(u.idx);
     const dropped = forUser(DATA.rtSessions, u.idx).filter(isDroppedCall).length;
     const sig = [];
@@ -3160,7 +3086,7 @@ function renderPeople(users){
     const last = u.lastTalkAt ? `통화 ${ago(u.lastTalkAt)}`
       : u.lastSignIn ? `<span class="muted">로그인 ${ago(u.lastSignIn)}</span>` : '—';
     html += `<tr class="xrow" data-u="${u.idx}" aria-expanded="false" title="${esc(u.realEmail||u.email||'')}">
-      <td>${prospectFor(u) ? prospectStar(prospectFor(u), 'margin-right:4px') : ''}<span class="uname"${whoAttr(u)}>${esc(nameOf(u))}</span>${badge(u)}${langPair(u.idx)}
+      <td>${prospectFor(u) ? prospectStar(prospectFor(u), 'margin-right:4px') : ''}<span class="uname"${whoAttr(u)}>${esc(nameOf(u))}</span>${badge(u)}${testerChip(u)}${langPair(u.idx)}
         <div class="usub">${(()=>{ const c=chosenLang(u.idx), used=langSummary(u.idx);
           if(c && used) return `${langLabel(c)} 선택 · ${used}`;
           if(c) return `${langLabel(c)} 선택 <span class="muted">(아직 안 씀)</span>`;
@@ -3437,7 +3363,7 @@ function renderGemini(){
   if(!tiles) return;
   const G = DATA.gemini;
   if(!G){ tiles.innerHTML='<div class="empty">Gemini 행을 못 읽었어요 (Worker 로그의 admin_gemini).</div>'; return; }
-  const fx = (ECON() && ECON().fx && ECON().fx.USD) || 1.17;
+  const fx = USD_PER_EUR;
   const E = v => (v||0)/fx;
   const today = new Date().toISOString().slice(0,10);
   const dayAgo = n => new Date(Date.now()-n*86400000).toISOString().slice(0,10);
@@ -3533,39 +3459,39 @@ function renderGemini(){
 function renderUnitTiles(){
   const C = DATA.cost;
   document.getElementById('unitTiles').innerHTML = `
-    <div class="tile"><div class="k">통화 1분</div><div class="v">${usd(C.usd_per_talk_min,4)}</div>
-      <div class="d">${C.talk_credits_per_min} 크레딧 · ${Math.round(C.chars_per_min)}자</div></div>
+    <div class="tile"><div class="k">통화 1분 (음성)</div><div class="v">${usd(C.usd_per_talk_min,4)}</div>
+      <div class="d">${num(C.chars_per_min)}자 · 글자당 $${C.rate}</div></div>
     <div class="tile"><div class="k">Watch 장면 1개</div><div class="v">${usd(C.usd_per_scene,4)}</div>
-      <div class="d">${num(C.scene_credits)} 크레딧 · ${num(Math.round(C.chars_per_scene))}자</div></div>
-    <div class="tile"><div class="k">비율</div><div class="v">${C.ratio}배</div>
-      <div class="d">장면 1개 = 통화 ${C.ratio}분</div></div>
-    <div class="tile"><div class="k">기준</div><div class="v">${C.sample.talk_min}분</div>
-      <div class="d">장면 ${C.sample.plays}개 · ${fmtD(C.sample.since)}부터</div></div>`;
+      <div class="d">${num(Math.round(C.chars_per_scene))}자</div></div>
+    <div class="tile"><div class="k">비율</div><div class="v">${C.ratio ?? '—'}배</div>
+      <div class="d">장면 1개 = 통화 ${C.ratio ?? '—'}분</div></div>
+    <div class="tile"><div class="k">장면 기준</div><div class="v">${num(C.sample.plays)}개</div>
+      <div class="d">${fmtD(C.sample.since)}부터 원장</div></div>`;
 }
 
 function renderTiers(){
   document.getElementById('tierCards').innerHTML = DATA.cost.tiers.map(t=>{
     const risk = t.margin < 0;
-    const cap = t.capped_credits || 1;
-    const talkPct = t.talk_credits/cap*100, scenePct = t.scene_credits/cap*100;
+    const cap = t.capped_cost || 1;
+    const talkPct = t.talk_usd/cap*100, scenePct = t.scene_usd/cap*100;
     const talkLbl = t.talk_unlimited ? '상한 없음' : `${t.talk_min}분`;
     return `<div class="tiercard ${risk?'risk':''}">
       <div class="tiertop"><span class="tiername">${PLAN_KO[t.id]||t.id}</span>
         <span style="font-size:12.5px;color:var(--ink-2);font-variant-numeric:tabular-nums">
         ${usd(t.price)}/월 → 순 ${usd(t.net)}</span></div>
       <div class="alloc">
-        ${t.talk_credits?`<div style="width:${talkPct}%;background:var(--s1)"></div>`:''}
+        ${t.talk_usd?`<div style="width:${talkPct}%;background:var(--s1)"></div>`:''}
         <div style="width:${scenePct}%;background:var(--s2)"></div></div>
       <div style="display:flex;flex-wrap:wrap;gap:5px 14px;font-size:12px;color:var(--ink-2)">
         <span><span class="swatch" style="background:var(--s1)"></span> 통화 ${talkLbl}`
-        + `${t.talk_credits?' · '+num(t.talk_credits)+' cr':''}</span>
-        <span><span class="swatch" style="background:var(--s2)"></span> 장면 ${t.scenes}개 · ${num(t.scene_credits)} cr</span>
+        + `${t.talk_usd?' · '+usd(t.talk_usd):''}</span>
+        <span><span class="swatch" style="background:var(--s2)"></span> 장면 ${t.scenes}개 · ${usd(t.scene_usd)}</span>
       </div>
       <div class="tstats">
         <div><div class="k">상한 내 원가</div><div class="v" style="color:${risk?'var(--crit)':'var(--ink)'}">${usd(t.capped_cost)}</div></div>
         <div><div class="k">마진</div><div class="v" style="color:${risk?'var(--crit)':'var(--good-text)'}">${t.margin<0?'−':'+'}${usd(Math.abs(t.margin))}</div></div>
         <div><div class="k">손익분기 사용률</div><div class="v">${t.fill_breakeven_pct ?? '—'}%</div></div>
-        <div><div class="k">하루 장면 한계</div><div class="v">${t.scenes_per_day_breakeven}개</div></div>
+        <div><div class="k">하루 장면 한계</div><div class="v">${t.scenes_per_day_breakeven ?? '—'}개</div></div>
       </div>
       <div style="font-size:12px;color:var(--muted)">할당의 ${t.scene_share ?? '—'}%가 장면이에요</div>
     </div>`;
@@ -3577,7 +3503,7 @@ function renderBurn(){
   const el = document.getElementById('burn');
   const rows = (C.daily||[]).slice();
   if(!rows.length){ el.innerHTML='<div class="empty">기록이 없어요.</div>'; return; }
-  // `daily` is [dayIdx, el, gm] against DATA.days, which now starts at launch —
+  // `daily` is [dayIdx, tts, gm] against DATA.days, which now starts at launch —
   // but spend history is older, so draw it from the cost rows' own dates.
   const W = innerW(el, 240), H=110, LEFT=42, RIGHT=8, top=8, bh=H-top-16;
   const n = rows.length, bw = (W-LEFT-RIGHT)/n;
@@ -3592,13 +3518,13 @@ function renderBurn(){
     const day = DATA.days[r[0]] ?? null;
     const v = r[1]+r[2]; if(!v) return;
     const h = Math.max(2, v/max*bh);
-    const tip = `<b>${day?fmtDate(day):''}</b><br>ElevenLabs ${usd(r[1],3)}`
+    const tip = `<b>${day?fmtDate(day):''}</b><br>TTS ${usd(r[1],3)}`
       + (r[2]>0?`<br>Gemini ${usd(r[2],3)}`:'');
     s += `<rect x="${(LEFT+i*bw).toFixed(1)}" y="${(top+bh-h).toFixed(1)}"`
       +  ` width="${Math.max(1.5,bw-1).toFixed(1)}" height="${h.toFixed(1)}" rx="1.5"`
       +  ` fill="var(--s2)" data-tip="${tip.replace(/"/g,'&quot;')}"/>`;
   });
-  s += '</svg><div class="legend">Gemini 토큰 기록은 2026-08-23 배포분부터라 그 전 막대는 ElevenLabs만이에요.</div>';
+  s += '</svg><div class="legend">Gemini 토큰 기록은 2026-08-23 배포분부터라 그 전 막대는 TTS만이에요. 통화 음성(게이트웨이)은 원장에 없어요.</div>';
   el.innerHTML = s;
 }
 
@@ -3699,17 +3625,17 @@ function renderCostTable(){
     if(costPeriod==='all'){
       const c = (C.byUser||{})[String(idx)]; if(!c) return null;
       const u = DATA.users[idx];
-      return {usd:c.usd, el:c.el, gm:c.gm, chars:c.chars, talk_secs:c.talk_secs ?? u.talkSecs, scenes:u.scenes, talk_el:c.talk_el};
+      return {usd:c.usd, tts:c.tts, gm:c.gm, chars:c.chars, talk_secs:c.talk_secs ?? u.talkSecs, scenes:u.scenes, talk_tts:c.talk_tts};
     }
     return ((C.byUserMonth||{})[costPeriod]||{})[String(idx)] || null;
   };
   // Say where the talk half comes from — it is not on the ledger (2026-09-26).
   const sub = document.getElementById('costSub');
   if(sub) sub.textContent = C.talk_estimated
-    ? `가입 이후 누적이에요. 달로 끊어 볼 수 있어요. 통화 원가는 원장에 글자가 안 남아서(게이트웨이) 통화 초 × 실측 분당 크레딧(${C.talk_credits_per_min}cr, ElevenLabs API)으로 계산해 더했어요 — ElevenLabs 열 안에 들어 있어요.`
-    : `가입 이후 누적이에요. 달로 끊어 볼 수 있어요. 지금은 원장 글자만 보여서 통화 원가가 빠져 있어요(admin_talk_cost 미적용) — 실제의 절반쯤이에요.`;
+    ? `가입 이후 누적이에요. 달로 끊어 볼 수 있어요. 통화 음성은 원장에 글자가 안 남아서(게이트웨이) 통화 시간 × 분당 ${num(C.chars_per_min)}자로 계산해 TTS 열에 더했어요.`
+    : `가입 이후 누적이에요. 달로 끊어 볼 수 있어요. 지금은 원장 글자만 보여서 통화 음성 원가가 빠져 있어요(admin_talk_cost 미적용).`;
   let html = `<thead><tr><th>유저</th><th>플랜</th><th class="num">통화</th><th class="num">장면</th>`
-    + `<th class="num">TTS 글자</th><th class="num">ElevenLabs</th><th class="num">Gemini</th>`
+    + `<th class="num">TTS 글자</th><th class="num">TTS</th><th class="num">Gemini</th>`
     + `<th class="num">합계</th></tr></thead><tbody>`;
   const rows = all.map(u=>({u, c:row(u.idx)})).filter(r=>r.c && r.c.usd>0)
     .sort((a,b)=>b.c.usd-a.c.usd);
@@ -3722,18 +3648,18 @@ function renderCostTable(){
       <td class="num">${c.talk_secs?fmtMin(c.talk_secs):'—'}</td>
       <td class="num">${c.scenes||'—'}</td>
       <td class="num">${num(Math.round(c.chars))}</td>
-      <td class="num">${usd(c.el,3)}</td>
+      <td class="num">${usd(c.tts,3)}</td>
       <td class="num muted">${c.gm>0?usd(c.gm,3):'미측정'}</td>
       <td class="num"><b>${usd(c.usd,3)}</b></td></tr>`;
   }
-  const tot = rows.reduce((a,{c})=>({usd:a.usd+c.usd, el:a.el+c.el, gm:a.gm+c.gm,
+  const tot = rows.reduce((a,{c})=>({usd:a.usd+c.usd, tts:a.tts+c.tts, gm:a.gm+c.gm,
     chars:a.chars+c.chars, talk:a.talk+(c.talk_secs||0), sc:a.sc+(c.scenes||0)}),
-    {usd:0,el:0,gm:0,chars:0,talk:0,sc:0});
+    {usd:0,tts:0,gm:0,chars:0,talk:0,sc:0});
   html += `<tr style="border-top:2px solid var(--baseline)"><td><b>합계</b></td><td></td>
     <td class="num"><b>${tot.talk?fmtMin(tot.talk):'—'}</b></td>
     <td class="num"><b>${tot.sc||'—'}</b></td>
     <td class="num"><b>${num(Math.round(tot.chars))}</b></td>
-    <td class="num"><b>${usd(tot.el,3)}</b></td>
+    <td class="num"><b>${usd(tot.tts,3)}</b></td>
     <td class="num muted"><b>${tot.gm>0?usd(tot.gm,3):'미측정'}</b></td>
     <td class="num"><b>${usd(tot.usd,3)}</b></td></tr>`;
   el.innerHTML = html + '</tbody>';
@@ -3760,397 +3686,9 @@ function renderFairUse(){
 
 /* ============================================================ wiring */
 
-/* ============================================================ 돈: 실제 원가·손익 모델
- * DATA.econ is built in assemble.ts from ElevenLabs' own usage API (truth.ts)
- * with the ledger beside it. null when the Worker has no ELEVENLABS_API_KEY.
- * Everything here is EUR; the older sections above stay in USD list prices.
- */
-const ECON = () => DATA.econ;
+/* EUR for the Gemini section; a fixed rate is close enough for a console. */
+const USD_PER_EUR = 1.17;
 const eur = (n,d=0) => (n<0?'−':'') + '€' + Math.abs(Number(n||0)).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
-const kcr = n => n>=1e6 ? (n/1e6).toFixed(2)+'M' : n>=1e3 ? Math.round(n/1e3)+'k' : String(Math.round(n||0));
-const ECON_SECS = ['econCatsSec','econDaySec','econUnitSec','pnlSec','growSec','leverSec'];
-const ECON_COLOR = {talk:'var(--s1)', scene:'var(--s2)', vm:'var(--s3)', accent:'var(--warn)', review:'#e87ba4',
-                   onb:'#4a3aa7', misc_rec:'#9aa3b2', v3:'#7b8494', other:'#c3c2b7'};
-const ECON_REC = {yes:['yes','기록됨'], partial:['part','일부'], no:['no','없음']};
-
-/** EUR per month this subscriber leaves after Apple, VAT and any launch code. */
-function netEurOfUser(u){
-  const e = ECON(); if(!e) return 0;
-  const sp = DATA.storePrices[u.plan]; if(!sp) return 0;
-  const c = 1 - DATA.revenue.commission, usdToEur = 1/e.fx.USD;
-  const o = u.offer;
-  if(o && o.price && o.currency){
-    const p = o.price, cur = o.currency;
-    const net = cur==='KRW' ? p/1.1*c/e.fx.KRW : cur==='EUR' ? p/1.19*c : p*c*usdToEur;
-    return net / sp.months;
-  }
-  const pl = e.plans.find(x=>x.id===u.plan);
-  return pl ? pl.net.avg : 0;
-}
-function currentNetEur(){
-  let net=0, count=0;
-  for(const u of DATA.users){
-    if(u.dev || u.owner) continue;
-    const st = stateOf(u);
-    if(st==='paid' || st==='cancelling'){ net += netEurOfUser(u); count++; }
-  }
-  return {net, count};
-}
-function econSignupsPerDay(){ const e=ECON(); return e && e.window.days ? e.window.signups/e.window.days : 0; }
-
-function renderEcon(){
-  const e = ECON();
-  const tiles = document.getElementById('econTiles'), miss = document.getElementById('econMissing');
-  ECON_SECS.forEach(id => document.getElementById(id).classList.toggle('gone', !e));
-  if(!e){
-    tiles.innerHTML = '';
-    miss.hidden = false;
-    miss.innerHTML = 'ElevenLabs 키가 없어서 원장 숫자만 보여요 — 원장은 게이트웨이 통화를 못 봅니다. '
-      + '<code>bash admin/deploy.sh secret ELEVENLABS_API_KEY</code> (게이트웨이의 키 그대로).';
-    document.getElementById('econAsOf').textContent = '';
-    return;
-  }
-  miss.hidden = true;
-  document.getElementById('econAsOf').textContent =
-    `ElevenLabs ${fmtClock(e.fetchedAt)} 조회 · €1 = $${e.fx.USD} = ₩${num(Math.round(e.fx.KRW))}${e.fx.source==='fallback'?' (환율 고정값)':''}`;
-  const cur = currentNetEur();
-  const usdToEur = 1/e.fx.USD;
-  const gm30 = e.window.days ? e.window.gmEur/e.window.days*30 : 0;
-  const planEur = e.tierPrice*usdToEur;
-  const profitNow = cur.net - (planEur + e.fixed.eur + gm30);
-  const tierName = e.tier.charAt(0).toUpperCase()+e.tier.slice(1);
-  const over = e.cycle.per30 > e.cycle.limit;
-  const t = [
-    {k:'ElevenLabs 이번 주기', v:`${kcr(e.cycle.used)} / ${kcr(e.cycle.limit)}`,
-      d:`${tierName} · 하루 ${kcr(e.cycle.perDay)} · 월 환산 ${kcr(e.cycle.per30)}${e.cycle.resetAt?' · '+fmtDate(e.cycle.resetAt.slice(0,10))+' 리셋':''}`, alert:over},
-    {k:`출시 후 ${e.window.days}일 변동 원가`, v:eur(e.window.elEur+e.window.gmEur,1),
-      d:`EL ${eur(e.window.elEur,1)} + Gemini ${eur(e.window.gmEur,1)} · 하루 ${eur(e.window.perDayEur,2)}`},
-    {k:'월 순매출 (지금)', v:eur(cur.net,1), d:`결제 ${cur.count}명 · 수수료·VAT·코드 반영`},
-    {k:'지금의 월 손익', v:eur(profitNow), d:`EL ${tierName} $${e.tierPrice} + 고정 ${eur(e.fixed.eur)} + Gemini ${eur(gm30)}`,
-      alert: profitNow<0, good: profitNow>=0},
-    {k:'원장이 본 비율', v: e.window.recordedShare==null ? '—' : `${Math.round(e.window.recordedShare*100)}%`,
-      d:`원장 ${kcr(e.window.recorded)} / 실제 ${kcr(e.window.credits)} 크레딧`, alert: e.window.recordedShare!=null && e.window.recordedShare<0.9},
-  ];
-  tiles.innerHTML = t.map(x=>`<div class="tile${x.alert?' alert':''}${x.good?' good':''}"><div class="k">${x.k}</div>`
-    + `<div class="v">${x.v}</div><div class="d">${x.d}</div></div>`).join('');
-}
-
-/* ---- 목소리 슬롯 ----------------------------------------------------------
- * DATA.voiceSlots (index.ts voiceSlots): ElevenLabs' own used/limit beside
- * who holds each slot in voice_clones. Account facts, so the dev toggle is
- * ignored like the rest of this tab. */
-const SLOT_PARTS = [
-  ['paid','구독 중','var(--s1)'], ['trial','체험 중','var(--s2)'], ['unlimited','관리자·무제한','#4a3aa7'],
-  ['free','무료·만료 (보관 대상)','var(--warn)'], ['anonymous','가입 전 (익명)','#9aa3b2'], ['untracked','DB에 없는 보이스','#c3c2b7'],
-];
-function renderSlots(){
-  const v = DATA.voiceSlots;
-  const sec = document.getElementById('slotSec'), miss = document.getElementById('slotMissing');
-  if(!v){ document.getElementById('slotTiles').innerHTML=''; document.getElementById('slotStack').innerHTML='';
-    document.getElementById('slotLegend').innerHTML=''; miss.hidden=false;
-    miss.textContent='슬롯 집계를 못 읽었어요 (Worker 로그의 voiceSlots).'; return; }
-  miss.hidden = true;
-  const used = v.elUsed, limit = v.elLimit;
-  const left = used!=null && limit!=null ? limit-used : null;
-  const pct = used!=null && limit ? used/limit : null;
-  document.getElementById('slotAsOf').textContent = used==null ? 'ElevenLabs 키 없음 — DB 숫자만' : '';
-  const b = v.buckets;
-  const t = [
-    {k:'사용 중 슬롯', v: used==null ? num(v.held) : `${num(used)} / ${num(limit)}`,
-      d: used==null ? 'DB 기준 (보관 안 된 활성 클론)' : `${Math.round(pct*100)}% · ${num(left)}칸 남음`,
-      alert: pct!=null && pct>=0.9, good: pct!=null && pct<0.7},
-    {k:'보관(park)됨', v:num(v.parked), d:'슬롯 밖 · 쓸 때 재생성'},
-    {k:'곧 보관', v:num(b.warned), d:'예고 푸시 나감 · 앱을 열면 유지'},
-    {k:'최근 7일 새 클론', v:num(v.clonedThisWeek), d: v.newest ? '마지막 '+ago(v.newest)+' · '+fmtTs(v.newest) : '—'},
-    {k:'이번 달 추가·수정', v: v.addEdits==null ? '—' : `${num(v.addEdits)} / ${num(v.maxAddEdits)}`,
-      d:'클론·재생성·리믹스마다 1', alert: v.addEdits!=null && v.maxAddEdits && v.addEdits/v.maxAddEdits>=0.9},
-  ];
-  document.getElementById('slotTiles').innerHTML = t.map(x=>`<div class="tile${x.alert?' alert':''}${x.good?' good':''}"><div class="k">${x.k}</div>`
-    + `<div class="v">${x.v}</div><div class="d">${x.d}</div></div>`).join('');
-  const val = k => k==='untracked' ? Math.max(0, v.untracked||0) : (b[k]||0);
-  const total = Math.max(limit || 0, v.held + Math.max(0, v.untracked||0)) || 1;
-  const parts = SLOT_PARTS.filter(([k])=>val(k)>0);
-  document.getElementById('slotStack').innerHTML = parts.map(([k,l,c]) =>
-    `<div style="width:${(val(k)/total*100).toFixed(2)}%;background:${c}" data-tip="${esc(l)} · ${num(val(k))}"></div>`).join('');
-  document.getElementById('slotLegend').innerHTML = parts.map(([k,l,c]) =>
-    `<span><span class="swatch" style="background:${c}"></span> ${esc(l)} ${num(val(k))}</span>`).join('')
-    + (left!=null ? `<span><span class="swatch" style="background:var(--chip)"></span> 빈 칸 ${num(left)}</span>` : '')
-    + (v.untracked!=null && v.untracked<0 ? `<span style="color:var(--crit)">DB 행 ${num(-v.untracked)}개가 ElevenLabs에 없음</span>` : '');
-}
-
-function renderEconCats(){
-  const e = ECON(); if(!e) return;
-  const total = e.cats.reduce((a,c)=>a+c.credits,0) || 1;
-  document.getElementById('econStack').innerHTML = e.cats.map(c =>
-    `<div style="width:${(c.credits/total*100).toFixed(2)}%;background:${ECON_COLOR[c.key]||'#999'}" data-tip="${esc(c.label)} · ${num(c.credits)} cr"></div>`).join('');
-  document.getElementById('econLegend').innerHTML = e.cats.map(c =>
-    `<span><span class="swatch" style="background:${ECON_COLOR[c.key]||'#999'}"></span> ${esc(c.label)}</span>`).join('');
-  const rows = e.cats.map(c => {
-    const [cls,lbl] = ECON_REC[c.recorded] || ['','?'];
-    return `<tr><td><span class="swatch" style="background:${ECON_COLOR[c.key]||'#999'};margin-right:6px"></span>${esc(c.label)}</td>`
-      + `<td class="num">${num(c.credits)}</td><td class="num">${Math.round(c.share*100)}%</td>`
-      + `<td class="num">${eur(c.credits*e.eurPerCredit,2)}</td>`
-      + `<td><span class="rec ${cls}">${lbl}</span> <span style="color:var(--muted);font-size:12px">${esc(c.note)}</span></td></tr>`;
-  });
-  document.getElementById('econCats').innerHTML =
-    `<thead><tr><th>활동</th><th class="num">크레딧</th><th class="num">비중</th><th class="num">원가</th><th>원장</th></tr></thead>`
-    + `<tbody>${rows.join('')}<tr><td><b>합계</b></td><td class="num"><b>${num(e.window.credits)}</b></td><td class="num">100%</td>`
-    + `<td class="num"><b>${eur(e.window.elEur,2)}</b></td><td style="color:var(--muted);font-size:12px">원장 ${num(e.window.recorded)} = ${Math.round((e.window.recordedShare||0)*100)}%</td></tr></tbody>`;
-  const rateNote = Math.abs(e.rateDb - e.rate) > 1e-7
-    ? `<li>DB의 크레딧 단가는 <b>$${e.rateDb}</b>(Creator 시절 씨앗값)인데 실제 티어는 <b>${e.tier}</b>($${e.tierPrice} / ${kcr(e.tierCredits)} = $${e.rate.toFixed(6)}). 이 탭의 모든 $·€ 원가는 실제 티어 단가로 다시 계산했어요. DB를 맞추려면 <code>select set_elevenlabs_usd_per_credit(${e.rate.toFixed(6)});</code></li>`
-    : '';
-  document.getElementById('econNote').innerHTML = `<ul>
-    <li><b>원장은 실제 크레딧의 ${Math.round((e.window.recordedShare||0)*100)}%만 봅니다.</b> 리얼타임 게이트웨이(통화의 본 경로)는 ElevenLabs에 직접 붙고 글자 수를 어디에도 남기지 않아요(<code>gateway/src/billing.ts</code>는 초만 보냄). 악센트 미리듣기는 행만 있고 크레딧이 없어요. 고치려면 게이트웨이가 통화 끝에 TTS 글자 수를 원장에 한 줄 남기면 돼요.</li>
-    ${rateNote}
-    <li>ElevenLabs 요금제는 <b>용량 레버지 단가 레버가 아니에요</b>: Pro $99/600k, Scale $299/1.8M, Business $990/6M 모두 1k당 약 $0.165, 초과분도 $0.17. 유일한 할인은 연간 결제 −17%.</li>
-  </ul>`;
-}
-
-function renderEconDaily(){
-  const e = ECON(); if(!e) return;
-  const el = document.getElementById('econDaily');
-  const rows = e.byDay;
-  if(!rows.length){ el.innerHTML = '<div class="empty">기록이 없어요.</div>'; return; }
-  const W = innerW(el, 240), H = 130, LEFT = 44, RIGHT = 8, top = 10, bh = H-top-18;
-  const n = rows.length, bw = (W-LEFT-RIGHT)/n;
-  const max = Math.max(1, ...rows.map(r=>r.actual));
-  let s = `<div class="panel-label"><span class="swatch" style="background:var(--seq2)"></span>실제
-      <span class="swatch" style="background:var(--s1);margin-left:10px"></span>원장
-      <span style="font-weight:400;color:var(--muted);margin-left:auto">합계 ${num(e.window.credits)} cr · 원장 ${num(e.window.recorded)}</span></div>`
-    + `<svg width="${W}" height="${H}" role="img" aria-label="일별 크레딧, 실제와 원장">`
-    + `<line x1="${LEFT}" y1="${top+bh}" x2="${W-RIGHT}" y2="${top+bh}" class="baseline"/>`
-    + `<text x="${LEFT-6}" y="${top+8}" text-anchor="end" class="axis">${kcr(max)}</text>`;
-  rows.forEach((r,i)=>{
-    const x = LEFT+i*bw, w = Math.max(2, bw-2);
-    const ha = Math.max(1, r.actual/max*bh), hr = r.recorded/max*bh;
-    const tip = `<b>${fmtDate(r.d)}</b><br>실제 ${num(r.actual)} cr · ${eur(r.actual*e.eurPerCredit,2)}<br>원장 ${num(r.recorded)} cr (${r.actual?Math.round(r.recorded/r.actual*100):0}%)`;
-    s += `<rect x="${x.toFixed(1)}" y="${(top+bh-ha).toFixed(1)}" width="${w.toFixed(1)}" height="${ha.toFixed(1)}" rx="1.5" fill="var(--seq2)" data-tip="${tip.replace(/"/g,'&quot;')}"/>`;
-    if(hr>0) s += `<rect x="${x.toFixed(1)}" y="${(top+bh-hr).toFixed(1)}" width="${w.toFixed(1)}" height="${hr.toFixed(1)}" rx="1.5" fill="var(--s1)" pointer-events="none"/>`;
-    if(n<=20 || i%Math.ceil(n/12)===0) s += `<text x="${(x+w/2).toFixed(1)}" y="${H-4}" text-anchor="middle" class="axis">${fmtD(r.d)}</text>`;
-  });
-  el.innerHTML = s + '</svg>';
-}
-
-// ---- unit economics ------------------------------------------------------
-const PLAN_KO_SHORT = {light_monthly:'Light 월', light_annual:'Light 연간(월 환산)', plus_monthly:'Plus 월', plus_annual:'Plus 연간(월 환산)'};
-function subCostEur(min, scenes){
-  const u = ECON().unit;
-  return min*u.talkEurPerMin + scenes*u.sceneEur + u.vmEurPerSubMonth;
-}
-function renderEconPlans(){
-  const e = ECON(); if(!e) return;
-  const u = e.unit;
-  document.getElementById('econUnitSub').innerHTML =
-    `순매출은 미국·한국·독일 스토어의 평균(Apple 85%, VAT 제외). 원가는 출시 후 실측 단가: <b>통화 1분 ${eur(u.talkEurPerMin,3)}</b>`
-    + ` (TTS ${u.talkCreditsPerMin} cr + Gemini ${eur(u.gmEurPerMin,4)}), <b>장면 1개 ${eur(u.sceneEur,3)}</b> (${num(u.sceneCredits)} cr),`
-    + ` 보이스메일 ${eur(u.vmEurPerSubMonth,2)}/구독자·월 (회당 ${u.vmPerSynth} cr, 하루 한 통 가정).`;
-  const pl = id => e.plans.find(p=>p.id===id).net;
-  const rows = [
-    ['plus_monthly', pl('plus_monthly'), '150분 · 8장면', subCostEur(150,8), `300분 + 30장면이면 원가 ${eur(subCostEur(300,30),1)} — 여전히 흑자`],
-    ['plus_annual',  pl('plus_annual'),  '150분 · 8장면', subCostEur(150,8), `통화 ${Math.round((pl('plus_annual').avg - u.vmEurPerSubMonth - 8*u.sceneEur)/u.talkEurPerMin)}분 넘기면 적자`],
-    ['light_monthly',pl('light_monthly'),'60분 · 4장면',  subCostEur(60,4),  `150분 + 60장면(다 쓰면) 원가 ${eur(subCostEur(150,60),1)} → <span style="color:${subCostEur(150,60)>pl('light_monthly').avg?'var(--crit)':'var(--good-text)'}">${subCostEur(150,60)>pl('light_monthly').avg?'적자':'흑자'} ${eur(Math.abs(pl('light_monthly').avg-subCostEur(150,60)),1)}</span>`],
-    ['light_annual', pl('light_annual'), '60분 · 4장면',  subCostEur(60,4),  `다 쓰면 ${eur(pl('light_annual').avg-subCostEur(150,60),1)}`],
-  ].map(([id,n,use,c,full]) => {
-    const m = n.avg - c;
-    return `<tr><td><b>${PLAN_KO_SHORT[id]}</b></td>`
-      + `<td class="num">${eur(n.avg,1)}<div style="font-size:11px;color:var(--muted)">KR ${eur(n.KR,1)} · US ${eur(n.US,1)} · DE ${eur(n.DE,1)}</div></td>`
-      + `<td style="color:var(--ink-2)">${use}</td><td class="num">${eur(c,2)}</td>`
-      + `<td class="num" style="color:${m<0?'var(--crit)':'var(--good-text)'};font-weight:600">${eur(m,1)}</td>`
-      + `<td style="color:var(--ink-2);font-size:12.5px">${full}</td></tr>`;
-  });
-  const code = pl('plus_monthly').avg/2, codeM = code - subCostEur(150,8);
-  rows.push(`<tr><td>Plus 50% 코드 (12개월)</td><td class="num">${eur(code,1)}</td><td style="color:var(--ink-2)">150분 · 8장면</td>`
-    + `<td class="num">${eur(subCostEur(150,8),2)}</td><td class="num" style="color:${codeM<0?'var(--crit)':'var(--good-text)'};font-weight:600">${eur(codeM,1)}</td>`
-    + `<td style="color:var(--ink-2);font-size:12.5px">정가의 절반, 원가는 그대로</td></tr>`);
-  rows.push(`<tr><td>무료 가입자</td><td class="num">—</td><td style="color:var(--ink-2)">무료 ${u.freeMinutes}분 + 온보딩</td>`
-    + `<td class="num">${eur(u.signupEur,2)}</td><td class="num" style="color:var(--crit);font-weight:600">${eur(-u.signupEur,2)}</td>`
-    + `<td style="color:var(--ink-2);font-size:12.5px">인사·악센트 미리듣기 ${num(u.onboardingCredits)} cr + 통화 ${u.freeMinutes}분 — 가입 1명당 확정 지출</td></tr>`);
-  document.getElementById('econPlans').innerHTML =
-    `<thead><tr><th>플랜</th><th class="num">순매출 /월</th><th>가정 사용</th><th class="num">원가 /월</th><th class="num">기여이익</th><th>다 쓰면</th></tr></thead><tbody>${rows.join('')}</tbody>`;
-  const lightFull = subCostEur(150,60) - pl('light_monthly').avg;
-  document.getElementById('econUnitNote').innerHTML = lightFull > 0
-    ? `<b>Light를 다 쓰면 ${eur(lightFull,1)} 적자</b>이고 이유는 장면(${eur(60*u.sceneEur,1)}) 하나예요. 가격 원칙(“못 쓰게 해서 벌지 않는다”)대로면 답은 장면 단가(길이 82→55초, 클론 절반 turbo — launch-billing.md의 레버)나 Light 가격이지 상한이 아니에요.`
-    : `Light는 다 써도 흑자예요.`;
-}
-
-// ---- the calculator --------------------------------------------------------
-const PNL_KEY = 'nawana.admin.pnl';
-const PNL_FIELDS = [
-  ['n','구독자 수',0,1000,5,'명'], ['plusShare','Plus 비중',0,100,5,'%'], ['codeShare','50% 코드 구독자 비중',0,100,5,'%'],
-  ['plusMin','Plus 월 통화',0,600,10,'분'], ['plusScenes','Plus 월 장면',0,120,1,'장면'],
-  ['lightMin','Light 월 통화',0,150,5,'분'], ['lightScenes','Light 월 장면',0,60,1,'장면'],
-  ['churn','월 해지율',2,20,1,'%'], ['conv','가입→유료 전환율',1,20,1,'%'],
-];
-const PNL_DEFAULT = {n:400, plusShare:60, codeShare:0, plusMin:150, plusScenes:8, lightMin:60, lightScenes:4, churn:8, conv:5, elAnnual:false};
-let pnl = {...PNL_DEFAULT};
-try{ const s = JSON.parse(localStorage.getItem(PNL_KEY)||'null'); if(s) pnl = {...PNL_DEFAULT, ...s}; }catch(e){}
-
-/** Cheapest ElevenLabs tier for this many credits a month — never below the
- *  tier the account is on today, so the "지금" preset and the tile above agree.
- *  Overage is billed per credit at about the same rate as the tiers. */
-function elTierFor(credits){
-  const e = ECON(); let best = Infinity, pick = null;
-  for(const t of e.tiers){
-    if(t.credits < e.tierCredits) continue;
-    const c = t.price + Math.max(0, credits - t.credits)*0.00017;
-    if(c<best){ best=c; pick=t; }
-  }
-  return {usd: best, tier: pick, over: pick ? credits > pick.credits : false};
-}
-function elPlanEur(credits, annual){
-  const e = ECON();
-  return elTierFor(credits).usd*(annual?0.8333:1)/e.fx.USD;
-}
-function elTierName(credits){
-  const r = elTierFor(credits); if(!r.tier) return '—';
-  return `${r.tier.name.charAt(0).toUpperCase()+r.tier.name.slice(1)}${r.over?' + 초과분':''} ≈ $${Math.round(r.usd)}`;
-}
-function pnlModel(N, p){
-  const e = ECON(), u = e.unit;
-  const plus = p.plusShare/100, code = p.codeShare/100, churn = p.churn/100, conv = p.conv/100;
-  const signups = conv>0 ? N*churn/conv : 0;
-  const plusNet = e.plans.find(x=>x.id==='plus_monthly').net.avg, lightNet = e.plans.find(x=>x.id==='light_monthly').net.avg;
-  const rev = N*(plus*plusNet + (1-plus)*lightNet)*(1-0.5*code);
-  const mins = N*(plus*p.plusMin + (1-plus)*p.lightMin) + signups*u.freeMinutes;
-  const gem = mins*u.gmEurPerMin;
-  const credits = N*(plus*(p.plusMin*u.talkCreditsPerMin + p.plusScenes*u.sceneCredits)
-                   + (1-plus)*(p.lightMin*u.talkCreditsPerMin + p.lightScenes*u.sceneCredits)
-                   + u.vmCreditsPerSubMonth) + signups*u.signupCredits;
-  const el = elPlanEur(credits, p.elAnnual);
-  const cost = el + gem + e.fixed.eur;
-  return {profit: rev-cost, rev, cost, credits, signups, el, gem};
-}
-function pnlSolve(p, target){ for(let N=0; N<=3000; N++){ if(pnlModel(N,p).profit >= target) return N; } return null; }
-
-function renderPnlControls(){
-  const c = document.getElementById('pnlControls');
-  if(c.dataset.built) return;
-  c.dataset.built = '1';
-  c.innerHTML = PNL_FIELDS.map(([k,lbl,min,max,step]) =>
-    `<div><label for="pnl_${k}">${lbl} <output id="pnlo_${k}"></output></label>`
-    + `<input type="range" id="pnl_${k}" min="${min}" max="${max}" step="${step}"></div>`).join('')
-    + `<label class="chk"><input type="checkbox" id="pnl_elAnnual"> ElevenLabs 연간 결제 (−17%)</label>`;
-  PNL_FIELDS.forEach(([k]) => document.getElementById('pnl_'+k).addEventListener('input', ev => { pnl[k] = +ev.target.value; renderPnl(); }));
-  document.getElementById('pnl_elAnnual').addEventListener('change', ev => { pnl.elAnnual = ev.target.checked; renderPnl(); });
-  const presets = [
-    ['now','지금', () => { const paid = DATA.users.filter(u=>!u.dev&&!u.owner&&(stateOf(u)==='paid'||stateOf(u)==='cancelling'));
-        const n = paid.length || 1;
-        return {n: paid.length, plusShare: Math.round(paid.filter(u=>String(u.plan).startsWith('plus')).length/n*20)*5,
-                codeShare: Math.round(paid.filter(u=>u.offer).length/n*20)*5}; }],
-    ['funnel','현재 퍼널의 한계', () => { const spd = econSignupsPerDay(); return {n: Math.round(spd*30*(pnl.conv/100)/(pnl.churn/100)), codeShare:0}; }],
-    ['target','€3,000 도달점', () => { const q = {...pnl, codeShare:0}; return {n: pnlSolve(q,3000) ?? 1000, codeShare:0}; }],
-    ['allplus','전원 Plus 정가', () => { const q = {...pnl, plusShare:100, codeShare:0}; return {n: pnlSolve(q,3000) ?? 1000, plusShare:100, codeShare:0}; }],
-  ];
-  document.getElementById('pnlPresets').innerHTML = presets.map(([k,l]) => `<button type="button" data-preset="${k}">${l}</button>`).join('');
-  document.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => {
-    const f = presets.find(x=>x[0]===b.dataset.preset)[2]; Object.assign(pnl, f()); renderPnl();
-  }));
-}
-function renderPnl(){
-  const e = ECON(); if(!e) return;
-  renderPnlControls();
-  PNL_FIELDS.forEach(([k,,,,,unit]) => { document.getElementById('pnl_'+k).value = pnl[k]; document.getElementById('pnlo_'+k).textContent = pnl[k]+unit; });
-  document.getElementById('pnl_elAnnual').checked = !!pnl.elAnnual;
-  const m = pnlModel(pnl.n, pnl);
-  const spdNow = econSignupsPerDay();
-  const tiles = [
-    {k:'월 순이익', v:eur(m.profit), d: m.profit>=3000 ? '목표 도달' : m.profit<0 ? '적자' : `€3,000까지 ${eur(3000-m.profit)}`, alert:m.profit<0, good:m.profit>=3000},
-    {k:'월 순매출 / 원가', v:eur(m.rev), d:`원가 ${eur(m.cost)} = EL ${eur(m.el)} + Gemini ${eur(m.gem)} + 고정 ${eur(e.fixed.eur)}`},
-    {k:'유지에 필요한 가입자', v:`${Math.round(m.signups)}/월`, d:`하루 ${(m.signups/30).toFixed(1)}명 (지금 ${spdNow.toFixed(1)}명) · 무료 사용자 원가 ${eur(m.signups*e.unit.signupEur)}`},
-    {k:'ElevenLabs 크레딧 / 월', v:kcr(m.credits), d:`${elTierName(m.credits)}${pnl.elAnnual?' (연간)':''}`},
-  ];
-  document.getElementById('pnlOut').innerHTML = tiles.map(x=>`<div class="tile${x.alert?' alert':''}${x.good?' good':''}"><div class="k">${x.k}</div><div class="v">${x.v}</div><div class="d">${x.d}</div></div>`).join('');
-  drawPnlCharts();
-  try{ localStorage.setItem(PNL_KEY, JSON.stringify(pnl)); }catch(e){}
-}
-function drawPnlCharts(){
-  const e = ECON(); if(!e || !document.getElementById('pnlControls').dataset.built) return;
-  // -- profit vs subscribers
-  const cEl = document.getElementById('pnlCurve');
-  const W = innerW(cEl, 260), H = 240, L = 50, R = 12, T = 14, B = 30;
-  const maxN = Math.max(600, Math.ceil(pnl.n*1.25/100)*100);
-  const step = Math.max(1, Math.round(maxN/160));
-  const pts = []; for(let N=0; N<=maxN; N+=step) pts.push([N, pnlModel(N,pnl).profit]);
-  if(pts[pts.length-1][0] !== maxN) pts.push([maxN, pnlModel(maxN,pnl).profit]);
-  const lo = Math.min(0, ...pts.map(q=>q[1])) - 200, hi = Math.max(3400, ...pts.map(q=>q[1])) + 200;
-  const x = N => L + N/maxN*(W-L-R), y = v => T + (1-(v-lo)/(hi-lo))*(H-T-B);
-  let s = `<svg width="${W}" height="${H}" role="img" aria-label="구독자 수에 따른 월 순이익">`;
-  const gstep = hi-lo > 8000 ? 2000 : 1000;
-  for(let v=Math.ceil(lo/gstep)*gstep; v<=hi; v+=gstep)
-    s += `<line class="${v===0?'pnl-zero':'pnl-grid'}" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" class="axis">${v/1000}k</text>`;
-  for(let N=0; N<=maxN; N+=maxN/6) s += `<text x="${x(N)}" y="${H-B+16}" text-anchor="middle" class="axis">${Math.round(N)}</text>`;
-  s += `<text x="${W-R}" y="${H-3}" text-anchor="end" class="axis">구독자 수 →</text>`;
-  s += `<line class="pnl-target" x1="${L}" x2="${W-R}" y1="${y(3000)}" y2="${y(3000)}"/><text x="${W-R-4}" y="${y(3000)-5}" text-anchor="end" class="pnl-lbl">€3,000</text>`;
-  s += `<path class="pnl-line" style="stroke:var(--s1)" d="${pts.map((q,i)=>(i?'L':'M')+x(q[0]).toFixed(1)+' '+y(q[1]).toFixed(1)).join('')}"/>`;
-  const be = pnlSolve(pnl,0), tg = pnlSolve(pnl,3000);
-  if(be!==null && be<=maxN) s += `<circle r="5" cx="${x(be)}" cy="${y(0)}" fill="var(--warn)" stroke="var(--surface)" stroke-width="2"/><text x="${x(be)+8}" y="${y(0)-8}" class="pnl-lbl">손익분기 ${be}명</text>`;
-  if(tg!==null && tg<=maxN) s += `<circle r="5" cx="${x(tg)}" cy="${y(3000)}" fill="var(--good)" stroke="var(--surface)" stroke-width="2"/><text x="${x(tg)+8}" y="${y(3000)+16}" class="pnl-lbl">€3,000 = ${tg}명</text>`;
-  const curP = pnlModel(pnl.n,pnl).profit;
-  s += `<circle r="6" cx="${x(pnl.n)}" cy="${y(curP)}" fill="var(--ink)" stroke="var(--surface)" stroke-width="2" data-tip="${pnl.n}명 → ${eur(curP)}/월"/>`;
-  // hover targets: one thin column per sample
-  const colW = (W-L-R)/pts.length;
-  pts.forEach(q => { const mm = pnlModel(q[0],pnl);
-    s += `<rect x="${(x(q[0])-colW/2).toFixed(1)}" y="${T}" width="${Math.max(2,colW).toFixed(1)}" height="${H-T-B}" fill="transparent" data-tip="${q[0]}명 → ${eur(mm.profit)}/월 · 가입 ${Math.round(mm.signups)}/월 · ${kcr(mm.credits)} cr"/>`; });
-  cEl.innerHTML = s + '</svg>';
-  document.getElementById('pnlNote').textContent =
-    (be!==null ? `손익분기 ${be}명, ` : '') + (tg!==null ? `€3,000은 ${tg}명${pnl.elAnnual?' (EL 연간 결제 반영)':''}. ` : '€3,000에 닿지 않는 가정이에요. ')
-    + '곡선의 굴곡은 ElevenLabs 요금제 계단(600k · 1.8M · 6M)이에요.';
-
-  // -- 36-month growth by signups/day
-  const gEl = document.getElementById('pnlGrowth');
-  const spdNow = econSignupsPerDay();
-  const scen = [[spdNow, `지금 ${spdNow.toFixed(1)}명/일`, 'var(--s1)'], [12,'12명/일','var(--s2)'], [22,'22명/일','var(--s3)'], [30,'30명/일','var(--warn)']];
-  const N0 = currentNetEur().count;
-  const sim = spd => { let N=N0; const out=[]; for(let m=1;m<=36;m++){ N = N*(1-pnl.churn/100) + spd*30*(pnl.conv/100); out.push([m, N, pnlModel(N,pnl).profit]); } return out; };
-  const series = scen.map(([spd,name,color]) => ({spd,name,color,pts:sim(spd)}));
-  const W2 = innerW(gEl, 260), H2 = 240;
-  const all = series.flatMap(sr=>sr.pts.map(q=>q[2]));
-  const lo2 = Math.min(0,...all)-200, hi2 = Math.max(3400,...all)+300;
-  const x2 = m => L + m/36*(W2-L-R), y2 = v => T + (1-(v-lo2)/(hi2-lo2))*(H2-T-B);
-  let g = `<div class="legend">${series.map(sr=>`<span><span class="swatch" style="background:${sr.color}"></span>${sr.name}</span>`).join('')}</div>`
-    + `<svg width="${W2}" height="${H2}" role="img" aria-label="36개월 순이익 전망">`;
-  const gs2 = hi2-lo2 > 8000 ? 2000 : 1000;
-  for(let v=Math.ceil(lo2/gs2)*gs2; v<=hi2; v+=gs2)
-    g += `<line class="${v===0?'pnl-zero':'pnl-grid'}" x1="${L}" x2="${W2-R}" y1="${y2(v)}" y2="${y2(v)}"/><text x="${L-6}" y="${y2(v)+4}" text-anchor="end" class="axis">${v/1000}k</text>`;
-  [6,12,18,24,30,36].forEach(m => { g += `<text x="${x2(m)}" y="${H2-B+16}" text-anchor="middle" class="axis">${m}개월</text>`; });
-  g += `<line class="pnl-target" x1="${L}" x2="${W2-R}" y1="${y2(3000)}" y2="${y2(3000)}"/><text x="${L+4}" y="${y2(3000)-5}" class="pnl-lbl">€3,000</text>`;
-  series.forEach(sr => { g += `<path class="pnl-line" style="stroke:${sr.color}" d="${sr.pts.map((q,i)=>(i?'L':'M')+x2(q[0]).toFixed(1)+' '+y2(q[2]).toFixed(1)).join('')}"/>`; });
-  for(let m=1;m<=36;m++){
-    const tip = `<b>${m}개월</b><br>` + series.map(sr=>`${sr.name}: ${eur(sr.pts[m-1][2])} (${Math.round(sr.pts[m-1][1])}명)`).join('<br>');
-    g += `<rect x="${(x2(m)-(W2-L-R)/72).toFixed(1)}" y="${T}" width="${((W2-L-R)/36).toFixed(1)}" height="${H2-T-B}" fill="transparent" data-tip="${tip.replace(/"/g,'&quot;')}"/>`;
-  }
-  gEl.innerHTML = g + '</svg>';
-  document.getElementById('pnlGrowRows').innerHTML =
-    `<thead><tr><th>하루 가입자</th><th class="num">정착 구독자</th><th class="num">12개월 후</th><th class="num">24개월 후</th><th class="num">€3,000 도달</th></tr></thead><tbody>`
-    + series.map(sr => { const hit = sr.pts.find(q=>q[2]>=3000); const steady = sr.spd*30*(pnl.conv/100)/(pnl.churn/100);
-        return `<tr><td><span class="swatch" style="background:${sr.color};margin-right:6px"></span>${sr.name}</td><td class="num">${Math.round(steady)}명</td>`
-          + `<td class="num" style="color:${sr.pts[11][2]<0?'var(--crit)':'inherit'}">${eur(sr.pts[11][2])}</td><td class="num" style="color:${sr.pts[23][2]<0?'var(--crit)':'inherit'}">${eur(sr.pts[23][2])}</td>`
-          + `<td class="num">${hit ? hit[0]+'개월째' : '<span style="color:var(--crit)">도달 못 함</span>'}</td></tr>`; }).join('') + '</tbody>';
-  renderLevers();
-}
-function renderLevers(){
-  const e = ECON(); if(!e) return;
-  const spd = econSignupsPerDay();
-  const base = {...pnl, codeShare:0};
-  const tg = pnlSolve(base,3000), tgAnnual = pnlSolve({...base, elAnnual:true},3000);
-  const need = tg!==null ? pnlModel(tg,base).signups : null;
-  const steadyNow = spd*30*(pnl.conv/100)/(pnl.churn/100);
-  const steadyProfit = pnlModel(steadyNow, pnl).profit;
-  const cur = currentNetEur();
-  const codeUsers = DATA.users.filter(u=>!u.dev&&!u.owner&&(stateOf(u)==='paid'||stateOf(u)==='cancelling')&&u.offer).length;
-  const vm = e.cats.find(c=>c.key==='vm');
-  const items = [
-    `<b>가입자 수가 전부예요.</b> 지금 퍼널(하루 ${spd.toFixed(1)}명, 전환 ${pnl.conv}%, 해지 ${pnl.churn}%)은 ${Math.round(steadyNow)}명에서 정착하고 월 ${eur(steadyProfit)}에서 멈춰요.`
-      + (tg!==null ? ` €3,000은 구독자 ${tg}명이고, 유지하려면 <b>월 ${Math.round(need)}명, 하루 ${(need/30).toFixed(0)}명</b>이 가입해야 해요 — 지금의 ${spd>0?(need/30/spd).toFixed(1):'∞'}배.` : ''),
-    `<b>전환율은 두 배가 가능한 구간.</b> 첫 통화 무료(09-18)와 무료 10분(09-22) 이후 코호트를 따로 재 보세요. 전환 ${pnl.conv}% → ${pnl.conv*2}%면 필요한 가입자가 절반이 돼요.`,
-    `<b>50% 코드는 12개월간 매출을 반으로 잘라요.</b> 지금 결제 ${cur.count}명 중 ${codeUsers}명이 코드. 웨이트리스트 이후엔 더 뿌리지 않는 게 맞아요.`,
-    `<b>Light 장면 단가.</b> Light를 다 쓰면 적자인 이유는 장면(${eur(e.unit.sceneEur,3)} × 60)뿐. 장면 길이 82→55초 −33%, 클론 절반 turbo −33% — launch-billing.md에 있는 레버.`,
-    vm ? `<b>보이스메일이 크레딧의 ${Math.round(vm.share*100)}%.</b> 일일 통화를 켠 사람마다 세션 끝마다 합성돼요(${e.window.days}일 ${vm.note}). 무료 사용자 몫이 문제면 “어제 받은 사람만 다음 것을 만든다”가 제품 규칙을 안 깨는 절약이에요.` : '',
-    `<b>ElevenLabs 요금제는 용량 레버.</b> 티어를 올려도 단가가 안 내려가요(전부 ≈$0.165/1k). 유일한 할인은 연간 −17%(도달 구독자 ${tg??'—'}→${tgAnnual??'—'}명). 지금 페이스 월 ${kcr(e.cycle.per30)}은 ${e.tier} 한도 ${kcr(e.cycle.limit)}의 ${Math.round(e.cycle.per30/e.cycle.limit*100)}% — 첫 마케팅 푸시에서 넘치니 <b>초과 과금(usage-based billing)을 미리 켜 두세요.</b>`,
-    `<b>측정을 고치기.</b> 게이트웨이가 TTS 글자 수를 원장에 남기고 DB 단가를 티어에 맞추면 위 ‘일별 소진’이 이 섹션과 같은 숫자를 말해요. ‘유저별 원가’는 2026-09-26부터 통화 초 × 실측 분당 크레딧으로 통화분을 채워 넣어요. 원가의 진실은 여전히 ElevenLabs API예요.`,
-  ].filter(Boolean);
-  document.getElementById('pnlLevers').innerHTML = items.map(t=>`<li style="margin-bottom:10px">${t}</li>`).join('');
-}
 
 function render(){
   prospectCache = null;
@@ -4169,14 +3707,13 @@ function render(){
   renderPlanUsage(); renderUnitTiles(); renderTiers(); renderGemini();
   renderSpeech(users); renderProspects(users);
   renderBurn(); renderCostMonths(); renderCostTable(); renderFairUse();
-  renderEcon(); renderSlots(); renderEconCats(); renderEconDaily(); renderEconPlans(); renderPnl();
 }
 /** Only the width-dependent drawings. Same code path as the first paint, so a
  *  redraw can never disagree with it. */
 function redrawCharts(){
   const users = visibleUsers();
   renderDaily(users); renderHeatmap(users); renderHoursToday(users); renderHours(users); renderHoursByUser(users); renderBurn();
-  renderEconDaily(); drawPnlCharts(); redrawMarketing();
+  redrawMarketing();
 }
 /* ============================================================ 라이브
  * Polls __ADMIN_BASE__/live.json (admin_live()) every 15 s while the tab is
@@ -4497,7 +4034,7 @@ function renderLive(){
   // 플랜 없음 read the same colour everywhere.
   const subOf = id => { const f = dayUser(id); return f ? `${prospectFor(f) ? '' : subDot(f)}${subShort(f)}` : ''; };
   const where = g => g ? `${flagOf(g.country)} ${esc(g.city || g.country || '')}` : '<span class="muted">위치 모름</span>';
-  // The clone they talk to (its ElevenLabs name) and the CEFR level they
+  // The clone they talk to (its voice name) and the CEFR level they
   // picked in onboarding — `setup` only holds levels the app actually
   // reported, so a missing one is "not in yet", never A1.
   const voiceNameOf = id => (dayUser(id) || {}).voiceName || null;
@@ -4507,7 +4044,7 @@ function renderLive(){
     return i >= 0 ? chosenLevel(i) : null; };
   const whoBits = id => [
     levelOf(id) ? `<span class="lvchip" title="온보딩에서 고른 레벨">${levelOf(id).toUpperCase()}</span>` : '',
-    voiceNameOf(id) ? `<span class="muted" title="ElevenLabs 보이스 이름">🗣 ${esc(voiceNameOf(id))}</span>` : '',
+    voiceNameOf(id) ? `<span class="muted" title="보이스 이름">🗣 ${esc(voiceNameOf(id))}</span>` : '',
   ].filter(Boolean).join(' ');
 
   const note = document.getElementById('liveNote');
@@ -4637,7 +4174,7 @@ function renderLive(){
       <span class="tp">${prospectFor({id:e.u}) ? prospectStar(prospectFor({id:e.u}), 'margin-right:3px') : ''}<b data-uid="${esc(e.u)}">${esc(liveName(u))}</b>${verOf(e.u)}${e.u===owner?'<span class="ownchip">본인</span>':''}${
         subOf(e.u) ? ` · ${subOf(e.u)}` : ''}${whoBits(e.u) ? ` · ${whoBits(e.u)}` : ''} · ${where(g)}</span>
       <span class="tid"><span data-uid="${esc(e.u)}" title="Supabase 유저 ID — 클릭하면 전체 선택">${esc(e.u)}</span>${
-        voiceOf(e.u) ? `<i>voice</i><span title="ElevenLabs 보이스 ID — 클릭하면 전체 선택">${esc(voiceOf(e.u))}</span>` : ''}</span>
+        voiceOf(e.u) ? `<i>voice</i><span title="보이스 ID, 클릭하면 전체 선택">${esc(voiceOf(e.u))}</span>` : ''}</span>
     </div>`;
   }
   document.getElementById('tlList').innerHTML = html

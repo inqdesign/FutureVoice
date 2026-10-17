@@ -4,10 +4,10 @@ import FVDenoise
 /// Cleans the voice-clone recording on the phone before it is uploaded
 /// (2026-10-15).
 ///
-/// The server used to do this with ElevenLabs Audio Isolation, which lowered
-/// a clone's noise floor 6–10 dB. ElevenLabs is gone; Cartesia has no
-/// denoiser. The founder compared, by ear on his own take, ElevenLabs,
-/// Apple's Sound Isolation (full, 70%, 50%) and DeepFilterNet3 (full, and
+/// The server used to do this with the previous provider's audio isolation,
+/// which lowered a clone's noise floor 6–10 dB; Cartesia has no denoiser.
+/// The founder compared, by ear on his own take, that isolation, Apple's
+/// Sound Isolation (full, 70%, 50%) and DeepFilterNet3 (full, and
 /// capped at 30 dB), and picked DeepFilterNet at 30 dB
 /// (`Desktop/beta audio/denoise-free-2026-10-15`). The cap leaves a little of
 /// the room in and keeps the texture of the voice, which is what the clone is

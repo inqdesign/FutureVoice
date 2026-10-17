@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// "What uses talk time?" — the transparency page. The rules here MUST stay
-/// in sync with the server (talk-tick + elevenlabs-tts routing): a mismatch
+/// in sync with the server (talk-tick + tts routing): a mismatch
 /// between what we show and what we meter is a trust-breaker.
 ///
 /// The model in one line: talk minutes are spent by the in-call clock and by

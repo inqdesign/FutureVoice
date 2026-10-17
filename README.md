@@ -3,7 +3,7 @@
 > Learn a language by speaking with a fluent version of yourself.
 > 자신의 유창한 미래 버전과 대화하며 언어를 배우는 앱.
 
-iOS SwiftUI app. ElevenLabs for voice clone + TTS, Gemini for the conversation brain and analysis, on-device STT for transcription. All provider calls route through Supabase Edge Functions — the app never holds raw API keys.
+iOS SwiftUI app. Cartesia for voice clone + TTS, Gemini for the conversation brain and analysis, on-device STT for transcription. All provider calls route through Supabase Edge Functions — the app never holds raw API keys.
 
 Original concept: [`docs/SPEC.md`](docs/SPEC.md). Working context for AI assistants: [`CLAUDE.md`](CLAUDE.md) (kept current — read that one first).
 
@@ -36,7 +36,7 @@ FutureVoice/
 FutureVoiceTests/                 # Unit tests for the learning-loop logic
 Config/FutureVoice.xcconfig       # gitignored — copy from .example and fill
 supabase/
-├── functions/                    # gemini / elevenlabs-* edge functions (key proxy)
+├── functions/                    # gemini / tts / voice-* edge functions (key proxy)
 └── migrations/                   # auth, voice_clones, subscriptions
 docs/SPEC.md                      # original concept (historical)
 ```
@@ -70,7 +70,7 @@ Voice features (mic, STT, the clone round-trip) need a real device.
 - **No secrets in code.** `Config/FutureVoice.xcconfig` is gitignored.
 - **Domain types are the source of truth** — `Models.swift`, spec references it.
 - **Prompts live in code** — `ConversationEngine.swift` and the other engines.
-- **One transport per provider** — `GeminiClient` / `ElevenLabsClient`, both via edge functions.
+- **One transport per provider** — `GeminiClient` / `VoiceClient`, both via edge functions.
 - **Deterministic scores stay deterministic** — LLM writes notes, never the numbers.
 
 ---

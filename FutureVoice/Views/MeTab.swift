@@ -795,7 +795,7 @@ struct MeTab: View {
 
     /// Every consequence of making a new clone, on one confirm: it bills, it
     /// replaces, and the old voice is unrecoverable (the previous clone is
-    /// deleted on ElevenLabs after the new one succeeds — only audio that was
+    /// deleted upstream after the new one succeeds — only audio that was
     /// already synthesized keeps playing, via the PhraseAudioStore lineage).
     /// The "5 credits" figure mirrors priceFor("voice_clone") in
     /// supabase/functions/_shared/credits.ts — keep them in sync.
@@ -969,7 +969,7 @@ struct MeTab: View {
 
     /// Save the new name. The local name is kept either way — if the upstream
     /// rename fails (offline, or the rename function isn't deployed), the app
-    /// says so plainly and the name still reaches ElevenLabs on the next clone.
+    /// says so plainly and the name still goes upstream with the next clone.
     private func renameVoice() {
         // Typing nothing (or the unchanged default) means "use the default" —
         // storing the derived string would freeze it against a persona rename.
@@ -1203,7 +1203,7 @@ struct MeTab: View {
     /// Where a consent given during onboarding can be READ BACK and TAKEN
     /// AWAY. GDPR Art. 7(3) requires withdrawal to be as easy as giving, and
     /// the only honest withdrawal for a voice model is deleting it — so that
-    /// button does exactly that, upstream at ElevenLabs included.
+    /// button does exactly that, upstream at the voice provider included.
     private var privacyPage: some View {
         List {
             Section {

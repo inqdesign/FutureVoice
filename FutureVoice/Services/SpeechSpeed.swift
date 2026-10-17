@@ -2,16 +2,15 @@ import Foundation
 
 /// How fast the fluent self speaks, chosen by the learner in Me → Voice.
 ///
-/// ElevenLabs takes `voice_settings.speed` (0.7–1.2) and nothing here sent it
+/// The voice takes a speed (0.7–1.2 on the app's scale) and nothing here sent it
 /// until 2026-09-23. It is a SYNTHESIS setting, not playback: the words are
 /// spoken more slowly rather than a recording being played slow, so the voice
 /// keeps its pitch and still sounds like the learner.
 ///
 /// **Three rungs — 1.0 · 0.9 · 0.8 — and the DEFAULT is the middle one.**
-/// 0.9 was picked by ear in the ElevenLabs playground against the production
-/// settings (turbo v2.5, stability 55, similarity 90, style 0, speaker boost
-/// on) as the most natural reading in English AND Korean, so that is what
-/// everyone gets. 1.0 is upstream's own speed — the clone as recorded — kept
+/// 0.9 was picked by ear against the production settings of the provider of
+/// the day as the most natural reading in English AND Korean, so that is
+/// what everyone gets. 1.0 is upstream's own speed — the clone as recorded — kept
 /// on the ladder because the learner asked for it, and labelled **Normal**,
 /// never "fast": nothing on this control speeds the voice up. The middle rung
 /// is **Relaxed** (여유있게 — user's word, 2026-09-23), not "slower": it is the
@@ -20,7 +19,7 @@ import Foundation
 /// well clear of the synthesizer's own take-to-take variance (0.95 measured
 /// +3.3% and two of five lines came back SHORTER). Don't add a 0.95 or an
 /// 0.85: a rung the learner cannot hear teaches them the control is fake.
-/// Below 0.8 nothing has been listened to; ElevenLabs' floor is 0.7.
+/// Below 0.8 nothing has been listened to; the scale's floor is 0.7.
 ///
 /// **Slow moved 0.8 → 0.85 on 2026-10-09** (founder: "the slow voice a little
 /// faster"). It now sits ~half a step under Relaxed instead of a full one —
@@ -78,7 +77,7 @@ enum SpeechSpeed: String, CaseIterable, Sendable {
         return isSane(v) ? v : nil
     }
 
-    /// Clamped to ElevenLabs' own window, and a value outside it is DROPPED
+    /// Clamped to the scale's own window, and a value outside it is DROPPED
     /// rather than pulled to the edge: out of range means the row is wrong,
     /// and guessing which edge was meant is how a typo becomes a voice nobody
     /// recognises. 0 is what `UserDefaults.double` returns for "absent", so it

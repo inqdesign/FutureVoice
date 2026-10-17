@@ -426,7 +426,7 @@ final class ScriptVoiceoverCenter: ObservableObject {
 /// end to end with a fixed breath between (`PacedSpeech`'s rule, a longer one
 /// between paragraphs), and writing one AAC file.
 enum ScriptVoiceoverAudio {
-    /// Mono float samples + sample rate. MP3 from ElevenLabs, WAV from a
+    /// Mono float samples + sample rate. MP3 from an older cached take, WAV from a
     /// Cartesia voice — the file extension is a hint `AVAudioFile` honours, so
     /// it is chosen from the bytes.
     static func decode(_ data: Data) -> ([Float], Double)? {

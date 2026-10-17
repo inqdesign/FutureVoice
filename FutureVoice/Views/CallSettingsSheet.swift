@@ -43,8 +43,8 @@ struct CallSettingsSheet: View {
     // non-equatable) property re-renders with it — the speed menu then
     // couldn't open mid-call. The rung is pushed to a live call by
     // `ConversationView`'s own `onChange` on the same defaults key; the line
-    // PLAYING keeps the speed it was synthesized at, because ElevenLabs takes
-    // `voice_settings` once per context and a context is one spoken line.
+    // PLAYING keeps the speed it was synthesized at, because the voice takes
+    // its speed once per context and a context is one spoken line.
 
     @AppStorage(SpeechSpeed.key) private var speechSpeed = SpeechSpeed.default.rawValue
     @AppStorage(CallSettings.showsTranscriptKey) private var showsTranscript = true

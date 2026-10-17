@@ -3,7 +3,7 @@ import Accelerate
 import Foundation
 
 /// On-device quality check for a recorded voice-clone sample. Surfaces the few
-/// things that actually wreck an ElevenLabs clone: too short, clipping, a noisy
+/// things that actually wreck a voice clone: too short, clipping, a noisy
 /// room, or a near-silent take. All measured locally — no upload, no API.
 struct AudioSampleQuality {
     enum Rating {

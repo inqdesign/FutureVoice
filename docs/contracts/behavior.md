@@ -18,7 +18,7 @@
 | TTS streaming playback | 16-bit **LE** mono PCM @ **22050 Hz** (`X-Audio-Format: pcm_22050`) |
 | TTS buffered playback | MP3 |
 
-16 kHz mono PCM WAV is accepted by both Whisper and ElevenLabs. **Don't change
+16 kHz mono PCM WAV is accepted by both Whisper and Cartesia. **Don't change
 it without checking both providers' docs.**
 
 ## 2. Turn-taking / endpointing (the Talk loop)

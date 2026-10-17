@@ -20,7 +20,7 @@ final class VoiceQuotaTests: XCTestCase {
     }
 
     func testOtherFailuresAreNotQuotaAnswers() {
-        XCTAssertNil(VoiceQuota.availableAt(inBody: #"{"error":"elevenlabs upstream error"}"#))
+        XCTAssertNil(VoiceQuota.availableAt(inBody: #"{"error":"cartesia upstream error"}"#))
         XCTAssertNil(VoiceQuota.availableAt(inBody: "voice_limit_reached"))
     }
 
@@ -32,7 +32,7 @@ final class VoiceQuotaTests: XCTestCase {
     }
 
     /// The exact body a re-record got on 2026-10-10 must read as a dated
-    /// line, never as "ElevenLabs HTTP 503: {…}".
+    /// line, never as "HTTP 503: {…}".
     func testReservedBodyReadsAsALineNotJSON() {
         let body = #"{"error":"voice_quota_reserved","message":"Making a new voice is paused for a few days. Your current voice keeps working.","available_at":"2026-10-12T09:24:07.000Z"}"#
         let text = VoiceError.httpError(status: 503, body: body).localizedDescription

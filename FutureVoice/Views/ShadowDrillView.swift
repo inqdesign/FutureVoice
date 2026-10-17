@@ -1016,7 +1016,7 @@ struct ShadowDrillView: View {
               FileManager.default.fileExists(atPath: url.path),
               let data = try? Data(contentsOf: url) else {
             // Preserve any specific error prepareAudio surfaced (e.g.
-            // ElevenLabs HTTP code) instead of stomping with a generic one.
+            // an upstream HTTP code) instead of stomping with a generic one.
             if error == nil {
                 self.error = explain("Couldn't load audio for this line.")
             }
@@ -1728,7 +1728,7 @@ struct ShadowDrillView: View {
             ?? TurnAudioStore.shared.timings(for: turn.id)
             ?? PhraseAudioStore.shared.timings(text: turn.transcript, voiceId: voiceId)
             ?? []
-        // Earlier builds cached ElevenLabs' NORMALIZED alignment, whose words
+        // Earlier builds cached the earlier provider's NORMALIZED alignment, whose words
         // are a romanization of non-Latin text — Korean lines came back as
         // "geureomyeon". Those caches are still on disk, and these words are
         // what the learner reads, so refuse any set that doesn't spell out the
@@ -1791,7 +1791,7 @@ struct ShadowDrillView: View {
     /// the duration-proportional estimate and persist; on failure the estimate
     /// simply stays — estimates are deliberately NOT persisted so alignment
     /// gets another free try on the next open. This path must never call
-    /// ElevenLabs: re-billing audio the user already paid for, just to
+    /// the synthesizer: re-billing audio the user already paid for, just to
     /// recover timings, is what caused runaway duplicate generations.
     private func recoverTimings(url: URL, voiceId: String) async {
         let local = await LocalAlignment.wordTimings(
@@ -1814,7 +1814,7 @@ struct ShadowDrillView: View {
 
     /// Do these timings belong to THIS recording?
     ///
-    /// Until now Talk stored timings fetched from a SECOND ElevenLabs render
+    /// Until now Talk stored timings fetched from a SECOND render
     /// of the same sentence. TTS isn't deterministic, so those word onsets
     /// describe audio the learner never hears — the highlight ran ahead of or
     /// behind the voice, drifting further the longer the line. Those caches

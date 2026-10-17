@@ -2,12 +2,10 @@ import Foundation
 
 /// One voice change per 30 days after the first voice (2026-10-09).
 ///
-/// Every voice the account adds costs one of ElevenLabs' monthly add/edits
-/// (Pro 290), and deleting gives nothing back — on 2026-10-08 the account
-/// stood at 274/290 three days before the reset, half of it spent by a few
-/// learners re-recording and trying accent after accent. So a re-record, a
-/// saved accent or "no accent" is ONE change, and there is one per rolling 30
-/// days. Listening to takes is free (a preview adds no voice). The server is
+/// It existed because the voice provider of the day capped how many voices
+/// the account could add each month. The server removed the limit on
+/// 2026-10-12 and now always answers "a change is available"; this stays so
+/// a limit could come back without an app release. The server is
 /// the judge (`voice_change_status`, `_shared/voice-changes.ts`); this is its
 /// answer, read so every button that would make a voice can say so BEFORE the
 /// learner spends a minute reading a script or half a minute waiting on takes.

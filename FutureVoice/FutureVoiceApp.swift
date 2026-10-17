@@ -273,8 +273,8 @@ final class AppState: ObservableObject {
     @Published var talkHomeReloadToken = UUID()
 
     /// The voice is a STAND-IN preset while the learner's own waits for the
-    /// account's monthly voice allowance to reset (2026-10-10). ElevenLabs
-    /// counts every voice added against a monthly cap; when it is spent a
+    /// account's monthly voice allowance to reset (2026-10-10). The provider
+    /// of the day counted every voice added against a monthly cap; when it was spent a
     /// first clone is refused, and the signup used to end there — the learner
     /// recorded, saw an error and left. Now the recording is kept
     /// (`VoiceSampleStore`), a preset speaks in the meantime so everything
@@ -521,17 +521,17 @@ final class AppState: ObservableObject {
     private var weeklyReportRetryAfter: Date?
     private static let weeklyReportRetryCooldown: TimeInterval = 15 * 60
 
-    /// What the user's clone is called — on ElevenLabs and in Me → Voice.
+    /// What the user's clone is called — upstream and in Me → Voice.
     /// Empty means "never named it": `voiceDisplayName` then derives one from
     /// the persona, so two users' clones are still tellable apart. Renaming
-    /// goes through `renameVoice(to:)`, which also updates ElevenLabs.
+    /// goes through `renameVoice(to:)`, which also updates it upstream.
     @Published private(set) var voiceName: String = "" {
         didSet { UserDefaults.standard.set(voiceName, forKey: Self.voiceNameKey) }
     }
 
     /// The name to SHOW and to send upstream — the user's own if they set one,
     /// otherwise "Future <persona name>". Falls back to a short slice of the
-    /// account id when there's no persona name yet, so the ElevenLabs library
+    /// account id when there's no persona name yet, so the provider's library
     /// never fills up with identical "Future Self" entries.
     var voiceDisplayName: String {
         let custom = voiceName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -700,7 +700,7 @@ final class AppState: ObservableObject {
                 let rows: [Row] = try await SupabaseProvider.shared
                     .from("voice_clones")
                     .select("parked_at")
-                    .eq("elevenlabs_voice_id", value: voiceId)
+                    .eq("voice_id", value: voiceId)
                     .limit(1)
                     .execute()
                     .value
@@ -1075,8 +1075,8 @@ final class AppState: ObservableObject {
     /// any install that re-cloned somewhere else — a second device, the dev
     /// build beside the shipped one, a TestFlight install carried across a
     /// re-record — keeps pointing at a voice the account replaced. The old id
-    /// is not merely out of date: `elevenlabs-voice-delete` marks a row
-    /// inactive only AFTER ElevenLabs has deleted the voice, so a superseded
+    /// is not merely out of date: `voice-delete` marks a row
+    /// inactive only AFTER the provider has deleted the voice, so a superseded
     /// id is a voice that no longer exists, and every TTS call on it comes
     /// back 404. That is a Talk where the reply is written and then never
     /// spoken — a Retry chip on every single turn, with nothing on screen
@@ -1084,16 +1084,16 @@ final class AppState: ObservableObject {
     /// shipped container still held a clone deleted in June.
     ///
     /// The server row is the authority because it is the only place the clone
-    /// is minted: `elevenlabs-voice-clone` inserts and activates it before the
+    /// is minted: `voice-clone` inserts and activates it before the
     /// new id ever reaches the client, so the server can't be BEHIND local.
     /// Local is kept only when the account has no active row at all (offline,
     /// or a first clone not yet mirrored) — never overwritten with nothing.
     private func restoreVoiceCloneFromCloud() async {
-        struct Row: Decodable { let elevenlabs_voice_id: String }
+        struct Row: Decodable { let voice_id: String }
         do {
             let rows: [Row] = try await SupabaseProvider.shared
                 .from("voice_clones")
-                .select("elevenlabs_voice_id")
+                .select("voice_id")
                 .eq("is_active", value: true)
                 .limit(1)
                 .execute()
@@ -1115,7 +1115,7 @@ final class AppState: ObservableObject {
             // Onboarding owns the voice while the session is anonymous; a
             // restore here could only resurrect one being reclaimed.
             guard !anonymous else { return }
-            guard let active = rows.first?.elevenlabs_voice_id,
+            guard let active = rows.first?.voice_id,
                   active != voiceCloneId else { return }
             // A voice staged for deletion is on its way OUT — adopting it
             // would resurrect it into a re-record the user is still inside.
@@ -1138,7 +1138,7 @@ final class AppState: ObservableObject {
     /// Debug-only: replay the whole first-run flow without uninstalling.
     /// Wipes the setup gate, voice clone, and persona so RootView routes back
     /// through SetupFlowView → voice clone → persona. Keeps the auth session
-    /// so there's no re-login. The ElevenLabs clone is stashed for cleanup
+    /// so there's no re-login. The upstream clone is stashed for cleanup
     /// (same as a normal re-record), not orphaned.
     func resetOnboarding() {
         resetVoiceClone()              // stashes voiceCloneId for later delete, sets nil
@@ -1464,15 +1464,15 @@ final class AppState: ObservableObject {
     /// they'd have NO voice at all.
     ///
     /// PERSISTED: this used to be in-memory only, so a delete that failed (or
-    /// an app kill mid-flow) orphaned the old voice in the ElevenLabs account
-    /// forever. Those leaked slots are what fills a 30-voice ceiling. Now it
+    /// an app kill mid-flow) orphaned the old voice upstream
+    /// forever. Now it
     /// survives relaunch and the delete is retried at startup.
     @Published private(set) var pendingDeleteVoiceId: String? {
         didSet { UserDefaults.standard.set(pendingDeleteVoiceId, forKey: Self.pendingDeleteVoiceIdKey) }
     }
 
     /// Wipe the clone so the user re-records. Stashes the current id so it
-    /// can be deleted from ElevenLabs once a new clone is in place.
+    /// can be deleted upstream once a new clone is in place.
     func resetVoiceClone() {
         if !voiceIsStandIn {
             pendingDeleteVoiceId = voiceCloneId
@@ -1545,7 +1545,7 @@ final class AppState: ObservableObject {
     }
 
     /// Clone (or re-clone) the voice from a recorded sample WAV. Normalizes the
-    /// sample loudness, uploads to ElevenLabs, swaps in the new voice id, and
+    /// sample loudness, uploads it to Cartesia, swaps in the new voice id, and
     /// cleans up the previous clone. Shared by first-run onboarding and the
     /// Settings "regenerate from saved recording" action.
     /// `scriptLanguage` is the language the sample was READ in (onboarding
@@ -1562,10 +1562,9 @@ final class AppState: ObservableObject {
             "level": proficiency.rawValue
         ])
         let levelled = AudioLoudness.peakNormalizedWAV(at: sampleURL)
-        // Cleaned HERE, on the phone, since ElevenLabs left (2026-10-15,
-        // `VoiceDenoiser`): DeepFilterNet capped at 30 dB, on every take —
-        // the server's ElevenLabs isolation also ran on every take, and the
-        // cap is what keeps a clean one from losing texture. Levelled again
+        // Cleaned HERE, on the phone (2026-10-15, `VoiceDenoiser`):
+        // DeepFilterNet capped at 30 dB, on every take — the cap is what
+        // keeps a clean one from losing texture. Levelled again
         // after, because removing noise lowers the peak. A failure uploads
         // the take as it was. The server no longer denoises anything.
         let snr = AudioSampleQuality.analyze(url: levelled)?.estimatedSNRdB

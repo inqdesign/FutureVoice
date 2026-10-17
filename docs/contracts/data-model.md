@@ -25,7 +25,7 @@ Materializations of the same rule:
 | cached audio (keyed by text + voiceId hash, so it's shared naturally) | *language-flavored caches on global records* — counterpart topic suggestions, persona situations: key by lang or invalidate on switch |
 | active-language pointer + enrolled list | |
 
-**One cloned voice is reused across every language.** ElevenLabs voices are
+**One cloned voice is reused across every language.** Cartesia voices are
 language-agnostic and the DB enforces one active clone per user — never
 re-clone on "add language".
 
@@ -36,7 +36,7 @@ profiles(id uuid pk → auth.users, native_language text default 'ko',
          target_language text default 'en', proficiency text default 'b1',
          created_at, updated_at)
 
-voice_clones(id uuid pk, user_id uuid → auth.users, elevenlabs_voice_id text,
+voice_clones(id uuid pk, user_id uuid → auth.users, voice_id text,
              is_active boolean default true, created_at)
 -- unique partial index on (user_id) where is_active
 --   → "switching to a new clone deactivates the old one"

@@ -141,10 +141,7 @@ async function fetchData(env: Env) {
     console.log(`recentLedger: ${(e as Error).message}`);
     return [];
   });
-  // ElevenLabs' own account of the window used to sit here (truth.ts); it is
-  // gone with ElevenLabs (2026-10-15), so the tab is on ledger figures,
-  // marked as such.
-  const data = assemble(raw, null);
+  const data = assemble(raw);
   // Gemini by UTC day × feature × model × unit, priced, plus the day's talk
   // minutes (2026-10-08, admin_gemini). The money tab's Gemini section is
   // drawn from it. Optional — without it that section says so and the rest

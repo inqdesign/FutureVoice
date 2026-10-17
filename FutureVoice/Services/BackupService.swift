@@ -89,8 +89,8 @@ enum BackupService {
     /// to the practice. The footer in Me promises "your voice and minutes
     /// already follow your account" — carrying them in the file would make
     /// two installs disagree with the server. Two are actively destructive:
-    /// `pendingDeleteVoiceId` makes the receiving install delete a voice from
-    /// ElevenLabs at startup, and `langScopeMigrated` would suppress the
+    /// `pendingDeleteVoiceId` makes the receiving install delete a voice
+    /// upstream at startup, and `langScopeMigrated` would suppress the
     /// receiving install's own flat-layout migration.
     private static let excludedDefaults: Set<String> = [
         "futurevoice.voiceCloneId",

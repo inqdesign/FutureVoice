@@ -56,7 +56,7 @@ proxy for scope): **S** < 300, **M** 300–1,000, **L** 1,000–2,500, **XL** mo
 | Welcome + Futureself | `WelcomeView`, `WelcomeHeroes` (1,380), `Futureself.metal` shader, `FutureselfPixels` | AGSL `RuntimeShader` (API 33+), Canvas fallback below | M |
 | Setup (native/target language, level) | `SetupFlowView`, `LanguageCatalog` | same | S |
 | Persona intake (dictated, parsed) | `PersonaIntakeView`, `GuidedIntake`, `PersonaParser`, `PersonaOnboardingView` | same, parser via Edge (brain-lift) | M |
-| **Voice clone** | `VoiceCloneOnboardingView` (1,543), `VoiceCloneScript`, `CloneScriptStore`, `AudioSampleQuality`, `VoiceAccentSheet`, `VoiceComparisonSheet`, `elevenlabs-voice-clone/-remix` | full port: script reading, take quality/SNR-based denoise flag, accent picks, comparison; anonymous session first, then account | XL |
+| **Voice clone** | `VoiceCloneOnboardingView` (1,543), `VoiceCloneScript`, `CloneScriptStore`, `AudioSampleQuality`, `VoiceAccentSheet`, `VoiceComparisonSheet`, `voice-clone` / `voice-remix` | full port: script reading, take quality/SNR-based denoise flag, accent picks, comparison; anonymous session first, then account | XL |
 | Anonymous session → account | `AuthService` (anonymous → `linkIdentityWithIdToken` Apple) | anonymous → **Google** link (primary on Android) + **Apple web OAuth** (iPhone switchers). Same rule: `isSignedIn`, never `session != nil` | M |
 | Consent, daily-call onboarding, onboarding paywall | `ConsentStore`, `DailyCallOnboardingView`, `OnboardingPaywallView` | same order: clone → meet → account → daily call → plans | M |
 

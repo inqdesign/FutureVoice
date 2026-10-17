@@ -4,7 +4,7 @@ import Speech
 /// Free, on-device word-timing extraction for audio we already have on disk.
 ///
 /// Shadow needs a word → time map for karaoke and word-tap looping. The paid
-/// path gets it from ElevenLabs' with-timestamps synthesis; but for lines
+/// path gets it from with-timestamps synthesis; but for lines
 /// whose audio is already cached (every conversation turn — the streaming
 /// TTS returns no timestamps) we can recover the same map locally by running
 /// Apple's speech recognizer over the file and reading per-word segment

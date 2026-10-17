@@ -135,7 +135,7 @@ struct VoiceCloneOnboardingView: View {
     /// A/B against the recording — the meet act's answer to "is this me?".
     @State private var comparingVoice = false
 
-    /// ElevenLabs IVC quality climbs steeply to ~60s and keeps improving to
+    /// Instant-clone quality climbs steeply to ~60s and keeps improving to
     /// ~90s. These three had all been collapsed to 60, which broke the flow in
     /// two ways: the script below needs ~75-80s to read, so it was ALWAYS cut
     /// off mid-sentence (and a cut-off take is a worse clone); and with

@@ -27,8 +27,8 @@ enum CoachingLanguage {
     /// by a synthesizer whose pauses and intonation follow the punctuation.
     ///
     /// Reported 2026-09-15 as "when it speaks Korean it reads without
-    /// breathing". Measured the same day (scratch probe, `eleven_turbo_v2_5`
-    /// and `eleven_multilingual_v2`, HTTP and the gateway's per-sentence
+    /// breathing". Measured the same day (scratch probe, both TTS models then
+    /// in use, HTTP and the gateway's per-sentence
     /// multi-stream path): a three-sentence Korean turn with no commas got
     /// ~1.1 s of internal pause in 12 s, the same text with a comma at each
     /// clause boundary ~1.7 s, and the gap between sentences stayed ~400 ms on
@@ -61,7 +61,7 @@ enum CoachingLanguage {
     ///
     /// The deeper, older problem is NOT this rule: short lines composed on an
     /// English skeleton ("지금 괜찮아? 목소리 듣고 싶어서.") predate it in
-    /// ElevenLabs history from August on. Spliced, not repeated: every engine
+    /// the TTS history from August on. Spliced, not repeated: every engine
     /// whose output is voiced carries this one string.
     /// What "warm" means for the fluent self (2026-09-30). Reported from a
     /// free-talk opener: "응규야 별일없이 잘 지내고 있는거지 너무 보고싶어" —

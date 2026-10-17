@@ -2,7 +2,7 @@ import Foundation
 
 /// The read-aloud script for voice cloning, per TARGET language.
 ///
-/// The sample must be in the language the clone will SPEAK: ElevenLabs keeps
+/// The sample must be in the language the clone will SPEAK: an instant clone keeps
 /// far more of a speaker's identity when the sample and the output share a
 /// language, and the fluent self only ever speaks the target. A learner
 /// reading their target aloud is also the gentlest possible first contact
@@ -202,10 +202,10 @@ enum VoiceCloneScript {
     /// paragraph break gives 0.00–0.14 s (i.e. nothing), while
     /// `<break time="0.5s" />` measured 0.69 and 0.73 s across two takes —
     /// the pause is requested rather than hoped for. Two things to hold. It
-    /// is measured on **eleven_turbo_v2_5**, the model these lines actually
-    /// use: a model that did NOT support the tag would SPEAK it, and these
-    /// are the first words anyone hears in their own fluent voice, so
-    /// re-measure the day the TTS model moves. And the tag counts toward the
+    /// was measured on the TTS model of the day (2026-09), not on Cartesia's:
+    /// a model that did NOT support the tag would SPEAK it, and these are the
+    /// first words anyone hears in their own fluent voice, so re-measure on
+    /// every TTS model change. And the tag counts toward the
     /// 120-character free gate, which is why several lines above are shorter
     /// than they would otherwise be — the budget is 98 characters of speech
     /// plus 22 of tag.

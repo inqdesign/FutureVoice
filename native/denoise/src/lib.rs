@@ -1,7 +1,7 @@
 //! Noise removal for the voice-clone recording, on the phone (2026-10-15).
 //!
-//! The clone recording used to be cleaned on the server by ElevenLabs Audio
-//! Isolation; ElevenLabs is gone, and the founder picked DeepFilterNet3 with a
+//! The clone recording used to be cleaned on the server by the previous TTS
+//! vendor; Cartesia has no denoiser, and the founder picked DeepFilterNet3 with a
 //! 30 dB attenuation limit by ear over Apple's Sound Isolation and over the
 //! full-strength setting ("dfn30", Desktop/beta audio/denoise-free-2026-10-15).
 //! The limit is the point: it leaves a little of the room in, and with it the

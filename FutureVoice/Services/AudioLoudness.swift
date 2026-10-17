@@ -4,7 +4,7 @@ import Foundation
 
 /// Loudness normalization for TTS playback.
 ///
-/// ElevenLabs premade voices (counterpart presets) ship professionally
+/// Library voices (counterpart presets) ship professionally
 /// mastered around -16 dBFS RMS. Instant voice clones instead reproduce the
 /// loudness of the user's sample recording — typically a phone-mic capture
 /// 10+ dB quieter — so in Watch/Conversation the clone voice sounds tiny next
@@ -91,7 +91,7 @@ enum AudioLoudness {
     /// names its temp file `.mp3` fails to open with
     /// `MPEGAudioFile::OpenFromDataSource failed` — silently, since the caller
     /// just falls back to the un-normalized audio. Everything here used to be
-    /// ElevenLabs MP3; the daily call's voicemail arrives as PCM wrapped in
+    /// MP3; the daily call's voicemail arrives as PCM wrapped in
     /// WAV (`wavData(fromPCM16:)`), which is how that assumption got found.
     private static func containerExtension(of data: Data) -> String {
         data.count >= 12 && data.prefix(4).elementsEqual("RIFF".utf8) ? "wav" : "mp3"
@@ -496,11 +496,11 @@ enum AudioLoudness {
     }
 
     /// Peak-normalizes a recorded voice-clone WAV to near full scale BEFORE it
-    /// is uploaded to ElevenLabs. IVC reproduces the loudness of its sample, so
+    /// is uploaded. An instant clone reproduces the loudness of its sample, so
     /// a quiet phone-mic take (often -26 to -34 dBFS) yields a quiet clone that
     /// every playback then has to claw back up. A clean peak-normalize (pure
     /// gain, no compression) raises the source level without coloring the
-    /// voice, so the clone comes back loud from ElevenLabs. Only boosts; never
+    /// voice, so the clone comes back loud. Only boosts; never
     /// attenuates an already-healthy take. Returns a new WAV URL, or the
     /// original on any failure (callers can always fall back to it).
     /// Where the SOUND starts in a file, in seconds — nil when nothing in it
@@ -620,7 +620,7 @@ enum AudioLoudness {
             // Write 16-bit PCM (NOT the buffer's 32-bit float processingFormat).
             // AVAudioFile's processingFormat is always float, so writing with
             // `buffer.format.settings` produced a 32-bit float WAV — ~2x the
-            // bytes, which pushed ~1 min takes past ElevenLabs' 11 MB limit.
+            // bytes, which pushed ~1 min takes past the clone upload's 11 MB limit.
             // 16-bit/44.1k mono is plenty for IVC and stays well under the cap.
             let outSettings: [String: Any] = [
                 AVFormatIDKey: Int(kAudioFormatLinearPCM),

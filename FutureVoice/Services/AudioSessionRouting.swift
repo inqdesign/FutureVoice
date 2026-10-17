@@ -50,7 +50,7 @@ enum AudioSessionRouting {
     ///
     /// Scoring surfaces deliberately do NOT use this (see `recordOptions`):
     /// cloning is the one case where the 8 kHz HFP mic is disqualifying,
-    /// because ElevenLabs IVC reproduces exactly the bandwidth it hears and
+    /// because an instant clone reproduces exactly the bandwidth it hears and
     /// the result stops sounding like the speaker at all.
     static let builtInMicCaptureOptions: AVAudioSession.CategoryOptions =
         [.allowBluetoothA2DP, .duckOthers]

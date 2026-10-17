@@ -65,7 +65,7 @@ Each session feeds the next.
 | Audio | AVAudioEngine / AVAudioPlayer | record, play, waveform |
 | STT (on-device) | **SpeechAnalyzer** (iOS 26) | Real-time transcription |
 | STT (fallback) | **Whisper API** | Higher accuracy when needed |
-| Voice cloning | **ElevenLabs API** | Voice clone + fluent TTS |
+| Voice cloning | **Cartesia API** | Voice clone + fluent TTS |
 | LLM | **Anthropic Claude API** | Conversation, pattern detection, rephrasing |
 | Backend | **Supabase** | Auth, learner profile, session summaries, audio storage |
 | Local persistence | **SwiftData** | Offline-first session cache |
@@ -89,14 +89,14 @@ listed below map 1:1 to the Swift structs:
 
 ### 6.1 Onboarding (one-time)
 1. Sign up → pick native + target language(s).
-2. **Voice cloning step**: user reads a 30–60s ElevenLabs prompt out loud.
-3. Upload audio → ElevenLabs `/v1/voices/add` → get `voice_id`.
+2. **Voice cloning step**: user reads a 30–60s clone script out loud.
+3. Upload audio → Cartesia `/voices/clone` → get `voice_id`.
 4. Save `voice_id` to user profile.
 5. First fluent-self preview: app says a welcome line in target language. **Magic moment.**
 
 ### 6.2 Pronunciation Session
 1. User picks phrase from a curated list (or types one).
-2. Tap play → fluent self speaks it (ElevenLabs TTS w/ user's voice_id, target lang).
+2. Tap play → fluent self speaks it (Cartesia TTS w/ user's voice_id, target lang).
 3. Tap record → user repeats.
 4. On-device STT transcribes user's attempt.
 5. Claude compares transcript + waveform timing → returns per-sound feedback.
@@ -104,10 +104,10 @@ listed below map 1:1 to the Swift structs:
 
 ### 6.3 Conversation Session
 1. User picks a topic.
-2. Fluent self opens with a prompt (Claude generates → ElevenLabs synthesizes → play).
+2. Fluent self opens with a prompt (Claude generates → Cartesia synthesizes → play).
 3. User taps and holds to speak (or auto-VAD).
 4. STT transcribes locally → send to Claude with learner profile context.
-5. Claude responds → ElevenLabs synthesizes → play.
+5. Claude responds → Cartesia synthesizes → play.
 6. Repeat for ~5–10 turns or until user ends.
 7. **Post-session**: Claude generates `SessionSummary` from transcript + profile.
 8. Update `LearnerProfile.recurringMistakes` and embeddings.
@@ -127,13 +127,13 @@ Prompt templates live in code so they can be iterated without doc edits.
 
 ## 8. Audio Handling
 
-- **Recording format**: 16kHz mono PCM WAV (matches Whisper + ElevenLabs).
+- **Recording format**: 16kHz mono PCM WAV (matches Whisper + Cartesia).
 - **VAD**: SFSpeechRecognizer built-in, or roll a simple amplitude+silence detector.
 - **Playback**: AVAudioPlayer for synthesized fluent-self audio. Pre-fetch when possible.
 - **Latency target**: < 1.5s from user end-of-speech to response start.
   - On-device STT: ~200–500ms
   - Claude turn: ~800ms
-  - ElevenLabs TTS: ~400–700ms (streaming endpoint)
+  - Cartesia TTS: ~100 ms to first audio (streaming)
 - **Storage**: last 30 days of session audio in Supabase Storage. Delete older unless user pins it.
 
 ---
@@ -154,7 +154,7 @@ Voice cloning is the moat → free up front to maximize activation.
 
 ### Phase 1 — Voice + Conversation Spike (1–2 weeks)  ← **WE ARE HERE**
 - SwiftUI shell, single screen.
-- Clone one voice end-to-end (ElevenLabs).
+- Clone one voice end-to-end (Cartesia).
 - One hardcoded conversation: record → STT → Claude → TTS → play.
 - **Goal**: hear yourself fluent for the first time.
 
@@ -185,7 +185,7 @@ Voice cloning is the moat → free up front to maximize activation.
 
 ## 12. References
 
-- ElevenLabs Voice Cloning API: https://elevenlabs.io/docs/api-reference/voices/add
+- Cartesia API: https://docs.cartesia.ai
 - Anthropic Claude API: https://docs.claude.com
 - Apple SpeechAnalyzer (iOS 26): WWDC 2025 session
 - AVAudioEngine: Apple developer docs

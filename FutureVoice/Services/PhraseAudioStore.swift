@@ -2,14 +2,14 @@ import CryptoKit
 import Foundation
 
 /// On-disk cache for TTS audio keyed by `(voiceId, text)` content hash, so
-/// repeating the same SRS drill phrase doesn't re-bill ElevenLabs each time.
+/// repeating the same SRS drill phrase doesn't re-bill synthesis each time.
 /// Files live under `Documents/PhraseAudio/{sha256}.mp3`. Separate from
 /// `TurnAudioStore` because the lookup key here is content-addressed rather
 /// than tied to a specific `Turn.id`.
 ///
 /// ## Re-recording your voice does NOT throw the old audio away
 ///
-/// The key includes the ElevenLabs voice id, so a re-clone used to miss on
+/// The key includes the voice id, so a re-clone used to miss on
 /// EVERY cached line — the whole library (scenes, drills, vocabulary,
 /// expressions, shadow lines) silently re-synthesized itself one tap at a
 /// time, re-billing audio the user already owned. The old files were still

@@ -4,7 +4,7 @@ import SwiftUI
 /// language), then persona, then voice-clone onboarding LAST — the heaviest
 /// ask sits at the top of the investment ladder and its Meet act drops
 /// straight into the first call. The auth gate is non-bypassable — without a
-/// Supabase session we can't proxy ElevenLabs/Gemini calls.
+/// Supabase session we can't proxy Cartesia/Gemini calls.
 ///
 /// Three short steps trail the clone, each shown once and each setting its own
 /// flag on every exit: the week (`WeeklyRhythmOnboardingView` — test day and

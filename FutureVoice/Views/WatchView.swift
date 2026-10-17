@@ -511,7 +511,7 @@ struct WatchView: View {
                 // exists, so `startPrefetch(after: 0)` had nothing to reach
                 // for and line 1 paid the whole round trip in the open —
                 // scene lines are serial server-side (rate · ownership ·
-                // scene claim · charge) before ElevenLabs is even called, so
+                // scene claim · charge) before the synthesizer is even called, so
                 // that one unhidden gap was seconds long while every later
                 // line was covered. Refill the window the moment a new line
                 // lands, so line 1 synthesizes behind line 0's playback like

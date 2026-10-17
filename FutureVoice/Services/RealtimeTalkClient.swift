@@ -373,7 +373,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// Reply PCM is 16-bit LE at whatever rate `audio_start` announced.
     private var replySampleRate: Double = 22050
     /// Loudness, borrowed wholesale from `AudioPlayer`'s streaming path.
-    /// Without it this screen plays RAW PCM at whatever level ElevenLabs
+    /// Without it this screen plays RAW PCM at whatever level the voice
     /// happened to render, into a `.playAndRecord` session with voice
     /// processing on — which is the quietest output profile the app has.
     /// Talk sounds right because `AudioPlayer` levels every stream; this one
@@ -402,7 +402,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     private var serverAudioEnded = false
     /// A wall (`insufficient_credits` and its kin) that landed while the last
     /// line was still in the player. The gateway already holds its error
-    /// until the line's `audio_end`, but "sent" is not "heard": ElevenLabs'
+    /// until the line's `audio_end`, but "sent" is not "heard": the voice's
     /// final can arrive with seconds still queued here, and `error` is this
     /// client's teardown — which stops the player. Held until the queue
     /// drains (or the cap), so the last line the allowance paid for is
@@ -509,7 +509,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             // `FreeTalkOpeners.warmAudio`) is on disk in the learner's own
             // voice. Play it from there and the gateway is never asked for
             // it: the line starts when `ready` lands instead of a further
-            // ElevenLabs round trip later, and the pool warm-up finally pays
+            // synthesis round trip later, and the pool warm-up finally pays
             // for itself on this path too. The text still goes up as HISTORY,
             // so the model knows what it just said.
             var startOpener = opener
@@ -828,7 +828,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     ///
     /// The gateway stores it and the NEXT line is synthesized with it — the
     /// line playing right now keeps the speed it was made at, because
-    /// ElevenLabs takes `voice_settings` only in a context's first message
+    /// the voice takes its settings only in a context's first message
     /// and a context is one line. That is also the promise the sheet's
     /// footer makes, so the two agree.
     ///
@@ -1690,7 +1690,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// the call is up.
     ///
     /// Measured 2026-09-13: tap → first word was 4.4 s on a healthy call, of
-    /// which ~1 s was the gateway asking ElevenLabs for a line the phone had
+    /// which ~1 s was the gateway asking the voice for a line the phone had
     /// already had on disk since the Talk tab was opened. The allowance
     /// pre-flight still runs in front of this — `ready` is what triggers it —
     /// so a spent month is still told before the fluent self says a word.
@@ -1730,7 +1730,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         ensurePlaybackFormat(rate: opener.rate)
 
         // The same loudness law every streamed line goes through — without it
-        // the greeting plays at whatever level ElevenLabs rendered it, next to
+        // the greeting plays at whatever level the voice rendered it, next to
         // replies that are levelled ("인사말만 크고 나머지는 안 들리던" in reverse).
         // A replay's buffer was levelled in place the first time round.
         if !isReplay {
