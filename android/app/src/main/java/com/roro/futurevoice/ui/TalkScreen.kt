@@ -675,7 +675,13 @@ fun TalkScreen(
                         style = MaterialTheme.typography.titleMedium, maxLines = 1)
                     else Column(horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.clickable { showingLevel = true }) {
-                        Text(topic.ifBlank { stringResource(R.string.lets_talk) },
+                        // A news call is titled "News": its topic is a whole
+                        // spoken line ("Did you see the news about…?"), which
+                        // only ever fit the bar cut off with an ellipsis.
+                        Text(when {
+                                newsFacts.isNotEmpty() -> stringResource(R.string.news)
+                                else -> topic.ifBlank { stringResource(R.string.lets_talk) }
+                            },
                             style = MaterialTheme.typography.titleMedium,
                             maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                         // The level being spoken at, and the call's own clock
