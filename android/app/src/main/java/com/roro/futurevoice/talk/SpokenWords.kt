@@ -68,17 +68,62 @@ object SpokenWords {
      * compared away (Korean spacing is the recognizer's; Japanese has none),
      * or three words in four shared (iOS `ConversationEngine.quotes`).
      */
-    fun quotes(quote: String, line: String): Boolean {
+    fun quotes(quote: String, line: String,
+               language: String? = com.roro.futurevoice.data.CoreVocabulary.activeLanguage()): Boolean {
         val needle = CarryoverDetector.normalized(quote)
         val hay = CarryoverDetector.normalized(line)
         if (needle.isEmpty()) return false
-        if (hay.contains(needle)) return true
+        val unspaced = language == null || language in substringLanguages
+        // Whole words only: "Seit drei Jahre" is not a quote of "Seit drei
+        // Jahren" (iOS, reported 2026-10-17 from a weekly test).
+        if (if (unspaced) hay.contains(needle) else " $hay ".contains(" $needle ")) return true
         val squeezed = needle.replace(" ", "")
-        if (squeezed.isNotEmpty() && hay.replace(" ", "").contains(squeezed)) return true
+        if (unspaced && squeezed.isNotEmpty() && hay.replace(" ", "").contains(squeezed)) return true
         val words = needle.split(' ').filter { it.isNotEmpty() }.toSet()
         if (words.size < 3) return false
         val have = hay.split(' ').filter { it.isNotEmpty() }.toSet()
         return words.intersect(have).size.toDouble() / words.size >= 0.75
+    }
+
+    /** Languages where a quote may sit inside a word: a Korean stem fix in an
+     *  eojeol (춥어서 → 추워서) is right, and Japanese has no boundaries. */
+    val substringLanguages = setOf("ko", "ja", "zh")
+
+    /**
+     * Where [needle] sits in [text], case- and diacritic-insensitively, on
+     * word boundaries (iOS `DrillStore.wholeWordRange`). A plain substring
+     * hit splices mid-word: "Seit drei Jahre" inside "Seit drei Jahren" came
+     * out "Seit drei Jahrenn" as a weekly-test answer. Korean, Japanese and
+     * an unknown language keep the substring match.
+     */
+    fun wholeWordRange(text: String, needle: String,
+                       language: String? = com.roro.futurevoice.data.CoreVocabulary.activeLanguage()): IntRange? {
+        val n = needle.trim()
+        if (n.isEmpty()) return null
+        val hay = fold(text)
+        val target = fold(n)
+        val checkBounds = language != null && language !in substringLanguages
+        var from = 0
+        while (true) {
+            val at = hay.indexOf(target, from)
+            if (at < 0) return null
+            val before = text.getOrNull(at - 1)
+            val after = text.getOrNull(at + n.length)
+            if (!checkBounds || (before?.isLetterOrDigit() != true && after?.isLetterOrDigit() != true)) {
+                return at until at + n.length
+            }
+            from = at + 1
+        }
+    }
+
+    /** Lowercased with diacritics dropped, one char per char — so an index
+     *  into the fold is an index into the original. */
+    private fun fold(s: String): String = buildString(s.length) {
+        for (c in s) {
+            val stripped = java.text.Normalizer.normalize(c.toString(), java.text.Normalizer.Form.NFD)
+                .filter { Character.getType(it) != Character.NON_SPACING_MARK.toInt() }
+            append((if (stripped.length == 1) stripped[0] else c).lowercaseChar())
+        }
     }
 
     /**

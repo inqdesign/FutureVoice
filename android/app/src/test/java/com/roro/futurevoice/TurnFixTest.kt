@@ -74,6 +74,57 @@ class TurnFixTest {
         assertEquals(fix.was to fix.now, DrillIngest.cardPair(fix, "I think my boss don't agree with me."))
     }
 
+    // Reported on iOS 2026-10-17: was "Seit drei Jahre" was found inside
+    // "Seit drei Jahren" — said right — and the weekly test's splice of the
+    // card made the answer "Seit drei Jahrenn".
+    private val jahren = "Seit drei Jahren wohne ich hier in Deutschland und habe ich"
+
+    @Test fun aFixInsideALongerWordIsNotTheLearners() {
+        assertFalse(com.roro.futurevoice.talk.SpokenWords.quotes("Seit drei Jahre", jahren, "de"))
+        assertTrue(com.roro.futurevoice.talk.SpokenWords.quotes("Seit drei Jahren", jahren, "de"))
+        val s = payload(jahren, "drei Jahre" to "drei Jahren").turnSuggestion(jahren, "de")
+        assertNull(s)
+    }
+
+    @Test fun everySpliceSiteRespectsWordBoundariesOutsideKoreanAndJapanese() {
+        assertNull(com.roro.futurevoice.talk.SpokenWords.wholeWordRange(jahren, "drei Jahre", "de"))
+        assertFalse(DrillIngest.cardPair(TurnFix(was = "drei Jahre", now = "drei Jahren"), jahren, "de")
+            .second.contains("Jahrenn"))
+        val run = com.roro.futurevoice.data.SayItAgainScript.applyPhraseFixes(jahren,
+            listOf(com.roro.futurevoice.talk.PhraseFeedback(userSaid = "drei Jahre",
+                fluentAlternative = "drei Jahren", reason = "")), "de")
+        assertEquals(jahren, run.text)
+        assertNull(com.roro.futurevoice.data.WeeklyTestEngine.blank("Jahre", jahren, "de"))
+        assertEquals("Seit drei ______ wohne ich hier in Deutschland und habe ich",
+            com.roro.futurevoice.data.WeeklyTestEngine.blank("Jahren", jahren, "de"))
+        // A Korean stem fix inside an eojeol is right and still lands.
+        val ko = DrillIngest.cardPair(TurnFix(was = "춥어", now = "추워"), "오늘 너무 춥어서 집에 있었어. 너는?", "ko")
+        assertTrue(ko.second.contains("추워서") || ko.second == "추워")
+    }
+
+    @Test fun theRepairDropsAMidWordFixAndItsCardButKeepsARealOne() {
+        val bogus = TurnFix(was = "Seit drei Jahre", now = "Seit drei Jahren", why = "Plural")
+        val real = TurnFix(was = "und habe ich", now = "und ich habe", why = "Wortstellung")
+        val turn = com.roro.futurevoice.talk.Turn(role = com.roro.futurevoice.talk.TurnRole.USER, transcript = jahren,
+            suggestion = com.roro.futurevoice.talk.TurnSuggestion(
+                "Seit drei Jahren wohne ich hier und habe gelernt", "", listOf(bogus, real)))
+        val session = com.roro.futurevoice.talk.Session(userId = "U", targetLanguage = "de",
+            startedAt = 0, endedAt = 1, turns = listOf(turn))
+        val (repaired, doomed) = DrillIngest.midWordRepair(session, "de")!!
+        assertEquals(listOf("und habe ich"), repaired.turns[0].suggestion!!.fixes!!.map { it.was })
+        fun card(target: String) = com.roro.futurevoice.talk.DrillCard(sourcePhrase = jahren,
+            targetPhrase = target, reason = "", createdAt = 0, nextReviewAt = 0, box = 0, sourceTurnId = turn.id)
+        val bogusCard = card("Seit drei Jahren")
+        val good = card("und ich habe")
+        assertEquals(listOf(good.id), DrillIngest.cardsWithout(listOf(bogusCard, good), doomed).map { it.id })
+        assertNull(DrillIngest.midWordRepair(repaired, "de"))
+        assertNull(DrillIngest.midWordRepair(session, "ko"))
+        val item = com.roro.futurevoice.data.WeeklyTestEngine.rewriteItem(
+            bogusCard.copy(sourcePhrase = bogus.was, sourceSessionId = session.id),
+            mapOf(session.id to session), "de")
+        assertFalse(item?.answer?.contains("Jahrenn") ?: false)
+    }
+
     @Test fun correctionIdIndexZeroIsTheOldId() {
         val turn = "3F2504E0-4F89-11D3-9A0C-0305E82C3301"
         assertEquals(TalkCurriculum.correctionId(turn), TalkCurriculum.correctionId(turn, 0))

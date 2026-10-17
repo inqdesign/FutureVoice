@@ -7,7 +7,6 @@ import com.roro.futurevoice.talk.ScenarioCurriculum
 import com.roro.futurevoice.talk.Session
 import com.roro.futurevoice.talk.Turn
 import com.roro.futurevoice.talk.TurnRole
-import java.text.Normalizer
 
 /**
  * One finished talk — or a Watch book's scene — turned into a script the
@@ -219,7 +218,8 @@ object SayItAgainScript {
      * dropped, so a run can't claim a correction it didn't make. Matching
      * ignores case and accents, as iOS's `.caseInsensitive, .diacriticInsensitive`.
      */
-    fun applyPhraseFixes(line: String, fixes: List<PhraseFeedback>): Spliced {
+    fun applyPhraseFixes(line: String, fixes: List<PhraseFeedback>,
+                         language: String? = CoreVocabulary.activeLanguage()): Spliced {
         var text = line
         var note = ""
         for (fix in fixes) {
@@ -227,26 +227,10 @@ object SayItAgainScript {
             val better = fix.fluentAlternative.trim()
             if (said.isEmpty() || better.isEmpty()) continue
             if (CarryoverDetector.normalized(said) == CarryoverDetector.normalized(better)) continue
-            val at = fold(text).indexOf(fold(said))
-            if (at < 0) continue
-            text = text.substring(0, at) + better + text.substring(at + said.length)
+            val range = com.roro.futurevoice.talk.SpokenWords.wholeWordRange(text, said, language) ?: continue
+            text = text.replaceRange(range, better)
             if (note.isEmpty()) note = fix.reason
         }
         return Spliced(text, text != line, note)
-    }
-
-    /**
-     * Case- and accent-folded, ONE CHAR PER CHAR so an index found in the
-     * folded text is an index in the original. A character whose decomposition
-     * is more than a base + marks (a Hangul syllable → jamo) is kept whole.
-     */
-    private fun fold(s: String): String {
-        val sb = StringBuilder(s.length)
-        for (ch in s) {
-            val base = Normalizer.normalize(ch.toString(), Normalizer.Form.NFD)
-                .filter { Character.getType(it) != Character.NON_SPACING_MARK.toInt() }
-            sb.append(if (base.length == 1) base[0].lowercaseChar() else ch.lowercaseChar())
-        }
-        return sb.toString()
     }
 }

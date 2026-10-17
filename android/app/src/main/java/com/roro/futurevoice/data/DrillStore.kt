@@ -125,6 +125,68 @@ object DrillIngest {
                  language: String? = CoreVocabulary.activeLanguage()): Pair<String, String> {
         if (com.roro.futurevoice.talk.CarryoverDetector.isCreditable(fix.now, language)) return fix.was to fix.now
         for (sentence in sentences(transcript)) {
+            val range = com.roro.futurevoice.talk.SpokenWords.wholeWordRange(sentence, fix.was, language) ?: continue
+            val widened = sentence.replaceRange(range, fix.now)
+            if (!com.roro.futurevoice.talk.CarryoverDetector.isCreditable(widened, language)) break
+            return sentence to widened
+        }
+        return fix.was to fix.now
+    }
+
+    /**
+     * A talk with its mid-word fixes taken out, and per turn the match keys
+     * of the cards those fixes minted (iOS `DrillStore.midWordRepair`,
+     * 2026-10-17). A fix whose `was` sits in the turn only INSIDE a longer
+     * word ("Seit drei Jahre" in "Seit drei Jahren") accused the learner of a
+     * slip they didn't make. Null when nothing changed.
+     */
+    fun midWordRepair(session: com.roro.futurevoice.talk.Session, language: String)
+        : Pair<com.roro.futurevoice.talk.Session, Map<String, Set<String>>>? {
+        val doomed = HashMap<String, Set<String>>()
+        val turns = session.turns.map { turn ->
+            val s = turn.suggestion
+            val fixes = s?.fixes
+            if (turn.role != com.roro.futurevoice.talk.TurnRole.USER || s == null || fixes == null) return@map turn
+            val bad = fixes.filter { fix ->
+                turn.transcript.contains(fix.was, ignoreCase = true) &&
+                    com.roro.futurevoice.talk.SpokenWords.wholeWordRange(turn.transcript, fix.was, language) == null
+            }
+            if (bad.isEmpty()) return@map turn
+            val badIds = bad.map { it.id }.toSet()
+            val kept = fixes.filter { it.id !in badIds }
+            doomed[turn.id] = bad.flatMap { fix ->
+                listOf(normalizedForMatch(substringCardPair(fix, turn.transcript, language).second),
+                       normalizedForMatch(fix.now))
+            }.toSet()
+            // The no-op path built `alternative` by splicing every fix into
+            // the turn, so it carries the same artefact.
+            if (s.alternative == substringSplice(fixes, turn.transcript)) {
+                if (kept.isEmpty()) return@map turn.copy(suggestion = null)
+                var line = turn.transcript
+                for (fix in kept) {
+                    val range = com.roro.futurevoice.talk.SpokenWords.wholeWordRange(line, fix.was, language) ?: continue
+                    line = line.replaceRange(range, fix.now)
+                }
+                return@map turn.copy(suggestion = s.copy(alternative = line, reason = kept.first().why, fixes = kept))
+            }
+            turn.copy(suggestion = s.copy(fixes = kept))
+        }
+        return if (doomed.isEmpty()) null else session.copy(turns = turns) to doomed
+    }
+
+    /** [all] minus the cards a repaired turn no longer has a fix for. */
+    fun cardsWithout(all: List<DrillCard>, doomed: Map<String, Set<String>>): List<DrillCard> =
+        all.filter { card ->
+            val keys = card.sourceTurnId?.let { doomed[it] } ?: return@filter true
+            normalizedForMatch(card.targetPhrase) !in keys
+        }
+
+    /** [cardPair] as it was before whole-word matching — only to recognize
+     *  the cards it made. */
+    private fun substringCardPair(fix: com.roro.futurevoice.talk.TurnFix, transcript: String,
+                                  language: String): Pair<String, String> {
+        if (com.roro.futurevoice.talk.CarryoverDetector.isCreditable(fix.now, language)) return fix.was to fix.now
+        for (sentence in sentences(transcript)) {
             val at = sentence.indexOf(fix.was, ignoreCase = true)
             if (at < 0) continue
             val widened = sentence.replaceRange(at, at + fix.was.length, fix.now)
@@ -132,6 +194,15 @@ object DrillIngest {
             return sentence to widened
         }
         return fix.was to fix.now
+    }
+
+    private fun substringSplice(fixes: List<com.roro.futurevoice.talk.TurnFix>, line: String): String {
+        var out = line
+        for (fix in fixes) {
+            val at = out.indexOf(fix.was, ignoreCase = true)
+            if (at >= 0) out = out.replaceRange(at, at + fix.was.length, fix.now)
+        }
+        return out
     }
 
     /** Keep the sentence that corresponds to the correction; prefix-cut otherwise. */
@@ -457,6 +528,33 @@ class DrillStore private constructor(context: Context) {
     suspend fun dueCount(language: String = LanguageScope.active(appContext),
                          now: Long = System.currentTimeMillis()): Int =
         load(language).count { it.nextReviewAt <= now }
+
+    /**
+     * Undoes what the substring match left on disk (iOS
+     * `repairMidWordFixes`, 2026-10-17): mid-word fixes leave their talks,
+     * and the cards they minted are deleted — a weekly-test item on such a
+     * card leaves the paper with it. Once per language; Korean and Japanese
+     * never had the bug.
+     */
+    suspend fun repairMidWordFixes(language: String) {
+        if (language.substringBefore('-') in com.roro.futurevoice.talk.SpokenWords.substringLanguages) return
+        val prefs = appContext.getSharedPreferences("futurevoice", Context.MODE_PRIVATE)
+        val key = "futurevoice.repair.midWordFixes.$language"
+        if (prefs.getBoolean(key, false)) return
+        val sessions = SessionStore.shared(appContext)
+        val doomed = HashMap<String, Set<String>>()
+        for (session in sessions.load(language)) {
+            val (repaired, keys) = DrillIngest.midWordRepair(session, language) ?: continue
+            sessions.save(repaired)
+            keys.forEach { (turn, k) -> doomed[turn] = doomed[turn].orEmpty() + k }
+        }
+        if (doomed.isNotEmpty()) mutex.withLock {
+            val all = loadLocked(language)
+            val kept = DrillIngest.cardsWithout(all, doomed)
+            if (kept.size != all.size) write(language, kept)
+        }
+        prefs.edit().putBoolean(key, true).apply()
+    }
 
     private suspend fun write(language: String, cards: List<DrillCard>) = withContext(Dispatchers.IO) {
         val target = file(language)

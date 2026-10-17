@@ -313,7 +313,7 @@ data class ConversationTurnPayload(
             val was = f.was.trim(); val now = f.now.trim()
             // A fix accuses the learner of saying `was`; if they didn't, the
             // accusation is invented.
-            if (was.isEmpty() || now.isEmpty() || !SpokenWords.quotes(was, original) ||
+            if (was.isEmpty() || now.isEmpty() || !SpokenWords.quotes(was, original, language) ||
                 SpokenWords.saysTheSameThing(was, now, language) ||
                 SpokenWords.changesOnlyWordOrder(was, now, language) ||
                 com.roro.futurevoice.data.DrillIngest.looksLikeMetaRule(now)) null
@@ -328,8 +328,8 @@ data class ConversationTurnPayload(
             if (fixes.isEmpty()) return null
             var line = original
             for (fix in fixes) {
-                val at = line.indexOf(fix.was, ignoreCase = true)
-                if (at >= 0) line = line.replaceRange(at, at + fix.was.length, fix.now)
+                val range = SpokenWords.wholeWordRange(line, fix.was, language) ?: continue
+                line = line.replaceRange(range, fix.now)
             }
             return TurnSuggestion(line, fixes.first().why, fixes)
         }

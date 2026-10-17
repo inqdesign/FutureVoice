@@ -41,6 +41,14 @@ class FutureVoiceApplication : Application() {
                 BillingService.shared(app).refresh()
             }
         }, "supabase-warmup").start()
+        // Fixes found inside a longer word, and their cards (iOS 2026-10-17).
+        Thread({
+            kotlinx.coroutines.runBlocking {
+                for (code in com.roro.futurevoice.data.LanguageScope.enrolled(app)) {
+                    runCatching { com.roro.futurevoice.data.DrillStore.shared(app).repairMidWordFixes(code) }
+                }
+            }
+        }, "mid-word-repair").start()
         com.roro.futurevoice.widget.StudyWidgetRefresher.schedule(this)
         // Shadow scoring digit spell-out: the built-in English speller (the
         // launch target). ICU's RuleBasedNumberFormat is absent from the

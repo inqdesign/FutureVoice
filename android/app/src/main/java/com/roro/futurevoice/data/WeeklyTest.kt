@@ -20,7 +20,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.io.File
-import java.text.Normalizer
 import kotlin.random.Random
 
 /**
@@ -724,7 +723,7 @@ object WeeklyTestEngine {
                 continue
             }
             val example = sceneExamples[phrase.trim().lowercase()] ?: continue
-            if (example.contains(phrase, ignoreCase = true) && TextScript.isInTargetScript(example, language)) {
+            if (foldedRange(example, phrase, language) != null && TextScript.isInTargetScript(example, language)) {
                 candidates += Candidate(phrase, example, null, null)
             }
         }
@@ -762,10 +761,9 @@ object WeeklyTestEngine {
      *  read as one line — a gap item never shows a whole turn. */
     private fun firstSentence(phrase: String, turns: List<Pair<Session, Turn>>,
                               language: String): Triple<String, Session, Turn>? {
-        val needle = phrase.lowercase()
         for ((session, turn) in turns) {
             for (sentence in TalkCurriculum.sentences(turn.transcript)) {
-                if (!sentence.lowercase().contains(needle)) continue
+                if (foldedRange(sentence, phrase, language) == null) continue
                 val n = WordSplitter.count(sentence, language)
                 if (n < 4 || n > 30 || !TextScript.isInTargetScript(sentence, language)) continue
                 return Triple(sentence, session, turn)
@@ -776,21 +774,11 @@ object WeeklyTestEngine {
 
     /** [sentence] with the first case- and diacritic-insensitive occurrence
      *  of [phrase] replaced by the blank mark. */
-    fun blank(phrase: String, sentence: String): String? {
+    fun blank(phrase: String, sentence: String,
+              language: String? = CoreVocabulary.activeLanguage()): String? {
         if (phrase.isEmpty()) return null
-        val at = fold(sentence).indexOf(fold(phrase))
-        if (at < 0) return null
-        return sentence.substring(0, at) + BLANK_MARK + sentence.substring(at + phrase.length)
-    }
-
-    /** Lowercased with diacritics dropped, one char per char — so an index
-     *  into the fold is an index into the original. */
-    private fun fold(s: String): String = buildString(s.length) {
-        for (c in s) {
-            val stripped = Normalizer.normalize(c.toString(), Normalizer.Form.NFD)
-                .filter { Character.getType(it) != Character.NON_SPACING_MARK.toInt() }
-            append((if (stripped.length == 1) stripped[0] else c).lowercaseChar())
-        }
+        val range = foldedRange(sentence, phrase, language) ?: return null
+        return sentence.replaceRange(range, BLANK_MARK)
     }
 
     // ── build
@@ -846,11 +834,11 @@ object WeeklyTestEngine {
             ?.firstOrNull { it.id == card.sourceTurnId }
         if (turn != null) {
             for (sentence in TalkCurriculum.sentences(turn.transcript)) {
-                val range = foldedRange(sentence, was) ?: continue
+                val range = foldedRange(sentence, was, language) ?: continue
                 val span = if (WordSplitter.count(sentence, language) > rewriteClauseFrom(language))
                     clauseRange(range, sentence) else sentence.indices
                 val clause = sentence.substring(span.first, span.last + 1)
-                val local = foldedRange(clause, was) ?: continue
+                val local = foldedRange(clause, was, language) ?: continue
                 said = clause
                 answer = clause.replaceRange(local, now)
                 break
@@ -1072,12 +1060,9 @@ object WeeklyTestEngine {
     // ── report (grammar · upgrade)
 
     /** Where [needle] sits in [text], case- and diacritic-insensitively. */
-    fun foldedRange(text: String, needle: String): IntRange? {
-        val n = needle.trim()
-        if (n.isEmpty()) return null
-        val at = fold(text).indexOf(fold(n))
-        return if (at < 0) null else at until at + n.length
-    }
+    fun foldedRange(text: String, needle: String,
+                    language: String? = CoreVocabulary.activeLanguage()): IntRange? =
+        com.roro.futurevoice.talk.SpokenWords.wholeWordRange(text, needle, language)
 
     private data class LearnerHit(val sentence: String, val range: IntRange, val session: Session, val turn: Turn)
 
@@ -1088,7 +1073,7 @@ object WeeklyTestEngine {
                                 language: String): LearnerHit? {
         for ((session, turn) in userTurns) {
             for (sentence in TalkCurriculum.sentences(turn.transcript)) {
-                val range = foldedRange(sentence, span) ?: continue
+                val range = foldedRange(sentence, span, language) ?: continue
                 val n = WordSplitter.count(sentence, language)
                 if (n < 3 || n > maxWords || !TextScript.isInTargetScript(sentence, language)) continue
                 return LearnerHit(sentence, range, session, turn)

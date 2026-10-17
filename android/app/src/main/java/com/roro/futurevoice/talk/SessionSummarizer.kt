@@ -514,10 +514,14 @@ object SessionSummarizer {
      * turns, or sharing three words in four with one — the model quotes
      * loosely (iOS `isTheirs`).
      */
-    internal fun isTheirs(quote: String, normalizedTurns: List<String>): Boolean {
+    internal fun isTheirs(quote: String, normalizedTurns: List<String>,
+                          language: String? = com.roro.futurevoice.data.CoreVocabulary.activeLanguage()): Boolean {
         val needle = normalized(quote)
         if (needle.isEmpty()) return false
-        if (normalizedTurns.any { it.contains(needle) }) return true
+        // Whole words outside Korean/Japanese: "Seit drei Jahre" is not a
+        // quote of "Seit drei Jahren" (iOS `ConversationEngine.quotes`).
+        val unspaced = language == null || language in SpokenWords.substringLanguages
+        if (normalizedTurns.any { if (unspaced) it.contains(needle) else " $it ".contains(" $needle ") }) return true
         val words = needle.split(" ").toSet()
         if (words.size < 3) return false
         return normalizedTurns.any { turn ->
