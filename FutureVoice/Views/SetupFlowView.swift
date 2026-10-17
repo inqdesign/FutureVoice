@@ -15,14 +15,15 @@ import SwiftUI
 ///                          made American and a British learner paid for a
 ///                          second remix to get theirs)
 ///   3. Level             ← CEFR self-rating; calibrates every conversation
-///   4. Daily goal        ← minutes of talk per day; the Talk home ring's
-///                          100%. The learner's own number — plans decide
-///                          what you CAN talk, this is what you INTEND to.
+///   4. Purpose           ← why they're learning; sets Talk's chips
+///
+/// The daily goal and the week used to close this flow. They moved to the
+/// routine builder over the Talk tab (`RoutineOnboardingView`, 2026-10-18),
+/// where they are set on the routine grid itself.
 ///
 /// Native language leads — it's a plain fact with an obvious answer, so the
 /// very first question never reads like a test. The target comes next (it
-/// scopes the level labels, e.g. TOPIK for Korean), then the self-rating,
-/// and the goal closes on a commitment the learner chose themselves.
+/// scopes the level labels, e.g. TOPIK for Korean), then the self-rating.
 ///
 /// Flips `appState.setupComplete` on finish; RootView then routes to the
 /// persona cards (voice clone comes last).
@@ -38,20 +39,12 @@ struct SetupFlowView: View {
     @State private var targetPickedByHand = false
     /// The accent picked on the accent step — nil until the target has one.
     @State private var accentId: String?
-    /// Same key the Talk home ring and Me's picker read — the ring's 100%.
-    @AppStorage("futurevoice.dailyGoalMinutes") private var dailyGoalMinutes = 10
-    @State private var goalMinutes = 10
     /// Backing out of step one crosses the auth boundary (Welcome lives
     /// before sign-in), so it asks first instead of silently signing out.
     @State private var confirmingSignOut = false
     /// Why they're learning — many answers, in the order tapped. The order
     /// is the Talk chip row's order (`LearningPurposeStore.chips`).
     @State private var purposes: [LearningPurpose] = []
-    /// The suggested week, built when the routine step opens (from the
-    /// purposes and the daily goal) and edited in place.
-    @State private var routine: [RoutineRecipe.Line] = []
-    /// "Decide later" on the routine step: the plain seeded routine stays.
-    @State private var skipRoutine = false
     @State private var purposeDetails = PurposeDetails()
     @State private var exam: ExamKind = .ielts
 
@@ -73,7 +66,7 @@ struct SetupFlowView: View {
     /// Device-preferred languages first — see `LanguageCatalog.nativeChoices`.
     private static let nativeChoices = LanguageCatalog.nativeChoices
 
-    private enum Step { case native, target, accent, level, purpose, goal, routine }
+    private enum Step { case native, target, accent, level, purpose }
 
     /// `preferredAccentId` for "keep my voice as recorded" — no remix at all
     /// (`AppState.applyDefaultAccent` skips it).
@@ -85,9 +78,7 @@ struct SetupFlowView: View {
     }
 
     private var steps: [Step] {
-        // The routine step is the purposes' answer — none picked, nothing
-        // to suggest, and the plain "talk X minutes a day" routine stands.
-        let tail: [Step] = purposes.isEmpty ? [.purpose, .goal] : [.purpose, .goal, .routine]
+        let tail: [Step] = [.purpose]
         return accentOptions.count > 1 ? [.native, .target, .accent, .level] + tail
                                        : [.native, .target, .level] + tail
     }
@@ -107,8 +98,6 @@ struct SetupFlowView: View {
                     case .accent: accentStep
                     case .level:  levelStep
                     case .purpose: purposeStep
-                    case .goal:   goalStep
-                    case .routine: routineStep
                     }
                 }
                 Spacer(minLength: 0)
@@ -132,7 +121,6 @@ struct SetupFlowView: View {
             nativeLanguage = appState.nativeLanguage
             targetLanguage = appState.targetLanguage
             level = appState.proficiency
-            goalMinutes = dailyGoalMinutes
             purposes = LearningPurposeStore.purposes
             purposeDetails = LearningPurposeStore.details
             // Only the PRE-selection avoids the app language — a default of
@@ -145,9 +133,6 @@ struct SetupFlowView: View {
             // Screenshot harness: `-onboardingStep <n>` jumps to a card.
             if UserDefaults.standard.object(forKey: "onboardingStep") != nil {
                 step = min(steps.count - 1, max(0, UserDefaults.standard.integer(forKey: "onboardingStep")))
-                if current == .routine {
-                    routine = RoutineRecipe.lines(for: purposes, goalMinutes: goalMinutes)
-                }
             }
             #endif
         }
@@ -167,8 +152,6 @@ struct SetupFlowView: View {
         case .accent: return chrome("Which accent?")
         case .level:  return chrome("Your level?")
         case .purpose: return chrome("Why are you learning?")
-        case .goal:   return chrome("Your daily goal?")
-        case .routine: return chrome("A week made for you")
         }
     }
 
@@ -261,128 +244,6 @@ struct SetupFlowView: View {
             Text(explain("What do you want it for?"))
         } footer: {
             Text(explain("Pick up to three. The first one is where Talk opens."))
-        }
-    }
-
-    // MARK: - Step 5 · The week
-
-    /// The routine the purposes suggest — a picture of the week, then each
-    /// block with WHY it's there and a time to change. "Decide later" keeps
-    /// the plain routine; My routine edits either one afterwards.
-    @ViewBuilder
-    private var routineStep: some View {
-        Section {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(RoutineRecipe.headline(for: purposes))
-                    .font(.title3.weight(.bold))
-                Text(explain("About \(goalMinutes) minutes of talk a day, and what it corrected comes back the same evening."))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                RoutineWeekPicture(blocks: routine.map(\.block))
-                    .padding(.top, 6)
-            }
-            .padding(.vertical, 6)
-        }
-        Section {
-            ForEach($routine) { $line in
-                HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: line.block.kind.symbol)
-                        .font(.subheadline)
-                        .foregroundStyle(line.block.kind.color)
-                        .frame(width: 22)
-                        .padding(.top, 2)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(line.block.kind.titled(line.block.minutes))
-                            .font(.body.weight(.semibold))
-                        Text(Self.weekdaySummary(line.block.weekdays))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text(line.why)
-                            .font(.caption)
-                            .foregroundStyle(Color.accentColor)
-                    }
-                    Spacer(minLength: 8)
-                    DatePicker("", selection: timeBinding($line.block), displayedComponents: .hourAndMinute)
-                        .labelsHidden()
-                }
-            }
-            HStack(spacing: 12) {
-                Image(systemName: StudyPlan.Kind.test.symbol)
-                    .font(.subheadline)
-                    .foregroundStyle(StudyPlan.Kind.test.color)
-                    .frame(width: 22)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(StudyPlan.Kind.test.label).font(.body.weight(.semibold))
-                    Text(explain("Once a week, everything the week taught"))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        } header: {
-            Text(explain("Try this"))
-        } footer: {
-            Text(explain("At talk times your fluent self calls you. You can change all of it later in My routine."))
-        }
-        Section {
-            Button(explain("Decide later")) {
-                skipRoutine = true
-                finish()
-            }
-        }
-    }
-
-    /// A block's start as a `Date` for the picker, written back as hour:minute.
-    private func timeBinding(_ block: Binding<StudyPlan.Block>) -> Binding<Date> {
-        Binding(
-            get: {
-                Calendar.current.date(bySettingHour: block.wrappedValue.hour,
-                                      minute: block.wrappedValue.minute, second: 0, of: Date()) ?? Date()
-            },
-            set: { date in
-                let c = Calendar.current.dateComponents([.hour, .minute], from: date)
-                block.wrappedValue.hour = c.hour ?? block.wrappedValue.hour
-                block.wrappedValue.minute = c.minute ?? block.wrappedValue.minute
-            })
-    }
-
-    /// "Every day", "Weekdays", or the days by name — Me's call row's rule.
-    static func weekdaySummary(_ days: Set<Int>) -> String {
-        if days == Set(1...7) { return explain("Every day") }
-        if days == Set(2...6) { return explain("Weekdays") }
-        if days == [1, 7] { return explain("Weekends") }
-        var cal = Calendar.current
-        cal.locale = Locale(identifier: LanguageCatalog.currentNative)
-        let names = cal.shortWeekdaySymbols
-        return [2, 3, 4, 5, 6, 7, 1].filter(days.contains).map { names[$0 - 1] }.joined(separator: " ")
-    }
-
-    // MARK: - Step 4 · Daily goal
-
-    /// Minutes of talking per day — the learner's own commitment, and the
-    /// 100% of the Talk home's goal ring. Changeable any time in Me.
-    private var goalStep: some View {
-        Section {
-            ForEach([5, 10, 15, 20, 30], id: \.self) { m in
-                pickRow(
-                    title: chrome("\(m) min a day"),
-                    subtitle: Self.goalBlurb(m),
-                    selected: goalMinutes == m
-                ) { goalMinutes = m }
-            }
-        } header: {
-            Text(explain("How much will you talk each day?"))
-        } footer: {
-            Text(explain("Your goal, your call — the ring on the Talk screen fills toward it. You can change it any time in settings."))
-        }
-    }
-
-    private static func goalBlurb(_ minutes: Int) -> String {
-        switch minutes {
-        case 5:  return explain("A quick daily habit — one short call")
-        case 10: return explain("The sweet spot for steady progress")
-        case 15: return explain("Building real momentum")
-        case 20: return explain("Serious about this")
-        default: return explain("Full immersion pace")
         }
     }
 
@@ -549,8 +410,7 @@ struct SetupFlowView: View {
             Button {
                 advance()
             } label: {
-                Text(current == .routine ? explain("Start with this routine")
-                     : step < steps.count - 1 ? explain("Next") : explain("Continue"))
+                Text(step < steps.count - 1 ? explain("Next") : explain("Continue"))
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
@@ -590,28 +450,15 @@ struct SetupFlowView: View {
                 targetLanguage = defaultTarget
             }
             step += 1
-            // Arriving at the week: build it from what was just answered.
-            if current == .routine {
-                routine = RoutineRecipe.lines(for: purposes, goalMinutes: goalMinutes)
-            }
         } else {
             finish()
         }
     }
 
     private func finish() {
-        // The chosen goal becomes the Talk home ring's 100% (same key Me
-        // edits later).
-        dailyGoalMinutes = goalMinutes
         LearningPurposeStore.purposes = purposes
         LearningPurposeStore.details = purposeDetails
         if purposes.contains(.exam) { LearningPurposeStore.setExam(exam, for: targetLanguage) }
-        // The suggested week replaces the plain seeded one — unless they
-        // chose to decide later.
-        if !purposes.isEmpty, !skipRoutine, !routine.isEmpty {
-            StudyPlanStore.shared.update(RoutineRecipe.plan(from: routine))
-            UserDefaults.standard.set(true, forKey: LearningPurposeStore.routineAppliedKey)
-        }
         // Persist the answers and enroll the chosen target as the ONLY
         // language (replacing the fresh install's default enrollment), then
         // open the gate so RootView moves on to the persona cards.

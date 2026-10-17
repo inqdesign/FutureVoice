@@ -42,6 +42,8 @@ struct ConversationHome: View {
     /// Today card → activity calendar (Button-driven so the row shows no
     /// disclosure chevron).
     @State private var showingActivity = false
+    /// The onboarding routine lands in the streak chip (`RoutineOnboardingView`).
+    @ObservedObject private var routineHandoff = RoutineHandoff.shared
     /// Discover rail's "All scenarios" card → the full collection page.
     @State private var showingAllScenarios = false
 
@@ -374,6 +376,7 @@ struct ConversationHome: View {
     /// glass as the language and profile buttons beside it.
     private var streakChip: some View {
         Button {
+            routineHandoff.showHint = false
             showingActivity = true
         } label: {
             HStack(spacing: 4) {
@@ -387,6 +390,7 @@ struct ConversationHome: View {
                 } else {
                     Image(systemName: "calendar")
                         .foregroundStyle(.secondary)
+                        .symbolEffect(.bounce, value: routineHandoff.landed)
                     Text("Activity")
                         .foregroundStyle(.primary)
                 }
@@ -397,6 +401,19 @@ struct ConversationHome: View {
             .modifier(HeaderGlass())
         }
         .buttonStyle(.plain)
+        // The routine builder shrinks into this chip, so it says where it is.
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { routineHandoff.chipFrame = $0 }
+        .popover(isPresented: $routineHandoff.showHint, arrowEdge: .top) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(explain("Your routine is here"))
+                    .font(.subheadline.weight(.semibold))
+                Text(explain("Tap to see it or change it."))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(14)
+            .presentationCompactAdaptation(.popover)
+        }
         .accessibilityLabel(snapshot.streakDays > 0
             ? "\(snapshot.streakDays) day streak. Opens activity calendar."
             : "Opens activity calendar.")

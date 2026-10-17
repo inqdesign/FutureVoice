@@ -6,10 +6,10 @@ import SwiftUI
 /// straight into the first call. The auth gate is non-bypassable — without a
 /// Supabase session we can't proxy Cartesia/Gemini calls.
 ///
-/// Three short steps trail the clone, each shown once and each setting its own
-/// flag on every exit: the week (`WeeklyRhythmOnboardingView` — test day and
-/// time), the daily call (the clone's first job) and the plans
-/// (`OnboardingPaywallView`, skipped silently for anyone with nothing to buy).
+/// One step trails the clone: the routine (`RoutineOnboardingView`), built
+/// over the Talk tab and shrunk into its Activity chip when done. Onboarding
+/// shows no paywall (2026-10-18, founder); the plans are asked at the first
+/// paid tap (`BillingGate`).
 struct RootView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var auth: AuthService
@@ -19,17 +19,13 @@ struct RootView: View {
     /// `Color.accentColor` chrome) matches the call button's living surface.
     /// Defaults to `.blue` — the same palette a fresh install starts on.
     @AppStorage("futureselfTheme") private var storedTheme = FutureselfTheme.blue.rawValue
-    /// Whether the daily-call step has been shown. Set by
-    /// `DailyCallOnboardingView` on BOTH exits (enabled or skipped), so
-    /// declining it doesn't turn the screen into a wall.
+    /// Whether the routine (daily call, study time) has been set up. The key
+    /// is the daily-call screen's, which the routine builder replaced on
+    /// 2026-10-18, so every install that saw that screen is past this one.
     @AppStorage("futurevoice.dailyCall.onboarded") private var dailyCallOnboarded = false
-    /// Whether the weekly step (test day + time) has been shown. New installs
-    /// only — it is asked only while the daily call hasn't been onboarded yet.
+    /// The weekly-test screen's flag, from the same era. Set beside the one
+    /// above so nothing that reads it asks again.
     @AppStorage("futurevoice.weeklyRhythm.onboarded") private var weeklyRhythmOnboarded = false
-    /// Whether the plans have been offered once, at the end of onboarding.
-    /// Set by `OnboardingPaywallView` on every exit — including the silent
-    /// one it takes for an account that has nothing to buy.
-    @AppStorage("futurevoice.paywall.onboarded") private var paywallOnboarded = false
     /// A signed-in account with practice already in iCloud, on an install
     /// that hasn't been set up: offer to continue from it (`SyncContinuePromptView`).
     @State private var showSyncOffer = false
@@ -198,33 +194,30 @@ struct RootView: View {
             // letting it through would hand someone an app whose data dies with
             // the install. The view reopens on its sign-up step.
             VoiceCloneOnboardingView()
-        } else if !dailyCallOnboarded && !weeklyRhythmOnboarded {
-            // The week's rhythm before the day's: when the week is looked back
-            // on and tested, then (next screen) when the daily call rings.
-            // Gated on the daily call too, so an existing install — which
-            // already has a test day — never sees it.
-            WeeklyRhythmOnboardingView()
-        } else if !dailyCallOnboarded {
-            // AFTER the clone, because the daily call is the clone's first
-            // real job — they've just heard themselves speak fluently, so
-            // "they'll phone you tomorrow" reads as a promise instead of a
-            // permissions request. Existing installs see it once too; that's
-            // how they learn the feature exists.
-            DailyCallOnboardingView()
-        } else if !paywallOnboarded {
-            // LAST, and only for an account with something to buy. The voice
-            // exists and has spoken by now, so the plans are priced against
-            // something heard rather than promised — and the first tap on
-            // Talk stops being where a hard paywall introduces itself.
-            OnboardingPaywallView()
         } else {
-            // A language switch swaps the entire scoped store set underneath
-            // the tabs — rebuild the tree so every view re-reads from the new
-            // language's stores (the stores themselves are repointed in
-            // LanguageScope.repointStores; this only resets view state).
-            RootTabView()
-                .id(appState.targetLanguage)
+            tabs(buildingRoutine: !dailyCallOnboarded)
         }
+    }
+
+    /// The tabs — with the routine builder over them until the routine is
+    /// set. It sits over the Talk tab because that is where it goes when
+    /// done: into the Activity chip in the header.
+    private func tabs(buildingRoutine: Bool) -> some View {
+        // A language switch swaps the entire scoped store set underneath
+        // the tabs — rebuild the tree so every view re-reads from the new
+        // language's stores (the stores themselves are repointed in
+        // LanguageScope.repointStores; this only resets view state).
+        RootTabView(holdingForRoutine: buildingRoutine)
+            .id(appState.targetLanguage)
+            .overlay {
+                if buildingRoutine {
+                    RoutineOnboardingView {
+                        dailyCallOnboarded = true
+                        weeklyRhythmOnboarded = true
+                    }
+                    .transition(.identity)
+                }
+            }
     }
 
     /// The static launch screen, redrawn in SwiftUI so the hand-off from
@@ -243,15 +236,14 @@ struct RootView: View {
     /// Screenshot harness. Launch with `-onboardingPreview <screen>` to jump
     /// straight to one onboarding view, bypassing the auth gate — lets the
     /// simulator capture each first-run screen without an Apple sign-in.
-    /// Screens: welcome · setup · voice · persona · weekly · dailycall.
+    /// Screens: welcome · setup · voice · persona · routine.
     private static var onboardingPreview: AnyView? {
         switch UserDefaults.standard.string(forKey: "onboardingPreview") {
         case "welcome":      return AnyView(WelcomeView())
         case "setup":        return AnyView(SetupFlowView())
         case "voice":        return AnyView(VoiceCloneOnboardingView())
         case "persona":      return AnyView(PersonaIntakeView())
-        case "weekly":       return AnyView(WeeklyRhythmOnboardingView())
-        case "dailycall":    return AnyView(DailyCallOnboardingView())
+        case "routine":      return AnyView(RoutinePreview())
         default:             return nil
         }
     }
