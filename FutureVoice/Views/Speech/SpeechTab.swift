@@ -51,14 +51,31 @@ struct SpeechTab: View {
                         // The newest three on the tab; everything else, past
                         // ones included, one tap away — the tab is for
                         // practising, not for an ever-growing list.
-                        ForEach(challenges.live.prefix(Self.challengesOnTab)) { script in
-                            SpeechCardLink {
-                                SpeechChallengeView(script: script)
-                                    .environmentObject(appState)
-                            } label: {
-                                SpeechChallengeRow(script: script, standing: challenges.standings[script.id])
+                        // One row that scrolls sideways (2026-10-17, founder:
+                        // three stacked cards took most of the screen). The
+                        // next card peeks in at the edge so the row reads as
+                        // more than one.
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(alignment: .top, spacing: 10) {
+                                ForEach(challenges.live.prefix(Self.challengesOnTab)) { script in
+                                    NavigationLink {
+                                        SpeechChallengeView(script: script)
+                                            .environmentObject(appState)
+                                    } label: {
+                                        SpeechChallengeRow(script: script, standing: challenges.standings[script.id])
+                                            .frame(maxHeight: .infinity, alignment: .top)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .containerRelativeFrame(.horizontal) { width, _ in
+                                        challenges.live.count > 1 ? width * 0.82 : width
+                                    }
+                                }
                             }
+                            .scrollTargetLayout()
                         }
+                        .scrollTargetBehavior(.viewAligned)
+                        .scrollClipDisabled()
+                        .speechCardRow()
                     } header: {
                         // The rest is one tap away from the header now: a
                         // plain row under the cards read as a fourth card.
