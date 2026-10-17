@@ -49,9 +49,14 @@ object ReviewRequest {
         val context = activity.applicationContext
         context.getSharedPreferences("futurevoice", 0).edit()
             .putString(ASKED_VERSION_KEY, BuildConfig.VERSION_NAME).apply()
-        Analytics.capture("review_requested", mapOf(
+        val props = mapOf(
             "talk_seconds" to TalkTimeLog.totalSeconds(context),
-            "talk_days" to TalkTimeLog.daysWithTalk(context)))
+            "talk_days" to TalkTimeLog.daysWithTalk(context))
+        Analytics.capture("review_requested", props)
+        // Also into client_events beside the feedback sheet's rows (iOS,
+        // 2026-10-17). Play decides whether it appears: "requested", not "shown".
+        com.roro.futurevoice.core.Telemetry.log("review_requested",
+            props.mapValues { it.value.toString() })
         runCatching {
             val manager = ReviewManagerFactory.create(context)
             manager.requestReviewFlow().addOnCompleteListener { task ->

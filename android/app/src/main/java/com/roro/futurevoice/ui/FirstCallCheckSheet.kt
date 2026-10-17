@@ -75,6 +75,10 @@ object FirstCallCheck {
 
     enum class Feeling { EASY, RIGHT, HARD }
 
+    /** Which exit raised it (iOS `FirstCallCheckSheet.Trigger`): after the
+     *  summary, or from an exit with no summary. */
+    enum class Trigger(val raw: String) { SUMMARY("summary"), CLOSE("close") }
+
     /** What a pick pre-sets below (iOS `pick(_:)`), as a value for tests. */
     data class Preset(val level: CefrLevel, val speed: SpeechSpeed, val coach: Boolean)
 
@@ -114,6 +118,7 @@ fun FirstCallCheckSheet(
     targetLanguage: String,
     /** The level the call ran at — "You picked …". */
     currentLevel: CefrLevel,
+    trigger: FirstCallCheck.Trigger = FirstCallCheck.Trigger.SUMMARY,
     /** Capture only: open with a pick already made. */
     initialFeeling: FirstCallCheck.Feeling? = null,
     onDismiss: () -> Unit,
@@ -135,13 +140,33 @@ fun FirstCallCheckSheet(
     }
     remember { initialFeeling?.let { pick(it) }; true }
 
+    // shown → saved | dismissed, like FeedbackSheet (iOS, 2026-10-17): until
+    // then only a Save left a row, so the answer rate couldn't be read.
+    var saved by remember { mutableStateOf(false) }
+    fun report(event: String, extra: Map<String, String> = emptyMap()) {
+        val props = mapOf("trigger" to trigger.raw, "level_before" to currentLevel.code) + extra
+        com.roro.futurevoice.core.Telemetry.log(event, props)
+        com.roro.futurevoice.core.Analytics.capture(event, props)
+    }
+    androidx.compose.runtime.LaunchedEffect(Unit) { report("first_call_check_shown") }
+    fun dismissUnsaved() {
+        if (!saved) {
+            saved = true
+            report("first_call_check_dismissed",
+                mapOf("feeling" to (feeling?.name?.lowercase() ?: "none")))
+        }
+        onDismiss()
+    }
+
     fun save() {
         if (level != currentLevel) app.setLevel(targetLanguage, level)
         SpeechSpeed.set(context, speed)
         // Always written: the learner saw the switch and confirmed it, and an
         // unset choice would follow the NEW level's default instead.
         CoachMode.setChoice(context, coach)
-        com.roro.futurevoice.core.Telemetry.log("first_call_check", mapOf(
+        saved = true
+        // Event name kept: rows since 2026-10-06 are under it.
+        report("first_call_check", mapOf(
             "feeling" to (feeling?.name?.lowercase() ?: "none"),
             "level" to level.code, "speed" to speed.raw, "coach" to if (coach) "on" else "off",
         ))
@@ -150,11 +175,11 @@ fun FirstCallCheckSheet(
 
     ModalBottomSheet(
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        onDismissRequest = onDismiss,
+        onDismissRequest = { dismissUnsaved() },
     ) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
-                TextButton(onClick = onDismiss) { Text(stringResource(R.string.later)) }
+                TextButton(onClick = { dismissUnsaved() }) { Text(stringResource(R.string.later)) }
             }
             Column(
                 Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())

@@ -255,6 +255,7 @@ fun TalkScreen(
      * pitch: its dismissal (Save or Later) continues the exit.
      */
     var firstCallCheck by remember { mutableStateOf<(() -> Unit)?>(null) }
+    var firstCallTrigger by remember { mutableStateOf(FirstCallCheck.Trigger.SUMMARY) }
     /** A learner line was added in THIS call (iOS `learnerSpokeThisCall`,
      *  set where a user turn is appended) — a resumed talk's old lines don't
      *  count. */
@@ -267,6 +268,7 @@ fun TalkScreen(
             val spoke = spokeThisCall()
             if (preview == null && FirstCallCheck.shouldShow(appContext, spoke)) {
                 FirstCallCheck.markShown(appContext)
+                firstCallTrigger = FirstCallCheck.Trigger.SUMMARY
                 firstCallCheck = { pitchCore() }
                 return@launch
             }
@@ -295,6 +297,7 @@ fun TalkScreen(
             if (preview == null && FirstCallCheck.shouldShow(appContext, spoke)) {
                 FirstCallCheck.markShown(appContext)
                 kotlinx.coroutines.delay(350)
+                firstCallTrigger = FirstCallCheck.Trigger.CLOSE
                 firstCallCheck = { onExit() }
                 return@launch
             }
@@ -303,6 +306,7 @@ fun TalkScreen(
     }
     firstCallCheck?.let { next ->
         FirstCallCheckSheet(targetLanguage = targetLanguage, currentLevel = level,
+            trigger = firstCallTrigger,
             onDismiss = { firstCallCheck = null; next() })
     }
     feedback?.let { FeedbackSheet(it, onDismiss = { feedback = null; onExit() }) }
