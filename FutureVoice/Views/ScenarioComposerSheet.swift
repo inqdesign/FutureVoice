@@ -1508,14 +1508,16 @@ struct PartnerPickerSheet: View {
     @State private var playingRowId: UUID?
     @State private var pool: [PublicPersonaService.PublicPersona] = []
     @State private var poolLoading = true
+    /// "New person" from inside the picker — the scene usually IS about
+    /// someone not on file yet. Whoever the intake saves is picked.
+    @State private var showingNewPerson = false
+    @State private var idsBeforeNewPerson: Set<UUID> = []
 
     var body: some View {
         NavigationStack {
             List {
                 if host == .talk { futureSelfSection }
-                if !mine.isEmpty {
-                    peopleSection(Text("Your people"), mine)
-                }
+                peopleSection(Text("Your people"), mine, addPerson: true)
                 if !users.isEmpty || poolLoading {
                     peopleSection(Text("People"), users, loading: poolLoading && users.isEmpty)
                 }
@@ -1532,7 +1534,18 @@ struct PartnerPickerSheet: View {
                 poolLoading = false
             }
             .onDisappear { player.stop() }
+            .sheet(isPresented: $showingNewPerson, onDismiss: pickNewPerson) {
+                CounterpartVoiceIntakeView().environmentObject(appState)
+            }
         }
+    }
+
+    private func pickNewPerson() {
+        guard let made = appState.counterparts.first(where: {
+            $0.remoteId == nil && !idsBeforeNewPerson.contains($0.id)
+        }) else { return }
+        onPick(made)
+        dismiss()
     }
 
     // MARK: Groups
@@ -1597,9 +1610,19 @@ struct PartnerPickerSheet: View {
     }
 
     private func peopleSection(_ title: Text, _ people: [Counterpart],
-                               loading: Bool = false) -> some View {
+                               loading: Bool = false,
+                               addPerson: Bool = false) -> some View {
         Section {
             ForEach(people) { p in row(p) }
+            if addPerson {
+                Button {
+                    player.stop()
+                    idsBeforeNewPerson = Set(appState.counterparts.map(\.id))
+                    showingNewPerson = true
+                } label: {
+                    Label("New person", systemImage: "plus.circle.fill")
+                }
+            }
             if loading {
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.mini)

@@ -651,7 +651,10 @@ struct WatchTab: View {
         let haptic = UIImpactFeedbackGenerator(style: .medium)
         haptic.prepare()
         haptic.impactOccurred()
-        playVoicePreview(for: person)
+        // Silent for now (2026-10-17, founder): every bundled clip opens on
+        // the same "hi, good to see you", and hearing it from person after
+        // person reads strange. The bubble stays; the voice waits for a
+        // better idea. Re-enable with `playVoicePreview(for: person)`.
     }
 
     /// Their voice as their bubble rises. A person from the pool reads the

@@ -1,93 +1,64 @@
 import SwiftUI
 
-/// Guided new-person flow, one card per category — same skeleton as persona
-/// onboarding (`PersonaIntakeView`). Name is typed, the relationship is a
-/// chip pick, and the relationship then TAILORS the three narrative cards
-/// (a fellow Kita parent gets asked about the kids; a manager about 1:1s).
-/// Narrative cards are tap-first — common answers as chips (with free-text
-/// add) plus a speak-or-type field for what a chip can't say; picks and
-/// narration merge into one answer, parsed into a `Counterpart` draft with
-/// Gemini, and land in the form prefilled so the user can tweak + pick a
-/// voice. A straight-to-form escape stays for users
-/// who'd rather just type fields.
+/// New person, on ONE card (2026-10-16, founder: "간편하게 — 이게 너무
+/// 복잡해"). It was eight: name, relationship, how you talk, three
+/// relationship-tailored question cards, interests, style. Now the card asks
+/// only what a form can't guess — the face and name, who they are to you,
+/// and one free note (spoken or typed, any language) — and the parse fills
+/// the form, where everything else (how you two talk, what you call each
+/// other, topics, manner) is prefilled to confirm. A public figure still
+/// skips the note: the model knows them, the lookup names them.
 struct CounterpartVoiceIntakeView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
 
-    // who → relationship → how you talk → 3 tailored narrative cards →
-    // interests → style
-    private enum Step: Int, CaseIterable {
-        case who, relationship, speech, narrative1, narrative2, narrative3, interests, style
-    }
-
-    @State private var step: Step = .who
     /// Seeded from the app language on appear; "en" is only the value held
     /// for the instant before that runs.
     @State private var locale = "en"
     @State private var name = ""
     @State private var kind: RelationshipKind?
     @State private var kindDetail = ""
-    @State private var narrativeAnswers = ["", "", ""]
-    /// Chip picks per narrative card — joined into the answer alongside
-    /// whatever was spoken or typed.
-    @State private var narrativeChips: [[String]] = [[], [], []]
-    @State private var interests: [String] = []
-    @State private var styleTraits: [String] = []
-    @State private var styleNotes = ""
-    // How the two of them talk — the card right after the relationship,
-    // prefilled from it so it reads as a confirmation. `speechTouched` stops
-    // a later change of relationship from overwriting what they picked.
-    @State private var myRegister: SpeechRegister = .polite
-    @State private var theirRegister: SpeechRegister = .polite
-    @State private var iCallThem = ""
-    @State private var theyCallMe = ""
-    @State private var speechTouched = false
+    @State private var note = ""
     @State private var isParsing = false
     @State private var error: String?
     @State private var prefilled: Counterpart?
     @State private var showManualForm = false
-    /// The photo picked on the first card. The person does not exist yet,
-    /// so it rides along to the form and is saved with them.
+    /// The photo picked on the card. The person does not exist yet, so it
+    /// rides along to the form and is saved with them.
     @State private var photo: UIImage?
-
-    private static var stylePresets: [String] { [
-        explain("Direct"), explain("Playful"), explain("Sarcastic"), explain("Formal"), explain("Warm"),
-        explain("Talkative"), explain("Quiet"), explain("Blunt"), explain("Fast talker"), explain("Careful")
-    ] }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                ProgressView(value: Double((steps.firstIndex(of: step) ?? 0) + 1),
-                             total: Double(steps.count))
-                    .padding(.horizontal, 20)
-                    .padding(.top, 8)
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
-                        stepContent
+                    VStack(alignment: .leading, spacing: 24) {
+                        whoSection
+                        relationshipSection
+                        if kind != .publicFigure { noteSection }
                         if let e = error {
                             Label(e, systemImage: "exclamationmark.triangle")
                                 .font(.footnote)
                                 .foregroundStyle(.red)
                         }
+                        Button("Rather just fill in a form?") {
+                            showManualForm = true
+                        }
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 16)
                     .padding(.bottom, 24)
-                    .id(step)
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .trailing).combined(with: .opacity),
-                        removal: .opacity))
                 }
                 .scrollDismissesKeyboard(.interactively)
-                .animation(.snappy, value: step)
                 IntakeBottomBar(
-                    backVisible: step != .who,
-                    nextTitle: neighbor(1) == nil ? chrome("Continue") : chrome("Next"),
-                    nextEnabled: canAdvance,
+                    backVisible: false,
+                    nextTitle: chrome("Continue"),
+                    nextEnabled: canContinue,
                     isWorking: isParsing,
-                    onBack: { withAnimation { step = neighbor(-1) ?? .who } },
-                    onNext: advance
+                    onBack: {},
+                    onNext: { Task { await parseAndContinue() } }
                 )
             }
             .navigationTitle("Tell me about them")
@@ -108,85 +79,53 @@ struct CounterpartVoiceIntakeView: View {
                 CounterpartFormView(initial: nil, photo: photo)
                     .environmentObject(appState)
             }
-            .onChange(of: kind) { _, k in
-                guard !speechTouched else { return }
-                let d = Counterpart.defaultRegisters(forKind: k?.rawValue)
-                myRegister = d.mine
-                theirRegister = d.theirs
-            }
             .onAppear {
                 locale = SpeakOrTypeField.defaultLocale(
                     appLanguage: appState.nativeLanguage,
                     targetLanguage: appState.targetLanguage)
                 #if DEBUG
-                // Screenshot harness: `-intakeStep <n>` jumps to a card with stand-in data.
-                if let raw = UserDefaults.standard.string(forKey: "intakeStep"),
-                   let i = Int(raw), let s = Step(rawValue: i) {
+                // Screenshot harness: `-intakeStep <any>` fills the card with stand-in data.
+                if UserDefaults.standard.string(forKey: "intakeStep") != nil {
                     name = "Boram"
                     // `-intakeKind "Public figure"` picks another relationship.
                     kind = UserDefaults.standard.string(forKey: "intakeKind")
                         .flatMap(RelationshipKind.init(rawValue:)) ?? .fellowParent
-                    step = s
                 }
                 #endif
             }
         }
     }
 
-    // MARK: - Steps
+    // MARK: - Sections
 
-    @ViewBuilder
-    private var stepContent: some View {
-        switch step {
-        case .who:          whoStep
-        case .relationship: relationshipStep
-        case .speech:       speechStep
-        case .narrative1:   narrativeStep(0)
-        case .narrative2:   narrativeStep(1)
-        case .narrative3:   narrativeStep(2)
-        case .interests:    interestsStep
-        case .style:        styleStep
-        }
-    }
-
-    private var whoStep: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            IntakeStepHeader(
-                question: explain("Who are we adding?"),
-                detail: explain("Someone you actually talk to — dialogues get simulated with them, in their manner."))
-            // Their face, optional. Photo library, camera, or a file; saved
-            // small and square with the person, never sent anywhere.
-            VStack(spacing: 8) {
+    /// Same shape as the two sections under it: a label, then one grey
+    /// card — the face and the name on a single row, like Contacts.
+    private var whoSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(explain("Name"))
+                .font(.headline)
+            HStack(spacing: 14) {
+                // Their face, optional. Photo library, camera, or a file;
+                // saved small and square with the person, never sent anywhere.
                 PersonPhotoButton(onImage: { photo = $0 },
                                   onRemove: photo == nil ? nil : { photo = nil }) {
-                    PersonPhotoCircle(image: photo, name: name)
+                    PersonPhotoCircle(image: photo, name: name, size: 56)
                 }
                 .buttonStyle(.plain)
-                Text(explain("A photo is optional. Without one, their initials stand in."))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                TextField("Their name — as you call them", text: $name)
+                    .textInputAutocapitalization(.words)
+                    .font(.title3)
             }
-            .frame(maxWidth: .infinity)
-            TextField("Their name — as you call them", text: $name)
-                .textInputAutocapitalization(.words)
-                .font(.title3)
-                .padding(14)
-                .background(Color(.secondarySystemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            Button("Rather just fill in a form?") {
-                showManualForm = true
-            }
-            .font(.footnote)
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity)
+            .padding(14)
+            .background(Color(.secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
     }
 
-    private var relationshipStep: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            IntakeStepHeader(
-                question: explain("Who are they to you?"),
-                detail: explain("This shapes what I ask next — a manager and a best friend live in different worlds."))
+    private var relationshipSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(explain("Who are they to you?"))
+                .font(.headline)
             VStack(alignment: .leading, spacing: 10) {
                 let columns = [GridItem(.adaptive(minimum: 110), spacing: 8)]
                 LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
@@ -200,10 +139,8 @@ struct CounterpartVoiceIntakeView: View {
                     }
                 }
                 TextField("More precisely? — e.g. College roommate", text: $kindDetail)
-                    // Typing here with no chip picked used to do nothing at
-                    // all — Next waits for a chip, and "house doctor" fits
-                    // none. Writing the relationship IS answering, so it
-                    // lights Other, which the learner can still change.
+                    // Writing the relationship IS answering, so it lights
+                    // Other, which the learner can still change.
                     .onChange(of: kindDetail) { _, text in
                         if kind == nil, !text.trimmingCharacters(in: .whitespaces).isEmpty {
                             kind = .other
@@ -221,145 +158,27 @@ struct CounterpartVoiceIntakeView: View {
         }
     }
 
-    /// How the learner and this person speak to each other. The profile
-    /// cards say who the person IS; nothing said how the two of them TALK,
-    /// so a best friend was voiced in polite speech. Both directions, because
-    /// Korean and Japanese let them differ.
-    private var speechStep: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            IntakeStepHeader(
-                question: name.isEmpty
-                    ? explain("How do you two talk?")
-                    : explain("How do you and \(name) talk?"),
-                detail: explain("Calls and scenes speak this way. You can change it later."))
-            VStack(alignment: .leading, spacing: 18) {
-                registerPicker(title: explain("You talk to them"), selection: $myRegister)
-                registerPicker(title: name.isEmpty
-                                   ? explain("They talk to you")
-                                   : explain("\(name) talks to you"),
-                               selection: $theirRegister)
-            }
-            .padding(14)
-            .background(Color(.secondarySystemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            VStack(spacing: 0) {
-                TextField("What you call them (optional)", text: $iCallThem)
-                    .padding(14)
-                Divider().padding(.leading, 14)
-                TextField("What they call you (optional)", text: $theyCallMe)
-                    .padding(14)
-            }
-            .background(Color(.secondarySystemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-        }
-    }
-
-    private func registerPicker(title: String, selection: Binding<SpeechRegister>) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-            Picker(title, selection: Binding(
-                get: { selection.wrappedValue },
-                set: { speechTouched = true; selection.wrappedValue = $0 })) {
-                ForEach(SpeechRegister.allCases) { r in
-                    Text(r.title).tag(r)
-                }
-            }
-            .pickerStyle(.segmented)
-            if let term = selection.wrappedValue.term(in: appState.targetLanguage) {
-                Text(explain("In \(LanguageCatalog.name(appState.targetLanguage, in: appState.nativeLanguage)): \(term)"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    private func narrativeStep(_ index: Int) -> some View {
-        let card = (kind ?? .other).cards[index]
-        return VStack(alignment: .leading, spacing: 20) {
-            IntakeStepHeader(question: card.question, detail: card.detail)
-            // Tap-first: common answers as chips (+ free-text add); the
-            // speak/type field below carries anything a chip can't say.
-            ChipPickerField(
-                presets: card.chips,
-                selection: $narrativeChips[index])
+    /// The one free note — everything the old question cards asked, in the
+    /// learner's own words, optional.
+    private var noteSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(explain("What else should I know about them?"))
+                .font(.headline)
             SpeakOrTypeField(
-                text: $narrativeAnswers[index],
+                text: $note,
                 locale: $locale,
                 placeholder: explain("Anything more? Type — or tap the mic and talk."))
         }
     }
 
-    private var interestsStep: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            IntakeStepHeader(
-                question: name.isEmpty ? explain("What are they into?") : explain("What's \(name) into?"),
-                detail: explain("Tap what fits — these become what you two talk about."))
-            ChipPickerField(
-                presets: PersonaOnboardingView.interestPresets,
-                selection: $interests)
-        }
-    }
-
-    private var styleStep: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            IntakeStepHeader(
-                question: name.isEmpty ? explain("How do they talk?") : explain("How does \(name) talk?"),
-                detail: name.isEmpty
-                    ? explain("Tap what fits — the simulated person should sound like the real one.")
-                    : explain("Tap what fits — the simulated \(name) should sound like the real one."))
-            ChipPickerField(
-                presets: Self.stylePresets,
-                selection: $styleTraits,
-                allowsCustom: false)
-            TextField("In your own words (optional) — e.g. switches to English when excited",
-                      text: $styleNotes, axis: .vertical)
-                .lineLimit(2...4)
-                .padding(14)
-                .background(Color(.secondarySystemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-        }
-    }
-
     // MARK: - Flow
 
-    /// The steps this person actually has. A relationship can ask fewer
-    /// than three narrative questions (a public figure asks two), and a card
-    /// kept only to fill a slot is one the learner can't see the point of.
-    private var steps: [Step] {
-        // A public figure is known to the model: the name is the intake, and
-        // the grounded lookup fills the rest for the form to confirm.
-        if kind == .publicFigure { return [.who, .relationship] }
-        let cardCount = (kind ?? .other).cards.count
-        return Step.allCases.filter { s in
-            switch s {
-            case .narrative1: return cardCount > 0
-            case .narrative2: return cardCount > 1
-            case .narrative3: return cardCount > 2
-            default: return true
-            }
-        }
+    private var canContinue: Bool {
+        !name.trimmingCharacters(in: .whitespaces).isEmpty && kind != nil
     }
 
-    private func neighbor(_ offset: Int) -> Step? {
-        guard let i = steps.firstIndex(of: step), steps.indices.contains(i + offset) else { return nil }
-        return steps[i + offset]
-    }
-
-    private var canAdvance: Bool {
-        switch step {
-        case .who:          return !name.trimmingCharacters(in: .whitespaces).isEmpty
-        case .relationship: return kind != nil
-        default:            return true
-        }
-    }
-
-    private func advance() {
-        if neighbor(1) == nil {
-            Task { await parseAndContinue() }
-        } else {
-            withAnimation { step = neighbor(1) ?? .style }
-        }
+    private var relationshipLabel: String {
+        kindDetail.isEmpty ? (kind?.title ?? "") : kindDetail
     }
 
     private func parseAndContinue() async {
@@ -369,9 +188,8 @@ struct CounterpartVoiceIntakeView: View {
 
         // A public figure: the model already knows the person, so the only
         // question is WHICH one — look that up and hand the form an identity
-        // to confirm. Nothing else about them is written down. Not found
-        // still opens the form, where the name can be fixed and looked up
-        // again; that is the one place to confirm or correct.
+        // to confirm. Not found still opens nothing; the error says so and
+        // the name can be fixed here.
         if kind == .publicFigure {
             var draft = Counterpart.empty
             draft.name = name
@@ -390,44 +208,22 @@ struct CounterpartVoiceIntakeView: View {
             return
         }
 
-        let kindLabel = [kind?.rawValue ?? "", kindDetail]
-            .filter { !$0.isEmpty }.joined(separator: " — ")
-        let styleLine = (styleTraits.joined(separator: ", ")
-            + (styleNotes.isEmpty ? "" : ". \(styleNotes)"))
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        let cards = (kind ?? .other).cards
-
-        var sections = ["Their name: \(name)"]
-        if !kindLabel.isEmpty { sections.append("Relationship to me: \(kindLabel)") }
-        for (i, card) in cards.enumerated() {
-            // Chip picks + whatever was spoken/typed form ONE answer.
-            var parts: [String] = []
-            if !narrativeChips[i].isEmpty {
-                parts.append(narrativeChips[i].joined(separator: ", "))
-            }
-            let typed = narrativeAnswers[i].trimmingCharacters(in: .whitespacesAndNewlines)
-            if !typed.isEmpty { parts.append(typed) }
-            if !parts.isEmpty {
-                sections.append("Q: \(card.question)\nA: \(parts.joined(separator: ". "))")
-            }
-        }
-        if !interests.isEmpty {
-            sections.append("What they're into: \(interests.joined(separator: ", "))")
-        }
-        if !styleLine.isEmpty { sections.append("How they talk: \(styleLine)") }
-
-        if narrativeAnswers.allSatisfy({ $0.trimmingCharacters(in: .whitespaces).isEmpty })
-            && narrativeChips.allSatisfy(\.isEmpty) {
+        let typed = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !typed.isEmpty else {
             // Nothing to extract — skip the LLM and go straight to the form.
             var draft = Counterpart.empty
             draft.name = name
-            draft.relationship = kindDetail.isEmpty ? (kind?.title ?? "") : kindDetail
-            draft.conversationStyle = styleLine
-            draft.commonTopics = interests.joined(separator: ", ")
-            applySpeech(to: &draft)
+            draft.relationship = relationshipLabel
+            applyDefaults(to: &draft)
             prefilled = draft
             return
         }
+
+        let kindLabel = [kind?.rawValue ?? "", kindDetail]
+            .filter { !$0.isEmpty }.joined(separator: " — ")
+        var sections = ["Their name: \(name)"]
+        if !kindLabel.isEmpty { sections.append("Relationship to me: \(kindLabel)") }
+        sections.append("About them: \(typed)")
 
         do {
             var draft = try await CounterpartParser.parse(
@@ -436,39 +232,31 @@ struct CounterpartVoiceIntakeView: View {
                 nativeLanguage: appState.nativeLanguage)
             // What the user typed outright wins over the parse.
             draft.name = name
-            // The relationship card is REQUIRED, so the user always gave one —
-            // but the parser is told not to invent, and for someone who isn't
-            // in their life (a celebrity: "BTS 정국" + Other) it returns "".
-            // The form's Save needs a relationship, so an empty one left Save
-            // greyed out and the only exit threw the person away.
+            // The parser is told not to invent, so it can return no
+            // relationship; the form's Save needs one.
             if draft.relationship.trimmingCharacters(in: .whitespaces).isEmpty {
-                draft.relationship = kindDetail.isEmpty ? (kind?.title ?? "") : kindDetail
+                draft.relationship = relationshipLabel
             }
-            applySpeech(to: &draft)
+            applyDefaults(to: &draft)
             prefilled = draft
         } catch {
             self.error = explain("Couldn't parse: \(error.localizedDescription)")
         }
     }
 
-    /// What the speech card settled, onto the draft the form opens with.
-    private func applySpeech(to draft: inout Counterpart) {
+    /// The relationship's own speech levels, so the form opens on them as a
+    /// confirmation — the card no longer asks how the two of them talk.
+    private func applyDefaults(to draft: inout Counterpart) {
         draft.relationshipKind = kind?.rawValue
-        // Only what the learner actually saw and settled; a skipped card
-        // leaves the person on its cast's default (polite, never corrected).
-        guard steps.contains(.speech) else { return }
-        draft.myRegister = myRegister
-        draft.theirRegister = theirRegister
-        draft.iCallThem = iCallThem.trimmingCharacters(in: .whitespacesAndNewlines)
-        draft.theyCallMe = theyCallMe.trimmingCharacters(in: .whitespacesAndNewlines)
+        let d = Counterpart.defaultRegisters(forKind: kind?.rawValue)
+        draft.myRegister = d.mine
+        draft.theirRegister = d.theirs
     }
 }
 
-// MARK: - Relationship-tailored questions
+// MARK: - Relationship
 
-/// The relationship pick on card 2 — each kind supplies the three narrative
-/// cards that follow, so questions land in that relationship's world instead
-/// of staying generic. Adding a kind or reworking copy happens only here.
+/// The relationship chips on the card. `rawValue` is the stored key.
 private enum RelationshipKind: String, CaseIterable, Identifiable {
     case friend = "Friend"
     case family = "Family"
@@ -479,9 +267,8 @@ private enum RelationshipKind: String, CaseIterable, Identifiable {
     case neighbor = "Neighbor"
     case teacher = "Teacher"
     /// A singer, an actor, an athlete — someone not in the learner's life.
-    /// Its own kind, not "Other": the cards ask why this person and where
-    /// the learner imagines meeting them, and the parse runs grounded so the
-    /// profile is the public record rather than the learner's guess.
+    /// Its own kind, not "Other": the name is looked up, grounded, so the
+    /// person is the public record rather than the learner's guess.
     case publicFigure = "Public figure"
     case other = "Other"
 
@@ -504,162 +291,4 @@ private enum RelationshipKind: String, CaseIterable, Identifiable {
         }
     }
 
-    struct NarrativeCard {
-        let question: String
-        let detail: String
-        /// Tappable common answers for this question — picked ones join the
-        /// narrative answer verbatim; the free-text row adds custom ones.
-        let chips: [String]
-    }
-
-    private static var tapOrTalk: String { explain("Tap what fits, add your own — or just talk, your native language is fine.") }
-
-    var cards: [NarrativeCard] {
-        switch self {
-        case .friend: return [
-            .init(question: explain("How did you two meet?"),
-                  detail: Self.tapOrTalk,
-                  chips: [explain("From school"), explain("From work"), explain("Through friends"),
-                          explain("Online"), explain("Childhood friends"), explain("Met recently")]),
-            .init(question: explain("What's their life like right now?"),
-                  detail: "",
-                  chips: [explain("Works full-time"), explain("Studying"), explain("Recently moved"),
-                          explain("Raising kids"), explain("Lives nearby"), explain("Lives abroad")]),
-            .init(question: explain("What's just between you two?"),
-                  detail: explain("This is what makes the dialogues feel real."),
-                  chips: [explain("Inside jokes"), explain("We tease each other"), explain("Deep talks"),
-                          explain("Mostly banter"), explain("Shared hobby"),
-                          explain("They know everything about me")])
-        ]
-        case .family: return [
-            .init(question: explain("Who are they in your family?"),
-                  detail: Self.tapOrTalk,
-                  chips: [explain("Older sibling"), explain("Younger sibling"), explain("Parent"),
-                          explain("Grandparent"), explain("Cousin"), explain("In-law")]),
-            .init(question: explain("What's going on in their life?"),
-                  detail: "",
-                  chips: [explain("Busy with work"), explain("Retired"), explain("New hobby"),
-                          explain("Just moved"), explain("Raising kids"), explain("Health ups and downs")]),
-            .init(question: explain("What do you two usually talk about?"),
-                  detail: explain("This is what makes the dialogues feel real."),
-                  chips: [explain("Family news"), explain("Food and recipes"), explain("Health"),
-                          explain("Old memories"), explain("Money and plans"),
-                          explain("They nag me lovingly")])
-        ]
-        case .partner: return [
-            .init(question: explain("How did your story start?"),
-                  detail: Self.tapOrTalk,
-                  chips: [explain("Together for years"), explain("Newly dating"), explain("Met through friends"),
-                          explain("Met online"), explain("Living together"), explain("Long distance")]),
-            .init(question: explain("What fills your conversations these days?"),
-                  detail: "",
-                  chips: [explain("Daily logistics"), explain("Future plans"), explain("Food and cooking"),
-                          explain("Travel plans"), explain("Work stories"), explain("Our pets")]),
-            .init(question: explain("What's your dynamic like?"),
-                  detail: explain("This is what makes the dialogues feel real."),
-                  chips: [explain("Playful teasing"), explain("Pet names"), explain("Lots of inside jokes"),
-                          explain("Calm and cozy"), explain("We debate everything"),
-                          explain("They call me out")])
-        ]
-        case .coworker: return [
-            .init(question: explain("How do you work together?"),
-                  detail: Self.tapOrTalk,
-                  chips: [explain("Same team"), explain("Cross-team"), explain("We share projects"),
-                          explain("Desk neighbors"), explain("Worked together for years"),
-                          explain("They're new")]),
-            .init(question: explain("What do your work chats look like?"),
-                  detail: "",
-                  chips: [explain("Daily standups"), explain("Reviews"), explain("Lunch together"),
-                          explain("Coffee breaks"), explain("Mostly chat apps"), explain("Casual between us")]),
-            .init(question: explain("What's the context around you two?"),
-                  detail: explain("This is what makes the dialogues feel real."),
-                  chips: [explain("Deadline crunch"), explain("Office jokes"), explain("New project starting"),
-                          explain("We vent together"), explain("After-work drinks"),
-                          explain("Company changes going on")])
-        ]
-        case .manager: return [
-            .init(question: explain("What's your working relationship?"),
-                  detail: Self.tapOrTalk,
-                  chips: [explain("My direct manager"), explain("Weekly 1:1s"), explain("Manager for years"),
-                          explain("New to me"), explain("Skip-level"), explain("We talk daily")]),
-            .init(question: explain("What do you usually discuss?"),
-                  detail: "",
-                  chips: [explain("Project updates"), explain("Feedback"), explain("Career growth"),
-                          explain("Priorities"), explain("Pretty formal"), explain("Fairly casual")]),
-            .init(question: explain("What else should I know about them?"),
-                  detail: explain("This is what makes the dialogues feel real."),
-                  chips: [explain("Direct style"), explain("Supportive"), explain("Detail-oriented"),
-                          explain("Big-picture person"), explain("Busy calendar"),
-                          explain("Knows my life a bit")])
-        ]
-        case .fellowParent: return [
-            .init(question: explain("How are your families connected?"),
-                  detail: Self.tapOrTalk,
-                  chips: [explain("Same Kita"), explain("Same school"), explain("Same class"),
-                          explain("Playground friends"), explain("Kids are best friends"),
-                          explain("Known for years")]),
-            .init(question: explain("Where do you usually run into each other?"),
-                  detail: "",
-                  chips: [explain("Drop-off"), explain("Pick-up"), explain("Playdates"),
-                          explain("Birthday parties"), explain("School events"), explain("The playground")]),
-            .init(question: explain("What do you two talk about?"),
-                  detail: explain("This is what makes the dialogues feel real."),
-                  chips: [explain("The kids"), explain("School news"), explain("Logistics and schedules"),
-                          explain("Weekend plans"), explain("Parenting tips"), explain("Neighborhood news")])
-        ]
-        case .neighbor: return [
-            .init(question: explain("How did you become neighbors?"),
-                  detail: Self.tapOrTalk,
-                  chips: [explain("Next door"), explain("Same building"), explain("Same street"),
-                          explain("Neighbors for years"), explain("I moved in recently"),
-                          explain("They moved in recently")]),
-            .init(question: explain("Where do your chats happen?"),
-                  detail: "",
-                  chips: [explain("Hallway"), explain("Elevator"), explain("Garden or yard"),
-                          explain("On the street"), explain("Neighborhood events"),
-                          explain("Walking the dog")]),
-            .init(question: explain("What do you usually talk about?"),
-                  detail: explain("This is what makes the dialogues feel real."),
-                  chips: [explain("Neighborhood news"), explain("The weather"), explain("Their family"),
-                          explain("Pets"), explain("Home projects"), explain("We trade favors")])
-        ]
-        case .teacher: return [
-            .init(question: explain("Whose teacher — and of what?"),
-                  detail: Self.tapOrTalk,
-                  chips: [explain("My teacher"), explain("My kid's teacher"), explain("Language teacher"),
-                          explain("Music teacher"), explain("Sports coach"), explain("Known for a while")]),
-            .init(question: explain("When do you talk with them?"),
-                  detail: "",
-                  chips: [explain("In class"), explain("Office hours"), explain("Parent meetings"),
-                          explain("Over messages"), explain("Pretty formal"), explain("Fairly relaxed")]),
-            .init(question: explain("What else should I know about them?"),
-                  detail: explain("This is what makes the dialogues feel real."),
-                  chips: [explain("Strict but fair"), explain("Encouraging"), explain("Patient"),
-                          explain("Talks fast"), explain("Recent school events"),
-                          explain("I want to ask more questions")])
-        ]
-        // No cards: the model already knows a public figure, so their name
-        // is the whole intake (see `steps`). Cards asking where you'd meet
-        // them, what you'd say, which side of them you follow and what you'd
-        // talk about were each tried and cut on 2026-09-28 — every one either
-        // shrank the person to a scene or asked the learner to do the
-        // model's job.
-        case .publicFigure: return []
-        case .other: return [
-            .init(question: explain("How do you know each other?"),
-                  detail: Self.tapOrTalk,
-                  chips: [explain("Through friends"), explain("From work"), explain("From a hobby"),
-                          explain("From the neighborhood"), explain("Online"), explain("Met recently")]),
-            .init(question: explain("What's their life like?"),
-                  detail: "",
-                  chips: [explain("Works full-time"), explain("Studying"), explain("Raising kids"),
-                          explain("Lives nearby"), explain("Lives abroad"), explain("Busy lately")]),
-            .init(question: explain("What's the context between you?"),
-                  detail: explain("This is what makes the dialogues feel real."),
-                  chips: [explain("Recurring topics"), explain("Inside jokes"), explain("We meet regularly"),
-                          explain("Mostly texting"), explain("They know my life well"),
-                          explain("Still getting to know each other")])
-        ]
-        }
-    }
 }
