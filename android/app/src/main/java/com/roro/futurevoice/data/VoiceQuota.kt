@@ -11,7 +11,7 @@ import kotlinx.serialization.json.jsonObject
  *
  * The server answers `voice_quota_full` (a first voice can't be made: the
  * month is spent) or `voice_quota_reserved` (what is left is kept for first
- * voices), both with `available_at` = when ElevenLabs resets the allowance.
+ * voices), both with `available_at` = when the provider resets the allowance.
  * The date moves every month, so it is always the server's, never a constant.
  */
 object VoiceQuota {

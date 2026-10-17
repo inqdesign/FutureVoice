@@ -30,7 +30,7 @@ class VoiceQuotaTest {
     }
 
     @Test fun otherFailuresAreNotQuotaAnswers() {
-        assertNull(VoiceQuota.availableAt("""{"error":"elevenlabs upstream error"}"""))
+        assertNull(VoiceQuota.availableAt("""{"error":"upstream error"}"""))
         assertNull(VoiceQuota.availableAt("voice_limit_reached"))
     }
 

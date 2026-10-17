@@ -187,7 +187,7 @@ class AuthRepository {
 
 @Serializable
 data class VoiceCloneRow(
-    @SerialName("elevenlabs_voice_id") val elevenlabsVoiceId: String,
+    @SerialName("voice_id") val voiceId: String,
 )
 
 @Serializable
@@ -203,7 +203,7 @@ data class ProfileRow(
 /**
  * The magic moment: a user who cloned on iPhone signs in here and the FIRST
  * thing they hear is their own voice. Restore, never re-clone — the DB enforces
- * one active clone per user and ElevenLabs voices are language-agnostic.
+ * one active clone per user and a voice is language-agnostic.
  */
 class VoiceCloneRepository {
 
@@ -217,7 +217,7 @@ class VoiceCloneRepository {
                 limit(1)
             }
             .decodeSingleOrNull<VoiceCloneRow>()
-            ?.elevenlabsVoiceId
+            ?.voiceId
 
     /**
      * `parked_at` of this voice's row (see [VoiceParking]) — in a query of its
@@ -229,7 +229,7 @@ class VoiceCloneRepository {
     suspend fun parkedAt(voiceId: String): ParkedRow? =
         Supa.client.from("voice_clones")
             .select(io.github.jan.supabase.postgrest.query.Columns.list("parked_at")) {
-                filter { eq("elevenlabs_voice_id", voiceId) }
+                filter { eq("voice_id", voiceId) }
                 limit(1)
             }
             .decodeSingleOrNull<ParkedRow>()

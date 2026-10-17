@@ -14,7 +14,7 @@ import java.io.File
 import java.util.UUID
 
 /**
- * `elevenlabs-voice-clone` — multipart upload, contract in `edge-api.md`.
+ * `voice-clone` — multipart upload, contract in `edge-api.md`.
  * The first clone (and 24 h of onboarding retakes) is free server-side.
  * The take is levelled and cleaned on the phone first ([VoiceDenoiser]) —
  * every clone upload walks through here, so every path gets it, as every iOS
@@ -55,7 +55,7 @@ class VoiceCloneClient(private val auth: AuthRepository) {
             .addFormDataPart("files", sample.name, sample.asRequestBody("audio/wav".toMediaType()))
             .build()
         val request = Request.Builder()
-            .url(Config.functionUrl("elevenlabs-voice-clone"))
+            .url(Config.functionUrl("voice-clone"))
             .header("Authorization", "Bearer ${auth.accessToken()}")
             .header("X-Idempotency-Key", UUID.randomUUID().toString())
             .post(body)
@@ -83,14 +83,14 @@ class VoiceCloneClient(private val auth: AuthRepository) {
         }
     }
 
-    /** `elevenlabs-voice-rename` (iOS `VoiceClient.renameVoice`). */
+    /** `voice-rename` (iOS `VoiceClient.renameVoice`). */
     suspend fun renameVoice(voiceId: String, name: String) = withContext(Dispatchers.IO) {
         val body = kotlinx.serialization.json.buildJsonObject {
             put("voice_id", kotlinx.serialization.json.JsonPrimitive(voiceId))
             put("name", kotlinx.serialization.json.JsonPrimitive(name))
         }.toString()
         val request = Request.Builder()
-            .url(Config.functionUrl("elevenlabs-voice-rename"))
+            .url(Config.functionUrl("voice-rename"))
             .header("Authorization", "Bearer ${auth.accessToken()}")
             .header("X-Idempotency-Key", UUID.randomUUID().toString())
             .post(body.toRequestBody("application/json".toMediaType()))

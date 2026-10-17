@@ -14,7 +14,7 @@ import kotlin.math.sqrt
  * (`EXTRA_AUDIO_SOURCE`) and returns its WORDS, but the `RecognitionPart`s
  * that should carry times come back empty (measured 2026-10-02, plan 2.9).
  * What the app does have is the line the learner was copying, with its word
- * onsets MEASURED by ElevenLabs at synthesis. A shadow take is the same
+ * onsets MEASURED by the synthesizer. A shadow take is the same
  * sentence said again, so the take is aligned to the model line ACOUSTICALLY
  * — dynamic time warping over cepstral features of the speech frames of
  * both — and each target word's measured onset is carried through the warp

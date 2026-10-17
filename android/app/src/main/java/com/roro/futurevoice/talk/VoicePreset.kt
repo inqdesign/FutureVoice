@@ -12,13 +12,13 @@ import com.roro.futurevoice.data.Counterpart
  * and stranger was an English speaker reading Korean. So what is STORED (on a
  * Counterpart, a Scenario, a public persona row, a built-in person) stays the
  * English id, and the voice that actually speaks is resolved from it at the
- * network edge, for the language being spoken: the ElevenLabs request, the
+ * network edge, for the language being spoken: the TTS request, the
  * gateway `start`, and the phrase-audio cache key. Nothing stored changes, and
  * a person — shared by every target language — speaks natively in each one.
  *
  * Since 2026-10-12 (iOS `e9fcb2d`) every slot speaks from Cartesia's library
  * in en/de/ko/ja — a native speaker of each. Every id here is in both server
- * allowlists (gateway `PRESET_VOICE_IDS`, `elevenlabs-tts`) — already deployed.
+ * allowlists (gateway `PRESET_VOICE_IDS`, `tts`) — already deployed.
  */
 object VoicePreset {
 
@@ -29,8 +29,8 @@ object VoicePreset {
 
     private val voicedBySlot: Map<String, Map<String, String>> = run {
         // Every selectable target language speaks from Cartesia's library
-        // since 2026-10-12 (iOS `e9fcb2d`; the ElevenLabs voices above are
-        // now only the SLOT ids stored on people and scenarios). English
+        // since 2026-10-12 (iOS `e9fcb2d`; the earlier provider's voices above
+        // are now only the SLOT ids stored on people and scenarios). English
         // keeps the slots' American/British split.
         val english = mapOf(
             PAIGE to "999df508-4de5-40a7-8bd3-8c12f678c284",  // Paige → Layla (F, US)

@@ -66,7 +66,7 @@ class TakeAlignerTest {
 }
 
 /**
- * The same bar on CONNECTED speech: every recording here is ElevenLabs
+ * The same bar on CONNECTED speech: every recording here is synthesized
  * (the synthesizer the model line comes from), so word onsets are its own
  * measured alignment. The reference is one preset voice at speed 1.0; each
  * take is another voice (or the same one slowed to 0.8/0.9), with two
@@ -102,7 +102,7 @@ class TakeAlignerConnectedSpeechTest {
         errs.sort()
         println("connected: measured $measured/$total, on the beat $within/$measured, " +
             "median ${errs.getOrNull(errs.size / 2)} ms, p90 ${errs.getOrNull(errs.size * 9 / 10)} ms")
-        // The truth here is ElevenLabs' own alignment, which is itself off by
+        // The truth here is the synthesizer's own alignment, which is itself off by
         // 100–200 ms on some words (a first word always "starts" at 0, before
         // the voice does), so the bar is lower than on the built fixtures.
         assertTrue(measured * 2 >= total)

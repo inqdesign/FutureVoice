@@ -206,7 +206,7 @@ class AudioOnsetTest {
     }
 }
 
-/** ElevenLabs alignment → words (iOS `JapaneseShadowTimingTests`' first half). */
+/** TTS character alignment → words (iOS `JapaneseShadowTimingTests`' first half). */
 class TtsAlignmentTest {
     @Test fun spacedCharactersGroupOnSpaces() {
         val text = "I'm here now"

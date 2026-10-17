@@ -38,7 +38,7 @@ data class Counterpart(
     val conversationStyle: String = "",
     val commonTopics: String = "",
 
-    /** ElevenLabs voice id. Never a clone — this is someone else. */
+    /** Preset voice id. Never a clone — this is someone else. */
     val voicePresetId: String = "",
 
     val freeNotes: String = "",

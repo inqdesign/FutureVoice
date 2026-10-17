@@ -10,7 +10,7 @@ import kotlin.math.sqrt
  * them (iOS `PacedSpeech`, `9f81572`, 2026-09-30).
  *
  * Reported: "the fluent self doesn't stop between sentences, especially in
- * Korean". Measured on the founder's clone in ko/en/ja/de: ElevenLabs puts
+ * Korean". Measured on the founder's clone in ko/en/ja/de: the synthesizer put
  * 0.08–0.29 s between sentences it is given in one text, against the
  * 0.5–0.8 s people leave. The live call was fixed in the gateway by sending
  * one sentence per generation; this is the same result for the lines the APP

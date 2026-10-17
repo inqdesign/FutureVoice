@@ -5,7 +5,7 @@ import androidx.annotation.StringRes
 import com.roro.futurevoice.R
 
 /**
- * How fast the fluent self speaks — ElevenLabs `voice_settings.speed`, sent
+ * How fast the fluent self speaks — the TTS `speed` setting, sent
  * with every synthesis (iOS `SpeechSpeed`, 2026-09-23). SYNTHESIS, not
  * playback: the pitch is untouched, so a slowed line still sounds like the
  * learner, and word timings come back measured against the audio made.

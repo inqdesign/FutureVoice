@@ -658,7 +658,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                 // The greeting is played from the phone when it is already
                 // there. The Talk tab synthesized every opener into the phrase
                 // cache when it opened, and asking the gateway to say a line
-                // the phone is holding costs a whole ElevenLabs round trip
+                // the phone is holding costs a whole TTS round trip
                 // before the first word (iOS `26a246c`).
                 //
                 // The text still goes up — as HISTORY, so the gateway records

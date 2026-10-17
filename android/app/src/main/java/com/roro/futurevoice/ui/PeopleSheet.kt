@@ -598,7 +598,7 @@ internal fun VoicePresetPicker(
 
 /** One neutral greeting per target language — phrasings that avoid
  *  speaker-gender agreement so any voice can say them (iOS `previewLine`).
- *  The `<break>` is ElevenLabs' pause tag: measured on the Korean line, the
+ *  The `<break>` is a TTS pause tag: measured on the Korean line, the
  *  period after 반가워요 gave NO pause at all. It is spoken as silence, never
  *  read out; this line is audio only, never drawn as text. */
 internal fun voicePreviewLine(code: String): String = when (code.substringBefore("-")) {

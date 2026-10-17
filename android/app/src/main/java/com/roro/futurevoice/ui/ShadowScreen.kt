@@ -142,7 +142,7 @@ import kotlin.math.abs
  * to that diff — AFTER the score is up. Words are tappable: two taps pick a
  * phrase; the trimmer below loops it.
  *
- * Where the timings come from: the model line's from ElevenLabs' alignment,
+ * Where the timings come from: the model line's from the synthesizer's alignment,
  * kept from the one synthesis that billed it (`PhraseAudioStore`); a line
  * cached without them is estimated, and an estimate is never graded. The
  * learner's from aligning the take to the model line (`TakeAligner`) — iOS

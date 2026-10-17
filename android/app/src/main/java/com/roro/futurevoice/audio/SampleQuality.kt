@@ -14,7 +14,7 @@ import kotlin.math.sqrt
 /**
  * On-device quality check for a recorded clone sample — port of
  * `AudioSampleQuality.swift`, same thresholds: the few things that actually
- * wreck an ElevenLabs clone (too short, clipping, a noisy room, a
+ * wreck a voice clone (too short, clipping, a noisy room, a
  * near-silent take). Frame-RMS percentiles approximate SNR (p90 − p10).
  */
 data class SampleQuality(

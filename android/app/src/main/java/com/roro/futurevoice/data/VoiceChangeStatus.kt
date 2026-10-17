@@ -18,7 +18,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
  * One voice change per 30 days after the first voice (iOS
  * `VoiceChangeStatus`, 2026-10-09).
  *
- * Every voice the account adds costs one of ElevenLabs' monthly add/edits,
+ * Every voice the account added cost one of the old provider's monthly add/edits,
  * and deleting gives nothing back. So a re-record, a saved accent, "no
  * accent" or "regenerate from saved recording" is ONE change, and there is
  * one per rolling 30 days. Listening to takes is free. The server is the

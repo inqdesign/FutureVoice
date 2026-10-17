@@ -13,12 +13,11 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
 /**
- * Speech in the learner's voice (Cartesia since 2026-10-15) via the
- * `elevenlabs-tts` Edge Function — the endpoint keeps its old name because
- * shipped builds call it. The app never holds a provider key; voice settings
+ * Speech in the learner's voice (Cartesia) via the `tts` Edge Function.
+ * The app never holds a provider key; voice settings
  * are fixed server-side (iOS `VoiceClient`).
  *
- * Wire contract: `docs/contracts/edge-api.md` §POST /elevenlabs-tts.
+ * Wire contract: `docs/contracts/edge-api.md` §POST /tts.
  */
 class VoiceClient(private val auth: AuthRepository) {
 
@@ -310,7 +309,7 @@ class VoiceClient(private val auth: AuthRepository) {
             voiceover_key = voiceoverKey,
         )
         val builder = Request.Builder()
-            .url(Config.functionUrl("elevenlabs-tts"))
+            .url(Config.functionUrl("tts"))
             .header("Authorization", "Bearer ${auth.accessToken()}")
             .header(
                 "X-Idempotency-Key",
@@ -402,7 +401,7 @@ class VoiceRemixClient(private val auth: com.roro.futurevoice.data.AuthRepositor
 
     private suspend fun post(json: String): String {
         val req = okhttp3.Request.Builder()
-            .url(com.roro.futurevoice.core.Config.functionUrl("elevenlabs-voice-remix"))
+            .url(com.roro.futurevoice.core.Config.functionUrl("voice-remix"))
             .header("Authorization", "Bearer ${auth.accessToken()}")
             .header("X-Idempotency-Key", java.util.UUID.randomUUID().toString())
             .post(json.toRequestBody("application/json".toMediaType()))

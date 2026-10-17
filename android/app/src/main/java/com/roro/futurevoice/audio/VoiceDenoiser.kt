@@ -13,8 +13,8 @@ import kotlin.math.sin
  * Cleans the voice-clone recording on the phone before it is uploaded
  * (iOS `VoiceDenoiser`, 2026-10-15).
  *
- * The server used to do this with ElevenLabs Audio Isolation. ElevenLabs is
- * gone; Cartesia has no denoiser. The founder compared candidates by ear on
+ * The server used to do this with the previous provider's audio isolation;
+ * Cartesia has no denoiser. The founder compared candidates by ear on
  * his own take and picked DeepFilterNet3 capped at 30 dB: the cap leaves a
  * little of the room in and keeps the texture of the voice, which is what the
  * clone is judged on.

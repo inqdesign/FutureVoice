@@ -37,7 +37,7 @@ import java.util.Date
  *
  * GDPR Art. 7(3) requires withdrawal to be as easy as giving, and the only
  * honest withdrawal for a voice model is deleting it — so that button does
- * exactly that, upstream at ElevenLabs included.
+ * exactly that, upstream at the voice provider included.
  */
 @Composable
 fun PrivacyScreen(voiceId: String?, onVoiceDeleted: () -> Unit, onBack: () -> Unit) {

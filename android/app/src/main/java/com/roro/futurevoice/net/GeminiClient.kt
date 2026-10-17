@@ -134,7 +134,7 @@ class GeminiClient(private val auth: AuthRepository) {
      * TCP+TLS handshake (and a fresh cached auth token) happens BEFORE the turn
      * request instead of on its critical path — on a cold cellular radio that
      * handshake alone is 200–600ms. The OPTIONS preflight needs no auth and
-     * bills nothing; ElevenLabs shares the same host, so one warm-up covers both.
+     * bills nothing; the TTS function shares the same host, so one warm-up covers both.
      */
     suspend fun preconnect() = withContext(Dispatchers.IO) {
         runCatching {

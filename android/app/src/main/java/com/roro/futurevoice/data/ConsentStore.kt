@@ -15,7 +15,7 @@ import java.io.File
  *
  * Two SEPARATE facts, deliberately not collapsed into one flag:
  *
- * - **Age.** ElevenLabs — the sub-processor that builds the voice model —
+ * - **Age.** The sub-processor that builds the voice model
  *   forbids its Services to anyone under 13, and to 13–17-year-olds without a
  *   guardian's consent, and separately forbids passing them on under less
  *   restrictive terms. There is no in-app way to verify a real parent, so the

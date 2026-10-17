@@ -25,7 +25,7 @@ import java.io.File
 object AccountEraser {
 
     /**
-     * Delete the voice model here and at ElevenLabs.
+     * Delete the voice model here and at the voice provider.
      *
      * A 403 ("not owned") or 404 means it is already gone upstream — that is a
      * success, not a failure, and retrying it forever would strand the
@@ -37,7 +37,7 @@ object AccountEraser {
         // it for every learner whose scenes and strangers speak with it.
         if (com.roro.futurevoice.talk.VoicePreset.isPreset(voiceId)) return@withContext true
         val req = Request.Builder()
-            .url(Config.functionUrl("elevenlabs-voice-delete"))
+            .url(Config.functionUrl("voice-delete"))
             .header("Authorization", "Bearer ${AuthRepository().accessToken()}")
             .post("""{"voice_id":"$voiceId"}""".toRequestBody("application/json".toMediaType()))
             .build()

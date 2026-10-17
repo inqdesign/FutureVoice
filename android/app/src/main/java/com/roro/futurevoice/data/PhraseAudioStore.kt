@@ -10,7 +10,7 @@ import java.security.MessageDigest
  * key, so a backup written on either platform resolves on the other.
  *
  * It exists for money, not speed. Without it every play of the same word
- * card, drill, shadow target or library line re-bills ElevenLabs for audio
+ * card, drill, shadow target or library line re-bills the voice provider for audio
  * the learner already owns — which is exactly what Android was doing on
  * every one of those surfaces.
  *
@@ -113,7 +113,7 @@ class PhraseAudioStore private constructor(context: Context) {
         candidates(voiceId, allowLineage, text).firstOrNull { it.exists() }
 
     /**
-     * The word timings saved with this line's audio — ElevenLabs' measured
+     * The word timings saved with this line's audio — the synthesizer's measured
      * alignment, kept from the one synthesis that ever bills it (iOS
      * `<key>.timings.json`, same JSON, so a backup reads on either platform).
      * Null when the line was cached without them.

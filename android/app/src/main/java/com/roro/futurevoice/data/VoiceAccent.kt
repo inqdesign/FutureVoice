@@ -4,8 +4,8 @@ package com.roro.futurevoice.data
 // Source: FutureVoice/Services/VoiceAccent.swift
 
 /**
- * A selectable output accent for the cloned voice, applied AFTER cloning via
- * ElevenLabs voice remixing (`elevenlabs-voice-remix`).
+ * A selectable output accent for the cloned voice, applied AFTER cloning by
+ * the `voice-remix` edge function (a Cartesia accent on the same voice).
  *
  * Exists because a clone recorded in the learner's NATIVE language carries no
  * target-language accent information at all — the TTS model fills that gap
@@ -61,7 +61,7 @@ object VoiceAccentCatalog {
     )
 
     /**
-     * The line the remix previews speak (ElevenLabs wants 100–1000 chars).
+     * The line the accent previews speak (100–1000 chars).
      * Written to surface accent-revealing sounds — for English: t-flapping
      * ("water", "better"), the bath/trap split ("can't", "half past"),
      * rhoticity ("park", "there"), and a tag question's intonation.

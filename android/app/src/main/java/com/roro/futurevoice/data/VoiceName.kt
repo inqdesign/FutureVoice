@@ -3,7 +3,7 @@ package com.roro.futurevoice.data
 import android.content.Context
 
 /**
- * What the clone is called, here and on ElevenLabs (iOS `voiceName` /
+ * What the clone is called, here and on the voice provider (iOS `voiceName` /
  * `voiceDisplayName` / `defaultVoiceName`, same defaults keys).
  *
  * The learner's own name if they set one, otherwise "Future <persona name>",

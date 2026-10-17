@@ -11,7 +11,7 @@ plugins {
  * Secrets come from `local.properties` (gitignored) — the Android mirror of
  * iOS's `Config/FutureVoice.xcconfig`. Only the Supabase URL + anon key are
  * needed: every provider call goes through an Edge Function, so the app never
- * holds a Google or ElevenLabs key. See `docs/contracts/edge-api.md`.
+ * holds a Google or Cartesia key. See `docs/contracts/edge-api.md`.
  */
 val localProps = Properties().apply {
     val f = rootProject.file("local.properties")

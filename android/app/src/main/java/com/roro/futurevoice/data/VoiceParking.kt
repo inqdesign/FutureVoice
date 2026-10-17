@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * A voice nobody is paying for is PARKED (iOS `VoiceParking`, 2026-09-28):
- * the server deletes it from ElevenLabs after 7 days without a plan and
+ * the server deleted it upstream after 7 days without a plan and
  * without the app being opened (`park-idle-voices`) and stamps `parked_at`
  * on its `voice_clones` row — which stays `is_active = true`, so an old build
  * that finds no active row doesn't re-record a free clone and take the slot
