@@ -1,5 +1,6 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.foundation.Canvas
 import com.roro.futurevoice.ui.brand.ContinuousShape
 import androidx.compose.foundation.border
@@ -432,49 +433,20 @@ fun RootScreen() {
     }
     var editProfile by remember { mutableStateOf(false) }
     var editProfileStep by remember { mutableStateOf(0) }
+    /** Whether the routine (daily call, study time) has been set up. The key
+     *  is the daily-call screen's, which the routine builder replaced (iOS
+     *  2026-10-18), so every install that saw that screen is past this one.
+     *  Onboarding shows no paywall: the plans are asked at the first paid tap. */
     var dailyCallOnboarded by remember {
         mutableStateOf(OnboardingFlags.seen(context, OnboardingFlags.DAILY_CALL))
     }
-    var weeklyRhythmOnboarded by remember {
-        mutableStateOf(OnboardingFlags.seen(context, OnboardingFlags.WEEKLY_RHYTHM))
-    }
-    var onboardingPaywallSeen by remember {
-        mutableStateOf(OnboardingFlags.seen(context, OnboardingFlags.PAYWALL))
-    }
-    // Null while unknown — the step must not flash for an account that turns
-    // out to have nothing to buy, so it waits for the answer rather than
-    // guessing at one.
-    var onboardingNeedsPlan by remember { mutableStateOf<Boolean?>(null) }
-    LaunchedEffect(state.voiceId, dailyCallOnboarded) {
-        if (state.voiceId != null && !onboardingPaywallSeen && onboardingNeedsPlan == null) {
-            // No session is "couldn't ask", never "no plan" (iOS
-            // `BillingGate.load`): a signed-out read answers with an empty
-            // account, which would pitch someone we merely failed to identify.
-            val auth = AuthRepository()
-            val account = if (auth.userId == null) null
-                else runCatching { AccountStatus.load(auth) }.getOrNull()
-                    ?.also { BillingGate.remember(it) }
-            // Couldn't ask, or nothing to sell — step aside for good. A failed
-            // lookup must not park the learner on a paywall forever; the
-            // first paid tap asks the server again anyway.
-            onboardingNeedsPlan = account?.needsSubscription ?: false
-            if (onboardingNeedsPlan == false) {
-                OnboardingFlags.markSeen(context, OnboardingFlags.PAYWALL)
-                onboardingPaywallSeen = true
-                // The skip is silent on screen, so it has to be loud here: a
-                // free-call grant makes EVERY new account take this branch.
-                val reason = when {
-                    account == null -> "lookup_failed"
-                    account.isEntitled -> "entitled"
-                    account.unlimited -> "unlimited"
-                    account.secondsBalance > 0 -> "balance"
-                    else -> "unknown"
-                }
-                com.roro.futurevoice.core.Analytics.capture("onboarding_paywall_skipped",
-                    mapOf("reason" to reason, "balance_s" to (account?.secondsBalance ?: -1).toString()))
-            }
-        }
-    }
+    /** The routine builder is over the tabs (iOS `holdingForRoutine`). */
+    val buildingRoutine = state.voiceId != null && !dailyCallOnboarded
+    val routineHint by RoutineHandoff.showHint.collectAsStateWithLifecycle()
+    /** The first-run sheets (age check, Talk's guide, the free minutes) wait
+     *  until the builder has gone into the Activity chip and that chip's hint
+     *  is closed (iOS `firstRunHeld`). */
+    var firstRunHeld by remember { mutableStateOf(false) }
     var welcomePreview by remember { mutableStateOf(false) }
     /** iOS `showingAgeCheck` — see [AgeCheckSheet]. */
     var showAgeCheck by remember { mutableStateOf(false) }
@@ -499,9 +471,7 @@ fun RootScreen() {
     //   3. else the welcome check now.
     var welcomeAfterIntro by remember { mutableStateOf(false) }
     var checkWelcome by remember { mutableStateOf(false) }
-    fun arriveAtTabs() {
-        if (tabsArrived) return
-        tabsArrived = true
+    fun offerFirstRunSheets() {
         when (TabArrival.decide(
             hasVoice = state.voiceId != null,
             ageOnRecord = com.roro.futurevoice.data.ConsentStore.ageConfirmedAt(context) != null,
@@ -514,6 +484,20 @@ fun RootScreen() {
             TabArrival.GUIDE_THEN_WELCOME -> welcomeAfterIntro = true
             TabArrival.WELCOME -> checkWelcome = true
         }
+    }
+    fun arriveAtTabs() {
+        if (tabsArrived) return
+        tabsArrived = true
+        if (buildingRoutine) firstRunHeld = true else offerFirstRunSheets()
+    }
+    // The chip's hint has closed (on its own or by a tap): what arrival held.
+    var hintWasUp by remember { mutableStateOf(false) }
+    LaunchedEffect(routineHint) {
+        if (routineHint) { hintWasUp = true; return@LaunchedEffect }
+        if (!hintWasUp || !firstRunHeld) return@LaunchedEffect
+        hintWasUp = false
+        firstRunHeld = false
+        offerFirstRunSheets()
     }
     // The held welcome follows the guide off screen (iOS `pageIntro`'s
     // onDismiss / `releaseHeldWelcome`): released once no guide is up and
@@ -813,28 +797,6 @@ fun RootScreen() {
             standInVoiceId = if (state.voiceIsStandIn) state.voiceId else null,
             onChooseStandIn = app::chooseStandInVoice,
         )
-        // The week's rhythm before the day's: when the week is looked back on
-        // and tested, then (next screen) when the daily call rings. Gated on
-        // the daily call too, so an existing install never sees it.
-        }}
-        state.voiceId != null && !dailyCallOnboarded && !weeklyRhythmOnboarded -> {{
-            WeeklyRhythmOnboardingScreen(context) { weeklyRhythmOnboarded = true }
-        // The clone's first real job, introduced right after it exists — so
-        // it reads as a promise rather than a permissions request.
-        }}
-        state.voiceId != null && !dailyCallOnboarded -> {{
-            DailyCallOnboardingScreen(context) { dailyCallOnboarded = true }
-        // The plans, offered ONCE at the end — LAST, and only for an account
-        // with something to buy. While the answer is unknown: the same blank
-        // hold, never a flash of a pitch (or of the tabs) at someone who
-        // isn't going to be shown one.
-        }}
-        state.voiceId != null && !onboardingPaywallSeen && onboardingNeedsPlan != false -> {{
-            if (onboardingNeedsPlan == true) PaywallScreen(onDismiss = {
-                OnboardingFlags.markSeen(context, OnboardingFlags.PAYWALL)
-                onboardingPaywallSeen = true
-            }) else Loading()
-
         }}
         else -> null
     }
@@ -1392,6 +1354,11 @@ fun RootScreen() {
           LaunchedEffect(state.voiceId, state.restoringVoice) {
               if (state.voiceId != null && !state.restoringVoice) arriveAtTabs()
           }
+          // The routine builder sits over the Talk tab, because that is where
+          // it goes when done: into the Activity chip in the header (iOS
+          // `RootView.tabs(buildingRoutine:)`).
+          LaunchedEffect(buildingRoutine) { if (buildingRoutine) tab = HomeTab.TALK }
+          Box(Modifier.fillMaxSize()) {
           IosSheetHost(
             presented = showMe,
             onDismiss = { dismissMe() },
@@ -1469,10 +1436,16 @@ fun RootScreen() {
             // A tab's first-visit guide never rises over a sheet the root owns.
             guideBlocked = paywalled || showIntroPreview || state.levelUp != null ||
                 referralJoin != null || welcomeMinutes != null || updatePending != null || showAgeCheck ||
-                showWhatsNew,
+                showWhatsNew || buildingRoutine || firstRunHeld,
         )
             },
           )
+          if (buildingRoutine) RoutineOnboardingOverlay(onFinished = {
+              OnboardingFlags.markSeen(context, OnboardingFlags.DAILY_CALL)
+              OnboardingFlags.markSeen(context, OnboardingFlags.WEEKLY_RHYTHM)
+              dailyCallOnboarded = true
+          })
+          }
         }
     }
     }
@@ -2742,7 +2715,21 @@ private fun StreakChip(language: String, onClick: () -> Unit) {
     // A capsule, and tappable: the streak is a claim about a history, so it
     // opens the record rather than asking to be taken on trust.
     // The same glass capsule as Speech's + and the two buttons beside it.
-    com.roro.futurevoice.ui.brand.IosGlassButton(onClick = onClick) {
+    // The routine builder shrinks into this chip, so it says where it is
+    // (iOS `RoutineHandoff`): its bounds, a bounce on landing, then the hint.
+    val landed by RoutineHandoff.landed.collectAsStateWithLifecycle()
+    val hint by RoutineHandoff.showHint.collectAsStateWithLifecycle()
+    val bounce = remember { androidx.compose.animation.core.Animatable(1f) }
+    LaunchedEffect(landed) {
+        if (landed == 0) return@LaunchedEffect
+        bounce.animateTo(1.3f, androidx.compose.animation.core.tween(120))
+        bounce.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = 0.4f))
+    }
+    Box(Modifier.onGloballyPositioned { RoutineHandoff.chipBounds.value = it.boundsInRoot() }) {
+    com.roro.futurevoice.ui.brand.IosGlassButton(onClick = {
+        RoutineHandoff.showHint.value = false
+        onClick()
+    }) {
         val lit = days > 0 || keptToday
         Icon(
             if (lit) Icons.Filled.LocalFireDepartment else Icons.Filled.CalendarMonth,
@@ -2750,13 +2737,43 @@ private fun StreakChip(language: String, onClick: () -> Unit) {
             // iOS: `flame.fill`, orange only once today is kept.
             tint = if (keptToday) androidx.compose.ui.graphics.Color(0xFFFF9500)
             else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(18.dp))
+            modifier = Modifier.size(18.dp).graphicsLayer { scaleX = bounce.value; scaleY = bounce.value })
         Spacer(Modifier.width(5.dp))
         Text(
             if (lit) stringResource(R.string.lld_day_streak_94de2a, maxOf(days, 1))
             else stringResource(R.string.activity),
             style = MaterialTheme.typography.bodyLarge.copy(
                 fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
+    }
+    if (hint) RoutineHintPopover(onDismiss = { RoutineHandoff.showHint.value = false })
+    }
+}
+
+/** "Your routine is here", hanging under the Activity chip (iOS's popover
+ *  with its arrow on the top edge). */
+@Composable
+private fun RoutineHintPopover(onDismiss: () -> Unit) {
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    androidx.compose.ui.window.Popup(
+        alignment = Alignment.TopCenter,
+        offset = with(density) { androidx.compose.ui.unit.IntOffset(0, (44 + 10).dp.roundToPx()) },
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.PopupProperties(focusable = true),
+    ) {
+        val dark = androidx.compose.foundation.isSystemInDarkTheme()
+        Column(
+            Modifier.padding(8.dp)
+                .shadow(12.dp, RoundedCornerShape(14.dp))
+                .background(if (dark) androidx.compose.ui.graphics.Color(0xFF2C2C2E)
+                    else androidx.compose.ui.graphics.Color.White, RoundedCornerShape(14.dp))
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(stringResource(R.string.your_routine_is_here), style = MaterialTheme.typography.titleSmall,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+            Text(stringResource(R.string.tap_to_see_it_or_change_it), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 

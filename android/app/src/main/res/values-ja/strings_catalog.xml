@@ -852,9 +852,11 @@
     <string name="how_is_it_going_so_far">"使ってみてどうですか？"</string>
     <string name="how_it_s_assessed">"判定方法"</string>
     <string name="how_it_works">"ルール"</string>
+    <string name="how_long_a_call">"通話は何分にしますか？"</string>
     <string name="how_long_have_you_been_there_optional">"そこにどのくらい住んでいますか？（任意）"</string>
     <string name="how_long_optional">"どのくらい経ちますか？（任意）"</string>
     <string name="how_many">"数"</string>
+    <string name="how_much_can_you_study_a_day">"1日にどれくらい勉強できますか？"</string>
     <string name="how_much_will_you_talk_each_day">"1日にどのくらい話しますか？"</string>
     <string name="how_much_you_elaborate_longer_richer_turns_read_higher">"どれだけ詳しく話しているかを見ます。長く、細かいほど高く読まれます。"</string>
     <string name="how_much_you_talked_and_reviewed_over_the_last_two_weeks">"この2週間でどれだけ話して、どれだけ復習したかを表示します。"</string>
@@ -885,6 +887,8 @@
     <string name="i_ll_help_you_keep_it_up_d1116e">"%s、続けられるように手伝うよ"</string>
     <!-- "I'll help you keep it up" -->
     <string name="i_ll_help_you_keep_it_up_fe0fae">"続けられるように手伝うよ"</string>
+    <!-- "I'll put review in at %@, about %lld cards. Drag it on the grid to move it later." -->
+    <string name="i_ll_put_review_in_at_about_lld_cards_drag_it_on_the_grid_to_f20228">"復習は%1$sに入れておきます。カードは%2$d枚ほどです。時間は表でドラッグして変えられます。"</string>
     <string name="i_m_lld_or_older">"私は%d歳以上です。"</string>
     <!-- "I'm %lld or older, and I agree to my recording being used to build my voice model." -->
     <string name="i_m_lld_or_older_and_i_agree_to_my_recording_being_used_to_b_a31e9d">"私は%d歳以上で、自分の録音を音声モデルの作成に使うことに同意します。"</string>
@@ -1025,6 +1029,7 @@
     <string name="left_to_spend">"残り時間"</string>
     <string name="length">"長さ"</string>
     <string name="let_s_go">"はじめる"</string>
+    <string name="let_s_make_your_routine">"ルーティンを作りましょう"</string>
     <string name="let_s_make_your_voice_again">"もう一度、声をつくりましょう"</string>
     <string name="let_s_talk">"話す"</string>
     <!-- 'Level %@' -->
@@ -1204,6 +1209,7 @@
     <string name="made_from_this_week_s_talks">"今週のトークから作りました"</string>
     <string name="make_a_situation">"シチュエーションを作る"</string>
     <string name="make_it_yours">"自分のものにする"</string>
+    <string name="make_my_routine">"ルーティンを作る"</string>
     <string name="making_a_few_takes_about_half_a_minute_keep_this_open">"何度か読み上げています。30秒ほどかかるので、この画面を閉じずにお待ちください。"</string>
     <string name="making_it_in_your_voice">"自分の声で作っています…"</string>
     <string name="making_it_yours">"自分のものにする"</string>
@@ -1452,6 +1458,8 @@
     <!-- "Nothing you hide is lost — your talk's book keeps every correction." -->
     <string name="nothing_you_hide_is_lost_your_talk_s_book_keeps_every_correc_4f2f1b">"隠しても消えません。通話ブックには直しが全部残ります。"</string>
     <string name="notice_how_it_s_done_not_just_what_s_said">"何を言ったかより、どう進めているかを見ましょう。"</string>
+    <!-- "Notifications are off, so I can't call you yet. Turn them on in Settings. Your routine is under Activity on the Talk screen." -->
+    <string name="notifications_are_off_so_i_can_t_call_you_yet_turn_them_on_i_52c0b7">"通知がオフなので、まだ電話をかけられません。設定で通知をオンにしてください。ルーティンはトーク画面のアクティビティにあります。"</string>
     <!-- "Notifications are off, so your routine can't remind you. Turn them on in Settings" -->
     <string name="notifications_are_off_so_your_routine_can_t_remind_you_turn_298720">"通知がオフなので、ルーティンのリマインダーが届きません。設定でオンにしてください"</string>
     <string name="now">"現在"</string>
@@ -1821,6 +1829,7 @@
     <string name="s_1_book_finished">"読み終えたブック1冊"</string>
     <string name="s_1_card">"1枚"</string>
     <string name="s_1_expression">"表現1個"</string>
+    <string name="s_1_hour">"1時間"</string>
     <string name="s_1_min">"約1分"</string>
     <string name="s_1_minute_vary_your_pitch_a_little">"1分で十分です。少しずつ抑揚を変えて読んでください。"</string>
     <string name="s_1_more_meaning">"ほかの意味 +1"</string>
@@ -2190,6 +2199,7 @@
     <string name="tap_to_hear_a_sample_in">"▶をタップすると%sのサンプルが聞けます。"</string>
     <string name="tap_to_hear_it_again">"タップするともう一度聞けます"</string>
     <string name="tap_to_reveal">"タップして表示"</string>
+    <string name="tap_to_see_it_or_change_it">"タップすると確認・変更できます。"</string>
     <string name="tap_to_shadow_the_selected_phrase">"タップで選んだ部分をシャドーイング"</string>
     <string name="tap_to_sync_shadow">"タップしてシャドーイング"</string>
     <string name="tap_to_talk">"タップして話す"</string>
@@ -2459,6 +2469,9 @@
     <string name="try_again">"もう一度"</string>
     <string name="try_for_free">"無料で始める"</string>
     <string name="try_in_your_next_talk">"次のトークで「%s」を使ってみましょう。"</string>
+    <string name="try_it_just_as_it_is_for_a_week_you_can_change_it_any_time">"まずは1週間、このまま続けてみましょう。いつでも変えられます。"</string>
+    <!-- "Try it like this for a week. It's under Activity on the Talk screen whenever you want to change it." -->
+    <string name="try_it_like_this_for_a_week_it_s_under_activity_on_the_talk_f71c6f">"このまま1週間やってみましょう。変えたいときはトーク画面のアクティビティからどうぞ。"</string>
     <string name="try_now">"今すぐもう一度"</string>
     <string name="try_saying">"こう言ってみましょう"</string>
     <string name="try_the_missed_ones_again">"間違えたものをもう一度"</string>
@@ -2662,6 +2675,7 @@
     <string name="what_your_fluent_self_knows_about_you">"流暢な自分が知っていること"</string>
     <string name="what_your_plan_holds">"プランに含まれるもの"</string>
     <string name="what_your_voice_is_called_in_the_app">"アプリでの声の名前"</string>
+    <string name="when_">"いつにしますか？"</string>
     <!-- "When a friend joins with your code, you both get %lld minutes — and invite minutes are spent before the month's pool." -->
     <string name="when_a_friend_joins_with_your_code_you_both_get_lld_minutes_de6e19">"自分のコードで友だちが登録すると、ふたりとも通話%d分もらえます。招待でもらった時間は今月の分より先に使われます。"</string>
     <!-- "When a new week starts, a short report on the last one comes up once: the days you studied, your streak, how long you talked, and what became yours. Every past week stays here, and a dot marks one you haven't opened." -->
@@ -2900,6 +2914,7 @@
     <string name="your_current_voice_is_deleted_and_you_ll_record_a_new_one">"今の声は削除され、新しく録音します。"</string>
     <!-- "Your current voice is replaced by the new one and deleted, so you can't go back to it. Audio already made keeps playing." -->
     <string name="your_current_voice_is_replaced_by_the_new_one_and_deleted_so_dd7e3f">"今の声は新しい声に置き換わって削除され、元に戻せません。すでに作った音声はそのまま聞けます。"</string>
+    <string name="your_daily_call">"毎日の電話"</string>
     <!-- "Your daily call is off, so this one won't ring. Turn it on in Me → Daily call." -->
     <string name="your_daily_call_is_off_so_this_one_won_t_ring_turn_it_on_in_10477c">"毎日の電話がオフなので鳴りません。マイページ → 毎日の電話でオンにできます。"</string>
     <string name="your_daily_call_rings_at_this_time">"この時間に毎日の電話が鳴ります。"</string>
@@ -2915,6 +2930,7 @@
     <string name="your_first_week_s_cards_arrive_when_it_closes">"1週間が終わると、最初のカードが届きます。"</string>
     <string name="your_fluent_self">"流暢な自分"</string>
     <string name="your_fluent_self_calls_first">"先に電話がかかってきます"</string>
+    <string name="your_fluent_self_calls_you_at_this_time">"この時間に流暢な自分から電話がかかってきます。"</string>
     <string name="your_fluent_self_in_your_voice">"自分の声で話す、流暢な自分"</string>
     <string name="your_fluent_self_is_ready">"流暢な自分が待っています"</string>
     <string name="your_fluent_self_phones_you">"流暢な自分から電話がかかります"</string>
@@ -3009,6 +3025,8 @@
     <!-- "Your recordings aren't backed up to iCloud right now, so they're on this device only. If you delete the app on this device, they're deleted with it." -->
     <string name="your_recordings_aren_t_backed_up_to_icloud_right_now_so_they_66fe02">"いまは録音がiCloudに保存できず、この端末にしかありません。この端末でアプリを削除すると、録音も一緒に消えます。"</string>
     <string name="your_recordings_of_this_script_will_be_here">"この原稿のテイクがここにたまっていきます。"</string>
+    <string name="your_routine_is_here">"ルーティンはここにあります"</string>
+    <string name="your_routine_is_ready">"ルーティンができました"</string>
     <string name="your_scenario">"自分のシチュエーション"</string>
     <string name="your_scenarios">"自分のシチュエーション"</string>
     <string name="your_score">"スコア"</string>
