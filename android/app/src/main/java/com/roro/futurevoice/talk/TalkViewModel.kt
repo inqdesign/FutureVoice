@@ -394,6 +394,9 @@ class TalkViewModel(context: Context) : ViewModel() {
                     .load(config.targetLanguage, config.level.code)
                 val brief = scenarioBrief(config)
                 val clock = pinPromptClock(config)
+                // Drawn with the clock, once per call (iOS `FreeTalkCue.random`).
+                val freeTalkCue = ConversationPrompt.FreeTalkCue.random(hasRecentNews =
+                    config.persona?.currentNotes()?.any { it.kind == PersonaNote.Kind.NOW } ?: false)
                 val build = { tutor: Boolean ->
                     ConversationEngine.conversationSystemPrompt(
                         targetLanguage = config.targetLanguage,
@@ -408,6 +411,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                         brief = brief,
                         clock = clock,
                         tutor = tutor,
+                        freeTalkCue = freeTalkCue,
                     ) + ConversationEngine.turnOutputInstruction(config.targetLanguage, config.nativeLanguage,
                         counterpart = config.cast?.person, inScene = config.scenarioId != null)
                 }
@@ -556,6 +560,9 @@ class TalkViewModel(context: Context) : ViewModel() {
                 // speaks, and the correction is a separate, later request.
                 val brief = scenarioBrief(config)
                 val clock = pinPromptClock(config)
+                // Drawn with the clock, once per call (iOS `FreeTalkCue.random`).
+                val freeTalkCue = ConversationPrompt.FreeTalkCue.random(hasRecentNews =
+                    config.persona?.currentNotes()?.any { it.kind == PersonaNote.Kind.NOW } ?: false)
                 val build = { tutor: Boolean ->
                     ConversationEngine.conversationSystemPrompt(
                         targetLanguage = config.targetLanguage,
@@ -575,6 +582,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                         brief = brief,
                         clock = clock,
                         tutor = tutor,
+                        freeTalkCue = freeTalkCue,
                     ) + ConversationPrompt.REALTIME_STYLE_RULES
                 }
                 promptForTutor = build

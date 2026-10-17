@@ -18,3 +18,5 @@ func chrome(_ s: String) -> String { s }
 enum PublicPersonaService { enum Group: String { case character, person } }
 enum WordSplitter { static func snippet(_ s: String, words: Int, characters: Int) -> String { s } }
 func explain(key: String, default d: String) -> String { d }
+/// Models.swift reads it for `Turn.readFromCoach` (iOS 3dc33326); no prompt fixture has a coach line.
+enum CoachRead { static func isRead(_ said: String, line: String?) -> Bool { false } }

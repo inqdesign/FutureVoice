@@ -61,6 +61,8 @@ object ConversationEngine {
         clock: PromptClock? = null,
         /** Tutor mode for this call (iOS `tutor:`, `TutorMode`), fixed when it opens. */
         tutor: Boolean = false,
+        /** How this call follows a hello answered with no subject (iOS `freeTalkCue:`), drawn once per call. */
+        freeTalkCue: ConversationPrompt.FreeTalkCue = ConversationPrompt.FreeTalkCue.PLAIN_QUESTION,
         now: Long = System.currentTimeMillis(),
     ): String {
         val languageName = LanguageCatalog.englishName(targetLanguage)
@@ -106,9 +108,9 @@ object ConversationEngine {
             ConversationPrompt.firstCallBlock(languageName) else ""
 
         // A plain free talk the learner placed: their subject first, and on
-        // "nothing much" the fluent self brings something (iOS `a92d7fc8`).
+        // "nothing much" the fluent self brings what `freeTalkCue` says (iOS `bbfa2902`).
         val theyCalledBlock = if (topic.isEmpty() && counterpart == null && !firstMeeting)
-            ConversationPrompt.theyCalledBlock else ""
+            ConversationPrompt.theyCalledBlock(freeTalkCue) else ""
 
         // History is left out for a cast stranger (no shared past) and the
         // first meeting (its own block says you have never spoken).

@@ -83,7 +83,12 @@ news = kotlin_conv(literal_at(engine, 'let newsBlock = newsFacts.isEmpty ? "" : 
 first = kotlin_conv(literal_at(engine, "let firstMeetingBlock = (firstMeeting && counterpart == nil) ?", csp),
                {"languageName": "languageName"})
 they_called = kotlin_conv(literal_at(
-    engine, "let theyCalledBlock = (topic.isEmpty && counterpart == nil && !firstMeeting) ?", csp), {})
+    engine, "let theyCalledBlock = (topic.isEmpty && counterpart == nil && !firstMeeting) ?", csp),
+    {"freeTalkCue.instruction": "freeTalkCue.instruction"})
+cue_at = engine.index("enum FreeTalkCue: String, CaseIterable {")
+cue = {case: kotlin_conv(literal_at(engine, 'return """', engine.index(f"case .{case}:", cue_at)), {},
+                         indent="                ")
+       for case in ("news", "plainQuestion", "ownThing")}
 main_anchor = engine.index("        return \"\"\"\n        You're in a real-feeling SPOKEN", csp)
 system = kotlin_conv(literal_at(engine, 'return """', main_anchor), {
     "languageName": "languageName",
@@ -209,8 +214,35 @@ object ConversationPrompt {{
     fun firstCallBlock(languageName: String): String =
         {first}
 
+    /**
+     * iOS `ConversationEngine.FreeTalkCue`: what the fluent self brings when the
+     * learner answers the free talk's hello with no subject of their own. Drawn
+     * ONCE per call ([random]), never left to the model.
+     */
+    enum class FreeTalkCue {{
+        NEWS, PLAIN_QUESTION, OWN_THING;
+
+        val instruction: String get() = when (this) {{
+            NEWS ->
+                {cue["news"]}
+            PLAIN_QUESTION ->
+                {cue["plainQuestion"]}
+            OWN_THING ->
+                {cue["ownThing"]}
+        }}
+
+        companion object {{
+            /** Half the calls ask about the news when there is some; the rest,
+             *  and every call without news, split between the other two. */
+            fun random(hasRecentNews: Boolean, rng: kotlin.random.Random = kotlin.random.Random.Default): FreeTalkCue {{
+                if (hasRecentNews && rng.nextBoolean()) return NEWS
+                return if (rng.nextBoolean()) PLAIN_QUESTION else OWN_THING
+            }}
+        }}
+    }}
+
     /** iOS `theyCalledBlock` — a plain free talk the LEARNER placed. */
-    const val theyCalledBlock: String =
+    fun theyCalledBlock(freeTalkCue: FreeTalkCue): String =
         {they_called}
 
     /** iOS `beginnerQuestions` — empty at B1 and above. */
