@@ -4076,6 +4076,12 @@
         },
         "zh-Hant" : {
           "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近 10 次的平均"
+          }
+        }
+      }
+    },
     "Whoever the situation calls for" : {
       "localizations" : {
         "de" : {
@@ -4118,12 +4124,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "情境裡會出現的人就是對方"
-          }
-        }
-      }
-    },
-            "state" : "translated",
-            "value" : "最近 10 次的平均"
           }
         }
       }
