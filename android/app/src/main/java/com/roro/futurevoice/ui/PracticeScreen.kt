@@ -227,6 +227,9 @@ fun PracticeBody(
                     onSentences = onOpenSentencesAll,
                     onShadowing = onShadowAll,
                 )
+                // The weekly test's door, under the four lists (iOS
+                // 2026-10-16; it was the header's face).
+                WeeklyTestBanner(language = language, level = level)
                 d?.feed?.forEach { book ->
                     // The shelf's own card, with its chapter buttons under it
                     // on the same ground.
@@ -388,8 +391,10 @@ private fun TalkCard(t: Session, onOpen: (String) -> Unit,
         },
         accent = if (t.origin?.name?.lowercase() == "news") Books.topics else Books.talks,
         // WHEN it was last worked, said as recency — it keeps advancing as
-        // the book is studied, which a fixed date does not.
-        detail = stringResource(R.string.studied, Recency.label(t.endedAt ?: t.startedAt)),
+        // the book is studied, which a fixed date does not. It rides after
+        // the source on one line ("Free talk · 11 hours ago"); the old
+        // "Studied …" wording went (iOS 2026-10-16).
+        detail = Recency.label(t.endedAt ?: t.startedAt),
         // A practice call has no score to headline.
         score = t.summary?.scorecard?.overall?.takeIf { !t.isPractice },
         // The book's mastery strip, as iOS's TalkBookCard carries it.
@@ -428,10 +433,11 @@ private fun ScenarioCard(sc: Scenario, onOpen: (String) -> Unit,
         photo = photo,
         initials = personaName?.takeIf { photo == null }?.let(::initials),
         tall = tall,
-        // WHO the scene is with — a category names the shelf, not the scene.
-        origin = sc.role?.takeIf { it.isNotBlank() } ?: sc.category,
+        // The source, then WHO the scene is with, on one line — "Scenario ·
+        // Sarah" (iOS `OriginTag(scenario:).with(partnerLabel)`, 2026-10-16).
+        origin = stringResource(if (sc.isTopic == true) R.string.news else R.string.scenario),
         accent = Books.scenarios,
-        detail = null,
+        detail = personaName ?: sc.role.trim().takeIf { it.isNotEmpty() },
         progressLabel = if (!tall) null
         else if (cur == null) stringResource(R.string.watch_the_scene_first)
         else if (total > 0 && done == total) stringResource(R.string.mastered_550ec5)

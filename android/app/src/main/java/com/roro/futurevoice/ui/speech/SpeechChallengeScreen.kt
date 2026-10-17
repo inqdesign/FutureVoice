@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -61,6 +62,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.window.Dialog
@@ -72,6 +74,7 @@ import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.data.SpeechChallenges
 import com.roro.futurevoice.data.SpeechLibrary
 import com.roro.futurevoice.data.SpeechScript
+import com.roro.futurevoice.ui.FormChevron
 import com.roro.futurevoice.ui.FormDivider
 import com.roro.futurevoice.ui.FormSection
 import com.roro.futurevoice.ui.FormTextRow
@@ -80,7 +83,11 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import com.roro.futurevoice.ui.NavPageBackHandler
 import com.roro.futurevoice.ui.SheetHeader
 import com.roro.futurevoice.ui.brand.AppSurfaces
+import com.roro.futurevoice.ui.brand.BookIconDisc
+import com.roro.futurevoice.ui.brand.ContinuousShape
+import com.roro.futurevoice.ui.brand.IosOutlinedButton
 import com.roro.futurevoice.ui.brand.IosButton
+import com.roro.futurevoice.ui.brand.FitButtonLabel
 import com.roro.futurevoice.ui.brand.IosDropdownMenu
 import com.roro.futurevoice.ui.brand.IosDropdownMenuItem
 import com.roro.futurevoice.ui.brand.IosGlassTextButton
@@ -89,42 +96,54 @@ import kotlinx.coroutines.launch
 
 // Speech challenges — iOS `SpeechChallengeViews.swift`.
 
-// MARK: - Row on the Speech tab
+// MARK: - Card on the Speech tab
 
+/** One challenge as a card, the review page's book card anatomy (iOS
+ *  2026-10-16): the trophy in a tinted disc top-left, the learner's standing
+ *  top-right, the title large, one quiet line under it, and the board's top
+ *  three at the foot. A card standing alone: no row fill, no separator, no
+ *  chevron, a 6 pt gap above and below (iOS `speechCardRow`). */
 @Composable
 internal fun SpeechChallengeRow(script: SpeechScript, standing: SpeechChallenges.Standing?, onClick: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    val accent = MaterialTheme.colorScheme.primary
+    Column(
+        Modifier.fillMaxWidth().padding(vertical = 6.dp)
+            .clip(ContinuousShape(18.dp))
+            .background(AppSurfaces.card)
+            .clickable(onClick = onClick)
+            .padding(14.dp),
     ) {
-        Icon(Icons.Outlined.EmojiEvents, contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
-        Spacer(Modifier.width(16.dp))
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(script.title, style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                val faces = standing?.topThree.orEmpty()
-                if (faces.isNotEmpty()) {
-                    SpeechChallengeFaces(faces)
-                    Spacer(Modifier.width(6.dp))
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+            BookIconDisc(accent = accent) {
+                Icon(Icons.Filled.EmojiEvents, contentDescription = null, tint = accent,
+                    modifier = Modifier.size(22.dp))
+            }
+            Spacer(Modifier.weight(1f))
+            val rank = standing?.myRank
+            val best = standing?.myBest
+            if (rank != null && best != null) {
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                    Text("#$rank", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text("$best", style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold, color = scoreColor(best))
                 }
-                val parts = listOf(
-                    stringResource(R.string.lld_taking_part, standing?.entrants ?: 0),
-                    lengthLabel(SpeechLibrary.estimatedSeconds(script.body, script.language)),
-                )
-                Text(parts.joinToString("  ·  "), style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        val rank = standing?.myRank
-        val best = standing?.myBest
-        if (rank != null && best != null) {
-            Spacer(Modifier.width(8.dp))
-            Column(horizontalAlignment = Alignment.End) {
-                Text("#$rank", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text("$best", style = MaterialTheme.typography.labelMedium, color = scoreColor(best))
-            }
+        Spacer(Modifier.height(8.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(script.title, style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            val parts = listOf(
+                stringResource(R.string.lld_taking_part, standing?.entrants ?: 0),
+                lengthLabel(SpeechLibrary.estimatedSeconds(script.body, script.language)),
+            )
+            Text(parts.joinToString(" · "), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        val faces = standing?.topThree.orEmpty()
+        if (faces.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            SpeechChallengeFaces(faces, size = 30.dp)
         }
     }
 }
@@ -190,6 +209,7 @@ internal fun SpeechChallengeScreen(
     var naming by remember { mutableStateOf(false) }
     var startAfterNaming by remember { mutableStateOf(false) }
     var showingScript by remember { mutableStateOf(false) }
+    var showingTakes by remember { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
     var confirmRetire by remember { mutableStateOf(false) }
 
@@ -236,15 +256,13 @@ internal fun SpeechChallengeScreen(
                 },
             )
         },
+        // The board first; the script and the way in together at the foot
+        // (iOS 2026-10-16: the board sat under a summary and a script row,
+        // and the start button was a bar of its own).
         bottomBar = {
-            if (script != null && !isPast) {
-                Box(Modifier.fillMaxWidth().background(AppSurfaces.ground).navigationBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    IosButton(onClick = { start() }, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(if (standing?.myBest == null) R.string.take_the_challenge else R.string.go_again),
-                            fontWeight = FontWeight.SemiBold)
-                    }
-                }
+            if (script != null) {
+                ChallengeActionBar(script, isPast = isPast, hasBest = standing?.myBest != null,
+                    onRead = { showingScript = true }, onStart = { start() })
             }
         },
     ) { padding ->
@@ -255,47 +273,6 @@ internal fun SpeechChallengeScreen(
         ) {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
-                if (script != null) {
-                    FormSection(null) {
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            if (script.summary.isNotEmpty()) {
-                                Text(script.summary, style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            Text(listOf(lengthLabel(SpeechLibrary.estimatedSeconds(script.body, script.language)),
-                                script.genre.title()).joinToString("  ·  "),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        FormDivider()
-                        Row(Modifier.fillMaxWidth().clickable { showingScript = true }.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.Description, null, tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.width(12.dp))
-                            Text(stringResource(R.string.read_the_script), color = MaterialTheme.colorScheme.primary)
-                        }
-                    }
-                }
-
-                val best = standing?.myBest
-                val rank = standing?.myRank
-                if (best != null && rank != null) {
-                    FormSection(stringResource(R.string.you)) {
-                        LabeledRow(stringResource(R.string.best)) {
-                            Text("$best", fontWeight = FontWeight.SemiBold, color = scoreColor(best))
-                        }
-                        FormDivider()
-                        LabeledRow(stringResource(R.string.place)) {
-                            Text(stringResource(R.string.lld_of_lld_8e05fc, rank, standing.entrants.coerceAtLeast(rank)))
-                        }
-                        standing.myAttempts?.let { attempts ->
-                            FormDivider()
-                            LabeledRow(stringResource(R.string.takes)) { Text("$attempts") }
-                        }
-                    }
-                }
-
                 FormSection(
                     stringResource(R.string.leaderboard),
                     footer = if (isPast) stringResource(R.string.this_challenge_has_ended_these_are_the_final_standings)
@@ -327,6 +304,31 @@ internal fun SpeechChallengeScreen(
                         }
                     }
                 }
+
+                val best = standing?.myBest
+                val rank = standing?.myRank
+                if (best != null && rank != null) {
+                    FormSection(stringResource(R.string.you)) {
+                        LabeledRow(stringResource(R.string.best)) {
+                            Text("$best", fontWeight = FontWeight.SemiBold, color = scoreColor(best))
+                        }
+                        FormDivider()
+                        LabeledRow(stringResource(R.string.place)) {
+                            Text(stringResource(R.string.lld_of_lld_8e05fc, rank, standing.entrants.coerceAtLeast(rank)))
+                        }
+                        standing.myAttempts?.let { attempts ->
+                            FormDivider()
+                            // Tapping the count lists them (iOS 2026-10-16).
+                            LabeledRow(stringResource(R.string.takes),
+                                modifier = Modifier.clickable { showingTakes = true }) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("$attempts")
+                                    FormChevron()
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -340,6 +342,9 @@ internal fun SpeechChallengeScreen(
     }
     if (showingScript && script != null) {
         SpeechScriptSheet(script, native, onEdited = {}, onDismiss = { showingScript = false })
+    }
+    if (showingTakes) {
+        SpeechTakesSheet(scriptId = challengeId, onDismiss = { showingTakes = false })
     }
     if (practicing && script != null) {
         Dialog(
@@ -366,9 +371,55 @@ internal fun SpeechChallengeScreen(
     }
 }
 
+/** One container at the foot: what the script is, then Read the script
+ *  beside the start button — iOS `actionBar`. A past challenge keeps only
+ *  Read the script. */
 @Composable
-private fun LabeledRow(label: String, value: @Composable () -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+private fun ChallengeActionBar(script: SpeechScript, isPast: Boolean, hasBest: Boolean,
+                               onRead: () -> Unit, onStart: () -> Unit) {
+    val shape = ContinuousShape(18.dp)
+    Column(
+        Modifier.fillMaxWidth().navigationBarsPadding()
+            .padding(start = 16.dp, end = 16.dp, bottom = 8.dp)
+            .shadow(12.dp, shape, ambientColor = Color.Black.copy(alpha = 0.08f),
+                spotColor = Color.Black.copy(alpha = 0.08f))
+            .clip(shape)
+            .background(AppSurfaces.card)
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            if (script.summary.isNotEmpty()) {
+                Text(script.summary, style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+            Text(listOf(lengthLabel(SpeechLibrary.estimatedSeconds(script.body, script.language)),
+                script.genre.title()).joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            IosOutlinedButton(onClick = onRead, modifier = Modifier.weight(1f),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 12.dp)) {
+                Icon(Icons.Outlined.Description, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                FitButtonLabel(stringResource(R.string.read_the_script),
+                    MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold))
+            }
+            if (!isPast) {
+                IosButton(onClick = onStart, modifier = Modifier.weight(1f),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 12.dp)) {
+                    FitButtonLabel(stringResource(if (hasBest) R.string.go_again else R.string.take_the_challenge),
+                        MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LabeledRow(label: String, modifier: Modifier = Modifier, value: @Composable () -> Unit) {
+    Row(modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically) {
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
         value()
@@ -471,22 +522,37 @@ internal fun SpeechChallengeListScreen(language: String, onOpen: (SpeechScript) 
         Column(Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
             if (live.isNotEmpty()) {
-                FormSection(stringResource(R.string.live)) {
-                    live.forEachIndexed { i, script ->
-                        if (i > 0) FormDivider()
+                CardSection(stringResource(R.string.live)) {
+                    live.forEach { script ->
                         SpeechChallengeRow(script, standings[script.id], onClick = { onOpen(script) })
                     }
                 }
             }
             if (past.isNotEmpty()) {
-                FormSection(stringResource(R.string.past_challenges),
+                CardSection(stringResource(R.string.past_challenges),
                     footer = stringResource(R.string.ended_challenges_keep_their_final_standings)) {
-                    past.forEachIndexed { i, script ->
-                        if (i > 0) FormDivider()
+                    past.forEach { script ->
                         SpeechChallengeRow(script, standings[script.id], onClick = { onOpen(script) })
                     }
                 }
             }
+        }
+    }
+}
+
+/** A section of standalone cards: `FormSection`'s header and footer with no
+ *  card around the rows, since each row is its own card. */
+@Composable
+private fun CardSection(header: String, footer: String? = null, content: @Composable () -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(top = 20.dp)) {
+        Text(header, style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 16.dp, bottom = 2.dp))
+        content()
+        footer?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 1.dp))
         }
     }
 }

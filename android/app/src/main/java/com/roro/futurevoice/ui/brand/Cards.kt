@@ -61,7 +61,8 @@ fun BookCard(
     icon: ImageVector? = null,
     origin: String? = null,
     accent: Color = Books.talks,
-    /** When this book was last WORKED, said as recency ("2일 전 학습함"). */
+    /** The card's one fact after the source — when a talk was last worked
+     *  ("11시간 전"), who a scene is with. */
     detail: String? = null,
     progress: Float? = null,
     /** "3/12 mastered", or the hint for a book with nothing in it yet. */
@@ -114,20 +115,18 @@ fun BookCard(
                 trailing?.invoke()
             }
             if (tall) androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
-            Column(Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                origin?.let {
-                    Text(it, style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-                }
-                Text(title, style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
+            // Title first and large, then ONE quiet line — the source and the
+            // card's one fact: "Free talk · 11 hours ago", "Scenario · Sarah"
+            // (iOS `OriginTag.with`, 2026-10-16, founder).
+            Column(Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(title, style = MaterialTheme.typography.titleMedium,
                     maxLines = 2, overflow = TextOverflow.Ellipsis)
-                detail?.let {
-                    Text(it, style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
+                listOfNotNull(origin?.takeIf { it.isNotEmpty() }, detail).joinToString(" · ")
+                    .takeIf { it.isNotEmpty() }?.let {
+                        Text(it, style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
             }
             Column(Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 progress?.let {

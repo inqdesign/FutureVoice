@@ -182,26 +182,29 @@ internal fun SpeechTabBody(language: String, native: String, level: CefrLevel,
 
     Column {
         if (challengeScripts.isNotEmpty()) {
-            GroupedSectionHeader(stringResource(R.string.challenges))
             // The newest three on the tab; everything else, past ones
-            // included, one tap away (iOS `challengesOnTab`).
+            // included, one tap away (iOS `challengesOnTab`) — from the
+            // header now: a plain row under the cards read as a fourth card.
             val live = challengeScripts.filter { standings[it.id]?.retiredAt == null }
             val hasMore = live.size > CHALLENGES_ON_TAB || live.size < challengeScripts.size
-            GroupedCard {
-                live.take(CHALLENGES_ON_TAB).forEachIndexed { i, script ->
-                    if (i > 0) GroupedRowDivider()
-                    SpeechChallengeRow(script, standings[script.id], onClick = { onOpenChallenge(script) })
-                }
+            Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 28.dp, bottom = 2.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.challenges), style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
                 if (hasMore) {
-                    if (live.isNotEmpty()) GroupedRowDivider(inset = false)
-                    Row(Modifier.fillMaxWidth().clickable(onClick = onOpenAllChallenges)
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    Row(Modifier.clickable(onClick = onOpenAllChallenges),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
                         verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.all_challenges), style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.weight(1f))
-                        Text("${challengeScripts.size}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.all_challenges), style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary)
+                        Text("${challengeScripts.size}", style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary)
                     }
                 }
+            }
+            // Each challenge is a card standing alone (iOS `SpeechCardLink`).
+            live.take(CHALLENGES_ON_TAB).forEach { script ->
+                SpeechChallengeRow(script, standings[script.id], onClick = { onOpenChallenge(script) })
             }
             GroupedFooter(stringResource(R.string.everyone_reads_the_same_script_your_best_take_goes_on_the_bo_281410))
         }
@@ -246,10 +249,14 @@ internal fun SpeechTabBody(language: String, native: String, level: CefrLevel,
                         Modifier.fillMaxWidth()
                             .clickable { practicing = script }
                             .padding(horizontal = 16.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalAlignment = Alignment.Top,
                     ) {
-                        Icon(script.genre.icon(), contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                        // Pinned to the title's first line, not centred on
+                        // the row (iOS `HStack(alignment: .top)`, 2026-10-16).
+                        Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+                            Icon(script.genre.icon(), contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                        }
                         Spacer(Modifier.width(16.dp))
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                             Text(script.title, style = MaterialTheme.typography.bodyLarge,

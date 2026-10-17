@@ -45,9 +45,7 @@ import com.roro.futurevoice.data.WeekRecapInbox
 import com.roro.futurevoice.data.WeekRecapStore
 import com.roro.futurevoice.data.WeeklyTestInbox
 import com.roro.futurevoice.data.WeeklyTestReminder
-import com.roro.futurevoice.data.WeeklyTestSchedule
 import com.roro.futurevoice.data.WeeklyTestSettings
-import com.roro.futurevoice.data.WeeklyTestStore
 import com.roro.futurevoice.ui.brand.IosGlassButton
 
 /**
@@ -55,9 +53,11 @@ import com.roro.futurevoice.ui.brand.IosGlassButton
  * week's things live here — they are the week's, not today's, and the page
  * below is the books. Icons with a dot, never numbers: put off (a stack of
  * cards, orange dot when something is due), the week's report (calendar, dot
- * while a closed week hasn't been opened), and the weekly test as its host's
- * face, apart at the far right. There is no monthly test (iOS 70dd26a9): a
- * month's misses come back in the weekly paper.
+ * while a closed week hasn't been opened). The weekly test's door left the
+ * header for a banner under the Studying page's library tiles (iOS
+ * 2026-10-16, `WeeklyTestBanner`); the reminder's tap still opens it here.
+ * There is no monthly test (iOS 70dd26a9): a month's misses come back in the
+ * weekly paper.
  *
  * It owns the screens those open (the test, the archive), and the two inboxes
  * that route to them — the weekly reminder's tap and a notice tapped for a
@@ -70,7 +70,6 @@ fun ReviewHeaderActions(language: String, level: CefrLevel, onOpenPutOff: () -> 
     val settingsRevision by WeeklyTestSettings.revision.collectAsStateWithLifecycle()
     val testInbox by WeeklyTestInbox.pending.collectAsStateWithLifecycle()
     val archiveAsked by WeekRecapInbox.archive.collectAsStateWithLifecycle()
-    var weekly by remember { mutableStateOf<WeeklyTestSchedule.State>(WeeklyTestSchedule.State.Ready) }
     var dueBack by remember { mutableIntStateOf(0) }
     var week by remember { mutableStateOf<WeekInProgress?>(null) }
     var hasPastWeeks by remember { mutableStateOf(false) }
@@ -80,9 +79,6 @@ fun ReviewHeaderActions(language: String, level: CefrLevel, onOpenPutOff: () -> 
     var reload by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(language, revision, settingsRevision, reload) {
-        val tests = WeeklyTestStore.shared(context).load(language)
-        val schedule = WeeklyTestSettings.schedule(context)
-        weekly = schedule.state(tests, { WeeklyTestSettings.isThin(context, it) })
         // Alarms don't survive a reboot; the tab re-arms the next opening.
         WeeklyTestReminder.reschedule(context)
         dueBack = putOffDueCount(context, language)
@@ -101,15 +97,13 @@ fun ReviewHeaderActions(language: String, level: CefrLevel, onOpenPutOff: () -> 
         if (archiveAsked) { WeekRecapInbox.archive.value = false; showingArchive = true }
     }
 
-    val weeklyNeedsYou = weekly is WeeklyTestSchedule.State.Ready || weekly is WeeklyTestSchedule.State.InProgress
     val w = week
     val showsWeekArchive = w != null && (w.hasActivity || hasPastWeeks)
     val accent = MaterialTheme.colorScheme.primary
 
     Row(Modifier.padding(end = 12.dp), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        // The two lists share one glass capsule; the test sits apart — a
-        // different kind of thing.
+        // The two lists share one glass capsule.
         GlassCapsule {
             HeaderIcon(Icons.Outlined.Layers, stringResource(R.string.back_from_earlier),
                 dot = if (dueBack > 0) Color(0xFFFF9500) else null, onClick = onOpenPutOff)
@@ -118,31 +112,10 @@ fun ReviewHeaderActions(language: String, level: CefrLevel, onOpenPutOff: () -> 
                     dot = if (hasUnseenWeek) accent else null) { showingArchive = true }
             }
         }
-        // The weekly test is its host's face — the same eyes the test itself
-        // is run by, so the door looks like who is behind it.
-        val testLabel = stringResource(R.string.weekly_test)
-        Box(
-            Modifier.size(44.dp)
-                .semantics { contentDescription = testLabel },
-            contentAlignment = Alignment.Center,
-        ) {
-            IosGlassButton(onClick = { openTest = true }, circle = true) {
-                WeeklyTestCharacter(WeeklyTestHost.Mood.WAITING, 0L, Modifier.size(32.dp),
-                    tile = com.roro.futurevoice.ui.brand.iosFill())
-            }
-            if (weeklyNeedsYou) Dot(accent, Modifier.align(Alignment.TopEnd).offset(x = (-4).dp, y = 4.dp))
-        }
     }
 
     if (openTest) {
-        Dialog(
-            onDismissRequest = { openTest = false; reload++ },
-            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
-        ) {
-            DialogSystemBarsLikeActivity()
-            WeeklyTestScreen(language = language, level = level,
-                onClose = { openTest = false; reload++; StoreEvents.bump() })
-        }
+        WeeklyTestDialog(language, level) { openTest = false; reload++ }
     }
     if (showingArchive) {
         WeekRecapArchiveSheet(level) { action ->
@@ -150,6 +123,20 @@ fun ReviewHeaderActions(language: String, level: CefrLevel, onOpenPutOff: () -> 
             reload++
             action?.let(::performWeekRecapAction)
         }
+    }
+}
+
+/** The weekly test, full screen over the tab — opened by the Studying page's
+ *  banner and by the reminder's tap. */
+@Composable
+internal fun WeeklyTestDialog(language: String, level: CefrLevel, onClose: () -> Unit) {
+    Dialog(
+        onDismissRequest = onClose,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+    ) {
+        DialogSystemBarsLikeActivity()
+        WeeklyTestScreen(language = language, level = level,
+            onClose = { onClose(); StoreEvents.bump() })
     }
 }
 
