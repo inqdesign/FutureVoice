@@ -30,7 +30,7 @@ struct SpeechTab: View {
     static let listMargin: CGFloat = 16
     static let challengeSpacing: CGFloat = 10
     /// How much of the third card shows at the right edge.
-    static let challengePeek: CGFloat = 28
+    static let challengePeek: CGFloat = 20
 
     private var ownScripts: [SpeechScript] {
         store.scripts.filter { challenges.script(id: $0.id) == nil }
@@ -70,8 +70,12 @@ struct SpeechTab: View {
                     }
                     .buttonStyle(.plain)
                     .containerRelativeFrame(.horizontal) { width, _ in
-                        // margin + two cards + two gaps + a sliver of the third
-                        (width - Self.listMargin - 2 * Self.challengeSpacing - Self.challengePeek) / 2
+                        // `width` is already inside BOTH content margins, but
+                        // the trailing one is where the third card peeks, so
+                        // it is given back: screen = leading margin + two
+                        // cards + two gaps + the peek. Leaving it out showed
+                        // ~60 pt of the third card instead of the peek.
+                        (width + Self.listMargin - 2 * Self.challengeSpacing - Self.challengePeek) / 2
                     }
                 }
             }
