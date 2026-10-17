@@ -286,9 +286,6 @@ enum ConversationEngine {
         // that going?"). Not for the first meeting, whose block owns the call.
         // 2026-10-17 (founder): the news is never the opener, and not every
         // call's second line either — `freeTalkCue` is drawn once per call.
-        // 2026-10-17 (founder): the news is the SECOND line, never the
-        // opener — a hello first leaves them the floor; an answer with no
-        // subject in it is the cue to ask about the newest thing on file.
         let theyCalledBlock = (topic.isEmpty && counterpart == nil && !firstMeeting) ? """
 
 
@@ -303,7 +300,7 @@ enum ConversationEngine {
         nothing that sounds worried or puzzled that they called ("is \
         something wrong?", 무슨 일 있어?, 왜 전화했어?). Later in the call, \
         once their subject has run its course, bring something the same way.
-""" : ""
+        """ : ""
 
         // When this is (`PromptClock`). The history is left out for a cast
         // stranger (no shared past, by that block's own rule) and for the
