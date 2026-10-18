@@ -72,19 +72,13 @@ object BackupService {
             .filter { it.isFile }
             .filterNot { f -> f.relativeTo(root).path.split(File.separator).any { it in skipDirs } }
             .toList()
-        val entries = ArrayList<Entry>(all.size)
-        all.forEachIndexed { i, f ->
-            onStep(Step.Packing(i + 1, all.size))
-            entries.add(Entry(f.relativeTo(root).path,
-                Base64.getEncoder().encodeToString(f.readBytes())))
-        }
-        onStep(Step.Encoding)
         val prefs = context.getSharedPreferences("futurevoice", 0).all
             .filterKeys { it.startsWith("futurevoice.") }
             .mapValues { (_, v) -> "${v!!::class.simpleName}:$v" }
         val out = File(context.cacheDir, "nawana-backup.json")
-        out.writeText(StoreJson.json.encodeToString(
-            Envelope.serializer(), Envelope(files = entries, defaults = prefs)))
+        out.outputStream().buffered().use { stream ->
+            BackupStream.write(root, all, prefs, stream) { i -> onStep(Step.Packing(i, all.size)) }
+        }
         out
     }
 
@@ -94,28 +88,42 @@ object BackupService {
         onStep: (Step) -> Unit = {},
     ): Report = withContext(Dispatchers.IO) {
         onStep(Step.Decoding)
-        val text = context.contentResolver.openInputStream(uri)?.use {
-            it.readBytes().decodeToString()
-        } ?: return@withContext Report()
-        val env = StoreJson.json.decodeFromString(Envelope.serializer(), text)
+        // How many files, for the bar — a second cheap read, because the
+        // envelope is streamed and its length isn't known until the end.
+        val total = context.contentResolver.openInputStream(uri)?.use { BackupStream.countFiles(it) }
+            ?: return@withContext Report()
+        // Files land in a staging folder first: the version can come AFTER
+        // the files in an iPhone's envelope, and a newer envelope must be
+        // refused before anything is laid down.
+        val staging = File(context.filesDir, ".restore-staging").apply { deleteRecursively(); mkdirs() }
+        val parsed = try {
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                BackupStream.read(input, staging) { i -> onStep(Step.Writing(i, total)) }
+            } ?: return@withContext Report()
+        } catch (e: Exception) {
+            staging.deleteRecursively()
+            throw e
+        }
         // A newer envelope is REFUSED, not guessed at: laying down files
         // whose shape this build does not know is how a restore silently
         // corrupts a library it was meant to save.
-        if (env.version > VERSION) return@withContext Report()
+        if (parsed.version > VERSION) { staging.deleteRecursively(); return@withContext Report() }
 
         val root = context.filesDir
-        var written = 0; var skipped = 0
-        env.files.forEachIndexed { i, e ->
-            onStep(Step.Writing(i + 1, env.files.size))
-            val target = File(root, e.path)
+        var written = 0; var skipped = parsed.skipped
+        for (path in parsed.files) {
+            val target = File(root, path)
             // Never outside filesDir, whatever the envelope claims.
-            if (!target.canonicalPath.startsWith(root.canonicalPath)) { skipped++; return@forEachIndexed }
+            if (!target.canonicalPath.startsWith(root.canonicalPath + File.separator)) { skipped++; continue }
             runCatching {
                 target.parentFile?.mkdirs()
-                target.writeBytes(Base64.getDecoder().decode(e.data))
+                val staged = File(staging, path)
+                if (!staged.renameTo(target)) { staged.copyTo(target, overwrite = true) }
                 written++
             }.onFailure { skipped++ }
         }
+        staging.deleteRecursively()
+        val env = Envelope(version = parsed.version, defaults = parsed.defaults)
 
         var restored = 0
         env.defaults?.let { d ->
