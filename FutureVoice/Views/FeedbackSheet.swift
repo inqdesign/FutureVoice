@@ -76,6 +76,8 @@ struct FeedbackSheet: View {
     /// whether this sheet ever delivered is kept apart for `report`.
     @State private var delivered = false
     @State private var lastSendError: String?
+    /// What was typed before a "Not now", kept for the next time this asks.
+    private var draftKey: String { "feedback.\(context.rawValue)" }
 
     var body: some View {
         NavigationStack {
@@ -135,7 +137,11 @@ struct FeedbackSheet: View {
             }
         }
         .fittingDetents([.medium, .large])
-        .onAppear { report("feedback_sheet_shown") }
+        .onAppear {
+            report("feedback_sheet_shown")
+            if feedbackText.isEmpty { feedbackText = SheetDrafts.text(draftKey) ?? "" }
+        }
+        .onChange(of: feedbackText) { _, text in SheetDrafts.set(draftKey, text) }
         .onDisappear {
             if !delivered { report("feedback_dismissed", dismissedProps) }
         }
@@ -207,6 +213,7 @@ struct FeedbackSheet: View {
                 ))
                 .execute()
             delivered = true
+            SheetDrafts.clear(draftKey)
             sent = true
             report("feedback_sent", [
                 "app_rating": String(appRating),
