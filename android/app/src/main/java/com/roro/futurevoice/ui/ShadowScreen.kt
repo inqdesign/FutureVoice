@@ -58,6 +58,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -203,9 +204,42 @@ data class ShadowSeed(
     val past: List<ShadowAttempt> = emptyList(),
 )
 
-@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
+/**
+ * One screen per LINE. The hand moves on by handing this composable a new
+ * line in the same place, so every `remember` inside — the score, the diff,
+ * the coach's bullets, the take — carried the previous line's result onto
+ * the next one (tester, Z Flip: "the last line's feedback stays in the
+ * middle"). Keyed, the next line starts clean, as iOS's per-line view does.
+ */
 @Composable
 fun ShadowScreen(
+    line: String,
+    voiceId: String,
+    targetLanguage: String,
+    onBack: () -> Unit,
+    /** The line's origin turn, when it came from a talk. */
+    turnId: String? = null,
+    /** Position in today's hand, for the header. Null = a one-off line. */
+    position: Pair<Int, Int>? = null,
+    /** Move to the next line of the hand. Null = this is the last one. */
+    onNext: (() -> Unit)? = null,
+    /** Capture only. */
+    seed: ShadowSeed? = null,
+    /** Audio that came with the line from somewhere other than the phrase
+     *  store — a Speech script's voiceover, whose word timings were measured
+     *  when it was made (iOS `ShadowDrillView(presetTimings:)`). Nothing is
+     *  synthesized for it. */
+    presetAudio: java.io.File? = null,
+    presetTimings: List<WordTiming>? = null,
+) {
+    androidx.compose.runtime.key(turnId, line) {
+        ShadowLineScreen(line = line, voiceId = voiceId, targetLanguage = targetLanguage, onBack = onBack, turnId = turnId, position = position, onNext = onNext, seed = seed, presetAudio = presetAudio, presetTimings = presetTimings)
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
+@Composable
+private fun ShadowLineScreen(
     line: String,
     voiceId: String,
     targetLanguage: String,
@@ -747,6 +781,9 @@ fun ShadowScreen(
     val timelineAvailable = (phase == ShadowPhase.IDLE || phase == ShadowPhase.RESULT ||
         phase == ShadowPhase.READ_FAILED) && targetFile?.exists() == true
 
+    /** The floating bottom panel's measured height — the list ends that far
+     *  above the screen's bottom so nothing stays under it. */
+    var panelHeightPx by remember { mutableIntStateOf(0) }
     Box(Modifier.fillMaxSize().background(page)) {
         Column(Modifier.fillMaxSize()) {
             SheetHeader(
@@ -843,12 +880,19 @@ fun ShadowScreen(
                         }
                     }
                 }
-                Spacer(Modifier.height(if (timelineAvailable) 230.dp else 110.dp))
+                // As tall as the panel that floats over this list (timeline,
+                // mic, the system's own bar) — a fixed 230 dp was shorter
+                // than that on a tall phone, so the list's end could never
+                // scroll out from under it: the last line's feedback stayed
+                // cut off (tester, Z Flip).
+                Spacer(Modifier.height(with(androidx.compose.ui.platform.LocalDensity.current) {
+                    panelHeightPx.toDp() }))
             }
         }
 
         // ---- bottom panel
-        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
+        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+            .onSizeChanged { panelHeightPx = it.height }) {
             ScrollEdgeFeather(color = page, ramp = 56.dp, solid = 0.dp,
                 modifier = Modifier.height(56.dp))
             Box(Modifier.fillMaxWidth().background(page).bottomBarInsets()
