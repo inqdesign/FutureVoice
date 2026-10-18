@@ -47,6 +47,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -122,28 +123,35 @@ internal fun SpeechChallengeRow(script: SpeechScript, standing: SpeechChallenges
             .padding(18.dp),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-            BookIconDisc(accent = accent) {
-                Icon(Icons.Filled.EmojiEvents, contentDescription = null, tint = accent,
-                    modifier = Modifier.size(22.dp))
+            // Out within the last week — whether or not this learner has
+            // taken it. "New" rides on the trophy's corner, not in the rank's
+            // slot: there it vanished the moment the learner had a record
+            // (founder, 2026-10-18, as iOS). One word in every language — the
+            // translations ran long and wrapped into a ball on large text.
+            val isNew = script.createdAt > System.currentTimeMillis() - 7L * 86_400_000L
+            Box {
+                BookIconDisc(accent = accent) {
+                    Icon(Icons.Filled.EmojiEvents, contentDescription = null, tint = accent,
+                        modifier = Modifier.size(22.dp))
+                }
+                if (isNew) {
+                    Text("New", style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1, softWrap = false,
+                        modifier = Modifier.align(Alignment.BottomEnd).offset(x = 14.dp, y = 4.dp)
+                            .wrapContentWidth(unbounded = true)
+                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .background(accent).padding(horizontal = 6.dp, vertical = 2.dp))
+                }
             }
             Spacer(Modifier.weight(1f))
             val rank = standing?.myRank
             val best = standing?.myBest
-            // Out within the last week and not yet taken by this learner:
-            // the badge takes the slot the rank fills once they enter.
-            val isNew = (standing?.myAttempts ?: 0) == 0 &&
-                script.createdAt > System.currentTimeMillis() - 7L * 86_400_000L
             if (rank != null && best != null) {
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(1.dp)) {
                     Text("#$rank", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     Text("$best", style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold, color = scoreColor(best))
                 }
-            } else if (isNew) {
-                Text(stringResource(R.string.speech_challenge_new), style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold, color = Color.White,
-                    modifier = Modifier.clip(androidx.compose.foundation.shape.CircleShape)
-                        .background(accent).padding(horizontal = 8.dp, vertical = 3.dp))
             }
         }
         // The title hangs under the disc; the meta line belongs to the FOOT,
