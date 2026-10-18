@@ -89,6 +89,13 @@ struct ConversationHome: View {
                 .padding(.top, 8)
             }
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
+            // The playlist's door, bottom-left (2026-10-18, founder). The row it
+            // belongs to — topics centred, the quiz face on the right — is on
+            // feat/talk-topics; when that lands, this moves into its left slot.
+            .overlay(alignment: .bottomLeading) {
+                PlaylistButton()
+                    .padding(16)
+            }
             .contentMargins(.bottom, 24, for: .scrollContent)
             #if DEBUG
             .defaultScrollAnchor(DebugCapture.previewScenariosTab ? .bottom : nil)

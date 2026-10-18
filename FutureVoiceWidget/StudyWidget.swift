@@ -22,6 +22,7 @@ struct FutureVoiceWidgetBundle: WidgetBundle {
         ProgressWidget()
         BookWidget()
         StreakWidget()
+        SceneListeningLiveActivity()
     }
 }
 

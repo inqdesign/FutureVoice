@@ -98,11 +98,23 @@ final class PhraseAudioStore {
     /// The key whose audio actually exists on disk — audio AND timings are both
     /// read from this one key, so karaoke can never end up aligned to a
     /// different take than the one playing.
-    private func resolvedKey(text: String, voiceId: String, allowLineage: Bool) -> String? {
-        for candidate in candidateVoiceIds(voiceId, allowLineage: allowLineage) {
-            let k = rawKey(text: text, voiceId: candidate)
-            if FileManager.default.fileExists(atPath: dir.appendingPathComponent("\(k).mp3").path) {
-                return k
+    ///
+    /// `anySpeed` also accepts a take made at another speech speed — for
+    /// listening back to lines already made (a playlist), where the line as it
+    /// was heard beats a gap. Never for anything that is about to synthesize:
+    /// there a miss at the current speed is the right answer.
+    private func resolvedKey(text: String, voiceId: String, allowLineage: Bool,
+                             anySpeed: Bool = false) -> String? {
+        let current = SpeechSpeed.current.cacheTag
+        let tags = anySpeed
+            ? [current] + SpeechSpeed.allCases.map(\.cacheTag).filter { $0 != current }
+            : [current]
+        for tag in tags {
+            for candidate in candidateVoiceIds(voiceId, allowLineage: allowLineage) {
+                let k = rawKey(text: text, voiceId: candidate, speedTag: tag)
+                if FileManager.default.fileExists(atPath: dir.appendingPathComponent("\(k).mp3").path) {
+                    return k
+                }
             }
         }
         return nil
@@ -114,8 +126,10 @@ final class PhraseAudioStore {
     ///   must sound like ONE take (the live call) — there, an older clone's
     ///   recording mid-conversation would read as the voice changing partway.
     ///   Review surfaces leave it on: reusing the old file beats re-billing.
-    func url(text: String, voiceId: String, allowLineage: Bool = true) -> URL? {
-        guard let k = resolvedKey(text: text, voiceId: voiceId, allowLineage: allowLineage) else {
+    func url(text: String, voiceId: String, allowLineage: Bool = true,
+             anySpeed: Bool = false) -> URL? {
+        guard let k = resolvedKey(text: text, voiceId: voiceId, allowLineage: allowLineage,
+                                  anySpeed: anySpeed) else {
             return nil
         }
         return dir.appendingPathComponent("\(k).mp3")
@@ -161,8 +175,10 @@ final class PhraseAudioStore {
 
     // MARK: - Word timings
 
-    func timings(text: String, voiceId: String, allowLineage: Bool = true) -> [WordTiming]? {
-        guard let k = resolvedKey(text: text, voiceId: voiceId, allowLineage: allowLineage) else {
+    func timings(text: String, voiceId: String, allowLineage: Bool = true,
+                 anySpeed: Bool = false) -> [WordTiming]? {
+        guard let k = resolvedKey(text: text, voiceId: voiceId, allowLineage: allowLineage,
+                                  anySpeed: anySpeed) else {
             return nil
         }
         let url = dir.appendingPathComponent("\(k).timings.json")
@@ -192,8 +208,8 @@ final class PhraseAudioStore {
 
     /// The key for exactly this voice id, with no preset resolution — only the
     /// lookup's fallback to a slot's pre-2026-09-28 files needs it.
-    private func rawKey(text: String, voiceId: String) -> String {
-        let speedTag = SpeechSpeed.current.cacheTag
+    private func rawKey(text: String, voiceId: String,
+                        speedTag: String = SpeechSpeed.current.cacheTag) -> String {
         let normalized = "\(voiceId)\n\(speedTag)\(text.trimmingCharacters(in: .whitespacesAndNewlines))"
         let digest = SHA256.hash(data: Data(normalized.utf8))
         return digest.map { String(format: "%02x", $0) }.joined()
