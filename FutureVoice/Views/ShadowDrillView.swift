@@ -13,6 +13,7 @@ import SwiftUI
 struct ShadowDrillView: View {
     let turn: Turn
     let targetLanguage: String
+    @AppStorage(Furigana.key) private var furiganaOn = true
     /// Word timings that came with `turn.audioURL` from somewhere other than
     /// the turn and phrase stores — a Speech script's voiceover, whose
     /// alignment was measured when it was made. Nil everywhere else.
@@ -278,11 +279,24 @@ struct ShadowDrillView: View {
         // flush, or the gaps between them read as spaces Japanese never has
         // (慌て て, 一 つ ずつ). Selection and colour still go per word.
         let spaced = LanguageCatalog.writesSpaces(targetLanguage)
+        // Readings over the kanji, cut from the whole line (`FuriganaWord`).
+        let line = timings.map(\.word).joined()
+        let rubyRuns = furiganaOn && targetLanguage == "ja" && Furigana.hasRuby(line)
+            ? Furigana.runs(in: line) : []
+        var starts: [Int] = []
+        var at = 0
+        for wt in timings { starts.append(at); at += wt.word.count }
         return FlowLayout(spacing: spaced ? 1 : 0, lineSpacing: 4) {
             ForEach(Array(timings.enumerated()), id: \.offset) { i, wt in
                 let selected = selectedWordRange?.contains(i) ?? false
                 VStack(spacing: 0) {
-                    Text(wt.word)
+                    Group {
+                        if rubyRuns.isEmpty {
+                            Text(wt.word)
+                        } else {
+                            FuriganaWord(word: wt.word, offset: starts[i], runs: rubyRuns)
+                        }
+                    }
                         .font(.title2.weight(.semibold))
                         .foregroundStyle(wordColor(at: i, wt: wt))
                         .padding(.horizontal, spaced ? 2 : 0)

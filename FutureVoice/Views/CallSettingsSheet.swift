@@ -54,6 +54,7 @@ struct CallSettingsSheet: View {
     @AppStorage(CoachMode.key) private var coachModeChoice: Bool?
     @AppStorage(AppState.proficiencyKey) private var proficiencyRaw = CEFRLevel.b1.rawValue
     @AppStorage(TutorMode.key) private var tutorMode = false
+    @AppStorage(Furigana.key) private var furigana = true
     @AppStorage(SendToAnswer.key) private var sendToAnswerChoice: Bool?
     private var sendToAnswer: Binding<Bool> {
         Binding(get: { SendToAnswer.resolve(choice: sendToAnswerChoice, levelRaw: proficiencyRaw) },
@@ -127,6 +128,13 @@ struct CallSettingsSheet: View {
                 Section {
                     Toggle(isOn: $showsTranscript) {
                         Label("Subtitles", systemImage: "captions.bubble")
+                    }
+                    // Readings over the kanji (`Furigana`), on every surface
+                    // that hands the learner a Japanese line to say.
+                    if LanguageScope.active == "ja" {
+                        Toggle(isOn: $furigana) {
+                            Label("Furigana", systemImage: "character.textbox")
+                        }
                     }
                     // A toggle that does nothing is worse than no toggle, so
                     // with the transcript off this row is replaced by the

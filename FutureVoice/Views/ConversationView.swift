@@ -4808,19 +4808,24 @@ private struct TurnView: View {
                     .foregroundStyle(.secondary)
                     .italic()
             } else if turn.role == .user {
-                Text(turn.transcript)
-                    // For the learner's line only: a better transcription
-                    // replacing the first one. A fluent-self reply streams in
-                    // dozens of deltas, and an animation per delta fought the
-                    // feed's bottom anchor — the bubble grew with a wobble
-                    // (2026-10-08).
-                    .animation(.easeInOut(duration: 0.2), value: turn.transcript)
+                FuriganaText(turn.transcript, rubyFont: .caption2) {
+                    Text(turn.transcript)
+                        // For the learner's line only: a better transcription
+                        // replacing the first one. A fluent-self reply streams in
+                        // dozens of deltas, and an animation per delta fought the
+                        // feed's bottom anchor — the bubble grew with a wobble
+                        // (2026-10-08).
+                        .animation(.easeInOut(duration: 0.2), value: turn.transcript)
+                }
             } else {
                 // The fluent self's line: each word the reveal adds fades in
                 // rather than popping (founder, 2026-10-15, "like Grok") —
                 // opacity only, so the layout and the bottom anchor are
-                // untouched.
-                FadeInText(text: turn.transcript)
+                // untouched. With furigana the line is laid out in units, and
+                // the fade gives way to it.
+                FuriganaText(turn.transcript, rubyFont: .caption2) {
+                    FadeInText(text: turn.transcript)
+                }
             }
         } accessory: {
             // Nothing to translate or correct until there is a line.
