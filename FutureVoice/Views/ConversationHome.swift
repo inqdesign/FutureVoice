@@ -44,6 +44,8 @@ struct ConversationHome: View {
     @State private var showingActivity = false
     /// Discover rail's "All scenarios" card → the full collection page.
     @State private var showingAllScenarios = false
+    /// The topics page behind the home's one door (`TalkTopicsPage`).
+    @State private var showingTopics = false
 
     private struct CallLaunch: Identifiable {
         let id = UUID()
@@ -55,6 +57,7 @@ struct ConversationHome: View {
         /// Pool-grounded facts for a news talk — seeds `newsFacts`.
         var newsFacts: [String] = []
         var entry: TalkEntry = .other
+        var learnerPicksTopic = false
     }
     /// Server-side account/billing snapshot — drives the credit chip. Credits
     /// live WITH the plan (not as a bare stat) so tapping goes to the
@@ -84,18 +87,40 @@ struct ConversationHome: View {
                         deepenRow
                             .padding(.horizontal, 20)
                     }
-                    DiscoverSection(
-                        onPickNews: { runNews($0) },
-                        onPickExam: { runExam($0, $1) },
-                        onPickTopic: { runFieldTopic($0) },
-                        onPickScenario: { runScenario($0) },
-                        onAllScenarios: { showingAllScenarios = true },
-                        onBuildScenario: { showingBuilder = true })
                 }
                 .padding(.top, 8)
             }
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
-            .contentMargins(.bottom, 24, for: .scrollContent)
+            // Room under the last row for the floating button.
+            .contentMargins(.bottom, 88, for: .scrollContent)
+            // One button to the topics page (draft 2026-10-18) — the discover
+            // block used to sit in the scroll in full. Placed and drawn exactly
+            // like Watch's "New situation": glass capsule, floating at the
+            // bottom centre over the page.
+            .overlay(alignment: .bottom) {
+                // Three slots (2026-10-18, founder): the topics button stays
+                // centred, the quick quiz's face sits at the right edge, and
+                // the left slot is kept for something still to come. The two
+                // side slots take equal widths so the centre never moves.
+                HStack(spacing: 12) {
+                    Color.clear
+                        .frame(maxWidth: .infinity, maxHeight: 1)
+                    Button { showingTopics = true } label: {
+                        Label("Find a topic", systemImage: "sparkles")
+                            .font(.body.weight(.semibold))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 4)
+                    }
+                    .modifier(GlassFloatingButton())
+                    .fixedSize()
+                    HStack {
+                        Spacer(minLength: 0)
+                        QuickQuizButton()
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .padding(16)
+            }
             #if DEBUG
             .defaultScrollAnchor(DebugCapture.previewScenariosTab ? .bottom : nil)
             #endif
@@ -139,7 +164,12 @@ struct ConversationHome: View {
             .sheet(isPresented: $showingAddLanguage) {
                 AddLanguageSheet().environmentObject(appState)
             }
-            .onAppear { reload(); drawRing() }
+            .onAppear {
+                reload(); drawRing()
+                #if DEBUG
+                if UserDefaults.standard.bool(forKey: "openTopics") { showingTopics = true }
+                #endif
+            }
             // Ring-path calls live in RootTabView's overlay — this view never
             // disappears, so onAppear can't refresh the stats. The token
             // bumps at call close, while the backdrop still covers the home.
@@ -222,6 +252,17 @@ struct ConversationHome: View {
             .navigationDestination(isPresented: $showingActivity) {
                 ActivityView()
             }
+            .navigationDestination(isPresented: $showingTopics) {
+                TalkTopicsPage(
+                    onPickNews: { runNews($0) },
+                    onPickExam: { runExam($0, $1) },
+                    onPickTopic: { runFieldTopic($0) },
+                    onPickScenario: { runScenario($0) },
+                    onAllScenarios: { showingAllScenarios = true },
+                    onBuildScenario: { showingBuilder = true },
+                    onOwnTopic: { runOwnTopic() })
+                    .environmentObject(appState)
+            }
             .navigationDestination(isPresented: $showingAllScenarios) {
                 TalkScenariosListView(onPick: runScenario)
                     .environmentObject(appState)
@@ -242,6 +283,7 @@ struct ConversationHome: View {
                                  initialOrigin: launch.origin,
                                  initialScenarioId: launch.scenarioId,
                                  initialNewsFacts: launch.newsFacts,
+                                 learnerPicksTopic: launch.learnerPicksTopic,
                                  entry: launch.entry)
                     .environmentObject(appState)
             }
@@ -470,6 +512,14 @@ struct ConversationHome: View {
                 newsFacts: t.facts ?? [],
                 entry: .talkNews
             )
+        }
+    }
+
+    /// A call about a subject the learner names once it starts — the topics
+    /// page's "my own topic".
+    private func runOwnTopic() {
+        BillingGate.start(orShow: $showingPaywall) {
+            callLaunch = CallLaunch(entry: .talkOwnTopic, learnerPicksTopic: true)
         }
     }
 

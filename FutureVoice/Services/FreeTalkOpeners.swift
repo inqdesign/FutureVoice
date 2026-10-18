@@ -90,6 +90,27 @@ final class FreeTalkOpeners {
         return introOpeners[code] ?? introOpeners["en"]!
     }
 
+    /// The line a "my own topic" call opens on (topics page, draft
+    /// 2026-10-18): not a hello for the time of day — the learner came with
+    /// something to talk about, so the first thing said hands them the topic.
+    /// Bundled like the hellos, so it never waits on Gemini.
+    static func topicOpener(language: String) -> String {
+        let code = LanguageCatalog.language(language)?.code ?? "en"
+        return topicOpeners[code] ?? topicOpeners["en"]!
+    }
+
+    private static let topicOpeners: [String: String] = [
+        "en": "Okay, what do you want to talk about today?",
+        "de": "Okay, worüber wollen wir heute reden?",
+        "ko": "좋아, 오늘은 어떤 주제로 얘기해 볼까?",
+        "ja": "よし、今日は何について話そうか？",
+        "es": "Bueno, ¿de qué quieres hablar hoy?",
+        "fr": "Bon, de quoi tu veux parler aujourd'hui ?",
+        "it": "Allora, di cosa vuoi parlare oggi?",
+        "pt": "Então, sobre o que você quer conversar hoje?",
+        "zh": "好，今天想聊什么？",
+    ]
+
     private static let introOpeners: [String: String] = [
         "en": "Hi. I'm the future you — the one who speaks English fluently. I can't wait for all the talks ahead of us. Don't give up, and let's get you here, together. So — what are you up to these days?",
         "de": "Hallo. Ich bin das zukünftige Du — das, das fließend Deutsch spricht. Ich freue mich auf all die Gespräche, die vor uns liegen. Gib nicht auf, und lass uns zusammen dafür sorgen, dass du hierher kommst. Also — was machst du gerade so?",

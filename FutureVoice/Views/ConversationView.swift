@@ -229,6 +229,10 @@ struct ConversationView: View {
     /// stores the ringtone under the same text + voice), so speaking it costs
     /// no second synthesis and the voice never changes mid-hand-off.
     private let initialOpener: String?
+    /// A "my own topic" call (topics page): opens by asking what to talk
+    /// about, and the subject the learner names is the call
+    /// (`ConversationEngine`'s THEY CHOSE THE TOPIC block).
+    private let learnerPicksTopic: Bool
     /// The screen this call was started from — `conversation_started` only.
     private let entry: TalkEntry
 
@@ -242,11 +246,13 @@ struct ConversationView: View {
          initialScenarioId: UUID? = nil, initialNewsFacts: [String] = [],
          initialCounterpart: Counterpart? = nil,
          initialOpener: String? = nil,
+         learnerPicksTopic: Bool = false,
          resumeSession: Session? = nil,
          entry: TalkEntry = .other,
          onClose: (() -> Void)? = nil) {
         self.onClose = onClose
         self.initialOpener = initialOpener
+        self.learnerPicksTopic = learnerPicksTopic && resumeSession == nil
         self.entry = resumeSession != nil ? .resume : entry
         if let s = resumeSession {
             _topic = State(initialValue: s.topic ?? "")
@@ -2621,6 +2627,10 @@ struct ConversationView: View {
                 opener = initialOpener
             } else if topicIsNews, let fromPool = openNewsConversation() {
                 opener = fromPool
+            } else if learnerPicksTopic {
+                // They came to talk about something: the first line hands
+                // them the topic instead of a hello.
+                opener = FreeTalkOpeners.topicOpener(language: appState.targetLanguage)
             } else if isFirstMeeting {
                 // They've never spoken. A friend's hello is a greeting
                 // between people who know each other — this call opens by
@@ -4713,7 +4723,7 @@ struct ConversationView: View {
     /// `UserPersona.metAt` is stamped when such a talk gets summarized, so an
     /// abandoned call that said nothing is not counted as having met anyone.
     private var isFirstMeeting: Bool {
-        appState.persona?.metAt == nil && topic.isEmpty && counterpart == nil
+        appState.persona?.metAt == nil && topic.isEmpty && counterpart == nil && !learnerPicksTopic
     }
 
     /// Read the clock for a call that is starting. A resumed talk's saved
@@ -4751,7 +4761,8 @@ struct ConversationView: View {
             firstMeeting: isFirstMeeting,
             clock: promptClock,
             tutor: tutorThisCall,
-            freeTalkCue: freeTalkCue
+            freeTalkCue: freeTalkCue,
+            learnerPicksTopic: learnerPicksTopic
         )
     }
 }
