@@ -35,7 +35,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>107</string>
+	<string>108</string>
 	<key>FVICloudContainer</key>
 	<string>$(ICLOUD_CONTAINER)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
