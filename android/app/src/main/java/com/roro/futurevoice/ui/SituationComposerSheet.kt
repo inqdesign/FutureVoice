@@ -220,7 +220,15 @@ internal fun ScenarioComposer(
     /** The box is the writing door for a NEW situation only; editing keeps
      *  the Form, where the delete row and the category crumb live. */
     val usesBox = mode == ComposerMode.CUSTOM && editing == null
-    var draft by remember { mutableStateOf(editing?.environment ?: prefill) }
+    /** One draft per door: the blank box, and each person's own box. */
+    val situationDraftKey = "situation.${person?.id ?: ""}"
+    var draft by remember {
+        mutableStateOf(editing?.environment ?: prefill.ifEmpty {
+            // What they wrote before closing the box without starting.
+            if (usesBox) SheetDrafts.text(situationDraftKey).orEmpty() else ""
+        })
+    }
+    LaunchedEffect(draft) { if (usesBox) SheetDrafts.set(situationDraftKey, draft) }
     var committing by remember { mutableStateOf(false) }
     var path by remember { mutableStateOf<List<Crumb>>(emptyList()) }
     var options by remember { mutableStateOf<List<SuggestedTopic>>(emptyList()) }
@@ -583,6 +591,7 @@ internal fun ScenarioComposer(
             ScenarioStore.shared(context).save(scenario, targetLanguage)
             StoreEvents.bump()
             committing = false
+            SheetDrafts.clear(situationDraftKey)
             onDismiss()
             onCommitted?.invoke(scenario)
         }

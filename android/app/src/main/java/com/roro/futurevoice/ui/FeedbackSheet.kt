@@ -21,6 +21,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -153,7 +154,10 @@ object FeedbackPrompt {
 fun FeedbackSheet(context: FeedbackContext, onDismiss: () -> Unit) {
     val app = LocalContext.current
     val scope = rememberCoroutineScope()
-    var text by remember { mutableStateOf("") }
+    // What was typed before a "Not now", kept for the next time this asks.
+    val draftKey = "feedback.${context.raw}"
+    var text by remember { mutableStateOf(SheetDrafts.text(draftKey).orEmpty()) }
+    LaunchedEffect(text) { SheetDrafts.set(draftKey, text) }
     var appRating by remember { mutableIntStateOf(0) }
     var callRating by remember { mutableIntStateOf(0) }
     var sending by remember { mutableStateOf(false) }
@@ -209,6 +213,7 @@ fun FeedbackSheet(context: FeedbackContext, onDismiss: () -> Unit) {
             runCatching { send(context, text.trim(), appRating, callRating) }
                 .onSuccess {
                     delivered = true
+                    SheetDrafts.clear(draftKey)
                     sent = true
                     report("feedback_sent", mapOf(
                         "app_rating" to appRating.toString(),

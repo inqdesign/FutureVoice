@@ -526,7 +526,8 @@ internal fun SpeechComposerSheet(language: String, native: String, level: CefrLe
             ?: SpeechGenre.EXPLAINER)
     }
     var seconds by remember { mutableStateOf(prefs.getInt("speech.composer.seconds", 60)) }
-    var topic by remember { mutableStateOf("") }
+    var topic by remember { mutableStateOf(com.roro.futurevoice.ui.SheetDrafts.text("speech.topic").orEmpty()) }
+    LaunchedEffect(topic) { com.roro.futurevoice.ui.SheetDrafts.set("speech.topic", topic) }
     var writing by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
@@ -568,6 +569,7 @@ internal fun SpeechComposerSheet(language: String, native: String, level: CefrLe
                 // the toggle showed.
                 if (vid != null) ScriptVoiceoverCenter.makeInBackground(context, script, vid,
                     minOf(quoted, ScriptVoiceover.quoteMinutes(script.body, script.language)))
+                com.roro.futurevoice.ui.SheetDrafts.clear("speech.topic")
                 onDismiss()
                 onWritten(script)
             } catch (_: Exception) {
@@ -677,9 +679,18 @@ private fun PlainField(value: String, onChange: (String) -> Unit, placeholder: S
 internal fun SpeechOwnScriptSheet(existing: SpeechScript?, language: String, native: String,
                                   onSave: (SpeechScript) -> Unit, onDismiss: () -> Unit) {
     val context = LocalContext.current
-    var title by remember { mutableStateOf(existing?.title.orEmpty()) }
+    // A new script keeps what was typed before the sheet closed unsaved.
+    val keepsDraft = existing == null && com.roro.futurevoice.capture.flags.SpeechCaptureFlags.ownDraft == null
+    var title by remember { mutableStateOf(existing?.title
+        ?: if (keepsDraft) com.roro.futurevoice.ui.SheetDrafts.text("speech.title").orEmpty() else "") }
     var text by remember { mutableStateOf(existing?.body
-        ?: com.roro.futurevoice.capture.flags.SpeechCaptureFlags.ownDraft.orEmpty()) }
+        ?: com.roro.futurevoice.capture.flags.SpeechCaptureFlags.ownDraft
+        ?: com.roro.futurevoice.ui.SheetDrafts.text("speech.body").orEmpty()) }
+    LaunchedEffect(title, text) {
+        if (!keepsDraft) return@LaunchedEffect
+        com.roro.futurevoice.ui.SheetDrafts.set("speech.body", text)
+        com.roro.futurevoice.ui.SheetDrafts.set("speech.title", if (text.isBlank()) "" else title)
+    }
     val lang = existing?.language ?: language.substringBefore('-')
     val trimmed = text.trim()
     // "Also make it in my voice", priced live from what is typed — the same
@@ -708,7 +719,10 @@ internal fun SpeechOwnScriptSheet(existing: SpeechScript?, language: String, nat
             createdAt = existing?.createdAt ?: System.currentTimeMillis(),
             isBuiltIn = false,
         )
-        if (existing == null) Analytics.capture("speech_script_added", mapOf("seconds" to script.targetSeconds))
+        if (existing == null) {
+            Analytics.capture("speech_script_added", mapOf("seconds" to script.targetSeconds))
+            com.roro.futurevoice.ui.SheetDrafts.clear("speech.title", "speech.body")
+        }
         onDismiss()
         onSave(script)
         return script
