@@ -326,6 +326,21 @@ object DailyCallScheduler {
         return manager?.canScheduleExactAlarms() == true
     }
 
+    /**
+     * Whether the ring may open its screen ([DailyCallRingActivity]) over a
+     * dark or locked phone. From Android 14 Play REVOKES this at install for
+     * any app it doesn't list as a phone or alarm app, and then the system
+     * keeps the full-screen intent to itself: the alarm-stream ring plays
+     * with the screen off and nothing to answer it on ("소리만 들리고 화면이
+     * 안 나온다", 2026-10-19). An adb install keeps the grant, which is why
+     * a developer phone never shows it. Always true below Android 14.
+     */
+    fun canShowRingScreen(context: Context): Boolean {
+        if (android.os.Build.VERSION.SDK_INT < 34) return true
+        return (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+            .canUseFullScreenIntent()
+    }
+
     /** How far the system may drift an inexact call. Ten minutes: late enough
      *  for the OS to batch it with other work, early enough that the learner
      *  still reads it as "my 8 o'clock call". */
@@ -442,6 +457,11 @@ object DailyCallScheduler {
                 .notify(REQUEST, build(CHANNEL_ID))
         }
         DailyCallStore.noteRang(context)
+        // What the ring could do on this phone — a ring nobody could see is
+        // otherwise indistinguishable from one nobody answered.
+        com.roro.futurevoice.core.Analytics.capture("daily_call_rang", mapOf(
+            "full_screen" to canShowRingScreen(context),
+            "exact" to canScheduleExact(context = context)))
         // The next call arms the moment this one rings.
         if (DailyCallStore.isEnabled(context)) schedule(context)
     }
