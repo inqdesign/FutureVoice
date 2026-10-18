@@ -710,7 +710,9 @@ struct SpeechComposerSheet: View {
             .onAppear {
                 gate.warm()
                 if voiceoverOn { voiceover = true }
+                if topic.isEmpty { topic = SheetDrafts.text("speech.topic") ?? "" }
             }
+            .onChange(of: topic) { _, t in SheetDrafts.set("speech.topic", t) }
             .navigationTitle("New script")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -783,6 +785,7 @@ struct SpeechComposerSheet: View {
                     Task { try? await ScriptVoiceoverCenter.shared.make(script: script, voiceId: voiceId,
                                                                          quotedMinutes: price) }
                 }
+                SheetDrafts.clear("speech.topic")
                 dismiss()
                 onWritten(script)
             } catch {
@@ -891,10 +894,23 @@ struct SpeechOwnScriptSheet: View {
                     text = existing.body
                 } else if let draft {
                     text = draft
+                } else if let kept = SheetDrafts.text("speech.body") {
+                    // What they typed before closing the sheet unsaved.
+                    title = SheetDrafts.text("speech.title") ?? ""
+                    text = kept
                 } else {
                     bodyFocused = true
                 }
                 if voiceoverOn { voiceover = true }
+            }
+            .onChange(of: text) { _, t in
+                guard existing == nil, draft == nil else { return }
+                SheetDrafts.set("speech.body", t)
+                SheetDrafts.set("speech.title", title)
+            }
+            .onChange(of: title) { _, t in
+                guard existing == nil, draft == nil, !trimmed.isEmpty else { return }
+                SheetDrafts.set("speech.title", t)
             }
         }
     }
@@ -946,6 +962,7 @@ struct SpeechOwnScriptSheet: View {
         )
         if existing == nil {
             Analytics.capture("speech_script_added", ["seconds": script.targetSeconds])
+            SheetDrafts.clear("speech.title", "speech.body")
         }
         dismiss()
         onSave(script)

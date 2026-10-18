@@ -26,6 +26,10 @@ struct RootView: View {
     /// The weekly-test screen's flag, from the same era. Set beside the one
     /// above so nothing that reads it asks again.
     @AppStorage("futurevoice.weeklyRhythm.onboarded") private var weeklyRhythmOnboarded = false
+    /// Whether "your practice stays on your phone" has been said
+    /// (`LocalDataOnboardingView`). New installs only: gated on the routine
+    /// flag, so an install that is already past onboarding never sees it.
+    @AppStorage("futurevoice.localData.onboarded") private var localDataOnboarded = false
     /// A signed-in account with practice already in iCloud, on an install
     /// that hasn't been set up: offer to continue from it (`SyncContinuePromptView`).
     @State private var showSyncOffer = false
@@ -194,6 +198,10 @@ struct RootView: View {
             // letting it through would hand someone an app whose data dies with
             // the install. The view reopens on its sign-up step.
             VoiceCloneOnboardingView()
+        } else if !localDataOnboarded && !dailyCallOnboarded {
+            // Where everything they are about to say will live, said before
+            // the first call — after the voice, ahead of the routine builder.
+            LocalDataOnboardingView()
         } else {
             tabs(buildingRoutine: !dailyCallOnboarded)
         }
@@ -244,6 +252,7 @@ struct RootView: View {
         case "voice":        return AnyView(VoiceCloneOnboardingView())
         case "persona":      return AnyView(PersonaIntakeView())
         case "routine":      return AnyView(RoutinePreview())
+        case "localdata":    return AnyView(LocalDataOnboardingView())
         default:             return nil
         }
     }

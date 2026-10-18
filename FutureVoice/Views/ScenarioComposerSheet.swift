@@ -289,6 +289,9 @@ struct ScenarioComposerSheet: View {
             // keyboard — add both a swipe-down and an explicit Done button.
             .scrollDismissesKeyboard(.interactively)
             .task(id: person?.id) { await ensurePersonIdeas() }
+            .onChange(of: situation) { _, text in
+                if usesBox { SheetDrafts.set(situationDraftKey, text) }
+            }
             .onAppear {
                 // TLS handshake + auth-token refresh off the critical path, so
                 // the first real ideas call isn't also paying for a cold radio.
@@ -312,6 +315,12 @@ struct ScenarioComposerSheet: View {
                    !s.isEmpty {
                     programmaticSituation = true
                     situation = s
+                    customMode = true
+                }
+                // What they wrote before closing the box without starting.
+                if usesBox, situation.isEmpty, let d = SheetDrafts.text(situationDraftKey) {
+                    programmaticSituation = true
+                    situation = d
                     customMode = true
                 }
                 if !partnerSeeded {
@@ -1482,10 +1491,14 @@ struct ScenarioComposerSheet: View {
             s.category = categoryName
             s.categoryIcon = icon
             s.summary = sum.isEmpty ? nil : sum
+            SheetDrafts.clear(situationDraftKey)
             onCommit(s)
             dismiss()
         }
     }
+
+    /// One draft per door: the blank box, and each person's own box.
+    private var situationDraftKey: String { "situation.\(person?.id.uuidString ?? "")" }
 
     /// What `Scenario.role` should say for an attached person. Your OWN
     /// people carry their relationship ("my landlord") — the scene is about
