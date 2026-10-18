@@ -11,8 +11,13 @@ struct QuickQuizItem: Identifiable, Equatable {
     let options: [String]
     /// grammar: the point's name (native), shown above the line.
     var heading: String? = nil
-    /// grammar: why the answer is right (native), shown once answered.
+    /// Shown once answered, and the quiz waits for Next: grammar says why,
+    /// a level expression what it means (native).
     var note: String? = nil
+    /// A written question from `QuickQuizStock`, counted as asked once shown.
+    var stockId: UUID? = nil
+    /// From the learner's own material rather than the level.
+    var isOwn: Bool = false
 
     /// The line with its blank filled — what a missed item is listed as.
     var solved: String {
@@ -26,11 +31,17 @@ struct QuickQuizItem: Identifiable, Equatable {
 ///
 /// Three kinds, all multiple choice, graded in code:
 ///
-///   word       a notebook word's meaning → pick the word (the weekly test's decoys)
-///   expression a "To study" phrase in the line the fluent self said it in,
-///              blanked → pick the phrase
+///   word       a word's meaning → pick the word (the weekly test's decoys)
+///   expression a line with the expression blanked → pick it
 ///   grammar    a new everyday line with a blank → pick the form that fits
-///              (`QuickQuizGrammar`, the learner's recurring grammar points)
+///
+/// The learner's OWN material comes first — notebook words, the "To study"
+/// list in the line the fluent self said it in — and the LEVEL fills the
+/// rest (same day, founder: "someone who has made no scene and had no call
+/// still gets a quiz at their level"): graded words of their CEFR band they
+/// have not marked known or used, and written questions from `QuickQuizStock`
+/// (common expressions of the level; grammar from their recurring slips,
+/// else the level's). A first-day learner gets a full quiz.
 ///
 /// Nothing here rests on what the RECOGNIZER heard. Words and expressions
 /// come from the fluent self's own lines (model-written), and grammar items
@@ -41,11 +52,13 @@ struct QuickQuizItem: Identifiable, Equatable {
 ///
 /// A quiz is built when it opens and gone when it closes. The only network
 /// is the free, cached dictionary lookup for word meanings (capped by
-/// `glossBudget`) and, when the grammar stock runs low, one model call.
+/// `glossBudget`) and, when the written stock runs low, one batch.
 ///
 /// An answer is weaker evidence than a test's, so only a MISS writes back:
-/// the word or phrase is due again now. A right answer changes nothing —
-/// USED outranks KNOWN, and a tap is neither. Grammar writes nothing.
+/// the word or phrase goes into the notebook, due now (a level word or
+/// expression the learner had never saved included — getting it wrong is
+/// the reason to study it). A right answer changes nothing — USED outranks
+/// KNOWN, and a tap is neither. Grammar writes nothing.
 @MainActor
 enum QuickQuizEngine {
     static let size = 10
@@ -60,30 +73,57 @@ enum QuickQuizEngine {
 
     static func build(appState: AppState) async -> [QuickQuizItem] {
         var rng = WeeklyTestRandom(seed: UUID())
-        // The grammar stock is topped up while the words are looked up.
-        async let grammarTask = QuickQuizGrammar.items(appState: appState, count: maxGrammar)
+        // The written stock is topped up while the words are looked up.
+        async let stockTask = QuickQuizStock.available(appState: appState,
+                                                       grammar: size, expressions: size)
         let words = await wordItems(appState: appState, rng: &rng)
-        let expressions = expressionItems(appState: appState, rng: &rng)
-        let grammar = await grammarTask
+        let ownExpressions = expressionItems(appState: appState, rng: &rng)
+        let stock = await stockTask
 
-        // Each kind its share, then whatever is left fills the quiz.
-        var picked = Array(words.prefix(maxWords)) + Array(expressions.prefix(maxExpressions))
-            + grammar
-        let rest = Array(words.dropFirst(maxWords)) + Array(expressions.dropFirst(maxExpressions))
-        picked += rest.shuffled(using: &rng).prefix(max(0, size - picked.count))
+        // The learner's own first, each kind its share; then the level.
+        let ownWords = words.filter { $0.isOwn }
+        let levelWords = words.filter { !$0.isOwn }
+        var picked = Array(ownWords.prefix(maxWords)) + Array(ownExpressions.prefix(maxExpressions))
+            + Array(stock.grammar.prefix(maxGrammar))
+        let fill = [Array(stock.expressions), levelWords, Array(stock.grammar.dropFirst(maxGrammar)),
+                    Array(ownWords.dropFirst(maxWords)), Array(ownExpressions.dropFirst(maxExpressions))]
+        // Round-robin over the fill so a thin learner still gets a mix.
+        var queues = fill.map { $0.shuffled(using: &rng) }
+        while picked.count < size, queues.contains(where: { !$0.isEmpty }) {
+            for i in queues.indices where picked.count < size && !queues[i].isEmpty {
+                picked.append(queues[i].removeFirst())
+            }
+        }
         guard picked.count >= minItems else { return [] }
-        return Array(picked.shuffled(using: &rng).prefix(size))
+        QuickQuizStock.markAsked(Set(picked.compactMap(\.stockId)))
+        return picked.shuffled(using: &rng)
     }
+
+    /// Words the level offers when the notebook runs out: graded at the
+    /// learner's band, not already known, used or in the notebook.
+    static let levelWordPool = 12
 
     // MARK: - Kinds
 
+    /// Notebook words first, then level words, each with its meaning. The
+    /// meanings are looked up together, capped at `glossBudget`.
     private static func wordItems(appState: AppState, rng: inout WeeklyTestRandom) async -> [QuickQuizItem] {
         let vocab = VocabStore.shared
         let language = appState.targetLanguage
+        let native = appState.nativeLanguage
         let studying = vocab.studying.filter { WeeklyTestEngine.isInTargetScript($0) }
-        guard !studying.isEmpty else { return [] }
-        let candidates = studying.shuffled(using: &rng)
+        let own = studying.shuffled(using: &rng)
         let taken = Set(studying.map { $0.lowercased() })
+            .union(vocab.records.keys.map { $0.lowercased() })
+        let level = CoreVocabulary.entries
+            .filter { $0.level == appState.proficiency && !taken.contains($0.word.lowercased()) }
+            .map(\.word)
+            .filter { WeeklyTestEngine.isInTargetScript($0) }
+            .shuffled(using: &rng)
+            .prefix(levelWordPool)
+        let candidates = Array(own.prefix(size)) + Array(level)
+        guard !candidates.isEmpty else { return [] }
+        let ownSet = Set(own.map { $0.lowercased() })
 
         var graded: [String] = []
         for band in WeeklyTestEngine.decoyBands(around: appState.proficiency) {
@@ -93,21 +133,36 @@ enum QuickQuizEngine {
                 .shuffled(using: &rng)
         }
 
-        let started = Date()
+        // Every meaning at once; whatever has not arrived by the budget is left out.
+        var senses: [String: String] = [:]
+        await withTaskGroup(of: (String, String?).self) { group in
+            for word in candidates {
+                group.addTask { @MainActor in
+                    let entry = await WordLore.entry(for: word, native: native, target: language)
+                    return (word, entry?.senses.first?.meaning.trimmingCharacters(in: .whitespacesAndNewlines))
+                }
+            }
+            group.addTask {
+                try? await Task.sleep(nanoseconds: UInt64(glossBudget * 1_000_000_000))
+                return ("", nil)
+            }
+            for await (word, sense) in group {
+                if word.isEmpty { group.cancelAll(); break }
+                if let sense { senses[word] = sense }
+                if senses.count == candidates.count { group.cancelAll(); break }
+            }
+        }
+
         var out: [QuickQuizItem] = []
         for word in candidates {
-            guard out.count < size, Date().timeIntervalSince(started) < glossBudget else { break }
-            guard let entry = await WordLore.entry(for: word, native: appState.nativeLanguage,
-                                                   target: language),
-                  let sense = entry.senses.first?.meaning.trimmingCharacters(in: .whitespacesAndNewlines),
-                  !sense.isEmpty,
-                  !sense.lowercased().contains(word.lowercased())
-            else { continue }
+            guard let sense = senses[word], !sense.isEmpty,
+                  !sense.lowercased().contains(word.lowercased()) else { continue }
             let decoys = WeeklyTestEngine.meaningDecoys(for: word, own: candidates, graded: graded,
                                                         language: language, rng: &rng)
             guard decoys.count == WeeklyTestEngine.choiceCount - 1 else { continue }
             out.append(QuickQuizItem(kind: .word, prompt: sense, answer: word,
-                                     options: ([word] + decoys).shuffled(using: &rng)))
+                                     options: ([word] + decoys).shuffled(using: &rng),
+                                     isOwn: ownSet.contains(word.lowercased())))
         }
         return out
     }
@@ -129,7 +184,8 @@ enum QuickQuizEngine {
         return WeeklyTestEngine.gapItems(toStudy: recent, sessions: sessions, fluentTurns: fluent,
                                          allSessions: sessions, openers: openers,
                                          appState: appState, rng: &rng)
-            .map { QuickQuizItem(kind: .expression, prompt: $0.prompt, answer: $0.answer, options: $0.options) }
+            .map { QuickQuizItem(kind: .expression, prompt: $0.prompt, answer: $0.answer, options: $0.options,
+                                 isOwn: true) }
     }
 
     // MARK: - Writing back

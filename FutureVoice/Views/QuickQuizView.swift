@@ -19,7 +19,7 @@ struct QuickQuizButton: View {
         // background wake) would be suspended mid-request.
         .task(id: scenePhase == .active) {
             guard scenePhase == .active else { return }
-            QuickQuizGrammar.prewarm(appState: appState)
+            QuickQuizStock.prewarm(appState: appState)
         }
         #if DEBUG
         .onAppear { if UserDefaults.standard.bool(forKey: "openQuiz") { showing = true } }
@@ -145,7 +145,7 @@ struct QuickQuizView: View {
                         }
                     }
                     .padding(.top, 4)
-                    // A grammar answer says why, and waits to be read.
+                    // A note (why, or what it means) waits to be read.
                     if chosen != nil, let note = item.note {
                         Text(note)
                             .font(.subheadline)
@@ -272,7 +272,7 @@ struct QuickQuizView: View {
             SoundEffects.play(.wrong)
             setMood(.sad)
         }
-        // Grammar waits on its Next button, under the reason.
+        // An item with a note waits on its Next button, under the note.
         guard item.note == nil else { return }
         advance = Task { @MainActor in
             try? await Task.sleep(nanoseconds: correct ? 700_000_000 : 1_400_000_000)
@@ -298,7 +298,7 @@ struct QuickQuizView: View {
     private func retryMissed() {
         items = missed.map { QuickQuizItem(kind: $0.kind, prompt: $0.prompt, answer: $0.answer,
                                           options: $0.options.shuffled(),
-                                          heading: $0.heading, note: $0.note) }
+                                          heading: $0.heading, note: $0.note, isOwn: $0.isOwn) }
         missed = []
         index = 0
         chosen = nil

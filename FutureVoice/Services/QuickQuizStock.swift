@@ -1,22 +1,28 @@
 import CryptoKit
 import Foundation
 
-/// The quick quiz's grammar questions (2026-10-18, founder: "words,
-/// expressions and grammar").
+/// The quick quiz's WRITTEN questions: grammar, and the level's expressions
+/// (2026-10-18, founder: "words, expressions and grammar"; then "someone who
+/// has made no scene and had no call still gets a quiz at their level — drop
+/// the rule that it must be the learner's own").
 ///
-/// A grammar question is a NEW everyday line with a blank and four forms for
-/// it, exactly one of which fits. They are written by one model call per
-/// batch and kept on disk (`quiz_grammar.json`, per language), so most
-/// quizzes ask nothing of the model: a batch is written only when fewer than
-/// `refillBelow` unasked questions are left, and a quiz waits for it at most
-/// `writeWait` — past that it goes without and the batch lands for the next.
+/// Each is a NEW everyday line with a blank and four choices, exactly one of
+/// which fits. They are written by one model call per batch and kept on disk
+/// (`quiz_stock.json`, per language), so most quizzes ask nothing of the
+/// model: a batch is written only when a kind has fewer than `refillBelow`
+/// unasked questions, and a quiz waits for it at most `writeWait` — past
+/// that it goes without and the batch lands for the next.
 ///
-/// What the questions are ABOUT: the learner's own recurring grammar points
-/// first — the ones the call's grammar focus trusts (`GrammarFocus.candidates`:
-/// said in two talks or more, judged a grammar point by `describe`) — and,
-/// when there are fewer than `minPoints` of those, the grammar a learner at
-/// their level is working on. Never the learner's transcript: the line is
-/// written fresh, so nothing a recognizer misheard can become an answer.
+/// - grammar: the learner's own recurring grammar points first — the ones
+///   the call's grammar focus trusts (`GrammarFocus.candidates`: said in two
+///   talks or more, judged a grammar point by `describe`) — and, when there
+///   are fewer than `minPoints` of those, the grammar of their level.
+/// - expression: common expressions of their level (collocations, phrasal
+///   verbs, set phrases). The learner's OWN study list is asked by
+///   `QuickQuizEngine` from the lines they heard; these fill in around it.
+///
+/// Never the learner's transcript: every line is written fresh, so nothing a
+/// recognizer misheard can become an answer.
 ///
 /// The model writes; code decides what is kept (one blank, four distinct
 /// choices in the target script, the answer among them) and grades. Then a
@@ -26,9 +32,13 @@ import Foundation
 /// two right answers ("밤을 새워서 / 새우느라고 피곤해요", "ate a / the
 /// sandwich"); the check dropped all three, plus a few stricter calls.
 @MainActor
-enum QuickQuizGrammar {
+enum QuickQuizStock {
+    enum Kind: String, Codable, CaseIterable { case grammar, expression }
+
     struct Stored: Codable, Identifiable {
         var id = UUID()
+        let kind: Kind
+        /// grammar: the point's name · expression: what it means (native).
         let point: String
         let tip: String
         let sentence: String
@@ -38,9 +48,10 @@ enum QuickQuizGrammar {
         let createdAt: Date
     }
 
-    /// Below this many unasked questions, a batch is written.
-    static let refillBelow = 6
-    static let batchSize = 10
+    /// Below this many unasked questions of either kind, a batch is written.
+    static let refillBelow = 5
+    /// Questions asked of the model per kind; about a third fail the check.
+    static let batchPerKind = 8
     /// The learner's own points the batch is built on, at most.
     static let maxPoints = 4
     /// With fewer of the learner's own points, the level's grammar fills in.
@@ -49,10 +60,10 @@ enum QuickQuizGrammar {
     static let writeWait: TimeInterval = 12
     /// A question is retired once asked this often; the stock is capped.
     static let maxAsked = 2
-    static let maxStored = 40
+    static let maxStored = 60
 
     private static var fileURL: URL {
-        LanguageScope.activeDirectory.appendingPathComponent("quiz_grammar.json")
+        LanguageScope.activeDirectory.appendingPathComponent("quiz_stock.json")
     }
 
     static func load() -> [Stored] {
@@ -83,11 +94,12 @@ enum QuickQuizGrammar {
     }
 
     private static var needsBatch: Bool {
-        load().filter { $0.asked == 0 }.count < refillBelow
+        let unasked = load().filter { $0.asked == 0 }
+        return Kind.allCases.contains { kind in unasked.filter { $0.kind == kind }.count < refillBelow }
     }
 
-    /// Fill the stock before anyone opens a quiz, so the first one has
-    /// grammar in it (the Talk tab calls this when the quiz button appears).
+    /// Fill the stock before anyone opens a quiz, so the first one is full
+    /// (the Talk tab calls this when the quiz button appears).
     static func prewarm(appState: AppState) {
         // A batch that just failed (offline, signed out) is not retried on
         // every return to the tab.
@@ -95,14 +107,18 @@ enum QuickQuizGrammar {
         _ = startWriting(appState: appState)
     }
 
-    /// Up to `count` questions, least-asked first and one per grammar point,
-    /// marked as asked. Writes a batch first when the stock is low.
-    static func items(appState: AppState, count: Int) async -> [QuickQuizItem] {
+    /// What can be asked now, least-asked first — grammar one per point.
+    /// Writes a batch first when the stock is low, waiting only when there
+    /// is too little to ask without it. Nothing is marked asked here: the
+    /// quiz marks what it actually used (`markAsked`).
+    static func available(appState: AppState, grammar: Int, expressions: Int) async
+        -> (grammar: [QuickQuizItem], expressions: [QuickQuizItem]) {
         var stock = load().filter { $0.asked < maxAsked }
         if needsBatch {
             let writing = startWriting(appState: appState)
-            if stock.count < count {
-                // Nothing to ask without it: wait, but not for long.
+            let short = stock.filter { $0.kind == .grammar }.count < grammar
+                || stock.filter { $0.kind == .expression }.count < expressions
+            if short {
                 let waited = await withTaskGroup(of: [Stored]?.self) { group in
                     group.addTask { await writing.value }
                     group.addTask {
@@ -116,26 +132,41 @@ enum QuickQuizGrammar {
                 if waited != nil { stock = load().filter { $0.asked < maxAsked } }
             }
         }
+        let ordered = stock.sorted { ($0.asked, $0.createdAt) < ($1.asked, $1.createdAt) }
 
-        var picked: [Stored] = []
         var points = Set<String>()
-        for q in stock.sorted(by: { ($0.asked, $0.createdAt) < ($1.asked, $1.createdAt) }) {
-            guard picked.count < count else { break }
-            guard points.insert(q.point.lowercased()).inserted else { continue }
-            picked.append(q)
-        }
-        guard !picked.isEmpty else { return [] }
+        let g = ordered.filter { $0.kind == .grammar }
+            .filter { points.insert($0.point.lowercased()).inserted }
+            .prefix(grammar)
+        var phrases = Set<String>()
+        let e = ordered.filter { $0.kind == .expression }
+            .filter { phrases.insert(CarryoverDetector.normalized($0.answer)).inserted }
+            .prefix(expressions)
+        return (g.map(item), e.map(item))
+    }
 
-        let ids = Set(picked.map(\.id))
+    private static func item(_ q: Stored) -> QuickQuizItem {
+        switch q.kind {
+        case .grammar:
+            return QuickQuizItem(kind: .grammar, prompt: q.sentence, answer: q.answer,
+                                 options: ([q.answer] + q.wrong).shuffled(),
+                                 heading: q.point.isEmpty ? nil : q.point,
+                                 note: q.tip.isEmpty ? nil : q.tip, stockId: q.id)
+        case .expression:
+            // The meaning is the note: it says what was just picked.
+            let meaning = [q.point, q.tip].filter { !$0.isEmpty }.joined(separator: " · ")
+            return QuickQuizItem(kind: .expression, prompt: q.sentence, answer: q.answer,
+                                 options: ([q.answer] + q.wrong).shuffled(),
+                                 note: meaning.isEmpty ? nil : "\(q.answer) — \(meaning)", stockId: q.id)
+        }
+    }
+
+    /// Count the questions a quiz actually asked.
+    static func markAsked(_ ids: Set<UUID>) {
+        guard !ids.isEmpty else { return }
         var all = load()
         for i in all.indices where ids.contains(all[i].id) { all[i].asked += 1 }
         save(all)
-
-        return picked.map { q in
-            QuickQuizItem(kind: .grammar, prompt: q.sentence, answer: q.answer,
-                          options: ([q.answer] + q.wrong).shuffled(),
-                          heading: q.point.isEmpty ? nil : q.point, note: q.tip.isEmpty ? nil : q.tip)
-        }
     }
 
     // MARK: - Writing
@@ -146,6 +177,7 @@ enum QuickQuizGrammar {
     /// "sentence"). A question that can't be read is skipped, never the batch.
     private struct Payload: Decodable {
         struct Item {
+            let kind: Kind
             let point: String
             let tip: String?
             let sentence: String
@@ -167,6 +199,7 @@ enum QuickQuizGrammar {
     /// One element of `items`, whatever shape it arrived in.
     private struct Loose: Decodable {
         let item: Payload.Item?
+
 
         private struct AnyKey: CodingKey {
             var stringValue: String
@@ -202,7 +235,9 @@ enum QuickQuizGrammar {
             if wrong.isEmpty, let all = strings("choices", "options") {
                 wrong = all.filter { $0 != answer }
             }
-            item = Payload.Item(point: string("point", "grammar_point", "grammar") ?? "",
+            let kind: Kind = (string("type", "kind") ?? "").lowercased().hasPrefix("expr") ? .expression : .grammar
+            item = Payload.Item(kind: kind,
+                                point: string("point", "meaning", "grammar_point", "grammar") ?? "",
                                 tip: string("tip", "explanation", "why"),
                                 sentence: sentence, answer: answer, wrong: wrong)
         }
@@ -226,29 +261,35 @@ enum QuickQuizGrammar {
         let level = appState.proficiency.rawValue.uppercased()
         let spokenTopics = sessions.compactMap(\.topic).filter { !$0.isEmpty }.suffix(6)
         let system = """
-            You write quick grammar questions for a \(targetName) learner whose own \
+            You write quick quiz questions for a \(targetName) learner whose own \
             language is \(nativeName), level \(level). Each question is ONE everyday \
             \(targetName) sentence with exactly one blank "\(WeeklyTestEngine.blankMark)" \
-            and four choices for it. Exactly ONE choice is correct.
+            and four choices for it. Exactly ONE choice is correct. Two types:
 
-            Return {"items":[{"point":"...","tip":"...","sentence":"...","answer":"...","wrong":["...","...","..."]}]}
+            Return {"items":[{"type":"grammar|expression","point":"...","tip":"...","sentence":"...","answer":"...","wrong":["...","...","..."]}]}
             - sentence: spoken and ordinary, \(WordSplitter.spaced ? "5–12 words" : "8–25 characters"), \
-              at their level, about everyday life\(spokenTopics.isEmpty ? "" : " (their recent topics: \(spokenTopics.joined(separator: "; ")))"). \
-              The blank replaces 1–3 words: the part the grammar point decides.
-            - The sentence must leave ONLY the answer possible. If a tense is tested, \
-              put a time word in the sentence; if a particle or article, make the \
-              meaning clear. Never write a blank two choices could both fill, not \
-              even casually.
-            - wrong: three forms that are clearly wrong in THIS sentence for a \
-              grammar reason, the same kind of word as the answer, and the ones a \
-              learner would really reach for. Never a synonym of the answer. Never \
-              a choice that differs only in politeness or speech level: keep one \
-              speech level throughout.
-            - point: the grammar point in \(nativeName), 2–5 words. tip: one line in \
-              \(nativeName), at most 14 words, on why the answer fits here.
+              at their level, about everyday life\(spokenTopics.isEmpty ? "" : " (their recent topics: \(spokenTopics.joined(separator: "; ")))").
+            - The sentence must leave ONLY the answer possible. Never write a blank \
+              two choices could both fill, not even casually. Keep one speech level \
+              throughout; never let choices differ only in politeness.
+            - type "grammar": the blank replaces the 1–3 words a grammar point \
+              decides. If a tense is tested, put a time word in the sentence; if a \
+              particle or article, make the meaning clear. wrong: three forms that \
+              are clearly wrong here for a grammar reason, the same kind of word as \
+              the answer, the ones a learner would really reach for. point: the \
+              grammar point in \(nativeName), 2–5 words. tip: one line in \(nativeName), \
+              at most 14 words, on why the answer fits here.
+            - type "expression": the answer is a common expression a \(level) learner \
+              should know — a collocation, phrasal verb or set phrase of 2–4 words — \
+              and the blank replaces all of it. wrong: three real expressions of the \
+              same shape that do not fit this sentence's meaning; never a synonym of \
+              the answer. point: what the expression means, in \(nativeName), at most \
+              8 words. tip: "".
             - Every sentence, answer and choice is in \(targetName). point and tip are \
               in \(nativeName).
-            Write \(batchSize) questions, at most 2 per grammar point, each sentence new. JSON only.
+            Write \(batchPerKind) grammar questions (at most 2 per grammar point) and \
+            \(batchPerKind) expression questions (each a different expression), each \
+            sentence new. JSON only.
             """
         var user: String
         if own.isEmpty {
@@ -261,6 +302,10 @@ enum QuickQuizGrammar {
         if own.count < minPoints {
             user += "\nAlso use grammar points a \(level) learner of \(targetName) is working on."
         }
+        let known = Set(load().filter { $0.kind == .expression }.map { $0.answer.lowercased() })
+        if !known.isEmpty {
+            user += "\nExpressions already used — pick others: " + known.sorted().joined(separator: ", ")
+        }
 
         let key = SHA256.hash(data: Data((system + user + "\(Date().timeIntervalSince1970)").utf8))
             .prefix(8).map { String(format: "%02x", $0) }.joined()
@@ -268,10 +313,10 @@ enum QuickQuizGrammar {
         do {
             payload = try await GeminiClient.shared.sendJSON(
                 system: system, messages: [.init(role: .user, content: user)],
-                maxTokens: 3000, purpose: "quiz",
-                idempotencyKey: "quiz-grammar:\(key)", requestTimeout: 30)
+                maxTokens: 6000, purpose: "quiz",
+                idempotencyKey: "quiz-stock:\(key)", requestTimeout: 45)
         } catch {
-            Telemetry.log("quiz_grammar_batch", ["stage": "write", "error": String(describing: error).prefix(200).description])
+            Telemetry.log("quiz_stock_batch", ["stage": "write", "error": String(describing: error).prefix(200).description])
             return nil
         }
 
@@ -285,8 +330,9 @@ enum QuickQuizGrammar {
         let added = await check(written, targetName: targetName, key: key)
         // One row per batch: how many were written, survived code, survived
         // the second reading — the only record of what the drop rate is.
-        Telemetry.log("quiz_grammar_batch", ["stage": "done", "written": "\(payload.items.count)",
+        Telemetry.log("quiz_stock_batch", ["stage": "done", "written": "\(payload.items.count)",
                                              "valid": "\(written.count)", "kept": "\(added.count)",
+                                             "kept_expressions": "\(added.filter { $0.kind == .expression }.count)",
                                              "own_points": "\(own.count)", "lang": target])
         guard !added.isEmpty else { return nil }
         save(load() + added)
@@ -319,10 +365,10 @@ enum QuickQuizGrammar {
         do {
             v = try await GeminiClient.shared.sendJSON(
                 system: system, messages: [.init(role: .user, content: user)],
-                maxTokens: 2000, purpose: "quiz",
-                idempotencyKey: "quiz-grammar-check:\(key)", requestTimeout: 30)
+                maxTokens: 4000, purpose: "quiz",
+                idempotencyKey: "quiz-stock-check:\(key)", requestTimeout: 45)
         } catch {
-            Telemetry.log("quiz_grammar_batch", ["stage": "check", "error": String(describing: error).prefix(200).description])
+            Telemetry.log("quiz_stock_batch", ["stage": "check", "error": String(describing: error).prefix(200).description])
             return []
         }
         let norm = CarryoverDetector.normalized
@@ -350,7 +396,7 @@ enum QuickQuizGrammar {
               TextScript.isInTargetScript(sentence.replacingOccurrences(of: blank, with: answer),
                                           language: language)
         else { return nil }
-        return Stored(point: clean(it.point), tip: clean(it.tip ?? ""), sentence: sentence,
+        return Stored(kind: it.kind, point: clean(it.point), tip: clean(it.tip ?? ""), sentence: sentence,
                       answer: answer, wrong: wrong, createdAt: Date())
     }
 }
