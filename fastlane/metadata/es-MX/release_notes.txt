@@ -1,7 +1,16 @@
 Novedades
-• Activa Estudiar en un guion de discurso y verás explicadas la gramática y las expresiones, con cada párrafo traducido a tu idioma.
-• Crea un audio de tu guion leído con tu propia voz.
-• Activa Responder con Enviar en una llamada y hacer una pausa ya no termina tu turno. Habla sin prisa y toca el botón central cuando acabes.
+• Ya puedes aprender español, con acento mexicano o castellano.
+• Crea tu rutina al empezar: elige a qué hora suena tu llamada diaria y cuánto estudias, y se añade al momento a tu plan semanal.
+• Tu yo fluido recuerda lo que te ha pasado últimamente y te pregunta por ello al saludarte.
+• Añadir a una persona se hace en una sola pantalla, y puedes crear a alguien nuevo desde el selector de personas.
+• Desliza los retos de discurso como tarjetas y entra al test semanal directamente desde Repaso.
+• Al crear tu voz, el ruido de fondo de la grabación se limpia mejor.
+• En Volver a decirlo ya puedes decir también las frases de tu yo fluido. Activa Leer las dos partes desde el botón de arriba a la izquierda.
 
 Correcciones
-• Corregimos pequeños errores y la app funciona de forma más estable.
+• La burbuja de tu yo fluido ya no parpadea al aparecer.
+• Los títulos de las llamadas de noticias ya no se cortan.
+• Escucharlo con mi voz ya no gasta más tiempo del que dura el guion.
+• Las palabras corregidas en Repaso ya no se meten dentro de otras palabras.
+• Si aprendes japonés o español, la lista de personas ya no aparece vacía.
+• Lo que estabas escribiendo sigue ahí si cierras una ventana y la vuelves a abrir.

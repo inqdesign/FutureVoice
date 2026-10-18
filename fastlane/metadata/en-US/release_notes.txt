@@ -1,7 +1,16 @@
 New
-• Turn on Study in a speech script to see its grammar and expressions explained, with each paragraph translated into your language.
-• Make an audio version of your script read in your own voice.
-• Turn on Answer with Send in a call and pausing won't end your turn. Take your time, then tap the middle button when you're done.
+• You can now learn Spanish, with a Mexican or Castilian accent.
+• Set up your routine when you start: pick when your daily call rings and how much you study, and it goes straight onto your weekly plan.
+• Your fluent self remembers what's been going on and asks about it when you say hello.
+• Adding a person takes one screen, and you can create someone new right from the person picker.
+• Swipe through speech challenges as cards, and find the weekly test right on the Review screen.
+• Your voice recording is cleaned of background noise more thoroughly when your voice is made.
+• In Say it again, you can now say your fluent self's lines too. Turn on Read both sides from the button at the top left.
 
 Fixed
-• Minor bug fixes and stability improvements.
+• Your fluent self's bubble no longer flickers when it appears.
+• News call titles are no longer cut off.
+• Hear it in my voice no longer uses more time than the script's length.
+• Corrected words in Review no longer land inside other words.
+• When learning Japanese or Spanish, the people list is no longer empty.
+• What you were typing is still there when you close a sheet and open it again.

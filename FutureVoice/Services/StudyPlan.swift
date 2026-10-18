@@ -41,8 +41,18 @@ struct StudyPlan: Codable, Equatable {
         }
 
         /// How tall the block is drawn in the weekly editor, in minutes —
-        /// a count has no length, so it gets a fixed one.
-        func drawnMinutes(amount: Int) -> Int { isTimed ? amount : 15 }
+        /// a count has no length, so it gets a fixed one. Review is the
+        /// exception: onboarding sizes it from study TIME (15 min, 30 min,
+        /// an hour), so its cards are drawn back at that length — 20 cards
+        /// to the quarter hour, the default block's own size.
+        func drawnMinutes(amount: Int) -> Int {
+            if isTimed { return amount }
+            if self == .review { return max(15, amount * 15 / Self.reviewCardsPerQuarter) }
+            return 15
+        }
+
+        /// Review cards a quarter hour holds (`defaultAmount`).
+        static let reviewCardsPerQuarter = 20
 
         /// Kinds the learner can place by hand — whole ACTIONS (founder,
         /// 2026-10-03: talk, review, say it again — not words or shadowing
@@ -445,6 +455,27 @@ struct StudyPlan: Codable, Equatable {
         }
         plan.streakSince = Calendar.current.startOfDay(for: now)
         plan.unitsVersion = 2
+        return plan
+    }
+
+    /// The routine onboarding builds (`RoutineOnboardingView`): the daily
+    /// call — `callMinutes` of talk at `callTime` on `days` — and the study
+    /// time as review at `reviewTime` on the same days. Every other day is
+    /// a rest day. Blocks of other kinds the plan already holds stay.
+    func withOnboardingRoutine(callMinutes: Int, callTime: DailyCallStore.CallTime, days: Set<Int>,
+                               studyMinutes: Int?, reviewTime: DailyCallStore.CallTime) -> StudyPlan {
+        var plan = self
+        plan.blocks.removeAll { $0.kind == .talk || $0.kind == .sayItAgain || $0.kind == .review }
+        plan.exceptions = [:]
+        plan.blocks.append(Block(kind: .talk, weekdays: days, hour: callTime.hour,
+                                 minute: callTime.minute, minutes: max(5, callMinutes)))
+        if let studyMinutes {
+            plan.blocks.append(Block(kind: .review, weekdays: days, hour: reviewTime.hour,
+                                     minute: reviewTime.minute,
+                                     minutes: studyMinutes * Kind.reviewCardsPerQuarter / 15))
+        }
+        let off = Set(1...7).subtracting(days)
+        plan.offWeekdays = off.isEmpty ? nil : off
         return plan
     }
 
