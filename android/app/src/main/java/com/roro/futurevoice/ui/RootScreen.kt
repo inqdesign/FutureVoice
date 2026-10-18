@@ -1882,6 +1882,7 @@ internal fun HomeScreen(
                             enabled = state.voiceId != null,
                             onTap = { launch("", emptyList()) },
                             onOpenActivity = onOpenActivity,
+                            heroTop = padding.calculateTopPadding(),
                         )
                         // After the first talk, the only card above Discover is the
                         // one asking for the learner's life. Before it, nothing: the
@@ -2015,7 +2016,10 @@ internal fun HomeScreen(
  */
 @Composable
 private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
-                     onOpenActivity: () -> Unit) {
+                     onOpenActivity: () -> Unit,
+                     /** Where the hero starts at rest: the page's top padding,
+                      *  i.e. the header with the status bar in it. */
+                     heroTop: androidx.compose.ui.unit.Dp) {
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
     // The FIRST frame is written from the real numbers (iOS `heroLine`:
@@ -2063,30 +2067,13 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
     // by half their height.
     val screenHeightPx = androidx.compose.ui.platform.LocalWindowInfo.current
         .containerSize.height.toFloat()
-    // Saveable: the tabs leave composition under a pushed page, and a hero
-    // re-solved from zero on the way back jumped the greeting and ring down,
-    // then back up a beat later.
-    var heroTopPx by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(0f) }
-    // Every report, kept WITHOUT laying out from it (iOS `latestHeroTopReport`).
-    val latestTop = remember { floatArrayOf(0f) }
-    // Adopted once, when it is plausible (a status bar is always above it) and
-    // SETTLED (unchanged across two samples) — iOS's settle-sample. Taking the
-    // very first report adopted a transient top before the header had landed,
-    // and the hero came out ~46 dp too tall: the ring sat that far below the
-    // midline.
-    LaunchedEffect(Unit) {
-        if (heroTopPx > 0f) return@LaunchedEffect
-        val floor = with(density) { 40.dp.toPx() }
-        var previous = Float.NaN
-        while (true) {
-            val current = latestTop[0]
-            if (current > floor && kotlin.math.abs(current - previous) < 0.5f) {
-                heroTopPx = current; break
-            }
-            previous = current
-            delay(250)
-        }
-    }
+    // The hero's top is the page's top padding, known before the first
+    // frame. It used to be MEASURED and adopted from a settle-sample (iOS's
+    // way), starting from 0 — so a cold launch drew the ring low and lifted
+    // it, greeting and all, a quarter-second later (founder: the Talk tab
+    // "clunks" on open). iOS fixed the same jump by seeding a close guess
+    // (2026-09-28); here the exact value is at hand.
+    val heroTopPx = with(density) { heroTop.toPx() }
     // An unfolded foldable or a tablet (≥ 600 dp across) is the one
     // exception: the ring is a fixed 280 dp, so centring it on a screen that
     // wide left it floating in empty space with the list pushed to the
@@ -2105,11 +2092,6 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
         Modifier
             .fillMaxWidth()
             .height(heroHeight)
-            // Adopted ONCE, at rest (see the settle-sample above). The page
-            // scrolls, so the hero's window top moves with it — and feeding a
-            // scrolled position back into the hero's own height made the page
-            // oscillate between two scroll offsets on a fling.
-            .onGloballyPositioned { latestTop[0] = it.boundsInWindow().top }
             .padding(top = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         // No spacing of its own (iOS `VStack(spacing: 0)`): the two weighted
