@@ -77,6 +77,11 @@ data class TalkConfig(
      * re-summarizes the whole talk, merged with its previous analysis.
      */
     val resume: Session? = null,
+    /** Which SCREEN the call was started from — telemetry only, never stored
+     *  on the session (iOS `TalkEntry`, 37376c33): talk_ring · talk_scenario ·
+     *  talk_news · talk_exam · talk_field · daily_call · widget · welcome ·
+     *  week_recap · routine · scenario_book · watch_person · resume · other. */
+    val entry: String = "other",
 ) {
     /** iOS `systemPrompt()`'s `composedTopic`. */
     val composedTopic: String get() = if (topicBlurb.isEmpty()) topic else "$topic. $topicBlurb"
@@ -549,7 +554,8 @@ class TalkViewModel(context: Context) : ViewModel() {
         startIdleWatch()
         com.roro.futurevoice.core.Analytics.capture("conversation_started", mapOf(
             "origin" to when { config.scenarioId != null -> "scenario"; config.newsFacts.isNotEmpty() -> "news"; config.cast != null -> "person"; else -> "free" },
-            "language" to config.targetLanguage, "realtime" to true, "resumed" to (config.resume != null)))
+            "language" to config.targetLanguage, "realtime" to true, "resumed" to (config.resume != null),
+            "entry" to if (config.resume != null) "resume" else config.entry))
         val freeTalk = config.topic.isBlank() && config.cast == null && config.scenarioId == null
         callJob = viewModelScope.launch {
             try {

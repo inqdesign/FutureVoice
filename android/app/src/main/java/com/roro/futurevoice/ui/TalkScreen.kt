@@ -136,6 +136,8 @@ fun TalkScreen(
     counterpartId: String? = null,
     /** A saved talk to pick back up (iOS `resumeSession`): Continue on its book. */
     resume: com.roro.futurevoice.talk.Session? = null,
+    /** Which screen started the call — `conversation_started` only. */
+    entry: String = "other",
     onExit: () -> Unit,
 ) {
     // "Go to Review" on the spent sheet (iOS `routeToPracticeOnClose`):
@@ -463,6 +465,7 @@ fun TalkScreen(
                 castVoiceId = castVoiceId,
                 counterpartId = counterpartId,
                 resume = resume,
+                entry = entry,
             )
         )
     }

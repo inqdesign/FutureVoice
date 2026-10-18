@@ -145,7 +145,10 @@ fun performWeekRecapAction(action: WeekRecapAction) {
             WeeklyTestInbox.pending.value = true
             DeepLinkInbox.pending.value = DeepLinkInbox.Destination.PRACTICE
         }
-        WeekRecapAction.TALK -> DeepLinkInbox.widgetRoute.value = DeepLinkInbox.WidgetRoute.FreeTalk
+        WeekRecapAction.TALK -> {
+            DeepLinkInbox.freeTalkEntry = "week_recap"
+            DeepLinkInbox.widgetRoute.value = DeepLinkInbox.WidgetRoute.FreeTalk
+        }
     }
 }
 
