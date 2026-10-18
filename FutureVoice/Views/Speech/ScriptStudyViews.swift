@@ -283,6 +283,9 @@ struct ScriptVoiceoverSection: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
+                // A list row's own label style tints the icon with the
+                // accent — the same colour as the fill, so it vanished.
+                .labelStyle(.titleAndIcon)
                 Button {
                     player.stop()
                     shadowing = stored
@@ -310,6 +313,7 @@ struct ScriptVoiceoverSection: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
+            .labelStyle(.titleAndIcon)
             .controlSize(.large)
             .disabled(quote > ScriptVoiceover.maxMinutes)
         }

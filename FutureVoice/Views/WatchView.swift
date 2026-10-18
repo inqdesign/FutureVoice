@@ -671,6 +671,7 @@ struct WatchView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
+                .labelStyle(.titleAndIcon)
             } else {
                 Button {
                     Task { await playFrom(index: 0) }

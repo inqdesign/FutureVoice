@@ -111,6 +111,7 @@ struct PracticeSessionView: View {
                     .padding(.vertical, 8)
             }
             .buttonStyle(.borderedProminent)
+            .labelStyle(.titleAndIcon)
             .controlSize(.large)
             .padding(.horizontal, 16)
 

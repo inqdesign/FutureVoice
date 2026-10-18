@@ -1729,7 +1729,7 @@ struct ProgressTab: View {
                 .font(.subheadline.weight(.semibold))
                 .frame(maxWidth: .infinity).padding(.vertical, 4)
         }
-        .buttonStyle(.borderedProminent).controlSize(.large).padding(.top, 2)
+        .buttonStyle(.borderedProminent).labelStyle(.titleAndIcon).controlSize(.large).padding(.top, 2)
     }
 
     /// The band just above the measured vocabulary level — where the words

@@ -1428,6 +1428,7 @@ struct SkyPersonCard: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
+                .labelStyle(.titleAndIcon)
                 Button(action: onWatch) {
                     Image(systemName: "play.fill")
                         .frame(width: 30)

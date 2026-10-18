@@ -46,6 +46,7 @@ struct MicChoiceSheet: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
+                .labelStyle(.titleAndIcon)
                 .controlSize(.large)
 
                 Button {

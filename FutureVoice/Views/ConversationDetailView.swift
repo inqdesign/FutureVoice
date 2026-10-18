@@ -335,6 +335,7 @@ struct ConversationDetailView: View {
                     .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
+                .labelStyle(.titleAndIcon)
                 .controlSize(.large)
                 .disabled(isRegenerating)
             }

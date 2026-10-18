@@ -880,6 +880,7 @@ struct StudyDeckView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
+                .labelStyle(.titleAndIcon)
                 .controlSize(.large)
                 .padding(.top, 4)
             }
