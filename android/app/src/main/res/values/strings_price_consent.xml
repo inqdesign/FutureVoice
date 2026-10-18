@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The store waiting on the learner's consent before it charges (iOS
+     PriceConsent, 2026-10-18). Says Google Play where iOS says Apple. -->
+<resources>
+    <string name="price_consent_title">"One tap keeps your plan going"</string>
+    <string name="price_consent_body_trial">"Before your free trial turns into your plan, Google Play asks you to confirm it once more. Without it, the plan doesn't start."</string>
+    <string name="price_consent_body_plan">"Before your next renewal, Google Play asks you to confirm it once more. Without it, the plan ends at the end of this period."</string>
+    <string name="price_consent_plan_starts">"Plan starts"</string>
+    <string name="price_consent_renews">"Renews"</string>
+    <string name="price_consent_footer">"The same plan you picked. Cancel any time in Google Play."</string>
+    <string name="price_consent_confirm_play">"Confirm in Google Play"</string>
+    <string name="price_consent_row_subtitle">"Needed to keep your plan going"</string>
+</resources>

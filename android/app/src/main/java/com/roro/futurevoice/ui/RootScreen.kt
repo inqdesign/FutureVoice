@@ -217,6 +217,13 @@ fun RootScreen() {
      *  can rise over onboarding; here the root is both, so they wait. */
     var tabsArrived by remember { mutableStateOf(false) }
     if (tabsArrived) referralJoin?.let { ReferralJoinSheet(join = it, onDismiss = com.roro.futurevoice.data.ReferralJoins::dismiss) }
+    // The store waiting on the learner's consent before it charges (iOS
+    // `PriceConsentSheet` on RootTabView), said in our words first.
+    val priceConsent by com.roro.futurevoice.data.PriceConsent.pending.collectAsStateWithLifecycle()
+    val priceConsentShowing by com.roro.futurevoice.data.PriceConsent.showing.collectAsStateWithLifecycle()
+    if (tabsArrived && priceConsentShowing) priceConsent?.let {
+        PriceConsentSheet(pending = it, onDismiss = com.roro.futurevoice.data.PriceConsent::dismiss)
+    }
     // A measured level-up, announced once wherever the learner happens to be.
     if (tabsArrived) state.levelUp?.let { (from, to) ->
         LevelUpSheet(from = from, to = to, onDismiss = app::clearLevelUp)

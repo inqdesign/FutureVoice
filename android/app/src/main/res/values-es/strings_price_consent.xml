@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The store waiting on the learner's consent before it charges (iOS
+     PriceConsent, 2026-10-18). Says Google Play where iOS says Apple. -->
+<resources>
+    <string name="price_consent_title">"Un toque y tu plan sigue"</string>
+    <string name="price_consent_body_trial">"Antes de que tu prueba gratis pase a tu plan, Google Play te pide confirmarlo una vez más. Sin eso, el plan no empieza."</string>
+    <string name="price_consent_body_plan">"Antes de tu próxima renovación, Google Play te pide confirmarlo una vez más. Sin eso, el plan termina al final de este periodo."</string>
+    <string name="price_consent_plan_starts">"Empieza el plan"</string>
+    <string name="price_consent_renews">"Se renueva"</string>
+    <string name="price_consent_footer">"Es el mismo plan que elegiste. Cancela cuando quieras en Google Play."</string>
+    <string name="price_consent_confirm_play">"Confirmar en Google Play"</string>
+    <string name="price_consent_row_subtitle">"Necesario para que tu plan siga"</string>
+</resources>

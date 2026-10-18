@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The store waiting on the learner's consent before it charges (iOS
+     PriceConsent, 2026-10-18). Says Google Play where iOS says Apple. -->
+<resources>
+    <string name="price_consent_title">"點一下確認，方案就會繼續"</string>
+    <string name="price_consent_body_trial">"免費試用轉為方案之前，Google Play 會再請你確認一次。沒有確認的話，方案不會開始。"</string>
+    <string name="price_consent_body_plan">"下次續訂之前，Google Play 會再請你確認一次。沒有確認的話，方案會在這期結束時一起結束。"</string>
+    <string name="price_consent_plan_starts">"方案開始"</string>
+    <string name="price_consent_renews">"下次續訂"</string>
+    <string name="price_consent_footer">"就是你選的方案。隨時都能在 Google Play 取消。"</string>
+    <string name="price_consent_confirm_play">"前往 Google Play 確認"</string>
+    <string name="price_consent_row_subtitle">"繼續使用方案需要這一步"</string>
+</resources>

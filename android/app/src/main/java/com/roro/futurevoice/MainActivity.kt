@@ -83,6 +83,13 @@ class MainActivity : ComponentActivity() {
         // Friends who joined with my code since last time — polled here
         // because there is no push infrastructure.
         lifecycleScope.launch { com.roro.futurevoice.data.ReferralJoins.announce(this@MainActivity) }
+        // The store waiting on the learner's consent before it charges
+        // (Korea's second consent after a trial): read it, and say what it
+        // is before they meet it in Play.
+        lifecycleScope.launch {
+            com.roro.futurevoice.data.PriceConsent.refresh()
+            com.roro.futurevoice.data.PriceConsent.offerIfDue(this@MainActivity)
+        }
         // A trial can start anywhere — an offer code, the store's own page, a
         // restore on another phone — so the notice is re-armed from what the
         // SERVER knows rather than only at the moment of purchase.

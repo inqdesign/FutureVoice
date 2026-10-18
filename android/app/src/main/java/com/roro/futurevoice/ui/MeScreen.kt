@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Verified
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Delete
@@ -395,6 +396,17 @@ fun MeScreen(
                             else -> null
                         },
                         onClick = onOpenPaywall)
+                    // Under the subscription it keeps going, for as long as
+                    // the store is waiting on consent (iOS: the same row).
+                    val consentPending by com.roro.futurevoice.data.PriceConsent.pending
+                        .collectAsStateWithLifecycle()
+                    if (consentPending != null) {
+                        MeRow(Icons.Outlined.Verified,
+                            stringResource(R.string.price_consent_confirm_play),
+                            stringResource(R.string.price_consent_row_subtitle),
+                            kind = MeRowKind.ACTION,
+                            onClick = com.roro.futurevoice.data.PriceConsent::open)
+                    }
                 }
 
                 // ── Usage, and the club ──

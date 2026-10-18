@@ -262,6 +262,10 @@ object DailyCallScheduler {
      */
     @Volatile private var liveCallSince: Long? = null
 
+    /** A conversation is on screen right now — anything that would interrupt
+     *  it (the price-consent explanation) waits. iOS `isLiveCall`. */
+    val isLiveCall: Boolean get() = liveCallSince != null
+
     /**
      * A scheduled ring must not land on a call the learner is already in: the
      * ring takes the audio focus out from under the call, and there is
@@ -284,6 +288,8 @@ object DailyCallScheduler {
     fun releaseAfterLiveCall(context: Context, now: Long = System.currentTimeMillis()) {
         val since = liveCallSince ?: return
         liveCallSince = null
+        // The consent explanation waits out a call; this is when it can come.
+        PriceConsent.offerIfDue(context)
         if (!DailyCallStore.isEnabled(context)) return
         // A day already settled (answered earlier, or every slot declined)
         // is neither settled twice nor rung again today.
