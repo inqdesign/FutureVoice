@@ -251,6 +251,7 @@
     <string name="back_to_the_welcome_screen">"Zurück zum Startbildschirm?"</string>
     <string name="back_tomorrow">"Kommt morgen wieder"</string>
     <string name="basic_simple_everyday_exchanges">"Grundlagen: einfache Alltagsgespräche"</string>
+    <string name="be_the_first">"Mach den Anfang"</string>
     <string name="becoming_you">"Lernt dich kennen"</string>
     <string name="best">"Bestwert"</string>
     <!-- "Best of all, say it in a call: a word you use in a real talk counts as learned. Each week there's also a short test made from that week's own talks." -->
@@ -2040,6 +2041,7 @@
     <string name="speaks_at_this_speed">"Spricht in diesem Tempo"</string>
     <!-- 'Specific enough — %@ it, or tap a breadcrumb to explore more.' -->
     <string name="specific_enough_it_or_tap_a_breadcrumb_to_explore_more">"Konkret genug — %s starten oder auf einen Pfadpunkt tippen, um weiterzustöbern."</string>
+    <string name="speech_challenge_new">"Neu"</string>
     <string name="speech_challenges">"Rede-Challenges"</string>
     <!-- 'Speech' -->
     <string name="speech_d00d85">"Rede"</string>

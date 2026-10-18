@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -24,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowCircleUp
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.VideocamOff
@@ -113,10 +115,11 @@ internal fun SpeechChallengeRow(script: SpeechScript, standing: SpeechChallenges
     val accent = MaterialTheme.colorScheme.primary
     Column(
         modifier.fillMaxWidth().padding(vertical = 6.dp)
+            .heightIn(min = 220.dp)
             .clip(ContinuousShape(18.dp))
             .background(AppSurfaces.card)
             .clickable(onClick = onClick)
-            .padding(14.dp),
+            .padding(18.dp),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
             BookIconDisc(accent = accent) {
@@ -126,29 +129,50 @@ internal fun SpeechChallengeRow(script: SpeechScript, standing: SpeechChallenges
             Spacer(Modifier.weight(1f))
             val rank = standing?.myRank
             val best = standing?.myBest
+            // Out within the last week and not yet taken by this learner:
+            // the badge takes the slot the rank fills once they enter.
+            val isNew = (standing?.myAttempts ?: 0) == 0 &&
+                script.createdAt > System.currentTimeMillis() - 7L * 86_400_000L
             if (rank != null && best != null) {
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(1.dp)) {
                     Text("#$rank", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     Text("$best", style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold, color = scoreColor(best))
                 }
+            } else if (isNew) {
+                Text(stringResource(R.string.speech_challenge_new), style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold, color = Color.White,
+                    modifier = Modifier.clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(accent).padding(horizontal = 8.dp, vertical = 3.dp))
             }
         }
-        Spacer(Modifier.height(8.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(script.title, style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold, maxLines = 3, overflow = TextOverflow.Ellipsis)
-            val parts = listOf(
-                stringResource(R.string.lld_taking_part, standing?.entrants ?: 0),
-                lengthLabel(SpeechLibrary.estimatedSeconds(script.body, script.language)),
-            )
-            Text(parts.joinToString(" · "), style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        }
+        // The title hangs under the disc; the meta line belongs to the FOOT,
+        // just above the faces, so it sits at the same height on every card
+        // whatever the title's length. The slack goes between.
+        Text(script.title, style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold, maxLines = 3, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 14.dp))
+        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.weight(1f))
+        val entrants = standing?.entrants ?: 0
+        val length = lengthLabel(SpeechLibrary.estimatedSeconds(script.body, script.language))
+        // "0 taking part" says the same thing as the foot, only sadder.
+        val meta = if (entrants > 0) stringResource(R.string.lld_taking_part, entrants) + " · " + length else length
+        Text(meta, style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(bottom = 8.dp))
+        // The board's top three, or, on a board nobody is on yet, an
+        // invitation in the same slot so every card ends alike.
         val faces = standing?.topThree.orEmpty()
         if (faces.isNotEmpty()) {
-            Spacer(Modifier.height(12.dp))
             SpeechChallengeFaces(faces, size = 30.dp)
+        } else {
+            Row(Modifier.height(30.dp), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Icon(Icons.Filled.Flag, contentDescription = null, tint = accent, modifier = Modifier.size(16.dp))
+                Text(stringResource(R.string.be_the_first), style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold, color = accent, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
         }
     }
 }

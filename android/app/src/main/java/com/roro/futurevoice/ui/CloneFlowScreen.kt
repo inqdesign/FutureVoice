@@ -589,7 +589,7 @@ fun CloneFlowScreen(
             } catch (e: com.roro.futurevoice.data.VoiceQuotaFull) {
                 val queue = onQueued
                 if (queue == null || !(existingVoiceId == null || voiceIsStandIn) || reRecording) {
-                    com.roro.futurevoice.core.Analytics.capture("voice_clone_failed")
+                    reportCloneFailure(e, firstTime = existingVoiceId == null || voiceIsStandIn)
                     error = e.line(context)
                     act = CloneAct.REVIEW
                     if (!reRecording) onHold(false)
@@ -611,7 +611,7 @@ fun CloneFlowScreen(
                 act = CloneAct.QUEUED
             } catch (e: Exception) {
                 android.util.Log.w("CloneFlow", "clone failed", e)
-                com.roro.futurevoice.core.Analytics.capture("voice_clone_failed")
+                reportCloneFailure(e, firstTime = existingVoiceId == null || voiceIsStandIn)
                 error = when {
                     e is com.roro.futurevoice.data.VoiceChangeLimit -> e.line(context)
                     e is VoiceCloneClient.VoiceLimitReached ->
@@ -1621,4 +1621,32 @@ fun VoiceRerecordCover(
             onClose = onClose,
         )
     }
+}
+
+/**
+ * WHY a clone failed, not just THAT it did (iOS `reportCloneFailure`). A bare
+ * `voice_clone_failed` row can't tell an offline phone from a server refusal
+ * or a silent recording, so every failure carries the same fields iOS sends.
+ */
+private fun reportCloneFailure(e: Exception, firstTime: Boolean) {
+    com.roro.futurevoice.core.Analytics.capture("voice_clone_failed", mapOf(
+        "first_time" to firstTime,
+        "status" to cloneFailureStatus(e),
+        "reason" to "${e::class.java.simpleName}: ${e.message.orEmpty()}".take(200),
+        "voice_limit_reached" to (e is VoiceCloneClient.VoiceLimitReached),
+        // Android never reclaims a slot before retrying; kept for iOS's shape.
+        "after_slot_reclaim" to false,
+    ))
+}
+
+/** The HTTP status behind a clone failure, as iOS `failureStatus` reports it:
+ *  402 for a wall, the real code for an upstream error, -1 when there was no
+ *  answer to read (offline, timeout, unreadable body). */
+private fun cloneFailureStatus(e: Exception): Int = when (e) {
+    is EdgeError.Http -> e.status
+    is EdgeError.InsufficientCredits, is EdgeError.DailyCapReached,
+    is EdgeError.SceneCapReached, is EdgeError.FairUseLimit -> 402
+    is com.roro.futurevoice.data.VoiceChangeLimit -> 403
+    is VoiceCloneClient.VoiceLimitReached -> 400
+    else -> -1
 }

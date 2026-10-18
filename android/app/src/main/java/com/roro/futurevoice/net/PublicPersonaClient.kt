@@ -343,19 +343,32 @@ class PublicPersonaClient(private val auth: AuthRepository) {
     }
 
     /**
-     * The whole active pool for one language — curated-catalog sized (tens,
-     * not thousands), so one fetch beats server-side pagination. Your own
-     * published row is filtered out: you don't meet yourself.
+     * The whole active pool, EVERY language (iOS `fetchPool`, 2026-10-18,
+     * founder: me, my people, users and characters all show, whatever is
+     * being learned) — a language nobody had seeded (ja, es) had nobody in it
+     * to meet. [language] only decides which row wins: a user published in
+     * several languages is ONE person, shown by the row in the language being
+     * learned, else the first; rows in that language come first. Curated-
+     * catalog sized, so one fetch beats pagination. Your own published row is
+     * filtered out: you don't meet yourself.
      */
     suspend fun fetchPool(language: String): List<PublicPersona> {
-        val rows = fetchPoolRows(language)
+        val rows = onePerPerson(fetchPoolRows(), language)
         adoptPhotos(rows)
         return rows
     }
 
-    private suspend fun fetchPoolRows(language: String): List<PublicPersona> = withContext(Dispatchers.IO) {
+    /** Target-language rows first; a user's rows in other languages dropped
+     *  once one of theirs is kept (curated rows have no owner and all stay). */
+    private fun onePerPerson(rows: List<PublicPersona>, language: String): List<PublicPersona> {
+        val owners = mutableSetOf<String>()
+        return (rows.filter { it.language == language } + rows.filter { it.language != language })
+            .filter { row -> row.owner_user_id?.lowercase()?.let { owners.add(it) } ?: true }
+    }
+
+    private suspend fun fetchPoolRows(): List<PublicPersona> = withContext(Dispatchers.IO) {
         val url = "${Config.supabaseUrl.trimEnd('/')}/rest/v1/public_personas" +
-            "?select=$columns&language=eq.$language&is_active=eq.true"
+            "?select=$columns&is_active=eq.true"
         val request = Request.Builder().url(url)
             .header("Authorization", "Bearer ${auth.accessToken()}")
             .header("apikey", Config.supabaseAnonKey)

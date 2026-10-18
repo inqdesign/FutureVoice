@@ -252,6 +252,7 @@
     <string name="back_to_the_welcome_screen">"Back to the welcome screen?"</string>
     <string name="back_tomorrow">"Back tomorrow"</string>
     <string name="basic_simple_everyday_exchanges">"Basic — simple, everyday exchanges"</string>
+    <string name="be_the_first">"Be the first"</string>
     <string name="becoming_you">"Becoming you"</string>
     <string name="best">"Best"</string>
     <!-- "Best of all, say it in a call: a word you use in a real talk counts as learned. Each week there's also a short test made from that week's own talks." -->
@@ -2047,6 +2048,7 @@
     <string name="speaks_at_this_speed">"Speaks at this speed"</string>
     <!-- 'Specific enough — %@ it, or tap a breadcrumb to explore more.' -->
     <string name="specific_enough_it_or_tap_a_breadcrumb_to_explore_more">"Specific enough — %s it, or tap a breadcrumb to explore more."</string>
+    <string name="speech_challenge_new">"New"</string>
     <string name="speech_challenges">"Speech challenges"</string>
     <!-- 'Speech' -->
     <string name="speech_d00d85">"Speech"</string>

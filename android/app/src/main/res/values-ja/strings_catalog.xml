@@ -251,6 +251,7 @@
     <string name="back_to_the_welcome_screen">"最初の画面に戻りますか？"</string>
     <string name="back_tomorrow">"明日また出てきます"</string>
     <string name="basic_simple_everyday_exchanges">"基礎 · 短い日常会話くらい"</string>
+    <string name="be_the_first">"一番乗りしよう"</string>
     <string name="becoming_you">"声を覚えている途中"</string>
     <string name="best">"ベスト"</string>
     <!-- "Best of all, say it in a call: a word you use in a real talk counts as learned. Each week there's also a short test made from that week's own talks." -->
@@ -2044,6 +2045,7 @@
     <string name="speaks_at_this_speed">"この速さで話します"</string>
     <!-- 'Specific enough — %@ it, or tap a breadcrumb to explore more.' -->
     <string name="specific_enough_it_or_tap_a_breadcrumb_to_explore_more">"十分具体的です。%sするか、上のパスをタップしてさらに探しましょう。"</string>
+    <string name="speech_challenge_new">"新着"</string>
     <string name="speech_challenges">"スピーチチャレンジ"</string>
     <!-- 'Speech' -->
     <string name="speech_d00d85">"スピーチ"</string>

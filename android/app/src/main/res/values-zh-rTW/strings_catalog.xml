@@ -251,6 +251,7 @@
     <string name="back_to_the_welcome_screen">"要回到最初的畫面嗎？"</string>
     <string name="back_tomorrow">"明天再出現"</string>
     <string name="basic_simple_everyday_exchanges">"基礎 · 簡短的日常對話"</string>
+    <string name="be_the_first">"搶先挑戰"</string>
     <string name="becoming_you">"正在變成你"</string>
     <string name="best">"最佳成績"</string>
     <!-- "Best of all, say it in a call: a word you use in a real talk counts as learned. Each week there's also a short test made from that week's own talks." -->
@@ -2044,6 +2045,7 @@
     <string name="speaks_at_this_speed">"以這個速度說話"</string>
     <!-- 'Specific enough — %@ it, or tap a breadcrumb to explore more.' -->
     <string name="specific_enough_it_or_tap_a_breadcrumb_to_explore_more">"夠具體了，可以直接%s，或點上方的路徑再探索。"</string>
+    <string name="speech_challenge_new">"新挑戰"</string>
     <string name="speech_challenges">"演講挑戰"</string>
     <!-- 'Speech' -->
     <string name="speech_d00d85">"演講"</string>
