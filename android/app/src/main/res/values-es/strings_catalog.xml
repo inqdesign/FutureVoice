@@ -2026,7 +2026,9 @@
     <string name="speaks_at_this_speed">"Habla a este ritmo"</string>
     <!-- 'Specific enough — %@ it, or tap a breadcrumb to explore more.' -->
     <string name="specific_enough_it_or_tap_a_breadcrumb_to_explore_more">"Ya es bastante concreto — %s, o toca la ruta de arriba para explorar más."</string>
+    <string name="speech_challenge_again">"Otra vez"</string>
     <string name="speech_challenge_new">"Nuevo"</string>
+    <string name="speech_challenge_take">"Empezar"</string>
     <string name="speech_challenges">"Retos de discurso"</string>
     <!-- 'Speech' -->
     <string name="speech_d00d85">"Discurso"</string>

@@ -473,13 +473,13 @@ private fun ChallengeActionBar(script: SpeechScript, isPast: Boolean, hasBest: B
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 12.dp)) {
                 Icon(Icons.Outlined.Description, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                FitButtonLabel(stringResource(R.string.read_the_script),
+                FitButtonLabel(stringResource(R.string.script),
                     MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold))
             }
             if (!isPast) {
                 IosButton(onClick = onStart, modifier = Modifier.weight(1f),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 12.dp)) {
-                    FitButtonLabel(stringResource(if (hasBest) R.string.go_again else R.string.take_the_challenge),
+                    FitButtonLabel(stringResource(if (hasBest) R.string.speech_challenge_again else R.string.speech_challenge_take),
                         MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold))
                 }
             }

@@ -2029,7 +2029,9 @@
     <string name="speaks_at_this_speed">"以这个速度说话"</string>
     <!-- 'Specific enough — %@ it, or tap a breadcrumb to explore more.' -->
     <string name="specific_enough_it_or_tap_a_breadcrumb_to_explore_more">"够具体了，可以直接%s，或点上方的路径再探索。"</string>
+    <string name="speech_challenge_again">"再挑战"</string>
     <string name="speech_challenge_new">"新挑战"</string>
+    <string name="speech_challenge_take">"挑战"</string>
     <string name="speech_challenges">"演讲挑战"</string>
     <!-- 'Speech' -->
     <string name="speech_d00d85">"演讲"</string>

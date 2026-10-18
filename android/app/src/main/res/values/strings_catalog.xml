@@ -2032,7 +2032,9 @@
     <string name="speaks_at_this_speed">"Speaks at this speed"</string>
     <!-- 'Specific enough — %@ it, or tap a breadcrumb to explore more.' -->
     <string name="specific_enough_it_or_tap_a_breadcrumb_to_explore_more">"Specific enough — %s it, or tap a breadcrumb to explore more."</string>
+    <string name="speech_challenge_again">"Again"</string>
     <string name="speech_challenge_new">"New"</string>
+    <string name="speech_challenge_take">"Take it on"</string>
     <string name="speech_challenges">"Speech challenges"</string>
     <!-- 'Speech' -->
     <string name="speech_d00d85">"Speech"</string>

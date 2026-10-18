@@ -2029,7 +2029,9 @@
     <string name="speaks_at_this_speed">"この速さで話します"</string>
     <!-- 'Specific enough — %@ it, or tap a breadcrumb to explore more.' -->
     <string name="specific_enough_it_or_tap_a_breadcrumb_to_explore_more">"十分具体的です。%sするか、上のパスをタップしてさらに探しましょう。"</string>
+    <string name="speech_challenge_again">"再挑戦"</string>
     <string name="speech_challenge_new">"新着"</string>
+    <string name="speech_challenge_take">"挑戦"</string>
     <string name="speech_challenges">"スピーチチャレンジ"</string>
     <!-- 'Speech' -->
     <string name="speech_d00d85">"スピーチ"</string>

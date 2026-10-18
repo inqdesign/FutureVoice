@@ -2030,7 +2030,9 @@
     <string name="speaks_at_this_speed">"이 속도로 말해요"</string>
     <!-- 'Specific enough — %@ it, or tap a breadcrumb to explore more.' -->
     <string name="specific_enough_it_or_tap_a_breadcrumb_to_explore_more">"충분히 구체적이에요 — %s 하거나, 위 경로를 눌러 더 탐색하세요."</string>
+    <string name="speech_challenge_again">"다시 도전"</string>
     <string name="speech_challenge_new">"새 챌린지"</string>
+    <string name="speech_challenge_take">"도전"</string>
     <string name="speech_challenges">"스피치 챌린지"</string>
     <!-- 'Speech' -->
     <string name="speech_d00d85">"스피치"</string>
