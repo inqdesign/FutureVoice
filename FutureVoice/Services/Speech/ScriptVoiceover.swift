@@ -75,11 +75,6 @@ enum ScriptVoiceover {
         }
     }
 
-    /// "Hear it in my voice · 3 min"
-    static func buttonLabel(minutes: Int) -> String {
-        explain("Hear it in my voice · \(minutes) min")
-    }
-
     /// "Uses 3 min of talk time"
     static func costLabel(minutes: Int) -> String {
         explain("Uses \(minutes) min of talk time")

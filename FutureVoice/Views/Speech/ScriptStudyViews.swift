@@ -227,10 +227,15 @@ struct ScriptVoiceoverSection: View {
     var body: some View {
         if let voiceId {
             Section {
-                VStack(alignment: .leading, spacing: 14) {
+                // What it costs (or that it's free now) under the heading,
+                // before the button it explains — read first, not after.
+                VStack(alignment: .leading, spacing: 12) {
+                    description(voiceId)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                     content(voiceId)
                 }
-                .buttonStyle(.borderless)
                 .padding(.vertical, 4)
                 .talkWall($wall, source: "speech_voiceover")
                 .alert("Couldn't make it in your voice", isPresented: Binding(
@@ -245,8 +250,8 @@ struct ScriptVoiceoverSection: View {
                 }
                 .onDisappear { player.stop() }
                 .onAppear { gate.warm() }
-            } footer: {
-                footer(voiceId)
+            } header: {
+                Text("Hear it in my voice")
             }
         }
     }
@@ -269,18 +274,25 @@ struct ScriptVoiceoverSection: View {
 
     @ViewBuilder private func content(_ voiceId: String) -> some View {
         if let stored = center.existing(for: script, voiceId: voiceId) {
-            Button {
-                togglePlay(stored)
-            } label: {
-                Label(player.isPlaying ? "Pause" : "Play in my voice",
-                      systemImage: player.isPlaying ? "pause.fill" : "play.fill")
+            HStack(spacing: 10) {
+                Button {
+                    togglePlay(stored)
+                } label: {
+                    Label(player.isPlaying ? "Pause" : "Play in my voice",
+                          systemImage: player.isPlaying ? "pause.fill" : "play.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                Button {
+                    player.stop()
+                    shadowing = stored
+                } label: {
+                    Label("Shadow it", systemImage: "waveform")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
             }
-            Button {
-                player.stop()
-                shadowing = stored
-            } label: {
-                Label("Shadow it", systemImage: "waveform")
-            }
+            .controlSize(.large)
         } else if case .making(let done, let total)? = center.job(for: script, voiceId: voiceId) {
             HStack(spacing: 12) {
                 ProgressView()
@@ -289,16 +301,21 @@ struct ScriptVoiceoverSection: View {
                 Text("\(done)/\(total)").monospacedDigit().foregroundStyle(.secondary)
             }
         } else {
+            // The minutes are in the line above; on the button beside the
+            // title they read as the recording's length.
             Button {
                 start(voiceId)
             } label: {
-                Label(ScriptVoiceover.buttonLabel(minutes: quote), systemImage: "person.wave.2")
+                Label("Make it in my voice", systemImage: "person.wave.2")
+                    .frame(maxWidth: .infinity)
             }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
             .disabled(quote > ScriptVoiceover.maxMinutes)
         }
     }
 
-    @ViewBuilder private func footer(_ voiceId: String) -> some View {
+    @ViewBuilder private func description(_ voiceId: String) -> some View {
         if center.existing(for: script, voiceId: voiceId) != nil {
             Text("Yours to replay and shadow, free.")
         } else if quote > ScriptVoiceover.maxMinutes {
