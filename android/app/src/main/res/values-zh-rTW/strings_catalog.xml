@@ -170,6 +170,7 @@
     <string name="all_sources">"所有來源"</string>
     <string name="all_words">"全部單字"</string>
     <string name="allow_access_to_photos">"請允許取用照片"</string>
+    <string name="allow_google_drive_access_to_keep_syncing">"要繼續同步，請允許存取 Google 雲端硬碟"</string>
     <string name="allow_notifications_so_your_routine_can_remind_you">"允許通知，作息才能提醒你"</string>
     <string name="almost">"差不多"</string>
     <string name="almost_there">"快好了…"</string>
@@ -306,6 +307,8 @@
     <string name="calls_at">"來電時間"</string>
     <!-- 'Calls draw on everything publicly known about them. Wrong person? Fix the name and look up again.' -->
     <string name="calls_draw_on_everything_publicly_known_about_them_wrong_per_ac77bc">"通話會以這個人公開的一切為基礎。不是這個人？修改名字後再查一次。"</string>
+    <!-- 'Calls, recordings and every word you study are saved right here.' -->
+    <string name="calls_recordings_and_every_word_you_study_are_saved_right_he_35bbe7">"通話、錄音，還有你學的每個單字和說法，全都存在這裡。"</string>
     <string name="calm_gently_witty">"沉穩，帶點幽默"</string>
     <string name="came_back_lld_times">"又出現了 %d 次"</string>
     <string name="came_back_lld_times_in_this_call">"這次通話中又出現了 %d 次"</string>
@@ -482,14 +485,17 @@
     <string name="delete_account">"刪除帳號"</string>
     <string name="delete_block">"刪除時段"</string>
     <string name="delete_forever">"永久刪除"</string>
+    <string name="delete_from_google_drive">"從 Google 雲端硬碟刪除"</string>
     <string name="delete_from_icloud">"從 iCloud 刪除"</string>
     <string name="delete_scenario">"刪除情境"</string>
     <string name="delete_talk">"刪除通話"</string>
+    <string name="delete_the_app_or_change_phones_and_it_s_gone_too">"刪除 App 或換手機時，紀錄也會一起消失。"</string>
     <string name="delete_the_video_your_voice_and_score_stay">"要刪除影片嗎？錄音和分數會保留。"</string>
     <string name="delete_this_scenario">"要刪除這個情境嗎？"</string>
     <string name="delete_this_talk">"要刪除這通電話嗎？"</string>
     <string name="delete_video">"刪除影片"</string>
     <string name="delete_your_account">"要刪除帳號嗎？"</string>
+    <string name="delete_your_practice_from_google_drive">"要刪除 Google 雲端硬碟裡的練習紀錄嗎？"</string>
     <string name="delete_your_practice_from_icloud">"要從 iCloud 刪除練習記錄嗎？"</string>
     <string name="delete_your_voice">"要刪除聲音嗎？"</string>
     <!-- 'Deletes cached voice audio only. Your talks, drills, words and books are untouched. Every line synthesizes again the next time it plays.' -->
@@ -655,6 +661,8 @@
     <string name="everything_planned_for_that_day_is_done_your_streak_grows_by_4f7c00">"當天排的都做完了，連續紀錄多一天。"</string>
     <!-- 'Everything said so far is saved. Reconnect to carry on from where you were.' -->
     <string name="everything_said_so_far_is_saved_reconnect_to_carry_on_from_w_c4f94f">"目前為止的對話都已儲存。重新連線就能接著聊。"</string>
+    <!-- "Everything synced to Google Drive is removed and syncing stops on every device. What's on this device stays." -->
+    <string name="everything_synced_to_google_drive_is_removed_and_syncing_sto_32a900">"同步到 Google 雲端硬碟的內容會全部刪除，所有裝置都會停止同步。這台裝置上的內容會保留。"</string>
     <!-- "Everything synced to iCloud is removed and syncing stops on every device. What's on this device stays." -->
     <string name="everything_synced_to_icloud_is_removed_and_syncing_stops_on_60516a">"會刪除同步到 iCloud 的所有內容，並在所有裝置上停止同步。這台裝置上的內容會保留。"</string>
     <string name="everything_this_conversation_had_to_teach_is_yours">"這次對話該學的，都學會了。"</string>
@@ -795,6 +803,11 @@
     <string name="goal_met_how_did_it_feel">"達標了。今天說得順嗎？"</string>
     <string name="good_llds_more_for_the_best_result">"很好。再%d秒，效果最好"</string>
     <string name="good_to_have_you_back">"最近好嗎？"</string>
+    <!-- "Google Drive access wasn't allowed. Try again and choose Allow." -->
+    <string name="google_drive_access_wasn_t_allowed_try_again_and_choose_allo_7f36e7">"沒有取得 Google 雲端硬碟的存取權限。請再試一次並選擇「允許」。"</string>
+    <!-- "Google Drive can't be reached right now. Check your connection, then try again." -->
+    <string name="google_drive_can_t_be_reached_right_now_check_your_connectio_286681">"現在連不上 Google 雲端硬碟。請檢查網路連線後再試一次。"</string>
+    <string name="google_drive_is_full_so_audio_isn_t_syncing">"Google 雲端硬碟已滿，音訊沒有同步"</string>
     <string name="got_it">"記住了"</string>
     <string name="got_them_all">"全部答對"</string>
     <!-- 'Graded against your B1 setting — how this talk went, not what your level is.' -->
@@ -956,6 +969,7 @@
     <string name="ios_is_blocking_the_call_turn_on_notifications_for_nawana_in_30ae8b">"iOS擋下了來電。請到「設定」開啟nawana的通知，再到「我的」重新開啟。"</string>
     <string name="is_answering">"%s正在回答"</string>
     <string name="it_didn_t_come_back_this_call">"這次通話一次都沒再出現"</string>
+    <string name="it_goes_with_the_app">"會跟著 App 一起刪除"</string>
     <string name="it_happens_one_talk_is_enough_to_start_again">"難免會這樣。聊一次就能重新開始。"</string>
     <string name="it_moves_as_you_talk">"越說越準"</string>
     <string name="it_needs_a_little_of_your_speech_first">"需要先有一點你說話的紀錄。"</string>
@@ -989,6 +1003,7 @@
     <!-- 'Keep a word from a talk, or watch a situation — its words collect here.' -->
     <string name="keep_a_word_from_a_talk_or_watch_a_situation_its_words_colle_b07a48">"在通話裡收下單字，或看一場情境，裡面的單字都會收集在這裡。"</string>
     <string name="keep_going_llds_more">"請繼續唸，再%d秒就好"</string>
+    <string name="keep_in_google_drive">"存到 Google 雲端硬碟"</string>
     <string name="keep_in_icloud">"保存到 iCloud"</string>
     <string name="keep_it">"收藏"</string>
     <string name="keep_it_today_for_day_1">"今天守住就是第 1 天"</string>
@@ -999,9 +1014,12 @@
     <string name="keep_talking">"繼續聊下去"</string>
     <string name="keep_this_voice">"保留這個聲音"</string>
     <string name="keep_what_you_d_use">"收藏用得上的"</string>
+    <string name="keep_your_practice_in_google_drive">"要把練習存在 Google 雲端硬碟嗎？"</string>
     <string name="keep_your_practice_in_icloud">"要把練習紀錄保存在 iCloud 嗎？"</string>
     <string name="kept_for_lld_days">"已連續守住 %d 天"</string>
     <string name="kept_from_a_talk">"通話裡收下的單字"</string>
+    <!-- 'Kept in your own Google Drive, it waits on any phone or tablet you sign into, your voice recording too, so your voice comes back without recording again.' -->
+    <string name="kept_in_your_own_google_drive_it_waits_on_any_phone_or_table_45e1ff">"存在你自己的 Google 雲端硬碟，登入任何手機或平板都能接著用。你的聲音錄音也會一起保存，不用重錄就能找回你的聲音。"</string>
     <!-- "Kept in your own iCloud, they're waiting on any phone or iPad you sign into — your voice recording too, so your voice comes back without recording again." -->
     <string name="kept_in_your_own_icloud_they_re_waiting_on_any_phone_or_ipad_9fa373">"保存在你自己的 iCloud，登入任何 iPhone 或 iPad 都能接著用。聲音錄音也會一起保存，不用重錄就能找回你的聲音。"</string>
     <string name="key_expressions">"關鍵表達"</string>
@@ -1411,6 +1429,7 @@
     <string name="not_in_today_s_routine">"不在今天的作息裡"</string>
     <string name="not_me_record_again">"不是我，重新錄音"</string>
     <string name="not_now">"現在不要"</string>
+    <string name="not_on_our_servers">"不會留在我們的伺服器"</string>
     <string name="not_published">"未公開"</string>
     <string name="not_rated">"未評分"</string>
     <!-- "Not read yet — it's read the first time you watch this scene." -->
@@ -1486,6 +1505,8 @@
     <!-- "On the day you pick, I'll put your week together: what you said, the words you picked up, how far you've come. Then a short test, made only from your own talks." -->
     <string name="on_the_day_you_pick_i_ll_put_your_week_together_what_you_sai_d42485">"在你選的那天，我會幫你整理這一週：你說了什麼、學到哪些詞、進步了多少。然後是一份小測驗，只用你自己的對話出題。"</string>
     <string name="on_the_street">"在路上"</string>
+    <!-- 'On your other device, open Settings, turn on “Continue on your other devices”, then come back here.' -->
+    <string name="on_your_other_device_open_settings_turn_on_continue_on_your_c7fa99">"請在另一台裝置打開「設定」，開啟「在其他裝置上繼續」，再回到這裡。"</string>
     <string name="once">"一次"</string>
     <!-- "Once a week, a test made only from that week's own talks: what a word means, the missing phrase, rebuilding a corrected sentence, writing down what you hear, saying a line out loud, and the grammar from your weekly report. A dot means it's open." -->
     <string name="once_a_week_a_test_made_only_from_that_week_s_own_talks_what_d9930a">"每週一次，只用你當週對話出的測驗：選單字意思、填空格裡的用語、重組修正過的句子、聽寫、開口說一句，還有每週報告裡的文法。看到圓點代表測驗已開放。"</string>
@@ -1637,6 +1658,10 @@
     <string name="practicing_your_rhythm">"正在練習說話的節奏…"</string>
     <!-- 'Practise on your iPhone, pick it up on your iPad. Everything is stored in your own iCloud, audio included, so it can use a few gigabytes there.' -->
     <string name="practise_on_your_iphone_pick_it_up_on_your_ipad_everything_i_80dce1">"在 iPhone 上練習，在 iPad 上接著做。包含音訊在內的所有內容都存在你自己的 iCloud，可能會用掉幾 GB。"</string>
+    <!-- 'Practise on your phone, pick it up on your tablet. Everything is kept in your own Google Drive, audio included, in a hidden folder only this app can open.' -->
+    <string name="practise_on_your_phone_pick_it_up_on_your_tablet_everything_0cf690">"在手機上練習，換到平板接著練。包括音訊在內，全部存在你自己的 Google 雲端硬碟裡一個只有這個 App 能開的隱藏資料夾。"</string>
+    <!-- 'Practised on another phone or tablet with sync on? Your talks, cards, words and recordings are in your Google Drive. Choose the same Google account you used there.' -->
+    <string name="practised_on_another_phone_or_tablet_with_sync_on_your_talks_dc3ff4">"如果你在其他手機或平板開著同步練習過，對話、卡片、單字和錄音都在你的 Google 雲端硬碟裡。請選擇你在那邊用的同一個 Google 帳號。"</string>
     <string name="preparing_study_notes">"正在準備學習筆記…"</string>
     <string name="preparing_the_file">"正在準備檔案…"</string>
     <string name="preparing_your_video">"正在準備影片…"</string>
@@ -1995,6 +2020,7 @@
     <string name="shown_over_their_face_on_the_watch_map_left_empty_one_is_wri_26f298">"會顯示在情境練習地圖上的頭像上方。留空的話會自動幫你寫。"</string>
     <!-- "Sign in, and your voice lands in this account the day it's made." -->
     <string name="sign_in_and_your_voice_lands_in_this_account_the_day_it_s_ma_e2e5d2">"登入後，聲音完成的那天就會直接進到這個帳號。"</string>
+    <string name="sign_in_to_a_google_account_on_this_device_then_try_again">"請先在這台裝置登入 Google 帳號，再試一次。"</string>
     <string name="sign_in_to_icloud_in_settings_first_then_try_again">"請先在「設定」登入 iCloud，再試一次。"</string>
     <string name="sign_in_to_icloud_in_settings_to_sync">"要同步，請在「設定」登入 iCloud"</string>
     <string name="sign_in_to_sync_your_practice_between_your_iphone_and_ipad">"登入後就能在 iPhone 和 iPad 之間同步練習記錄。"</string>
@@ -2490,6 +2516,7 @@
     <string name="try_using">"試著用"</string>
     <string name="turn_camera_off">"關閉相機"</string>
     <string name="turn_camera_on">"開啟相機"</string>
+    <string name="turn_it_on_any_time_in_settings_devices">"隨時都能在「設定 → 裝置」開啟。"</string>
     <!-- 'Turn it on to film yourself, or off to practice with your voice only.' -->
     <string name="turn_it_on_to_film_yourself_or_off_to_practice_with_your_voi_8f2b9e">"開著會把你唸稿的樣子錄下來，關掉就只錄聲音。"</string>
     <string name="turn_on_photos_for_nawana_in_settings_to_save_the_card">"要儲存卡片，請在設定中允許 nawana 取用照片。"</string>
@@ -2536,6 +2563,7 @@
     <string name="useful_information_clearly_told">"把實用資訊講清楚"</string>
     <string name="uses_lld_min_of_talk_time">"使用 %d 分鐘通話時間"</string>
     <string name="uses_talk_time">"會用到通話時間"</string>
+    <string name="uses_your_google_drive">"使用你的 Google 雲端硬碟"</string>
     <string name="uses_your_icloud">"使用你的 iCloud"</string>
     <string name="variants">"換個說法"</string>
     <!-- 'Verified grammar slips per 100 spoken words — fewer reads higher.' -->
@@ -2580,6 +2608,7 @@
     <string name="vs_last_week">"與上週相比"</string>
     <string name="vs_previous_30_days">"與前 30 天相比"</string>
     <string name="waiting_for_the_first_sync">"等待第一次同步"</string>
+    <string name="want_a_copy_use_your_own_google_drive">"想留一份？放進你自己的 Google 雲端硬碟"</string>
     <string name="warm_and_chatty">"溫暖又愛聊"</string>
     <string name="watch">"情境練習"</string>
     <string name="watch_again">"再看一次"</string>
@@ -2603,6 +2632,7 @@
     <string name="watching_a_scene">"看情境練習"</string>
     <string name="watching_for_ideas">"邊看邊找點子"</string>
     <string name="we_didn_t_hear_you_check_the_microphone_and_try_again">"沒有聽到你的聲音。請檢查麥克風後再試一次。"</string>
+    <string name="we_don_t_keep_your_talks_so_speak_freely">"我們不保存你的對話內容，放心開口說吧。"</string>
     <!-- "We'll find who they are — you just confirm. Their voice is a preset, never their real one." -->
     <string name="we_ll_find_who_they_are_you_just_confirm_their_voice_is_a_pr_d4840a">"我們會找出是誰，你只要確認就好。聲音是預設聲音，絕不會是本人的聲音。"</string>
     <!-- "We'll remind you before it converts, and the date is always in Me → Talk time." -->
@@ -3030,6 +3060,9 @@
     <string name="your_practice_from_your_other_device_is_in_your_icloud_talks_5ad16e">"你在其他裝置上的練習都在 iCloud 裡：對話、卡片、單字、錄音。把它帶過來，之後兩邊會保持一致。"</string>
     <!-- "Your practice on this device takes about %@. That's roughly the space it needs in iCloud." -->
     <string name="your_practice_on_this_device_takes_about_that_s_roughly_the_b08018">"這台裝置上的練習紀錄約 %s，iCloud 也大約需要這麼多空間。"</string>
+    <!-- "Your practice on this device takes about %@. That's roughly the space it needs in Google Drive." -->
+    <string name="your_practice_on_this_device_takes_about_that_s_roughly_the_b9cf59">"這台裝置上的練習大約占 %s，Google 雲端硬碟也需要差不多的空間。"</string>
+    <string name="your_practice_stays_on_your_phone">"你的練習只留在這支手機上"</string>
     <string name="your_profile">"個人檔案"</string>
     <string name="your_project_update">"專案進度報告"</string>
     <!-- 'Your recent conversations measure at a higher level. Scoring and material difficulty now follow it.' -->
@@ -3062,6 +3095,8 @@
     <string name="your_talks_books_and_cards_are_still_on_it_open_me_there_tur_546039">"通話、複習本和卡片都還在那台裝置上。在那裡打開「我的」，開啟「在其他裝置上繼續」，再回來。"</string>
     <!-- "Your talks, books and recordings are on this phone only. If you delete the app or change phones, they're gone for good." -->
     <string name="your_talks_books_and_recordings_are_on_this_phone_only_if_yo_02b0cd">"你的對話、複習本和錄音目前只在這支手機上。刪除 App 或換手機後，就會永久消失。"</string>
+    <!-- 'Your talks, cards, words and recordings, audio included, stay the same on every device signed into this account and the same Google account. Turning this off stops syncing and deletes nothing.' -->
+    <string name="your_talks_cards_words_and_recordings_audio_included_stay_th_0bead2">"對話、卡片、單字和錄音（連同音訊）會在登入這個帳號和同一個 Google 帳號的每台裝置上保持一致。關掉只會停止同步，不會刪除任何東西。"</string>
     <!-- 'Your talks, cards, words and recordings — including the audio — are kept the same on every device signed into this account and your iCloud. Turning this off stops syncing and deletes nothing.' -->
     <string name="your_talks_cards_words_and_recordings_including_the_audio_ar_4e4ae2">"對話、卡片、單字和錄音（包含音訊）會在登入此帳號與 iCloud 的所有裝置上保持一致。關閉只會停止同步，不會刪除任何內容。"</string>
     <string name="your_talks_together">"一起聊過的通話"</string>

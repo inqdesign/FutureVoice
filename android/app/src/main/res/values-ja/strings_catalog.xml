@@ -170,6 +170,7 @@
     <string name="all_sources">"すべての出典"</string>
     <string name="all_words">"すべての単語"</string>
     <string name="allow_access_to_photos">"写真へのアクセスを許可してください"</string>
+    <string name="allow_google_drive_access_to_keep_syncing">"同期を続けるには、Googleドライブへのアクセスを許可してください"</string>
     <string name="allow_notifications_so_your_routine_can_remind_you">"ルーティンのリマインダーを受け取るには通知を許可してください"</string>
     <string name="almost">"ほぼ"</string>
     <string name="almost_there">"もう少しです…"</string>
@@ -306,6 +307,8 @@
     <string name="calls_at">"電話の時刻"</string>
     <!-- 'Calls draw on everything publicly known about them. Wrong person? Fix the name and look up again.' -->
     <string name="calls_draw_on_everything_publicly_known_about_them_wrong_per_ac77bc">"通話では、この人について公開されていることすべてをもとに話します。別の人なら、名前を直してもう一度検索してください。"</string>
+    <!-- 'Calls, recordings and every word you study are saved right here.' -->
+    <string name="calls_recordings_and_every_word_you_study_are_saved_right_he_35bbe7">"通話も録音も、覚えた単語や表現も、すべてここに保存されます。"</string>
     <string name="calm_gently_witty">"落ち着いていてウィットがある"</string>
     <string name="came_back_lld_times">"%d回くり返しました"</string>
     <string name="came_back_lld_times_in_this_call">"この通話で%d回くり返しました"</string>
@@ -482,14 +485,17 @@
     <string name="delete_account">"アカウントを削除"</string>
     <string name="delete_block">"ブロックを削除"</string>
     <string name="delete_forever">"完全に削除"</string>
+    <string name="delete_from_google_drive">"Googleドライブから削除"</string>
     <string name="delete_from_icloud">"iCloudから削除"</string>
     <string name="delete_scenario">"シチュエーションを削除"</string>
     <string name="delete_talk">"通話を削除"</string>
+    <string name="delete_the_app_or_change_phones_and_it_s_gone_too">"アプリを削除したり機種変更したりすると、記録も消えます。"</string>
     <string name="delete_the_video_your_voice_and_score_stay">"動画を削除しますか？録音とスコアは残ります。"</string>
     <string name="delete_this_scenario">"このシチュエーションを削除しますか？"</string>
     <string name="delete_this_talk">"この通話を削除しますか？"</string>
     <string name="delete_video">"動画を削除"</string>
     <string name="delete_your_account">"アカウントを削除しますか？"</string>
+    <string name="delete_your_practice_from_google_drive">"Googleドライブにある練習の記録を削除しますか？"</string>
     <string name="delete_your_practice_from_icloud">"iCloudから練習データを削除しますか？"</string>
     <string name="delete_your_voice">"声を削除しますか？"</string>
     <!-- 'Deletes cached voice audio only. Your talks, drills, words and books are untouched. Every line synthesizes again the next time it plays.' -->
@@ -655,6 +661,8 @@
     <string name="everything_planned_for_that_day_is_done_your_streak_grows_by_4f7c00">"その日の計画を全部やりました。連続記録が1日のびます。"</string>
     <!-- 'Everything said so far is saved. Reconnect to carry on from where you were.' -->
     <string name="everything_said_so_far_is_saved_reconnect_to_carry_on_from_w_c4f94f">"ここまでの会話は保存されています。再接続すれば続きから話せます。"</string>
+    <!-- "Everything synced to Google Drive is removed and syncing stops on every device. What's on this device stays." -->
+    <string name="everything_synced_to_google_drive_is_removed_and_syncing_sto_32a900">"Googleドライブに同期した記録はすべて削除され、どのデバイスでも同期が止まります。この端末にあるものはそのまま残ります。"</string>
     <!-- "Everything synced to iCloud is removed and syncing stops on every device. What's on this device stays." -->
     <string name="everything_synced_to_icloud_is_removed_and_syncing_stops_on_60516a">"iCloudに同期したものをすべて削除し、すべてのデバイスで同期を止めます。このデバイスにあるものはそのまま残ります。"</string>
     <string name="everything_this_conversation_had_to_teach_is_yours">"この通話で学ぶことは、すべて身につきました。"</string>
@@ -795,6 +803,11 @@
     <string name="goal_met_how_did_it_feel">"終わったね。今日はうまく話せた？"</string>
     <string name="good_llds_more_for_the_best_result">"いいですね。あと%d秒読むと、いちばんよく仕上がります"</string>
     <string name="good_to_have_you_back">"元気にしてた？"</string>
+    <!-- "Google Drive access wasn't allowed. Try again and choose Allow." -->
+    <string name="google_drive_access_wasn_t_allowed_try_again_and_choose_allo_7f36e7">"Googleドライブへのアクセスが許可されませんでした。もう一度押して「許可」を選んでください。"</string>
+    <!-- "Google Drive can't be reached right now. Check your connection, then try again." -->
+    <string name="google_drive_can_t_be_reached_right_now_check_your_connectio_286681">"いまGoogleドライブにつながりません。接続を確認して、もう一度お試しください。"</string>
+    <string name="google_drive_is_full_so_audio_isn_t_syncing">"Googleドライブの容量がいっぱいのため、音声が同期されていません"</string>
     <string name="got_it">"覚えた"</string>
     <string name="got_them_all">"全問正解"</string>
     <!-- 'Graded against your B1 setting — how this talk went, not what your level is.' -->
@@ -956,6 +969,7 @@
     <string name="ios_is_blocking_the_call_turn_on_notifications_for_nawana_in_30ae8b">"iOSが電話をブロックしています。設定でnawanaの通知をオンにしてから、マイページでもう一度オンにしてください。"</string>
     <string name="is_answering">"%sが答えています"</string>
     <string name="it_didn_t_come_back_this_call">"今回の通話では一度も出ませんでした"</string>
+    <string name="it_goes_with_the_app">"アプリと一緒に消えます"</string>
     <string name="it_happens_one_talk_is_enough_to_start_again">"そんな週もあります。トーク1回で、また始められます。"</string>
     <string name="it_moves_as_you_talk">"話すほど変わります"</string>
     <string name="it_needs_a_little_of_your_speech_first">"まずは少し、自分が話した記録が必要です。"</string>
@@ -989,6 +1003,7 @@
     <!-- 'Keep a word from a talk, or watch a situation — its words collect here.' -->
     <string name="keep_a_word_from_a_talk_or_watch_a_situation_its_words_colle_b07a48">"通話中に単語を保存するか、シーンを見てみてください。そこで出てきた単語がここに集まります。"</string>
     <string name="keep_going_llds_more">"続けて読んでください。あと%d秒です"</string>
+    <string name="keep_in_google_drive">"Googleドライブに残す"</string>
     <string name="keep_in_icloud">"iCloudに保管する"</string>
     <string name="keep_it">"取っておく"</string>
     <string name="keep_it_today_for_day_1">"今日守れば1日目"</string>
@@ -999,9 +1014,12 @@
     <string name="keep_talking">"会話を続けましょう"</string>
     <string name="keep_this_voice">"この声のままにする"</string>
     <string name="keep_what_you_d_use">"使えそうなものは取っておく"</string>
+    <string name="keep_your_practice_in_google_drive">"練習の記録をGoogleドライブに残しておきますか？"</string>
     <string name="keep_your_practice_in_icloud">"練習記録をiCloudに保管しますか？"</string>
     <string name="kept_for_lld_days">"%d日続けて守っています"</string>
     <string name="kept_from_a_talk">"通話で保存した単語"</string>
+    <!-- 'Kept in your own Google Drive, it waits on any phone or tablet you sign into, your voice recording too, so your voice comes back without recording again.' -->
+    <string name="kept_in_your_own_google_drive_it_waits_on_any_phone_or_table_45e1ff">"自分のGoogleドライブに残しておけば、ログインしたどのスマホやタブレットでもそのまま続けられます。声の録音も一緒なので、録り直さなくても声が戻ります。"</string>
     <!-- "Kept in your own iCloud, they're waiting on any phone or iPad you sign into — your voice recording too, so your voice comes back without recording again." -->
     <string name="kept_in_your_own_icloud_they_re_waiting_on_any_phone_or_ipad_9fa373">"自分のiCloudに保管しておけば、ログインしたどのiPhoneやiPadでもそのまま続けられます。声の録音も一緒なので、録り直さなくても声が戻ります。"</string>
     <string name="key_expressions">"キー表現"</string>
@@ -1411,6 +1429,7 @@
     <string name="not_in_today_s_routine">"今日のルーティンにない"</string>
     <string name="not_me_record_again">"自分の声じゃない、録音し直す"</string>
     <string name="not_now">"今はしない"</string>
+    <string name="not_on_our_servers">"サーバーには残りません"</string>
     <string name="not_published">"非公開"</string>
     <string name="not_rated">"未評価"</string>
     <!-- "Not read yet — it's read the first time you watch this scene." -->
@@ -1486,6 +1505,8 @@
     <!-- "On the day you pick, I'll put your week together: what you said, the words you picked up, how far you've come. Then a short test, made only from your own talks." -->
     <string name="on_the_day_you_pick_i_ll_put_your_week_together_what_you_sai_d42485">"選んだ日に、1週間をまとめておくね。何を話したか、どんな言葉を覚えたか、どれだけ伸びたか。それから、自分の会話だけで作った短いテストも。"</string>
     <string name="on_the_street">"道で"</string>
+    <!-- 'On your other device, open Settings, turn on “Continue on your other devices”, then come back here.' -->
+    <string name="on_your_other_device_open_settings_turn_on_continue_on_your_c7fa99">"ほかのデバイスで設定を開いて「ほかのデバイスで続ける」をオンにしてから、ここに戻ってきてください。"</string>
     <string name="once">"1回"</string>
     <!-- "Once a week, a test made only from that week's own talks: what a word means, the missing phrase, rebuilding a corrected sentence, writing down what you hear, saying a line out loud, and the grammar from your weekly report. A dot means it's open." -->
     <string name="once_a_week_a_test_made_only_from_that_week_s_own_talks_what_d9930a">"週に一度、その週の自分のトークだけで作ったテストが開きます。単語の意味、空欄に入る表現、直した文の組み立て直し、聞き取り、声に出して言う問題、週間レポートに出た文法まで。点があればテストが開いているという意味です。"</string>
@@ -1637,6 +1658,10 @@
     <string name="practicing_your_rhythm">"話すリズムを練習しています…"</string>
     <!-- 'Practise on your iPhone, pick it up on your iPad. Everything is stored in your own iCloud, audio included, so it can use a few gigabytes there.' -->
     <string name="practise_on_your_iphone_pick_it_up_on_your_ipad_everything_i_80dce1">"iPhoneで練習して、iPadで続きから。音声も含めてすべて自分のiCloudに保存されるので、数GBを使うことがあります。"</string>
+    <!-- 'Practise on your phone, pick it up on your tablet. Everything is kept in your own Google Drive, audio included, in a hidden folder only this app can open.' -->
+    <string name="practise_on_your_phone_pick_it_up_on_your_tablet_everything_0cf690">"スマホで練習して、タブレットで続きを。音声も含めてすべて自分のGoogleドライブの、このアプリだけが開ける非表示のフォルダに保存されます。"</string>
+    <!-- 'Practised on another phone or tablet with sync on? Your talks, cards, words and recordings are in your Google Drive. Choose the same Google account you used there.' -->
+    <string name="practised_on_another_phone_or_tablet_with_sync_on_your_talks_dc3ff4">"ほかのスマホやタブレットで同期をオンにして練習していたなら、会話・カード・単語・録音は自分のGoogleドライブにあります。そこで使ったGoogleアカウントを選んでください。"</string>
     <string name="preparing_study_notes">"学習メモを用意しています…"</string>
     <string name="preparing_the_file">"ファイルを準備しています…"</string>
     <string name="preparing_your_video">"動画を準備しています…"</string>
@@ -1995,6 +2020,7 @@
     <string name="shown_over_their_face_on_the_watch_map_left_empty_one_is_wri_26f298">"シーン練習のマップで顔の上に表示されます。空欄なら自動で書きます。"</string>
     <!-- "Sign in, and your voice lands in this account the day it's made." -->
     <string name="sign_in_and_your_voice_lands_in_this_account_the_day_it_s_ma_e2e5d2">"サインインすると、声ができた日にこのアカウントに届きます。"</string>
+    <string name="sign_in_to_a_google_account_on_this_device_then_try_again">"この端末でGoogleアカウントにログインしてから、もう一度お試しください。"</string>
     <string name="sign_in_to_icloud_in_settings_first_then_try_again">"先に「設定」でiCloudにサインインしてから、もう一度お試しください。"</string>
     <string name="sign_in_to_icloud_in_settings_to_sync">"同期するには「設定」でiCloudにサインインしてください"</string>
     <string name="sign_in_to_sync_your_practice_between_your_iphone_and_ipad">"サインインすると、iPhoneとiPadの間で練習データを同期できます。"</string>
@@ -2490,6 +2516,7 @@
     <string name="try_using">"使ってみよう"</string>
     <string name="turn_camera_off">"カメラをオフ"</string>
     <string name="turn_camera_on">"カメラをオン"</string>
+    <string name="turn_it_on_any_time_in_settings_devices">"設定 → デバイスからいつでもオンにできます。"</string>
     <!-- 'Turn it on to film yourself, or off to practice with your voice only.' -->
     <string name="turn_it_on_to_film_yourself_or_off_to_practice_with_your_voi_8f2b9e">"オンにすると読む姿を録画、オフにすると声だけを録音します。"</string>
     <string name="turn_on_photos_for_nawana_in_settings_to_save_the_card">"カードを保存するには、設定でnawanaの写真へのアクセスをオンにしてください。"</string>
@@ -2536,6 +2563,7 @@
     <string name="useful_information_clearly_told">"役立つ情報をわかりやすく"</string>
     <string name="uses_lld_min_of_talk_time">"通話時間を%d分使います"</string>
     <string name="uses_talk_time">"通話時間を使います"</string>
+    <string name="uses_your_google_drive">"自分のGoogleドライブを使います"</string>
     <string name="uses_your_icloud">"自分のiCloudを使用"</string>
     <string name="variants">"言い換えると"</string>
     <!-- 'Verified grammar slips per 100 spoken words — fewer reads higher.' -->
@@ -2580,6 +2608,7 @@
     <string name="vs_last_week">"先週比"</string>
     <string name="vs_previous_30_days">"前の30日比"</string>
     <string name="waiting_for_the_first_sync">"最初の同期を待っています"</string>
+    <string name="want_a_copy_use_your_own_google_drive">"自分のGoogleドライブにコピーを残せます"</string>
     <string name="warm_and_chatty">"あたたかくて話し好き"</string>
     <string name="watch">"シーン練習"</string>
     <string name="watch_again">"もう一度見る"</string>
@@ -2603,6 +2632,7 @@
     <string name="watching_a_scene">"シーン練習を見る"</string>
     <string name="watching_for_ideas">"アイデアを探しながら見る"</string>
     <string name="we_didn_t_hear_you_check_the_microphone_and_try_again">"声が聞こえませんでした。マイクを確認して、もう一度お試しください。"</string>
+    <string name="we_don_t_keep_your_talks_so_speak_freely">"会話の内容は私たちのサーバーに保存しません。安心して話してください。"</string>
     <!-- "We'll find who they are — you just confirm. Their voice is a preset, never their real one." -->
     <string name="we_ll_find_who_they_are_you_just_confirm_their_voice_is_a_pr_d4840a">"誰なのかはこちらで探します。確認するだけで大丈夫です。声はプリセットで、本人の声は使いません。"</string>
     <!-- "We'll remind you before it converts, and the date is always in Me → Talk time." -->
@@ -3030,6 +3060,9 @@
     <string name="your_practice_from_your_other_device_is_in_your_icloud_talks_5ad16e">"ほかのデバイスの練習データがiCloudにあります。トーク、カード、単語、録音まで。ここに取り込んで、これからは両方を揃えておきます。"</string>
     <!-- "Your practice on this device takes about %@. That's roughly the space it needs in iCloud." -->
     <string name="your_practice_on_this_device_takes_about_that_s_roughly_the_b08018">"この端末の練習記録は約%sです。iCloudにもほぼ同じ容量が必要です。"</string>
+    <!-- "Your practice on this device takes about %@. That's roughly the space it needs in Google Drive." -->
+    <string name="your_practice_on_this_device_takes_about_that_s_roughly_the_b9cf59">"この端末の練習の記録は約%sです。Googleドライブにもだいたい同じだけの容量が必要です。"</string>
+    <string name="your_practice_stays_on_your_phone">"練習したことは、この端末だけに残ります"</string>
     <string name="your_profile">"プロフィール"</string>
     <string name="your_project_update">"進捗報告"</string>
     <!-- 'Your recent conversations measure at a higher level. Scoring and material difficulty now follow it.' -->
@@ -3062,6 +3095,8 @@
     <string name="your_talks_books_and_cards_are_still_on_it_open_me_there_tur_546039">"通話や復習ブック、カードはまだそのデバイスにあります。そちらでマイページを開いて「ほかのデバイスで続ける」をオンにしてから、戻ってきてください。"</string>
     <!-- "Your talks, books and recordings are on this phone only. If you delete the app or change phones, they're gone for good." -->
     <string name="your_talks_books_and_recordings_are_on_this_phone_only_if_yo_02b0cd">"会話・ブック・録音はいまこの端末にしかありません。アプリを削除したり機種変更したりすると、元に戻せずに消えます。"</string>
+    <!-- 'Your talks, cards, words and recordings, audio included, stay the same on every device signed into this account and the same Google account. Turning this off stops syncing and deletes nothing.' -->
+    <string name="your_talks_cards_words_and_recordings_audio_included_stay_th_0bead2">"会話・カード・単語・録音が音声まで、このアカウントと同じGoogleアカウントでログインしたすべてのデバイスでそろいます。オフにしても同期が止まるだけで、何も削除されません。"</string>
     <!-- 'Your talks, cards, words and recordings — including the audio — are kept the same on every device signed into this account and your iCloud. Turning this off stops syncing and deletes nothing.' -->
     <string name="your_talks_cards_words_and_recordings_including_the_audio_ar_4e4ae2">"トーク、カード、単語、録音が、音声も含めて、このアカウントとiCloudにサインインしたすべてのデバイスで同じに保たれます。オフにしても同期が止まるだけで、何も削除されません。"</string>
     <string name="your_talks_together">"一緒にした通話"</string>

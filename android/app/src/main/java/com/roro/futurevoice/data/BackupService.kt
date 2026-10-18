@@ -60,7 +60,10 @@ object BackupService {
      * of them can be fetched again, so carrying it would turn a backup into a
      * transfer nobody finishes.
      */
-    private val skipDirs = setOf("PhraseAudio", "TurnAudio", "tts-cache")
+    private val skipDirs = setOf("PhraseAudio", "TurnAudio", "tts-cache",
+        // Drive sync's own index: a restored install must re-derive its
+        // relationship with the cloud (iOS `excludedFolders`).
+        "sync")
 
     suspend fun export(
         context: Context,

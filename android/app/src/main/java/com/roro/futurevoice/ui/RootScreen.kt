@@ -205,6 +205,9 @@ fun RootScreen() {
     /** Set when a Talk-home card's call closes; the home consumes it and
      *  offers the persona-deepen sheet (iOS `maybePromptDeepen`). */
     var deepenPending by remember { mutableStateOf(false) }
+    /** Set when ANY call closes; the home consumes it and may offer the
+     *  backup file once (iOS `maybeOfferBackup`). */
+    var backupPending by remember { mutableStateOf(false) }
     // Debug only: `--ez debugHomeCardCallEnded true` plays the moment a
     // Talk-home card's call has just closed, without a call.
     LaunchedEffect(Unit) {
@@ -452,6 +455,18 @@ fun RootScreen() {
      *  until the builder has gone into the Activity chip and that chip's hint
      *  is closed (iOS `firstRunHeld`). */
     var firstRunHeld by remember { mutableStateOf(false) }
+    // The second device's question, asked once per account per install.
+    val secondDeviceUser = remember(state.signedIn, state.isAnonymous) {
+        if (state.signedIn && !state.isAnonymous) com.roro.futurevoice.data.AuthRepository().userId else null
+    }
+    var syncOfferSeen by remember(secondDeviceUser) {
+        mutableStateOf(secondDeviceUser == null ||
+            com.roro.futurevoice.sync.SyncStore.wasOffered(context, secondDeviceUser) ||
+            com.roro.futurevoice.sync.SyncEngine.shared(context).isEnabled)
+    }
+    var localDataOnboarded by remember {
+        mutableStateOf(OnboardingFlags.seen(context, OnboardingFlags.LOCAL_DATA))
+    }
     var welcomePreview by remember { mutableStateOf(false) }
     /** iOS `showingAgeCheck` — see [AgeCheckSheet]. */
     var showAgeCheck by remember { mutableStateOf(false) }
@@ -719,6 +734,17 @@ fun RootScreen() {
         // First-run answers before anything else — what to teach and how to
         // calibrate.
         }}
+        // A signed-in account on an install that hasn't been set up, which
+        // already has a voice (adopted from the server) — practice exists on
+        // another device. Offer to bring it over before setup asks again
+        // (iOS `SyncContinuePromptView` / `SyncOtherDeviceHintView`).
+        !state.setupComplete && state.signedIn && !state.isAnonymous && state.voiceId != null &&
+            secondDeviceUser != null && !syncOfferSeen -> {{ SyncContinueScreen(
+            userId = secondDeviceUser,
+            onPulled = app::adoptPulledPractice,
+            onDone = { syncOfferSeen = true },
+        )
+        }}
         !state.setupComplete -> {{ SetupFlowScreen(
             initialNative = state.nativeLanguage,
             initialTarget = state.targetLanguage,
@@ -805,6 +831,13 @@ fun RootScreen() {
             standInVoiceId = if (state.voiceIsStandIn) state.voiceId else null,
             onChooseStandIn = app::chooseStandInVoice,
         )
+        // Where everything they are about to say will live, said before the
+        // first call, ahead of the routine builder (iOS
+        // `LocalDataOnboardingView`). Gated on the builder's flag, so an
+        // install past the routine never sees it.
+        }}
+        state.voiceId != null && !localDataOnboarded && !dailyCallOnboarded -> {{
+            LocalDataOnboardingScreen(context) { localDataOnboarded = true }
         }}
         else -> null
     }
@@ -1345,6 +1378,7 @@ fun RootScreen() {
                     // A call that flew in from the ring flies back to it.
                     TalkMorph.close(morphScope) {
                         if (callFromHomeCard) deepenPending = true
+                        backupPending = true
                         callFromHomeCard = false
                         inCall = false; callTopic = ""; callFacts = emptyList(); callBlurb = ""
                         callScenarioId = null; callOpener = ""; callCast = null
@@ -1446,6 +1480,8 @@ fun RootScreen() {
             onAddLanguage = { showAddLanguage = true },
             deepenPending = deepenPending,
             onDeepenConsumed = { deepenPending = false },
+            backupPending = backupPending,
+            onBackupConsumed = { backupPending = false },
             // A tab's first-visit guide never rises over a sheet the root owns.
             guideBlocked = paywalled || showIntroPreview || state.levelUp != null ||
                 referralJoin != null || welcomeMinutes != null || updatePending != null || showAgeCheck ||
@@ -1631,6 +1667,9 @@ internal fun HomeScreen(
     /** A Talk-home card's call has just closed (see [CallRoute.fromHomeCard]). */
     deepenPending: Boolean = false,
     onDeepenConsumed: () -> Unit = {},
+    /** Any call has just closed — the once-only backup offer may follow. */
+    backupPending: Boolean = false,
+    onBackupConsumed: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var showDeepen by remember { mutableStateOf(false) }
@@ -1676,6 +1715,27 @@ internal fun HomeScreen(
         }
         deepenAsk = false
     }
+
+    // iOS `maybeOfferBackup`: after the third finished talk, once, while sync
+    // is off, never on top of the deepen sheet. iOS offers its iCloud here;
+    // Android offers the learner's Google Drive.
+    var showBackupOffer by remember { mutableStateOf(false) }
+    LaunchedEffect(backupPending) {
+        if (!backupPending) return@LaunchedEffect
+        onBackupConsumed()
+        kotlinx.coroutines.delay(900)
+        if (showDeepen) return@LaunchedEffect
+        val prefs = context.getSharedPreferences("futurevoice", 0)
+        if (prefs.getBoolean(BACKUP_OFFERED_KEY, false) || !state.signedIn || state.isAnonymous ||
+            com.roro.futurevoice.sync.SyncEngine.shared(context).isEnabled) return@LaunchedEffect
+        val talks = com.roro.futurevoice.data.SessionStore.shared(context)
+            .load(state.targetLanguage).count { it.endedAt != null }
+        if (talks >= 3) {
+            prefs.edit().putBoolean(BACKUP_OFFERED_KEY, true).apply()
+            showBackupOffer = true
+        }
+    }
+    if (showBackupOffer) BackupOfferSheet(onDismiss = { showBackupOffer = false })
 
     if (showDeepen) {
         PersonaDeepenSheet(

@@ -170,6 +170,7 @@
     <string name="all_sources">"모든 출처"</string>
     <string name="all_words">"전체 단어"</string>
     <string name="allow_access_to_photos">"사진 접근을 허용해 주세요"</string>
+    <string name="allow_google_drive_access_to_keep_syncing">"계속 동기화하려면 Google Drive 접근을 허용해 주세요"</string>
     <string name="allow_notifications_so_your_routine_can_remind_you">"루틴 알림을 받으려면 알림을 허용해 주세요"</string>
     <string name="almost">"거의"</string>
     <string name="almost_there">"거의 다 됐어요…"</string>
@@ -307,6 +308,8 @@
     <string name="calls_at">"전화 시각"</string>
     <!-- 'Calls draw on everything publicly known about them. Wrong person? Fix the name and look up again.' -->
     <string name="calls_draw_on_everything_publicly_known_about_them_wrong_per_ac77bc">"통화에서는 이 사람에 대해 공개된 모든 걸 바탕으로 이야기해요. 다른 사람이라면 이름을 고치고 다시 찾아 주세요."</string>
+    <!-- 'Calls, recordings and every word you study are saved right here.' -->
+    <string name="calls_recordings_and_every_word_you_study_are_saved_right_he_35bbe7">"통화, 녹음, 공부한 단어와 표현까지 전부 여기에 저장돼요."</string>
     <string name="calm_gently_witty">"차분하고 위트 있는"</string>
     <string name="came_back_lld_times">"%d번 다시 나왔어요"</string>
     <string name="came_back_lld_times_in_this_call">"이번 통화에서 %d번 다시 나왔어요"</string>
@@ -483,14 +486,17 @@
     <string name="delete_account">"계정 삭제"</string>
     <string name="delete_block">"칸 삭제"</string>
     <string name="delete_forever">"영구 삭제"</string>
+    <string name="delete_from_google_drive">"Google Drive에서 삭제"</string>
     <string name="delete_from_icloud">"iCloud에서 삭제"</string>
     <string name="delete_scenario">"상황 삭제"</string>
     <string name="delete_talk">"대화 삭제"</string>
+    <string name="delete_the_app_or_change_phones_and_it_s_gone_too">"앱을 지우거나 폰을 바꾸면 기록도 같이 사라져요."</string>
     <string name="delete_the_video_your_voice_and_score_stay">"영상을 지울까요? 녹음과 점수는 그대로 남아요."</string>
     <string name="delete_this_scenario">"이 상황을 삭제할까요?"</string>
     <string name="delete_this_talk">"이 대화를 삭제할까요?"</string>
     <string name="delete_video">"영상 삭제"</string>
     <string name="delete_your_account">"계정을 삭제할까요?"</string>
+    <string name="delete_your_practice_from_google_drive">"Google Drive에 있는 연습 기록을 지울까요?"</string>
     <string name="delete_your_practice_from_icloud">"iCloud에서 연습 기록을 삭제할까요?"</string>
     <string name="delete_your_voice">"목소리를 삭제할까요?"</string>
     <!-- 'Deletes cached voice audio only. Your talks, drills, words and books are untouched. Every line synthesizes again the next time it plays.' -->
@@ -656,6 +662,8 @@
     <string name="everything_planned_for_that_day_is_done_your_streak_grows_by_4f7c00">"그날 계획을 전부 했어요. 연속 기록이 하루 늘어요."</string>
     <!-- 'Everything said so far is saved. Reconnect to carry on from where you were.' -->
     <string name="everything_said_so_far_is_saved_reconnect_to_carry_on_from_w_c4f94f">"지금까지 나눈 이야기는 저장돼 있어요. 다시 연결하면 이어서 할 수 있어요."</string>
+    <!-- "Everything synced to Google Drive is removed and syncing stops on every device. What's on this device stays." -->
+    <string name="everything_synced_to_google_drive_is_removed_and_syncing_sto_32a900">"Google Drive에 동기화된 기록이 모두 지워지고, 모든 기기에서 동기화가 멈춰요. 이 기기에 있는 건 그대로 남아요."</string>
     <!-- "Everything synced to iCloud is removed and syncing stops on every device. What's on this device stays." -->
     <string name="everything_synced_to_icloud_is_removed_and_syncing_stops_on_60516a">"iCloud에 올라간 것을 모두 지우고, 모든 기기에서 동기화를 멈춰요. 이 기기에 있는 건 그대로예요."</string>
     <string name="everything_this_conversation_had_to_teach_is_yours">"이 대화에서 배울 건 다 익혔어요."</string>
@@ -796,6 +804,11 @@
     <string name="goal_met_how_did_it_feel">"다 했네. 오늘은 말 좀 잘 나왔어?"</string>
     <string name="good_llds_more_for_the_best_result">"좋아요. %d초만 더 읽으면 가장 잘 나와요"</string>
     <string name="good_to_have_you_back">"잘 지냈어?"</string>
+    <!-- "Google Drive access wasn't allowed. Try again and choose Allow." -->
+    <string name="google_drive_access_wasn_t_allowed_try_again_and_choose_allo_7f36e7">"Google Drive 접근이 허용되지 않았어요. 다시 눌러 허용을 골라 주세요."</string>
+    <!-- "Google Drive can't be reached right now. Check your connection, then try again." -->
+    <string name="google_drive_can_t_be_reached_right_now_check_your_connectio_286681">"지금은 Google Drive에 연결할 수 없어요. 인터넷 연결을 확인하고 다시 해 주세요."</string>
+    <string name="google_drive_is_full_so_audio_isn_t_syncing">"Google Drive 공간이 가득 차서 오디오가 동기화되지 않아요"</string>
     <string name="got_it">"알아요"</string>
     <string name="got_them_all">"전부 맞혔어요"</string>
     <!-- 'Graded against your B1 setting — how this talk went, not what your level is.' -->
@@ -957,6 +970,7 @@
     <string name="ios_is_blocking_the_call_turn_on_notifications_for_nawana_in_30ae8b">"iOS가 전화를 막고 있어요. 설정에서 nawana 알림을 켠 뒤, Me에서 다시 켜 주세요."</string>
     <string name="is_answering">"%s 대답 중"</string>
     <string name="it_didn_t_come_back_this_call">"이번 통화에선 한 번도 안 나왔어요"</string>
+    <string name="it_goes_with_the_app">"앱과 함께 지워져요"</string>
     <string name="it_happens_one_talk_is_enough_to_start_again">"그런 주도 있어요. 대화 한 번이면 다시 시작이에요."</string>
     <string name="it_moves_as_you_talk">"말할수록 바뀌어요"</string>
     <string name="it_needs_a_little_of_your_speech_first">"먼저 내가 말한 기록이 조금 필요해요."</string>
@@ -990,6 +1004,7 @@
     <!-- 'Keep a word from a talk, or watch a situation — its words collect here.' -->
     <string name="keep_a_word_from_a_talk_or_watch_a_situation_its_words_colle_b07a48">"대화 중에 단어를 담거나 상황을 시청해 보세요. 거기서 나온 단어가 여기 모여요."</string>
     <string name="keep_going_llds_more">"계속 읽어 주세요. %d초만 더요"</string>
+    <string name="keep_in_google_drive">"Google Drive에 보관"</string>
     <string name="keep_in_icloud">"iCloud에 보관하기"</string>
     <string name="keep_it">"챙기기"</string>
     <string name="keep_it_today_for_day_1">"오늘 지키면 1일째"</string>
@@ -1000,9 +1015,12 @@
     <string name="keep_talking">"계속 이야기해요"</string>
     <string name="keep_this_voice">"이 목소리 유지"</string>
     <string name="keep_what_you_d_use">"쓸 만한 건 챙기기"</string>
+    <string name="keep_your_practice_in_google_drive">"연습 기록을 Google Drive에 보관할까요?"</string>
     <string name="keep_your_practice_in_icloud">"기록을 iCloud에 보관할까요?"</string>
     <string name="kept_for_lld_days">"%d일째 지키는 중"</string>
     <string name="kept_from_a_talk">"대화에서 담아둔 단어"</string>
+    <!-- 'Kept in your own Google Drive, it waits on any phone or tablet you sign into, your voice recording too, so your voice comes back without recording again.' -->
+    <string name="kept_in_your_own_google_drive_it_waits_on_any_phone_or_table_45e1ff">"내 Google Drive에 보관하면 로그인하는 어느 폰이나 태블릿에서든 그대로 이어져요. 목소리 녹음도 함께 가서, 다시 녹음하지 않아도 목소리가 돌아와요."</string>
     <!-- "Kept in your own iCloud, they're waiting on any phone or iPad you sign into — your voice recording too, so your voice comes back without recording again." -->
     <string name="kept_in_your_own_icloud_they_re_waiting_on_any_phone_or_ipad_9fa373">"내 iCloud에 보관해 두면 로그인하는 어느 폰이나 iPad에서든 그대로 이어져요. 목소리 녹음도 함께 보관돼서, 다시 녹음하지 않아도 목소리가 돌아와요."</string>
     <string name="key_expressions">"핵심 표현"</string>
@@ -1412,6 +1430,7 @@
     <string name="not_in_today_s_routine">"오늘 루틴에 없음"</string>
     <string name="not_me_record_again">"아니에요, 다시 녹음할래요"</string>
     <string name="not_now">"지금은 안 할래요"</string>
+    <string name="not_on_our_servers">"서버에 남지 않아요"</string>
     <string name="not_published">"공개 안 함"</string>
     <string name="not_rated">"별점 없음"</string>
     <!-- "Not read yet — it's read the first time you watch this scene." -->
@@ -1487,6 +1506,8 @@
     <!-- "On the day you pick, I'll put your week together: what you said, the words you picked up, how far you've come. Then a short test, made only from your own talks." -->
     <string name="on_the_day_you_pick_i_ll_put_your_week_together_what_you_sai_d42485">"네가 고른 날, 한 주를 정리해 줄게. 무슨 말을 했는지, 어떤 단어를 얻었는지, 얼마나 늘었는지. 그리고 네 대화로만 만든 짧은 테스트도."</string>
     <string name="on_the_street">"길에서"</string>
+    <!-- 'On your other device, open Settings, turn on “Continue on your other devices”, then come back here.' -->
+    <string name="on_your_other_device_open_settings_turn_on_continue_on_your_c7fa99">"다른 기기에서 설정을 열고 “다른 기기에서 이어서 하기”를 켠 다음 여기로 돌아와 주세요."</string>
     <string name="once">"1회"</string>
     <!-- "Once a week, a test made only from that week's own talks: what a word means, the missing phrase, rebuilding a corrected sentence, writing down what you hear, saying a line out loud, and the grammar from your weekly report. A dot means it's open." -->
     <string name="once_a_week_a_test_made_only_from_that_week_s_own_talks_what_d9930a">"일주일에 한 번, 그 주에 내가 한 대화로만 만든 테스트가 열려요. 단어 뜻 고르기, 빈칸에 들어갈 표현, 고친 문장 다시 맞추기, 듣고 받아쓰기, 소리 내어 말하기, 주간 리포트에 나온 문법까지요. 점이 보이면 테스트가 열려 있다는 뜻이에요."</string>
@@ -1638,6 +1659,10 @@
     <string name="practicing_your_rhythm">"말의 리듬을 연습하는 중…"</string>
     <!-- 'Practise on your iPhone, pick it up on your iPad. Everything is stored in your own iCloud, audio included, so it can use a few gigabytes there.' -->
     <string name="practise_on_your_iphone_pick_it_up_on_your_ipad_everything_i_80dce1">"아이폰에서 연습하고 아이패드에서 이어서 해요. 오디오까지 전부 내 iCloud에 저장돼서, 거기 몇 GB를 쓸 수 있어요."</string>
+    <!-- 'Practise on your phone, pick it up on your tablet. Everything is kept in your own Google Drive, audio included, in a hidden folder only this app can open.' -->
+    <string name="practise_on_your_phone_pick_it_up_on_your_tablet_everything_0cf690">"폰에서 연습하고 태블릿에서 이어서 하세요. 오디오까지 전부 내 Google Drive 안, 이 앱만 열 수 있는 숨은 폴더에 보관돼요."</string>
+    <!-- 'Practised on another phone or tablet with sync on? Your talks, cards, words and recordings are in your Google Drive. Choose the same Google account you used there.' -->
+    <string name="practised_on_another_phone_or_tablet_with_sync_on_your_talks_dc3ff4">"다른 폰이나 태블릿에서 동기화를 켜고 연습했다면, 대화·카드·단어·녹음이 내 Google Drive에 있어요. 거기서 쓴 Google 계정을 똑같이 골라 주세요."</string>
     <string name="preparing_study_notes">"공부할 내용을 준비하고 있어요…"</string>
     <string name="preparing_the_file">"파일을 준비하는 중…"</string>
     <string name="preparing_your_video">"영상을 준비하고 있어요…"</string>
@@ -1996,6 +2021,7 @@
     <string name="shown_over_their_face_on_the_watch_map_left_empty_one_is_wri_26f298">"상황연습 지도에서 얼굴 위에 떠요. 비워 두면 알아서 써 둬요."</string>
     <!-- "Sign in, and your voice lands in this account the day it's made." -->
     <string name="sign_in_and_your_voice_lands_in_this_account_the_day_it_s_ma_e2e5d2">"로그인하면 목소리가 만들어지는 날 바로 이 계정에 들어와요."</string>
+    <string name="sign_in_to_a_google_account_on_this_device_then_try_again">"이 기기에서 Google 계정에 로그인한 뒤 다시 해 주세요."</string>
     <string name="sign_in_to_icloud_in_settings_first_then_try_again">"먼저 설정에서 iCloud에 로그인한 뒤 다시 해 주세요."</string>
     <string name="sign_in_to_icloud_in_settings_to_sync">"동기화하려면 설정에서 iCloud에 로그인하세요"</string>
     <string name="sign_in_to_sync_your_practice_between_your_iphone_and_ipad">"로그인하면 아이폰과 아이패드 사이에서 연습 기록을 맞출 수 있어요."</string>
@@ -2491,6 +2517,7 @@
     <string name="try_using">"써 볼 단어"</string>
     <string name="turn_camera_off">"카메라 끄기"</string>
     <string name="turn_camera_on">"카메라 켜기"</string>
+    <string name="turn_it_on_any_time_in_settings_devices">"언제든 설정 → 기기에서 켜면 돼요."</string>
     <!-- 'Turn it on to film yourself, or off to practice with your voice only.' -->
     <string name="turn_it_on_to_film_yourself_or_off_to_practice_with_your_voi_8f2b9e">"켜면 읽는 모습까지 담기고, 끄면 목소리만 녹음해요."</string>
     <string name="turn_on_photos_for_nawana_in_settings_to_save_the_card">"카드를 저장하려면 설정에서 나와나의 사진 접근을 켜 주세요."</string>
@@ -2537,6 +2564,7 @@
     <string name="useful_information_clearly_told">"쓸모 있는 정보를 또렷하게"</string>
     <string name="uses_lld_min_of_talk_time">"통화 시간 %d분 사용"</string>
     <string name="uses_talk_time">"통화 시간을 써요"</string>
+    <string name="uses_your_google_drive">"내 Google Drive를 써요"</string>
     <string name="uses_your_icloud">"내 iCloud 사용"</string>
     <string name="variants">"다르게 말하면"</string>
     <!-- 'Verified grammar slips per 100 spoken words — fewer reads higher.' -->
@@ -2581,6 +2609,7 @@
     <string name="vs_last_week">"지난주 대비"</string>
     <string name="vs_previous_30_days">"지난 30일 대비"</string>
     <string name="waiting_for_the_first_sync">"첫 동기화를 기다리는 중"</string>
+    <string name="want_a_copy_use_your_own_google_drive">"내 Google Drive에 사본을 둘 수 있어요"</string>
     <string name="warm_and_chatty">"다정한 수다쟁이"</string>
     <string name="watch">"상황연습"</string>
     <string name="watch_again">"다시 보기"</string>
@@ -2604,6 +2633,7 @@
     <string name="watching_a_scene">"상황연습 보기"</string>
     <string name="watching_for_ideas">"아이디어 얻으며 보기"</string>
     <string name="we_didn_t_hear_you_check_the_microphone_and_try_again">"목소리가 들리지 않았어요. 마이크를 확인하고 다시 해 주세요."</string>
+    <string name="we_don_t_keep_your_talks_so_speak_freely">"대화는 저희 서버에 보관하지 않아요. 마음 편히 말해도 돼요."</string>
     <!-- "We'll find who they are — you just confirm. Their voice is a preset, never their real one." -->
     <string name="we_ll_find_who_they_are_you_just_confirm_their_voice_is_a_pr_d4840a">"누구인지는 저희가 찾을게요. 확인만 해 주세요. 목소리는 기본 목소리 중 하나이고, 실제 그 사람의 목소리는 쓰지 않아요."</string>
     <!-- "We'll remind you before it converts, and the date is always in Me → Talk time." -->
@@ -3031,6 +3061,9 @@
     <string name="your_practice_from_your_other_device_is_in_your_icloud_talks_5ad16e">"다른 기기에서 한 연습이 iCloud에 있어요 — 통화, 카드, 단어, 녹음까지. 여기로 가져오고, 앞으로 두 기기를 같이 맞춰 가요."</string>
     <!-- "Your practice on this device takes about %@. That's roughly the space it needs in iCloud." -->
     <string name="your_practice_on_this_device_takes_about_that_s_roughly_the_b08018">"이 기기의 연습 기록은 약 %s예요. iCloud에도 그만큼 공간이 필요해요."</string>
+    <!-- "Your practice on this device takes about %@. That's roughly the space it needs in Google Drive." -->
+    <string name="your_practice_on_this_device_takes_about_that_s_roughly_the_b9cf59">"이 기기의 연습 기록은 약 %s예요. Google Drive에도 대략 그만큼 공간이 필요해요."</string>
+    <string name="your_practice_stays_on_your_phone">"연습한 건 모두 이 폰에만 남아요"</string>
     <string name="your_profile">"프로필"</string>
     <string name="your_project_update">"진행 상황 보고"</string>
     <!-- 'Your recent conversations measure at a higher level. Scoring and material difficulty now follow it.' -->
@@ -3063,6 +3096,8 @@
     <string name="your_talks_books_and_cards_are_still_on_it_open_me_there_tur_546039">"통화와 책, 카드는 아직 그 기기에 있어요. 거기서 나 → ‘다른 기기에서 이어서 하기’를 켜고 돌아와 주세요."</string>
     <!-- "Your talks, books and recordings are on this phone only. If you delete the app or change phones, they're gone for good." -->
     <string name="your_talks_books_and_recordings_are_on_this_phone_only_if_yo_02b0cd">"대화·책·녹음이 지금 이 폰에만 있어요. 앱을 지우거나 폰을 바꾸면 되돌릴 수 없이 사라져요."</string>
+    <!-- 'Your talks, cards, words and recordings, audio included, stay the same on every device signed into this account and the same Google account. Turning this off stops syncing and deletes nothing.' -->
+    <string name="your_talks_cards_words_and_recordings_audio_included_stay_th_0bead2">"대화, 카드, 단어, 녹음이 오디오까지, 이 계정과 같은 Google 계정으로 로그인한 모든 기기에서 똑같이 맞춰져요. 끄면 동기화만 멈추고 아무것도 지워지지 않아요."</string>
     <!-- 'Your talks, cards, words and recordings — including the audio — are kept the same on every device signed into this account and your iCloud. Turning this off stops syncing and deletes nothing.' -->
     <string name="your_talks_cards_words_and_recordings_including_the_audio_ar_4e4ae2">"통화, 카드, 단어, 녹음이 — 오디오까지 — 이 계정과 iCloud에 로그인한 모든 기기에서 같게 유지돼요. 끄면 동기화만 멈추고 아무것도 지우지 않아요."</string>
     <string name="your_talks_together">"함께한 대화"</string>

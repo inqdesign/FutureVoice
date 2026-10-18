@@ -25,6 +25,11 @@ object CaptureOnboarding {
     val wired: Map<String, @Composable (Context) -> Unit> = mapOf<String, @Composable (Context) -> Unit>(
         // The first-run "About you" cards (iOS `PersonaIntakeView`, `-intakeStep <n>`
         // with "Eunggyu" / "Munich" stand-ins): 0 name · 1 home · 2 interests.
+        // "Your practice stays on your phone", and the Drive sync screens.
+        "local-data" to { c -> com.roro.futurevoice.ui.LocalDataOnboardingScreen(c) {} },
+        "sync-continue" to { _ -> com.roro.futurevoice.ui.SyncContinueScreen("capture", onPulled = {}, onDone = {}) },
+        "sync-devices" to { _ -> com.roro.futurevoice.ui.SyncDevicesPage(onBack = {}) },
+        "backup-offer" to { _ -> com.roro.futurevoice.ui.BackupOfferSheet(onDismiss = {}) },
         "persona-intake" to { c -> PersonaIntakeShot(c, 0) },
         "persona-intake-1" to { c -> PersonaIntakeShot(c, 1) },
         "persona-intake-2" to { c -> PersonaIntakeShot(c, 2) },

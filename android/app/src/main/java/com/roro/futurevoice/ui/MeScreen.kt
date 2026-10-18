@@ -42,6 +42,7 @@ import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.PhoneCallback
 import androidx.compose.material.icons.outlined.RecordVoiceOver
 import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.Devices
 import androidx.compose.material.icons.outlined.TrackChanges
 import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.material.icons.outlined.WorkspacePremium
@@ -334,6 +335,7 @@ fun MeScreen(
             // A seated member's cell wears this palette on everyone's grid.
             scope.launch { CoreClubClient(AuthRepository()).publishTheme(it.ordinal) }
         }, onBack = { page = null })
+        MePage.DEVICES -> SyncDevicesPage(onBack = { page = null })
         MePage.DATA -> DataPage(
             step = backupStep,
             exported = exportedBackup,
@@ -501,6 +503,12 @@ fun MeScreen(
                     MeRow(Icons.Outlined.Palette, stringResource(R.string.appearance),
                         stringResource((appearance ?: com.roro.futurevoice.data.AppAppearance.SYSTEM).labelRes),
                         onClick = { page = MePage.APPEARANCE })
+                    GroupedRowDivider()
+                    // iOS `SyncSection`: the phone and the tablet as one app,
+                    // through the learner's own Google Drive.
+                    MeRow(Icons.Outlined.Devices, stringResource(R.string.devices),
+                        stringResource(R.string.continue_on_your_other_devices),
+                        onClick = { page = MePage.DEVICES })
                     GroupedRowDivider()
                     MeRow(Icons.Outlined.Storage, stringResource(R.string.practice_data),
                         backupStep?.let { backupStepLabel(it) }
