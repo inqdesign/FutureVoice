@@ -47,7 +47,6 @@ struct PracticeTab: View {
     @State private var showingWeekArchive = false
     @State private var hasUnseenWeek = false
     @State private var weekRecapAction: WeekRecapSheet.Action?
-    @State private var weeklyTestState: WeeklyTestSchedule.State = .ready
     /// A per-item callback was tapped — open exactly this card. Word/phrase
     /// items ride in a one-card review deck; a sentence opens its drill card.
     @State private var focusedReviewItem: StudyDeckItem?
@@ -741,15 +740,6 @@ struct PracticeTab: View {
         Circle().fill(color).frame(width: 7, height: 7).offset(x: 3, y: -2)
     }
 
-    private var weeklyTestValue: (text: String, tint: Color?) {
-        switch weeklyTestState {
-        case .ready: return (explain("Start"), .accentColor)
-        case let .inProgress(test): return ("\(test.answers.count)/\(test.total)", .accentColor)
-        case let .done(test, _): return ("\(test.score)/\(test.total)", .primary)
-        case .thin: return (explain("Preparing"), nil)
-        }
-    }
-
     /// When a book came into existence. The one ordering the whole tab now
     /// uses — see `bookRows`.
     private func created(_ book: StudyBook) -> Date {
@@ -773,7 +763,6 @@ struct PracticeTab: View {
             // off (2026-10-03, user decision: an index at the bottom of a
             // long feed was nowhere).
             libraryList
-            weeklyTestBanner
                 .padding(.bottom, 8)
             ForEach(books) { book in
                 // The shelf's own card, with its chapter buttons under it on
@@ -909,57 +898,6 @@ struct PracticeTab: View {
         .padding(.vertical, 12)
         .padding(.horizontal, 6)
         .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
-    }
-
-    /// The weekly test as a full-width banner under the four lists
-    /// (2026-10-16, founder): the host's face, what the week's test is
-    /// waiting on, and its number at the right. It is the test's ONLY door
-    /// on this page — the header no longer carries it. A thin week reads
-    /// "Preparing" and opens nothing: there is no paper to show.
-    private var weeklyTestBanner: some View {
-        Button { showingWeeklyTest = true } label: {
-            HStack(spacing: 12) {
-                WeeklyTestCharacter(mood: .waiting, since: .distantPast, tile: Color(.tertiarySystemFill))
-                    .scaleEffect(44 / WeeklyTestCharacter.size)
-                    .frame(width: 44, height: 44)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Weekly test")
-                        .font(.headline)
-                        .foregroundStyle(.primary)
-                    Text(weeklyTestBannerLine)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: 8)
-                Text(weeklyTestValue.text)
-                    .font(.subheadline.weight(.semibold).monospacedDigit())
-                    .foregroundStyle(weeklyTestValue.tint ?? .secondary)
-                if weeklyTestState.opensNow {
-                    Image(systemName: "chevron.right")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.tertiary)
-                }
-            }
-            .padding(.vertical, 12)
-            .padding(.horizontal, 14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(!weeklyTestState.opensNow)
-        .accessibilityValue(Text(weeklyTestValue.text))
-        .accessibilityIdentifier("practice.weeklyTestBanner")
-    }
-
-    private var weeklyTestBannerLine: String {
-        switch weeklyTestState {
-        case .ready: return explain("Your weekly test is ready")
-        case .inProgress: return explain("Continue the test")
-        case let .done(_, next), let .thin(next):
-            return explain("Next one \(Self.weekdayName(next, .wide))")
-        }
     }
 
     /// Grouped in the APP language — `formatted()` follows the phone's
@@ -1211,9 +1149,6 @@ struct PracticeTab: View {
     }
 
     private func reload() {
-        let tests = WeeklyTestStore.shared.load()
-        weeklyTestState = WeeklyTestSettings.shared.schedule.state(
-            tests: tests, settings: WeeklyTestSettings.shared)
         _ = WeekRecapStore.shared.lastWeek()   // freezes the closed week
         thisWeek = WeekRecapBuilder.thisWeek()
         let pastWeeks = WeekRecapStore.shared.archive()
@@ -1464,13 +1399,5 @@ struct WeeklyTestSettingsSection: View {
         notifications = status
         settings.reminderOn = status.canRing
         await WeeklyTestReminder.reschedule()
-    }
-}
-
-private extension WeeklyTestSchedule.State {
-    /// There is a test to open or a score to show — not a thin week.
-    var opensNow: Bool {
-        if case .thin = self { return false }
-        return true
     }
 }
