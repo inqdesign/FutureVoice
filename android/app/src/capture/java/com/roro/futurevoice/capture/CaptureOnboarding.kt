@@ -61,15 +61,15 @@ object CaptureOnboarding {
                 targetLanguage = "en", onCloned = {}, googleAvailable = true,
                 onGoogleSignIn = {}, onAppleSignIn = {}, debugStage = "account")
         },
-        // Not iOS mode names: the bottom-inset survey's own shots (master
-        // plan "Bottom insets survey"). The two steps after the voice, and the
-        // retroactive age check over an empty page.
-        "daily-call-onboarding" to { c ->
-            com.roro.futurevoice.ui.DailyCallOnboardingScreen(c, onDone = {})
-        },
-        "weekly-rhythm-onboarding" to { c ->
-            com.roro.futurevoice.ui.WeeklyRhythmOnboardingScreen(c, onDone = {})
-        },
+        // iOS `-onboardingPreview routine` (+ `-routineStep`): the routine
+        // builder after the voice, one step each.
+        "routine-onboarding" to { _ -> com.roro.futurevoice.ui.RoutineOnboardingOverlay(onFinished = {}) },
+        "routine-onboarding-call" to { _ ->
+            com.roro.futurevoice.ui.RoutineOnboardingOverlay(onFinished = {}, debugStep = "call") },
+        "routine-onboarding-study" to { _ ->
+            com.roro.futurevoice.ui.RoutineOnboardingOverlay(onFinished = {}, debugStep = "study") },
+        "routine-onboarding-done" to { _ ->
+            com.roro.futurevoice.ui.RoutineOnboardingOverlay(onFinished = {}, debugStep = "done") },
         // The voice act, one stage each (the debug app's `--es cloneStage`,
         // which only answers on an install that isn't set up yet).
     ) + listOf("intro", "consent", "mic", "spot", "script", "recording", "reviewing", "uploading", "meet")

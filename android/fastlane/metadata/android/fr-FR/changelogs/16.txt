@@ -1,0 +1,5 @@
+Nouveautés
+• Les cartes de défis de discours signalent les nouveaux défis, et un troisième défi est arrivé.
+
+Corrections
+• Quand tu apprends le japonais ou l’espagnol, la liste des personnes n’est plus vide.

@@ -24,7 +24,6 @@ import com.roro.futurevoice.ui.PracticeBody
 import com.roro.futurevoice.ui.Shelf
 import com.roro.futurevoice.ui.WeekRecapArchiveSheet
 import com.roro.futurevoice.ui.WeekRecapDeck
-import com.roro.futurevoice.ui.WeeklyRhythmOnboardingScreen
 import kotlinx.coroutines.runBlocking
 import com.roro.futurevoice.ui.brand.AppSurfaces
 
@@ -170,7 +169,5 @@ object CaptureWeekRecap {
         "week-recap-quiet" to deck(::quiet),
         "week-archive" to archive(practice = false),
         "practice-week" to archive(practice = true),
-        // iOS `-onboardingPreview weekly`: onboarding's "once a week" step.
-        "onboarding-weekly" to { c -> WeeklyRhythmOnboardingScreen(c) {} },
     )
 }

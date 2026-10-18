@@ -1,0 +1,9 @@
+Novedades
+• Crea tu rutina al empezar: elige a qué hora suena tu llamada diaria y cuánto estudias, y se añade a tu plan semanal.
+• Añadir a una persona se hace en una pantalla, y puedes crear a alguien nuevo desde el selector.
+• Desliza los retos de discurso como tarjetas y entra al test semanal desde Repaso.
+
+Correcciones
+• Tu llamada diaria suena aunque reinicies.
+• Los títulos de las llamadas de noticias ya no se cortan.
+• Escucharlo con mi voz ya no gasta más tiempo que el guion.

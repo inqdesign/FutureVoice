@@ -23,12 +23,17 @@ object DeepLinkInbox {
         data object FreeTalk : WidgetRoute
     }
 
-    /** Which screen sent the next [WidgetRoute.FreeTalk] — telemetry only
-     *  (`conversation_started.entry`, iOS 37376c33). The widget's own link
-     *  leaves it null and is read as "widget"; in-app doors set it first. */
+    val widgetRoute = MutableStateFlow<WidgetRoute?>(null)
+
+    /** Which in-app door staged a [WidgetRoute.FreeTalk] — telemetry only
+     *  (iOS `requestFreeTalk(from:)`). Null = the widget's own link. */
     @Volatile var freeTalkEntry: String? = null
 
-    val widgetRoute = MutableStateFlow<WidgetRoute?>(null)
+    /** A free talk asked for from inside the app (iOS `requestFreeTalk(from:)`). */
+    fun requestFreeTalk(entry: String) {
+        freeTalkEntry = entry
+        widgetRoute.value = WidgetRoute.FreeTalk
+    }
 
     val pending = MutableStateFlow<Destination?>(null)
 
