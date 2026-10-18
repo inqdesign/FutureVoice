@@ -26,6 +26,9 @@ struct RootView: View {
     /// Whether the weekly step (test day + time) has been shown. New installs
     /// only — it is asked only while the daily call hasn't been onboarded yet.
     @AppStorage("futurevoice.weeklyRhythm.onboarded") private var weeklyRhythmOnboarded = false
+    /// Whether "your practice stays on your phone" has been said
+    /// (`LocalDataOnboardingView`). New installs only, like the week's step.
+    @AppStorage("futurevoice.localData.onboarded") private var localDataOnboarded = false
     /// Whether the plans have been offered once, at the end of onboarding.
     /// Set by `OnboardingPaywallView` on every exit — including the silent
     /// one it takes for an account that has nothing to buy.
@@ -198,6 +201,11 @@ struct RootView: View {
             // letting it through would hand someone an app whose data dies with
             // the install. The view reopens on its sign-up step.
             VoiceCloneOnboardingView()
+        } else if !localDataOnboarded && !dailyCallOnboarded {
+            // Where everything they are about to say will live, said before
+            // the first call. Gated on the daily call like the week's step,
+            // so an existing install never sees it.
+            LocalDataOnboardingView()
         } else if !dailyCallOnboarded && !weeklyRhythmOnboarded {
             // The week's rhythm before the day's: when the week is looked back
             // on and tested, then (next screen) when the daily call rings.
@@ -250,6 +258,7 @@ struct RootView: View {
         case "setup":        return AnyView(SetupFlowView())
         case "voice":        return AnyView(VoiceCloneOnboardingView())
         case "persona":      return AnyView(PersonaIntakeView())
+        case "localdata":    return AnyView(LocalDataOnboardingView())
         case "weekly":       return AnyView(WeeklyRhythmOnboardingView())
         case "dailycall":    return AnyView(DailyCallOnboardingView())
         default:             return nil

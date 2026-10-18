@@ -1372,6 +1372,52 @@
         }
       }
     },
+    "Calls, recordings and every word you study are saved right here." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anrufe, Aufnahmen und jedes Wort, das du lernst, werden genau hier gespeichert."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las llamadas, las grabaciones y cada palabra que estudias se guardan aquí."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appels, enregistrements, chaque mot que tu apprends : tout est gardé ici."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通話も録音も、覚えた単語や表現も、すべてここに保存されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "통화, 녹음, 공부한 단어와 표현까지 전부 여기에 저장돼요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通话、录音，还有你学的每个单词和表达，全都存在这里。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通話、錄音，還有你學的每個單字和說法，全都存在這裡。"
+          }
+        }
+      }
+    },
     "Castilian" : {
       "localizations" : {
         "de" : {
@@ -1506,6 +1552,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "虛線是每日平均。最多的一天：%@，%@。"
+          }
+        }
+      }
+    },
+    "Delete the app or change phones, and it's gone too." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Löschst du die App oder wechselst das Handy, ist alles weg."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si eliminas la app o cambias de teléfono, también se pierde."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si tu supprimes l’app ou changes de téléphone, tout disparaît aussi."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリを削除したり機種変更したりすると、記録も消えます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "앱을 지우거나 폰을 바꾸면 기록도 같이 사라져요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除 App 或换手机时，记录也会一起消失。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刪除 App 或換手機時，紀錄也會一起消失。"
           }
         }
       }
@@ -1884,6 +1976,52 @@
         }
       }
     },
+    "It goes with the app" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sie geht mit der App"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se va con la app"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ça part avec l’app"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリと一緒に消えます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "앱과 함께 지워져요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "会随 App 一起删除"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "會跟著 App 一起刪除"
+          }
+        }
+      }
+    },
     "It's deleted on your other devices too." : {
       "localizations" : {
         "de" : {
@@ -2064,6 +2202,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "每天實際開口說話的分鐘數。虛線是你每天 %lld 分鐘的目標。"
+          }
+        }
+      }
+    },
+    "Not on our servers" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht auf unseren Servern"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nada en nuestros servidores"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rien sur nos serveurs"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サーバーには残りません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "서버에 남지 않아요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不会留在我们的服务器上"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不會留在我們的伺服器"
           }
         }
       }
@@ -3196,6 +3380,52 @@
         }
       }
     },
+    "Turn it on any time in Settings → Devices." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jederzeit einschaltbar unter Einstellungen → Geräte."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actívalo cuando quieras en Ajustes → Dispositivos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Active-la quand tu veux dans Réglages → Appareils."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定 → デバイスからいつでもオンにできます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "언제든 설정 → 기기에서 켜면 돼요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "随时可以在“设置 → 设备”中开启。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隨時都能在「設定 → 裝置」開啟。"
+          }
+        }
+      }
+    },
     "Tutor mode" : {
       "localizations" : {
         "de" : {
@@ -3330,6 +3560,98 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "影片只在這個裝置上。到「我的 → 裝置」選擇畫質，就會一起傳到 iCloud。"
+          }
+        }
+      }
+    },
+    "We don't keep your talks, so speak freely." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wir speichern deine Gespräche nicht. Sprich also ganz frei."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No guardamos tus conversaciones, así que habla con total libertad."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nous ne gardons pas tes conversations. Parle en toute liberté."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "会話の内容は私たちのサーバーに保存しません。安心して話してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대화는 저희 서버에 보관하지 않아요. 마음 편히 말해도 돼요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我们不保存你的对话内容，放心开口说吧。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我們不保存你的對話內容，放心開口說吧。"
+          }
+        }
+      }
+    },
+    "Want a copy? Use your own iCloud" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Kopie in deiner iCloud, wenn du willst"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Quieres una copia? Usa tu iCloud"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une copie dans ton iCloud, si tu veux"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分のiCloudにコピーを残せます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 iCloud에 사본을 둘 수 있어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "想留一份？存到你自己的 iCloud"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "想留一份？放進你自己的 iCloud"
           }
         }
       }
@@ -3520,6 +3842,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "工作"
+          }
+        }
+      }
+    },
+    "Your practice stays on your phone" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alles, was du übst, bleibt auf deinem Handy"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu práctica se queda en tu teléfono"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta pratique reste sur ton téléphone"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "練習したことは、この端末だけに残ります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "연습한 건 모두 이 폰에만 남아요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的练习只留在这部手机上"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的練習只留在這支手機上"
           }
         }
       }
