@@ -413,6 +413,9 @@ class RealtimeTalkClient(private val context: Context) {
         manualTurns: Boolean = false,
     ) {
         if (state != State.IDLE && state != State.FAILED) return
+        // The whole call on the call path, so the echo canceller has the
+        // reply to subtract (iOS: the voice-processing unit).
+        com.roro.futurevoice.audio.CallAudioMode.enter(context)
         tornDown = false
         wallCode = null
         lastErrorCode = null
@@ -608,6 +611,9 @@ class RealtimeTalkClient(private val context: Context) {
         finishReveal()
         stopMic()
         scope.launch(audioThread) { runCatching { player?.stop() }; player = null }
+        // Here, not on the audio thread: a resume's connect() runs right
+        // after this and must not have its mode switched off behind it.
+        com.roro.futurevoice.audio.CallAudioMode.exit(context)
         runCatching { socket?.close(1000, null) }; socket = null
     }
 
@@ -665,7 +671,7 @@ class RealtimeTalkClient(private val context: Context) {
                     // The rate can change between replies; a player is bound
                     // to one rate, so it is rebuilt when the announced differs.
                     val p = player?.takeIf { it.sampleRate == rate }
-                        ?: PcmStreamPlayer(rate).also { player?.stop(); player = it }
+                        ?: PcmStreamPlayer(rate, forCall = true).also { player?.stop(); player = it }
                     p.volume = com.roro.futurevoice.data.AudioPrefs.talkVoiceVolume(context)
                     p.start()
                     lineTrackStarted = true
@@ -843,6 +849,7 @@ class RealtimeTalkClient(private val context: Context) {
             AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
         // VOICE_COMMUNICATION puts the platform echo canceller and noise
         // suppressor in the capture path — the reply on the speaker must not
+        com.roro.futurevoice.audio.CallAudioMode.routeToSpeakerIfNothingWorn(context)
         // come back as a barge-in.
         val rec = AudioRecord(MediaRecorder.AudioSource.VOICE_COMMUNICATION, MIC_RATE,
             AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, max(minBuf, MIC_FRAMES * 4))

@@ -14,7 +14,12 @@ import kotlinx.coroutines.withContext
  * Format is fixed by the Edge Function: 16-bit LE mono PCM at 22.05 kHz
  * (`X-Audio-Format: pcm_22050`). See `docs/contracts/behavior.md` §1.
  */
-class PcmStreamPlayer(val sampleRate: Int = 22_050) {
+class PcmStreamPlayer(
+    val sampleRate: Int = 22_050,
+    /** The realtime call: played on the call path, which is what the mic's
+     *  echo canceller subtracts ([CallAudioMode]). Everything else stays MEDIA. */
+    private val forCall: Boolean = false,
+) {
 
     private var track: AudioTrack? = null
     private var writtenFrames: Int = 0
@@ -52,7 +57,8 @@ class PcmStreamPlayer(val sampleRate: Int = 22_050) {
                     // earpiece receiver on most devices. iOS respects headphones
                     // rather than force-routing, and MEDIA is the Android
                     // equivalent — speaker or connected headset, full volume.
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setUsage(if (forCall) AudioAttributes.USAGE_VOICE_COMMUNICATION
+                        else AudioAttributes.USAGE_MEDIA)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                     .build()
             )
