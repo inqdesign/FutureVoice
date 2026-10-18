@@ -3078,3 +3078,5 @@
     <string name="your_world">"Tu vida en %s"</string>
     <string name="yours_to_replay_and_shadow_free">"Volver a escucharlo y hacer shadowing es gratis."</string>
 </resources>
+    <string name="from_the_situation">"Según la situación"</string>
+    <string name="whoever_the_situation_calls_for">"Hablarás con quien pida la situación"</string>

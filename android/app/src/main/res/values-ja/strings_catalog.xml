@@ -3081,3 +3081,5 @@
     <string name="your_world">"自分の%s生活"</string>
     <string name="yours_to_replay_and_shadow_free">"何度聞いても、シャドーイングしても無料です。"</string>
 </resources>
+    <string name="from_the_situation">"状況に合う相手"</string>
+    <string name="whoever_the_situation_calls_for">"状況に出てくる人が相手になります"</string>
