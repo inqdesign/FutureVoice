@@ -13,3 +13,4 @@ Fixed
 • Hear it in my voice no longer uses more time than the script's length.
 • Corrected words in Review no longer land inside other words.
 • When learning Japanese or Spanish, the people list is no longer empty.
+• What you were typing is still there when you close a sheet and open it again.

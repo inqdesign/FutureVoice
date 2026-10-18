@@ -13,3 +13,4 @@ Correcciones
 • Escucharlo con mi voz ya no gasta más tiempo del que dura el guion.
 • Las palabras corregidas en Repaso ya no se meten dentro de otras palabras.
 • Si aprendes japonés o español, la lista de personas ya no aparece vacía.
+• Lo que estabas escribiendo sigue ahí si cierras una ventana y la vuelves a abrir.

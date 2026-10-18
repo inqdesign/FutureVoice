@@ -13,3 +13,4 @@ Corrections
 • L’écouter avec ma voix ne consomme plus plus de temps que la durée du texte.
 • Les mots corrigés dans Révision ne s’insèrent plus à l’intérieur d’autres mots.
 • Quand tu apprends le japonais ou l’espagnol, la liste des personnes n’est plus vide.
+• Ce que tu étais en train d’écrire est toujours là quand tu fermes une fenêtre et la rouvres.
