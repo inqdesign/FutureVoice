@@ -378,8 +378,11 @@ struct WatchTab: View {
                                                    .init(color: .clear, location: 0.94)],
                                            startPoint: .top, endPoint: .bottom)
                         }
-                        .opacity(skyReady ? 1 : 0)
-                        .animation(.easeOut(duration: 0.3), value: skyReady)
+                        // The fade animates the opacity ONLY. Scoped to the
+                        // whole map, it also animated the scroll to "me" that
+                        // lands in the same moment, and "me" slid in from the
+                        // top left on every first open.
+                        .animation(.easeOut(duration: 0.3)) { $0.opacity(skyReady ? 1 : 0) }
                 }
             }
             .scrollDisabled(true)
