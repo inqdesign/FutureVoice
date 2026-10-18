@@ -21,7 +21,7 @@ _spec = importlib.util.spec_from_file_location(
 L = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(L)
 
-CAMPAIGN = "android-tester-update-1.1.11-17"
+CAMPAIGN = "android-tester-update-1-1-11-17"
 STORE = "https://play.google.com/store/apps/details?id=com.roro.futurevoice"
 
 # The founder's own test account (hello.threesby) is left out.
