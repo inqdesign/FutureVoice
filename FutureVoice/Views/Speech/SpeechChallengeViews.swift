@@ -16,6 +16,24 @@ struct SpeechChallengeRow: View {
                 BookIconDisc {
                     Image(systemName: "trophy.fill").font(.title3).foregroundStyle(.tint)
                 }
+                // "New" rides on the trophy's corner, not in the rank's slot:
+                // there it vanished the moment the learner had a record, and
+                // the card's corner changed shape (founder, 2026-10-18).
+                // One word in every language — the translations ran long and
+                // wrapped into a ball on large text.
+                .overlay(alignment: .bottomTrailing) {
+                    if isNew {
+                        Text(verbatim: "New")
+                            .font(.caption2.weight(.bold))
+                            .lineLimit(1)
+                            .fixedSize()
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(Color.accentColor))
+                            .offset(x: 14, y: 4)
+                    }
+                }
                 Spacer()
                 if let rank = standing?.myRank, let best = standing?.myBest {
                     VStack(alignment: .trailing, spacing: 1) {
@@ -25,13 +43,6 @@ struct SpeechChallengeRow: View {
                             .font(.caption.weight(.semibold).monospacedDigit())
                             .foregroundStyle(SpeechScoreColor.color(best))
                     }
-                } else if isNew {
-                    Text(explain(key: "speech.challenge.new", default: "New"))
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(Capsule().fill(Color.accentColor))
                 }
             }
             // The title hangs under the disc; the meta line belongs to the
@@ -70,11 +81,9 @@ struct SpeechChallengeRow: View {
         .contentShape(Rectangle())
     }
 
-    /// Out within the last week and not yet taken by this learner: the
-    /// badge takes the slot the learner's rank fills once they enter.
+    /// Out within the last week — whether or not this learner has taken it.
     private var isNew: Bool {
-        (standing?.myAttempts ?? 0) == 0
-            && script.createdAt > Date().addingTimeInterval(-7 * 86_400)
+        script.createdAt > Date().addingTimeInterval(-7 * 86_400)
     }
 
     private var metaLine: String {
