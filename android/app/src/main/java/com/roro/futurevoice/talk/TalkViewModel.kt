@@ -77,6 +77,9 @@ data class TalkConfig(
      * re-summarizes the whole talk, merged with its previous analysis.
      */
     val resume: Session? = null,
+    /** Which SCREEN the call was started from ([TalkEntry]) — telemetry only,
+     *  never stored on the session (iOS `conversation_started.entry`). */
+    val entry: String = TalkEntry.OTHER,
 ) {
     /** iOS `systemPrompt()`'s `composedTopic`. */
     val composedTopic: String get() = if (topicBlurb.isEmpty()) topic else "$topic. $topicBlurb"
@@ -549,6 +552,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         startIdleWatch()
         com.roro.futurevoice.core.Analytics.capture("conversation_started", mapOf(
             "origin" to when { config.scenarioId != null -> "scenario"; config.newsFacts.isNotEmpty() -> "news"; config.cast != null -> "person"; else -> "free" },
+            "entry" to (if (config.resume != null) TalkEntry.RESUME else config.entry),
             "language" to config.targetLanguage, "realtime" to true, "resumed" to (config.resume != null)))
         val freeTalk = config.topic.isBlank() && config.cast == null && config.scenarioId == null
         callJob = viewModelScope.launch {
@@ -1841,3 +1845,27 @@ class TalkViewModel(context: Context) : ViewModel() {
     }
 }
 
+/**
+ * Which SCREEN a call was started from — telemetry only (iOS `TalkEntry`).
+ * The origin says what kind of talk it is; a free talk can come from the Talk
+ * ring, the daily call, a widget or the routine, and a scenario talk from
+ * Talk's list or a book page, and only this tells them apart.
+ */
+object TalkEntry {
+    const val TALK_RING = "talk_ring"
+    const val TALK_SCENARIO = "talk_scenario"
+    const val TALK_NEWS = "talk_news"
+    const val TALK_EXAM = "talk_exam"
+    const val TALK_FIELD = "talk_field"
+    const val DAILY_CALL = "daily_call"
+    const val WIDGET = "widget"
+    const val WELCOME = "welcome"
+    const val WEEK_RECAP = "week_recap"
+    const val PROGRESS_TIP = "progress_tip"
+    const val ROUTINE = "routine"
+    const val SCENARIO_BOOK = "scenario_book"
+    const val PRACTICE_BOOK = "practice_book"
+    const val WATCH_PERSON = "watch_person"
+    const val RESUME = "resume"
+    const val OTHER = "other"
+}

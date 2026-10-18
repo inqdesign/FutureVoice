@@ -202,7 +202,7 @@ object CapturePractice {
                     scenarioId = p.id, language = lang(c), onWatch = {}, onShadow = {},
                     onBack = { page = com.roro.futurevoice.ui.RootRoute.Tabs })
                 else ->
-                    com.roro.futurevoice.ui.HomeScreen(state = state, onStartCall = { _, _, _ -> }, onOpenMe = {},
+                    com.roro.futurevoice.ui.HomeScreen(state = state, onStartCall = { _, _, _, _ -> }, onOpenMe = {},
                         tab = tab, onTabChange = { tab = it }, initialPracticeShelf = shelf,
                         onOpenFinished = { finished = it },
                         onOpenTalk = { page = com.roro.futurevoice.ui.RootRoute.TalkBook(it) },

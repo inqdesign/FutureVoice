@@ -259,7 +259,7 @@ object CaptureTalk {
             state?.let { s ->
                 HomeScreen(
                     state = s,
-                    onStartCall = { _, _, _ -> },
+                    onStartCall = { _, _, _, _ -> },
                     onOpenMe = {},
                     tab = tab,
                     onTabChange = { tab = it },
@@ -279,7 +279,7 @@ object CaptureTalk {
         Seeded(work = { work(); state = appState(context) }) {
             var current by remember { mutableStateOf(tab) }
             state?.let { s ->
-                HomeScreen(state = s, onStartCall = { _, _, _ -> }, onOpenMe = {},
+                HomeScreen(state = s, onStartCall = { _, _, _, _ -> }, onOpenMe = {},
                     tab = current, onTabChange = { current = it })
             }
         }

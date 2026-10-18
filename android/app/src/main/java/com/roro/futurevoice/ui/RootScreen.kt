@@ -200,6 +200,8 @@ fun RootScreen() {
     /** A saved talk the call picks back up (Continue on its book). */
     var callResume by call.resume
     var callFromHomeCard by call.fromHomeCard
+    /** Which screen started the call — `conversation_started.entry` only. */
+    var callEntry by call.entry
     /** Set when a Talk-home card's call closes; the home consumes it and
      *  offers the persona-deepen sheet (iOS `maybePromptDeepen`). */
     var deepenPending by remember { mutableStateOf(false) }
@@ -407,6 +409,8 @@ fun RootScreen() {
                     showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false; detailSessionId = null
                     bookScenarioId = null; watchScenarioId = null; shadowLine = null
                     callTopic = ""; callFacts = emptyList(); callBlurb = ""; callScenarioId = null
+                    callEntry = DeepLinkInbox.freeTalkEntry ?: com.roro.futurevoice.talk.TalkEntry.WIDGET
+                    DeepLinkInbox.freeTalkEntry = null
                     inCall = true
                 }
             }
@@ -428,6 +432,7 @@ fun RootScreen() {
             // so a plain free talk later doesn't replay it.
             callOpener = com.roro.futurevoice.data.DailyCallStore.script(context).orEmpty()
             com.roro.futurevoice.data.DailyCallStore.setScript(context, null)
+            callEntry = com.roro.futurevoice.talk.TalkEntry.DAILY_CALL
             inCall = true
         }
     }
@@ -598,7 +603,8 @@ fun RootScreen() {
             com.roro.futurevoice.core.Analytics.capture(
                 "free_talk_welcome_closed", mapOf("started" to true))
             tab = HomeTab.TALK
-            gate { callTopic = ""; callFacts = emptyList(); callBlurb = ""; callScenarioId = null; inCall = true }
+            gate { callTopic = ""; callFacts = emptyList(); callBlurb = ""; callScenarioId = null
+                callEntry = com.roro.futurevoice.talk.TalkEntry.WELCOME; inCall = true }
         }
     }
 
@@ -621,7 +627,8 @@ fun RootScreen() {
     val morphScope = rememberCoroutineScope()
     /** Every metered launcher from the home lands here (`mint` = an unsaved
      *  ready-made situation, saved once the gate passes). */
-    fun startCall(topic: String, facts: List<String>, scenarioId: String?, mint: Scenario?, blurb: String = "") {
+    fun startCall(topic: String, facts: List<String>, scenarioId: String?, mint: Scenario?, blurb: String = "",
+                  entry: String = com.roro.futurevoice.talk.TalkEntry.OTHER) {
         // The paywall is asked here, at the TAP — every metered
         // launcher (free talk, a news story, a scenario, a widget
         // deep link) meets in this one callback, so one gate covers
@@ -630,6 +637,7 @@ fun RootScreen() {
         gate {
             fun open() {
                 callTopic = topic; callFacts = facts; callScenarioId = scenarioId; callBlurb = blurb
+                callEntry = entry
                 // A news story's title IS its opener — written by `news-topics`
                 // as a friend bringing it up ("Did you see the news about…?")
                 // and spoken verbatim, as iOS does (`openNewsConversation`).
@@ -942,6 +950,7 @@ fun RootScreen() {
                         callCast = person?.let { com.roro.futurevoice.talk.ConversationEngine.Cast.of(it) }
                         callCastVoice = person?.voicePresetId?.takeIf { it.isNotBlank() }
                         callResume = s
+                        callEntry = com.roro.futurevoice.talk.TalkEntry.RESUME
                         inCall = true
                     } }
                 },
@@ -968,6 +977,7 @@ fun RootScreen() {
                 onTalk = { sc -> gate {
                     bookScenarioId = null; bookOverWatchId = null; watchScenarioId = null
                     callTopic = sc.promptBlurb; callFacts = emptyList(); callBlurb = ""; callScenarioId = sc.id
+                    callEntry = com.roro.futurevoice.talk.TalkEntry.SCENARIO_BOOK
                     inCall = true
                 } },
                 onShadow = { shadowLine = it },
@@ -1085,7 +1095,7 @@ fun RootScreen() {
             onOpenTalk = { detailSessionId = it },
             onBack = { showActivity = false },
             // Every routine line is a door to that kind of practice.
-            onStartTalk = { showActivity = false; DeepLinkInbox.widgetRoute.value = DeepLinkInbox.WidgetRoute.FreeTalk },
+            onStartTalk = { showActivity = false; DeepLinkInbox.requestFreeTalk(com.roro.futurevoice.talk.TalkEntry.ROUTINE) },
             onOpenReview = { showActivity = false; showDueReview = true },
             onOpenRoutineReview = {
                 gateScope.launch {
@@ -1330,6 +1340,7 @@ fun RootScreen() {
                 castVoiceId = callCastVoice,
                 counterpartId = callCounterpartId,
                 resume = callResume,
+                entry = callEntry,
                 onExit = {
                     // A call that flew in from the ring flies back to it.
                     TalkMorph.close(morphScope) {
@@ -1338,6 +1349,7 @@ fun RootScreen() {
                         inCall = false; callTopic = ""; callFacts = emptyList(); callBlurb = ""
                         callScenarioId = null; callOpener = ""; callCast = null
                         callCastVoice = null; callCounterpartId = null; callResume = null
+                        callEntry = com.roro.futurevoice.talk.TalkEntry.OTHER
                     }
                 },
             )
@@ -1369,9 +1381,9 @@ fun RootScreen() {
             background = {
           HomeScreen(
             state = state,
-            onStartCall = { topic, facts, scenarioId -> startCall(topic, facts, scenarioId, null) },
-            onStartStarter = { sc -> startCall(sc.promptBlurb, emptyList(), sc.id, sc) },
-            onStartTopic = { topic, blurb -> startCall(topic, emptyList(), null, null, blurb) },
+            onStartCall = { topic, facts, scenarioId, entry -> startCall(topic, facts, scenarioId, null, entry = entry) },
+            onStartStarter = { sc, entry -> startCall(sc.promptBlurb, emptyList(), sc.id, sc, entry = entry) },
+            onStartTopic = { topic, blurb, entry -> startCall(topic, emptyList(), null, null, blurb, entry) },
             onOpenMe = { showMe = true },
             onOpenBook = { bookScenarioId = it },
             onOpenPeople = { showPeople = true },
@@ -1385,6 +1397,7 @@ fun RootScreen() {
                 callCounterpartId = c.id
                 gate {
                     callTopic = ""; callFacts = emptyList(); callScenarioId = null
+                    callEntry = com.roro.futurevoice.talk.TalkEntry.WATCH_PERSON
                     inCall = true
                 }
             },
@@ -1543,7 +1556,8 @@ private data class PendingLaunch(val topic: String, val facts: List<String>, val
                                   /** An unsaved ready-made situation, saved once the gate passes. */
                                   val mint: Scenario? = null,
                                   /** Context told to the call beside the topic. */
-                                  val blurb: String = "")
+                                  val blurb: String = "",
+                                  val entry: String = com.roro.futurevoice.talk.TalkEntry.OTHER)
 
 /** The four verbs, in the order the product does them. Internal so the
  *  capture build can open the shell on a tab. */
@@ -1564,12 +1578,13 @@ internal enum class HomeTab(val label: Int) {
 @Composable
 internal fun HomeScreen(
     state: AppState,
-    onStartCall: (topic: String, newsFacts: List<String>, scenarioId: String?) -> Unit,
+    /** The last argument is the screen it came from ([com.roro.futurevoice.talk.TalkEntry]). */
+    onStartCall: (topic: String, newsFacts: List<String>, scenarioId: String?, entry: String) -> Unit,
     /** A ready-made situation (`StarterSituation`), saved only once the tap passes the gate. */
-    onStartStarter: (Scenario) -> Unit = {},
+    onStartStarter: (Scenario, entry: String) -> Unit = { _, _ -> },
     /** A topic with its own context — an exam question, a topic from the
      *  learner's field (iOS `runExam` / `runFieldTopic`). */
-    onStartTopic: (topic: String, blurb: String) -> Unit = { _, _ -> },
+    onStartTopic: (topic: String, blurb: String, entry: String) -> Unit = { _, _, _ -> },
     onOpenMe: () -> Unit,
     onOpenPractice: () -> Unit = {},
     onOpenDeck: () -> Unit = {},
@@ -1679,9 +1694,9 @@ internal fun HomeScreen(
     ) { granted ->
         if (granted) pendingLaunch?.let { p ->
             when {
-                p.mint != null -> onStartStarter(p.mint)
-                p.blurb.isNotEmpty() -> onStartTopic(p.topic, p.blurb)
-                else -> onStartCall(p.topic, p.facts, p.scenarioId)
+                p.mint != null -> onStartStarter(p.mint, p.entry)
+                p.blurb.isNotEmpty() -> onStartTopic(p.topic, p.blurb, p.entry)
+                else -> onStartCall(p.topic, p.facts, p.scenarioId, p.entry)
             }
         }
         // A refusal has to be answerable: the tap did nothing and nothing on
@@ -1709,8 +1724,8 @@ internal fun HomeScreen(
             })
     }
     fun launch(topic: String, facts: List<String>, scenarioId: String? = null, mint: Scenario? = null,
-               blurb: String = "") {
-        pendingLaunch = PendingLaunch(topic, facts, scenarioId, mint, blurb)
+               blurb: String = "", entry: String) {
+        pendingLaunch = PendingLaunch(topic, facts, scenarioId, mint, blurb, entry)
         permission.launch(Manifest.permission.RECORD_AUDIO)
     }
 
@@ -1853,7 +1868,7 @@ internal fun HomeScreen(
                         TalkHero(
                             state = state,
                             enabled = state.voiceId != null,
-                            onTap = { launch("", emptyList()) },
+                            onTap = { launch("", emptyList(), entry = com.roro.futurevoice.talk.TalkEntry.TALK_RING) },
                             onOpenActivity = onOpenActivity,
                         )
                         // After the first talk, the only card above Discover is the
@@ -1874,13 +1889,13 @@ internal fun HomeScreen(
                             state = state,
                             enabled = state.voiceId != null,
                             onSavePersona = onSavePersona,
-                            onPickNews = { topic -> launch(topic.title, topic.facts.orEmpty()) },
-                            onPickScenario = { sc -> launch(sc.promptBlurb, emptyList(), sc.id) },
-                            onPickStarter = { sc -> launch(sc.promptBlurb, emptyList(), sc.id, mint = sc) },
+                            onPickNews = { topic -> launch(topic.title, topic.facts.orEmpty(), entry = com.roro.futurevoice.talk.TalkEntry.TALK_NEWS) },
+                            onPickScenario = { sc -> launch(sc.promptBlurb, emptyList(), sc.id, entry = com.roro.futurevoice.talk.TalkEntry.TALK_SCENARIO) },
+                            onPickStarter = { sc -> launch(sc.promptBlurb, emptyList(), sc.id, mint = sc, entry = com.roro.futurevoice.talk.TalkEntry.TALK_SCENARIO) },
                             // An ordinary topic call: the blurb tells it which
                             // exam and which part (iOS `runExam`).
-                            onPickExam = { t, exam -> launch(t.title, emptyList(), blurb = t.callBlurb(exam)) },
-                            onPickTopic = { t -> launch(t.title, emptyList(), blurb = t.blurb) },
+                            onPickExam = { t, exam -> launch(t.title, emptyList(), blurb = t.callBlurb(exam), entry = com.roro.futurevoice.talk.TalkEntry.TALK_EXAM) },
+                            onPickTopic = { t -> launch(t.title, emptyList(), blurb = t.blurb, entry = com.roro.futurevoice.talk.TalkEntry.TALK_FIELD) },
                             // They all live on Watch — that IS the collection.
                             onAllScenarios = { onTabChange(HomeTab.WATCH) },
                         )
@@ -1935,7 +1950,7 @@ internal fun HomeScreen(
                         onOpenDueReview = onOpenDueReview,
                         onOpenSessionDeck = onOpenSessionDeck,
                         nativeLanguage = state.nativeLanguage,
-                        onTalkScenario = { sc -> onStartCall(sc.promptBlurb, emptyList(), sc.id) },
+                        onTalkScenario = { sc -> onStartCall(sc.promptBlurb, emptyList(), sc.id, com.roro.futurevoice.talk.TalkEntry.PRACTICE_BOOK) },
                     )
 
                     HomeTab.PROGRESS -> ProgressBody(
@@ -2987,6 +3002,8 @@ class CallRoute : androidx.lifecycle.ViewModel() {
      *  `ConversationHome.callLaunch`, whose dismissal is the one moment the
      *  persona-deepen sheet is offered. The ring's free talk is not one. */
     val fromHomeCard = mutableStateOf(false)
+    /** [com.roro.futurevoice.talk.TalkEntry] — telemetry only. */
+    val entry = mutableStateOf(com.roro.futurevoice.talk.TalkEntry.OTHER)
 }
 
 /**

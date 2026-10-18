@@ -25,6 +25,16 @@ object DeepLinkInbox {
 
     val widgetRoute = MutableStateFlow<WidgetRoute?>(null)
 
+    /** Which in-app door staged a [WidgetRoute.FreeTalk] — telemetry only
+     *  (iOS `requestFreeTalk(from:)`). Null = the widget's own link. */
+    @Volatile var freeTalkEntry: String? = null
+
+    /** A free talk asked for from inside the app (iOS `requestFreeTalk(from:)`). */
+    fun requestFreeTalk(entry: String) {
+        freeTalkEntry = entry
+        widgetRoute.value = WidgetRoute.FreeTalk
+    }
+
     val pending = MutableStateFlow<Destination?>(null)
 
     /** The one item a per-item reminder named: (kind, value). Read by the
