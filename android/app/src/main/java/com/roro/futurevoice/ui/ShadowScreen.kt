@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -825,10 +826,13 @@ private fun ShadowLineScreen(
                     val targetSec = attemptTargetDurationMs / 1000.0
                     val yourSec = maxOf(0, lastAttemptDurationMs) / 1000.0
                     val ratio = if (targetSec > 0) yourSec / targetSec else 0.0
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        DurationCell(stringResource(R.string.target), secondsLabel(targetSec), cell, Modifier.weight(1f))
-                        DurationCell(stringResource(R.string.you), secondsLabel(yourSec), cell, Modifier.weight(1f))
-                        DurationCell(stringResource(R.string.pace), paceLabel(ratio), cell, Modifier.weight(1f),
+                    // One height for all three: on large text "Pace" wraps to
+                    // two lines and its cell alone grew taller than the others.
+                    Row(Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        DurationCell(stringResource(R.string.target), secondsLabel(targetSec), cell, Modifier.weight(1f).fillMaxHeight())
+                        DurationCell(stringResource(R.string.you), secondsLabel(yourSec), cell, Modifier.weight(1f).fillMaxHeight())
+                        DurationCell(stringResource(R.string.pace), paceLabel(ratio), cell, Modifier.weight(1f).fillMaxHeight(),
                             color = paceColor(ratio))
                     }
                 }

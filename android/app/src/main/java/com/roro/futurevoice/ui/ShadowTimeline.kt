@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.layout.layout
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -78,6 +79,8 @@ private object TL {
     val playheadW = 2.5.dp
     /** SF Symbols' `*.circle` buttons at 44 pt: the circle IS the button. */
     val glyphButton = 44.dp
+    /** The control row's design width; narrower bars scale it down. */
+    val controlsWidth = 320.dp
     /** The ring of an outlined `*.circle` symbol (measured: 3.7 pt at 44). */
     val ring = 3.5.dp
     /** Played past a selection's last word so its release isn't clipped. */
@@ -251,7 +254,12 @@ fun ShadowTimeline(
             Spacer(Modifier.weight(1f))
             Text(timeLabel(trackEnd), style = style, color = muted)
         }
-        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        // The row is built for TL.controlsWidth: four 44 dp circles and the
+        // speed chip around a 60 dp mic laid over the middle. On a narrower
+        // bar (the phone's display size turned up) the mic sat on the loop
+        // button, so there the whole row is drawn smaller instead — same
+        // arrangement, same proportions, nothing overlapping.
+        Box(Modifier.fillMaxWidth().shrinkToFit(TL.controlsWidth), contentAlignment = Alignment.Center) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                 // `play.circle.fill` / `pause.circle.fill`: a filled accent
@@ -359,3 +367,22 @@ private fun timeLabel(ms: Int): String {
 
 private fun speedLabel(r: Float): String =
     if (r == 1f) "1×" else String.format(Locale.US, "%s×", r.toString().trimEnd('0').trimEnd('.'))
+
+/** Lay the content out at [designWidth] and draw it scaled down to fit when
+ *  the space is narrower; at or above it, nothing changes. */
+private fun Modifier.shrinkToFit(designWidth: Dp): Modifier = this.then(
+    Modifier.layout { measurable, constraints ->
+        val design = designWidth.roundToPx()
+        if (!constraints.hasBoundedWidth || constraints.maxWidth >= design) {
+            val p = measurable.measure(constraints)
+            return@layout layout(p.width, p.height) { p.place(0, 0) }
+        }
+        val p = measurable.measure(constraints.copy(minWidth = design, maxWidth = design))
+        val k = constraints.maxWidth.toFloat() / design
+        layout(constraints.maxWidth, (p.height * k).toInt()) {
+            p.placeWithLayer(0, 0) {
+                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)
+                scaleX = k; scaleY = k
+            }
+        }
+    })

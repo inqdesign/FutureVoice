@@ -66,6 +66,8 @@ import androidx.compose.ui.unit.sp
 internal val IosTabBarClearance = 62.dp + 6.dp + 8.dp + 24.dp
 
 private val PillWidth = 76.dp
+/** How much wider than its slot the pill may be on a narrow bar. */
+private val PillOverhang = 8.dp
 private val PillInsetX = 4.dp
 private val PillInsetY = 5.5.dp
 /** Centre of the glyph ink, from the capsule's top. */
@@ -105,11 +107,17 @@ internal fun IosTabBar(selected: HomeTab, onSelect: (HomeTab) -> Unit, modifier:
                     spotColor = Color.Black.copy(alpha = 0.12f))
                 .background(capsule, shape),
         ) {
-            val edge = PillInsetX + PillWidth / 2
+            // The pill is a little wider than a tab's slot, as on iOS (76 on a
+            // 67 slot) — never the full 76 on a narrow bar. With the phone's
+            // display size turned up the bar is ~290 dp and a slot ~51, and a
+            // 76 dp pill reached into both neighbours (tester's screenshot).
+            val narrowStep = (maxWidth - PillInsetX * 2 - PillOverhang) / tabs.size
+            val pillWidth = minOf(PillWidth, narrowStep + PillOverhang)
+            val edge = PillInsetX + pillWidth / 2
             val step = (maxWidth - edge * 2) / (tabs.size - 1)
             Box(
                 Modifier.offset(x = PillInsetX + step * index, y = PillInsetY)
-                    .width(PillWidth).height(62.dp - PillInsetY * 2)
+                    .width(pillWidth).height(62.dp - PillInsetY * 2)
                     .background(pill, shape),
             )
             // Each tab's slot is one `step` wide, centred where the pill

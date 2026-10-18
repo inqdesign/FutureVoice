@@ -1047,10 +1047,14 @@ fun CloneFlowScreen(
                             stringResource(R.string.pick_how_your_fluent_self_looks_and_sounds))
                         // The palette — a decision made by eye: the big orb
                         // recolours live and that is the feedback. Silent.
-                        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        // Six equal slots across the width: a fixed 14 dp gap
+                        // ran the row off both edges once the phone's display
+                        // size was turned up (tester's screenshot).
+                        Row(Modifier.fillMaxWidth().widthIn(max = 380.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly) {
                             FutureselfTheme.entries.forEach { t ->
                                 val selected = t == theme
-                                Column(Modifier.heightIn(min = 70.dp).clickable {
+                                Column(Modifier.weight(1f).heightIn(min = 70.dp).clickable {
                                     theme = t
                                     FutureselfTheme.pick(context, t)
                                     HapticEngine.light(context)
@@ -1065,7 +1069,7 @@ fun CloneFlowScreen(
                                                 else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
                                                 CircleShape),
                                     )
-                                    Text(t.label, fontSize = 11.sp,
+                                    Text(t.label, fontSize = 11.sp, maxLines = 1, softWrap = false,
                                         color = if (selected) MaterialTheme.colorScheme.onSurface
                                         else MaterialTheme.colorScheme.onSurfaceVariant)
                                 }

@@ -565,6 +565,7 @@ object CaptureTalk {
             coachMode = com.roro.futurevoice.talk.CoachMode.resolve(
                 com.roro.futurevoice.talk.CoachMode.choice(context), CefrLevel.B1.code),
             onCoachMode = {}, tutorMode = false, onTutorMode = {},
+            sendToAnswer = false, onSendToAnswer = {},
             onFlag = { _, _ -> }, onSpeedChange = {}, onDismiss = {},
         )
     }
