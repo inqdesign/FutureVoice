@@ -297,6 +297,21 @@ struct WeeklyPlanEditor: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var store = StudyPlanStore.shared
 
+    /// Under the routine builder in onboarding: the grid is the picture the
+    /// sheet's answers land on, so nothing here edits it — no +, no gear,
+    /// no Done, no taps or drags on blocks. Scrolling still works.
+    var onboarding = false
+    /// A block just placed from outside (the onboarding sheet): scrolled
+    /// to and ringed for a moment, like a block the + adds.
+    var spotlight: Spotlight? = nil
+
+    struct Spotlight: Equatable {
+        var kind: StudyPlan.Kind
+        var minute: Int
+        /// Bumped on every request, so the same block can be shown twice.
+        var token: Int
+    }
+
     @State private var showTestEditor = false
     @State private var showSettings = false
     /// Whether the routine's reminders can ring at all — only said when they can't.
@@ -336,12 +351,16 @@ struct WeeklyPlanEditor: View {
                     if let snapshot {
                         PlannerWeekCard(snapshot: snapshot, mode: .master, hourHeight: Self.hourHeight,
                                         selectedDay: $noDay,
-                                        onMove: handleMove,
+                                        onMove: { occ, day, start in
+                                            if !onboarding { handleMove(occ, day, start) }
+                                        },
                                         onEdit: { occ, _ in
+                                            guard !onboarding else { return }
                                             if let id = occ.blockId { blockEditor = .inWeek(blockId: id) }
                                             else if occ.kind == .test { showTestEditor = true }
                                         },
                                         onAdd: { start in
+                                            guard !onboarding else { return }
                                             let c = cal.dateComponents([.weekday, .hour, .minute], from: start)
                                             blockEditor = .newInWeek(weekday: c.weekday ?? 2,
                                                                      hour: c.hour ?? 20, minute: c.minute ?? 0)
@@ -357,7 +376,7 @@ struct WeeklyPlanEditor: View {
                         .padding(.top, 6)
                         // Room for the + to float over without covering
                         // the last hours.
-                        .padding(.bottom, Self.addButtonClearance)
+                        .padding(.bottom, onboarding ? Self.onboardingSheetClearance : Self.addButtonClearance)
                         .overlay(alignment: .topLeading) {
                             // Scroll anchor at 7:00.
                             Color.clear.frame(height: 1)
@@ -386,13 +405,21 @@ struct WeeklyPlanEditor: View {
                 }
                 .onChange(of: scrollRequest) { _, _ in
                     DispatchQueue.main.async {
-                        withAnimation(.easeOut(duration: 0.3)) { proxy.scrollTo("focus", anchor: .center) }
+                        // Above the onboarding sheet, which covers the
+                        // lower half.
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            proxy.scrollTo("focus", anchor: onboarding ? UnitPoint(x: 0.5, y: 0.2) : .center)
+                        }
                     }
+                }
+                .onChange(of: spotlight) { _, spot in
+                    guard let spot else { return }
+                    showPlaced(spot)
                 }
             }
             .safeAreaInset(edge: .top, spacing: 0) {
                 VStack(spacing: 0) {
-                    notificationsBanner
+                    if !onboarding { notificationsBanner }
                     weekdayHeader
                 }
             }
@@ -403,19 +430,21 @@ struct WeeklyPlanEditor: View {
             // Out of the way while a block is being dragged — it would sit
             // over the very hours the block is being dropped on.
             .overlay(alignment: .bottomTrailing) {
-                if dragTarget == nil { addButton.transition(.opacity) }
+                if dragTarget == nil && !onboarding { addButton.transition(.opacity) }
             }
             .navigationTitle(explain("My routine"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // Study days are set once and rarely touched, so they live
-                // behind the gear rather than above the week.
-                ToolbarItem(placement: .cancellationAction) {
-                    Button { showSettings = true } label: { Image(systemName: "gearshape") }
-                        .accessibilityLabel(Text(explain("Study days")))
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                if !onboarding {
+                    // Study days are set once and rarely touched, so they live
+                    // behind the gear rather than above the week.
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button { showSettings = true } label: { Image(systemName: "gearshape") }
+                            .accessibilityLabel(Text(explain("Study days")))
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { dismiss() }
+                    }
                 }
             }
             .sheet(isPresented: $showSettings, onDismiss: reload) {
@@ -529,6 +558,21 @@ struct WeeklyPlanEditor: View {
 
     /// The +'s height plus its margin, with some air.
     static let addButtonClearance: CGFloat = 56 + 4 + 24
+    /// The onboarding sheet's tallest step, so the evening hours can still
+    /// be scrolled up above it.
+    static let onboardingSheetClearance: CGFloat = 420
+
+    /// Ring and scroll to the block the onboarding sheet just placed.
+    private func showPlaced(_ spot: Spotlight) {
+        let block = store.plan.blocks.first { $0.kind == spot.kind && $0.startMinute == spot.minute }
+        focusMinute = spot.minute
+        scrollRequest += 1
+        withAnimation(.easeOut(duration: 0.2)) { landedId = block?.id }
+        let id = block?.id
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.4) {
+            if landedId == id { withAnimation(.easeOut(duration: 0.3)) { landedId = nil } }
+        }
+    }
 
     private enum RestChoice: Hashable { case none, weekends, custom }
 

@@ -73,8 +73,27 @@ enum SayItAgainScript {
         /// Where a passing take is filed. Non-nil only for case 1 above —
         /// everything else is practice, not material.
         let attemptId: UUID?
+        /// The OTHER side's line (the fluent self's, or the scene
+        /// counterpart's), put on the prompter by `bothSides`. It stays drawn
+        /// on that side of the conversation; only who says it changes.
+        var isOtherSide = false
 
         var isCorrected: Bool { !said.isEmpty }
+    }
+
+    /// Both sides (2026-10-18, a learner's request): every line is the
+    /// learner's to say, the other side's included, in order, and nothing
+    /// plays. A fluent-self line of a TALK is filed under its own turn id —
+    /// the id a shadow take on that line has always carried — so a passing
+    /// read counts toward the book's Shadow chapter exactly like one. A
+    /// scene's counterpart lines are not chapter material, so they are
+    /// practice only.
+    static func bothSides(_ steps: [Step], filesOtherSide: Bool) -> [Step] {
+        steps.map { step in
+            guard !step.isSpoken else { return step }
+            return Step(id: step.id, isSpoken: true, text: step.text, said: "", note: "",
+                        attemptId: filesOtherSide ? step.id : nil, isOtherSide: true)
+        }
     }
 
     /// `@MainActor` for `TalkCurriculum.correctionId` alone — the id a

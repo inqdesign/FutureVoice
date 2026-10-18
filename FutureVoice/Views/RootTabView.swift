@@ -6,6 +6,12 @@ import SwiftUI
 /// Practice (the review home: books + dictionaries), and Progress (measured
 /// CEFR + skills + activity).
 struct RootTabView: View {
+    /// The onboarding routine builder is over the tabs: the first-run sheets
+    /// (age check, Talk's guide, the free minutes) wait until it has gone
+    /// into the Activity chip and that chip's hint is closed.
+    var holdingForRoutine = false
+    @ObservedObject private var routineHandoff = RoutineHandoff.shared
+    @State private var firstRunHeld = false
     @ObservedObject private var watchCreation = WatchCreation.shared
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var auth: AuthService
@@ -102,6 +108,11 @@ struct RootTabView: View {
 
     var body: some View {
         tabRoot
+        .onChange(of: routineHandoff.showHint) { was, now in
+            guard was, !now, firstRunHeld else { return }
+            firstRunHeld = false
+            offerFirstRunSheets()
+        }
         // A Speech block's reminder or routine line: the Speech tab.
         .onAppear { consumeSpeechTap() }
         .onChange(of: callInbox.pendingSpeech) { _, _ in consumeSpeechTap() }
@@ -233,14 +244,7 @@ struct RootTabView: View {
             // Warm the billing snapshot so the first paid tap answers from
             // memory instead of holding the call button on a round trip.
             BillingGate.shared.warm()
-            if appState.voiceCloneId != nil && !ConsentStore.shared.isAgeVerified {
-                showingAgeCheck = true
-            } else if selection == .home, PageIntroStore.isDue(.talk) {
-                welcomeAfterIntro = true
-                offerPageIntro()
-            } else {
-                checkFreeTalkWelcome()
-            }
+            if holdingForRoutine { firstRunHeld = true } else { offerFirstRunSheets() }
             // Populate the home-screen widgets on first entry. The scenePhase
             // refresh only fires on background↔active transitions, so a cold
             // launch that goes straight to foreground wouldn't otherwise
@@ -501,6 +505,17 @@ struct RootTabView: View {
         case .watch:    return .watch
         case .practice: return .review
         case .progress: return .progress
+        }
+    }
+
+    private func offerFirstRunSheets() {
+        if appState.voiceCloneId != nil && !ConsentStore.shared.isAgeVerified {
+            showingAgeCheck = true
+        } else if selection == .home, PageIntroStore.isDue(.talk) {
+            welcomeAfterIntro = true
+            offerPageIntro()
+        } else {
+            checkFreeTalkWelcome()
         }
     }
 
