@@ -142,6 +142,8 @@ dependencies {
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play)
     implementation(libs.googleid)
+    implementation(libs.play.services.auth)
+    implementation(libs.androidx.work.runtime)
     implementation(libs.billing)
     implementation(libs.play.review)
     implementation(libs.glance.appwidget)

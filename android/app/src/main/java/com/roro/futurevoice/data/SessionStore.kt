@@ -114,6 +114,13 @@ class SessionStore private constructor(context: Context) {
             result
         }
 
+    /** Drive sync rewrote `sessions.json` underneath the cache (iOS
+     *  `invalidateCache`): the next read goes back to the file. */
+    fun invalidateCache() {
+        cache = null
+        cachedLanguage = null
+    }
+
     private suspend fun all(language: String): MutableList<Session> {
         cache?.let { if (cachedLanguage == language) return it }
         val loaded = withContext(Dispatchers.IO) {
@@ -131,6 +138,7 @@ class SessionStore private constructor(context: Context) {
     }
 
     private suspend fun write(language: String, sessions: List<Session>) = withContext(Dispatchers.IO) {
+        com.roro.futurevoice.sync.SyncEngine.noteChanged()
         val target = file(language)
         val tmp = File(target.parentFile, "$FILE_NAME.tmp")
         tmp.writeText(StoreJson.json.encodeToString(ListSerializer(Session.serializer()), sessions))

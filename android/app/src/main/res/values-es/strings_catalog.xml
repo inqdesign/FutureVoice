@@ -170,6 +170,7 @@
     <string name="all_sources">"Todas las fuentes"</string>
     <string name="all_words">"Todas las palabras"</string>
     <string name="allow_access_to_photos">"Permite el acceso a Fotos"</string>
+    <string name="allow_google_drive_access_to_keep_syncing">"Permite el acceso a Google Drive para seguir sincronizando"</string>
     <string name="allow_notifications_so_your_routine_can_remind_you">"Permite las notificaciones para que tu rutina pueda recordártelo"</string>
     <string name="almost">"casi"</string>
     <string name="almost_there">"Ya casi…"</string>
@@ -306,6 +307,8 @@
     <string name="calls_at">"Horario de llamadas"</string>
     <!-- 'Calls draw on everything publicly known about them. Wrong person? Fix the name and look up again.' -->
     <string name="calls_draw_on_everything_publicly_known_about_them_wrong_per_ac77bc">"Las llamadas se basan en todo lo que se sabe públicamente de esta persona. ¿No es quien buscas? Corrige el nombre y vuelve a buscar."</string>
+    <!-- 'Calls, recordings and every word you study are saved right here.' -->
+    <string name="calls_recordings_and_every_word_you_study_are_saved_right_he_35bbe7">"Las llamadas, las grabaciones y cada palabra que estudias se guardan aquí."</string>
     <string name="calm_gently_witty">"Tranquilo y con humor fino"</string>
     <!-- 'Camera access is off. Turn it on in Settings, or practise with the mic only.' -->
     <string name="camera_access_is_off_turn_it_on_in_settings_or_practise_with_527914">"La cámara no tiene permiso. Actívalo en Ajustes o practica solo con el micrófono."</string>
@@ -479,14 +482,17 @@
     <string name="delete_account">"Eliminar cuenta"</string>
     <string name="delete_block">"Eliminar bloque"</string>
     <string name="delete_forever">"Eliminar para siempre"</string>
+    <string name="delete_from_google_drive">"Eliminar de Google Drive"</string>
     <string name="delete_from_icloud">"Eliminar de iCloud"</string>
     <string name="delete_scenario">"Eliminar situación"</string>
     <string name="delete_talk">"Eliminar llamada"</string>
+    <string name="delete_the_app_or_change_phones_and_it_s_gone_too">"Si eliminas la app o cambias de teléfono, también se pierde."</string>
     <string name="delete_the_video_your_voice_and_score_stay">"¿Borrar el video? El audio y la puntuación se conservan."</string>
     <string name="delete_this_scenario">"¿Eliminar esta situación?"</string>
     <string name="delete_this_talk">"¿Eliminar esta llamada?"</string>
     <string name="delete_video">"Eliminar video"</string>
     <string name="delete_your_account">"¿Eliminar tu cuenta?"</string>
+    <string name="delete_your_practice_from_google_drive">"¿Eliminar tu práctica de Google Drive?"</string>
     <string name="delete_your_practice_from_icloud">"¿Eliminar tu práctica de iCloud?"</string>
     <string name="delete_your_voice">"¿Eliminar tu voz?"</string>
     <!-- 'Deletes cached voice audio only. Your talks, drills, words and books are untouched. Every line synthesizes again the next time it plays.' -->
@@ -648,6 +654,8 @@
     <string name="everything_planned_for_that_day_is_done_your_streak_grows_by_4f7c00">"Hiciste todo lo planeado para ese día. Tu racha suma uno."</string>
     <!-- 'Everything said so far is saved. Reconnect to carry on from where you were.' -->
     <string name="everything_said_so_far_is_saved_reconnect_to_carry_on_from_w_c4f94f">"Todo lo que dijiste hasta ahora está guardado. Vuelve a conectar para seguir donde lo dejaste."</string>
+    <!-- "Everything synced to Google Drive is removed and syncing stops on every device. What's on this device stays." -->
+    <string name="everything_synced_to_google_drive_is_removed_and_syncing_sto_32a900">"Se elimina todo lo sincronizado en Google Drive y la sincronización se detiene en todos tus dispositivos. Lo que hay en este se queda."</string>
     <!-- "Everything synced to iCloud is removed and syncing stops on every device. What's on this device stays." -->
     <string name="everything_synced_to_icloud_is_removed_and_syncing_stops_on_60516a">"Se elimina todo lo sincronizado en iCloud y la sincronización se detiene en todos los dispositivos. Lo que hay en este dispositivo se queda."</string>
     <string name="everything_this_conversation_had_to_teach_is_yours">"Ya aprendiste todo lo que esta llamada tenía que enseñarte."</string>
@@ -787,6 +795,11 @@
     <string name="goal_met_how_did_it_feel">"Ya lo hiciste. ¿Hoy te salió bien hablar?"</string>
     <string name="good_llds_more_for_the_best_result">"Bien. %d s más y saldrá lo mejor posible"</string>
     <string name="good_to_have_you_back">"¿Cómo has estado?"</string>
+    <!-- "Google Drive access wasn't allowed. Try again and choose Allow." -->
+    <string name="google_drive_access_wasn_t_allowed_try_again_and_choose_allo_7f36e7">"No se permitió el acceso a Google Drive. Vuelve a intentarlo y elige Permitir."</string>
+    <!-- "Google Drive can't be reached right now. Check your connection, then try again." -->
+    <string name="google_drive_can_t_be_reached_right_now_check_your_connectio_286681">"Ahora no se puede conectar con Google Drive. Revisa tu conexión y vuelve a intentarlo."</string>
+    <string name="google_drive_is_full_so_audio_isn_t_syncing">"Google Drive está lleno, así que el audio no se sincroniza"</string>
     <string name="got_it">"Memorizado"</string>
     <string name="got_them_all">"Todas bien"</string>
     <!-- 'Graded against your B1 setting — how this talk went, not what your level is.' -->
@@ -944,6 +957,7 @@
     <string name="ios_is_blocking_the_call_turn_on_notifications_for_nawana_in_30ae8b">"iOS está bloqueando la llamada. Activa las notificaciones de nawana en Ajustes y vuelve a activarla en Mi perfil."</string>
     <string name="is_answering">"%s está respondiendo"</string>
     <string name="it_didn_t_come_back_this_call">"No volvió a aparecer en esta llamada"</string>
+    <string name="it_goes_with_the_app">"Se va con la app"</string>
     <string name="it_happens_one_talk_is_enough_to_start_again">"Pasa. Con una conversación basta para volver."</string>
     <string name="it_moves_as_you_talk">"Cambia a medida que hablas"</string>
     <string name="it_needs_a_little_of_your_speech_first">"Primero necesita un poco de lo que hablas."</string>
@@ -977,6 +991,7 @@
     <!-- 'Keep a word from a talk, or watch a situation — its words collect here.' -->
     <string name="keep_a_word_from_a_talk_or_watch_a_situation_its_words_colle_b07a48">"Guarda una palabra de una llamada o mira una situación: las palabras que salgan se juntan aquí."</string>
     <string name="keep_going_llds_more">"Sigue leyendo — %d s más"</string>
+    <string name="keep_in_google_drive">"Guardar en Google Drive"</string>
     <string name="keep_in_icloud">"Guardar en iCloud"</string>
     <string name="keep_it">"Guárdalo"</string>
     <string name="keep_it_today_for_day_1">"Cúmplelo hoy: día 1"</string>
@@ -987,9 +1002,12 @@
     <string name="keep_talking">"Sigue hablando"</string>
     <string name="keep_this_voice">"Mantener esta voz"</string>
     <string name="keep_what_you_d_use">"Quédate con lo que usarías"</string>
+    <string name="keep_your_practice_in_google_drive">"¿Guardas tu práctica en Google Drive?"</string>
     <string name="keep_your_practice_in_icloud">"¿Guardar tu práctica en iCloud?"</string>
     <string name="kept_for_lld_days">"Cumplido %d días seguidos"</string>
     <string name="kept_from_a_talk">"Palabras guardadas en una llamada"</string>
+    <!-- 'Kept in your own Google Drive, it waits on any phone or tablet you sign into, your voice recording too, so your voice comes back without recording again.' -->
+    <string name="kept_in_your_own_google_drive_it_waits_on_any_phone_or_table_45e1ff">"En tu propio Google Drive te espera en cualquier teléfono o tableta donde inicies sesión, también la grabación de tu voz, así tu voz vuelve sin grabar de nuevo."</string>
     <!-- "Kept in your own iCloud, they're waiting on any phone or iPad you sign into — your voice recording too, so your voice comes back without recording again." -->
     <string name="kept_in_your_own_icloud_they_re_waiting_on_any_phone_or_ipad_9fa373">"Guardados en tu propio iCloud, te esperan en cualquier teléfono o iPad donde inicies sesión, también la grabación de tu voz, así que tu voz vuelve sin grabar de nuevo."</string>
     <string name="key_expressions">"Expresiones clave"</string>
@@ -1397,6 +1415,7 @@
     <string name="not_in_today_s_routine">"No está en la rutina de hoy"</string>
     <string name="not_me_record_again">"No es mi voz, grabar otra vez"</string>
     <string name="not_now">"Ahora no"</string>
+    <string name="not_on_our_servers">"Nada en nuestros servidores"</string>
     <string name="not_published">"Sin publicar"</string>
     <string name="not_rated">"Sin valorar"</string>
     <!-- "Not read yet — it's read the first time you watch this scene." -->
@@ -1470,6 +1489,8 @@
     <!-- "On the day you pick, I'll put your week together: what you said, the words you picked up, how far you've come. Then a short test, made only from your own talks." -->
     <string name="on_the_day_you_pick_i_ll_put_your_week_together_what_you_sai_d42485">"El día que elijas, te armo un resumen de tu semana: lo que dijiste, las palabras que aprendiste, cuánto avanzaste. Y luego un test corto, hecho solo con tus propias conversaciones."</string>
     <string name="on_the_street">"En la calle"</string>
+    <!-- 'On your other device, open Settings, turn on “Continue on your other devices”, then come back here.' -->
+    <string name="on_your_other_device_open_settings_turn_on_continue_on_your_c7fa99">"En tu otro dispositivo, abre Ajustes, activa «Continuar en tus otros dispositivos» y vuelve aquí."</string>
     <string name="once">"una vez"</string>
     <!-- "Once a week, a test made only from that week's own talks: what a word means, the missing phrase, rebuilding a corrected sentence, writing down what you hear, saying a line out loud, and the grammar from your weekly report. A dot means it's open." -->
     <string name="once_a_week_a_test_made_only_from_that_week_s_own_talks_what_d9930a">"Una vez por semana, una prueba hecha solo con las conversaciones de esa semana: qué significa una palabra, la frase que falta, reconstruir una oración corregida, escribir lo que oyes, decir una frase en voz alta y la gramática de tu informe semanal. Un punto significa que está abierta."</string>
@@ -1621,6 +1642,10 @@
     <string name="practicing_your_rhythm">"Practicando tu ritmo al hablar…"</string>
     <!-- 'Practise on your iPhone, pick it up on your iPad. Everything is stored in your own iCloud, audio included, so it can use a few gigabytes there.' -->
     <string name="practise_on_your_iphone_pick_it_up_on_your_ipad_everything_i_80dce1">"Practica en tu iPhone y sigue en tu iPad. Todo se guarda en tu propio iCloud, audio incluido, así que puede ocupar unos gigabytes allí."</string>
+    <!-- 'Practise on your phone, pick it up on your tablet. Everything is kept in your own Google Drive, audio included, in a hidden folder only this app can open.' -->
+    <string name="practise_on_your_phone_pick_it_up_on_your_tablet_everything_0cf690">"Practica en el teléfono y sigue en la tableta. Todo se guarda en tu propio Google Drive, audio incluido, en una carpeta oculta que solo esta app puede abrir."</string>
+    <!-- 'Practised on another phone or tablet with sync on? Your talks, cards, words and recordings are in your Google Drive. Choose the same Google account you used there.' -->
+    <string name="practised_on_another_phone_or_tablet_with_sync_on_your_talks_dc3ff4">"¿Practicaste en otro teléfono o tableta con la sincronización activada? Tus conversaciones, tarjetas, palabras y grabaciones están en tu Google Drive. Elige la misma cuenta de Google que usaste allí."</string>
     <string name="preparing_study_notes">"Preparando las notas de estudio…"</string>
     <string name="preparing_the_file">"Preparando el archivo…"</string>
     <string name="preparing_your_video">"Preparando tu video…"</string>
@@ -1976,6 +2001,7 @@
     <string name="shown_over_their_face_on_the_watch_map_left_empty_one_is_wri_26f298">"Aparece sobre su cara en el mapa de Escenas. Si lo dejas vacío, lo escribimos por ti."</string>
     <!-- "Sign in, and your voice lands in this account the day it's made." -->
     <string name="sign_in_and_your_voice_lands_in_this_account_the_day_it_s_ma_e2e5d2">"Inicia sesión y tu voz llegará a esta cuenta el día que esté lista."</string>
+    <string name="sign_in_to_a_google_account_on_this_device_then_try_again">"Inicia sesión en una cuenta de Google en este dispositivo y vuelve a intentarlo."</string>
     <string name="sign_in_to_icloud_in_settings_first_then_try_again">"Primero inicia sesión en iCloud en Ajustes y vuelve a intentarlo."</string>
     <string name="sign_in_to_icloud_in_settings_to_sync">"Inicia sesión en iCloud en Ajustes para sincronizar"</string>
     <string name="sign_in_to_sync_your_practice_between_your_iphone_and_ipad">"Inicia sesión para sincronizar tu práctica entre tu iPhone y tu iPad."</string>
@@ -2465,6 +2491,7 @@
     <string name="try_using">"Intenta usar"</string>
     <string name="turn_camera_off">"Apagar cámara"</string>
     <string name="turn_camera_on">"Encender cámara"</string>
+    <string name="turn_it_on_any_time_in_settings_devices">"Actívalo cuando quieras en Ajustes → Dispositivos."</string>
     <!-- 'Turn it on to film yourself, or off to practice with your voice only.' -->
     <string name="turn_it_on_to_film_yourself_or_off_to_practice_with_your_voi_8f2b9e">"Encendida, te graba mientras lees; apagada, solo graba tu voz."</string>
     <string name="turn_on_photos_for_nawana_in_settings_to_save_the_card">"Activa Fotos para nawana en Ajustes para guardar la tarjeta."</string>
@@ -2511,6 +2538,7 @@
     <string name="useful_information_clearly_told">"Información útil, contada con claridad"</string>
     <string name="uses_lld_min_of_talk_time">"Usa %d min de tiempo de conversación"</string>
     <string name="uses_talk_time">"Usa tiempo de conversación"</string>
+    <string name="uses_your_google_drive">"Usa tu Google Drive"</string>
     <string name="uses_your_icloud">"Usa tu iCloud"</string>
     <string name="variants">"Otras formas de decirlo"</string>
     <!-- 'Verified grammar slips per 100 spoken words — fewer reads higher.' -->
@@ -2555,6 +2583,7 @@
     <string name="vs_last_week">"frente a la semana pasada"</string>
     <string name="vs_previous_30_days">"frente a los 30 días anteriores"</string>
     <string name="waiting_for_the_first_sync">"Esperando la primera sincronización"</string>
+    <string name="want_a_copy_use_your_own_google_drive">"¿Quieres una copia? Usa tu Google Drive"</string>
     <string name="warm_and_chatty">"Cercano y parlanchín"</string>
     <string name="watch">"Escenas"</string>
     <string name="watch_again">"Ver otra vez"</string>
@@ -2578,6 +2607,7 @@
     <string name="watching_a_scene">"Ver una escena"</string>
     <string name="watching_for_ideas">"Mirar para sacar ideas"</string>
     <string name="we_didn_t_hear_you_check_the_microphone_and_try_again">"No te escuchamos. Revisa el micrófono e inténtalo de nuevo."</string>
+    <string name="we_don_t_keep_your_talks_so_speak_freely">"No guardamos tus conversaciones, así que habla con total libertad."</string>
     <!-- "We'll find who they are — you just confirm. Their voice is a preset, never their real one." -->
     <string name="we_ll_find_who_they_are_you_just_confirm_their_voice_is_a_pr_d4840a">"Nosotros averiguamos quién es; tú solo confirmas. Su voz es una predeterminada, nunca la real."</string>
     <!-- "We'll remind you before it converts, and the date is always in Me → Talk time." -->
@@ -3001,6 +3031,9 @@
     <string name="your_practice_from_your_other_device_is_in_your_icloud_talks_5ad16e">"Tu práctica de tu otro dispositivo está en tu iCloud: conversaciones, tarjetas, palabras, grabaciones. Tráela aquí y mantén ambos al día desde ahora."</string>
     <!-- "Your practice on this device takes about %@. That's roughly the space it needs in iCloud." -->
     <string name="your_practice_on_this_device_takes_about_that_s_roughly_the_b08018">"Tu práctica en este dispositivo ocupa unos %s. Es más o menos el espacio que necesita en iCloud."</string>
+    <!-- "Your practice on this device takes about %@. That's roughly the space it needs in Google Drive." -->
+    <string name="your_practice_on_this_device_takes_about_that_s_roughly_the_b9cf59">"Tu práctica en este dispositivo ocupa unos %s. Es más o menos el espacio que necesita en Google Drive."</string>
+    <string name="your_practice_stays_on_your_phone">"Tu práctica se queda en tu teléfono"</string>
     <string name="your_profile">"Tu perfil"</string>
     <string name="your_project_update">"El avance de tu proyecto"</string>
     <!-- 'Your recent conversations measure at a higher level. Scoring and material difficulty now follow it.' -->
@@ -3031,6 +3064,8 @@
     <string name="your_talks_books_and_cards_are_still_on_it_open_me_there_tur_546039">"Tus llamadas, cuadernos y tarjetas siguen allí. Abre Mi perfil en ese dispositivo, activa « Continuar en tus otros dispositivos » y vuelve aquí."</string>
     <!-- "Your talks, books and recordings are on this phone only. If you delete the app or change phones, they're gone for good." -->
     <string name="your_talks_books_and_recordings_are_on_this_phone_only_if_yo_02b0cd">"Tus conversaciones, cuadernos y grabaciones solo están en este teléfono. Si eliminas la app o cambias de teléfono, se pierden para siempre."</string>
+    <!-- 'Your talks, cards, words and recordings, audio included, stay the same on every device signed into this account and the same Google account. Turning this off stops syncing and deletes nothing.' -->
+    <string name="your_talks_cards_words_and_recordings_audio_included_stay_th_0bead2">"Tus conversaciones, tarjetas, palabras y grabaciones, audio incluido, son iguales en cada dispositivo con esta cuenta y la misma cuenta de Google. Si lo desactivas, solo se detiene la sincronización y no se borra nada."</string>
     <!-- 'Your talks, cards, words and recordings — including the audio — are kept the same on every device signed into this account and your iCloud. Turning this off stops syncing and deletes nothing.' -->
     <string name="your_talks_cards_words_and_recordings_including_the_audio_ar_4e4ae2">"Tus conversaciones, tarjetas, palabras y grabaciones, audio incluido, se mantienen iguales en todos los dispositivos con esta cuenta y tu iCloud. Desactivarlo detiene la sincronización y no elimina nada."</string>
     <string name="your_talks_together">"Llamadas juntos"</string>

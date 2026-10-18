@@ -120,6 +120,18 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
      * a restored install keeps pointing at the old language, so every file
      * lands correctly and the screen shows nothing.
      */
+    /** iOS `SyncContinuePromptView.continueFromCloud`: the pull laid the
+     *  persona, languages and level down — setup asked for exactly what just
+     *  arrived, so it is complete when a persona came with it. */
+    fun adoptPulledPractice() {
+        viewModelScope.launch {
+            if (PersonaStore.shared(appContext).load() != null) {
+                prefs.edit().putBoolean(SETUP_COMPLETE_KEY, true).apply()
+            }
+            adoptRestoredData()
+        }
+    }
+
     fun adoptRestoredData() {
         // No store repointing to do: every scoped store resolves
         // `lang/<code>/` on each call rather than caching a handle, which is
@@ -145,6 +157,18 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
             StoreEvents.bump()
         }
     }
+
+    /** iOS `AppState.adoptSyncedChanges`: a pull laid files down under the
+     *  running app — re-read what the state flow holds from them. */
+    private val sync by lazy { com.roro.futurevoice.sync.SyncEngine.shared(appContext).also { engine ->
+        engine.onApplied = { kinds ->
+            val held = setOf(com.roro.futurevoice.sync.SyncKind.PERSONA,
+                com.roro.futurevoice.sync.SyncKind.PERSONA_NOTE,
+                com.roro.futurevoice.sync.SyncKind.DEFAULTS,
+                com.roro.futurevoice.sync.SyncKind.PROFILE)
+            if (kinds.any { it in held }) adoptRestoredData()
+        }
+    } }
 
     init {
         viewModelScope.launch {
@@ -212,6 +236,9 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
                             )
                         }
                         auth.userId?.let { com.roro.futurevoice.core.Analytics.identify(it) }
+                        // Drive sync follows the ACCOUNT (never an anonymous
+                        // session — nothing to key on, iOS `SyncEngine.setUser`).
+                        sync.setUser(if (auth.isAnonymous) null else auth.userId)
                         // An account now owns the session: a linked anonymous
                         // user keeps its id and its voice is off the clock.
                         if (!auth.isAnonymous) com.roro.futurevoice.data.VoiceReclaim.clear(appContext)
@@ -230,6 +257,7 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
                         _state.update { it.copy(resolvingSession = true) }
 
                     else -> _state.update {
+                        sync.setUser(null)
                         it.copy(
                             resolvingSession = false,
                             signedIn = false,
