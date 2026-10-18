@@ -140,7 +140,11 @@ struct RootTabView: View {
                 WatchTab()
                     // "New situation" hides the bar so the box can take its
                     // place; applied here, outside the tab's own stack.
-                    .toolbar(watchCreation.creating ? .hidden : .visible, for: .tabBar)
+                    // `.automatic`, never `.visible`, otherwise: a forced
+                    // visible here outranks the `.hidden` of a scene pushed
+                    // inside the tab, and a new situation played with the
+                    // tab bar over it once the box closed.
+                    .toolbar(watchCreation.creating ? .hidden : .automatic, for: .tabBar)
                     .tabItem { Label("Watch", systemImage: "play.circle.fill") }
                     .tag(Tab.watch)
 
