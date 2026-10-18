@@ -1,0 +1,5 @@
+Novedades
+• Las tarjetas de retos de discurso marcan los retos nuevos, y ya está aquí el tercer reto.
+
+Correcciones
+• Si aprendes japonés o español, la lista de personas ya no aparece vacía.

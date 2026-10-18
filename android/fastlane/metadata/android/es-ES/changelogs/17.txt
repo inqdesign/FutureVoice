@@ -1,0 +1,7 @@
+Corregido
+• La voz de tu yo fluido ya no se mezcla con lo que dices.
+• El saludo y el círculo de Hablar ya no saltan al abrir la app.
+• Al reanudar una llamada en pausa, los botones siguen ahí.
+• En el shadowing ya no queda la corrección de la frase anterior, y la de la última se ve entera.
+• Las tarjetas para compartir salen nítidas y bien proporcionadas.
+• La barra de pestañas y los botones ya no se solapan con texto grande.

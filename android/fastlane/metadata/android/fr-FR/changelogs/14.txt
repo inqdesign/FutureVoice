@@ -1,0 +1,9 @@
+Nouveautés
+• Crée ta routine dès le départ : choisis l’heure de ton appel et ton temps d’étude, tout s’ajoute à ton planning.
+• Ajouter une personne tient sur un écran, et tu peux créer quelqu’un depuis le sélecteur.
+• Parcours les défis de discours en cartes, test hebdo dans Révision.
+
+Corrections
+• Ton appel quotidien sonne même après un redémarrage.
+• Les titres des appels sur l’actualité ne sont plus coupés.
+• L’écouter avec ma voix ne prend plus plus de temps que le texte.

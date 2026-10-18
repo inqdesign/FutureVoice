@@ -1,0 +1,7 @@
+Fixed
+• Your future self's voice no longer leaks into what you say during a call.
+• The Talk tab's greeting and ring no longer jump when the app opens.
+• Resuming a paused call keeps the buttons on screen.
+• In shadowing, the last line's feedback no longer carries over, and the final line's feedback shows in full.
+• Share cards come out sharp and in the right shape.
+• The tab bar and buttons no longer overlap on phones with large text.
