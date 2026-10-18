@@ -134,14 +134,18 @@ enum QuickQuizGrammar {
         return picked.map { q in
             QuickQuizItem(kind: .grammar, prompt: q.sentence, answer: q.answer,
                           options: ([q.answer] + q.wrong).shuffled(),
-                          heading: q.point, note: q.tip.isEmpty ? nil : q.tip)
+                          heading: q.point.isEmpty ? nil : q.point, note: q.tip.isEmpty ? nil : q.tip)
         }
     }
 
     // MARK: - Writing
 
+    /// The batch as written. Read one question at a time: measured on the
+    /// first device runs (2026-10-18), half the batches failed whole because
+    /// ONE item came back as a string or under another key ("question" for
+    /// "sentence"). A question that can't be read is skipped, never the batch.
     private struct Payload: Decodable {
-        struct Item: Decodable {
+        struct Item {
             let point: String
             let tip: String?
             let sentence: String
@@ -149,6 +153,59 @@ enum QuickQuizGrammar {
             let wrong: [String]
         }
         let items: [Item]
+
+        private enum Keys: String, CodingKey { case items, questions }
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: Keys.self)
+            let raw = (try? c.decode([Loose].self, forKey: .items))
+                ?? (try? c.decode([Loose].self, forKey: .questions)) ?? []
+            items = raw.compactMap(\.item)
+        }
+    }
+
+    /// One element of `items`, whatever shape it arrived in.
+    private struct Loose: Decodable {
+        let item: Payload.Item?
+
+        private struct AnyKey: CodingKey {
+            var stringValue: String
+            var intValue: Int? { nil }
+            init(stringValue: String) { self.stringValue = stringValue }
+            init?(intValue: Int) { nil }
+        }
+
+        init(from decoder: Decoder) throws {
+            // An object written out as a JSON string.
+            if let text = try? decoder.singleValueContainer().decode(String.self) {
+                let data = Data(text.utf8)
+                item = (try? JSONDecoder().decode(Loose.self, from: data))?.item
+                return
+            }
+            guard let c = try? decoder.container(keyedBy: AnyKey.self) else { item = nil; return }
+            func string(_ names: String...) -> String? {
+                for n in names {
+                    if let v = try? c.decode(String.self, forKey: AnyKey(stringValue: n)),
+                       !v.trimmingCharacters(in: .whitespaces).isEmpty { return v }
+                }
+                return nil
+            }
+            func strings(_ names: String...) -> [String]? {
+                for n in names {
+                    if let v = try? c.decode([String].self, forKey: AnyKey(stringValue: n)) { return v }
+                }
+                return nil
+            }
+            guard let sentence = string("sentence", "question", "text", "prompt"),
+                  let answer = string("answer", "correct", "correct_answer") else { item = nil; return }
+            var wrong = strings("wrong", "wrong_choices", "distractors", "incorrect") ?? []
+            if wrong.isEmpty, let all = strings("choices", "options") {
+                wrong = all.filter { $0 != answer }
+            }
+            item = Payload.Item(point: string("point", "grammar_point", "grammar") ?? "",
+                                tip: string("tip", "explanation", "why"),
+                                sentence: sentence, answer: answer, wrong: wrong)
+        }
     }
 
     /// Writes one batch into the stock. Returns what was added, nil on failure.
