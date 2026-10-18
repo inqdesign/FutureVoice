@@ -229,6 +229,8 @@ struct ConversationView: View {
     /// stores the ringtone under the same text + voice), so speaking it costs
     /// no second synthesis and the voice never changes mid-hand-off.
     private let initialOpener: String?
+    /// The screen this call was started from — `conversation_started` only.
+    private let entry: TalkEntry
 
     /// Presented as the immersive "talk seat" from ConversationHome. An initial
     /// topic launches a scenario; empty = free talk. Pass `resumeSession` to
@@ -241,9 +243,11 @@ struct ConversationView: View {
          initialCounterpart: Counterpart? = nil,
          initialOpener: String? = nil,
          resumeSession: Session? = nil,
+         entry: TalkEntry = .other,
          onClose: (() -> Void)? = nil) {
         self.onClose = onClose
         self.initialOpener = initialOpener
+        self.entry = resumeSession != nil ? .resume : entry
         if let s = resumeSession {
             _topic = State(initialValue: s.topic ?? "")
             _topicBlurb = State(initialValue: "")
@@ -948,6 +952,7 @@ struct ConversationView: View {
                 HapticEngine.phoneCallStarted()
                 Analytics.capture("conversation_started", [
                     "origin": sessionOrigin.rawValue,
+                    "entry": entry.rawValue,
                     "resumed": isResuming
                 ])
                 pinPromptClock()

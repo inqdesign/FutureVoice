@@ -241,7 +241,7 @@ struct ActivityView: View {
 
     private func open(_ kind: StudyPlan.Kind) {
         switch kind {
-        case .talk: appState.pendingFreeTalk = true
+        case .talk: appState.requestFreeTalk(from: .routine)
         case .sayItAgain: showSayItAgainPicker = true
         case .speech: DailyCallInbox.shared.pendingSpeech = true
         case .words: routineSheet = .words

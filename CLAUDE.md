@@ -356,7 +356,7 @@ a language school. Rows come from the Supabase table `public_personas`, read ano
 - The talk saves as an ordinary `Session` with `counterpartId`, so its review material, transcript and Practice book all come from the existing machinery for free. The person's card lists every talk you've had with them.
 - Bookmarks are local only (`UserDefaults`). Nothing a learner does here reaches the persona's author: no notification, no shared record.
 
-Intros are MATERIAL, so they're written in the target language — a persona row serves one `language` and the pool is fetched per `AppState.targetLanguage`. Publishing is gated on intro density (80 chars), not on a privacy toggle: a one-liner can't carry a conversation, and the same bar keeps thin rows out of the pool.
+Intros are MATERIAL, so they're written in the target language — a persona row serves one `language`. **The pool is EVERY language's active rows** (2026-10-18, founder: me, my people, users and characters all show whatever is being learned — fetched per target language, Japanese and Spanish had nobody to meet, since nobody had seeded them); `fetchPool(language:)` only puts the target language's rows first and keeps ONE row per user published in several languages (`onePerPerson`). Publishing is gated on intro density (80 chars), not on a privacy toggle: a one-liner can't carry a conversation, and the same bar keeps thin rows out of the pool.
 
 ## A person is a RELATIONSHIP, and a call knows which kind (2026-09-28)
 

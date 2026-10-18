@@ -255,6 +255,14 @@ final class AppState: ObservableObject {
     /// soon as it's up (staged, so a cold launch that isn't mounted yet still
     /// fires once the tab appears).
     @Published var pendingFreeTalk = false
+    /// Which screen staged `pendingFreeTalk` — telemetry only. Set through
+    /// `requestFreeTalk(from:)`, which every in-app door uses.
+    var pendingFreeTalkEntry: TalkEntry = .other
+
+    func requestFreeTalk(from entry: TalkEntry) {
+        pendingFreeTalkEntry = entry
+        pendingFreeTalk = true
+    }
 
     /// The Talk hero ring's live GLOBAL frame (its Futureself circle),
     /// reported by ConversationHome — RootTabView's free-talk proxy morphs

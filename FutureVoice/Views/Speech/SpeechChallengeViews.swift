@@ -25,37 +25,64 @@ struct SpeechChallengeRow: View {
                             .font(.caption.weight(.semibold).monospacedDigit())
                             .foregroundStyle(SpeechScoreColor.color(best))
                     }
+                } else if isNew {
+                    Text(explain(key: "speech.challenge.new", default: "New"))
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(Color.accentColor))
                 }
             }
-            Spacer(minLength: 8)
-            VStack(alignment: .leading, spacing: 3) {
-                // Half a screen wide in the row: room for a longer title,
-                // and the meta line may wrap rather than lose its length.
-                Text(script.title)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                    .lineLimit(3)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(metaLine)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+            // The title hangs under the disc; the meta line belongs to the
+            // FOOT, just above the faces, so it sits at the same height on
+            // every card whatever the title's length. The slack goes between.
+            Text(script.title)
+                .font(.headline)
+                .foregroundStyle(.primary)
+                .lineLimit(3)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 14)
+            Spacer(minLength: 16)
+            Text(metaLine)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+                .padding(.bottom, 8)
+            // The board's top three, or, on a board nobody is on yet, an
+            // invitation in the same slot so every card ends alike.
             if let faces = standing?.topThree, !faces.isEmpty {
                 SpeechChallengeFaces(faces: faces, size: 30)
-                    .padding(.top, 12)
+            } else {
+                HStack(spacing: 6) {
+                    Image(systemName: "flag.fill")
+                    Text("Be the first").lineLimit(1)
+                }
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.tint)
+                .frame(height: 30)
             }
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18)
+        .frame(maxWidth: .infinity, minHeight: 220, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 18).fill(Color(.secondarySystemGroupedBackground)))
         .contentShape(Rectangle())
     }
 
+    /// Out within the last week and not yet taken by this learner: the
+    /// badge takes the slot the learner's rank fills once they enter.
+    private var isNew: Bool {
+        (standing?.myAttempts ?? 0) == 0
+            && script.createdAt > Date().addingTimeInterval(-7 * 86_400)
+    }
+
     private var metaLine: String {
         let length = SpeechFormat.length(SpeechLibrary.estimatedSeconds(script.body, language: script.language))
-        return [explain("\(standing?.entrants ?? 0) taking part"), length].joined(separator: " · ")
+        // "0 taking part" says the same thing as the foot, only sadder.
+        let entrants = standing?.entrants ?? 0
+        guard entrants > 0 else { return length }
+        return [explain("\(entrants) taking part"), length].joined(separator: " · ")
     }
 }
 
@@ -214,6 +241,9 @@ struct SpeechChallengeView: View {
         }
         .navigationTitle(script.title)
         .navigationBarTitleDisplayMode(.inline)
+        // A page pushed into the tab, like a book page: the tab bar goes,
+        // and the glass panel's buttons take the foot.
+        .toolbar(.hidden, for: .tabBar)
         .refreshable { await reload() }
         .task { await reload() }
         // The board first; the script and the way in together at the foot
@@ -504,6 +534,7 @@ struct SpeechChallengeListView: View {
         }
         .navigationTitle("All challenges")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .refreshable { await challenges.refresh(language: appState.targetLanguage) }
     }
 

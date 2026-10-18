@@ -56,6 +56,7 @@ struct ConversationHome: View {
         var scenarioId: UUID? = nil
         /// Pool-grounded facts for a news talk — seeds `newsFacts`.
         var newsFacts: [String] = []
+        var entry: TalkEntry = .other
     }
     /// Server-side account/billing snapshot — drives the credit chip. Credits
     /// live WITH the plan (not as a bare stat) so tapping goes to the
@@ -242,7 +243,8 @@ struct ConversationHome: View {
                                  initialIsNews: launch.isNews,
                                  initialOrigin: launch.origin,
                                  initialScenarioId: launch.scenarioId,
-                                 initialNewsFacts: launch.newsFacts)
+                                 initialNewsFacts: launch.newsFacts,
+                                 entry: launch.entry)
                     .environmentObject(appState)
             }
         }
@@ -337,7 +339,7 @@ struct ConversationHome: View {
             onSettled: { heroSettled = true },
             onTap: { frame in
                 appState.talkRingFrame = frame
-                appState.pendingFreeTalk = true
+                appState.requestFreeTalk(from: .talkRing)
             })
     }
 
@@ -468,7 +470,8 @@ struct ConversationHome: View {
             }
             appState.markScenarioUsed(id: s.id)
             callLaunch = CallLaunch(topic: s.displayTitle, blurb: s.promptBlurb, isNews: false,
-                                    origin: .scenario, scenarioId: s.id)
+                                    origin: .scenario, scenarioId: s.id,
+                                    entry: .talkScenario)
         }
     }
 
@@ -481,7 +484,8 @@ struct ConversationHome: View {
                 blurb: "Recent news to discuss (facts from coverage): \(t.blurb)",
                 isNews: true,
                 origin: .news,
-                newsFacts: t.facts ?? []
+                newsFacts: t.facts ?? [],
+                entry: .talkNews
             )
         }
     }
@@ -490,7 +494,8 @@ struct ConversationHome: View {
     /// ordinary topic call: the blurb tells it which exam and which part.
     private func runExam(_ t: ExamTopic, _ exam: ExamKind) {
         BillingGate.start(orShow: $showingPaywall) {
-            callLaunch = CallLaunch(topic: t.title, blurb: t.callBlurb(exam: exam))
+            callLaunch = CallLaunch(topic: t.title, blurb: t.callBlurb(exam: exam),
+                                    entry: .talkExam)
         }
     }
 
@@ -498,7 +503,7 @@ struct ConversationHome: View {
     /// they're applying for). An ordinary topic call.
     private func runFieldTopic(_ t: SuggestedTopic) {
         BillingGate.start(orShow: $showingPaywall) {
-            callLaunch = CallLaunch(topic: t.title, blurb: t.blurb)
+            callLaunch = CallLaunch(topic: t.title, blurb: t.blurb, entry: .talkField)
         }
     }
 
