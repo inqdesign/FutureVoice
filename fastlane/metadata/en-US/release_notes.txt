@@ -1,16 +1,14 @@
 New
-• You can now learn Spanish, with a Mexican or Castilian accent.
-• Set up your routine when you start: pick when your daily call rings and how much you study, and it goes straight onto your weekly plan.
-• Your fluent self remembers what's been going on and asks about it when you say hello.
-• Adding a person takes one screen, and you can create someone new right from the person picker.
-• Swipe through speech challenges as cards, and find the weekly test right on the Review screen.
-• Your voice recording is cleaned of background noise more thoroughly when your voice is made.
-• In Say it again, you can now say your fluent self's lines too. Turn on Read both sides from the button at the top left.
+• Take a quick quiz from the Talk screen whenever you like, with words, expressions and grammar picked for you.
+• Find a topic for today's talk with one button.
+• Listen to your situations back to back in a player. It keeps playing with the screen off.
+• When you learn Japanese, readings now appear above the kanji.
+• On a free trial in Korea, the app tells you ahead of time that you'll need to agree before you're charged.
+• The weekly test now lives inside your weekly report.
 
 Fixed
-• Your fluent self's bubble no longer flickers when it appears.
-• News call titles are no longer cut off.
-• Hear it in my voice no longer uses more time than the script's length.
-• Corrected words in Review no longer land inside other words.
-• When learning Japanese or Spanish, the people list is no longer empty.
-• What you were typing is still there when you close a sheet and open it again.
+• Challenge cards no longer change size when you open one and come back.
+• You no longer slide in from the side when Watch first opens.
+• The tab bar no longer shows while a situation plays.
+• Icons on blue buttons are visible again.
+• Hear it in my voice on a script now shows what it costs and a clearer button.
