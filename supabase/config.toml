@@ -550,6 +550,14 @@ enabled = true
 verify_jwt = false
 entrypoint = "./functions/default-accent-backfill/index.ts"
 
+[functions.consent-reminder]
+enabled = true
+# Called by pg_cron every hour, which has no Supabase JWT to send —
+# authenticity is the CLEANUP_SECRET header checked inside the function, which
+# refuses everything when the env var is unset.
+verify_jwt = false
+entrypoint = "./functions/consent-reminder/index.ts"
+
 [functions.owner-watch]
 enabled = true
 # Called by pg_cron every minute, which has no Supabase JWT to send —

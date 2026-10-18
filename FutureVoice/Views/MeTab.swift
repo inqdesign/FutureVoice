@@ -41,6 +41,8 @@ struct MeTab: View {
     /// shows, because a club nobody can see is a club nobody joins.
     @State private var coreMembership: CoreClubService.Membership?
     @State private var showingPaywall = false
+    /// Me is itself a sheet, so the consent explanation is presented from here.
+    @State private var showingPriceConsent = false
     @State private var showingAddLanguage = false
     @State private var rerecording = false
     @State private var voiceBeforeRerecord: String?
@@ -58,6 +60,8 @@ struct MeTab: View {
     @State private var pickingAccent = false
     @State private var comparingVoice = false
     @ObservedObject private var syncEngine = SyncEngine.shared
+    /// Apple waiting on the learner's consent before it charges.
+    @ObservedObject private var priceConsent = PriceConsent.shared
     @State private var importingBackup = false
     @State private var backupResult: String?
     /// Non-nil while an export or import is running — it's both the progress
@@ -110,6 +114,19 @@ struct MeTab: View {
                             subtitle: hasPlan ? nil
                                               : explain("Talking needs a plan"),
                             value: hasPlan ? account.planLabel : nil)
+                    }
+                    // Under the subscription it keeps going, for as long as
+                    // Apple is waiting (Korea's second consent after a trial).
+                    // The sheet raises itself once a day; this is the door
+                    // that is always there.
+                    if priceConsent.pending != nil {
+                        Button {
+                            showingPriceConsent = true
+                        } label: {
+                            row(icon: "checkmark.seal",
+                                title: explain("Confirm with Apple"),
+                                subtitle: explain("Needed to keep your plan going"))
+                        }
                     }
                 }
 
@@ -340,6 +357,7 @@ struct MeTab: View {
             // open, Me re-renders, and a cover on a List row is torn down
             // with the row — it opened and closed at once.
             .fullScreenCover(isPresented: $editingRoutine) { WeeklyPlanEditor() }
+            .sheet(isPresented: $showingPriceConsent) { PriceConsentSheet() }
             .sheet(isPresented: $showingPaywall, onDismiss: {
                 Task { account = await AccountStatus.fetch() }
             }) {

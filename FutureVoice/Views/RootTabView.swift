@@ -58,6 +58,7 @@ struct RootTabView: View {
     /// view in reach (and on a cold launch from the lock screen, no view
     /// exists yet), so it drops the plan here and this picks it up.
     @ObservedObject private var callInbox = DailyCallInbox.shared
+    @ObservedObject private var priceConsent = PriceConsent.shared
     /// The answered call once `BillingGate` has let it through — the cover
     /// presents from this, never straight from the inbox.
     @State private var answeredCall: DailyCallPlan?
@@ -340,55 +341,14 @@ struct RootTabView: View {
         // Note the transcript word links (futurevoice://word/…) are
         // intercepted locally by ConversationDetailView's OpenURLAction and
         // never reach here.
-        .onOpenURL { url in
-            guard url.scheme == "futurevoice" else { return }
-            Analytics.capture("widget_opened", ["kind": url.host ?? "unknown"])
-            // A tapped widget note carries its item as ?q=… so we open that
-            // exact word/phrase; absent, we open the plain list.
-            let q = URLComponents(url: url, resolvingAgainstBaseURL: false)?
-                .queryItems?.first(where: { $0.name == "q" })?.value
-            switch url.host {
-            case "freetalk":
-                selection = .home
-                appState.requestFreeTalk(from: .widget)
-            case "talk":
-                // Streak widget: open the Talk tab so the user does an activity.
-                selection = .home
-            case "practice":
-                selection = .practice
-                appState.pendingPracticeRoute = .studying   // land on the Studying shelf, not wherever it was left
-            case "review":
-                // Review reminder (and any future surface that means "the
-                // things you set aside are back").
-                selection = .practice
-                appState.pendingPracticeRoute = .review
-            case "weeklytest":
-                selection = .practice
-                appState.pendingPracticeRoute = .weeklyTest
-            case "book":
-                // Continue widget: open a specific book's detail page.
-                let comps = URLComponents(url: url, resolvingAgainstBaseURL: false)
-                let type = comps?.queryItems?.first(where: { $0.name == "type" })?.value ?? "talk"
-                if let idString = comps?.queryItems?.first(where: { $0.name == "id" })?.value,
-                   let id = UUID(uuidString: idString) {
-                    selection = .practice
-                    appState.pendingPracticeRoute = .book(kind: type, id: id)
-                } else {
-                    selection = .practice
-                    appState.pendingPracticeRoute = .studying
-                }
-            case "vocab":
-                selection = .practice
-                appState.pendingPracticeRoute = .vocabulary(word: q)
-                appState.focusWord = q          // opens the card even if the page is already up
-            case "expressions":
-                selection = .practice
-                appState.pendingPracticeRoute = .expressions(phrase: q)
-                appState.focusPhrase = q
-            default:
-                break
-            }
-        }
+        .onOpenURL(perform: handleURL)
+        // A server push names a link too (`push-send`'s `url`); it lands the
+        // same way, through the notification delegate.
+        .onAppear { consumePushLink() }
+        .onChange(of: callInbox.pendingURL) { _, _ in consumePushLink() }
+        // Apple waiting on the learner's consent before it charges (Korea's
+        // second consent after a trial) — said in our words first.
+        .sheet(isPresented: $priceConsent.showingSheet) { PriceConsentSheet() }
         // The beta intro ("Welcome to the beta", 300 free credits) used to be
         // presented here on first entry. It is NOT shown in the public build:
         // there is no beta quota to explain — a new account starts at zero and
@@ -626,6 +586,68 @@ struct RootTabView: View {
                 answeredCall = plan
             }
         }
+    }
+
+    /// Every `futurevoice://` link: widgets, notifications, server pushes.
+    private func handleURL(_ url: URL) {
+        guard url.scheme == "futurevoice" else { return }
+        Analytics.capture("widget_opened", ["kind": url.host ?? "unknown"])
+        // A tapped widget note carries its item as ?q=… so we open that
+        // exact word/phrase; absent, we open the plain list.
+        let q = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+            .queryItems?.first(where: { $0.name == "q" })?.value
+        switch url.host {
+        case "consent":
+            // The consent reminder push (`consent-reminder`).
+            priceConsent.open()
+        case "freetalk":
+            selection = .home
+            appState.requestFreeTalk(from: .widget)
+        case "talk":
+            // Streak widget: open the Talk tab so the user does an activity.
+            selection = .home
+        case "practice":
+            selection = .practice
+            appState.pendingPracticeRoute = .studying   // land on the Studying shelf, not wherever it was left
+        case "review":
+            // Review reminder (and any future surface that means "the
+            // things you set aside are back").
+            selection = .practice
+            appState.pendingPracticeRoute = .review
+        case "weeklytest":
+            selection = .practice
+            appState.pendingPracticeRoute = .weeklyTest
+        case "book":
+            // Continue widget: open a specific book's detail page.
+            let comps = URLComponents(url: url, resolvingAgainstBaseURL: false)
+            let type = comps?.queryItems?.first(where: { $0.name == "type" })?.value ?? "talk"
+            if let idString = comps?.queryItems?.first(where: { $0.name == "id" })?.value,
+               let id = UUID(uuidString: idString) {
+                selection = .practice
+                appState.pendingPracticeRoute = .book(kind: type, id: id)
+            } else {
+                selection = .practice
+                appState.pendingPracticeRoute = .studying
+            }
+        case "vocab":
+            selection = .practice
+            appState.pendingPracticeRoute = .vocabulary(word: q)
+            appState.focusWord = q          // opens the card even if the page is already up
+        case "expressions":
+            selection = .practice
+            appState.pendingPracticeRoute = .expressions(phrase: q)
+            appState.focusPhrase = q
+        default:
+            break
+        }
+    }
+
+    /// A cold launch from the push sets the link before this view exists,
+    /// so it is read on appear as well as on change.
+    private func consumePushLink() {
+        guard let url = callInbox.pendingURL else { return }
+        callInbox.pendingURL = nil
+        handleURL(url)
     }
 
     private func consumeSpeechTap() {

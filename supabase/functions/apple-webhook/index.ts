@@ -186,6 +186,27 @@ Deno.serve(async (req) => {
       throw new Error(`user_subscriptions upsert: ${subErr.message}`)
     }
 
+    // Is Apple waiting on the learner's consent to charge (Korea's second
+    // consent after a trial, or a real price increase)? Written in its own
+    // update so a database without the columns (20261018170000) costs this
+    // record, never the entitlement above.
+    const consent = consentPending(payload.notificationType, payload.subtype, renewal)
+    if (!other && consent !== undefined) {
+      const { error: consentErr } = await db.from("user_subscriptions")
+        .update(consent
+          ? { price_consent_due_at: tx.expiresDate ? iso(tx.expiresDate) : null }
+          : { price_consent_pending_since: null, price_consent_due_at: null })
+        .eq("user_id", userId)
+      if (consentErr) console.error("price consent update", consentErr.message)
+      else if (consent) {
+        // Keep the FIRST moment Apple asked; a repeat PENDING must not reset it.
+        await db.from("user_subscriptions")
+          .update({ price_consent_pending_since: new Date().toISOString() })
+          .eq("user_id", userId)
+          .is("price_consent_pending_since", null)
+      }
+    }
+
     // Revenue, as Apple actually charged it. `price` (milliunits of
     // `currency`) is the only honest figure available: it already accounts for
     // the storefront's price tier, the local currency and any intro offer,
@@ -225,6 +246,7 @@ Deno.serve(async (req) => {
     // Production only: Sandbox is TestFlight and our own test purchases.
     const head = environment === "Production"
       ? lossHeadline(payload.notificationType, payload.subtype)
+        ?? consentHeadline(payload.notificationType, payload.subtype)
       : null
     if (head) {
       const { data: who } = await db.auth.admin.getUserById(userId)
@@ -386,6 +408,47 @@ function lossHeadline(type?: string, subtype?: string): string | null {
     default:
       return null
   }
+}
+
+/// The owner hears when Apple starts waiting on a learner's consent and when
+/// it gets it: in Korea every trial passes this step, and four of six lapsed
+/// on it in September without anyone knowing they were being asked.
+function consentHeadline(type?: string, subtype?: string): string | null {
+  if (type !== "PRICE_INCREASE") return null
+  return subtype === "PENDING" ? "⏳ 결제 동의 대기(체험 → 정가)"
+    : subtype === "ACCEPTED" ? "✅ 결제 동의함"
+    : null
+}
+
+/// Whether Apple is waiting on the learner's consent before the next charge.
+/// `true` = waiting, `false` = settled (agreed, renewed or ended), `undefined`
+/// = this notification says nothing about it, leave the row alone.
+///
+/// Korea's second consent after a trial arrives as a PRICE_INCREASE, and the
+/// renewal info carries `priceIncreaseStatus` (0 = not answered, 1 = agreed)
+/// for as long as an increase is pending, so either source can set it.
+function consentPending(
+  type?: string,
+  subtype?: string,
+  renewal?: { priceIncreaseStatus?: number } | null,
+): boolean | undefined {
+  if (type === "PRICE_INCREASE") {
+    if (subtype === "PENDING") return true
+    if (subtype === "ACCEPTED") return false
+  }
+  switch (type) {
+    // The charge happened, or there is nothing left to charge.
+    case "DID_RENEW":
+    case "EXPIRED":
+    case "GRACE_PERIOD_EXPIRED":
+    case "REFUND":
+    case "REVOKE":
+      return false
+  }
+  if (typeof renewal?.priceIncreaseStatus === "number") {
+    return renewal.priceIncreaseStatus === 0
+  }
+  return undefined
 }
 
 /// Apple's `expirationIntent`, in the owner's words.

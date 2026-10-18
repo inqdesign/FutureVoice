@@ -1274,6 +1274,98 @@
         }
       }
     },
+    "Before your free trial turns into your plan, Apple asks you to confirm it once more. Without it, the plan doesn't start." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bevor deine Gratis-Testphase in deinen Tarif übergeht, bittet Apple dich, ihn noch einmal zu bestätigen. Ohne das startet der Tarif nicht."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antes de que tu prueba gratis pase a tu plan, Apple te pide confirmarlo una vez más. Sin eso, el plan no empieza."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avant que ton essai gratuit devienne ton forfait, Apple te demande de le confirmer une fois de plus. Sans ça, le forfait ne démarre pas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無料体験がプランに切り替わる前に、Apple がもう一度だけ確認を求めます。確認しないとプランは始まりません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "체험이 끝나기 전에 Apple이 결제 동의를 한 번 더 받아요. 이 확인이 없으면 요금제가 시작되지 않고 그대로 끝나요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "免费试用转为套餐之前，Apple 会再请你确认一次。没有确认的话，套餐不会开始。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "免費試用轉為方案之前，Apple 會再請你確認一次。沒有確認的話，方案不會開始。"
+          }
+        }
+      }
+    },
+    "Before your next renewal, Apple asks you to confirm it once more. Without it, the plan ends at the end of this period." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vor deiner nächsten Verlängerung bittet Apple dich, sie noch einmal zu bestätigen. Ohne das endet der Tarif mit diesem Zeitraum."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antes de tu próxima renovación, Apple te pide confirmarlo una vez más. Sin eso, el plan termina al final de este periodo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avant ton prochain renouvellement, Apple te demande de le confirmer une fois de plus. Sans ça, le forfait s’arrête à la fin de cette période."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次の更新の前に、Apple がもう一度だけ確認を求めます。確認しないと、今の期間の終わりでプランも終わります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다음 결제 전에 Apple이 동의를 한 번 더 받아요. 이 확인이 없으면 이번 기간이 끝날 때 구독도 끝나요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下次续订之前，Apple 会再请你确认一次。没有确认的话，套餐会在本期结束时一起结束。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下次續訂之前，Apple 會再請你確認一次。沒有確認的話，方案會在這期結束時一起結束。"
+          }
+        }
+      }
+    },
     "Cafe" : {
       "localizations" : {
         "de" : {
@@ -1460,6 +1552,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "西班牙式"
+          }
+        }
+      }
+    },
+    "Confirm with Apple" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bei Apple bestätigen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirmar con Apple"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirmer avec Apple"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple で確認する"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple에서 확인하기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "前往 Apple 确认"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "前往 Apple 確認"
           }
         }
       }
@@ -2206,6 +2344,52 @@
         }
       }
     },
+    "Needed to keep your plan going" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nötig, damit dein Tarif weiterläuft"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Necesario para que tu plan siga"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nécessaire pour que ton forfait continue"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プランを続けるために必要です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "구독을 이어가려면 필요해요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "继续使用套餐需要这一步"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "繼續使用方案需要這一步"
+          }
+        }
+      }
+    },
     "Not on our servers" : {
       "localizations" : {
         "de" : {
@@ -2294,6 +2478,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "這段期間還沒有紀錄。"
+          }
+        }
+      }
+    },
+    "One tap keeps your plan going" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Tippen, und dein Tarif läuft weiter"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un toque y tu plan sigue"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une touche et ton forfait continue"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ワンタップでプランがそのまま続きます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "확인 한 번이면 구독이 그대로 이어져요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "点一下确认，套餐就会继续"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "點一下確認，方案就會繼續"
           }
         }
       }
@@ -2484,6 +2714,144 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "請到「我的 → 聲音」重新選擇口音。這次沒有套用成功。"
+          }
+        }
+      }
+    },
+    "Plan starts" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tarif startet"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Empieza el plan"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Début du forfait"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プラン開始"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "요금제 시작"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "套餐开始"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "方案開始"
+          }
+        }
+      }
+    },
+    "Price" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preis"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Precio"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prix"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "価格"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "가격"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "价格"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "價格"
+          }
+        }
+      }
+    },
+    "Renews" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verlängert am"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se renueva"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Renouvellement"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次回の更新"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다음 결제"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下次续订"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下次續訂"
           }
         }
       }
@@ -3242,6 +3610,52 @@
         }
       }
     },
+    "The same plan you picked. Cancel any time in Settings." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es ist der Tarif, den du gewählt hast. Kündbar jederzeit in den Einstellungen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es el mismo plan que elegiste. Cancela cuando quieras en Ajustes."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "C’est le forfait que tu as choisi. Résilie quand tu veux dans Réglages."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選んだプランのままです。いつでも設定から解約できます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "처음 고른 요금제 그대로예요. 언제든 설정에서 해지할 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "就是你选的套餐。随时都能在设置中取消。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "就是你選的方案。隨時都能在設定中取消。"
+          }
+        }
+      }
+    },
     "The video is on the device you recorded it on." : {
       "localizations" : {
         "de" : {
@@ -3932,52 +4346,52 @@
         },
         "zh-Hant" : {
           "stringUnit" : {
-    "Whoever the situation calls for" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wer in der Situation vorkommt, spricht mit dir"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hablarás con quien pida la situación"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tu parleras à la personne que la situation demande"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "状況に出てくる人が相手になります"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "상황에 나오는 사람이 상대가 돼요"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "情境里会出现的人就是对方"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "情境裡會出現的人就是對方"
-          }
-        }
-      }
-    },
+            "Whoever the situation calls for" : {
+              "localizations" : {
+                "de" : {
+                  "stringUnit" : {
+                    "state" : "translated",
+                    "value" : "Wer in der Situation vorkommt, spricht mit dir"
+                  }
+                },
+                "es" : {
+                  "stringUnit" : {
+                    "state" : "translated",
+                    "value" : "Hablarás con quien pida la situación"
+                  }
+                },
+                "fr" : {
+                  "stringUnit" : {
+                    "state" : "translated",
+                    "value" : "Tu parleras à la personne que la situation demande"
+                  }
+                },
+                "ja" : {
+                  "stringUnit" : {
+                    "state" : "translated",
+                    "value" : "状況に出てくる人が相手になります"
+                  }
+                },
+                "ko" : {
+                  "stringUnit" : {
+                    "state" : "translated",
+                    "value" : "상황에 나오는 사람이 상대가 돼요"
+                  }
+                },
+                "zh-Hans" : {
+                  "stringUnit" : {
+                    "state" : "translated",
+                    "value" : "情境里会出现的人就是对方"
+                  }
+                },
+                "zh-Hant" : {
+                  "stringUnit" : {
+                    "state" : "translated",
+                    "value" : "情境裡會出現的人就是對方"
+                  }
+                }
+              }
+            },
             "state" : "translated",
             "value" : "最近 10 次的平均"
           }
