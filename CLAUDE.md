@@ -18,6 +18,43 @@ Tab order: **Talk · Watch · Review · Progress** (`RootTabView`) — do → cr
 - **Home-screen widgets** (`FutureVoiceWidget` target) — TWO widgets in one bundle, one per `StudyWidgetSection`: a **Vocabulary** widget (notebook `studying` words + recent used, CEFR tag, taps `futurevoice://vocab`) and an **Expressions** widget (`VocabStore.expressionEntries()`, taps `futurevoice://expressions`). Both are list widgets whose window slides every 30 min. App-side `StudyWidgetRefresher` writes a per-section snapshot into the App Group on every `DrillStore`/`VocabStore` write and at scene-phase edges; the extension only reads. App-side `StudyWidgetRefresher` writes a snapshot into the App Group (`group.com.roro.futurevoice`) on every `DrillStore`/`VocabStore.studying` write and at scene-phase edges; the extension only reads. The shared contract `FutureVoice/Shared/StudyWidgetShared.swift` compiles into BOTH targets — keep it free of Models.swift/store imports. Widget tap deep-links `futurevoice://practice` (handled in `RootTabView`). The widgets speak the app language, not the phone's — see "UI text has ONE language" below.
   **The refresh is COALESCED and never runs in the write's own run-loop turn** (2026-09-23). `refreshBook` rebuilds every talk book (`TalkCurriculum.build`, NLTagger over the whole session) on the main actor, and a single "I know" on a word card writes three files, each asking for it — measured 30 books ≈ 515 ms in the simulator, paid between the tap and the button repainting, which is what the learner reported as the toggle stuttering. `schedule()` now runs ONE refresh 0.4 s after the last write; only the BACKGROUND edge still calls `refresh()` directly (iOS may suspend right after it). The active edge and `RootTabView.onAppear` go through `schedule()`, whose pass yields the main thread after every talk book (2026-09-28): on a cold launch both used to rebuild every book synchronously while the Talk ring drew, and the first `coreLevelLabel` loaded the CEFR list + tagger on main (~230 ms) — those two are now warmed off-main in `FutureVoiceApp.init`. Practice's talk-book pass yields per book for the same reason (first tab switch). The build itself got cheap the same day: `VocabStore.lemmas(in:)`, `offListContentWords(in:)` and `lookupKey(for:)` memoize per text + tagger language (`TextMemo`, lock-guarded, bounded), and `CarryoverDetector.normalized`, `TalkCurriculum.sentences(in:)`, `WordSplitter.count` are single-pass — a warm rebuild of 30 books is ~37 ms (`TalkCurriculumTimingTests` prints it). Don't put a tagger call back on a per-word path without going through the memo.
 
+## Which branch is the app (read before trusting any file)
+
+**`feat/voice-onboarding-and-audio` is the app.** Every feature lands there
+first, iOS and server alike. A `release/x.y.z` branch is cut from it and
+carries only release chores (version, notes, update sheet) — a feature
+committed on a release or feature branch is merged back into
+`feat/voice-onboarding-and-audio` the same day, or the code being worked on
+and the app people install drift apart. This happened on 2026-10-18: the
+routine builder shipped in 1.1.11 from `feat/routine-onboarding` while this
+branch still had the weekly-test, daily-call and plans screens, and a
+description of onboarding written from this branch was wrong about the app.
+Android is `feat/android` (see "Android moves WITH iOS").
+
+## Onboarding, in order (keep this list true)
+
+What a NEW install walks through, top to bottom — `RootView.gatedContent`
+is the code, this list is the check. An install that is already set up
+skips every step it has a flag for.
+
+1. Welcome → setup (`SetupFlowView`: languages, level, why you're learning)
+2. Persona cards (`PersonaIntakeView`)
+3. The voice (`VoiceCloneOnboardingView`: record, hear it, pick the pace;
+   the account is made here)
+4. "Your practice stays on your phone" (`LocalDataOnboardingView`) — all of
+   it is on this device only, nothing on our servers, it goes with the app;
+   a copy can live in the learner's own iCloud (Android: Google Drive)
+5. The routine builder over the Talk tab (`RoutineOnboardingView`: the
+   daily call, study time), shrinking into the Activity chip
+
+No paywall in onboarding (plans at the first paid tap). Steps 4 and 5 share
+the flag `futurevoice.dailyCall.onboarded`, so an install past the routine
+never sees step 4. Later, once: the iCloud offer after the third finished
+talk (`BackupOfferSheet`). Retired, do not describe as current:
+`WeeklyRhythmOnboardingView`, `DailyCallOnboardingView`,
+`OnboardingPaywallView`. Preview any step with `-onboardingPreview
+<welcome|setup|persona|voice|localdata|routine>`.
+
 ## Sync between the learner's own devices (iCloud, opt-in) — 2026-09-18
 
 A phone and a tablet must feel like ONE app: a talk on the phone is on the
