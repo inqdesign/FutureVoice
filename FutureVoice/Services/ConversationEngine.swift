@@ -158,7 +158,8 @@ enum ConversationEngine {
         firstMeeting: Bool = false,
         clock: PromptClock? = nil,
         tutor: Bool = false,
-        freeTalkCue: FreeTalkCue = .plainQuestion
+        freeTalkCue: FreeTalkCue = .plainQuestion,
+        learnerPicksTopic: Bool = false
     ) -> String {
         let languageName = LanguageCatalog.englishName(targetLanguage)
         let patterns = topPatterns.prefix(3).map { "- \($0.mistake) → \($0.correction) (\($0.context))" }
@@ -286,7 +287,7 @@ enum ConversationEngine {
         // that going?"). Not for the first meeting, whose block owns the call.
         // 2026-10-17 (founder): the news is never the opener, and not every
         // call's second line either — `freeTalkCue` is drawn once per call.
-        let theyCalledBlock = (topic.isEmpty && counterpart == nil && !firstMeeting) ? """
+        let theyCalledBlock = (topic.isEmpty && counterpart == nil && !firstMeeting && !learnerPicksTopic) ? """
 
 
         THEY CALLED YOU. Your opening line was only a friend's hello for \
@@ -302,6 +303,25 @@ enum ConversationEngine {
         once their subject has run its course, bring something the same way.
         """ : ""
 
+        // "My own topic" (topics page, draft 2026-10-18): not a free talk.
+        // A free talk catches up and lets a subject arrive; this call was
+        // placed to talk about ONE thing the learner names, so the catching
+        // up is skipped and their subject is the whole call.
+        let ownTopicBlock = (learnerPicksTopic && topic.isEmpty && counterpart == nil) ? """
+
+
+        THEY CHOSE THE TOPIC. Your opening line asked what they want to talk \
+        about today, and whatever subject they name in their answer IS this \
+        call. Take it up in that very turn — no catching up, no "how was \
+        your day", nothing of your own news. Get into the subject itself \
+        fast: your own take on it, the concrete part, the one thing you'd \
+        genuinely want to know about it. Stay on it; a few angles on one \
+        subject beat five subjects touched once, and you move off it only \
+        when they do. If their answer names no subject ("I don't know", \
+        "anything"), offer two concrete subjects drawn from what you know \
+        about them, in one short turn, and let them pick.
+        """ : ""
+
         // When this is (`PromptClock`). The history is left out for a cast
         // stranger (no shared past, by that block's own rule) and for the
         // first meeting (whose block already says you have never spoken).
@@ -314,7 +334,7 @@ enum ConversationEngine {
         The point is for it to sound like two actual people talking — not a \
         language-class exchange. Read everything below, then talk like a real person.
 
-        \(counterpart.map { personaBlock(forCast: $0, persona: persona, languageName: languageName) } ?? personaBlock(persona, languageName: languageName))\(counterpartBlock)\(firstMeetingBlock)\(theyCalledBlock)\(clockBlock)
+        \(counterpart.map { personaBlock(forCast: $0, persona: persona, languageName: languageName) } ?? personaBlock(persona, languageName: languageName))\(counterpartBlock)\(firstMeetingBlock)\(theyCalledBlock)\(ownTopicBlock)\(clockBlock)
 
         Language profile:
         - Native language: \(LanguageCatalog.englishName(nativeLanguage))
