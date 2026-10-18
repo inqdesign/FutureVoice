@@ -28,6 +28,7 @@ struct SpeechTab: View {
     static let challengesOnTab = 3
     /// The inset-grouped list's side margin, where its cards start.
     static let listMargin: CGFloat = 16
+    private static let listSpace = "speechList"
     static let challengeSpacing: CGFloat = 10
     /// How much of the third card shows at the right edge.
     static let challengePeek: CGFloat = 20
@@ -87,8 +88,10 @@ struct SpeechTab: View {
         .padding(.horizontal, -bleed)
         .background {
             // The header's own slot: its leading edge is how far it sits in
-            // from the screen.
-            Color.clear.onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minX } action: {
+            // from the list's edge. Measured against the LIST, not the
+            // screen: a push or pop slides the whole list, and a global
+            // reading moved with it, resizing the cards mid-transition.
+            Color.clear.onGeometryChange(for: CGFloat.self) { $0.frame(in: .named(Self.listSpace)).minX } action: {
                 challengeBleed = max(0, $0)
             }
         }
@@ -186,6 +189,7 @@ struct SpeechTab: View {
                     }
                 }
             }
+            .coordinateSpace(.named(Self.listSpace))
             .navigationTitle("Speech")
             // Same header as Watch and Progress: the title inline-large on
             // the toolbar row, the tab's one action at its trailing edge.
