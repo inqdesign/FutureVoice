@@ -12,3 +12,4 @@ Behoben
 • Titel von Nachrichten-Anrufen werden nicht mehr abgeschnitten.
 • „In meiner Stimme hören“ verbraucht nicht mehr Zeit, als der Text lang ist.
 • Korrigierte Wörter in Wiederholen landen nicht mehr mitten in anderen Wörtern.
+• Wenn du Japanisch oder Spanisch lernst, ist die Personenliste nicht mehr leer.

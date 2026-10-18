@@ -12,3 +12,4 @@ Correcciones
 • Los títulos de las llamadas de noticias ya no se cortan.
 • Escucharlo con mi voz ya no gasta más tiempo del que dura el guion.
 • Las palabras corregidas en Repaso ya no se meten dentro de otras palabras.
+• Si aprendes japonés o español, la lista de personas ya no aparece vacía.
