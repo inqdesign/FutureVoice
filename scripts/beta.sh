@@ -90,6 +90,17 @@ if any(l.strip().startswith(marks) for l in lines):
 print("\n".join(lines).strip())' "$1"
 }
 
+# The SAME files with their headings kept, for builds whose sheet draws them
+# as sections (New / Fixed / Improved). Its own statement, after the row's,
+# so a database without the columns (20261018150000) costs the sections, never
+# the update notice itself.
+publish_note_sections() {
+  local ko en
+  ko=$(cat "$NOTES_KO_FILE"); en=$(cat "$NOTES_EN_FILE")
+  supabase_sql "update public.app_release set notes_sections_ko = $(sql_text "$ko"), notes_sections_en = $(sql_text "$en") where platform = 'ios';" >/dev/null \
+    || echo "  ! notes_sections update failed (migration 20261018150000 not applied?) — the sheet shows one flat list." >&2
+}
+
 # Every release is news on nawana.app/community (founder, 2026-10-02: "every
 # build update, always"). Posted from the SAME release notes the store and the
 # update sheet show — already public, so publishing them discloses nothing new —
@@ -145,6 +156,7 @@ if [[ "${1:-}" == "released" ]]; then
   supabase_sql "update public.app_release set latest_build = $BUILD, latest_version = $(sql_text "$VERSION"), notes_ko = $(sql_text "$notes_ko"), notes_en = $(sql_text "$notes_en"), updated_at = now() where platform = 'ios';" >/dev/null \
     && echo "✓ app_release.latest_build → $BUILD ($VERSION). App Store installs now see the update sheet." \
     || { echo "✗ app_release update failed" >&2; exit 1; }
+  publish_note_sections
   community_post "$VERSION"
   exit 0
 fi
@@ -344,6 +356,7 @@ echo "▸ Exported $IPA"
 publish_release_row() {
   if supabase_sql "update public.app_release set latest_testflight_build = $BUILD, latest_version = $(sql_text "$VERSION"), notes_ko = $(sql_text "$notes_ko"), notes_en = $(sql_text "$notes_en"), updated_at = now() where platform = 'ios';" >/dev/null; then
     echo "▸ app_release.latest_testflight_build → $BUILD (TestFlight installs now see the update sheet)"
+    publish_note_sections
     echo "  When App Review approves and the store shows $VERSION:  ./scripts/beta.sh released"
   else
     echo "  ! app_release update failed — testers will not be offered $BUILD yet. Run by hand:" >&2

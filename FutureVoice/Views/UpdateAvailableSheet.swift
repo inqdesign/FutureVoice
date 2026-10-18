@@ -34,7 +34,7 @@ struct UpdateAvailableSheet: View {
                 header
 
                 if !notes.isEmpty {
-                    VStack(alignment: .leading, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 22) {
                         if let lead = notes.lead {
                             Text(lead)
                                 .font(.subheadline)
@@ -42,26 +42,8 @@ struct UpdateAvailableSheet: View {
                                 .fixedSize(horizontal: false, vertical: true)
                         }
 
-                        if !notes.bullets.isEmpty {
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text("What's new")
-                                    .font(.footnote.weight(.semibold))
-                                    .foregroundStyle(.secondary)
-                                    .textCase(.uppercase)
-
-                                ForEach(Array(notes.bullets.enumerated()), id: \.offset) { _, line in
-                                    HStack(alignment: .firstTextBaseline, spacing: 10) {
-                                        Image(systemName: "circle.fill")
-                                            .font(.system(size: 5))
-                                            .foregroundStyle(.tint)
-                                        Text(line)
-                                            .font(.subheadline)
-                                            .foregroundStyle(.primary)
-                                            .fixedSize(horizontal: false, vertical: true)
-                                    }
-                                }
-                            }
-                            .padding(.top, 2)
+                        ForEach(Array(notes.sections.enumerated()), id: \.offset) { _, section in
+                            sectionView(section)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -122,11 +104,48 @@ struct UpdateAvailableSheet: View {
         // paragraph plus five bullets, and opening THAT at medium puts the
         // list — the part that answers "what changed?" — below the fold.
         .presentationDetents([.medium, .large], selection: $detent)
-        .onAppear { detent = notes.bullets.isEmpty ? .medium : .large }
+        .onAppear { detent = notes.sections.isEmpty ? .medium : .large }
         // Both are set from the same flag so a required sheet can't be escaped
         // by dragging it away — the one gap an `if` around the button leaves.
         .interactiveDismissDisabled(update.required)
         .presentationDragIndicator(update.required ? .hidden : .visible)
+    }
+
+    /// One kind of change under its own heading — what's new, what was fixed,
+    /// what got faster — so a learner can read the part they care about
+    /// without sorting a single list in their head. The heading is the APP's
+    /// word for the kind, not the file's, so every release reads the same.
+    private func sectionView(_ section: ReleaseNotes.Section) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if let kind = section.kind {
+                Label {
+                    Text(kind.title)
+                } icon: {
+                    Image(systemName: kind.symbol)
+                        .foregroundStyle(.tint)
+                }
+                .font(.subheadline.weight(.semibold))
+            } else {
+                Text("What's new")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+            }
+
+            ForEach(Array(section.items.enumerated()), id: \.offset) { _, line in
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Image(systemName: "circle.fill")
+                        .font(.system(size: 5))
+                        .foregroundStyle(.secondary)
+                    Text(line)
+                        .font(.subheadline)
+                        .foregroundStyle(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, 2)
     }
 
     private var header: some View {
@@ -160,45 +179,102 @@ struct UpdateAvailableSheet: View {
     }
 }
 
-/// Release notes as written for the App Store: a paragraph, then a dash list.
-/// Splitting them lets the sheet lay the list out as rows instead of letting a
-/// hyphen wrap into the middle of a centred block.
+/// Release notes as written for the App Store: an optional paragraph, then
+/// SECTIONS — a heading line ("New" / "Fixed" / "Improved", in either
+/// language) over a dash list. The store file has always been written this
+/// way; the sheet used to flatten it into one "What's new" list because the
+/// server copy had its headings stripped for older builds' parser (see
+/// `beta.sh sheet_notes`). The headed copy now rides in its own columns
+/// (`notes_sections_*`), and flat notes — one list, no headings — still parse
+/// as a single section without a title.
 struct ReleaseNotes {
-    let lead: String?
-    let bullets: [String]
+    enum Kind: CaseIterable {
+        case new, fixed, improved
 
-    var isEmpty: Bool { lead == nil && bullets.isEmpty }
+        var title: LocalizedStringKey {
+            switch self {
+            case .new: "New features"
+            case .fixed: "Bug fixes"
+            case .improved: "Improvements"
+            }
+        }
+
+        var symbol: String {
+            switch self {
+            case .new: "sparkles"
+            case .fixed: "ladybug"
+            case .improved: "gauge.with.dots.needle.67percent"
+            }
+        }
+
+        /// A heading line, read by its words. Fixed is tried first so
+        /// "Bug fixes and improvements" files its list as fixes.
+        init?(heading: String) {
+            let h = heading.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: " :：·"))
+            guard h.count <= 30 else { return nil }
+            func has(_ words: [String]) -> Bool { words.contains { h.contains($0) } }
+            if has(["고친", "버그", "수정", "fix", "bug"]) { self = .fixed }
+            else if has(["개선", "성능", "향상", "다듬", "improv", "faster", "performance"]) { self = .improved }
+            else if has(["새 기능", "새로운", "new"]) { self = .new }
+            else { return nil }
+        }
+    }
+
+    struct Section {
+        /// nil = a list with no heading (flat notes).
+        let kind: Kind?
+        var items: [String]
+    }
+
+    let lead: String?
+    let sections: [Section]
+
+    var isEmpty: Bool { lead == nil && sections.isEmpty }
 
     init(_ raw: String?) {
         guard let raw, !raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             lead = nil
-            bullets = []
+            sections = []
             return
         }
 
         var leadLines: [String] = []
-        var items: [String] = []
+        var parts: [Section] = []
         for line in raw.components(separatedBy: .newlines) {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             guard !trimmed.isEmpty else {
                 // A blank line inside the lead is a paragraph break; keep it,
                 // but never let it open the block with one.
-                if !leadLines.isEmpty, items.isEmpty { leadLines.append("") }
+                if !leadLines.isEmpty, parts.isEmpty { leadLines.append("") }
                 continue
             }
             if let marker = ["- ", "• ", "· ", "* "].first(where: { trimmed.hasPrefix($0) }) {
-                items.append(String(trimmed.dropFirst(marker.count)).trimmingCharacters(in: .whitespaces))
-            } else if items.isEmpty {
-                leadLines.append(trimmed)
+                let item = String(trimmed.dropFirst(marker.count)).trimmingCharacters(in: .whitespaces)
+                if parts.isEmpty { parts.append(Section(kind: nil, items: [])) }
+                parts[parts.count - 1].items.append(item)
+            } else if let kind = Kind(heading: trimmed) {
+                parts.append(Section(kind: kind, items: []))
+            } else if let last = parts.indices.last, !parts[last].items.isEmpty {
+                // Prose after a list is a wrapped bullet, not a new section.
+                parts[last].items[parts[last].items.count - 1] += " " + trimmed
             } else {
-                // Prose after the list is a wrapped bullet, not a new section.
-                items[items.count - 1] += " " + trimmed
+                leadLines.append(trimmed)
+            }
+        }
+
+        // Two headings of the same kind (a file edited twice) read as one.
+        var merged: [Section] = []
+        for part in parts where !part.items.isEmpty {
+            if let i = merged.firstIndex(where: { $0.kind == part.kind }) {
+                merged[i].items += part.items
+            } else {
+                merged.append(part)
             }
         }
 
         let joined = leadLines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
         lead = joined.isEmpty ? nil : joined
-        bullets = items
+        sections = merged
     }
 }
 
@@ -206,15 +282,15 @@ struct ReleaseNotes {
     Text("host").sheet(isPresented: .constant(true)) {
         UpdateAvailableSheet(update: .init(latestBuild: 26, latestVersion: "1.0",
                                            notes: """
-                                           nawana를 시작합니다.
+                                           새 기능
+                                           • 스피치 원고에서 공부하기를 켜면 문법과 표현을 짚어 줘요.
+                                           • 원고를 내 목소리로 읽은 오디오를 만들어 들어볼 수 있어요.
 
-                                           말이 늘지 않는 이유는 하나 — 충분히 말하지 않아서예요. 60초 녹음으로 유창해진 미래의 내 목소리를 만들고, 매일 통화하세요.
+                                           고친 점
+                                           • 시트를 닫았다 열어도 쓰던 글이 남아요.
 
-                                           - 내 관심사에서 시작하는 매일 통화
-                                           - 매 턴 돌아오는 유창한 버전
-                                           - 통화가 끝나면 자동으로 만들어지는 나만의 교재
-                                           - 내 목소리로 하는 섀도잉, 입으로 답하는 복습
-                                           - 실제로 말한 것들로만 측정되는 레벨
+                                           성능 향상
+                                           • 앱을 처음 열 때 Talk 화면이 더 부드럽게 떠요.
                                            """,
                                            required: false), onDismiss: {})
     }

@@ -125,11 +125,37 @@ final class AppUpdateService: ObservableObject {
             return
         }
 
-        let notes = LanguageCatalog.currentNative.hasPrefix("ko") ? row.notes_ko : row.notes_en
+        let korean = LanguageCatalog.currentNative.hasPrefix("ko")
+        let sectioned = await Self.sectionedNotes(korean: korean)
+        let notes = sectioned ?? (korean ? row.notes_ko : row.notes_en)
         pending = AppUpdate(latestBuild: latest,
                             latestVersion: row.latest_version,
                             notes: notes?.trimmingCharacters(in: .whitespacesAndNewlines),
                             required: required)
+    }
+
+    /// The notes WITH their headings (New / Fixed / Improved), which the
+    /// sheet lays out as sections. A query of its own: a `.select()` naming a
+    /// column the database hasn't got fails the whole query, and the update
+    /// notice must not depend on this migration having landed. nil = no
+    /// headed copy — the flat `notes_*` are drawn as one list, as before.
+    private static func sectionedNotes(korean: Bool) async -> String? {
+        struct Row: Decodable {
+            let notes_sections_ko: String?
+            let notes_sections_en: String?
+        }
+        guard let rows: [Row] = try? await SupabaseProvider.shared
+            .from("app_release")
+            .select("notes_sections_ko,notes_sections_en")
+            .eq("platform", value: "ios")
+            .limit(1)
+            .execute()
+            .value,
+              let row = rows.first,
+              let text = (korean ? row.notes_sections_ko : row.notes_sections_en)?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+              !text.isEmpty else { return nil }
+        return text
     }
 
     /// Remember an optional notice as said. A REQUIRED one is never recorded —
