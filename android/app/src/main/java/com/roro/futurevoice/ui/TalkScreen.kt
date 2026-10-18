@@ -978,7 +978,11 @@ fun TalkScreen(
                     // thinking, blooms centre-out while the fluent self speaks.
                     // A separate outlined "Pause" button below it made the surface
                     // decoration and the control an afterthought.
-                    if (onCall || paused) {
+                    // Resuming from a pause is a reconnect (CONNECTING with the
+                    // talk already on screen): the pill stays and sweeps, rather
+                    // than the whole bar vanishing until the gateway is back.
+                    val reconnecting = state.phase == TalkPhase.CONNECTING && state.turns.isNotEmpty()
+                    if (onCall || paused || reconnecting) {
                         androidx.compose.runtime.DisposableEffect(Unit) {
                             onDispose { TalkMorph.pillPresent = false }
                         }
