@@ -2047,7 +2047,7 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
         // if it moved the number.
         if (TalkTimeLog.syncFromServer(context)) seconds = TalkTimeLog.secondsToday(context)
     }
-    val theme = remember { FutureselfTheme.stored(context) }
+    val theme = FutureselfTheme.stored(context)
 
     // The ring's CENTRE sits on the device screen's midline — iOS solves the
     // hero's height for exactly that rather than guessing at a padding, and

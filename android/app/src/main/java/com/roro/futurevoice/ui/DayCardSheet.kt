@@ -93,7 +93,7 @@ fun DayCardSheet(data: DayCardData, onDismiss: () -> Unit) {
         context.getSharedPreferences("futurevoice", 0)
             .getString("futurevoice.nativeLanguage", null) ?: "en"
     }
-    val theme = remember { FutureselfTheme.stored(context).ordinal }
+    val theme = FutureselfTheme.stored(context).ordinal
     LaunchedEffect(data.date) { photo = DayCardStore.photo(context, data.date) }
 
     // The full-size shot, not `TakePicturePreview` — that one hands back the

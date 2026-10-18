@@ -134,7 +134,7 @@ private fun Glyph(icon: ImageVector, size: Dp = 14.dp, tint: Color = accent) =
 @Composable
 private fun futureselfTheme(): FutureselfTheme {
     val context = LocalContext.current
-    return remember { FutureselfTheme.stored(context) }
+    return FutureselfTheme.stored(context)
 }
 
 // MARK: - Talk

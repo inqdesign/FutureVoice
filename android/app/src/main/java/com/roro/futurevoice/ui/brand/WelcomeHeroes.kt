@@ -73,7 +73,7 @@ fun FutureselfHero(modifier: Modifier = Modifier) {
         )
     }
     val context = LocalContext.current
-    val theme = remember { FutureselfTheme.stored(context) }
+    val theme = FutureselfTheme.stored(context)
     var mode by remember { mutableStateOf(FutureselfMode.IDLE) }
     var level by remember { mutableFloatStateOf(0f) }
     var line by remember { mutableIntStateOf(0) }

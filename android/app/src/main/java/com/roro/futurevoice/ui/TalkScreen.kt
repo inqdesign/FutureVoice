@@ -1057,7 +1057,7 @@ fun TalkScreen(
                                         else -> FutureselfMode.IDLE
                                     },
                                     level = state.level.coerceIn(0f, 1f),
-                                    theme = remember { FutureselfTheme.stored(context) },
+                                    theme = FutureselfTheme.stored(context),
                                     modifier = Modifier.fillMaxSize(),
                                 )
                                 // The clock lives INSIDE the pill. Whole minutes only,

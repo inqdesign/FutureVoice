@@ -466,7 +466,7 @@ private fun WhyPage(hero: Hero, eyebrow: Int, problem: Int, detail: Int, answer:
                 Hero.Futureself -> {
                     val context = LocalContext.current
                     Futureself(mode = FutureselfMode.SPEAKING, level = 0.35f,
-                        theme = remember { FutureselfTheme.stored(context) }, virtualHeight = 64f,
+                        theme = FutureselfTheme.stored(context), virtualHeight = 64f,
                         modifier = Modifier.size(88.dp).clip(CircleShape))
                 }
                 is Hero.Symbol -> Box(

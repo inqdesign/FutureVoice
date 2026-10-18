@@ -490,7 +490,7 @@ private fun DayJournal(context: Context, day: Long, seconds: Int, talks: List<Se
     }
     val study = card.studyMinutes
     if (seconds == 0 && talks.isEmpty() && shadowed == 0 && reviewed == 0 && study == 0) return
-    val theme = remember { FutureselfTheme.stored(context).ordinal }
+    val theme = FutureselfTheme.stored(context).ordinal
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         Box(Modifier.size(PREVIEW_WIDTH, PREVIEW_WIDTH * 5 / 4).clip(ContinuousShape(10.dp)).clickable(onClick = onShare),

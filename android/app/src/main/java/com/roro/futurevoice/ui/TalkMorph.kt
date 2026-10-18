@@ -149,7 +149,7 @@ internal object TalkMorph {
 internal fun TalkMorphOverlay(inCall: Boolean) {
     if (!TalkMorph.active) return
     val context = LocalContext.current
-    val theme = remember { FutureselfTheme.stored(context) }
+    val theme = FutureselfTheme.stored(context)
     val page = MaterialTheme.colorScheme.background
     val density = LocalDensity.current
     val navBottom = WindowInsets.navigationBars.getBottom(density)
