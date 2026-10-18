@@ -359,7 +359,7 @@ struct SpeechChallengeView: View {
                 Button {
                     showingScript = true
                 } label: {
-                    Label("Read the script", systemImage: "doc.text")
+                    Label("Script", systemImage: "doc.text")
                         .font(.headline)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
@@ -371,7 +371,7 @@ struct SpeechChallengeView: View {
                     Button {
                         start()
                     } label: {
-                        Text(standing?.myBest == nil ? LocalizedStringKey("Take the challenge") : LocalizedStringKey("Go again"))
+                        Text(standing?.myBest == nil ? LocalizedStringKey("speech.challenge.take") : LocalizedStringKey("speech.challenge.again"))
                             .font(.headline)
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
