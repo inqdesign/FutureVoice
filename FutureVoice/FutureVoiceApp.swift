@@ -50,6 +50,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         // they're finished. The paywall's own service is gone the moment the
         // sheet closes, so the listener has to start here.
         StoreKitService.startTransactionListener()
+        // StoreKit's messages, Korea's trial consent among them, are delivered
+        // as the app becomes active — the listener has to be up before that.
+        Task { @MainActor in PriceConsent.shared.startMessageListener() }
         // iCloud sync's background tasks — registration after launch is refused.
         SyncBackground.register()
         return true
@@ -194,6 +197,13 @@ struct FutureVoiceApp: App {
                 // an offer code redeemed in the App Store, a restore on a
                 // new phone. Signed by Apple, verified server-side.
                 Task { await StoreKitService.claimCurrentEntitlements() }
+                // Apple waiting on the learner's consent before it charges
+                // (Korea's second consent after a trial): read it, and say
+                // what it is before Apple's own sheet asks.
+                Task { @MainActor in
+                    await PriceConsent.shared.refresh()
+                    PriceConsent.shared.offerIfDue()
+                }
                 // Drop the trial-ending notice once the trial isn't one any
                 // more. Reads the billing snapshot the app already keeps, so
                 // it usually costs nothing.

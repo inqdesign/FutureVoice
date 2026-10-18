@@ -80,7 +80,7 @@ final class AudioPlayer: NSObject, ObservableObject {
     ///   audio. Force-reset clears that.
     /// Playback sources whose own surface already reports itself once —
     /// see the note in `play`.
-    static let unreportedPlaybackSources: Set<String> = ["conversation", "say_again"]
+    static let unreportedPlaybackSources: Set<String> = ["conversation", "say_again", "playlist"]
 
     func play(_ data: Data,
               source: String = "replay",
@@ -97,6 +97,9 @@ final class AudioPlayer: NSObject, ObservableObject {
         if !Self.unreportedPlaybackSources.contains(source) {
             Analytics.capture("audio_played", ["source": source])
         }
+        // One voice at a time: anything else that speaks pauses a playlist
+        // (PlaylistPlayer keeps its place and waits for a tap).
+        if !PlaylistPlayer.isStartingOwnAudio { PlaylistPlayer.shared.yieldToOtherAudio() }
         if configureSession {
             configureForPlayback(forceSessionReset: forceSessionReset)
         } else {
@@ -161,6 +164,7 @@ final class AudioPlayer: NSObject, ObservableObject {
     /// Decode audio and make it scrubbable WITHOUT starting playback, so a
     /// timeline UI can show duration and seek before the first play.
     func prepare(_ data: Data, forceSessionReset: Bool = false) {
+        if !PlaylistPlayer.isStartingOwnAudio { PlaylistPlayer.shared.yieldToOtherAudio() }
         configureForPlayback(forceSessionReset: forceSessionReset)
         let playData = AudioLoudness.normalized(
             data, extraGainDB: AudioSessionRouting.playbackBoostDB()) ?? data
@@ -215,6 +219,7 @@ final class AudioPlayer: NSObject, ObservableObject {
         // the first half arms before either player holds anything, whereas
         // deactivating under an already-prepared `AVAudioPlayer` is exactly
         // what would silence the other half.
+        if !PlaylistPlayer.isStartingOwnAudio { PlaylistPlayer.shared.yieldToOtherAudio() }
         if configureSession { configureForPlayback(forceSessionReset: true) }
         let playData = AudioLoudness.normalized(
             data, extraGainDB: AudioSessionRouting.playbackBoostDB()) ?? data
@@ -355,6 +360,7 @@ final class AudioPlayer: NSObject, ObservableObject {
     func startPCMStream(sampleRate: Double, voiceKey: String? = nil,
                         configureSession: Bool = true,
                         completion: (() -> Void)? = nil) throws {
+        if !PlaylistPlayer.isStartingOwnAudio { PlaylistPlayer.shared.yieldToOtherAudio() }
         stop()   // clear any AVAudioPlayer/stream leftovers first
 
         if configureSession {

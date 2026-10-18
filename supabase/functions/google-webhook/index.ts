@@ -88,7 +88,12 @@ Deno.serve(async (req) => {
       externalAccountIdentifiers?: { obfuscatedExternalAccountId?: string }
       lineItems?: Array<{
         productId?: string; expiryTime?: string
-        autoRenewingPlan?: { autoRenewEnabled?: boolean }
+        autoRenewingPlan?: {
+          autoRenewEnabled?: boolean
+          // Korea's consent before a trial or a lower price steps up to the
+          // regular one (in force since 2026-02-03 on Play).
+          priceStepUpConsentDetails?: { state?: string; consentDeadlineTime?: string }
+        }
         offerDetails?: { offerId?: string | null }
       }>
       startTime?: string
@@ -144,6 +149,26 @@ Deno.serve(async (req) => {
         return json(200, { received: true })
       }
       throw new Error(`user_subscriptions upsert: ${error.message}`)
+    }
+
+    // Play waiting on the learner's consent before it charges (Korea), the
+    // same fact apple-webhook records (20261018170000). Every notification
+    // re-reads the whole purchase, so a missing field means nothing is
+    // pending. Its own update: a database without the columns costs this
+    // record, never the entitlement above.
+    const consent = line?.autoRenewingPlan?.priceStepUpConsentDetails
+    const waiting = consent?.state === "CONSENT_STATE_PENDING" || consent?.state === "PENDING"
+    const { error: consentErr } = await db.from("user_subscriptions")
+      .update(waiting
+        ? { price_consent_due_at: consent?.consentDeadlineTime ?? line?.expiryTime ?? null }
+        : { price_consent_pending_since: null, price_consent_due_at: null })
+      .eq("user_id", userId)
+    if (consentErr) console.error("price consent update", consentErr.message)
+    else if (waiting) {
+      await db.from("user_subscriptions")
+        .update({ price_consent_pending_since: new Date().toISOString() })
+        .eq("user_id", userId)
+        .is("price_consent_pending_since", null)
     }
 
     // The owner hears about a subscriber leaving, as on apple-webhook

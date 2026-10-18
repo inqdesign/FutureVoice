@@ -32,8 +32,9 @@ struct ConversationHome: View {
     @State private var showingBuilder = false
     @State private var showingAddLanguage = false
     /// The post-first-talk "tell me more about you" bottom sheet. Auto-shown
-    /// ONCE (flag below) right after the first conversation ends; afterwards
-    /// the deepenRow re-opens it while the narrative fields stay empty.
+    /// ONCE (flag below) right after the first conversation ends. The row
+    /// that re-opened it under the ring was removed 2026-10-18 (founder: it
+    /// didn't sit with the rest of the page); Me → Profile is the way back.
     @State private var showingDeepen = false
     @AppStorage("futurevoice.personaDeepenPrompted") private var deepenPrompted = false
     /// "Keep your practice in iCloud?" — asked once (`BackupOfferSheet`).
@@ -80,13 +81,6 @@ struct ConversationHome: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     heroSection
-                    // Nothing before the first talk (2026-10-08): the greeting
-                    // and the ring already say what to do, and a card telling
-                    // people to tap the biggest thing on the screen said nothing.
-                    if sessionCount > 0 && personaNeedsDepth {
-                        deepenRow
-                            .padding(.horizontal, 20)
-                    }
                 }
                 .padding(.top, 8)
             }
@@ -98,13 +92,16 @@ struct ConversationHome: View {
             // like Watch's "New situation": glass capsule, floating at the
             // bottom centre over the page.
             .overlay(alignment: .bottom) {
-                // Three slots (2026-10-18, founder): the topics button stays
-                // centred, the quick quiz's face sits at the right edge, and
-                // the left slot is kept for something still to come. The two
-                // side slots take equal widths so the centre never moves.
+                // Three slots (2026-10-18, founder): the player on the left,
+                // the topics button centred, the quick quiz's face on the
+                // right. The two side slots take equal widths so the centre
+                // never moves.
                 HStack(spacing: 12) {
-                    Color.clear
-                        .frame(maxWidth: .infinity, maxHeight: 1)
+                    HStack {
+                        PlaylistButton()
+                        Spacer(minLength: 0)
+                    }
+                    .frame(maxWidth: .infinity)
                     Button { showingTopics = true } label: {
                         Label("Find a topic", systemImage: "sparkles")
                             .font(.body.weight(.semibold))
@@ -746,37 +743,6 @@ struct ConversationHome: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
             showingDeepen = true
         }
-    }
-
-    /// Persistent re-entry under Today once the auto-prompt has passed —
-    /// visible only while the narrative fields stay empty.
-    private var deepenRow: some View {
-        Button {
-            showingDeepen = true
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "person.crop.circle.badge.plus")
-                    .font(.title3)
-                    .foregroundStyle(.tint)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Tell me more about you")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
-                    Text(explain("Talks get more real when I know your life."))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer(minLength: 8)
-                Image(systemName: "chevron.right")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
-            .background(RoundedRectangle(cornerRadius: 20).fill(Color(.secondarySystemGroupedBackground)))
-            .contentShape(RoundedRectangle(cornerRadius: 20))
-        }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Logic

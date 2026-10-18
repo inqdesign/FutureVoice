@@ -279,10 +279,14 @@ struct SayItAgainView: View {
                      name: step.isSpoken ? chrome("You") : source.otherName,
                      avatar: step.isSpoken ? nil : source.otherAvatar,
                      isCurrent: isCurrent) {
-            if step.isCorrected {
-                Text(highlightedCorrection(step.text, original: step.said, baseFont: .body))
-            } else {
-                Text(step.text)
+            FuriganaText(step.isCorrected
+                         ? highlightedCorrection(step.text, original: step.said, baseFont: .body)
+                         : AttributedString(step.text)) {
+                if step.isCorrected {
+                    Text(highlightedCorrection(step.text, original: step.said, baseFont: .body))
+                } else {
+                    Text(step.text)
+                }
             }
         } accessory: {
             if step.isSpoken { takeAccessory(step, take: take) }
@@ -465,7 +469,11 @@ struct SayItAgainView: View {
                 // past it. A short line sizes to itself as before.
                 ScrollView {
                     VStack(spacing: 14) {
-                        Group {
+                        FuriganaText(step.isCorrected
+                                     ? highlightedCorrection(step.text, original: step.said,
+                                                             baseFont: .title2.weight(.semibold))
+                                     : AttributedString(step.text),
+                                     rubyFont: .caption, alignment: .center) {
                             if step.isCorrected {
                                 Text(highlightedCorrection(step.text, original: step.said,
                                                            baseFont: .title2.weight(.semibold)))

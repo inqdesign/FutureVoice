@@ -489,11 +489,11 @@ struct CoachHintLabel: View {
 
     var body: some View {
         Label {
-            HStack(spacing: 4) {
+            HStack(alignment: .bottom, spacing: 4) {
                 Text(used ? "Used it" : "Try using")
                     .foregroundStyle(.secondary)
                 Text("·").foregroundStyle(.tertiary)
-                Text(item.text).bold()
+                FuriganaText(item.text, rubyFont: .caption2).bold()
             }
         } icon: {
             Image(systemName: used ? "checkmark.circle.fill" : "lightbulb")
@@ -517,7 +517,10 @@ struct CoachReplyLabel: View {
             }
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            Self.text(reply.say, color: .primary)
+            FuriganaText(Self.attributed(reply.say, color: .primary),
+                         rubyFont: .caption2, alignment: .center) {
+                Self.text(reply.say, color: .primary)
+            }
                 .font(.body.weight(.semibold))
             if !reply.meaning.isEmpty {
                 Self.text(reply.meaning, color: .secondary)
@@ -527,6 +530,25 @@ struct CoachReplyLabel: View {
         .multilineTextAlignment(.center)
         .fixedSize(horizontal: false, vertical: true)
         .frame(maxWidth: .infinity)
+    }
+
+    /// `text(_:color:)` as an attributed string, for `FuriganaText`.
+    static func attributed(_ line: String, color: Color) -> AttributedString {
+        var out = AttributedString()
+        var rest = Substring(line)
+        func plain(_ s: Substring) -> AttributedString {
+            var a = AttributedString(String(s)); a.foregroundColor = color; return a
+        }
+        while let open = rest.firstIndex(of: "["),
+              let close = rest[open...].firstIndex(of: "]") {
+            out += plain(rest[..<open])
+            var example = AttributedString(String(rest[rest.index(after: open)..<close]))
+            example.foregroundColor = Color(.tertiaryLabel)
+            example.underlineStyle = .single
+            out += example
+            rest = rest[rest.index(after: close)...]
+        }
+        return out + plain(rest)
     }
 
     /// "[7]" is a placeholder for the learner's own words: drawn faded and

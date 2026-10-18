@@ -26,6 +26,9 @@ enum CallNowPlaying {
     static func begin(title: String,
                       onResume: @escaping () -> Void,
                       onPause: @escaping () -> Void) {
+        // A playlist playing when the call starts stops and hands the lock
+        // screen over; it keeps its place for afterwards.
+        PlaylistPlayer.shared.yieldToCall()
         let center = MPRemoteCommandCenter.shared()
         center.playCommand.removeTarget(nil)
         center.pauseCommand.removeTarget(nil)

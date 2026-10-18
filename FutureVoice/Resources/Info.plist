@@ -52,6 +52,8 @@
 	<string>nawana saves your day's card to your photo library.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>nawana transcribes what you say on-device so it can compare your speech with the fluent version of your voice.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>SUPABASE_ANON_KEY</key>
 	<string>$(SUPABASE_ANON_KEY)</string>
 	<key>SUPABASE_URL</key>

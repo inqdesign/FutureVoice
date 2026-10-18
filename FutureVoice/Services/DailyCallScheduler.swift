@@ -342,6 +342,8 @@ enum DailyCallScheduler {
     static func releaseAfterLiveCall() {
         guard let since = liveCallSince else { return }
         liveCallSince = nil
+        // The consent explanation waits out a call; this is when it can come.
+        Task { @MainActor in PriceConsent.shared.offerIfDue() }
         Task {
             let store = DailyCallStore.shared
             guard store.isEnabled, let plan = store.load(), !plan.isSettled else { return }
@@ -574,6 +576,9 @@ final class DailyCallInbox: ObservableObject {
     @Published var pendingWeekRecap = false
     /// Developer: a recap built on demand (any window), raised as is.
     @Published var debugWeekRecap: WeekRecap?
+    /// A server push carried a `futurevoice://` link (`push-send`'s `url`):
+    /// `RootTabView` routes it exactly as if the link had been opened.
+    @Published var pendingURL: URL?
 }
 
 /// Routes notification taps. Installed as the app's `UNUserNotificationCenter`
@@ -608,6 +613,19 @@ final class DailyCallNotificationDelegate: NSObject, UNUserNotificationCenterDel
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         let category = response.notification.request.content.categoryIdentifier
+
+        // A server push (`push-send`) names where a tap should land. Until
+        // 2026-10-18 nothing read it, so every such push opened the app
+        // wherever it was left.
+        if let link = response.notification.request.content.userInfo["url"] as? String,
+           let url = URL(string: link), url.scheme == "futurevoice" {
+            Task { @MainActor in
+                defer { completionHandler() }
+                guard response.actionIdentifier != UNNotificationDismissActionIdentifier else { return }
+                DailyCallInbox.shared.pendingURL = url
+            }
+            return
+        }
 
         // Review reminders land on the due items themselves, not just "the
         // app": a reminder that opens wherever you left off is the reason a
