@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Download
@@ -47,6 +48,7 @@ import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.layout.layout
 import androidx.core.content.FileProvider
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
@@ -94,10 +96,19 @@ fun DayCardSheet(data: DayCardData, onDismiss: () -> Unit) {
     val theme = remember { FutureselfTheme.stored(context).ordinal }
     LaunchedEffect(data.date) { photo = DayCardStore.photo(context, data.date) }
 
+    // The full-size shot, not `TakePicturePreview` — that one hands back the
+    // camera's thumbnail (a few hundred pixels), which is what a 1080-wide
+    // card in an Instagram story showed as mush.
+    val cameraUri = remember {
+        val dir = File(context.cacheDir, "share").apply { mkdirs() }
+        FileProvider.getUriForFile(context, "${context.packageName}.fileprovider",
+            File(dir, "daycard-camera.jpg"))
+    }
     val camera = rememberLauncherForActivityResult(
-        ActivityResultContracts.TakePicturePreview()
-    ) { bitmap ->
-        if (bitmap != null) {
+        ActivityResultContracts.TakePicture()
+    ) { taken ->
+        if (!taken) return@rememberLauncherForActivityResult
+        DayCardStore.decodeUpright(context, cameraUri)?.let { bitmap ->
             photo = bitmap
             DayCardStore.savePhoto(context, data.date, bitmap)
             // Making a card settles the day: a card is what that day WAS.
@@ -106,7 +117,7 @@ fun DayCardSheet(data: DayCardData, onDismiss: () -> Unit) {
     }
     val cameraPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { granted -> if (granted) camera.launch(null) }
+    ) { granted -> if (granted) camera.launch(cameraUri) }
     // A photo already taken is a place too — the camera is the point, but
     // refusing the library would mean a day can only be illustrated live.
     val imagePicker = rememberLauncherForActivityResult(
@@ -219,23 +230,55 @@ fun DayCardSheet(data: DayCardData, onDismiss: () -> Unit) {
             Modifier.fillMaxWidth().bottomBarInsets().verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp).padding(top = 8.dp, bottom = 32.dp),
         ) {
-            DayCard(
-                data = data.copy(topics = listOfNotNull(headline.takeIf { it.isNotBlank() })),
-                photo = photo?.asImageBitmap(), format = format, theme = theme,
+            // The card is LAID OUT at its export size — 360dp at density 3,
+            // 1080 px wide — and only DRAWN smaller to fit the screen. Laid
+            // out at the screen's size it was captured at ~2.6x and upscaled
+            // (soft), and on a phone narrower than 360dp + gutters it was
+            // squeezed to the width and then stretched back to 4:5.
+            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val cardW = DayCardFormat.FEED.width
+                val shownW = minOf(maxWidth, cardW.dp)
+                val shownH = shownW * (format.height.toFloat() / cardW)
+                val pxW = cardW * DayCardFormat.EXPORT_SCALE
+                val pxH = format.height * DayCardFormat.EXPORT_SCALE
                 // Same corner and shadow as iOS's preview; the export records
                 // inside the clip, so the shared picture stays square-cornered
                 // like iOS's render.
-                modifier = Modifier.align(Alignment.CenterHorizontally).padding(vertical = 8.dp)
+                Box(Modifier.align(Alignment.Center).padding(vertical = 8.dp).size(shownW, shownH)
                     .shadow(10.dp, androidx.compose.foundation.shape.RoundedCornerShape(26.dp),
                         ambientColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.18f),
                         spotColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.18f))
-                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(26.dp)).drawWithContent {
-                        // Record the card as it is drawn, so the exported picture
-                        // is exactly what the learner is looking at.
-                        layer.record { this@drawWithContent.drawContent() }
-                        drawLayer(layer)
-                    },
-            )
+                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(26.dp))) {
+                    androidx.compose.runtime.CompositionLocalProvider(
+                        androidx.compose.ui.platform.LocalDensity provides
+                            androidx.compose.ui.unit.Density(DayCardFormat.EXPORT_SCALE.toFloat(), 1f),
+                    ) {
+                        DayCard(
+                            data = data.copy(topics = listOfNotNull(headline.takeIf { it.isNotBlank() })),
+                            photo = photo?.asImageBitmap(), format = format, theme = theme,
+                            modifier = Modifier.layout { measurable, constraints ->
+                                val placeable = measurable.measure(
+                                    androidx.compose.ui.unit.Constraints.fixed(pxW, pxH))
+                                val w = constraints.maxWidth
+                                val h = constraints.maxHeight
+                                layout(w, h) {
+                                    placeable.placeWithLayer(0, 0) {
+                                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)
+                                        scaleX = w.toFloat() / pxW
+                                        scaleY = h.toFloat() / pxH
+                                    }
+                                }
+                            }.drawWithContent {
+                                // Record the card as it is drawn, at full size, so
+                                // the exported picture is exactly what the learner
+                                // is looking at.
+                                layer.record { this@drawWithContent.drawContent() }
+                                drawLayer(layer)
+                            },
+                        )
+                    }
+                }
+            }
             com.roro.futurevoice.ui.brand.IosSegmented(
                 options = listOf(stringResource(R.string.feed_4_5), stringResource(R.string.square)),
                 selected = if (format == DayCardFormat.FEED) 0 else 1,
