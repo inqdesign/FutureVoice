@@ -88,11 +88,12 @@ struct SpeechTab: View {
         .padding(.horizontal, -bleed)
         .background {
             // The header's own slot: its leading edge is how far it sits in
-            // from the list's edge. Measured against the LIST, not the
-            // screen: a push or pop slides the whole list, and a global
-            // reading moved with it, resizing the cards mid-transition.
+            // from the list's edge. A push reads it as −89 while the list is
+            // off screen (measured), and taking that as 0 shrank the cards
+            // 173 → 141 pt for the pop back. Only an inset is an answer.
             Color.clear.onGeometryChange(for: CGFloat.self) { $0.frame(in: .named(Self.listSpace)).minX } action: {
-                challengeBleed = max(0, $0)
+                guard $0 > 0 else { return }
+                challengeBleed = $0
             }
         }
         .padding(.top, 4)
