@@ -28,7 +28,6 @@ struct SpeechTab: View {
     static let challengesOnTab = 3
     /// The inset-grouped list's side margin, where its cards start.
     static let listMargin: CGFloat = 16
-    private static let listSpace = "speechList"
     static let challengeSpacing: CGFloat = 10
     /// How much of the third card shows at the right edge.
     static let challengePeek: CGFloat = 20
@@ -49,9 +48,17 @@ struct SpeechTab: View {
         }
     }
 
-    /// How far the list's header sits in from the screen's leading edge,
-    /// measured, so the challenge row can bleed back out to the edge.
-    @State private var challengeBleed: CGFloat = 32
+    /// The list's width and its header's: half the difference is how far
+    /// the header sits in from each edge, so the challenge row can bleed
+    /// back out to both. WIDTHS, never a position: a push, a pop and a
+    /// swipe back all slide the list, and every position read (global or
+    /// the list's own space, measured the same) moved with it — the cards
+    /// shrank 173 → 141 pt and came back small on a swipe back.
+    @State private var listWidth: CGFloat = 0
+    @State private var headerWidth: CGFloat = 0
+    private var challengeBleed: CGFloat {
+        listWidth > headerWidth && headerWidth > 0 ? (listWidth - headerWidth) / 2 : 32
+    }
 
     /// One row that scrolls sideways (2026-10-17, founder: three stacked
     /// cards took most of the screen). Two cards across and the third cut at
@@ -87,13 +94,10 @@ struct SpeechTab: View {
         .scrollTargetBehavior(.viewAligned)
         .padding(.horizontal, -bleed)
         .background {
-            // The header's own slot: its leading edge is how far it sits in
-            // from the list's edge. A push reads it as −89 while the list is
-            // off screen (measured), and taking that as 0 shrank the cards
-            // 173 → 141 pt for the pop back. Only an inset is an answer.
-            Color.clear.onGeometryChange(for: CGFloat.self) { $0.frame(in: .named(Self.listSpace)).minX } action: {
-                guard $0 > 0 else { return }
-                challengeBleed = $0
+            // The header's own slot, before the bleed (padding is applied
+            // inside this background's frame).
+            Color.clear.onGeometryChange(for: CGFloat.self) { $0.size.width } action: {
+                headerWidth = $0
             }
         }
         .padding(.top, 4)
@@ -190,7 +194,7 @@ struct SpeechTab: View {
                     }
                 }
             }
-            .coordinateSpace(.named(Self.listSpace))
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { listWidth = $0 }
             .navigationTitle("Speech")
             // Same header as Watch and Progress: the title inline-large on
             // the toolbar row, the tab's one action at its trailing edge.
