@@ -33,6 +33,7 @@ from waitlist-launch-mail.py.
 """
 
 import argparse
+import datetime
 import html
 import importlib.util
 import json
@@ -53,7 +54,7 @@ INK, PAPER, SURF, DIM, FAINT, BLUE = launch.INK, launch.PAPER, launch.SURF, laun
 FONT, MONO, FONT_FACE, LOGO_URL = launch.FONT, launch.MONO, launch.FONT_FACE, launch.LOGO_URL
 SIGN, FOOTER, TAGLINE, PER_SEND_PAUSE = launch.SIGN, launch.FOOTER, launch.TAGLINE, launch.PER_SEND_PAUSE
 
-CAMPAIGN = "update-2026-09-16"
+CAMPAIGN = "update-2026-10-18"
 # Accounts that are ours, not learners.
 OURS = {"eunggyu.lee@gmail.com", "android-dev-test@dearroro.dev", "forsgappstore@gmail.com"}
 
@@ -229,6 +230,8 @@ def main() -> None:
     ap.add_argument("--to", nargs="+", metavar="EMAIL", help="only these addresses (must be in the list)")
     ap.add_argument("--only-old", action="store_true",
                     help="skip accounts whose last event already named the current build")
+    ap.add_argument("--since-days", type=int, metavar="N",
+                    help="only accounts that sent a client event in the last N days (recent visitors)")
     ap.add_argument("--version", help="override the version printed (default: app_release)")
     args = ap.parse_args()
 
@@ -247,6 +250,8 @@ def main() -> None:
         print(f"sent test to {args.test}: {mid}")
         return
 
+    since = (datetime.date.today() - datetime.timedelta(days=args.since_days)).isoformat() \
+        if args.since_days is not None else None
     plan, skipped = [], []
     wanted = {e.lower() for e in args.to} if args.to else None
     for r in sql(RECIPIENTS_SQL):
@@ -261,6 +266,8 @@ def main() -> None:
             skipped.append((email, "invalid address"))
             continue
         if wanted is not None and email.lower() not in wanted:
+            continue
+        if args.since_days is not None and not (r["last_seen"] and r["last_seen"] >= since):
             continue
         if args.only_old and r["build"] and int(r["build"]) >= build:
             skipped.append((email, f"already on {r['build']}"))
