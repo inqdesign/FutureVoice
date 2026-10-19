@@ -330,23 +330,35 @@ fun WeeklyTestScreen(
         val tests = store.load(language)
         val opening = WeeklyTestSettings.schedule(context).currentOpening()
         if (trialScope != null) {
-            val report = TrialReportStore.load(context)
+            var paperScope: WeeklyTestEngine.Scope = trialScope
+            // The deck may still be writing the coach; its grammar and
+            // word-upgrade questions need it, so give it the weekly paper's
+            // own wait before going without.
+            if (paperScope.coach == null) {
+                val deadline = System.currentTimeMillis() + WeeklyTestEngine.COACH_WAIT_MS
+                while (paperScope.coach == null && System.currentTimeMillis() < deadline) {
+                    TrialReportStore.load(context, language)?.recap?.coach?.let { paperScope = paperScope.copy(coach = it) }
+                    if (paperScope.coach == null) delay(500)
+                }
+            }
             val built = withContext(Dispatchers.Default) {
-                val material = WeeklyTestEngine.gather(context, language, level, native, trialScope)
-                WeeklyTestEngine.build(material, null, language, level, scope = trialScope) { word ->
+                val material = WeeklyTestEngine.gather(context, language, level, native, paperScope)
+                WeeklyTestEngine.build(material, null, language, level, scope = paperScope) { word ->
                     PracticeCaptureFlags.lookup { lore.entry(word, native, language) }
                         ?.senses?.firstOrNull()?.meaning
                 }
             }
             if (built == null) {
-                report?.let { TrialReportStore.save(context, it.copy(testThin = true)) }
+                // Read again AFTER the build: the deck saved the level and
+                // the coach into this file meanwhile.
+                TrialReportStore.update(context, language) { it.copy(testThin = true) }
                 Analytics.capture("trial_test_thin")
                 phase = TestPhase.Thin
                 return
             }
             val t = built.copy(startedAt = System.currentTimeMillis())
             store.save(t)
-            report?.let { TrialReportStore.save(context, it.copy(testId = t.id)) }
+            TrialReportStore.update(context, language) { it.copy(testId = t.id) }
             Analytics.capture("weekly_test_started", mapOf("items" to t.total, "trial" to true))
             resume(t)
             return
@@ -425,7 +437,7 @@ fun WeeklyTestScreen(
         if (trialScope != null) {
             // The trial's paper is the one on the report, whatever the
             // week's schedule says.
-            val id = TrialReportStore.load(context)?.testId
+            val id = TrialReportStore.load(context, language)?.testId
             val test = id?.let { i -> tests.firstOrNull { it.id == i } }
             if (test == null) { buildNew(); return }
             if (test.isFinished) { phase = TestPhase.Result(test); return }
@@ -667,7 +679,7 @@ fun WeeklyTestScreen(
                 TestPhase.Thin -> if (trialScope != null) TrialThinState()
                     else ThinState { scope.launch { buildNew() } }
                 is TestPhase.Result -> WeeklyTestResult(ph.test, isRetry = retry != null,
-                    language = language, onRetry = { startRetry(ph.test) })
+                    isTrial = trialScope != null, language = language, onRetry = { startRetry(ph.test) })
                 is TestPhase.Playing -> {
                     val item = current
                     if (item == null) Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
@@ -1383,7 +1395,9 @@ private fun BottomBar(item: WeeklyTestItem, outcome: Boolean?, isLast: Boolean, 
  * leave them to the decks.
  */
 @Composable
-private fun WeeklyTestResult(test: WeeklyTest, isRetry: Boolean, language: String, onRetry: () -> Unit) {
+private fun WeeklyTestResult(test: WeeklyTest, isRetry: Boolean, language: String, onRetry: () -> Unit,
+                             /** The trial report's first test: a start, not a week. */
+                             isTrial: Boolean = false) {
     val context = LocalContext.current
     val shownAt = remember { System.currentTimeMillis() }
     var previous by remember { mutableStateOf<WeeklyTest?>(null) }
@@ -1409,6 +1423,11 @@ private fun WeeklyTestResult(test: WeeklyTest, isRetry: Boolean, language: Strin
                 Spacer(Modifier.height(10.dp))
                 val headline = when {
                     isRetry -> if (missed.isEmpty()) R.string.got_them_all else R.string.closer
+                    isTrial -> when {
+                        ratio >= 0.9 -> R.string.a_strong_start
+                        ratio >= 0.6 -> R.string.a_good_start
+                        else -> R.string.first_test_done
+                    }
                     ratio >= 0.9 -> R.string.a_strong_week
                     ratio >= 0.6 -> R.string.a_good_week
                     else -> R.string.the_week_is_in_the_book
@@ -1417,11 +1436,11 @@ private fun WeeklyTestResult(test: WeeklyTest, isRetry: Boolean, language: Strin
                     fontWeight = FontWeight.SemiBold)
                 Text(stringResource(R.string.lld_of_lld, test.score, test.total),
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
-                previous?.let {
+                previous?.takeIf { !isTrial }?.let {
                     Text(stringResource(R.string.last_week_lld_lld, it.score, it.total),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                 }
-                if (!isRetry && weeks >= 2) {
+                if (!isRetry && !isTrial && weeks >= 2) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp),
                         modifier = Modifier.padding(top = 4.dp)) {
                         Icon(Icons.Filled.EventNote, contentDescription = null, modifier = Modifier.size(16.dp),
