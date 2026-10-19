@@ -278,6 +278,7 @@
     <string name="bring_your_practice_over">"쓰던 기기의 연습을 가져올 수 있어요"</string>
     <string name="browse_all_vocabulary">"전체 어휘 둘러보기"</string>
     <string name="browse_expressions">"표현 보기"</string>
+    <string name="bug_fixes">"버그 수정"</string>
     <string name="build_a_scenario">"상황 만들기"</string>
     <string name="build_lld_lld">"빌드 %1$d → %2$d"</string>
     <string name="build_new">"새로 만들기"</string>
@@ -904,6 +905,7 @@
     <string name="icloud_storage_is_full_audio_isn_t_syncing">"iCloud 저장 공간이 꽉 찼어요 — 오디오는 동기화되지 않아요"</string>
     <string name="ielts_opic_toeic_speaking">"IELTS, OPIc, TOEIC Speaking…"</string>
     <string name="import_practice_data">"연습 데이터 가져오기"</string>
+    <string name="improvements">"성능 향상"</string>
     <string name="in_">"%1$s로는 %2$s"</string>
     <string name="in_a_new_situation_you_don_t_know_what_to_say">"처음 겪는 상황에선 무슨 말을 할지 떠오르지 않아요"</string>
     <string name="in_call_suggestions">"통화 중 제안"</string>
@@ -1328,6 +1330,7 @@
     <string name="new_best_lld_of_lld">"최고 기록 경신 · %2$d명 중 %1$d위"</string>
     <string name="new_block">"새 칸"</string>
     <string name="new_expressions_from_the_call">"통화에서 건진 새 표현"</string>
+    <string name="new_features">"새로운 기능"</string>
     <string name="new_from_your_fluent_self">"유창해진 내가 쓴 새 표현"</string>
     <string name="new_here_get_started_instead">"처음이신가요? 시작하기"</string>
     <string name="new_person">"사람 추가"</string>

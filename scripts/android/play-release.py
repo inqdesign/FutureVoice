@@ -15,6 +15,10 @@ the same files fastlane `supply` reads. A version with no en-US notes is
 refused: the notes are what a tester sees in the Play app, and "no notes" is
 how a placeholder ships.
 
+After the commit the same ko-KR / en-US changelogs, headings kept, go into
+app_release.notes_sections_ko/en for the android row — what the in-app update
+sheet draws as sections (warns, never fails, if that write doesn't land).
+
 The release is written as a DRAFT while the app has never been published
 (Play refuses any other status then); afterwards it is `completed` on the
 track. Rolling a draft out is one click in Play Console → the track, which
@@ -85,6 +89,53 @@ def notes(code: int) -> list[dict]:
     if not any(n["language"] == "en-US" for n in out):
         sys.exit(f"No en-US release notes at en-US/changelogs/{code}.txt — write them first.")
     return out
+
+
+SUPABASE_REF = "chhzjtigzdotacutwcyo"
+
+
+def publish_note_sections(code: int) -> None:
+    """The same changelogs WITH their headings, for the update sheet's
+    sections (New / Fixed / Improved) — beta.sh's `publish_note_sections`,
+    for the `android` row of app_release. Korean from ko-KR, English from
+    en-US. Its own statement, and a failure only warns: a database without
+    the columns (20261018150000), or no token in the keychain, costs the
+    sections, never the release."""
+    import base64
+    import json
+
+    def read(folder: str) -> str | None:
+        path = os.path.join(pl.META, folder, "changelogs", f"{code}.txt")
+        return open(path).read().strip() if os.path.exists(path) else None
+
+    def sql_text(t: str | None) -> str:
+        if t is None:
+            return "null"
+        tag = "n"
+        while f"${tag}$" in t:
+            tag += "n"
+        return f"${tag}${t}${tag}$"
+
+    ko, en = read("ko-KR"), read("en-US")
+    raw = subprocess.run(["security", "find-generic-password", "-s", "Supabase CLI", "-w"],
+                         capture_output=True, text=True).stdout.strip()
+    if not raw:
+        print("  ! Supabase token not in the keychain — notes_sections not updated.", file=sys.stderr)
+        return
+    token = base64.b64decode(raw.removeprefix("go-keyring-base64:")).decode()
+    query = (f"update public.app_release set notes_sections_ko = {sql_text(ko)}, "
+             f"notes_sections_en = {sql_text(en)} where platform = 'android';")
+    r = subprocess.run(
+        ["curl", "-sf", "-X", "POST",
+         f"https://api.supabase.com/v1/projects/{SUPABASE_REF}/database/query",
+         "-H", f"Authorization: Bearer {token}", "-H", "Content-Type: application/json",
+         "-d", json.dumps({"query": query})],
+        capture_output=True, text=True)
+    if r.returncode == 0:
+        print("▸ app_release (android).notes_sections → this version's changelogs")
+    else:
+        print("  ! notes_sections update failed (migration 20261018150000 not applied?) — "
+              "the sheet shows one flat list.", file=sys.stderr)
 
 
 def build() -> None:
@@ -199,6 +250,7 @@ def main() -> None:
         pl.call("POST", f"/edits/{edit}:commit")
         edit = None
         print(f"Committed to {track} as {status}.")
+        publish_note_sections(code)
     finally:
         if edit:
             try:

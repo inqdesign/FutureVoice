@@ -116,8 +116,8 @@ object AppUpdateService {
 
         // Release notes are MATERIAL for the reader, not for the machine: the
         // learner reads them in the language the app speaks to them in.
-        val notes = if (com.roro.futurevoice.core.UILanguage.current(context)?.startsWith("ko") == true)
-            row.notesKo else row.notesEn
+        val korean = com.roro.futurevoice.core.UILanguage.current(context)?.startsWith("ko") == true
+        val notes = sectionedNotes(korean) ?: (if (korean) row.notesKo else row.notesEn)
 
         _pending.value = AppUpdate(
             latestBuild = latest,
@@ -128,6 +128,29 @@ object AppUpdateService {
             url = if (fromPlay) PLAY_URL else (row.betaUrl?.takeIf { it.isNotBlank() } ?: PLAY_URL),
         )
     }
+
+    @Serializable
+    private data class SectionsRow(
+        @SerialName("notes_sections_ko") val notesSectionsKo: String? = null,
+        @SerialName("notes_sections_en") val notesSectionsEn: String? = null,
+    )
+
+    /**
+     * The notes WITH their headings (New / Fixed / Improved), which the sheet
+     * lays out as sections. A query of its own: a select naming a column the
+     * database hasn't got fails the whole query, and the update notice must
+     * not depend on this migration having landed. Null = no headed copy — the
+     * flat `notes_*` are drawn as one list, as before.
+     */
+    private suspend fun sectionedNotes(korean: Boolean): String? = runCatching {
+        Supa.client.from("app_release")
+            .select(io.github.jan.supabase.postgrest.query.Columns.list("notes_sections_ko", "notes_sections_en")) {
+                filter { eq("platform", "android") }
+                limit(1)
+            }
+            .decodeSingleOrNull<SectionsRow>()
+    }.getOrNull()?.let { if (korean) it.notesSectionsKo else it.notesSectionsEn }
+        ?.trim()?.takeIf { it.isNotEmpty() }
 
     /** Remember an optional notice as said, and put the sheet away. A REQUIRED
      *  one is never recorded and never dismissed — there is nothing to

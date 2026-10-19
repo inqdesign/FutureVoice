@@ -265,7 +265,7 @@ object CaptureMe {
     }
 
     /** iOS `UpdateCaptureHost`: build 99 / 1.1, the real release notes at their
-     *  real length (a paragraph and five bullets), none when required. */
+     *  real length (three headed sections), none when required. */
     @Composable
     private fun Update(required: Boolean) {
         OverGround {
@@ -284,16 +284,19 @@ object CaptureMe {
         Box(Modifier.fillMaxSize().background(AppSurfaces.ground)) { sheet() }
     }
 
-    /** Verbatim from iOS `UpdateCaptureHost.releaseNotes`. */
+    /** Verbatim from iOS `UpdateCaptureHost.releaseNotes`: headed sections
+     *  over bullets, the way a release ships them. */
     private val RELEASE_NOTES = """
-        nawana를 시작합니다.
+        새 기능
+        • 스피치 원고에서 공부하기를 켜면 문법과 표현을 짚어 주고, 문단마다 우리말 번역을 보여 줘요.
+        • 원고를 내 목소리로 읽은 오디오를 만들어 들어볼 수 있어요.
+        • 통화에서 '보내기로 답하기'를 켜면 말하다 멈춰도 차례가 넘어가지 않아요.
 
-        말이 늘지 않는 이유는 하나 — 충분히 말하지 않아서예요. 60초 녹음으로 유창해진 미래의 내 목소리를 만들고, 매일 통화하세요. 통화가 끝나면 내가 쓴 단어·표현·문법으로 나만의 교재가 만들어져요.
+        고친 점
+        • 시트를 닫았다 열어도 쓰던 글이 남아요.
+        • 챌린지 목록의 New 표시가 줄을 밀어내지 않아요.
 
-        - 내 관심사에서 시작하는 매일 통화
-        - 매 턴 돌아오는 유창한 버전
-        - 통화가 끝나면 자동으로 만들어지는 나만의 교재
-        - 내 목소리로 하는 섀도잉, 입으로 답하는 복습
-        - 실제로 말한 것들로만 측정되는 레벨
+        성능 향상
+        • 앱을 처음 열 때 Talk 화면이 덜컹거리지 않고 부드럽게 떠요.
     """.trimIndent()
 }
