@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  The nawana Podcast's daily episode (scripts/news-show-daily.py). Tried at
+  07:00, 12:00 and 18:00: the script makes the day once and does nothing
+  (and spends nothing) on the other runs, so a Mac asleep at seven still gets
+  the day out. A missed time runs when the Mac wakes. Install once:
+
+    cp scripts/news-show-daily.plist ~/Library/LaunchAgents/com.nawana.podcast-daily.plist
+    launchctl load ~/Library/LaunchAgents/com.nawana.podcast-daily.plist
+
+  Remove:  launchctl unload ~/Library/LaunchAgents/com.nawana.podcast-daily.plist
+  Output:  ~/Library/Logs/nawana/podcast-daily.log; episodes in ~/nawana-podcast
+           (launchd cannot open files inside Google Drive, which Desktop is)
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.nawana.podcast-daily</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/python3</string>
+    <string>-I</string>
+    <string>/Users/eunggyuelee/fv-ios-show/scripts/news-show-daily.py</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict><key>Hour</key><integer>7</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Hour</key><integer>12</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Hour</key><integer>18</integer><key>Minute</key><integer>0</integer></dict>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/homebrew/bin</string>
+    <key>HOME</key>
+    <string>/Users/eunggyuelee</string>
+    <key>DEV_VARS</key>
+    <string>/Users/eunggyuelee/FutureVoice/gateway/.dev.vars</string>
+    <key>GATEWAY_DIR</key>
+    <string>/Users/eunggyuelee/FutureVoice/gateway</string>
+    <key>OUT_DIR</key>
+    <string>/Users/eunggyuelee/nawana-podcast</string>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>/Users/eunggyuelee/Library/Logs/nawana/podcast-daily.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/eunggyuelee/Library/Logs/nawana/podcast-daily.log</string>
+</dict>
+</plist>

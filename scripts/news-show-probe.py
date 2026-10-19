@@ -180,6 +180,7 @@ def _write_script(lang, topic):
         "SHAPE\n"
         f"- 550-650 words in total (about 4 minutes), 24-30 turns, alternating, {a} first. "
         "Count: a 300-word episode is too short.\n"
+        "- The show is the nawana Podcast: say its name once in the opening.\n"
         "- A short warm opening that names the show's topic, then the story: what happened, "
         "why it matters, what each of them thinks, one everyday angle a listener shares. "
         "Close with one line that hands the question to the listener.\n"

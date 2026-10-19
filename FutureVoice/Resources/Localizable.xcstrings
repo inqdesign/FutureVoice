@@ -1044,6 +1044,52 @@
         }
       }
     },
+    "A new episode every day, in English for now." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeden Tag eine neue Folge, vorerst auf Englisch."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un episodio nuevo cada día, por ahora en inglés."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un nouvel épisode chaque jour, en anglais pour l’instant."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "毎日新しいエピソードが1本届きます。今は英語だけです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "매일 새 에피소드가 하나씩 올라와요. 지금은 영어만 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每天更新一集，目前只有英语。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每天更新一集，目前只有英文。"
+          }
+        }
+      }
+    },
     "A smaller copy, about 12 MB a minute. Send an original from its take." : {
       "localizations" : {
         "de" : {
@@ -3168,52 +3214,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "繼續使用方案需要這一步"
-          }
-        }
-      }
-    },
-    "New episodes every day, in English and German for now." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jeden Tag neue Folgen, vorerst auf Englisch und Deutsch."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Episodios nuevos cada día, por ahora en inglés y alemán."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "De nouveaux épisodes chaque jour, en anglais et en allemand pour l’instant."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "毎日新しいエピソードが届きます。今は英語とドイツ語だけです。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "매일 새 에피소드가 올라와요. 지금은 영어와 독일어만 있어요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "每天都有新一集，目前只有英语和德语。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "每天都有新的一集，目前只有英文和德文。"
           }
         }
       }

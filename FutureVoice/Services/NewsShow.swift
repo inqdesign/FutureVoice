@@ -1,43 +1,53 @@
 import CryptoKit
 import Foundation
 
-/// The platform's daily news show (2026-10-19, founder).
+/// The nawana Podcast (2026-10-19, founder).
 ///
-/// Every day the PLATFORM picks a handful of news stories per target
-/// language, the same for everyone, and two hosts talk each one through.
-/// Nothing here is per learner: the episodes are made once on the server
-/// side (`scripts/news-show-probe.py`, then `news-show-publish.sh`) and read
-/// by every install from R2 (`shows/<lang>/latest.json` + one mp3 per line),
-/// so listening is free and needs no `BillingGate`.
+/// One episode a day, the same for everyone: two hosts talk one news story
+/// through, a different category each weekday (Monday tech, Tuesday
+/// fashion…). Made once on the platform side (`scripts/news-show-daily.py`)
+/// and read by every install from R2 as a FEED — `shows/<lang>/latest.json`,
+/// newest first, every episode numbered — plus one mp3 per line. Listening
+/// is free and needs no `BillingGate`.
 ///
 /// An episode is played by the situations player, line by line, so it gets
 /// the same karaoke caption, translation and lock screen as a scene. Its
-/// files are a CACHE (Caches/NewsShow), and only the newest day is kept.
+/// files are a CACHE (Caches/NewsShow), fetched when the episode is picked,
+/// and dropped once the episode leaves the feed.
 struct NewsShowEpisode: Identifiable, Hashable {
     let id: UUID
     let title: String
     /// Counted across days by the publisher: EP 1 is the show's first.
     let number: Int
     let date: Date
-    let hosts: String
+    let category: String?
     let minutes: Int
     let lines: [PlaylistLine]
+    /// The line files, relative to the feed, for `NewsShow.prepare`.
+    fileprivate let files: [String]
+    fileprivate let language: String
+
+    /// Every line's audio is on the phone.
+    var isReady: Bool { lines.allSatisfy(\.hasAudio) }
 }
 
 enum NewsShow {
-    /// The bucket's public r2.dev address. English and German only for now
-    /// (founder: other languages once there are learners for them).
+    /// The bucket's public r2.dev address. English only while the show's
+    /// reaction is tested (founder, 2026-10-19).
     static let base = URL(string: "https://pub-83c97a52f2e549718b126bf60f710f1a.r2.dev/shows")!
-    static let languages: Set<String> = ["en", "de"]
+    static let languages: Set<String> = ["en"]
 
-    private struct Manifest: Codable {
-        let date: String
-        let hosts: [String]
+    private struct Feed: Codable {
+        /// The first test day's per-day manifest had a top-level date; the
+        /// daily feed dates each episode.
+        let date: String?
         let episodes: [Episode]
 
         struct Episode: Codable {
             let id: String
             let number: Int?
+            let date: String?
+            let category: String?
             let title: String
             let seconds: Int?
             let lines: [Line]
@@ -51,54 +61,55 @@ enum NewsShow {
         }
     }
 
-    /// Today's episodes for `language`, with every line's audio on the phone.
-    /// Offline, the last day fetched; never anything that can't play.
+    /// The feed for `language`, newest first. Offline, the last feed fetched.
+    /// Nothing is downloaded here; `prepare` fetches an episode when picked.
     static func episodes(language: String) async -> [NewsShowEpisode] {
         let lang = language.lowercased().split(separator: "-").first.map(String.init) ?? language
         guard languages.contains(lang), let dir = cacheDirectory(lang) else { return [] }
-        let manifestFile = dir.appendingPathComponent("latest.json")
+        let feedFile = dir.appendingPathComponent("latest.json")
 
-        var manifest: Manifest?
-        var request = URLRequest(url: base.appendingPathComponent("\(lang)/latest.json"),
+        var feed: Feed?
+        let request = URLRequest(url: base.appendingPathComponent("\(lang)/latest.json"),
                                  cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 15)
-        request.httpMethod = "GET"
         if let (data, response) = try? await URLSession.shared.data(for: request),
            (response as? HTTPURLResponse)?.statusCode == 200,
-           let fresh = try? JSONDecoder().decode(Manifest.self, from: data) {
-            manifest = fresh
-            try? data.write(to: manifestFile, options: .atomic)
-        } else if let data = try? Data(contentsOf: manifestFile) {
-            manifest = try? JSONDecoder().decode(Manifest.self, from: data)
+           let fresh = try? JSONDecoder().decode(Feed.self, from: data) {
+            feed = fresh
+            try? data.write(to: feedFile, options: .atomic)
+        } else if let data = try? Data(contentsOf: feedFile) {
+            feed = try? JSONDecoder().decode(Feed.self, from: data)
         }
-        guard let manifest else { return [] }
+        guard let feed else { return [] }
 
-        await download(manifest, lang: lang, into: dir)
-        prune(dir, keeping: manifest.date)
-
-        let hosts = manifest.hosts.joined(separator: " · ")
         let day = DateFormatter()
         day.calendar = Calendar(identifier: .gregorian)
         day.locale = Locale(identifier: "en_US_POSIX")
         day.dateFormat = "yyyy-MM-dd"
-        let date = day.date(from: manifest.date) ?? Date()
-        return manifest.episodes.enumerated().compactMap { index, episode in
+        let episodes = feed.episodes.enumerated().map { index, episode in
             let id = stableId(episode.id)
             let lines = episode.lines.map { line in
                 PlaylistLine(bookId: id, text: line.text, voiceId: "", speaker: line.speaker,
                              isOther: true, bookTitle: episode.title,
                              localFile: dir.appendingPathComponent(line.audio),
                              translations: line.translations)
-            }.filter(\.hasAudio)
-            guard !lines.isEmpty else { return nil }
-            return NewsShowEpisode(id: id, title: episode.title,
-                                   number: episode.number ?? index + 1, date: date, hosts: hosts,
-                                   minutes: max(1, Int(((Double(episode.seconds ?? 0)) / 60).rounded())),
-                                   lines: lines)
+            }
+            return NewsShowEpisode(
+                id: id, title: episode.title, number: episode.number ?? index + 1,
+                date: (episode.date ?? feed.date).flatMap(day.date(from:)) ?? Date(),
+                category: episode.category,
+                minutes: max(1, Int((Double(episode.seconds ?? 0) / 60).rounded())),
+                lines: lines, files: episode.lines.map(\.audio), language: lang)
         }
+        prune(dir, keeping: Set(feed.episodes.flatMap(\.lines).compactMap {
+            $0.audio.split(separator: "/").first.map(String.init)
+        }))
+        return episodes
     }
 
-    private static func download(_ manifest: Manifest, lang: String, into dir: URL) async {
-        let missing = manifest.episodes.flatMap(\.lines).map(\.audio).filter {
+    /// Fetch whatever of `episode` isn't on the phone yet.
+    static func prepare(_ episode: NewsShowEpisode) async {
+        guard let dir = cacheDirectory(episode.language) else { return }
+        let missing = episode.files.filter {
             !FileManager.default.fileExists(atPath: dir.appendingPathComponent($0).path)
         }
         await withTaskGroup(of: Void.self) { group in
@@ -106,7 +117,7 @@ enum NewsShow {
                 group.addTask {
                     let target = dir.appendingPathComponent(path)
                     guard let (data, response) = try? await URLSession.shared.data(
-                            from: base.appendingPathComponent("\(lang)/\(path)")),
+                            from: base.appendingPathComponent("\(episode.language)/\(path)")),
                           (response as? HTTPURLResponse)?.statusCode == 200 else { return }
                     try? FileManager.default.createDirectory(
                         at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -116,11 +127,17 @@ enum NewsShow {
         }
     }
 
-    /// Only the newest day stays on the phone.
-    private static func prune(_ dir: URL, keeping date: String) {
+    /// The glyph for an episode's category — the one the Talk tab's news
+    /// cards wear.
+    static func icon(for category: String?) -> String {
+        DiscoverSection.categoryIcon(category)
+    }
+
+    /// Only what the feed still lists stays on the phone.
+    private static func prune(_ dir: URL, keeping folders: Set<String>) {
         let fm = FileManager.default
         for name in (try? fm.contentsOfDirectory(atPath: dir.path)) ?? []
-        where name != date && name != "latest.json" {
+        where !folders.contains(name) && name != "latest.json" {
             try? fm.removeItem(at: dir.appendingPathComponent(name))
         }
     }

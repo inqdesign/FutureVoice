@@ -177,21 +177,27 @@ struct ScenePlayerSheet: View {
 
     private func playAll() {
         if allLines.isEmpty {
-            player.play(showLines, title: Self.showTitle)
+            Task { await playAllShows() }
         } else {
             player.play(allLines, title: Self.listTitle)
         }
     }
 
-    /// Every episode of the day, in order.
-    private func playAllShows() {
+    /// Every episode, newest first. Files are fetched when asked for.
+    private func playAllShows() async {
+        await withTaskGroup(of: Void.self) { group in
+            for episode in shows where !episode.isReady {
+                group.addTask { await NewsShow.prepare(episode) }
+            }
+        }
         player.play(showLines, title: Self.showTitle)
     }
 
     /// One episode on its own (founder: the whole show, or just the episode).
     /// Picked again while it is playing, it carries on rather than restarting.
-    private func play(show episode: NewsShowEpisode) {
+    private func play(show episode: NewsShowEpisode) async {
         if player.title == Self.showTitle, player.current?.bookId == episode.id { return }
+        await NewsShow.prepare(episode)
         player.play(episode.lines, title: Self.showTitle)
     }
 
@@ -216,8 +222,11 @@ private struct PlayerLibrary: View {
     @Binding var tracks: [SceneTrack]
     @Binding var shows: [NewsShowEpisode]
     let onPick: (SceneTrack) -> Void
-    let onPickShow: (NewsShowEpisode) -> Void
-    let onPlayAllShows: () -> Void
+    let onPickShow: (NewsShowEpisode) async -> Void
+    let onPlayAllShows: () async -> Void
+    /// What is being fetched right now: an episode, or `allId` for Play all.
+    @State private var fetching: UUID?
+    private static let allId = UUID()
     @Environment(\.dismiss) private var dismiss
     @Environment(\.locale) private var locale
     @ObservedObject private var player = PlaylistPlayer.shared
@@ -250,25 +259,38 @@ private struct PlayerLibrary: View {
             ContentUnavailableView {
                 Label("nawana Podcast", systemImage: "newspaper")
             } description: {
-                Text("New episodes every day, in English and German for now.")
+                Text("A new episode every day, in English for now.")
             }
             .listRowBackground(Color.clear)
         } else {
             Section {
                 Button {
-                    onPlayAllShows()
-                    dismiss()
+                    fetch(Self.allId) { await onPlayAllShows() }
                 } label: {
-                    Label("Play all", systemImage: "play.fill")
+                    HStack {
+                        Label("Play all", systemImage: "play.fill")
+                        Spacer()
+                        if fetching == Self.allId { ProgressView() }
+                    }
                 }
                 ForEach(shows) { episode in
                     Button {
-                        onPickShow(episode)
-                        dismiss()
+                        fetch(episode.id) { await onPickShow(episode) }
                     } label: { row(episode) }
                     .buttonStyle(.plain)
                 }
             }
+        }
+    }
+
+    /// Fetch, play, then back to the player. One fetch at a time.
+    private func fetch(_ id: UUID, _ action: @escaping () async -> Void) {
+        guard fetching == nil else { return }
+        fetching = id
+        Task {
+            await action()
+            fetching = nil
+            dismiss()
         }
     }
 
@@ -324,11 +346,13 @@ private struct PlayerLibrary: View {
         let playing = player.hasQueue && player.current?.bookId == episode.id
         return HStack(spacing: 12) {
             Group {
-                if playing {
+                if fetching == episode.id {
+                    ProgressView()
+                } else if playing {
                     PlayingBars(isAnimating: player.isPlaying || player.isInGap)
                         .frame(width: 16, height: 14)
                 } else {
-                    Image(systemName: "newspaper")
+                    Image(systemName: NewsShow.icon(for: episode.category))
                 }
             }
             .foregroundStyle(.tint)

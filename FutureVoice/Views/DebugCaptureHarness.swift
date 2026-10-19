@@ -1267,8 +1267,9 @@ enum DebugCapture {
                 .task {
                     guard !PlaylistPlayer.shared.hasQueue else { return }
                     let episodes = await NewsShow.episodes(language: appState.targetLanguage)
-                    if let second = episodes.dropFirst().first {
-                        PlaylistPlayer.shared.play(second.lines, title: explain("nawana Podcast"))
+                    if let newest = episodes.first {
+                        await NewsShow.prepare(newest)
+                        PlaylistPlayer.shared.play(newest.lines, title: explain("nawana Podcast"))
                     }
                 }
                 .sheet(isPresented: .constant(true)) {
@@ -1282,6 +1283,7 @@ enum DebugCapture {
                 .task {
                     guard !PlaylistPlayer.shared.hasQueue else { return }
                     let episodes = await NewsShow.episodes(language: appState.targetLanguage)
+                    for episode in episodes { await NewsShow.prepare(episode) }
                     PlaylistPlayer.shared.play(episodes.flatMap(\.lines), title: explain("nawana Podcast"))
                 }
                 .sheet(isPresented: .constant(true)) {
