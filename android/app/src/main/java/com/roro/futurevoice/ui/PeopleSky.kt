@@ -131,7 +131,7 @@ import kotlin.math.sin
  * neighbourhood further out, strangers at the edge. The map is bigger than
  * the screen and pans like a word cloud.
  *
- * The lens (All · My people · People I know · Strangers) is ONE choice in the
+ * The lens (All · My people · nawana users · Characters) is ONE choice in the
  * header. Every lens uses the same rings: a ring with nobody on it in that
  * lens folds away and the next ring moves in. Nobody changes angle — a person
  * who doesn't belong to the lens fades out where they stand.
@@ -142,14 +142,15 @@ import kotlin.math.sin
  */
 internal object PeopleSky {
 
-    enum class Lens { ALL, MINE, KNOWN, STRANGERS }
+    /** By WHO they are (iOS 2026-10-19): three lenses that never share a face. */
+    enum class Lens { ALL, MINE, USERS, CHARACTERS }
 
     @Composable
     fun Lens.title(): String = when (this) {
         Lens.ALL -> stringResource(R.string.all)
         Lens.MINE -> stringResource(R.string.watch_sky_lens_mine)
-        Lens.KNOWN -> stringResource(R.string.watch_sky_lens_known)
-        Lens.STRANGERS -> stringResource(R.string.strangers)
+        Lens.USERS -> stringResource(R.string.watch_sky_lens_users)
+        Lens.CHARACTERS -> stringResource(R.string.characters)
     }
 
     /** One thing on the map. */
@@ -177,8 +178,9 @@ internal object PeopleSky {
         fun shows(lens: Lens): Boolean = when (lens) {
             Lens.ALL -> true
             Lens.MINE -> isMine
-            Lens.KNOWN -> practiced > 0
-            Lens.STRANGERS -> !isMine && practiced == 0
+            Lens.USERS, Lens.CHARACTERS ->
+                !isMine && person.cast != CounterpartCast.OWN_PERSON &&
+                    person.isRealLearner == (lens == Lens.USERS)
         }
 
         val size: Float
@@ -222,7 +224,7 @@ internal object PeopleSky {
         val occupied = counts.map { it > 0 }
         val (slots, me) = when (lens) {
             Lens.MINE -> listOf(150f, 280f, 410f) to 100f
-            Lens.KNOWN -> listOf(146f, 276f, 400f) to 96f
+            Lens.USERS, Lens.CHARACTERS -> listOf(146f, 276f, 400f) to 96f
             else -> listOf(156f, 286f, 416f) to 104f
         }
         val radii = mutableListOf<Float>()
