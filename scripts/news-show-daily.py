@@ -12,6 +12,9 @@ tab's news pool (`news_topics`, already searched today) when that category
 has a row; only otherwise does it search. Made with the same pieces as
 news-show-probe.py, uploaded to R2 (`nawana-shows`), latest.json last.
 
+Episodes already made (OUT_DIR/stock.json) go out first, one a day, at no
+cost; only when the stock is empty is a new one made.
+
 Audio is deleted from this Mac once it is in R2; script.txt, script.json,
 topic.json and latest.json stay in OUT_DIR/<date>.
 
@@ -132,14 +135,44 @@ def put(key, path, content_type, cache):
                    cwd=GATEWAY_DIR, check=True, stdout=subprocess.DEVNULL, env=wrangler_env())
 
 
+def publish_from_stock(feed, number):
+    """Episodes already made go out first, one a day, before anything new is
+    made (founder, 2026-10-19). Their audio is already in R2, so publishing
+    one is a feed write and costs nothing. OUT_DIR/stock.json, oldest first."""
+    stock_file = os.path.join(OUT, "stock.json")
+    try:
+        stock = json.load(open(stock_file))
+    except (OSError, ValueError):
+        return False
+    if not stock:
+        return False
+    episode = {**stock[0], "id": f"{TODAY}-{LANG}", "number": number, "date": TODAY}
+    folder = os.path.join(OUT, TODAY)
+    os.makedirs(folder, exist_ok=True)
+    feed = {"feed": True, "language": LANG, "hosts": [h[0] for h in probe.HOSTS[LANG]],
+            "episodes": ([episode] + feed["episodes"])[:FEED_CAP]}
+    manifest = os.path.join(folder, "latest.json")
+    with open(manifest, "w") as f:
+        json.dump(feed, f, ensure_ascii=False, indent=2)
+    with open(os.path.join(folder, "from-stock.json"), "w") as f:
+        json.dump(stock[0], f, ensure_ascii=False, indent=2)
+    put(f"shows/{LANG}/latest.json", manifest, "application/json", "public, max-age=300")
+    with open(stock_file, "w") as f:
+        json.dump(stock[1:], f, ensure_ascii=False, indent=2)
+    print(f"EP {number} · {TODAY} · from stock · {episode['title']} · {len(stock) - 1} left in stock")
+    return True
+
+
 def main():
     reset = "--reset" in sys.argv
     feed = {"episodes": []} if reset else load_feed()
     if any(e.get("date") == TODAY for e in feed["episodes"]):
         print(f"{TODAY} is already in the feed; nothing to do")
         return
-    category = CATEGORY_BY_WEEKDAY[datetime.date.fromisoformat(TODAY).weekday()]
     number = max([e.get("number", 0) for e in feed["episodes"]], default=0) + 1
+    if publish_from_stock(feed, number):
+        return
+    category = CATEGORY_BY_WEEKDAY[datetime.date.fromisoformat(TODAY).weekday()]
 
     # Checked before anything is spent: a folder for today means a run
     # already made (or half made) it.
