@@ -244,7 +244,7 @@ private struct PlayerLibrary: View {
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Picker(selection: $tab) {
-                    Text("nawana Podcast").tag(Tab.podcast)
+                    Text("Podcast").tag(Tab.podcast)
                     Text("My situations").tag(Tab.situations)
                 } label: { EmptyView() }
                 .pickerStyle(.segmented)
