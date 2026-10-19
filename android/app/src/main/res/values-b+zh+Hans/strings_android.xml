@@ -22,8 +22,6 @@
     <string name="tap_a_category_the_composer_suggests_specific_scenarios">点一下分类，就会建议可以看的具体情境。</string>
     <string name="add_someone_you_actually_talk_to">加入实际会对话的人 — 朋友、同事、房东。和他们的情境会建立在你们真实的关系上。</string>
     <string name="add_a_person">添加人物</string>
-    <string name="who_are_they_to_you">这个人对我来说是谁？</string>
-    <string name="shared_context">共同知道的事</string>
     <string name="a_scene_with_lls">和 %1$s 的情境</string>
     <string name="lld_day_streak">连续 %1$d 天</string>
     <string name="lld_talks">对话 %1$d 次</string>
@@ -56,7 +54,6 @@
     <string name="worth_reaching_for">下次可以试试的</string>
     <string name="lets_talk">开始说</string>
     <string name="nothing_here_yet_have_a_talk_or_watch_a_scene">这里还没有东西。对话或看一段情境，那里做出来的材料就会在这里变成书。</string>
-    <string name="expressiveness">表达力</string>
     <string name="have_a_talk_and_this_gets_measured">对话之后就会测量这里。</string>
     <string name="things_you_studied_came_out_of_your_mouth">学过的东西在真实对话中说出口了</string>
     <string name="plus_lld_this_week">这周 +%1$d</string>
@@ -73,9 +70,6 @@
     <string name="im_ready">准备好了</string>
     <string name="pick_your_look">选个颜色</string>
     <string name="its_built_and_its_yours">做好了，而且是我的。登录就会留着 — 连同学习记录，换哪支手机都在。</string>
-    <string name="great_sample">录得很好</string>
-    <string name="usable_could_be_better">可以用 — 不过可以更好</string>
-    <string name="re_record_recommended">建议重录</string>
     <string name="too_short_llds_aim_for_60_90s">太短了（%1$d 秒）— 目标是 60～90 秒。</string>
     <string name="a_little_short_60_90s_clones_best">有点短 — 60～90 秒做出来最好。</string>
     <string name="clipping_detected_move_further">声音破了 — 离麦克风远一点试试。</string>
@@ -98,9 +92,7 @@
     <string name="write_to_us_to_see_or_correct_what_we_hold">想查看或修正我们保管的数据，写信给我们就可以，包含同意的日期。</string>
     <string name="this_permanently_deletes_your_voice_clone_talk_time_and_account">这会永久删除声音克隆、通话时间和账号，无法复原。订阅中的话，要另外在 Play 商店取消。</string>
     <string name="couldnt_delete_account">无法删除账号</string>
-    <string name="make_me_sound_more_like_you">让我听起来更像你</string>
     <string name="the_more_i_know_your_life_the_more_real_every_talk_feels">我越了解你的生活，每次对话就越真实。就这样说说看 — 用母语也可以。</string>
-    <string name="what_do_you_do">你做什么工作？</string>
     <string name="work_study_or_your_main_project">工作、念书，或正在做的项目 — 平常一天是什么样子</string>
     <string name="whos_in_your_daily_life">每天跟谁一起生活？</string>
     <string name="who_you_live_with_kids_pets">一起住的人、小孩、宠物 — 那些你常常会讲到的人</string>
@@ -142,10 +134,6 @@
     <string name="reminders_cant_reach_you">复习和每日来电无法送达。请到设置打开。</string>
     <string name="axis_vocab">词汇</string>
     <string name="axis_express">表达</string>
-    <string name="common_phrases">常用说法</string>
-    <string name="another_way_to_say_it">也可以这样说</string>
-    <string name="as_a_name">当作名字时</string>
-    <string name="from_your_talks">在你的对话中</string>
     <string name="previous_item">上一个</string>
     <string name="next_item">下一个</string>
     <string name="why_label">为什么</string>
@@ -156,7 +144,6 @@
     <string name="save_expression">保存表达</string>
     <string name="your_subscription_starts_cancel_any_time_before_then_in_google_play">订阅开始，之后改用方案自己的每月通话时间。在那之前，随时可以在 Google Play 取消。</string>
 
-    <string name="fluency_pace">流畅度与节奏</string>
     <string name="slip">重点</string>
     <string name="slips">重点</string>
     <string name="silent_take">(无声)</string>
@@ -192,9 +179,7 @@
     <string name="grammar_measured_line">在评分过的对话里，每 100 个字有 %1$s 个确认过的语法失误%2$s。</string>
     <string name="counted_from_transcript_verified_slips_only">只算逐字稿确认过的失误，识别噪声和用法建议都不算。这就是等级评定看的那个数字。</string>
     <string name="run_your_review_cards_built_from_your_own_slips">去跑复习卡。那些卡就是用你自己的失误做的，正好对准这里。</string>
-    <string name="how_vividly_and_naturally_you_get_your_meaning_across">把想说的话说得多生动、多自然。</string>
     <string name="tell_stories_react_and_add_detail">说故事、给反应、加细节——不只是发生了什么，还有当下的感受。</string>
-    <string name="finding_your_flow">正在找到节奏</string>
     <string name="pace_conversational">能对话的速度</string>
     <string name="pace_fluent">流利的速度</string>
     <string name="pace_very_fluent">非常流利的速度</string>
@@ -209,13 +194,8 @@
     <string name="assessed_detail_grammar_density">每 100 个字有 %1$s 个确认过的语法失误，和等级评定看的密度一样。</string>
     <string name="assessed_detail_grammar_score">最近几次对话平均 %1$d/100 分，每次都从真正说出口的句子里确认的失误来评分。</string>
     <string name="assessed_detail_expression">每轮 %1$d 个字——想法展开到哪里。</string>
-    <string name="a_week_since_the_last_assessment">距离上次评定满一周</string>
     <string name="one_more_day">再 1 天</string>
-    <string name="lld_more_days">再 %1$d 天</string>
-    <string name="enough_new_conversation">新对话已足够</string>
-    <string name="lld_more_min_of_new_talk">新对话再 %1$d 分钟</string>
     <string name="reps_this_week">本周复习</string>
-    <string name="days_active">有活动的天数</string>
     <string name="avg_shadow_score">跟读平均分</string>
     <string name="open_google_play">打开 Google Play</string>
     <string name="get_the_new_test_build">取得新的测试版</string>
@@ -242,15 +222,11 @@
     <string name="accent_standard_german">标准德语</string>
     <string name="accent_mexican">墨西哥式</string>
     <string name="accent_castilian">西班牙式</string>
-    <string name="which_accent">想要哪种口音？</string>
-    <string name="which_accent_do_you_want_to_speak_with">想用哪种口音说？</string>
     <string name="your_fluent_self_speaks_with_this_accent_in_your_own_voice">流利的自己会用你的声音、带着这个口音说话。听过之后也能再换。</string>
-    <string name="your_voice_as_you_recorded_it_with_no_accent_applied">保留录音时的声音，不另外加口音</string>
     <string name="voice_change_already">最近 30 天内已经换过声音了。</string>
     <string name="voice_change_again_from">%s 起可以再换声音。</string>
     <string name="voice_change_uses_it">声音每 30 天可以换一次，现在换就会用掉这一次。</string>
     <string name="use_this_voice_q">要用这个声音吗？</string>
-    <string name="getting_your_line_ready">正在整理你的句子…</string>
     <!-- iOS ede039e: how two people talk (SpeechRegister) and the public figure's identity. -->
     <string name="rel_how_do_you_two_talk">你们怎么说话？</string>
     <string name="rel_how_do_you_and_s_talk">你和%1$s怎么说话？</string>

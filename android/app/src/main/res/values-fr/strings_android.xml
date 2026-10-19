@@ -22,8 +22,6 @@
     <string name="tap_a_category_the_composer_suggests_specific_scenarios">Touche une catégorie : on te propose des situations précises à regarder.</string>
     <string name="add_someone_you_actually_talk_to">Ajoute quelqu’un à qui tu parles vraiment — un ami, un collègue, ton propriétaire. Les scènes avec cette personne s’appuient sur ce que vous êtes vraiment tous les deux.</string>
     <string name="add_a_person">Ajouter une personne</string>
-    <string name="who_are_they_to_you">Qui est-ce pour toi ?</string>
-    <string name="shared_context">Contexte commun</string>
     <string name="a_scene_with_lls">Une scène avec %1$s</string>
     <string name="lld_day_streak">Série de %1$d jours</string>
     <string name="lld_talks">%1$d conversations</string>
@@ -56,7 +54,6 @@
     <string name="worth_reaching_for">À viser</string>
     <string name="lets_talk">On parle ?</string>
     <string name="nothing_here_yet_have_a_talk_or_watch_a_scene">Rien pour l’instant. Parle ou regarde une scène — ce que ça donne devient des carnets ici.</string>
-    <string name="expressiveness">Expressivité</string>
     <string name="have_a_talk_and_this_gets_measured">Parle, et ça se mesure.</string>
     <string name="things_you_studied_came_out_of_your_mouth">choses étudiées que tu as dites dans une vraie conversation</string>
     <string name="plus_lld_this_week">+%1$d cette semaine</string>
@@ -73,9 +70,6 @@
     <string name="im_ready">Je suis prêt</string>
     <string name="pick_your_look">Choisis ton style</string>
     <string name="its_built_and_its_yours">C’est prêt, et c’est à toi. Connecte-toi et ça reste — avec ta progression, sur n’importe quel téléphone.</string>
-    <string name="great_sample">Excellent enregistrement</string>
-    <string name="usable_could_be_better">Utilisable — ça pourrait être mieux</string>
-    <string name="re_record_recommended">Mieux vaut réenregistrer</string>
     <string name="too_short_llds_aim_for_60_90s">Trop court (%1$d s) — vise 60 à 90 s.</string>
     <string name="a_little_short_60_90s_clones_best">Un peu court — le clonage marche mieux entre 60 et 90 s.</string>
     <string name="clipping_detected_move_further">Saturation détectée — éloigne-toi un peu du micro.</string>
@@ -98,9 +92,7 @@
     <string name="write_to_us_to_see_or_correct_what_we_hold">Écris-nous pour voir ou corriger ce qu’on garde sur toi, y compris la date à laquelle tu as donné ton consentement.</string>
     <string name="this_permanently_deletes_your_voice_clone_talk_time_and_account">Ça supprime définitivement ton clone vocal, ton temps de parole et ton compte. C’est irréversible. Un abonnement Google Play actif doit être annulé séparément dans le Play Store.</string>
     <string name="couldnt_delete_account">Impossible de supprimer le compte</string>
-    <string name="make_me_sound_more_like_you">Fais que je te ressemble encore plus</string>
     <string name="the_more_i_know_your_life_the_more_real_every_talk_feels">Plus je connais ta vie, plus chaque appel semble réel. Parle, c’est tout — ta langue natale, c’est très bien.</string>
-    <string name="what_do_you_do">Tu fais quoi dans la vie ?</string>
     <string name="work_study_or_your_main_project">Travail, études, ou ton projet principal — à quoi ressemble une journée type</string>
     <string name="whos_in_your_daily_life">Qui fait partie de ton quotidien ?</string>
     <string name="who_you_live_with_kids_pets">Avec qui tu vis, tes enfants, tes animaux — les gens dont tu finis par parler</string>
@@ -142,10 +134,6 @@
     <string name="reminders_cant_reach_you">Les révisions et l’appel quotidien ne peuvent pas te joindre. Active-les dans les réglages.</string>
     <string name="axis_vocab">Vocabulaire</string>
     <string name="axis_express">Expression</string>
-    <string name="common_phrases">Expressions courantes</string>
-    <string name="another_way_to_say_it">Une autre façon de le dire</string>
-    <string name="as_a_name">Comme un nom</string>
-    <string name="from_your_talks">Dans tes conversations</string>
     <string name="previous_item">Précédent</string>
     <string name="next_item">Suivant</string>
     <string name="why_label">Pourquoi</string>
@@ -159,7 +147,6 @@
          nothing here is language, so it is never translated. -->
     <string name="price_per_cycle" translatable="false">%1$s / %2$s</string>
 
-    <string name="fluency_pace">Aisance et rythme</string>
     <string name="slip">erreur</string>
     <string name="slips">erreurs</string>
     <string name="silent_take">(silencieux)</string>
@@ -195,9 +182,7 @@
     <string name="grammar_measured_line">%1$s erreurs de grammaire vérifiées pour 100 mots parlés dans tes appels évalués%2$s.</string>
     <string name="counted_from_transcript_verified_slips_only">Ne compte que les erreurs vérifiées par transcription — les artefacts de reconnaissance vocale et les suggestions de style sont exclus. C’est exactement le chiffre que ton évaluation de niveau prend en compte.</string>
     <string name="run_your_review_cards_built_from_your_own_slips">Fais tes cartes de révision — elles sont construites à partir de tes propres erreurs et ciblent exactement ça.</string>
-    <string name="how_vividly_and_naturally_you_get_your_meaning_across">À quel point tu fais passer ton idée de façon vivante et naturelle.</string>
     <string name="tell_stories_react_and_add_detail">Raconte des histoires, réagis, ajoute des détails — décris ce que tu as ressenti, pas seulement ce qui s’est passé.</string>
-    <string name="finding_your_flow">Prise de rythme</string>
     <string name="pace_conversational">Conversationnel</string>
     <string name="pace_fluent">Fluide</string>
     <string name="pace_very_fluent">Très fluide</string>
@@ -212,13 +197,8 @@
     <string name="assessed_detail_grammar_density">%1$s erreurs de grammaire vérifiées pour 100 mots parlés — la même densité que celle prise en compte par l’évaluation.</string>
     <string name="assessed_detail_grammar_score">Score de %1$d/100 sur tes appels récents — chaque appel est noté à partir des erreurs de grammaire vérifiées dans ce que tu as dit.</string>
     <string name="assessed_detail_expression">%1$d mots par tour — jusqu’où les idées sont développées.</string>
-    <string name="a_week_since_the_last_assessment">Une semaine depuis la dernière évaluation</string>
     <string name="one_more_day">Encore 1 jour</string>
-    <string name="lld_more_days">Encore %1$d jours</string>
-    <string name="enough_new_conversation">Assez de nouvelles conversations</string>
-    <string name="lld_more_min_of_new_talk">Encore %1$d min de nouvelle conversation</string>
     <string name="reps_this_week">répétitions cette semaine</string>
-    <string name="days_active">jours actifs</string>
     <string name="avg_shadow_score">score moyen de shadowing</string>
     <string name="open_google_play">Ouvrir Google Play</string>
     <string name="get_the_new_test_build">Télécharger la nouvelle version de test</string>
@@ -245,15 +225,11 @@
     <string name="accent_standard_german">Allemand standard</string>
     <string name="accent_mexican">Mexicain</string>
     <string name="accent_castilian">Castillan</string>
-    <string name="which_accent">Quel accent ?</string>
-    <string name="which_accent_do_you_want_to_speak_with">Avec quel accent tu veux parler ?</string>
     <string name="your_fluent_self_speaks_with_this_accent_in_your_own_voice">Ton moi fluide parle avec cet accent, avec ta propre voix. Tu pourras le changer une fois que tu l’auras entendu.</string>
-    <string name="your_voice_as_you_recorded_it_with_no_accent_applied">Ta voix telle que tu l’as enregistrée, sans accent ajouté</string>
     <string name="voice_change_already">Tu as déjà changé ta voix au cours des 30 derniers jours.</string>
     <string name="voice_change_again_from">Tu pourras de nouveau changer ta voix à partir du %s.</string>
     <string name="voice_change_uses_it">Tu peux changer ta voix une fois tous les 30 jours, et ce changement compte.</string>
     <string name="use_this_voice_q">Utiliser cette voix ?</string>
-    <string name="getting_your_line_ready">On prépare ta phrase…</string>
     <!-- iOS ede039e: how two people talk (SpeechRegister) and the public figure's identity. -->
     <string name="rel_how_do_you_two_talk">Comment vous vous parlez ?</string>
     <string name="rel_how_do_you_and_s_talk">Comment tu parles avec %1$s ?</string>

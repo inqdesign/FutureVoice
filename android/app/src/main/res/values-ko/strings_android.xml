@@ -22,8 +22,6 @@
     <string name="tap_a_category_the_composer_suggests_specific_scenarios">분류를 누르면 볼 수 있는 구체적인 상황을 제안해요.</string>
     <string name="add_someone_you_actually_talk_to">실제로 대화하는 사람을 더해요 — 친구, 동료, 집주인. 그 사람과의 장면은 두 사람의 실제 관계 위에서 만들어져요.</string>
     <string name="add_a_person">사람 추가</string>
-    <string name="who_are_they_to_you">나에게 어떤 사람인가요?</string>
-    <string name="shared_context">같이 아는 것</string>
     <string name="a_scene_with_lls">%1$s와의 장면</string>
     <string name="lld_day_streak">%1$d일 연속</string>
     <string name="lld_talks">대화 %1$d회</string>
@@ -56,7 +54,6 @@
     <string name="worth_reaching_for">다음에 써 볼 것</string>
     <string name="lets_talk">대화하기</string>
     <string name="nothing_here_yet_have_a_talk_or_watch_a_scene">아직 아무것도 없어요. 대화하거나 장면을 보면 거기서 나온 재료가 여기 책이 돼요.</string>
-    <string name="expressiveness">표현력</string>
     <string name="have_a_talk_and_this_gets_measured">대화를 하면 여기가 측정돼요.</string>
     <string name="things_you_studied_came_out_of_your_mouth">공부한 것이 실제 대화에서 입 밖으로 나왔어요</string>
     <string name="plus_lld_this_week">이번 주 +%1$d</string>
@@ -73,9 +70,6 @@
     <string name="im_ready">준비됐어요</string>
     <string name="pick_your_look">색을 골라요</string>
     <string name="its_built_and_its_yours">다 만들어졌고 내 것이에요. 로그인하면 그대로 남아요 — 기록과 함께, 어느 폰에서든.</string>
-    <string name="great_sample">좋은 녹음이에요</string>
-    <string name="usable_could_be_better">쓸 만해요 — 더 좋을 수 있고요</string>
-    <string name="re_record_recommended">다시 녹음하는 걸 권해요</string>
     <string name="too_short_llds_aim_for_60_90s">너무 짧아요 (%1$d초) — 60~90초를 목표로.</string>
     <string name="a_little_short_60_90s_clones_best">조금 짧아요 — 60~90초가 가장 잘 만들어져요.</string>
     <string name="clipping_detected_move_further">소리가 깨졌어요 — 마이크에서 조금 떨어져 보세요.</string>
@@ -98,9 +92,7 @@
     <string name="write_to_us_to_see_or_correct_what_we_hold">보관 중인 내 정보를 확인하거나 고치고 싶으면 메일 주세요. 동의한 날짜도 포함돼요.</string>
     <string name="this_permanently_deletes_your_voice_clone_talk_time_and_account">목소리 클론과 통화 시간, 계정을 영구히 지워요. 되돌릴 수 없어요. 구독 중이라면 Play 스토어에서 따로 해지해야 해요.</string>
     <string name="couldnt_delete_account">계정을 지우지 못했어요</string>
-    <string name="make_me_sound_more_like_you">너처럼 들리게 해줘</string>
     <string name="the_more_i_know_your_life_the_more_real_every_talk_feels">네 생활을 알수록 대화가 진짜 같아져. 그냥 말해 — 모국어로 해도 돼.</string>
-    <string name="what_do_you_do">무슨 일 해?</string>
     <string name="work_study_or_your_main_project">일, 공부, 하고 있는 프로젝트 — 보통 하루가 어떤지</string>
     <string name="whos_in_your_daily_life">매일 누구랑 지내?</string>
     <string name="who_you_live_with_kids_pets">같이 사는 사람, 아이, 반려동물 — 자꾸 얘기하게 되는 사람들</string>
@@ -142,10 +134,6 @@
     <string name="reminders_cant_reach_you">복습과 매일 전화가 닿지 못해요. 설정에서 켜 주세요.</string>
     <string name="axis_vocab">어휘</string>
     <string name="axis_express">표현</string>
-    <string name="common_phrases">자주 쓰는 표현</string>
-    <string name="another_way_to_say_it">이렇게도 말해요</string>
-    <string name="as_a_name">이름으로 쓸 때</string>
-    <string name="from_your_talks">내 대화에서</string>
     <string name="previous_item">이전</string>
     <string name="next_item">다음</string>
     <string name="why_label">왜</string>
@@ -156,7 +144,6 @@
     <string name="save_expression">표현 저장</string>
     <string name="your_subscription_starts_cancel_any_time_before_then_in_google_play">구독이 시작되고, 그때부터 구독의 매달 통화 시간을 써요. 그 전까지는 Google Play에서 언제든 해지할 수 있어요.</string>
 
-    <string name="fluency_pace">유창성과 속도</string>
     <string name="slip">문법 포인트</string>
     <string name="slips">문법 포인트</string>
     <string name="silent_take">(무음)</string>
@@ -192,9 +179,7 @@
     <string name="grammar_measured_line">평가에 쓰인 대화에서 100단어당 확인된 문법 실수 %1$s개%2$s.</string>
     <string name="counted_from_transcript_verified_slips_only">전사로 확인된 실수만 세요. 인식 오류나 표현 제안은 빼요. 레벨 판정이 보는 숫자와 똑같아요.</string>
     <string name="run_your_review_cards_built_from_your_own_slips">복습 카드를 돌려 보세요. 직접 틀린 문장으로 만든 거라 딱 이걸 겨냥해요.</string>
-    <string name="how_vividly_and_naturally_you_get_your_meaning_across">하고 싶은 말을 얼마나 생생하고 자연스럽게 전하는지예요.</string>
     <string name="tell_stories_react_and_add_detail">이야기를 들려주고, 반응하고, 살을 붙여 보세요. 무슨 일이 있었는지만 말고 어떤 기분이었는지까지요.</string>
-    <string name="finding_your_flow">흐름을 찾는 중</string>
     <string name="pace_conversational">대화가 되는 속도</string>
     <string name="pace_fluent">유창한 속도</string>
     <string name="pace_very_fluent">아주 유창한 속도</string>
@@ -209,13 +194,8 @@
     <string name="assessed_detail_grammar_density">100단어당 확인된 문법 실수 %1$s개. 레벨 판정이 보는 밀도와 같아요.</string>
     <string name="assessed_detail_grammar_score">최근 대화 평균 %1$d/100점. 대화마다 실제로 말한 문장에서 확인된 실수로 채점해요.</string>
     <string name="assessed_detail_expression">한 턴에 %1$d단어. 생각을 얼마나 펼치는지예요.</string>
-    <string name="a_week_since_the_last_assessment">지난 평가로부터 일주일</string>
     <string name="one_more_day">하루 더</string>
-    <string name="lld_more_days">%1$d일 더</string>
-    <string name="enough_new_conversation">새 대화 충분</string>
-    <string name="lld_more_min_of_new_talk">새 대화 %1$d분 더</string>
     <string name="reps_this_week">이번 주 복습</string>
-    <string name="days_active">활동한 날</string>
     <string name="avg_shadow_score">쉐도잉 평균</string>
     <string name="open_google_play">Google Play 열기</string>
     <string name="get_the_new_test_build">새 테스트 빌드 받기</string>
@@ -242,15 +222,11 @@
     <string name="accent_standard_german">표준 독일어</string>
     <string name="accent_mexican">멕시코식</string>
     <string name="accent_castilian">스페인식</string>
-    <string name="which_accent">원하는 억양은?</string>
-    <string name="which_accent_do_you_want_to_speak_with">어떤 억양으로 말하고 싶으세요?</string>
     <string name="your_fluent_self_speaks_with_this_accent_in_your_own_voice">유창해진 내가 내 목소리로, 이 억양으로 말해요. 직접 들어본 뒤에 바꿀 수도 있어요.</string>
-    <string name="your_voice_as_you_recorded_it_with_no_accent_applied">녹음한 목소리 그대로, 억양을 입히지 않아요</string>
     <string name="voice_change_already">최근 30일 안에 이미 목소리를 바꿨어요.</string>
     <string name="voice_change_again_from">%s부터 다시 목소리를 바꿀 수 있어요.</string>
     <string name="voice_change_uses_it">목소리는 30일에 한 번 바꿀 수 있어요. 지금 바꾸면 그 한 번을 써요.</string>
     <string name="use_this_voice_q">이 목소리로 할까요?</string>
-    <string name="getting_your_line_ready">말할 문장을 다듬고 있어요…</string>
     <!-- iOS ede039e: how two people talk (SpeechRegister) and the public figure's identity. -->
     <string name="rel_how_do_you_two_talk">둘은 어떤 말투로 얘기해요?</string>
     <string name="rel_how_do_you_and_s_talk">%1$s하고는 어떤 말투로 얘기해요?</string>

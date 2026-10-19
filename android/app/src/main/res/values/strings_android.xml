@@ -22,8 +22,6 @@
     <string name="tap_a_category_the_composer_suggests_specific_scenarios">Tap a category — the composer suggests specific scenarios you can watch.</string>
     <string name="add_someone_you_actually_talk_to">Add someone you actually talk to — a friend, a colleague, your landlord. Scenes with them are grounded in what you two are really like.</string>
     <string name="add_a_person">Add a person</string>
-    <string name="who_are_they_to_you">Who are they to you?</string>
-    <string name="shared_context">Shared context</string>
     <string name="a_scene_with_lls">A scene with %1$s</string>
     <string name="lld_day_streak">%1$d-day streak</string>
     <string name="lld_talks">%1$d talks</string>
@@ -56,7 +54,6 @@
     <string name="worth_reaching_for">Worth reaching for</string>
     <string name="lets_talk">Let\'s talk</string>
     <string name="nothing_here_yet_have_a_talk_or_watch_a_scene">Nothing here yet. Have a talk or watch a scene — the material it makes becomes books here.</string>
-    <string name="expressiveness">Expressiveness</string>
     <string name="have_a_talk_and_this_gets_measured">Have a talk and this gets measured.</string>
     <string name="things_you_studied_came_out_of_your_mouth">things you studied have come out of your mouth in a real conversation</string>
     <string name="plus_lld_this_week">+%1$d this week</string>
@@ -73,9 +70,6 @@
     <string name="im_ready">I\'m ready</string>
     <string name="pick_your_look">Pick your look</string>
     <string name="its_built_and_its_yours">It\'s built and it\'s yours. Sign in and it stays — with your progress, on whichever phone you use.</string>
-    <string name="great_sample">Great sample</string>
-    <string name="usable_could_be_better">Usable — could be better</string>
-    <string name="re_record_recommended">Re-record recommended</string>
     <string name="too_short_llds_aim_for_60_90s">Too short (%1$ds) — aim for 60–90s.</string>
     <string name="a_little_short_60_90s_clones_best">A little short — 60–90s clones best.</string>
     <string name="clipping_detected_move_further">Clipping detected — move a little further from the mic.</string>
@@ -98,9 +92,7 @@
     <string name="write_to_us_to_see_or_correct_what_we_hold">Write to us to see or correct what we hold about you, including the date you gave consent.</string>
     <string name="this_permanently_deletes_your_voice_clone_talk_time_and_account">This permanently deletes your voice clone, talk time, and account. It cannot be undone. An active Google Play subscription must be canceled separately in the Play Store.</string>
     <string name="couldnt_delete_account">Couldn\'t delete account</string>
-    <string name="make_me_sound_more_like_you">Make me sound more like you</string>
     <string name="the_more_i_know_your_life_the_more_real_every_talk_feels">The more I know your life, the more real every talk feels. Just talk — your native language is fine.</string>
-    <string name="what_do_you_do">What do you do?</string>
     <string name="work_study_or_your_main_project">Work, study, or your main project — what a typical day looks like</string>
     <string name="whos_in_your_daily_life">Who\'s in your daily life?</string>
     <string name="who_you_live_with_kids_pets">Who you live with, kids, pets — people you end up talking about</string>
@@ -142,10 +134,6 @@
     <string name="reminders_cant_reach_you">Reviews and the daily call can\'t reach you. Turn them on in settings.</string>
     <string name="axis_vocab">Vocab</string>
     <string name="axis_express">Express</string>
-    <string name="common_phrases">Common phrases</string>
-    <string name="another_way_to_say_it">Another way to say it</string>
-    <string name="as_a_name">As a name</string>
-    <string name="from_your_talks">From your talks</string>
     <string name="previous_item">Previous</string>
     <string name="next_item">Next</string>
     <string name="why_label">Why</string>
@@ -161,7 +149,6 @@
 
     <!-- Talk book: the scorecard's fourth axis. "Fluency" alone is already a
          key elsewhere and means something narrower. -->
-    <string name="fluency_pace">Fluency &amp; pace</string>
     <!-- The plural word inside "Review %1$d grammar %2$s from this talk".
          Korean/Japanese/Chinese drop the argument, so it only surfaces in
          English. -->
@@ -208,9 +195,7 @@
     <string name="grammar_measured_line">%1$s verified grammar slips per 100 spoken words across your assessed talks%2$s.</string>
     <string name="counted_from_transcript_verified_slips_only">Counted from transcript-verified slips only — recognizer artifacts and style suggestions are excluded. This is the exact number your level assessment weighs.</string>
     <string name="run_your_review_cards_built_from_your_own_slips">Run your review cards — they\'re built from your own slips and target exactly these.</string>
-    <string name="how_vividly_and_naturally_you_get_your_meaning_across">How vividly and naturally you get your meaning across.</string>
     <string name="tell_stories_react_and_add_detail">Tell stories, react, and add detail — describe how things felt, not just what happened.</string>
-    <string name="finding_your_flow">Finding your flow</string>
     <string name="pace_conversational">Conversational</string>
     <string name="pace_fluent">Fluent</string>
     <string name="pace_very_fluent">Very fluent</string>
@@ -225,13 +210,8 @@
     <string name="assessed_detail_grammar_density">%1$s verified grammar slips per 100 spoken words — the same density the assessment weighs.</string>
     <string name="assessed_detail_grammar_score">Scoring %1$d/100 across recent talks — each talk graded from the verified grammar slips in what you said.</string>
     <string name="assessed_detail_expression">%1$d words per turn — how far ideas get developed.</string>
-    <string name="a_week_since_the_last_assessment">A week since the last assessment</string>
     <string name="one_more_day">1 more day</string>
-    <string name="lld_more_days">%1$d more days</string>
-    <string name="enough_new_conversation">Enough new conversation</string>
-    <string name="lld_more_min_of_new_talk">%1$d more min of new talk</string>
     <string name="reps_this_week">reps this week</string>
-    <string name="days_active">days active</string>
     <string name="avg_shadow_score">avg shadow score</string>
     <string name="open_google_play">Open Google Play</string>
     <string name="get_the_new_test_build">Get the new test build</string>
@@ -258,15 +238,11 @@
     <string name="accent_standard_german">Standard German</string>
     <string name="accent_mexican">Mexican</string>
     <string name="accent_castilian">Castilian</string>
-    <string name="which_accent">Which accent?</string>
-    <string name="which_accent_do_you_want_to_speak_with">Which accent do you want to speak with?</string>
     <string name="your_fluent_self_speaks_with_this_accent_in_your_own_voice">Your fluent self speaks with this accent, in your own voice. You can change it once you\'ve heard it.</string>
-    <string name="your_voice_as_you_recorded_it_with_no_accent_applied">Your voice as you recorded it, with no accent applied</string>
     <string name="voice_change_already">You\'ve already changed your voice in the last 30 days.</string>
     <string name="voice_change_again_from">You can change your voice again from %s.</string>
     <string name="voice_change_uses_it">You can change your voice once every 30 days, and this uses it.</string>
     <string name="use_this_voice_q">Use this voice?</string>
-    <string name="getting_your_line_ready">Getting your line ready…</string>
     <!-- iOS ede039e: how two people talk (SpeechRegister) and the public figure's identity. -->
     <string name="rel_how_do_you_two_talk">How do you two talk?</string>
     <string name="rel_how_do_you_and_s_talk">How do you and %1$s talk?</string>
