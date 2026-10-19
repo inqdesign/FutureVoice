@@ -153,6 +153,7 @@ enum ConversationEngine {
         topic: String,
         persona: UserPersona? = nil,
         counterpart: Counterpart? = nil,
+        personHistory: PersonHistory? = nil,
         newsFacts: [String] = [],
         brief: ScenarioBrief? = nil,
         firstMeeting: Bool = false,
@@ -221,7 +222,7 @@ enum ConversationEngine {
         // `characterBlock` (ConversationEngine+Character.swift).
         let counterpartBlock = counterpart.map {
             characterBlock($0, persona: persona, targetLanguage: targetLanguage,
-                           languageName: languageName)
+                           languageName: languageName, history: personHistory)
         } ?? ""
 
         // The very first call. Everything the app knows about this learner

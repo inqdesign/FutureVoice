@@ -456,9 +456,18 @@ along with `publicIdentity` / `factsRefreshedAt` (fixed the same day).
   friend/partner/family): the whole notebook, private rungs included, framed
   as "you know this from being close to them". A stranger or public figure
   never gets past `strangerLines`, whatever the toggle says.
-- Not built yet: per-person MEMORY across calls (the relationship ledger —
-  what was talked about, what each said, open loops). Every call with the
-  same person still starts without the previous one.
+- **A person remembers your earlier calls** (2026-10-19, founder: "pick
+  up the last conversation — extend it, or move to another topic on their
+  own"). `PersonHistory` rides on every cast call once a past talk exists:
+  the LAST talk as lines (its end, ≤30 lines / 3,000 chars) and up to five
+  before it as date + title, built from sessions on disk — no new call, no
+  new storage. With it the stranger and public-figure blocks stop saying
+  "no shared history"; with none, every block is byte-identical to before.
+  **Continue the last talk** (`PickUpTalkButton`, on the map's person card
+  and Find people's person page) sets `pickUp`: the first line comes out of
+  the last talk, and the model decides whether to carry the thread or move
+  on. Plain Talk is a new conversation that may call back. Not a ledger of
+  open loops yet, and not measured with a probe. Tests: `PersonHistoryTests`.
 
 ## Push notifications (2026-09-26)
 

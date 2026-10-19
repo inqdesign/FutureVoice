@@ -233,6 +233,11 @@ struct ConversationView: View {
     /// stores the ringtone under the same text + voice), so speaking it costs
     /// no second synthesis and the voice never changes mid-hand-off.
     private let initialOpener: String?
+    /// The learner tapped "pick up where you left off" on a person.
+    private let pickUpLastTalk: Bool
+    /// What this call's person remembers of earlier talks, pinned with the
+    /// clock (`PersonHistory`).
+    @State private var personHistory: PersonHistory?
     /// A "my own topic" call (topics page): opens by asking what to talk
     /// about, and the subject the learner names is the call
     /// (`ConversationEngine`'s THEY CHOSE THE TOPIC block).
@@ -250,12 +255,14 @@ struct ConversationView: View {
          initialScenarioId: UUID? = nil, initialNewsFacts: [String] = [],
          initialCounterpart: Counterpart? = nil,
          initialOpener: String? = nil,
+         pickUpLastTalk: Bool = false,
          learnerPicksTopic: Bool = false,
          resumeSession: Session? = nil,
          entry: TalkEntry = .other,
          onClose: (() -> Void)? = nil) {
         self.onClose = onClose
         self.initialOpener = initialOpener
+        self.pickUpLastTalk = pickUpLastTalk && resumeSession == nil
         self.learnerPicksTopic = learnerPicksTopic && resumeSession == nil
         self.entry = resumeSession != nil ? .resume : entry
         if let s = resumeSession {
@@ -4773,6 +4780,10 @@ struct ConversationView: View {
         )
         freeTalkCue = .random(hasRecentNews: appState.persona?.currentNotes()
             .contains { $0.kind == .now } ?? false)
+        personHistory = sessionCounterpartId.flatMap {
+            PersonHistory.build(personId: $0, sessions: SessionStore.shared.load(),
+                                excluding: sessionId, pickUp: pickUpLastTalk)
+        }
     }
 
     private func systemPrompt() -> String {
@@ -4789,6 +4800,7 @@ struct ConversationView: View {
             topic: composedTopic,
             persona: appState.persona,
             counterpart: counterpart,
+            personHistory: personHistory,
             newsFacts: newsFacts,
             brief: sessionScenarioId.flatMap { sid in
                 appState.scenarios.first { $0.id == sid }?.brief

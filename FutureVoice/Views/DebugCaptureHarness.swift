@@ -1553,6 +1553,23 @@ enum DebugCapture {
                 seedSkyPeople(into: appState,
                               withClose: !UserDefaults.standard.bool(forKey: "skyNoClose"))
             }
+            // `-skyCard 1`: the card's person has a past talk, so it shows
+            // "Continue the last talk".
+            if UserDefaults.standard.bool(forKey: "skyCard"),
+               let p = appState.counterparts.first(where: { $0.remoteId == nil }) {
+                once("watchtab-sky-talk") {
+                    let end = Date().addingTimeInterval(-86_400)
+                    var s = Session(id: UUID(), userId: UUID(), targetLanguage: appState.targetLanguage,
+                                    mode: .conversation, topic: nil,
+                                    startedAt: end.addingTimeInterval(-600), endedAt: end,
+                                    turns: [Turn(id: UUID(), role: .user, audioURL: nil,
+                                                 transcript: "I finally booked the flights to Lisbon.",
+                                                 durationMs: 2000, timestamp: end, suggestion: nil)],
+                                    summary: nil)
+                    s.counterpartId = p.id
+                    SessionStore.shared.save(s)
+                }
+            }
             UserDefaults.standard.set(true, forKey: PeopleSky.defaultsKey)
             return AnyView(WatchTab())
         case "watchtab-empty":

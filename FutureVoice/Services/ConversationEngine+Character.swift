@@ -14,16 +14,21 @@ import Foundation
 extension ConversationEngine {
 
     static func characterBlock(_ c: Counterpart, persona: UserPersona?,
-                               targetLanguage: String, languageName: String) -> String {
+                               targetLanguage: String, languageName: String,
+                               history: PersonHistory? = nil) -> String {
+        let block: String
         switch c.cast {
         case .ownPerson:
-            return ownPersonBlock(c, targetLanguage: targetLanguage, languageName: languageName)
+            block = ownPersonBlock(c, targetLanguage: targetLanguage, languageName: languageName)
         case .stranger:
-            return strangerBlock(c, persona: persona, targetLanguage: targetLanguage,
-                                 languageName: languageName)
+            block = strangerBlock(c, persona: persona, targetLanguage: targetLanguage,
+                                  languageName: languageName, metBefore: history != nil)
         case .publicFigure:
-            return publicFigureBlock(c, targetLanguage: targetLanguage, languageName: languageName)
+            block = publicFigureBlock(c, targetLanguage: targetLanguage, languageName: languageName,
+                                      metBefore: history != nil)
         }
+        // No history = byte-identical to the block before memory existed.
+        return block + (history?.promptBlock(name: c.name, languageName: languageName) ?? "")
     }
 
     /// What a cast person is told about the user. Someone close to the
@@ -148,7 +153,8 @@ extension ConversationEngine {
     /// A Find-people persona: a new acquaintance. The text is the block every
     /// cast call used before 2026-09-28, plus the address block.
     private static func strangerBlock(_ c: Counterpart, persona: UserPersona?,
-                                      targetLanguage: String, languageName: String) -> String {
+                                      targetLanguage: String, languageName: String,
+                                      metBefore: Bool = false) -> String {
         let facets = [
             c.location.isEmpty ? nil : "Where: \(c.location)",
             c.commonTopics.isEmpty ? nil : "Their usual topics: \(c.commonTopics)",
@@ -162,8 +168,8 @@ extension ConversationEngine {
         - Name: \(c.name)
         \(facets.isEmpty ? "" : facets + "\n")\
         - Their self-introduction, in their words: "\(c.intro.isEmpty ? c.background : c.intro)"
-        You and the user are new acquaintances with no shared history to \
-        reference. Speak AS this person: their life, their opinions, their tone. \
+        \(metBefore ? "You and the user have talked before (YOUR HISTORY below) and are still getting to know each other." : "You and the user are new acquaintances with no shared history to reference.") \
+        Speak AS this person: their life, their opinions, their tone. \
         Stay in character the whole call; never announce you're playing a role.
 
         \(addressBlock(c, targetLanguage: targetLanguage, languageName: languageName))
@@ -192,7 +198,8 @@ extension ConversationEngine {
     /// — every call with RM opened on the one fact in it that stood out (the
     /// museums). Old rows still carry those fields; they are not read.
     private static func publicFigureBlock(_ c: Counterpart, targetLanguage: String,
-                                          languageName: String) -> String {
+                                          languageName: String,
+                                          metBefore: Bool = false) -> String {
         let identity = c.publicIdentity.flatMap { $0.isEmpty ? nil : $0 } ?? c.name
         return """
 
@@ -207,7 +214,7 @@ extension ConversationEngine {
         opinions and habits, what you have been doing lately. Don't fall back \
         on the one or two things you are best known for — range across your \
         whole public life, and go wherever the user takes the conversation.
-        The user knows you; you don't know them yet. Be the person you are in \
+        \(metBefore ? "The user knows you, and you have talked before (YOUR HISTORY below)." : "The user knows you; you don't know them yet.") Be the person you are in \
         public with someone you've just met: genuine, curious about them, in \
         your own manner. Share and react; don't interview them.
         Stay on public ground: nothing about your health, relationships, \

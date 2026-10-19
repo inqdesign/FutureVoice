@@ -18,6 +18,8 @@ struct FindPeopleSheet: View {
     let onNew: () -> Void
     /// Start a live call with this (already saved) person.
     let onTalk: (Counterpart) -> Void
+    /// A call that picks up the last talk with them.
+    var onPickUp: ((Counterpart) -> Void)? = nil
     /// Watch a scene of the fluent self and this person just talking.
     let onWatch: (Counterpart) -> Void
     /// Build a specific situation with them (the composer).
@@ -129,7 +131,7 @@ struct FindPeopleSheet: View {
             .navigationDestination(for: Counterpart.self) { person in
                 FindPersonCard(person: person,
                                bookmarks: $bookmarks,
-                               onTalk: onTalk, onWatch: onWatch,
+                               onTalk: onTalk, onPickUp: onPickUp, onWatch: onWatch,
                                onCompose: onCompose)
                     .environmentObject(appState)
             }
@@ -477,6 +479,8 @@ struct FindPersonCard: View {
     let person: Counterpart
     @Binding var bookmarks: Set<String>
     let onTalk: (Counterpart) -> Void
+    /// A call that picks up the last talk; shown once there is one.
+    var onPickUp: ((Counterpart) -> Void)? = nil
     let onWatch: (Counterpart) -> Void
     /// Build a situation with this person (the composer). Every person gets
     /// it: meeting a stranger is a situation on its own, but once you've kept
@@ -606,6 +610,12 @@ struct FindPersonCard: View {
             }
         }
         .safeAreaInset(edge: .bottom) {
+            VStack(spacing: 10) {
+            if let onPickUp, let last = pastTalks.first {
+                PickUpTalkButton(lastTitle: last.displayTitle) {
+                    BillingGate.start(orShow: $showingPaywall) { onPickUp(savedPerson()) }
+                }
+            }
             HStack(spacing: 12) {
                 // Same weight on both: watching and talking are two ways in,
                 // not a main action and a lesser one. A prominent Talk read
@@ -629,6 +639,7 @@ struct FindPersonCard: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
+            }
             }
             .controlSize(.large)
             .padding(.horizontal, 20)

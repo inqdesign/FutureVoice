@@ -34,6 +34,8 @@ struct WatchTab: View {
     @State private var showingFind = false
     /// A Find-people stranger to start a live call with (fullScreenCover).
     @State private var callPerson: Counterpart?
+    /// The call opening on `callPerson` picks up the last talk with them.
+    @State private var pickUpCall = false
     /// A bookmarked stranger tapped in the stories row — opens their card
     /// (intro, past talks, Preview/Talk) rather than the situation composer.
     @State private var personCard: Counterpart?
@@ -227,6 +229,7 @@ struct WatchTab: View {
                         person: person,
                         bookmarks: $bookmarkedRemoteIds,
                         onTalk: { p in personCard = nil; callPerson = p },
+                        onPickUp: { p in personCard = nil; pickUpCall = true; callPerson = p },
                         onWatch: { p in
                             personCard = nil
                             watchScene = WatchTarget(scenario: freeTalkScenario(with: p),
@@ -273,6 +276,11 @@ struct WatchTab: View {
                         showingFind = false
                         callPerson = person
                     },
+                    onPickUp: { person in
+                        showingFind = false
+                        pickUpCall = true
+                        callPerson = person
+                    },
                     onWatch: { person in
                         showingFind = false
                         watchScene = WatchTarget(scenario: freeTalkScenario(with: person),
@@ -289,8 +297,9 @@ struct WatchTab: View {
                     })
                     .environmentObject(appState)
             }
-            .fullScreenCover(item: $callPerson) { person in
-                ConversationView(initialCounterpart: person, entry: .watchPerson)
+            .fullScreenCover(item: $callPerson, onDismiss: { pickUpCall = false }) { person in
+                ConversationView(initialCounterpart: person, pickUpLastTalk: pickUpCall,
+                                 entry: .watchPerson)
                     .environmentObject(appState)
             }
             .navigationDestination(item: $watchScene) { t in
@@ -432,6 +441,14 @@ struct WatchTab: View {
                                       BillingGate.start(orShow: $skyCardPaywall) {
                                           let p = savedFromCard(card)
                                           skyCard = nil
+                                          callPerson = p
+                                      }
+                                  },
+                                  onPickUp: {
+                                      BillingGate.start(orShow: $skyCardPaywall) {
+                                          let p = savedFromCard(card)
+                                          skyCard = nil
+                                          pickUpCall = true
                                           callPerson = p
                                       }
                                   })
@@ -1347,6 +1364,35 @@ struct PersonBubble: View {
     }
 }
 
+/// "Pick up where you left off": a call with someone you've talked to that
+/// opens out of the last talk (`PersonHistory.pickUp`). The person decides
+/// whether to carry the thread on or move to something new.
+struct PickUpTalkButton: View {
+    let lastTitle: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: "arrow.uturn.forward")
+                    .font(.body.weight(.semibold))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Continue the last talk")
+                        .font(.subheadline.weight(.semibold))
+                    Text(lastTitle)
+                        .font(.caption).foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "phone.fill")
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.large)
+    }
+}
+
 /// The floating "Your own situation" button wears the same glass as the tab
 /// bar and the header buttons around it — a solid blue pill with a shadow sat
 /// on the map like a sticker. Before iOS 26 it falls back to a material pill.
@@ -1380,6 +1426,8 @@ struct SkyPersonCard: View {
     let onCompose: () -> Void
     let onWatch: () -> Void
     let onTalk: () -> Void
+    /// A call that picks up the last talk; shown once there is one.
+    var onPickUp: (() -> Void)? = nil
 
     /// How far the card is being pulled down; past `dismissPull` it goes.
     @State private var pull: CGFloat = 0
@@ -1433,6 +1481,10 @@ struct SkyPersonCard: View {
             // One row: the situation keeps its words (it is the card's
             // point), Watch and Talk are their glyphs alone — a label in
             // every language would not fit three across.
+            if let onPickUp, let last = pastTalks.first {
+                PickUpTalkButton(lastTitle: last.displayTitle, action: onPickUp)
+            }
+
             HStack(spacing: 10) {
                 Button(action: onCompose) {
                     Label("Make a situation", systemImage: "square.and.pencil")
