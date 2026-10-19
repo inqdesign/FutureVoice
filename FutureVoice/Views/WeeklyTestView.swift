@@ -110,7 +110,8 @@ struct WeeklyTestView: View {
                         ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
                 case let .result(test):
-                    WeeklyTestResultView(test: test, isRetry: retry != nil, onRetry: { startRetry(from: test) })
+                    WeeklyTestResultView(test: test, isRetry: retry != nil, isTrial: trialScope != nil,
+                                         onRetry: { startRetry(from: test) })
                 }
             }
             .navigationTitle(trialScope == nil ? Text("Weekly test") : Text("Your first test"))
@@ -1009,7 +1010,8 @@ struct WeeklyTestView: View {
         if trialScope != nil {
             // The trial's paper is the one on the report, whatever the
             // week's schedule says.
-            if let id = TrialReportStore.load()?.testId, let test = tests.first(where: { $0.id == id }) {
+            if let id = TrialReportStore.load(language: appState.targetLanguage)?.testId,
+               let test = tests.first(where: { $0.id == id }) {
                 if test.isFinished { phase = .result(test) }
                 else { resume(WeeklyTestEngine.pruned(test) ?? test) }
             } else {
@@ -1042,19 +1044,29 @@ struct WeeklyTestView: View {
         phase = .loading
         let tests = WeeklyTestStore.shared.load()
         let opening = settings.schedule.currentOpening()
-        if let scope = trialScope {
-            var report = TrialReportStore.load()
+        if var scope = trialScope {
+            let language = appState.targetLanguage
+            // The deck may still be writing the coach; its grammar and
+            // word-upgrade questions need it, so give it the weekly paper's
+            // own wait before going without.
+            if scope.coach == nil {
+                let deadline = Date().addingTimeInterval(WeeklyTestEngine.coachWait)
+                while scope.coach == nil, Date() < deadline {
+                    scope.coach = TrialReportStore.load(language: language)?.recap.coach
+                    if scope.coach == nil { try? await Task.sleep(nanoseconds: 500_000_000) }
+                }
+            }
             guard var test = await WeeklyTestEngine.build(lastTest: nil, appState: appState, scope: scope) else {
-                report?.testThin = true
-                if let report { TrialReportStore.save(report) }
+                // Read again AFTER the build: the deck saved the level and
+                // the coach into this file meanwhile.
+                TrialReportStore.update(language: language) { $0.testThin = true }
                 Analytics.capture("trial_test_thin")
                 phase = .thin
                 return
             }
             test.startedAt = Date()
             WeeklyTestStore.shared.save(test)
-            report?.testId = test.id
-            if let report { TrialReportStore.save(report) }
+            TrialReportStore.update(language: language) { $0.testId = test.id }
             Analytics.capture("weekly_test_started", ["items": test.total, "trial": true])
             resume(test)
             return
@@ -1329,6 +1341,8 @@ struct WeeklyTestResultView: View {
     /// A second go at the misses: practice, not a result — no praise
     /// comparison, no "back in review" claims.
     var isRetry: Bool = false
+    /// The trial report's first test: a start, not a week.
+    var isTrial: Bool = false
     var onRetry: (() -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
@@ -1364,12 +1378,12 @@ struct WeeklyTestResultView: View {
                             .font(.title2.weight(.semibold))
                         Text("\(test.score) of \(test.total)")
                             .foregroundStyle(.secondary)
-                        if let previous {
+                        if let previous, !isTrial {
                             Text("Last week \(previous.score)/\(previous.total)")
                                 .font(.footnote)
                                 .foregroundStyle(.tertiary)
                         }
-                        if !isRetry, weeks >= 2 {
+                        if !isRetry, !isTrial, weeks >= 2 {
                             Label("\(weeks) weeks running", systemImage: "calendar")
                                 .font(.footnote.weight(.medium))
                                 .foregroundStyle(.secondary)
@@ -1434,6 +1448,13 @@ struct WeeklyTestResultView: View {
     private var headline: Text {
         if isRetry {
             return missed.isEmpty ? Text("Got them all") : Text("Closer")
+        }
+        if isTrial {
+            switch ratio {
+            case 0.9...: return Text("A strong start")
+            case 0.6..<0.9: return Text("A good start")
+            default: return Text("First test done")
+            }
         }
         switch ratio {
         case 0.9...: return Text("A strong week")

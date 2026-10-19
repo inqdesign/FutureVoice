@@ -14,6 +14,7 @@
 //     user_ids?: string[],        // omit for everyone with a token
 //     texts: { en: { title, body }, ko: { … }, … },   // picked by app_language
 //     url?: "futurevoice://…",    // where a tap should land
+//     environment?: "production" | "sandbox",  // only tokens of that build
 //     collapse_id?: string
 //   }
 //
@@ -125,6 +126,7 @@ Deno.serve(async (req) => {
   let payload: {
     kind?: string; dedupe_key?: string; user_ids?: string[]
     texts?: Record<string, Text>; url?: string; collapse_id?: string
+    environment?: string
   }
   try { payload = await req.json() } catch { return new Response("bad json", { status: 400 }) }
 
@@ -143,6 +145,12 @@ Deno.serve(async (req) => {
   let query = admin.from("device_tokens")
     .select("token,user_id,bundle_id,environment,app_language")
   if (payload.user_ids?.length) query = query.in("user_id", payload.user_ids)
+  // A once-ever notice is claimed on the FIRST token reached, so a caller
+  // that means the shipped app names it, and the newest install goes first
+  // (an old token is the likeliest to be dead, and a dead one keeps the
+  // claim). Without the field, every token, as before.
+  if (payload.environment) query = query.eq("environment", payload.environment)
+  query = query.order("updated_at", { ascending: false })
   const { data: rows, error } = await query.returns<Row[]>()
   if (error) return new Response(`tokens: ${error.message}`, { status: 500 })
 

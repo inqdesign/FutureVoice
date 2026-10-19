@@ -23,6 +23,9 @@
 #   ./scripts/push-trial-report.sh          # dry run: who, how many, the words
 #   ./scripts/push-trial-report.sh --send   # deliver
 #
+# push-send must be the version that reads `environment` (2026-10-20) or the
+# notice can be claimed on a sandbox or dead token and never reach the phone.
+#
 # Needs: the Supabase CLI login in the keychain (to read the audience) and
 # SUPABASE_URL + PUSH_SECRET (to send, as push-broadcast.sh).
 set -euo pipefail
@@ -81,7 +84,7 @@ for r in rows:
     langs[r["lang"]] = langs.get(r["lang"], 0) + 1
 print(json.dumps({
     "count": len(rows), "langs": langs,
-    "payload": {"kind": "trial_report", "dedupe_key": "trial-report",
+    "payload": {"kind": "trial_report", "dedupe_key": "trial-report", "environment": "production",
                 "user_ids": [r["user_id"] for r in rows], "texts": texts,
                 "url": "futurevoice://trialreport", "collapse_id": "trial-report"},
 }, ensure_ascii=False))

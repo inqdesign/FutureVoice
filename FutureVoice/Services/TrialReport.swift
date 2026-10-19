@@ -40,13 +40,22 @@ enum TrialReportStore {
     /// and a required test of two questions is still a test of the learner's
     /// own lines. Below this the test card says so and lets them past.
     static let minTestItems = 3
+    /// The deck is on screen, from whichever presenter raised it (the call
+    /// screen or the root), so the other one doesn't raise a second.
+    static var isShowing = false
 
     private static let offersKey = "futurevoice.trialReport.offers"
     private static let finishedKey = "futurevoice.trialReport.finished"
 
-    private static var url: URL {
+    private static var documents: URL {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("trial_report.json")
+    }
+
+    /// One report per TARGET language: its test lives in that language's
+    /// store and its level is that language's, so a switch must neither
+    /// show the other one nor overwrite it.
+    private static func url(_ language: String) -> URL {
+        documents.appendingPathComponent("trial_report_\(language).json")
     }
 
     static var finished: Bool {
@@ -75,29 +84,41 @@ enum TrialReportStore {
     /// gate a tapped link (`futurevoice://trialreport`, the push to those who
     /// left at the wall) answers, since a tap is asking even after two offers.
     static func canOpen(_ account: AccountStatus) -> Bool {
-        guard account.subscriptionStatus == "inactive",
+        // A fetch that failed reads as "never subscribed, nothing left";
+        // only an answer the server actually gave may say so.
+        guard account.ownershipKnown, account.subscriptionStatus == "inactive",
               !account.unlimited, account.needsSubscription else { return false }
         return !spokenSessions().isEmpty
     }
 
-    static func load() -> TrialReport? {
-        guard let data = try? Data(contentsOf: url) else { return nil }
+    static func load(language: String) -> TrialReport? {
+        guard let data = try? Data(contentsOf: url(language)) else { return nil }
         return try? decoder.decode(TrialReport.self, from: data)
     }
 
     static func save(_ report: TrialReport) {
         guard let data = try? encoder.encode(report) else { return }
-        try? data.write(to: url, options: [.atomic])
+        try? data.write(to: url(report.targetLanguage), options: [.atomic])
+    }
+
+    /// Load, change, save in one step — the deck and the test view both
+    /// write this file, and a copy read before a long await is stale.
+    @discardableResult
+    static func update(language: String, _ change: (inout TrialReport) -> Void) -> TrialReport? {
+        guard var report = load(language: language) else { return nil }
+        change(&report)
+        save(report)
+        return report
     }
 
     /// The saved report, or a fresh one from the first talk to now. Built
     /// once: the free minutes are over, so the window cannot grow, and a
     /// second build would rewrite a coach the learner already read.
     static func current(targetLanguage: String, now: Date = Date()) -> TrialReport {
-        if let kept = load(), kept.targetLanguage == targetLanguage { return kept }
+        if let kept = load(language: targetLanguage) { return kept }
         let first = spokenSessions().compactMap { $0.turns.first?.timestamp ?? $0.startedAt }.min() ?? now
         var recap = WeekRecapBuilder.build(start: Calendar.current.startOfDay(for: first),
-                                           end: now.addingTimeInterval(1))
+                                           end: now.addingTimeInterval(1), wholeWindow: true)
         // No week before a trial; the talk card's comparison line stays quiet.
         recap.previousTalkSeconds = 0
         recap.previousShadowAverage = nil
@@ -117,7 +138,10 @@ enum TrialReportStore {
 
     /// Developer: start over.
     static func reset() {
-        try? FileManager.default.removeItem(at: url)
+        let files = (try? FileManager.default.contentsOfDirectory(atPath: documents.path)) ?? []
+        for name in files where name.hasPrefix("trial_report") {
+            try? FileManager.default.removeItem(at: documents.appendingPathComponent(name))
+        }
         UserDefaults.standard.removeObject(forKey: offersKey)
         UserDefaults.standard.removeObject(forKey: finishedKey)
     }
@@ -144,6 +168,13 @@ extension AppState {
     /// the talks can't carry an assessment, the median of their per-talk
     /// reads stands in; nil only when there is nothing at all to read.
     func assessTrialLevel() async -> (level: CEFRLevel, rationale: String?)? {
+        // The talk that spent the pool may have started the ordinary first
+        // assessment (15 min of speech reached); wait for it rather than
+        // running a second one beside it.
+        let deadline = Date().addingTimeInterval(90)
+        while weeklyReportGenerating, Date() < deadline {
+            try? await Task.sleep(nanoseconds: 500_000_000)
+        }
         if let report = weeklyReports.sorted(by: { $0.generatedAt > $1.generatedAt }).first,
            let level = report.cefrLevel.flatMap(CEFRLevel.init(rawValue:)) {
             return (level, report.levelRationale)

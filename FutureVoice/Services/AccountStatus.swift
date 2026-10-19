@@ -45,6 +45,12 @@ struct AccountStatus {
     /// shows the live balance like anyone else's — watching it tick down IS
     /// the point — and only the wall-related nudges are dropped.
     var unlimited: Bool = false
+    /// Both the credit row and the subscription row were READ, not assumed.
+    /// Every query below is a `try?`, so a failed fetch leaves `.empty` —
+    /// "inactive, 0 s" — which looks exactly like a free account whose pool
+    /// is spent. Anything that tells a learner they have never paid
+    /// (`TrialReportStore.canOpen`) must ask this first.
+    var ownershipKnown = false
     /// Seconds of metered audio spent SO FAR THIS BILLING PERIOD — the pool
     /// is monthly since 2026-08-20, so "today" is no longer a unit anything
     /// is measured in. From `talk_allowance()`.
@@ -530,13 +536,14 @@ struct AccountStatus {
         let userId = session.user.id.uuidString
 
         struct CreditRow: Decodable { let balance: Int; let unlimited: Bool? }
-        if let rows: [CreditRow] = try? await SupabaseProvider.shared
+        let creditRows: [CreditRow]? = try? await SupabaseProvider.shared
             .from("user_credits")
             .select("balance,unlimited")
             .eq("user_id", value: userId)
             .limit(1)
             .execute()
-            .value {
+            .value
+        if let rows = creditRows {
             out.secondsBalance = rows.first?.balance ?? 0
             out.unlimited = rows.first?.unlimited ?? false
         }
@@ -549,14 +556,15 @@ struct AccountStatus {
             let started_at: String?
             let trial_ends_at: String?
         }
-        if let rows: [SubRow] = try? await SupabaseProvider.shared
+        let subRows: [SubRow]? = try? await SupabaseProvider.shared
             .from("user_subscriptions")
             .select("plan_id,status,cancel_at_period_end,source,started_at,trial_ends_at")
             .eq("user_id", value: userId)
             .limit(1)
             .execute()
-            .value,
-           let row = rows.first {
+            .value
+        out.ownershipKnown = creditRows?.isEmpty == false && subRows != nil
+        if let rows = subRows, let row = rows.first {
             out.planId = row.plan_id
             out.subscriptionStatus = row.status
             out.cancelAtPeriodEnd = row.cancel_at_period_end ?? false

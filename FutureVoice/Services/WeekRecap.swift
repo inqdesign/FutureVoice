@@ -181,8 +181,21 @@ enum WeekRecapBuilder {
         return (end.addingTimeInterval(-7 * 86_400), end)
     }
 
-    static func build(start: Date, end: Date, calendar: Calendar = .current) -> WeekRecap {
-        let days = (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: calendar.startOfDay(for: start)) }
+    /// `wholeWindow`: count every day from `start` to `end` instead of the
+    /// week's seven — the trial report's window (`TrialReport`) can run
+    /// longer than a week, and its counts must cover all of it.
+    static func build(start: Date, end: Date, wholeWindow: Bool = false,
+                      calendar: Calendar = .current) -> WeekRecap {
+        var dayCount = 7
+        if wholeWindow {
+            dayCount = 0
+            var day = calendar.startOfDay(for: start)
+            while day < end, let next = calendar.date(byAdding: .day, value: 1, to: day) {
+                dayCount += 1
+                day = next
+            }
+        }
+        let days = (0..<max(1, dayCount)).compactMap { calendar.date(byAdding: .day, value: $0, to: calendar.startOfDay(for: start)) }
         let active = PracticeStats.activeDays(calendar: calendar)
         let log = days.compactMap { PracticeLog.shared.day($0) }
         func inWeek(_ date: Date?) -> Bool { date.map { $0 >= start && $0 < end } ?? false }
@@ -478,7 +491,8 @@ enum WeekRecapCoach {
     static func write(for recap: WeekRecap,
                       targetLanguage: String,
                       level: CEFRLevel,
-                      nativeLanguage: String = LanguageCatalog.currentNative) async throws -> WeekRecap.Coach {
+                      nativeLanguage: String = LanguageCatalog.currentNative,
+                      firstTalks: Bool = false) async throws -> WeekRecap.Coach {
         let evidence = Evidence.gather(recap: recap, targetLanguage: targetLanguage, setLevel: level)
         let targetName = LanguageCatalog.englishName(targetLanguage)
         let nativeName = LanguageCatalog.englishName(nativeLanguage)
@@ -564,13 +578,15 @@ enum WeekRecapCoach {
         level. JSON only.
         """
         var user = evidence.prompt
-        if let previous = WeekRecapStore.shared.recap(endingAt: recap.start)?.coach {
+        if !firstTalks, let previous = WeekRecapStore.shared.recap(endingAt: recap.start)?.coach {
             user += "\n\n# LAST WEEK'S COACHING (don't repeat it; if a pattern is STILL there, say so with this week's examples)\n"
             user += previous.grammar.map { "- grammar: \($0.rule)" }.joined(separator: "\n")
             user += "\n" + previous.upgrades.map { "- upgrade: \($0.instead) → \($0.better)" }.joined(separator: "\n")
         }
         let response: Payload = try await GeminiClient.shared.sendJSON(
-            system: system,
+            // The trial report reads the free minutes, not a week; the
+            // weekly prompt is unchanged when this is off.
+            system: firstTalks ? system + "\n\n" + Self.firstTalksNote : system,
             messages: [.init(role: .user, content: user)],
             // Three nested arrays on the app's longest evidence prompt, and
             // gen-3 thinks out of the same ceiling — a truncation loses it all.
@@ -582,6 +598,16 @@ enum WeekRecapCoach {
         guard !coach.headline.isEmpty else { throw URLError(.cannotParseResponse) }
         return coach
     }
+
+    /// Appended for the trial report (`TrialReport`).
+    static let firstTalksNote = """
+    THIS IS NOT A WEEK. The evidence is the learner's FIRST talks with the \
+    app: their free minutes, which have just run out. Wherever the \
+    instructions above say "week", read "these first talks". Never write \
+    "this week", "last week" or "next week" (or their translation) in any \
+    field. The headline names what these first talks showed; the plan is \
+    2-3 things for their next talks.
+    """
 
     // MARK: Evidence
 

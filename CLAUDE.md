@@ -2012,6 +2012,21 @@ routine to keep going." `TrialReport.swift`, and `WeekRecapSheet(trial:)`.
   each learner gets it once and the script can be re-run daily. Send only
   after the build with the report is live: an older build opens at Talk.
   Android has no server push.
+- **Quality pass, 2026-10-20** (rules that came out of it): the gate needs
+  `AccountStatus.ownershipKnown` — every query in `fetch` is a `try?`, so a
+  failed fetch reads "inactive, 0 s" and a subscriber offline would have
+  been shown "your free minutes are over"; a routine the learner BUILT
+  (onboarding's builder, flag `futurevoice.dailyCall.onboarded`, or
+  `routineAppliedKey`) is shown and never replaced by the recipe; the coach
+  gets `WeekRecapCoach.firstTalksNote` so a trial never says "this week";
+  the window counts every day (`build(wholeWindow:)`); one file per target
+  language (`trial_report_<lang>.json`), written only through
+  `TrialReportStore.update` (load, change, save — the deck and the test
+  write the same file); the deck's start-up runs once per opening (the
+  test's cover would re-run `.task`); the root asks the cached account
+  first and shares one guard (`quietForTrialReport`, live call included)
+  with the push link. `push-send` takes `environment` and goes newest token
+  first, so a once-ever notice is not claimed on a dead or sandbox token.
 - Debug: `-capture tabs -trialreport 1` raises it past the gate,
   `-trialthin 1` skips the test, `-trialpage N` opens on a card,
   `-trialdemo 1` seeds a finished twenty-minute trial (`TrialReportDemo`),

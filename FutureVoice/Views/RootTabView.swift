@@ -496,6 +496,17 @@ struct RootTabView: View {
             || callInbox.pendingAnswer != nil || answeredCall != nil
             || appState.levelUpAnnouncement != nil
             || referralInbox.pendingJoin != nil || updates.pending != nil
+            || trialReport != nil
+    }
+
+    /// Nothing else is up, here or in a call screen above the tabs: the
+    /// trial report's three doors all ask this. A call launched from Watch,
+    /// Practice or a Talk card has no `freeTalkCallId`, so the live-call
+    /// flag stands in, and the call screen's own copy of the deck says
+    /// itself with `TrialReportStore.isShowing`.
+    private var quietForTrialReport: Bool {
+        !anotherSheetUp && !freeTalkClosing && pageIntro == nil
+            && !DailyCallScheduler.isLiveCall && !TrialReportStore.isShowing
     }
 
     /// What's new in this release, once (WhatsNewSheet). Ahead of the voice
@@ -581,7 +592,7 @@ struct RootTabView: View {
                   callInbox.pendingAnswer == nil, answeredCall == nil,
                   !showingAgeCheck, !showingPaywall, !showingWelcome, !showingIntroPreview,
                   appState.levelUpAnnouncement == nil, referralInbox.pendingJoin == nil,
-                  updates.pending == nil else { return }
+                  updates.pending == nil, trialReport == nil, !TrialReportStore.isShowing else { return }
             weekRecapAction = nil
             weekRecap = recap
         }
@@ -600,13 +611,14 @@ struct RootTabView: View {
               TrialReportStore.offers < TrialReportStore.maxOffers else { return }
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 1_500_000_000)
-            guard let account = await BillingGate.shared.snapshot(force: true),
+            // Cheapest first: a paying account (cached) or a pool not yet
+            // spent never reaches the network; only a likely yes is asked
+            // fresh, since a purchase a minute ago must not see the report.
+            guard let cached = await BillingGate.shared.snapshot(),
+                  TrialReportStore.shouldOffer(cached),
+                  let account = await BillingGate.shared.snapshot(force: true),
                   TrialReportStore.shouldOffer(account) else { return }
-            guard trialReport == nil, weekRecap == nil, freeTalkCallId == nil, !freeTalkClosing,
-                  callInbox.pendingAnswer == nil, answeredCall == nil,
-                  !showingAgeCheck, !showingPaywall, !showingWelcome, !showingIntroPreview,
-                  appState.levelUpAnnouncement == nil, referralInbox.pendingJoin == nil,
-                  updates.pending == nil else { return }
+            guard quietForTrialReport else { return }
             trialReport = TrialReportStore.current(targetLanguage: appState.targetLanguage)
         }
     }
@@ -617,7 +629,7 @@ struct RootTabView: View {
             guard let account = await BillingGate.shared.snapshot(force: true) else { return }
             let opens = TrialReportStore.canOpen(account)
             Analytics.capture("trial_report_link", ["opened": opens])
-            guard opens, trialReport == nil, weekRecap == nil else { return }
+            guard opens, quietForTrialReport else { return }
             trialReport = TrialReportStore.current(targetLanguage: appState.targetLanguage)
         }
     }

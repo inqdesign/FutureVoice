@@ -43,6 +43,11 @@ struct WeekRecapSheet: View {
     @State private var routine: [RoutineRecipe.Line] = []
     @State private var routineIsOwn = false
     @State private var showingPaywall = false
+    /// The deck's start-up runs once per opening: the test's full-screen
+    /// cover makes the deck disappear and reappear, which would re-run
+    /// `.task` (a second offer counted, the thin flag reset under the
+    /// learner) and cancel the level read mid-call.
+    @State private var trialStarted = false
 
     init(recap: WeekRecap, action: Binding<Action?>, startPage: Int = 0) {
         _recap = State(initialValue: recap)
@@ -130,7 +135,11 @@ struct WeekRecapSheet: View {
         }
         // One row per viewing, never one per swipe: how far the deck was
         // read is the question, and it is answered once.
+        .onAppear { if isTrial { TrialReportStore.isShowing = true } }
         .onDisappear {
+            // Covered by the test or the plans is not closed.
+            guard !showingTrialTest, !showingPaywall else { return }
+            if isTrial { TrialReportStore.isShowing = false }
             Analytics.capture(isTrial ? "trial_report_closed" : "week_recap_closed",
                               ["reached": (revealed.max() ?? 0) + 1, "cards": cards.count])
         }
@@ -147,7 +156,14 @@ struct WeekRecapSheet: View {
             PaywallView(source: "trial_report")
         }
         .task {
-            if isTrial { await startTrial(); return }
+            if isTrial {
+                guard !trialStarted else { return }
+                trialStarted = true
+                // Unstructured, so the cover's disappear doesn't cancel the
+                // level read or the coach halfway.
+                Task { await startTrial() }
+                return
+            }
             // Shown means SEEN: marked here, not where it was raised, so a
             // presentation that never landed doesn't use up the week.
             WeekRecapStore.shared.markShown(recap)
@@ -177,7 +193,8 @@ struct WeekRecapSheet: View {
             }
             HStack {
                 if isTrial {
-                    Text("Your first \(AccountStatus.freeGrantSeconds / 60) minutes")
+                    // Invite minutes can make the free time longer than the grant.
+                    Text("Your first \(max(AccountStatus.freeGrantSeconds / 60, recap.talkMinutes)) minutes")
                         .font(.headline)
                 } else {
                     Text("Your week")
@@ -1030,11 +1047,20 @@ struct WeekRecapSheet: View {
     private func startTrial() async {
         TrialReportStore.offers += 1
         Analytics.capture("trial_report_opened", ["talk_min": recap.talkMinutes, "cards": cards.count])
+        // A test that could not be made last time (offline, a failed
+        // write) is tried again: the minutes can't grow, but the network can
+        // come back.
+        if trial?.testThin == true, trial?.testId == nil {
+            updateTrial { $0.testThin = false }
+        }
         reloadTrialTest(jump: false)
-        // The routine: the one already chosen in setup, else the one the
-        // learner's purposes suggest.
-        if UserDefaults.standard.bool(forKey: LearningPurposeStore.routineAppliedKey),
-           !StudyPlanStore.shared.plan.blocks.isEmpty {
+        // The routine: the one the learner already built (onboarding's
+        // routine builder since 2026-10-18, or setup's suggested week
+        // before it), else the one their purposes suggest. A routine they
+        // built is never replaced from here.
+        let builtOwn = UserDefaults.standard.bool(forKey: LearningPurposeStore.routineAppliedKey)
+            || UserDefaults.standard.bool(forKey: "futurevoice.dailyCall.onboarded")
+        if builtOwn, !StudyPlanStore.shared.plan.blocks.isEmpty {
             routine = StudyPlanStore.shared.plan.blocks.map { RoutineRecipe.Line(block: $0, why: "") }
             routineIsOwn = true
         } else {
@@ -1066,7 +1092,7 @@ struct WeekRecapSheet: View {
     /// done in an earlier sitting starts at the cover like any deck.
     private func reloadTrialTest(jump: Bool) {
         let wasCleared = trialTestCleared
-        let saved = TrialReportStore.load()
+        let saved = TrialReportStore.load(language: trial?.targetLanguage ?? appState.targetLanguage)
         if let saved { trial?.testThin = saved.testThin; trial?.testId = saved.testId }
         if let id = saved?.testId {
             trialTest = WeeklyTestStore.shared.load().first { $0.id == id }
@@ -1088,10 +1114,14 @@ struct WeekRecapSheet: View {
 
     /// Re-read before writing: the test view saves its id into the same file.
     private func updateTrial(_ change: (inout TrialReport) -> Void) {
-        guard var latest = TrialReportStore.load() ?? trial else { return }
-        change(&latest)
-        TrialReportStore.save(latest)
-        trial = latest
+        guard let language = trial?.targetLanguage else { return }
+        if let latest = TrialReportStore.update(language: language, change) {
+            trial = latest
+        } else if var copy = trial {
+            change(&copy)
+            TrialReportStore.save(copy)
+            trial = copy
+        }
     }
 
     // MARK: - Helpers
@@ -1120,7 +1150,7 @@ struct WeekRecapSheet: View {
         guard recap.coach == nil, recap.hasActivity else { return }
         do {
             let written = try await WeekRecapCoach.write(for: recap, targetLanguage: appState.targetLanguage,
-                                                         level: appState.proficiency)
+                                                         level: appState.proficiency, firstTalks: isTrial)
             withAnimation(.easeOut(duration: 0.3)) { recap.coach = written }
             if isTrial {
                 updateTrial { $0.recap = recap }
