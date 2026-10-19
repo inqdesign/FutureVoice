@@ -12,6 +12,9 @@ tab's news pool (`news_topics`, already searched today) when that category
 has a row; only otherwise does it search. Made with the same pieces as
 news-show-probe.py, uploaded to R2 (`nawana-shows`), latest.json last.
 
+Audio is deleted from this Mac once it is in R2; script.txt, script.json,
+topic.json and latest.json stay in OUT_DIR/<date>.
+
 Keys from gateway/.dev.vars (DEV_VARS to point elsewhere); wrangler from
 GATEWAY_DIR (default: this checkout's gateway/).
 """
@@ -19,6 +22,7 @@ import datetime
 import importlib.util
 import json
 import os
+import shutil
 import subprocess
 import sys
 import urllib.parse
@@ -172,6 +176,13 @@ def main():
         put(f"shows/{LANG}/{TODAY}/lines/{name}", os.path.join(folder, "lines", name),
             "audio/mpeg", immutable)
     put(f"shows/{LANG}/latest.json", manifest, "application/json", "public, max-age=300")
+
+    # The Mac is only where the episode is MADE; R2 is where it lives. Once
+    # it is up, the audio here goes (founder, 2026-10-19). The script, the
+    # topic and the feed stay: they are what a question about an episode is
+    # answered from, and the folder still marks the day as made.
+    shutil.rmtree(os.path.join(folder, "lines"))
+    os.remove(os.path.join(folder, "episode.mp3"))
     print(f"EP {number} · {TODAY} · {category} · {episode['title']} · "
           f"{r['seconds'] // 60}:{r['seconds'] % 60:02d} · {r['chars']} chars "
           f"${r['chars'] * probe.USD_PER_CHAR:.2f} · topic from {how['source']}")
