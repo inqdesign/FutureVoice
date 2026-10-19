@@ -48,7 +48,6 @@ import com.roro.futurevoice.data.SessionStore
 import com.roro.futurevoice.data.ShadowAttemptStore
 import com.roro.futurevoice.data.TalkCurriculum
 import com.roro.futurevoice.data.VocabStore
-import com.roro.futurevoice.data.WeeklyTestSchedule.State as S
 import com.roro.futurevoice.talk.Scenario
 import com.roro.futurevoice.talk.ScenarioCurriculum
 import com.roro.futurevoice.talk.Session
@@ -294,83 +293,5 @@ private fun LibraryTile(icon: ImageVector, value: String, title: String, onClick
         Text(title, style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
             overflow = TextOverflow.Ellipsis)
-    }
-}
-
-/**
- * The weekly test as a full-width banner under the four lists (iOS
- * `PracticeTab.weeklyTestBanner`, 2026-10-16, founder): the host's face, what
- * the week's test is waiting on, and its number at the right. It is the
- * test's ONLY door on this page — the header no longer carries it. A thin
- * week opens nothing: there is no paper to show.
- */
-@Composable
-fun WeeklyTestBanner(language: String, level: CefrLevel) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val revision by com.roro.futurevoice.data.StoreEvents.revision.collectAsStateWithLifecycle()
-    val settingsRevision by com.roro.futurevoice.data.WeeklyTestSettings.revision.collectAsStateWithLifecycle()
-    var state by androidx.compose.runtime.remember {
-        androidx.compose.runtime.mutableStateOf<com.roro.futurevoice.data.WeeklyTestSchedule.State>(
-            com.roro.futurevoice.data.WeeklyTestSchedule.State.Ready)
-    }
-    var open by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
-    var reload by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(0) }
-    androidx.compose.runtime.LaunchedEffect(language, revision, settingsRevision, reload) {
-        val tests = com.roro.futurevoice.data.WeeklyTestStore.shared(context).load(language)
-        state = com.roro.futurevoice.data.WeeklyTestSettings.schedule(context)
-            .state(tests, { com.roro.futurevoice.data.WeeklyTestSettings.isThin(context, it) })
-    }
-
-    val locale = java.util.Locale.forLanguageTag(com.roro.futurevoice.core.UILanguage.current(context) ?: "en")
-    fun weekday(at: Long) = java.time.Instant.ofEpochMilli(at).atZone(java.time.ZoneId.systemDefault())
-        .dayOfWeek.getDisplayName(java.time.format.TextStyle.FULL, locale)
-    val accent = MaterialTheme.colorScheme.primary
-    // The same figure the header's face announced (iOS `weeklyTestValue`).
-    // TODO(strings): iOS shows "Preparing" (준비 중) on a thin week; Android
-    // has no such string yet, so a thin week shows no figure.
-    val (value, tint) = when (val s = state) {
-        S.Ready -> stringResource(R.string.start) to accent
-        is S.InProgress -> "${s.test.answers.size}/${s.test.total}" to accent
-        is S.Done -> "${s.test.score}/${s.test.total}" to MaterialTheme.colorScheme.onSurface
-        is S.Thin -> "" to MaterialTheme.colorScheme.onSurfaceVariant
-    }
-    val line = when (val s = state) {
-        S.Ready -> stringResource(R.string.your_weekly_test_is_ready)
-        is S.InProgress -> stringResource(R.string.continue_the_test)
-        is S.Done -> stringResource(R.string.next_one, weekday(s.next))
-        is S.Thin -> stringResource(R.string.next_one, weekday(s.next))
-    }
-    val opensNow = state !is S.Thin
-    Row(
-        Modifier.fillMaxWidth()
-            .clip(ContinuousShape(16.dp))
-            .background(AppSurfaces.card)
-            .clickable(enabled = opensNow) { open = true }
-            .padding(vertical = 12.dp, horizontal = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        WeeklyTestCharacter(WeeklyTestHost.Mood.WAITING, 0L, Modifier.size(44.dp),
-            tile = com.roro.futurevoice.ui.brand.iosFill())
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(stringResource(R.string.weekly_test), style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface)
-            Text(line, style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        if (value.isNotEmpty()) {
-            Text(value, style = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = "tnum"),
-                fontWeight = FontWeight.SemiBold, color = tint)
-        }
-        if (opensNow) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null, tint = MaterialTheme.colorScheme.outline,
-                modifier = Modifier.size(18.dp))
-        }
-    }
-
-    if (open) {
-        WeeklyTestDialog(language, level) { open = false; reload++ }
     }
 }

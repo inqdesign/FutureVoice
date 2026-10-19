@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Lift FreeTalkOpeners' bundled lines out of the Swift source.
 
-Two pieces of CONTENT: the per-language INTRO line (the very first free talk,
+Three pieces of CONTENT (the third, `topicOpeners`, opens a "my own topic" call): the per-language INTRO line (the very first free talk,
 before the fluent self has met the learner) and the per-language PICK-UP hello
 for each part of the day every later free talk opens on — hand-written since
 iOS 2026-10-13, so the Gemini pool prompt this script used to lift is gone. Retyped, the two
@@ -41,6 +41,7 @@ def part_table(name):
 
 intro = table("introOpeners")
 pick_up = part_table("pickUpLines")
+topic = table("topicOpeners")
 
 
 def swift_unescape(v):
@@ -78,6 +79,12 @@ object FreeTalkOpenerContent {{
      *  hello per part of the day (`PromptClock.partOfDay`), no guessed topic. */
     val pickUp: Map<String, Map<String, String>> = mapOf(
 {kparts(pick_up)}
+    )
+
+    /** The line a "my own topic" call opens on (iOS `topicOpeners`, topics
+     *  page): it hands the learner the topic instead of a hello. */
+    val topic: Map<String, String> = mapOf(
+{kmap(topic)}
     )
 }}
 ''')

@@ -54,8 +54,9 @@ import com.roro.futurevoice.ui.brand.IosGlassButton
  * below is the books. Icons with a dot, never numbers: put off (a stack of
  * cards, orange dot when something is due), the week's report (calendar, dot
  * while a closed week hasn't been opened). The weekly test's door left the
- * header for a banner under the Studying page's library tiles (iOS
- * 2026-10-16, `WeeklyTestBanner`); the reminder's tap still opens it here.
+ * header (iOS 2026-10-16) and the Studying page's banner went too (iOS
+ * 4f706d92): the test lives inside the week's report deck; the reminder's
+ * tap still opens it here.
  * There is no monthly test (iOS 70dd26a9): a month's misses come back in the
  * weekly paper.
  *

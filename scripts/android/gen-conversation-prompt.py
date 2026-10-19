@@ -83,8 +83,11 @@ news = kotlin_conv(literal_at(engine, 'let newsBlock = newsFacts.isEmpty ? "" : 
 first = kotlin_conv(literal_at(engine, "let firstMeetingBlock = (firstMeeting && counterpart == nil) ?", csp),
                {"languageName": "languageName"})
 they_called = kotlin_conv(literal_at(
-    engine, "let theyCalledBlock = (topic.isEmpty && counterpart == nil && !firstMeeting) ?", csp),
+    engine, "let theyCalledBlock = (topic.isEmpty && counterpart == nil && !firstMeeting && !learnerPicksTopic) ?", csp),
     {"freeTalkCue.instruction": "freeTalkCue.instruction"})
+# "My own topic" (topics page, iOS deed6cf4).
+own_topic = kotlin_conv(literal_at(
+    engine, "let ownTopicBlock = (learnerPicksTopic && topic.isEmpty && counterpart == nil) ?", csp), {})
 cue_at = engine.index("enum FreeTalkCue: String, CaseIterable {")
 cue = {case: kotlin_conv(literal_at(engine, 'return """', engine.index(f"case .{case}:", cue_at)), {},
                          indent="                ")
@@ -96,6 +99,7 @@ system = kotlin_conv(literal_at(engine, 'return """', main_anchor), {
     "counterpartBlock": "counterpartBlock",
     "firstMeetingBlock": "firstMeetingBlock",
     "theyCalledBlock": "theyCalledBlock",
+    "ownTopicBlock": "ownTopicBlock",
     "clockBlock": "clockBlock",
     "LanguageCatalog.englishName(nativeLanguage)": "nativeName",
     "levelName": "levelName",
@@ -245,6 +249,11 @@ object ConversationPrompt {{
     fun theyCalledBlock(freeTalkCue: FreeTalkCue): String =
         {they_called}
 
+    /** iOS `ownTopicBlock` — a "my own topic" call (topics page): the
+     *  subject the learner names is the call. */
+    val ownTopicBlock: String =
+        {own_topic}
+
     /** iOS `beginnerQuestions` — empty at B1 and above. */
     fun beginnerQuestions(level: CefrLevel): String {{
         if (level != CefrLevel.A1 && level != CefrLevel.A2) return ""
@@ -259,7 +268,7 @@ object ConversationPrompt {{
     fun systemPrompt(
         languageName: String, nativeName: String, levelName: String, level: CefrLevel,
         personaBlock: String, counterpartBlock: String, firstMeetingBlock: String,
-        theyCalledBlock: String, clockBlock: String,
+        theyCalledBlock: String, ownTopicBlock: String, clockBlock: String,
         patterns: String, weak: String, topic: String, newsBlock: String, briefBlock: String,
         targetLanguage: String, tutor: Boolean,
     ): String =

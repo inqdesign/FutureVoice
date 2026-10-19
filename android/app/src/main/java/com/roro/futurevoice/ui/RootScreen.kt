@@ -15,6 +15,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.PlayCircleFilled
@@ -202,6 +203,8 @@ fun RootScreen() {
     var callFromHomeCard by call.fromHomeCard
     /** Which screen started the call — `conversation_started.entry` only. */
     var callEntry by call.entry
+    /** The topics page's "my own topic" — the call opens by asking what to talk about. */
+    var callPicksTopic by call.picksTopic
     /** Set when a Talk-home card's call closes; the home consumes it and
      *  offers the persona-deepen sheet (iOS `maybePromptDeepen`). */
     var deepenPending by remember { mutableStateOf(false) }
@@ -307,6 +310,8 @@ fun RootScreen() {
     var deckSessionId by remember { mutableStateOf<String?>(null) }
     var focusStudyItem by remember { mutableStateOf<StudyDeckItem?>(null) }
     var showActivity by remember { mutableStateOf(false) }
+    /** Talk's topics page, behind "Find a topic" (iOS `TalkTopicsPage`). */
+    var showTopics by remember { mutableStateOf(false) }
     val routineEditorOpen by RoutineNav.editorOpen.collectAsStateWithLifecycle()
     val sayAgainPending by com.roro.futurevoice.data.PlanReminder.pendingSayItAgain.collectAsStateWithLifecycle()
     var showAssessment by remember { mutableStateOf(false) }
@@ -664,7 +669,7 @@ fun RootScreen() {
     /** Every metered launcher from the home lands here (`mint` = an unsaved
      *  ready-made situation, saved once the gate passes). */
     fun startCall(topic: String, facts: List<String>, scenarioId: String?, mint: Scenario?, blurb: String = "",
-                  entry: String = com.roro.futurevoice.talk.TalkEntry.OTHER) {
+                  entry: String = com.roro.futurevoice.talk.TalkEntry.OTHER, learnerPicksTopic: Boolean = false) {
         // The paywall is asked here, at the TAP — every metered
         // launcher (free talk, a news story, a scenario, a widget
         // deep link) meets in this one callback, so one gate covers
@@ -674,16 +679,18 @@ fun RootScreen() {
             fun open() {
                 callTopic = topic; callFacts = facts; callScenarioId = scenarioId; callBlurb = blurb
                 callEntry = entry
+                callPicksTopic = learnerPicksTopic
                 // A news story's title IS its opener — written by `news-topics`
                 // as a friend bringing it up ("Did you see the news about…?")
                 // and spoken verbatim, as iOS does (`openNewsConversation`).
                 // Left to a generated opener, the model read that question as
                 // the learner's and answered it ("Yes, I heard…").
                 callOpener = if (facts.isNotEmpty()) topic else ""
-                callFromHomeCard = topic.isNotEmpty() || scenarioId != null
+                // The topics page's calls are the home's `callLaunch` too.
+                callFromHomeCard = topic.isNotEmpty() || scenarioId != null || learnerPicksTopic
                 // The FREE talk is the ring's own tap: its surface morphs
                 // into the call pill (iOS). Every other launcher opens flat.
-                if (topic.isEmpty() && scenarioId == null && tab == HomeTab.TALK)
+                if (topic.isEmpty() && scenarioId == null && !learnerPicksTopic && tab == HomeTab.TALK)
                     TalkMorph.open(morphScope) { inCall = true }
                 else inCall = true
             }
@@ -919,6 +926,9 @@ fun RootScreen() {
             if (showPrivacy) add(RootRoute.Privacy)
         }
         if (inCall && state.voiceId != null && !callOverProfile) add(RootRoute.Call)
+        // Under the call: a topic picked here starts a call over the page,
+        // and hanging up comes back to it (iOS: a cover over the pushed page).
+        if (showTopics) add(RootRoute.Topics)
         add(RootRoute.Tabs)
     }.reversed()
     /** What a committed back on [top] does — exactly its own back button. */
@@ -936,6 +946,7 @@ fun RootScreen() {
                 is RootRoute.Library -> library = null
                 RootRoute.Assessment -> showAssessment = false
                 RootRoute.Activity -> showActivity = false
+                RootRoute.Topics -> showTopics = false
                 RootRoute.Effort -> showEffort = false
                 is RootRoute.Person -> personDetailId = null
                 is RootRoute.Finished -> finishedBooks = null
@@ -1142,6 +1153,22 @@ fun RootScreen() {
                 .getInt("futurevoice.dailyGoalMinutes", 10),
             onOpenActivity = { showActivity = true },
             onBack = { showEffort = false },
+        )
+
+        RootRoute.Topics -> TalkTopicsPage(
+            state = state,
+            onBack = { showTopics = false },
+            onStartCall = { topic, facts, scenarioId, entry -> startCall(topic, facts, scenarioId, null, entry = entry) },
+            onStartStarter = { sc, entry -> startCall(sc.promptBlurb, emptyList(), sc.id, sc, entry = entry) },
+            onStartTopic = { topic, blurb, entry -> startCall(topic, emptyList(), null, null, blurb, entry) },
+            // A call about a subject the learner names once it starts.
+            onStartOwnTopic = {
+                startCall("", emptyList(), null, null,
+                    entry = com.roro.futurevoice.talk.TalkEntry.TALK_OWN_TOPIC, learnerPicksTopic = true)
+            },
+            onSavePersona = app::savePersona,
+            // They all live on Watch — that IS the collection.
+            onAllScenarios = { showTopics = false; tab = HomeTab.WATCH },
         )
 
         RootRoute.Activity -> ActivityScreen(
@@ -1395,6 +1422,7 @@ fun RootScreen() {
                 counterpartId = callCounterpartId,
                 resume = callResume,
                 entry = callEntry,
+                learnerPicksTopic = callPicksTopic,
                 onExit = {
                     // A call that flew in from the ring flies back to it.
                     TalkMorph.close(morphScope) {
@@ -1405,6 +1433,7 @@ fun RootScreen() {
                         callScenarioId = null; callOpener = ""; callCast = null
                         callCastVoice = null; callCounterpartId = null; callResume = null
                         callEntry = com.roro.futurevoice.talk.TalkEntry.OTHER
+                        callPicksTopic = false
                     }
                 },
             )
@@ -1439,6 +1468,7 @@ fun RootScreen() {
             onStartCall = { topic, facts, scenarioId, entry -> startCall(topic, facts, scenarioId, null, entry = entry) },
             onStartStarter = { sc, entry -> startCall(sc.promptBlurb, emptyList(), sc.id, sc, entry = entry) },
             onStartTopic = { topic, blurb, entry -> startCall(topic, emptyList(), null, null, blurb, entry) },
+            onOpenTopics = { showTopics = true },
             onOpenMe = { showMe = true },
             onOpenBook = { bookScenarioId = it },
             onOpenPeople = { showPeople = true },
@@ -1609,12 +1639,70 @@ internal fun SignInScreen(
     }
 }
 
-private data class PendingLaunch(val topic: String, val facts: List<String>, val scenarioId: String?,
+internal data class PendingLaunch(val topic: String, val facts: List<String>, val scenarioId: String?,
                                   /** An unsaved ready-made situation, saved once the gate passes. */
                                   val mint: Scenario? = null,
                                   /** Context told to the call beside the topic. */
                                   val blurb: String = "",
-                                  val entry: String = com.roro.futurevoice.talk.TalkEntry.OTHER)
+                                  val entry: String = com.roro.futurevoice.talk.TalkEntry.OTHER,
+                                  /** The topics page's "my own topic" (iOS `runOwnTopic`). */
+                                  val ownTopic: Boolean = false)
+
+/**
+ * A call launched from a Talk surface (the home, the topics page): the
+ * microphone is asked for at the tap, and a refusal says why the tap did
+ * nothing. [onStartOwnTopic] is the topics page's "my own topic".
+ */
+@Composable
+internal fun rememberCallLauncher(
+    onStartCall: (topic: String, newsFacts: List<String>, scenarioId: String?, entry: String) -> Unit,
+    onStartStarter: (Scenario, entry: String) -> Unit,
+    onStartTopic: (topic: String, blurb: String, entry: String) -> Unit,
+    onStartOwnTopic: () -> Unit,
+): (PendingLaunch) -> Unit {
+    var pendingLaunch by remember { mutableStateOf<PendingLaunch?>(null) }
+    var micDenied by remember { mutableStateOf(false) }
+    val permission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) pendingLaunch?.let { p ->
+            when {
+                p.ownTopic -> onStartOwnTopic()
+                p.mint != null -> onStartStarter(p.mint, p.entry)
+                p.blurb.isNotEmpty() -> onStartTopic(p.topic, p.blurb, p.entry)
+                else -> onStartCall(p.topic, p.facts, p.scenarioId, p.entry)
+            }
+        }
+        // A refusal has to be answerable: the tap did nothing and nothing on
+        // screen said why, and the only route back is the system settings.
+        else micDenied = true
+        pendingLaunch = null
+    }
+    if (micDenied) {
+        val ctx = LocalContext.current
+        AlertDialog(
+            onDismissRequest = { micDenied = false },
+            title = { Text(stringResource(R.string.microphone_access_needed)) },
+            text = { Text(stringResource(R.string.nawana_needs_the_microphone_and_speech_recognition_to_hear_y_121253)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    micDenied = false
+                    ctx.startActivity(android.content.Intent(
+                        android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        android.net.Uri.fromParts("package", ctx.packageName, null))
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                }) { Text(stringResource(R.string.open_settings)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { micDenied = false }) { Text(stringResource(R.string.not_now)) }
+            })
+    }
+    return { p: PendingLaunch ->
+        pendingLaunch = p
+        permission.launch(Manifest.permission.RECORD_AUDIO)
+    }
+
+}
 
 /** The four verbs, in the order the product does them. Internal so the
  *  capture build can open the shell on a tab. */
@@ -1642,6 +1730,10 @@ internal fun HomeScreen(
     /** A topic with its own context — an exam question, a topic from the
      *  learner's field (iOS `runExam` / `runFieldTopic`). */
     onStartTopic: (topic: String, blurb: String, entry: String) -> Unit = { _, _, _ -> },
+    /** The topics page's "my own topic" (iOS `runOwnTopic`). */
+    onStartOwnTopic: () -> Unit = {},
+    /** The bottom row's "Find a topic" → the topics page (iOS `TalkTopicsPage`). */
+    onOpenTopics: () -> Unit = {},
     onOpenMe: () -> Unit,
     onOpenPractice: () -> Unit = {},
     onOpenDeck: () -> Unit = {},
@@ -1770,47 +1862,10 @@ internal fun HomeScreen(
         )
     }
 
-    var pendingLaunch by remember { mutableStateOf<PendingLaunch?>(null) }
-    var micDenied by remember { mutableStateOf(false) }
-    val permission = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) pendingLaunch?.let { p ->
-            when {
-                p.mint != null -> onStartStarter(p.mint, p.entry)
-                p.blurb.isNotEmpty() -> onStartTopic(p.topic, p.blurb, p.entry)
-                else -> onStartCall(p.topic, p.facts, p.scenarioId, p.entry)
-            }
-        }
-        // A refusal has to be answerable: the tap did nothing and nothing on
-        // screen said why, and the only route back is the system settings.
-        else micDenied = true
-        pendingLaunch = null
-    }
-    if (micDenied) {
-        val ctx = LocalContext.current
-        AlertDialog(
-            onDismissRequest = { micDenied = false },
-            title = { Text(stringResource(R.string.microphone_access_needed)) },
-            text = { Text(stringResource(R.string.nawana_needs_the_microphone_and_speech_recognition_to_hear_y_121253)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    micDenied = false
-                    ctx.startActivity(android.content.Intent(
-                        android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                        android.net.Uri.fromParts("package", ctx.packageName, null))
-                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
-                }) { Text(stringResource(R.string.open_settings)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { micDenied = false }) { Text(stringResource(R.string.not_now)) }
-            })
-    }
+    val launchCall = rememberCallLauncher(onStartCall, onStartStarter, onStartTopic, onStartOwnTopic)
     fun launch(topic: String, facts: List<String>, scenarioId: String? = null, mint: Scenario? = null,
-               blurb: String = "", entry: String) {
-        pendingLaunch = PendingLaunch(topic, facts, scenarioId, mint, blurb, entry)
-        permission.launch(Manifest.permission.RECORD_AUDIO)
-    }
+               blurb: String = "", entry: String) =
+        launchCall(PendingLaunch(topic, facts, scenarioId, mint, blurb, entry))
 
     // Writing a situation on the Watch map: the tab bar steps aside for the
     // box, and the title for Cancel (iOS `WatchCreation`).
@@ -1955,27 +2010,10 @@ internal fun HomeScreen(
                             onOpenActivity = onOpenActivity,
                             heroTop = padding.calculateTopPadding(),
                         )
-                        // No card between the ring and Discover: the "tell me more
-                        // about you" row was removed 2026-10-18 (iOS 3b927c6f —
-                        // founder: it didn't sit with the rest of the page). The
-                        // sheet still auto-shows once after the first talk; Me →
-                        // Profile is the way back.
-                        // One Discover section, two chips — what to talk about
-                        // today: the day's stories, or a situation you built.
-                        DiscoverSection(
-                            state = state,
-                            enabled = state.voiceId != null,
-                            onSavePersona = onSavePersona,
-                            onPickNews = { topic -> launch(topic.title, topic.facts.orEmpty(), entry = com.roro.futurevoice.talk.TalkEntry.TALK_NEWS) },
-                            onPickScenario = { sc -> launch(sc.promptBlurb, emptyList(), sc.id, entry = com.roro.futurevoice.talk.TalkEntry.TALK_SCENARIO) },
-                            onPickStarter = { sc -> launch(sc.promptBlurb, emptyList(), sc.id, mint = sc, entry = com.roro.futurevoice.talk.TalkEntry.TALK_SCENARIO) },
-                            // An ordinary topic call: the blurb tells it which
-                            // exam and which part (iOS `runExam`).
-                            onPickExam = { t, exam -> launch(t.title, emptyList(), blurb = t.callBlurb(exam), entry = com.roro.futurevoice.talk.TalkEntry.TALK_EXAM) },
-                            onPickTopic = { t -> launch(t.title, emptyList(), blurb = t.blurb, entry = com.roro.futurevoice.talk.TalkEntry.TALK_FIELD) },
-                            // They all live on Watch — that IS the collection.
-                            onAllScenarios = { onTabChange(HomeTab.WATCH) },
-                        )
+                        // No card under the ring: the "tell me more about you" row
+                        // was removed 2026-10-18 (iOS 3b927c6f), and the discover
+                        // block moved behind "Find a topic" the same day (iOS
+                        // deed6cf4) — the home is a launcher, not a feed.
                         state.error?.let {
                             Text(it, style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error)
@@ -2045,21 +2083,46 @@ internal fun HomeScreen(
                         onStartTalk = { onTabChange(HomeTab.TALK) },
                     )
                 }
-                // Room to scroll the last item up past the floating bar.
-                if (!paged && !canvas) Spacer(Modifier.height(IosTabBarClearance)
+                // Room to scroll the last item up past the floating bar —
+                // and on Talk past the button row above it (iOS 88 pt).
+                if (!paged && !canvas) Spacer(Modifier.height(IosTabBarClearance + (if (t == HomeTab.TALK) 64.dp else 0.dp))
                     .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.navigationBars))
             }
 
           }
         }
-        // The situation player's door, bottom-left of Talk (iOS
-        // `ConversationHome` → `PlaylistButton`, 2026-10-18): above the
-        // floating bar, fixed while the page scrolls under it.
+        // Talk's bottom row (iOS `ConversationHome`'s overlay, 2026-10-18,
+        // founder): the situation player on the left, "Find a topic" centred,
+        // the quick quiz's face on the right. The two side slots take equal
+        // widths so the centre never moves. Above the floating bar, fixed
+        // while the page scrolls under it.
         if (tab == HomeTab.TALK && !writingSituation) {
-            PlaylistButton(onClick = { showPlayer = true },
-                modifier = Modifier.align(Alignment.BottomStart)
+            Row(
+                Modifier.align(Alignment.BottomCenter).fillMaxWidth()
                     .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.navigationBars)
-                    .padding(start = 16.dp, bottom = 76.dp + 16.dp))
+                    .padding(start = 16.dp, end = 16.dp, bottom = 76.dp + 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                    PlaylistButton(onClick = { showPlayer = true })
+                }
+                // Drawn exactly like Watch's "New situation": glass capsule,
+                // accent label.
+                com.roro.futurevoice.ui.brand.IosGlassButton(onClick = onOpenTopics,
+                    modifier = Modifier.height(50.dp)) {
+                    Icon(Icons.Filled.AutoAwesome, contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.find_a_topic), style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1)
+                }
+                Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
+                    QuickQuizButton(language = state.targetLanguage, native = state.nativeLanguage,
+                        level = state.level)
+                }
+            }
         }
         // The feather under the floating bar (iOS `tabBarScrollFeather`):
         // from the physical bottom edge, 44 dp of page colour and a 72 dp
@@ -2254,7 +2317,7 @@ private val RING_TAIL = 20.dp
  */
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-private fun DiscoverSection(
+internal fun DiscoverSection(
     state: AppState,
     enabled: Boolean,
     onPickNews: (SuggestedTopic) -> Unit,
@@ -3045,6 +3108,8 @@ class CallRoute : androidx.lifecycle.ViewModel() {
     val fromHomeCard = mutableStateOf(false)
     /** [com.roro.futurevoice.talk.TalkEntry] — telemetry only. */
     val entry = mutableStateOf(com.roro.futurevoice.talk.TalkEntry.OTHER)
+    /** A "my own topic" call (topics page, iOS `CallLaunch.learnerPicksTopic`). */
+    val picksTopic = mutableStateOf(false)
 }
 
 /**
@@ -3094,6 +3159,7 @@ internal sealed interface RootRoute {
     data object SayAgainPick : RootRoute { override val key = "sayAgainPick" }
     data object RoutineEditor : RootRoute { override val key = "routineEditor" }
     data object Activity : RootRoute { override val key = "activity" }
+    data object Topics : RootRoute { override val key = "topics" }
     data object Effort : RootRoute { override val key = "effort" }
     data object DueReview : RootRoute { override val key = "dueReview" }
     data object RoutineReview : RootRoute { override val key = "routineReview" }
@@ -3148,6 +3214,8 @@ internal fun rootPushes(from: RootRoute, to: RootRoute, deckPushed: Boolean): Bo
         RootRoute.Assessment, is RootRoute.Finished, RootRoute.Effort -> from is RootRoute.Tabs
         // The streak's Activity, and the effort page's "Calendar and routine".
         RootRoute.Activity -> from is RootRoute.Tabs || from is RootRoute.Effort
+        // Talk's "Find a topic" pushes the topics page.
+        RootRoute.Topics -> from is RootRoute.Tabs
         // The Speech tab's challenge rows push the board.
         is RootRoute.SpeechChallenge -> from is RootRoute.Tabs || from is RootRoute.SpeechChallenges
         RootRoute.SpeechChallenges -> from is RootRoute.Tabs

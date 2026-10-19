@@ -80,7 +80,17 @@ data class TalkConfig(
     /** Which SCREEN the call was started from ([TalkEntry]) — telemetry only,
      *  never stored on the session (iOS `conversation_started.entry`). */
     val entry: String = TalkEntry.OTHER,
+    /**
+     * A "my own topic" call (topics page, iOS `learnerPicksTopic`): opens by
+     * asking what to talk about, and the subject the learner names is the
+     * call (`ConversationEngine`'s THEY CHOSE THE TOPIC block). Never on a
+     * resumed talk.
+     */
+    val learnerPicksTopic: Boolean = false,
 ) {
+    /** iOS `learnerPicksTopic && resumeSession == nil`. */
+    val picksTopic: Boolean get() = learnerPicksTopic && resume == null
+
     /** iOS `systemPrompt()`'s `composedTopic`. */
     val composedTopic: String get() = if (topicBlurb.isEmpty()) topic else "$topic. $topicBlurb"
 }
@@ -415,6 +425,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                         clock = clock,
                         tutor = tutor,
                         freeTalkCue = freeTalkCue,
+                        learnerPicksTopic = config.picksTopic,
                     ) + ConversationEngine.turnOutputInstruction(config.targetLanguage, config.nativeLanguage,
                         counterpart = config.cast?.person, inScene = config.scenarioId != null)
                 }
@@ -580,13 +591,14 @@ class TalkViewModel(context: Context) : ViewModel() {
                         // barista and a Find-people call as a stranger; neither
                         // can run an introduction without breaking what it was
                         // launched as.
-                        firstMeeting = freeTalk && config.persona?.metAt == null,
+                        firstMeeting = freeTalk && config.persona?.metAt == null && !config.picksTopic,
                         newsFacts = config.newsFacts,
                         counterpart = config.cast?.person,
                         brief = brief,
                         clock = clock,
                         tutor = tutor,
                         freeTalkCue = freeTalkCue,
+                        learnerPicksTopic = config.picksTopic,
                     ) + ConversationPrompt.REALTIME_STYLE_RULES
                 }
                 promptForTutor = build
@@ -633,7 +645,11 @@ class TalkViewModel(context: Context) : ViewModel() {
                     // the INTRO line before the two have met (it introduces
                     // itself first), then a friend's hello for the time of
                     // day (iOS `a9a80ed7`).
-                    if (freeTalk) {
+                    // A "my own topic" call: they came to talk about
+                    // something, so the first line hands them the topic
+                    // instead of a hello (iOS deed6cf4).
+                    if (config.picksTopic) FreeTalkOpeners.topicOpener(config.targetLanguage)
+                    else if (freeTalk) {
                         if (config.persona?.metAt == null) FreeTalkOpeners.introOpener(config.targetLanguage)
                         else FreeTalkOpeners.pickUpOpener(config.targetLanguage)
                     } else config.scenarioId?.let { id ->
@@ -1857,6 +1873,8 @@ object TalkEntry {
     const val TALK_NEWS = "talk_news"
     const val TALK_EXAM = "talk_exam"
     const val TALK_FIELD = "talk_field"
+    /** The topics page's "my own topic": the call opens by asking what to talk about. */
+    const val TALK_OWN_TOPIC = "talk_own_topic"
     const val DAILY_CALL = "daily_call"
     const val WIDGET = "widget"
     const val WELCOME = "welcome"
