@@ -1180,7 +1180,9 @@ struct PracticeTab: View {
         // a bar only means something where there is a fixed whole, and only
         // the word list has one). Words: known or said, of the whole graded
         // list. Expressions: known or said. Sentences: cards reviewed at
-        // least once. Shadowing: takes recorded.
+        // least once. Shadowing: LINES shadowed at least once — not takes,
+        // which counted every retake and read as a pile, not progress; the
+        // same set the Shadowing page's "Practiced" filter lists.
         var stats = LibraryStats()
         let pool = CoreVocabulary.set
         stats.words = LibraryStat(checked: vocab.records.keys.filter { pool.contains($0.lowercased()) }.count,
@@ -1188,7 +1190,7 @@ struct PracticeTab: View {
         let expressions = ExpressionCatalog.all(scenarios: appState.scenarios, store: vocab)
         stats.expressions = LibraryStat(checked: expressions.filter { vocab.hasUsedExpression($0.text) }.count)
         stats.sentences = LibraryStat(checked: cards.filter { $0.timesSeen > 0 }.count)
-        stats.shadow = LibraryStat(checked: appState.shadowAttempts.count)
+        stats.shadow = LibraryStat(checked: Set(appState.shadowAttempts.map(\.turnId)).count)
         libraryStats = stats
 
         // Second pass: derived talk-book progress (pickup-word extraction is
