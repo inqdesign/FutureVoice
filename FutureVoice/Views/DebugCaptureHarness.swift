@@ -1262,6 +1262,18 @@ enum DebugCapture {
                 .sheet(isPresented: .constant(true)) {
                     ScenePlayerSheet().environmentObject(appState)
                 })
+        case "show-playing":
+            // Today's news show, fetched from R2 for real (en/de) and played
+            // in the situations player — the network path end to end.
+            return AnyView(Color(.systemGroupedBackground).ignoresSafeArea()
+                .task {
+                    guard !PlaylistPlayer.shared.hasQueue else { return }
+                    let episodes = await NewsShow.episodes(language: appState.targetLanguage)
+                    PlaylistPlayer.shared.play(episodes.flatMap(\.lines), title: explain("Today's show"))
+                }
+                .sheet(isPresented: .constant(true)) {
+                    ScenePlayerSheet().environmentObject(appState)
+                })
         case "home-scenarios":
             once("home") { seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState) }
             previewScenariosTab = true
