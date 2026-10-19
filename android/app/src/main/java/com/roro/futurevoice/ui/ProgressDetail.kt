@@ -956,7 +956,7 @@ fun HowAssessedSheet(
     onDismiss: () -> Unit,
 ) {
     val secondary = MaterialTheme.colorScheme.onSurfaceVariant
-    androidx.compose.material3.ModalBottomSheet(
+    ModalBottomSheet(
         sheetState = com.roro.futurevoice.ui.rememberModalBottomSheetState(skipPartiallyExpanded = true),
         onDismissRequest = onDismiss,
         containerColor = com.roro.futurevoice.ui.brand.AppSurfaces.ground,

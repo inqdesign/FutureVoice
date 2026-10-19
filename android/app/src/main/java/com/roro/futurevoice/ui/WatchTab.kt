@@ -1016,7 +1016,7 @@ private fun SavedScenariosSheet(
             .map { it.key to icon[it.key] }
     }
     val shown = category?.let { c -> scenarios.filter { it.category == c } } ?: scenarios
-    androidx.compose.material3.ModalBottomSheet(
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = com.roro.futurevoice.ui.rememberModalBottomSheetState(skipPartiallyExpanded = true),
         dragHandle = null,
