@@ -325,6 +325,10 @@ fun WatchSceneScreen(
                     loggedScene = true
                     com.roro.futurevoice.data.PracticeLog.record(
                         context, com.roro.futurevoice.data.PracticeLog.Kind.SCENE)
+                    // The first line is where a scene is paid for (five
+                    // minutes of talk since 2026-10-19): the cached account
+                    // must not keep showing the minutes from before it.
+                    com.roro.futurevoice.data.BillingGate.invalidate()
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
