@@ -99,6 +99,23 @@ class RealtimeTalkClient(private val context: Context) {
         /** iOS `echoMargin`: how much louder than the echo a voice must be to
          *  count as the learner (~5 dB) — rejects the speaker, keeps barge-in. */
         private const val ECHO_MARGIN = 1.8f
+        /**
+         * Barge-in judged ON THE PHONE (iOS ed7505b5, 2026-10-20, founder:
+         * "cutting in is late, or it doesn't stop at all"). The gateway cut a
+         * line only once the transcriber had written an interim of the
+         * learner's words — a second or more — and not at all once the reply
+         * was fully generated while the phone was still playing it. The mic
+         * frame is here the instant they speak: voice held over the line for
+         * this long stops the player now and tells the gateway (`barge`).
+         * Earphones: the mic hears only the learner. Speaker: only frames
+         * that cleared the echo gate's bar count, and for longer, so the
+         * line's own echo can't stop itself; a half-duplex first line stays
+         * uninterruptible as before.
+         */
+        private const val BARGE_RMS = 0.02f
+        private const val BARGE_EARPHONE_SECONDS = 0.25
+        private const val BARGE_SPEAKER_SECONDS = 0.35
+        private const val BARGE_QUIET_RESET = 0.15
 
         /**
          * Voiced time and mid-speech pauses, read off the learner's own take
@@ -308,6 +325,17 @@ class RealtimeTalkClient(private val context: Context) {
     private var gateLearned = 0
     @Volatile private var echoHoldUntil = 0L
     private var linesStarted = 0
+    private var bargeVoiced = 0.0
+    private var bargeQuiet = 0.0
+    /** Set when the phone cut a line itself: audio of that line still in
+     *  flight (the gateway hears `barge` a round trip later) is dropped
+     *  until the next line starts. */
+    @Volatile private var droppingCutLine = false
+    /** Send-to-answer is on: a pause never ends the turn, and nothing here
+     *  cuts a line by itself (iOS `SendToAnswer.isOn`). */
+    @Volatile private var manualTurnsOn = false
+
+    private fun gateIsHalfDuplex(): Boolean = synchronized(gateLock) { gateActive && gateHalfDuplex }
 
     private fun setEchoGate(active: Boolean, halfDuplex: Boolean = false) = synchronized(gateLock) {
         if (active && !gateActive) {
@@ -422,6 +450,8 @@ class RealtimeTalkClient(private val context: Context) {
         replyPCM.reset(); userPCM.reset(); lastTurnPCM = ByteArray(0)
         micBytesSent = 0; warningsThisCall = 0; turnsThisCall = 0
         linesStarted = 0; setEchoGate(false)
+        manualTurnsOn = manualTurns
+        droppingCutLine = false; bargeVoiced = 0.0; bargeQuiet = 0.0
         state = State.CONNECTING
 
         val start = buildJsonObject {
@@ -458,6 +488,9 @@ class RealtimeTalkClient(private val context: Context) {
             }
 
             override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
+                // The phone already cut this line: the rest is never heard
+                // and never kept.
+                if (droppingCutLine) return
                 // Binary frames are reply PCM at the announced rate.
                 val chunk = bytes.toByteArray()
                 replyPCM.write(chunk)
@@ -559,6 +592,7 @@ class RealtimeTalkClient(private val context: Context) {
      *  commits them by the usual pause rule. */
     fun setManualTurns(on: Boolean) {
         if (tornDown) return
+        manualTurnsOn = on
         runCatching { socket?.send("""{"type":"set","manualTurns":$on}""") }
     }
 
@@ -656,6 +690,7 @@ class RealtimeTalkClient(private val context: Context) {
             }
             "audio_start" -> {
                 val ctx = msg["context"]?.jsonPrimitive?.content
+                droppingCutLine = false
                 replyContext = ctx
                 replyBeganAt = System.currentTimeMillis()
                 replyRate = msg["sampleRate"]?.jsonPrimitive?.content?.toIntOrNull() ?: DEFAULT_REPLY_RATE
@@ -740,35 +775,8 @@ class RealtimeTalkClient(private val context: Context) {
                     if (state == State.SPEAKING) state = State.LISTENING
                 }
             }
-            "interrupted" -> {
-                // Stop local playback NOW and drop what was buffered.
-                scope.launch(audioThread) { runCatching { player?.stop() }; player = null }
-                // A barge-in means the learner IS talking — the gate would
-                // only stand in their way now.
-                setEchoGate(false)
-                if (msg["reopened"]?.jsonPrimitive?.booleanOrNull == true) {
-                    // Withdrawn: the turn it answered isn't over. Nothing of
-                    // the line is kept — not its bubble, not its audio.
-                    replyContext?.let { onReplyWithdrawn?.invoke(it) }
-                    replyContext = null
-                    replyBeganAt = null
-                    replyPCM.reset()
-                    replyText.setLength(0)
-                    synchronized(revealLock) { reveal = null; revealJob?.cancel(); revealJob = null }
-                    state = State.HEARING
-                    return
-                }
-                // A barge-in this soon after the line began is a cut-in, not
-                // the learner deliberately talking over a line they heard.
-                val began = replyBeganAt
-                if (began != null && System.currentTimeMillis() - began < CUT_IN_WINDOW_MS) {
-                    replyContext?.let { onReplyCutIn?.invoke(it) }
-                }
-                replyContext?.let { onInterrupted?.invoke(it) }
-                // The rest will never be heard; the line keeps all its words.
-                finishReveal()
-                state = State.HEARING
-            }
+            "interrupted" -> applyInterrupted(
+                reopened = msg["reopened"]?.jsonPrimitive?.booleanOrNull == true)
             "stats", "rotating" -> Unit   // the gateway reconnects upstream itself
             "warning" -> {
                 // The call SURVIVED something — a retried reply, a dropped
@@ -807,6 +815,61 @@ class RealtimeTalkClient(private val context: Context) {
                 fail(message, code)
             }
         }
+    }
+
+    /** Stop the line the learner is talking over — from the gateway's
+     *  `interrupted`, or from the phone's own judge ([considerBarge]). */
+    private fun applyInterrupted(reopened: Boolean) {
+        // Stop local playback NOW and drop what was buffered.
+        scope.launch(audioThread) { runCatching { player?.stop() }; player = null }
+        // A barge-in means the learner IS talking — the gate would
+        // only stand in their way now.
+        setEchoGate(false)
+        if (reopened) {
+            // Withdrawn: the turn it answered isn't over. Nothing of
+            // the line is kept — not its bubble, not its audio.
+            replyContext?.let { onReplyWithdrawn?.invoke(it) }
+            replyContext = null
+            replyBeganAt = null
+            replyPCM.reset()
+            replyText.setLength(0)
+            synchronized(revealLock) { reveal = null; revealJob?.cancel(); revealJob = null }
+            state = State.HEARING
+            return
+        }
+        // A barge-in this soon after the line began is a cut-in, not
+        // the learner deliberately talking over a line they heard.
+        val began = replyBeganAt
+        if (began != null && System.currentTimeMillis() - began < CUT_IN_WINDOW_MS) {
+            replyContext?.let { onReplyCutIn?.invoke(it) }
+        }
+        replyContext?.let { onInterrupted?.invoke(it) }
+        // The rest will never be heard; the line keeps all its words.
+        finishReveal()
+        state = State.HEARING
+    }
+
+    /** See [BARGE_RMS]. Runs per mic buffer on the mic thread. */
+    private fun considerBarge(rms: Float, muted: Boolean, seconds: Double) {
+        if (state != State.SPEAKING || manualTurnsOn || gateIsHalfDuplex()) {
+            bargeVoiced = 0.0; bargeQuiet = 0.0
+            return
+        }
+        val speaker = outputIsSpeaker()
+        if (!muted && rms >= BARGE_RMS) {
+            bargeVoiced += seconds
+            bargeQuiet = 0.0
+        } else {
+            bargeQuiet += seconds
+            if (bargeQuiet >= BARGE_QUIET_RESET) bargeVoiced = 0.0
+        }
+        val needed = if (speaker) BARGE_SPEAKER_SECONDS else BARGE_EARPHONE_SECONDS
+        if (bargeVoiced < needed) return
+        Log.d(TAG, "barge: ${if (speaker) "speaker" else "earphones"} ${(bargeVoiced * 1000).toInt()}ms of voice over the line")
+        bargeVoiced = 0.0; bargeQuiet = 0.0
+        runCatching { socket?.send("""{"type":"barge"}""") }
+        droppingCutLine = true
+        applyInterrupted(reopened = false)
     }
 
     /**
@@ -890,7 +953,10 @@ class RealtimeTalkClient(private val context: Context) {
                 // which is what Gemini Live's own VAD wants.
                 if (micGated) { level = 0f; continue }
                 if (lineTrackStarted && gateWaitingForSound() && player?.hasStartedSounding == true) markPlaybackStarted()
-                if (echoMuted(kotlin.math.sqrt(sumSq / n).toFloat())) {
+                val rms = kotlin.math.sqrt(sumSq / n).toFloat()
+                val muted = echoMuted(rms)
+                considerBarge(rms, muted, n.toDouble() / MIC_RATE)
+                if (muted) {
                     // Silence, not a gap: the transcriber is streaming.
                     level = 0f
                     socket?.send(ByteArray(frame.size).toByteString())
