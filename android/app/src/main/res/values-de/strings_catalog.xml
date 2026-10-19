@@ -770,6 +770,7 @@
     <!-- 'Future self is the pixel surface behind every call button — tap a theme to feel it.' -->
     <string name="future_self_is_the_pixel_surface_behind_every_call_button_ta_f0338e">"Future self ist die Pixelfläche hinter jedem Anruf-Button — tippe ein Thema an, um es zu spüren."</string>
     <string name="future_self_is_thinking">"Dein fließendes Ich denkt nach…"</string>
+    <string name="is_thinking">"%s denkt nach…"</string>
     <string name="future_self_speaking_tap_to_hang_up">"Dein fließendes Ich spricht — tippen zum Auflegen"</string>
     <string name="generate_review_material">"Lernmaterial erzeugen"</string>
     <string name="generate_scenarios_for">"Situationen für %s erstellen"</string>

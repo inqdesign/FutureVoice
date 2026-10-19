@@ -483,6 +483,19 @@ fun TalkScreen(
     // mid-call: a row that changed under the learner would be asking for a
     // different word than the one they were about to say.
     var goals by remember { mutableStateOf(preview?.goals ?: emptyList()) }
+    // Who the other side's lines are labelled as (iOS `otherSideName`): the
+    // cast person; on a scenario call its linked person, else the role the
+    // scenario names ("Interviewer"); otherwise the fluent self (null).
+    var scenarioOtherName by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(scenarioId, targetLanguage) {
+        val sc = scenarioId?.let { id ->
+            com.roro.futurevoice.data.ScenarioStore.shared(context).load(targetLanguage).firstOrNull { it.id == id }
+        } ?: return@LaunchedEffect
+        scenarioOtherName = sc.counterpartId?.let { id ->
+            com.roro.futurevoice.data.CounterpartStore.shared(context).load().firstOrNull { it.id == id }?.name
+        } ?: sc.role.trim().ifEmpty { null }
+    }
+    val otherSideName = cast?.name ?: scenarioOtherName
     var goalsUsed by remember { mutableStateOf(preview?.goalsUsed ?: emptySet()) }
     var openGoal by remember { mutableStateOf(preview?.openGoal) }
     LaunchedEffect(targetLanguage) {
@@ -840,7 +853,8 @@ fun TalkScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
-                                Text(stringResource(R.string.future_self_is_thinking),
+                                Text(otherSideName?.let { stringResource(R.string.is_thinking, it) }
+                                    ?: stringResource(R.string.future_self_is_thinking),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
@@ -899,7 +913,7 @@ fun TalkScreen(
                             // the one hard edge left.
                             .then(if (turn.role == TurnRole.USER) Modifier.animateContentSize(tween(250))
                                 else Modifier.animateContentSize(tween(220)))) {
-                            DialogueLine(turn, scale = DialogueScale.CALL, otherName = cast?.name,
+                            DialogueLine(turn, scale = DialogueScale.CALL, otherName = otherSideName,
                                 fadesIn = turn.role == TurnRole.FLUENT_SELF,
                                 showsCorrections = showsCorrections,
                                 focusRepeatLabel = if (coachMode && turn.id in state.focusRepeatTurns)

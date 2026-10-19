@@ -775,6 +775,7 @@
     <!-- 'Future self is the pixel surface behind every call button — tap a theme to feel it.' -->
     <string name="future_self_is_the_pixel_surface_behind_every_call_button_ta_f0338e">"Future self는 모든 통화 버튼 뒤에 깔리는 픽셀 화면이에요. 테마를 눌러 느낌을 보세요."</string>
     <string name="future_self_is_thinking">"유창해진 내가 생각하는 중…"</string>
+    <string name="is_thinking">"%s 생각하는 중…"</string>
     <string name="future_self_speaking_tap_to_hang_up">"유창한 내가 말하는 중 — 누르면 통화 종료"</string>
     <string name="generate_review_material">"복습 자료 만들기"</string>
     <string name="generate_scenarios_for">"%s 상황 만들기"</string>

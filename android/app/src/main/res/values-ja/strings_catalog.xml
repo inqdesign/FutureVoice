@@ -774,6 +774,7 @@
     <!-- 'Future self is the pixel surface behind every call button — tap a theme to feel it.' -->
     <string name="future_self_is_the_pixel_surface_behind_every_call_button_ta_f0338e">"Future selfは、すべての通話ボタンの背景に敷かれるピクセル面です。テーマをタップして雰囲気を確かめてみてください。"</string>
     <string name="future_self_is_thinking">"流暢な自分が考え中…"</string>
+    <string name="is_thinking">"%sが考え中…"</string>
     <string name="future_self_speaking_tap_to_hang_up">"流暢な自分が話しています · タップで通話終了"</string>
     <string name="generate_review_material">"復習教材を作る"</string>
     <string name="generate_scenarios_for">"%sのシチュエーションを作る"</string>

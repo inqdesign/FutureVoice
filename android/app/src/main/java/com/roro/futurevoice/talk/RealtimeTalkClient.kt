@@ -665,7 +665,11 @@ class RealtimeTalkClient(private val context: Context) {
                 finishReveal()
                 linesStarted += 1
                 lineTrackStarted = false
-                setEchoGate(true, halfDuplex = linesStarted == 1 && outputIsSpeaker())
+                // The gate is for the open speaker only: in earphones there is
+                // no echo to learn, and the learn window took the learner's own
+                // voice as the floor, muting every barge-in (iOS 2026-10-16).
+                val speaker = outputIsSpeaker()
+                setEchoGate(speaker, halfDuplex = linesStarted == 1 && speaker)
                 val rate = replyRate
                 scope.launch(audioThread) {
                     // The rate can change between replies; a player is bound
@@ -845,11 +849,11 @@ class RealtimeTalkClient(private val context: Context) {
         // Which mic, when earphones are on: the worn one by default, because
         // it is at the mouth wherever the phone ends up. Output is untouched.
         com.roro.futurevoice.data.MicPreference.applyInputRoute(context)
+        com.roro.futurevoice.audio.CallAudioMode.routeToSpeakerIfNothingWorn(context)
         val minBuf = AudioRecord.getMinBufferSize(MIC_RATE,
             AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
         // VOICE_COMMUNICATION puts the platform echo canceller and noise
         // suppressor in the capture path — the reply on the speaker must not
-        com.roro.futurevoice.audio.CallAudioMode.routeToSpeakerIfNothingWorn(context)
         // come back as a barge-in.
         val rec = AudioRecord(MediaRecorder.AudioSource.VOICE_COMMUNICATION, MIC_RATE,
             AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, max(minBuf, MIC_FRAMES * 4))

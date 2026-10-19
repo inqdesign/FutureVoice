@@ -774,6 +774,7 @@
     <!-- 'Future self is the pixel surface behind every call button — tap a theme to feel it.' -->
     <string name="future_self_is_the_pixel_surface_behind_every_call_button_ta_f0338e">"Future self是每个通话按钮背后的像素界面。点击主题感受看看。"</string>
     <string name="future_self_is_thinking">"流利的自己正在想…"</string>
+    <string name="is_thinking">"%s正在想…"</string>
     <string name="future_self_speaking_tap_to_hang_up">"流利的自己说话中 · 点击挂断"</string>
     <string name="generate_review_material">"创建复习教材"</string>
     <string name="generate_scenarios_for">"为%s创建情境"</string>
