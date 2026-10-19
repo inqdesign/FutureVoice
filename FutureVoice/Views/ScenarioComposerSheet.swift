@@ -1607,6 +1607,12 @@ struct PartnerPickerSheet: View {
         return rows
     }
 
+    /// Pool rows' jobs by remote id: the counterpart carries no occupation,
+    /// and the face is drawn from it.
+    private var jobs: [String: String] {
+        Dictionary(pool.map { ($0.id, $0.occupation) }, uniquingKeysWith: { a, _ in a })
+    }
+
     private var mine: [Counterpart] {
         appState.counterparts.filter { $0.remoteId == nil }
     }
@@ -1671,6 +1677,19 @@ struct PartnerPickerSheet: View {
 
     private func row(_ p: Counterpart) -> some View {
         HStack(spacing: 12) {
+            // The map's faces: a real learner's photo, else the profile
+            // silhouette; a character's job; your own people's relationship.
+            PersonBubble(name: p.name, photoId: p.id, size: 36,
+                         fallbackSymbol: PeopleSky.symbol(
+                            for: p, occupation: p.remoteId.flatMap { jobs[$0] }))
+            VStack(alignment: .leading, spacing: 1) {
+                Text(p.name).font(.body.weight(.medium))
+                let caption = Self.caption(for: p)
+                if !caption.isEmpty {
+                    Text(caption).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                }
+            }
+            Spacer()
             Button {
                 Task { await preview(p) }
             } label: {
@@ -1688,14 +1707,6 @@ struct PartnerPickerSheet: View {
             .buttonStyle(.plain)
             .accessibilityLabel(playingRowId == p.id && player.isPlaying
                                 ? "Stop preview" : "Preview \(p.name)")
-            VStack(alignment: .leading, spacing: 1) {
-                Text(p.name).font(.body.weight(.medium))
-                let caption = Self.caption(for: p)
-                if !caption.isEmpty {
-                    Text(caption).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                }
-            }
-            Spacer()
             if current?.id == p.id {
                 Image(systemName: "checkmark").fontWeight(.semibold).foregroundStyle(.tint)
             }

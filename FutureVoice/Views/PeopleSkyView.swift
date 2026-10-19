@@ -274,7 +274,12 @@ enum PeopleSky {
                 ? "music.mic" : "star.fill"
         }
         if c.cast == .stranger {
-            return jobSymbol(occupation ?? c.intro) ?? "person.fill"
+            // The profile silhouette means a REAL learner, and only that: a
+            // learner without a photo wears it, and a character never does —
+            // every character gets the icon of what they do.
+            if c.isRealLearner { return "person.fill" }
+            return jobSymbol(occupation ?? c.intro)
+                ?? jobSymbol(c.intro) ?? "bubble.left.and.bubble.right.fill"
         }
         switch c.relationshipKind {
         case "Partner": return "heart.fill"
@@ -307,18 +312,28 @@ enum PeopleSky {
     private static func jobSymbol(_ text: String) -> String? {
         let t = text.lowercased()
         let jobs: [([String], String)] = [
-            (["nurse", "간호", "看護", "pfleger", "krankenschwester"], "cross.case.fill"),
+            (["nurse", "간호", "看護", "pflege", "krankenschwester"], "cross.case.fill"),
+            (["pharmac", "약사", "薬剤", "apothek"], "pills.fill"),
+            (["barista", "cafe", "café", "바리스타", "카페"], "cup.and.saucer.fill"),
+            (["landlord", "vermieter", "중개", "집주인", "大家"], "key.fill"),
+            (["neighbor", "neighbour", "nachbar", "이웃", "隣"], "door.left.hand.open"),
+            (["elektriker", "electrician", "전기"], "bolt.fill"),
+            (["analyst", "data", "분석"], "chart.bar.fill"),
+            (["climb", "클라이밍", "kletter"], "figure.climbing"),
+            (["어머니", "어머님", "mother", "schwieger"], "house.fill"),
             (["doctor", "physician", "의사", "医師", "arzt", "ärztin"], "stethoscope"),
             (["design", "디자인", "デザイン"], "paintbrush.pointed.fill"),
             (["chef", "cook", "요리", "料理", "koch"], "fork.knife"),
             (["developer", "engineer", "programmer", "개발", "엔지니어", "エンジニア", "entwickler"], "laptopcomputer"),
-            (["teacher", "professor", "교사", "선생", "教師", "先生", "lehrer"], "graduationcap.fill"),
-            (["student", "학생", "学生", "studi"], "book.fill"),
+            (["teacher", "professor", "교사", "선생", "강사", "教師", "先生", "lehrer", "erzieher"], "graduationcap.fill"),
+            (["student", "학생", "学生", "studi", "ausbildung"], "book.fill"),
             (["music", "singer", "musician", "음악", "가수", "音楽", "musik"], "music.note"),
             (["photograph", "사진", "写真", "fotograf"], "camera.fill"),
             (["writer", "author", "journalist", "작가", "기자", "作家", "autor"], "pencil"),
             (["market", "sales", "마케팅", "영업", "営業"], "megaphone.fill"),
             (["parent", "mom", "dad", "엄마", "아빠", "육아", "子育て"], "figure.and.child.holdhands"),
+            (["lead", "manager", "recruit", "선배", "회사", "team", "büro", "amt"], "briefcase.fill"),
+            (["moved", "holiday", "einbürgerung", "seit", "이주", "이민"], "airplane"),
         ]
         return jobs.first { $0.0.contains(where: t.contains) }?.1
     }
@@ -815,5 +830,16 @@ private struct DepthOfField: ViewModifier {
             return effect
                 .opacity(sharp ? 1 : max(0.3, min(1, 1.45 - 0.75 * t)))
         }
+    }
+}
+
+
+extension Counterpart {
+    /// A published learner from the pool, not a character we wrote. Rows
+    /// met before `personaKind` existed read as learners, the pool's default.
+    var isRealLearner: Bool {
+        guard let r = remoteId, !r.hasPrefix("builtin:") else { return false }
+        return (personaKind ?? PublicPersonaService.Group.user.rawValue)
+            == PublicPersonaService.Group.user.rawValue
     }
 }

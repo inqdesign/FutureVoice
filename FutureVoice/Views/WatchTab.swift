@@ -1312,6 +1312,10 @@ struct PersonBubble: View {
     /// until photos existed.
     var photoId: UUID? = nil
     var size: CGFloat = 64
+    /// Drawn instead of initials when there is no photo. A real learner from
+    /// the pool wears a silhouette, so a row with no face still says "a
+    /// person", never a name we made up.
+    var fallbackSymbol: String? = nil
 
     @ObservedObject private var photos = CounterpartPhotoStore.shared
 
@@ -1328,9 +1332,15 @@ struct PersonBubble: View {
                 Circle().fill(Color.accentColor.opacity(0.15))
                     .frame(width: size, height: size)
                     .overlay(Circle().strokeBorder(Color.accentColor.opacity(0.35), lineWidth: 1.5))
-                Text(Books.initials(name))
-                    .font(size >= 56 ? .headline.weight(.bold) : .caption.weight(.semibold))
-                    .foregroundStyle(.tint)
+                if let symbol = fallbackSymbol {
+                    Image(systemName: symbol)
+                        .font(.system(size: size * 0.42, weight: .semibold))
+                        .foregroundStyle(.tint)
+                } else {
+                    Text(Books.initials(name))
+                        .font(size >= 56 ? .headline.weight(.bold) : .caption.weight(.semibold))
+                        .foregroundStyle(.tint)
+                }
             }
         }
         .id(photos.version)
