@@ -847,6 +847,11 @@ struct WatchView: View {
                 if !loggedScene {
                     loggedScene = true
                     PracticeLog.shared.record(.scene)
+                    // The first line is where a scene is paid for (five
+                    // minutes of talk since 2026-10-19): the cached account
+                    // must not keep showing the minutes from before it.
+                    BillingGate.shared.invalidate()
+                    BillingGate.shared.warm()
                 }
             } catch let capped where capped.isDayCapped {
                 // Out of today's allowance. Say so where the scene was going
