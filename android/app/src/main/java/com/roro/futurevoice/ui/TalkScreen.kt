@@ -1298,7 +1298,13 @@ fun DialogueLine(turn: Turn, isCurrent: Boolean = false,
                 }
             }
         },
-    ) { if (fadesIn) FadeInText(turn.transcript) else Text(turn.transcript) }
+    ) {
+        // With furigana the line is laid out in units (iOS `FuriganaText`),
+        // and the fluent self's fade gives way to it.
+        FuriganaText(androidx.compose.ui.text.AnnotatedString(turn.transcript)) {
+            if (fadesIn) FadeInText(turn.transcript) else Text(turn.transcript)
+        }
+    }
 }
 
 /** How long a newly revealed word takes to go from clear to solid. */

@@ -819,7 +819,7 @@ private fun ShadowLineScreen(
             ) {
                 // ---- target line
                 TargetLineSection(line, timings, selection, activeRange, practiceRange != null, rhythm, steps,
-                    wordOps, wordBeats, spaced, phase, syncStartedAt, target, tick, ::tapWord)
+                    wordOps, wordBeats, spaced, phase, syncStartedAt, target, tick, ::tapWord, targetLanguage)
 
                 // ---- durations (after analysis only)
                 if (steps.isNotEmpty() && attemptTargetDurationMs > 0) {
@@ -1212,6 +1212,7 @@ private fun TargetLineSection(
     phraseSelected: Boolean, rhythm: ShadowScore.RhythmAnalysis?, steps: List<ShadowScore.DiffStep>,
     wordOps: Map<Int, ShadowScore.DiffOp>, wordBeats: Map<Int, ShadowScore.RhythmWord>, spaced: Boolean,
     phase: ShadowPhase, syncStartedAt: Long, target: TargetPlayer, tick: Long, tapWord: (Int) -> Unit,
+    targetLanguage: String,
 ) {
     val secondary = MaterialTheme.colorScheme.onSurfaceVariant
     val tertiary = secondary.copy(alpha = 0.6f)
@@ -1256,6 +1257,13 @@ private fun TargetLineSection(
                 target.isPlaying -> target.positionMs
                 else -> null
             }
+            // Readings over the kanji, cut from the whole line (`FuriganaWord`).
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val rubyLine = timings.joinToString("") { it.word }
+            val rubyRuns = if (com.roro.futurevoice.data.Furigana.enabled(context) && targetLanguage == "ja" &&
+                com.roro.futurevoice.data.Furigana.hasRuby(rubyLine))
+                com.roro.futurevoice.data.Furigana.runs(rubyLine) else emptyList()
+            val starts = timings.runningFold(0) { at, wt -> at + wt.word.length }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(if (spaced) 1.dp else 0.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 timings.forEachIndexed { i, wt ->
@@ -1268,14 +1276,15 @@ private fun TargetLineSection(
                         modifier = Modifier.width(androidx.compose.foundation.layout.IntrinsicSize.Max).clickable(
                             interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                             indication = null) { tapWord(i) }) {
-                        Text(wt.word,
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = wordColor(i, wt, nowMs, recording = phase == ShadowPhase.RECORDING,
-                                activeRange = activeRange, hasDiff = steps.isNotEmpty(), ops = wordOps),
-                            modifier = Modifier.clip(RoundedCornerShape(4.dp))
-                                .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.22f) else Color.Transparent)
-                                .padding(horizontal = if (spaced) 2.dp else 0.dp, vertical = 1.dp))
+                        val wordStyle = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold)
+                        val color = wordColor(i, wt, nowMs, recording = phase == ShadowPhase.RECORDING,
+                            activeRange = activeRange, hasDiff = steps.isNotEmpty(), ops = wordOps)
+                        val wordModifier = Modifier.clip(RoundedCornerShape(4.dp))
+                            .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.22f) else Color.Transparent)
+                            .padding(horizontal = if (spaced) 2.dp else 0.dp, vertical = 1.dp)
+                        if (rubyRuns.isEmpty()) Text(wt.word, style = wordStyle, color = color, modifier = wordModifier)
+                        else FuriganaWord(wt.word, starts[i], rubyRuns, style = wordStyle, color = color,
+                            modifier = wordModifier)
                         BeatMark(wordBeats[i])
                     }
                 }

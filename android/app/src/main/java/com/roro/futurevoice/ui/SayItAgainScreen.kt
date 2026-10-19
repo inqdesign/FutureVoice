@@ -775,8 +775,11 @@ private fun HistoryRow(
             isCurrent = isCurrent,
             accessory = { if (step.isSpoken) TakeAccessory(take, onRetry) },
         ) {
-            if (step.isCorrected) Text(highlightedCorrection(step.text, step.said))
-            else Text(step.text)
+            val shown = if (step.isCorrected) highlightedCorrection(step.text, step.said)
+                else androidx.compose.ui.text.AnnotatedString(step.text)
+            FuriganaText(shown) {
+                if (step.isCorrected) Text(shown) else Text(step.text)
+            }
         }
         // A weak read is told in the learner's own words as well as a number:
         // which words drifted is the only actionable half of a low score.
@@ -979,15 +982,19 @@ private fun ReadingPanel(step: SayItAgainScript.Step?, onSkip: () -> Unit) {
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text(if (step.isCorrected) highlightedCorrection(step.text, step.said)
-                        else buildAnnotatedString { append(step.text) },
-                        style = MaterialTheme.typography.headlineSmall.copy(
-                            // iOS `.lineSpacing(4)` on title2's 28 pt leading.
-                            lineHeight = androidx.compose.ui.unit.TextUnit(32f,
-                                androidx.compose.ui.unit.TextUnitType.Sp)),
-                        fontWeight = FontWeight.SemiBold, color = lineInk,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth())
+                    val shown = if (step.isCorrected) highlightedCorrection(step.text, step.said)
+                        else buildAnnotatedString { append(step.text) }
+                    val lineStyle = MaterialTheme.typography.headlineSmall.copy(
+                        // iOS `.lineSpacing(4)` on title2's 28 pt leading.
+                        lineHeight = androidx.compose.ui.unit.TextUnit(32f,
+                            androidx.compose.ui.unit.TextUnitType.Sp),
+                        fontWeight = FontWeight.SemiBold, color = lineInk)
+                    FuriganaText(shown, Modifier.fillMaxWidth(), rubyStyle = rubyCaption(),
+                        alignment = Alignment.CenterHorizontally, style = lineStyle) {
+                        Text(shown, style = lineStyle,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth())
+                    }
                     if (step.note.isNotBlank()) {
                         Text(step.note, style = MaterialTheme.typography.bodySmall,
                             color = ink.copy(alpha = 0.7f),
