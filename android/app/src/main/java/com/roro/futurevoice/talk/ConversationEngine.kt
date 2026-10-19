@@ -27,7 +27,11 @@ object ConversationEngine {
      * `PublicPersonaService.asCounterpart` does — so the character blocks read
      * exactly the fields iOS reads.
      */
-    data class Cast(val person: com.roro.futurevoice.data.Counterpart) {
+    data class Cast(
+        val person: com.roro.futurevoice.data.Counterpart,
+        /** "Continue the last talk" (iOS `pickUpLastTalk`): the call opens out of it. */
+        val pickUp: Boolean = false,
+    ) {
         val name: String get() = person.name
         val kind: CounterpartCast get() = person.cast
 
@@ -52,6 +56,8 @@ object ConversationEngine {
         topic: String = "",
         persona: UserPersona? = null,
         counterpart: com.roro.futurevoice.data.Counterpart? = null,
+        /** What [counterpart] remembers of earlier talks (iOS `personHistory:`). */
+        personHistory: PersonHistory? = null,
         newsFacts: List<String> = emptyList(),
         /** A scenario talk's attached material (iOS `briefBlock`). */
         brief: ScenarioBrief? = null,
@@ -102,7 +108,7 @@ object ConversationEngine {
 
         // A cast call: the model IS a specific person, not the fluent self.
         val counterpartBlock = counterpart?.let {
-            ConversationCharacter.characterBlock(it, persona, targetLanguage, languageName)
+            ConversationCharacter.characterBlock(it, persona, targetLanguage, languageName, personHistory)
         } ?: ""
 
         // The very first call — never for a cast counterpart.

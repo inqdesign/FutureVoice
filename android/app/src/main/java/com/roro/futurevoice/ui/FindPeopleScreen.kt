@@ -116,6 +116,8 @@ fun FindPeopleScreen(
     /** Talk on a card. [meet] persists the person — called by the host only
      *  once its gate has passed (iOS `start { onTalk(savedPerson()) }`). */
     onTalk: (person: PublicPersonaClient.PublicPersona, meet: () -> Counterpart) -> Unit,
+    /** "Continue the last talk" on a card (iOS `onPickUp`), same contract as [onTalk]. */
+    onPickUp: ((person: PublicPersonaClient.PublicPersona, meet: () -> Counterpart) -> Unit)? = null,
     /** Watch on a person's card: a scene of the two of them, in THEIR preset
      *  voice (iOS `FindPeopleSheet(onWatch:)`). The host gates it as a scene
      *  and calls [meet] only after the gate (iOS `startScene { onWatch(savedPerson()) }`). */
@@ -270,6 +272,7 @@ fun FindPeopleScreen(
             bookmarked = bookmarks.contains(open.id),
             onToggleBookmark = { bookmarks = toggleBookmark(context, open.id) },
             onTalk = onTalk,
+            onPickUp = onPickUp,
             onWatch = onWatch,
             onPersonSaved = { scope.launch { reloadOwn(); StoreEvents.bump() } },
             onBack = { card = null },
@@ -554,6 +557,7 @@ internal fun FindPersonCard(
     bookmarked: Boolean,
     onToggleBookmark: () -> Unit,
     onTalk: (PublicPersonaClient.PublicPersona, () -> Counterpart) -> Unit,
+    onPickUp: ((PublicPersonaClient.PublicPersona, () -> Counterpart) -> Unit)? = null,
     onWatch: (() -> Counterpart) -> Unit,
     onPersonSaved: () -> Unit,
     onBack: () -> Unit,
@@ -629,6 +633,13 @@ internal fun FindPersonCard(
                 // first): watching and talking are two ways in, not a main
                 // action and a lesser one. Both spend, so both are gated by
                 // the host — Watch as a scene, Talk as a call.
+                val last = talks.firstOrNull()
+                if (onPickUp != null && last != null) {
+                    PickUpTalkButton(last.displayTitle ?: stringResource(R.string.conversation)) {
+                        onPickUp(person.copy(voice_preset_id = voiceId)) { persist(voiceId) }
+                    }
+                    Spacer(Modifier.size(10.dp))
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     com.roro.futurevoice.ui.brand.IosTonalButton(
                         onClick = { onWatch { persist(voiceId) } },

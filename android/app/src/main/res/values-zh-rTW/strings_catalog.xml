@@ -436,6 +436,7 @@
     <string name="contents">"目錄"</string>
     <string name="continue_">"繼續"</string>
     <string name="continue_on_your_other_devices">"在其他裝置上繼續"</string>
+    <string name="continue_the_last_talk">"接著上次的話題"</string>
     <string name="continue_the_test">"繼續測驗"</string>
     <string name="continue_where_you_left_off">"要從上次的進度繼續嗎？"</string>
     <string name="continue_with_google">"用Google繼續"</string>

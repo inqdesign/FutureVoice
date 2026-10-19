@@ -27,12 +27,13 @@ import com.roro.futurevoice.data.knowsLearnersLife
 object ConversationCharacter {
 
     /** The block that casts the model AS [c] (iOS `characterBlock`). */
-    fun characterBlock(c: Counterpart, persona: UserPersona?, targetLanguage: String, languageName: String): String =
+    fun characterBlock(c: Counterpart, persona: UserPersona?, targetLanguage: String, languageName: String,
+                       history: PersonHistory? = null): String =
         when (c.cast) {
             CounterpartCast.OWN_PERSON -> ownPersonBlock(c, targetLanguage, languageName)
-            CounterpartCast.STRANGER -> strangerBlock(c, persona, targetLanguage, languageName)
-            CounterpartCast.PUBLIC_FIGURE -> publicFigureBlock(c, targetLanguage, languageName)
-        }
+            CounterpartCast.STRANGER -> strangerBlock(c, persona, targetLanguage, languageName, history != null)
+            CounterpartCast.PUBLIC_FIGURE -> publicFigureBlock(c, targetLanguage, languageName, history != null)
+        } + (history?.promptBlock(c.name, languageName) ?: "")
 
     /**
      * What a cast person is told about the user. Someone close to the learner
@@ -105,7 +106,8 @@ object ConversationCharacter {
     }
 
     /** A Find-people persona: a new acquaintance. */
-    private fun strangerBlock(c: Counterpart, persona: UserPersona?, targetLanguage: String, languageName: String): String {
+    private fun strangerBlock(c: Counterpart, persona: UserPersona?, targetLanguage: String, languageName: String,
+                              metBefore: Boolean): String {
         val facets = listOfNotNull(
             if (c.location.isEmpty()) null else "Where: ${c.location}",
             if (c.commonTopics.isEmpty()) null else "Their usual topics: ${c.commonTopics}",
@@ -113,7 +115,7 @@ object ConversationCharacter {
         ).joinToString("\n") { "- $it" }
         return ConversationPrompt.strangerBlock(c.name, facets, c.intro.ifEmpty { c.background },
             addressBlock(c, targetLanguage, languageName),
-            CommonGround.block(persona, CommonGround.of(c)), languageName)
+            CommonGround.block(persona, CommonGround.of(c)), languageName, metBefore)
     }
 
     /**
@@ -121,9 +123,11 @@ object ConversationCharacter {
      * person; what it doesn't know is which one the learner means, and the
      * learner confirmed that ([PublicFigureLookup.identify]).
      */
-    private fun publicFigureBlock(c: Counterpart, targetLanguage: String, languageName: String): String {
+    private fun publicFigureBlock(c: Counterpart, targetLanguage: String, languageName: String,
+                                  metBefore: Boolean): String {
         val identity = c.publicIdentity?.takeIf { it.isNotEmpty() } ?: c.name
-        return ConversationPrompt.publicFigureBlock(identity, addressBlock(c, targetLanguage, languageName), languageName)
+        return ConversationPrompt.publicFigureBlock(identity, addressBlock(c, targetLanguage, languageName),
+            languageName, metBefore)
     }
 
     // MARK: - Corrections

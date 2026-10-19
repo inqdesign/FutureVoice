@@ -407,6 +407,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                     .load(config.targetLanguage, config.level.code)
                 val brief = scenarioBrief(config)
                 val clock = pinPromptClock(config)
+                val history = personHistory(config)
                 // Drawn with the clock, once per call (iOS `FreeTalkCue.random`).
                 val freeTalkCue = ConversationPrompt.FreeTalkCue.random(hasRecentNews =
                     config.persona?.currentNotes()?.any { it.kind == PersonaNote.Kind.NOW } ?: false)
@@ -421,6 +422,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                         persona = config.persona,
                         newsFacts = config.newsFacts,
                         counterpart = config.cast?.person,
+                        personHistory = history,
                         brief = brief,
                         clock = clock,
                         tutor = tutor,
@@ -554,6 +556,18 @@ class TalkViewModel(context: Context) : ViewModel() {
             resumedFrom = config.resume?.turns?.lastOrNull()?.timestamp)
     }
 
+    /** iOS `PersonHistory`, pinned with the clock: what the cast person remembers. */
+    private suspend fun personHistory(config: TalkConfig): PersonHistory? {
+        val person = config.cast?.person ?: return null
+        return withContext(Dispatchers.IO) {
+            val sessions = runCatching {
+                com.roro.futurevoice.data.SessionStore.shared(appContext).load(config.targetLanguage)
+            }.getOrDefault(emptyList())
+            PersonHistory.build(person.id, sessions, excluding = sessionId,
+                pickUp = config.cast.pickUp && config.resume == null)
+        }
+    }
+
     private fun startRealtime(config: TalkConfig) {
         lastActivityAt = System.currentTimeMillis()
         // Nobody-there watch on THIS path too (iOS `f41d045`): it was only
@@ -575,6 +589,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                 // speaks, and the correction is a separate, later request.
                 val brief = scenarioBrief(config)
                 val clock = pinPromptClock(config)
+                val history = personHistory(config)
                 // Drawn with the clock, once per call (iOS `FreeTalkCue.random`).
                 val freeTalkCue = ConversationPrompt.FreeTalkCue.random(hasRecentNews =
                     config.persona?.currentNotes()?.any { it.kind == PersonaNote.Kind.NOW } ?: false)
@@ -594,6 +609,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                         firstMeeting = freeTalk && config.persona?.metAt == null && !config.picksTopic,
                         newsFacts = config.newsFacts,
                         counterpart = config.cast?.person,
+                        personHistory = history,
                         brief = brief,
                         clock = clock,
                         tutor = tutor,

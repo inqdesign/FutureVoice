@@ -436,6 +436,7 @@
     <string name="contents">"目次"</string>
     <string name="continue_">"続ける"</string>
     <string name="continue_on_your_other_devices">"ほかのデバイスで続ける"</string>
+    <string name="continue_the_last_talk">"前回の話の続き"</string>
     <string name="continue_the_test">"テストの続きをする"</string>
     <string name="continue_where_you_left_off">"前回の続きから始めますか？"</string>
     <string name="continue_with_google">"Googleで続ける"</string>

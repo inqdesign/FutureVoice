@@ -2,8 +2,8 @@
 # feat/script-study, not yet merged into the IOS_REF branch).
 gen-script-study-prompt.py 18f1fbf7
 # The free talk's random follow-up (FreeTalkCue, iOS bbfa2902 + its indent fix
-# 94295d18; + "my own topic", deed6cf4). The shared pin can't move yet: speech Study / week report.
-gen-conversation-prompt.py deed6cf4
+# 94295d18; + "my own topic", deed6cf4; + a person met before, 0d691811). The shared pin can't move yet: speech Study / week report.
+gen-conversation-prompt.py 0d691811
 # The "my own topic" opener (topicOpeners, iOS deed6cf4).
 gen-free-talk-openers.py deed6cf4
 # The quick quiz's written questions (QuickQuizStock, iOS 9c61e6de).

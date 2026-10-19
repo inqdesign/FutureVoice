@@ -22,6 +22,7 @@ import com.roro.futurevoice.talk.VoicePreset
 import kotlin.math.max
 import androidx.compose.foundation.border
 import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material.icons.outlined.People
 import androidx.compose.ui.graphics.Color
@@ -151,6 +152,8 @@ internal fun WatchTabBody(
     onOpenProfile: () -> Unit = {},
     /** The card's Talk: a call with them (already gated by the caller). */
     onTalkWith: (Counterpart) -> Unit = {},
+    /** The card's "Continue the last talk" (iOS `onPickUp`, gated by the caller). */
+    onPickUpWith: (Counterpart) -> Unit = {},
     /** The card's Watch: a scene of the two of them (gated by the caller). */
     onWatchWith: (Counterpart) -> Unit = {},
     /** A talk on the card's "Your talks together". */
@@ -536,6 +539,12 @@ internal fun WatchTabBody(
                             onTalkWith(p)
                         }
                     },
+                    onPickUp = {
+                        scope.launch {
+                            val p = savedFromCard(c)
+                            onPickUpWith(p)
+                        }
+                    },
                     onOpenTalk = onOpenTalk,
                 )
             }
@@ -668,6 +677,8 @@ internal fun SkyPersonCard(
     onWatch: () -> Unit,
     onTalk: () -> Unit,
     onOpenTalk: (String) -> Unit,
+    /** A call that picks up the last talk; shown once there is one. */
+    onPickUp: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val density = androidx.compose.ui.platform.LocalDensity.current
@@ -787,6 +798,12 @@ internal fun SkyPersonCard(
             CardToggle(open = true) { expanded = true }
         }
 
+        talks.firstOrNull()?.let { last ->
+            if (onPickUp != null) {
+                PickUpTalkButton(last.displayTitle ?: stringResource(R.string.conversation), onPickUp)
+                Spacer(Modifier.height(10.dp))
+            }
+        }
         // One row: the situation keeps its words (it is the card's point),
         // Watch and Talk are their glyphs alone — a label in every language
         // would not fit three across.
@@ -808,6 +825,34 @@ internal fun SkyPersonCard(
             CardIconButton(Icons.Filled.PlayArrow, stringResource(R.string.watch), onWatch)
             CardIconButton(Icons.Filled.Phone, stringResource(R.string.talk), onTalk)
         }
+    }
+}
+
+/**
+ * "Continue the last talk" (iOS `PickUpTalkButton`): a call with someone
+ * you've talked to that opens out of the last talk; the person decides
+ * whether to carry the thread on or move to something new.
+ */
+@Composable
+internal fun PickUpTalkButton(lastTitle: String, onClick: () -> Unit) {
+    val accent = MaterialTheme.colorScheme.primary
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(CircleShape)
+            .background(accent.copy(alpha = 0.15f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 18.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = null, tint = accent,
+            modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(R.string.continue_the_last_talk), color = accent,
+                style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text(lastTitle, color = accent.copy(alpha = 0.7f),
+                style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Icon(Icons.Filled.Phone, contentDescription = null, tint = accent, modifier = Modifier.size(20.dp))
     }
 }
 

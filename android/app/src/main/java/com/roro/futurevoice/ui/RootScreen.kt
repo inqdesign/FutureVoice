@@ -1261,6 +1261,15 @@ fun RootScreen() {
             },
             // A past talk on a card pushes its book; back returns to the card.
             onOpenTalk = { detailSessionId = it },
+            onPickUp = { p, meet ->
+                callCastVoice = p.voice_preset_id.takeIf { it.isNotBlank() }
+                callCounterpartId = p.id
+                gate {
+                    callCast = com.roro.futurevoice.talk.ConversationEngine.Cast(meet(), pickUp = true)
+                    callTopic = ""; callFacts = emptyList(); callBlurb = ""; callScenarioId = null
+                    showPeople = false; inCall = true
+                }
+            },
             onTalk = { p, meet ->
                 callCastVoice = p.voice_preset_id.takeIf { it.isNotBlank() }
                 // The talk saves as an ordinary Session carrying this, so the
@@ -1475,6 +1484,16 @@ fun RootScreen() {
             onOpenProfile = { showMyProfileSheet = true },
             // The Watch map's person card (iOS `SkyPersonCard`): Talk is a call
             // with them, Watch a scene of the two of them past the hellos.
+            onPickUpWithPerson = { c ->
+                callCast = com.roro.futurevoice.talk.ConversationEngine.Cast(c, pickUp = true)
+                callCastVoice = c.voicePresetId.takeIf { it.isNotBlank() }
+                callCounterpartId = c.id
+                gate {
+                    callTopic = ""; callFacts = emptyList(); callScenarioId = null
+                    callEntry = com.roro.futurevoice.talk.TalkEntry.WATCH_PERSON
+                    inCall = true
+                }
+            },
             onTalkWithPerson = { c ->
                 // A met stranger is cast from their saved row, as on iOS.
                 callCast = com.roro.futurevoice.talk.ConversationEngine.Cast.of(c)
@@ -1746,6 +1765,8 @@ internal fun HomeScreen(
     onOpenProfile: () -> Unit = {},
     /** The Watch map's person card: a call with them (gated here). */
     onTalkWithPerson: (com.roro.futurevoice.data.Counterpart) -> Unit = {},
+    /** The card's "Continue the last talk" (gated here). */
+    onPickUpWithPerson: (com.roro.futurevoice.data.Counterpart) -> Unit = {},
     /** The Watch map's person card: a scene of the two of them (gated here). */
     onWatchWithPerson: (com.roro.futurevoice.data.Counterpart) -> Unit = {},
     /** Practice's header seal → the finished-books page, with the books it counted. */
@@ -2044,6 +2065,7 @@ internal fun HomeScreen(
                         meName = state.persona?.displayName.orEmpty(),
                         onOpenProfile = onOpenProfile,
                         onTalkWith = onTalkWithPerson,
+                        onPickUpWith = onPickUpWithPerson,
                         onWatchWith = onWatchWithPerson,
                         onOpenTalk = onOpenTalk,
                     )

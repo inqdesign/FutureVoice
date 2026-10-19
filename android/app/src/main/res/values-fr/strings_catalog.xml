@@ -433,6 +433,7 @@
     <string name="contents">"Sommaire"</string>
     <string name="continue_">"Continuer"</string>
     <string name="continue_on_your_other_devices">"Continuer sur tes autres appareils"</string>
+    <string name="continue_the_last_talk">"Reprendre la dernière conversation"</string>
     <string name="continue_the_test">"Reprendre le test"</string>
     <string name="continue_where_you_left_off">"Reprendre là où tu t’étais arrêté ?"</string>
     <string name="continue_with_google">"Continuer avec Google"</string>

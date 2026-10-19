@@ -165,9 +165,11 @@ pos = character.index("private static func strangerBlock(")
 strangerb = kotlin_conv(literal_at(character, 'return """', pos), {
     **ADDR, 'facets.isEmpty ? "" : facets + "\\n"': '(if (facets.isEmpty()) "" else facets + "\\n")',
     "c.intro.isEmpty ? c.background : c.intro": "intro",
-    "CommonGround.block(learner: persona, counterpart: c)": "commonGround"})
+    "CommonGround.block(learner: persona, counterpart: c)": "commonGround",
+    "metBefore": "metBefore"})
 pos = character.index("private static func publicFigureBlock(")
-public = kotlin_conv(literal_at(character, 'return """', pos), {**ADDR, "identity": "identity"})
+public = kotlin_conv(literal_at(character, 'return """', pos), {**ADDR, "identity": "identity",
+                                                                 "metBefore": "metBefore"})
 
 pos = ground.index("static func block(")
 ground_none = kotlin_conv(literal_at(ground, 'return """', pos), {})
@@ -322,11 +324,13 @@ object ConversationPrompt {{
 
     /** iOS `strangerBlock`. */
     fun strangerBlock(name: String, facets: String, intro: String, addressBlock: String,
-                      commonGround: String, languageName: String): String =
+                      commonGround: String, languageName: String,
+                      metBefore: Boolean = false): String =
         {strangerb}
 
     /** iOS `publicFigureBlock`. */
-    fun publicFigureBlock(identity: String, addressBlock: String, languageName: String): String =
+    fun publicFigureBlock(identity: String, addressBlock: String, languageName: String,
+                          metBefore: Boolean = false): String =
         {public}
 
     /** iOS `CommonGround.block` with nothing shared. */

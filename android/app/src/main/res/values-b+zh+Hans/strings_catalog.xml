@@ -436,6 +436,7 @@
     <string name="contents">"目录"</string>
     <string name="continue_">"继续"</string>
     <string name="continue_on_your_other_devices">"在其他设备上继续"</string>
+    <string name="continue_the_last_talk">"接着上次的话题"</string>
     <string name="continue_the_test">"继续测验"</string>
     <string name="continue_where_you_left_off">"要从上次的进度继续吗？"</string>
     <string name="continue_with_google">"用Google继续"</string>
