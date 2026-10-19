@@ -722,52 +722,6 @@
         }
       }
     },
-    "+ Scenes, %lld min each" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "+ Szenen (je %lld Min.)"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "+ Escenas (%lld min cada una)"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "+ Scènes (%lld min chacune)"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "+ シーン練習(1回%lld分)"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "+ 상황연습 (1개에 %lld분)"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "+ 情境练习(每次 %lld 分钟)"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "+ 情境練習(每次 %lld 分鐘)"
-          }
-        }
-      }
-    },
     "+%lld" : {
       "localizations" : {
         "de" : {
@@ -1270,52 +1224,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "再多聊幾次，就能看到你的等級。"
-          }
-        }
-      }
-    },
-    "A new Watch scene uses %lld min of the same talk time. Watching it again is free." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jede neue Szene kostet %lld Min. von derselben Sprechzeit. Noch mal ansehen ist kostenlos."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cada escena nueva descuenta %lld min de ese mismo tiempo de conversación. Volver a verla es gratis."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chaque nouvelle scène prend %lld min sur ce même temps de conversation. La revoir est gratuit."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新しいシーン練習は、同じ通話時間から1回%lld分使います。もう一度見るのは無料です。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "새 상황연습은 같은 통화 시간에서 %lld분씩 써요. 이미 본 건 다시 봐도 무료예요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "每看一个新的情境练习，会从同一份通话时间里扣 %lld 分钟。重看免费。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "每看一個新的情境練習，會從同一份通話時間裡扣 %lld 分鐘。重看免費。"
           }
         }
       }

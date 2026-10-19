@@ -666,10 +666,6 @@ struct PaywallView: View {
                       systemImage: "checkmark.circle")
                 Label(explain("A 10-minute tutor call every weekday is about 200 minutes a month. Here, minutes count only while the conversation is going — pauses are free."),
                       systemImage: "phone")
-                if account.scenesCostTalk {
-                    Label(explain("A new Watch scene uses \(account.sceneTalkMinutes) min of the same talk time. Watching it again is free."),
-                          systemImage: "play.circle")
-                }
             }
             .font(.footnote)
             .foregroundStyle(.secondary)
@@ -793,13 +789,11 @@ struct PaywallView: View {
                             .foregroundStyle(.secondary)
                     }
                     // Since 2026-10-19 a scene is paid for out of the same
-                    // minutes (five each) for anyone subscribing from then on;
-                    // the count is printed only to an account that is still
-                    // on it, which is what that account would buy.
-                    if account.scenesCostTalk {
-                        Text(explain("+ Scenes, \(account.sceneTalkMinutes) min each"))
-                            .font(.subheadline.weight(.medium))
-                    } else if scenes > 0 {
+                    // minutes for anyone subscribing from then on, so it is
+                    // not a thing the plan includes and the row says nothing
+                    // about it (founder). The count is printed only to an
+                    // account still on it, which is what that account buys.
+                    if !account.scenesCostTalk && scenes > 0 {
                         Text(explain("+ \(scenes) scenes"))
                             .font(.subheadline.weight(.medium))
                     }
