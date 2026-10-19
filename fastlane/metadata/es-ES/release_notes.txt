@@ -1,16 +1,17 @@
 Novedades
-• Ya puedes aprender español, con acento mexicano o castellano.
-• Crea tu rutina al empezar: elige a qué hora suena tu llamada diaria y cuánto estudias, y se añade al momento a tu plan semanal.
-• Tu yo fluido recuerda lo que te ha pasado últimamente y te pregunta por ello al saludarte.
-• Añadir a una persona se hace en una sola pantalla, y puedes crear a alguien nuevo desde el selector de personas.
-• Desliza los retos de discurso como tarjetas y entra al test semanal directamente desde Repaso.
-• Al crear tu voz, el ruido de fondo de la grabación se limpia mejor.
-• En Volver a decirlo ya puedes decir también las frases de tu yo fluido. Activa Leer las dos partes desde el botón de arriba a la izquierda.
+• Si estás aprendiendo inglés, cada día hay un episodio nuevo del pódcast de nawana: dos presentadores comentan una noticia del día y, en el guion, «Estudiar» te marca las expresiones y la gramática. Lo tienes en la lista del reproductor, en «Pódcast».
+• Puedes bajar la velocidad del reproductor.
+• En las llamadas con una persona o un papel, su nombre aparece sobre sus frases.
+• Haz un quiz rápido cuando quieras desde la pantalla de hablar, con palabras, expresiones y gramática elegidas para ti.
+• Encuentra un tema para la conversación de hoy con un solo botón.
+• Escucha tus situaciones una tras otra en el reproductor, incluso con la pantalla apagada.
+• Si aprendes japonés, ahora ves la lectura encima de los kanji.
+• La prueba semanal ahora está dentro de tu informe semanal.
 
 Correcciones
-• La burbuja de tu yo fluido ya no parpadea al aparecer.
-• Los títulos de las llamadas de noticias ya no se cortan.
-• Escucharlo con mi voz ya no gasta más tiempo del que dura el guion.
-• Las palabras corregidas en Repaso ya no se meten dentro de otras palabras.
-• Si aprendes japonés o español, la lista de personas ya no aparece vacía.
-• Lo que estabas escribiendo sigue ahí si cierras una ventana y la vuelves a abrir.
+• Si interrumpes a tu yo fluido, se calla al momento. Antes paraba tarde o no paraba.
+• Las tarjetas de los retos ya no cambian de tamaño al volver.
+• Al abrir Escenas por primera vez ya no entras deslizándote desde un lado.
+• La barra de pestañas ya no aparece mientras se reproduce una situación.
+• Los iconos de los botones azules se ven de nuevo.
+• «Escuchar con mi voz» muestra mejor lo que cuesta.

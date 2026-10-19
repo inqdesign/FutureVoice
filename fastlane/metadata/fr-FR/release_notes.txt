@@ -1,16 +1,17 @@
 Nouveautés
-• Tu peux maintenant apprendre l’espagnol, avec un accent mexicain ou castillan.
-• Crée ta routine dès le départ : choisis l’heure de ton appel quotidien et ton temps d’étude, et tout s’ajoute à ton planning de la semaine.
-• Ton moi fluide se souvient de ce qui t’arrive en ce moment et t’en parle dès le bonjour.
-• Ajouter une personne se fait sur un seul écran, et tu peux créer quelqu’un directement depuis le choix de la personne.
-• Fais défiler les défis de discours en cartes et ouvre le test hebdo directement depuis Révision.
-• À la création de ta voix, les bruits de fond de l’enregistrement sont mieux nettoyés.
-• Dans Redire, tu peux maintenant dire aussi les répliques de ton moi fluide. Active Lire les deux rôles depuis le bouton en haut à gauche.
+• Si tu apprends l’anglais, un nouvel épisode du podcast nawana t’attend chaque jour : deux animateurs parlent d’une actualité du jour, et dans le texte, « Étudier » te montre les expressions et la grammaire. Il se trouve dans la liste du lecteur, sous « Podcast ».
+• Tu peux ralentir la vitesse du lecteur.
+• Dans les appels avec une personne ou un rôle, son nom s’affiche au-dessus de ses phrases.
+• Fais un quiz rapide quand tu veux depuis l’écran Parler, avec des mots, des expressions et de la grammaire choisis pour toi.
+• Trouve un sujet pour la conversation du jour en un seul bouton.
+• Écoute tes situations à la suite dans le lecteur, même écran éteint.
+• Quand tu apprends le japonais, la lecture s’affiche au-dessus des kanji.
+• Le test de la semaine se trouve maintenant dans ton bilan de la semaine.
 
 Corrections
-• La bulle de ton moi fluide ne clignote plus quand elle apparaît.
-• Les titres des appels sur l’actualité ne sont plus coupés.
-• L’écouter avec ma voix ne consomme plus plus de temps que la durée du texte.
-• Les mots corrigés dans Révision ne s’insèrent plus à l’intérieur d’autres mots.
-• Quand tu apprends le japonais ou l’espagnol, la liste des personnes n’est plus vide.
-• Ce que tu étais en train d’écrire est toujours là quand tu fermes une fenêtre et la rouvres.
+• Quand tu coupes la parole à ton moi fluide, il s’arrête tout de suite. Avant, il s’arrêtait trop tard, ou pas du tout.
+• Les cartes des défis ne changent plus de taille quand tu reviens.
+• À la première ouverture de Scènes, tu n’arrives plus en glissant depuis le côté.
+• La barre d’onglets ne s’affiche plus pendant une situation.
+• Les icônes des boutons bleus sont de nouveau visibles.
+• « Écouter avec ma voix » indique plus clairement ce que ça coûte.
