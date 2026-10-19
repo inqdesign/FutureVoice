@@ -43,15 +43,19 @@ enum PeopleSky {
     }
 
     enum Lens: String, CaseIterable, Identifiable {
-        case all, mine, known, strangers
+        /// By WHO they are, never how well you know them (2026-10-19,
+        /// founder): "People I know" (anyone talked to) overlapped My people,
+        /// and Strangers mixed real learners with characters we wrote. Three
+        /// lenses that never share a face, the same line the faces draw.
+        case all, mine, users, characters
         var id: String { rawValue }
 
         var title: String {
             switch self {
             case .all: return explain("All")
             case .mine: return explain(key: "watch.sky.lens.mine", default: "My people")
-            case .known: return explain(key: "watch.sky.lens.known", default: "People I know")
-            case .strangers: return explain("Strangers")
+            case .users: return explain(key: "watch.sky.lens.users", default: "nawana users")
+            case .characters: return explain("Characters")
             }
         }
     }
@@ -113,10 +117,15 @@ enum PeopleSky {
                 case .role: return false
                 }
             case .mine: return isMine
-            case .known: return practiced > 0
-            case .strangers:
-                if case .role = kind { return true }
-                return !isMine && practiced == 0
+            case .users, .characters:
+                let c: Counterpart
+                switch kind {
+                case .person(let p), .pooled(let p): c = p
+                // A role has no person behind it: it is a character's slot.
+                case .role: return lens == .characters
+                }
+                guard !isMine, c.cast != .ownPerson else { return false }
+                return c.isRealLearner == (lens == .users)
             }
         }
 
@@ -157,7 +166,7 @@ enum PeopleSky {
         let slots: [CGFloat], me: CGFloat
         switch lens {
         case .mine: (slots, me) = ([150, 280, 410], 100)
-        case .known: (slots, me) = ([146, 276, 400], 96)
+        case .users, .characters: (slots, me) = ([146, 276, 400], 96)
         default: (slots, me) = ([156, 286, 416], 104)
         }
         var radii: [CGFloat] = []

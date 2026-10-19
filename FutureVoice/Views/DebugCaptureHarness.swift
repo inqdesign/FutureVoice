@@ -1548,7 +1548,7 @@ enum DebugCapture {
             return AnyView(WatchTab())
         case "watchtab-sky":
             // The people map with a realistic cast: close people, people
-            // around, met strangers. `-skyLens strangers` opens on a lens.
+            // around, met strangers. `-skyLens users` opens on a lens.
             once("watchtab-sky") {
                 seedSkyPeople(into: appState,
                               withClose: !UserDefaults.standard.bool(forKey: "skyNoClose"))
