@@ -5,7 +5,7 @@
 // function (see `verify_jwt = true` default in config.toml), so by the time
 // we run here the Authorization header is guaranteed to be a valid signed
 // Supabase JWT. We still call `auth.getUser()` to extract the user id —
-// useful for logging, rate-limiting hooks, and tying ElevenLabs voice ids
+// useful for logging, rate-limiting hooks, and tying voice ids
 // to a specific user when we record usage.
 
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"

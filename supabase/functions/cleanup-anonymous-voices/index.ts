@@ -4,9 +4,8 @@
 // can be built and HEARD before the app asks for an account (see
 // `AuthService.startAnonymousSession`). Most of those sessions become accounts
 // one screen later — Apple is linked to the same user, so nothing here ever
-// sees them. The rest are people who put the phone down: a real ElevenLabs
-// voice, held by a user nobody can ever sign into again, occupying a slot on a
-// shared account ceiling that costs money.
+// sees them. The rest are people who put the phone down: a real cloned
+// voice, held by a user nobody can ever sign into again.
 //
 // So: every anonymous user older than the grace window loses its clones
 // upstream and is deleted, which cascades every row it owned. Grace exists
@@ -23,14 +22,14 @@ import { timingSafeEqual } from "../_shared/auth.ts"
 import * as cartesia from "../_shared/cartesia.ts"
 
 /// How long an unclaimed anonymous user is left alone, in MINUTES. Short on
-/// purpose: an abandoned clone holds a paid ElevenLabs voice slot, and the
+/// purpose: an abandoned clone holds a paid voice upstream, and the
 /// source recording stays on the device, so a returning real user rebuilds
 /// with no re-recording. The only thing this window must outlast is ONE live
 /// onboarding session (greeting → Meet → daily-call intro), which is a few
 /// minutes; 30 clears it with margin. Paired with a 15-min sweep, an
 /// abandoned clone is reclaimed within ~45 min instead of the old ~48-72h.
 const GRACE_MINUTES = 30
-/// Bounded per run so one invocation can't spend minutes in ElevenLabs calls.
+/// Bounded per run so one invocation can't spend minutes in upstream calls.
 /// Anything left over is collected by the next run (now every 15 min).
 const MAX_PER_RUN = 200
 
@@ -69,14 +68,14 @@ Deno.serve(async (req) => {
     // that's gone is a voice we can no longer name upstream.
     const { data: clones } = await admin
       .from("voice_clones")
-      .select("elevenlabs_voice_id")
+      .select("voice_id")
       .eq("user_id", row.user_id)
 
-    // Cartesia voices only: an ElevenLabs id (from before 2026-10-12) has
-    // nothing upstream left to delete since ElevenLabs is gone (2026-10-15).
+    // Cartesia voices only: an id from before 2026-10-12 (an earlier
+    // provider) has nothing upstream left to delete.
     let upstreamOK = true
     for (const clone of clones ?? []) {
-      const id = clone.elevenlabs_voice_id as string | null
+      const id = clone.voice_id as string | null
       if (!id || !cartesia.isCartesiaVoice(id)) continue
       const r = await cartesia.deleteVoice(id)   // a voice already gone counts as deleted
       if (r.ok) {

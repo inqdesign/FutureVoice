@@ -13,7 +13,7 @@
 //
 // Each provider call follows this pattern:
 //   1. charge — atomic DB debit / allowance consume. On 402, stop.
-//   2. invoke upstream provider (ElevenLabs / Gemini)
+//   2. invoke upstream provider (Cartesia / Gemini)
 //   3. if upstream failed, refund() with the same idempotency key
 //   4. return result to client
 //
@@ -25,7 +25,7 @@
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"
 
 export type ChargeableAction =
-  | "tts"               // per ElevenLabs synthesis (no timestamps)
+  | "tts"               // per synthesis (no timestamps)
   | "tts_timestamps"    // with-timestamps endpoint (slightly more expensive)
   | "tts_scene"         // Watch scene lines — priced by playback time (~850 chars ≈ 1 min ≈ 4.5 cr)
   | "talk_time"         // wall-clock call seconds (talk-tick) — 4.5 cr/min
@@ -63,12 +63,12 @@ export function priceFor(action: ChargeableAction, params: Record<string, unknow
     case "talk_time":       return 0
     // Free since the minutes-native change: the meter is talk minutes and
     // nothing else. Re-clone churn is bounded by a daily cap in
-    // elevenlabs-voice-clone instead of a price.
+    // voice-clone instead of a price.
     case "voice_clone":     return 0
     case "voice_delete":    return 0
     // Free by the same logic as the clone's onboarding grace: the accent pick
     // is part of getting a voice the user believes is theirs, not usage.
-    // Bounded by recordFreeUsage daily caps in elevenlabs-voice-remix.
+    // Bounded by recordFreeUsage daily caps in voice-remix.
     case "voice_remix":     return 0
     // Every Gemini action is FREE since 2026-08 (the free-learning-loop
     // change): upstream cost is ~$0.002/call vs the 1 credit (~$0.04) we

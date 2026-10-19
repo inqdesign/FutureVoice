@@ -9,7 +9,7 @@ export interface Env {
   SUPABASE_URL: string
   SUPABASE_ANON_KEY: string
   /** Service-role key, used ONLY for the voice_clones ownership read —
-   *  the same query the elevenlabs-tts edge function makes. */
+   *  the same query the tts edge function makes. */
   SUPABASE_SERVICE_ROLE_KEY: string
   GEMINI_API_KEY: string
   /** Half-cascade Live model ("models/..."); see README before changing. */
@@ -56,7 +56,7 @@ export async function ownsVoice(env: Env, userId: string, voiceId: string): Prom
   if (await isStockVoice(env.CARTESIA_API_KEY, voiceId)) return "ok"
   const url = `${env.SUPABASE_URL}/rest/v1/voice_clones` +
     `?user_id=eq.${encodeURIComponent(userId)}` +
-    `&elevenlabs_voice_id=eq.${encodeURIComponent(voiceId)}` +
+    `&voice_id=eq.${encodeURIComponent(voiceId)}` +
     `&select=id,parked_at&limit=1`
   const r = await fetch(url, {
     headers: {
@@ -67,8 +67,9 @@ export async function ownsVoice(env: Env, userId: string, voiceId: string): Prom
   if (!r.ok) return "forbidden"
   const rows = (await r.json()) as { parked_at?: string | null }[]
   if (!Array.isArray(rows) || rows.length === 0) return "forbidden"
-  // An ElevenLabs clone (2026-10-15) can't speak any more either — the same
-  // answer as a parked voice, and the same way back (a rebuild).
+  // A clone from before 2026-10-12 (an earlier provider) can't speak any
+  // more either — the same answer as a parked voice, and the same way back
+  // (a rebuild).
   return rows[0]?.parked_at || !isCartesiaVoice(voiceId) ? "parked" : "ok"
 }
 

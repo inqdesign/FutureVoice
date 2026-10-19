@@ -1,7 +1,7 @@
 // Delete clone recordings older than the retention window.
 //
-// `elevenlabs-voice-clone` writes the takes it receives into the private
-// `voice-originals` bucket, because ElevenLabs' own copy dies with the voice
+// `voice-clone` writes the takes it receives into the private
+// `voice-originals` bucket, because the provider's own copy dies with the voice
 // and an accent pick deletes the voice seconds later. That copy exists to
 // check the quality of a clone that just went wrong — not to accumulate. So
 // it is kept for ONE DAY and then removed, which is what the consent screen

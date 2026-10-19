@@ -73,7 +73,7 @@ node test/talk.mjs --url ws://localhost:8799/call --wav test/hello16k.wav
 ## What's in / not in Phase 1
 
 - ✅ Auth (Supabase JWT) and voice ownership (same deepfake rule as
-  `elevenlabs-tts`) enforced at session start.
+  the `tts` edge function) enforced at session start.
 - ✅ Turn-taking, barge-in, input transcription, reply streaming, TTS context
   rotation, Gemini session rotation (~15 min cap → resumption handle).
 - ⏳ Metering: speech seconds counted and reported (`stats` events), **not

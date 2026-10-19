@@ -18,7 +18,7 @@ export interface StartMessage {
   token: string
   /** Voice id the reply audio speaks in — the learner's Cartesia clone, a
    *  Cartesia library voice, or a preset slot (presets.ts). Ownership is
-   *  enforced server-side, same rule as the elevenlabs-tts edge function. */
+   *  enforced server-side, same rule as the tts edge function. */
   voiceId: string
   /** BCP-47-ish target language code ("en", "de", ...) — currently only
    *  recorded; Gemini Live infers the language from the audio itself. */
@@ -36,7 +36,7 @@ export interface StartMessage {
    *  app because the app would need a second audio engine to do it, and
    *  two engines fighting over one session is how the call goes silent. */
   opener?: string
-  /** How fast the fluent self speaks — the app's rung on ElevenLabs' old
+  /** How fast the fluent self speaks — the app's rung on its own
    *  0.7–1.2 scale (mapped onto Cartesia's by `cartesiaSpeed`), chosen by the learner in Me → Voice. Absent means normal, and
    *  an app build that predates the setting never sends it. Clamped here
    *  rather than trusted: this rides in from a client. */

@@ -2,18 +2,17 @@
 // stranger's slot) — what a stored preset id SPEAKS as, per language.
 //
 // A preset id is a SLOT (VoicePreset in Models.swift): what is stored on a
-// person, a scenario or a persona row is one of four ElevenLabs-era ids, and
-// the app swaps in the language's own Cartesia voice at the network edge
-// (`VoicePreset.speaking`). ElevenLabs is gone (2026-10-15), so the server
-// does the same swap for whatever still arrives as a slot: an older build,
-// and the four Korean ElevenLabs voices builds from 2026-09-28 sent for
-// Korean and Japanese learners. Mirror of `voicedBySlot` in Models.swift and
+// person, a scenario or a persona row is one of four ids from the earlier
+// provider, and the app swaps in the language's own Cartesia voice at the
+// network edge (`VoicePreset.speaking`). The server does the same swap for
+// whatever still arrives as a slot: an older build, and the four Korean
+// stand-ins builds from 2026-09-28 sent for Korean and Japanese learners. Mirror of `voicedBySlot` in Models.swift and
 // gateway/src/presets.ts — keep the three in step.
 
 const SLOTS = ["NDTYOmYEjbDIVCKB35i3", "UgBBYS2sOqTuMpoF3BR0",
                "FF59babHL8N8gfTgtBMT", "L0Dsvb3SLTyegXwtm47J"] as const
 
-/** The Korean ElevenLabs voices that once stood in for the slots, in slot
+/** The Korean voices that once stood in for the slots, in slot
  *  order (Sian, KO-Calm, Han, Joon). */
 const LEGACY_KOREAN = ["5n5gqmaQi9Ewevrz7bOS", "L4az9Gb378GIycFl2nAB",
                        "8jHHF8rMqMlg8if2mOUe", "AKF7f2y1L8ktV5vxXILw"]

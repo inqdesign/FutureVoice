@@ -37,9 +37,9 @@ const DEFAULT_OUTPUT_FORMAT = "pcm_22050"
  *  app sends, and it rides straight into the system prompt. */
 const MAX_STEER_CHARS = 600
 
-/** The app's speech-speed setting, made safe. Anything outside ElevenLabs'
- *  0.7–1.2 window is refused by upstream for the WHOLE line, which would be a
- *  silent call — so a nonsense value becomes "no preference", never an error. */
+/** The app's speech-speed setting, made safe. Anything outside the app's
+ *  0.7–1.2 window is a nonsense value from a client, and a bad speed could
+ *  silence the WHOLE line — so it becomes "no preference", never an error. */
 function clampSpeed(v: unknown): number | undefined {
   if (typeof v !== "number" || !Number.isFinite(v)) return undefined
   if (v < 0.7 || v > 1.2) return undefined
@@ -130,7 +130,7 @@ export class CallSession implements DurableObject {
   /// on the other end: a killed app on a mobile network leaves a half-open
   /// socket that never delivers a `close` event, so `teardown` is never
   /// reached, and any session state that happens to read as "busy" (an
-  /// `activeContext` whose ElevenLabs context never reported done) then bills
+  /// `activeContext` whose voice context never reported done) then bills
   /// every second forever. Two such sessions were found alive 45 minutes
   /// after their call ended, charging 15 s every 15 s (2026-09-05).
   ///
@@ -156,7 +156,7 @@ export class CallSession implements DurableObject {
   private static readonly billableClientGapMs = 10_000
   /** No conversation runs this long; past it the session is a leak. */
   private static readonly maxSessionMs = 60 * 60 * 1000
-  /** An `activeContext` outliving this is a lost ElevenLabs context, not a
+  /** An `activeContext` outliving this is a lost voice context, not a
    *  reply — clearing it is what stops the meter believing we are speaking. */
   private static readonly maxContextMs = 90_000
   private sessionStartedAt = Date.now()
@@ -209,10 +209,8 @@ export class CallSession implements DurableObject {
    *  test that needs no thresholds. Kept short: echo only ever quotes the
    *  last few seconds. */
   private recentReplyText = ""
-  /** Reply text written but not yet VOICED, per context. The ElevenLabs
-   *  socket runs `auto_mode` (no server-side buffering — lowest latency),
-   *  which its docs recommend only for full sentences: "sending partial
-   *  phrases will result in highly reduced quality". Gemini's SSE deltas
+  /** Reply text written but not yet VOICED, per context. A voice
+   *  generation sounds right only over a full sentence. Gemini's SSE deltas
    *  break wherever the tokenizer happened to ("Take" ‖ " a deep breath",
    *  "for the" ‖ " constant shifts", even "U" ‖ "gh" — probed 2026-09-03),
    *  and each fragment came out as its own generation: a pitch reset and a
@@ -1604,9 +1602,8 @@ export class CallSession implements DurableObject {
     for (const sentence of CallSession.eachSentence(sentences)) this.voice(context, sentence)
   }
 
-  /** Send one piece of text to the voice. ElevenLabs asks that every chunk
-   *  end in a single space — it is the word boundary the synthesizer keys
-   *  on, and the next chunk is glued straight onto it. */
+  /** Send one piece of text to the voice. Every chunk ends in a single
+   *  space — the word boundary between it and the next one. */
   private voice(context: string, text: string): void {
     const chunk = text.replace(/\s+$/, "") + " "
     if (chunk.trim().length === 0) return
@@ -1676,7 +1673,7 @@ export class CallSession implements DurableObject {
     if (this.lineEndTimer !== null) { clearInterval(this.lineEndTimer); this.lineEndTimer = null }
     // Give the context's SLOT back. One socket holds five at a time, and a
     // line ended locally (the play-out fallback, which is the usual case —
-    // ElevenLabs' `isFinal` frequently never comes) used to leave its context
+    // the provider's own "done" frequently never came) used to leave its context
     // open forever: the sixth line of a call was refused, the socket errored,
     // and the rest of the call had no voice at all (prod, 2026-09-13).
     // No-op for a context that went final on its own.
@@ -1686,13 +1683,13 @@ export class CallSession implements DurableObject {
     if (this.pendingWall !== null) this.settleWall(this.pendingWall)
   }
 
-  /** `audio_end` used to ride on ElevenLabs' `isFinal` alone, and on
+  /** `audio_end` used to ride on the provider's own "done" alone, and on
    *  2026-09-11 (device, opener line) it never came: the client sat on
    *  "speaking", its echo gate never opened, and — with the first line
    *  half-duplex — the learner talked into a muted mic for the rest of the
    *  call. The play-out clock already knows when the phone will have gone
    *  quiet, so once it has, plus a beat for a straggling chunk, the line is
-   *  declared over from here. A `isFinal` that arrives first wins and
+   *  declared over from here. A "done" that arrives first wins and
    *  clears this. */
   private lineEndTimer: number | null = null
   private static readonly lineEndGraceMs = 1500
@@ -1708,11 +1705,11 @@ export class CallSession implements DurableObject {
    *  alone — which only moves when audio arrives, so on a line with none yet
    *  it was still the previous line's end, and on a call's FIRST line it was
    *  0. The first tick (500 ms after the text was flushed) then declared the
-   *  greeting over before ElevenLabs had sent a byte, and every chunk that
+   *  greeting over before the voice had sent a byte, and every chunk that
    *  followed was dropped as a stale context: the text on screen, no voice.
    *  Device log 2026-09-28, `audio_start` → `audio_end` in 485 ms, "why
    *  suddenly I can't hear your voice?". The first line is the one that
-   *  opens the ElevenLabs socket, so it is the slow one — hence "sometimes,
+   *  opens the voice socket, so it is the slow one — hence "sometimes,
    *  and only the first line". */
   private armLineEndFallback(context: string): void {
     if (this.lineEndTimer !== null) clearInterval(this.lineEndTimer)

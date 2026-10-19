@@ -1,18 +1,13 @@
-// Cartesia — the clone voice's second home (2026-10-12).
+// Cartesia — every voice the app speaks in (since 2026-10-12).
 //
-// Why: ElevenLabs Pro holds 160 custom voices and 290 voice creations a
-// month for the whole account, and both were ~80% used with ~25 signups a
-// week; Cartesia stores instant clones without a limit (support, 2026-10-12)
-// at the same price per character ($37–39 vs $40 / 1M), measured faster
-// (first audio 100 ms vs 148 ms, gateway/test/probe-tts-ttfb.mjs) and
-// preferred by ear by the founder.
+// Why Cartesia: it stores instant clones without a limit (support,
+// 2026-10-12) at $37–39 per million characters, its first audio arrives in
+// ~100 ms, and the founder preferred it by ear.
 //
-// How a voice is routed: by the SHAPE of its id. Cartesia ids are UUIDs,
-// ElevenLabs ids are 20 alphanumerics — so every path (this edge function,
-// the gateway, an old app build that just passes the id along) can tell
-// where a voice lives without a database read. The id is stored in
-// `voice_clones.elevenlabs_voice_id` like any other (the column name is
-// history; it means "the provider's voice id").
+// A Cartesia voice id is a UUID, optionally with an accent ("<uuid>:british").
+// Anything else is a voice from before 2026-10-12, which nothing can speak
+// any more; `isCartesiaVoice` is how every path tells them apart without a
+// database read. The id is stored in `voice_clones.voice_id`.
 
 
 const HOST = "https://api.cartesia.ai"
@@ -56,8 +51,8 @@ const BASE_ACCENT: Record<string, string> = {
   es: "united-states-spanish",
 }
 
-/** The app's accent picks arrive as ElevenLabs remix PROMPTS
- *  (VoiceAccentCatalog) — read the accent out of the wording. */
+/** The app's accent picks arrive as PROMPTS in words (VoiceAccentCatalog)
+ *  — read the accent out of the wording. */
 export function accentFromDescription(description: string): string | null {
   const d = description.toLowerCase()
   if (d.includes("general american") || d.includes("american english")) return "general-american"
@@ -237,13 +232,12 @@ export function lineLanguage(text: string, target: string | null | undefined): s
   return SUPPORTED.has(t) ? t : "en"
 }
 
-/** The app's speed rungs (ElevenLabs' scale: Slow 0.85 · Relaxed 0.9 ·
- *  Normal 1.0) onto Cartesia's. Measured 2026-10-12 on the same lines:
- *  Cartesia at 1.0 speaks 15–35% slower than ElevenLabs at 1.0, and its knob
- *  is weak — 1.0 → 1.5 is only 6–12% faster. So the rungs are stretched over
- *  Cartesia's whole upper range: Slow → 1.0, Relaxed → ~1.17, Normal → 1.5
- *  (where English matches ElevenLabs' Relaxed pace; Japanese stays ~20%
- *  slower). Absent = ElevenLabs' default, 1.0. */
+/** The app's speed rungs (Slow 0.85 · Relaxed 0.9 · Normal 1.0, the scale
+ *  the app has always sent) onto Cartesia's. Measured 2026-10-12: Cartesia
+ *  at 1.0 speaks 15–35% slower than the app's rungs were tuned for, and its
+ *  knob is weak — 1.0 → 1.5 is only 6–12% faster. So the rungs are stretched
+ *  over Cartesia's whole upper range: Slow → 1.0, Relaxed → ~1.17,
+ *  Normal → 1.5. Absent = the app's Normal, 1.0. */
 export function cartesiaSpeed(speed: number | undefined): number {
   const s = typeof speed === "number" && speed >= 0.6 && speed <= 1.5 ? speed : 1.0
   return Math.max(0.6, Math.min(1.5, 1.0 + (s - 0.85) / 0.15 * 0.5))
@@ -306,9 +300,8 @@ export function synthesizePcmStream(line: CartesiaLine, sampleRate: number): Pro
   })
 }
 
-/** The line with word timings, shaped like ElevenLabs' `/with-timestamps`
- *  reply ({audio_base64, alignment{characters, …_start/_end_times}}) so every
- *  app build reads it unchanged. Cartesia times WORDS; each word's window is
+/** The line with word timings, in the reply shape every app build reads
+ *  ({audio_base64, alignment{characters, …_start/_end_times}}). Cartesia times WORDS; each word's window is
  *  spread over its characters and the gaps between words become the spaces —
  *  the app groups characters back into words, so nothing finer is needed.
  *  The audio is WAV: this endpoint streams raw PCM only, and every player
@@ -415,8 +408,7 @@ export async function cloneVoice(
   // voice came out so soft the app's own levelling couldn't lift the first
   // greeting. So the take is levelled here before it goes up.
   // The room is taken out on the PHONE since 2026-10-15 (DeepFilterNet,
-  // `VoiceDenoiser` / Android's twin): ElevenLabs Audio Isolation did it
-  // here before, and ElevenLabs is gone. An older build's take arrives as
+  // `VoiceDenoiser` / Android's twin). An older build's take arrives as
   // recorded and is cloned as recorded.
   const levelled = await levelledWav(clip)
   form.append("clip", levelled ?? clip, clip.name || "sample.wav")

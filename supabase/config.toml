@@ -389,38 +389,38 @@ s3_access_key = "env(S3_ACCESS_KEY)"
 # Configures AWS_SECRET_ACCESS_KEY for S3 bucket
 s3_secret_key = "env(S3_SECRET_KEY)"
 
-[functions.elevenlabs-tts]
+[functions.tts]
 enabled = true
 verify_jwt = true
-import_map = "./functions/elevenlabs-tts/deno.json"
+import_map = "./functions/tts/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/elevenlabs-tts/index.ts"
+entrypoint = "./functions/tts/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/elevenlabs-tts/*.html" ]
+# static_files = [ "./functions/tts/*.html" ]
 
-[functions.elevenlabs-voice-clone]
+[functions.voice-clone]
 enabled = true
 verify_jwt = true
-import_map = "./functions/elevenlabs-voice-clone/deno.json"
+import_map = "./functions/voice-clone/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/elevenlabs-voice-clone/index.ts"
+entrypoint = "./functions/voice-clone/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/elevenlabs-voice-clone/*.html" ]
+# static_files = [ "./functions/voice-clone/*.html" ]
 
-[functions.elevenlabs-voice-delete]
+[functions.voice-delete]
 enabled = true
 verify_jwt = true
-import_map = "./functions/elevenlabs-voice-delete/deno.json"
+import_map = "./functions/voice-delete/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/elevenlabs-voice-delete/index.ts"
+entrypoint = "./functions/voice-delete/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/elevenlabs-voice-delete/*.html" ]
+# static_files = [ "./functions/voice-delete/*.html" ]
 
 [functions.gemini]
 enabled = true

@@ -1,7 +1,7 @@
 // Account deletion — Apple Guideline 5.1.1(v) requires in-app account deletion.
 //
 // POST, no body. Deletes, in order:
-//   1. Every ElevenLabs voice clone the user owns (best-effort — a dangling
+//   1. Every voice clone the user owns (best-effort — a dangling
 //      clone must not block the deletion, but we log failures).
 //   2. Any active Stripe web subscription (immediate cancel — the account is
 //      gone, so there is nothing left to bill against). Apple subscriptions
@@ -32,15 +32,15 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   )
 
-  // 1) The voice must not outlive the account. Cartesia voices only: an
-  // ElevenLabs one (from before 2026-10-12) went with ElevenLabs itself.
+  // 1) The voice must not outlive the account. Cartesia voices only: one
+  // from before 2026-10-12 went with the provider that held it.
   const { data: clones } = await admin
     .from("voice_clones")
-    .select("elevenlabs_voice_id")
+    .select("voice_id")
     .eq("user_id", user.id)
   const deleted = new Set<string>()
   for (const clone of clones ?? []) {
-    const id = clone.elevenlabs_voice_id as string | null
+    const id = clone.voice_id as string | null
     if (!id || !cartesia.isCartesiaVoice(id)) continue
     // Accent ids ("<uuid>:<accent>") share one voice; delete it once.
     const { uuid } = cartesia.parseVoice(id)

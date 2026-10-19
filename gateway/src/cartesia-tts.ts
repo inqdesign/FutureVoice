@@ -3,8 +3,7 @@
 //
 // One socket per call, one CONTEXT per line, sentences streamed into it as
 // the model writes them, `flush` when the reply is complete. Measured on a
-// warm socket (test/probe-tts-ttfb.mjs): first audio 100 ms median against
-// ElevenLabs' 148 ms, word timings on every line.
+// warm socket: first audio 100 ms median, word timings on every line.
 //
 // Each SENTENCE is its own Cartesia request (`continue: false`), played in
 // order under the line's context. Streaming them into one context with
@@ -32,7 +31,7 @@ const MODEL = "sonic-3.6"
 
 /** Cartesia clone ids are UUIDs, optionally carrying an accent
  *  ("<uuid>:british" — see supabase/functions/_shared/cartesia.ts);
- *  ElevenLabs ids are 20 alphanumerics. */
+ *  anything else is a voice from before 2026-10-12. */
 const VOICE = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?::([a-z-]+))?$/i
 export function isCartesiaVoice(voiceId: string | null | undefined): boolean {
   return !!voiceId && VOICE.test(voiceId)
@@ -282,8 +281,8 @@ export class CartesiaTTS {
       const id = `${contextId}:${++this.seq}`
       line.sentences.push({ id, audio: [], done: false })
       this.sentenceLine.set(id, contextId)
-      // As written: Cartesia's "!" is +0.6–1.7 dB, not ElevenLabs' shout
-      // (measured 2026-10-12, en/de/ko/ja), so nothing is calmed here.
+      // As written: Cartesia's "!" is only +0.6–1.7 dB (measured
+      // 2026-10-12, en/de/ko/ja), so nothing is calmed here.
       this.ws?.send(JSON.stringify(this.request(id, text.trim())))
     })
   }
@@ -340,7 +339,7 @@ interface Line {
 /** The app's speed rungs onto Cartesia's scale — the same mapping as
  *  supabase/functions/_shared/cartesia.ts `cartesiaSpeed` (keep them equal):
  *  Slow 0.85 → 1.0, Relaxed 0.9 → ~1.17, Normal 1.0 → 1.5. Cartesia speaks
- *  slower than ElevenLabs at the same number and its knob is weak (measured
+ *  slower than the rungs were tuned for and its knob is weak (measured
  *  2026-10-12), so the rungs use its whole upper range. */
 function cartesiaSpeed(speed: number | undefined): number {
   const s = typeof speed === "number" && speed >= 0.6 && speed <= 1.5 ? speed : 1.0
