@@ -248,6 +248,8 @@ internal fun ScenarioComposer(
      *  sheet raised underneath an open sheet never appears, and the composer
      *  staying up means the situation just written is still there after. */
     var showPaywall by remember { mutableStateOf(false) }
+    /** Not enough talk time left for a scene (2026-10-19). */
+    var sceneShort by remember { mutableStateOf(false) }
 
     // WHO the other side is. nil = the future self (Talk only). Materialized
     // into CounterpartStore on commit, so downstream it is an ordinary person.
@@ -495,6 +497,14 @@ internal fun ScenarioComposer(
                 AuthRepository(),
                 if (host == ComposerHost.WATCH) com.roro.futurevoice.data.VoiceRevival.Purpose.SCENE
                 else com.roro.futurevoice.data.VoiceRevival.Purpose.CALL) { }
+            if (!allowed && BillingGate.showSceneShort.value) {
+                // Not enough talk time for a scene: this sheet shows the
+                // spent-pool sheet itself, so the situation stays written.
+                BillingGate.showSceneShort.value = false
+                sceneShort = true
+                committing = false
+                return@launch
+            }
             if (!allowed && !BillingGate.showPaywall.value) {
                 // Not the paywall: a PARKED voice's revival screen was closed
                 // (see `VoiceRevival`). Nothing to buy; stay on the sheet.
@@ -823,6 +833,10 @@ internal fun ScenarioComposer(
         // The plans, when the CTA can't be paid for — from HERE, so the sheet
         // (and the situation in it) survives being told no.
         if (showPaywall) PaywallDialog(onDismiss = { showPaywall = false })
+        if (sceneShort) AllowanceSpentSheet(SpentPool.TALK,
+            onReview = { sceneShort = false },
+            onUpgrade = { sceneShort = false; showPaywall = true },
+            onDismiss = { sceneShort = false })
     }
     if (embedded) {
         Column(Modifier.fillMaxWidth()) { boxBottom() }

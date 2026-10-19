@@ -82,6 +82,7 @@
     <string name="a_recruiter">"招募人員"</string>
     <!-- 'A reminder that your trial is about to convert — we ask to send notifications when the trial starts.' -->
     <string name="a_reminder_that_your_trial_is_about_to_convert_we_ask_to_sen_cd5350">"提醒你試用期快要轉為付費。試用開始時會詢問通知權限。"</string>
+    <string name="a_scene_needs_lld_min_of_talk_time">"情境練習需要 %d 分鐘通話時間"</string>
     <!-- 'A sentence lands here once it reaches the top of the review ladder.' -->
     <string name="a_sentence_lands_here_once_it_reaches_the_top_of_the_review_e78fa1">"句子爬到複習階梯的頂端，就會來到這裡。"</string>
     <string name="a_separate_pool">"另外計算"</string>

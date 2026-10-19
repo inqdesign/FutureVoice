@@ -36,6 +36,10 @@ object BillingGate {
      *  (iOS `PaywallView(preselectTier:)`). The paywall consumes it. */
     val paywallTier = MutableStateFlow<String?>(null)
 
+    /** Set when a scene's talk minutes aren't there (2026-10-19); the root
+     *  presents the spent-pool sheet from it, a sheet hosting the tap its own. */
+    val showSceneShort = MutableStateFlow(false)
+
     @Volatile private var cached: AccountStatus? = null
     @Volatile private var fetchedAt: Long? = null
     @Volatile private var refreshing = false
@@ -83,6 +87,15 @@ object BillingGate {
             runCatching { AccountStatus.load(auth) }.getOrNull()
         }
         if (fresh != null) remember(fresh)
+        // A scene that costs talk time needs a whole scene's worth left
+        // (iOS `sceneAnswer`). A short answer from cache is re-read first.
+        if (go && scene && (fresh ?: cached)?.sceneTalkShort == true) {
+            val confirmed = fresh ?: runCatching { AccountStatus.load(auth) }.getOrNull()?.also { remember(it) }
+            if (confirmed?.sceneTalkShort == true) {
+                showSceneShort.value = true
+                return false
+            }
+        }
         if (go) return proceed(purpose, action)
         showPaywall.value = true
         return false

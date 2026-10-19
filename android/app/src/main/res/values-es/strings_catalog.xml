@@ -82,6 +82,7 @@
     <string name="a_recruiter">"un reclutador"</string>
     <!-- 'A reminder that your trial is about to convert — we ask to send notifications when the trial starts.' -->
     <string name="a_reminder_that_your_trial_is_about_to_convert_we_ask_to_sen_cd5350">"Un aviso de que tu prueba está a punto de pasar a pago. Te pedimos permiso para las notificaciones cuando empiece la prueba."</string>
+    <string name="a_scene_needs_lld_min_of_talk_time">"Una escena necesita %d min de conversación"</string>
     <!-- 'A sentence lands here once it reaches the top of the review ladder.' -->
     <string name="a_sentence_lands_here_once_it_reaches_the_top_of_the_review_e78fa1">"Una frase llega aquí cuando alcanza el último peldaño de la escalera de repaso."</string>
     <string name="a_separate_pool">"Una bolsa aparte"</string>

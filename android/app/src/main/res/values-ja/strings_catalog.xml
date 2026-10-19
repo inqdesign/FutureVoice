@@ -82,6 +82,7 @@
     <string name="a_recruiter">"採用担当者"</string>
     <!-- 'A reminder that your trial is about to convert — we ask to send notifications when the trial starts.' -->
     <string name="a_reminder_that_your_trial_is_about_to_convert_we_ask_to_sen_cd5350">"トライアルがまもなく課金に切り替わるお知らせです。トライアル開始時に通知の許可をお願いします。"</string>
+    <string name="a_scene_needs_lld_min_of_talk_time">"シーン練習には通話時間が%d分必要です"</string>
     <!-- 'A sentence lands here once it reaches the top of the review ladder.' -->
     <string name="a_sentence_lands_here_once_it_reaches_the_top_of_the_review_e78fa1">"文は復習のはしごのてっぺんに届くと、ここに来ます。"</string>
     <string name="a_separate_pool">"別枠"</string>

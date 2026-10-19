@@ -48,7 +48,18 @@ private fun sceneCostText(account: AccountStatus?): String? {
         if (account.freeScenesUsed >= cap) return null
         return stringResource(R.string.your_free_scene_it_takes_no_talk_time)
     }
-    if (account.scenesCostTalk) return voiceoverPriceLine(account.sceneTalkMinutes, account)
+    if (account.scenesCostTalk) {
+        // Short of a whole scene: say what it needs before the tap, which
+        // answers with the spent-pool sheet.
+        if (account.sceneTalkShort) {
+            return listOfNotNull(
+                stringResource(R.string.a_scene_needs_lld_min_of_talk_time, account.sceneTalkMinutes),
+                com.roro.futurevoice.data.ScriptVoiceover.remainingMinutes(account)
+                    ?.let { stringResource(R.string.lld_min_of_talk_time_left, it) },
+            ).joinToString(" · ")
+        }
+        return voiceoverPriceLine(account.sceneTalkMinutes, account)
+    }
     val cap = account.monthlyScenesCap ?: return null
     return stringResource(R.string.lld_of_lld_scenes_left,
         maxOf(0, cap - account.scenesUsedPeriod), cap)

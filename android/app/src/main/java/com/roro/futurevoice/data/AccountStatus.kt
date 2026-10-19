@@ -135,6 +135,25 @@ data class AccountStatus(
     /** A scene's price in whole talk minutes. */
     val sceneTalkMinutes: Int get() = (sceneTalkSeconds ?: 0) / 60
 
+    /** Talk seconds a scene can be paid from: the plan's pool plus invite
+     *  minutes and packs (the claim spends both, extra first). Null where
+     *  nothing is counted (iOS `sceneSpendableSeconds`). */
+    val sceneSpendableSeconds: Int?
+        get() {
+            val cap = monthlyCapSeconds
+            if (!isEntitled || cap == null || unlimited) return null
+            return maxOf(0, cap - secondsUsedPeriod) + bonusSeconds
+        }
+
+    /** A scene costs talk time and there isn't a whole scene's worth left:
+     *  the spent-pool sheet answers the tap before any script is written. */
+    val sceneTalkShort: Boolean
+        get() {
+            val cost = sceneTalkSeconds ?: return false
+            val left = sceneSpendableSeconds ?: return false
+            return left < cost
+        }
+
     /** A free account that has had its scenes — the next one is the plans
      *  (iOS `freeScenesSpent`). It can still talk off its balance. */
     val freeScenesSpent: Boolean

@@ -82,6 +82,7 @@
     <string name="a_recruiter">"a recruiter"</string>
     <!-- 'A reminder that your trial is about to convert — we ask to send notifications when the trial starts.' -->
     <string name="a_reminder_that_your_trial_is_about_to_convert_we_ask_to_sen_cd5350">"A reminder that your trial is about to convert — we ask to send notifications when the trial starts."</string>
+    <string name="a_scene_needs_lld_min_of_talk_time">"A scene needs %d min of talk time"</string>
     <!-- 'A sentence lands here once it reaches the top of the review ladder.' -->
     <string name="a_sentence_lands_here_once_it_reaches_the_top_of_the_review_e78fa1">"A sentence lands here once it reaches the top of the review ladder."</string>
     <string name="a_separate_pool">"A separate pool"</string>

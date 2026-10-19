@@ -1583,6 +1583,12 @@ fun RootScreen() {
     // branch that replaced the page would have thrown away a scene mid-play
     // (re-entering it writes a fresh take, a second scene count).
     if (paywalled) PaywallDialog(onDismiss = { BillingGate.showPaywall.value = false })
+    // Not enough talk time for a scene, said at the tap (2026-10-19).
+    val sceneShort by BillingGate.showSceneShort.collectAsStateWithLifecycle()
+    if (sceneShort) AllowanceSpentSheet(SpentPool.TALK,
+        onReview = { BillingGate.showSceneShort.value = false },
+        onUpgrade = { BillingGate.showSceneShort.value = false; BillingGate.showPaywall.value = true },
+        onDismiss = { BillingGate.showSceneShort.value = false })
     TalkMorphOverlay(inCall = inCall)
     }
 }
