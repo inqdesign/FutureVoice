@@ -70,40 +70,53 @@ private struct PlaylistGlassCircle: ViewModifier {
 
 // MARK: - Playing bars
 
-/// The "this is playing" mark: four bars that rise and fall like a voice
-/// (founder, 2026-10-19 — the waveform symbol's colour sweep didn't read as
-/// sound). Paused, they rest low; Reduce Motion keeps them still.
+/// The "this is playing" mark: four bars driven by the LOUDNESS of what is
+/// playing right now (`AudioPlayer.level`, the player's own meter), so they
+/// rise with a voice and settle in the pause between lines (founder,
+/// 2026-10-19: a made-up wave out of step with the sound read as random).
+/// The newest reading enters on the right and slides left, so the four
+/// bars are the last moments of the voice, not four copies of one number.
+/// Paused, they rest low; Reduce Motion keeps them still.
 struct PlayingBars: View {
     var isAnimating: Bool
+    @ObservedObject var audio: AudioPlayer = PlaylistPlayer.shared.audio
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var history: [Double] = PlayingBars.resting
 
-    /// Each bar its own speed and phase, so the four never move as one.
-    private static let bars: [(speed: Double, phase: Double)] =
-        [(7.1, 0.0), (9.3, 1.7), (6.2, 3.1), (8.4, 4.6)]
+    private static let resting: [Double] = [0.35, 0.6, 0.45, 0.3]
+    /// The middle bars a little taller, like every level meter's shape.
+    private static let weights: [Double] = [0.8, 1.0, 0.95, 0.75]
 
     var body: some View {
-        TimelineView(.animation(paused: !isAnimating || reduceMotion)) { context in
-            let t = context.date.timeIntervalSinceReferenceDate
-            GeometryReader { geo in
-                let gap = geo.size.width * 0.12
-                let width = (geo.size.width - gap * Double(Self.bars.count - 1)) / Double(Self.bars.count)
-                HStack(alignment: .center, spacing: gap) {
-                    ForEach(Self.bars.indices, id: \.self) { i in
-                        Capsule()
-                            .frame(width: width, height: geo.size.height * level(i, at: t))
-                    }
+        GeometryReader { geo in
+            let count = history.count
+            let gap = geo.size.width * 0.12
+            let width = (geo.size.width - gap * Double(count - 1)) / Double(count)
+            HStack(alignment: .center, spacing: gap) {
+                ForEach(0..<count, id: \.self) { i in
+                    Capsule()
+                        .frame(width: width, height: geo.size.height * height(i))
                 }
-                .frame(width: geo.size.width, height: geo.size.height)
             }
+            .frame(width: geo.size.width, height: geo.size.height)
+        }
+        .animation(.easeOut(duration: 0.12), value: history)
+        .onChange(of: audio.level) { _, level in
+            guard isAnimating, !reduceMotion else { return }
+            // Fast up, slower down, so a syllable shows and a pause eases out.
+            let v = Double(level)
+            let next = max(v, (history.last ?? 0) * 0.55)
+            history = Array(history.dropFirst()) + [next]
+        }
+        .onChange(of: isAnimating) { _, on in
+            if !on { history = Self.resting }
         }
         .accessibilityHidden(true)
     }
 
-    private func level(_ i: Int, at t: TimeInterval) -> Double {
-        guard isAnimating, !reduceMotion else { return [0.35, 0.6, 0.45, 0.3][i] }
-        let bar = Self.bars[i]
-        let wave = (sin(t * bar.speed + bar.phase) + sin(t * bar.speed * 0.53 + bar.phase * 2)) / 2
-        return 0.25 + 0.75 * abs(wave)
+    private func height(_ i: Int) -> Double {
+        guard isAnimating, !reduceMotion else { return Self.resting[i] }
+        return 0.18 + 0.82 * min(1, history[i] * Self.weights[i])
     }
 }
 
