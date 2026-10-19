@@ -79,7 +79,28 @@ final class AuthService: NSObject, ObservableObject {
     }
 
     private func loadInitialSession() async {
-        session = try? await SupabaseProvider.shared.auth.session
+        var wait: UInt64 = 1
+        while true {
+            do {
+                session = try await SupabaseProvider.shared.auth.session
+                break
+            } catch {
+                // A refresh the server REFUSED deletes the stored session
+                // (supabase-swift's cleanup codes), so a session still on file
+                // means the network failed, not the account. A phone left
+                // alone for hours wakes with an expired token and no network
+                // yet; reading that as signed out flashed Welcome until the
+                // next refresh landed (reported on Android 2026-10-19, same
+                // shape here). Hold the launch screen and try again.
+                guard SupabaseProvider.shared.auth.currentSession != nil else {
+                    session = nil
+                    break
+                }
+                if session != nil { break }   // the auto-refresh got there first
+                try? await Task.sleep(nanoseconds: wait * NSEC_PER_SEC)
+                wait = min(wait * 2, 15)
+            }
+        }
         didResolveInitialSession = true
     }
 
