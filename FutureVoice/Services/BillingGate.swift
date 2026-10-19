@@ -54,17 +54,23 @@ final class BillingGate: ObservableObject {
         return await snapshot(force: account != nil)?.needsSubscription ?? false
     }
 
-    /// `blocks()` for a tap that is about to WRITE A SCENE: also true for a
-    /// free account that has had its two scenes, which can still talk off its
-    /// balance but not start a third scene. Same cache rule — a yes from
-    /// cache, a no only from a fresh fetch.
-    func blocksScene() async -> Bool {
-        if let cached = account, !cached.needsSubscription, !cached.freeScenesSpent {
+    /// What a tap that writes a scene may do: go, the plans (no plan, or a
+    /// free account that has had its sample scene), or — for an
+    /// account whose scenes cost talk time and hasn't a whole scene's worth
+    /// left — the spent-pool sheet. Same cache rule as `blocks()`: a yes from
+    /// cache, a no only from a fresh fetch, and a failed fetch is a yes.
+    enum SceneAnswer { case go, paywall, short(AccountStatus) }
+
+    func sceneAnswer() async -> SceneAnswer {
+        if let cached = account, !cached.needsSubscription, !cached.freeScenesSpent,
+           !cached.sceneTalkShort {
             Task { await refreshIfStale() }
-            return false
+            return .go
         }
-        guard let fresh = await snapshot(force: account != nil) else { return false }
-        return fresh.needsSubscription || fresh.freeScenesSpent
+        guard let fresh = await snapshot(force: account != nil) else { return .go }
+        if fresh.needsSubscription || fresh.freeScenesSpent { return .paywall }
+        if fresh.sceneTalkShort { return .short(fresh) }
+        return .go
     }
 
     /// The current snapshot, fetched when stale. Nil means "couldn't ask" —
@@ -117,11 +123,19 @@ final class BillingGate: ObservableObject {
         }
     }
 
-    /// `start(orShow:)` for a launch that writes a Watch scene.
-    static func startScene(orShow paywall: Binding<Bool>, _ start: @escaping () -> Void) {
+    /// `start(orShow:)` for a launch that writes a Watch scene. `wall` is
+    /// where the spent-pool sheet goes when the scene's talk minutes aren't
+    /// there — it must belong to the view on screen, like `paywall`.
+    static func startScene(orShow paywall: Binding<Bool>, wall: Binding<TalkWall?>,
+                           _ start: @escaping () -> Void) {
         Task { @MainActor in
-            if await shared.blocksScene() { paywall.wrappedValue = true }
-            else if await VoiceRevival.ensureVoice(for: .scene) { start() }
+            switch await shared.sceneAnswer() {
+            case .paywall: paywall.wrappedValue = true
+            case .short(let account):
+                wall.wrappedValue = .spent(account, await InviteOffer.load(for: account))
+            case .go:
+                if await VoiceRevival.ensureVoice(for: .scene) { start() }
+            }
         }
     }
 

@@ -36,7 +36,9 @@
 -- which writes the line's characters to the ledger for cost measurement and
 -- spends nothing). A scene whose script failed to write never reaches a line,
 -- so it is never charged. A spent pool refuses the scene with the talk
--- meter's own DAILY_CAP_REACHED -> the spent-pool sheet, never a paywall.
+-- meter's own DAILY_CAP_REACHED -> the spent-pool sheet, never a paywall;
+-- the app asks the same question at the tap, before any script is written,
+-- against plan minutes + extra minutes, which is how the claim pays too.
 --
 -- DEPLOY ORDER: this migration first (the edge function will pass `p_talk`
 -- and `scene_paid`, which nothing before this accepts), then the `tts` edge
@@ -147,6 +149,7 @@ declare
   v_fresh      boolean;
   v_unlimited  boolean;
   v_kept       boolean;
+  v_balance    integer;
   v_free_cap   constant integer := 1;
 begin
   if p_user_id is null or coalesce(p_scene_key, '') = '' then
@@ -204,17 +207,44 @@ begin
     values (p_user_id, current_date, p_scene_key)
     on conflict do nothing;
     if v_fresh then
+      -- Invite minutes and packs pay first, exactly like talking. When they
+      -- hold less than a whole scene, they pay what they have and the plan
+      -- the rest: the app shows ONE "minutes left" figure (plan + extra),
+      -- and a scene that figure says fits must not be refused because the
+      -- meter would only take it whole from one side.
       -- DAILY_CAP_REACHED (the month's minutes, or the trial's) raises out
-      -- of here and rolls the claim back with it.
-      perform public.consume_metered_seconds(
-        p_user_id         => p_user_id,
-        p_seconds         => v_talk_secs,
-        p_pool            => 'talk_seconds',
-        p_action          => 'scene_play',
-        p_source_fn       => 'begin_scene_play',
-        p_idempotency_key => 'scene_play:' || p_user_id::text || ':' || p_scene_key,
-        p_metadata        => jsonb_build_object('scene_key', p_scene_key,
-                                                'scene_talk_seconds', v_talk_secs));
+      -- of here and rolls the whole claim back, both charges included.
+      select coalesce(balance, 0) into v_balance from user_credits where user_id = p_user_id;
+      if v_balance > 0 and v_balance < v_talk_secs then
+        perform public.consume_metered_seconds(
+          p_user_id         => p_user_id,
+          p_seconds         => v_balance,
+          p_pool            => 'talk_seconds',
+          p_action          => 'scene_play',
+          p_source_fn       => 'begin_scene_play',
+          p_idempotency_key => 'scene_play:' || p_user_id::text || ':' || p_scene_key || ':extra',
+          p_metadata        => jsonb_build_object('scene_key', p_scene_key,
+                                                  'scene_talk_seconds', v_talk_secs));
+        perform public.consume_metered_seconds(
+          p_user_id         => p_user_id,
+          p_seconds         => v_talk_secs - v_balance,
+          p_pool            => 'talk_seconds',
+          p_action          => 'scene_play',
+          p_source_fn       => 'begin_scene_play',
+          p_idempotency_key => 'scene_play:' || p_user_id::text || ':' || p_scene_key,
+          p_metadata        => jsonb_build_object('scene_key', p_scene_key,
+                                                  'scene_talk_seconds', v_talk_secs));
+      else
+        perform public.consume_metered_seconds(
+          p_user_id         => p_user_id,
+          p_seconds         => v_talk_secs,
+          p_pool            => 'talk_seconds',
+          p_action          => 'scene_play',
+          p_source_fn       => 'begin_scene_play',
+          p_idempotency_key => 'scene_play:' || p_user_id::text || ':' || p_scene_key,
+          p_metadata        => jsonb_build_object('scene_key', p_scene_key,
+                                                  'scene_talk_seconds', v_talk_secs));
+      end if;
     end if;
     return jsonb_build_object('allowed', true, 'metered_by', 'talk',
                               'counted', false, 'paid', true,

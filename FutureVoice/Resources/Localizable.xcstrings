@@ -1320,6 +1320,52 @@
         }
       }
     },
+    "A scene needs %lld min of talk time" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Szene braucht %lld Min. Sprechzeit"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Una escena necesita %lld min de conversación"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une scène demande %lld min de conversation"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "シーン練習には通話時間が%lld分必要です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "상황연습에는 통화 시간 %lld분이 필요해요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "情境练习需要 %lld 分钟通话时间"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "情境練習需要 %lld 分鐘通話時間"
+          }
+        }
+      }
+    },
     "A smaller copy, about 12 MB a minute. Send an original from its take." : {
       "localizations" : {
         "de" : {

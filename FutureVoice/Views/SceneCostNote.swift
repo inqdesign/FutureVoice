@@ -30,6 +30,12 @@ struct SceneCostNote: View {
             return explain("Your free scene · it takes no talk time")
         }
         if account.scenesCostTalk {
+            // Short of a whole scene: say what it needs before the tap, which
+            // answers with the spent-pool sheet.
+            if account.sceneTalkShort {
+                return [explain("A scene needs \(account.sceneTalkMinutes) min of talk time"),
+                        ScriptVoiceover.remainingLabel(account)].compactMap { $0 }.joined(separator: " · ")
+            }
             return ScriptVoiceover.priceLine(minutes: account.sceneTalkMinutes, account: account)
         }
         if let cap = account.monthlyScenesCap {

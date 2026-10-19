@@ -234,6 +234,23 @@ struct AccountStatus {
     /// "5" — a scene's price in whole talk minutes.
     var sceneTalkMinutes: Int { (sceneTalkSeconds ?? 0) / 60 }
 
+    /// Talk minutes a scene can be paid from: the plan's pool plus invite
+    /// minutes and packs (the claim spends both, extra first). Nil where
+    /// nothing is counted.
+    var sceneSpendableSeconds: Int? {
+        guard isEntitled, !isUncappedTalk, !unlimited else { return nil }
+        return secondsRemaining + bonusSeconds
+    }
+
+    /// A scene costs talk time and there isn't a whole scene's worth left:
+    /// the spent-pool sheet is the answer at the tap, before any script is
+    /// written (2026-10-19).
+    var sceneTalkShort: Bool {
+        guard scenesCostTalk, let left = sceneSpendableSeconds,
+              let cost = sceneTalkSeconds else { return false }
+        return left < cost
+    }
+
     /// Scenes left in this period's pool.
     var scenesRemaining: Int {
         guard let cap = monthlyScenesCap else { return 0 }

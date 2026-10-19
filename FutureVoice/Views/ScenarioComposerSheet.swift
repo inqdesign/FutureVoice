@@ -96,6 +96,8 @@ struct ScenarioComposerSheet: View {
     /// Raised in place of the CTA when the account can't pay for what it
     /// starts (a call on Talk, a scene on Watch).
     @State private var showingPaywall = false
+    /// Not enough talk time left for a scene (2026-10-19).
+    @State private var sceneWall: TalkWall?
 
     // Custom category creation (keyword title + icon or emoji)
     @State private var addingCustom = false
@@ -281,6 +283,7 @@ struct ScenarioComposerSheet: View {
             // an open sheet doesn't appear, and the composer staying up means
             // the situation they just wrote is still there afterwards.
             .sheet(isPresented: $showingPaywall) { PaywallView(source: "composer") }
+            .talkWall($sceneWall, source: "composer_scene_short")
             .sheet(isPresented: $showingPartnerPicker) {
                 PartnerPickerSheet(host: host, current: partner) { partner = $0 }
                     .environmentObject(appState)
@@ -1436,10 +1439,19 @@ struct ScenarioComposerSheet: View {
             // Watch writes a scene — so the account is asked here, before
             // anything is generated. Blocked means the plans and nothing
             // else: no categorize call, no scenario minted, no host callback.
-            let blocked = host == .watch
-                ? await BillingGate.shared.blocksScene()
-                : await BillingGate.shared.blocks()
-            if blocked {
+            if host == .watch {
+                switch await BillingGate.shared.sceneAnswer() {
+                case .paywall:
+                    showingPaywall = true
+                    return
+                case .short(let account):
+                    // Not enough talk time for a scene: said here, before a
+                    // scenario is minted or a script written.
+                    sceneWall = .spent(account, await InviteOffer.load(for: account))
+                    return
+                case .go: break
+                }
+            } else if await BillingGate.shared.blocks() {
                 showingPaywall = true
                 return
             }

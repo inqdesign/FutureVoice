@@ -490,6 +490,8 @@ struct FindPersonCard: View {
 
     /// Raised in place of Talk/Watch when the account can't pay for them.
     @State private var showingPaywall = false
+    /// Not enough talk time left for a scene (2026-10-19).
+    @State private var sceneWall: TalkWall?
 
     /// This person as they are RIGHT NOW: the saved row when one exists (it
     /// carries every earlier voice pick), else the pool's row.
@@ -625,7 +627,7 @@ struct FindPersonCard: View {
                 // than from the tab behind this card, which couldn't show
                 // them while this is on screen.
                 Button {
-                    BillingGate.startScene(orShow: $showingPaywall) { onWatch(savedPerson()) }
+                    BillingGate.startScene(orShow: $showingPaywall, wall: $sceneWall) { onWatch(savedPerson()) }
                 } label: {
                     Label("Watch", systemImage: "play.fill")
                         .frame(maxWidth: .infinity)
@@ -647,6 +649,7 @@ struct FindPersonCard: View {
             .background(.bar)
         }
         .sheet(isPresented: $showingPaywall) { PaywallView(source: "find_people") }
+        .talkWall($sceneWall, source: "find_people_scene_short")
     }
 
     /// First Talk/Preview is the moment you "meet" them — persist the person

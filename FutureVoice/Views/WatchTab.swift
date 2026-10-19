@@ -69,6 +69,8 @@ struct WatchTab: View {
     /// The person whose card floats over the map (a tap on them).
     @State private var skyCard: Counterpart?
     @State private var skyCardPaywall = false
+    /// Not enough talk time left for a scene (2026-10-19).
+    @State private var skyCardWall: TalkWall?
     @StateObject private var previewPlayer = AudioPlayer()
     @State private var keyboardUp = false
     /// Panned away from me: "Back to me" shows (drawn here, over the fade).
@@ -431,7 +433,7 @@ struct WatchTab: View {
                                   onClose: { skyCard = nil },
                                   onCompose: { composeFromCard(card) },
                                   onWatch: {
-                                      BillingGate.startScene(orShow: $skyCardPaywall) {
+                                      BillingGate.startScene(orShow: $skyCardPaywall, wall: $skyCardWall) {
                                           let p = savedFromCard(card)
                                           skyCard = nil
                                           watchScene = WatchTarget(scenario: freeTalkScenario(with: p), fresh: true)
@@ -498,6 +500,7 @@ struct WatchTab: View {
             .animation(.smooth(duration: 0.3), value: skyAway)
             .animation(.smooth(duration: 0.3), value: skyCard?.id)
             .sheet(isPresented: $skyCardPaywall) { PaywallView(source: "watch_person_card") }
+            .talkWall($skyCardWall, source: "watch_person_card_scene_short")
             .onDisappear { previewPlayer.stop() }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboardUp = true }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboardUp = false }

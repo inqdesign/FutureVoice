@@ -415,6 +415,10 @@ enum DebugCapture {
             out.monthlyScenesCap = nil
             out.scenesUsedPeriod = 0
             out.sceneTalkSeconds = 300
+            // `-sceneshort 1`: three minutes left, short of a whole scene.
+            if UserDefaults.standard.bool(forKey: "sceneshort") {
+                out.secondsUsedPeriod = (out.monthlyCapSeconds ?? 9000) - 180
+            }
         }
         return out
     }
