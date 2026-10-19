@@ -35,19 +35,30 @@ struct PlaylistLine: Hashable, Identifiable {
     /// resolve through `PhraseAudioStore`'s lineage.
     var fallbackVoices: [String] = []
 
+    /// A line that is not one of the app's own takes: a news-show line,
+    /// downloaded to the cache (`NewsShow`). Played as is.
+    var localFile: URL? = nil
+
     var isFluentSelf: Bool { !isOther }
 
     /// The file that plays: any speed's take, the file Watch played it from,
     /// or a take under an older voice id. A scene watched before a speed or
     /// voice change still plays as it was heard.
     var audioKey: String? {
-        PhraseAudioStore.shared.sceneLineKey(text: text, voiceId: voiceId, isOther: isOther,
+        guard localFile == nil else { return nil }
+        return PhraseAudioStore.shared.sceneLineKey(text: text, voiceId: voiceId, isOther: isOther,
                                              fallbackVoices: fallbackVoices)
     }
 
-    var audioURL: URL? { audioKey.map(PhraseAudioStore.shared.url(forKey:)) }
+    var audioURL: URL? {
+        if let localFile { return localFile }
+        return audioKey.map(PhraseAudioStore.shared.url(forKey:))
+    }
 
-    var hasAudio: Bool { audioKey != nil }
+    var hasAudio: Bool {
+        if let localFile { return FileManager.default.fileExists(atPath: localFile.path) }
+        return audioKey != nil
+    }
 
     /// Word timings measured on the take that plays, if any were kept.
     var storedTimings: [WordTiming]? {

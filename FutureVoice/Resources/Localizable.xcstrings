@@ -124122,6 +124122,52 @@
         }
       }
     },
+    "Today's show" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heutige Sendung"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El programa de hoy"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’émission du jour"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今日の番組"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘의 방송"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今日节目"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今日節目"
+          }
+        }
+      }
+    },
     "Today's talk minutes are used up — they reset at midnight. This call is saved; pick it up tomorrow." : {
       "comment" : "Error message explaining that a user's free talk minutes have run out for the day, but the call is still saved and can be resumed tomorrow.",
       "extractionState" : "stale",

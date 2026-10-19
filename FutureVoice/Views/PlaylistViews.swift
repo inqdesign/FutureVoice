@@ -74,19 +74,22 @@ struct ScenePlayerSheet: View {
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var player = PlaylistPlayer.shared
     @State private var tracks: [SceneTrack] = []
+    @State private var shows: [NewsShowEpisode] = []
     @State private var loaded = false
     @State private var showingList = false
 
     private static var listTitle: String { explain("My situations") }
+    private static var showTitle: String { explain("Today's show") }
 
     private var allLines: [PlaylistLine] { tracks.flatMap(\.lines) }
+    private var showLines: [PlaylistLine] { shows.flatMap(\.lines) }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                NowPlayingCaption(isEmpty: loaded && tracks.isEmpty)
+                NowPlayingCaption(isEmpty: loaded && tracks.isEmpty && shows.isEmpty)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                PlayerControls(onPlayAll: playAll, canPlay: !tracks.isEmpty)
+                PlayerControls(onPlayAll: playAll, canPlay: !tracks.isEmpty || !shows.isEmpty)
                     .padding(.top, 12)
                     .padding(.bottom, 20)
             }
@@ -98,17 +101,19 @@ struct ScenePlayerSheet: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Button { showingList = true } label: { Image(systemName: "list.bullet") }
                         .accessibilityLabel(Text("Situations"))
-                        .disabled(tracks.isEmpty)
+                        .disabled(tracks.isEmpty && shows.isEmpty)
                 }
                 ToolbarItem(placement: .topBarTrailing) { PlayerOptionsMenu() }
             }
             .navigationDestination(isPresented: $showingList) {
-                SituationList(tracks: tracks, onPick: play(from:))
+                SituationList(tracks: tracks, shows: shows, onPick: play(from:),
+                              onPickShow: play(show:))
             }
             .task {
                 tracks = SceneLibrary.tracks(scenarios: ScenarioStore.shared.load(),
                                              cloneId: appState.voiceCloneId)
                 loaded = true
+                shows = await NewsShow.episodes(language: appState.targetLanguage)
             }
         }
         .presentationDetents([.medium, .large])
@@ -116,7 +121,23 @@ struct ScenePlayerSheet: View {
     }
 
     private func playAll() {
-        player.play(allLines, title: Self.listTitle)
+        if allLines.isEmpty {
+            player.play(showLines, title: Self.showTitle)
+        } else {
+            player.play(allLines, title: Self.listTitle)
+        }
+    }
+
+    /// The day's episodes play on from the one picked, like the situations.
+    private func play(show episode: NewsShowEpisode) {
+        let lines = showLines
+        guard let start = lines.firstIndex(where: { $0.bookId == episode.id }) else { return }
+        if player.title == Self.showTitle, player.lines.map(\.id) == lines.map(\.id),
+           let at = player.lines.firstIndex(where: { $0.bookId == episode.id }) {
+            player.jump(toLine: at)
+        } else {
+            player.play(lines, title: Self.showTitle, startAt: start)
+        }
     }
 
     /// Every situation plays on from the one picked, so picking a scene
@@ -133,21 +154,44 @@ struct ScenePlayerSheet: View {
     }
 }
 
-/// The situations, newest first. Picking one plays from there and goes back
-/// to the player.
+/// Today's show, then the situations, newest first. Picking one plays from
+/// there and goes back to the player.
 private struct SituationList: View {
     let tracks: [SceneTrack]
+    let shows: [NewsShowEpisode]
     let onPick: (SceneTrack) -> Void
+    let onPickShow: (NewsShowEpisode) -> Void
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var player = PlaylistPlayer.shared
 
     var body: some View {
-        List(tracks) { track in
-            Button {
-                onPick(track)
-                dismiss()
-            } label: { row(track) }
-            .buttonStyle(.plain)
+        List {
+            if !shows.isEmpty {
+                Section {
+                    ForEach(shows) { episode in
+                        Button {
+                            onPickShow(episode)
+                            dismiss()
+                        } label: { row(episode) }
+                        .buttonStyle(.plain)
+                    }
+                } header: {
+                    Text("Today's show")
+                }
+            }
+            if !tracks.isEmpty {
+                Section {
+                    ForEach(tracks) { track in
+                        Button {
+                            onPick(track)
+                            dismiss()
+                        } label: { row(track) }
+                        .buttonStyle(.plain)
+                    }
+                } header: {
+                    if !shows.isEmpty { Text("My situations") }
+                }
+            }
         }
         .navigationTitle(Text("Situations"))
         .navigationBarTitleDisplayMode(.inline)
@@ -165,6 +209,25 @@ private struct SituationList: View {
                     .foregroundStyle(playing ? Color.accentColor : .primary)
                     .lineLimit(2)
                 Text(track.otherName).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .contentShape(Rectangle())
+    }
+
+    private func row(_ episode: NewsShowEpisode) -> some View {
+        let playing = player.hasQueue && player.current?.bookId == episode.id
+        return HStack(spacing: 12) {
+            Image(systemName: playing ? "waveform" : "newspaper")
+                .foregroundStyle(.tint)
+                .symbolEffect(.variableColor.iterative, isActive: playing && player.isPlaying)
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(episode.title)
+                    .foregroundStyle(playing ? Color.accentColor : .primary)
+                    .lineLimit(2)
+                Text("\(episode.hosts) · \(episode.minutes) min")
+                    .font(.caption).foregroundStyle(.secondary)
             }
             Spacer(minLength: 0)
         }
