@@ -64,8 +64,6 @@ import java.util.Locale
 @Composable
 fun WeekRecapArchiveSheet(level: CefrLevel, onDismiss: (WeekRecapAction?) -> Unit) {
     val context = LocalContext.current
-    val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val scope = rememberCoroutineScope()
     var thisWeek by remember { mutableStateOf<WeekInProgress?>(null) }
     var weeks by remember { mutableStateOf<List<WeekRecap>>(emptyList()) }
     var open by remember { mutableStateOf<WeekRecap?>(null) }
@@ -77,16 +75,13 @@ fun WeekRecapArchiveSheet(level: CefrLevel, onDismiss: (WeekRecapAction?) -> Uni
         thisWeek = WeekRecapBuilder.thisWeek(context)
         weeks = WeekRecapStore.archive(context)
     }
-    fun close(action: WeekRecapAction?) {
-        scope.launch { sheet.hide() }.invokeOnCompletion { onDismiss(action) }
-    }
+    fun close(action: WeekRecapAction?) = onDismiss(action)
 
-    ModalBottomSheet(onDismissRequest = { onDismiss(null) }, sheetState = sheet,
-        containerColor = AppSurfaces.ground) {
-        // iOS: a plain `.sheet` — the large detent, full height however short
-        // the list. Sized to content, two rows read as a half sheet.
+    // iOS: a plain `.sheet` — the large detent, full height however short
+    // the list: the tabs' page sheet, like Me and Find people.
+    PageSheet(onDismiss = { onDismiss(null) }) {
         Column(Modifier.fillMaxWidth().fillMaxHeight().verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp).padding(bottom = 32.dp)) {
+            .padding(horizontal = 16.dp).padding(top = 8.dp, bottom = 32.dp)) {
             SheetHeader(stringResource(R.string.wr_your_week),
                 trailing = { com.roro.futurevoice.ui.brand.IosGlassTextButton(
                     stringResource(R.string.done), { close(null) }, bold = true) })

@@ -1016,12 +1016,8 @@ private fun SavedScenariosSheet(
             .map { it.key to icon[it.key] }
     }
     val shown = category?.let { c -> scenarios.filter { it.category == c } } ?: scenarios
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = com.roro.futurevoice.ui.rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        dragHandle = null,
-        containerColor = AppSurfaces.ground,
-    ) {
+    // iOS: a plain `.sheet` — the tabs' page sheet, like Me and Find people.
+    PageSheet(onDismiss = onDismiss) {
         Column(Modifier.fillMaxSize()) {
             SheetHeader(
                 title = stringResource(R.string.your_scenarios),

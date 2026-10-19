@@ -211,3 +211,33 @@ private const val FLICK_DP_S = 1000f
 private val CORNER = 38.dp
 /** Gap between the status bar and the sheet's top edge. */
 private val SheetGap = 10.dp
+
+/**
+ * A page sheet asked for from INSIDE a tab (iOS `.sheet` at its large detent,
+ * e.g. the week archive, Your scenarios): drawn by the tab root's
+ * [IosSheetHost] — the one Me, Find people and the put-off deck use — so
+ * every large sheet over the tabs is the same sheet. While this is in
+ * composition its [content] is that sheet's body; leaving composition takes
+ * the sheet down. System back closes it.
+ */
+@Composable
+fun PageSheet(onDismiss: () -> Unit, content: @Composable () -> Unit) {
+    val dismiss = androidx.compose.runtime.rememberUpdatedState(onDismiss)
+    val body = androidx.compose.runtime.rememberUpdatedState(content)
+    val entry = remember {
+        TabPageSheet.Entry(onDismiss = { dismiss.value() }) {
+            androidx.activity.compose.BackHandler { dismiss.value() }
+            body.value()
+        }
+    }
+    DisposableEffect(entry) {
+        TabPageSheet.current.value = entry
+        onDispose { if (TabPageSheet.current.value === entry) TabPageSheet.current.value = null }
+    }
+}
+
+/** The page sheet a tab asked for ([PageSheet]), read by the tab root's host. */
+object TabPageSheet {
+    class Entry(val onDismiss: () -> Unit, val content: @Composable () -> Unit)
+    val current = mutableStateOf<Entry?>(null)
+}

@@ -1474,15 +1474,21 @@ fun RootScreen() {
           LaunchedEffect(buildingRoutine) { if (buildingRoutine) tab = HomeTab.TALK }
           Box(Modifier.fillMaxSize()) {
           // Held while the sheet slides away, so it doesn't empty mid-exit.
+          // A tab's own page sheet (the week archive, Your scenarios) comes
+          // after these: one sheet at a time.
+          val pageSheet by TabPageSheet.current
           var sheetShown by remember { mutableStateOf(tabSheetStack) }
-          if (tabSheetStack != null) sheetShown = tabSheetStack
+          var pageShown by remember { mutableStateOf(pageSheet) }
+          if (tabSheetStack != null) { sheetShown = tabSheetStack; pageShown = null }
+          else if (pageSheet != null) { pageShown = pageSheet; sheetShown = null }
           IosSheetHost(
-            presented = tabSheetStack != null,
+            presented = tabSheetStack != null || pageSheet != null,
             onDismiss = {
                 when {
                     showMe -> dismissMe()
                     showPeople -> { showPeople = false; personDetailId = null }
-                    else -> { showDueReview = false; focusStudyItem = null }
+                    showDueReview -> { showDueReview = false; focusStudyItem = null }
+                    else -> pageSheet?.onDismiss?.invoke()
                 }
             },
             sheet = {
@@ -1490,6 +1496,7 @@ fun RootScreen() {
                     IosNavStack(stack = stack, onPop = { popRoute(stack.last()) },
                         pageKey = { it.key }) { DrawRoute(it) }
                 }
+                pageShown?.content?.invoke()
             },
             background = {
           HomeScreen(
