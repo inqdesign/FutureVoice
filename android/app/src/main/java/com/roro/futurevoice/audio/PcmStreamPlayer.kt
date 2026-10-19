@@ -42,6 +42,8 @@ class PcmStreamPlayer(
         get() = runCatching { (track?.playbackHeadPosition ?: 0) > 0 }.getOrDefault(false)
 
     fun start() {
+        // One voice at a time (iOS `startPCMStream` → the playlist yields).
+        PlaylistPlayer.yieldToOtherAudio()
         stop()
         val minBuffer = AudioTrack.getMinBufferSize(
             sampleRate,

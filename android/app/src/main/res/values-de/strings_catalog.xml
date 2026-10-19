@@ -317,6 +317,7 @@
     <string name="cancel_this_take">"Aufnahme abbrechen"</string>
     <!-- 'Capped at ≈%@ by the words you use — your next talk will be read for the structures you build.' -->
     <string name="capped_at_by_the_words_you_use_your_next_talk_will_be_read_f_13babf">"Durch deinen Wortschatz auf ≈%s begrenzt. Ab dem nächsten Gespräch zählen auch die Satzstrukturen, die du baust."</string>
+    <string name="captions">"Untertitel"</string>
     <!-- "Captured from what you say, what your fluent self says back, and the expressions your watched scenes teach. Mark the ones you've got down as known." -->
     <string name="captured_from_what_you_say_what_your_fluent_self_says_back_a_21aa65">"Gesammelt aus dem, was du sagst, was dein fließendes Ich dir antwortet, und den Wendungen aus deinen Szenen. Markiere, was sitzt, als gewusst."</string>
     <string name="cards_done">"Karten geschafft"</string>
@@ -1302,6 +1303,7 @@
     <string name="my_routine">"Meine Routine"</string>
     <string name="my_script">"Mein Skript"</string>
     <string name="my_scripts">"Meine Skripte"</string>
+    <string name="my_situations">"Meine Situationen"</string>
     <string name="my_words_lld">"Meine Wörter · %d"</string>
     <string name="nailed_it_matched_the_line_almost_word_for_word">"Getroffen – fast Wort für Wort."</string>
     <!-- 'Nailed it — matched the line almost word for word, on the beat.' -->
@@ -1365,6 +1367,7 @@
     <string name="no_need_to_be_loud_just_be_clear">"Du musst nicht laut sein, nur deutlich."</string>
     <string name="no_one_here_yet_for_this_language_check_back_soon">"Für diese Sprache ist hier noch niemand — schau bald wieder vorbei."</string>
     <string name="no_one_matches_yet_try_an_interest_a_job_or_a_city">"Noch keine Treffer — versuch es mit einem Interesse, Beruf oder einer Stadt."</string>
+    <string name="no_pause">"Ohne Pause"</string>
     <string name="no_plan">"Kein Tarif"</string>
     <string name="no_practice_this_day">"An diesem Tag keine Übung."</string>
     <!-- 'No prompt, no card on screen — you reached for these yourself. Cards you produce live jump ahead in the review queue.' -->
@@ -1372,6 +1375,7 @@
     <string name="no_saved_lines">"Keine gespeicherten Sätze"</string>
     <string name="no_seat_right_now">"Gerade kein Platz"</string>
     <string name="no_sessions_yet">"Noch keine Sitzungen"</string>
+    <string name="no_situations_to_hear_yet">"Noch keine Situationen zum Anhören"</string>
     <string name="no_streak_yet">"Noch keine Serie"</string>
     <string name="no_takes_came_back_please_try_again">"Es kamen keine Aufnahmen zurück. Bitte versuch es noch einmal."</string>
     <string name="no_takes_yet">"Noch keine Aufnahmen"</string>
@@ -1510,6 +1514,7 @@
     <string name="opens_me_your_profile_voice_daily_goal_plan_and_this_guide_t_15a2d0">"Öffnet Ich: dein Profil, deine Stimme, dein Tagesziel, dein Tarif und diese Anleitung. Der Ring um dein Bild zeigt, wie viel Gesprächszeit du diesen Monat schon verbraucht hast."</string>
     <string name="opens_the_full_card">"Öffnet die ganze Karte"</string>
     <string name="optional_what_s_the_situation_about">"Optional — worum geht es in der Situation?"</string>
+    <string name="options">"Optionen"</string>
     <string name="or_a_generic_role">"Oder eine allgemeine Rolle:"</string>
     <string name="or_describe_one_yourself">"Oder beschreibe selbst eine"</string>
     <string name="or_describe_where_custom">"Oder beschreibe wo (frei)…"</string>
@@ -1540,6 +1545,7 @@
     <!-- 'Paste the presentation or speech you actually have to give. Plus and Max.' -->
     <string name="paste_the_presentation_or_speech_you_actually_have_to_give_p_a8d05a">"Füg deine echte Präsentation oder Rede ein und übe genau die."</string>
     <string name="pause">"Pause"</string>
+    <string name="pause_between_lines">"Pause zwischen Sätzen"</string>
     <string name="paused">"Pausiert"</string>
     <string name="paused_tap_to_pick_it_back_up">"Pausiert · tippe, um weiterzumachen"</string>
     <string name="pauses">"Pausen"</string>
@@ -1604,6 +1610,7 @@
     <string name="play_what_you_said">"Abspielen, was du gesagt hast"</string>
     <string name="play_your_recording">"Deine Aufnahme abspielen"</string>
     <string name="play_your_take">"Aufnahme abspielen"</string>
+    <string name="player">"Player"</string>
     <string name="plus">"Plus"</string>
     <string name="plus_and_max">"Plus und Max"</string>
     <string name="podcasts">"Podcasts"</string>
@@ -1625,7 +1632,10 @@
     <string name="preparing_the_file">"Datei wird vorbereitet …"</string>
     <string name="preparing_your_video">"Dein Video wird vorbereitet…"</string>
     <string name="present_a_real_product_or_invention">"Stell ein echtes Produkt oder eine Erfindung vor"</string>
+    <!-- 'Press play to hear every situation, or pick one from the list.' -->
+    <string name="press_play_to_hear_every_situation_or_pick_one_from_the_list">"Drück auf Play, um alle Situationen zu hören, oder wähl eine aus der Liste."</string>
     <string name="preview">"%s probehören"</string>
+    <string name="previous">"Zurück"</string>
     <string name="previous_expression">"Vorherige Wendung"</string>
     <string name="previous_selection">"Vorherige Auswahl"</string>
     <string name="previous_word">"Vorheriges Wort"</string>
@@ -1754,6 +1764,7 @@
     <string name="remove_photo">"Foto entfernen"</string>
     <string name="remove_the_accent">"Akzent entfernen?"</string>
     <string name="renamed_on_this_device_only">"Nur auf diesem Gerät umbenannt"</string>
+    <string name="repeat">"Wiederholen"</string>
     <string name="repeat_your_fluent_self_s_lines_from_this_talk">"Sprich die Sätze deines fließenden Ichs aus diesem Gespräch nach."</string>
     <string name="replace_your_current_clone_with_a_new_one">"Ersetze deinen jetzigen Klon durch einen neuen"</string>
     <!-- 'Replaces your current voice. Your recording is kept, so you can rebuild the original anytime from Me → Voice.' -->
@@ -1829,6 +1840,7 @@
     <string name="s_1_word_phrase_or_line_is_waiting">"1 Wort, Wendung oder Satz wartet."</string>
     <!-- '%.1f verified grammar slips per 100 spoken words — the same density the assessment weighs.' -->
     <string name="s_1f_verified_grammar_slips_per_100_spoken_words_the_same_de_b8c9f0">"%.1f bestätigte Grammatikfehler pro 100 gesprochene Wörter. Genau diese Dichte wiegt die Einstufung."</string>
+    <string name="s_2_seconds">"2 Sekunden"</string>
     <string name="s_3_days">"3 Tage"</string>
     <string name="said_lld">"%d× gesagt"</string>
     <string name="same_as_before">"unverändert"</string>
@@ -1974,6 +1986,7 @@
     <string name="shown_beside_your_score_on_every_challenge_board">"Steht in jeder Rangliste neben deiner Punktzahl."</string>
     <!-- 'Shown over their face on the Watch map. Left empty, one is written for you.' -->
     <string name="shown_over_their_face_on_the_watch_map_left_empty_one_is_wri_26f298">"Steht auf der Ansehen-Karte über dem Gesicht. Leer gelassen, wird sie für dich geschrieben."</string>
+    <string name="shuffle">"Zufällig"</string>
     <!-- "Sign in, and your voice lands in this account the day it's made." -->
     <string name="sign_in_and_your_voice_lands_in_this_account_the_day_it_s_ma_e2e5d2">"Melde dich an, dann landet deine Stimme an dem Tag in diesem Konto, an dem sie fertig ist."</string>
     <string name="sign_in_to_icloud_in_settings_first_then_try_again">"Melde dich zuerst in den Einstellungen bei iCloud an und versuche es dann noch einmal."</string>
@@ -1989,6 +2002,7 @@
     <string name="since">"Seit %s"</string>
     <string name="situation">"Situation"</string>
     <string name="situation_ideas">"Ideen für Situationen"</string>
+    <string name="situations">"Situationen"</string>
     <string name="skill_by_skill">"Fähigkeit für Fähigkeit"</string>
     <string name="skip">"Überspringen"</string>
     <string name="skip_sign_in_debug">"Anmeldung überspringen (Debug)"</string>
@@ -2073,6 +2087,7 @@
     <string name="stop">"Stopp"</string>
     <string name="stop_dictation">"Diktat beenden"</string>
     <string name="stop_playback">"Wiedergabe stoppen"</string>
+    <string name="stop_playing">"Wiedergabe beenden"</string>
     <string name="stop_preview">"Probehören stoppen"</string>
     <string name="stop_review">"Stoppen &amp; wiederholen"</string>
     <string name="stop_your_recording">"Aufnahme stoppen"</string>
@@ -2424,6 +2439,7 @@
     <string name="time_to_meet_the_you_who_speaks_perfect_in_your_own_voice_on_e62699">"Gleich triffst du dein Ich, das perfektes %s spricht — in deiner eigenen Stimme. Eine Minute Vorlesen genügt."</string>
     <string name="time_to_practice">"Zeit zum Üben"</string>
     <string name="time_to_say_it_again">"Zeit, es nochmal zu sagen"</string>
+    <string name="time_to_say_it_back">"Zeit zum Nachsprechen"</string>
     <string name="tip">"Tipp"</string>
     <string name="title_optional">"Titel (optional)"</string>
     <string name="to_reach">"Bis %s"</string>
@@ -2446,6 +2462,7 @@
     <string name="total">"Gesamt"</string>
     <string name="touch_and_hold_to_file_it_again">"Gedrückt halten, um es neu einzusortieren."</string>
     <string name="transcript">"Transkript"</string>
+    <string name="translation">"Übersetzung"</string>
     <string name="trap_words_what_you_said_before_the_fix">"Fallenwörter – was du vor der Korrektur gesagt hast"</string>
     <!-- 'Travel' -->
     <string name="travel_22fb76">"Reisen"</string>
@@ -2559,6 +2576,8 @@
     <string name="waiting_for_the_first_sync">"Warte auf die erste Synchronisierung"</string>
     <string name="warm_and_chatty">"Herzlich und gesprächig"</string>
     <string name="watch">"Ansehen"</string>
+    <!-- 'Watch a situation once and it plays here, both voices, whenever you like.' -->
+    <string name="watch_a_situation_once_and_it_plays_here_both_voices_wheneve_11cd3e">"Sieh dir eine Situation einmal an, dann kannst du sie hier mit beiden Stimmen hören, wann du willst."</string>
     <string name="watch_again">"Nochmal ansehen"</string>
     <string name="watch_again_or_study_it">"Noch mal ansehen oder lernen"</string>
     <string name="watch_book">"Ansehen-Buch"</string>

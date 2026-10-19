@@ -61,6 +61,9 @@ class Mp3Player(private val cacheDir: File, private val source: String? = null) 
     }
 
     private suspend fun playFile(file: File, fromMs: Int = 0) = suspendCancellableCoroutine { cont ->
+        // One voice at a time: anything else that speaks pauses the
+        // situation player (it keeps its place and waits for a tap).
+        PlaylistPlayer.yieldToOtherAudio()
         stop()
         val mp = MediaPlayer().apply {
             setAudioAttributes(

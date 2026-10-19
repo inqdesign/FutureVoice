@@ -2,6 +2,7 @@ package com.roro.futurevoice.data
 
 import android.content.Context
 import java.io.File
+import kotlinx.serialization.builtins.serializer
 import java.security.MessageDigest
 
 /**
@@ -77,24 +78,34 @@ class PhraseAudioStore private constructor(context: Context) {
      * `allowLineage = false` turns this off too, for anything that must be
      * heard in the voice speaking NOW (a preview, a call's opener).
      */
-    private fun candidates(voiceId: String, allowLineage: Boolean, text: String): List<File> {
+    private fun candidates(voiceId: String, allowLineage: Boolean, text: String,
+                           speedTag: String = SpeechSpeed.currentCacheTag()): List<File> {
         val speaking = com.roro.futurevoice.talk.VoicePreset.speaking(voiceId)
-        if (!allowLineage) return listOf(rawFile(speaking, text))
-        if (speaking != voiceId) return listOf(rawFile(speaking, text), rawFile(voiceId, text))
+        if (!allowLineage) return listOf(rawFile(speaking, text, speedTag))
+        if (speaking != voiceId) return listOf(rawFile(speaking, text, speedTag), rawFile(voiceId, text, speedTag))
         val lineage = ownVoiceLineage
-        if (voiceId !in lineage) return listOf(rawFile(voiceId, text))
-        return listOf(rawFile(voiceId, text)) + lineage.filter { it != voiceId }.map { rawFile(it, text) }
+        if (voiceId !in lineage) return listOf(rawFile(voiceId, text, speedTag))
+        return listOf(rawFile(voiceId, text, speedTag)) +
+            lineage.filter { it != voiceId }.map { rawFile(it, text, speedTag) }
     }
 
     /** The key for exactly this voice id, with no preset resolution. */
-    private fun rawFile(voiceId: String, text: String): File {
+    private fun rawFile(voiceId: String, text: String,
+                        speedTag: String = SpeechSpeed.currentCacheTag()): File {
         val key = MessageDigest.getInstance("SHA-256")
             // The speed rung is part of the line: the same words at another
             // speed are another take. The default's tag is empty, so every
             // line cached before speeds existed is still found.
-            .digest("$voiceId\n${SpeechSpeed.currentCacheTag()}${text.trim()}".toByteArray())
+            .digest("$voiceId\n$speedTag${text.trim()}".toByteArray())
             .joinToString("") { "%02x".format(it) }
         return File(dir, "$key.mp3")
+    }
+
+    /** Every speed rung's cache tag, the current one first (iOS `anySpeed`). */
+    private fun speedTags(anySpeed: Boolean): List<String> {
+        val current = SpeechSpeed.currentCacheTag()
+        if (!anySpeed) return listOf(current)
+        return listOf(current) + SpeechSpeed.entries.map { it.cacheTag(appContext) }.filter { it != current }.distinct()
     }
 
     /** Cached audio for this line, or null. A line synthesized under an
@@ -109,8 +120,93 @@ class PhraseAudioStore private constructor(context: Context) {
 
     /** The audio file that answers for this line (own clone lineage
      *  included), or null — the timings beside it describe THAT take. */
-    private fun existingFile(text: String, voiceId: String, allowLineage: Boolean = true): File? =
-        candidates(voiceId, allowLineage, text).firstOrNull { it.exists() }
+    /**
+     * `anySpeed` also accepts a take made at another speech speed — for
+     * listening back to lines already made (a playlist), where the line as it
+     * was heard beats a gap. Never for anything that is about to synthesize:
+     * there a miss at the current speed is the right answer (iOS `anySpeed`).
+     */
+    private fun existingFile(text: String, voiceId: String, allowLineage: Boolean = true,
+                             anySpeed: Boolean = false): File? {
+        for (tag in speedTags(anySpeed)) {
+            candidates(voiceId, allowLineage, text, tag).firstOrNull { it.exists() }?.let { return it }
+        }
+        return null
+    }
+
+    // ── Scene lines, found by what was PLAYED (iOS 2026-10-19) ──
+    //
+    // A file's name is a hash of the voice that made it, so a lookup has to
+    // re-derive that voice — and the voice behind a preset slot or a
+    // Find-people person has changed twice (2026-09-28, 2026-10-12). The
+    // listening playlist then lost every scene whose lines sat under the old
+    // id, with the audio still on disk. So Watch writes down which file each
+    // line actually played from, by speaker side and text, and the playlist
+    // reads that before it re-derives anything. Local only, beside the files
+    // it names (a cache clear takes both). Same file and shape as iOS
+    // (`PhraseAudio/scene-lines.json`, line id → key).
+
+    private val sceneLinesFile get() = File(dir, "scene-lines.json")
+    private val sceneLines: MutableMap<String, String> by lazy {
+        runCatching {
+            StoreJson.json.decodeFromString(
+                kotlinx.serialization.builtins.MapSerializer(
+                    String.serializer(), String.serializer()),
+                sceneLinesFile.readText()).toMutableMap()
+        }.getOrNull() ?: mutableMapOf()
+    }
+
+    private fun sceneLineId(text: String, isOther: Boolean): String =
+        (if (isOther) "other\n" else "me\n") + text.trim()
+
+    /** Watch, once a line has played: remember the file it came from. */
+    fun rememberSceneLine(text: String, voiceId: String, isOther: Boolean) {
+        val k = existingFile(text, voiceId, allowLineage = true)?.nameWithoutExtension ?: return
+        val id = sceneLineId(text, isOther)
+        synchronized(sceneLines) {
+            if (sceneLines[id] == k) return
+            sceneLines[id] = k
+            runCatching {
+                val tmp = File(dir, "scene-lines.json.tmp")
+                tmp.writeText(StoreJson.json.encodeToString(
+                    kotlinx.serialization.builtins.MapSerializer(
+                        String.serializer(), String.serializer()),
+                    sceneLines.toMap()))
+                tmp.renameTo(sceneLinesFile)
+            }
+        }
+    }
+
+    /**
+     * The file a scene line plays from, for listening back: the voice it is
+     * asked for (any speed), then the file Watch played it from, then any of
+     * [fallbackVoices] — the ids that voice went by before. Never synthesizes.
+     */
+    fun sceneLineKey(text: String, voiceId: String, isOther: Boolean,
+                     fallbackVoices: List<String>): String? {
+        existingFile(text, voiceId, allowLineage = true, anySpeed = true)?.let { return it.nameWithoutExtension }
+        val played = synchronized(sceneLines) { sceneLines[sceneLineId(text, isOther)] }
+        if (played != null && fileForKey(played).exists()) return played
+        for (tag in SpeechSpeed.entries.map { it.cacheTag(appContext) }.distinct()) {
+            for (voice in fallbackVoices) {
+                val f = rawFile(voice, text, tag)
+                if (f.exists()) return f.nameWithoutExtension
+            }
+        }
+        return null
+    }
+
+    fun fileForKey(key: String): File = File(dir, "$key.mp3")
+
+    fun timingsForKey(key: String): List<com.roro.futurevoice.talk.WordTiming>? {
+        val f = File(dir, "$key.timings.json")
+        if (!f.exists()) return null
+        return runCatching {
+            StoreJson.json.decodeFromString(
+                kotlinx.serialization.builtins.ListSerializer(com.roro.futurevoice.talk.WordTiming.serializer()),
+                f.readText())
+        }.getOrNull()
+    }
 
     /**
      * The word timings saved with this line's audio — the synthesizer's measured

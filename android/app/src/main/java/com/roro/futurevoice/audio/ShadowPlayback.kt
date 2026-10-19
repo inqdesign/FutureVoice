@@ -56,6 +56,7 @@ class TargetPlayer {
     /** Play [fromMs]…[toMs] (null = to the end of the file). */
     fun playSegment(fromMs: Int, toMs: Int?, loop: Boolean = this.loop) {
         val p = player ?: return
+        PlaylistPlayer.yieldToOtherAudio()
         Analytics.capture("audio_played", mapOf("source" to "shadow"))
         this.loop = loop
         segmentStart = fromMs
@@ -135,6 +136,7 @@ object DuetPlayer {
 
     /** Mix and play; false when either side is empty. */
     fun play(target: WavPcm, targetLeadMs: Int, take: WavPcm, takeLeadMs: Int): Boolean {
+        PlaylistPlayer.yieldToOtherAudio()
         stop()
         val rate = target.sampleRate
         val t = target.samples.drop(target.sampleRate.toLong(), targetLeadMs)

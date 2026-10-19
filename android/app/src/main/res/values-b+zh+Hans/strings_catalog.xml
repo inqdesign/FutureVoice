@@ -320,6 +320,7 @@
     <string name="cancel_this_take">"取消这次录制"</string>
     <!-- 'Capped at ≈%@ by the words you use — your next talk will be read for the structures you build.' -->
     <string name="capped_at_by_the_words_you_use_your_next_talk_will_be_read_f_13babf">"依你使用的单词先定在 ≈%s；下一次对话起，也会一并读取你组成的句子结构。"</string>
+    <string name="captions">"字幕"</string>
     <!-- "Captured from what you say, what your fluent self says back, and the expressions your watched scenes teach. Mark the ones you've got down as known." -->
     <string name="captured_from_what_you_say_what_your_fluent_self_says_back_a_21aa65">"收集你说的话、流利的自己回你的话，还有看过的情境练习教的用语。已经学会的，标为我会了。"</string>
     <string name="cards_done">"卡片都看完了"</string>
@@ -1306,6 +1307,7 @@
     <string name="my_routine">"我的作息"</string>
     <string name="my_script">"我的讲稿"</string>
     <string name="my_scripts">"我的讲稿"</string>
+    <string name="my_situations">"我的情境"</string>
     <string name="my_words_lld">"我的单词 · %d"</string>
     <string name="nailed_it_matched_the_line_almost_word_for_word">"太棒了，几乎一字不差。"</string>
     <!-- 'Nailed it — matched the line almost word for word, on the beat.' -->
@@ -1369,6 +1371,7 @@
     <string name="no_need_to_be_loud_just_be_clear">"不用大声，念清楚就好。"</string>
     <string name="no_one_here_yet_for_this_language_check_back_soon">"这个语言还没有人。过一会儿再来看看。"</string>
     <string name="no_one_matches_yet_try_an_interest_a_job_or_a_city">"没有符合的人。试试用兴趣、职业或城市搜索。"</string>
+    <string name="no_pause">"不停顿"</string>
     <string name="no_plan">"没有方案"</string>
     <string name="no_practice_this_day">"这天没有练习记录。"</string>
     <!-- 'No prompt, no card on screen — you reached for these yourself. Cards you produce live jump ahead in the review queue.' -->
@@ -1376,6 +1379,7 @@
     <string name="no_saved_lines">"没有保存的句子"</string>
     <string name="no_seat_right_now">"现在没有席位"</string>
     <string name="no_sessions_yet">"还没有任何练习"</string>
+    <string name="no_situations_to_hear_yet">"还没有可以听的情境"</string>
     <string name="no_streak_yet">"还没有连续记录"</string>
     <string name="no_takes_came_back_please_try_again">"没有收到结果。请再试一次。"</string>
     <string name="no_takes_yet">"还没有录制"</string>
@@ -1514,6 +1518,7 @@
     <string name="opens_me_your_profile_voice_daily_goal_plan_and_this_guide_t_15a2d0">"打开“我的”：个人资料、声音、每日目标、套餐和这份指南都在这里。头像外的圆环显示本月通话时长已用了多少。"</string>
     <string name="opens_the_full_card">"打开完整卡片"</string>
     <string name="optional_what_s_the_situation_about">"可选 · 是什么样的情境？"</string>
+    <string name="options">"选项"</string>
     <string name="or_a_generic_role">"或是一般角色："</string>
     <string name="or_describe_one_yourself">"也可以自己描述"</string>
     <string name="or_describe_where_custom">"或自己描述地点…"</string>
@@ -1544,6 +1549,7 @@
     <!-- 'Paste the presentation or speech you actually have to give. Plus and Max.' -->
     <string name="paste_the_presentation_or_speech_you_actually_have_to_give_p_a8d05a">"把真正要讲的汇报或演讲粘贴进来，直接练这一份。"</string>
     <string name="pause">"暂停"</string>
+    <string name="pause_between_lines">"句子之间停一下"</string>
     <string name="paused">"已暂停"</string>
     <string name="paused_tap_to_pick_it_back_up">"暂停中 · 点击继续"</string>
     <string name="pauses">"停顿"</string>
@@ -1608,6 +1614,7 @@
     <string name="play_what_you_said">"播放我说的"</string>
     <string name="play_your_recording">"播放录音"</string>
     <string name="play_your_take">"播放你的录制"</string>
+    <string name="player">"播放器"</string>
     <string name="plus">"Plus"</string>
     <string name="plus_and_max">"Plus·Max 专享"</string>
     <string name="podcasts">"Podcast"</string>
@@ -1629,7 +1636,10 @@
     <string name="preparing_the_file">"正在准备文件…"</string>
     <string name="preparing_your_video">"正在准备视频…"</string>
     <string name="present_a_real_product_or_invention">"介绍真实的产品或发明"</string>
+    <!-- 'Press play to hear every situation, or pick one from the list.' -->
+    <string name="press_play_to_hear_every_situation_or_pick_one_from_the_list">"按下播放就会听所有情境，也可以从列表选一个。"</string>
     <string name="preview">"试听%s"</string>
+    <string name="previous">"上一句"</string>
     <string name="previous_expression">"上一个用语"</string>
     <string name="previous_selection">"上次的选择"</string>
     <string name="previous_word">"上一个单词"</string>
@@ -1758,6 +1768,7 @@
     <string name="remove_photo">"移除照片"</string>
     <string name="remove_the_accent">"要移除口音吗？"</string>
     <string name="renamed_on_this_device_only">"只在这台设备上改名"</string>
+    <string name="repeat">"重复"</string>
     <string name="repeat_your_fluent_self_s_lines_from_this_talk">"跟着念这通电话里流利的自己说过的话。"</string>
     <string name="replace_your_current_clone_with_a_new_one">"用新录的声音取代现在的声音"</string>
     <!-- 'Replaces your current voice. Your recording is kept, so you can rebuild the original anytime from Me → Voice.' -->
@@ -1833,6 +1844,7 @@
     <string name="s_1_word_phrase_or_line_is_waiting">"有1个单词、用语或句子在等你。"</string>
     <!-- '%.1f verified grammar slips per 100 spoken words — the same density the assessment weighs.' -->
     <string name="s_1f_verified_grammar_slips_per_100_spoken_words_the_same_de_b8c9f0">"每说 100 个字有 %.1f 个确认到的语法错误，和等级评估看的是同一个数字。"</string>
+    <string name="s_2_seconds">"2 秒"</string>
     <string name="s_3_days">"3天"</string>
     <string name="said_lld">"说过%d次"</string>
     <string name="same_as_before">"没有变化"</string>
@@ -1978,6 +1990,7 @@
     <string name="shown_beside_your_score_on_every_challenge_board">"在每个挑战的排行榜上，都会显示在分数旁边。"</string>
     <!-- 'Shown over their face on the Watch map. Left empty, one is written for you.' -->
     <string name="shown_over_their_face_on_the_watch_map_left_empty_one_is_wri_26f298">"会显示在情境练习地图上的头像上方。留空的话会自动帮你写。"</string>
+    <string name="shuffle">"随机播放"</string>
     <!-- "Sign in, and your voice lands in this account the day it's made." -->
     <string name="sign_in_and_your_voice_lands_in_this_account_the_day_it_s_ma_e2e5d2">"登录后，声音完成的那天就会直接进到这个账号。"</string>
     <string name="sign_in_to_icloud_in_settings_first_then_try_again">"请先在“设置”中登录 iCloud，再试一次。"</string>
@@ -1993,6 +2006,7 @@
     <string name="since">"%s起"</string>
     <string name="situation">"情境"</string>
     <string name="situation_ideas">"情境点子"</string>
+    <string name="situations">"情境"</string>
     <string name="skill_by_skill">"逐项技能"</string>
     <string name="skip">"略过"</string>
     <string name="skip_sign_in_debug">"略过登录（调试）"</string>
@@ -2077,6 +2091,7 @@
     <string name="stop">"停止"</string>
     <string name="stop_dictation">"停止语音输入"</string>
     <string name="stop_playback">"停止播放"</string>
+    <string name="stop_playing">"停止播放"</string>
     <string name="stop_preview">"停止试听"</string>
     <string name="stop_review">"停下来听听看"</string>
     <string name="stop_your_recording">"停止录音"</string>
@@ -2428,6 +2443,7 @@
     <string name="time_to_meet_the_you_who_speaks_perfect_in_your_own_voice_on_e62699">"该来见见用自己的声音、把%s说得流利的未来的自己了。只要读1分钟就能做好。"</string>
     <string name="time_to_practice">"该练习了"</string>
     <string name="time_to_say_it_again">"该重说一次了"</string>
+    <string name="time_to_say_it_back">"留时间跟着说"</string>
     <string name="tip">"小提示"</string>
     <string name="title_optional">"标题（选填）"</string>
     <string name="to_reach">"想达到%s"</string>
@@ -2450,6 +2466,7 @@
     <string name="total">"总计"</string>
     <string name="touch_and_hold_to_file_it_again">"长按可以重新归类。"</string>
     <string name="transcript">"对话记录"</string>
+    <string name="translation">"翻译"</string>
     <string name="trap_words_what_you_said_before_the_fix">"陷阱单词 · 你修正前说的"</string>
     <!-- 'Travel' -->
     <string name="travel_22fb76">"旅行"</string>
@@ -2563,6 +2580,8 @@
     <string name="waiting_for_the_first_sync">"等待第一次同步"</string>
     <string name="warm_and_chatty">"温暖又爱聊"</string>
     <string name="watch">"情境练习"</string>
+    <!-- 'Watch a situation once and it plays here, both voices, whenever you like.' -->
+    <string name="watch_a_situation_once_and_it_plays_here_both_voices_wheneve_11cd3e">"情境看过一次，就能在这里用两个人的声音随时再听。"</string>
     <string name="watch_again">"再看一次"</string>
     <string name="watch_again_or_study_it">"再看一遍，或用教材学习"</string>
     <string name="watch_book">"情境复习本"</string>

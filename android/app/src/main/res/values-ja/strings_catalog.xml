@@ -320,6 +320,7 @@
     <string name="cancel_this_take">"このテイクを取り消す"</string>
     <!-- 'Capped at ≈%@ by the words you use — your next talk will be read for the structures you build.' -->
     <string name="capped_at_by_the_words_you_use_your_next_talk_will_be_read_f_13babf">"使っている単語に合わせて≈%sまでとしました。次のトークからは、組み立てる文の構造も読みます。"</string>
+    <string name="captions">"字幕"</string>
     <!-- "Captured from what you say, what your fluent self says back, and the expressions your watched scenes teach. Mark the ones you've got down as known." -->
     <string name="captured_from_what_you_say_what_your_fluent_self_says_back_a_21aa65">"自分が話した言葉、流暢な自分が返した言葉、そして見たシーン練習が教えてくれた表現を集めています。身についたものは「知ってる」にしておいてください。"</string>
     <string name="cards_done">"カードはここまで"</string>
@@ -1306,6 +1307,7 @@
     <string name="my_routine">"マイルーティン"</string>
     <string name="my_script">"自分の原稿"</string>
     <string name="my_scripts">"自分の原稿"</string>
+    <string name="my_situations">"マイシチュエーション"</string>
     <string name="my_words_lld">"自分の単語 · %d"</string>
     <string name="nailed_it_matched_the_line_almost_word_for_word">"完璧。ほぼ一語一句そのまま言えました。"</string>
     <!-- 'Nailed it — matched the line almost word for word, on the beat.' -->
@@ -1369,6 +1371,7 @@
     <string name="no_need_to_be_loud_just_be_clear">"大きな声はいりません。はっきり読むだけで大丈夫です。"</string>
     <string name="no_one_here_yet_for_this_language_check_back_soon">"この言語ではまだ誰もいません。しばらくしてからまた見てみてください。"</string>
     <string name="no_one_matches_yet_try_an_interest_a_job_or_a_city">"一致する人がいません。興味、仕事、都市で探してみてください。"</string>
+    <string name="no_pause">"間をあけない"</string>
     <string name="no_plan">"プランなし"</string>
     <string name="no_practice_this_day">"この日は練習の記録がありません。"</string>
     <!-- 'No prompt, no card on screen — you reached for these yourself. Cards you produce live jump ahead in the review queue.' -->
@@ -1376,6 +1379,7 @@
     <string name="no_saved_lines">"保存した文なし"</string>
     <string name="no_seat_right_now">"今は席がありません"</string>
     <string name="no_sessions_yet">"まだセッションがありません"</string>
+    <string name="no_situations_to_hear_yet">"まだ聴けるシチュエーションがありません"</string>
     <string name="no_streak_yet">"まだ連続記録なし"</string>
     <string name="no_takes_came_back_please_try_again">"結果が返ってきませんでした。もう一度お試しください。"</string>
     <string name="no_takes_yet">"まだテイクがありません"</string>
@@ -1514,6 +1518,7 @@
     <string name="opens_me_your_profile_voice_daily_goal_plan_and_this_guide_t_15a2d0">"タップするとマイページが開きます。プロフィール、声、1日の目標、プラン、このガイドがここにあります。写真のまわりのリングは、今月のトーク時間をどれだけ使ったかを表します。"</string>
     <string name="opens_the_full_card">"カード全体を開きます"</string>
     <string name="optional_what_s_the_situation_about">"任意 · どんな状況ですか？"</string>
+    <string name="options">"オプション"</string>
     <string name="or_a_generic_role">"または一般的な役割:"</string>
     <string name="or_describe_one_yourself">"自分で説明しても大丈夫です"</string>
     <string name="or_describe_where_custom">"または場所を自分で説明…"</string>
@@ -1544,6 +1549,7 @@
     <!-- 'Paste the presentation or speech you actually have to give. Plus and Max.' -->
     <string name="paste_the_presentation_or_speech_you_actually_have_to_give_p_a8d05a">"本番で話すプレゼンやスピーチを貼り付けて、そのまま練習できます。"</string>
     <string name="pause">"一時停止"</string>
+    <string name="pause_between_lines">"セリフの間"</string>
     <string name="paused">"一時停止中"</string>
     <string name="paused_tap_to_pick_it_back_up">"一時停止中 · タップで再開"</string>
     <string name="pauses">"間"</string>
@@ -1608,6 +1614,7 @@
     <string name="play_what_you_said">"自分が言ったことを再生"</string>
     <string name="play_your_recording">"録音を再生"</string>
     <string name="play_your_take">"テイクを再生"</string>
+    <string name="player">"プレーヤー"</string>
     <string name="plus">"プラス"</string>
     <string name="plus_and_max">"Plus·Max限定"</string>
     <string name="podcasts">"ポッドキャスト"</string>
@@ -1629,7 +1636,10 @@
     <string name="preparing_the_file">"ファイルを準備しています…"</string>
     <string name="preparing_your_video">"動画を準備しています…"</string>
     <string name="present_a_real_product_or_invention">"実在の製品や発明を紹介"</string>
+    <!-- 'Press play to hear every situation, or pick one from the list.' -->
+    <string name="press_play_to_hear_every_situation_or_pick_one_from_the_list">"再生を押すとすべてのシチュエーションが流れます。リストから選んでもOKです。"</string>
     <string name="preview">"%sを試聴"</string>
+    <string name="previous">"前へ"</string>
     <string name="previous_expression">"前の表現"</string>
     <string name="previous_selection">"前回の選択"</string>
     <string name="previous_word">"前の単語"</string>
@@ -1758,6 +1768,7 @@
     <string name="remove_photo">"写真を外す"</string>
     <string name="remove_the_accent">"アクセントを消しますか？"</string>
     <string name="renamed_on_this_device_only">"この端末でのみ名前が変わります"</string>
+    <string name="repeat">"リピート"</string>
     <string name="repeat_your_fluent_self_s_lines_from_this_talk">"この通話で流暢な自分が言ったセリフを、まねして言ってみましょう。"</string>
     <string name="replace_your_current_clone_with_a_new_one">"今の声を新しく録音したものに置き換えます"</string>
     <!-- 'Replaces your current voice. Your recording is kept, so you can rebuild the original anytime from Me → Voice.' -->
@@ -1833,6 +1844,7 @@
     <string name="s_1_word_phrase_or_line_is_waiting">"単語・表現・文1個が待っています。"</string>
     <!-- '%.1f verified grammar slips per 100 spoken words — the same density the assessment weighs.' -->
     <string name="s_1f_verified_grammar_slips_per_100_spoken_words_the_same_de_b8c9f0">"話した100語あたりの確認済み文法ミスは%.1f件。レベル評価が見ているのと同じ数値です。"</string>
+    <string name="s_2_seconds">"2秒"</string>
     <string name="s_3_days">"3日"</string>
     <string name="said_lld">"言った回数 %d回"</string>
     <string name="same_as_before">"変化なし"</string>
@@ -1978,6 +1990,7 @@
     <string name="shown_beside_your_score_on_every_challenge_board">"どのチャレンジのランキングでも、点数の横に表示されます。"</string>
     <!-- 'Shown over their face on the Watch map. Left empty, one is written for you.' -->
     <string name="shown_over_their_face_on_the_watch_map_left_empty_one_is_wri_26f298">"シーン練習のマップで顔の上に表示されます。空欄なら自動で書きます。"</string>
+    <string name="shuffle">"シャッフル"</string>
     <!-- "Sign in, and your voice lands in this account the day it's made." -->
     <string name="sign_in_and_your_voice_lands_in_this_account_the_day_it_s_ma_e2e5d2">"サインインすると、声ができた日にこのアカウントに届きます。"</string>
     <string name="sign_in_to_icloud_in_settings_first_then_try_again">"先に「設定」でiCloudにサインインしてから、もう一度お試しください。"</string>
@@ -1993,6 +2006,7 @@
     <string name="since">"%sから"</string>
     <string name="situation">"シチュエーション"</string>
     <string name="situation_ideas">"シチュエーションのアイデア"</string>
+    <string name="situations">"シチュエーション"</string>
     <string name="skill_by_skill">"スキルごとに詳しく"</string>
     <string name="skip">"スキップ"</string>
     <string name="skip_sign_in_debug">"ログインをスキップ（デバッグ）"</string>
@@ -2077,6 +2091,7 @@
     <string name="stop">"停止"</string>
     <string name="stop_dictation">"音声入力を停止"</string>
     <string name="stop_playback">"再生を停止"</string>
+    <string name="stop_playing">"再生をやめる"</string>
     <string name="stop_preview">"試聴を停止"</string>
     <string name="stop_review">"止めて聞いてみる"</string>
     <string name="stop_your_recording">"録音を停止"</string>
@@ -2428,6 +2443,7 @@
     <string name="time_to_meet_the_you_who_speaks_perfect_in_your_own_voice_on_e62699">"自分の声で%sを流暢に話す未来の自分に会う時間です。1分読むだけで作れます。"</string>
     <string name="time_to_practice">"練習の時間です"</string>
     <string name="time_to_say_it_again">"もう一度話す時間です"</string>
+    <string name="time_to_say_it_back">"言い返せるくらい"</string>
     <string name="tip">"ヒント"</string>
     <string name="title_optional">"タイトル（任意）"</string>
     <string name="to_reach">"%sに届くには"</string>
@@ -2450,6 +2466,7 @@
     <string name="total">"合計"</string>
     <string name="touch_and_hold_to_file_it_again">"長押しでもう一度振り分けられます。"</string>
     <string name="transcript">"会話記録"</string>
+    <string name="translation">"翻訳"</string>
     <string name="trap_words_what_you_said_before_the_fix">"ひっかけの単語 · 直す前に言ったこと"</string>
     <!-- 'Travel' -->
     <string name="travel_22fb76">"旅行"</string>
@@ -2563,6 +2580,8 @@
     <string name="waiting_for_the_first_sync">"最初の同期を待っています"</string>
     <string name="warm_and_chatty">"あたたかくて話し好き"</string>
     <string name="watch">"シーン練習"</string>
+    <!-- 'Watch a situation once and it plays here, both voices, whenever you like.' -->
+    <string name="watch_a_situation_once_and_it_plays_here_both_voices_wheneve_11cd3e">"シチュエーションを一度見ると、ここでふたりの声のまま、いつでも聴けます。"</string>
     <string name="watch_again">"もう一度見る"</string>
     <string name="watch_again_or_study_it">"もう一度見るか、教材で勉強する"</string>
     <string name="watch_book">"シーン練習のブック"</string>
