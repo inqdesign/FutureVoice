@@ -152,14 +152,23 @@ struct QuickQuizView: View {
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
-                        Button("Next") { next() }
-                            .buttonStyle(.borderedProminent)
-                            .controlSize(.large)
                     }
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 24)
             }
+            // Next sits in ONE place at the bottom, whatever the question's
+            // length (founder, 2026-10-19: under the note it moved with the
+            // content). Its room is kept while it is hidden, so the question
+            // never shifts when it appears.
+            let waiting = chosen != nil && item.note != nil
+            Button("Next") { next() }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .opacity(waiting ? 1 : 0)
+                .disabled(!waiting)
+                .padding(.top, 8)
+                .padding(.bottom, 20)
         }
     }
 
