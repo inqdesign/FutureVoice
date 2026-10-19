@@ -700,6 +700,13 @@ export class CallSession implements DurableObject {
       }
       return
     }
+    if (msg.type === "barge") {
+      // The phone heard the learner over the line and already stopped the
+      // voice (earphones only — see BargeMessage). Same cut as an interim's,
+      // without waiting for the transcriber to write a word.
+      if (this.started && !this.manualTurns) this.interrupt()
+      return
+    }
     if (msg.type === "send") {
       if (!this.started || !this.manualTurns) return
       this.sends += 1

@@ -124,7 +124,15 @@ export interface SetMessage {
 }
 
 export type ClientMessage = StartMessage | SayMessage | EndMessage | SetMessage
-  | SendMessage | DiscardMessage
+  | SendMessage | DiscardMessage | BargeMessage
+
+/** The PHONE heard the learner start talking over the line (2026-10-20).
+ *  In earphones its mic hears only them, so it can tell in a quarter second
+ *  what an interim takes a second or more to say — and it has already
+ *  stopped playing. Cut the generation now. An older gateway ignores it. */
+export interface BargeMessage {
+  type: "barge"
+}
 
 // ---------------------------------------------------------------------------
 // Gateway -> client events.

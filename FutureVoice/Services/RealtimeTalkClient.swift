@@ -203,6 +203,20 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// speaking. ~5 dB — enough to reject a cancelled speaker, low enough that
     /// talking over the fluent self still works.
     private static let echoMargin: Float = 1.8
+    /// Barge-in judged ON THE PHONE (2026-10-20, founder: "cutting in is
+    /// late, or it doesn't stop at all"). The gateway cut a line only once
+    /// the transcriber had written an interim of the learner's words — a
+    /// second or more — and not at all once the reply was fully generated
+    /// while the phone was still playing it. The mic frame is here the
+    /// instant they speak: voice held over the line for this long stops the
+    /// player now and tells the gateway (`barge`). Earphones: the mic hears
+    /// only the learner. Speaker: only frames that cleared the echo gate's
+    /// bar count, and for longer, so the line's own echo can't stop itself;
+    /// a half-duplex first line stays uninterruptible as before.
+    private static let bargeRMS: Float = 0.02
+    private static let bargeEarphoneSeconds = 0.25
+    private static let bargeSpeakerSeconds = 0.35
+    private static let bargeQuietReset = 0.15
     /// The echo does not stop with the audio: the room's tail and the last
     /// buffers keep arriving. Hold the gate briefly past the end of a line.
     private var echoHoldUntil = Date.distantPast
@@ -446,6 +460,12 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// rebuild in that window cut the only line the learner had heard nothing
     /// of yet. `until` bounds it, so a wedged engine can't hold them off.
     private var openerInAir: (opener: LocalOpener, until: Date)?
+    private var bargeVoiced: Double = 0
+    /// Set when the phone cut a line itself: audio of that line still in
+    /// flight (the gateway hears `barge` a round trip later) is dropped
+    /// until the next line starts.
+    private var droppingCutLine = false
+    private var bargeQuiet: Double = 0
     private var openerIsAudible: Bool {
         guard let inAir = openerInAir else { return false }
         return Date() < inAir.until
@@ -1975,6 +1995,9 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             // from its first word, not from the moment the server catches up
             // (reported 2026-09-01: "no reaction at the start").
             if !muted || self.state != .speaking { self.level = norm }
+            self.considerBarge(rms: rms, muted: muted,
+                               gateActive: gate.active, halfDuplex: gate.halfDuplex,
+                               seconds: Double(frames) / uplink.sampleRate)
             // Keep the learner's own take for listen-back in Practice —
             // every frame that went upstream as REAL audio, and none that
             // went as silence. The first cut fenced on "a line is playing"
@@ -2168,6 +2191,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             state = said.isEmpty ? .listening : .thinkingReply
         case "audio_start":
             Self.step("reply audio starting")
+            droppingCutLine = false
             openerInAir = nil
             streamLevel = AudioLoudness.StreamingLevelEstimator()
             replyPCM = Data()
@@ -2250,43 +2274,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             if pendingBuffers == 0 { closeEchoGateAfterTail() }
         case "interrupted":
             Self.step("interrupted\(json["reopened"] as? Bool == true ? " (reopened)" : "") queued=\(pendingBuffers)")
-            // Drop everything queued: the learner is talking over it, and the
-            // gateway has already stopped generating. Anything still in the
-            // player is a voice arguing with them.
-            openerInAir = nil
-            replyInAir = nil
-            Self.avGuard("interrupt.stop") { self.player.stop() }
-            pendingBuffers = 0
-            // `play()` RAISES if the engine died underneath us (a route blip
-            // mid-line); a failed resume is recovered by the next line's
-            // rebuild, a raise is a crash.
-            Self.avGuard("interrupt.play") { self.player.play() }
-            state = .hearing
-            if json["reopened"] as? Bool == true {
-                // Withdrawn: the turn it answered isn't over. Nothing of the
-                // line is kept — not its bubble, not its audio.
-                if let context = replyContext {
-                    if let idx = lines.lastIndex(where: { !$0.isUser }) { lines.remove(at: idx) }
-                    onReplyWithdrawn?(context)
-                }
-                replyPCM = Data()
-                replyText = ""
-                replyContext = nil
-                replyBeganAt = nil
-                reveal = nil
-                revealTask?.cancel()
-            } else {
-                if let context = replyContext, let began = replyBeganAt,
-                   Date().timeIntervalSince(began) < Self.cutInWindow {
-                    onReplyCutIn?(context)
-                }
-                handOverReply()
-                // The rest will never be heard; the line keeps all its words.
-                finishReveal()
-            }
-            // A barge-in means the learner IS talking — the gate would only
-            // stand in their way now.
-            mic.setEchoGate(active: false)
+            applyInterrupted(reopened: json["reopened"] as? Bool == true)
         case "stats":
             speechSeconds = json["speechSeconds"] as? Int ?? speechSeconds
         case "rotating":
@@ -2475,6 +2463,73 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         }
     }
 
+    /// Stop the line the learner is talking over — from the gateway's
+    /// `interrupted`, or from the phone's own judge (`considerBarge`).
+    private func applyInterrupted(reopened: Bool) {
+        // Drop everything queued: the learner is talking over it, and the
+        // gateway has already stopped generating. Anything still in the
+        // player is a voice arguing with them.
+        openerInAir = nil
+        replyInAir = nil
+        Self.avGuard("interrupt.stop") { self.player.stop() }
+        pendingBuffers = 0
+        // `play()` RAISES if the engine died underneath us (a route blip
+        // mid-line); a failed resume is recovered by the next line's
+        // rebuild, a raise is a crash.
+        Self.avGuard("interrupt.play") { self.player.play() }
+        state = .hearing
+        if reopened {
+            // Withdrawn: the turn it answered isn't over. Nothing of the
+            // line is kept — not its bubble, not its audio.
+            if let context = replyContext {
+                if let idx = lines.lastIndex(where: { !$0.isUser }) { lines.remove(at: idx) }
+                onReplyWithdrawn?(context)
+            }
+            replyPCM = Data()
+            replyText = ""
+            replyContext = nil
+            replyBeganAt = nil
+            reveal = nil
+            revealTask?.cancel()
+        } else {
+            if let context = replyContext, let began = replyBeganAt,
+               Date().timeIntervalSince(began) < Self.cutInWindow {
+                onReplyCutIn?(context)
+            }
+            handOverReply()
+            // The rest will never be heard; the line keeps all its words.
+            finishReveal()
+        }
+        // A barge-in means the learner IS talking — the gate would only
+        // stand in their way now.
+        mic.setEchoGate(active: false)
+    }
+
+    /// See `bargeRMS`. Runs per mic buffer on the main actor.
+    private func considerBarge(rms: Float, muted: Bool, gateActive: Bool,
+                               halfDuplex: Bool, seconds: Double) {
+        guard state == .speaking, !SendToAnswer.isOn, !(gateActive && halfDuplex) else {
+            bargeVoiced = 0; bargeQuiet = 0
+            return
+        }
+        let speaker = builtOutput == AVAudioSession.Port.builtInSpeaker.rawValue
+        if !muted && rms >= Self.bargeRMS {
+            bargeVoiced += seconds
+            bargeQuiet = 0
+        } else {
+            bargeQuiet += seconds
+            if bargeQuiet >= Self.bargeQuietReset { bargeVoiced = 0 }
+        }
+        let needed = speaker ? Self.bargeSpeakerSeconds : Self.bargeEarphoneSeconds
+        guard bargeVoiced >= needed else { return }
+        Self.step(String(format: "barge: %@ %.0fms of voice over the line",
+                         speaker ? "speaker" : "earphones", bargeVoiced * 1000))
+        bargeVoiced = 0; bargeQuiet = 0
+        sendControl(["type": "barge"])
+        droppingCutLine = true
+        applyInterrupted(reopened: false)
+    }
+
     private func handOverReply() {
         guard let context = replyContext else { return }
         let pcm = replyPCM
@@ -2657,7 +2712,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     }
 
     private func playReplyChunk(_ data: Data) {
-        guard data.count >= 2 else { return }
+        guard data.count >= 2, !droppingCutLine else { return }
         if let committed = turnCommittedAt {
             lastLatencyMs = Int(Date().timeIntervalSince(committed) * 1000)
             turnCommittedAt = nil
