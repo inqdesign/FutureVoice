@@ -113,7 +113,7 @@ data class BookPreview(
 
 /** How much of each list has been STUDIED (iOS `LibraryStats`): words known or
  *  said in the graded list, expressions known or said, sentence cards reviewed
- *  at least once, shadow takes recorded. No bars — only words have a whole. */
+ *  at least once, lines shadowed at least once (not takes). No bars — only words have a whole. */
 data class LibraryStats(val words: Int = 0, val expressions: Int = 0,
                         val sentences: Int = 0, val shadow: Int = 0)
 
@@ -191,7 +191,7 @@ suspend fun loadReviewShelves(context: Context, language: String, level: CefrLev
         words = vocab.recordedWords(language).count { core.level(it, language) != null },
         expressions = ExpressionCatalog.all(context, language).count { it.known },
         sentences = cards.count { it.timesSeen > 0 },
-        shadow = attempts.size,
+        shadow = attempts.map { it.turnId }.toSet().size,
     )
     return ReviewShelfData(
         feed = feed,
