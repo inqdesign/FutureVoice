@@ -308,6 +308,14 @@ struct WatchView: View {
     /// (a replay, a new take) mints a new key, but a fully cached scene never
     /// reaches the server and so never spends one.
     @State private var sceneRunKey = UUID().uuidString
+
+    /// A saved dialogue is a scene watched AGAIN, and watching again is free,
+    /// always (2026-10-19): its lines go as `scene-replay` with no scene key,
+    /// so a line whose audio isn't on this phone is made again for nothing.
+    /// Only a scene being written right now is claimed and paid for.
+    private var isReplay: Bool { savedDialogue != nil }
+    private var ttsPurpose: String { isReplay ? "scene-replay" : "scene" }
+    private var ttsSceneKey: String? { isReplay ? nil : sceneRunKey }
     /// This run has put a scene in `PracticeLog` — once per view, on the
     /// first line actually heard, so watching counts toward the streak
     /// (`PracticeStats.activeDays`) whether or not the scene is finished.
@@ -850,8 +858,10 @@ struct WatchView: View {
                     // The first line is where a scene is paid for (five
                     // minutes of talk since 2026-10-19): the cached account
                     // must not keep showing the minutes from before it.
-                    BillingGate.shared.invalidate()
-                    BillingGate.shared.warm()
+                    if !isReplay {
+                        BillingGate.shared.invalidate()
+                        BillingGate.shared.warm()
+                    }
                 }
             } catch let capped where capped.isDayCapped {
                 // Out of today's allowance. Say so where the scene was going
@@ -926,8 +936,8 @@ struct WatchView: View {
         // (voiceId, speed, text)) — nothing is orphaned and nothing re-billed.
         let audio = try await VoiceClient.shared.synthesize(
             voiceId: voiceId, text: text,
-            purpose: "scene",
-            sceneKey: sceneRunKey)
+            purpose: ttsPurpose,
+            sceneKey: ttsSceneKey)
         PhraseAudioStore.shared.save(audio, text: text, voiceId: voiceId)
         return audio
     }
@@ -952,8 +962,8 @@ struct WatchView: View {
         let result = try await VoiceClient.shared.synthesizeStreaming(
             voiceId: request.voiceId,
             text: request.text,
-            purpose: "scene",
-            sceneKey: sceneRunKey
+            purpose: ttsPurpose,
+            sceneKey: ttsSceneKey
         ) { chunk, sampleRate in
             if !started {
                 do {

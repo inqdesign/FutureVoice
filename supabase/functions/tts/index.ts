@@ -21,7 +21,7 @@ import * as cartesia from "../_shared/cartesia.ts"
 import { chargePooledTTS, chargeFreePooledTTS, chargeTurnTTSFloored, refund,
          beginScenePlay, enforceRequestRate, insufficientCreditsResponse,
          dailyCapResponse, sceneCapResponse, rateLimitedResponse,
-         billingClient } from "../_shared/credits.ts"
+         billingClient, recordSceneReplay } from "../_shared/credits.ts"
 
 // The ledger's name for this function.
 const SOURCE_FN = "tts"
@@ -208,6 +208,9 @@ Deno.serve(async (req) => {
   // the line's characters must fit what the reservation covers. Without one
   // it is refused rather than metered, so the tag is never free synthesis.
   const isVoiceover = body.purpose === "script-voiceover"
+  // Watching a scene AGAIN is free, always (20261019120000): the line is
+  // recorded and nothing is spent, past an abuse ceiling that answers 429.
+  const isSceneReplay = body.purpose === "scene-replay"
   if (isVoiceover && (!body.voiceover_key || body.with_timestamps !== true)) {
     return errorResponse(400, "voiceover_key and with_timestamps required")
   }
@@ -268,6 +271,9 @@ Deno.serve(async (req) => {
     // exactly as before.
     const chargePromise = isVoiceover
       ? claimVoiceoverLine(user.id, body.voiceover_key!, body.text.length, idemKey)
+      : isSceneReplay
+      ? recordSceneReplay({ userId: user.id, chars: body.text.length, sourceFn: SOURCE_FN,
+                            idempotencyKey: idemKey, metadata: chargeArgs.metadata })
       : isFreeEntry
       ? Promise.resolve({ ok: true as const, balanceAfter: -1, charged: 0, idempotencyKey: idemKey })
       : FREE_PURPOSES.has(body.purpose ?? "")
@@ -297,6 +303,9 @@ Deno.serve(async (req) => {
     }
     if (ch.reason === "daily_cap") {
       return dailyCapResponse(cors())
+    }
+    if (ch.reason === "replay_cap") {
+      return rateLimitedResponse(cors())
     }
     return errorResponse(500, "charge failed", ch.detail)
   }

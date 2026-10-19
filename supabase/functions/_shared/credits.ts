@@ -258,7 +258,7 @@ export interface ChargeResult {
 }
 export interface ChargeError {
   ok: false
-  reason: "insufficient_credits" | "daily_cap" | "no_credit_row" | "db_error"
+  reason: "insufficient_credits" | "daily_cap" | "no_credit_row" | "db_error" | "replay_cap"
   balanceAfter?: number
   detail?: string
 }
@@ -513,6 +513,33 @@ export function sceneCapResponse(corsHeaders: HeadersInit): Response {
     }),
     { status: 402, headers: { "Content-Type": "application/json", ...corsHeaders } },
   )
+}
+
+/**
+ * A line of a scene being watched AGAIN (`purpose: "scene-replay"`): recorded,
+ * never charged (`record_scene_replay`, 20261019120000). Past the abuse
+ * ceiling it answers `rate_limited`, never a wall that sells something.
+ */
+export async function recordSceneReplay(opts: {
+  userId: string
+  chars: number
+  sourceFn: string
+  idempotencyKey: string
+  metadata?: Record<string, unknown>
+}): Promise<ChargeResult | ChargeError> {
+  const { data, error } = await billingClient().rpc("record_scene_replay", {
+    p_user_id: opts.userId,
+    p_chars: opts.chars,
+    p_source_fn: opts.sourceFn,
+    p_idempotency_key: opts.idempotencyKey,
+    p_metadata: opts.metadata ?? null,
+  })
+  if (error) {
+    if (error.message?.includes("REPLAY_CAP")) return { ok: false, reason: "replay_cap", detail: error.message }
+    return { ok: false, reason: "db_error", detail: error.message }
+  }
+  const parsed = data as { charged?: number }
+  return { ok: true, balanceAfter: -1, charged: parsed?.charged ?? 0, idempotencyKey: opts.idempotencyKey }
 }
 
 /**

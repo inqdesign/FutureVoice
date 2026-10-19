@@ -357,3 +357,54 @@ begin
                               case when v_billing = 'talk' then v_talk_secs end);
 end;
 $function$;
+
+-- 6. Watching a scene AGAIN is free, always (founder, 2026-10-19: "다시보기는
+-- 과금하면 안되는게 맞아 당연히"). A replay whose audio is on the phone never
+-- reaches the server; one whose audio isn't (a new device, a reinstall, audio
+-- not yet synced) is synthesized again and must cost the learner nothing.
+-- It is NOT the free review pool (`charge_tts_free_pooled`): that one is
+-- shared with drills and charges past 12,000 characters a day, so a busy day
+-- would have billed a replay after all. This records the line and spends
+-- nothing; the only limit is an abuse ceiling well above any honest day
+-- (60,000 characters, ~65 scenes), answered as rate-limited, never a paywall.
+-- The app sends `purpose: "scene-replay"` and no scene key for a replay.
+create or replace function public.record_scene_replay(p_user_id uuid, p_chars integer,
+                                                      p_source_fn text, p_idempotency_key text,
+                                                      p_metadata jsonb default null,
+                                                      p_daily_cap integer default 60000)
+ returns jsonb
+ language plpgsql
+ security definer
+ set search_path to 'public'
+as $$
+declare
+  v_new bigint;
+begin
+  if p_chars <= 0 then raise exception 'p_chars must be > 0'; end if;
+  if p_idempotency_key is not null and exists (
+    select 1 from usage_ledger where idempotency_key = p_idempotency_key
+  ) then
+    return jsonb_build_object('charged', 0, 'balance', -1);
+  end if;
+
+  insert into tts_char_pool (user_id, day, action, chars)
+  values (p_user_id, current_date, 'scene_replay', p_chars)
+  on conflict (user_id, day, action) do update
+    set chars = tts_char_pool.chars + excluded.chars,
+        updated_at = now()
+  returning chars into v_new;
+
+  if v_new > p_daily_cap then
+    raise exception 'REPLAY_CAP';   -- rolls the accumulation back too
+  end if;
+
+  insert into usage_ledger (user_id, kind, delta, action, source_fn, idempotency_key, metadata)
+  values (p_user_id, 'debit', 0, 'tts', p_source_fn, p_idempotency_key,
+          coalesce(p_metadata, '{}'::jsonb)
+            || jsonb_build_object('pool', 'scene_replay', 'covered_by', 'free', 'seconds', 0));
+  return jsonb_build_object('charged', 0, 'balance', -1, 'covered_by', 'free');
+end;
+$$;
+
+revoke all on function public.record_scene_replay(uuid, integer, text, text, jsonb, integer) from public, anon, authenticated;
+grant execute on function public.record_scene_replay(uuid, integer, text, text, jsonb, integer) to service_role;
