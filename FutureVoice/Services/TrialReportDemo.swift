@@ -80,6 +80,105 @@ enum TrialReportDemo {
         UserDefaults.standard.set(false, forKey: LearningPurposeStore.routineAppliedKey)
     }
 
+    // MARK: - Live: the real model over realistic talks
+
+    /// `-triallive 1`: the same learner, but only the TALKS are written here.
+    /// The coach, the level and the test are made by the real model through
+    /// the signed-in account (`-devEmail` / `-devPassword`), exactly as on a
+    /// phone whose free minutes just ran out.
+    static var liveStarted = false
+
+    static func seedLiveTalks(now: Date = Date()) {
+        TrialReportStore.reset()
+        for s in SessionStore.shared.load() { SessionStore.shared.delete(id: s.id) }
+        let uid = UUID()
+        let cal = Calendar.current
+        func day(_ back: Int, _ hour: Int) -> Date {
+            cal.date(byAdding: .day, value: -back, to: cal.startOfDay(for: now))!.addingTimeInterval(Double(hour) * 3600)
+        }
+        typealias Line = (role: TurnRole, text: String, seconds: Int, fixes: [TurnFix], better: String?)
+        func u(_ t: String, _ sec: Int, _ fixes: [TurnFix] = [], better: String? = nil) -> Line { (.user, t, sec, fixes, better) }
+        func f(_ t: String) -> Line { (.fluentSelf, t, max(3, t.count / 14), [], nil) }
+        let talks: [(start: Date, origin: SessionOrigin, topic: String?, offered: [String], lines: [Line])] = [
+            (day(2, 20), .free, nil, ["what you do day to day", "walk me through"], [
+                f("Hey, it's you, a few years from now. I just want to hear about your days. What do you do?"),
+                u("Uh, I am working in a startup since three years. I am product manager.", 9,
+                  [TurnFix(was: "I am working in a startup since three years", now: "I've been working at a startup for three years", why: "지금까지 이어지는 일은 현재완료 진행형과 for를 써요."),
+                   TurnFix(was: "I am product manager", now: "I'm a product manager", why: "직업 앞에는 a가 필요해요.")],
+                  better: "I've been working at a startup for three years. I'm a product manager."),
+                f("Oh nice, three years is a long time at a startup. Walk me through what you do day to day."),
+                u("Every day I have many meetings. And I talk with the developers, and then I write the plan, and then we decide.", 14),
+                f("That sounds like a lot of talking. Which meeting do you like least?"),
+                u("The weekly meeting. It is very long and very boring. My boss explained me the plan again and again.", 12,
+                  [TurnFix(was: "My boss explained me the plan", now: "My boss explained the plan to me", why: "explain 뒤에는 내용이 먼저 오고, 사람은 to와 함께 와요.")],
+                  better: "The weekly meeting. It's long and pretty boring, and my boss explains the plan to me again and again."),
+                f("Ha, the same plan every week. What would you change about that meeting?"),
+                u("I want to make it short. Maybe thirty minutes. It is good for everyone.", 9),
+            ]),
+            (day(1, 8), .scenario, "Pitching a new feature to my team", ["push back on", "a good fit", "keep it short"], [
+                f("Okay, I'm your teammate. You wanted to pitch the new onboarding feature?"),
+                u("Yes. I think new users are confused in the first day. So I want to make a guide.", 10),
+                f("Makes sense. But what if the developers push back on the timeline?"),
+                u("I will explain them why it is important. The users leave the app very fast.", 9,
+                  [TurnFix(was: "I will explain them why", now: "I'll explain to them why", why: "explain 다음에 사람을 바로 쓰지 않고 to를 붙여요.")],
+                  better: "I'll explain to them why it matters. Users are leaving the app really fast."),
+                f("Good point. Do you have numbers to show them?"),
+                u("Yes, we lost forty percent of users in the first week. It is very bad number.", 10,
+                  [TurnFix(was: "It is very bad number", now: "That's a really bad number", why: "셀 수 있는 명사 앞에는 a가 필요해요.")],
+                  better: "Yes, we lost forty percent of users in the first week. That's a really bad number."),
+                f("That's a strong argument. Honestly, it sounds like a good fit for this quarter. Keep it short, two slides at most."),
+                u("Okay, I will make two slides. Thank you, it is good advice.", 7),
+            ]),
+            (now.addingTimeInterval(-3 * 3600), .news, "A four-day work week", ["the trade-off", "I'm all for it"], [
+                f("Did you see the news? Some companies are trying a four-day work week."),
+                u("Yes, I saw it yesterday. I think it is good idea but it is difficult for startups.", 10,
+                  [TurnFix(was: "it is good idea", now: "it's a good idea", why: "idea 앞에 a가 빠졌어요.")],
+                  better: "Yes, I saw it yesterday. I think it's a good idea, but it's hard for startups."),
+                f("Why harder for startups? What's the trade-off for you?"),
+                u("Because we have small team. If one person is not there, the work stops. I am working here since three years and it was always like this.", 15,
+                  [TurnFix(was: "I am working here since three years", now: "I've been working here for three years", why: "지금까지 이어지는 일은 현재완료 진행형과 for를 써요.")],
+                  better: "Because we're a small team, so if one person is out, the work stops. I've been working here for three years, and it's always been like that."),
+                f("That's real. If you could choose, would you take Fridays off?"),
+                u("Of course! I will go hiking with my family. My daughter likes the mountain very much.", 10),
+            ]),
+        ]
+        for talk in talks {
+            var t = talk.start
+            var turns: [Turn] = []
+            for line in talk.lines {
+                var turn = Turn(id: UUID(), role: line.role, audioURL: nil, transcript: line.text,
+                                durationMs: line.seconds * 1000, timestamp: t, suggestion: nil)
+                if let better = line.better {
+                    turn.suggestion = TurnSuggestion(alternative: better, reason: "", fixes: line.fixes)
+                }
+                turns.append(turn)
+                t = t.addingTimeInterval(Double(line.seconds) + 25)
+            }
+            var summary = SessionSummary(phrasesUsed: [], newPatternsDetected: [], suggestedDrills: [],
+                                         overallNote: "", scorecard: nil)
+            summary.expressionsOffered = talk.offered
+            SessionStore.shared.save(Session(
+                id: UUID(), userId: uid, targetLanguage: "en", mode: .conversation,
+                topic: talk.topic, startedAt: talk.start, endedAt: t,
+                turns: turns, summary: summary, origin: talk.origin))
+        }
+        for r in WeeklyReportStore.shared.load() { WeeklyReportStore.shared.delete(id: r.id) }
+        LearningPurposeStore.purposes = [.work]
+    }
+
+    /// Debug sign-in with the dev account, so the model calls are real.
+    static func signIn() async -> Bool {
+        let d = UserDefaults.standard
+        guard let email = d.string(forKey: "devEmail"), let password = d.string(forKey: "devPassword") else { return false }
+        do {
+            try await SupabaseProvider.shared.auth.signIn(email: email, password: password)
+            return true
+        } catch {
+            print("TRIAL LIVE sign-in failed:", error)
+            return false
+        }
+    }
+
     private static func demoTest(start: Date, now: Date) -> WeeklyTest {
         func item(_ kind: WeeklyTestItem.Kind, _ prompt: String, _ answer: String, _ options: [String],
                   rule: String? = nil, note: String? = nil) -> WeeklyTestItem {

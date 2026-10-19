@@ -2030,7 +2030,10 @@ routine to keep going." `TrialReport.swift`, and `WeekRecapSheet(trial:)`.
 - Debug: `-capture tabs -trialreport 1` raises it past the gate,
   `-trialthin 1` skips the test, `-trialpage N` opens on a card,
   `-trialdemo 1` seeds a finished twenty-minute trial (`TrialReportDemo`),
-  `-trialtest 1` opens the test (its result, on the demo).
+  `-trialtest 1` opens the test (its result, on the demo), and
+  `-triallive 1 -devEmail … -devPassword …` signs a simulator into a dev
+  account, seeds three realistic talks and lets the REAL coach, level and
+  test run (no database change; the dev account is in `~/keys`).
 
 ## Japanese as a TARGET language (2026-09-18)
 

@@ -601,6 +601,19 @@ struct RootTabView: View {
     private func offerTrialReport() {
         #if DEBUG
         // `-trialreport 1`: raise the deck on this device's talks, past the gate.
+        if UserDefaults.standard.bool(forKey: "triallive"), trialReport == nil, !TrialReportDemo.liveStarted {
+            TrialReportDemo.liveStarted = true
+            // `-triallive 1 -devEmail … -devPassword …`: real model calls
+            // over seeded talks, past the account gate.
+            Task { @MainActor in
+                let signed = await TrialReportDemo.signIn()
+                print("TRIAL LIVE signed in:", signed)
+                TrialReportDemo.seedLiveTalks()
+                appState.weeklyReports = []
+                trialReport = TrialReportStore.current(targetLanguage: appState.targetLanguage)
+            }
+            return
+        }
         if UserDefaults.standard.bool(forKey: "trialreport"), trialReport == nil {
             if UserDefaults.standard.bool(forKey: "trialdemo") { TrialReportDemo.seed() }
             trialReport = TrialReportStore.current(targetLanguage: appState.targetLanguage)
