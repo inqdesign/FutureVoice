@@ -277,6 +277,7 @@
     <string name="bring_your_practice_over">"可以把你之前的练习带过来"</string>
     <string name="browse_all_vocabulary">"浏览全部词汇"</string>
     <string name="browse_expressions">"浏览用语"</string>
+    <string name="bug_fixes">"问题修复"</string>
     <string name="build_a_scenario">"创建情境"</string>
     <string name="build_lld_lld">"Build %1$d → %2$d"</string>
     <string name="build_new">"新建"</string>
@@ -900,6 +901,7 @@
     <string name="icloud_storage_is_full_audio_isn_t_syncing">"iCloud 空间已满，音频不会同步"</string>
     <string name="ielts_opic_toeic_speaking">"IELTS、OPIc、TOEIC Speaking……"</string>
     <string name="import_practice_data">"导入练习数据"</string>
+    <string name="improvements">"性能改进"</string>
     <string name="in_">"%1$s：%2$s"</string>
     <string name="in_a_new_situation_you_don_t_know_what_to_say">"遇到新情况，不知道该说什么"</string>
     <string name="in_call_suggestions">"通话中的建议"</string>
@@ -1322,6 +1324,7 @@
     <string name="new_best_lld_of_lld">"刷新最佳 · %2$d 人中第 %1$d 名"</string>
     <string name="new_block">"新时段"</string>
     <string name="new_expressions_from_the_call">"通话里捡到的新用语"</string>
+    <string name="new_features">"新功能"</string>
     <string name="new_from_your_fluent_self">"流利的自己用过的新用语"</string>
     <string name="new_here_get_started_instead">"第一次来？请改点「开始使用」"</string>
     <string name="new_person">"添加人物"</string>

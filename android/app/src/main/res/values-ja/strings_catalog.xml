@@ -277,6 +277,7 @@
     <string name="bring_your_practice_over">"これまでの練習をここに持ってこられます"</string>
     <string name="browse_all_vocabulary">"語彙をすべて見る"</string>
     <string name="browse_expressions">"表現を見る"</string>
+    <string name="bug_fixes">"バグ修正"</string>
     <string name="build_a_scenario">"シチュエーションを作る"</string>
     <string name="build_lld_lld">"ビルド %1$d → %2$d"</string>
     <string name="build_new">"新しく作る"</string>
@@ -900,6 +901,7 @@
     <string name="icloud_storage_is_full_audio_isn_t_syncing">"iCloudの容量がいっぱいです。音声は同期されません"</string>
     <string name="ielts_opic_toeic_speaking">"IELTS、OPIc、TOEIC Speaking…"</string>
     <string name="import_practice_data">"練習データを読み込む"</string>
+    <string name="improvements">"動作の改善"</string>
     <string name="in_">"%1$sでは%2$s"</string>
     <string name="in_a_new_situation_you_don_t_know_what_to_say">"初めての状況では、何を言えばいいか浮かばない"</string>
     <string name="in_call_suggestions">"通話中の提案"</string>
@@ -1322,6 +1324,7 @@
     <string name="new_best_lld_of_lld">"自己ベスト更新・%2$d人中 %1$d位"</string>
     <string name="new_block">"新しいブロック"</string>
     <string name="new_expressions_from_the_call">"通話で拾った新しい表現"</string>
+    <string name="new_features">"新機能"</string>
     <string name="new_from_your_fluent_self">"流暢な自分が使った新しい表現"</string>
     <string name="new_here_get_started_instead">"はじめての方は「はじめる」から"</string>
     <string name="new_person">"人を追加"</string>

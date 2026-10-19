@@ -10,8 +10,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowCircleDown
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.BottomSheetDefaults
 import com.roro.futurevoice.ui.brand.IosButton as Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -29,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
@@ -54,9 +58,9 @@ import com.roro.futurevoice.data.AppUpdateService
  *     client kept describing allowances that no longer existed.
  *
  * The notes are the release notes shipped to the store, so they are a
- * paragraph plus a bullet list, not a sentence. The body SCROLLS with the
- * buttons pinned below it, and the bullets are parsed out ([ReleaseNotes]) so
- * "what's new" reads as a list of things rather than a wall of prose.
+ * paragraph plus headed lists (new · fixed · improved), not a sentence. The
+ * body SCROLLS with the buttons pinned below it, and the sections are parsed
+ * out ([ReleaseNotes]) so each kind of change reads as its own list.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -127,30 +131,14 @@ fun UpdateAvailableSheet(
                 if (!notes.isEmpty) {
                     Column(
                         Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(22.dp),
                     ) {
                         notes.lead?.let {
                             Text(it,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        if (notes.bullets.isNotEmpty()) {
-                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                Text(
-                                    stringResource(R.string.what_s_new).uppercase(),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                notes.bullets.forEach { line ->
-                                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                        Icon(Icons.Filled.Circle, contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.padding(top = 7.dp).size(5.dp))
-                                        Text(line, style = MaterialTheme.typography.bodyMedium)
-                                    }
-                                }
-                            }
-                        }
+                        notes.sections.forEach { section -> NotesSection(section) }
                     }
                 }
             }
@@ -181,6 +169,49 @@ fun UpdateAvailableSheet(
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
+            }
+        }
+    }
+}
+
+/**
+ * One kind of change under its own heading — what's new, what was fixed, what
+ * got faster — so a learner can read the part they care about without sorting
+ * a single list in their head. The heading is the APP's word for the kind, not
+ * the file's, so every release reads the same.
+ */
+@Composable
+private fun NotesSection(section: ReleaseNotes.Section) {
+    Column(
+        Modifier.fillMaxWidth().padding(top = 2.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        val kind = section.kind
+        if (kind != null) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(kind.icon, contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp))
+                Text(stringResource(kind.title),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold)
+            }
+        } else {
+            Text(
+                stringResource(R.string.what_s_new).uppercase(),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        section.items.forEach { line ->
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Icon(Icons.Filled.Circle, contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 7.dp).size(5.dp))
+                Text(line, style = MaterialTheme.typography.bodyMedium)
             }
         }
     }
@@ -222,42 +253,88 @@ private fun buildLine(
 }
 
 /**
- * Release notes as written for the store: a paragraph, then a dash list.
- * Splitting them lets the sheet lay the list out as rows instead of letting a
- * hyphen wrap into the middle of a centred block.
+ * Release notes as written for the store: an optional paragraph, then
+ * SECTIONS — a heading line ("New" / "Fixed" / "Improved", in either
+ * language) over a dash list. The sheet used to flatten them into one
+ * "What's new" list because the server copy had its headings stripped for
+ * older builds' parser. The headed copy now rides in its own columns
+ * (`notes_sections_*`), and flat notes — one list, no headings — still parse
+ * as a single section without a title.
  */
 class ReleaseNotes(raw: String?) {
-    val lead: String?
-    val bullets: List<String>
+    enum class Kind(@androidx.annotation.StringRes val title: Int, val icon: ImageVector) {
+        NEW(R.string.new_features, Icons.Filled.AutoAwesome),
+        FIXED(R.string.bug_fixes, Icons.Filled.BugReport),
+        IMPROVED(R.string.improvements, Icons.Filled.Speed);
 
-    val isEmpty: Boolean get() = lead == null && bullets.isEmpty()
+        companion object {
+            /** A heading line, read by its words. Fixed is tried first so
+             *  "Bug fixes and improvements" files its list as fixes. */
+            fun fromHeading(heading: String): Kind? {
+                val h = heading.lowercase().trim(' ', ':', '：', '·')
+                if (h.length > 30) return null
+                fun has(words: List<String>) = words.any { h.contains(it) }
+                return when {
+                    has(listOf("고친", "버그", "수정", "fix", "bug")) -> FIXED
+                    has(listOf("개선", "성능", "향상", "다듬", "improv", "faster", "performance")) -> IMPROVED
+                    has(listOf("새 기능", "새로운", "new")) -> NEW
+                    else -> null
+                }
+            }
+        }
+    }
+
+    /** [kind] null = a list with no heading (flat notes). */
+    class Section(val kind: Kind?, val items: MutableList<String>)
+
+    val lead: String?
+    val sections: List<Section>
+
+    val isEmpty: Boolean get() = lead == null && sections.isEmpty()
 
     init {
         val text = raw?.trim().orEmpty()
         if (text.isEmpty()) {
             lead = null
-            bullets = emptyList()
+            sections = emptyList()
         } else {
             val leadLines = mutableListOf<String>()
-            val items = mutableListOf<String>()
+            val parts = mutableListOf<Section>()
             for (line in text.lines()) {
                 val trimmed = line.trim()
                 if (trimmed.isEmpty()) {
                     // A blank line inside the lead is a paragraph break; keep
                     // it, but never let it open the block with one.
-                    if (leadLines.isNotEmpty() && items.isEmpty()) leadLines += ""
+                    if (leadLines.isNotEmpty() && parts.isEmpty()) leadLines += ""
                     continue
                 }
                 val marker = listOf("- ", "• ", "· ", "* ").firstOrNull { trimmed.startsWith(it) }
+                val kind = if (marker == null) Kind.fromHeading(trimmed) else null
                 when {
-                    marker != null -> items += trimmed.removePrefix(marker).trim()
-                    items.isEmpty() -> leadLines += trimmed
-                    // Prose after the list is a wrapped bullet, not a new section.
-                    else -> items[items.lastIndex] = items.last() + " " + trimmed
+                    marker != null -> {
+                        if (parts.isEmpty()) parts += Section(null, mutableListOf())
+                        parts.last().items += trimmed.removePrefix(marker).trim()
+                    }
+                    kind != null -> parts += Section(kind, mutableListOf())
+                    // Prose after a list is a wrapped bullet, not a new section.
+                    parts.isNotEmpty() && parts.last().items.isNotEmpty() -> {
+                        val items = parts.last().items
+                        items[items.lastIndex] = items.last() + " " + trimmed
+                    }
+                    else -> leadLines += trimmed
                 }
             }
+
+            // Two headings of the same kind (a file edited twice) read as one.
+            val merged = mutableListOf<Section>()
+            for (part in parts) {
+                if (part.items.isEmpty()) continue
+                val same = merged.firstOrNull { it.kind == part.kind }
+                if (same != null) same.items += part.items else merged += part
+            }
+
             lead = leadLines.joinToString("\n").trim().takeIf { it.isNotEmpty() }
-            bullets = items
+            sections = merged
         }
     }
 }

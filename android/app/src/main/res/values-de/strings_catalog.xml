@@ -277,6 +277,7 @@
     <string name="bring_your_practice_over">"Hol dein Üben hierher"</string>
     <string name="browse_all_vocabulary">"Gesamten Wortschatz ansehen"</string>
     <string name="browse_expressions">"Wendungen ansehen"</string>
+    <string name="bug_fixes">"Fehlerbehebungen"</string>
     <string name="build_a_scenario">"Situation erstellen"</string>
     <string name="build_lld_lld">"Build %1$d → %2$d"</string>
     <string name="build_new">"Neu erstellen"</string>
@@ -896,6 +897,7 @@
     <string name="icloud_storage_is_full_audio_isn_t_syncing">"iCloud-Speicher ist voll – Audio wird nicht synchronisiert"</string>
     <string name="ielts_opic_toeic_speaking">"IELTS, OPIc, TOEIC Speaking…"</string>
     <string name="import_practice_data">"Übungsdaten importieren"</string>
+    <string name="improvements">"Verbesserungen"</string>
     <string name="in_">"Auf %1$s: %2$s"</string>
     <string name="in_a_new_situation_you_don_t_know_what_to_say">"In einer neuen Situation weißt du nicht, was du sagen sollst"</string>
     <string name="in_call_suggestions">"Vorschläge im Gespräch"</string>
@@ -1318,6 +1320,7 @@
     <string name="new_best_lld_of_lld">"Neuer Bestwert · Platz %1$d von %2$d"</string>
     <string name="new_block">"Neuer Block"</string>
     <string name="new_expressions_from_the_call">"Neue Wendungen aus dem Anruf"</string>
+    <string name="new_features">"Neue Funktionen"</string>
     <string name="new_from_your_fluent_self">"Neu von deinem fließenden Ich"</string>
     <string name="new_here_get_started_instead">"Neu hier? Dann leg los"</string>
     <string name="new_person">"Person hinzufügen"</string>

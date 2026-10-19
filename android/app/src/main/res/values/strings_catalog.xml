@@ -278,6 +278,7 @@
     <string name="bring_your_practice_over">"Bring your practice over"</string>
     <string name="browse_all_vocabulary">"Browse all vocabulary"</string>
     <string name="browse_expressions">"Browse expressions"</string>
+    <string name="bug_fixes">"Bug fixes"</string>
     <string name="build_a_scenario">"Build a scenario"</string>
     <string name="build_lld_lld">"Build %1$d → %2$d"</string>
     <string name="build_new">"Build new"</string>
@@ -903,6 +904,7 @@
     <string name="icloud_storage_is_full_audio_isn_t_syncing">"iCloud storage is full — audio isn't syncing"</string>
     <string name="ielts_opic_toeic_speaking">"IELTS, OPIc, TOEIC Speaking…"</string>
     <string name="import_practice_data">"Import practice data"</string>
+    <string name="improvements">"Improvements"</string>
     <string name="in_">"In %1$s: %2$s"</string>
     <string name="in_a_new_situation_you_don_t_know_what_to_say">"In a new situation, you don't know what to say"</string>
     <string name="in_call_suggestions">"In-call suggestions"</string>
@@ -1325,6 +1327,7 @@
     <string name="new_best_lld_of_lld">"New best · #%1$d of %2$d"</string>
     <string name="new_block">"New block"</string>
     <string name="new_expressions_from_the_call">"New expressions from the call"</string>
+    <string name="new_features">"New features"</string>
     <string name="new_from_your_fluent_self">"New from your fluent self"</string>
     <string name="new_here_get_started_instead">"New here? Get started instead"</string>
     <string name="new_person">"New person"</string>
