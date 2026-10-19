@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.outlined.FontDownload
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.School
 import androidx.compose.material.icons.automirrored.outlined.Send
@@ -153,6 +154,15 @@ fun CallSettingsSheet(
             GroupedCard {
                 ToggleRow(Icons.Filled.ChatBubbleOutline, stringResource(R.string.subtitles), showsTranscript) {
                     onFlag(CallSettings.SHOWS_TRANSCRIPT, it)
+                }
+                // Readings over the kanji (`Furigana`), on every surface that
+                // hands the learner a Japanese line to say.
+                if (com.roro.futurevoice.data.LanguageScope.active(context) == "ja") {
+                    GroupedRowDivider()
+                    ToggleRow(Icons.Outlined.FontDownload, stringResource(R.string.furigana),
+                        com.roro.futurevoice.data.Furigana.enabled(context)) {
+                        com.roro.futurevoice.data.Furigana.setEnabled(context, it)
+                    }
                 }
                 GroupedRowDivider()
                 // With the transcript off this row is replaced by the reason

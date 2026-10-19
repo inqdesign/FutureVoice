@@ -242,11 +242,14 @@ fun CoachHintLabel(item: TalkGoalItem, used: Boolean, onTap: () -> Unit) {
         Icon(if (used) Icons.Filled.CheckCircle else Icons.Outlined.Lightbulb, contentDescription = null,
             tint = if (used) FocusGreen else MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(18.dp))
-        Text(stringResource(if (used) R.string.cm_used_it else R.string.cm_try_using),
-            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text("·", style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
-        Text(item.text, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+        // Bottom-aligned: a word with furigana stands taller than its label.
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(stringResource(if (used) R.string.cm_used_it else R.string.cm_try_using),
+                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("·", style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+            FuriganaText(item.text, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+        }
     }
 }
 
@@ -263,9 +266,12 @@ fun CoachReplyLabel(reply: com.roro.futurevoice.talk.CoachReply, modifier: Modif
         verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(reply.heading ?: stringResource(R.string.try_saying), style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(coachLine(reply.say, MaterialTheme.colorScheme.onSurface),
-            style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        val say = coachLine(reply.say, MaterialTheme.colorScheme.onSurface)
+        FuriganaText(say, alignment = Alignment.CenterHorizontally,
+            style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold) {
+            Text(say, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        }
         if (reply.meaning.isNotEmpty()) {
             Text(coachLine(reply.meaning, MaterialTheme.colorScheme.onSurfaceVariant),
                 style = MaterialTheme.typography.bodyMedium,
