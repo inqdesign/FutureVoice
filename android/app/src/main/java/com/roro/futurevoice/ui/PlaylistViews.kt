@@ -2,7 +2,11 @@ package com.roro.futurevoice.ui
 
 import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
@@ -226,7 +230,24 @@ fun ScenePlayerSheet(
     topInset: Dp,
     onDismiss: () -> Unit,
 ) {
-    if (!visible) return
+    // Rises from the bottom edge and settles, and goes back down the same
+    // way, like an iOS sheet (founder, 2026-10-19: it used to appear in one
+    // frame and vanish in one). A critically damped spring: no bounce.
+    AnimatedVisibility(
+        visible = visible,
+        enter = slideInVertically(spring(dampingRatio = 1f, stiffness = 380f)) { it },
+        exit = slideOutVertically(spring(dampingRatio = 1f, stiffness = 520f)) { it },
+    ) {
+        ScenePlayerSheetContent(state, topInset, onDismiss)
+    }
+}
+
+@Composable
+private fun ScenePlayerSheetContent(
+    state: AppState,
+    topInset: Dp,
+    onDismiss: () -> Unit,
+) {
     val context = LocalContext.current
     val density = LocalDensity.current
     var tracks by remember { mutableStateOf<List<SceneTrack>>(emptyList()) }
