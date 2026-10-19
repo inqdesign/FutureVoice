@@ -229,6 +229,15 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
                     is SessionStatus.Initializing ->
                         _state.update { it.copy(resolvingSession = true) }
 
+                    // The stored session is still there; only its refresh
+                    // failed (a phone left alone for hours wakes with an
+                    // expired token and no network yet), and the library
+                    // retries by itself. Reading it as signed out flashed
+                    // Welcome for a moment on every such launch (reported
+                    // 2026-10-19, Galaxy S25). Keep whatever we had — the
+                    // launch screen on a cold start — until it settles.
+                    is SessionStatus.RefreshFailure -> Unit
+
                     else -> _state.update {
                         it.copy(
                             resolvingSession = false,
