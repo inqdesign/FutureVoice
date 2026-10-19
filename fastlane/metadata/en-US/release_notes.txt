@@ -1,7 +1,14 @@
 New
-• Turn on Study in a speech script to see its grammar and expressions explained, with each paragraph translated into your language.
-• Make an audio version of your script read in your own voice.
-• Turn on Answer with Send in a call and pausing won't end your turn. Take your time, then tap the middle button when you're done.
+• Take a quick quiz from the Talk screen whenever you like, with words, expressions and grammar picked for you.
+• Find a topic for today's talk with one button.
+• Listen to your situations back to back in a player. It keeps playing with the screen off.
+• When you learn Japanese, readings now appear above the kanji.
+• On a free trial in Korea, the app tells you ahead of time that you'll need to agree before you're charged.
+• The weekly test now lives inside your weekly report.
 
 Fixed
-• Minor bug fixes and stability improvements.
+• Challenge cards no longer change size when you open one and come back.
+• You no longer slide in from the side when Watch first opens.
+• The tab bar no longer shows while a situation plays.
+• Icons on blue buttons are visible again.
+• Hear it in my voice on a script now shows what it costs and a clearer button.

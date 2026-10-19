@@ -1,7 +1,16 @@
 Nouveautés
-• Active Étudier sur un texte de discours : la grammaire et les expressions sont expliquées, et chaque paragraphe est traduit dans ta langue.
-• Crée un audio de ton texte lu avec ta propre voix.
-• Active Répondre avec Envoyer pendant un appel : une pause ne termine plus ton tour. Prends ton temps, puis touche le bouton du milieu quand tu as fini.
+• Tu peux maintenant apprendre l’espagnol, avec un accent mexicain ou castillan.
+• Crée ta routine dès le départ : choisis l’heure de ton appel quotidien et ton temps d’étude, et tout s’ajoute à ton planning de la semaine.
+• Ton moi fluide se souvient de ce qui t’arrive en ce moment et t’en parle dès le bonjour.
+• Ajouter une personne se fait sur un seul écran, et tu peux créer quelqu’un directement depuis le choix de la personne.
+• Fais défiler les défis de discours en cartes et ouvre le test hebdo directement depuis Révision.
+• À la création de ta voix, les bruits de fond de l’enregistrement sont mieux nettoyés.
+• Dans Redire, tu peux maintenant dire aussi les répliques de ton moi fluide. Active Lire les deux rôles depuis le bouton en haut à gauche.
 
 Corrections
-• Petits bugs corrigés, l’app est plus stable.
+• La bulle de ton moi fluide ne clignote plus quand elle apparaît.
+• Les titres des appels sur l’actualité ne sont plus coupés.
+• L’écouter avec ma voix ne consomme plus plus de temps que la durée du texte.
+• Les mots corrigés dans Révision ne s’insèrent plus à l’intérieur d’autres mots.
+• Quand tu apprends le japonais ou l’espagnol, la liste des personnes n’est plus vide.
+• Ce que tu étais en train d’écrire est toujours là quand tu fermes une fenêtre et la rouvres.

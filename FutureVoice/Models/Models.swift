@@ -136,6 +136,8 @@ enum TalkEntry: String {
     case talkNews = "talk_news"
     case talkExam = "talk_exam"
     case talkField = "talk_field"
+    /// The topics page's "my own topic": the call opens by asking what to talk about.
+    case talkOwnTopic = "talk_own_topic"
     case dailyCall = "daily_call"
     case widget
     case welcome

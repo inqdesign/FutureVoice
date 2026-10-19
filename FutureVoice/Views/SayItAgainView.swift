@@ -97,7 +97,9 @@ struct SayItAgainView: View {
 
     init(source: Source) {
         self.source = source
-        _steps = State(initialValue: source.steps)
+        let steps = Self.arranged(source.steps, kind: source.kind,
+                                  bothSides: UserDefaults.standard.bool(forKey: Self.bothSidesKey))
+        _steps = State(initialValue: steps)
         // The opening state is decided HERE, not in `onAppear`. A run that
         // skips the intro used to start one frame late, so the intro was
         // drawn and then taken away — "인트로가 나오다가 자동으로 닫혀" — which
@@ -107,8 +109,8 @@ struct SayItAgainView: View {
         // readable before `self` exists; it is the same store the property
         // wrapper writes.
         let seen = UserDefaults.standard.bool(forKey: Self.introSeenKey)
-        guard seen, let first = source.steps.first,
-              source.steps.contains(where: { $0.isSpoken }) else { return }
+        guard seen, let first = steps.first,
+              steps.contains(where: { $0.isSpoken }) else { return }
         _index = State(initialValue: 0)
         // A first line still being rewritten waits on the prompter's
         // "getting ready" rather than flashing the line as it was said.
@@ -153,6 +155,15 @@ struct SayItAgainView: View {
     /// the learner made rather than on top of a run already going.
     static let introSeenKey = "futurevoice.sayItAgain.introSeen"
     @AppStorage(introSeenKey) private var introSeen = false
+    /// Read the other side's lines too (`SayItAgainScript.bothSides`).
+    /// Remembered: whoever asked for it once wants it the next time.
+    static let bothSidesKey = "futurevoice.sayItAgain.bothSides"
+    @AppStorage(bothSidesKey) private var bothSides = false
+
+    static func arranged(_ steps: [SayItAgainScript.Step], kind: String,
+                         bothSides: Bool) -> [SayItAgainScript.Step] {
+        bothSides ? SayItAgainScript.bothSides(steps, filesOtherSide: kind == "talk") : steps
+    }
     @AppStorage("futureselfTheme") private var storedTheme = FutureselfTheme.blue.rawValue
     @State private var micError: String?
     @State private var askingMicChoice = false
@@ -223,6 +234,17 @@ struct SayItAgainView: View {
             .navigationTitle("Say it again")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Menu {
+                        Toggle(isOn: Binding(get: { bothSides },
+                                             set: { setBothSides($0) })) {
+                            Label("Read both sides", systemImage: "person.2")
+                        }
+                    } label: {
+                        Image(systemName: bothSides ? "person.2.fill" : "person.2")
+                    }
+                    .accessibilityLabel(Text("Read both sides"))
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Close") { finishAndDismiss() }
                 }
@@ -275,9 +297,10 @@ struct SayItAgainView: View {
         let take = takes[step.id]
         // `DialogueLine.name` is a `String`, so a literal here would be
         // frozen English — see "UI text has ONE language".
-        DialogueLine(speaker: step.isSpoken ? .user : .other,
-                     name: step.isSpoken ? chrome("You") : source.otherName,
-                     avatar: step.isSpoken ? nil : source.otherAvatar,
+        let mine = step.isSpoken && !step.isOtherSide
+        DialogueLine(speaker: mine ? .user : .other,
+                     name: mine ? chrome("You") : source.otherName,
+                     avatar: mine ? nil : source.otherAvatar,
                      isCurrent: isCurrent) {
             FuriganaText(step.isCorrected
                          ? highlightedCorrection(step.text, original: step.said, baseFont: .body)
@@ -375,7 +398,11 @@ struct SayItAgainView: View {
             // Says what the run IS before anything else: the whole
             // conversation again, with the learner's part spoken right. It
             // is not a list of fixes — an uncorrected turn is read as said.
-            Text(source.kind == "scene"
+            Text(bothSides
+                 ? (source.kind == "scene"
+                    ? explain("Do this scene again from the start, and say every line out loud, yours and the other side's.")
+                    : explain("Do this talk again from the start, and say every line out loud: yours the corrected way, and your fluent self's too."))
+                 : source.kind == "scene"
                  ? explain("Do this scene again from the start, and say your part out loud. The other side plays just as it did.")
                  : explain("Do this talk again from the start, and say your part the corrected way. The answers play just as they did."))
                 .font(.subheadline).foregroundStyle(.secondary)
@@ -452,7 +479,13 @@ struct SayItAgainView: View {
                     .font(.system(size: 8))
                     .foregroundStyle(.red)
                     .symbolEffect(.pulse, isActive: true)
-                Text(promptStep?.isCorrected == true ? "Say it the fixed way" : "Say your line")
+                Group {
+                    if promptStep?.isOtherSide == true {
+                        Text("Say \(source.otherName)'s line")
+                    } else {
+                        Text(promptStep?.isCorrected == true ? "Say it the fixed way" : "Say your line")
+                    }
+                }
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(theme.ink.opacity(0.7))
                 Spacer()
@@ -588,6 +621,7 @@ struct SayItAgainView: View {
             Telemetry.log("say_again_start", [
                 "kind": source.kind,
                 "lines": "\(spokenCount)",
+                "both": bothSides ? "1" : "0",
             ])
         }
         runTask?.cancel()
@@ -624,6 +658,7 @@ struct SayItAgainView: View {
         ActivityEventLog.shared.record(.sayItAgain)
         Telemetry.log("say_again_run", [
             "kind": source.kind,
+            "both": bothSides ? "1" : "0",
             "lines": "\(spokenCount)",
             "read": "\(readCount)",
             "avg": averageScore.map(String.init) ?? "",
@@ -808,6 +843,28 @@ struct SayItAgainView: View {
             fix: ""))
     }
 
+    /// Flip "Read both sides". The script changes under the run, so a run
+    /// under way starts over from the first line; on the intro it only
+    /// changes what Start will run.
+    private func setBothSides(_ on: Bool) {
+        guard on != bothSides else { return }
+        bothSides = on
+        let base = steps.map { step -> SayItAgainScript.Step in
+            guard step.isOtherSide else { return step }
+            return SayItAgainScript.Step(id: step.id, isSpoken: false, text: step.text,
+                                         said: "", note: "", attemptId: nil)
+        }
+        runTask?.cancel()
+        for task in scoreTasks.values { task.cancel() }
+        scoreTasks.removeAll()
+        player.stop()
+        _ = live.stop()
+        _ = recorder.stop()
+        takes.removeAll()
+        steps = Self.arranged(base, kind: source.kind, bothSides: on)
+        if phase != .intro { start(from: 0) }
+    }
+
     /// Re-read one line. Mid-run it rejoins the script there — the answer
     /// after it plays again, which is the conversation. On the finished
     /// screen it is a single take and the page stays where it is.
@@ -905,8 +962,9 @@ struct SayItAgainView: View {
     /// scripts line up exactly; if they somehow don't, the run keeps the
     /// one it has.
     private func applyRewrites(session: Session) {
-        let rebuilt = SayItAgainScript.build(session: session,
-                                             rewrites: SayItAgainRewrites.shared.all)
+        let rebuilt = Self.arranged(SayItAgainScript.build(session: session,
+                                                           rewrites: SayItAgainRewrites.shared.all),
+                                    kind: source.kind, bothSides: bothSides)
         guard rebuilt.map(\.id) == steps.map(\.id) else { return }
         let from: Int
         switch phase {

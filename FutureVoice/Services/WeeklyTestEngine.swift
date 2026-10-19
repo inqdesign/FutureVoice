@@ -476,7 +476,7 @@ enum WeeklyTestEngine {
     /// the list the learner keeps on the Expressions page, in the sentence
     /// they met it in: this week's talks first, then any talk, then the
     /// scene that taught it. A phrase with no such line is skipped.
-    private static func gapItems(
+    static func gapItems(
         toStudy: [ExpressionCatalog.Item],
         sessions: [Session],
         fluentTurns: [(session: Session, turn: Turn)],
