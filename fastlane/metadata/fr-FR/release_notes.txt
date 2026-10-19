@@ -1,5 +1,5 @@
 Nouveautés
-• Si tu apprends l’anglais, un nouvel épisode du podcast nawana t’attend chaque jour : deux animateurs parlent d’une actualité du jour, et dans le texte, « Étudier » te montre les expressions et la grammaire. Il se trouve dans la liste du lecteur, sous « Podcast ».
+• Si tu apprends l’anglais, un nouvel épisode du podcast nawana t’attend chaque jour : deux animateurs parlent d’une actualité du jour, et dans le texte, « Étudier » te montre les expressions et la grammaire. Il se trouve dans la liste du lecteur, sous « Podcast ».
 • Tu peux ralentir la vitesse du lecteur.
 • Dans les appels avec une personne ou un rôle, son nom s’affiche au-dessus de ses phrases.
 • Fais un quiz rapide quand tu veux depuis l’écran Parler, avec des mots, des expressions et de la grammaire choisis pour toi.
@@ -14,4 +14,4 @@ Corrections
 • À la première ouverture de Scènes, tu n’arrives plus en glissant depuis le côté.
 • La barre d’onglets ne s’affiche plus pendant une situation.
 • Les icônes des boutons bleus sont de nouveau visibles.
-• « Écouter avec ma voix » indique plus clairement ce que ça coûte.
+• « Écouter avec ma voix » indique plus clairement ce que ça coûte.
