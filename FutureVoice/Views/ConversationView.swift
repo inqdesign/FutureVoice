@@ -1505,42 +1505,23 @@ struct ConversationView: View {
                                     .id("partial-listening")
                                     .transition(Self.placeholderTransition)
                             }
-                        case .thinkingReply:
-                            // Subtitles off means NO words in the feed: the
-                            // pill already scans while the reply is written,
-                            // and this line flashing for a second and going
-                            // read as a glitch (reported 2026-10-09).
-                            if showsTranscript {
-                                ThinkingIndicator(name: otherSideName)
-                                    .id("partial-thinking")
-                                    .transition(Self.placeholderTransition)
-                            }
                         default:
-                            // The reply has begun but has no words yet: the
-                            // thinking line keeps its place (same id, so it
-                            // is not re-inserted) until the bubble that
-                            // replaces it has text to be drawn with.
-                            if showsTranscript, replyHasNoWordsYet {
-                                ThinkingIndicator(name: otherSideName)
-                                    .id("partial-thinking")
-                                    .transition(Self.placeholderTransition)
-                            }
+                            // No "… is thinking" line in the feed (founder,
+                            // 2026-10-20): the pill and the hint under it
+                            // already say so, and the beat before the voice
+                            // is about a second — a line that appears and
+                            // goes in that second read as a flicker.
+                            EmptyView()
                         }
                     } else if phase == .listening, showsTranscript {
-                        // Separate id from ThinkingIndicator + explicit opacity
-                        // transition so SwiftUI doesn't morph one view's text
-                        // into another. The previous shared id caused the
-                        // user's partial transcript to briefly bleed into the
-                        // "Future self is thinking…" bubble during the swap.
+                        // Its own id + an explicit opacity transition, so
+                        // SwiftUI never morphs one row's text into another's.
                         PartialTurnView(text: live.transcript)
                             .id("partial-listening")
                             .transition(Self.placeholderTransition)
                     } else if phase == .thinking && (turns.last?.role == .user) {
-                        if showsTranscript {
-                            ThinkingIndicator(name: otherSideName)
-                                .id("partial-thinking")
-                                .transition(Self.placeholderTransition)
-                        }
+                        // The pill says it (see above); nothing in the feed.
+                        EmptyView()
                     } else if let fid = failedTurnId, turns.last?.id == fid {
                         RetryReplyRow(outOfCredits: outOfCredits,
                                       onRetry: retryReply,
@@ -5111,22 +5092,6 @@ private struct PartialTurnView: View {
                 .foregroundStyle(.secondary)
                 .italic(text.isEmpty)
         }
-    }
-}
-
-private struct ThinkingIndicator: View {
-    /// The other side's label (`otherSideName`).
-    var name: String = chrome("Future self")
-
-    var body: some View {
-        HStack(spacing: 6) {
-            ProgressView().scaleEffect(0.7)
-            Text(name == chrome("Future self") ? chrome("Future self is thinking…")
-                                                : chrome("\(name) is thinking…"))
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
