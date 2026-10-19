@@ -7,6 +7,11 @@ import SwiftUI
 /// review work → new phrases from the fluent self → what tripped you up →
 /// the coach → the test. A card with nothing to say is not dealt, so a quiet
 /// week is a short deck, never a row of zeros.
+///
+/// The same deck is the TRIAL REPORT (`init(trial:)`, see `TrialReport`):
+/// the free minutes instead of a week, then the test (required — the level
+/// and routine cards are dealt only once it is done), the level, and the
+/// routine, whose button opens the plans.
 struct WeekRecapSheet: View {
     enum Action { case test, talk }
 
@@ -27,14 +32,52 @@ struct WeekRecapSheet: View {
     @State private var offerReminder = false
     @State private var reminderJustOn = false
 
+    // Trial report only.
+    private let isTrial: Bool
+    @State private var trial: TrialReport?
+    @State private var trialTest: WeeklyTest?
+    @State private var showingTrialTest = false
+    @State private var trialLevel: CEFRLevel?
+    @State private var trialRationale: String?
+    @State private var levelSettled = false
+    @State private var routine: [RoutineRecipe.Line] = []
+    @State private var routineIsOwn = false
+    @State private var showingPaywall = false
+
     init(recap: WeekRecap, action: Binding<Action?>, startPage: Int = 0) {
         _recap = State(initialValue: recap)
         _action = action
         _page = State(initialValue: startPage)
         _revealed = State(initialValue: [startPage])
+        isTrial = false
     }
 
-    enum Card: Hashable { case cover, talk, used, review, fresh, stumbles, grammar, words, coach, test }
+    init(trial: TrialReport) {
+        _recap = State(initialValue: trial.recap)
+        _action = .constant(nil)
+        var start = 0
+        #if DEBUG
+        start = UserDefaults.standard.integer(forKey: "trialpage")
+        #endif
+        _page = State(initialValue: start)
+        _revealed = State(initialValue: [start])
+        _trial = State(initialValue: trial)
+        _trialLevel = State(initialValue: trial.level.flatMap(CEFRLevel.init(rawValue:)))
+        _trialRationale = State(initialValue: trial.levelRationale)
+        _levelSettled = State(initialValue: trial.level != nil)
+        isTrial = true
+    }
+
+    enum Card: Hashable {
+        case cover, talk, used, review, fresh, stumbles, grammar, words, coach, test
+        case trialTest, level, routine
+    }
+
+    /// The trial's test is done, or could not be made — either way the
+    /// level and the routine are the learner's to see.
+    private var trialTestCleared: Bool {
+        trialTest?.isFinished == true || trial?.testThin == true
+    }
 
     private var cards: [Card] {
         var list: [Card] = [.cover]
@@ -49,7 +92,12 @@ struct WeekRecapSheet: View {
         // under the learner's thumb.
         if recap.hasActivity { list += [.grammar, .words] }
         list.append(.coach)
-        list.append(.test)
+        if isTrial {
+            list.append(.trialTest)
+            if trialTestCleared { list += [.level, .routine] }
+        } else {
+            list.append(.test)
+        }
         return list
     }
 
@@ -83,10 +131,23 @@ struct WeekRecapSheet: View {
         // One row per viewing, never one per swipe: how far the deck was
         // read is the question, and it is answered once.
         .onDisappear {
-            Analytics.capture("week_recap_closed", ["reached": (revealed.max() ?? 0) + 1,
-                                                    "cards": cards.count])
+            Analytics.capture(isTrial ? "trial_report_closed" : "week_recap_closed",
+                              ["reached": (revealed.max() ?? 0) + 1, "cards": cards.count])
+        }
+        .fullScreenCover(isPresented: $showingTrialTest, onDismiss: reloadTrialTest) {
+            WeeklyTestView(trialScope: .init(start: recap.start, minimum: TrialReportStore.minTestItems,
+                                             coach: recap.coach))
+                .environmentObject(appState)
+        }
+        .sheet(isPresented: $showingPaywall, onDismiss: {
+            // The report has done its job whether or not they bought.
+            TrialReportStore.finished = true
+            dismiss()
+        }) {
+            PaywallView(source: "trial_report")
         }
         .task {
+            if isTrial { await startTrial(); return }
             // Shown means SEEN: marked here, not where it was raised, so a
             // presentation that never landed doesn't use up the week.
             WeekRecapStore.shared.markShown(recap)
@@ -115,11 +176,16 @@ struct WeekRecapSheet: View {
                 }
             }
             HStack {
-                Text("Your week")
-                    .font(.headline)
-                Text(dateRange)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                if isTrial {
+                    Text("Your first \(AccountStatus.freeGrantSeconds / 60) minutes")
+                        .font(.headline)
+                } else {
+                    Text("Your week")
+                        .font(.headline)
+                    Text(dateRange)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
                 Spacer()
                 Button { dismiss() } label: {
                     Image(systemName: "xmark")
@@ -139,7 +205,17 @@ struct WeekRecapSheet: View {
 
     @ViewBuilder
     private var bottomButton: some View {
-        if cards[safe: page] == .test {
+        if isTrial, let card = cards[safe: page], [.trialTest, .routine].contains(card) {
+            if card == .routine {
+                primary(Text("Keep going with this routine")) { keepRoutine() }
+            } else if trialTestCleared {
+                primary(Text("See your level")) { advance() }
+            } else if let t = trialTest, !t.answers.isEmpty {
+                primary(Text("Continue the test")) { showingTrialTest = true }
+            } else {
+                primary(Text("Take the test")) { showingTrialTest = true }
+            }
+        } else if cards[safe: page] == .test {
             switch testState {
             case .ready:
                 primary(Text("Start this week's test")) { finish(.test) }
@@ -151,8 +227,12 @@ struct WeekRecapSheet: View {
                 primary(Text("Start a talk")) { finish(.talk) }
             }
         } else {
-            primary(Text("Next")) { withAnimation { page = min(page + 1, cards.count - 1) } }
+            primary(Text("Next")) { advance() }
         }
+    }
+
+    private func advance() {
+        withAnimation { page = min(page + 1, cards.count - 1) }
     }
 
     private func primary(_ label: Text, action: @escaping () -> Void) -> some View {
@@ -190,6 +270,9 @@ struct WeekRecapSheet: View {
                 case .words:    words
                 case .coach:    coach
                 case .test:     test
+                case .trialTest: trialTestCard
+                case .level:    levelCard
+                case .routine:  routineCard
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -220,7 +303,12 @@ struct WeekRecapSheet: View {
     }
 
     // 1 — the week at a glance
+    @ViewBuilder
     private var cover: some View {
+        if isTrial { trialCover } else { weekCover }
+    }
+
+    private var weekCover: some View {
         VStack(alignment: .leading, spacing: 18) {
             kicker(Text("Last week"), "calendar")
             if recap.hasActivity {
@@ -682,7 +770,7 @@ struct WeekRecapSheet: View {
     private var coachPending: some View {
         if coachFailed {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Couldn't read your week just now.")
+                (isTrial ? Text("Couldn't read your minutes just now.") : Text("Couldn't read your week just now."))
                     .font(.title3)
                 Button {
                     coachFailed = false
@@ -695,7 +783,7 @@ struct WeekRecapSheet: View {
         } else {
             HStack(spacing: 10) {
                 ProgressView()
-                Text("Reading your week…")
+                (isTrial ? Text("Reading your minutes…") : Text("Reading your week…"))
                     .foregroundStyle(.secondary)
             }
             .padding(.vertical, 20)
@@ -704,7 +792,7 @@ struct WeekRecapSheet: View {
 
     private func planBox(_ items: [Text]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("This week")
+            (isTrial ? Text("Next up") : Text("This week"))
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.tint)
             ForEach(Array(items.enumerated()), id: \.offset) { i, item in
@@ -796,6 +884,210 @@ struct WeekRecapSheet: View {
             .formatted(Date.FormatStyle(locale: chromeLocale).weekday(.abbreviated).month(.abbreviated).day())
     }
 
+    // MARK: - Trial report
+
+    // 1 — the free minutes at a glance
+    private var trialCover: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            kicker(Text("Your free minutes"), "gift")
+            bigNumber(recap.talkMinutes, unit: Text("min"))
+            Text("That was your free time. Here's what it showed.")
+                .font(.title3)
+                .fixedSize(horizontal: false, vertical: true)
+            summaryRow
+        }
+    }
+
+    // The test — required: the level and the routine come after it.
+    private var trialTestCard: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            kicker(Text("Your first test"), "checklist")
+            Image(systemName: trialTest?.isFinished == true ? "checkmark.circle.fill"
+                  : trial?.testThin == true ? "calendar.badge.clock" : "checkmark.circle")
+                .font(.system(size: 72, weight: .light))
+                .foregroundStyle(trialTest?.isFinished == true ? Color.green
+                                 : trial?.testThin == true ? Color.secondary : Color.accentColor)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+            if let t = trialTest, t.isFinished {
+                Text("Done: \(t.score)/\(t.total).")
+                    .font(.title3.weight(.semibold))
+                Text("Next, your level.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+            } else if trial?.testThin == true {
+                Text("Your talks were too short to make questions from. Your report goes on without it.")
+                    .font(.title3)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if let t = trialTest, !t.answers.isEmpty {
+                Text("You're \(t.answers.count) of \(t.total) in. Pick up where you left off.")
+                    .font(.title3)
+            } else {
+                Text("A few minutes, made from what you said: the words, the phrases, the corrections.")
+                    .font(.title3)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("Take it, then see your level.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    // The level — the first assessment, run early for the report.
+    private var levelCard: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            kicker(Text("Your level"), "chart.bar.fill")
+            if let level = trialLevel {
+                Text(LanguageCatalog.levelLabel(level, target: appState.targetLanguage))
+                    .font(.system(size: 64, weight: .bold, design: .rounded))
+                Text(canDo(level))
+                    .font(.title3)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let rationale = trialRationale, !rationale.isEmpty {
+                    section(Text("How we read it")) {
+                        Text(rationale)
+                            .font(.subheadline)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                if let t = trialTest, t.isFinished {
+                    Label { Text("Test \(t.score)/\(t.total)") } icon: { Image(systemName: "checklist") }
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                Text("It moves as you talk. Progress keeps track.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } else if levelSettled {
+                Text("A few more talks and your level is ready.")
+                    .font(.title3)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                HStack(spacing: 10) {
+                    ProgressView()
+                    Text("Reading your level…")
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 20)
+            }
+        }
+    }
+
+    /// Same lines as Progress's level page.
+    private func canDo(_ l: CEFRLevel) -> String {
+        switch l {
+        case .a1: return explain("Simple words and phrases about immediate, familiar things.")
+        case .a2: return explain("Everyday topics in simple terms — routines, plans, basic needs.")
+        case .b1: return explain("Familiar topics fluently enough to get by, and tell a simple story.")
+        case .b2: return explain("Clear, detailed talk on many topics, including some abstract ones.")
+        case .c1: return explain("Fluent, flexible, and precise — even on complex topics.")
+        case .c2: return explain("Effortless and nuanced, close to native.")
+        }
+    }
+
+    // The routine — the way on, and the button to the plans.
+    private var routineCard: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            kicker(Text("Keep it going"), "calendar")
+            Text(RoutineRecipe.headline(for: LearningPurposeStore.purposes))
+                .font(.title2.weight(.bold))
+                .fixedSize(horizontal: false, vertical: true)
+            Text(explain("About \(StudyPlanStore.goalMinutes) minutes of talk a day, and what it corrected comes back the same evening."))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            RoutineWeekPicture(blocks: routine.map(\.block))
+            VStack(alignment: .leading, spacing: 12) {
+                ForEach(routine) { line in
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: line.block.kind.symbol)
+                            .font(.subheadline)
+                            .foregroundStyle(line.block.kind.color)
+                            .frame(width: 22)
+                            .padding(.top, 2)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(line.block.kind.titled(line.block.minutes))
+                                .font(.subheadline.weight(.semibold))
+                            Text(SetupFlowView.weekdaySummary(line.block.weekdays))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            if !line.why.isEmpty {
+                                Text(line.why)
+                                    .font(.caption)
+                                    .foregroundStyle(Color.accentColor)
+                            }
+                        }
+                    }
+                }
+            }
+            Text(explain("You can change all of it later in My routine."))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func startTrial() async {
+        TrialReportStore.offers += 1
+        Analytics.capture("trial_report_opened", ["talk_min": recap.talkMinutes, "cards": cards.count])
+        reloadTrialTest()
+        // The routine: the one already chosen in setup, else the one the
+        // learner's purposes suggest.
+        if UserDefaults.standard.bool(forKey: LearningPurposeStore.routineAppliedKey),
+           !StudyPlanStore.shared.plan.blocks.isEmpty {
+            routine = StudyPlanStore.shared.plan.blocks.map { RoutineRecipe.Line(block: $0, why: "") }
+            routineIsOwn = true
+        } else {
+            routine = RoutineRecipe.lines(for: LearningPurposeStore.purposes,
+                                          goalMinutes: StudyPlanStore.goalMinutes)
+        }
+        async let level: Void = loadTrialLevel()
+        await writeCoachIfNeeded()
+        await level
+    }
+
+    private func loadTrialLevel() async {
+        guard trialLevel == nil else { return }
+        let read = await appState.assessTrialLevel()
+        withAnimation(.easeOut(duration: 0.3)) {
+            trialLevel = read?.level
+            trialRationale = read?.rationale
+            levelSettled = true
+        }
+        if let read {
+            updateTrial { $0.level = read.level.rawValue; $0.levelRationale = read.rationale }
+        }
+    }
+
+    private func reloadTrialTest() {
+        let wasCleared = trialTestCleared
+        let saved = TrialReportStore.load()
+        if let saved { trial?.testThin = saved.testThin; trial?.testId = saved.testId }
+        if let id = saved?.testId {
+            trialTest = WeeklyTestStore.shared.load().first { $0.id == id }
+        }
+        // Done in this sitting: straight on to the level.
+        if !wasCleared, trialTestCleared, let index = cards.firstIndex(of: .level) {
+            withAnimation { page = index }
+        }
+    }
+
+    private func keepRoutine() {
+        if !routineIsOwn, !routine.isEmpty {
+            StudyPlanStore.shared.update(RoutineRecipe.plan(from: routine))
+            UserDefaults.standard.set(true, forKey: LearningPurposeStore.routineAppliedKey)
+        }
+        Analytics.capture("trial_report_routine", ["own": routineIsOwn])
+        showingPaywall = true
+    }
+
+    /// Re-read before writing: the test view saves its id into the same file.
+    private func updateTrial(_ change: (inout TrialReport) -> Void) {
+        guard var latest = TrialReportStore.load() ?? trial else { return }
+        change(&latest)
+        TrialReportStore.save(latest)
+        trial = latest
+    }
+
     // MARK: - Helpers
 
     private var chromeLocale: Locale { Locale(identifier: UILanguage.chromeLanguage) }
@@ -824,7 +1116,11 @@ struct WeekRecapSheet: View {
             let written = try await WeekRecapCoach.write(for: recap, targetLanguage: appState.targetLanguage,
                                                          level: appState.proficiency)
             withAnimation(.easeOut(duration: 0.3)) { recap.coach = written }
-            WeekRecapStore.shared.save(recap)
+            if isTrial {
+                updateTrial { $0.recap = recap }
+            } else {
+                WeekRecapStore.shared.save(recap)
+            }
         } catch {
             coachFailed = true
             Analytics.capture("week_recap_coach_error", ["error": "\(error)".prefix(160).description])

@@ -89,6 +89,10 @@ struct ConversationView: View {
     /// up (`handleTalkPoolSpent`) and the plans are offered after the book,
     /// whether or not the pitch has been made once already.
     @State private var freeCallSpent = false
+    /// The free minutes are over on a never-subscribed account: the report
+    /// of what they showed comes up in place of the plans, which are its
+    /// last card (`TrialReport`).
+    @State private var trialReport: TrialReport?
     /// Wall-clock talk metering (4.5 cr/min via `talk-tick`). Started when
     /// the call seat opens, stopped on end/teardown; its 402 ends the call
     /// gracefully through the same out-of-credits alert as a turn failure.
@@ -1148,6 +1152,13 @@ struct ConversationView: View {
                 // Opened FROM the spent-day sheet it carries the tier that
                 // sheet named, so "Go Unlimited" doesn't land on Daily.
                 PaywallView(source: paywallSource, preselectTier: paywallTier)
+            }
+            .sheet(isPresented: Binding(get: { trialReport != nil },
+                                        set: { if !$0 { trialReport = nil } }),
+                   onDismiss: { close() }) {
+                if let trialReport {
+                    WeekRecapSheet(trial: trialReport).environmentObject(appState)
+                }
             }
             .sheet(isPresented: $showingFirstCallCheck, onDismiss: {
                 if closeAfterFirstCallCheck {
@@ -4658,6 +4669,11 @@ struct ConversationView: View {
             guard freeCallSpent || account.needsSubscription else {
                 logPostCallPitch("skipped_minutes_left")
                 endAndCloseAfterPitch()
+                return
+            }
+            if TrialReportStore.shouldOffer(account) {
+                logPostCallPitch("trial_report")
+                trialReport = TrialReportStore.current(targetLanguage: appState.targetLanguage)
                 return
             }
             logPostCallPitch("shown")

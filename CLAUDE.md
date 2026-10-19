@@ -1895,6 +1895,44 @@ deck's last card offers it ("Tell me when next week's is ready") while it is
 off and permission isn't refused — asked after the learner has seen what it
 brings, never cold. Captures: `-capture week-archive` / `practice-week`.
 
+## The free minutes end in a REPORT, not a paywall (2026-10-19)
+
+Founder: "when the 20 free minutes are spent, don't just show the paywall —
+give them a report of what those minutes showed, a test, their level, and a
+routine to keep going." `TrialReport.swift`, and `WeekRecapSheet(trial:)`.
+
+- **It is the week deck in a trial mode, not a second deck.** Same cards
+  over the window from the first spoken talk to now (no previous-week lines;
+  talk minutes fall back to the talks' own lengths when the meter log was
+  pruned), the coach saved into `Documents/trial_report.json`, never into
+  `WeekRecapStore` (it would collide with a week's end). Then three cards of
+  its own: the TEST, the LEVEL, the ROUTINE.
+- **The test is required** (founder's pick). The level and routine cards are
+  not dealt until the trial paper is finished, or could not be built
+  (`testThin` — the minutes are over, another talk can't fill it). The paper
+  is `WeeklyTestEngine.build(scope:)`: the trial window, a floor of 3, the
+  trial's own coach; its id lives on the report and `WeeklyTestView(trialScope:)`
+  resumes it from there, not from the schedule. It is saved as an ordinary
+  weekly paper, so its write-back and retakes work, and the week it falls in
+  reads as tested.
+- **The level is the FIRST formal assessment, run early** (founder's pick):
+  `AppState.assessTrialLevel` runs `WeeklyReportEngine.generate` past the
+  15-minute speech gate (twenty minutes of call is rarely fifteen of the
+  learner's own speech), saves it like any report so Progress agrees, sets
+  `proficiency`, no level-up sheet. Fallback: the median per-talk read.
+- **The routine's button IS the way to the plans** (founder's pick): "Keep
+  going with this routine" applies the purposes' routine (unless setup
+  already did) and opens `PaywallView(source: "trial_report")`; closing it
+  marks the report finished.
+- **Who**: `subscriptionStatus == "inactive"` (never subscribed — a lapsed
+  subscriber's empty pool is not a trial ending), not `unlimited`,
+  `needsSubscription`, a spoken talk on file. Raised by `ConversationView.endAndClose`
+  in place of the post-call pitch, and by `RootTabView.offerTrialReport` on
+  launch/foreground (which also reaches accounts that spent their minutes
+  before this build) — at most `maxOffers` (2) openings, then never again.
+- Debug: `-capture tabs -trialreport 1` raises it past the gate,
+  `-trialthin 1` skips the test, `-trialpage N` opens on a card.
+
 ## Japanese as a TARGET language (2026-09-18)
 
 Japanese was wired for STT, shadow scoring and the clone script from the

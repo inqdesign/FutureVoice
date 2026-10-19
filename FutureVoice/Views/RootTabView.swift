@@ -78,6 +78,9 @@ struct RootTabView: View {
     /// first open after the week turns (and on the week-turn notification).
     @State private var weekRecap: WeekRecap?
     @State private var weekRecapAction: WeekRecapSheet.Action?
+    /// The free minutes' report, raised again on a later open when the call
+    /// that spent them closed before its last card (`TrialReport`).
+    @State private var trialReport: TrialReport?
     /// The first-visit introduction of the tab now on screen (`PageIntroSheet`).
     @State private var pageIntro: PageIntro.Page?
     /// The free-talk welcome waits behind the Talk introduction on a first
@@ -291,6 +294,13 @@ struct RootTabView: View {
                 .environmentObject(appState)
         }
         .onAppear { offerWeekRecap() }
+        .onAppear { offerTrialReport() }
+        .sheet(isPresented: Binding(get: { trialReport != nil },
+                                    set: { if !$0 { trialReport = nil } })) {
+            if let trialReport {
+                WeekRecapSheet(trial: trialReport).environmentObject(appState)
+            }
+        }
         .onAppear { offerWhatsNew() }
         .sheet(isPresented: $showingWhatsNew) {
             WhatsNewSheet().environmentObject(appState)
@@ -311,7 +321,7 @@ struct RootTabView: View {
         }
         #endif
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { offerWeekRecap() }
+            if phase == .active { offerWeekRecap(); offerTrialReport() }
         }
         .onChange(of: callInbox.pendingWeekRecap) { _, _ in offerWeekRecap() }
         .onChange(of: callInbox.debugWeekRecap) { _, recap in
@@ -559,6 +569,29 @@ struct RootTabView: View {
                   updates.pending == nil else { return }
             weekRecapAction = nil
             weekRecap = recap
+        }
+    }
+
+    private func offerTrialReport() {
+        #if DEBUG
+        // `-trialreport 1`: raise the deck on this device's talks, past the gate.
+        if UserDefaults.standard.bool(forKey: "trialreport"), trialReport == nil {
+            trialReport = TrialReportStore.current(targetLanguage: appState.targetLanguage)
+            return
+        }
+        #endif
+        guard appState.setupComplete, trialReport == nil, !TrialReportStore.finished,
+              TrialReportStore.offers < TrialReportStore.maxOffers else { return }
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            guard let account = await BillingGate.shared.snapshot(force: true),
+                  TrialReportStore.shouldOffer(account) else { return }
+            guard trialReport == nil, weekRecap == nil, freeTalkCallId == nil, !freeTalkClosing,
+                  callInbox.pendingAnswer == nil, answeredCall == nil,
+                  !showingAgeCheck, !showingPaywall, !showingWelcome, !showingIntroPreview,
+                  appState.levelUpAnnouncement == nil, referralInbox.pendingJoin == nil,
+                  updates.pending == nil else { return }
+            trialReport = TrialReportStore.current(targetLanguage: appState.targetLanguage)
         }
     }
 

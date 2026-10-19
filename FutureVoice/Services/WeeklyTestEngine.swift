@@ -105,13 +105,23 @@ enum WeeklyTestEngine {
     /// `minItems` gradable things. Reads the active language's stores.
     /// `lastTest` is the latest WEEKLY paper (`WeeklyTestStore.latestWeekly`);
     /// `recentTests` the finished weekly papers the retakes come from.
+    /// A paper over a window of the caller's choosing instead of the week's
+    /// — the trial report's test (`TrialReport`): from the first talk to now,
+    /// its own coach, and a lower floor, since twenty minutes is a small week.
+    struct Scope {
+        var start: Date
+        var minimum: Int
+        var coach: WeekRecap.Coach?
+    }
+
     static func build(
         lastTest: WeeklyTest?,
         recentTests: [WeeklyTest] = [],
         appState: AppState,
+        scope: Scope? = nil,
         now: Date = Date()
     ) async -> WeeklyTest? {
-        let (start, end) = window(lastTest: lastTest, now: now)
+        let (start, end) = scope.map { (min($0.start, now), now) } ?? window(lastTest: lastTest, now: now)
         let id = UUID()
         var rng = WeeklyTestRandom(seed: id)
 
@@ -153,7 +163,7 @@ enum WeeklyTestEngine {
                             rng: &rng)
         // What the week's report found: grammar that keeps going wrong and
         // words leaned on too often (user, 2026-10-03).
-        let coach = await weekCoach(appState: appState, now: now)
+        let coach = scope != nil ? scope?.coach : await weekCoach(appState: appState, now: now)
         items += await grammarItems(coach: coach, userTurns: userTurns, appState: appState, now: now, rng: &rng)
         items += upgradeItems(coach: coach, userTurns: userTurns, appState: appState, rng: &rng)
         // What recent weeks got wrong is asked again — the test is a
@@ -173,7 +183,7 @@ enum WeeklyTestEngine {
         let counts = Dictionary(grouping: items, by: \.kind).mapValues(\.count)
         print("WEEKLYTEST built: sessions=\(windowSessions.count) items=\(counts)")
         #endif
-        guard items.count >= minItems else { return nil }
+        guard items.count >= (scope?.minimum ?? minItems) else { return nil }
         items.shuffle(using: &rng)
         // A test opens on something you can answer by reading — never on the
         // one item that needs the speaker on.

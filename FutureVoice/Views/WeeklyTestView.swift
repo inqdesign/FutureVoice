@@ -17,6 +17,13 @@ struct WeeklyTestView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var player = AudioPlayer()
     @StateObject private var recorder = AudioRecorder()
+    /// Set for the trial report's test (`TrialReport`): its own window and
+    /// floor, its id kept on the report rather than judged by the schedule.
+    private let trialScope: WeeklyTestEngine.Scope?
+
+    init(trialScope: WeeklyTestEngine.Scope? = nil) {
+        self.trialScope = trialScope
+    }
 
     /// The speak item's own little machine.
     private enum SpeakPhase: Equatable { case idle, recording, reading, heardNothing, micOff }
@@ -106,7 +113,7 @@ struct WeeklyTestView: View {
                     WeeklyTestResultView(test: test, isRetry: retry != nil, onRetry: { startRetry(from: test) })
                 }
             }
-            .navigationTitle(Text("Weekly test"))
+            .navigationTitle(trialScope == nil ? Text("Weekly test") : Text("Your first test"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -127,6 +134,20 @@ struct WeeklyTestView: View {
 
     @ViewBuilder
     private var thinState: some View {
+        if trialScope != nil {
+            // The trial's minutes are over; another talk can't fill it.
+            ContentUnavailableView {
+                Label("Not enough for a test yet", systemImage: "calendar.badge.clock")
+            } description: {
+                Text(explain("Your talks were too short to make questions from. Your report goes on without it."))
+            }
+        } else {
+            weeklyThinState
+        }
+    }
+
+    @ViewBuilder
+    private var weeklyThinState: some View {
         VStack(spacing: 16) {
             ContentUnavailableView {
                 Label("A talk or two first", systemImage: "calendar.badge.clock")
@@ -985,6 +1006,17 @@ struct WeeklyTestView: View {
 
     private func start() async {
         let tests = WeeklyTestStore.shared.load()
+        if trialScope != nil {
+            // The trial's paper is the one on the report, whatever the
+            // week's schedule says.
+            if let id = TrialReportStore.load()?.testId, let test = tests.first(where: { $0.id == id }) {
+                if test.isFinished { phase = .result(test) }
+                else { resume(WeeklyTestEngine.pruned(test) ?? test) }
+            } else {
+                await buildNew()
+            }
+            return
+        }
         #if DEBUG
         // A capture run asks for a specific kind: always deal a fresh paper.
         if DebugCapture.weeklyTestKind != nil { await buildNew(); return }
@@ -1010,6 +1042,23 @@ struct WeeklyTestView: View {
         phase = .loading
         let tests = WeeklyTestStore.shared.load()
         let opening = settings.schedule.currentOpening()
+        if let scope = trialScope {
+            var report = TrialReportStore.load()
+            guard var test = await WeeklyTestEngine.build(lastTest: nil, appState: appState, scope: scope) else {
+                report?.testThin = true
+                if let report { TrialReportStore.save(report) }
+                Analytics.capture("trial_test_thin")
+                phase = .thin
+                return
+            }
+            test.startedAt = Date()
+            WeeklyTestStore.shared.save(test)
+            report?.testId = test.id
+            if let report { TrialReportStore.save(report) }
+            Analytics.capture("weekly_test_started", ["items": test.total, "trial": true])
+            resume(test)
+            return
+        }
         guard var test = await WeeklyTestEngine.build(lastTest: WeeklyTestStore.latestWeekly(tests),
                                                       recentTests: tests,
                                                       appState: appState) else {
