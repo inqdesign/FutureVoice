@@ -322,6 +322,7 @@
     <string name="cancel_this_take">"Cancel this take"</string>
     <!-- 'Capped at ≈%@ by the words you use — your next talk will be read for the structures you build.' -->
     <string name="capped_at_by_the_words_you_use_your_next_talk_will_be_read_f_13babf">"Capped at ≈%s by the words you use — your next talk will be read for the structures you build."</string>
+    <string name="captions">"Captions"</string>
     <!-- "Captured from what you say, what your fluent self says back, and the expressions your watched scenes teach. Mark the ones you've got down as known." -->
     <string name="captured_from_what_you_say_what_your_fluent_self_says_back_a_21aa65">"Captured from what you say, what your fluent self says back, and the expressions your watched scenes teach. Mark the ones you've got down as known."</string>
     <string name="cards_done">"Cards done"</string>
@@ -1308,6 +1309,7 @@
     <string name="my_routine">"My routine"</string>
     <string name="my_script">"My script"</string>
     <string name="my_scripts">"My scripts"</string>
+    <string name="my_situations">"My situations"</string>
     <string name="my_words_lld">"My words · %d"</string>
     <string name="nailed_it_matched_the_line_almost_word_for_word">"Nailed it — matched the line almost word for word."</string>
     <!-- 'Nailed it — matched the line almost word for word, on the beat.' -->
@@ -1371,6 +1373,7 @@
     <string name="no_need_to_be_loud_just_be_clear">"No need to be loud — just be clear."</string>
     <string name="no_one_here_yet_for_this_language_check_back_soon">"No one here yet for this language — check back soon."</string>
     <string name="no_one_matches_yet_try_an_interest_a_job_or_a_city">"No one matches yet — try an interest, a job, or a city."</string>
+    <string name="no_pause">"No pause"</string>
     <string name="no_plan">"No plan"</string>
     <string name="no_practice_this_day">"No practice this day."</string>
     <!-- 'No prompt, no card on screen — you reached for these yourself. Cards you produce live jump ahead in the review queue.' -->
@@ -1378,6 +1381,7 @@
     <string name="no_saved_lines">"No saved lines"</string>
     <string name="no_seat_right_now">"No seat right now"</string>
     <string name="no_sessions_yet">"No sessions yet"</string>
+    <string name="no_situations_to_hear_yet">"No situations to hear yet"</string>
     <string name="no_streak_yet">"No streak yet"</string>
     <string name="no_takes_came_back_please_try_again">"No takes came back. Please try again."</string>
     <string name="no_takes_yet">"No takes yet"</string>
@@ -1516,6 +1520,7 @@
     <string name="opens_me_your_profile_voice_daily_goal_plan_and_this_guide_t_15a2d0">"Opens Me: your profile, voice, daily goal, plan and this guide. The ring around your picture shows how much of this month's talk time you've used."</string>
     <string name="opens_the_full_card">"Opens the full card"</string>
     <string name="optional_what_s_the_situation_about">"Optional — what's the situation about?"</string>
+    <string name="options">"Options"</string>
     <string name="or_a_generic_role">"Or a generic role:"</string>
     <string name="or_describe_one_yourself">"Or describe one yourself"</string>
     <string name="or_describe_where_custom">"Or describe where (custom)…"</string>
@@ -1546,6 +1551,7 @@
     <!-- 'Paste the presentation or speech you actually have to give. Plus and Max.' -->
     <string name="paste_the_presentation_or_speech_you_actually_have_to_give_p_a8d05a">"Paste the presentation or speech you actually have to give. Plus and Max."</string>
     <string name="pause">"Pause"</string>
+    <string name="pause_between_lines">"Pause between lines"</string>
     <string name="paused">"Paused"</string>
     <string name="paused_tap_to_pick_it_back_up">"Paused — tap to pick it back up"</string>
     <string name="pauses">"Pauses"</string>
@@ -1610,6 +1616,7 @@
     <string name="play_what_you_said">"Play what you said"</string>
     <string name="play_your_recording">"Play your recording"</string>
     <string name="play_your_take">"Play your take"</string>
+    <string name="player">"Player"</string>
     <string name="plus">"Plus"</string>
     <string name="plus_and_max">"Plus and Max"</string>
     <string name="podcasts">"podcasts"</string>
@@ -1631,7 +1638,10 @@
     <string name="preparing_the_file">"Preparing the file…"</string>
     <string name="preparing_your_video">"Preparing your video…"</string>
     <string name="present_a_real_product_or_invention">"Present a real product or invention"</string>
+    <!-- 'Press play to hear every situation, or pick one from the list.' -->
+    <string name="press_play_to_hear_every_situation_or_pick_one_from_the_list">"Press play to hear every situation, or pick one from the list."</string>
     <string name="preview">"Preview %s"</string>
+    <string name="previous">"Previous"</string>
     <string name="previous_expression">"Previous expression"</string>
     <string name="previous_selection">"Previous selection"</string>
     <string name="previous_word">"Previous word"</string>
@@ -1760,6 +1770,7 @@
     <string name="remove_photo">"Remove photo"</string>
     <string name="remove_the_accent">"Remove the accent?"</string>
     <string name="renamed_on_this_device_only">"Renamed on this device only"</string>
+    <string name="repeat">"Repeat"</string>
     <string name="repeat_your_fluent_self_s_lines_from_this_talk">"Repeat your fluent self's lines from this talk."</string>
     <string name="replace_your_current_clone_with_a_new_one">"Replace your current clone with a new one"</string>
     <!-- 'Replaces your current voice. Your recording is kept, so you can rebuild the original anytime from Me → Voice.' -->
@@ -1835,6 +1846,7 @@
     <string name="s_1_word_phrase_or_line_is_waiting">"1 word, phrase or line is waiting."</string>
     <!-- '%.1f verified grammar slips per 100 spoken words — the same density the assessment weighs.' -->
     <string name="s_1f_verified_grammar_slips_per_100_spoken_words_the_same_de_b8c9f0">"%.1f verified grammar slips per 100 spoken words — the same density the assessment weighs."</string>
+    <string name="s_2_seconds">"2 seconds"</string>
     <string name="s_3_days">"3 days"</string>
     <string name="said_lld">"Said %d×"</string>
     <string name="same_as_before">"same as before"</string>
@@ -1980,6 +1992,7 @@
     <string name="shown_beside_your_score_on_every_challenge_board">"Shown beside your score on every challenge board."</string>
     <!-- 'Shown over their face on the Watch map. Left empty, one is written for you.' -->
     <string name="shown_over_their_face_on_the_watch_map_left_empty_one_is_wri_26f298">"Shown over their face on the Watch map. Left empty, one is written for you."</string>
+    <string name="shuffle">"Shuffle"</string>
     <!-- "Sign in, and your voice lands in this account the day it's made." -->
     <string name="sign_in_and_your_voice_lands_in_this_account_the_day_it_s_ma_e2e5d2">"Sign in, and your voice lands in this account the day it's made."</string>
     <string name="sign_in_to_icloud_in_settings_first_then_try_again">"Sign in to iCloud in Settings first, then try again."</string>
@@ -1995,6 +2008,7 @@
     <string name="since">"Since %s"</string>
     <string name="situation">"Situation"</string>
     <string name="situation_ideas">"Situation ideas"</string>
+    <string name="situations">"Situations"</string>
     <string name="skill_by_skill">"Skill by skill"</string>
     <string name="skip">"Skip"</string>
     <string name="skip_sign_in_debug">"Skip sign-in (debug)"</string>
@@ -2079,6 +2093,7 @@
     <string name="stop">"Stop"</string>
     <string name="stop_dictation">"Stop dictation"</string>
     <string name="stop_playback">"Stop playback"</string>
+    <string name="stop_playing">"Stop playing"</string>
     <string name="stop_preview">"Stop preview"</string>
     <string name="stop_review">"Stop &amp; review"</string>
     <string name="stop_your_recording">"Stop your recording"</string>
@@ -2430,6 +2445,7 @@
     <string name="time_to_meet_the_you_who_speaks_perfect_in_your_own_voice_on_e62699">"Time to meet the you who speaks perfect %s — in your own voice. One minute of reading is all it takes."</string>
     <string name="time_to_practice">"Time to practice"</string>
     <string name="time_to_say_it_again">"Time to say it again"</string>
+    <string name="time_to_say_it_back">"Time to say it back"</string>
     <string name="tip">"Tip"</string>
     <string name="title_optional">"Title (optional)"</string>
     <string name="to_reach">"To reach %s"</string>
@@ -2452,6 +2468,7 @@
     <string name="total">"total"</string>
     <string name="touch_and_hold_to_file_it_again">"Touch and hold to file it again."</string>
     <string name="transcript">"Transcript"</string>
+    <string name="translation">"Translation"</string>
     <string name="trap_words_what_you_said_before_the_fix">"Trap words — what you said before the fix"</string>
     <!-- 'Travel' -->
     <string name="travel_22fb76">"Travel"</string>
@@ -2565,6 +2582,8 @@
     <string name="waiting_for_the_first_sync">"Waiting for the first sync"</string>
     <string name="warm_and_chatty">"Warm and chatty"</string>
     <string name="watch">"Watch"</string>
+    <!-- 'Watch a situation once and it plays here, both voices, whenever you like.' -->
+    <string name="watch_a_situation_once_and_it_plays_here_both_voices_wheneve_11cd3e">"Watch a situation once and it plays here, both voices, whenever you like."</string>
     <string name="watch_again">"Watch again"</string>
     <string name="watch_again_or_study_it">"Watch again, or study it"</string>
     <string name="watch_book">"Watch book"</string>

@@ -315,6 +315,10 @@ fun WatchSceneScreen(
                     // Streaming unavailable — classic fetch-then-play.
                     mp3.play(loadOrSynthesize(request))
                 }
+                // The listening playlist finds the line by this, whatever
+                // the voice behind the id is called later.
+                PhraseAudioStore.shared(context).rememberSceneLine(
+                    request.text, request.voiceId, isOther = turns[i].speaker != "user")
                 if (!loggedScene) {
                     // A scene the learner sat through keeps a streak alive —
                     // logged ONCE, on the first line actually heard.
@@ -774,7 +778,7 @@ private val SceneRuns = mutableMapOf<String, Deferred<ScenarioCurriculum>>()
 private const val PREFETCH_DEPTH = 2
 
 /** iOS `Scenario.displayTitle` — the scene's name until its own title is written. */
-private val Scenario.displayTitle: String
+internal val Scenario.displayTitle: String
     get() {
         val r = role.trim()
         return if (r.isEmpty()) environment else "$environment · with $r"

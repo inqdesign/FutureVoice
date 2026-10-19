@@ -1668,6 +1668,8 @@ internal fun HomeScreen(
 ) {
     val context = LocalContext.current
     var showDeepen by remember { mutableStateOf(false) }
+    /** The situation player sheet (iOS `PlaylistButton`'s `.sheet`). */
+    var showPlayer by remember { mutableStateOf(false) }
     // "Why & how" — each tab's guide, the first time it is opened (iOS
     // `RootTabView.offerPageIntro`).
     PageIntroHost(tab.guidePage(), blocked = guideBlocked || showDeepen)
@@ -2010,6 +2012,15 @@ internal fun HomeScreen(
 
           }
         }
+        // The situation player's door, bottom-left of Talk (iOS
+        // `ConversationHome` → `PlaylistButton`, 2026-10-18): above the
+        // floating bar, fixed while the page scrolls under it.
+        if (tab == HomeTab.TALK && !writingSituation) {
+            PlaylistButton(onClick = { showPlayer = true },
+                modifier = Modifier.align(Alignment.BottomStart)
+                    .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.navigationBars)
+                    .padding(start = 16.dp, bottom = 76.dp + 16.dp))
+        }
         // The feather under the floating bar (iOS `tabBarScrollFeather`):
         // from the physical bottom edge, 44 dp of page colour and a 72 dp
         // ramp to transparent above it, so pages dissolve as they slide
@@ -2027,6 +2038,9 @@ internal fun HomeScreen(
                 IosTabBar(selected = tab, onSelect = onTabChange)
             }
         }
+        // The player floats over the page, the bar included (iOS sheet).
+        ScenePlayerSheet(visible = showPlayer, state = state,
+            topInset = padding.calculateTopPadding(), onDismiss = { showPlayer = false })
       }
     }
 }

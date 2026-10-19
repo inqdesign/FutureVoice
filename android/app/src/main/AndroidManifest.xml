@@ -94,6 +94,14 @@
             android:exported="false"
             android:foregroundServiceType="microphone|mediaPlayback" />
 
+        <!-- The situation player: keeps the list going with the screen off and
+             holds its lock-screen controls (iOS background audio + Now
+             Playing + the Live Activity). -->
+        <service
+            android:name=".audio.PlaylistService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
         <!-- The daily call ringing on a dark or locked screen: Answer /
              Decline, nothing starts until one is pressed. Its own task, so
              declining never brings the app forward. -->

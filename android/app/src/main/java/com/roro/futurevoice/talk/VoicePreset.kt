@@ -81,6 +81,36 @@ object VoicePreset {
         "es" to mapOf(PAIGE to "Carolina", MARK to "Jorge", EMMA to "Carmen", JAMES to "Javier"),
     )
 
+    /**
+     * What the slots spoke as in Korean and Japanese from 2026-09-28 until
+     * Cartesia on 2026-10-12. Nothing synthesizes in these any more; lines
+     * made in them are still on phones, and listening back finds them here
+     * (iOS `VoicePreset.retiredVoicedBySlot`).
+     */
+    private val retiredVoicedBySlot: Map<String, String> = mapOf(
+        PAIGE to "5n5gqmaQi9Ewevrz7bOS",
+        MARK to "L4az9Gb378GIycFl2nAB",
+        EMMA to "8jHHF8rMqMlg8if2mOUe",
+        JAMES to "AKF7f2y1L8ktV5vxXILw",
+    )
+
+    /**
+     * Every voice a preset has ever spoken in, [slot]'s own first, then the
+     * other slots'. For finding audio already made, never for synthesis: a
+     * line on file in another slot's voice was made for this same text, and
+     * a person re-voiced on 2026-10-12 spoke in whichever slot the learner
+     * had picked (iOS `VoicePreset.everyVoiceEverUsed(startingWith:)`).
+     */
+    fun everyVoiceEverUsed(slot: String?): List<String> {
+        fun voices(s: String): List<String> =
+            listOf(s) + voicedBySlot.keys.sorted().mapNotNull { voicedBySlot[it]?.get(s) } +
+                listOfNotNull(retiredVoicedBySlot[s])
+        val catalog = listOf(PAIGE, MARK, EMMA, JAMES)
+        val slots = listOfNotNull(slot) + catalog.filter { it != slot }
+        val seen = HashSet<String>()
+        return slots.flatMap { voices(it) }.filter { seen.add(it) }
+    }
+
     @Volatile private var appContext: Context? = null
     fun init(context: Context) { appContext = context.applicationContext }
 

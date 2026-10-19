@@ -50,6 +50,10 @@ class CallForegroundService : Service() {
             // `holdForLiveCall` with `CallNowPlaying`): no scheduled ring may
             // land on a call already up. Idempotent — this runs per phase.
             com.roro.futurevoice.data.DailyCallScheduler.holdForLiveCall(context)
+            // A playlist playing when the call starts stops and hands the lock
+            // screen over; it keeps its place for afterwards (iOS
+            // `CallNowPlaying.begin` → `PlaylistPlayer.yieldToCall`).
+            com.roro.futurevoice.audio.PlaylistPlayer.yieldToCall()
             val i = Intent(context, CallForegroundService::class.java)
                 .putExtra(EXTRA_TITLE, title).putExtra(EXTRA_HINT, hint).putExtra(EXTRA_PAUSED, paused)
             runCatching { context.startForegroundService(i) }
