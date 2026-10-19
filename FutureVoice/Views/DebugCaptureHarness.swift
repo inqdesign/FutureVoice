@@ -112,6 +112,10 @@ enum DebugCapture {
     /// A profile with both halves filled: the typed fields and three lines
     /// the fluent self picked up, classified the way the summary call would.
     private static func seedSamplePersona(_ appState: AppState) {
+        if UserDefaults.standard.bool(forKey: "fictionalPersona") {
+            seedFictionalPersona(appState)
+            return
+        }
         var p = UserPersona.empty
         p.displayName = "Eunggyu"
         p.city = "Munich"
@@ -160,6 +164,28 @@ enum DebugCapture {
             always looking for ways to practice better communication. When I \
             have some free time, I really enjoy going for a long run along the \
             Isar river to clear my head.
+            """, for: PublicIntroComposer.sources(p, language: appState.targetLanguage))
+    }
+
+    /// `-fictionalPersona YES`: a made-up learner for screens that leave the
+    /// app (mail, marketing), so the founder's own profile never does.
+    private static func seedFictionalPersona(_ appState: AppState) {
+        var p = UserPersona.empty
+        p.displayName = "Minji"
+        p.city = "Seoul"
+        p.country = "South Korea"
+        p.occupation = "UX designer at a travel startup"
+        p.interests = ["design", "travel", "coffee"]
+        p.metAt = Calendar.current.date(byAdding: .day, value: -20, to: Date())
+        PersonaStore.shared.save(p)
+        appState.persona = p
+        PublicIntroComposer.save("""
+            Hi, I'm Minji, a UX designer in Seoul. I work at a small travel \
+            startup, so most of my day goes into figuring out why people get \
+            lost in an app and how to make that stop. Outside work I'm usually \
+            hunting for a quiet café with good filter coffee, and I plan trips \
+            far more often than I actually take them. I'd love to talk about \
+            design, cities you've lived in, or the best thing you ate abroad.
             """, for: PublicIntroComposer.sources(p, language: appState.targetLanguage))
     }
 
@@ -295,11 +321,25 @@ enum DebugCapture {
         return scripts[0]
     }
 
+    /// `-skyPhotoDir <host dir>`: <name>.jpg there is that sample person's
+    /// photo (lowercased, accents, spaces and dots dropped: "Mr. Becker" →
+    /// mrbecker.jpg, "Sofía" → sofia.jpg). Used by the map and the boards.
+    static func samplePhoto(_ name: String) -> UIImage? {
+        guard let dir = UserDefaults.standard.string(forKey: "skyPhotoDir") else { return nil }
+        let file = name.folding(options: .diacriticInsensitive, locale: nil)
+            .lowercased().filter { $0.isLetter } + ".jpg"
+        return UIImage(contentsOfFile: (dir as NSString).appendingPathComponent(file))
+    }
+
     /// Top-three faces for the challenge captures: the first two with a
     /// drawn photo stand-in, the third with none (its initial shows).
     private static func sampleFaces(_ names: [String]) -> [SpeechChallenges.Face] {
         let tints: [UIColor] = [.systemTeal, .systemOrange, .systemPink, .systemIndigo, .systemGreen]
         return names.enumerated().map { i, name in
+            if let img = samplePhoto(name) {
+                let square = img.preparingThumbnail(of: CGSize(width: 96, height: 96)) ?? img
+                return .init(display_name: name, avatar: square.jpegData(compressionQuality: 0.8)?.base64EncodedString())
+            }
             // Every third has no photo, so the initial is in the sample too.
             guard i % 3 != 2 else { return .init(display_name: name, avatar: nil) }
             let image = UIGraphicsImageRenderer(size: CGSize(width: 96, height: 96)).image { ctx in
@@ -1203,6 +1243,25 @@ enum DebugCapture {
             var p = SessionSummarizer.Progress()
             if name != "summary-progress-start" {
                 p.readBack = true
+        case "situations", "situations-playing":
+            // The listening player over seeded scenes. A capture run has no
+            // clone and no watched scene, so every seeded scene gets a short
+            // dialogue and the bundled ring tone as each line's "audio" —
+            // enough to be listed, played and captioned.
+            once("situations") {
+                seedScenarios(into: appState)
+                if appState.voiceCloneId == nil { appState.voiceCloneId = "capture-voice" }
+                seedSceneAudio(cloneId: appState.voiceCloneId!)
+            }
+            if name == "situations-playing", !PlaylistPlayer.shared.hasQueue {
+                let lines = SceneLibrary.tracks(scenarios: ScenarioStore.shared.load(),
+                                                cloneId: appState.voiceCloneId).flatMap(\.lines)
+                PlaylistPlayer.shared.play(lines, title: explain("My situations"))
+            }
+            return AnyView(Color(.systemGroupedBackground).ignoresSafeArea()
+                .sheet(isPresented: .constant(true)) {
+                    ScenePlayerSheet().environmentObject(appState)
+                })
                 p.wroteCorrections = true
                 p.phrases = 4
                 p.wroteDrills = true
@@ -1243,25 +1302,6 @@ enum DebugCapture {
             once("level") { seedSessions() }
             return AnyView(LevelInfoSheet(level: .b1, surface: .watch)
                 .environmentObject(appState))
-        case "situations", "situations-playing":
-            // The listening player over seeded scenes. A capture run has no
-            // clone and no watched scene, so every seeded scene gets a short
-            // dialogue and the bundled ring tone as each line's "audio" —
-            // enough to be listed, played and captioned.
-            once("situations") {
-                seedScenarios(into: appState)
-                if appState.voiceCloneId == nil { appState.voiceCloneId = "capture-voice" }
-                seedSceneAudio(cloneId: appState.voiceCloneId!)
-            }
-            if name == "situations-playing", !PlaylistPlayer.shared.hasQueue {
-                let lines = SceneLibrary.tracks(scenarios: ScenarioStore.shared.load(),
-                                                cloneId: appState.voiceCloneId).flatMap(\.lines)
-                PlaylistPlayer.shared.play(lines, title: explain("My situations"))
-            }
-            return AnyView(Color(.systemGroupedBackground).ignoresSafeArea()
-                .sheet(isPresented: .constant(true)) {
-                    ScenePlayerSheet().environmentObject(appState)
-                })
         case "home-scenarios":
             once("home") { seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState) }
             previewScenariosTab = true
@@ -1307,6 +1347,15 @@ enum DebugCapture {
             // "Keep your practice in iCloud?" over the Talk home.
             once("home") { seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState) }
             return AnyView(ConversationHome().sheet(isPresented: .constant(true)) { BackupOfferSheet() })
+        case "discover-settings":
+            // The Talk tab's topic settings: why you're learning, interests.
+            return AnyView(DiscoverSettingsSheet().environmentObject(appState))
+        case "voice-move":
+            // "Your voice moves to the new engine" over the Talk home.
+            once("home") { seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState) }
+            return AnyView(ConversationHome().sheet(isPresented: .constant(true)) {
+                VoiceMoveSheet().environmentObject(appState).environmentObject(AuthService())
+            })
         case "voice-revival", "voice-revival-tune":
             // A parked voice brought back at the call tap (`VoiceRevival`):
             // the rebuild, then the speed + accent page.
@@ -2419,6 +2468,28 @@ enum DebugCapture {
 
     static var sampleQuietWeek: WeekRecap {
         let week = WeekRecapBuilder.lastWeek()
+    /// Give every seeded scene a short dialogue and a playable file for
+    /// each line, under the keys WatchView uses.
+    static func seedSceneAudio(cloneId: String) {
+        guard let url = Bundle.main.url(forResource: "ringtone", withExtension: "wav"),
+              let data = try? Data(contentsOf: url) else { return }
+        let people = CounterpartStore.shared.load()
+        for var scenario in ScenarioStore.shared.load() {
+            if (scenario.curriculum?.dialogue ?? []).isEmpty {
+                scenario.curriculum?.dialogue = [
+                    DialogueEngineTurn(speaker: "counterpart", text: "Hey! Did you see the news this morning?"),
+                    DialogueEngineTurn(speaker: "user", text: "I did. Honestly, it turned out better than expected."),
+                    DialogueEngineTurn(speaker: "counterpart", text: "Really? What changed your mind?"),
+                    DialogueEngineTurn(speaker: "user", text: "Let me walk you through what happened.")
+                ]
+                ScenarioStore.shared.save(scenario)
+            }
+            for line in SceneLibrary.dialogue(scenario: scenario, cloneId: cloneId, people: people) {
+                PhraseAudioStore.shared.save(data, text: line.text, voiceId: line.voiceId)
+            }
+        }
+    }
+
         return WeekRecap(
             start: week.start, end: week.end, activeDays: Array(repeating: false, count: 7), streak: 0,
             talkSeconds: 0, previousTalkSeconds: 12 * 60, talks: [],
@@ -2466,28 +2537,6 @@ enum DebugCapture {
         test.appliedAt = test.finishedAt
         items.removeAll()
         WeeklyTestStore.shared.save(test)
-    }
-
-    /// Give every seeded scene a short dialogue and a playable file for
-    /// each line, under the keys WatchView uses.
-    static func seedSceneAudio(cloneId: String) {
-        guard let url = Bundle.main.url(forResource: "ringtone", withExtension: "wav"),
-              let data = try? Data(contentsOf: url) else { return }
-        let people = CounterpartStore.shared.load()
-        for var scenario in ScenarioStore.shared.load() {
-            if (scenario.curriculum?.dialogue ?? []).isEmpty {
-                scenario.curriculum?.dialogue = [
-                    DialogueEngineTurn(speaker: "counterpart", text: "Hey! Did you see the news this morning?"),
-                    DialogueEngineTurn(speaker: "user", text: "I did. Honestly, it turned out better than expected."),
-                    DialogueEngineTurn(speaker: "counterpart", text: "Really? What changed your mind?"),
-                    DialogueEngineTurn(speaker: "user", text: "Let me walk you through what happened.")
-                ]
-                ScenarioStore.shared.save(scenario)
-            }
-            for line in SceneLibrary.dialogue(scenario: scenario, cloneId: cloneId, people: people) {
-                PhraseAudioStore.shared.save(data, text: line.text, voiceId: line.voiceId)
-            }
-        }
     }
 
     static func seedSessions(scored: Bool = false, beginner: Bool = false) {
@@ -2605,6 +2654,11 @@ enum DebugCapture {
 
     static func seedSkyPeople(into appState: AppState, withClose: Bool = true) {
         for c in appState.counterparts { appState.deleteCounterpart(id: c.id) }
+        // `-skyPhotoDir`: me.jpg there is the learner's own face in the middle.
+        if let dir = UserDefaults.standard.string(forKey: "skyPhotoDir"),
+           let me = UIImage(contentsOfFile: (dir as NSString).appendingPathComponent("me.jpg")) {
+            AvatarStore.shared.save(me)
+        }
         let cast: [(String, String, String?, String?)] = [
             ("Jisu", "Partner", "Partner", nil), ("Mom", "Mother", "Family", nil),
             ("Minho", "Best friend", "Friend", nil), ("Harin", "Friend from school", "Friend", nil),
@@ -2667,6 +2721,9 @@ enum DebugCapture {
                                     in: appState.targetLanguage)
             }
             appState.saveCounterpart(c)
+            // `-skyPhotoDir <host dir>`: <name>.jpg there becomes that
+            // person's photo (lowercased, spaces and dots dropped).
+            if let img = samplePhoto(name) { CounterpartPhotoStore.shared.save(img, for: c.id) }
         }
     }
 

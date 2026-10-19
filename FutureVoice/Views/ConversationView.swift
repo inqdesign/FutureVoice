@@ -687,6 +687,24 @@ struct ConversationView: View {
         sessionCounterpartId.flatMap { id in appState.counterparts.first { $0.id == id } }
     }
 
+    /// Who the other side's lines are labelled as. A person-talk is that
+    /// person; a scenario call is its linked person, else the role the
+    /// scenario names ("Interviewer"); everything else is the fluent self.
+    /// A scenario with no role leaves the counterpart to the scene, and
+    /// there is no name to show for that, so it stays the fluent self.
+    private var otherSideName: String {
+        if let counterpart { return counterpart.name }
+        if let sid = sessionScenarioId,
+           let s = appState.scenarios.first(where: { $0.id == sid }) {
+            if let person = s.counterpartId.flatMap({ id in appState.counterparts.first { $0.id == id } }) {
+                return person.name
+            }
+            let role = s.role.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !role.isEmpty { return chrome(String.LocalizationValue(role)) }
+        }
+        return chrome("Future self")
+    }
+
     /// Who speaks the reply audio. A person-talk uses THAT person's preset
     /// voice — the partner is the stranger, not the fluent self. Everything
     /// else keeps the user's clone.
@@ -1437,7 +1455,8 @@ struct ConversationView: View {
                                         ? grammarFocus?.label : nil,
                                      translates: !LanguageCatalog.sameLanguage(appState.targetLanguage,
                                                                                appState.nativeLanguage),
-                                     showsCorrections: showsCorrections)
+                                     showsCorrections: showsCorrections,
+                                     otherName: otherSideName)
                                 .id(turn.id)
                                 // A reply arrives already growing; sliding it
                                 // up from below on top of that read as a jolt.
@@ -1479,7 +1498,7 @@ struct ConversationView: View {
                             // and this line flashing for a second and going
                             // read as a glitch (reported 2026-10-09).
                             if showsTranscript {
-                                ThinkingIndicator()
+                                ThinkingIndicator(name: otherSideName)
                                     .id("partial-thinking")
                                     .transition(Self.placeholderTransition)
                             }
@@ -1489,7 +1508,7 @@ struct ConversationView: View {
                             // is not re-inserted) until the bubble that
                             // replaces it has text to be drawn with.
                             if showsTranscript, replyHasNoWordsYet {
-                                ThinkingIndicator()
+                                ThinkingIndicator(name: otherSideName)
                                     .id("partial-thinking")
                                     .transition(Self.placeholderTransition)
                             }
@@ -1505,7 +1524,7 @@ struct ConversationView: View {
                             .transition(Self.placeholderTransition)
                     } else if phase == .thinking && (turns.last?.role == .user) {
                         if showsTranscript {
-                            ThinkingIndicator()
+                            ThinkingIndicator(name: otherSideName)
                                 .id("partial-thinking")
                                 .transition(Self.placeholderTransition)
                         }
@@ -4798,6 +4817,8 @@ private struct TurnView: View {
     /// still saved — this only decides whether it is drawn mid-call, so the
     /// summary, the drill cards and the talk's book are untouched by it.
     var showsCorrections = true
+    /// The other side's label — the person or role on a cast call.
+    var otherName: String = chrome("Future self")
 
     @State private var translation: String?
     @State private var showing = false
@@ -4810,7 +4831,7 @@ private struct TurnView: View {
 
     var body: some View {
         DialogueLine(speaker: speaker,
-                     name: turn.role == .user ? chrome("You") : chrome("Future self"),
+                     name: turn.role == .user ? chrome("You") : otherName,
                      scale: .call) {
             // The learner's line goes up the instant they stop talking — it is
             // the text they were already watching build on screen, so there is
@@ -5071,10 +5092,14 @@ private struct PartialTurnView: View {
 }
 
 private struct ThinkingIndicator: View {
+    /// The other side's label (`otherSideName`).
+    var name: String = chrome("Future self")
+
     var body: some View {
         HStack(spacing: 6) {
             ProgressView().scaleEffect(0.7)
-            Text("Future self is thinking…")
+            Text(name == chrome("Future self") ? chrome("Future self is thinking…")
+                                                : chrome("\(name) is thinking…"))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }

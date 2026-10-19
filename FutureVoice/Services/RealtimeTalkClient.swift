@@ -206,6 +206,16 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// The echo does not stop with the audio: the room's tail and the last
     /// buffers keep arriving. Hold the gate briefly past the end of a line.
     private var echoHoldUntil = Date.distantPast
+    /// The gate is for the OPEN SPEAKER only. In earphones the mic hears
+    /// none of the line (device log 2026-10-16, Bluetooth HFP: rms 0.0000
+    /// whenever the learner was quiet), so there is no echo to learn — and
+    /// the learn window took the learner's own voice instead: they were
+    /// still finishing their sentence as the reply began, the floor came out
+    /// at their speaking level, and every barge-in after that was muted as
+    /// "echo". The gateway's text check still catches a stray echo there.
+    private var echoNeedsGate: Bool {
+        builtOutput == AVAudioSession.Port.builtInSpeaker.rawValue
+    }
 
     /// Where the gateway lives. Overridable at runtime so a device on the same
     /// Wi-Fi can be pointed at `wrangler dev` (Me → Realtime call → long-press
@@ -1724,7 +1734,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         // speaker is half-duplex, because the echo canceller has not heard
         // the voice yet and cannot cancel what it has never heard.
         let halfDuplex = builtOutput == AVAudioSession.Port.builtInSpeaker.rawValue
-        mic.setEchoGate(active: true, halfDuplex: halfDuplex)
+        mic.setEchoGate(active: echoNeedsGate, halfDuplex: halfDuplex)
         state = .speaking
         replySampleRate = opener.rate
         ensurePlaybackFormat(rate: opener.rate)
@@ -2187,7 +2197,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             let halfDuplex = linesStarted == 1
                 && builtOutput == AVAudioSession.Port.builtInSpeaker.rawValue
             if halfDuplex { Self.step("echo gate: first line on speaker — half-duplex") }
-            mic.setEchoGate(active: true, halfDuplex: halfDuplex)
+            mic.setEchoGate(active: echoNeedsGate, halfDuplex: halfDuplex)
             replySampleRate = json["sampleRate"] as? Double ?? 22050
             ensurePlaybackFormat(rate: replySampleRate)
             // The line is appended empty and filled by the deltas, so the

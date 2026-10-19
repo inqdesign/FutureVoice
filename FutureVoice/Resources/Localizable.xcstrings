@@ -250,6 +250,52 @@
         }
       }
     },
+    "%@ is thinking…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ denkt nach…"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ está pensando…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ réfléchit…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@が考え中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 생각하는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@正在想…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@正在想…"
+          }
+        }
+      }
+    },
     "%@ pauses/min · %lldm per talk · %lld words/turn" : {
       "localizations" : {
         "de" : {
@@ -3868,6 +3914,52 @@
         }
       }
     },
+    "Preparing" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In Vorbereitung"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En preparación"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En préparation"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "準備中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "준비 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "准备中"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "準備中"
+          }
+        }
+      }
+    },
     "Press play to hear every situation, or pick one from the list." : {
       "localizations" : {
         "ko" : {
@@ -6048,6 +6140,52 @@
         }
       }
     },
+    "Whoever the situation calls for" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wer in der Situation vorkommt, spricht mit dir"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hablarás con quien pida la situación"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu parleras à la personne que la situation demande"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "状況に出てくる人が相手になります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "상황에 나오는 사람이 상대가 돼요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "情境里会出现的人就是对方"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "情境裡會出現的人就是對方"
+          }
+        }
+      }
+    },
     "Words and phrases that became yours." : {
       "localizations" : {
         "de" : {
@@ -6462,52 +6600,6 @@
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "Whoever the situation calls for" : {
-              "localizations" : {
-                "de" : {
-                  "stringUnit" : {
-                    "state" : "translated",
-                    "value" : "Wer in der Situation vorkommt, spricht mit dir"
-                  }
-                },
-                "es" : {
-                  "stringUnit" : {
-                    "state" : "translated",
-                    "value" : "Hablarás con quien pida la situación"
-                  }
-                },
-                "fr" : {
-                  "stringUnit" : {
-                    "state" : "translated",
-                    "value" : "Tu parleras à la personne que la situation demande"
-                  }
-                },
-                "ja" : {
-                  "stringUnit" : {
-                    "state" : "translated",
-                    "value" : "状況に出てくる人が相手になります"
-                  }
-                },
-                "ko" : {
-                  "stringUnit" : {
-                    "state" : "translated",
-                    "value" : "상황에 나오는 사람이 상대가 돼요"
-                  }
-                },
-                "zh-Hans" : {
-                  "stringUnit" : {
-                    "state" : "translated",
-                    "value" : "情境里会出现的人就是对方"
-                  }
-                },
-                "zh-Hant" : {
-                  "stringUnit" : {
-                    "state" : "translated",
-                    "value" : "情境裡會出現的人就是對方"
-                  }
-                }
-              }
-            },
             "state" : "translated",
             "value" : "最近 10 次的平均"
           }
