@@ -1302,6 +1302,38 @@ enum DebugCapture {
             once("level") { seedSessions() }
             return AnyView(LevelInfoSheet(level: .b1, surface: .watch)
                 .environmentObject(appState))
+        case "show-script":
+            // An episode's script on the Speech script page, Study on, with
+            // the study made when it was published.
+            UserDefaults.standard.set(true, forKey: "speech.script.study")
+            return AnyView(ShowScriptCapture().environmentObject(appState))
+        case "show-list":
+            return AnyView(Color(.systemGroupedBackground).ignoresSafeArea()
+                .task {
+                    guard !PlaylistPlayer.shared.hasQueue else { return }
+                    let episodes = await NewsShow.episodes(language: appState.targetLanguage)
+                    if let newest = episodes.first {
+                        await NewsShow.prepare(newest)
+                        PlaylistPlayer.shared.play(newest.lines, title: explain("nawana Podcast"))
+                    }
+                }
+                .sheet(isPresented: .constant(true)) {
+                    ScenePlayerSheet(startOnList: true).environmentObject(appState)
+                        .presentationDetents([.large])
+                })
+        case "show-playing":
+            // Today's news show, fetched from R2 for real (en/de) and played
+            // in the situations player — the network path end to end.
+            return AnyView(Color(.systemGroupedBackground).ignoresSafeArea()
+                .task {
+                    guard !PlaylistPlayer.shared.hasQueue else { return }
+                    let episodes = await NewsShow.episodes(language: appState.targetLanguage)
+                    for episode in episodes { await NewsShow.prepare(episode) }
+                    PlaylistPlayer.shared.play(episodes.flatMap(\.lines), title: explain("nawana Podcast"))
+                }
+                .sheet(isPresented: .constant(true)) {
+                    ScenePlayerSheet().environmentObject(appState)
+                })
         case "home-scenarios":
             once("home") { seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState) }
             previewScenariosTab = true
@@ -3252,6 +3284,23 @@ private struct PageIntroCaptureHost: View {
             try? await Task.sleep(for: .milliseconds(400))
             showing = true
         }
+    }
+}
+#endif
+
+#if DEBUG
+private struct ShowScriptCapture: View {
+    @EnvironmentObject private var appState: AppState
+    @State private var episode: NewsShowEpisode?
+
+    var body: some View {
+        Color(.systemGroupedBackground).ignoresSafeArea()
+            .task { episode = await NewsShow.episodes(language: appState.targetLanguage).first }
+            .sheet(item: $episode) { e in
+                SpeechScriptSheet(script: e.script, study: e.study(native: appState.nativeLanguage),
+                                  shipped: true)
+                    .environmentObject(appState)
+            }
     }
 }
 #endif

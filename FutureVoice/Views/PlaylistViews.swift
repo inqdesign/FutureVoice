@@ -38,10 +38,15 @@ private struct PlaylistButtonFace: View {
                     .rotationEffect(.degrees(-90))
                     .padding(-4)
             }
-            Image(systemName: player.isPlaying ? "waveform" : "headphones")
-                .font(.system(size: 17, weight: .semibold))
-                .symbolEffect(.variableColor.iterative, isActive: player.isPlaying)
-                .foregroundStyle(player.hasQueue ? Color.accentColor : .primary)
+            if player.isPlaying {
+                PlayingBars(isAnimating: true)
+                    .frame(width: 18, height: 16)
+                    .foregroundStyle(Color.accentColor)
+            } else {
+                Image(systemName: "headphones")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(player.hasQueue ? Color.accentColor : .primary)
+            }
         }
     }
 }
@@ -63,6 +68,61 @@ private struct PlaylistGlassCircle: ViewModifier {
     }
 }
 
+// MARK: - Playing bars
+
+/// The "this is playing" mark: four bars driven by the LOUDNESS of what is
+/// playing right now (`AudioPlayer.level`, the player's own meter), so they
+/// rise with a voice and settle in the pause between lines (founder,
+/// 2026-10-19: a made-up wave out of step with the sound read as random).
+/// Every bar follows the SAME moment — each at its own share of it, re-drawn
+/// as the voice moves — so the four rise and fall together and never lean
+/// one way (a first cut slid past readings across them, which read as a
+/// slope down to the right). Paused, they rest low; Reduce Motion keeps them
+/// still.
+struct PlayingBars: View {
+    var isAnimating: Bool
+    @ObservedObject var audio: AudioPlayer = PlaylistPlayer.shared.audio
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var bars: [Double] = PlayingBars.resting
+    @State private var loudness: Double = 0
+
+    private static let resting: [Double] = [0.2, 0.35, 0.28, 0.18]
+    /// The lowest a bar goes: about its own width, a dot.
+    private static let floor = 0.12
+
+    var body: some View {
+        GeometryReader { geo in
+            let count = bars.count
+            let gap = geo.size.width * 0.12
+            let width = (geo.size.width - gap * Double(count - 1)) / Double(count)
+            HStack(alignment: .center, spacing: gap) {
+                ForEach(0..<count, id: \.self) { i in
+                    Capsule()
+                        .frame(width: width, height: geo.size.height * bars[i])
+                }
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+        }
+        .animation(.easeOut(duration: 0.1), value: bars)
+        .onChange(of: audio.level) { _, level in
+            guard isAnimating, !reduceMotion else { return }
+            // Fast up, slower down: a syllable shows, a pause eases out.
+            loudness = max(Double(level), loudness * 0.8)
+            // The meter rarely reads under ~0.3 while someone is talking, so
+            // that much is taken off and the rest curved: quiet syllables sit
+            // near the floor and only the loud ones reach the top.
+            let shown = pow(max(0, (loudness - 0.25) / 0.75), 1.4)
+            bars = bars.indices.map { _ in
+                Self.floor + (1 - Self.floor) * shown * .random(in: 0.5...1)
+            }
+        }
+        .onChange(of: isAnimating) { _, on in
+            if !on { bars = Self.resting; loudness = 0 }
+        }
+        .accessibilityHidden(true)
+    }
+}
+
 // MARK: - The player
 
 /// A floating sheet that IS the player. The line being said fills the top,
@@ -74,19 +134,27 @@ struct ScenePlayerSheet: View {
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var player = PlaylistPlayer.shared
     @State private var tracks: [SceneTrack] = []
+    @State private var shows: [NewsShowEpisode] = []
     @State private var loaded = false
-    @State private var showingList = false
+    @State private var showingList: Bool
+
+    /// `startOnList` opens straight on the library (the capture harness).
+    init(startOnList: Bool = false) {
+        _showingList = State(initialValue: startOnList)
+    }
 
     private static var listTitle: String { explain("My situations") }
+    private static var showTitle: String { explain("nawana Podcast") }
 
     private var allLines: [PlaylistLine] { tracks.flatMap(\.lines) }
+    private var showLines: [PlaylistLine] { shows.flatMap(\.lines) }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                NowPlayingCaption(isEmpty: loaded && tracks.isEmpty)
+                NowPlayingCaption(isEmpty: loaded && tracks.isEmpty && shows.isEmpty)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                PlayerControls(onPlayAll: playAll, canPlay: !tracks.isEmpty)
+                PlayerControls(onPlayAll: playAll, canPlay: !tracks.isEmpty || !shows.isEmpty)
                     .padding(.top, 12)
                     .padding(.bottom, 20)
             }
@@ -98,25 +166,55 @@ struct ScenePlayerSheet: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Button { showingList = true } label: { Image(systemName: "list.bullet") }
                         .accessibilityLabel(Text("Situations"))
-                        .disabled(tracks.isEmpty)
+                        .disabled(tracks.isEmpty && shows.isEmpty)
                 }
                 ToolbarItem(placement: .topBarTrailing) { PlayerOptionsMenu() }
             }
             .navigationDestination(isPresented: $showingList) {
-                SituationList(tracks: tracks, onPick: play(from:))
+                // Bindings, not values: a destination already on screen is not
+                // rebuilt when the sheet's state changes, and the episodes
+                // arrive after the download — handed over as values, a list
+                // opened early stayed empty.
+                PlayerLibrary(tracks: $tracks, shows: $shows, onPick: play(from:),
+                              onPickShow: play(show:), onPlayAllShows: playAllShows)
             }
-            .task {
-                tracks = SceneLibrary.tracks(scenarios: ScenarioStore.shared.load(),
-                                             cloneId: appState.voiceCloneId)
-                loaded = true
-            }
+        }
+        // On the sheet, not the player page: opened straight on the library
+        // the page never appears, and nothing would load.
+        .task {
+            tracks = SceneLibrary.tracks(scenarios: ScenarioStore.shared.load(),
+                                         cloneId: appState.voiceCloneId)
+            loaded = true
+            shows = await NewsShow.episodes(language: appState.targetLanguage)
         }
         .presentationDetents([.medium, .large])
         .presentationBackgroundInteraction(.enabled(upThrough: .medium))
     }
 
     private func playAll() {
-        player.play(allLines, title: Self.listTitle)
+        if allLines.isEmpty {
+            Task { await playAllShows() }
+        } else {
+            player.play(allLines, title: Self.listTitle)
+        }
+    }
+
+    /// Every episode, newest first. Files are fetched when asked for.
+    private func playAllShows() async {
+        await withTaskGroup(of: Void.self) { group in
+            for episode in shows where !episode.isReady {
+                group.addTask { await NewsShow.prepare(episode) }
+            }
+        }
+        player.play(showLines, title: Self.showTitle)
+    }
+
+    /// One episode on its own (founder: the whole show, or just the episode).
+    /// Picked again while it is playing, it carries on rather than restarting.
+    private func play(show episode: NewsShowEpisode) async {
+        if player.title == Self.showTitle, player.current?.bookId == episode.id { return }
+        await NewsShow.prepare(episode)
+        player.play(episode.lines, title: Self.showTitle)
     }
 
     /// Every situation plays on from the one picked, so picking a scene
@@ -133,38 +231,184 @@ struct ScenePlayerSheet: View {
     }
 }
 
-/// The situations, newest first. Picking one plays from there and goes back
-/// to the player.
-private struct SituationList: View {
-    let tracks: [SceneTrack]
+/// What there is to hear, behind two tabs: the nawana Podcast (the
+/// platform's daily episodes) and the learner's own situations. Picking one
+/// plays it and goes back to the player.
+private struct PlayerLibrary: View {
+    @Binding var tracks: [SceneTrack]
+    @Binding var shows: [NewsShowEpisode]
     let onPick: (SceneTrack) -> Void
+    let onPickShow: (NewsShowEpisode) async -> Void
+    let onPlayAllShows: () async -> Void
+    /// What is being fetched right now: an episode, or `allId` for Play all.
+    @State private var fetching: UUID?
+    @State private var reading: NewsShowEpisode?
+    private static let allId = UUID()
+    @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.locale) private var locale
     @ObservedObject private var player = PlaylistPlayer.shared
+    @AppStorage("futurevoice.playlist.tab") private var tab = Tab.podcast
+
+    enum Tab: String { case podcast, situations }
 
     var body: some View {
-        List(tracks) { track in
-            Button {
-                onPick(track)
-                dismiss()
-            } label: { row(track) }
-            .buttonStyle(.plain)
+        List {
+            switch tab {
+            case .podcast: podcast
+            case .situations: situations
+            }
         }
-        .navigationTitle(Text("Situations"))
+        // The two tabs sit under the bar at full width, the system's own
+        // segmented row (founder: squeezed into the bar beside Back, the
+        // glass capsule looked off).
+        .safeAreaInset(edge: .top, spacing: 0) {
+            Picker(selection: $tab) {
+                Text("Podcast").tag(Tab.podcast)
+                Text("My situations").tag(Tab.situations)
+            } label: { EmptyView() }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color(.systemGroupedBackground))
+        }
+        .navigationTitle(Text("Listen"))
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $reading) { episode in
+            SpeechScriptSheet(script: episode.script,
+                              study: episode.study(native: appState.nativeLanguage),
+                              shipped: true)
+                .environmentObject(appState)
+        }
+    }
+
+    @ViewBuilder private var podcast: some View {
+        if shows.isEmpty {
+            ContentUnavailableView {
+                Label("nawana Podcast", systemImage: "newspaper")
+            } description: {
+                Text("A new episode every day, in English for now.")
+            }
+            .listRowBackground(Color.clear)
+        } else {
+            Section {
+                Button {
+                    fetch(Self.allId) { await onPlayAllShows() }
+                } label: {
+                    HStack {
+                        Label("Play all", systemImage: "play.fill")
+                        Spacer()
+                        if fetching == Self.allId { ProgressView() }
+                    }
+                }
+                ForEach(shows) { episode in
+                    HStack(spacing: 8) {
+                        Button {
+                            fetch(episode.id) { await onPickShow(episode) }
+                        } label: { row(episode) }
+                        .buttonStyle(.plain)
+                        // The script, on the Speech tab's own page, with Study.
+                        Button {
+                            Analytics.capture("podcast_script_opened",
+                                              ["episode": episode.number,
+                                               "category": episode.category ?? ""])
+                            reading = episode
+                        } label: {
+                            Image(systemName: "doc.text")
+                                .font(.body)
+                                .frame(width: 36, height: 36)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.borderless)
+                        .accessibilityLabel(Text("Script"))
+                    }
+                }
+            }
+        }
+    }
+
+    /// Fetch, play, then back to the player. One fetch at a time.
+    private func fetch(_ id: UUID, _ action: @escaping () async -> Void) {
+        guard fetching == nil else { return }
+        fetching = id
+        Task {
+            await action()
+            fetching = nil
+            dismiss()
+        }
+    }
+
+    @ViewBuilder private var situations: some View {
+        if tracks.isEmpty {
+            ContentUnavailableView {
+                Label("No situations to hear yet", systemImage: "headphones")
+            } description: {
+                Text("Watch a situation once and it plays here, both voices, whenever you like.")
+            }
+            .listRowBackground(Color.clear)
+        } else {
+            ForEach(tracks) { track in
+                Button {
+                    onPick(track)
+                    dismiss()
+                } label: { row(track) }
+                .buttonStyle(.plain)
+            }
+        }
     }
 
     private func row(_ track: SceneTrack) -> some View {
         let playing = player.hasQueue && player.current?.bookId == track.id
         return HStack(spacing: 12) {
-            Image(systemName: playing ? "waveform" : "bubble.left.and.bubble.right")
-                .foregroundStyle(.tint)
-                .symbolEffect(.variableColor.iterative, isActive: playing && player.isPlaying)
-                .frame(width: 24)
+            Group {
+                if playing {
+                    PlayingBars(isAnimating: player.isPlaying || player.isInGap)
+                        .frame(width: 16, height: 14)
+                } else {
+                    Image(systemName: "bubble.left.and.bubble.right")
+                }
+            }
+            .foregroundStyle(.tint)
+            .frame(width: 24)
             VStack(alignment: .leading, spacing: 2) {
                 Text(track.title)
                     .foregroundStyle(playing ? Color.accentColor : .primary)
                     .lineLimit(2)
                 Text(track.otherName).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .contentShape(Rectangle())
+    }
+
+    private func episodeLabel(_ episode: NewsShowEpisode) -> String {
+        "EP \(episode.number) · "
+            + episode.date.formatted(.dateTime.month(.abbreviated).day().locale(locale))
+    }
+
+    private func row(_ episode: NewsShowEpisode) -> some View {
+        let playing = player.hasQueue && player.current?.bookId == episode.id
+        return HStack(spacing: 12) {
+            Group {
+                if fetching == episode.id {
+                    ProgressView()
+                } else if playing {
+                    PlayingBars(isAnimating: player.isPlaying || player.isInGap)
+                        .frame(width: 16, height: 14)
+                } else {
+                    Image(systemName: NewsShow.icon(for: episode.category))
+                }
+            }
+            .foregroundStyle(.tint)
+            .frame(width: 24)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(episode.title)
+                    .foregroundStyle(playing ? Color.accentColor : .primary)
+                    .lineLimit(2)
+                // The hosts are the same on every episode; how long it is helps
+                // choose. "%@ · %lld min" is already in every language.
+                Text("\(episodeLabel(episode)) · \(episode.minutes) min")
+                    .font(.caption).foregroundStyle(.secondary)
             }
             Spacer(minLength: 0)
         }
@@ -257,6 +501,13 @@ private struct NowPlayingCaption: View {
         guard showTranslation, let line = player.current,
               !LanguageCatalog.sameLanguage(appState.nativeLanguage, appState.targetLanguage)
         else { return }
+        // A podcast line is shown only in the translations it shipped with:
+        // made once by the publisher and read by everyone. It never asks for
+        // a new one per phone (founder, 2026-10-19: API cost).
+        if let shipped = line.translations {
+            translation = shipped[appState.nativeLanguage]
+            return
+        }
         if let cached = Translator.cached(line.text, to: appState.nativeLanguage) {
             translation = cached
             return
@@ -344,10 +595,18 @@ private struct PlayerOptionsMenu: View {
             Toggle(isOn: $showTranslation) { Label("Translation", systemImage: "character.bubble") }
             Picker(selection: $player.gap) {
                 Text("No pause").tag(PlaylistPlayer.Gap.none)
-                Text("2 seconds").tag(PlaylistPlayer.Gap.short)
+                Text("1 second").tag(PlaylistPlayer.Gap.short)
                 Text("Time to say it back").tag(PlaylistPlayer.Gap.echo)
             } label: {
                 Label("Pause between lines", systemImage: "pause")
+            }
+            .pickerStyle(.menu)
+            Picker(selection: $player.speed) {
+                ForEach(PlaylistPlayer.speeds, id: \.self) { s in
+                    Text(verbatim: s == 1 ? "1×" : String(format: "%.2g×", s)).tag(s)
+                }
+            } label: {
+                Label("Speed", systemImage: "gauge.with.dots.needle.33percent")
             }
             .pickerStyle(.menu)
             if player.hasQueue {

@@ -249,7 +249,7 @@ struct DiscoverSection: View {
 
     /// Best-effort glyph for a free-form interest category ("ai / tech" →
     /// cpu). Fallback is the newspaper — every story is at least news.
-    private static func categoryIcon(_ category: String?) -> String {
+    static func categoryIcon(_ category: String?) -> String {
         guard let c = category?.lowercased() else { return "newspaper.fill" }
         if c.contains("ai") || c.contains("tech") { return "cpu" }
         if c.contains("cook") || c.contains("food") { return "fork.knife" }
@@ -261,6 +261,7 @@ struct DiscoverSection: View {
         if c.contains("film") || c.contains("movie") || c.contains("tv") { return "film" }
         if c.contains("game") { return "gamecontroller" }
         if c.contains("health") { return "heart" }
+        if c.contains("fashion") { return "tshirt" }
         return "newspaper.fill"
     }
 
