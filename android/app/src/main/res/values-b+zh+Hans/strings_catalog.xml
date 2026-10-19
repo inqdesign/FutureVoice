@@ -59,8 +59,6 @@
     <!-- 'A new scene is paid for out of the same minutes. Watching it again is free.' -->
     <string name="a_new_scene_is_paid_for_out_of_the_same_minutes_watching_it_238960">"每看一个新的情境练习，都会从通话时间里扣。重看免费。"</string>
     <string name="a_new_watch">"全新的情境练习"</string>
-    <!-- 'A new Watch scene uses %lld min of the same talk time. Watching it again is free.' -->
-    <string name="a_new_watch_scene_uses_lld_min_of_the_same_talk_time_watchin_280e12">"每看一个新的情境练习，会从同一份通话时间里扣 %d 分钟。重看免费。"</string>
     <string name="a_new_week_starts_now_start_small">"新的一周开始了，轻松开始就好。"</string>
     <string name="a_passerby">"路人"</string>
     <!-- 'A person you describe once: someone real in your life, someone famous, or someone you invent. Save who they are, how the two of you know each other and how you talk, and they become a character you can bring back.' -->
@@ -2192,7 +2190,6 @@
     <string name="scene">"情境练习"</string>
     <string name="scene_partner_voice">"情境练习对方的声音：%s"</string>
     <string name="scenes">"情境"</string>
-    <string name="scenes_lld_min_each">"+ 情境练习(每次 %d 分钟)"</string>
     <string name="scenes_refill_at_the_start_of_each_billing_period">"情境练习的次数会在每个账单周期开始时补满。"</string>
     <string name="scenes_refill_on">"情境练习的次数会在%s补满。"</string>
     <!-- "Scenes you've already watched replay free forever and never use a new one." -->

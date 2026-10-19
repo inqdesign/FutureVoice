@@ -59,8 +59,6 @@
     <!-- 'A new scene is paid for out of the same minutes. Watching it again is free.' -->
     <string name="a_new_scene_is_paid_for_out_of_the_same_minutes_watching_it_238960">"새 상황연습을 볼 때마다 통화 시간에서 빠져요. 이미 본 건 다시 봐도 무료예요."</string>
     <string name="a_new_watch">"새로워진 상황연습"</string>
-    <!-- 'A new Watch scene uses %lld min of the same talk time. Watching it again is free.' -->
-    <string name="a_new_watch_scene_uses_lld_min_of_the_same_talk_time_watchin_280e12">"새 상황연습은 같은 통화 시간에서 %d분씩 써요. 이미 본 건 다시 봐도 무료예요."</string>
     <string name="a_new_week_starts_now_start_small">"새 주가 시작됐어요. 가볍게 시작해요."</string>
     <string name="a_passerby">"지나가는 사람"</string>
     <!-- 'A person you describe once: someone real in your life, someone famous, or someone you invent. Save who they are, how the two of you know each other and how you talk, and they become a character you can bring back.' -->
@@ -2192,7 +2190,6 @@
     <string name="scene">"상황연습"</string>
     <string name="scene_partner_voice">"상황연습 상대 목소리: %s"</string>
     <string name="scenes">"장면"</string>
-    <string name="scenes_lld_min_each">"+ 상황연습 (1개에 %d분)"</string>
     <string name="scenes_refill_at_the_start_of_each_billing_period">"상황연습은 결제 주기가 시작될 때 새로 채워져요."</string>
     <string name="scenes_refill_on">"상황연습은 %s에 새로 채워져요."</string>
     <!-- "Scenes you've already watched replay free forever and never use a new one." -->

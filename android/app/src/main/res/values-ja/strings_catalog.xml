@@ -59,8 +59,6 @@
     <!-- 'A new scene is paid for out of the same minutes. Watching it again is free.' -->
     <string name="a_new_scene_is_paid_for_out_of_the_same_minutes_watching_it_238960">"新しいシーン練習を見るたびに、通話時間から引かれます。もう一度見るのは無料です。"</string>
     <string name="a_new_watch">"新しくなったシーン練習"</string>
-    <!-- 'A new Watch scene uses %lld min of the same talk time. Watching it again is free.' -->
-    <string name="a_new_watch_scene_uses_lld_min_of_the_same_talk_time_watchin_280e12">"新しいシーン練習は、同じ通話時間から1回%d分使います。もう一度見るのは無料です。"</string>
     <string name="a_new_week_starts_now_start_small">"新しい週の始まりです。軽く始めましょう。"</string>
     <string name="a_passerby">"通りがかりの人"</string>
     <!-- 'A person you describe once: someone real in your life, someone famous, or someone you invent. Save who they are, how the two of you know each other and how you talk, and they become a character you can bring back.' -->
@@ -2192,7 +2190,6 @@
     <string name="scene">"シーン練習"</string>
     <string name="scene_partner_voice">"シーン練習の相手の声: %s"</string>
     <string name="scenes">"シーン"</string>
-    <string name="scenes_lld_min_each">"+ シーン練習(1回%d分)"</string>
     <string name="scenes_refill_at_the_start_of_each_billing_period">"シーン練習は、請求期間が始まるたびに補充されます。"</string>
     <string name="scenes_refill_on">"シーン練習は%sに補充されます。"</string>
     <!-- "Scenes you've already watched replay free forever and never use a new one." -->

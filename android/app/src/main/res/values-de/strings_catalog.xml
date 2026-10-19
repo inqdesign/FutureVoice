@@ -59,8 +59,6 @@
     <!-- 'A new scene is paid for out of the same minutes. Watching it again is free.' -->
     <string name="a_new_scene_is_paid_for_out_of_the_same_minutes_watching_it_238960">"Jede neue Szene geht von denselben Minuten ab. Noch mal ansehen ist kostenlos."</string>
     <string name="a_new_watch">"„Ansehen“ ist neu"</string>
-    <!-- 'A new Watch scene uses %lld min of the same talk time. Watching it again is free.' -->
-    <string name="a_new_watch_scene_uses_lld_min_of_the_same_talk_time_watchin_280e12">"Jede neue Szene kostet %d Min. von derselben Sprechzeit. Noch mal ansehen ist kostenlos."</string>
     <string name="a_new_week_starts_now_start_small">"Eine neue Woche beginnt. Fang klein an."</string>
     <string name="a_passerby">"einem Passanten"</string>
     <!-- 'A person you describe once: someone real in your life, someone famous, or someone you invent. Save who they are, how the two of you know each other and how you talk, and they become a character you can bring back.' -->
@@ -2189,7 +2187,6 @@
     <string name="scene">"Szene"</string>
     <string name="scene_partner_voice">"Stimme des Szenenpartners: %s"</string>
     <string name="scenes">"Szenen"</string>
-    <string name="scenes_lld_min_each">"+ Szenen (je %d Min.)"</string>
     <string name="scenes_refill_at_the_start_of_each_billing_period">"Szenen füllen sich zu Beginn jedes Abrechnungszeitraums wieder auf."</string>
     <string name="scenes_refill_on">"Szenen füllen sich am %s wieder auf."</string>
     <!-- "Scenes you've already watched replay free forever and never use a new one." -->
