@@ -818,7 +818,7 @@
     <string name="health">"건강"</string>
     <string name="hear_it">"들어보기"</string>
     <string name="hear_it_again">"다시 듣기"</string>
-    <string name="hear_it_in_my_voice_lld_min">"내 목소리로 듣기 · %d분"</string>
+    <string name="hear_it_in_my_voice">"내 목소리로 듣기"</string>
     <string name="hear_it_in_the_app_write_it_here">"앱에서 듣고 여기에 쓰기"</string>
     <string name="hear_my_attempt">"내 녹음 듣기"</string>
     <string name="hear_target">"원본 듣기"</string>
@@ -1205,6 +1205,7 @@
     <string name="made_from_the_recording_on_this_phone_a_stand_in_voice_speak_f60768">"이 폰에 있는 녹음으로 만들어요. 그때까지는 임시 목소리가 말해요."</string>
     <string name="made_from_this_week_s_talks">"이번 주 대화로 만들었어요"</string>
     <string name="make_a_situation">"상황 만들기"</string>
+    <string name="make_it_in_my_voice">"내 목소리로 만들기"</string>
     <string name="make_it_yours">"내 것으로 만들기"</string>
     <string name="making_a_few_takes_about_half_a_minute_keep_this_open">"여러 번 읽어보는 중이에요. 30초쯤 걸리니 이 화면을 닫지 말고 기다려 주세요."</string>
     <string name="making_it_in_your_voice">"내 목소리로 만들고 있어요…"</string>

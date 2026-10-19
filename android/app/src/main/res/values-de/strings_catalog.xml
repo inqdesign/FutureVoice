@@ -813,7 +813,7 @@
     <string name="health">"Gesundheit"</string>
     <string name="hear_it">"Anhören"</string>
     <string name="hear_it_again">"Nochmal anhören"</string>
-    <string name="hear_it_in_my_voice_lld_min">"In meiner Stimme hören · %d Min."</string>
+    <string name="hear_it_in_my_voice">"In meiner Stimme hören"</string>
     <string name="hear_it_in_the_app_write_it_here">"In der App hören, hier schreiben"</string>
     <string name="hear_my_attempt">"Eigene Aufnahme anhören"</string>
     <string name="hear_target">"Original anhören"</string>
@@ -1200,6 +1200,7 @@
     <string name="made_from_the_recording_on_this_phone_a_stand_in_voice_speak_f60768">"Aus der Aufnahme auf diesem Handy. Bis dahin spricht eine Ersatzstimme."</string>
     <string name="made_from_this_week_s_talks">"Aus den Gesprächen dieser Woche"</string>
     <string name="make_a_situation">"Situation bauen"</string>
+    <string name="make_it_in_my_voice">"In meiner Stimme erstellen"</string>
     <string name="make_it_yours">"Mach es zu deinem"</string>
     <string name="making_a_few_takes_about_half_a_minute_keep_this_open">"Ich mache ein paar Aufnahmen, das dauert etwa eine halbe Minute. Lass diesen Bildschirm offen."</string>
     <string name="making_it_in_your_voice">"Wird in deiner Stimme erstellt…"</string>

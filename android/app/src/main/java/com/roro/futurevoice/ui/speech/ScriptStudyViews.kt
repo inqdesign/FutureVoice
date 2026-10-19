@@ -74,6 +74,8 @@ import com.roro.futurevoice.ui.ShadowScreen
 import com.roro.futurevoice.ui.SpentPool
 import com.roro.futurevoice.ui.WordCardSheet
 import com.roro.futurevoice.ui.brand.AppSurfaces
+import com.roro.futurevoice.ui.brand.IosButton
+import com.roro.futurevoice.ui.brand.IosOutlinedButton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -292,7 +294,7 @@ internal fun voiceoverPriceLine(minutes: Int, account: AccountStatus?): String =
 
 // MARK: - Hear it in my voice
 
-/** The Script sheet's voiceover section: the priced button before it exists,
+/** The Script sheet's voiceover section: a heading, the price line, then the button before it exists,
  *  a progress line while it is made, then Play and Shadow — free forever
  *  (iOS `ScriptVoiceoverSection`). */
 @Composable
@@ -327,64 +329,71 @@ internal fun ScriptVoiceoverSection(script: SpeechScript, voiceId: String) {
                 val w = e.voiceoverWall()
                 if (w != null) wall = w else error = e.message
             } catch (_: Exception) {
-                // Shown in the footer from the job's state.
+                // Shown under the heading from the job's state.
             }
         }
     }
 
+    // Header · card (iOS c80094a0): what it costs — or that it's free now —
+    // sits right under the heading, before the button it explains; the
+    // minutes are only there, since on the button they read as the
+    // recording's length.
     Column(Modifier.fillMaxWidth().padding(top = 20.dp)) {
+        Text(stringResource(R.string.hear_it_in_my_voice), style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 16.dp, bottom = 8.dp))
         FormCard {
-            val stored = existing
-            when {
-                stored != null -> {
-                    VoiceoverRow(if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                        stringResource(if (playing) R.string.pause else R.string.play_in_my_voice), accent) {
-                        // Pause keeps the place, as iOS's pause does; the
-                        // next play picks up there, and the end starts over.
-                        if (playing) { resumeAt = player.positionMs; player.stop(); playing = false }
-                        else scope.launch {
-                            playing = true
-                            val finished = runCatching { player.play(stored.file, resumeAt) }.isSuccess
-                            if (playing && finished) resumeAt = 0
-                            playing = false
+            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 15.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                when {
+                    existing != null -> FooterText(stringResource(R.string.yours_to_replay_and_shadow_free))
+                    quote > ScriptVoiceover.MAX_MINUTES ->
+                        FooterText(stringResource(R.string.this_script_is_too_long_to_make_in_your_voice))
+                    else -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        FooterText(voiceoverPriceLine(quote, account))
+                        (job as? ScriptVoiceoverCenter.Job.Failed)?.let {
+                            FooterText(it.message, Color(0xFFFF3B30))
                         }
                     }
-                    FormDivider()
-                    VoiceoverRow(Icons.Filled.GraphicEq, stringResource(R.string.shadow_it), accent) {
-                        player.stop(); playing = false; resumeAt = 0; shadowing = stored
+                }
+                val stored = existing
+                when {
+                    stored != null -> Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        IosButton(onClick = {
+                            // Pause keeps the place, as iOS's pause does; the
+                            // next play picks up there, and the end starts over.
+                            if (playing) { resumeAt = player.positionMs; player.stop(); playing = false }
+                            else scope.launch {
+                                playing = true
+                                val finished = runCatching { player.play(stored.file, resumeAt) }.isSuccess
+                                if (playing && finished) resumeAt = 0
+                                playing = false
+                            }
+                        }, modifier = Modifier.weight(1f)) {
+                            VoiceoverLabel(if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                                stringResource(if (playing) R.string.pause else R.string.play_in_my_voice))
+                        }
+                        IosOutlinedButton(onClick = {
+                            player.stop(); playing = false; resumeAt = 0; shadowing = stored
+                        }, modifier = Modifier.weight(1f)) {
+                            VoiceoverLabel(Icons.Filled.GraphicEq, stringResource(R.string.shadow_it))
+                        }
                     }
-                }
-                job is ScriptVoiceoverCenter.Job.Making -> Row(Modifier.fillMaxWidth().padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                    Spacer(Modifier.width(12.dp))
-                    Text(stringResource(R.string.making_it_in_your_voice), Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodyLarge)
-                    Text("${job.done}/${job.total}", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                else -> {
-                    val enabled = quote <= ScriptVoiceover.MAX_MINUTES
-                    VoiceoverRow(Icons.Outlined.RecordVoiceOver,
-                        stringResource(R.string.hear_it_in_my_voice_lld_min, quote),
-                        if (enabled) accent else MaterialTheme.colorScheme.onSurfaceVariant,
-                        enabled = enabled) { start() }
+                    job is ScriptVoiceoverCenter.Job.Making -> Row(Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(12.dp))
+                        Text(stringResource(R.string.making_it_in_your_voice), Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyLarge)
+                        Text("${job.done}/${job.total}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    else -> IosButton(onClick = { start() }, modifier = Modifier.fillMaxWidth(),
+                        enabled = quote <= ScriptVoiceover.MAX_MINUTES) {
+                        VoiceoverLabel(Icons.Outlined.RecordVoiceOver, stringResource(R.string.make_it_in_my_voice))
+                    }
                 }
             }
         }
-        val footer: @Composable () -> Unit = {
-            when {
-                existing != null -> FooterText(stringResource(R.string.yours_to_replay_and_shadow_free))
-                quote > ScriptVoiceover.MAX_MINUTES ->
-                    FooterText(stringResource(R.string.this_script_is_too_long_to_make_in_your_voice))
-                else -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    FooterText(voiceoverPriceLine(quote, account))
-                    (job as? ScriptVoiceoverCenter.Job.Failed)?.let {
-                        FooterText(it.message, Color(0xFFFF3B30))
-                    }
-                }
-            }
-        }
-        Box(Modifier.padding(start = 16.dp, end = 16.dp, top = 7.dp)) { footer() }
     }
 
     VoiceoverWallHost(wall) { wall = null }
@@ -407,15 +416,12 @@ internal fun ScriptVoiceoverSection(script: SpeechScript, voiceId: String) {
     }
 }
 
+/** An iOS `Label` on a large button: icon, then the title, centred. */
 @Composable
-private fun VoiceoverRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, tint: Color,
-                         enabled: Boolean = true, onClick: () -> Unit) {
-    Row(Modifier.fillMaxWidth().clickable(enabled = enabled, onClick = onClick)
-        .padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = tint, modifier = Modifier.size(24.dp))
-        Spacer(Modifier.width(16.dp))
-        Text(label, color = tint, style = MaterialTheme.typography.bodyLarge)
-    }
+private fun VoiceoverLabel(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String) {
+    Icon(icon, null, modifier = Modifier.size(18.dp))
+    Spacer(Modifier.width(6.dp))
+    Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis)
 }
 
 @Composable

@@ -817,7 +817,7 @@
     <string name="health">"健康"</string>
     <string name="hear_it">"聞いてみる"</string>
     <string name="hear_it_again">"もう一度聞く"</string>
-    <string name="hear_it_in_my_voice_lld_min">"自分の声で聞く · %d分"</string>
+    <string name="hear_it_in_my_voice">"自分の声で聞く"</string>
     <string name="hear_it_in_the_app_write_it_here">"アプリで聞いて、ここに書く"</string>
     <string name="hear_my_attempt">"自分の録音を聞く"</string>
     <string name="hear_target">"お手本を聞く"</string>
@@ -1204,6 +1204,7 @@
     <string name="made_from_the_recording_on_this_phone_a_stand_in_voice_speak_f60768">"このスマホの録音から作ります。それまでは仮の声が話します。"</string>
     <string name="made_from_this_week_s_talks">"今週のトークから作りました"</string>
     <string name="make_a_situation">"シチュエーションを作る"</string>
+    <string name="make_it_in_my_voice">"自分の声で作る"</string>
     <string name="make_it_yours">"自分のものにする"</string>
     <string name="making_a_few_takes_about_half_a_minute_keep_this_open">"何度か読み上げています。30秒ほどかかるので、この画面を閉じずにお待ちください。"</string>
     <string name="making_it_in_your_voice">"自分の声で作っています…"</string>

@@ -819,7 +819,7 @@
     <string name="health">"Health"</string>
     <string name="hear_it">"Hear it"</string>
     <string name="hear_it_again">"Hear it again"</string>
-    <string name="hear_it_in_my_voice_lld_min">"Hear it in my voice · %d min"</string>
+    <string name="hear_it_in_my_voice">"Hear it in my voice"</string>
     <string name="hear_it_in_the_app_write_it_here">"Hear it in the app, write it here"</string>
     <string name="hear_my_attempt">"Hear my attempt"</string>
     <string name="hear_target">"Hear target"</string>
@@ -1207,6 +1207,7 @@
     <string name="made_from_the_recording_on_this_phone_a_stand_in_voice_speak_f60768">"Made from the recording on this phone. A stand-in voice speaks until then."</string>
     <string name="made_from_this_week_s_talks">"Made from this week's talks"</string>
     <string name="make_a_situation">"Make a situation"</string>
+    <string name="make_it_in_my_voice">"Make it in my voice"</string>
     <string name="make_it_yours">"Make it yours"</string>
     <string name="making_a_few_takes_about_half_a_minute_keep_this_open">"Making a few takes — about half a minute. Keep this open."</string>
     <string name="making_it_in_your_voice">"Making it in your voice…"</string>

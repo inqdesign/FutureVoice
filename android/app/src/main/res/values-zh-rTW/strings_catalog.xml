@@ -817,7 +817,7 @@
     <string name="health">"健康"</string>
     <string name="hear_it">"聽聽看"</string>
     <string name="hear_it_again">"再聽一次"</string>
-    <string name="hear_it_in_my_voice_lld_min">"用我的聲音聽 · %d分鐘"</string>
+    <string name="hear_it_in_my_voice">"用我的聲音聽"</string>
     <string name="hear_it_in_the_app_write_it_here">"在 App 裡聽，在這裡寫"</string>
     <string name="hear_my_attempt">"聽我的錄音"</string>
     <string name="hear_target">"聽範本"</string>
@@ -1204,6 +1204,7 @@
     <string name="made_from_the_recording_on_this_phone_a_stand_in_voice_speak_f60768">"會用這支手機裡的錄音來製作。在那之前，先由臨時聲音說話。"</string>
     <string name="made_from_this_week_s_talks">"用這週的對話做成"</string>
     <string name="make_a_situation">"建立情境"</string>
+    <string name="make_it_in_my_voice">"用我的聲音生成"</string>
     <string name="make_it_yours">"變成自己的"</string>
     <string name="making_a_few_takes_about_half_a_minute_keep_this_open">"正在唸幾個版本，大約需要30秒。請不要關閉這個畫面。"</string>
     <string name="making_it_in_your_voice">"正在用你的聲音生成…"</string>
