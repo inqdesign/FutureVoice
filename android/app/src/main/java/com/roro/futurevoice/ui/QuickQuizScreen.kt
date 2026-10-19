@@ -45,6 +45,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -292,11 +293,19 @@ private fun Question(item: QuickQuizItem, index: Int, total: Int, chosen: String
             if (chosen != null && item.note != null) {
                 Text(item.note, style = PT.subheadline, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center)
-                Button(onClick = onNext, modifier = Modifier.heightIn(min = 50.dp),
-                    shape = androidx.compose.foundation.shape.CircleShape,
-                    contentPadding = PaddingValues(horizontal = 24.dp)) {
-                    Text(stringResource(R.string.next), style = PT.headline)
-                }
+            }
+        }
+        // Next sits in ONE place at the bottom, whatever the question's
+        // length (founder, 2026-10-19: under the note it moved with the
+        // content). Its room is kept even while it is hidden, so the
+        // question never shifts when it appears.
+        val waiting = chosen != null && item.note != null
+        Box(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 20.dp), contentAlignment = Alignment.Center) {
+            Button(onClick = onNext, enabled = waiting,
+                modifier = Modifier.heightIn(min = 50.dp).alpha(if (waiting) 1f else 0f),
+                shape = androidx.compose.foundation.shape.CircleShape,
+                contentPadding = PaddingValues(horizontal = 24.dp)) {
+                Text(stringResource(R.string.next), style = PT.headline)
             }
         }
     }
