@@ -281,7 +281,9 @@ fun WeekRecapDeck(
 
     val trialScope = rememberCoroutineScope()
     /** Re-read the report and its test: the test screen writes both. */
-    suspend fun reloadTrialTest() {
+    /** [jump]: back from the test. A report whose test was done in an
+     *  earlier sitting opens at the cover like any deck. */
+    suspend fun reloadTrialTest(jump: Boolean) {
         val wasCleared = trialTest?.isFinished == true || trialState?.testThin == true
         val saved = TrialReportStore.load(context)
         if (saved != null) trialState = trialState?.copy(testThin = saved.testThin, testId = saved.testId)
@@ -290,7 +292,7 @@ fun WeekRecapDeck(
         }
         // Done in this sitting: straight on to the level.
         val cleared = trialTest?.isFinished == true || trialState?.testThin == true
-        if (!wasCleared && cleared) jumpToLevel = true
+        if (jump && !wasCleared && cleared) jumpToLevel = true
     }
     fun updateTrial(change: (TrialReport) -> TrialReport) {
         trialScope.launch {
@@ -302,7 +304,7 @@ fun WeekRecapDeck(
         if (isTrial) {
             TrialReportStore.countOffer(context)
             Analytics.capture("trial_report_opened", mapOf("talk_min" to recap.talkMinutes, "cards" to cards.size))
-            reloadTrialTest()
+            reloadTrialTest(jump = false)
             // The routine: the one already chosen in setup, else the one the
             // learner's purposes suggest.
             val plan = StudyPlanStore.current(context)
@@ -379,12 +381,12 @@ fun WeekRecapDeck(
     }
     if (showingTrialTest) {
         Dialog(
-            onDismissRequest = { showingTrialTest = false; scope.launch { reloadTrialTest() } },
+            onDismissRequest = { showingTrialTest = false; scope.launch { reloadTrialTest(jump = true) } },
             properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
         ) {
             DialogSystemBarsLikeActivity()
             WeeklyTestScreen(language = language, level = level,
-                onClose = { showingTrialTest = false; scope.launch { reloadTrialTest() } },
+                onClose = { showingTrialTest = false; scope.launch { reloadTrialTest(jump = true) } },
                 trialScope = WeeklyTestEngine.Scope(start = current.start,
                     minimum = TrialReportStore.MIN_TEST_ITEMS, coach = current.coach),
                 onTrialFinished = {
@@ -421,7 +423,7 @@ fun WeekRecapDeck(
                         RecapCard.COVER -> if (isTrial) TrialCover(current) else Cover(current)
                         RecapCard.TALK -> TalkCard(current)
                         RecapCard.USED -> UsedCard(current)
-                        RecapCard.REVIEW -> ReviewCard(current)
+                        RecapCard.REVIEW -> ReviewCard(current, isTrial)
                         RecapCard.FRESH -> FreshCard(current)
                         RecapCard.STUMBLES -> StumblesCard(current)
                         RecapCard.GRAMMAR -> GrammarCard(current, pending)
@@ -695,13 +697,13 @@ private fun UsedCard(r: WeekRecap) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ReviewCard(r: WeekRecap) {
+private fun ReviewCard(r: WeekRecap, isTrial: Boolean = false) {
     // Like every card it leads with ONE number, and that number is the count
     // of the list right under it.
     Kicker(stringResource(R.string.practice), Icons.Filled.ViewAgenda)
     if (r.nowYours.isNotEmpty()) {
         BigNumber(r.nowYours.size)
-        Lead(stringResource(R.string.wr_became_yours_body))
+        Lead(stringResource(if (isTrial) R.string.trial_became_yours_body else R.string.wr_became_yours_body))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             r.nowYours.take(12).forEach {
                 Text(it, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium,

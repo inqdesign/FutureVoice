@@ -23,4 +23,5 @@
     <string name="trial_reading">"まとめています…"</string>
     <string name="trial_next_up">"次にやること"</string>
     <string name="trial_not_enough">"まだテストを作れるほどではありません"</string>
+    <string name="trial_became_yours_body">"自分のものになった単語と表現です。"</string>
 </resources>

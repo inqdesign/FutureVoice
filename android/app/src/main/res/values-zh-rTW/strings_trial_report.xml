@@ -23,4 +23,5 @@
     <string name="trial_reading">"正在整理…"</string>
     <string name="trial_next_up">"接下來要做的事"</string>
     <string name="trial_not_enough">"還不夠出一份測驗"</string>
+    <string name="trial_became_yours_body">"變成你的單字和用語。"</string>
 </resources>

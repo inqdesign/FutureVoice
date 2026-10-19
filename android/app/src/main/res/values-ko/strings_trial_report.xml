@@ -23,4 +23,5 @@
     <string name="trial_reading">"정리하는 중이에요…"</string>
     <string name="trial_next_up">"다음에 할 일"</string>
     <string name="trial_not_enough">"아직 테스트를 만들 만큼은 아니에요"</string>
+    <string name="trial_became_yours_body">"내 것이 된 단어와 표현이에요."</string>
 </resources>

@@ -23,4 +23,5 @@
     <string name="trial_reading">"Je lis tes minutes…"</string>
     <string name="trial_next_up">"Ensuite"</string>
     <string name="trial_not_enough">"Pas encore assez pour un test"</string>
+    <string name="trial_became_yours_body">"Les mots et expressions devenus les tiens."</string>
 </resources>
