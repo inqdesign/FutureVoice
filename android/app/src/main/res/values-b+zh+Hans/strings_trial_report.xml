@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The trial report (iOS TrialReport + WeekRecapSheet trial mode, 2026-10-19). -->
+<resources>
+    <string name="trial_your_first_minutes">"最初的 %d 分钟"</string>
+    <string name="trial_free_minutes">"免费体验的时间"</string>
+    <string name="trial_cover_body">"免费时间用完了。这段时间看到的，都整理在这里。"</string>
+    <string name="trial_first_test">"第一次测验"</string>
+    <string name="trial_next_level">"接下来看看你的等级。"</string>
+    <string name="trial_test_thin">"对话太短，出不了题目。报告会继续往下。"</string>
+    <string name="trial_test_body">"几分钟就好，题目来自你说过的话：单词、短语、被纠正的句子。"</string>
+    <string name="trial_take_then_level">"做完就能看到你的等级。"</string>
+    <string name="trial_how_we_read">"判断依据"</string>
+    <string name="trial_test_score">"测验 %1$d/%2$d"</string>
+    <string name="trial_level_moves">"说得越多，它就会跟着变。可以在「成长」里查看。"</string>
+    <string name="trial_level_later">"再多聊几次，就能看到你的等级。"</string>
+    <string name="trial_reading_level">"正在判断你的等级…"</string>
+    <string name="trial_keep_it_going">"继续下去"</string>
+    <string name="trial_change_later">"之后都可以在「我的作息」里修改。"</string>
+    <string name="trial_keep_routine">"照这个作息继续"</string>
+    <string name="trial_see_level">"查看你的等级"</string>
+    <string name="trial_take_test">"开始测验"</string>
+    <string name="trial_coach_failed">"现在没法整理出来。"</string>
+    <string name="trial_reading">"正在整理…"</string>
+    <string name="trial_next_up">"接下来要做的事"</string>
+    <string name="trial_not_enough">"还不够出一份测验"</string>
+    <string name="trial_became_yours_body">"变成你的单词和用语。"</string>
+</resources>

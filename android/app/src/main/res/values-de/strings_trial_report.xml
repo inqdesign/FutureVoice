@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The trial report (iOS TrialReport + WeekRecapSheet trial mode, 2026-10-19). -->
+<resources>
+    <string name="trial_your_first_minutes">"Deine ersten %d Minuten"</string>
+    <string name="trial_free_minutes">"Deine Gratisminuten"</string>
+    <string name="trial_cover_body">"Das war deine Gratiszeit. Das hat sie gezeigt."</string>
+    <string name="trial_first_test">"Dein erster Test"</string>
+    <string name="trial_next_level">"Jetzt dein Niveau."</string>
+    <string name="trial_test_thin">"Deine Gespräche waren zu kurz für Fragen. Der Bericht geht ohne Test weiter."</string>
+    <string name="trial_test_body">"Ein paar Minuten, gemacht aus dem, was du gesagt hast: Wörter, Wendungen, Korrekturen."</string>
+    <string name="trial_take_then_level">"Mach ihn, dann siehst du dein Niveau."</string>
+    <string name="trial_how_we_read">"So haben wir es eingeschätzt"</string>
+    <string name="trial_test_score">"Test %1$d/%2$d"</string>
+    <string name="trial_level_moves">"Es ändert sich, während du sprichst. Unter Fortschritt siehst du es."</string>
+    <string name="trial_level_later">"Noch ein paar Gespräche, dann steht dein Niveau fest."</string>
+    <string name="trial_reading_level">"Dein Niveau wird eingeschätzt …"</string>
+    <string name="trial_keep_it_going">"Bleib dran"</string>
+    <string name="trial_change_later">"Du kannst alles später unter Meine Routine ändern."</string>
+    <string name="trial_keep_routine">"Mit dieser Routine weitermachen"</string>
+    <string name="trial_see_level">"Niveau ansehen"</string>
+    <string name="trial_take_test">"Test machen"</string>
+    <string name="trial_coach_failed">"Deine Minuten konnten gerade nicht gelesen werden."</string>
+    <string name="trial_reading">"Deine Minuten werden gelesen …"</string>
+    <string name="trial_next_up">"Als Nächstes"</string>
+    <string name="trial_not_enough">"Noch nicht genug für einen Test"</string>
+    <string name="trial_became_yours_body">"Wörter und Wendungen, die deine geworden sind."</string>
+</resources>

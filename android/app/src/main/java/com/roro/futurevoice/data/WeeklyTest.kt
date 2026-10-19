@@ -310,8 +310,16 @@ object WeeklyTestEngine {
         )
     }
 
+    /**
+     * A paper over a window of the caller's choosing instead of the week's
+     * (iOS `WeeklyTestEngine.Scope`) — the trial report's test
+     * ([TrialReport]): from the first talk to now, its own coach, and a lower
+     * floor, since twenty minutes is a small week.
+     */
+    data class Scope(val start: Long, val minimum: Int, val coach: WeekRecap.Coach?)
+
     suspend fun gather(context: Context, language: String, level: CefrLevel,
-                       native: String): Material {
+                       native: String, scope: Scope? = null): Material {
         val vocab = VocabStore.shared(context)
         val app = context.applicationContext
         val now = System.currentTimeMillis()
@@ -336,7 +344,7 @@ object WeeklyTestEngine {
                 TalkCurriculum.build(session, level, language, vocab, emptyList(), emptyList())
                     .words.map { it.text to (it.masteredAt != null) }
             },
-            coach = weekCoach(app, language, level, native),
+            coach = if (scope != null) scope.coach else weekCoach(app, language, level, native),
             mistakes = mistakes,
             describeMistake = { p ->
                 GrammarFocus.describe(app, p, language, native)?.let { it.label to it.tip }
@@ -426,9 +434,12 @@ object WeeklyTestEngine {
         id: String = StoreJson.newId(),
         /** The finished weekly papers the retakes come from (with [lastTest]). */
         recentTests: List<WeeklyTest> = emptyList(),
+        /** The trial report's own window and floor; its coach rides on the
+         *  [Material] ([gather] with the same scope). */
+        scope: Scope? = null,
         gloss: suspend (String) -> String?,
     ): WeeklyTest? {
-        val (start, end) = window(lastTest, now)
+        val (start, end) = scope?.let { minOf(it.start, now) to now } ?: window(lastTest, now)
         val rng = WeeklyTestRandom(id)
         val windowSessions = material.sessions.filter { s ->
             val ended = s.endedAt ?: return@filter false
@@ -478,7 +489,7 @@ object WeeklyTestEngine {
                 asRewrite(it, material.cards, material.sessions, language)
             }
         }
-        if (items.size < MIN_ITEMS) return null
+        if (items.size < (scope?.minimum ?: MIN_ITEMS)) return null
         items.shuffle(rng)
         // A test opens on something you can answer by reading.
         if (items.first().kind == WeeklyTestItem.Kind.LISTEN) {

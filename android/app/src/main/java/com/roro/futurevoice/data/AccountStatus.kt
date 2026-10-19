@@ -134,6 +134,10 @@ data class AccountStatus(
         /** The shortest pool that can carry a conversation. Mirrors the
          *  server's floor in `consume_metered_seconds`; keep the two the same. */
         const val MINIMUM_CALL_SECONDS = 60
+        /** The free pool a new account is granted (iOS `freeGrantSeconds`,
+         *  `20260926100000_twenty_free_minutes`) — what the trial report's
+         *  title counts in minutes. */
+        const val FREE_GRANT_SECONDS = 1200
 
         /** The tiers in order of SIZE, smallest first. Order is the only thing
          *  it says — a tier missing from the catalog is skipped, never assumed. */

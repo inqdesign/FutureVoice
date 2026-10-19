@@ -111,7 +111,24 @@ import com.roro.futurevoice.data.WeeklyTestInbox
 import com.roro.futurevoice.data.WeeklyTestSchedule
 import com.roro.futurevoice.data.WeeklyTestSettings
 import com.roro.futurevoice.data.WeeklyTestStore
+import com.roro.futurevoice.data.WeeklyTest
+import com.roro.futurevoice.data.WeeklyTestEngine
+import com.roro.futurevoice.data.TrialReport
+import com.roro.futurevoice.data.TrialReportStore
+import com.roro.futurevoice.data.assessTrialLevel
+import com.roro.futurevoice.data.AccountStatus
+import com.roro.futurevoice.data.LanguageCatalog
+import com.roro.futurevoice.data.LearningPurposeStore
+import com.roro.futurevoice.data.RoutineRecipe
+import com.roro.futurevoice.data.RoutineText
+import com.roro.futurevoice.data.StudyPlanStore
 import com.roro.futurevoice.net.WeekRecapCoach
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.automirrored.filled.EventNote
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.ui.brand.ContinuousShape
 import kotlinx.coroutines.delay
@@ -129,10 +146,18 @@ import java.util.Locale
  * review work → new phrases from the fluent self → what tripped you up →
  * grammar → words → the coach → the test. A card with nothing to say is not
  * dealt, so a quiet week is a short deck, never a row of zeros.
+ *
+ * The same deck is the TRIAL REPORT ([TrialReportSheet], see [TrialReport]):
+ * the free minutes instead of a week, then the test (required — the level and
+ * routine cards are dealt only once it is done), the level, and the routine,
+ * whose button opens the plans.
  */
 enum class WeekRecapAction { TEST, TALK }
 
-private enum class RecapCard { COVER, TALK, USED, REVIEW, FRESH, STUMBLES, GRAMMAR, WORDS, COACH, TEST }
+private enum class RecapCard {
+    COVER, TALK, USED, REVIEW, FRESH, STUMBLES, GRAMMAR, WORDS, COACH, TEST,
+    TRIAL_TEST, LEVEL, ROUTINE,
+}
 
 private val Green = Color(0xFF34C759)
 private val Orange = Color(0xFFFF9500)
@@ -170,6 +195,26 @@ fun WeekRecapSheet(recap: WeekRecap, level: CefrLevel, onDismiss: (WeekRecapActi
     }
 }
 
+/** The free minutes' report as a sheet (iOS `WeekRecapSheet(trial:)`).
+ *  [onMeasuredLevel] sets the level quietly — no level-up sheet; the
+ *  report's own card is the announcement. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TrialReportSheet(report: TrialReport, level: CefrLevel, onMeasuredLevel: (String) -> Unit,
+                     onDismiss: () -> Unit) {
+    val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet,
+        containerColor = AppSurfaces.ground) {
+        Box(Modifier.fillMaxHeight(0.94f)) {
+            WeekRecapDeck(recap = report.recap, level = level, trial = report,
+                onMeasuredLevel = onMeasuredLevel) {
+                scope.launch { sheet.hide() }.invokeOnCompletion { onDismiss() }
+            }
+        }
+    }
+}
+
 @Composable
 fun WeekRecapDeck(
     recap: WeekRecap,
@@ -177,6 +222,9 @@ fun WeekRecapDeck(
     startPage: Int = 0,
     /** Don't call the coach (the capture run's recap is pre-written). */
     writeCoach: Boolean = true,
+    /** Set: the deck is the trial report ([TrialReport]). */
+    trial: TrialReport? = null,
+    onMeasuredLevel: (String) -> Unit = {},
     onClose: (WeekRecapAction?) -> Unit,
 ) {
     val context = LocalContext.current
@@ -185,6 +233,23 @@ fun WeekRecapDeck(
     var coachAttempt by remember { mutableStateOf(0) }
     var testState by remember { mutableStateOf<WeeklyTestSchedule.State>(WeeklyTestSchedule.State.Ready) }
     val language = remember { LanguageScope.active(context) }
+
+    // Trial report only.
+    val isTrial = trial != null
+    var trialState by remember { mutableStateOf(trial) }
+    var trialTest by remember { mutableStateOf<WeeklyTest?>(null) }
+    var showingTrialTest by remember { mutableStateOf(false) }
+    var trialLevel by remember { mutableStateOf(trial?.level?.let { raw ->
+        CefrLevel.entries.firstOrNull { it.code.equals(raw, ignoreCase = true) } }) }
+    var trialRationale by remember { mutableStateOf(trial?.levelRationale) }
+    var levelSettled by remember { mutableStateOf(trial?.level != null) }
+    var routine by remember { mutableStateOf<List<RoutineRecipe.Line>>(emptyList()) }
+    var routineIsOwn by remember { mutableStateOf(false) }
+    var showingPaywall by remember { mutableStateOf(false) }
+    var jumpToLevel by remember { mutableStateOf(false) }
+    /** The trial's test is done, or could not be made — either way the level
+     *  and the routine are the learner's to see. */
+    val trialTestCleared = trialTest?.isFinished == true || trialState?.testThin == true
 
     val cards = buildList {
         val r = current
@@ -198,7 +263,12 @@ fun WeekRecapDeck(
         // they show their own loading state — so the deck never reshuffles.
         if (r.hasActivity) { add(RecapCard.GRAMMAR); add(RecapCard.WORDS) }
         add(RecapCard.COACH)
-        add(RecapCard.TEST)
+        if (isTrial) {
+            add(RecapCard.TRIAL_TEST)
+            if (trialTestCleared) { add(RecapCard.LEVEL); add(RecapCard.ROUTINE) }
+        } else {
+            add(RecapCard.TEST)
+        }
     }
     val pager = rememberPagerState(initialPage = startPage.coerceIn(0, cards.size - 1)) { cards.size }
     val revealed = remember { mutableStateListOf(startPage) }
@@ -206,7 +276,51 @@ fun WeekRecapDeck(
         snapshotFlow { pager.currentPage }.collect { if (it !in revealed) revealed.add(it) }
     }
 
+    val trialScope = rememberCoroutineScope()
+    /** Re-read the report and its test: the test screen writes both. */
+    /** [jump]: back from the test. A report whose test was done in an
+     *  earlier sitting opens at the cover like any deck. */
+    suspend fun reloadTrialTest(jump: Boolean) {
+        val wasCleared = trialTest?.isFinished == true || trialState?.testThin == true
+        val saved = TrialReportStore.load(context)
+        if (saved != null) trialState = trialState?.copy(testThin = saved.testThin, testId = saved.testId)
+        saved?.testId?.let { id ->
+            WeeklyTestStore.shared(context).load(language).firstOrNull { it.id == id }?.let { trialTest = it }
+        }
+        // Done in this sitting: straight on to the level.
+        val cleared = trialTest?.isFinished == true || trialState?.testThin == true
+        if (jump && !wasCleared && cleared) jumpToLevel = true
+    }
+    fun updateTrial(change: (TrialReport) -> TrialReport) {
+        trialScope.launch {
+            TrialReportStore.update(context, trialState, change)?.let { trialState = it }
+        }
+    }
+
     LaunchedEffect(recap.end) {
+        if (isTrial) {
+            TrialReportStore.countOffer(context)
+            Analytics.capture("trial_report_opened", mapOf("talk_min" to recap.talkMinutes, "cards" to cards.size))
+            reloadTrialTest(jump = false)
+            // The routine: the one already chosen in setup, else the one the
+            // learner's purposes suggest.
+            val plan = StudyPlanStore.current(context)
+            if (LearningPurposeStore.routineApplied(context) && plan.blocks.isNotEmpty()) {
+                routine = plan.blocks.map { RoutineRecipe.Line(it, 0) }
+                routineIsOwn = true
+            } else {
+                routine = RoutineRecipe.lines(LearningPurposeStore.purposes(context),
+                    StudyPlanStore.goalMinutes(context))
+            }
+            if (trialLevel == null) {
+                val read = assessTrialLevel(context, language, nativeLanguage(context), onMeasuredLevel)
+                trialLevel = read?.first
+                trialRationale = read?.second
+                levelSettled = true
+                if (read != null) updateTrial { it.copy(level = read.first.code, levelRationale = read.second) }
+            }
+            return@LaunchedEffect
+        }
         // Shown means SEEN: marked here, not where it was raised.
         WeekRecapStore.markShown(context, recap)
         testState = WeeklyTestSettings.schedule(context).state(
@@ -220,7 +334,12 @@ fun WeekRecapDeck(
             WeekRecapCoach.write(context, current, language, level, nativeLanguage(context))
         }.onSuccess { coach ->
             current = current.copy(coach = coach)
-            WeekRecapStore.save(context, current)
+            if (isTrial) {
+                val written = current
+                updateTrial { it.copy(recap = written) }
+            } else {
+                WeekRecapStore.save(context, current)
+            }
         }.onFailure { e ->
             coachFailed = true
             Analytics.capture("week_recap_coach_error", mapOf("error" to e.toString().take(160)))
@@ -229,8 +348,8 @@ fun WeekRecapDeck(
     // One row per viewing, never one per swipe.
     androidx.compose.runtime.DisposableEffect(Unit) {
         onDispose {
-            Analytics.capture("week_recap_closed", mapOf("reached" to ((revealed.maxOrNull() ?: 0) + 1),
-                "cards" to cards.size))
+            Analytics.capture(if (isTrial) "trial_report_closed" else "week_recap_closed",
+                mapOf("reached" to ((revealed.maxOrNull() ?: 0) + 1), "cards" to cards.size))
         }
     }
 
@@ -241,8 +360,49 @@ fun WeekRecapDeck(
     }
 
     val scope = rememberCoroutineScope()
+    LaunchedEffect(jumpToLevel, cards.size) {
+        if (!jumpToLevel) return@LaunchedEffect
+        val index = cards.indexOf(RecapCard.LEVEL)
+        if (index >= 0) { jumpToLevel = false; pager.animateScrollToPage(index) }
+    }
+    fun advance() {
+        scope.launch { pager.animateScrollToPage(minOf(pager.currentPage + 1, cards.size - 1)) }
+    }
+    fun keepRoutine() {
+        if (!routineIsOwn && routine.isNotEmpty()) {
+            StudyPlanStore.update(context, RoutineRecipe.plan(routine))
+            LearningPurposeStore.setRoutineApplied(context)
+        }
+        Analytics.capture("trial_report_routine", mapOf("own" to routineIsOwn))
+        showingPaywall = true
+    }
+    if (showingTrialTest) {
+        Dialog(
+            onDismissRequest = { showingTrialTest = false; scope.launch { reloadTrialTest(jump = true) } },
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+        ) {
+            DialogSystemBarsLikeActivity()
+            WeeklyTestScreen(language = language, level = level,
+                onClose = { showingTrialTest = false; scope.launch { reloadTrialTest(jump = true) } },
+                trialScope = WeeklyTestEngine.Scope(start = current.start,
+                    minimum = TrialReportStore.MIN_TEST_ITEMS, coach = current.coach),
+                onTrialFinished = {
+                    val wasCleared = trialTest?.isFinished == true || trialState?.testThin == true
+                    trialTest = it
+                    if (!wasCleared) jumpToLevel = true
+                })
+        }
+    }
+    if (showingPaywall) {
+        PaywallDialog(onDismiss = {
+            // The report has done its job whether or not they bought.
+            showingPaywall = false
+            TrialReportStore.setFinished(context)
+            onClose(null)
+        })
+    }
     Column(Modifier.fillMaxSize().background(AppSurfaces.ground)) {
-        TopBar(current, cards.size, pager.currentPage,
+        TopBar(current, cards.size, pager.currentPage, isTrial,
             onSelect = { scope.launch { pager.animateScrollToPage(it) } },
             onClose = { finish(null) })
         HorizontalPager(state = pager, modifier = Modifier.weight(1f)) { index ->
@@ -254,19 +414,22 @@ fun WeekRecapDeck(
                     .alpha(alpha).offset(y = ((1f - alpha) * 14).dp),
                     verticalArrangement = Arrangement.spacedBy(18.dp)) {
                     val pending: @Composable () -> Unit = {
-                        CoachPending(coachFailed) { coachFailed = false; coachAttempt++ }
+                        CoachPending(coachFailed, isTrial) { coachFailed = false; coachAttempt++ }
                     }
                     when (cards[index]) {
-                        RecapCard.COVER -> Cover(current)
+                        RecapCard.COVER -> if (isTrial) TrialCover(current) else Cover(current)
                         RecapCard.TALK -> TalkCard(current)
                         RecapCard.USED -> UsedCard(current)
-                        RecapCard.REVIEW -> ReviewCard(current)
+                        RecapCard.REVIEW -> ReviewCard(current, isTrial)
                         RecapCard.FRESH -> FreshCard(current)
                         RecapCard.STUMBLES -> StumblesCard(current)
                         RecapCard.GRAMMAR -> GrammarCard(current, pending)
                         RecapCard.WORDS -> WordsCard(current, pending)
-                        RecapCard.COACH -> CoachCard(current, pending)
+                        RecapCard.COACH -> CoachCard(current, pending, isTrial)
                         RecapCard.TEST -> { TestCard(testState); ReminderOffer() }
+                        RecapCard.TRIAL_TEST -> TrialTestCard(trialTest, trialState?.testThin == true)
+                        RecapCard.LEVEL -> LevelCard(trialLevel, trialRationale, levelSettled, trialTest)
+                        RecapCard.ROUTINE -> RoutineCard(routine)
                     }
                 }
             }
@@ -274,7 +437,18 @@ fun WeekRecapDeck(
         // The deck's one button clears the navigation bar wherever the deck is
         // drawn (a sheet, or the capture's full page, where Next sat under it).
         Box(Modifier.fillMaxWidth().bottomBarInsets().padding(horizontal = 20.dp).padding(bottom = 12.dp, top = 4.dp)) {
-            if (cards.getOrNull(pager.currentPage) == RecapCard.TEST) {
+            val card = cards.getOrNull(pager.currentPage)
+            if (isTrial && (card == RecapCard.TRIAL_TEST || card == RecapCard.ROUTINE)) {
+                val t = trialTest
+                when {
+                    card == RecapCard.ROUTINE ->
+                        Primary(stringResource(R.string.trial_keep_routine)) { keepRoutine() }
+                    trialTestCleared -> Primary(stringResource(R.string.trial_see_level)) { advance() }
+                    t != null && t.answers.isNotEmpty() ->
+                        Primary(stringResource(R.string.wr_continue_test)) { showingTrialTest = true }
+                    else -> Primary(stringResource(R.string.trial_take_test)) { showingTrialTest = true }
+                }
+            } else if (card == RecapCard.TEST) {
                 when (testState) {
                     WeeklyTestSchedule.State.Ready ->
                         Primary(stringResource(R.string.wr_start_test)) { finish(WeekRecapAction.TEST) }
@@ -286,9 +460,7 @@ fun WeekRecapDeck(
                         Primary(stringResource(R.string.start_a_talk)) { finish(WeekRecapAction.TALK) }
                 }
             } else {
-                Primary(stringResource(R.string.next)) {
-                    scope.launch { pager.animateScrollToPage(minOf(pager.currentPage + 1, cards.size - 1)) }
-                }
+                Primary(stringResource(R.string.next)) { advance() }
             }
         }
     }
@@ -309,7 +481,8 @@ private fun chromeLocale(): Locale {
 }
 
 @Composable
-private fun TopBar(recap: WeekRecap, count: Int, page: Int, onSelect: (Int) -> Unit, onClose: () -> Unit) {
+private fun TopBar(recap: WeekRecap, count: Int, page: Int, isTrial: Boolean, onSelect: (Int) -> Unit,
+                   onClose: () -> Unit) {
     val locale = chromeLocale()
     Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 4.dp, bottom = 4.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -322,14 +495,20 @@ private fun TopBar(recap: WeekRecap, count: Int, page: Int, onSelect: (Int) -> U
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(stringResource(R.string.wr_your_week), style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold)
-            // The date gives way, never the close button (at a 1.3 font it
-            // pushed the ✕ off the row).
-            Text(dateRange(recap, locale), style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f))
+            if (isTrial) {
+                Text(stringResource(R.string.trial_your_first_minutes, AccountStatus.FREE_GRANT_SECONDS / 60),
+                    style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f))
+            } else {
+                Text(stringResource(R.string.wr_your_week), style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold)
+                // The date gives way, never the close button (at a 1.3 font it
+                // pushed the ✕ off the row).
+                Text(dateRange(recap, locale), style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f))
+            }
             Box(Modifier.size(32.dp).background(tertiaryFill(), CircleShape).clickable(onClick = onClose),
                 contentAlignment = Alignment.Center) {
                 Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.close),
@@ -429,7 +608,12 @@ private fun Cover(r: WeekRecap) {
                 fontWeight = FontWeight.SemiBold, color = Orange)
         }
     }
-    if (r.hasActivity) {
+    if (r.hasActivity) SummaryRow(r)
+}
+
+/** The whole week in one glance, before the cards take it apart. */
+@Composable
+private fun SummaryRow(r: WeekRecap) {
         Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (r.talkSeconds > 0) LabelRow(Icons.Filled.GraphicEq) {
                 Text(pluralStringResource(R.plurals.wr_min_of_talk_talks, r.talks.size, r.talkMinutes, r.talks.size))
@@ -444,7 +628,6 @@ private fun Cover(r: WeekRecap) {
                 Text(pluralStringResource(R.plurals.wr_new_phrases, r.newExpressionCount, r.newExpressionCount))
             }
         }
-    }
 }
 
 @Composable
@@ -511,13 +694,13 @@ private fun UsedCard(r: WeekRecap) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ReviewCard(r: WeekRecap) {
+private fun ReviewCard(r: WeekRecap, isTrial: Boolean = false) {
     // Like every card it leads with ONE number, and that number is the count
     // of the list right under it.
     Kicker(stringResource(R.string.practice), Icons.Filled.ViewAgenda)
     if (r.nowYours.isNotEmpty()) {
         BigNumber(r.nowYours.size)
-        Lead(stringResource(R.string.wr_became_yours_body))
+        Lead(stringResource(if (isTrial) R.string.trial_became_yours_body else R.string.wr_became_yours_body))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             r.nowYours.take(12).forEach {
                 Text(it, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium,
@@ -664,7 +847,7 @@ private fun WordsCard(r: WeekRecap, pending: @Composable () -> Unit) {
 }
 
 @Composable
-private fun CoachCard(r: WeekRecap, pending: @Composable () -> Unit) {
+private fun CoachCard(r: WeekRecap, pending: @Composable () -> Unit, isTrial: Boolean = false) {
     Kicker(stringResource(R.string.wr_from_coach), Icons.Filled.FormatQuote)
     val c = r.coach
     when {
@@ -678,12 +861,12 @@ private fun CoachCard(r: WeekRecap, pending: @Composable () -> Unit) {
                     if (c.insightQuote.isNotEmpty()) Secondary(quoted(c.insightQuote))
                 }
             }
-            if (c.plan.isNotEmpty()) PlanBox(c.plan)
+            if (c.plan.isNotEmpty()) PlanBox(c.plan, isTrial)
         }
         r.hasActivity -> pending()
         else -> {
             Lead(stringResource(R.string.wr_new_week_start_small))
-            PlanBox(listOf(fallbackFocus(r)))
+            PlanBox(listOf(fallbackFocus(r)), isTrial)
         }
     }
 }
@@ -698,11 +881,12 @@ private fun fallbackFocus(r: WeekRecap): String {
 }
 
 @Composable
-private fun PlanBox(items: List<String>) {
+private fun PlanBox(items: List<String>, isTrial: Boolean = false) {
     val accent = MaterialTheme.colorScheme.primary
     Column(Modifier.fillMaxWidth().background(accent.copy(alpha = 0.12f), RoundedCornerShape(16.dp)).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(stringResource(R.string.wr_this_week), style = MaterialTheme.typography.labelMedium,
+        Text(stringResource(if (isTrial) R.string.trial_next_up else R.string.wr_this_week),
+            style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold, color = accent)
         items.forEachIndexed { i, item ->
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -715,10 +899,10 @@ private fun PlanBox(items: List<String>) {
 
 /** The coach's read hasn't landed: waiting, or failed with a way back. */
 @Composable
-private fun CoachPending(failed: Boolean, onRetry: () -> Unit) {
+private fun CoachPending(failed: Boolean, isTrial: Boolean, onRetry: () -> Unit) {
     if (failed) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Lead(stringResource(R.string.wr_coach_failed))
+            Lead(stringResource(if (isTrial) R.string.trial_coach_failed else R.string.wr_coach_failed))
             OutlinedButton(onClick = onRetry) {
                 Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
@@ -729,7 +913,7 @@ private fun CoachPending(failed: Boolean, onRetry: () -> Unit) {
         Row(Modifier.padding(vertical = 20.dp), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-            Secondary(stringResource(R.string.wr_reading))
+            Secondary(stringResource(if (isTrial) R.string.trial_reading else R.string.wr_reading))
         }
     }
 }
@@ -792,6 +976,114 @@ private fun ReminderOffer() {
             Text(stringResource(R.string.wr_tell_me_next_week))
         }
     }
+}
+
+// MARK: - Trial report
+
+// 1 — the free minutes at a glance
+@Composable
+private fun TrialCover(r: WeekRecap) {
+    Kicker(stringResource(R.string.trial_free_minutes), Icons.Filled.CardGiftcard)
+    BigNumber(r.talkMinutes, stringResource(R.string.wr_min))
+    Lead(stringResource(R.string.trial_cover_body))
+    SummaryRow(r)
+}
+
+// The test — required: the level and the routine come after it.
+@Composable
+private fun TrialTestCard(test: WeeklyTest?, thin: Boolean) {
+    val finished = test?.isFinished == true
+    Kicker(stringResource(R.string.trial_first_test), Icons.Filled.Checklist)
+    Box(Modifier.fillMaxWidth().padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
+        Icon(when {
+            finished -> Icons.Filled.CheckCircle
+            thin -> Icons.AutoMirrored.Filled.EventNote
+            else -> Icons.Filled.CheckCircleOutline
+        }, contentDescription = null,
+            tint = when {
+                finished -> Green
+                thin -> MaterialTheme.colorScheme.onSurfaceVariant
+                else -> MaterialTheme.colorScheme.primary
+            }, modifier = Modifier.size(72.dp))
+    }
+    when {
+        test != null && finished -> {
+            Text(stringResource(R.string.wr_test_done, test.score, test.total),
+                style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Secondary(stringResource(R.string.trial_next_level))
+        }
+        thin -> Lead(stringResource(R.string.trial_test_thin))
+        test != null && test.answers.isNotEmpty() ->
+            Lead(stringResource(R.string.wr_test_in_progress, test.answers.size, test.total))
+        else -> {
+            Lead(stringResource(R.string.trial_test_body))
+            Secondary(stringResource(R.string.trial_take_then_level))
+        }
+    }
+}
+
+// The level — the first assessment, run early for the report.
+@Composable
+private fun LevelCard(level: CefrLevel?, rationale: String?, settled: Boolean, test: WeeklyTest?) {
+    val context = LocalContext.current
+    Kicker(stringResource(R.string.your_level_0ad2c2), Icons.Filled.BarChart)
+    when {
+        level != null -> {
+            Text(LanguageCatalog.levelLabel(level, LanguageScope.active(context)),
+                fontSize = 64.sp, fontWeight = FontWeight.Bold, lineHeight = 64.sp)
+            Lead(canDoAt(level.code))
+            if (!rationale.isNullOrEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.trial_how_we_read), style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(rationale, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+            if (test != null && test.isFinished) LabelRow(Icons.Filled.Checklist, MaterialTheme.colorScheme.onSurfaceVariant) {
+                Secondary(stringResource(R.string.trial_test_score, test.score, test.total))
+            }
+            Text(stringResource(R.string.trial_level_moves), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        settled -> Lead(stringResource(R.string.trial_level_later))
+        else -> Row(Modifier.padding(vertical = 20.dp), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+            Secondary(stringResource(R.string.trial_reading_level))
+        }
+    }
+}
+
+// The routine — the way on, and the button to the plans.
+@Composable
+private fun RoutineCard(routine: List<RoutineRecipe.Line>) {
+    val context = LocalContext.current
+    val res = context.resources
+    Kicker(stringResource(R.string.trial_keep_it_going), Icons.Filled.CalendarMonth)
+    Text(stringResource(RoutineRecipe.headline(LearningPurposeStore.purposes(context))),
+        style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+    Secondary(stringResource(R.string.about_lld_minutes_of_talk_a_day_and_what_it_corrected_comes_22496d,
+        StudyPlanStore.goalMinutes(context)))
+    RoutineWeekPicture(routine.map { it.block })
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        routine.forEach { line ->
+            val b = line.block
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Icon(b.kind.icon(), contentDescription = null, tint = b.kind.color(),
+                    modifier = Modifier.padding(top = 2.dp).size(20.dp).width(22.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(RoutineText.titled(res, b.kind, b.minutes),
+                        style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                    Text(routineWeekdaySummary(b.weekdays), style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (line.why != 0) Text(stringResource(line.why), style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary)
+                }
+            }
+        }
+    }
+    Text(stringResource(R.string.trial_change_later), style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 // MARK: - Helpers
@@ -871,7 +1163,7 @@ fun WeekRecapRow(level: CefrLevel, reloadKey: Any?) {
  * opens the archive instead.
  */
 @Composable
-fun WeekRecapHost(ready: Boolean, blocked: Boolean, level: CefrLevel) {
+fun WeekRecapHost(ready: Boolean, blocked: Boolean, level: CefrLevel, onShowing: (Boolean) -> Unit = {}) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val asked by WeekRecapInbox.asked.collectAsStateWithLifecycle()
@@ -907,10 +1199,53 @@ fun WeekRecapHost(ready: Boolean, blocked: Boolean, level: CefrLevel) {
         WeekRecapInbox.debug.value = null
         showing = recap
     }
+    LaunchedEffect(showing != null) { onShowing(showing != null) }
     showing?.let {
         WeekRecapSheet(it, level) { action ->
             showing = null
             action?.let(::performWeekRecapAction)
         }
+    }
+}
+
+/**
+ * The free minutes' report (iOS `RootTabView.offerTrialReport` and the call's
+ * `trialReport` sheet): raised when the call that spent the pool closes
+ * ([TrialReportInbox]), and again on a later open — a beat after the app is
+ * up, never over a call or another sheet — when it was closed before its last
+ * card. The account is asked fresh; the gate is [TrialReportStore.shouldOffer].
+ */
+@Composable
+fun TrialReportHost(ready: Boolean, inCall: Boolean, blocked: Boolean, level: CefrLevel,
+                    onMeasuredLevel: (String) -> Unit) {
+    val context = LocalContext.current
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val pending by com.roro.futurevoice.data.TrialReportInbox.pending.collectAsStateWithLifecycle()
+    var showing by remember { mutableStateOf<TrialReport?>(null) }
+    var resumes by remember { mutableStateOf(0) }
+    val stillBlocked by androidx.compose.runtime.rememberUpdatedState(blocked)
+    LaunchedEffect(lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) { resumes++ }
+    }
+    // From the call that spent the pool: it has already asked the gate.
+    LaunchedEffect(pending, inCall) {
+        if (!pending || inCall || showing != null) return@LaunchedEffect
+        com.roro.futurevoice.data.TrialReportInbox.pending.value = false
+        showing = TrialReportStore.current(context, LanguageScope.active(context))
+    }
+    LaunchedEffect(ready, resumes) {
+        if (!ready || showing != null || TrialReportStore.finished(context) ||
+            TrialReportStore.offers(context) >= TrialReportStore.MAX_OFFERS) return@LaunchedEffect
+        delay(1_500)
+        val account = runCatching {
+            AccountStatus.load(com.roro.futurevoice.data.AuthRepository())
+                .also { com.roro.futurevoice.data.BillingGate.remember(it) }
+        }.getOrNull() ?: return@LaunchedEffect
+        if (!TrialReportStore.shouldOffer(context, account)) return@LaunchedEffect
+        if (showing != null || stillBlocked) return@LaunchedEffect
+        showing = TrialReportStore.current(context, LanguageScope.active(context))
+    }
+    showing?.let {
+        TrialReportSheet(it, level, onMeasuredLevel) { showing = null }
     }
 }
