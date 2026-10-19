@@ -86,7 +86,9 @@ struct PlayingBars: View {
     @State private var bars: [Double] = PlayingBars.resting
     @State private var loudness: Double = 0
 
-    private static let resting: [Double] = [0.35, 0.6, 0.45, 0.3]
+    private static let resting: [Double] = [0.2, 0.35, 0.28, 0.18]
+    /// The lowest a bar goes: about its own width, a dot.
+    private static let floor = 0.12
 
     var body: some View {
         GeometryReader { geo in
@@ -106,7 +108,13 @@ struct PlayingBars: View {
             guard isAnimating, !reduceMotion else { return }
             // Fast up, slower down: a syllable shows, a pause eases out.
             loudness = max(Double(level), loudness * 0.8)
-            bars = bars.indices.map { _ in 0.15 + 0.85 * loudness * .random(in: 0.55...1) }
+            // The meter rarely reads under ~0.3 while someone is talking, so
+            // that much is taken off and the rest curved: quiet syllables sit
+            // near the floor and only the loud ones reach the top.
+            let shown = pow(max(0, (loudness - 0.25) / 0.75), 1.4)
+            bars = bars.indices.map { _ in
+                Self.floor + (1 - Self.floor) * shown * .random(in: 0.5...1)
+            }
         }
         .onChange(of: isAnimating) { _, on in
             if !on { bars = Self.resting; loudness = 0 }
