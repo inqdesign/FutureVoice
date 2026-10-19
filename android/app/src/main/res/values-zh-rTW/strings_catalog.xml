@@ -175,6 +175,7 @@
     <string name="all_sources">"所有來源"</string>
     <string name="all_words">"全部單字"</string>
     <string name="allow_access_to_photos">"請允許取用照片"</string>
+    <string name="allow_google_drive_access_to_keep_syncing">"要繼續同步，請允許存取 Google 雲端硬碟"</string>
     <string name="allow_notifications_so_your_routine_can_remind_you">"允許通知，作息才能提醒你"</string>
     <string name="almost">"差不多"</string>
     <string name="almost_there">"快好了…"</string>
@@ -401,6 +402,10 @@
     <string name="clears_setup_voice_clone_and_persona_then_restarts_the_first_cdfc74">"清除設定、聲音和個人檔案，從第一次開啟的畫面重新開始。登入狀態不變。"</string>
     <string name="client_calls">"客戶通話"</string>
     <string name="clock_time">"通話時長"</string>
+    <!-- "Cloning again uses 5 credits. Your current voice is replaced and deleted on ElevenLabs — you can't go back to it. Audio already generated keeps playing." -->
+    <string name="cloning_again_uses_5_credits_your_current_voice_is_replaced_156602">"重新複製會用掉5點數。目前的聲音會被新聲音取代，並從ElevenLabs刪除，無法還原。已經生成的音訊可以繼續播放。"</string>
+    <!-- "Cloning again uses a few minutes of talk time. Your current voice is replaced and deleted on ElevenLabs — you can't go back to it. Audio already generated keeps playing." -->
+    <string name="cloning_again_uses_a_few_minutes_of_talk_time_your_current_v_551704">"重新製作會用掉幾分鐘的通話時間。目前的聲音會被新聲音取代，並從ElevenLabs刪除，無法還原。已經做好的音訊可以繼續聽。"</string>
     <string name="cloning_your_voice">"正在製作你的聲音…"</string>
     <string name="close">"關閉"</string>
     <string name="close_the_book">"闔上本子"</string>
@@ -543,6 +548,7 @@
     <string name="delete_account">"刪除帳號"</string>
     <string name="delete_block">"刪除時段"</string>
     <string name="delete_forever">"永久刪除"</string>
+    <string name="delete_from_google_drive">"從 Google 雲端硬碟刪除"</string>
     <string name="delete_from_icloud">"從 iCloud 刪除"</string>
     <string name="delete_scenario">"刪除情境"</string>
     <string name="delete_talk">"刪除通話"</string>
@@ -552,6 +558,7 @@
     <string name="delete_this_talk">"要刪除這通電話嗎？"</string>
     <string name="delete_video">"刪除影片"</string>
     <string name="delete_your_account">"要刪除帳號嗎？"</string>
+    <string name="delete_your_practice_from_google_drive">"要刪除 Google 雲端硬碟裡的練習紀錄嗎？"</string>
     <string name="delete_your_practice_from_icloud">"要從 iCloud 刪除練習記錄嗎？"</string>
     <string name="delete_your_voice">"要刪除聲音嗎？"</string>
     <!-- 'Deletes cached voice audio only. Your talks, drills, words and books are untouched. Every line synthesizes again the next time it plays.' -->
@@ -586,8 +593,12 @@
     <!-- "Distinct graded words you've used, accumulating from the day each was first said." -->
     <string name="distinct_graded_words_you_ve_used_accumulating_from_the_day_188d71">"你實際用過的單字，依等級計算，從每個字第一次說出口那天開始累積。"</string>
     <string name="distinct_words_from_your_talks_in_the_last_lld_days">"最近%d天的通話裡用過的不同單字數。"</string>
+    <!-- "Do this scene again from the start, and say every line out loud, yours and the other side's." -->
+    <string name="do_this_scene_again_from_the_start_and_say_every_line_out_lo_9794c6">"從頭再演一次這個場景，自己的台詞和對方的台詞都大聲說出來。"</string>
     <!-- 'Do this scene again from the start, and say your part out loud. The other side plays just as it did.' -->
     <string name="do_this_scene_again_from_the_start_and_say_your_part_out_lou_3f2c37">"從頭再演一次這個場景。輪到你時，把你的台詞說出來。對方的話會照當時播放。"</string>
+    <!-- "Do this talk again from the start, and say every line out loud: yours the corrected way, and your fluent self's too." -->
+    <string name="do_this_talk_again_from_the_start_and_say_every_line_out_lou_0cfb37">"從頭再進行一次這段對話，自己的話照修正後的說，流利的自己的話也全部大聲說出來。"</string>
     <!-- 'Do this talk again from the start, and say your part the corrected way. The answers play just as they did.' -->
     <string name="do_this_talk_again_from_the_start_and_say_your_part_the_corr_5ece3b">"從頭再進行一次這場對話。輪到你時，用修正後的說法說出來。回答會照當時播放。"</string>
     <string name="doctor_clinic">"看醫生"</string>
@@ -723,6 +734,8 @@
     <string name="everything_planned_for_that_day_is_done_your_streak_grows_by_4f7c00">"當天排的都做完了，連續紀錄多一天。"</string>
     <!-- 'Everything said so far is saved. Reconnect to carry on from where you were.' -->
     <string name="everything_said_so_far_is_saved_reconnect_to_carry_on_from_w_c4f94f">"目前為止的對話都已儲存。重新連線就能接著聊。"</string>
+    <!-- "Everything synced to Google Drive is removed and syncing stops on every device. What's on this device stays." -->
+    <string name="everything_synced_to_google_drive_is_removed_and_syncing_sto_32a900">"同步到 Google 雲端硬碟的內容會全部刪除，所有裝置都會停止同步。這台裝置上的內容會保留。"</string>
     <!-- "Everything synced to iCloud is removed and syncing stops on every device. What's on this device stays." -->
     <string name="everything_synced_to_icloud_is_removed_and_syncing_stops_on_60516a">"會刪除同步到 iCloud 的所有內容，並在所有裝置上停止同步。這台裝置上的內容會保留。"</string>
     <string name="everything_this_conversation_had_to_teach_is_yours">"這次對話該學的，都學會了。"</string>
@@ -889,6 +902,11 @@
     <string name="goal_met_how_did_it_feel">"達標了。今天說得順嗎？"</string>
     <string name="good_llds_more_for_the_best_result">"很好。再%d秒，效果最好"</string>
     <string name="good_to_have_you_back">"最近好嗎？"</string>
+    <!-- "Google Drive access wasn't allowed. Try again and choose Allow." -->
+    <string name="google_drive_access_wasn_t_allowed_try_again_and_choose_allo_7f36e7">"沒有取得 Google 雲端硬碟的存取權限。請再試一次並選擇「允許」。"</string>
+    <!-- "Google Drive can't be reached right now. Check your connection, then try again." -->
+    <string name="google_drive_can_t_be_reached_right_now_check_your_connectio_286681">"現在連不上 Google 雲端硬碟。請檢查網路連線後再試一次。"</string>
+    <string name="google_drive_is_full_so_audio_isn_t_syncing">"Google 雲端硬碟已滿，音訊沒有同步"</string>
     <string name="got_it">"記住了"</string>
     <string name="got_them_all">"全部答對"</string>
     <!-- 'Graded against your B1 setting — how this talk went, not what your level is.' -->
@@ -926,6 +944,7 @@
     <string name="hear_it">"聽聽看"</string>
     <string name="hear_it_again">"再聽一次"</string>
     <string name="hear_it_in_my_voice">"用我的聲音聽"</string>
+    <string name="hear_it_in_my_voice_lld_min">"用我的聲音聽 · %d分鐘"</string>
     <string name="hear_it_in_the_app_write_it_here">"在 App 裡聽，在這裡寫"</string>
     <string name="hear_my_attempt">"聽我的錄音"</string>
     <string name="hear_target">"聽範本"</string>
@@ -971,9 +990,11 @@
     <string name="how_is_it_going_so_far">"用起來感覺如何？"</string>
     <string name="how_it_s_assessed">"判定方式"</string>
     <string name="how_it_works">"規則"</string>
+    <string name="how_long_a_call">"每次通話幾分鐘？"</string>
     <string name="how_long_have_you_been_there_optional">"在那裡住多久了？（選填）"</string>
     <string name="how_long_optional">"多久了？（選填）"</string>
     <string name="how_many">"數量"</string>
+    <string name="how_much_can_you_study_a_day">"一天能學習多久？"</string>
     <string name="how_much_will_you_talk_each_day">"每天要說多久？"</string>
     <string name="how_much_you_elaborate_longer_richer_turns_read_higher">"看你說得多詳細。說得越長越豐富，分數越高。"</string>
     <string name="how_much_you_talked_and_reviewed_over_the_last_two_weeks">"顯示最近兩週說了多少、複習了多少。"</string>
@@ -1006,6 +1027,8 @@
     <string name="i_ll_help_you_keep_it_up_d1116e">"%s，我會幫你一直保持下去"</string>
     <!-- "I'll help you keep it up" -->
     <string name="i_ll_help_you_keep_it_up_fe0fae">"我會幫你持續下去"</string>
+    <!-- "I'll put review in at %@, about %lld cards. Drag it on the grid to move it later." -->
+    <string name="i_ll_put_review_in_at_about_lld_cards_drag_it_on_the_grid_to_f20228">"複習會排在 %1$s，大約 %2$d 張卡片。之後可以在表上拖曳來改時間。"</string>
     <string name="i_m_lld_or_older">"我已滿%d歲。"</string>
     <!-- "I'm %lld or older, and I agree to my recording being used to build my voice model." -->
     <string name="i_m_lld_or_older_and_i_agree_to_my_recording_being_used_to_b_a31e9d">"我已滿%d歲，並同意用我的錄音建立我的語音模型。"</string>
@@ -1106,6 +1129,7 @@
     <!-- 'Keep a word from a talk, or watch a situation — its words collect here.' -->
     <string name="keep_a_word_from_a_talk_or_watch_a_situation_its_words_colle_b07a48">"在通話裡收下單字，或看一場情境，裡面的單字都會收集在這裡。"</string>
     <string name="keep_going_llds_more">"請繼續唸，再%d秒就好"</string>
+    <string name="keep_in_google_drive">"存到 Google 雲端硬碟"</string>
     <string name="keep_in_icloud">"保存到 iCloud"</string>
     <string name="keep_it">"收藏"</string>
     <string name="keep_it_today_for_day_1">"今天守住就是第 1 天"</string>
@@ -1118,9 +1142,12 @@
     <string name="keep_talking_past_the_first_answer_say_a_little_more_in_each_f6621d">"別停在第一句回答，每次多說一點，速度就會從更長的段落裡讀出來。"</string>
     <string name="keep_this_voice">"保留這個聲音"</string>
     <string name="keep_what_you_d_use">"收藏用得上的"</string>
+    <string name="keep_your_practice_in_google_drive">"要把練習存在 Google 雲端硬碟嗎？"</string>
     <string name="keep_your_practice_in_icloud">"要把練習紀錄保存在 iCloud 嗎？"</string>
     <string name="kept_for_lld_days">"已連續守住 %d 天"</string>
     <string name="kept_from_a_talk">"通話裡收下的單字"</string>
+    <!-- 'Kept in your own Google Drive, it waits on any phone or tablet you sign into, your voice recording too, so your voice comes back without recording again.' -->
+    <string name="kept_in_your_own_google_drive_it_waits_on_any_phone_or_table_45e1ff">"存在你自己的 Google 雲端硬碟，登入任何手機或平板都能接著用。你的聲音錄音也會一起保存，不用重錄就能找回你的聲音。"</string>
     <!-- "Kept in your own iCloud, they're waiting on any phone or iPad you sign into — your voice recording too, so your voice comes back without recording again." -->
     <string name="kept_in_your_own_icloud_they_re_waiting_on_any_phone_or_ipad_9fa373">"保存在你自己的 iCloud，登入任何 iPhone 或 iPad 都能接著用。聲音錄音也會一起保存，不用重錄就能找回你的聲音。"</string>
     <string name="key_expressions">"關鍵表達"</string>
@@ -1160,6 +1187,7 @@
     <string name="left_to_spend">"剩餘時間"</string>
     <string name="length">"時長"</string>
     <string name="let_s_go">"開始吧"</string>
+    <string name="let_s_make_your_routine">"來安排你的作息吧"</string>
     <string name="let_s_make_your_voice_again">"重新錄一次你的聲音吧"</string>
     <string name="let_s_talk">"開始說"</string>
     <!-- 'Level %@' -->
@@ -1358,6 +1386,7 @@
     <string name="make_it_in_my_voice">"用我的聲音生成"</string>
     <string name="make_it_yours">"變成自己的"</string>
     <string name="make_me_sound_more_like_you">"讓我聽起來更像你"</string>
+    <string name="make_my_routine">"安排作息"</string>
     <string name="making_a_few_takes_about_half_a_minute_keep_this_open">"正在唸幾個版本，大約需要30秒。請不要關閉這個畫面。"</string>
     <string name="making_it_in_your_voice">"正在用你的聲音生成…"</string>
     <string name="making_it_yours">"變成自己的"</string>
@@ -1479,6 +1508,8 @@
     <string name="name">"名字"</string>
     <string name="name_interests_place">"名字、興趣、地區…"</string>
     <string name="name_on_the_board">"排行榜上的名字"</string>
+    <!-- 'Names your clone here and on ElevenLabs. Leave it empty to go back to the default.' -->
+    <string name="names_your_clone_here_and_on_elevenlabs_leave_it_empty_to_go_d44a48">"這是在App和ElevenLabs兩邊稱呼這個聲音的名字。留空就會回到預設名稱。"</string>
     <string name="narrow_it_down">"縮小範圍"</string>
     <string name="nawana_backup">"nawana備份"</string>
     <!-- 'nawana needs the microphone and speech recognition to hear you speak. Turn them on in Settings → nawana.' -->
@@ -1630,10 +1661,14 @@
     <!-- "Nothing you hide is lost — your talk's book keeps every correction." -->
     <string name="nothing_you_hide_is_lost_your_talk_s_book_keeps_every_correc_4f2f1b">"隱藏不會弄丟任何東西，通話複習本裡每一則修正都還在。"</string>
     <string name="notice_how_it_s_done_not_just_what_s_said">"不只看說了什麼，更要看是怎麼應對的。"</string>
+    <!-- "Notifications are off, so I can't call you yet. Turn them on in Settings. Your routine is under Activity on the Talk screen." -->
+    <string name="notifications_are_off_so_i_can_t_call_you_yet_turn_them_on_i_52c0b7">"通知已關閉，所以還不能打電話給你。請到設定開啟通知。作息在對話畫面的「活動」裡。"</string>
     <!-- "Notifications are off, so your routine can't remind you. Turn them on in Settings" -->
     <string name="notifications_are_off_so_your_routine_can_t_remind_you_turn_298720">"通知已關閉，作息無法提醒你。請到設定開啟"</string>
     <!-- "Now and then it asks something you can answer with a word you're studying, and shows you the word. Use it and it gets a check." -->
     <string name="now_and_then_it_asks_something_you_can_answer_with_a_word_yo_33236e">"有時會問一個能用你正在複習的單字回答的問題，並顯示那個單字。用上了就會打勾。"</string>
+    <!-- "Now and then your future self asks something you can answer with a word you're studying, and the mistake you make most becomes the call's focus." -->
+    <string name="now_and_then_your_future_self_asks_something_you_can_answer_743ca9">"流利的自己偶爾會問你能用正在學的單字回答的問題，並把你最常犯的錯誤當作這次通話的重點。"</string>
     <string name="nutrition">"營養"</string>
     <string name="of_7_days">"/ 7天"</string>
     <string name="of_lld_min_talked_this_month">"本月%2$d分鐘中已通話%1$s"</string>
@@ -1651,6 +1686,8 @@
     <!-- "On the day you pick, I'll put your week together: what you said, the words you picked up, how far you've come. Then a short test, made only from your own talks." -->
     <string name="on_the_day_you_pick_i_ll_put_your_week_together_what_you_sai_d42485">"在你選的那天，我會幫你整理這一週：你說了什麼、學到哪些詞、進步了多少。然後是一份小測驗，只用你自己的對話出題。"</string>
     <string name="on_the_street">"在路上"</string>
+    <!-- 'On your other device, open Settings, turn on “Continue on your other devices”, then come back here.' -->
+    <string name="on_your_other_device_open_settings_turn_on_continue_on_your_c7fa99">"請在另一台裝置打開「設定」，開啟「在其他裝置上繼續」，再回到這裡。"</string>
     <string name="once">"一次"</string>
     <!-- "Once a week, a test made only from that week's own talks: what a word means, the missing phrase, rebuilding a corrected sentence, writing down what you hear, saying a line out loud, and the grammar from your weekly report. A dot means it's open." -->
     <string name="once_a_week_a_test_made_only_from_that_week_s_own_talks_what_d9930a">"每週一次，只用你當週對話出的測驗：選單字意思、填空格裡的用語、重組修正過的句子、聽寫、開口說一句，還有每週報告裡的文法。看到圓點代表測驗已開放。"</string>
@@ -1829,6 +1866,10 @@
     <string name="practicing_your_rhythm">"正在練習說話的節奏…"</string>
     <!-- 'Practise on your iPhone, pick it up on your iPad. Everything is stored in your own iCloud, audio included, so it can use a few gigabytes there.' -->
     <string name="practise_on_your_iphone_pick_it_up_on_your_ipad_everything_i_80dce1">"在 iPhone 上練習，在 iPad 上接著做。包含音訊在內的所有內容都存在你自己的 iCloud，可能會用掉幾 GB。"</string>
+    <!-- 'Practise on your phone, pick it up on your tablet. Everything is kept in your own Google Drive, audio included, in a hidden folder only this app can open.' -->
+    <string name="practise_on_your_phone_pick_it_up_on_your_tablet_everything_0cf690">"在手機上練習，換到平板接著練。包括音訊在內，全部存在你自己的 Google 雲端硬碟裡一個只有這個 App 能開的隱藏資料夾。"</string>
+    <!-- 'Practised on another phone or tablet with sync on? Your talks, cards, words and recordings are in your Google Drive. Choose the same Google account you used there.' -->
+    <string name="practised_on_another_phone_or_tablet_with_sync_on_your_talks_dc3ff4">"如果你在其他手機或平板開著同步練習過，對話、卡片、單字和錄音都在你的 Google 雲端硬碟裡。請選擇你在那邊用的同一個 Google 帳號。"</string>
     <string name="preparing_study_notes">"正在準備學習筆記…"</string>
     <string name="preparing_the_file">"正在準備檔案…"</string>
     <string name="preparing_your_video">"正在準備影片…"</string>
@@ -1887,6 +1928,7 @@
     <string name="re_synthesize_every_line_learning_data_untouched">"重新合成每一句，學習紀錄不受影響"</string>
     <string name="read">"%s 已讀"</string>
     <string name="read_again">"重新讀取"</string>
+    <string name="read_both_sides">"兩邊的台詞都念"</string>
     <!-- 'Read from the structures you actually build and from verified grammar slips per 100 spoken words — the lower of the two.' -->
     <string name="read_from_the_structures_you_actually_build_and_from_verifie_7599b1">"以你實際組成的句子結構，和每說 100 個字中確認到的文法錯誤來讀，取兩者較低的一個。"</string>
     <!-- 'Read from your real talks — vocabulary, grammar, fluency and expression together.' -->
@@ -2042,6 +2084,7 @@
     <string name="s_10_min">"10分鐘"</string>
     <string name="s_1_card">"1 張"</string>
     <string name="s_1_expression">"用語1個"</string>
+    <string name="s_1_hour">"1 小時"</string>
     <string name="s_1_min">"約1分鐘"</string>
     <string name="s_1_minute_vary_your_pitch_a_little">"1分鐘就夠。讀的時候語調稍微變化一下。"</string>
     <string name="s_1_more_day">"再 1 天"</string>
@@ -2085,6 +2128,8 @@
     <string name="save_to_sentences">"存到句子"</string>
     <string name="save_your_recording_to_your_account">"把錄音存到你的帳號。"</string>
     <string name="saved">"已儲存"</string>
+    <!-- "Saved here, but ElevenLabs didn't accept the new name: %@ It'll be applied the next time your voice is cloned." -->
+    <string name="saved_here_but_elevenlabs_didn_t_accept_the_new_name_it_ll_b_76dd24">"已存在這台裝置上，但 ElevenLabs 沒有接受新名字：%s 下次重新複製聲音時會套用。"</string>
     <!-- "Saved here, but the voice service didn't take the new name yet: %@ It'll be applied the next time your voice is made." -->
     <string name="saved_here_but_the_voice_service_didn_t_take_the_new_name_ye_8a3a70">"已在這裡儲存，但語音服務還沒套用新名字：%s 下次製作聲音時會套用。"</string>
     <string name="saved_to_expressions">"已存到用語"</string>
@@ -2111,6 +2156,7 @@
     <string name="say_it_yourself">"自己說說看"</string>
     <!-- 'Say more in one sentence — a reason, a condition, what happened before. Longer sentences are what move this band.' -->
     <string name="say_more_in_one_sentence_a_reason_a_condition_what_happened_9100fc">"試著在一句話裡多說一點：原因、條件、之前發生的事。能讓這個等級往上的是更長的句子。"</string>
+    <string name="say_s_line">"%s的台詞"</string>
     <string name="say_the_word_out_loud">"大聲念出單字"</string>
     <!-- 'Say the word out loud first. Then tap the card to see its meaning and an example.' -->
     <string name="say_the_word_out_loud_first_then_tap_the_card_to_see_its_mea_72e3b6">"先把單字唸出來，再點一下卡片看意思和例句。"</string>
@@ -2222,6 +2268,7 @@
     <string name="shuffle">"隨機播放"</string>
     <!-- "Sign in, and your voice lands in this account the day it's made." -->
     <string name="sign_in_and_your_voice_lands_in_this_account_the_day_it_s_ma_e2e5d2">"登入後，聲音完成的那天就會直接進到這個帳號。"</string>
+    <string name="sign_in_to_a_google_account_on_this_device_then_try_again">"請先在這台裝置登入 Google 帳號，再試一次。"</string>
     <string name="sign_in_to_icloud_in_settings_first_then_try_again">"請先在「設定」登入 iCloud，再試一次。"</string>
     <string name="sign_in_to_icloud_in_settings_to_sync">"要同步，請在「設定」登入 iCloud"</string>
     <string name="sign_in_to_sync_your_practice_between_your_iphone_and_ipad">"登入後就能在 iPhone 和 iPad 之間同步練習記錄。"</string>
@@ -2460,6 +2507,7 @@
     <string name="tap_to_hear_a_sample_in">"點 ▶ 可以聽%s的範例。"</string>
     <string name="tap_to_hear_it_again">"點一下可以再聽一次"</string>
     <string name="tap_to_reveal">"點一下顯示"</string>
+    <string name="tap_to_see_it_or_change_it">"點一下就能查看或修改。"</string>
     <string name="tap_to_shadow_the_selected_phrase">"點一下跟讀選取的片段"</string>
     <string name="tap_to_start_a_phone_call">"點一下開始通話"</string>
     <string name="tap_to_sync_shadow">"點一下跟讀"</string>
@@ -2690,6 +2738,8 @@
     <string name="this_day_has_its_own_plan_so_this_change_is_for_this_day_onl_6323e8">"這天有單獨調整過的安排，所以這次修改只套用在這一天。"</string>
     <!-- "This deletes your voice model everywhere it is kept. Audio already made keeps playing until you delete your account. The app can't hold a call without a voice, so it will ask you to record a new one, or you can delete your account entirely." -->
     <string name="this_deletes_your_voice_model_everywhere_it_is_kept_audio_al_7612fd">"這會從所有保存的地方刪除你的聲音模型。已經做好的音訊在刪除帳號前都能繼續聽。沒有聲音就無法通話，所以會請你重新錄一次，你也可以直接刪除整個帳號。"</string>
+    <!-- "This deletes your voice model here and at ElevenLabs. Audio already generated keeps playing until you delete your account. The app can't hold a call without a voice, so it will ask you to record a new one — or you can delete your account entirely." -->
+    <string name="this_deletes_your_voice_model_here_and_at_elevenlabs_audio_a_b79e8b">"會把你的聲音模型從這裡和ElevenLabs兩邊都刪掉。已經生成的音檔在你刪除帳號前還是會照常播放。沒有聲音就沒辦法通話，所以會請你重新錄一個，或者你也可以直接刪除整個帳號。"</string>
     <!-- 'This is how other learners find you. Tap to change it or take it down.' -->
     <string name="this_is_how_other_learners_find_you_tap_to_change_it_or_take_211599">"其他學習者看到的就是這樣。點一下可以修改或下架。"</string>
     <string name="this_is_what_makes_the_dialogues_feel_real">"這就是讓對話感覺真實的關鍵。"</string>
@@ -2764,6 +2814,9 @@
     <string name="try_again">"再試一次"</string>
     <string name="try_for_free">"免費開始"</string>
     <string name="try_in_your_next_talk">"下次聊天時，用用看「%s」。"</string>
+    <string name="try_it_just_as_it_is_for_a_week_you_can_change_it_any_time">"先照這樣試一週，隨時都能改。"</string>
+    <!-- "Try it like this for a week. It's under Activity on the Talk screen whenever you want to change it." -->
+    <string name="try_it_like_this_for_a_week_it_s_under_activity_on_the_talk_f71c6f">"就照這樣過一週吧。想改的時候，到對話畫面的「活動」就行。"</string>
     <string name="try_now">"現在再試一次"</string>
     <string name="try_saying">"試著這樣說"</string>
     <string name="try_the_missed_ones_again">"再試一次答錯的"</string>
@@ -2822,6 +2875,7 @@
     <string name="useful_information_clearly_told">"把實用資訊講清楚"</string>
     <string name="uses_lld_min_of_talk_time">"使用 %d 分鐘通話時間"</string>
     <string name="uses_talk_time">"會用到通話時間"</string>
+    <string name="uses_your_google_drive">"使用你的 Google 雲端硬碟"</string>
     <string name="uses_your_icloud">"使用你的 iCloud"</string>
     <string name="variants">"換個說法"</string>
     <!-- 'Verified grammar slips per 100 spoken words — fewer reads higher.' -->
@@ -2876,6 +2930,7 @@
     <string name="vs_previous_30_days">"與前 30 天相比"</string>
     <string name="waiting_for_the_first_sync">"等待第一次同步"</string>
     <string name="walking_the_dog">"遛狗時"</string>
+    <string name="want_a_copy_use_your_own_google_drive">"想留一份？放進你自己的 Google 雲端硬碟"</string>
     <string name="want_a_copy_use_your_own_icloud">"想留一份？放進你自己的 iCloud"</string>
     <string name="warm">"溫暖"</string>
     <string name="warm_and_chatty">"溫暖又愛聊"</string>
@@ -3011,9 +3066,11 @@
     <string name="what_you_say_depends_on_who_you_say_it_to_asking_for_a_day_o_63228d">"同一句話，對誰說就不一樣。請假這件事，跟主管說和跟同事說是完全不同的對話，隨便一個陌生人練不出這種差別。有了具體的人，每個情境聽起來都像真的。"</string>
     <string name="what_you_say_when_someone_meets_you">"別人遇到你時，你說的第一句話"</string>
     <string name="what_you_usually_talk_about">"平常聊些什麼"</string>
+    <string name="what_your_clone_is_called_here_and_on_elevenlabs">"這個聲音在這裡和ElevenLabs上的名稱"</string>
     <string name="what_your_fluent_self_knows_about_you">"流利的自己對你的了解"</string>
     <string name="what_your_plan_holds">"方案裡有什麼"</string>
     <string name="what_your_voice_is_called_in_the_app">"你的聲音在 App 裡的名字"</string>
+    <string name="when_">"什麼時候？"</string>
     <!-- "When a friend joins with your code, you both get %lld minutes — and invite minutes are spent before the month's pool." -->
     <string name="when_a_friend_joins_with_your_code_you_both_get_lld_minutes_de6e19">"朋友用你的邀請碼註冊，兩人各拿到%d分鐘通話時間。邀請得到的時間會比這個月的額度先用。"</string>
     <!-- "When a new week starts, a short report on the last one comes up once: the days you studied, your streak, how long you talked, and what became yours. Every past week stays here, and a dot marks one you haven't opened." -->
@@ -3292,9 +3349,12 @@
     <string name="your_conversation_is_saved_open_it_under_review_to_generate_7c3e0c">"對話已儲存。到「複習」打開它，就能重新產生複習教材。"</string>
     <!-- "Your corrections, notes and word meanings come back in this language. The app's own screens stay English." -->
     <string name="your_corrections_notes_and_word_meanings_come_back_in_this_l_95bb21">"糾正、筆記和單字意思會用這個語言顯示。App 本身的畫面仍是英文。"</string>
+    <!-- 'Your current clone will be deleted on ElevenLabs after the new one is created.' -->
+    <string name="your_current_clone_will_be_deleted_on_elevenlabs_after_the_n_92deb0">"新的複製聲音建立後，目前的會從 ElevenLabs 刪除。"</string>
     <string name="your_current_voice_is_deleted_and_you_ll_record_a_new_one">"現在的聲音會被刪除，你要重新錄一次。"</string>
     <!-- "Your current voice is replaced by the new one and deleted, so you can't go back to it. Audio already made keeps playing." -->
     <string name="your_current_voice_is_replaced_by_the_new_one_and_deleted_so_dd7e3f">"目前的聲音會被新聲音取代並刪除，無法還原。已經做好的音訊可以繼續聽。"</string>
+    <string name="your_daily_call">"每天的來電"</string>
     <!-- "Your daily call is off, so this one won't ring. Turn it on in Me → Daily call." -->
     <string name="your_daily_call_is_off_so_this_one_won_t_ring_turn_it_on_in_10477c">"每日來電已關閉，所以不會響。可以在「我的」→「每日來電」開啟。"</string>
     <string name="your_daily_call_rings_at_this_time">"每日來電會在這個時間打來。"</string>
@@ -3310,6 +3370,7 @@
     <string name="your_first_week_s_cards_arrive_when_it_closes">"一週結束後，第一份卡片就會送達。"</string>
     <string name="your_fluent_self">"流利的自己"</string>
     <string name="your_fluent_self_calls_first">"流利的自己會先打來"</string>
+    <string name="your_fluent_self_calls_you_at_this_time">"流利的自己會在這個時間打給你。"</string>
     <string name="your_fluent_self_in_your_voice">"用你的聲音說話的流利的自己"</string>
     <string name="your_fluent_self_phones_you">"流利的自己會打電話給你"</string>
     <!-- 'Your fluent self speaks this language in your own voice. You can add more languages later — same voice, no extra setup.' -->
@@ -3394,14 +3455,20 @@
     <string name="your_practice_from_your_other_device_is_in_your_icloud_talks_5ad16e">"你在其他裝置上的練習都在 iCloud 裡：對話、卡片、單字、錄音。把它帶過來，之後兩邊會保持一致。"</string>
     <!-- "Your practice on this device takes about %@. That's roughly the space it needs in iCloud." -->
     <string name="your_practice_on_this_device_takes_about_that_s_roughly_the_b08018">"這台裝置上的練習紀錄約 %s，iCloud 也大約需要這麼多空間。"</string>
+    <!-- "Your practice on this device takes about %@. That's roughly the space it needs in Google Drive." -->
+    <string name="your_practice_on_this_device_takes_about_that_s_roughly_the_b9cf59">"這台裝置上的練習大約占 %s，Google 雲端硬碟也需要差不多的空間。"</string>
     <string name="your_practice_stays_on_your_phone">"你的練習只留在這支手機上"</string>
     <string name="your_profile">"個人檔案"</string>
     <string name="your_project_update">"專案進度報告"</string>
     <!-- 'Your recent conversations measure at a higher level. Scoring and material difficulty now follow it.' -->
     <string name="your_recent_conversations_measure_at_a_higher_level_scoring_8861e0">"最近的對話測出了更高的程度。評分和教材難度現在會跟著新程度走。"</string>
+    <!-- 'Your recording is sent to ElevenLabs, which builds a voice model from it. That model is biometric data.' -->
+    <string name="your_recording_is_sent_to_elevenlabs_which_builds_a_voice_mo_ecdb2a">"錄音會送到 ElevenLabs，在那裡建立語音模型。這個模型屬於生物特徵資料。"</string>
     <!-- "Your recordings aren't backed up to iCloud right now, so they're on this device only. If you delete the app on this device, they're deleted with it." -->
     <string name="your_recordings_aren_t_backed_up_to_icloud_right_now_so_they_66fe02">"目前錄音無法備份到 iCloud，只存在這台裝置上。如果在這台裝置上刪除 App，錄音也會一起刪除。"</string>
     <string name="your_recordings_of_this_script_will_be_here">"這份講稿的錄製會放在這裡。"</string>
+    <string name="your_routine_is_here">"你的作息在這裡"</string>
+    <string name="your_routine_is_ready">"作息安排好了"</string>
     <string name="your_scenario">"我的情境"</string>
     <string name="your_scenarios">"我的情境"</string>
     <string name="your_score">"分數"</string>
@@ -3425,6 +3492,8 @@
     <string name="your_talks_books_and_cards_are_still_on_it_open_me_there_tur_546039">"通話、複習本和卡片都還在那台裝置上。在那裡打開「我的」，開啟「在其他裝置上繼續」，再回來。"</string>
     <!-- "Your talks, books and recordings are on this phone only. If you delete the app or change phones, they're gone for good." -->
     <string name="your_talks_books_and_recordings_are_on_this_phone_only_if_yo_02b0cd">"你的對話、複習本和錄音目前只在這支手機上。刪除 App 或換手機後，就會永久消失。"</string>
+    <!-- 'Your talks, cards, words and recordings, audio included, stay the same on every device signed into this account and the same Google account. Turning this off stops syncing and deletes nothing.' -->
+    <string name="your_talks_cards_words_and_recordings_audio_included_stay_th_0bead2">"對話、卡片、單字和錄音（連同音訊）會在登入這個帳號和同一個 Google 帳號的每台裝置上保持一致。關掉只會停止同步，不會刪除任何東西。"</string>
     <!-- 'Your talks, cards, words and recordings — including the audio — are kept the same on every device signed into this account and your iCloud. Turning this off stops syncing and deletes nothing.' -->
     <string name="your_talks_cards_words_and_recordings_including_the_audio_ar_4e4ae2">"對話、卡片、單字和錄音（包含音訊）會在登入此帳號與 iCloud 的所有裝置上保持一致。關閉只會停止同步，不會刪除任何內容。"</string>
     <string name="your_talks_together">"一起聊過的通話"</string>
@@ -3461,6 +3530,8 @@
     <string name="your_voice_model_is_built_by_the_most_trusted_service_there_b4db4a">"語音模型由最值得信賴的服務建立，只用於語言練習。"</string>
     <!-- "Your voice model is deleted everywhere it is kept, and this can't be undone. You'll be asked to record a new one before your next call." -->
     <string name="your_voice_model_is_deleted_everywhere_it_is_kept_and_this_c_b14bff">"你的聲音模型會從所有保存的地方刪除，無法還原。下次通話前會請你重新錄音。"</string>
+    <!-- "Your voice model is deleted here and at ElevenLabs, and this can't be undone. You'll be asked to record a new one before your next call." -->
+    <string name="your_voice_model_is_deleted_here_and_at_elevenlabs_and_this_107e07">"語音模型會從 App 和 ElevenLabs 兩邊刪除，無法復原。下一通電話前會請你重新錄一個。"</string>
     <!-- 'Your voice recording goes too, so a new phone makes your voice again without recording.' -->
     <string name="your_voice_recording_goes_too_so_a_new_phone_makes_your_voic_c72584">"聲音錄音也會一起保存，換新手機也不用重錄就能做出你的聲音。"</string>
     <string name="your_voice_will_be_ready_in_a_few_days">"你的聲音會在幾天後準備好。"</string>

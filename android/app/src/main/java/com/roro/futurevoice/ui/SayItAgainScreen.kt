@@ -1,5 +1,8 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.outlined.People
+import androidx.compose.material3.IconButton
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
@@ -266,8 +269,12 @@ fun SayItAgainScreen(
     // No `source`: the run is one ANALYTICS event, not one per line played.
     val player = remember { Mp3Player(context.cacheDir) }
     val recorder = remember { WavRecorder() }
+    /** Read the other side's lines too ([SayItAgainScript.bothSides]).
+     *  Remembered: whoever asked for it once wants it the next time. */
+    val prefs = remember { context.getSharedPreferences("futurevoice", 0) }
+    var bothSides by remember { mutableStateOf(prefs.getBoolean(BOTH_SIDES_KEY, false)) }
     /** The script; lines not yet read are swapped for rewrites as they land. */
-    var steps by remember { mutableStateOf(source.steps) }
+    var steps by remember { mutableStateOf(arrangedSteps(source.steps, source.kind, bothSides)) }
     val language = source.targetLanguage
     /** The background request for the learner turns the call left without a
      *  whole-turn rewrite. `rewritesDone` is what a step waits on. */
@@ -342,10 +349,10 @@ fun SayItAgainScreen(
      *  it has. */
     fun applyRewrites(session: Session) {
         val app = context.applicationContext
-        val rebuilt = SayItAgainScript.build(session,
+        val rebuilt = arrangedSteps(SayItAgainScript.build(session,
             rewrites = com.roro.futurevoice.data.SayItAgainRewrites.all(app)) { id ->
             File(File(app.filesDir, "turn-audio"), "$id.wav").let { it.isFile && it.length() > 44 }
-        }
+        }, source.kind, bothSides)
         if (rebuilt.map { it.id } != steps.map { it.id }) return
         val from = when (phase) {
             SayPhase.INTRO -> 0
@@ -527,6 +534,7 @@ fun SayItAgainScreen(
             val s = takes.values.mapNotNull { it.score }
             com.roro.futurevoice.core.Telemetry.log("say_again_run", mapOf(
                 "kind" to kind,
+                "both" to if (bothSides) "1" else "0",
                 "lines" to spokenCount.toString(),
                 "read" to s.size.toString(),
                 "avg" to (if (s.isEmpty()) "" else (s.sum() / s.size).toString()),
@@ -568,6 +576,7 @@ fun SayItAgainScreen(
             com.roro.futurevoice.core.Telemetry.log("say_again_start", mapOf(
                 "kind" to source.kind,
                 "lines" to spokenCount.toString(),
+                "both" to if (bothSides) "1" else "0",
             ))
         }
         flushLog()
@@ -594,6 +603,28 @@ fun SayItAgainScreen(
                 phase = SayPhase.FINISHED
             } else run(i)
         }
+    }
+
+    /** Flip "Read both sides". The script changes under the run, so a run
+     *  under way starts over from the first line; on the intro it only
+     *  changes what Start will run. */
+    fun setBothSides(on: Boolean) {
+        if (on == bothSides) return
+        bothSides = on
+        prefs.edit().putBoolean(BOTH_SIDES_KEY, on).apply()
+        val base = steps.map { step ->
+            if (!step.isOtherSide) step
+            else SayItAgainScript.Step(id = step.id, isSpoken = false, text = step.text,
+                said = "", note = "", attemptId = null)
+        }
+        runJob?.cancel()
+        scoreJobs.values.forEach { it.cancel() }
+        scoreJobs.clear()
+        player.stop()
+        runCatching { recorder.stop() }
+        takes.clear()
+        steps = arrangedSteps(base, source.kind, on)
+        if (phase != SayPhase.INTRO) start(0)
     }
 
     // The mic permission is asked at the first tap that needs it.
@@ -661,6 +692,24 @@ fun SayItAgainScreen(
                 colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
                     containerColor = page, scrolledContainerColor = page),
                 title = { com.roro.futurevoice.ui.brand.IosNavTitle(stringResource(R.string.say_it_again)) },
+                navigationIcon = {
+                    var menu by remember { mutableStateOf(false) }
+                    Box {
+                        IconButton(onClick = { menu = true }) {
+                            Icon(if (bothSides) Icons.Filled.People else Icons.Outlined.People,
+                                contentDescription = stringResource(R.string.read_both_sides))
+                        }
+                        com.roro.futurevoice.ui.brand.IosMenu(menu, { menu = false }) {
+                            // iOS: a Toggle in a Menu — the tick says it is on.
+                            com.roro.futurevoice.ui.brand.IosMenuItem(
+                                text = stringResource(R.string.read_both_sides),
+                                onClick = { menu = false; setBothSides(!bothSides) },
+                                checked = bothSides,
+                                icon = Icons.Outlined.People,
+                            )
+                        }
+                    }
+                },
                 actions = {
                     TextButton(onClick = { close() }) { Text(stringResource(R.string.close)) }
                 },
@@ -673,7 +722,7 @@ fun SayItAgainScreen(
             // same bottom-anchored scroll view holds it).
             androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
                 val minH = maxHeight
-                IntroHero(source, spokenCount, correctedCount,
+                IntroHero(source, bothSides, spokenCount, correctedCount,
                     Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
                         .heightIn(min = minH).padding(bottom = barDp))
             }
@@ -725,7 +774,7 @@ fun SayItAgainScreen(
                         SayPhase.INTRO -> IntroPanel(spokenCount) { withMic { start(0) } }
                         SayPhase.LISTENING -> ListeningPanel(source.otherName) { skipRequested = true }
                         SayPhase.PREPARING -> PreparingPanel()
-                        SayPhase.READING -> ReadingPanel(promptStep,
+                        SayPhase.READING -> ReadingPanel(promptStep, source.otherName,
                             onSkip = { skipRequested = true })
                         SayPhase.FINISHED -> FinishedPanel(
                             readCount = readCount, spokenCount = spokenCount, average = averageScore,
@@ -768,10 +817,13 @@ private fun HistoryRow(
     isCurrent: Boolean,
     onRetry: () -> Unit,
 ) {
+    // An other-side line read by the learner stays on the other side, with
+    // the take's score and Retry beside it.
+    val mine = step.isSpoken && !step.isOtherSide
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         DialogueLine(
-            speaker = if (step.isSpoken) DialogueSpeaker.USER else DialogueSpeaker.OTHER,
-            name = if (step.isSpoken) stringResource(R.string.you) else otherName,
+            speaker = if (mine) DialogueSpeaker.USER else DialogueSpeaker.OTHER,
+            name = if (mine) stringResource(R.string.you) else otherName,
             isCurrent = isCurrent,
             accessory = { if (step.isSpoken) TakeAccessory(take, onRetry) },
         ) {
@@ -842,7 +894,7 @@ private fun TakeAccessory(take: SayTake?, onRetry: () -> Unit) {
 
 /** The cover of a run: what is about to happen, and how much of it. */
 @Composable
-private fun IntroHero(source: SayItAgainSource, spoken: Int, corrected: Int, modifier: Modifier) {
+private fun IntroHero(source: SayItAgainSource, bothSides: Boolean, spoken: Int, corrected: Int, modifier: Modifier) {
     Column(modifier.padding(horizontal = 28.dp).padding(top = 48.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.Bottom)) {
@@ -852,9 +904,12 @@ private fun IntroHero(source: SayItAgainSource, spoken: Int, corrected: Int, mod
             fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
         // Says what the run IS: the whole conversation again, with the
         // learner's part spoken right — not a list of fixes.
-        Text(stringResource(if (source.kind == "scene")
-            R.string.do_this_scene_again_from_the_start_and_say_your_part_out_lou_3f2c37
-        else R.string.do_this_talk_again_from_the_start_and_say_your_part_the_corr_5ece3b),
+        Text(stringResource(when {
+            bothSides && source.kind == "scene" -> R.string.do_this_scene_again_from_the_start_and_say_every_line_out_lo_9794c6
+            bothSides -> R.string.do_this_talk_again_from_the_start_and_say_every_line_out_lou_0cfb37
+            source.kind == "scene" -> R.string.do_this_scene_again_from_the_start_and_say_your_part_out_lou_3f2c37
+            else -> R.string.do_this_talk_again_from_the_start_and_say_your_part_the_corr_5ece3b
+        }),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
         if (corrected > 0) {
@@ -929,7 +984,7 @@ private fun ListeningPanel(otherName: String, onSkip: () -> Unit) {
  * mic already knows. Skip stays, small, for a line they don't want to say.
  */
 @Composable
-private fun ReadingPanel(step: SayItAgainScript.Step?, onSkip: () -> Unit) {
+private fun ReadingPanel(step: SayItAgainScript.Step?, otherName: String, onSkip: () -> Unit) {
     val context = LocalContext.current
     val theme = com.roro.futurevoice.ui.brand.FutureselfTheme.live.value
         ?: com.roro.futurevoice.ui.brand.FutureselfTheme.stored(context)
@@ -956,8 +1011,11 @@ private fun ReadingPanel(step: SayItAgainScript.Step?, onSkip: () -> Unit) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Box(Modifier.size(8.dp).clip(CircleShape).background(Color(0xFFFF3B30)))
-            Text(stringResource(if (step?.isCorrected == true) R.string.say_it_the_fixed_way
-                else R.string.say_your_line),
+            Text(when {
+                step?.isOtherSide == true -> stringResource(R.string.say_s_line, otherName)
+                step?.isCorrected == true -> stringResource(R.string.say_it_the_fixed_way)
+                else -> stringResource(R.string.say_your_line)
+            },
                 style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold,
                 color = ink.copy(alpha = 0.7f), modifier = Modifier.weight(1f))
             Text(stringResource(R.string.skip),
@@ -1083,3 +1141,10 @@ private fun sayScoreColor(score: Int): Color = when {
     score >= ShadowPicks.RETRY_THRESHOLD -> MaterialTheme.colorScheme.primary
     else -> Color(0xFFFF9500)
 }
+
+/** iOS `SayItAgainView.bothSidesKey`. */
+private const val BOTH_SIDES_KEY = "futurevoice.sayItAgain.bothSides"
+
+/** iOS `SayItAgainView.arranged`: the source's steps, both sides when asked. */
+private fun arrangedSteps(steps: List<SayItAgainScript.Step>, kind: String, bothSides: Boolean) =
+    if (bothSides) SayItAgainScript.bothSides(steps, filesOtherSide = kind == "talk") else steps

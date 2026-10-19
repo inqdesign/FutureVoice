@@ -81,7 +81,7 @@ import com.roro.futurevoice.ui.brand.FutureselfMode
 import com.roro.futurevoice.ui.brand.FutureselfTheme
 
 /** The Settings pages a row pushes (iOS `MeTab`'s NavigationLinks). */
-enum class MePage { DAILY_CALL, VOICE, SOUND, APPEARANCE, DATA, GUIDE, CORE, APP_LANGUAGE, SCENE_VOICE, STAND_IN_VOICE }
+enum class MePage { DAILY_CALL, VOICE, SOUND, APPEARANCE, DATA, DEVICES, GUIDE, CORE, APP_LANGUAGE, SCENE_VOICE, STAND_IN_VOICE }
 
 /**
  * One pushed Settings page: back arrow, a centred inline title (iOS

@@ -28,8 +28,8 @@ android {
         applicationId = "com.roro.futurevoice"
         minSdk = 26
         targetSdk = 36
-        versionCode = 13
-        versionName = "1.1.10"
+        versionCode = 17
+        versionName = "1.1.11"
 
         buildConfigField("String", "SUPABASE_URL", "\"${secret("SUPABASE_URL")}\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"${secret("SUPABASE_ANON_KEY")}\"")
@@ -142,6 +142,8 @@ dependencies {
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play)
     implementation(libs.googleid)
+    implementation(libs.play.services.auth)
+    implementation(libs.androidx.work.runtime)
     implementation(libs.billing)
     implementation(libs.play.review)
     implementation(libs.glance.appwidget)

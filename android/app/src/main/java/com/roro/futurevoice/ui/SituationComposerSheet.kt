@@ -62,7 +62,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.GraphicEq
-import androidx.compose.material.icons.filled.QuestionMark
+import androidx.compose.material.icons.filled.PersonSearch
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Refresh
@@ -134,6 +134,10 @@ import kotlinx.coroutines.launch
  * Categorizing is a nicety and never blocks a commit (iOS rule): a failure
  * just leaves the free text as the scenario, with no breadcrumb.
  */
+/** Which surface the CTA serves. Talk offers "Future self" (a call with no
+ *  one attached is a call with your own fluent voice); Watch offers "From the
+ *  situation" — nobody picked, and the scene casts the other side from what
+ *  was written (iOS `Host`). */
 enum class ComposerHost { TALK, WATCH }
 
 /**
@@ -298,12 +302,13 @@ internal fun ScenarioComposer(
             partner = editing.counterpartId?.let { id -> people.firstOrNull { it.id == id } }
         }
         // Watch + nobody picked stays null: the situation decides who the
-        // other side is (an empty `Scenario.role`, the scene's preset voice) —
-        // iOS 5217c2cc. It used to open on the first built-in character, which
-        // was harmless while the slot picked a VOICE and wrong once a person
-        // came with it: a job interview played by someone with their own job
-        // and manner. A legacy scenario with no person keeps its voice through
-        // `voicePresetId`. Talk + nobody stays the fluent self.
+        // other side is (an empty `Scenario.role`, the scene's preset voice).
+        // It used to open on the first built-in character, which was harmless
+        // while the slot picked a VOICE and wrong once a person came with it
+        // — a job interview played by someone with their own job and manner
+        // (iOS `5217c2cc`). A legacy scenario with no person keeps its voice
+        // the same way (`commit` carries voicePresetId). Talk with nobody
+        // attached stays the fluent self.
         // Capture only (iOS `composerPreview`): Cafe already picked, with
         // sample ideas as its chips, so the narrowing step renders offline.
         com.roro.futurevoice.capture.flags.WatchCaptureFlags.composerPreviewIdeas?.let { ideas ->
@@ -715,8 +720,8 @@ internal fun ScenarioComposer(
                     // A fixed label when the box was opened from a
                     // person — the entry point chose them — and a
                     // free choice when it was opened from the tab.
-                    if (person != null) PersonChip(person, fixed = true) {}
-                    else PersonChip(partner, fixed = false, watch = host == ComposerHost.WATCH) { pickingPartner = true }
+                    if (person != null) PersonChip(person, host, fixed = true) {}
+                    else PersonChip(partner, host, fixed = false) { pickingPartner = true }
                 },
                 trailingControls = {
                     DictationLanguagePill(dictationLocale) { dictationLocale = it }
@@ -1056,12 +1061,12 @@ internal fun ScenarioComposer(
                                 .padding(horizontal = 16.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            PartnerAvatar(partner, watch = host == ComposerHost.WATCH)
+                            PartnerAvatar(partner, host)
                             Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
-                                Text(partner?.name ?: noPartnerName(host == ComposerHost.WATCH),
+                                Text(partner?.name ?: noPartnerName(host),
                                     style = MaterialTheme.typography.bodyLarge)
-                                Text(partnerCaption(partner, watch = host == ComposerHost.WATCH),
+                                Text(partnerCaption(partner, host),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -1153,7 +1158,7 @@ private fun AttachMenuButton(actions: AttachActions) {
  * a picker — offering to change it would undo the choice just made.
  */
 @Composable
-private fun PersonChip(p: Counterpart?, fixed: Boolean, watch: Boolean = false, onClick: () -> Unit) {
+private fun PersonChip(p: Counterpart?, host: ComposerHost, fixed: Boolean, onClick: () -> Unit) {
     Row(
         Modifier.height(40.dp).clip(CircleShape)
             .background(com.roro.futurevoice.ui.brand.iosFill())
@@ -1167,11 +1172,11 @@ private fun PersonChip(p: Counterpart?, fixed: Boolean, watch: Boolean = false, 
             Box(Modifier.size(28.dp)
                 .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape),
                 contentAlignment = Alignment.Center) {
-                Icon(noPartnerIcon(watch), contentDescription = null,
+                Icon(noPartnerIcon(host), contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
             }
         } else PersonBubble(p.name, p.id, size = 28.dp)
-        Text(p?.name ?: noPartnerName(watch),
+        Text(p?.name ?: noPartnerName(host),
             style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
@@ -1337,21 +1342,21 @@ internal fun partnerCaptionOf(p: Counterpart): String {
 }
 
 @Composable
-private fun partnerCaption(p: Counterpart?, watch: Boolean = false): String =
-    if (p == null) stringResource(if (watch) R.string.whoever_the_situation_calls_for
+private fun partnerCaption(p: Counterpart?, host: ComposerHost): String =
+    if (p == null) stringResource(if (host == ComposerHost.WATCH) R.string.whoever_the_situation_calls_for
         else R.string.your_own_voice_already_fluent)
     else partnerCaptionOf(p)
 
-/** Nobody picked: Talk's call is with the future self; a Watch scene is
- *  with whoever the situation calls for (iOS `noPartnerName`). */
+/** Nobody picked: Talk's call is with the future self; a Watch scene is with
+ *  whoever the situation calls for. */
 @Composable
-private fun noPartnerName(watch: Boolean): String =
-    stringResource(if (watch) R.string.from_the_situation else R.string.future_self_1384d5)
+private fun noPartnerName(host: ComposerHost): String =
+    stringResource(if (host == ComposerHost.WATCH) R.string.from_the_situation else R.string.future_self_1384d5)
 
-/** The fluent self has no face — it is a voice; "from the situation" is a
- *  person not yet known (iOS `person.fill.questionmark`). */
-private fun noPartnerIcon(watch: Boolean) =
-    if (watch) Icons.Filled.QuestionMark else Icons.Filled.GraphicEq
+/** The fluent self has no face — it is a voice; the situation's person isn't
+ *  known yet (iOS `person.fill.questionmark`). */
+private fun noPartnerIcon(host: ComposerHost) =
+    if (host == ComposerHost.WATCH) Icons.Filled.PersonSearch else Icons.Filled.GraphicEq
 
 // MARK: - Rows and chips
 
@@ -1374,14 +1379,14 @@ private fun PersonRow(p: Counterpart) {
 }
 
 @Composable
-private fun PartnerAvatar(p: Counterpart?, watch: Boolean = false) {
+private fun PartnerAvatar(p: Counterpart?, host: ComposerHost = ComposerHost.TALK) {
     Box(
         Modifier.size(40.dp)
             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         if (p == null) {
-            Icon(noPartnerIcon(watch), contentDescription = null,
+            Icon(noPartnerIcon(host), contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
         } else {
             PersonBubble(p.name, p.id, size = 40.dp)
@@ -1602,15 +1607,15 @@ private fun PartnerPickerSheet(
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(bottom = 4.dp))
             // The "nobody" row: Talk's future self, or Watch's "from the
-            // situation" — the scene casts the other side itself (iOS).
+            // situation" — the scene casts the other side itself, with no persona.
             GroupedSectionSpacer()
             GroupedCard {
                 PickerRow(
-                    name = noPartnerName(host == ComposerHost.WATCH),
-                    caption = partnerCaption(null, watch = host == ComposerHost.WATCH),
+                    name = noPartnerName(host),
+                    caption = partnerCaption(null, host),
                     person = null,
                     selected = current == null,
-                    watch = host == ComposerHost.WATCH,
+                    host = host,
                 ) { onPick(null) }
             }
             GroupedSectionHeader(stringResource(R.string.your_people))
@@ -1717,7 +1722,7 @@ private fun PickerRow(
     caption: String,
     person: Counterpart?,
     selected: Boolean,
-    watch: Boolean = false,
+    host: ComposerHost = ComposerHost.TALK,
     onClick: () -> Unit,
 ) {
     Row(
@@ -1725,7 +1730,7 @@ private fun PickerRow(
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        PartnerAvatar(person, watch)
+        PartnerAvatar(person, host)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(name, style = MaterialTheme.typography.bodyLarge)

@@ -110,8 +110,21 @@ private val LABEL_WIDTH = 16.dp
 private val GAP = 3.dp
 /** The +'s height plus its margin, with some air. */
 private val ADD_BUTTON_CLEARANCE = (56 + 4 + 24).dp
+/** The onboarding sheet's tallest step, so the evening hours can still be
+ *  scrolled up above it. */
+private val ONBOARDING_SHEET_CLEARANCE = 420.dp
 /** A drag moves the time in 10-minute steps, each one felt. */
 private const val DRAG_STEP_MINUTES = 10
+
+/** A block just placed from outside (the onboarding sheet): scrolled to and
+ *  ringed for a moment, like a block the + adds (iOS `Spotlight`). */
+data class PlanSpotlight(
+    val kind: StudyPlan.Kind,
+    /** Minutes after midnight the block starts at. */
+    val minute: Int,
+    /** Bumped on every request, so the same block can be shown twice. */
+    val token: Int,
+)
 
 /** What the block editor is opened on: a spot in the week, or a block. */
 sealed interface BlockTarget {
@@ -131,9 +144,19 @@ sealed interface BlockTarget {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WeeklyPlanEditor(onClose: () -> Unit, captureBlock: BlockTarget? = null) {
-    androidx.activity.compose.BackHandler(onBack = onClose)
-    NavCoverGuard()
+fun WeeklyPlanEditor(
+    onClose: () -> Unit,
+    captureBlock: BlockTarget? = null,
+    /** Under the routine builder in onboarding: the grid is the picture the
+     *  sheet's answers land on, so nothing here edits it — no +, no gear, no
+     *  Done, no taps or drags on blocks. Scrolling still works. */
+    onboarding: Boolean = false,
+    /** A block just placed from outside (the onboarding sheet). */
+    spotlight: PlanSpotlight? = null,
+) {
+    // Onboarding has no way out of the grid but its sheet (iOS: no Done).
+    androidx.activity.compose.BackHandler { if (!onboarding) onClose() }
+    if (!onboarding) NavCoverGuard()
     val context = LocalContext.current
     val res = context.resources
     val haptic = LocalHapticFeedback.current
@@ -176,6 +199,19 @@ fun WeeklyPlanEditor(onClose: () -> Unit, captureBlock: BlockTarget? = null) {
     }
 
     LaunchedEffect(Unit) { scroll.scrollTo(((7 - snapshot.startHour) * hourPx).roundToInt()) }
+    // Ring and scroll to the block the onboarding sheet just placed — above
+    // the sheet, which covers the lower half (iOS `showPlaced`).
+    LaunchedEffect(spotlight) {
+        val spot = spotlight ?: return@LaunchedEffect
+        val block = StudyPlanStore.plan.value.blocks.firstOrNull { it.kind == spot.kind && it.startMinute == spot.minute }
+        val y = (spot.minute / 60.0 - snapshot.startHour) * hourPx
+        scroll.animateScrollTo((y - scroll.viewportSize * 0.2).roundToInt().coerceAtLeast(0),
+            tween(300, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
+        val id = block?.id
+        landedId = id
+        delay(2400)
+        if (landedId == id) landedId = null
+    }
 
     fun update(next: StudyPlan): Boolean {
         val ok = StudyPlanStore.update(context, next, byLearner = true)
@@ -251,18 +287,20 @@ fun WeeklyPlanEditor(onClose: () -> Unit, captureBlock: BlockTarget? = null) {
                 title = { Text(stringResource(R.string.routine_my_routine)) },
                 // Study days are set once and rarely touched: behind the gear.
                 navigationIcon = {
-                    IconButton(onClick = { showDays = true }) {
+                    if (!onboarding) IconButton(onClick = { showDays = true }) {
                         Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.routine_study_days))
                     }
                 },
-                actions = { TextButton(onClick = onClose) { Text(stringResource(R.string.routine_done)) } },
+                actions = {
+                    if (!onboarding) TextButton(onClick = onClose) { Text(stringResource(R.string.routine_done)) }
+                },
             )
         },
     ) { padding ->
         // The timeline runs to the screen's bottom edge; only the top bar is
         // padded off.
         Column(Modifier.padding(top = padding.calculateTopPadding()).fillMaxSize()) {
-            if (!notificationsOn) {
+            if (!notificationsOn && !onboarding) {
                 Row(Modifier.fillMaxWidth().background(AppSurfaces.card).clickable {
                     if (canAsk) askOnce() else context.startActivity(
                         Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
@@ -280,24 +318,29 @@ fun WeeklyPlanEditor(onClose: () -> Unit, captureBlock: BlockTarget? = null) {
                         tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
                 }
             }
-            WeekdayHeader(snapshot) { occ -> occ.blockId?.let { blockEditor = BlockTarget.InWeek(it) } }
+            WeekdayHeader(snapshot) { occ ->
+                if (!onboarding) occ.blockId?.let { blockEditor = BlockTarget.InWeek(it) }
+            }
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 Column(Modifier.fillMaxSize().verticalScroll(scroll)
                     // Room for the + to float over without covering the
                     // last hours.
                     .padding(start = 8.dp, end = 8.dp, top = 6.dp).bottomBarInsets()
-                    .padding(bottom = ADD_BUTTON_CLEARANCE)) {
+                    .padding(bottom = if (onboarding) ONBOARDING_SHEET_CLEARANCE else ADD_BUTTON_CLEARANCE)) {
                     WeekGrid(
                         snapshot = snapshot, highlightId = landedId,
+                        readOnly = onboarding,
                         onAdd = { day, minute ->
-                            blockEditor = BlockTarget.NewInWeek(StudyPlan.weekday(day), minute / 60, minute % 60)
+                            if (!onboarding)
+                                blockEditor = BlockTarget.NewInWeek(StudyPlan.weekday(day), minute / 60, minute % 60)
                         },
                         onEdit = { occ ->
                             val id = occ.blockId
-                            if (id != null) blockEditor = BlockTarget.InWeek(id)
+                            if (onboarding) Unit
+                            else if (id != null) blockEditor = BlockTarget.InWeek(id)
                             else if (occ.kind == StudyPlan.Kind.TEST) showTest = true
                         },
-                        onMove = ::handleMove,
+                        onMove = { occ, day, start -> if (!onboarding) handleMove(occ, day, start) },
                         onDragTarget = { t -> dragTarget = t; if (t != null) { landedId = null; landedNote = null } },
                     )
                 }
@@ -315,7 +358,7 @@ fun WeeklyPlanEditor(onClose: () -> Unit, captureBlock: BlockTarget? = null) {
                 // on the grid at the first free slot from the kind's usual time.
                 // Out of the way while a block is being dragged — it would sit
                 // over the very hours the block is being dropped on.
-                androidx.compose.animation.AnimatedVisibility(visible = dragTarget == null,
+                androidx.compose.animation.AnimatedVisibility(visible = dragTarget == null && !onboarding,
                     enter = androidx.compose.animation.fadeIn(), exit = androidx.compose.animation.fadeOut(),
                     modifier = Modifier.align(Alignment.BottomEnd)) {
                 Box(Modifier.bottomBarInsets().padding(end = 20.dp, bottom = 4.dp)) {
@@ -442,6 +485,8 @@ private fun WeekdayHeader(snapshot: PlannerSnapshot, onTap: (StudyPlan.Occurrenc
 private fun WeekGrid(
     snapshot: PlannerSnapshot,
     highlightId: String?,
+    /** Onboarding: nothing on the grid moves under a finger. */
+    readOnly: Boolean = false,
     onAdd: (day: Long, minuteOfDay: Int) -> Unit,
     onEdit: (StudyPlan.Occurrence) -> Unit,
     onMove: (StudyPlan.Occurrence, Long, Long) -> Unit,
@@ -518,7 +563,7 @@ private fun WeekGrid(
                 val top = maxOf(y(occ.start), bottom + gap)
                 bottom = top + h
                 val isDragging = dragging == occ.id
-                val draggable = occ.blockId != null || occ.kind == StudyPlan.Kind.TEST
+                val draggable = !readOnly && (occ.blockId != null || occ.kind == StudyPlan.Kind.TEST)
                 val color = occ.kind.color()
                 val hDp = with(density) { h.toDp() }
                 Box(

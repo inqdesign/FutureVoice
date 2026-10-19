@@ -198,6 +198,53 @@
         }
       }
     },
+    "Allow Google Drive access to keep syncing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erlaube den Zugriff auf Google Drive, damit es weiter synchronisiert"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permite el acceso a Google Drive para seguir sincronizando"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Autorise l’accès à Google Drive pour continuer la synchro"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同期を続けるには、Googleドライブへのアクセスを許可してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "계속 동기화하려면 Google Drive 접근을 허용해 주세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要继续同步，请允许访问 Google 云端硬盘"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要繼續同步，請允許存取 Google 雲端硬碟"
+          }
+        }
+      }
+    },
     "%.1f verified grammar slips per 100 spoken words across your assessed talks%@." : {
       "localizations" : {
         "de" : {
@@ -721,6 +768,53 @@
           }
         }
       }
+    },
+    "1 hour" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 Stunde"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 hora"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 heure"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1時間"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1시간"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 小时"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 小時"
+          }
+        }
+      },
+      "extractionState" : "manual"
     },
     "1 run" : {
       "localizations" : {
@@ -1832,6 +1926,100 @@
         }
       }
     },
+    "Do this scene again from the start, and say every line out loud, yours and the other side's." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spiel diese Szene noch einmal von vorn und sag jeden Satz laut, deine und die der anderen Seite."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repite esta escena desde el principio y di en voz alta todas las frases, las tuyas y las de la otra persona."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refais cette scène depuis le début et dis toutes les répliques à voix haute, les tiennes comme celles de l’autre."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このシーンを最初からもう一度。自分のセリフも相手のセリフも、全部声に出して言います。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 장면을 처음부터 다시 해요. 내 대사도 상대 대사도 전부 소리 내어 말해요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从头再演一次这个场景，自己的台词和对方的台词都大声说出来。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "從頭再演一次這個場景，自己的台詞和對方的台詞都大聲說出來。"
+          }
+        }
+      },
+      "extractionState" : "manual"
+    },
+    "Do this talk again from the start, and say every line out loud: yours the corrected way, and your fluent self's too." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Führ dieses Gespräch noch einmal von vorn und sag jeden Satz laut: deine in der korrigierten Form und auch die deines fließenden Ichs."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repite esta conversación desde el principio y di en voz alta todas las frases: las tuyas, ya corregidas, y también las de tu yo fluido."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refais cette conversation depuis le début et dis toutes les répliques à voix haute : les tiennes, corrigées, et aussi celles de ton moi fluide."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このトークを最初からもう一度。自分の言葉は直した形で、流暢な自分のセリフも全部声に出して言います。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 대화를 처음부터 다시 해요. 내 말은 고친 대로, 미래의 내 말까지 전부 소리 내어 말해요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从头再进行一次这段对话，自己的话照修改后的说，流利的自己的话也全部大声说出来。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "從頭再進行一次這段對話，自己的話照修正後的說，流利的自己的話也全部大聲說出來。"
+          }
+        }
+      },
+      "extractionState" : "manual"
+    },
     "Delete the app or change phones, and it's gone too." : {
       "localizations" : {
         "de" : {
@@ -1874,6 +2062,147 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "刪除 App 或換手機時，紀錄也會一起消失。"
+          }
+        }
+      }
+    },
+    "Delete from Google Drive" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus Google Drive löschen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eliminar de Google Drive"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer de Google Drive"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Googleドライブから削除"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google Drive에서 삭제"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从 Google 云端硬盘删除"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "從 Google 雲端硬碟刪除"
+          }
+        }
+      }
+    },
+    "Delete your practice from Google Drive?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Üben aus Google Drive löschen?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Eliminar tu práctica de Google Drive?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer ta pratique de Google Drive ?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Googleドライブにある練習の記録を削除しますか？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google Drive에 있는 연습 기록을 지울까요?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要删除 Google 云端硬盘里的练习记录吗？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要刪除 Google 雲端硬碟裡的練習紀錄嗎？"
+          }
+        }
+      }
+    },
+    "Everything synced to Google Drive is removed and syncing stops on every device. What's on this device stays." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alles, was in Google Drive synchronisiert ist, wird gelöscht, und auf allen Geräten hört die Synchronisierung auf. Was auf diesem Gerät ist, bleibt."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se elimina todo lo sincronizado en Google Drive y la sincronización se detiene en todos tus dispositivos. Lo que hay en este se queda."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tout ce qui est synchronisé sur Google Drive est supprimé et la synchro s’arrête sur tous tes appareils. Ce qui est sur celui-ci reste."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Googleドライブに同期した記録はすべて削除され、どのデバイスでも同期が止まります。この端末にあるものはそのまま残ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google Drive에 동기화된 기록이 모두 지워지고, 모든 기기에서 동기화가 멈춰요. 이 기기에 있는 건 그대로 남아요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同步到 Google 云端硬盘的内容会全部删除，所有设备都会停止同步。这台设备上的内容会保留。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同步到 Google 雲端硬碟的內容會全部刪除，所有裝置都會停止同步。這台裝置上的內容會保留。"
           }
         }
       }
@@ -2150,6 +2479,147 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "由情境決定"
+          }
+        }
+      }
+    },
+    "Google Drive is full, so audio isn't syncing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google Drive ist voll, deshalb wird kein Audio synchronisiert"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google Drive está lleno, así que el audio no se sincroniza"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google Drive est plein, l’audio ne se synchronise donc pas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Googleドライブの容量がいっぱいのため、音声が同期されていません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google Drive 공간이 가득 차서 오디오가 동기화되지 않아요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google 云端硬盘已满，音频没有同步"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google 雲端硬碟已滿，音訊沒有同步"
+          }
+        }
+      }
+    },
+    "Google Drive access wasn't allowed. Try again and choose Allow." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Zugriff auf Google Drive wurde nicht erlaubt. Versuch es noch einmal und wähle „Zulassen“."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se permitió el acceso a Google Drive. Vuelve a intentarlo y elige Permitir."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’accès à Google Drive n’a pas été autorisé. Réessaie et choisis Autoriser."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Googleドライブへのアクセスが許可されませんでした。もう一度押して「許可」を選んでください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google Drive 접근이 허용되지 않았어요. 다시 눌러 허용을 골라 주세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有获得 Google 云端硬盘的访问权限。请再试一次并选择“允许”。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沒有取得 Google 雲端硬碟的存取權限。請再試一次並選擇「允許」。"
+          }
+        }
+      }
+    },
+    "Google Drive can't be reached right now. Check your connection, then try again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google Drive ist gerade nicht erreichbar. Prüf deine Verbindung und versuch es dann noch einmal."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ahora no se puede conectar con Google Drive. Revisa tu conexión y vuelve a intentarlo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google Drive est injoignable pour le moment. Vérifie ta connexion, puis réessaie."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "いまGoogleドライブにつながりません。接続を確認して、もう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지금은 Google Drive에 연결할 수 없어요. 인터넷 연결을 확인하고 다시 해 주세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "现在连不上 Google 云端硬盘。请检查网络连接后再试一次。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "現在連不上 Google 雲端硬碟。請檢查網路連線後再試一次。"
           }
         }
       }
@@ -2432,6 +2902,194 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "會跟著 App 一起刪除"
+          }
+        }
+      }
+    },
+    "On your other device, open Settings, turn on “Continue on your other devices”, then come back here." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffne auf deinem anderen Gerät die Einstellungen, schalte „Auf deinen anderen Geräten weitermachen“ ein und komm dann hierher zurück."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En tu otro dispositivo, abre Ajustes, activa «Continuar en tus otros dispositivos» y vuelve aquí."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sur ton autre appareil, ouvre Réglages, active « Continuer sur tes autres appareils », puis reviens ici."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ほかのデバイスで設定を開いて「ほかのデバイスで続ける」をオンにしてから、ここに戻ってきてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다른 기기에서 설정을 열고 “다른 기기에서 이어서 하기”를 켠 다음 여기로 돌아와 주세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请在另一台设备打开“设置”，开启“在其他设备上继续”，再回到这里。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請在另一台裝置打開「設定」，開啟「在其他裝置上繼續」，再回到這裡。"
+          }
+        }
+      }
+    },
+    "Keep your practice in Google Drive?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Üben in Google Drive aufbewahren?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Guardas tu práctica en Google Drive?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Garder ta pratique dans Google Drive ?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "練習の記録をGoogleドライブに残しておきますか？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "연습 기록을 Google Drive에 보관할까요?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要把练习存在 Google 云端硬盘吗？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要把練習存在 Google 雲端硬碟嗎？"
+          }
+        }
+      }
+    },
+    "Kept in your own Google Drive, it waits on any phone or tablet you sign into, your voice recording too, so your voice comes back without recording again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In deinem eigenen Google Drive wartet es auf jedem Handy oder Tablet, auf dem du dich anmeldest, auch deine Stimmaufnahme, damit deine Stimme ohne neue Aufnahme zurückkommt."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En tu propio Google Drive te espera en cualquier teléfono o tableta donde inicies sesión, también la grabación de tu voz, así tu voz vuelve sin grabar de nuevo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dans ton propre Google Drive, elle t’attend sur tout téléphone ou tablette où tu te connectes, l’enregistrement de ta voix aussi, pour retrouver ta voix sans réenregistrer."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分のGoogleドライブに残しておけば、ログインしたどのスマホやタブレットでもそのまま続けられます。声の録音も一緒なので、録り直さなくても声が戻ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 Google Drive에 보관하면 로그인하는 어느 폰이나 태블릿에서든 그대로 이어져요. 목소리 녹음도 함께 가서, 다시 녹음하지 않아도 목소리가 돌아와요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "存在你自己的 Google 云端硬盘，登录任何手机或平板都能接着用。你的声音录音也会一起保存，不用重录就能找回你的声音。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "存在你自己的 Google 雲端硬碟，登入任何手機或平板都能接著用。你的聲音錄音也會一起保存，不用重錄就能找回你的聲音。"
+          }
+        }
+      }
+    },
+    "Keep in Google Drive" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In Google Drive aufbewahren"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardar en Google Drive"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Garder dans Google Drive"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Googleドライブに残す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google Drive에 보관"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "存到 Google 云端硬盘"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "存到 Google 雲端硬碟"
           }
         }
       }
@@ -2988,6 +3646,53 @@
         }
       }
     },
+    "Notifications are off, so I can't call you yet. Turn them on in Settings. Your routine is under Activity on the Talk screen." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mitteilungen sind aus, deshalb kann ich dich noch nicht anrufen. Schalte sie in den Einstellungen ein. Deine Routine findest du unter Aktivität auf dem Sprechen-Bildschirm."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las notificaciones están desactivadas, así que todavía no puedo llamarte. Actívalas en Ajustes. Tu rutina está en Actividad, en la pantalla Hablar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les notifications sont désactivées, je ne peux donc pas encore t’appeler. Active-les dans Réglages. Ta routine se trouve dans Activité, sur l’écran Parler."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通知がオフなので、まだ電話をかけられません。設定で通知をオンにしてください。ルーティンはトーク画面のアクティビティにあります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "알림이 꺼져 있어서 아직 전화를 걸 수 없어요. 설정에서 알림을 켜 주세요. 루틴은 대화 화면의 활동에 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通知已关闭，所以还不能给你打电话。请到设置开启通知。作息在对话界面的“活动”里。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通知已關閉，所以還不能打電話給你。請到設定開啟通知。作息在對話畫面的「活動」裡。"
+          }
+        }
+      },
+      "extractionState" : "manual"
+    },
     "One tap keeps your plan going" : {
       "localizations" : {
         "de" : {
@@ -3312,6 +4017,100 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "請到「我的 → 聲音」重新選擇口音。這次沒有套用成功。"
+          }
+        }
+      }
+    },
+    "Practise on your phone, pick it up on your tablet. Everything is kept in your own Google Drive, audio included, in a hidden folder only this app can open." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Übe auf dem Handy, mach auf dem Tablet weiter. Alles liegt in deinem eigenen Google Drive, Audio inklusive, in einem versteckten Ordner, den nur diese App öffnen kann."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Practica en el teléfono y sigue en la tableta. Todo se guarda en tu propio Google Drive, audio incluido, en una carpeta oculta que solo esta app puede abrir."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pratique sur ton téléphone, reprends sur ta tablette. Tout est gardé dans ton propre Google Drive, audio compris, dans un dossier caché que seule cette app peut ouvrir."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スマホで練習して、タブレットで続きを。音声も含めてすべて自分のGoogleドライブの、このアプリだけが開ける非表示のフォルダに保存されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "폰에서 연습하고 태블릿에서 이어서 하세요. 오디오까지 전부 내 Google Drive 안, 이 앱만 열 수 있는 숨은 폴더에 보관돼요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在手机上练习，换到平板接着练。包括音频在内，全部存在你自己的 Google 云端硬盘里一个只有这个 App 能打开的隐藏文件夹。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在手機上練習，換到平板接著練。包括音訊在內，全部存在你自己的 Google 雲端硬碟裡一個只有這個 App 能開的隱藏資料夾。"
+          }
+        }
+      }
+    },
+    "Practised on another phone or tablet with sync on? Your talks, cards, words and recordings are in your Google Drive. Choose the same Google account you used there." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hast du auf einem anderen Handy oder Tablet mit eingeschalteter Synchronisierung geübt? Dann sind deine Gespräche, Karten, Wörter und Aufnahmen in deinem Google Drive. Wähl dasselbe Google-Konto wie dort."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Practicaste en otro teléfono o tableta con la sincronización activada? Tus conversaciones, tarjetas, palabras y grabaciones están en tu Google Drive. Elige la misma cuenta de Google que usaste allí."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu as pratiqué sur un autre téléphone ou une tablette avec la synchro activée ? Tes conversations, cartes, mots et enregistrements sont dans ton Google Drive. Choisis le même compte Google que là-bas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ほかのスマホやタブレットで同期をオンにして練習していたなら、会話・カード・単語・録音は自分のGoogleドライブにあります。そこで使ったGoogleアカウントを選んでください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다른 폰이나 태블릿에서 동기화를 켜고 연습했다면, 대화·카드·단어·녹음이 내 Google Drive에 있어요. 거기서 쓴 Google 계정을 똑같이 골라 주세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果你在其他手机或平板开着同步练习过，对话、卡片、单词和录音都在你的 Google 云端硬盘里。请选择你在那边用的同一个 Google 账号。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果你在其他手機或平板開著同步練習過，對話、卡片、單字和錄音都在你的 Google 雲端硬碟裡。請選擇你在那邊用的同一個 Google 帳號。"
           }
         }
       }
@@ -3972,6 +4771,53 @@
         }
       }
     },
+    "Sign in to a Google account on this device, then try again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Melde dich auf diesem Gerät bei einem Google-Konto an und versuch es dann noch einmal."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inicia sesión en una cuenta de Google en este dispositivo y vuelve a intentarlo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecte-toi à un compte Google sur cet appareil, puis réessaie."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この端末でGoogleアカウントにログインしてから、もう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 기기에서 Google 계정에 로그인한 뒤 다시 해 주세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请先在这台设备登录 Google 账号，再试一次。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請先在這台裝置登入 Google 帳號，再試一次。"
+          }
+        }
+      }
+    },
     "Shuffle" : {
       "localizations" : {
         "ko" : {
@@ -4438,6 +5284,53 @@
         }
       }
     },
+    "When?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wann?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Cuándo?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quand ?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "いつにしますか？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "언제 할까요?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "什么时候？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "什麼時候？"
+          }
+        }
+      },
+      "extractionState" : "manual"
+    },
     "The original goes to your iCloud." : {
       "localizations" : {
         "de" : {
@@ -4714,6 +5607,100 @@
         }
       }
     },
+    "Try it just as it is for a week. You can change it any time." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Probier sie eine Woche lang genau so aus. Ändern kannst du sie jederzeit."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pruébala tal cual durante una semana. Puedes cambiarla cuando quieras."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Essaie-la telle quelle pendant une semaine. Tu peux la changer à tout moment."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まずは1週間、このまま続けてみましょう。いつでも変えられます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "일주일만 이대로 해 봐요. 언제든 바꿀 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先照这样试一周，随时都能改。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先照這樣試一週，隨時都能改。"
+          }
+        }
+      },
+      "extractionState" : "manual"
+    },
+    "Try it like this for a week. It's under Activity on the Talk screen whenever you want to change it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Probier es eine Woche so aus. Ändern kannst du sie jederzeit unter Aktivität auf dem Sprechen-Bildschirm."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pruébala así una semana. Si quieres cambiarla, está en Actividad, en la pantalla Hablar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Essaie-la ainsi pendant une semaine. Pour la modifier, elle est dans Activité, sur l’écran Parler."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このまま1週間やってみましょう。変えたいときはトーク画面のアクティビティからどうぞ。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "일주일 이렇게 해 봐요. 바꾸고 싶을 땐 대화 화면의 활동에서 바꾸면 돼요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "就照这样过一周吧。想改的时候，去对话界面的“活动”就行。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "就照這樣過一週吧。想改的時候，到對話畫面的「活動」就行。"
+          }
+        }
+      },
+      "extractionState" : "manual"
+    },
     "Time to say it back" : {
       "localizations" : {
         "ko" : {
@@ -4848,6 +5835,53 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "隨時都能在「設定 → 裝置」開啟。"
+          }
+        }
+      }
+    },
+    "Uses your Google Drive" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nutzt dein Google Drive"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usa tu Google Drive"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utilise ton Google Drive"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分のGoogleドライブを使います"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 Google Drive를 써요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用你的 Google 云端硬盘"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用你的 Google 雲端硬碟"
           }
         }
       }
@@ -5078,6 +6112,53 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "我們不保存你的對話內容，放心開口說吧。"
+          }
+        }
+      }
+    },
+    "Want a copy? Use your own Google Drive" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Kopie in deinem Google Drive, wenn du willst"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Quieres una copia? Usa tu Google Drive"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une copie dans ton Google Drive, si tu veux"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分のGoogleドライブにコピーを残せます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 Google Drive에 사본을 둘 수 있어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "想留一份？存到你自己的 Google 云端硬盘"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "想留一份？放進你自己的 Google 雲端硬碟"
           }
         }
       }
@@ -5360,6 +6441,100 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你的練習只留在這支手機上"
+          }
+        }
+      }
+    },
+    "Your talks, cards, words and recordings, audio included, stay the same on every device signed into this account and the same Google account. Turning this off stops syncing and deletes nothing." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Gespräche, Karten, Wörter und Aufnahmen, Audio inklusive, sind auf jedem Gerät mit diesem Konto und demselben Google-Konto gleich. Ausschalten stoppt nur die Synchronisierung und löscht nichts."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tus conversaciones, tarjetas, palabras y grabaciones, audio incluido, son iguales en cada dispositivo con esta cuenta y la misma cuenta de Google. Si lo desactivas, solo se detiene la sincronización y no se borra nada."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tes conversations, cartes, mots et enregistrements, audio compris, restent identiques sur chaque appareil connecté à ce compte et au même compte Google. Désactiver arrête la synchro sans rien supprimer."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "会話・カード・単語・録音が音声まで、このアカウントと同じGoogleアカウントでログインしたすべてのデバイスでそろいます。オフにしても同期が止まるだけで、何も削除されません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대화, 카드, 단어, 녹음이 오디오까지, 이 계정과 같은 Google 계정으로 로그인한 모든 기기에서 똑같이 맞춰져요. 끄면 동기화만 멈추고 아무것도 지워지지 않아요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "对话、卡片、单词和录音（连同音频）会在登录这个账号和同一个 Google 账号的每台设备上保持一致。关掉只会停止同步，不会删除任何东西。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "對話、卡片、單字和錄音（連同音訊）會在登入這個帳號和同一個 Google 帳號的每台裝置上保持一致。關掉只會停止同步，不會刪除任何東西。"
+          }
+        }
+      }
+    },
+    "Your practice on this device takes about %@. That's roughly the space it needs in Google Drive." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Üben auf diesem Gerät belegt etwa %@. Ungefähr so viel Platz braucht es auch in Google Drive."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu práctica en este dispositivo ocupa unos %@. Es más o menos el espacio que necesita en Google Drive."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta pratique sur cet appareil occupe environ %@. C’est à peu près la place qu’il lui faut dans Google Drive."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この端末の練習の記録は約%@です。Googleドライブにもだいたい同じだけの容量が必要です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 기기의 연습 기록은 약 %@예요. Google Drive에도 대략 그만큼 공간이 필요해요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这台设备上的练习大约占 %@，Google 云端硬盘也需要差不多的空间。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這台裝置上的練習大約占 %@，Google 雲端硬碟也需要差不多的空間。"
           }
         }
       }
@@ -6273,6 +7448,194 @@
           }
         }
       }
+    },
+    "Your daily call" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein täglicher Anruf"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu llamada diaria"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ton appel quotidien"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "毎日の電話"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "매일 오는 전화"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每天的来电"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每天的來電"
+          }
+        }
+      },
+      "extractionState" : "manual"
+    },
+    "Your fluent self calls you at this time." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein fließendes Ich ruft dich um diese Zeit an."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu yo fluido te llama a esta hora."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ton moi fluide t’appelle à cette heure-là."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この時間に流暢な自分から電話がかかってきます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 시간에 유창해진 내가 전화를 걸어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流利的自己会在这个时间给你打电话。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流利的自己會在這個時間打給你。"
+          }
+        }
+      },
+      "extractionState" : "manual"
+    },
+    "Your routine is here" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hier ist deine Routine"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu rutina está aquí"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta routine est ici"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ルーティンはここにあります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "루틴은 여기 있어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的作息在这里"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的作息在這裡"
+          }
+        }
+      },
+      "extractionState" : "manual"
+    },
+    "Your routine is ready" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Routine steht"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu rutina está lista"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta routine est prête"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ルーティンができました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "루틴이 준비됐어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "作息安排好了"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "作息安排好了"
+          }
+        }
+      },
+      "extractionState" : "manual"
     },
     "watch.sky.backToMe" : {
       "localizations" : {
@@ -7284,6 +8647,18 @@
           }
         }
       }
+    },
+    "%@ / %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ / %2$@"
+          }
+        }
+      },
+      "shouldTranslate" : false,
+      "extractionState" : "manual"
     },
     "%@ %lld" : {
       "extractionState" : "stale",
@@ -31167,6 +32542,100 @@
         }
       }
     },
+    "Cloning again uses 5 credits. Your current voice is replaced and deleted on ElevenLabs — you can't go back to it. Audio already generated keeps playing." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein erneutes Klonen kostet 5 Credits. Deine aktuelle Stimme wird ersetzt und bei ElevenLabs gelöscht – du kannst nicht zu ihr zurückkehren. Bereits erzeugte Audios bleiben abspielbar."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Volver a clonar cuesta 5 créditos. Tu voz actual se reemplaza y se elimina de ElevenLabs — no podrás recuperarla. El audio ya generado se sigue escuchando."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refaire le clone coûte 5 crédits. Ta voix actuelle est remplacée et supprimée chez ElevenLabs — impossible de revenir en arrière. L’audio déjà généré continue de s’écouter."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "もう一度クローンすると5クレジット使います。今の声は新しい声に置き換わり、ElevenLabsからも削除されて元に戻せません。すでに作られた音声はそのまま再生されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다시 클론하면 5크레딧이 사용돼요. 지금 목소리는 새 목소리로 대체되고 ElevenLabs에서 삭제되어 되돌릴 수 없어요. 이미 만들어진 오디오는 계속 재생돼요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新克隆会用掉5点数。目前的声音会被新声音取代，并从ElevenLabs删除，无法还原。已经生成的音频可以继续播放。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新複製會用掉5點數。目前的聲音會被新聲音取代，並從ElevenLabs刪除，無法還原。已經生成的音訊可以繼續播放。"
+          }
+        }
+      }
+    },
+    "Cloning again uses a few minutes of talk time. Your current voice is replaced and deleted on ElevenLabs — you can't go back to it. Audio already generated keeps playing." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein erneutes Klonen kostet ein paar Minuten Sprechzeit. Deine aktuelle Stimme wird ersetzt und bei ElevenLabs gelöscht — zurück geht es nicht. Bereits erzeugte Audios bleiben abspielbar."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Volver a clonar cuesta unos minutos de tiempo de conversación. Tu voz actual se reemplaza y se elimina de ElevenLabs — no podrás recuperarla. El audio ya generado se sigue escuchando."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refaire le clone coûte quelques minutes de temps de conversation. Ta voix actuelle est remplacée et supprimée chez ElevenLabs — impossible de revenir en arrière. L’audio déjà généré continue de s’écouter."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "作り直すと通話時間が数分かかります。今の声は新しい声に置き換わり、ElevenLabsからも削除されて元に戻せません。すでに作った音声はそのまま聞けます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다시 만들면 통화 시간이 몇 분 들어요. 지금 목소리는 새 목소리로 바뀌고 ElevenLabs에서도 지워져서 되돌릴 수 없어요. 이미 만들어 둔 소리는 계속 들려요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新制作会用掉几分钟的通话时间。目前的声音会被新声音取代，并从ElevenLabs删除，无法还原。已经做好的音频可以继续听。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新製作會用掉幾分鐘的通話時間。目前的聲音會被新聲音取代，並從ElevenLabs刪除，無法還原。已經做好的音訊可以繼續聽。"
+          }
+        }
+      },
+      "extractionState" : "manual"
+    },
     "Cloning your voice…" : {
       "localizations" : {
         "de" : {
@@ -54197,6 +55666,53 @@
         }
       }
     },
+    "Hear it in my voice · %lld min" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In meiner Stimme hören · %lld Min."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escucharlo con mi voz · %lld min"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’écouter avec ma voix · %lld min"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分の声で聞く · %lld分"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 목소리로 듣기 · %lld분"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用我的声音听 · %lld分钟"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用我的聲音聽 · %lld分鐘"
+          }
+        }
+      },
+      "extractionState" : "manual"
+    },
     "Hear it in the app, write it here" : {
       "localizations" : {
         "de" : {
@@ -73786,6 +75302,53 @@
         }
       }
     },
+    "Names your clone here and on ElevenLabs. Leave it empty to go back to the default." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Benennt deinen Klon hier und bei ElevenLabs. Leer lassen für den Standardnamen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Así se llama tu clon aquí y en ElevenLabs. Déjalo vacío para volver al nombre original."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "C’est le nom de ce clone ici et sur ElevenLabs. Laisse vide pour revenir au nom par défaut."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリとElevenLabsの両方で、この声を呼ぶ名前です。空のままにすると元の名前に戻ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "앱과 ElevenLabs 양쪽에서 이 목소리를 부르는 이름이에요. 비워 두면 기본 이름으로 돌아가요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这是在App和ElevenLabs两边称呼这个声音的名字。留空就会回到默认名称。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這是在App和ElevenLabs兩邊稱呼這個聲音的名字。留空就會回到預設名稱。"
+          }
+        }
+      },
+      "extractionState" : "manual"
+    },
     "Narrow it down" : {
       "localizations" : {
         "de" : {
@@ -80873,6 +82436,53 @@
           }
         }
       }
+    },
+    "Now and then your future self asks something you can answer with a word you're studying, and the mistake you make most becomes the call's focus." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ab und zu stellt dir dein fließendes Ich eine Frage, die du mit einem Wort beantworten kannst, das du gerade lernst, und dein häufigster Fehler wird zum Fokus des Anrufs."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De vez en cuando, tu yo fluido te pregunta algo que puedes responder con una palabra que estás estudiando, y el error que más cometes se vuelve el enfoque de la llamada."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De temps en temps, ton moi fluide te pose une question à laquelle tu peux répondre avec un mot que tu étudies, et l’erreur que tu fais le plus devient l’objectif de l’appel."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流暢な自分がときどき、勉強中の単語で答えられる質問をして、いちばんよくするミスをこの通話のポイントにします。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "유창해진 내가 가끔 공부 중인 단어로 답할 수 있는 질문을 하고, 가장 자주 하는 실수를 통화의 초점으로 잡아 줘요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流利的自己偶尔会问你能用正在学的单词回答的问题，并把你最常犯的错误当作这次通话的重点。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流利的自己偶爾會問你能用正在學的單字回答的問題，並把你最常犯的錯誤當作這次通話的重點。"
+          }
+        }
+      },
+      "extractionState" : "manual"
     },
     "Nutrition" : {
       "localizations" : {
@@ -92407,6 +94017,100 @@
         }
       }
     },
+    "Read both sides" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beide Seiten lesen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leer las dos partes"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lire les deux rôles"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "両方のセリフを読む"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "양쪽 대사 모두 읽기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "两边的台词都念"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "兩邊的台詞都念"
+          }
+        }
+      },
+      "extractionState" : "manual"
+    },
+    "Say %@'s line" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sag den Satz von %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Di la frase de %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dis la réplique de %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@のセリフです"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 대사예요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@的台词"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@的台詞"
+          }
+        }
+      },
+      "extractionState" : "manual"
+    },
     "Ready for your first talk?" : {
       "comment" : "Text displayed in the hero when the user is on their first talk of the day.",
       "isCommentAutoGenerated" : true,
@@ -98507,6 +100211,53 @@
           }
         }
       }
+    },
+    "Saved here, but ElevenLabs didn't accept the new name: %@ It'll be applied the next time your voice is cloned." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hier gesichert, aber ElevenLabs hat den neuen Namen nicht angenommen: %@ Er wird beim nächsten Klonen deiner Stimme übernommen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardado aquí, pero ElevenLabs no aceptó el nombre nuevo: %@ Se aplicará la próxima vez que se cree tu voz."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistré sur cet appareil, mais ElevenLabs n’a pas accepté le nouveau nom : %@ Il sera appliqué au prochain clonage de ta voix."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この端末には保存しましたが、ElevenLabsが新しい名前を受け付けませんでした: %@ 次に声を作り直すときに反映されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 기기에는 저장했는데 ElevenLabs가 새 이름을 받지 않았어요: %@ 다음에 목소리를 다시 만들 때 반영돼요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已存在这台设备上，但 ElevenLabs 没有接受新名字：%@ 下次重新克隆声音时会套用。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已存在這台裝置上，但 ElevenLabs 沒有接受新名字：%@ 下次重新複製聲音時會套用。"
+          }
+        }
+      },
+      "extractionState" : "manual"
     },
     "Saved to expressions" : {
       "localizations" : {
@@ -121093,6 +122844,53 @@
         }
       }
     },
+    "This deletes your voice model here and at ElevenLabs. Audio already generated keeps playing until you delete your account. The app can't hold a call without a voice, so it will ask you to record a new one — or you can delete your account entirely." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Damit wird dein Stimmmodell hier und bei ElevenLabs gelöscht. Bereits erzeugtes Audio bleibt abspielbar, bis du dein Konto löschst. Ohne Stimme kann die App kein Gespräch führen, du wirst also um eine neue Aufnahme gebeten – oder du löschst dein Konto ganz."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esto borra tu modelo de voz aquí y en ElevenLabs. El audio ya generado se sigue escuchando hasta que elimines tu cuenta. La app no puede mantener una llamada sin voz, así que te pedirá grabar una nueva — o puedes eliminar la cuenta por completo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ça supprime ton modèle de voix ici et chez ElevenLabs. L’audio déjà généré continue de se lire jusqu’à la suppression de ton compte. L’app ne peut pas tenir un appel sans voix : elle te demandera d’en enregistrer une nouvelle — ou tu peux supprimer ton compte entièrement."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリとElevenLabsの両方から音声モデルを削除します。すでに作られた音声は、アカウントを削除するまでそのまま再生されます。声がないと通話ができないので、新しく録音するよう求められます。アカウントごと削除することもできます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "앱과 ElevenLabs 양쪽에서 음성 모델을 지워요. 이미 만들어 둔 소리는 계정을 지우기 전까지 그대로 들려요. 목소리가 없으면 통화를 할 수 없어서 새로 녹음해 달라고 물어볼 거예요. 계정을 통째로 지우셔도 되고요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "会把你的声音模型从这里和ElevenLabs两边都删掉。已经生成的音频在你删除账号前还是会照常播放。没有声音就没办法通话，所以会请你重新录一个，或者你也可以直接删除整个账号。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "會把你的聲音模型從這裡和ElevenLabs兩邊都刪掉。已經生成的音檔在你刪除帳號前還是會照常播放。沒有聲音就沒辦法通話，所以會請你重新錄一個，或者你也可以直接刪除整個帳號。"
+          }
+        }
+      },
+      "extractionState" : "manual"
+    },
     "This day has its own plan, so this change is for this day only." : {
       "localizations" : {
         "de" : {
@@ -122193,6 +123991,53 @@
           }
         }
       }
+    },
+    "Tap to see it or change it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tippe, um sie anzusehen oder zu ändern."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toca para verla o cambiarla."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touche pour la voir ou la modifier."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タップすると確認・変更できます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "눌러서 보고 바꿀 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "点一下就能查看或修改。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "點一下就能查看或修改。"
+          }
+        }
+      },
+      "extractionState" : "manual"
     },
     "Time for your words" : {
       "localizations" : {
@@ -131828,6 +133673,53 @@
           }
         }
       }
+    },
+    "What your clone is called, here and on ElevenLabs" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie dein Klon heißt, hier und bei ElevenLabs"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cómo se llama tu clon aquí y en ElevenLabs"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le nom de ton clone, ici et sur ElevenLabs"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "こことElevenLabsでこの声を呼ぶ名前"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "여기와 ElevenLabs에서 이 목소리를 부르는 이름"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这个声音在这里和ElevenLabs上的名称"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這個聲音在這裡和ElevenLabs上的名稱"
+          }
+        }
+      },
+      "extractionState" : "manual"
     },
     "What your fluent self knows about you" : {
       "localizations" : {
@@ -142862,6 +144754,53 @@
         }
       }
     },
+    "Your current clone will be deleted on ElevenLabs after the new one is created." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein aktueller Klon wird bei ElevenLabs gelöscht, sobald der neue erstellt ist."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu clon actual se elimina de ElevenLabs en cuanto se cree el nuevo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ton clone actuel sera supprimé chez ElevenLabs dès que le nouveau sera créé."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しいクローンができたあと、今のクローンはElevenLabsから削除されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "새 클론이 만들어진 뒤 기존 클론은 ElevenLabs에서 삭제돼요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新的克隆声音创建后，目前的会从 ElevenLabs 删除。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新的複製聲音建立後，目前的會從 ElevenLabs 刪除。"
+          }
+        }
+      }
+    },
     "Your daily call is off, so this one won't ring. Turn it on in Me → Daily call." : {
       "localizations" : {
         "de" : {
@@ -146635,6 +148574,53 @@
         }
       }
     },
+    "Your recording is sent to ElevenLabs, which builds a voice model from it. That model is biometric data." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Aufnahme geht an ElevenLabs, das daraus ein Stimmmodell erstellt. Dieses Modell ist ein biometrisches Datum."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La grabación se envía a ElevenLabs, que crea un modelo de voz a partir de ella. Ese modelo es un dato biométrico."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’enregistrement est envoyé à ElevenLabs, qui en construit un modèle de voix. Ce modèle est une donnée biométrique."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "録音はElevenLabsに送られ、そこで音声モデルが作られます。このモデルは生体情報です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "녹음은 ElevenLabs로 보내고, 거기서 음성 모델을 만듭니다. 이 모델이 생체인식정보입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "录音会送到 ElevenLabs，在那里创建语音模型。这个模型属于生物特征数据。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "錄音會送到 ElevenLabs，在那裡建立語音模型。這個模型屬於生物特徵資料。"
+          }
+        }
+      }
+    },
     "Your recordings aren't backed up to iCloud right now, so they're on this device only. If you delete the app on this device, they're deleted with it." : {
       "localizations" : {
         "de" : {
@@ -148786,6 +150772,53 @@
         }
       }
     },
+    "Your voice model is deleted here and at ElevenLabs, and this can't be undone. You'll be asked to record a new one before your next call." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Stimmmodell wird hier und bei ElevenLabs gelöscht – das lässt sich nicht rückgängig machen. Vor deinem nächsten Gespräch wirst du um eine neue Aufnahme gebeten."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El modelo de voz se borra aquí y en ElevenLabs, y no se puede deshacer. Te pediremos grabar uno nuevo antes de tu próxima llamada."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le modèle de voix est supprimé ici et chez ElevenLabs, et c’est irréversible. Il te sera demandé d’en enregistrer un nouveau avant ton prochain appel."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "音声モデルはアプリとElevenLabsの両方から削除され、元に戻せません。次の通話の前に、新しく録音するよう求められます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "앱과 ElevenLabs 양쪽에서 음성 모델이 지워지고, 되돌릴 수 없어요. 다음 통화 전에 새로 녹음해 달라고 물어볼 거예요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "语音模型会从 App 和 ElevenLabs 两边删除，无法复原。下一通电话前会请你重新录一个。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "語音模型會從 App 和 ElevenLabs 兩邊刪除，無法復原。下一通電話前會請你重新錄一個。"
+          }
+        }
+      },
+      "extractionState" : "manual"
+    },
     "Your voice recording goes too, so a new phone makes your voice again without recording." : {
       "localizations" : {
         "de" : {
@@ -150727,6 +152760,247 @@
           }
         }
       }
+    },
+    "How long a call?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie lange soll ein Anruf dauern?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Cuánto dura cada llamada?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Combien de minutes par appel ?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通話は何分にしますか？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "한 번에 몇 분 통화할까요?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每次通话几分钟？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每次通話幾分鐘？"
+          }
+        }
+      },
+      "extractionState" : "manual"
+    },
+    "How much can you study a day?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie viel Zeit hast du am Tag zum Lernen?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Cuánto puedes estudiar al día?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Combien de temps peux-tu étudier par jour ?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1日にどれくらい勉強できますか？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "하루에 공부는 얼마나 할 수 있어요?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一天能学习多久？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一天能學習多久？"
+          }
+        }
+      },
+      "extractionState" : "manual"
+    },
+    "I'll put review in at %@, about %lld cards. Drag it on the grid to move it later." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Wiederholung kommt um %1$@, etwa %2$lld Karten. Du kannst sie später im Raster verschieben."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "I'll put review in at %1$@, about %2$lld cards. Drag it on the grid to move it later."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pondré el repaso a las %1$@, unas %2$lld tarjetas. Luego puedes arrastrarlo en la tabla para moverlo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Je place la révision à %1$@, environ %2$lld cartes. Tu pourras la déplacer en la faisant glisser dans le tableau."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "復習は%1$@に入れておきます。カードは%2$lld枚ほどです。時間は表でドラッグして変えられます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "복습은 %1$@에 넣어 둘게요. 카드 %2$lld장쯤이에요. 시간은 표에서 끌어서 바꿀 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复习会排在 %1$@，大约 %2$lld 张卡片。之后可以在表上拖动来改时间。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "複習會排在 %1$@，大約 %2$lld 張卡片。之後可以在表上拖曳來改時間。"
+          }
+        }
+      },
+      "extractionState" : "manual"
+    },
+    "Let's make your routine" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stellen wir deine Routine zusammen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vamos a crear tu rutina"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Créons ta routine"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ルーティンを作りましょう"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 루틴을 만들어 봐요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "来安排你的作息吧"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "來安排你的作息吧"
+          }
+        }
+      },
+      "extractionState" : "manual"
+    },
+    "Make my routine" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Routine erstellen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crear mi rutina"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Créer ma routine"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ルーティンを作る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "루틴 만들기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安排作息"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安排作息"
+          }
+        }
+      },
+      "extractionState" : "manual"
     },
     "Their own" : {
       "localizations" : {

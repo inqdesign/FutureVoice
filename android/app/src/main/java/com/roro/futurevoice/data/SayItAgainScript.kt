@@ -68,8 +68,27 @@ object SayItAgainScript {
         val note: String = "",
         /** Where a passing take is filed. Non-null only for case 1 above. */
         val attemptId: String? = null,
+        /** The OTHER side's line (the fluent self's, or the scene
+         *  counterpart's), put on the prompter by [bothSides]. It stays drawn
+         *  on that side of the conversation; only who says it changes. */
+        val isOtherSide: Boolean = false,
     ) {
         val isCorrected: Boolean get() = said.isNotEmpty()
+    }
+
+    /**
+     * Both sides (iOS 2026-10-18, a learner's request): every line is the
+     * learner's to say, the other side's included, in order, and nothing
+     * plays. A fluent-self line of a TALK is filed under its own turn id —
+     * the id a shadow take on that line has always carried — so a passing
+     * read counts toward the book's Shadow chapter exactly like one. A
+     * scene's counterpart lines are not chapter material, so they are
+     * practice only.
+     */
+    fun bothSides(steps: List<Step>, filesOtherSide: Boolean): List<Step> = steps.map { step ->
+        if (step.isSpoken) step
+        else Step(id = step.id, isSpoken = true, text = step.text, said = "", note = "",
+            attemptId = if (filesOtherSide) step.id else null, isOtherSide = true)
     }
 
     /** [hasAudio] says whether a turn's recording is on disk

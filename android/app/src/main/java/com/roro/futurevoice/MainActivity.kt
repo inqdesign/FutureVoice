@@ -102,6 +102,8 @@ class MainActivity : ComponentActivity() {
             }
         }
         AppUsageLog.begin()
+        // Drive sync: the foreground pass is the one that always runs.
+        com.roro.futurevoice.sync.SyncEngine.shared(this).foregrounded()
         // Settle yesterday's (and any unsettled past day's) card before the
         // 45-day logs can prune it — iOS `freezePastDays` on `.active`. Off
         // the main thread: it reads every enrolled language's talks.
@@ -117,6 +119,7 @@ class MainActivity : ComponentActivity() {
     override fun onPause() {
         super.onPause()
         AppUsageLog.end(this)
+        com.roro.futurevoice.sync.SyncEngine.shared(this).backgrounded()
         // The background edge refreshes NOW, not after the coalescing delay:
         // the process may be frozen right after this returns.
         val app = applicationContext

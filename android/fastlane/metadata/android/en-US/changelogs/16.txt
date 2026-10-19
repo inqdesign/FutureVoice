@@ -1,0 +1,5 @@
+New
+• Speech challenge cards show a badge on new challenges, and a third challenge is out.
+
+Fixed
+• When learning Japanese or Spanish, the people list is no longer empty.

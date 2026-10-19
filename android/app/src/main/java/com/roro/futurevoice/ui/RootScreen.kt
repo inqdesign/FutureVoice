@@ -1,5 +1,6 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.foundation.Canvas
 import com.roro.futurevoice.ui.brand.ContinuousShape
 import androidx.compose.foundation.border
@@ -197,12 +198,15 @@ fun RootScreen() {
     var callCounterpartId by call.counterpartId
     /** A saved talk the call picks back up (Continue on its book). */
     var callResume by call.resume
-    /** Which screen started the call (telemetry, iOS `TalkEntry`). */
-    var callEntry by call.entry
     var callFromHomeCard by call.fromHomeCard
+    /** Which screen started the call — `conversation_started.entry` only. */
+    var callEntry by call.entry
     /** Set when a Talk-home card's call closes; the home consumes it and
      *  offers the persona-deepen sheet (iOS `maybePromptDeepen`). */
     var deepenPending by remember { mutableStateOf(false) }
+    /** Set when ANY call closes; the home consumes it and may offer the
+     *  backup file once (iOS `maybeOfferBackup`). */
+    var backupPending by remember { mutableStateOf(false) }
     // Debug only: `--ez debugHomeCardCallEnded true` plays the moment a
     // Talk-home card's call has just closed, without a call.
     LaunchedEffect(Unit) {
@@ -414,7 +418,7 @@ fun RootScreen() {
                     showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false; detailSessionId = null
                     bookScenarioId = null; watchScenarioId = null; shadowLine = null
                     callTopic = ""; callFacts = emptyList(); callBlurb = ""; callScenarioId = null
-                    callEntry = DeepLinkInbox.freeTalkEntry ?: "widget"
+                    callEntry = DeepLinkInbox.freeTalkEntry ?: com.roro.futurevoice.talk.TalkEntry.WIDGET
                     DeepLinkInbox.freeTalkEntry = null
                     inCall = true
                 }
@@ -437,54 +441,37 @@ fun RootScreen() {
             // so a plain free talk later doesn't replay it.
             callOpener = com.roro.futurevoice.data.DailyCallStore.script(context).orEmpty()
             com.roro.futurevoice.data.DailyCallStore.setScript(context, null)
-            callEntry = "daily_call"
+            callEntry = com.roro.futurevoice.talk.TalkEntry.DAILY_CALL
             inCall = true
         }
     }
     var editProfile by remember { mutableStateOf(false) }
     var editProfileStep by remember { mutableStateOf(0) }
+    /** Whether the routine (daily call, study time) has been set up. The key
+     *  is the daily-call screen's, which the routine builder replaced (iOS
+     *  2026-10-18), so every install that saw that screen is past this one.
+     *  Onboarding shows no paywall: the plans are asked at the first paid tap. */
     var dailyCallOnboarded by remember {
         mutableStateOf(OnboardingFlags.seen(context, OnboardingFlags.DAILY_CALL))
     }
-    var weeklyRhythmOnboarded by remember {
-        mutableStateOf(OnboardingFlags.seen(context, OnboardingFlags.WEEKLY_RHYTHM))
+    /** The routine builder is over the tabs (iOS `holdingForRoutine`). */
+    val buildingRoutine = state.voiceId != null && !dailyCallOnboarded
+    val routineHint by RoutineHandoff.showHint.collectAsStateWithLifecycle()
+    /** The first-run sheets (age check, Talk's guide, the free minutes) wait
+     *  until the builder has gone into the Activity chip and that chip's hint
+     *  is closed (iOS `firstRunHeld`). */
+    var firstRunHeld by remember { mutableStateOf(false) }
+    // The second device's question, asked once per account per install.
+    val secondDeviceUser = remember(state.signedIn, state.isAnonymous) {
+        if (state.signedIn && !state.isAnonymous) com.roro.futurevoice.data.AuthRepository().userId else null
     }
-    var onboardingPaywallSeen by remember {
-        mutableStateOf(OnboardingFlags.seen(context, OnboardingFlags.PAYWALL))
+    var syncOfferSeen by remember(secondDeviceUser) {
+        mutableStateOf(secondDeviceUser == null ||
+            com.roro.futurevoice.sync.SyncStore.wasOffered(context, secondDeviceUser) ||
+            com.roro.futurevoice.sync.SyncEngine.shared(context).isEnabled)
     }
-    // Null while unknown — the step must not flash for an account that turns
-    // out to have nothing to buy, so it waits for the answer rather than
-    // guessing at one.
-    var onboardingNeedsPlan by remember { mutableStateOf<Boolean?>(null) }
-    LaunchedEffect(state.voiceId, dailyCallOnboarded) {
-        if (state.voiceId != null && !onboardingPaywallSeen && onboardingNeedsPlan == null) {
-            // No session is "couldn't ask", never "no plan" (iOS
-            // `BillingGate.load`): a signed-out read answers with an empty
-            // account, which would pitch someone we merely failed to identify.
-            val auth = AuthRepository()
-            val account = if (auth.userId == null) null
-                else runCatching { AccountStatus.load(auth) }.getOrNull()
-                    ?.also { BillingGate.remember(it) }
-            // Couldn't ask, or nothing to sell — step aside for good. A failed
-            // lookup must not park the learner on a paywall forever; the
-            // first paid tap asks the server again anyway.
-            onboardingNeedsPlan = account?.needsSubscription ?: false
-            if (onboardingNeedsPlan == false) {
-                OnboardingFlags.markSeen(context, OnboardingFlags.PAYWALL)
-                onboardingPaywallSeen = true
-                // The skip is silent on screen, so it has to be loud here: a
-                // free-call grant makes EVERY new account take this branch.
-                val reason = when {
-                    account == null -> "lookup_failed"
-                    account.isEntitled -> "entitled"
-                    account.unlimited -> "unlimited"
-                    account.secondsBalance > 0 -> "balance"
-                    else -> "unknown"
-                }
-                com.roro.futurevoice.core.Analytics.capture("onboarding_paywall_skipped",
-                    mapOf("reason" to reason, "balance_s" to (account?.secondsBalance ?: -1).toString()))
-            }
-        }
+    var localDataOnboarded by remember {
+        mutableStateOf(OnboardingFlags.seen(context, OnboardingFlags.LOCAL_DATA))
     }
     var welcomePreview by remember { mutableStateOf(false) }
     /** iOS `showingAgeCheck` — see [AgeCheckSheet]. */
@@ -510,9 +497,7 @@ fun RootScreen() {
     //   3. else the welcome check now.
     var welcomeAfterIntro by remember { mutableStateOf(false) }
     var checkWelcome by remember { mutableStateOf(false) }
-    fun arriveAtTabs() {
-        if (tabsArrived) return
-        tabsArrived = true
+    fun offerFirstRunSheets() {
         when (TabArrival.decide(
             hasVoice = state.voiceId != null,
             ageOnRecord = com.roro.futurevoice.data.ConsentStore.ageConfirmedAt(context) != null,
@@ -525,6 +510,20 @@ fun RootScreen() {
             TabArrival.GUIDE_THEN_WELCOME -> welcomeAfterIntro = true
             TabArrival.WELCOME -> checkWelcome = true
         }
+    }
+    fun arriveAtTabs() {
+        if (tabsArrived) return
+        tabsArrived = true
+        if (buildingRoutine) firstRunHeld = true else offerFirstRunSheets()
+    }
+    // The chip's hint has closed (on its own or by a tap): what arrival held.
+    var hintWasUp by remember { mutableStateOf(false) }
+    LaunchedEffect(routineHint) {
+        if (routineHint) { hintWasUp = true; return@LaunchedEffect }
+        if (!hintWasUp || !firstRunHeld) return@LaunchedEffect
+        hintWasUp = false
+        firstRunHeld = false
+        offerFirstRunSheets()
     }
     // The held welcome follows the guide off screen (iOS `pageIntro`'s
     // onDismiss / `releaseHeldWelcome`): released once no guide is up and
@@ -626,7 +625,7 @@ fun RootScreen() {
                 "free_talk_welcome_closed", mapOf("started" to true))
             tab = HomeTab.TALK
             gate { callTopic = ""; callFacts = emptyList(); callBlurb = ""; callScenarioId = null
-                callEntry = "welcome"; inCall = true }
+                callEntry = com.roro.futurevoice.talk.TalkEntry.WELCOME; inCall = true }
         }
     }
 
@@ -650,7 +649,7 @@ fun RootScreen() {
     /** Every metered launcher from the home lands here (`mint` = an unsaved
      *  ready-made situation, saved once the gate passes). */
     fun startCall(topic: String, facts: List<String>, scenarioId: String?, mint: Scenario?, blurb: String = "",
-                  entry: String = "other") {
+                  entry: String = com.roro.futurevoice.talk.TalkEntry.OTHER) {
         // The paywall is asked here, at the TAP — every metered
         // launcher (free talk, a news story, a scenario, a widget
         // deep link) meets in this one callback, so one gate covers
@@ -741,6 +740,17 @@ fun RootScreen() {
         // First-run answers before anything else — what to teach and how to
         // calibrate.
         }}
+        // A signed-in account on an install that hasn't been set up, which
+        // already has a voice (adopted from the server) — practice exists on
+        // another device. Offer to bring it over before setup asks again
+        // (iOS `SyncContinuePromptView` / `SyncOtherDeviceHintView`).
+        !state.setupComplete && state.signedIn && !state.isAnonymous && state.voiceId != null &&
+            secondDeviceUser != null && !syncOfferSeen -> {{ SyncContinueScreen(
+            userId = secondDeviceUser,
+            onPulled = app::adoptPulledPractice,
+            onDone = { syncOfferSeen = true },
+        )
+        }}
         !state.setupComplete -> {{ SetupFlowScreen(
             initialNative = state.nativeLanguage,
             initialTarget = state.targetLanguage,
@@ -827,28 +837,13 @@ fun RootScreen() {
             standInVoiceId = if (state.voiceIsStandIn) state.voiceId else null,
             onChooseStandIn = app::chooseStandInVoice,
         )
-        // The week's rhythm before the day's: when the week is looked back on
-        // and tested, then (next screen) when the daily call rings. Gated on
-        // the daily call too, so an existing install never sees it.
+        // Where everything they are about to say will live, said before the
+        // first call, ahead of the routine builder (iOS
+        // `LocalDataOnboardingView`). Gated on the builder's flag, so an
+        // install past the routine never sees it.
         }}
-        state.voiceId != null && !dailyCallOnboarded && !weeklyRhythmOnboarded -> {{
-            WeeklyRhythmOnboardingScreen(context) { weeklyRhythmOnboarded = true }
-        // The clone's first real job, introduced right after it exists — so
-        // it reads as a promise rather than a permissions request.
-        }}
-        state.voiceId != null && !dailyCallOnboarded -> {{
-            DailyCallOnboardingScreen(context) { dailyCallOnboarded = true }
-        // The plans, offered ONCE at the end — LAST, and only for an account
-        // with something to buy. While the answer is unknown: the same blank
-        // hold, never a flash of a pitch (or of the tabs) at someone who
-        // isn't going to be shown one.
-        }}
-        state.voiceId != null && !onboardingPaywallSeen && onboardingNeedsPlan != false -> {{
-            if (onboardingNeedsPlan == true) PaywallScreen(onDismiss = {
-                OnboardingFlags.markSeen(context, OnboardingFlags.PAYWALL)
-                onboardingPaywallSeen = true
-            }) else Loading()
-
+        state.voiceId != null && !localDataOnboarded && !dailyCallOnboarded -> {{
+            LocalDataOnboardingScreen(context) { localDataOnboarded = true }
         }}
         else -> null
     }
@@ -994,6 +989,7 @@ fun RootScreen() {
                         callCast = person?.let { com.roro.futurevoice.talk.ConversationEngine.Cast.of(it) }
                         callCastVoice = person?.voicePresetId?.takeIf { it.isNotBlank() }
                         callResume = s
+                        callEntry = com.roro.futurevoice.talk.TalkEntry.RESUME
                         inCall = true
                     } }
                 },
@@ -1020,7 +1016,7 @@ fun RootScreen() {
                 onTalk = { sc -> gate {
                     bookScenarioId = null; bookOverWatchId = null; watchScenarioId = null
                     callTopic = sc.promptBlurb; callFacts = emptyList(); callBlurb = ""; callScenarioId = sc.id
-                    callEntry = "scenario_book"
+                    callEntry = com.roro.futurevoice.talk.TalkEntry.SCENARIO_BOOK
                     inCall = true
                 } },
                 onShadow = { shadowLine = it },
@@ -1138,8 +1134,7 @@ fun RootScreen() {
             onOpenTalk = { detailSessionId = it },
             onBack = { showActivity = false },
             // Every routine line is a door to that kind of practice.
-            onStartTalk = { showActivity = false; DeepLinkInbox.freeTalkEntry = "routine"
-                DeepLinkInbox.widgetRoute.value = DeepLinkInbox.WidgetRoute.FreeTalk },
+            onStartTalk = { showActivity = false; DeepLinkInbox.requestFreeTalk(com.roro.futurevoice.talk.TalkEntry.ROUTINE) },
             onOpenReview = { showActivity = false; showDueReview = true },
             onOpenRoutineReview = {
                 gateScope.launch {
@@ -1389,11 +1384,12 @@ fun RootScreen() {
                     // A call that flew in from the ring flies back to it.
                     TalkMorph.close(morphScope) {
                         if (callFromHomeCard) deepenPending = true
+                        backupPending = true
                         callFromHomeCard = false
                         inCall = false; callTopic = ""; callFacts = emptyList(); callBlurb = ""
                         callScenarioId = null; callOpener = ""; callCast = null
                         callCastVoice = null; callCounterpartId = null; callResume = null
-                        callEntry = "other"
+                        callEntry = com.roro.futurevoice.talk.TalkEntry.OTHER
                     }
                 },
             )
@@ -1410,6 +1406,11 @@ fun RootScreen() {
           LaunchedEffect(state.voiceId, state.restoringVoice) {
               if (state.voiceId != null && !state.restoringVoice) arriveAtTabs()
           }
+          // The routine builder sits over the Talk tab, because that is where
+          // it goes when done: into the Activity chip in the header (iOS
+          // `RootView.tabs(buildingRoutine:)`).
+          LaunchedEffect(buildingRoutine) { if (buildingRoutine) tab = HomeTab.TALK }
+          Box(Modifier.fillMaxSize()) {
           IosSheetHost(
             presented = showMe,
             onDismiss = { dismissMe() },
@@ -1436,7 +1437,7 @@ fun RootScreen() {
                 callCounterpartId = c.id
                 gate {
                     callTopic = ""; callFacts = emptyList(); callScenarioId = null
-                    callEntry = "watch_person"
+                    callEntry = com.roro.futurevoice.talk.TalkEntry.WATCH_PERSON
                     inCall = true
                 }
             },
@@ -1485,13 +1486,21 @@ fun RootScreen() {
             onAddLanguage = { showAddLanguage = true },
             deepenPending = deepenPending,
             onDeepenConsumed = { deepenPending = false },
+            backupPending = backupPending,
+            onBackupConsumed = { backupPending = false },
             // A tab's first-visit guide never rises over a sheet the root owns.
             guideBlocked = paywalled || showIntroPreview || state.levelUp != null ||
                 referralJoin != null || welcomeMinutes != null || updatePending != null || showAgeCheck ||
-                showWhatsNew,
+                showWhatsNew || buildingRoutine || firstRunHeld,
         )
             },
           )
+          if (buildingRoutine) RoutineOnboardingOverlay(onFinished = {
+              OnboardingFlags.markSeen(context, OnboardingFlags.DAILY_CALL)
+              OnboardingFlags.markSeen(context, OnboardingFlags.WEEKLY_RHYTHM)
+              dailyCallOnboarded = true
+          })
+          }
         }
     }
     }
@@ -1590,8 +1599,7 @@ private data class PendingLaunch(val topic: String, val facts: List<String>, val
                                   val mint: Scenario? = null,
                                   /** Context told to the call beside the topic. */
                                   val blurb: String = "",
-                                  /** Which screen it came from (telemetry). */
-                                  val entry: String = "other")
+                                  val entry: String = com.roro.futurevoice.talk.TalkEntry.OTHER)
 
 /** The four verbs, in the order the product does them. Internal so the
  *  capture build can open the shell on a tab. */
@@ -1612,6 +1620,7 @@ internal enum class HomeTab(val label: Int) {
 @Composable
 internal fun HomeScreen(
     state: AppState,
+    /** The last argument is the screen it came from ([com.roro.futurevoice.talk.TalkEntry]). */
     onStartCall: (topic: String, newsFacts: List<String>, scenarioId: String?, entry: String) -> Unit,
     /** A ready-made situation (`StarterSituation`), saved only once the tap passes the gate. */
     onStartStarter: (Scenario, entry: String) -> Unit = { _, _ -> },
@@ -1664,6 +1673,9 @@ internal fun HomeScreen(
     /** A Talk-home card's call has just closed (see [CallRoute.fromHomeCard]). */
     deepenPending: Boolean = false,
     onDeepenConsumed: () -> Unit = {},
+    /** Any call has just closed — the once-only backup offer may follow. */
+    backupPending: Boolean = false,
+    onBackupConsumed: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var showDeepen by remember { mutableStateOf(false) }
@@ -1712,6 +1724,27 @@ internal fun HomeScreen(
         deepenAsk = false
     }
 
+    // iOS `maybeOfferBackup`: after the third finished talk, once, while sync
+    // is off, never on top of the deepen sheet. iOS offers its iCloud here;
+    // Android offers the learner's Google Drive.
+    var showBackupOffer by remember { mutableStateOf(false) }
+    LaunchedEffect(backupPending) {
+        if (!backupPending) return@LaunchedEffect
+        onBackupConsumed()
+        kotlinx.coroutines.delay(900)
+        if (showDeepen) return@LaunchedEffect
+        val prefs = context.getSharedPreferences("futurevoice", 0)
+        if (prefs.getBoolean(BACKUP_OFFERED_KEY, false) || !state.signedIn || state.isAnonymous ||
+            com.roro.futurevoice.sync.SyncEngine.shared(context).isEnabled) return@LaunchedEffect
+        val talks = com.roro.futurevoice.data.SessionStore.shared(context)
+            .load(state.targetLanguage).count { it.endedAt != null }
+        if (talks >= 3) {
+            prefs.edit().putBoolean(BACKUP_OFFERED_KEY, true).apply()
+            showBackupOffer = true
+        }
+    }
+    if (showBackupOffer) BackupOfferSheet(onDismiss = { showBackupOffer = false })
+
     if (showDeepen) {
         PersonaDeepenSheet(
             persona = state.persona,
@@ -1759,7 +1792,7 @@ internal fun HomeScreen(
             })
     }
     fun launch(topic: String, facts: List<String>, scenarioId: String? = null, mint: Scenario? = null,
-               blurb: String = "", entry: String = "other") {
+               blurb: String = "", entry: String) {
         pendingLaunch = PendingLaunch(topic, facts, scenarioId, mint, blurb, entry)
         permission.launch(Manifest.permission.RECORD_AUDIO)
     }
@@ -1903,7 +1936,7 @@ internal fun HomeScreen(
                         TalkHero(
                             state = state,
                             enabled = state.voiceId != null,
-                            onTap = { launch("", emptyList(), entry = "talk_ring") },
+                            onTap = { launch("", emptyList(), entry = com.roro.futurevoice.talk.TalkEntry.TALK_RING) },
                             onOpenActivity = onOpenActivity,
                             heroTop = padding.calculateTopPadding(),
                         )
@@ -1918,13 +1951,13 @@ internal fun HomeScreen(
                             state = state,
                             enabled = state.voiceId != null,
                             onSavePersona = onSavePersona,
-                            onPickNews = { topic -> launch(topic.title, topic.facts.orEmpty(), entry = "talk_news") },
-                            onPickScenario = { sc -> launch(sc.promptBlurb, emptyList(), sc.id, entry = "talk_scenario") },
-                            onPickStarter = { sc -> launch(sc.promptBlurb, emptyList(), sc.id, mint = sc, entry = "talk_scenario") },
+                            onPickNews = { topic -> launch(topic.title, topic.facts.orEmpty(), entry = com.roro.futurevoice.talk.TalkEntry.TALK_NEWS) },
+                            onPickScenario = { sc -> launch(sc.promptBlurb, emptyList(), sc.id, entry = com.roro.futurevoice.talk.TalkEntry.TALK_SCENARIO) },
+                            onPickStarter = { sc -> launch(sc.promptBlurb, emptyList(), sc.id, mint = sc, entry = com.roro.futurevoice.talk.TalkEntry.TALK_SCENARIO) },
                             // An ordinary topic call: the blurb tells it which
                             // exam and which part (iOS `runExam`).
-                            onPickExam = { t, exam -> launch(t.title, emptyList(), blurb = t.callBlurb(exam), entry = "talk_exam") },
-                            onPickTopic = { t -> launch(t.title, emptyList(), blurb = t.blurb, entry = "talk_field") },
+                            onPickExam = { t, exam -> launch(t.title, emptyList(), blurb = t.callBlurb(exam), entry = com.roro.futurevoice.talk.TalkEntry.TALK_EXAM) },
+                            onPickTopic = { t -> launch(t.title, emptyList(), blurb = t.blurb, entry = com.roro.futurevoice.talk.TalkEntry.TALK_FIELD) },
                             // They all live on Watch — that IS the collection.
                             onAllScenarios = { onTabChange(HomeTab.WATCH) },
                         )
@@ -1979,7 +2012,7 @@ internal fun HomeScreen(
                         onOpenDueReview = onOpenDueReview,
                         onOpenSessionDeck = onOpenSessionDeck,
                         nativeLanguage = state.nativeLanguage,
-                        onTalkScenario = { sc -> onStartCall(sc.promptBlurb, emptyList(), sc.id, "other") },
+                        onTalkScenario = { sc -> onStartCall(sc.promptBlurb, emptyList(), sc.id, com.roro.futurevoice.talk.TalkEntry.PRACTICE_BOOK) },
                     )
 
                     HomeTab.PROGRESS -> ProgressBody(
@@ -2752,7 +2785,21 @@ private fun StreakChip(language: String, onClick: () -> Unit) {
     // A capsule, and tappable: the streak is a claim about a history, so it
     // opens the record rather than asking to be taken on trust.
     // The same glass capsule as Speech's + and the two buttons beside it.
-    com.roro.futurevoice.ui.brand.IosGlassButton(onClick = onClick) {
+    // The routine builder shrinks into this chip, so it says where it is
+    // (iOS `RoutineHandoff`): its bounds, a bounce on landing, then the hint.
+    val landed by RoutineHandoff.landed.collectAsStateWithLifecycle()
+    val hint by RoutineHandoff.showHint.collectAsStateWithLifecycle()
+    val bounce = remember { androidx.compose.animation.core.Animatable(1f) }
+    LaunchedEffect(landed) {
+        if (landed == 0) return@LaunchedEffect
+        bounce.animateTo(1.3f, androidx.compose.animation.core.tween(120))
+        bounce.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = 0.4f))
+    }
+    Box(Modifier.onGloballyPositioned { RoutineHandoff.chipBounds.value = it.boundsInRoot() }) {
+    com.roro.futurevoice.ui.brand.IosGlassButton(onClick = {
+        RoutineHandoff.showHint.value = false
+        onClick()
+    }) {
         val lit = days > 0 || keptToday
         Icon(
             if (lit) Icons.Filled.LocalFireDepartment else Icons.Filled.CalendarMonth,
@@ -2760,13 +2807,43 @@ private fun StreakChip(language: String, onClick: () -> Unit) {
             // iOS: `flame.fill`, orange only once today is kept.
             tint = if (keptToday) androidx.compose.ui.graphics.Color(0xFFFF9500)
             else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(18.dp))
+            modifier = Modifier.size(18.dp).graphicsLayer { scaleX = bounce.value; scaleY = bounce.value })
         Spacer(Modifier.width(5.dp))
         Text(
             if (lit) stringResource(R.string.lld_day_streak_94de2a, maxOf(days, 1))
             else stringResource(R.string.activity),
             style = MaterialTheme.typography.bodyLarge.copy(
                 fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
+    }
+    if (hint) RoutineHintPopover(onDismiss = { RoutineHandoff.showHint.value = false })
+    }
+}
+
+/** "Your routine is here", hanging under the Activity chip (iOS's popover
+ *  with its arrow on the top edge). */
+@Composable
+private fun RoutineHintPopover(onDismiss: () -> Unit) {
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    androidx.compose.ui.window.Popup(
+        alignment = Alignment.TopCenter,
+        offset = with(density) { androidx.compose.ui.unit.IntOffset(0, (44 + 10).dp.roundToPx()) },
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.PopupProperties(focusable = true),
+    ) {
+        val dark = androidx.compose.foundation.isSystemInDarkTheme()
+        Column(
+            Modifier.padding(8.dp)
+                .shadow(12.dp, RoundedCornerShape(14.dp))
+                .background(if (dark) androidx.compose.ui.graphics.Color(0xFF2C2C2E)
+                    else androidx.compose.ui.graphics.Color.White, RoundedCornerShape(14.dp))
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(stringResource(R.string.your_routine_is_here), style = MaterialTheme.typography.titleSmall,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+            Text(stringResource(R.string.tap_to_see_it_or_change_it), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
@@ -2946,12 +3023,12 @@ class CallRoute : androidx.lifecycle.ViewModel() {
     val castVoice = mutableStateOf<String?>(null)
     val counterpartId = mutableStateOf<String?>(null)
     val resume = mutableStateOf<com.roro.futurevoice.talk.Session?>(null)
-    /** Which screen started the call — `conversation_started.entry` only. */
-    val entry = mutableStateOf("other")
     /** Launched from a Talk-home card (a scenario or a news story) — iOS
      *  `ConversationHome.callLaunch`, whose dismissal is the one moment the
      *  persona-deepen sheet is offered. The ring's free talk is not one. */
     val fromHomeCard = mutableStateOf(false)
+    /** [com.roro.futurevoice.talk.TalkEntry] — telemetry only. */
+    val entry = mutableStateOf(com.roro.futurevoice.talk.TalkEntry.OTHER)
 }
 
 /**

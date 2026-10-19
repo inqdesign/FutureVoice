@@ -1,0 +1,7 @@
+Corrections
+• La voix de ton moi fluide ne se mêle plus à ce que tu dis en appel.
+• Le message d’accueil et le cercle de Parler ne sautent plus à l’ouverture.
+• En reprenant un appel en pause, les boutons restent affichés.
+• En shadowing, le retour de la phrase précédente ne reste plus, et celui de la dernière s’affiche en entier.
+• Les cartes à partager sont nettes et au bon format.
+• La barre d’onglets et les boutons ne se chevauchent plus avec un grand texte.

@@ -175,6 +175,7 @@
     <string name="all_sources">"Toutes les sources"</string>
     <string name="all_words">"Tous les mots"</string>
     <string name="allow_access_to_photos">"Autorise l’accès à Photos"</string>
+    <string name="allow_google_drive_access_to_keep_syncing">"Autorise l’accès à Google Drive pour continuer la synchro"</string>
     <string name="allow_notifications_so_your_routine_can_remind_you">"Autorise les notifications pour que ta routine puisse te le rappeler"</string>
     <string name="almost">"presque"</string>
     <string name="almost_there">"Presque fini…"</string>
@@ -398,6 +399,10 @@
     <string name="clears_setup_voice_clone_and_persona_then_restarts_the_first_cdfc74">"Efface la configuration, le clone vocal et le profil, puis reprend tout depuis le premier écran. Tu restes connecté."</string>
     <string name="client_calls">"Appels clients"</string>
     <string name="clock_time">"temps d’appel"</string>
+    <!-- "Cloning again uses 5 credits. Your current voice is replaced and deleted on ElevenLabs — you can't go back to it. Audio already generated keeps playing." -->
+    <string name="cloning_again_uses_5_credits_your_current_voice_is_replaced_156602">"Refaire le clone coûte 5 crédits. Ta voix actuelle est remplacée et supprimée chez ElevenLabs — impossible de revenir en arrière. L’audio déjà généré continue de s’écouter."</string>
+    <!-- "Cloning again uses a few minutes of talk time. Your current voice is replaced and deleted on ElevenLabs — you can't go back to it. Audio already generated keeps playing." -->
+    <string name="cloning_again_uses_a_few_minutes_of_talk_time_your_current_v_551704">"Refaire le clone coûte quelques minutes de temps de conversation. Ta voix actuelle est remplacée et supprimée chez ElevenLabs — impossible de revenir en arrière. L’audio déjà généré continue de s’écouter."</string>
     <string name="cloning_your_voice">"Création de ta voix…"</string>
     <string name="close">"Fermer"</string>
     <string name="close_the_book">"Ferme le carnet"</string>
@@ -540,6 +545,7 @@
     <string name="delete_account">"Supprimer le compte"</string>
     <string name="delete_block">"Supprimer le créneau"</string>
     <string name="delete_forever">"Supprimer définitivement"</string>
+    <string name="delete_from_google_drive">"Supprimer de Google Drive"</string>
     <string name="delete_from_icloud">"Supprimer d’iCloud"</string>
     <string name="delete_scenario">"Supprimer la situation"</string>
     <string name="delete_talk">"Supprimer l’appel"</string>
@@ -549,6 +555,7 @@
     <string name="delete_this_talk">"Supprimer cet appel ?"</string>
     <string name="delete_video">"Supprimer la vidéo"</string>
     <string name="delete_your_account">"Supprimer ton compte ?"</string>
+    <string name="delete_your_practice_from_google_drive">"Supprimer ta pratique de Google Drive ?"</string>
     <string name="delete_your_practice_from_icloud">"Supprimer ta pratique d’iCloud ?"</string>
     <string name="delete_your_voice">"Supprimer ta voix ?"</string>
     <!-- 'Deletes cached voice audio only. Your talks, drills, words and books are untouched. Every line synthesizes again the next time it plays.' -->
@@ -583,8 +590,12 @@
     <!-- "Distinct graded words you've used, accumulating from the day each was first said." -->
     <string name="distinct_graded_words_you_ve_used_accumulating_from_the_day_188d71">"Les mots distincts que tu as employés, comptés par niveau, cumulés depuis le jour où tu as dit chacun pour la première fois."</string>
     <string name="distinct_words_from_your_talks_in_the_last_lld_days">"Mots distincts employés dans tes appels des %d derniers jours."</string>
+    <!-- "Do this scene again from the start, and say every line out loud, yours and the other side's." -->
+    <string name="do_this_scene_again_from_the_start_and_say_every_line_out_lo_9794c6">"Refais cette scène depuis le début et dis toutes les répliques à voix haute, les tiennes comme celles de l’autre."</string>
     <!-- 'Do this scene again from the start, and say your part out loud. The other side plays just as it did.' -->
     <string name="do_this_scene_again_from_the_start_and_say_your_part_out_lou_3f2c37">"Refais cette scène depuis le début, en disant ta part à voix haute. L’autre personne est jouée comme la première fois."</string>
+    <!-- "Do this talk again from the start, and say every line out loud: yours the corrected way, and your fluent self's too." -->
+    <string name="do_this_talk_again_from_the_start_and_say_every_line_out_lou_0cfb37">"Refais cette conversation depuis le début et dis toutes les répliques à voix haute : les tiennes, corrigées, et aussi celles de ton moi fluide."</string>
     <!-- 'Do this talk again from the start, and say your part the corrected way. The answers play just as they did.' -->
     <string name="do_this_talk_again_from_the_start_and_say_your_part_the_corr_5ece3b">"Refais cette conversation depuis le début, en disant ta part comme elle a été corrigée. Les réponses sont jouées comme la première fois."</string>
     <string name="doctor_clinic">"Médecin / clinique"</string>
@@ -720,6 +731,8 @@
     <string name="everything_planned_for_that_day_is_done_your_streak_grows_by_4f7c00">"Tout ce qui était prévu ce jour-là est fait. Ta série augmente d’un jour."</string>
     <!-- 'Everything said so far is saved. Reconnect to carry on from where you were.' -->
     <string name="everything_said_so_far_is_saved_reconnect_to_carry_on_from_w_c4f94f">"Tout ce qui a été dit est gardé. Reconnecte-toi pour reprendre où tu en étais."</string>
+    <!-- "Everything synced to Google Drive is removed and syncing stops on every device. What's on this device stays." -->
+    <string name="everything_synced_to_google_drive_is_removed_and_syncing_sto_32a900">"Tout ce qui est synchronisé sur Google Drive est supprimé et la synchro s’arrête sur tous tes appareils. Ce qui est sur celui-ci reste."</string>
     <!-- "Everything synced to iCloud is removed and syncing stops on every device. What's on this device stays." -->
     <string name="everything_synced_to_icloud_is_removed_and_syncing_stops_on_60516a">"Tout ce qui est synchronisé dans iCloud est supprimé et la synchronisation s’arrête sur tous les appareils. Ce qui est sur cet appareil reste."</string>
     <string name="everything_this_conversation_had_to_teach_is_yours">"Tu as appris tout ce que cet appel avait à t’apprendre."</string>
@@ -886,6 +899,11 @@
     <string name="goal_met_how_did_it_feel">"C’est fait. Ça sortait bien, aujourd’hui ?"</string>
     <string name="good_llds_more_for_the_best_result">"Bien. Encore %d s pour le meilleur résultat"</string>
     <string name="good_to_have_you_back">"Alors, tu vas bien ?"</string>
+    <!-- "Google Drive access wasn't allowed. Try again and choose Allow." -->
+    <string name="google_drive_access_wasn_t_allowed_try_again_and_choose_allo_7f36e7">"L’accès à Google Drive n’a pas été autorisé. Réessaie et choisis Autoriser."</string>
+    <!-- "Google Drive can't be reached right now. Check your connection, then try again." -->
+    <string name="google_drive_can_t_be_reached_right_now_check_your_connectio_286681">"Google Drive est injoignable pour le moment. Vérifie ta connexion, puis réessaie."</string>
+    <string name="google_drive_is_full_so_audio_isn_t_syncing">"Google Drive est plein, l’audio ne se synchronise donc pas"</string>
     <string name="got_it">"Mémorisé"</string>
     <string name="got_them_all">"Tout bon"</string>
     <!-- 'Graded against your B1 setting — how this talk went, not what your level is.' -->
@@ -923,6 +941,7 @@
     <string name="hear_it">"Écouter"</string>
     <string name="hear_it_again">"Réécouter"</string>
     <string name="hear_it_in_my_voice">"L’écouter avec ma voix"</string>
+    <string name="hear_it_in_my_voice_lld_min">"L’écouter avec ma voix · %d min"</string>
     <string name="hear_it_in_the_app_write_it_here">"Écoute dans l’app, écris ici"</string>
     <string name="hear_my_attempt">"Écouter ma prise"</string>
     <string name="hear_target">"Écouter le modèle"</string>
@@ -968,9 +987,11 @@
     <string name="how_is_it_going_so_far">"Ça se passe comment jusqu’ici ?"</string>
     <string name="how_it_s_assessed">"Comment c’est évalué"</string>
     <string name="how_it_works">"Les règles"</string>
+    <string name="how_long_a_call">"Combien de minutes par appel ?"</string>
     <string name="how_long_have_you_been_there_optional">"Tu es là depuis combien de temps ? (facultatif)"</string>
     <string name="how_long_optional">"Depuis combien de temps ? (facultatif)"</string>
     <string name="how_many">"Combien"</string>
+    <string name="how_much_can_you_study_a_day">"Combien de temps peux-tu étudier par jour ?"</string>
     <string name="how_much_will_you_talk_each_day">"Tu vas parler combien chaque jour ?"</string>
     <string name="how_much_you_elaborate_longer_richer_turns_read_higher">"À quel point tu développes — des tours plus longs et plus riches se lisent plus haut."</string>
     <string name="how_much_you_talked_and_reviewed_over_the_last_two_weeks">"Combien tu as parlé et révisé ces deux dernières semaines."</string>
@@ -1003,6 +1024,8 @@
     <string name="i_ll_help_you_keep_it_up_d1116e">"%s, je t’aide à tenir le rythme"</string>
     <!-- "I'll help you keep it up" -->
     <string name="i_ll_help_you_keep_it_up_fe0fae">"Je t’aiderai à ne pas lâcher"</string>
+    <!-- "I'll put review in at %@, about %lld cards. Drag it on the grid to move it later." -->
+    <string name="i_ll_put_review_in_at_about_lld_cards_drag_it_on_the_grid_to_f20228">"Je place la révision à %1$s, environ %2$d cartes. Tu pourras la déplacer en la faisant glisser dans le tableau."</string>
     <string name="i_m_lld_or_older">"J’ai %d ans ou plus."</string>
     <!-- "I'm %lld or older, and I agree to my recording being used to build my voice model." -->
     <string name="i_m_lld_or_older_and_i_agree_to_my_recording_being_used_to_b_a31e9d">"J’ai %d ans ou plus et j’accepte que mon enregistrement serve à créer mon modèle vocal."</string>
@@ -1103,6 +1126,7 @@
     <!-- 'Keep a word from a talk, or watch a situation — its words collect here.' -->
     <string name="keep_a_word_from_a_talk_or_watch_a_situation_its_words_colle_b07a48">"Garde un mot pendant un appel, ou regarde une situation : les mots qui en sortent se rassemblent ici."</string>
     <string name="keep_going_llds_more">"Continue à lire — encore %ds"</string>
+    <string name="keep_in_google_drive">"Garder dans Google Drive"</string>
     <string name="keep_in_icloud">"Garder dans iCloud"</string>
     <string name="keep_it">"Garde-le"</string>
     <string name="keep_it_today_for_day_1">"Tiens-le aujourd’hui : jour 1"</string>
@@ -1115,9 +1139,12 @@
     <string name="keep_talking_past_the_first_answer_say_a_little_more_in_each_f6621d">"Ne t’arrête pas à la première réponse : dis-en un peu plus à chaque fois, et ton rythme sera mesuré sur des passages plus longs."</string>
     <string name="keep_this_voice">"Garder cette voix"</string>
     <string name="keep_what_you_d_use">"Garde ce qui te servira"</string>
+    <string name="keep_your_practice_in_google_drive">"Garder ta pratique dans Google Drive ?"</string>
     <string name="keep_your_practice_in_icloud">"Garder ta pratique dans iCloud ?"</string>
     <string name="kept_for_lld_days">"Tenu depuis %d jours"</string>
     <string name="kept_from_a_talk">"Mots gardés pendant un appel"</string>
+    <!-- 'Kept in your own Google Drive, it waits on any phone or tablet you sign into, your voice recording too, so your voice comes back without recording again.' -->
+    <string name="kept_in_your_own_google_drive_it_waits_on_any_phone_or_table_45e1ff">"Dans ton propre Google Drive, elle t’attend sur tout téléphone ou tablette où tu te connectes, l’enregistrement de ta voix aussi, pour retrouver ta voix sans réenregistrer."</string>
     <!-- "Kept in your own iCloud, they're waiting on any phone or iPad you sign into — your voice recording too, so your voice comes back without recording again." -->
     <string name="kept_in_your_own_icloud_they_re_waiting_on_any_phone_or_ipad_9fa373">"Gardés dans ton propre iCloud, ils t’attendent sur chaque téléphone ou iPad où tu te connectes, ton enregistrement vocal aussi : ta voix revient sans réenregistrer."</string>
     <string name="key_expressions">"Expressions clés"</string>
@@ -1157,6 +1184,7 @@
     <string name="left_to_spend">"Temps restant"</string>
     <string name="length">"Durée"</string>
     <string name="let_s_go">"C’est parti !"</string>
+    <string name="let_s_make_your_routine">"Créons ta routine"</string>
     <string name="let_s_make_your_voice_again">"Recréons ta voix"</string>
     <string name="let_s_talk">"On parle ?"</string>
     <!-- 'Level %@' -->
@@ -1355,6 +1383,7 @@
     <string name="make_it_in_my_voice">"La créer avec ma voix"</string>
     <string name="make_it_yours">"Fais-le tien"</string>
     <string name="make_me_sound_more_like_you">"Fais que je te ressemble encore plus"</string>
+    <string name="make_my_routine">"Créer ma routine"</string>
     <string name="making_a_few_takes_about_half_a_minute_keep_this_open">"Je fais plusieurs prises. Ça prend environ 30 secondes, ne ferme pas cet écran."</string>
     <string name="making_it_in_your_voice">"Création avec ta voix…"</string>
     <string name="making_it_yours">"Te l’approprier"</string>
@@ -1476,6 +1505,8 @@
     <string name="name">"Nom"</string>
     <string name="name_interests_place">"Nom, centres d’intérêt, ville…"</string>
     <string name="name_on_the_board">"Ton nom au classement"</string>
+    <!-- 'Names your clone here and on ElevenLabs. Leave it empty to go back to the default.' -->
+    <string name="names_your_clone_here_and_on_elevenlabs_leave_it_empty_to_go_d44a48">"C’est le nom de ce clone ici et sur ElevenLabs. Laisse vide pour revenir au nom par défaut."</string>
     <string name="narrow_it_down">"Affiner"</string>
     <string name="nawana_backup">"sauvegarde nawana"</string>
     <!-- 'nawana needs the microphone and speech recognition to hear you speak. Turn them on in Settings → nawana.' -->
@@ -1627,10 +1658,14 @@
     <!-- "Nothing you hide is lost — your talk's book keeps every correction." -->
     <string name="nothing_you_hide_is_lost_your_talk_s_book_keeps_every_correc_4f2f1b">"Rien de ce que tu masques n’est perdu : le carnet d’appel garde toutes les corrections."</string>
     <string name="notice_how_it_s_done_not_just_what_s_said">"Remarque comment c’est fait, pas seulement ce qui est dit."</string>
+    <!-- "Notifications are off, so I can't call you yet. Turn them on in Settings. Your routine is under Activity on the Talk screen." -->
+    <string name="notifications_are_off_so_i_can_t_call_you_yet_turn_them_on_i_52c0b7">"Les notifications sont désactivées, je ne peux donc pas encore t’appeler. Active-les dans Réglages. Ta routine se trouve dans Activité, sur l’écran Parler."</string>
     <!-- "Notifications are off, so your routine can't remind you. Turn them on in Settings" -->
     <string name="notifications_are_off_so_your_routine_can_t_remind_you_turn_298720">"Les notifications sont désactivées, ta routine ne peut donc pas te le rappeler. Active-les dans Réglages"</string>
     <!-- "Now and then it asks something you can answer with a word you're studying, and shows you the word. Use it and it gets a check." -->
     <string name="now_and_then_it_asks_something_you_can_answer_with_a_word_yo_33236e">"De temps en temps, il pose une question à laquelle tu peux répondre avec un mot que tu étudies, et te montre le mot. Emploie-le et il est coché."</string>
+    <!-- "Now and then your future self asks something you can answer with a word you're studying, and the mistake you make most becomes the call's focus." -->
+    <string name="now_and_then_your_future_self_asks_something_you_can_answer_743ca9">"De temps en temps, ton moi fluide te pose une question à laquelle tu peux répondre avec un mot que tu étudies, et l’erreur que tu fais le plus devient l’objectif de l’appel."</string>
     <string name="nutrition">"Nutrition"</string>
     <string name="of_7_days">"sur 7 jours"</string>
     <string name="of_lld_min_talked_this_month">"%1$s d’appel sur %2$d min ce mois-ci"</string>
@@ -1648,6 +1683,8 @@
     <!-- "On the day you pick, I'll put your week together: what you said, the words you picked up, how far you've come. Then a short test, made only from your own talks." -->
     <string name="on_the_day_you_pick_i_ll_put_your_week_together_what_you_sai_d42485">"Le jour que tu choisis, je te prépare ta semaine : ce que tu as dit, les mots que tu as appris, le chemin parcouru. Puis un petit test, fait uniquement à partir de tes conversations."</string>
     <string name="on_the_street">"Dans la rue"</string>
+    <!-- 'On your other device, open Settings, turn on “Continue on your other devices”, then come back here.' -->
+    <string name="on_your_other_device_open_settings_turn_on_continue_on_your_c7fa99">"Sur ton autre appareil, ouvre Réglages, active « Continuer sur tes autres appareils », puis reviens ici."</string>
     <string name="once">"une fois"</string>
     <!-- "Once a week, a test made only from that week's own talks: what a word means, the missing phrase, rebuilding a corrected sentence, writing down what you hear, saying a line out loud, and the grammar from your weekly report. A dot means it's open." -->
     <string name="once_a_week_a_test_made_only_from_that_week_s_own_talks_what_d9930a">"Une fois par semaine, un test tiré uniquement des conversations de la semaine : le sens d’un mot, l’expression manquante, une phrase corrigée à reconstruire, ce que tu entends à écrire, une phrase à dire à voix haute, et la grammaire de ton bilan de la semaine. Un point signifie qu’il est ouvert."</string>
@@ -1826,6 +1863,10 @@
     <string name="practicing_your_rhythm">"On travaille le rythme de ta parole…"</string>
     <!-- 'Practise on your iPhone, pick it up on your iPad. Everything is stored in your own iCloud, audio included, so it can use a few gigabytes there.' -->
     <string name="practise_on_your_iphone_pick_it_up_on_your_ipad_everything_i_80dce1">"Pratique sur ton iPhone, reprends sur ton iPad. Tout est stocké dans ton propre iCloud, audio compris, et peut donc y occuper quelques gigaoctets."</string>
+    <!-- 'Practise on your phone, pick it up on your tablet. Everything is kept in your own Google Drive, audio included, in a hidden folder only this app can open.' -->
+    <string name="practise_on_your_phone_pick_it_up_on_your_tablet_everything_0cf690">"Pratique sur ton téléphone, reprends sur ta tablette. Tout est gardé dans ton propre Google Drive, audio compris, dans un dossier caché que seule cette app peut ouvrir."</string>
+    <!-- 'Practised on another phone or tablet with sync on? Your talks, cards, words and recordings are in your Google Drive. Choose the same Google account you used there.' -->
+    <string name="practised_on_another_phone_or_tablet_with_sync_on_your_talks_dc3ff4">"Tu as pratiqué sur un autre téléphone ou une tablette avec la synchro activée ? Tes conversations, cartes, mots et enregistrements sont dans ton Google Drive. Choisis le même compte Google que là-bas."</string>
     <string name="preparing_study_notes">"Préparation des notes d’étude…"</string>
     <string name="preparing_the_file">"Préparation du fichier…"</string>
     <string name="preparing_your_video">"Préparation de ta vidéo…"</string>
@@ -1884,6 +1925,7 @@
     <string name="re_synthesize_every_line_learning_data_untouched">"On refait toutes les phrases. Ton historique d’apprentissage reste intact"</string>
     <string name="read">"Lu le %s"</string>
     <string name="read_again">"Relire"</string>
+    <string name="read_both_sides">"Lire les deux rôles"</string>
     <!-- 'Read from the structures you actually build and from verified grammar slips per 100 spoken words — the lower of the two.' -->
     <string name="read_from_the_structures_you_actually_build_and_from_verifie_7599b1">"Calculé sur les structures que tu construis vraiment et sur les fautes de grammaire confirmées pour 100 mots parlés : le plus bas des deux."</string>
     <!-- 'Read from your real talks — vocabulary, grammar, fluency and expression together.' -->
@@ -2039,6 +2081,7 @@
     <string name="s_10_min">"10 min"</string>
     <string name="s_1_card">"1 carte"</string>
     <string name="s_1_expression">"1 expression"</string>
+    <string name="s_1_hour">"1 heure"</string>
     <string name="s_1_min">"~1 min"</string>
     <string name="s_1_minute_vary_your_pitch_a_little">"1 minute suffit. Lis en variant un peu l’intonation."</string>
     <string name="s_1_more_day">"Encore 1 jour"</string>
@@ -2082,6 +2125,8 @@
     <string name="save_to_sentences">"Enregistrer dans les phrases"</string>
     <string name="save_your_recording_to_your_account">"Garde ton enregistrement dans ton compte."</string>
     <string name="saved">"Enregistré"</string>
+    <!-- "Saved here, but ElevenLabs didn't accept the new name: %@ It'll be applied the next time your voice is cloned." -->
+    <string name="saved_here_but_elevenlabs_didn_t_accept_the_new_name_it_ll_b_76dd24">"Enregistré sur cet appareil, mais ElevenLabs n’a pas accepté le nouveau nom : %s Il sera appliqué au prochain clonage de ta voix."</string>
     <!-- "Saved here, but the voice service didn't take the new name yet: %@ It'll be applied the next time your voice is made." -->
     <string name="saved_here_but_the_voice_service_didn_t_take_the_new_name_ye_8a3a70">"Enregistré ici, mais le service vocal n’a pas encore pris le nouveau nom : %s Il sera appliqué la prochaine fois que ta voix sera créée."</string>
     <string name="saved_to_expressions">"Enregistré dans les expressions"</string>
@@ -2108,6 +2153,7 @@
     <string name="say_it_yourself">"Dis-le toi-même"</string>
     <!-- 'Say more in one sentence — a reason, a condition, what happened before. Longer sentences are what move this band.' -->
     <string name="say_more_in_one_sentence_a_reason_a_condition_what_happened_9100fc">"Dis plus de choses en une phrase – une raison, une condition, ce qui s’est passé avant. Ce sont les phrases plus longues qui font bouger ce niveau."</string>
+    <string name="say_s_line">"Dis la réplique de %s"</string>
     <string name="say_the_word_out_loud">"Dis le mot à voix haute"</string>
     <!-- 'Say the word out loud first. Then tap the card to see its meaning and an example.' -->
     <string name="say_the_word_out_loud_first_then_tap_the_card_to_see_its_mea_72e3b6">"Dis d’abord le mot à voix haute. Puis touche la carte pour voir son sens et un exemple."</string>
@@ -2219,6 +2265,7 @@
     <string name="shuffle">"Aléatoire"</string>
     <!-- "Sign in, and your voice lands in this account the day it's made." -->
     <string name="sign_in_and_your_voice_lands_in_this_account_the_day_it_s_ma_e2e5d2">"Connecte-toi : ta voix arrivera dans ce compte le jour où elle sera prête."</string>
+    <string name="sign_in_to_a_google_account_on_this_device_then_try_again">"Connecte-toi à un compte Google sur cet appareil, puis réessaie."</string>
     <string name="sign_in_to_icloud_in_settings_first_then_try_again">"Connecte-toi d’abord à iCloud dans Réglages, puis réessaie."</string>
     <string name="sign_in_to_icloud_in_settings_to_sync">"Connecte-toi à iCloud dans Réglages pour synchroniser"</string>
     <string name="sign_in_to_sync_your_practice_between_your_iphone_and_ipad">"Connecte-toi pour synchroniser ta pratique entre ton iPhone et ton iPad."</string>
@@ -2457,6 +2504,7 @@
     <string name="tap_to_hear_a_sample_in">"Touche ▶ pour écouter un échantillon en %s."</string>
     <string name="tap_to_hear_it_again">"Touche pour réécouter"</string>
     <string name="tap_to_reveal">"Touche pour voir"</string>
+    <string name="tap_to_see_it_or_change_it">"Touche pour la voir ou la modifier."</string>
     <string name="tap_to_shadow_the_selected_phrase">"Touche pour répéter le passage choisi"</string>
     <string name="tap_to_start_a_phone_call">"Touche pour lancer l’appel"</string>
     <string name="tap_to_sync_shadow">"Touche pour répéter en même temps"</string>
@@ -2687,6 +2735,8 @@
     <string name="this_day_has_its_own_plan_so_this_change_is_for_this_day_onl_6323e8">"Ce jour a son propre programme : ce changement ne vaut que pour ce jour."</string>
     <!-- "This deletes your voice model everywhere it is kept. Audio already made keeps playing until you delete your account. The app can't hold a call without a voice, so it will ask you to record a new one, or you can delete your account entirely." -->
     <string name="this_deletes_your_voice_model_everywhere_it_is_kept_audio_al_7612fd">"Cela supprime ton modèle de voix partout où il est conservé. L’audio déjà créé reste lisible jusqu’à la suppression de ton compte. Sans voix, pas d’appel : l’app te demandera d’en enregistrer une nouvelle, ou tu peux supprimer ton compte entièrement."</string>
+    <!-- "This deletes your voice model here and at ElevenLabs. Audio already generated keeps playing until you delete your account. The app can't hold a call without a voice, so it will ask you to record a new one — or you can delete your account entirely." -->
+    <string name="this_deletes_your_voice_model_here_and_at_elevenlabs_audio_a_b79e8b">"Ça supprime ton modèle de voix ici et chez ElevenLabs. L’audio déjà généré continue de se lire jusqu’à la suppression de ton compte. L’app ne peut pas tenir un appel sans voix : elle te demandera d’en enregistrer une nouvelle — ou tu peux supprimer ton compte entièrement."</string>
     <!-- 'This is how other learners find you. Tap to change it or take it down.' -->
     <string name="this_is_how_other_learners_find_you_tap_to_change_it_or_take_211599">"Voilà comment les autres apprenants te voient. Touche pour le modifier ou le retirer."</string>
     <string name="this_is_what_makes_the_dialogues_feel_real">"C’est ce qui rend les dialogues vivants."</string>
@@ -2761,6 +2811,9 @@
     <string name="try_again">"Réessayer"</string>
     <string name="try_for_free">"Commencer gratuitement"</string>
     <string name="try_in_your_next_talk">"Essaie « %s » dans ta prochaine conversation."</string>
+    <string name="try_it_just_as_it_is_for_a_week_you_can_change_it_any_time">"Essaie-la telle quelle pendant une semaine. Tu peux la changer à tout moment."</string>
+    <!-- "Try it like this for a week. It's under Activity on the Talk screen whenever you want to change it." -->
+    <string name="try_it_like_this_for_a_week_it_s_under_activity_on_the_talk_f71c6f">"Essaie-la ainsi pendant une semaine. Pour la modifier, elle est dans Activité, sur l’écran Parler."</string>
     <string name="try_now">"Réessayer maintenant"</string>
     <string name="try_saying">"Essaie de dire"</string>
     <string name="try_the_missed_ones_again">"Refaire les ratés"</string>
@@ -2819,6 +2872,7 @@
     <string name="useful_information_clearly_told">"Des infos utiles, racontées clairement"</string>
     <string name="uses_lld_min_of_talk_time">"Utilise %d min de temps de conversation"</string>
     <string name="uses_talk_time">"Utilise du temps de conversation"</string>
+    <string name="uses_your_google_drive">"Utilise ton Google Drive"</string>
     <string name="uses_your_icloud">"Utilise ton iCloud"</string>
     <string name="variants">"Autres façons de le dire"</string>
     <!-- 'Verified grammar slips per 100 spoken words — fewer reads higher.' -->
@@ -2873,6 +2927,7 @@
     <string name="vs_previous_30_days">"par rapport aux 30 jours précédents"</string>
     <string name="waiting_for_the_first_sync">"En attente de la première synchronisation"</string>
     <string name="walking_the_dog">"En promenant le chien"</string>
+    <string name="want_a_copy_use_your_own_google_drive">"Une copie dans ton Google Drive, si tu veux"</string>
     <string name="want_a_copy_use_your_own_icloud">"Une copie dans ton iCloud, si tu veux"</string>
     <string name="warm">"Chaleureux"</string>
     <string name="warm_and_chatty">"Chaleureux et bavard"</string>
@@ -3008,9 +3063,11 @@
     <string name="what_you_say_depends_on_who_you_say_it_to_asking_for_a_day_o_63228d">"Ce que tu dis dépend de à qui tu le dis. Demander un jour de congé, ce n’est pas la même conversation avec ton chef qu’avec un collègue, et un inconnu quelconque ne peut pas te montrer cette différence. Avec une personne précise, chaque scène sonne vrai."</string>
     <string name="what_you_say_when_someone_meets_you">"Ce que tu dis quand on te croise"</string>
     <string name="what_you_usually_talk_about">"Ce dont tu parles avec elle d’habitude"</string>
+    <string name="what_your_clone_is_called_here_and_on_elevenlabs">"Le nom de ton clone, ici et sur ElevenLabs"</string>
     <string name="what_your_fluent_self_knows_about_you">"Ce que ton moi fluide sait de toi"</string>
     <string name="what_your_plan_holds">"Ce que contient ta formule"</string>
     <string name="what_your_voice_is_called_in_the_app">"Le nom de ta voix dans l’app"</string>
+    <string name="when_">"Quand ?"</string>
     <!-- "When a friend joins with your code, you both get %lld minutes — and invite minutes are spent before the month's pool." -->
     <string name="when_a_friend_joins_with_your_code_you_both_get_lld_minutes_de6e19">"Si un ami s’inscrit avec ton code, chacun reçoit %d minutes, et les minutes d’invitation passent avant celles du mois."</string>
     <!-- "When a new week starts, a short report on the last one comes up once: the days you studied, your streak, how long you talked, and what became yours. Every past week stays here, and a dot marks one you haven't opened." -->
@@ -3289,9 +3346,12 @@
     <string name="your_conversation_is_saved_open_it_under_review_to_generate_7c3e0c">"La conversation est enregistrée. Ouvre-la dans Révision pour regénérer son matériel de révision."</string>
     <!-- "Your corrections, notes and word meanings come back in this language. The app's own screens stay English." -->
     <string name="your_corrections_notes_and_word_meanings_come_back_in_this_l_95bb21">"Les corrections, les notes et le sens des mots arrivent dans cette langue. Les écrans de l’app restent en anglais."</string>
+    <!-- 'Your current clone will be deleted on ElevenLabs after the new one is created.' -->
+    <string name="your_current_clone_will_be_deleted_on_elevenlabs_after_the_n_92deb0">"Ton clone actuel sera supprimé chez ElevenLabs dès que le nouveau sera créé."</string>
     <string name="your_current_voice_is_deleted_and_you_ll_record_a_new_one">"Ta voix actuelle est supprimée et tu en enregistres une nouvelle."</string>
     <!-- "Your current voice is replaced by the new one and deleted, so you can't go back to it. Audio already made keeps playing." -->
     <string name="your_current_voice_is_replaced_by_the_new_one_and_deleted_so_dd7e3f">"Ta voix actuelle est remplacée par la nouvelle et supprimée, impossible de revenir en arrière. L’audio déjà créé continue de s’écouter."</string>
+    <string name="your_daily_call">"Ton appel quotidien"</string>
     <!-- "Your daily call is off, so this one won't ring. Turn it on in Me → Daily call." -->
     <string name="your_daily_call_is_off_so_this_one_won_t_ring_turn_it_on_in_10477c">"Ton appel quotidien est désactivé, donc celle-ci ne sonnera pas. Active-le dans Mon profil → Appel quotidien."</string>
     <string name="your_daily_call_rings_at_this_time">"Ton appel quotidien sonne à cette heure."</string>
@@ -3307,6 +3367,7 @@
     <string name="your_first_week_s_cards_arrive_when_it_closes">"Les cartes de ta première semaine arrivent quand elle se termine."</string>
     <string name="your_fluent_self">"Ton moi fluide"</string>
     <string name="your_fluent_self_calls_first">"Ton moi fluide appelle en premier"</string>
+    <string name="your_fluent_self_calls_you_at_this_time">"Ton moi fluide t’appelle à cette heure-là."</string>
     <string name="your_fluent_self_in_your_voice">"Ton moi fluide, avec ta voix"</string>
     <string name="your_fluent_self_phones_you">"Ton moi fluide t’appelle"</string>
     <!-- 'Your fluent self speaks this language in your own voice. You can add more languages later — same voice, no extra setup.' -->
@@ -3391,14 +3452,20 @@
     <string name="your_practice_from_your_other_device_is_in_your_icloud_talks_5ad16e">"Ta pratique de ton autre appareil est dans ton iCloud : conversations, cartes, mots, enregistrements. Récupère-la ici et garde les deux au même niveau désormais."</string>
     <!-- "Your practice on this device takes about %@. That's roughly the space it needs in iCloud." -->
     <string name="your_practice_on_this_device_takes_about_that_s_roughly_the_b08018">"Ta pratique sur cet appareil occupe environ %s. C’est à peu près l’espace qu’il lui faut dans iCloud."</string>
+    <!-- "Your practice on this device takes about %@. That's roughly the space it needs in Google Drive." -->
+    <string name="your_practice_on_this_device_takes_about_that_s_roughly_the_b9cf59">"Ta pratique sur cet appareil occupe environ %s. C’est à peu près la place qu’il lui faut dans Google Drive."</string>
     <string name="your_practice_stays_on_your_phone">"Ta pratique reste sur ton téléphone"</string>
     <string name="your_profile">"Ton profil"</string>
     <string name="your_project_update">"Le point sur ton projet"</string>
     <!-- 'Your recent conversations measure at a higher level. Scoring and material difficulty now follow it.' -->
     <string name="your_recent_conversations_measure_at_a_higher_level_scoring_8861e0">"Tes conversations récentes se mesurent à un niveau plus haut. La notation et la difficulté du matériel le suivent désormais."</string>
+    <!-- 'Your recording is sent to ElevenLabs, which builds a voice model from it. That model is biometric data.' -->
+    <string name="your_recording_is_sent_to_elevenlabs_which_builds_a_voice_mo_ecdb2a">"L’enregistrement est envoyé à ElevenLabs, qui en construit un modèle de voix. Ce modèle est une donnée biométrique."</string>
     <!-- "Your recordings aren't backed up to iCloud right now, so they're on this device only. If you delete the app on this device, they're deleted with it." -->
     <string name="your_recordings_aren_t_backed_up_to_icloud_right_now_so_they_66fe02">"Tes enregistrements ne sont plus sauvegardés dans iCloud pour l’instant : ils sont seulement sur cet appareil. Si tu supprimes l’app ici, ils disparaissent avec elle."</string>
     <string name="your_recordings_of_this_script_will_be_here">"Les prises de ce texte s’afficheront ici."</string>
+    <string name="your_routine_is_here">"Ta routine est ici"</string>
+    <string name="your_routine_is_ready">"Ta routine est prête"</string>
     <string name="your_scenario">"Ta situation"</string>
     <string name="your_scenarios">"Tes situations"</string>
     <string name="your_score">"Score"</string>
@@ -3422,6 +3489,8 @@
     <string name="your_talks_books_and_cards_are_still_on_it_open_me_there_tur_546039">"Tes appels, tes carnets et tes cartes y sont encore. Ouvre Mon profil sur cet appareil, active « Continuer sur tes autres appareils », puis reviens ici."</string>
     <!-- "Your talks, books and recordings are on this phone only. If you delete the app or change phones, they're gone for good." -->
     <string name="your_talks_books_and_recordings_are_on_this_phone_only_if_yo_02b0cd">"Tes conversations, carnets et enregistrements sont uniquement sur ce téléphone. Si tu supprimes l’app ou changes de téléphone, ils sont perdus pour de bon."</string>
+    <!-- 'Your talks, cards, words and recordings, audio included, stay the same on every device signed into this account and the same Google account. Turning this off stops syncing and deletes nothing.' -->
+    <string name="your_talks_cards_words_and_recordings_audio_included_stay_th_0bead2">"Tes conversations, cartes, mots et enregistrements, audio compris, restent identiques sur chaque appareil connecté à ce compte et au même compte Google. Désactiver arrête la synchro sans rien supprimer."</string>
     <!-- 'Your talks, cards, words and recordings — including the audio — are kept the same on every device signed into this account and your iCloud. Turning this off stops syncing and deletes nothing.' -->
     <string name="your_talks_cards_words_and_recordings_including_the_audio_ar_4e4ae2">"Tes conversations, cartes, mots et enregistrements, audio compris, restent identiques sur chaque appareil connecté à ce compte et à ton iCloud. Désactiver arrête la synchronisation et ne supprime rien."</string>
     <string name="your_talks_together">"Appels ensemble"</string>
@@ -3458,6 +3527,8 @@
     <string name="your_voice_model_is_built_by_the_most_trusted_service_there_b4db4a">"Le modèle de voix est créé par le service le plus fiable qui existe, et ne sert qu’à ta pratique des langues."</string>
     <!-- "Your voice model is deleted everywhere it is kept, and this can't be undone. You'll be asked to record a new one before your next call." -->
     <string name="your_voice_model_is_deleted_everywhere_it_is_kept_and_this_c_b14bff">"Ton modèle de voix est supprimé partout où il est conservé, et c’est définitif. Tu en enregistreras un nouveau avant ton prochain appel."</string>
+    <!-- "Your voice model is deleted here and at ElevenLabs, and this can't be undone. You'll be asked to record a new one before your next call." -->
+    <string name="your_voice_model_is_deleted_here_and_at_elevenlabs_and_this_107e07">"Le modèle de voix est supprimé ici et chez ElevenLabs, et c’est irréversible. Il te sera demandé d’en enregistrer un nouveau avant ton prochain appel."</string>
     <!-- 'Your voice recording goes too, so a new phone makes your voice again without recording.' -->
     <string name="your_voice_recording_goes_too_so_a_new_phone_makes_your_voic_c72584">"Ton enregistrement vocal suit aussi : un nouveau téléphone recrée ta voix sans réenregistrer."</string>
     <string name="your_voice_will_be_ready_in_a_few_days">"Ta voix sera prête dans quelques jours."</string>

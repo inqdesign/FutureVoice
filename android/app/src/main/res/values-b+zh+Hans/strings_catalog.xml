@@ -175,6 +175,7 @@
     <string name="all_sources">"所有来源"</string>
     <string name="all_words">"全部单词"</string>
     <string name="allow_access_to_photos">"请允许访问照片"</string>
+    <string name="allow_google_drive_access_to_keep_syncing">"要继续同步，请允许访问 Google 云端硬盘"</string>
     <string name="allow_notifications_so_your_routine_can_remind_you">"允许通知，作息才能提醒你"</string>
     <string name="almost">"差不多"</string>
     <string name="almost_there">"快好了…"</string>
@@ -401,6 +402,10 @@
     <string name="clears_setup_voice_clone_and_persona_then_restarts_the_first_cdfc74">"清除设置、声音和个人文件，从第一次打开的界面重新开始。登录状态不变。"</string>
     <string name="client_calls">"客户通话"</string>
     <string name="clock_time">"通话时长"</string>
+    <!-- "Cloning again uses 5 credits. Your current voice is replaced and deleted on ElevenLabs — you can't go back to it. Audio already generated keeps playing." -->
+    <string name="cloning_again_uses_5_credits_your_current_voice_is_replaced_156602">"重新克隆会用掉5点数。目前的声音会被新声音取代，并从ElevenLabs删除，无法还原。已经生成的音频可以继续播放。"</string>
+    <!-- "Cloning again uses a few minutes of talk time. Your current voice is replaced and deleted on ElevenLabs — you can't go back to it. Audio already generated keeps playing." -->
+    <string name="cloning_again_uses_a_few_minutes_of_talk_time_your_current_v_551704">"重新制作会用掉几分钟的通话时间。目前的声音会被新声音取代，并从ElevenLabs删除，无法还原。已经做好的音频可以继续听。"</string>
     <string name="cloning_your_voice">"正在制作你的声音…"</string>
     <string name="close">"关闭"</string>
     <string name="close_the_book">"合上本子"</string>
@@ -543,6 +548,7 @@
     <string name="delete_account">"删除账号"</string>
     <string name="delete_block">"删除时段"</string>
     <string name="delete_forever">"永久删除"</string>
+    <string name="delete_from_google_drive">"从 Google 云端硬盘删除"</string>
     <string name="delete_from_icloud">"从 iCloud 删除"</string>
     <string name="delete_scenario">"删除情境"</string>
     <string name="delete_talk">"删除通话"</string>
@@ -552,6 +558,7 @@
     <string name="delete_this_talk">"要删除这通电话吗？"</string>
     <string name="delete_video">"删除视频"</string>
     <string name="delete_your_account">"要删除账号吗？"</string>
+    <string name="delete_your_practice_from_google_drive">"要删除 Google 云端硬盘里的练习记录吗？"</string>
     <string name="delete_your_practice_from_icloud">"要从 iCloud 删除练习记录吗？"</string>
     <string name="delete_your_voice">"要删除声音吗？"</string>
     <!-- 'Deletes cached voice audio only. Your talks, drills, words and books are untouched. Every line synthesizes again the next time it plays.' -->
@@ -586,8 +593,12 @@
     <!-- "Distinct graded words you've used, accumulating from the day each was first said." -->
     <string name="distinct_graded_words_you_ve_used_accumulating_from_the_day_188d71">"你实际用过的单词，依等级计算，从每个字第一次说出口那天开始累积。"</string>
     <string name="distinct_words_from_your_talks_in_the_last_lld_days">"最近%d天的通话里用过的不同单词数。"</string>
+    <!-- "Do this scene again from the start, and say every line out loud, yours and the other side's." -->
+    <string name="do_this_scene_again_from_the_start_and_say_every_line_out_lo_9794c6">"从头再演一次这个场景，自己的台词和对方的台词都大声说出来。"</string>
     <!-- 'Do this scene again from the start, and say your part out loud. The other side plays just as it did.' -->
     <string name="do_this_scene_again_from_the_start_and_say_your_part_out_lou_3f2c37">"从头再演一次这个场景。轮到你时，把你的台词说出来。对方的话会照当时播放。"</string>
+    <!-- "Do this talk again from the start, and say every line out loud: yours the corrected way, and your fluent self's too." -->
+    <string name="do_this_talk_again_from_the_start_and_say_every_line_out_lou_0cfb37">"从头再进行一次这段对话，自己的话照修改后的说，流利的自己的话也全部大声说出来。"</string>
     <!-- 'Do this talk again from the start, and say your part the corrected way. The answers play just as they did.' -->
     <string name="do_this_talk_again_from_the_start_and_say_your_part_the_corr_5ece3b">"从头再进行一次这场对话。轮到你时，用修正后的说法说出来。回答会照当时播放。"</string>
     <string name="doctor_clinic">"看医生"</string>
@@ -723,6 +734,8 @@
     <string name="everything_planned_for_that_day_is_done_your_streak_grows_by_4f7c00">"当天计划的全部完成，连续记录加一天。"</string>
     <!-- 'Everything said so far is saved. Reconnect to carry on from where you were.' -->
     <string name="everything_said_so_far_is_saved_reconnect_to_carry_on_from_w_c4f94f">"目前为止的对话都已保存。重新连接就能接着聊。"</string>
+    <!-- "Everything synced to Google Drive is removed and syncing stops on every device. What's on this device stays." -->
+    <string name="everything_synced_to_google_drive_is_removed_and_syncing_sto_32a900">"同步到 Google 云端硬盘的内容会全部删除，所有设备都会停止同步。这台设备上的内容会保留。"</string>
     <!-- "Everything synced to iCloud is removed and syncing stops on every device. What's on this device stays." -->
     <string name="everything_synced_to_icloud_is_removed_and_syncing_stops_on_60516a">"会删除同步到 iCloud 的所有内容，并在所有设备上停止同步。这台设备上的内容会保留。"</string>
     <string name="everything_this_conversation_had_to_teach_is_yours">"这次对话该学的，都学会了。"</string>
@@ -889,6 +902,11 @@
     <string name="goal_met_how_did_it_feel">"达标了。今天说得顺吗？"</string>
     <string name="good_llds_more_for_the_best_result">"很好。再%d秒，效果最好"</string>
     <string name="good_to_have_you_back">"最近好吗？"</string>
+    <!-- "Google Drive access wasn't allowed. Try again and choose Allow." -->
+    <string name="google_drive_access_wasn_t_allowed_try_again_and_choose_allo_7f36e7">"没有获得 Google 云端硬盘的访问权限。请再试一次并选择“允许”。"</string>
+    <!-- "Google Drive can't be reached right now. Check your connection, then try again." -->
+    <string name="google_drive_can_t_be_reached_right_now_check_your_connectio_286681">"现在连不上 Google 云端硬盘。请检查网络连接后再试一次。"</string>
+    <string name="google_drive_is_full_so_audio_isn_t_syncing">"Google 云端硬盘已满，音频没有同步"</string>
     <string name="got_it">"记住了"</string>
     <string name="got_them_all">"全部答对"</string>
     <!-- 'Graded against your B1 setting — how this talk went, not what your level is.' -->
@@ -926,6 +944,7 @@
     <string name="hear_it">"听听看"</string>
     <string name="hear_it_again">"再听一次"</string>
     <string name="hear_it_in_my_voice">"用我的声音听"</string>
+    <string name="hear_it_in_my_voice_lld_min">"用我的声音听 · %d分钟"</string>
     <string name="hear_it_in_the_app_write_it_here">"在 App 里听，在这里写"</string>
     <string name="hear_my_attempt">"听我的录音"</string>
     <string name="hear_target">"听范本"</string>
@@ -971,9 +990,11 @@
     <string name="how_is_it_going_so_far">"用起来感觉如何？"</string>
     <string name="how_it_s_assessed">"判定方式"</string>
     <string name="how_it_works">"规则"</string>
+    <string name="how_long_a_call">"每次通话几分钟？"</string>
     <string name="how_long_have_you_been_there_optional">"在那里住多久了？（选填）"</string>
     <string name="how_long_optional">"多久了？（选填）"</string>
     <string name="how_many">"数量"</string>
+    <string name="how_much_can_you_study_a_day">"一天能学习多久？"</string>
     <string name="how_much_will_you_talk_each_day">"每天要说多久？"</string>
     <string name="how_much_you_elaborate_longer_richer_turns_read_higher">"看你说得多详细。说得越长越丰富，分数越高。"</string>
     <string name="how_much_you_talked_and_reviewed_over_the_last_two_weeks">"最近两周你说了多少、复习了多少。"</string>
@@ -1006,6 +1027,8 @@
     <string name="i_ll_help_you_keep_it_up_d1116e">"%s，我会帮你一直保持下去"</string>
     <!-- "I'll help you keep it up" -->
     <string name="i_ll_help_you_keep_it_up_fe0fae">"我会帮你持续下去"</string>
+    <!-- "I'll put review in at %@, about %lld cards. Drag it on the grid to move it later." -->
+    <string name="i_ll_put_review_in_at_about_lld_cards_drag_it_on_the_grid_to_f20228">"复习会排在 %1$s，大约 %2$d 张卡片。之后可以在表上拖动来改时间。"</string>
     <string name="i_m_lld_or_older">"我已满%d岁。"</string>
     <!-- "I'm %lld or older, and I agree to my recording being used to build my voice model." -->
     <string name="i_m_lld_or_older_and_i_agree_to_my_recording_being_used_to_b_a31e9d">"我已满%d岁，并同意用我的录音创建我的语音模型。"</string>
@@ -1106,6 +1129,7 @@
     <!-- 'Keep a word from a talk, or watch a situation — its words collect here.' -->
     <string name="keep_a_word_from_a_talk_or_watch_a_situation_its_words_colle_b07a48">"在通话里收下单词，或看一场情境，里面的单词都会收集在这里。"</string>
     <string name="keep_going_llds_more">"请继续念，再%d秒就好"</string>
+    <string name="keep_in_google_drive">"存到 Google 云端硬盘"</string>
     <string name="keep_in_icloud">"保存到 iCloud"</string>
     <string name="keep_it">"收藏"</string>
     <string name="keep_it_today_for_day_1">"今天守住就是第 1 天"</string>
@@ -1118,9 +1142,12 @@
     <string name="keep_talking_past_the_first_answer_say_a_little_more_in_each_f6621d">"别停在第一句回答，每次多说一点，速度就会从更长的段落里读出来。"</string>
     <string name="keep_this_voice">"保留这个声音"</string>
     <string name="keep_what_you_d_use">"收藏用得上的"</string>
+    <string name="keep_your_practice_in_google_drive">"要把练习存在 Google 云端硬盘吗？"</string>
     <string name="keep_your_practice_in_icloud">"要把练习记录保存在 iCloud 吗？"</string>
     <string name="kept_for_lld_days">"已连续守住 %d 天"</string>
     <string name="kept_from_a_talk">"通话里收下的单词"</string>
+    <!-- 'Kept in your own Google Drive, it waits on any phone or tablet you sign into, your voice recording too, so your voice comes back without recording again.' -->
+    <string name="kept_in_your_own_google_drive_it_waits_on_any_phone_or_table_45e1ff">"存在你自己的 Google 云端硬盘，登录任何手机或平板都能接着用。你的声音录音也会一起保存，不用重录就能找回你的声音。"</string>
     <!-- "Kept in your own iCloud, they're waiting on any phone or iPad you sign into — your voice recording too, so your voice comes back without recording again." -->
     <string name="kept_in_your_own_icloud_they_re_waiting_on_any_phone_or_ipad_9fa373">"保存在你自己的 iCloud，登录任何 iPhone 或 iPad 都能接着用。声音录音也会一起保存，不用重录就能找回你的声音。"</string>
     <string name="key_expressions">"关键表达"</string>
@@ -1160,6 +1187,7 @@
     <string name="left_to_spend">"剩余时间"</string>
     <string name="length">"时长"</string>
     <string name="let_s_go">"开始吧"</string>
+    <string name="let_s_make_your_routine">"来安排你的作息吧"</string>
     <string name="let_s_make_your_voice_again">"重新录一次你的声音吧"</string>
     <string name="let_s_talk">"开始说"</string>
     <!-- 'Level %@' -->
@@ -1358,6 +1386,7 @@
     <string name="make_it_in_my_voice">"用我的声音生成"</string>
     <string name="make_it_yours">"变成自己的"</string>
     <string name="make_me_sound_more_like_you">"让我听起来更像你"</string>
+    <string name="make_my_routine">"安排作息"</string>
     <string name="making_a_few_takes_about_half_a_minute_keep_this_open">"正在念几个版本，大约需要30秒。请不要关闭这个界面。"</string>
     <string name="making_it_in_your_voice">"正在用你的声音生成…"</string>
     <string name="making_it_yours">"变成你自己的"</string>
@@ -1479,6 +1508,8 @@
     <string name="name">"名字"</string>
     <string name="name_interests_place">"名字、兴趣、地区…"</string>
     <string name="name_on_the_board">"排行榜上的名字"</string>
+    <!-- 'Names your clone here and on ElevenLabs. Leave it empty to go back to the default.' -->
+    <string name="names_your_clone_here_and_on_elevenlabs_leave_it_empty_to_go_d44a48">"这是在App和ElevenLabs两边称呼这个声音的名字。留空就会回到默认名称。"</string>
     <string name="narrow_it_down">"缩小范围"</string>
     <string name="nawana_backup">"nawana备份"</string>
     <!-- 'nawana needs the microphone and speech recognition to hear you speak. Turn them on in Settings → nawana.' -->
@@ -1630,10 +1661,14 @@
     <!-- "Nothing you hide is lost — your talk's book keeps every correction." -->
     <string name="nothing_you_hide_is_lost_your_talk_s_book_keeps_every_correc_4f2f1b">"隐藏不会弄丢任何东西，通话复习本里每一条修正都还在。"</string>
     <string name="notice_how_it_s_done_not_just_what_s_said">"不只看说了什么，更要看怎么说。"</string>
+    <!-- "Notifications are off, so I can't call you yet. Turn them on in Settings. Your routine is under Activity on the Talk screen." -->
+    <string name="notifications_are_off_so_i_can_t_call_you_yet_turn_them_on_i_52c0b7">"通知已关闭，所以还不能给你打电话。请到设置开启通知。作息在对话界面的“活动”里。"</string>
     <!-- "Notifications are off, so your routine can't remind you. Turn them on in Settings" -->
     <string name="notifications_are_off_so_your_routine_can_t_remind_you_turn_298720">"通知已关闭，作息无法提醒你。请到设置开启"</string>
     <!-- "Now and then it asks something you can answer with a word you're studying, and shows you the word. Use it and it gets a check." -->
     <string name="now_and_then_it_asks_something_you_can_answer_with_a_word_yo_33236e">"它不时会问一个你能用正在学习的单词回答的问题，并把那个单词显示出来。用上了就会打勾。"</string>
+    <!-- "Now and then your future self asks something you can answer with a word you're studying, and the mistake you make most becomes the call's focus." -->
+    <string name="now_and_then_your_future_self_asks_something_you_can_answer_743ca9">"流利的自己偶尔会问你能用正在学的单词回答的问题，并把你最常犯的错误当作这次通话的重点。"</string>
     <string name="nutrition">"营养"</string>
     <string name="of_7_days">"/ 7天"</string>
     <string name="of_lld_min_talked_this_month">"本月%2$d分钟中已通话%1$s"</string>
@@ -1651,6 +1686,8 @@
     <!-- "On the day you pick, I'll put your week together: what you said, the words you picked up, how far you've come. Then a short test, made only from your own talks." -->
     <string name="on_the_day_you_pick_i_ll_put_your_week_together_what_you_sai_d42485">"在你选的那天，我会帮你整理这一周：你说了什么、学到哪些词、进步了多少。然后是一份小测验，只用你自己的对话出题。"</string>
     <string name="on_the_street">"在路上"</string>
+    <!-- 'On your other device, open Settings, turn on “Continue on your other devices”, then come back here.' -->
+    <string name="on_your_other_device_open_settings_turn_on_continue_on_your_c7fa99">"请在另一台设备打开“设置”，开启“在其他设备上继续”，再回到这里。"</string>
     <string name="once">"一次"</string>
     <!-- "Once a week, a test made only from that week's own talks: what a word means, the missing phrase, rebuilding a corrected sentence, writing down what you hear, saying a line out loud, and the grammar from your weekly report. A dot means it's open." -->
     <string name="once_a_week_a_test_made_only_from_that_week_s_own_talks_what_d9930a">"每周一次，只用当周自己的对话出题的测验：单词意思、缺失的用语、重组纠正后的句子、听写、开口说一句，还有周报里提到的语法。有圆点说明测验已开放。"</string>
@@ -1829,6 +1866,10 @@
     <string name="practicing_your_rhythm">"正在练习说话的节奏…"</string>
     <!-- 'Practise on your iPhone, pick it up on your iPad. Everything is stored in your own iCloud, audio included, so it can use a few gigabytes there.' -->
     <string name="practise_on_your_iphone_pick_it_up_on_your_ipad_everything_i_80dce1">"在 iPhone 上练习，在 iPad 上接着做。包括音频在内的所有内容都存在你自己的 iCloud，可能会用掉几 GB。"</string>
+    <!-- 'Practise on your phone, pick it up on your tablet. Everything is kept in your own Google Drive, audio included, in a hidden folder only this app can open.' -->
+    <string name="practise_on_your_phone_pick_it_up_on_your_tablet_everything_0cf690">"在手机上练习，换到平板接着练。包括音频在内，全部存在你自己的 Google 云端硬盘里一个只有这个 App 能打开的隐藏文件夹。"</string>
+    <!-- 'Practised on another phone or tablet with sync on? Your talks, cards, words and recordings are in your Google Drive. Choose the same Google account you used there.' -->
+    <string name="practised_on_another_phone_or_tablet_with_sync_on_your_talks_dc3ff4">"如果你在其他手机或平板开着同步练习过，对话、卡片、单词和录音都在你的 Google 云端硬盘里。请选择你在那边用的同一个 Google 账号。"</string>
     <string name="preparing_study_notes">"正在准备学习笔记…"</string>
     <string name="preparing_the_file">"正在准备文件…"</string>
     <string name="preparing_your_video">"正在准备视频…"</string>
@@ -1887,6 +1928,7 @@
     <string name="re_synthesize_every_line_learning_data_untouched">"重新合成每一句，学习记录不受影响"</string>
     <string name="read">"%s 已读"</string>
     <string name="read_again">"重新读取"</string>
+    <string name="read_both_sides">"两边的台词都念"</string>
     <!-- 'Read from the structures you actually build and from verified grammar slips per 100 spoken words — the lower of the two.' -->
     <string name="read_from_the_structures_you_actually_build_and_from_verifie_7599b1">"以你实际组成的句子结构，和每说 100 个字中确认到的语法错误来读，取两者较低的一个。"</string>
     <!-- 'Read from your real talks — vocabulary, grammar, fluency and expression together.' -->
@@ -2042,6 +2084,7 @@
     <string name="s_10_min">"10分钟"</string>
     <string name="s_1_card">"1 张"</string>
     <string name="s_1_expression">"用语1个"</string>
+    <string name="s_1_hour">"1 小时"</string>
     <string name="s_1_min">"约1分钟"</string>
     <string name="s_1_minute_vary_your_pitch_a_little">"1分钟就够。读的时候语调稍微变化一下。"</string>
     <string name="s_1_more_day">"再 1 天"</string>
@@ -2085,6 +2128,8 @@
     <string name="save_to_sentences">"存到句子"</string>
     <string name="save_your_recording_to_your_account">"把录音保存到你的账号。"</string>
     <string name="saved">"已保存"</string>
+    <!-- "Saved here, but ElevenLabs didn't accept the new name: %@ It'll be applied the next time your voice is cloned." -->
+    <string name="saved_here_but_elevenlabs_didn_t_accept_the_new_name_it_ll_b_76dd24">"已存在这台设备上，但 ElevenLabs 没有接受新名字：%s 下次重新克隆声音时会套用。"</string>
     <!-- "Saved here, but the voice service didn't take the new name yet: %@ It'll be applied the next time your voice is made." -->
     <string name="saved_here_but_the_voice_service_didn_t_take_the_new_name_ye_8a3a70">"已在这里保存，但语音服务还没应用新名字：%s 下次制作声音时会应用。"</string>
     <string name="saved_to_expressions">"已存到用语"</string>
@@ -2111,6 +2156,7 @@
     <string name="say_it_yourself">"自己说出来"</string>
     <!-- 'Say more in one sentence — a reason, a condition, what happened before. Longer sentences are what move this band.' -->
     <string name="say_more_in_one_sentence_a_reason_a_condition_what_happened_9100fc">"试着在一句话里多说一点：原因、条件、之前发生的事。能让这个等级上升的是更长的句子。"</string>
+    <string name="say_s_line">"%s的台词"</string>
     <string name="say_the_word_out_loud">"大声念出单词"</string>
     <!-- 'Say the word out loud first. Then tap the card to see its meaning and an example.' -->
     <string name="say_the_word_out_loud_first_then_tap_the_card_to_see_its_mea_72e3b6">"先把单词大声说出来，再点一下卡片看释义和例句。"</string>
@@ -2222,6 +2268,7 @@
     <string name="shuffle">"随机播放"</string>
     <!-- "Sign in, and your voice lands in this account the day it's made." -->
     <string name="sign_in_and_your_voice_lands_in_this_account_the_day_it_s_ma_e2e5d2">"登录后，声音完成的那天就会直接进到这个账号。"</string>
+    <string name="sign_in_to_a_google_account_on_this_device_then_try_again">"请先在这台设备登录 Google 账号，再试一次。"</string>
     <string name="sign_in_to_icloud_in_settings_first_then_try_again">"请先在“设置”中登录 iCloud，再试一次。"</string>
     <string name="sign_in_to_icloud_in_settings_to_sync">"要同步，请在“设置”中登录 iCloud"</string>
     <string name="sign_in_to_sync_your_practice_between_your_iphone_and_ipad">"登录后就能在 iPhone 和 iPad 之间同步练习记录。"</string>
@@ -2460,6 +2507,7 @@
     <string name="tap_to_hear_a_sample_in">"点 ▶ 可以听%s的范例。"</string>
     <string name="tap_to_hear_it_again">"点一下可以再听一次"</string>
     <string name="tap_to_reveal">"点击显示"</string>
+    <string name="tap_to_see_it_or_change_it">"点一下就能查看或修改。"</string>
     <string name="tap_to_shadow_the_selected_phrase">"点击跟读选取的片段"</string>
     <string name="tap_to_start_a_phone_call">"点一下开始通话"</string>
     <string name="tap_to_sync_shadow">"点击跟读"</string>
@@ -2690,6 +2738,8 @@
     <string name="this_day_has_its_own_plan_so_this_change_is_for_this_day_onl_6323e8">"这天有单独调整过的安排，所以这次修改只应用在这一天。"</string>
     <!-- "This deletes your voice model everywhere it is kept. Audio already made keeps playing until you delete your account. The app can't hold a call without a voice, so it will ask you to record a new one, or you can delete your account entirely." -->
     <string name="this_deletes_your_voice_model_everywhere_it_is_kept_audio_al_7612fd">"这会从所有保存的地方删除你的声音模型。已经做好的音频在删除账号前都能继续听。没有声音就无法通话，所以会请你重新录一次，你也可以直接删除整个账号。"</string>
+    <!-- "This deletes your voice model here and at ElevenLabs. Audio already generated keeps playing until you delete your account. The app can't hold a call without a voice, so it will ask you to record a new one — or you can delete your account entirely." -->
+    <string name="this_deletes_your_voice_model_here_and_at_elevenlabs_audio_a_b79e8b">"会把你的声音模型从这里和ElevenLabs两边都删掉。已经生成的音频在你删除账号前还是会照常播放。没有声音就没办法通话，所以会请你重新录一个，或者你也可以直接删除整个账号。"</string>
     <!-- 'This is how other learners find you. Tap to change it or take it down.' -->
     <string name="this_is_how_other_learners_find_you_tap_to_change_it_or_take_211599">"其他学习者看到的就是这样。点一下可以修改或下架。"</string>
     <string name="this_is_what_makes_the_dialogues_feel_real">"这就是让对话感觉真实的关键。"</string>
@@ -2764,6 +2814,9 @@
     <string name="try_again">"再试一次"</string>
     <string name="try_for_free">"免费开始"</string>
     <string name="try_in_your_next_talk">"下次聊天时，用用看“%s”。"</string>
+    <string name="try_it_just_as_it_is_for_a_week_you_can_change_it_any_time">"先照这样试一周，随时都能改。"</string>
+    <!-- "Try it like this for a week. It's under Activity on the Talk screen whenever you want to change it." -->
+    <string name="try_it_like_this_for_a_week_it_s_under_activity_on_the_talk_f71c6f">"就照这样过一周吧。想改的时候，去对话界面的“活动”就行。"</string>
     <string name="try_now">"现在再试一次"</string>
     <string name="try_saying">"试着这样说"</string>
     <string name="try_the_missed_ones_again">"再试一次答错的"</string>
@@ -2822,6 +2875,7 @@
     <string name="useful_information_clearly_told">"把实用信息讲清楚"</string>
     <string name="uses_lld_min_of_talk_time">"使用 %d 分钟通话时间"</string>
     <string name="uses_talk_time">"会用到通话时间"</string>
+    <string name="uses_your_google_drive">"使用你的 Google 云端硬盘"</string>
     <string name="uses_your_icloud">"使用你的 iCloud"</string>
     <string name="variants">"换个说法"</string>
     <!-- 'Verified grammar slips per 100 spoken words — fewer reads higher.' -->
@@ -2876,6 +2930,7 @@
     <string name="vs_previous_30_days">"与前 30 天相比"</string>
     <string name="waiting_for_the_first_sync">"等待第一次同步"</string>
     <string name="walking_the_dog">"遛狗时"</string>
+    <string name="want_a_copy_use_your_own_google_drive">"想留一份？存到你自己的 Google 云端硬盘"</string>
     <string name="want_a_copy_use_your_own_icloud">"想留一份？存到你自己的 iCloud"</string>
     <string name="warm">"温暖"</string>
     <string name="warm_and_chatty">"温暖又爱聊"</string>
@@ -3011,9 +3066,11 @@
     <string name="what_you_say_depends_on_who_you_say_it_to_asking_for_a_day_o_63228d">"说什么取决于对谁说。向上司请假和向同事请假是完全不同的对话，随便一个陌生人没法让你练出这种差别。有了具体的人，每个情境都像真的一样。"</string>
     <string name="what_you_say_when_someone_meets_you">"别人遇到你时，你说的第一句话"</string>
     <string name="what_you_usually_talk_about">"平常聊些什么"</string>
+    <string name="what_your_clone_is_called_here_and_on_elevenlabs">"这个声音在这里和ElevenLabs上的名称"</string>
     <string name="what_your_fluent_self_knows_about_you">"流利的自己对你的了解"</string>
     <string name="what_your_plan_holds">"方案里有什么"</string>
     <string name="what_your_voice_is_called_in_the_app">"你的声音在 App 里的名字"</string>
+    <string name="when_">"什么时候？"</string>
     <!-- "When a friend joins with your code, you both get %lld minutes — and invite minutes are spent before the month's pool." -->
     <string name="when_a_friend_joins_with_your_code_you_both_get_lld_minutes_de6e19">"朋友用你的邀请码注册，两人各拿到%d分钟通话时间。邀请得到的时间会比这个月的额度先用。"</string>
     <!-- "When a new week starts, a short report on the last one comes up once: the days you studied, your streak, how long you talked, and what became yours. Every past week stays here, and a dot marks one you haven't opened." -->
@@ -3292,9 +3349,12 @@
     <string name="your_conversation_is_saved_open_it_under_review_to_generate_7c3e0c">"对话已保存。到「复习」打开它，就能重新产生复习教材。"</string>
     <!-- "Your corrections, notes and word meanings come back in this language. The app's own screens stay English." -->
     <string name="your_corrections_notes_and_word_meanings_come_back_in_this_l_95bb21">"纠正、笔记和单词意思会用这个语言显示。App 本身的界面仍是英文。"</string>
+    <!-- 'Your current clone will be deleted on ElevenLabs after the new one is created.' -->
+    <string name="your_current_clone_will_be_deleted_on_elevenlabs_after_the_n_92deb0">"新的克隆声音创建后，目前的会从 ElevenLabs 删除。"</string>
     <string name="your_current_voice_is_deleted_and_you_ll_record_a_new_one">"现在的声音会被删除，你要重新录一次。"</string>
     <!-- "Your current voice is replaced by the new one and deleted, so you can't go back to it. Audio already made keeps playing." -->
     <string name="your_current_voice_is_replaced_by_the_new_one_and_deleted_so_dd7e3f">"目前的声音会被新声音取代并删除，无法还原。已经做好的音频可以继续听。"</string>
+    <string name="your_daily_call">"每天的来电"</string>
     <!-- "Your daily call is off, so this one won't ring. Turn it on in Me → Daily call." -->
     <string name="your_daily_call_is_off_so_this_one_won_t_ring_turn_it_on_in_10477c">"每日来电已关闭，所以不会响。可以在“我的”→“每日来电”开启。"</string>
     <string name="your_daily_call_rings_at_this_time">"每日来电会在这个时间打来。"</string>
@@ -3310,6 +3370,7 @@
     <string name="your_first_week_s_cards_arrive_when_it_closes">"一周结束后，第一份卡片就会送达。"</string>
     <string name="your_fluent_self">"流利的自己"</string>
     <string name="your_fluent_self_calls_first">"流利的自己会先打来"</string>
+    <string name="your_fluent_self_calls_you_at_this_time">"流利的自己会在这个时间给你打电话。"</string>
     <string name="your_fluent_self_in_your_voice">"流利的自己，用你的声音"</string>
     <string name="your_fluent_self_phones_you">"流利的自己会打电话给你"</string>
     <!-- 'Your fluent self speaks this language in your own voice. You can add more languages later — same voice, no extra setup.' -->
@@ -3394,14 +3455,20 @@
     <string name="your_practice_from_your_other_device_is_in_your_icloud_talks_5ad16e">"你在其他设备上的练习都在 iCloud 里：对话、卡片、单词、录音。把它带过来，之后两边会保持一致。"</string>
     <!-- "Your practice on this device takes about %@. That's roughly the space it needs in iCloud." -->
     <string name="your_practice_on_this_device_takes_about_that_s_roughly_the_b08018">"这台设备上的练习记录约 %s，iCloud 也大约需要这么多空间。"</string>
+    <!-- "Your practice on this device takes about %@. That's roughly the space it needs in Google Drive." -->
+    <string name="your_practice_on_this_device_takes_about_that_s_roughly_the_b9cf59">"这台设备上的练习大约占 %s，Google 云端硬盘也需要差不多的空间。"</string>
     <string name="your_practice_stays_on_your_phone">"你的练习只留在这部手机上"</string>
     <string name="your_profile">"个人资料"</string>
     <string name="your_project_update">"项目进展汇报"</string>
     <!-- 'Your recent conversations measure at a higher level. Scoring and material difficulty now follow it.' -->
     <string name="your_recent_conversations_measure_at_a_higher_level_scoring_8861e0">"最近的对话测出了更高的水平。评分和教材难度现在会跟着新水平走。"</string>
+    <!-- 'Your recording is sent to ElevenLabs, which builds a voice model from it. That model is biometric data.' -->
+    <string name="your_recording_is_sent_to_elevenlabs_which_builds_a_voice_mo_ecdb2a">"录音会送到 ElevenLabs，在那里创建语音模型。这个模型属于生物特征数据。"</string>
     <!-- "Your recordings aren't backed up to iCloud right now, so they're on this device only. If you delete the app on this device, they're deleted with it." -->
     <string name="your_recordings_aren_t_backed_up_to_icloud_right_now_so_they_66fe02">"目前录音无法备份到 iCloud，只保存在这台设备上。如果在这台设备上删除 App，录音也会一起删除。"</string>
     <string name="your_recordings_of_this_script_will_be_here">"这份讲稿的录制会放在这里。"</string>
+    <string name="your_routine_is_here">"你的作息在这里"</string>
+    <string name="your_routine_is_ready">"作息安排好了"</string>
     <string name="your_scenario">"我的情境"</string>
     <string name="your_scenarios">"我的情境"</string>
     <string name="your_score">"得分"</string>
@@ -3425,6 +3492,8 @@
     <string name="your_talks_books_and_cards_are_still_on_it_open_me_there_tur_546039">"通话、复习本和卡片都还在那台设备上。在那里打开“我的”，开启“在其他设备上继续”，再回来。"</string>
     <!-- "Your talks, books and recordings are on this phone only. If you delete the app or change phones, they're gone for good." -->
     <string name="your_talks_books_and_recordings_are_on_this_phone_only_if_yo_02b0cd">"你的对话、复习本和录音目前只在这部手机上。删除 App 或换手机后，就会永久消失。"</string>
+    <!-- 'Your talks, cards, words and recordings, audio included, stay the same on every device signed into this account and the same Google account. Turning this off stops syncing and deletes nothing.' -->
+    <string name="your_talks_cards_words_and_recordings_audio_included_stay_th_0bead2">"对话、卡片、单词和录音（连同音频）会在登录这个账号和同一个 Google 账号的每台设备上保持一致。关掉只会停止同步，不会删除任何东西。"</string>
     <!-- 'Your talks, cards, words and recordings — including the audio — are kept the same on every device signed into this account and your iCloud. Turning this off stops syncing and deletes nothing.' -->
     <string name="your_talks_cards_words_and_recordings_including_the_audio_ar_4e4ae2">"对话、卡片、单词和录音（包括音频）会在登录此账号与 iCloud 的所有设备上保持一致。关闭只会停止同步，不会删除任何内容。"</string>
     <string name="your_talks_together">"一起聊过的通话"</string>
@@ -3461,6 +3530,8 @@
     <string name="your_voice_model_is_built_by_the_most_trusted_service_there_b4db4a">"语音模型由最值得信赖的服务创建，只用于语言练习。"</string>
     <!-- "Your voice model is deleted everywhere it is kept, and this can't be undone. You'll be asked to record a new one before your next call." -->
     <string name="your_voice_model_is_deleted_everywhere_it_is_kept_and_this_c_b14bff">"你的声音模型会从所有保存的地方删除，无法还原。下次通话前会请你重新录音。"</string>
+    <!-- "Your voice model is deleted here and at ElevenLabs, and this can't be undone. You'll be asked to record a new one before your next call." -->
+    <string name="your_voice_model_is_deleted_here_and_at_elevenlabs_and_this_107e07">"语音模型会从 App 和 ElevenLabs 两边删除，无法复原。下一通电话前会请你重新录一个。"</string>
     <!-- 'Your voice recording goes too, so a new phone makes your voice again without recording.' -->
     <string name="your_voice_recording_goes_too_so_a_new_phone_makes_your_voic_c72584">"声音录音也会一起保存，换新手机也不用重录就能做出你的声音。"</string>
     <string name="your_voice_will_be_ready_in_a_few_days">"你的声音会在几天后准备好。"</string>

@@ -51,14 +51,17 @@ import androidx.compose.ui.text.font.FontWeight
 /**
  * First-run quick-answer setup — `SetupFlowView.swift`, one question per
  * screen, mostly taps: native language → target language → (accent) →
- * level → daily goal. The accent step shows only where the target has
+ * level → why you're learning. The accent step shows only where the target has
  * accents to pick (English): the voice is remixed into it right after the
  * clone, so the pick costs nothing more (iOS 2026-10-08 — before, every
  * English clone was made American and a British learner paid for a second
  * remix to get theirs). Native leads (a plain fact, so the first question never reads like a
- * test); the target scopes the level labels (TOPIK for Korean); the goal
- * closes on a commitment the learner chose. Strings come from the shared
- * catalog — nothing here is authored twice.
+ * test); the target scopes the level labels (TOPIK for Korean); the
+ * purposes set Talk's chips. The daily goal and the week used to close this
+ * flow; they moved to the routine builder over the Talk tab
+ * ([RoutineOnboardingOverlay], iOS 2026-10-18), where they are set on the
+ * routine grid itself. Strings come from the shared catalog — nothing here
+ * is authored twice.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -137,20 +140,14 @@ private fun SetupFlowBody(
     var purposes by remember { mutableStateOf(LearningPurposeStore.purposes(goalContext)) }
     var purposeDetails by remember { mutableStateOf(LearningPurposeStore.details(goalContext)) }
     var exam by remember { mutableStateOf(ExamKind.IELTS) }
-    /** The suggested week, built when the routine step opens (from the
-     *  purposes and the daily goal) and edited in place. */
-    var routine by remember { mutableStateOf<List<RoutineRecipe.Line>>(emptyList()) }
-    // The routine step is the purposes' answer — none picked, nothing to
-    // suggest, and the plain "talk X minutes a day" routine stands.
-    val tail = if (purposes.isEmpty()) listOf(SetupStep.PURPOSE, SetupStep.GOAL)
-    else listOf(SetupStep.PURPOSE, SetupStep.GOAL, SetupStep.ROUTINE)
+    val tail = listOf(SetupStep.PURPOSE)
     val steps = if (accentOptions.size > 1)
         listOf(SetupStep.NATIVE, SetupStep.TARGET, SetupStep.ACCENT, SetupStep.LEVEL) + tail
     else listOf(SetupStep.NATIVE, SetupStep.TARGET, SetupStep.LEVEL) + tail
     val current = steps[step.coerceAtMost(steps.size - 1)]
-    var goal by remember {
-        mutableIntStateOf(goalContext.getSharedPreferences("futurevoice", 0)
-            .getInt("futurevoice.dailyGoalMinutes", 10))
+    /** Untouched here: the routine builder sets it (the call's length). */
+    val goal = remember {
+        goalContext.getSharedPreferences("futurevoice", 0).getInt("futurevoice.dailyGoalMinutes", 10)
     }
     /** Backing out of step one crosses the auth boundary — asked first
      *  instead of silently signing out. */
@@ -191,7 +188,7 @@ private fun SetupFlowBody(
             target = defaultTarget(native)
     }
 
-    fun finish(skipRoutine: Boolean) {
+    fun finish() {
         // The accent the first clone is remixed into. A pick made for a
         // target they then moved away from doesn't belong to this one.
         val picked = accentId?.takeIf { id ->
@@ -201,12 +198,6 @@ private fun SetupFlowBody(
         LearningPurposeStore.setDetails(goalContext, purposeDetails)
         if (LearningPurpose.EXAM in purposes) LearningPurposeStore.setExam(goalContext, exam, target)
         onFinish(native, target, level, goal)
-        // The suggested week replaces the plain seeded one (written by
-        // `completeSetup` just now) — unless they chose to decide later.
-        if (purposes.isNotEmpty() && !skipRoutine && routine.isNotEmpty()) {
-            StudyPlanStore.update(goalContext, RoutineRecipe.plan(routine))
-            LearningPurposeStore.setRoutineApplied(goalContext)
-        }
     }
 
     Scaffold(
@@ -218,8 +209,6 @@ private fun SetupFlowBody(
                     SetupStep.ACCENT -> R.string.which_accent
                     SetupStep.LEVEL -> R.string.your_level_5f68da
                     SetupStep.PURPOSE -> R.string.why_are_you_learning
-                    SetupStep.GOAL -> R.string.your_daily_goal
-                    SetupStep.ROUTINE -> R.string.a_week_made_for_you
                 }))
             })
         },
@@ -232,17 +221,11 @@ private fun SetupFlowBody(
                 ) { Text(stringResource(R.string.back)) }
                 Button(
                     onClick = {
-                        if (step < steps.size - 1) {
-                            resolveCollision(); step += 1
-                            // Arriving at the week: build it from what was just answered.
-                            if (steps[step.coerceAtMost(steps.size - 1)] == SetupStep.ROUTINE)
-                                routine = RoutineRecipe.lines(purposes, goal)
-                        }
-                        else finish(skipRoutine = false)
+                        if (step < steps.size - 1) { resolveCollision(); step += 1 }
+                        else finish()
                     },
                     modifier = Modifier.weight(1f),
                 ) { Text(stringResource(when {
-                    current == SetupStep.ROUTINE -> R.string.start_with_this_routine
                     step < steps.size - 1 -> R.string.next
                     else -> R.string.continue_
                 })) }
@@ -257,7 +240,7 @@ private fun SetupFlowBody(
             // Step 0 asks its question as the first section's HEADER, because
             // it has two sections and each needs its own — repeating it above
             // them said the same thing twice.
-            if (current != SetupStep.NATIVE && current != SetupStep.ROUTINE) {
+            if (current != SetupStep.NATIVE) {
                 Text(
                     stringResource(when (current) {
                         SetupStep.TARGET -> R.string.which_language_do_you_want_to_speak
@@ -323,10 +306,6 @@ private fun SetupFlowBody(
                     subtitle = { levelBlurb(it) },
                     footer = stringResource(R.string.you_re_about_to_build_your_fluent_self_another_you_that_alre_1eac72,
                         LanguageCatalog.ownName(target, native))) { level = it }
-                SetupStep.GOAL -> ChoiceList(listOf(5, 10, 15, 20, 30), selected = goal,
-                    title = { stringResource(R.string.lld_min_a_day, it) },
-                    subtitle = { goalBlurb(it) },
-                    footer = stringResource(R.string.your_goal_your_call_the_ring_on_the_talk_screen_fills_toward_377ab2)) { goal = it }
                 // Why they're learning. Many answers; the number on each is
                 // the order tapped, and the first is the chip Talk opens on.
                 SetupStep.PURPOSE -> LazyColumn {
@@ -339,8 +318,6 @@ private fun SetupFlowBody(
                     item { GroupedFooter(stringResource(R.string.pick_up_to_three_the_first_one_is_where_talk_opens)) }
                     item { Spacer(Modifier.padding(vertical = 12.dp)) }
                 }
-                SetupStep.ROUTINE -> RoutineStep(purposes, goal, routine, { routine = it },
-                    onDecideLater = { finish(skipRoutine = true) })
             }
         }
     }
@@ -408,90 +385,7 @@ private fun ChoiceRow(title: String, subtitle: String?, selected: Boolean, onPic
     }
 }
 
-private enum class SetupStep { NATIVE, TARGET, ACCENT, LEVEL, PURPOSE, GOAL, ROUTINE }
-
-/**
- * The routine the purposes suggest (iOS `routineStep`) — a picture of the
- * week, then each block with WHY it's there and a time to change. "Decide
- * later" keeps the plain routine; My routine edits either one afterwards.
- */
-@Composable
-private fun RoutineStep(
-    purposes: List<LearningPurpose>,
-    goalMinutes: Int,
-    routine: List<RoutineRecipe.Line>,
-    onRoutine: (List<RoutineRecipe.Line>) -> Unit,
-    onDecideLater: () -> Unit,
-) {
-    val res = androidx.compose.ui.platform.LocalContext.current.resources
-    LazyColumn {
-        item {
-            Spacer(Modifier.height(12.dp))
-            GroupedCard {
-                Column(Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(RoutineRecipe.headline(purposes)),
-                        style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text(stringResource(R.string.about_lld_minutes_of_talk_a_day_and_what_it_corrected_comes_22496d,
-                        goalMinutes), style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Box(Modifier.padding(top = 6.dp)) { RoutineWeekPicture(routine.map { it.block }) }
-                }
-            }
-        }
-        item { GroupedSectionHeader(stringResource(R.string.try_this)) }
-        item {
-            GroupedCard {
-                routine.forEachIndexed { i, line ->
-                    if (i > 0) GroupedRowDivider()
-                    val b = line.block
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Icon(b.kind.icon(), contentDescription = null, tint = b.kind.color(),
-                            modifier = Modifier.padding(top = 2.dp).size(22.dp))
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(RoutineText.titled(res, b.kind, b.minutes),
-                                style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                            Text(routineWeekdaySummary(b.weekdays), style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(stringResource(line.why), style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary)
-                        }
-                        com.roro.futurevoice.ui.brand.IosCompactTimePicker(b.hour, b.minute) { h, m ->
-                            onRoutine(routine.map { if (it.block.id == b.id)
-                                it.copy(block = it.block.copy(hour = h, minute = m)) else it })
-                        }
-                    }
-                }
-                GroupedRowDivider()
-                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Icon(StudyPlan.Kind.TEST.icon(), contentDescription = null, tint = StudyPlan.Kind.TEST.color(),
-                        modifier = Modifier.size(22.dp))
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(RoutineText.label(res, StudyPlan.Kind.TEST),
-                            style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                        Text(stringResource(R.string.once_a_week_everything_the_week_taught),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            }
-        }
-        item { GroupedFooter(stringResource(R.string.at_talk_times_your_fluent_self_calls_you_you_can_change_all_3984de)) }
-        item { GroupedSectionSpacer() }
-        item {
-            GroupedCard {
-                Text(stringResource(R.string.decide_later), style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.fillMaxWidth().clickable { onDecideLater() }
-                        .padding(horizontal = 16.dp, vertical = 12.dp))
-            }
-        }
-        item { Spacer(Modifier.padding(vertical = 12.dp)) }
-    }
-}
+private enum class SetupStep { NATIVE, TARGET, ACCENT, LEVEL, PURPOSE }
 
 @Composable
 internal fun levelBlurb(level: CefrLevel): String = stringResource(when (level) {
@@ -501,13 +395,4 @@ internal fun levelBlurb(level: CefrLevel): String = stringResource(when (level) 
     CefrLevel.B2 -> R.string.independent_i_discuss_most_things_with_some_ease
     CefrLevel.C1 -> R.string.advanced_i_express_myself_fluently_and_precisely
     CefrLevel.C2 -> R.string.mastery_effortless_near_native
-})
-
-@Composable
-private fun goalBlurb(minutes: Int): String = stringResource(when (minutes) {
-    5 -> R.string.a_quick_daily_habit_one_short_call
-    10 -> R.string.the_sweet_spot_for_steady_progress
-    15 -> R.string.building_real_momentum
-    20 -> R.string.serious_about_this
-    else -> R.string.full_immersion_pace
 })

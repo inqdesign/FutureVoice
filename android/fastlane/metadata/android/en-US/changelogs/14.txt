@@ -1,0 +1,9 @@
+New
+• Set up your routine when you start: pick when your daily call rings and how long you study, and it lands on your weekly plan.
+• Adding a person takes one screen, and you can create someone new from the person picker.
+• Swipe through speech challenges as cards, and find the weekly test on the Review screen.
+
+Fixed
+• Your daily call still rings after the phone restarts.
+• News call titles are no longer cut off.
+• Hear it in my voice no longer costs more time than the script.

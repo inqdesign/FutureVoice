@@ -13,5 +13,10 @@ object StoreEvents {
     private val _revision = MutableStateFlow(0)
     val revision: StateFlow<Int> = _revision
 
-    fun bump() = _revision.update { it + 1 }
+    /** [fromSync] is the Drive sync laying a pull down: screens redraw, but
+     *  it must not ask the sync to push what it just pulled. */
+    fun bump(fromSync: Boolean = false) {
+        _revision.update { it + 1 }
+        if (!fromSync) com.roro.futurevoice.sync.SyncEngine.noteChanged()
+    }
 }

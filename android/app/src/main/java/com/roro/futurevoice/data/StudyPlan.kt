@@ -76,12 +76,22 @@ data class StudyPlan(
         }
 
         /** How tall the block is drawn in the editor, in minutes — a count
-         *  has no length, so it gets a fixed one. */
-        fun drawnMinutes(amount: Int): Int = if (isTimed) amount else 15
+         *  has no length, so it gets a fixed one. Review is the exception:
+         *  onboarding sizes it from study TIME (15 min, 30 min, an hour), so
+         *  its cards are drawn back at that length — 20 cards to the quarter
+         *  hour, the default block's own size (iOS `drawnMinutes`). */
+        fun drawnMinutes(amount: Int): Int = when {
+            isTimed -> amount
+            this == REVIEW -> maxOf(15, amount * 15 / REVIEW_CARDS_PER_QUARTER)
+            else -> 15
+        }
 
         val isFoldedIntoReview: Boolean get() = this == WORDS || this == EXPRESSIONS || this == SHADOW
 
         companion object {
+            /** Review cards a quarter hour holds ([defaultAmount]). */
+            const val REVIEW_CARDS_PER_QUARTER = 20
+
             /** Kinds the learner places by hand — whole ACTIONS (iOS
              *  2026-10-03): talk, review, say it again. */
             val placeable = listOf(TALK, REVIEW, SAY_IT_AGAIN, SPEECH)
@@ -377,6 +387,27 @@ data class StudyPlan(
         }
         val plan = copy(blocks = fold(blocks), exceptions = exceptions.mapValues { fold(it.value) })
         return if (plan != this) plan.mergingTwins() else plan
+    }
+
+    /**
+     * The routine onboarding builds ([RoutineOnboardingOverlay], iOS
+     * `withOnboardingRoutine`): the daily call — [callMinutes] of talk at
+     * [callMinute] on [days] — and the study time as review at [reviewMinute]
+     * on the same days. Every other day is a rest day. Blocks of other kinds
+     * the plan already holds stay.
+     */
+    fun withOnboardingRoutine(callMinutes: Int, callMinute: Int, days: Set<Int>,
+                              studyMinutes: Int?, reviewMinute: Int): StudyPlan {
+        val kept = blocks.filter { it.kind != Kind.TALK && it.kind != Kind.SAY_IT_AGAIN && it.kind != Kind.REVIEW }
+        val talk = Block(kind = Kind.TALK, weekdays = days, hour = callMinute / 60,
+            minute = callMinute % 60, minutes = maxOf(5, callMinutes))
+        val review = studyMinutes?.let {
+            Block(kind = Kind.REVIEW, weekdays = days, hour = reviewMinute / 60, minute = reviewMinute % 60,
+                minutes = it * Kind.REVIEW_CARDS_PER_QUARTER / 15)
+        }
+        val off = (1..7).toSet() - days
+        return copy(blocks = kept + talk + listOfNotNull(review), exceptions = emptyMap(),
+            offWeekdays = off.ifEmpty { null })
     }
 
     companion object {

@@ -604,8 +604,8 @@ internal fun WatchTabBody(
             existingCategories = scenarios.mapNotNull { it.category }.distinct(),
             prefill = situationPrefill,
             person = withPerson,
-            // With nobody picked the scene casts the other side from the
-            // situation itself (iOS 5217c2cc) — never the fluent self.
+            // A scene always needs an other person, so this host opens on a
+            // character rather than on the fluent self.
             host = ComposerHost.WATCH,
             mode = mode,
             // Minting it plays it — the composer's CTA IS "Watch".
