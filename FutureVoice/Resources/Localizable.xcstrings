@@ -5128,6 +5128,52 @@
         }
       }
     },
+    "Study notes for this episode aren't in your language yet." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Lernnotizen zu dieser Folge gibt es noch nicht in deiner Sprache."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las notas de estudio de este episodio aún no están en tu idioma."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les notes d’étude de cet épisode ne sont pas encore dans ta langue."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このエピソードの学習メモは、まだあなたの言語にはありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 에피소드의 공부 노트는 아직 내 언어로 없어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这一集的学习笔记还没有你的语言版本。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這一集的學習筆記還沒有你的語言版本。"
+          }
+        }
+      }
+    },
     "Take it, then see your level." : {
       "localizations" : {
         "de" : {

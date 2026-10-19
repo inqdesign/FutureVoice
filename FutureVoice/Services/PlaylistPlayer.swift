@@ -146,6 +146,8 @@ final class PlaylistPlayer: ObservableObject {
         let start = lines.indices.contains(startAt)
             ? playable.firstIndex { $0.id == lines[startAt].id } ?? 0
             : 0
+        flushListening(finished: false)
+        startedEpisodes = []
         self.title = title
         self.lines = playable
         order = Self.makeOrder(lines: playable, shuffled: shuffle, first: start)
@@ -170,6 +172,7 @@ final class PlaylistPlayer: ObservableObject {
 
     func pause() {
         guard isPlaying || isInGap else { return }
+        flushListening(finished: false)
         generation += 1
         gapTask?.cancel()
         isInGap = false
@@ -226,6 +229,7 @@ final class PlaylistPlayer: ObservableObject {
     /// Stop and forget the list.
     func close() {
         pause()
+        flushListening(finished: false)
         lines = []
         order = []
         position = 0
@@ -284,6 +288,7 @@ final class PlaylistPlayer: ObservableObject {
 
     private func advance(after duration: TimeInterval, generation mine: Int, skipping: Bool) {
         guard generation == mine else { return }
+        if !skipping, let line = current { heard(line, seconds: duration) }
         // A whole lap of lines with no audio must end, not spin.
         skipStreak = skipping ? skipStreak + 1 : 0
         let wait = skipping ? 0 : pause(after: duration)
@@ -303,6 +308,7 @@ final class PlaylistPlayer: ObservableObject {
                 self.startCurrent()
             } else {
                 // The end of the list: stay on the last line, stopped.
+                self.flushListening(finished: true)
                 self.isPlaying = false
                 self.publishNowPlaying()
             }
@@ -394,6 +400,62 @@ final class PlaylistPlayer: ObservableObject {
         d.append(contentsOf: Array("data".utf8)); le32(dataBytes)
         d.append(Data(count: dataBytes))
         return d
+    }
+
+    // MARK: - Listening record (nawana Podcast)
+
+    /// What has been heard of the episode playing now, sent as ONE
+    /// `podcast_listened` row when the listener leaves it (another episode,
+    /// pause, stop, the list's end). Pausing and coming back makes a second
+    /// row for the same episode; analysis sums them per learner + episode.
+    private struct Listening {
+        let bookId: UUID
+        let number: Int
+        let category: String
+        var seconds: Double = 0
+        var lines: Set<UUID> = []
+        var lastLineHeard = false
+    }
+    private var listening: Listening?
+    /// Episodes already reported as started in this list, so a pause and a
+    /// resume isn't a second start.
+    private var startedEpisodes: Set<UUID> = []
+
+    private func heard(_ line: PlaylistLine, seconds: TimeInterval) {
+        guard let number = line.episodeNumber else { return }
+        if listening?.bookId != line.bookId {
+            flushListening(finished: false)
+            listening = Listening(bookId: line.bookId, number: number,
+                                  category: line.episodeCategory ?? "")
+            if startedEpisodes.insert(line.bookId).inserted {
+                Analytics.capture("podcast_started", ["episode": number,
+                                                      "category": line.episodeCategory ?? ""])
+            }
+        }
+        listening?.seconds += seconds
+        listening?.lines.insert(line.id)
+        if lines.last(where: { $0.bookId == line.bookId })?.id == line.id {
+            listening?.lastLineHeard = true
+        }
+    }
+
+    private func flushListening(finished: Bool) {
+        guard let l = listening, !l.lines.isEmpty else { listening = nil; return }
+        listening = nil
+        let total = lines.filter { $0.bookId == l.bookId }.count
+        let d = UserDefaults.standard
+        Analytics.capture("podcast_listened", [
+            "episode": l.number,
+            "category": l.category,
+            "seconds": Int(l.seconds.rounded()),
+            "lines_heard": l.lines.count,
+            "lines_total": total,
+            "completed": l.lastLineHeard,
+            "speed": Double(speed),
+            "gap": gap.rawValue,
+            "translation": d.bool(forKey: "futurevoice.playlist.translation"),
+            "captions": d.object(forKey: "futurevoice.playlist.captions") as? Bool ?? true,
+        ])
     }
 
     // MARK: - Lock screen

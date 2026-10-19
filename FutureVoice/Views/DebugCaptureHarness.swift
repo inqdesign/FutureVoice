@@ -1262,6 +1262,11 @@ enum DebugCapture {
                 .sheet(isPresented: .constant(true)) {
                     ScenePlayerSheet().environmentObject(appState)
                 })
+        case "show-script":
+            // An episode's script on the Speech script page, Study on, with
+            // the study made when it was published.
+            UserDefaults.standard.set(true, forKey: "speech.script.study")
+            return AnyView(ShowScriptCapture().environmentObject(appState))
         case "show-list":
             return AnyView(Color(.systemGroupedBackground).ignoresSafeArea()
                 .task {
@@ -3222,6 +3227,23 @@ private struct PageIntroCaptureHost: View {
             try? await Task.sleep(for: .milliseconds(400))
             showing = true
         }
+    }
+}
+#endif
+
+#if DEBUG
+private struct ShowScriptCapture: View {
+    @EnvironmentObject private var appState: AppState
+    @State private var episode: NewsShowEpisode?
+
+    var body: some View {
+        Color(.systemGroupedBackground).ignoresSafeArea()
+            .task { episode = await NewsShow.episodes(language: appState.targetLanguage).first }
+            .sheet(item: $episode) { e in
+                SpeechScriptSheet(script: e.script, study: e.study(native: appState.nativeLanguage),
+                                  shipped: true)
+                    .environmentObject(appState)
+            }
     }
 }
 #endif

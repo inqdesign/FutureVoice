@@ -226,7 +226,9 @@ private struct PlayerLibrary: View {
     let onPlayAllShows: () async -> Void
     /// What is being fetched right now: an episode, or `allId` for Play all.
     @State private var fetching: UUID?
+    @State private var reading: NewsShowEpisode?
     private static let allId = UUID()
+    @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
     @Environment(\.locale) private var locale
     @ObservedObject private var player = PlaylistPlayer.shared
@@ -241,17 +243,27 @@ private struct PlayerLibrary: View {
             case .situations: situations
             }
         }
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                Picker(selection: $tab) {
-                    Text("Podcast").tag(Tab.podcast)
-                    Text("My situations").tag(Tab.situations)
-                } label: { EmptyView() }
-                .pickerStyle(.segmented)
-                .fixedSize()
-            }
+        // The two tabs sit under the bar at full width, the system's own
+        // segmented row (founder: squeezed into the bar beside Back, the
+        // glass capsule looked off).
+        .safeAreaInset(edge: .top, spacing: 0) {
+            Picker(selection: $tab) {
+                Text("Podcast").tag(Tab.podcast)
+                Text("My situations").tag(Tab.situations)
+            } label: { EmptyView() }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color(.systemGroupedBackground))
         }
+        .navigationTitle(Text("Listen"))
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $reading) { episode in
+            SpeechScriptSheet(script: episode.script,
+                              study: episode.study(native: appState.nativeLanguage),
+                              shipped: true)
+                .environmentObject(appState)
+        }
     }
 
     @ViewBuilder private var podcast: some View {
@@ -274,10 +286,26 @@ private struct PlayerLibrary: View {
                     }
                 }
                 ForEach(shows) { episode in
-                    Button {
-                        fetch(episode.id) { await onPickShow(episode) }
-                    } label: { row(episode) }
-                    .buttonStyle(.plain)
+                    HStack(spacing: 8) {
+                        Button {
+                            fetch(episode.id) { await onPickShow(episode) }
+                        } label: { row(episode) }
+                        .buttonStyle(.plain)
+                        // The script, on the Speech tab's own page, with Study.
+                        Button {
+                            Analytics.capture("podcast_script_opened",
+                                              ["episode": episode.number,
+                                               "category": episode.category ?? ""])
+                            reading = episode
+                        } label: {
+                            Image(systemName: "doc.text")
+                                .font(.body)
+                                .frame(width: 36, height: 36)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.borderless)
+                        .accessibilityLabel(Text("Script"))
+                    }
                 }
             }
         }

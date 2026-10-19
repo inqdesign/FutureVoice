@@ -23,12 +23,39 @@ struct NewsShowEpisode: Identifiable, Hashable {
     let category: String?
     let minutes: Int
     let lines: [PlaylistLine]
+    /// The episode as a Speech script, so it opens on the Speech tab's own
+    /// script page (founder, 2026-10-19).
+    let script: SpeechScript
+    fileprivate let shippedStudy: NewsShow.ShippedStudy?
+    fileprivate let translations: [[String: String]]
     /// The line files, relative to the feed, for `NewsShow.prepare`.
     fileprivate let files: [String]
     fileprivate let language: String
 
     /// Every line's audio is on the phone.
     var isReady: Bool { lines.allSatisfy(\.hasAudio) }
+
+    /// The study made when the episode was published, in `native`: the
+    /// highlights placed in the script and each line's translation as its
+    /// paragraph note. Nil when the episode has none in that language —
+    /// a podcast's study is never made on the phone.
+    func study(native: String) -> ScriptStudy? {
+        guard let shippedStudy else { return nil }
+        let same = LanguageCatalog.sameLanguage(native, script.language)
+        let candidates: [ScriptStudy.Candidate] = shippedStudy.highlights.compactMap { h in
+            guard let kind = ScriptStudy.Kind(rawValue: h.kind),
+                  let note = same ? "" : h.notes?[native] else { return nil }
+            return .init(text: h.text, kind: kind, lemma: h.lemma, note: note, example: h.example)
+        }
+        guard !candidates.isEmpty else { return nil }
+        let paragraphs = ScriptStudy.paragraphs(script.body)
+        let highlights = ScriptStudy.locate(candidates, in: paragraphs,
+                                            spaced: LanguageCatalog.writesSpaces(script.language))
+        let notes = paragraphs.indices.map { i in
+            same || i >= translations.count ? "" : translations[i][native] ?? ""
+        }
+        return ScriptStudy(highlights: highlights, paragraphNotes: notes)
+    }
 }
 
 enum NewsShow {
@@ -36,6 +63,18 @@ enum NewsShow {
     /// reaction is tested (founder, 2026-10-19).
     static let base = URL(string: "https://pub-83c97a52f2e549718b126bf60f710f1a.r2.dev/shows")!
     static let languages: Set<String> = ["en"]
+
+    fileprivate struct ShippedStudy: Codable, Hashable {
+        struct Highlight: Codable, Hashable {
+            let text: String
+            let kind: String
+            let lemma: String?
+            let example: String?
+            /// Native language → the note, every app language at once.
+            let notes: [String: String]?
+        }
+        let highlights: [Highlight]
+    }
 
     private struct Feed: Codable {
         /// The first test day's per-day manifest had a top-level date; the
@@ -51,6 +90,7 @@ enum NewsShow {
             let title: String
             let seconds: Int?
             let lines: [Line]
+            let study: ShippedStudy?
         }
         struct Line: Codable {
             let speaker: String
@@ -91,14 +131,23 @@ enum NewsShow {
                 PlaylistLine(bookId: id, text: line.text, voiceId: "", speaker: line.speaker,
                              isOther: true, bookTitle: episode.title,
                              localFile: dir.appendingPathComponent(line.audio),
-                             translations: line.translations)
+                             translations: line.translations,
+                             episodeNumber: episode.number ?? index + 1,
+                             episodeCategory: episode.category)
             }
+            let script = SpeechScript(
+                id: id, title: episode.title, genre: .news, topic: episode.category ?? "",
+                body: episode.lines.map { "\($0.speaker): \($0.text)" }.joined(separator: "\n"),
+                summary: "", keyTerms: [], sources: [], language: lang,
+                targetSeconds: episode.seconds ?? 0, createdAt: Date(), isBuiltIn: false)
             return NewsShowEpisode(
                 id: id, title: episode.title, number: episode.number ?? index + 1,
                 date: (episode.date ?? feed.date).flatMap(day.date(from:)) ?? Date(),
                 category: episode.category,
                 minutes: max(1, Int((Double(episode.seconds ?? 0) / 60).rounded())),
-                lines: lines, files: episode.lines.map(\.audio), language: lang)
+                lines: lines, script: script, shippedStudy: episode.study,
+                translations: episode.lines.map { $0.translations ?? [:] },
+                files: episode.lines.map(\.audio), language: lang)
         }
         prune(dir, keeping: Set(feed.episodes.flatMap(\.lines).compactMap {
             $0.audio.split(separator: "/").first.map(String.init)

@@ -44,6 +44,10 @@ struct PlaylistLine: Hashable, Identifiable {
     /// for the same translation. Nil for a scene line.
     var translations: [String: String]? = nil
 
+    /// A podcast line's episode number and category (the listening record).
+    var episodeNumber: Int? = nil
+    var episodeCategory: String? = nil
+
     var isFluentSelf: Bool { !isOther }
 
     /// A line worth saying back in the "time to say it back" pause: the

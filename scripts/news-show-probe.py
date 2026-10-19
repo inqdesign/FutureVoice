@@ -289,6 +289,46 @@ def translate_lines(lang, texts):
     return out
 
 
+def study_for(lang, lines, level="B1"):
+    """The Speech tab's "Study" for an episode, made ONCE for everybody: the
+    same rules as ScriptStudyEngine.generate / supabase script-study (keep in
+    step), but one call returns every native language's note at once, and
+    no paragraph notes — the line translations already are those."""
+    natives = [n for n in NATIVES if n != lang]
+    t = LANG_NAME[lang]
+    system = (
+        f"You are a language teacher preparing a script for a learner ({level}) who will "
+        f"hear it and read it in {t}.\n"
+        "Output STRICT JSON only:\n"
+        '{ "highlights": [ { "text": "...", "kind": "expression|grammar|word", "lemma": "...", '
+        '"example": "...", "notes": { "<code>": "..." } } ] }\n\n'
+        "HIGHLIGHTS: 7 or 8 in total, the ones most worth learning for THIS learner: a little "
+        "above their level, reusable outside this script. Spread them over the lines. Mostly "
+        "expressions (fixed phrases, phrasal verbs, collocations), then grammar patterns (a "
+        "structure like \"only to\", \"tends to\"), then single words.\n"
+        "- text: copied EXACTLY from ONE line of the script, same spelling and case, one "
+        "contiguous stretch, never a whole sentence, never a speaker's name. A grammar "
+        "pattern is the few words that carry it.\n"
+        "- kind: expression, grammar or word.\n"
+        f"- lemma: for a word, its dictionary form in {t}; else omit.\n"
+        f"- example: {t}. One new short sentence using it, not from the script.\n"
+        "- notes: one entry for EACH of these language codes: " + ", ".join(natives) + ". "
+        "Each in that language: one or two short sentences, what it means and what it does "
+        "HERE. For grammar, the pattern and when it is used. Written the way a native speaker "
+        "of that language would say it."
+    )
+    user = "SCRIPT:\n" + "\n".join(f"{i + 1}. {l['speaker']}: {l['text']}" for i, l in enumerate(lines))
+    said = " \n ".join(l["text"] for l in lines)
+    for _ in range(2):
+        got = gemini(system, user).get("highlights", [])
+        keep = [h for h in got if isinstance(h, dict) and h.get("text") and h["text"] in said
+                and h.get("kind") in ("expression", "grammar", "word")
+                and all((h.get("notes") or {}).get(n) for n in natives)]
+        if len(keep) >= 5:
+            return {"level": level, "highlights": keep}
+    return None
+
+
 def make_episode(lang, idx, topic, folder):
     """One episode as ONE file (the podcast) and one file PER LINE (the
     app's player plays and captions a line at a time, like a scene)."""
@@ -323,6 +363,7 @@ def make_episode(lang, idx, topic, folder):
 
     for line, meaning in zip(script["lines"], translate_lines(lang, [l["text"] for l in script["lines"]])):
         line["translations"] = meaning
+    script["study"] = study_for(lang, script["lines"])
     chars = sum(len(p[2]) for p in pieces)
     script["facts"] = topic["facts"]
     script["area"] = topic.get("area", "news")

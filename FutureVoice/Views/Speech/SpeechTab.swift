@@ -409,12 +409,17 @@ struct SpeechScriptSheet: View {
     @State private var studyFailed = false
     @State private var studyLoading = false
     @State private var card: ScriptStudy.Highlight?
+    /// A script that arrives with its study already made (a nawana Podcast
+    /// episode): nothing is edited, voiced or studied on this phone — the
+    /// study was written once for everybody when the episode was published.
+    private let shipped: Bool
 
     init(script: SpeechScript, onEdited: @escaping (SpeechScript) -> Void = { _ in },
-         study: ScriptStudy? = nil) {
+         study: ScriptStudy? = nil, shipped: Bool = false) {
         _script = State(initialValue: script)
         _study = State(initialValue: study)
         self.onEdited = onEdited
+        self.shipped = shipped
     }
 
     private var paragraphs: [String] { ScriptStudy.paragraphs(script.body) }
@@ -482,7 +487,9 @@ struct SpeechScriptSheet: View {
                     }
                 }
 
-                ScriptVoiceoverSection(script: script)
+                if !shipped {
+                    ScriptVoiceoverSection(script: script)
+                }
 
                 if !script.keyTerms.isEmpty {
                     Section("Key terms") {
@@ -511,7 +518,7 @@ struct SpeechScriptSheet: View {
                 // The bundled sample is everyone's and stays as shipped;
                 // changing it would make it a script of your own, which is
                 // the Plus side of the tab.
-                if !script.isBuiltIn && !script.isChallenge {
+                if !script.isBuiltIn && !script.isChallenge && !shipped {
                     // Edit on the left, Done alone on the right (founder,
                     // 2026-10-14).
                     ToolbarItem(placement: .topBarLeading) {
@@ -544,7 +551,11 @@ struct SpeechScriptSheet: View {
     private var studyTaskId: String { "\(studying)|\(script.body.hashValue)" }
 
     @ViewBuilder private var studyStatus: some View {
-        if studyFailed {
+        if shipped {
+            Text("Study notes for this episode aren't in your language yet.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        } else if studyFailed {
             VStack(alignment: .leading, spacing: 8) {
                 Text(ScriptStudyEngine.StudyError.empty.localizedDescription)
                     .font(.footnote)
@@ -563,7 +574,7 @@ struct SpeechScriptSheet: View {
     }
 
     private func loadStudy(force: Bool = false) async {
-        guard studying, study == nil, !studyLoading || force else { return }
+        guard studying, study == nil, !shipped, !studyLoading || force else { return }
         studyLoading = true
         studyFailed = false
         defer { studyLoading = false }

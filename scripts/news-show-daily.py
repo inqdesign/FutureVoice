@@ -196,6 +196,7 @@ def main():
         "lines": [{"speaker": l["speaker"], "text": l["text"], "audio": f"{TODAY}/{l['audio']}",
                    "translations": l.get("translations", {})} for l in sc["lines"]],
         "expressions": [e.get("phrase", "") for e in sc.get("expressions", [])],
+        "study": sc.get("study"),
     }
     feed = {"feed": True, "language": LANG, "hosts": [h[0] for h in probe.HOSTS[LANG]],
             "episodes": ([episode] + feed["episodes"])[:FEED_CAP]}
