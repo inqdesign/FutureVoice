@@ -3,6 +3,7 @@ package com.roro.futurevoice.ui
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.slideInVertically
@@ -88,6 +89,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.roro.futurevoice.R
 import com.roro.futurevoice.audio.PlaylistPlayer
@@ -255,7 +257,6 @@ private fun ScenePlayerSheetContent(
     var loaded by remember { mutableStateOf(false) }
     var showingList by remember { mutableStateOf(false) }
     var large by remember { mutableStateOf(false) }
-    var drag by remember { mutableStateOf(0f) }
     val scope = rememberCoroutineScope()
     val listTitle = stringResource(R.string.my_situations)
     val showTitle = stringResource(R.string.nawana_podcast)
@@ -313,15 +314,32 @@ private fun ScenePlayerSheetContent(
         val full = maxHeight
         val medium = full * 0.5f
         val big = full - topInset - 10.dp
-        val target = if (large) big else medium
-        val height by animateDpAsState(target, tween(320), label = "sheet")
-        val dragDp = with(density) { drag.toDp() }
-        val dragState = rememberDraggableState { delta -> drag += delta }
+        val mediumPx = with(density) { medium.toPx() }
+        val bigPx = with(density) { big.toPx() }
+        // ONE number is the sheet: its visible height. A drag moves it under
+        // the finger, a release carries the finger's speed into a spring to
+        // the nearest detent (or away), so nothing jumps when the finger
+        // lifts (founder, 2026-10-19: expanding and collapsing weren't
+        // smooth — the drag was dropped to 0 on release, the sheet snapped
+        // back by that much, then a fixed 320 ms tween started over).
+        val sheet = remember { Animatable(mediumPx) }
+        LaunchedEffect(mediumPx, bigPx) {
+            if (!sheet.isRunning) sheet.snapTo(if (large) bigPx else mediumPx)
+        }
+        val settle = spring<Float>(dampingRatio = 1f, stiffness = 420f)
+        val dragState = rememberDraggableState { delta ->
+            scope.launch { sheet.snapTo((sheet.value - delta).coerceIn(0f, bigPx)) }
+        }
+        val shown = sheet.value
+        // Below the half detent the sheet keeps its half height and slides
+        // down instead of squashing its content.
+        val drawnPx = maxOf(shown, mediumPx)
+        val sinkPx = (mediumPx - shown).coerceAtLeast(0f)
         Column(
             Modifier.align(Alignment.BottomCenter)
-                .offset(y = dragDp.coerceAtLeast(0.dp))
+                .offset { IntOffset(0, sinkPx.roundToInt()) }
                 .fillMaxWidth()
-                .height(if (dragDp < 0.dp) (height - dragDp).coerceAtMost(big) else height)
+                .height(with(density) { drawnPx.toDp() })
                 .shadow(24.dp, RoundedCornerShape(topStart = 38.dp, topEnd = 38.dp),
                     ambientColor = Color.Black.copy(alpha = 0.2f), spotColor = Color.Black.copy(alpha = 0.2f))
                 .clip(RoundedCornerShape(topStart = 38.dp, topEnd = 38.dp))
@@ -329,14 +347,18 @@ private fun ScenePlayerSheetContent(
                 // Swallow taps on the sheet itself, so they never reach the page.
                 .clickable(remember { MutableInteractionSource() }, indication = null) {}
                 .draggable(dragState, Orientation.Vertical, onDragStopped = { v ->
-                    val up = -drag
+                    // v is downward; the height grows upward.
+                    val h = sheet.value
                     val vDp = v / density.density
+                    val dismissAt = mediumPx - with(density) { 80.dp.toPx() }
                     when {
-                        up > with(density) { 60.dp.toPx() } || vDp < -1000f -> large = true
-                        drag > with(density) { 80.dp.toPx() } || vDp > 1000f ->
-                            if (large) large = false else onDismiss()
+                        vDp < -1000f -> { large = true; sheet.animateTo(bigPx, settle, -v) }
+                        vDp > 1000f && h <= mediumPx + 1f -> onDismiss()
+                        vDp > 1000f -> { large = false; sheet.animateTo(mediumPx, settle, -v) }
+                        h < dismissAt -> onDismiss()
+                        h > (mediumPx + bigPx) / 2 -> { large = true; sheet.animateTo(bigPx, settle, -v) }
+                        else -> { large = false; sheet.animateTo(mediumPx, settle, -v) }
                     }
-                    drag = 0f
                 }),
         ) {
             // The grabber, as iOS draws one on a sheet with two detents.
