@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The trial report (iOS TrialReport + WeekRecapSheet trial mode, 2026-10-19). -->
+<resources>
+    <string name="trial_your_first_minutes">"Tes %d premières minutes"</string>
+    <string name="trial_free_minutes">"Tes minutes gratuites"</string>
+    <string name="trial_cover_body">"Ton temps gratuit est écoulé. Voici ce qu’il a montré."</string>
+    <string name="trial_first_test">"Ton premier test"</string>
+    <string name="trial_next_level">"Maintenant, ton niveau."</string>
+    <string name="trial_test_thin">"Tes conversations étaient trop courtes pour en tirer des questions. Le bilan continue sans le test."</string>
+    <string name="trial_test_body">"Quelques minutes, à partir de ce que tu as dit : les mots, les expressions, les corrections."</string>
+    <string name="trial_take_then_level">"Fais-le, puis découvre ton niveau."</string>
+    <string name="trial_how_we_read">"Comment on l’a évalué"</string>
+    <string name="trial_test_score">"Test %1$d/%2$d"</string>
+    <string name="trial_level_moves">"Il évolue à mesure que tu parles. Tu le suis dans Progression."</string>
+    <string name="trial_level_later">"Encore quelques conversations et ton niveau sera prêt."</string>
+    <string name="trial_reading_level">"J’évalue ton niveau…"</string>
+    <string name="trial_keep_it_going">"Continue sur ta lancée"</string>
+    <string name="trial_change_later">"Tu peux tout changer plus tard dans Ma routine."</string>
+    <string name="trial_keep_routine">"Continuer avec cette routine"</string>
+    <string name="trial_see_level">"Voir ton niveau"</string>
+    <string name="trial_take_test">"Passer le test"</string>
+    <string name="trial_coach_failed">"Impossible de lire tes minutes pour le moment."</string>
+    <string name="trial_reading">"Je lis tes minutes…"</string>
+    <string name="trial_next_up">"Ensuite"</string>
+    <string name="trial_not_enough">"Pas encore assez pour un test"</string>
+</resources>

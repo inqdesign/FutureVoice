@@ -1004,7 +1004,7 @@ private fun BigStat(
 
 /** What a level can actually DO, in one line (iOS `canDo`). */
 @Composable
-private fun canDoAt(level: String): String = stringResource(
+internal fun canDoAt(level: String): String = stringResource(
     when (level.uppercase()) {
         "A1" -> R.string.simple_words_and_phrases_about_immediate_familiar_things
         "A2" -> R.string.everyday_topics_in_simple_terms_routines_plans_basic_needs

@@ -420,13 +420,16 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
         }
     }
 
-    fun applyMeasuredLevel(raw: String) {
+    /** [announce] false: set the level without the level-up sheet — the trial
+     *  report's own level card is the announcement (iOS sets `proficiency`
+     *  alone there). */
+    fun applyMeasuredLevel(raw: String, announce: Boolean = true) {
         val measured = CefrLevel.from(raw)
         val current = _state.value.level
         if (measured == current) return
         val target = _state.value.targetLanguage
         LanguageScope.setLevel(appContext, target, measured.code)
-        val rose = measured.ordinal > current.ordinal
+        val rose = announce && measured.ordinal > current.ordinal
         if (rose) com.roro.futurevoice.core.Analytics.capture("level_up", mapOf("from" to current.code, "to" to measured.code))
         _state.update {
             it.copy(level = measured, levelUp = if (rose) current to measured else it.levelUp)

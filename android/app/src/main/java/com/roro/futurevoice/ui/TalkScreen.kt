@@ -235,6 +235,17 @@ fun TalkScreen(
                 account == null -> log("skipped_lookup_failed")
                 account.isEntitled || account.unlimited -> log("skipped_entitled")
                 spentThisCall || account.needsSubscription -> {
+                    // The free minutes are over on a never-subscribed
+                    // account: the report of what they showed comes up in
+                    // place of the plans, which are its last card (iOS
+                    // `TrialReport`). The root raises it once the call
+                    // screen has gone, as it does the plans.
+                    if (com.roro.futurevoice.data.TrialReportStore.shouldOffer(appContext, account)) {
+                        log("trial_report")
+                        com.roro.futurevoice.data.TrialReportInbox.pending.value = true
+                        onExit()
+                        return@launch
+                    }
                     log("shown")
                     // The plans hold the exit, and their dismissal IS the
                     // exit — no feedback ask, no rating sheet behind them

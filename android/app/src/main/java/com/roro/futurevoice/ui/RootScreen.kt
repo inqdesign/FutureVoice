@@ -635,12 +635,26 @@ fun RootScreen() {
     // first open after it turns (and on the week-turn notification), never
     // over a call or another sheet.
     val updatePending by com.roro.futurevoice.data.AppUpdateService.pending.collectAsStateWithLifecycle()
+    var weekRecapUp by remember { mutableStateOf(false) }
     WeekRecapHost(
         ready = state.setupComplete && state.voiceId != null && tabsArrived,
         blocked = inCall || paywalled || showIntroPreview || state.levelUp != null ||
             referralJoin != null || welcomeMinutes != null || updatePending != null || guideUp ||
             showAgeCheck || showWhatsNew,
         level = state.level,
+        onShowing = { weekRecapUp = it },
+    )
+    // The free minutes' report: at the end of the call that spent them, and
+    // again on a later open if it was closed before its last card (iOS
+    // `offerTrialReport`).
+    TrialReportHost(
+        ready = state.setupComplete && tabsArrived,
+        inCall = inCall,
+        blocked = inCall || weekRecapUp || paywalled || showIntroPreview || state.levelUp != null ||
+            referralJoin != null || welcomeMinutes != null || updatePending != null || guideUp ||
+            showAgeCheck || showWhatsNew,
+        level = state.level,
+        onMeasuredLevel = { app.applyMeasuredLevel(it, announce = false) },
     )
 
     // A PARKED voice is rebuilt at the metered tap, on top of whatever is

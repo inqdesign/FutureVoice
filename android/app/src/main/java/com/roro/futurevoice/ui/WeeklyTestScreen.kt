@@ -114,6 +114,7 @@ import com.roro.futurevoice.data.ShadowAttempt
 import com.roro.futurevoice.data.ShadowAttemptStore
 import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.data.StoreJson
+import com.roro.futurevoice.data.TrialReportStore
 import com.roro.futurevoice.data.WeeklyTest
 import com.roro.futurevoice.data.WeeklyTestEngine
 import com.roro.futurevoice.data.WeeklyTestItem
@@ -167,6 +168,12 @@ fun WeeklyTestScreen(
     language: String,
     level: CefrLevel,
     onClose: () -> Unit,
+    /** Set for the trial report's test ([TrialReport]): its own window and
+     *  floor, its id kept on the report rather than judged by the schedule
+     *  (iOS `WeeklyTestView(trialScope:)`). */
+    trialScope: WeeklyTestEngine.Scope? = null,
+    /** The trial's paper just finished — the deck moves on to the level. */
+    onTrialFinished: (WeeklyTest) -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -262,6 +269,7 @@ fun WeeklyTestScreen(
         if (firstTime) t = t.copy(appliedAt = now)
         current = null
         phase = TestPhase.Result(t)
+        if (trialScope != null) onTrialFinished(t)
         if (firstTime) {
             Analytics.capture("weekly_test_finished",
                 mapOf("score" to t.score, "total" to t.total, "best_streak" to t.bestStreak))
@@ -321,6 +329,28 @@ fun WeeklyTestScreen(
         phase = TestPhase.Loading
         val tests = store.load(language)
         val opening = WeeklyTestSettings.schedule(context).currentOpening()
+        if (trialScope != null) {
+            val report = TrialReportStore.load(context)
+            val built = withContext(Dispatchers.Default) {
+                val material = WeeklyTestEngine.gather(context, language, level, native, trialScope)
+                WeeklyTestEngine.build(material, null, language, level, scope = trialScope) { word ->
+                    PracticeCaptureFlags.lookup { lore.entry(word, native, language) }
+                        ?.senses?.firstOrNull()?.meaning
+                }
+            }
+            if (built == null) {
+                report?.let { TrialReportStore.save(context, it.copy(testThin = true)) }
+                Analytics.capture("trial_test_thin")
+                phase = TestPhase.Thin
+                return
+            }
+            val t = built.copy(startedAt = System.currentTimeMillis())
+            store.save(t)
+            report?.let { TrialReportStore.save(context, it.copy(testId = t.id)) }
+            Analytics.capture("weekly_test_started", mapOf("items" to t.total, "trial" to true))
+            resume(t)
+            return
+        }
         // Off the main thread: gathering reads every store and rebuilds every
         // talk book's word chapter, and with a few hundred talks that froze
         // the screen long enough for an ANR (seen in the capture build).
@@ -392,6 +422,18 @@ fun WeeklyTestScreen(
 
     suspend fun start() {
         val tests = store.load(language)
+        if (trialScope != null) {
+            // The trial's paper is the one on the report, whatever the
+            // week's schedule says.
+            val id = TrialReportStore.load(context)?.testId
+            val test = id?.let { i -> tests.firstOrNull { it.id == i } }
+            if (test == null) { buildNew(); return }
+            if (test.isFinished) { phase = TestPhase.Result(test); return }
+            val cleaned = WeeklyTestEngine.pruned(test,
+                WeeklyTestEngine.rewriteLookup(context, test.targetLanguage))
+            if (cleaned != null) { store.save(cleaned); resume(cleaned) } else resume(test)
+            return
+        }
         val schedule = WeeklyTestSettings.schedule(context)
         // A capture run asks for a specific kind: always deal a fresh paper.
         if (WeeklyTestCaptureFlags.kind != null) { buildNew(); return }
@@ -591,7 +633,7 @@ fun WeeklyTestScreen(
             CenterAlignedTopAppBar(
                 colors = AppSurfaces.topBarColors(),
                 title = {
-                    Text(stringResource(R.string.weekly_test),
+                    Text(stringResource(if (trialScope == null) R.string.weekly_test else R.string.trial_first_test),
                         style = MaterialTheme.typography.titleMedium)
                 },
                 actions = {
@@ -622,7 +664,8 @@ fun WeeklyTestScreen(
                     Text(stringResource(R.string.making_your_test),
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                TestPhase.Thin -> ThinState { scope.launch { buildNew() } }
+                TestPhase.Thin -> if (trialScope != null) TrialThinState()
+                    else ThinState { scope.launch { buildNew() } }
                 is TestPhase.Result -> WeeklyTestResult(ph.test, isRetry = retry != null,
                     language = language, onRetry = { startRetry(ph.test) })
                 is TestPhase.Playing -> {
@@ -690,6 +733,24 @@ fun WeeklyTestScreen(
 }
 
 // ── Pieces
+
+/** The trial's minutes are over; another talk can't fill it, so no retry. */
+@Composable
+private fun TrialThinState() {
+    Column(Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(Icons.Filled.EventNote, contentDescription = null,
+            modifier = Modifier.size(44.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(12.dp))
+        Text(stringResource(R.string.trial_not_enough),
+            style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(6.dp))
+        Text(stringResource(R.string.trial_test_thin),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+    }
+}
 
 @Composable
 private fun ThinState(onTryAgain: () -> Unit) {
