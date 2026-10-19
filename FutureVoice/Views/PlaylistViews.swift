@@ -38,10 +38,15 @@ private struct PlaylistButtonFace: View {
                     .rotationEffect(.degrees(-90))
                     .padding(-4)
             }
-            Image(systemName: player.isPlaying ? "waveform" : "headphones")
-                .font(.system(size: 17, weight: .semibold))
-                .symbolEffect(.variableColor.iterative, isActive: player.isPlaying)
-                .foregroundStyle(player.hasQueue ? Color.accentColor : .primary)
+            if player.isPlaying {
+                PlayingBars(isAnimating: true)
+                    .frame(width: 18, height: 16)
+                    .foregroundStyle(Color.accentColor)
+            } else {
+                Image(systemName: "headphones")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(player.hasQueue ? Color.accentColor : .primary)
+            }
         }
     }
 }
@@ -63,6 +68,45 @@ private struct PlaylistGlassCircle: ViewModifier {
     }
 }
 
+// MARK: - Playing bars
+
+/// The "this is playing" mark: four bars that rise and fall like a voice
+/// (founder, 2026-10-19 — the waveform symbol's colour sweep didn't read as
+/// sound). Paused, they rest low; Reduce Motion keeps them still.
+struct PlayingBars: View {
+    var isAnimating: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// Each bar its own speed and phase, so the four never move as one.
+    private static let bars: [(speed: Double, phase: Double)] =
+        [(7.1, 0.0), (9.3, 1.7), (6.2, 3.1), (8.4, 4.6)]
+
+    var body: some View {
+        TimelineView(.animation(paused: !isAnimating || reduceMotion)) { context in
+            let t = context.date.timeIntervalSinceReferenceDate
+            GeometryReader { geo in
+                let gap = geo.size.width * 0.12
+                let width = (geo.size.width - gap * Double(Self.bars.count - 1)) / Double(Self.bars.count)
+                HStack(alignment: .center, spacing: gap) {
+                    ForEach(Self.bars.indices, id: \.self) { i in
+                        Capsule()
+                            .frame(width: width, height: geo.size.height * level(i, at: t))
+                    }
+                }
+                .frame(width: geo.size.width, height: geo.size.height)
+            }
+        }
+        .accessibilityHidden(true)
+    }
+
+    private func level(_ i: Int, at t: TimeInterval) -> Double {
+        guard isAnimating, !reduceMotion else { return [0.35, 0.6, 0.45, 0.3][i] }
+        let bar = Self.bars[i]
+        let wave = (sin(t * bar.speed + bar.phase) + sin(t * bar.speed * 0.53 + bar.phase * 2)) / 2
+        return 0.25 + 0.75 * abs(wave)
+    }
+}
+
 // MARK: - The player
 
 /// A floating sheet that IS the player. The line being said fills the top,
@@ -76,10 +120,15 @@ struct ScenePlayerSheet: View {
     @State private var tracks: [SceneTrack] = []
     @State private var shows: [NewsShowEpisode] = []
     @State private var loaded = false
-    @State private var showingList = false
+    @State private var showingList: Bool
+
+    /// `startOnList` opens straight on the library (the capture harness).
+    init(startOnList: Bool = false) {
+        _showingList = State(initialValue: startOnList)
+    }
 
     private static var listTitle: String { explain("My situations") }
-    private static var showTitle: String { explain("Today's show") }
+    private static var showTitle: String { explain("nawana Podcast") }
 
     private var allLines: [PlaylistLine] { tracks.flatMap(\.lines) }
     private var showLines: [PlaylistLine] { shows.flatMap(\.lines) }
@@ -106,15 +155,21 @@ struct ScenePlayerSheet: View {
                 ToolbarItem(placement: .topBarTrailing) { PlayerOptionsMenu() }
             }
             .navigationDestination(isPresented: $showingList) {
-                SituationList(tracks: tracks, shows: shows, onPick: play(from:),
-                              onPickShow: play(show:))
+                // Bindings, not values: a destination already on screen is not
+                // rebuilt when the sheet's state changes, and the episodes
+                // arrive after the download — handed over as values, a list
+                // opened early stayed empty.
+                PlayerLibrary(tracks: $tracks, shows: $shows, onPick: play(from:),
+                              onPickShow: play(show:), onPlayAllShows: playAllShows)
             }
-            .task {
-                tracks = SceneLibrary.tracks(scenarios: ScenarioStore.shared.load(),
-                                             cloneId: appState.voiceCloneId)
-                loaded = true
-                shows = await NewsShow.episodes(language: appState.targetLanguage)
-            }
+        }
+        // On the sheet, not the player page: opened straight on the library
+        // the page never appears, and nothing would load.
+        .task {
+            tracks = SceneLibrary.tracks(scenarios: ScenarioStore.shared.load(),
+                                         cloneId: appState.voiceCloneId)
+            loaded = true
+            shows = await NewsShow.episodes(language: appState.targetLanguage)
         }
         .presentationDetents([.medium, .large])
         .presentationBackgroundInteraction(.enabled(upThrough: .medium))
@@ -128,16 +183,16 @@ struct ScenePlayerSheet: View {
         }
     }
 
-    /// The day's episodes play on from the one picked, like the situations.
+    /// Every episode of the day, in order.
+    private func playAllShows() {
+        player.play(showLines, title: Self.showTitle)
+    }
+
+    /// One episode on its own (founder: the whole show, or just the episode).
+    /// Picked again while it is playing, it carries on rather than restarting.
     private func play(show episode: NewsShowEpisode) {
-        let lines = showLines
-        guard let start = lines.firstIndex(where: { $0.bookId == episode.id }) else { return }
-        if player.title == Self.showTitle, player.lines.map(\.id) == lines.map(\.id),
-           let at = player.lines.firstIndex(where: { $0.bookId == episode.id }) {
-            player.jump(toLine: at)
-        } else {
-            player.play(lines, title: Self.showTitle, startAt: start)
-        }
+        if player.title == Self.showTitle, player.current?.bookId == episode.id { return }
+        player.play(episode.lines, title: Self.showTitle)
     }
 
     /// Every situation plays on from the one picked, so picking a scene
@@ -154,56 +209,101 @@ struct ScenePlayerSheet: View {
     }
 }
 
-/// Today's show, then the situations, newest first. Picking one plays from
-/// there and goes back to the player.
-private struct SituationList: View {
-    let tracks: [SceneTrack]
-    let shows: [NewsShowEpisode]
+/// What there is to hear, behind two tabs: the nawana Podcast (the
+/// platform's daily episodes) and the learner's own situations. Picking one
+/// plays it and goes back to the player.
+private struct PlayerLibrary: View {
+    @Binding var tracks: [SceneTrack]
+    @Binding var shows: [NewsShowEpisode]
     let onPick: (SceneTrack) -> Void
     let onPickShow: (NewsShowEpisode) -> Void
+    let onPlayAllShows: () -> Void
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.locale) private var locale
     @ObservedObject private var player = PlaylistPlayer.shared
+    @AppStorage("futurevoice.playlist.tab") private var tab = Tab.podcast
+
+    enum Tab: String { case podcast, situations }
 
     var body: some View {
         List {
-            if !shows.isEmpty {
-                Section {
-                    ForEach(shows) { episode in
-                        Button {
-                            onPickShow(episode)
-                            dismiss()
-                        } label: { row(episode) }
-                        .buttonStyle(.plain)
-                    }
-                } header: {
-                    Text("Today's show")
-                }
+            switch tab {
+            case .podcast: podcast
+            case .situations: situations
             }
-            if !tracks.isEmpty {
-                Section {
-                    ForEach(tracks) { track in
-                        Button {
-                            onPick(track)
-                            dismiss()
-                        } label: { row(track) }
-                        .buttonStyle(.plain)
-                    }
-                } header: {
-                    if !shows.isEmpty { Text("My situations") }
+        }
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Picker(selection: $tab) {
+                    Text("nawana Podcast").tag(Tab.podcast)
+                    Text("My situations").tag(Tab.situations)
+                } label: { EmptyView() }
+                .pickerStyle(.segmented)
+                .fixedSize()
+            }
+        }
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    @ViewBuilder private var podcast: some View {
+        if shows.isEmpty {
+            ContentUnavailableView {
+                Label("nawana Podcast", systemImage: "newspaper")
+            } description: {
+                Text("New episodes every day, in English and German for now.")
+            }
+            .listRowBackground(Color.clear)
+        } else {
+            Section {
+                Button {
+                    onPlayAllShows()
+                    dismiss()
+                } label: {
+                    Label("Play all", systemImage: "play.fill")
+                }
+                ForEach(shows) { episode in
+                    Button {
+                        onPickShow(episode)
+                        dismiss()
+                    } label: { row(episode) }
+                    .buttonStyle(.plain)
                 }
             }
         }
-        .navigationTitle(Text("Situations"))
-        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    @ViewBuilder private var situations: some View {
+        if tracks.isEmpty {
+            ContentUnavailableView {
+                Label("No situations to hear yet", systemImage: "headphones")
+            } description: {
+                Text("Watch a situation once and it plays here, both voices, whenever you like.")
+            }
+            .listRowBackground(Color.clear)
+        } else {
+            ForEach(tracks) { track in
+                Button {
+                    onPick(track)
+                    dismiss()
+                } label: { row(track) }
+                .buttonStyle(.plain)
+            }
+        }
     }
 
     private func row(_ track: SceneTrack) -> some View {
         let playing = player.hasQueue && player.current?.bookId == track.id
         return HStack(spacing: 12) {
-            Image(systemName: playing ? "waveform" : "bubble.left.and.bubble.right")
-                .foregroundStyle(.tint)
-                .symbolEffect(.variableColor.iterative, isActive: playing && player.isPlaying)
-                .frame(width: 24)
+            Group {
+                if playing {
+                    PlayingBars(isAnimating: player.isPlaying || player.isInGap)
+                        .frame(width: 16, height: 14)
+                } else {
+                    Image(systemName: "bubble.left.and.bubble.right")
+                }
+            }
+            .foregroundStyle(.tint)
+            .frame(width: 24)
             VStack(alignment: .leading, spacing: 2) {
                 Text(track.title)
                     .foregroundStyle(playing ? Color.accentColor : .primary)
@@ -215,18 +315,31 @@ private struct SituationList: View {
         .contentShape(Rectangle())
     }
 
+    private func episodeLabel(_ episode: NewsShowEpisode) -> String {
+        "EP \(episode.number) · "
+            + episode.date.formatted(.dateTime.month(.abbreviated).day().locale(locale))
+    }
+
     private func row(_ episode: NewsShowEpisode) -> some View {
         let playing = player.hasQueue && player.current?.bookId == episode.id
         return HStack(spacing: 12) {
-            Image(systemName: playing ? "waveform" : "newspaper")
-                .foregroundStyle(.tint)
-                .symbolEffect(.variableColor.iterative, isActive: playing && player.isPlaying)
-                .frame(width: 24)
+            Group {
+                if playing {
+                    PlayingBars(isAnimating: player.isPlaying || player.isInGap)
+                        .frame(width: 16, height: 14)
+                } else {
+                    Image(systemName: "newspaper")
+                }
+            }
+            .foregroundStyle(.tint)
+            .frame(width: 24)
             VStack(alignment: .leading, spacing: 2) {
                 Text(episode.title)
                     .foregroundStyle(playing ? Color.accentColor : .primary)
                     .lineLimit(2)
-                Text("\(episode.hosts) · \(episode.minutes) min")
+                // The hosts are the same on every episode; how long it is helps
+                // choose. "%@ · %lld min" is already in every language.
+                Text("\(episodeLabel(episode)) · \(episode.minutes) min")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Spacer(minLength: 0)

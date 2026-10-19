@@ -57,6 +57,22 @@ SENTENCE_GAP = 0.42   # PacedSpeech's gap between one speaker's sentences
 TURN_GAP = 0.55       # a breath longer when the other host takes over
 CARTESIA_SPEED = 1.0 + (0.9 - 0.85) / 0.15 * 0.5   # the app's Relaxed rung
 USD_PER_CHAR = 39 / 1_000_000
+PUBLIC = "https://pub-83c97a52f2e549718b126bf60f710f1a.r2.dev/shows"
+
+
+def first_number(lang):
+    """Episodes are numbered across days (EP 1 is the show's first), so a
+    new day starts after the last one published; re-making a day keeps its
+    numbers."""
+    try:
+        with urllib.request.urlopen(f"{PUBLIC}/{lang}/latest.json", timeout=15) as r:
+            last = json.load(r)
+    except Exception:
+        return 1
+    numbers = [e.get("number", 0) for e in last.get("episodes", [])]
+    if last.get("date") == TODAY:
+        return min(numbers) if numbers else 1
+    return (max(numbers) if numbers else 0) + 1
 
 
 def post(url, body, headers):
@@ -296,6 +312,7 @@ def main():
             json.dump({"topics": topics, **sources}, f, ensure_ascii=False, indent=2)
         print(f"[{lang}] {len(topics)} topics")
         episodes = []
+        start = first_number(lang)
         for i, t in enumerate(topics, 1):
             slug = f"{i:02d}-{re.sub(r'[^A-Za-z0-9]+', '-', t.get('area', 'news')).strip('-').lower()}"
             r = make_episode(lang, i, t, os.path.join(base, slug))
@@ -304,6 +321,7 @@ def main():
             # The manifest the app reads: paths are relative to shows/<lang>/.
             episodes.append({
                 "id": f"{TODAY}-{lang}-{i:02d}",
+                "number": start + i - 1,
                 "title": sc.get("title", t["title"]),
                 "area": sc["area"],
                 "seconds": r["seconds"],

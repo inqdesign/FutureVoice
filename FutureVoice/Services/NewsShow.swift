@@ -16,6 +16,9 @@ import Foundation
 struct NewsShowEpisode: Identifiable, Hashable {
     let id: UUID
     let title: String
+    /// Counted across days by the publisher: EP 1 is the show's first.
+    let number: Int
+    let date: Date
     let hosts: String
     let minutes: Int
     let lines: [PlaylistLine]
@@ -34,6 +37,7 @@ enum NewsShow {
 
         struct Episode: Codable {
             let id: String
+            let number: Int?
             let title: String
             let seconds: Int?
             let lines: [Line]
@@ -70,7 +74,12 @@ enum NewsShow {
         prune(dir, keeping: manifest.date)
 
         let hosts = manifest.hosts.joined(separator: " · ")
-        return manifest.episodes.compactMap { episode in
+        let day = DateFormatter()
+        day.calendar = Calendar(identifier: .gregorian)
+        day.locale = Locale(identifier: "en_US_POSIX")
+        day.dateFormat = "yyyy-MM-dd"
+        let date = day.date(from: manifest.date) ?? Date()
+        return manifest.episodes.enumerated().compactMap { index, episode in
             let id = stableId(episode.id)
             let lines = episode.lines.map { line in
                 PlaylistLine(bookId: id, text: line.text, voiceId: "", speaker: line.speaker,
@@ -78,7 +87,8 @@ enum NewsShow {
                              localFile: dir.appendingPathComponent(line.audio))
             }.filter(\.hasAudio)
             guard !lines.isEmpty else { return nil }
-            return NewsShowEpisode(id: id, title: episode.title, hosts: hosts,
+            return NewsShowEpisode(id: id, title: episode.title,
+                                   number: episode.number ?? index + 1, date: date, hosts: hosts,
                                    minutes: max(1, Int(((Double(episode.seconds ?? 0)) / 60).rounded())),
                                    lines: lines)
         }
