@@ -2123,12 +2123,14 @@ internal fun HomeScreen(
         // founder): the situation player on the left, "Find a topic" centred,
         // the quick quiz's face on the right. The two side slots take equal
         // widths so the centre never moves. Above the floating bar, fixed
-        // while the page scrolls under it.
+        // while the page scrolls under it. 21 dp in from the edges, flush with
+        // the tab bar's capsule: measured off iOS, where the row lands at 21pt
+        // (its `.padding(16)` notwithstanding).
         if (tab == HomeTab.TALK && !writingSituation) {
             Row(
                 Modifier.align(Alignment.BottomCenter).fillMaxWidth()
                     .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.navigationBars)
-                    .padding(start = 16.dp, end = 16.dp, bottom = 76.dp + 16.dp),
+                    .padding(start = 21.dp, end = 21.dp, bottom = 76.dp + 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
