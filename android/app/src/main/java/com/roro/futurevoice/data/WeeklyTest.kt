@@ -716,7 +716,7 @@ object WeeklyTestEngine {
      *  the list the learner keeps on the Expressions page, in the sentence
      *  they met it in: this week's talks first, then any talk, then the
      *  scene that taught it. A phrase with no such line is skipped. */
-    private fun gapItems(toStudy: List<String>, sessions: List<Session>,
+    fun gapItems(toStudy: List<String>, sessions: List<Session>,
                          fluentTurns: List<Pair<Session, Turn>>, allSessions: List<Session>,
                          openers: Set<String>, sceneExamples: Map<String, String>,
                          library: List<String>, language: String, rng: Random): List<WeeklyTestItem> {

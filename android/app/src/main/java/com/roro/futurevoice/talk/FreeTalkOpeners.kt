@@ -37,6 +37,13 @@ class FreeTalkOpeners(private val context: Context) {
         fun introOpener(language: String): String =
             FreeTalkOpenerContent.intro[language.take(2)] ?: FreeTalkOpenerContent.intro.getValue("en")
 
+        /** The line a "my own topic" call opens on (iOS `topicOpener`, topics
+         *  page, deed6cf4): not a hello for the time of day — the learner came
+         *  with something to talk about, so the first thing said hands them
+         *  the topic. Bundled like the hellos, so it never waits on Gemini. */
+        fun topicOpener(language: String): String =
+            FreeTalkOpenerContent.topic[language.take(2)] ?: FreeTalkOpenerContent.topic.getValue("en")
+
         /** The hello a free talk placed at [at] opens on (iOS `pickUpLine`):
          *  the part of the day is `PromptClock.partOfDay`, the same split the
          *  call's own prompt is told. */

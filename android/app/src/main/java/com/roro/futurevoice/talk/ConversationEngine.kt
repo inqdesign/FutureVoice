@@ -63,6 +63,8 @@ object ConversationEngine {
         tutor: Boolean = false,
         /** How this call follows a hello answered with no subject (iOS `freeTalkCue:`), drawn once per call. */
         freeTalkCue: ConversationPrompt.FreeTalkCue = ConversationPrompt.FreeTalkCue.PLAIN_QUESTION,
+        /** A "my own topic" call (iOS `learnerPicksTopic:`, topics page). */
+        learnerPicksTopic: Boolean = false,
         now: Long = System.currentTimeMillis(),
     ): String {
         val languageName = LanguageCatalog.englishName(targetLanguage)
@@ -109,8 +111,14 @@ object ConversationEngine {
 
         // A plain free talk the learner placed: their subject first, and on
         // "nothing much" the fluent self brings what `freeTalkCue` says (iOS `bbfa2902`).
-        val theyCalledBlock = if (topic.isEmpty() && counterpart == null && !firstMeeting)
+        val theyCalledBlock = if (topic.isEmpty() && counterpart == null && !firstMeeting && !learnerPicksTopic)
             ConversationPrompt.theyCalledBlock(freeTalkCue) else ""
+
+        // "My own topic" (topics page, iOS deed6cf4): not a free talk. This
+        // call was placed to talk about ONE thing the learner names, so the
+        // catching up is skipped and their subject is the whole call.
+        val ownTopicBlock = if (learnerPicksTopic && topic.isEmpty() && counterpart == null)
+            ConversationPrompt.ownTopicBlock else ""
 
         // History is left out for a cast stranger (no shared past) and the
         // first meeting (its own block says you have never spoken).
@@ -125,7 +133,7 @@ object ConversationEngine {
             levelName = levelName, level = level,
             personaBlock = personaBlock, counterpartBlock = counterpartBlock,
             firstMeetingBlock = firstMeetingBlock, theyCalledBlock = theyCalledBlock,
-            clockBlock = clockBlock,
+            ownTopicBlock = ownTopicBlock, clockBlock = clockBlock,
             patterns = patterns, weak = weak, topic = topic,
             newsBlock = newsBlock, briefBlock = briefBlock,
             targetLanguage = targetLanguage, tutor = tutor,

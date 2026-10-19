@@ -138,6 +138,8 @@ fun TalkScreen(
     resume: com.roro.futurevoice.talk.Session? = null,
     /** The screen the call was started from — `conversation_started` only. */
     entry: String = com.roro.futurevoice.talk.TalkEntry.OTHER,
+    /** A "my own topic" call (topics page, iOS `learnerPicksTopic`). */
+    learnerPicksTopic: Boolean = false,
     onExit: () -> Unit,
 ) {
     // "Go to Review" on the spent sheet (iOS `routeToPracticeOnClose`):
@@ -477,6 +479,7 @@ fun TalkScreen(
                 counterpartId = counterpartId,
                 resume = resume,
                 entry = entry,
+                learnerPicksTopic = learnerPicksTopic,
             )
         )
     }
