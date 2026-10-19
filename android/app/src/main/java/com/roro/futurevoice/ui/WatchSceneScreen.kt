@@ -180,6 +180,11 @@ fun WatchSceneScreen(
         if (replaySaved) "scene:$scenarioId:replay-${UUID.randomUUID().toString().take(8)}"
         else "scene:$scenarioId:$runKey"
     }
+    /** Watching a scene AGAIN is free, always (iOS `WatchView.isReplay`,
+     *  2026-10-19): a replay's lines go as `scene-replay` with no scene key,
+     *  so a line whose audio isn't on this phone is made again for nothing. */
+    val ttsPurpose = if (replaySaved) "scene-replay" else "scene"
+    val ttsSceneKey: String? = if (replaySaved) null else sceneRunKey
     /** The replay already started once on this page — coming back from a
      *  shadow line shows it again without playing it over. */
     var replayStarted by rememberSaveable(replaySaved) { mutableStateOf(false) }
@@ -232,7 +237,7 @@ fun WatchSceneScreen(
         store.data(request.text, request.voiceId)?.let { return it }
         val audio = VoiceClient(AuthRepository()).synthesize(
             voiceId = request.voiceId, text = request.text,
-            purpose = "scene", sceneKey = sceneRunKey)
+            purpose = ttsPurpose, sceneKey = ttsSceneKey)
         store.save(audio, request.text, request.voiceId)
         return audio
     }
@@ -261,7 +266,7 @@ fun WatchSceneScreen(
         val result = SceneAudioScope.async {
             val r = VoiceClient(AuthRepository()).synthesizeStreaming(
                 voiceId = request.voiceId, text = request.text,
-                purpose = "scene", sceneKey = sceneRunKey,
+                purpose = ttsPurpose, sceneKey = ttsSceneKey,
             ) { chunk ->
                 if (!feeding) return@synthesizeStreaming
                 if (!started) { pcm.start(); started = true }
@@ -328,7 +333,7 @@ fun WatchSceneScreen(
                     // The first line is where a scene is paid for (five
                     // minutes of talk since 2026-10-19): the cached account
                     // must not keep showing the minutes from before it.
-                    com.roro.futurevoice.data.BillingGate.invalidate()
+                    if (!replaySaved) com.roro.futurevoice.data.BillingGate.invalidate()
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
