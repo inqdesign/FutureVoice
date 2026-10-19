@@ -27,8 +27,11 @@
     <string name="a_day_counts_once_every_goal_here_is_met_and_only_finished_w_970192">"Un día queda completo cuando cumples todos los objetivos de aquí — y solo cuenta **lo que terminas**: “Memorizado” en una frase, “Ya lo sé” en una palabra o expresión, una toma de shadowing grabada. Dejar algo para 10 minutos después o para mañana también es avanzar, pero no es terminarlo. Pon un objetivo en 0 y ese apartado queda fuera."</string>
     <string name="a_few_days_in_the_rhythm_is_starting">"Unos cuantos días. El ritmo está llegando."</string>
     <string name="a_few_minutes_made_from_this_week_s_talks">"Unos minutos, hecho con las conversaciones de esta semana."</string>
+    <!-- 'A few minutes, made from what you said: the words, the phrases, the corrections.' -->
+    <string name="a_few_minutes_made_from_what_you_said_the_words_the_phrases_27cec2">"Unos minutos, hecho con lo que dijiste: las palabras, las frases, las correcciones."</string>
     <!-- 'A few minutes, made from your own week: the words, the phrases, the corrections.' -->
     <string name="a_few_minutes_made_from_your_own_week_the_words_the_phrases_fda207">"Unos minutos, hechos con tu propia semana: las palabras, las expresiones y las frases corregidas."</string>
+    <string name="a_few_more_talks_and_your_level_is_ready">"Unas conversaciones más y tendrás tu nivel."</string>
     <!-- 'A final-round interview next Thursday, in English, with the hiring manager who wrote the job ad.' -->
     <string name="a_final_round_interview_next_thursday_in_english_with_the_hi_60558a">"Entrevista final el jueves que viene, en inglés, con quien escribió la oferta."</string>
     <!-- 'A free talk starts right away. Your fluent self speaks first.' -->
@@ -52,6 +55,7 @@
     <string name="a_more_natural_way_to_say_it">"Una forma más natural de decirlo"</string>
     <string name="a_neighbor">"un vecino"</string>
     <string name="a_new_assessment_is_due_it_runs_after_your_next_talk">"Toca una nueva evaluación: se hace al terminar tu próxima llamada."</string>
+    <string name="a_new_episode_every_day_in_english_for_now">"Un episodio nuevo cada día, por ahora en inglés."</string>
     <string name="a_new_watch">"Escenas, renovado"</string>
     <string name="a_new_week_starts_now_start_small">"Empieza una semana nueva. Sin prisa."</string>
     <string name="a_passerby">"alguien en la calle"</string>
@@ -399,10 +403,6 @@
     <string name="clears_setup_voice_clone_and_persona_then_restarts_the_first_cdfc74">"Borra la configuración, el clon de voz y el perfil, y vuelve a empezar desde la primera pantalla. Tu sesión sigue abierta."</string>
     <string name="client_calls">"Llamadas con clientes"</string>
     <string name="clock_time">"tiempo de llamada"</string>
-    <!-- "Cloning again uses 5 credits. Your current voice is replaced and deleted on ElevenLabs — you can't go back to it. Audio already generated keeps playing." -->
-    <string name="cloning_again_uses_5_credits_your_current_voice_is_replaced_156602">"Volver a clonar cuesta 5 créditos. Tu voz actual se reemplaza y se elimina de ElevenLabs — no podrás recuperarla. El audio ya generado se sigue escuchando."</string>
-    <!-- "Cloning again uses a few minutes of talk time. Your current voice is replaced and deleted on ElevenLabs — you can't go back to it. Audio already generated keeps playing." -->
-    <string name="cloning_again_uses_a_few_minutes_of_talk_time_your_current_v_551704">"Volver a clonar cuesta unos minutos de tiempo de conversación. Tu voz actual se reemplaza y se elimina de ElevenLabs — no podrás recuperarla. El audio ya generado se sigue escuchando."</string>
     <string name="cloning_your_voice">"Creando tu voz…"</string>
     <string name="close">"Cerrar"</string>
     <string name="close_the_book">"Cierra el cuaderno"</string>
@@ -487,6 +487,7 @@
     <string name="couldn_t_read_that_file_as_a_photo">"No se pudo leer ese archivo como foto."</string>
     <string name="couldn_t_read_that_photo">"No se pudo leer esa foto."</string>
     <string name="couldn_t_read_this_one">"Este no se pudo leer"</string>
+    <string name="couldn_t_read_your_minutes_just_now">"Ahora mismo no pudimos leer tus minutos."</string>
     <string name="couldn_t_read_your_week_just_now">"Ahora mismo no pudimos leer tu semana."</string>
     <string name="couldn_t_rebuild_your_voice">"No se pudo volver a crear tu voz"</string>
     <string name="couldn_t_redeem_that_code">"No se pudo canjear ese código."</string>
@@ -797,11 +798,13 @@
     <string name="feed_4_5">"Feed 4:5"</string>
     <string name="fellow_parent">"Padre o madre del cole"</string>
     <string name="filing_this_under_a_category">"Clasificando por categoría…"</string>
+    <string name="fill_in_the_blank">"Completa el hueco"</string>
     <string name="fill_the_blank">"Completa el hueco"</string>
     <string name="fillers">"Muletillas"</string>
     <string name="filter">"Filtro"</string>
     <string name="finance">"finanzas"</string>
     <string name="find_a_quiet_spot">"Buscar un lugar tranquilo"</string>
+    <string name="find_a_topic">"Buscar un tema"</string>
     <string name="find_people">"Buscar personas"</string>
     <string name="finding_people">"Buscando personas…"</string>
     <string name="finding_scenarios">"Buscando situaciones…"</string>
@@ -889,6 +892,7 @@
     <string name="get_under_1f_and_this_reads">" — baja de %1$.1f y esto se lee como ≈%2$s"</string>
     <string name="getting_what_your_other_devices_did">"Recibiendo lo que hiciste en tus otros dispositivos…"</string>
     <string name="getting_your_line_ready">"Preparando tu frase…"</string>
+    <string name="getting_your_quiz_ready">"Preparando tu quiz…"</string>
     <string name="given">"Aceptado el %s"</string>
     <string name="giving_your_view_in_a_meeting">"Dar tu opinión en una reunión"</string>
     <string name="glossary">"Glosario"</string>
@@ -941,7 +945,6 @@
     <string name="hear_it">"Escuchar"</string>
     <string name="hear_it_again">"Escuchar otra vez"</string>
     <string name="hear_it_in_my_voice">"Escúchalo con mi voz"</string>
-    <string name="hear_it_in_my_voice_lld_min">"Escucharlo con mi voz · %d min"</string>
     <string name="hear_it_in_the_app_write_it_here">"Escúchalo en la app y escríbelo aquí"</string>
     <string name="hear_my_attempt">"Escuchar mi grabación"</string>
     <string name="hear_target">"Escuchar el modelo"</string>
@@ -1006,6 +1009,7 @@
     <string name="how_was_today">"¿Cómo te fue hoy?"</string>
     <string name="how_was_your_day">"¿Qué tal el día?"</string>
     <string name="how_was_your_first_call">"¿Qué tal tu primera conversación?"</string>
+    <string name="how_we_read_it">"Cómo lo vimos"</string>
     <string name="how_would_a_fluent_speaker_say_it">"¿Cómo lo diría alguien con fluidez?"</string>
     <string name="how_you_met">"Cómo se conocieron"</string>
     <string name="how_you_met_and_how_long">"Cómo se conocieron (y cuánto hace)"</string>
@@ -1040,6 +1044,7 @@
     <!-- "iCloud isn't available on this device." -->
     <string name="icloud_isn_t_available_on_this_device_58fd8e">"iCloud no está disponible en este dispositivo."</string>
     <string name="icloud_storage_is_full_audio_isn_t_syncing">"El almacenamiento de iCloud está lleno: el audio no se sincroniza"</string>
+    <string name="ideas">"Ideas"</string>
     <string name="ielts_opic_toeic_speaking">"IELTS, OPIc, TOEIC Speaking…"</string>
     <string name="import_practice_data">"Importar datos de práctica"</string>
     <string name="improvements">"Mejoras"</string>
@@ -1096,6 +1101,7 @@
     <string name="it_goes_with_the_app">"Se va con la app"</string>
     <string name="it_happens_one_talk_is_enough_to_start_again">"Pasa. Con una conversación basta para volver."</string>
     <string name="it_moves_as_you_talk">"Cambia a medida que hablas"</string>
+    <string name="it_moves_as_you_talk_progress_keeps_track">"Cambia a medida que hablas. Lo verás en Progreso."</string>
     <string name="it_needs_a_little_of_your_speech_first">"Primero necesita un poco de lo que hablas."</string>
     <!-- 'It rings even on silent, and I remember how the last call went.' -->
     <string name="it_rings_even_on_silent_and_i_remember_how_the_last_call_wen_b28e80">"Suena aunque tengas el silencio puesto. Y me acuerdo de cómo fue la última llamada."</string>
@@ -1126,9 +1132,11 @@
     <!-- 'Keep a word from a talk, or watch a situation — its words collect here.' -->
     <string name="keep_a_word_from_a_talk_or_watch_a_situation_its_words_colle_b07a48">"Guarda una palabra de una llamada o mira una situación: las palabras que salgan se juntan aquí."</string>
     <string name="keep_going_llds_more">"Sigue leyendo — %d s más"</string>
+    <string name="keep_going_with_this_routine">"Seguir con esta rutina"</string>
     <string name="keep_in_google_drive">"Guardar en Google Drive"</string>
     <string name="keep_in_icloud">"Guardar en iCloud"</string>
     <string name="keep_it">"Guárdalo"</string>
+    <string name="keep_it_going">"Sigue así"</string>
     <string name="keep_it_today_for_day_1">"Cúmplelo hoy: día 1"</string>
     <string name="keep_it_up_as_a_habit">"Poco a poco, hasta que sea costumbre"</string>
     <string name="keep_my_current_voice">"Mantener mi voz actual"</string>
@@ -1492,6 +1500,7 @@
     <string name="my_direct_manager">"Mi jefe/a directo/a"</string>
     <string name="my_expressions_lld">"Mis expresiones · %d"</string>
     <string name="my_kid_s_teacher">"Profe de mi hijo/a"</string>
+    <string name="my_own_topic">"Mi propio tema"</string>
     <string name="my_recording">"Mi grabación"</string>
     <string name="my_routine">"Mi rutina"</string>
     <string name="my_script">"Mi guion"</string>
@@ -1505,12 +1514,11 @@
     <string name="name">"Nombre"</string>
     <string name="name_interests_place">"Nombre, intereses, dónde vives…"</string>
     <string name="name_on_the_board">"Tu nombre en la clasificación"</string>
-    <!-- 'Names your clone here and on ElevenLabs. Leave it empty to go back to the default.' -->
-    <string name="names_your_clone_here_and_on_elevenlabs_leave_it_empty_to_go_d44a48">"Así se llama tu clon aquí y en ElevenLabs. Déjalo vacío para volver al nombre original."</string>
     <string name="narrow_it_down">"Concretar más"</string>
     <string name="nawana_backup">"copia de seguridad de nawana"</string>
     <!-- 'nawana needs the microphone and speech recognition to hear you speak. Turn them on in Settings → nawana.' -->
     <string name="nawana_needs_the_microphone_and_speech_recognition_to_hear_y_121253">"nawana necesita el micrófono y el reconocimiento de voz para oírte hablar. Actívalos en Ajustes → nawana."</string>
+    <string name="nawana_podcast">"Podcast de nawana"</string>
     <string name="needed_to_keep_your_plan_going">"Necesario para que tu plan siga"</string>
     <!-- 'Needs about %lld more min of your own speech outside practice calls before it reads a band.' -->
     <string name="needs_about_lld_more_min_of_your_own_speech_outside_practice_33fa61">"Habla unos %d min más fuera de las conversaciones de práctica y aquí aparecerá tu nivel."</string>
@@ -1557,8 +1565,10 @@
     <string name="next_one">"El próximo, el %s"</string>
     <string name="next_report_in_lldd_lld_more_minutes_of_practice">"Próximo informe en %1$d d · %2$d min más de práctica."</string>
     <string name="next_shadowing">"Ahora: shadowing"</string>
+    <string name="next_up">"Lo siguiente"</string>
     <string name="next_week_s_arrives">"La próxima llega el %s"</string>
     <string name="next_word">"Palabra siguiente"</string>
+    <string name="next_your_level">"Ahora, tu nivel."</string>
     <string name="nice">"Bien"</string>
     <string name="nice_hedging_honestly_to_be_fair">"Buen uso de matices como \"honestly\" o \"to be fair\"."</string>
     <string name="nice_work">"Buen trabajo"</string>
@@ -1602,11 +1612,13 @@
     <string name="normal">"Normal"</string>
     <!-- "Normal, Relaxed or Slow. It's how fast your fluent self speaks, and it changes from the next thing it says." -->
     <string name="normal_relaxed_or_slow_it_s_how_fast_your_fluent_self_speaks_c3399c">"Normal, Tranquila o Lenta. Es la velocidad a la que habla tu yo fluido, y cambia a partir de lo siguiente que diga."</string>
+    <string name="not_enough_for_a_test_yet">"Aún no hay suficiente para un test"</string>
     <!-- "Not enough from this week yet for a test. A talk or two, and it's ready." -->
     <string name="not_enough_from_this_week_yet_for_a_test_a_talk_or_two_and_i_64c62a">"Todavía no hay material para un test. Con una o dos conversaciones estará listo."</string>
     <string name="not_found">"No encontrado"</string>
     <string name="not_happy_with_a_take_you_can_re_record">"¿No te gusta la toma? Puedes grabarla otra vez."</string>
     <string name="not_me_record_again">"No es mi voz, grabar otra vez"</string>
+    <string name="not_much_to_quiz_yet">"Aún hay poco para preguntarte"</string>
     <string name="not_now">"Ahora no"</string>
     <string name="not_on_our_servers">"Nada en nuestros servidores"</string>
     <string name="not_published">"Sin publicar"</string>
@@ -1664,8 +1676,6 @@
     <string name="notifications_are_off_so_your_routine_can_t_remind_you_turn_298720">"Las notificaciones están desactivadas, así que tu rutina no puede recordártelo. Actívalas en Ajustes"</string>
     <!-- "Now and then it asks something you can answer with a word you're studying, and shows you the word. Use it and it gets a check." -->
     <string name="now_and_then_it_asks_something_you_can_answer_with_a_word_yo_33236e">"De vez en cuando pregunta algo que puedes responder con una palabra que estás estudiando, y te muestra la palabra. Úsala y se marca."</string>
-    <!-- "Now and then your future self asks something you can answer with a word you're studying, and the mistake you make most becomes the call's focus." -->
-    <string name="now_and_then_your_future_self_asks_something_you_can_answer_743ca9">"De vez en cuando, tu yo fluido te pregunta algo que puedes responder con una palabra que estás estudiando, y el error que más cometes se vuelve el enfoque de la llamada."</string>
     <string name="nutrition">"Nutrición"</string>
     <string name="of_7_days">"de 7 días"</string>
     <string name="of_lld_min_talked_this_month">"%1$s de %2$d min de llamada este mes"</string>
@@ -1834,6 +1844,7 @@
     <string name="plan_your_week_once_here_each_day_then_shows_whether_you_did_83c5d3">"Planifica tu semana una vez aquí. Luego cada día muestra si lo cumpliste."</string>
     <string name="planned">"Planeado"</string>
     <string name="play">"Reproducir"</string>
+    <string name="play_all">"Reproducir todo"</string>
     <string name="play_in_my_voice">"Reproducir con mi voz"</string>
     <string name="play_the_line">"Reproducir la frase"</string>
     <string name="play_the_line_in_the_app_s_shadow_chapter">"Reproduce la frase en el capítulo de Shadowing de la app"</string>
@@ -1847,6 +1858,7 @@
     <string name="playground_friends">"Amigos del parque"</string>
     <string name="plus">"Plus"</string>
     <string name="plus_and_max">"Plus y Max"</string>
+    <string name="podcast">"Pódcast"</string>
     <string name="podcasts">"podcasts"</string>
     <string name="policy">"Política"</string>
     <string name="polish_your_one_minute_self_introduction">"Pulir tu presentación de un minuto"</string>
@@ -1867,6 +1879,7 @@
     <string name="practise_on_your_phone_pick_it_up_on_your_tablet_everything_0cf690">"Practica en el teléfono y sigue en la tableta. Todo se guarda en tu propio Google Drive, audio incluido, en una carpeta oculta que solo esta app puede abrir."</string>
     <!-- 'Practised on another phone or tablet with sync on? Your talks, cards, words and recordings are in your Google Drive. Choose the same Google account you used there.' -->
     <string name="practised_on_another_phone_or_tablet_with_sync_on_your_talks_dc3ff4">"¿Practicaste en otro teléfono o tableta con la sincronización activada? Tus conversaciones, tarjetas, palabras y grabaciones están en tu Google Drive. Elige la misma cuenta de Google que usaste allí."</string>
+    <string name="preparing">"En preparación"</string>
     <string name="preparing_study_notes">"Preparando las notas de estudio…"</string>
     <string name="preparing_the_file">"Preparando el archivo…"</string>
     <string name="preparing_your_video">"Preparando tu video…"</string>
@@ -1912,6 +1925,7 @@
     <string name="quiet_fe73d7">"Callado"</string>
     <string name="quirks_goals_pet_peeves_whatever_helps_me_sound_like_you">"Manías, metas, cosas que te molestan — lo que sea que me ayude a sonar como tú"</string>
     <string name="quirks_preferences_anything_that_helps_me_sound_like_you">"Manías, gustos, cualquier cosa que me ayude a sonar como tú"</string>
+    <string name="quiz">"Quiz"</string>
     <string name="raising_kids">"Cría a sus hijos"</string>
     <string name="rather_just_fill_in_a_form">"¿Prefieres llenar un formulario?"</string>
     <string name="re_assessing_your_level_now">"Volviendo a medir tu nivel…"</string>
@@ -1953,7 +1967,10 @@
     <string name="reading_the_link">"Leyendo el enlace"</string>
     <string name="reading_the_photo">"Leyendo la foto"</string>
     <string name="reading_your_level">"Cómo leer tu nivel"</string>
+    <!-- 'Reading your level…' -->
+    <string name="reading_your_level_35a449">"Calculando tu nivel…"</string>
     <string name="reading_your_material">"Leyendo tu material…"</string>
+    <string name="reading_your_minutes">"Leyendo tus minutos…"</string>
     <string name="reading_your_week">"Leyendo tu semana…"</string>
     <string name="ready">"Listo el %s"</string>
     <string name="ready_assessing_your_level_now">"Listo — midiendo tu nivel…"</string>
@@ -2088,6 +2105,7 @@
     <string name="s_1_more_meaning">"+1 significado más"</string>
     <string name="s_1_run">"1 vez"</string>
     <string name="s_1_scene">"1 escena"</string>
+    <string name="s_1_second">"1 segundo"</string>
     <string name="s_1_take">"1 grabación"</string>
     <string name="s_1_word">"1 palabra"</string>
     <string name="s_1_word_phrase_or_line_is_waiting">"1 palabra, expresión o frase te espera."</string>
@@ -2113,6 +2131,8 @@
     <string name="sample">"Ejemplo"</string>
     <string name="sarcastic">"Sarcástico"</string>
     <string name="save">"Guardar"</string>
+    <!-- 'Save a few words or have another talk, and the quiz fills up.' -->
+    <string name="save_a_few_words_or_have_another_talk_and_the_quiz_fills_up">"Guarda algunas palabras o habla otra vez y el quiz se llenará."</string>
     <string name="save_conversation">"Guardar la conversación"</string>
     <string name="save_line">"Guardar la frase"</string>
     <string name="save_lld_vs_monthly">"Ahorra %d%% frente al mensual"</string>
@@ -2125,8 +2145,6 @@
     <string name="save_to_sentences">"Guardar en frases"</string>
     <string name="save_your_recording_to_your_account">"Guarda tu grabación en tu cuenta."</string>
     <string name="saved">"Guardado"</string>
-    <!-- "Saved here, but ElevenLabs didn't accept the new name: %@ It'll be applied the next time your voice is cloned." -->
-    <string name="saved_here_but_elevenlabs_didn_t_accept_the_new_name_it_ll_b_76dd24">"Guardado aquí, pero ElevenLabs no aceptó el nombre nuevo: %s Se aplicará la próxima vez que se cree tu voz."</string>
     <!-- "Saved here, but the voice service didn't take the new name yet: %@ It'll be applied the next time your voice is made." -->
     <string name="saved_here_but_the_voice_service_didn_t_take_the_new_name_ye_8a3a70">"Guardado aquí, pero el servicio de voz aún no tomó el nuevo nombre: %s Se aplicará la próxima vez que se cree tu voz."</string>
     <string name="saved_to_expressions">"Guardado en expresiones"</string>
@@ -2157,6 +2175,7 @@
     <string name="say_the_word_out_loud">"Di la palabra en voz alta"</string>
     <!-- 'Say the word out loud first. Then tap the card to see its meaning and an example.' -->
     <string name="say_the_word_out_loud_first_then_tap_the_card_to_see_its_mea_72e3b6">"Primero di la palabra en voz alta. Luego toca la tarjeta para ver su significado y un ejemplo."</string>
+    <string name="say_what_you_want_to_talk_about_and_the_call_starts_there">"Di de qué quieres hablar y la llamada empieza por ahí"</string>
     <string name="say_your_line">"Di tu frase"</string>
     <string name="scenario">"Situación"</string>
     <string name="scenarios">"Situaciones"</string>
@@ -2198,6 +2217,7 @@
     <string name="see_the_results">"Ver resultados"</string>
     <string name="see_where_it_went">"Ver en qué se usó"</string>
     <string name="see_words">"Ver %s palabras"</string>
+    <string name="see_your_level">"Ver tu nivel"</string>
     <string name="seminars_presentations_my_subject">"Seminarios, presentaciones, mi carrera"</string>
     <string name="send">"Enviar"</string>
     <string name="send_the_original_to_icloud">"Enviar el original a iCloud"</string>
@@ -2399,6 +2419,7 @@
     <string name="studies_chip_topics_from_your_subject">"Chip Estudios · temas de tu carrera"</string>
     <string name="study">"Estudio"</string>
     <string name="study_days">"Días de estudio"</string>
+    <string name="study_notes_for_this_episode_aren_t_in_your_language_yet">"Las notas de estudio de este episodio aún no están en tu idioma."</string>
     <string name="study_record">"Registro de estudio"</string>
     <string name="study_this">"Estudiar en el cuaderno"</string>
     <string name="study_time">"Tiempo de estudio"</string>
@@ -2427,9 +2448,11 @@
     <string name="system">"Según el sistema"</string>
     <string name="take_a_photo">"Tomar una foto"</string>
     <string name="take_down">"Retirar"</string>
+    <string name="take_it_then_see_your_level">"Hazlo y luego verás tu nivel."</string>
     <string name="take_lld">"Toma %d"</string>
     <string name="take_not_found">"No se encontró la toma"</string>
     <string name="take_the_challenge">"Aceptar el reto"</string>
+    <string name="take_the_test">"Hacer el test"</string>
     <string name="take_your_airpods_out_before_recording">"Quítate los AirPods antes de grabar"</string>
     <!-- 'Take your intro out of the pool? Learners who already met your persona keep their own past talks.' -->
     <string name="take_your_intro_out_of_the_pool_learners_who_already_met_you_863b54">"¿Quitar tu presentación del grupo compartido? Quienes ya conocieron tu personaje conservan sus propias llamadas anteriores."</string>
@@ -2541,6 +2564,7 @@
     <string name="telling_my_landlord_the_heating_has_been_broken_for_three_we_9a0ae9">"Decirle al casero que la calefacción lleva tres semanas rota y sacarle una fecha."</string>
     <string name="terms_of_use">"Términos de uso"</string>
     <string name="test_day">"Día del test"</string>
+    <string name="test_lld_lld">"Test %1$d/%2$d"</string>
     <string name="text">"Texto"</string>
     <string name="text_size">"Tamaño del texto"</string>
     <string name="thank_you">"Gracias"</string>
@@ -2561,6 +2585,7 @@
     <string name="that_s_your_session">"Hasta aquí la sesión de hoy"</string>
     <string name="that_s_your_trial_s_scenes">"Hasta aquí las escenas de la prueba"</string>
     <string name="that_s_your_trial_s_talk_time">"Hasta aquí el tiempo de conversación de la prueba"</string>
+    <string name="that_was_your_free_time_here_s_what_it_showed">"Ese fue tu tiempo gratis. Esto es lo que mostró."</string>
     <string name="the_app_overall">"La app en general"</string>
     <string name="the_avatar_will_play_this_role_you_practice_your_side">"El avatar hará este papel. Tú practicas tu parte."</string>
     <!-- 'The better the mic, the better the voice that comes out. A wired mic is best if you have one.' -->
@@ -2623,6 +2648,7 @@
     <string name="the_name_your_voice_goes_by_in_the_app_leave_it_empty_to_go_f9c525">"El nombre de tu voz en la app. Déjalo vacío para volver al nombre original."</string>
     <string name="the_news_chip_brings_this_week_s_stories_for_each_one">"El chip Noticias trae los artículos de esta semana para cada uno."</string>
     <string name="the_next_contact">"el siguiente contacto"</string>
+    <string name="the_ones_you_missed_are_back_in_your_review">"Las que fallaste vuelven a tu repaso."</string>
     <string name="the_original_goes_to_your_icloud">"El original va a tu iCloud."</string>
     <string name="the_original_is_in_icloud">"El original está en iCloud"</string>
     <!-- 'The other days are rest days: nothing is planned, and they never break your streak.' -->
@@ -2735,8 +2761,6 @@
     <string name="this_day_has_its_own_plan_so_this_change_is_for_this_day_onl_6323e8">"Este día tiene su propio plan, así que este cambio es solo para este día."</string>
     <!-- "This deletes your voice model everywhere it is kept. Audio already made keeps playing until you delete your account. The app can't hold a call without a voice, so it will ask you to record a new one, or you can delete your account entirely." -->
     <string name="this_deletes_your_voice_model_everywhere_it_is_kept_audio_al_7612fd">"Esto borra tu modelo de voz de todos los lugares donde se guarda. El audio que ya existe se sigue escuchando hasta que borres tu cuenta. Sin voz no hay llamadas, así que te pediremos grabar una nueva, o puedes borrar tu cuenta por completo."</string>
-    <!-- "This deletes your voice model here and at ElevenLabs. Audio already generated keeps playing until you delete your account. The app can't hold a call without a voice, so it will ask you to record a new one — or you can delete your account entirely." -->
-    <string name="this_deletes_your_voice_model_here_and_at_elevenlabs_audio_a_b79e8b">"Esto borra tu modelo de voz aquí y en ElevenLabs. El audio ya generado se sigue escuchando hasta que elimines tu cuenta. La app no puede mantener una llamada sin voz, así que te pedirá grabar una nueva — o puedes eliminar la cuenta por completo."</string>
     <!-- 'This is how other learners find you. Tap to change it or take it down.' -->
     <string name="this_is_how_other_learners_find_you_tap_to_change_it_or_take_211599">"Así te ven otros estudiantes. Toca para cambiarlo o retirarlo."</string>
     <string name="this_is_what_makes_the_dialogues_feel_real">"Esto es lo que hace que los diálogos parezcan reales."</string>
@@ -2816,6 +2840,7 @@
     <string name="try_it_like_this_for_a_week_it_s_under_activity_on_the_talk_f71c6f">"Pruébala así una semana. Si quieres cambiarla, está en Actividad, en la pantalla Hablar."</string>
     <string name="try_now">"Reintentar ahora"</string>
     <string name="try_saying">"Prueba a decir"</string>
+    <string name="try_the_missed_ones">"Repetir las falladas"</string>
     <string name="try_the_missed_ones_again">"Repetir los fallos"</string>
     <string name="try_this">"Prueba esto"</string>
     <string name="try_using">"Intenta usar"</string>
@@ -3028,6 +3053,7 @@
     <string name="what_s_the_context_around_you_two">"¿Qué está pasando a su alrededor?"</string>
     <string name="what_s_the_context_between_you">"¿Qué contexto hay entre ustedes?"</string>
     <string name="what_s_the_plan_today">"¿Qué haces hoy?"</string>
+    <string name="what_s_the_word">"¿Qué palabra es?"</string>
     <string name="what_s_their_life_like">"¿Cómo es su vida?"</string>
     <string name="what_s_their_life_like_right_now">"¿Cómo es su vida ahora mismo?"</string>
     <string name="what_s_your_dynamic_like">"¿Cómo es su dinámica?"</string>
@@ -3063,7 +3089,6 @@
     <string name="what_you_say_depends_on_who_you_say_it_to_asking_for_a_day_o_63228d">"Lo que dices depende de a quién se lo dices. Pedir un día libre es una conversación distinta con tu jefe que con un compañero, y un desconocido cualquiera no puede enseñarte esa diferencia. Con una persona concreta, cada escena suena real."</string>
     <string name="what_you_say_when_someone_meets_you">"Lo que dices cuando alguien te conoce"</string>
     <string name="what_you_usually_talk_about">"De qué suelen hablar"</string>
-    <string name="what_your_clone_is_called_here_and_on_elevenlabs">"Cómo se llama tu clon aquí y en ElevenLabs"</string>
     <string name="what_your_fluent_self_knows_about_you">"Lo que tu yo fluido sabe de ti"</string>
     <string name="what_your_plan_holds">"Lo que incluye tu plan"</string>
     <string name="what_your_voice_is_called_in_the_app">"El nombre de tu voz en la app"</string>
@@ -3146,6 +3171,7 @@
     <string name="words_and_expressions_you_used">"Palabras y expresiones que usaste"</string>
     <!-- 'words and lines mastered, out of %lld your talks and watches have made' -->
     <string name="words_and_lines_mastered_out_of_lld_your_talks_and_watches_h_4f4924">"palabras y frases aprendidas, de las %d que han generado tus llamadas y escenas"</string>
+    <string name="words_and_phrases_that_became_yours">"Las palabras y expresiones que hiciste tuyas."</string>
     <string name="words_and_phrases_that_became_yours_this_week">"Las palabras y expresiones que hiciste tuyas esta semana."</string>
     <!-- 'Words' -->
     <string name="words_d26d55">"Palabras"</string>
@@ -3237,6 +3263,7 @@
     <string name="yesterday">"Ayer"</string>
     <string name="you">"Yo"</string>
     <string name="you_but_fluent">"Tú, pero fluido"</string>
+    <string name="you_can_change_all_of_it_later_in_my_routine">"Puedes cambiarlo todo después en Mi rutina."</string>
     <string name="you_can_change_both_later_in_settings">"Puedes cambiar los dos más adelante en los ajustes."</string>
     <!-- 'You can change or take this down any time in Me → Find people.' -->
     <string name="you_can_change_or_take_this_down_any_time_in_me_find_people">"Puedes cambiarlo o retirarlo cuando quieras en Mi perfil → Buscar personas."</string>
@@ -3346,8 +3373,6 @@
     <string name="your_conversation_is_saved_open_it_under_review_to_generate_7c3e0c">"La conversación está guardada. Ábrela en Repaso para volver a generar su material de repaso."</string>
     <!-- "Your corrections, notes and word meanings come back in this language. The app's own screens stay English." -->
     <string name="your_corrections_notes_and_word_meanings_come_back_in_this_l_95bb21">"Las correcciones, las notas y los significados llegan en este idioma. Las pantallas de la app siguen en inglés."</string>
-    <!-- 'Your current clone will be deleted on ElevenLabs after the new one is created.' -->
-    <string name="your_current_clone_will_be_deleted_on_elevenlabs_after_the_n_92deb0">"Tu clon actual se elimina de ElevenLabs en cuanto se cree el nuevo."</string>
     <string name="your_current_voice_is_deleted_and_you_ll_record_a_new_one">"Tu voz actual se borra y grabarás una nueva."</string>
     <!-- "Your current voice is replaced by the new one and deleted, so you can't go back to it. Audio already made keeps playing." -->
     <string name="your_current_voice_is_replaced_by_the_new_one_and_deleted_so_dd7e3f">"Tu voz actual se reemplaza por la nueva y se elimina, así que no podrás recuperarla. El audio que ya existe se sigue escuchando."</string>
@@ -3362,8 +3387,10 @@
     <string name="your_files_stay_on_your_phone_only_what_was_read_is_kept_her_ec86b8">"Tus archivos se quedan en tu teléfono. Aquí solo se guarda lo leído."</string>
     <string name="your_first_assessment_unlocks_after_lld_minutes_of_talk">"La primera evaluación se abre al llegar a %d minutos de conversación."</string>
     <string name="your_first_level_appears">"Aparece tu primer nivel"</string>
+    <string name="your_first_lld_minutes">"Tus primeros %d minutos"</string>
     <string name="your_first_report_unlocks_after_lld_minutes_of_practice">"El primer informe se abre al llegar a %d minutos de práctica."</string>
     <string name="your_first_talk_starts_filling_this_page">"Esta página se llena desde tu primera llamada"</string>
+    <string name="your_first_test">"Tu primer test"</string>
     <string name="your_first_week_s_cards_arrive_when_it_closes">"Las tarjetas de tu primera semana llegan cuando termina."</string>
     <string name="your_fluent_self">"Tu yo fluido"</string>
     <string name="your_fluent_self_calls_first">"Tu yo fluido llama primero"</string>
@@ -3376,6 +3403,7 @@
     <string name="your_fluent_self_speaks_with_this_accent_in_your_own_voice_y_33fab6">"Tu yo fluido habla con este acento, con tu propia voz. Cuando lo escuches, puedes cambiarlo."</string>
     <string name="your_fluent_self_used_this_you_didn_t">"Esto lo usó tu yo fluido; tú todavía no."</string>
     <string name="your_fluent_self_wants_to_know_you">"Solo conociéndote puede hablar como tú"</string>
+    <string name="your_free_minutes">"Tus minutos gratis"</string>
     <string name="your_free_talk_time_is_used_up">"Se agotó tu tiempo gratis para hablar"</string>
     <string name="your_free_trial_ends_soon">"Tu prueba gratis termina pronto"</string>
     <!-- "Your friend enters this code when they sign up, and you both get %lld minutes. You're rewarded for your first %lld friends." -->
@@ -3459,8 +3487,6 @@
     <string name="your_project_update">"El avance de tu proyecto"</string>
     <!-- 'Your recent conversations measure at a higher level. Scoring and material difficulty now follow it.' -->
     <string name="your_recent_conversations_measure_at_a_higher_level_scoring_8861e0">"Tus conversaciones recientes se miden en un nivel más alto. La puntuación y la dificultad del material ya lo siguen."</string>
-    <!-- 'Your recording is sent to ElevenLabs, which builds a voice model from it. That model is biometric data.' -->
-    <string name="your_recording_is_sent_to_elevenlabs_which_builds_a_voice_mo_ecdb2a">"La grabación se envía a ElevenLabs, que crea un modelo de voz a partir de ella. Ese modelo es un dato biométrico."</string>
     <!-- "Your recordings aren't backed up to iCloud right now, so they're on this device only. If you delete the app on this device, they're deleted with it." -->
     <string name="your_recordings_aren_t_backed_up_to_icloud_right_now_so_they_66fe02">"Ahora tus grabaciones no se guardan en iCloud, así que solo están en este dispositivo. Si eliminas la app aquí, se eliminan con ella."</string>
     <string name="your_recordings_of_this_script_will_be_here">"Aquí se irán guardando las tomas de este guion."</string>
@@ -3494,6 +3520,8 @@
     <!-- 'Your talks, cards, words and recordings — including the audio — are kept the same on every device signed into this account and your iCloud. Turning this off stops syncing and deletes nothing.' -->
     <string name="your_talks_cards_words_and_recordings_including_the_audio_ar_4e4ae2">"Tus conversaciones, tarjetas, palabras y grabaciones, audio incluido, se mantienen iguales en todos los dispositivos con esta cuenta y tu iCloud. Desactivarlo detiene la sincronización y no elimina nada."</string>
     <string name="your_talks_together">"Llamadas juntos"</string>
+    <!-- 'Your talks were too short to make questions from. Your report goes on without it.' -->
+    <string name="your_talks_were_too_short_to_make_questions_from_your_report_839d2a">"Tus conversaciones fueron demasiado cortas para sacar preguntas. El informe sigue sin el test."</string>
     <string name="your_textbook">"Tu libro de texto"</string>
     <!-- 'Your trial becomes a paid subscription in %lld days. You can cancel any time in the App Store.' -->
     <string name="your_trial_becomes_a_paid_subscription_in_lld_days_you_can_c_3e05d0">"La prueba pasa a suscripción de pago en %d días. Puedes cancelarla en el App Store cuando quieras."</string>
@@ -3527,8 +3555,6 @@
     <string name="your_voice_model_is_built_by_the_most_trusted_service_there_b4db4a">"El modelo de voz lo crea el servicio más fiable que existe y se usa solo para tu práctica de idiomas."</string>
     <!-- "Your voice model is deleted everywhere it is kept, and this can't be undone. You'll be asked to record a new one before your next call." -->
     <string name="your_voice_model_is_deleted_everywhere_it_is_kept_and_this_c_b14bff">"Tu modelo de voz se borra de todos los lugares donde se guarda, y no se puede deshacer. Grabarás uno nuevo antes de tu próxima llamada."</string>
-    <!-- "Your voice model is deleted here and at ElevenLabs, and this can't be undone. You'll be asked to record a new one before your next call." -->
-    <string name="your_voice_model_is_deleted_here_and_at_elevenlabs_and_this_107e07">"El modelo de voz se borra aquí y en ElevenLabs, y no se puede deshacer. Te pediremos grabar uno nuevo antes de tu próxima llamada."</string>
     <!-- 'Your voice recording goes too, so a new phone makes your voice again without recording.' -->
     <string name="your_voice_recording_goes_too_so_a_new_phone_makes_your_voic_c72584">"La grabación de tu voz también se guarda, así que un teléfono nuevo recrea tu voz sin grabar otra vez."</string>
     <string name="your_voice_will_be_ready_in_a_few_days">"Tu voz estará lista en unos días."</string>

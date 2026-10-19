@@ -297,6 +297,52 @@
         }
       }
     },
+    "%@ is thinking…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ denkt nach…"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ está pensando…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ réfléchit…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@が考え中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 생각하는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@正在想…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@正在想…"
+          }
+        }
+      }
+    },
     "%@ pauses/min · %lldm per talk · %lld words/turn" : {
       "localizations" : {
         "de" : {
@@ -813,8 +859,7 @@
             "value" : "1 小時"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "1 run" : {
       "localizations" : {
@@ -858,6 +903,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "1 次"
+          }
+        }
+      }
+    },
+    "1 second" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 Sekunde"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 segundo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 seconde"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1秒"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1초"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 秒"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 秒"
           }
         }
       }
@@ -996,6 +1087,144 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "2 秒"
+          }
+        }
+      }
+    },
+    "A few minutes, made from what you said: the words, the phrases, the corrections." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein paar Minuten, gemacht aus dem, was du gesagt hast: Wörter, Wendungen, Korrekturen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unos minutos, hecho con lo que dijiste: las palabras, las frases, las correcciones."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quelques minutes, à partir de ce que tu as dit : les mots, les expressions, les corrections."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "数分で終わります。自分が話したことから作りました。単語、フレーズ、直した文。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "몇 분이면 돼요. 내가 한 말로 만들었어요. 단어, 표현, 고친 문장까지요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "几分钟就好，题目来自你说过的话：单词、短语、被纠正的句子。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "幾分鐘就好，題目來自你說過的話：單字、片語、被修正的句子。"
+          }
+        }
+      }
+    },
+    "A few more talks and your level is ready." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch ein paar Gespräche, dann steht dein Niveau fest."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unas conversaciones más y tendrás tu nivel."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Encore quelques conversations et ton niveau sera prêt."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "あと少し話すと、レベルが出ます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대화를 조금 더 하면 레벨이 나와요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再多聊几次，就能看到你的等级。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再多聊幾次，就能看到你的等級。"
+          }
+        }
+      }
+    },
+    "A new episode every day, in English for now." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeden Tag eine neue Folge, vorerst auf Englisch."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un episodio nuevo cada día, por ahora en inglés."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un nouvel épisode chaque jour, en anglais pour l’instant."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "毎日新しいエピソードが1本届きます。今は英語だけです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "매일 새 에피소드가 하나씩 올라와요. 지금은 영어만 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每天更新一集，目前只有英语。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每天更新一集，目前只有英文。"
           }
         }
       }
@@ -1834,6 +2063,52 @@
         }
       }
     },
+    "Couldn't read your minutes just now." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Minuten konnten gerade nicht gelesen werden."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ahora mismo no pudimos leer tus minutos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de lire tes minutes pour le moment."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "いまはまとめられませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지금은 정리하지 못했어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "现在没法整理出来。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "現在沒辦法整理出來。"
+          }
+        }
+      }
+    },
     "Count" : {
       "localizations" : {
         "de" : {
@@ -1925,100 +2200,6 @@
           }
         }
       }
-    },
-    "Do this scene again from the start, and say every line out loud, yours and the other side's." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Spiel diese Szene noch einmal von vorn und sag jeden Satz laut, deine und die der anderen Seite."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Repite esta escena desde el principio y di en voz alta todas las frases, las tuyas y las de la otra persona."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Refais cette scène depuis le début et dis toutes les répliques à voix haute, les tiennes comme celles de l’autre."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このシーンを最初からもう一度。自分のセリフも相手のセリフも、全部声に出して言います。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "이 장면을 처음부터 다시 해요. 내 대사도 상대 대사도 전부 소리 내어 말해요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "从头再演一次这个场景，自己的台词和对方的台词都大声说出来。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "從頭再演一次這個場景，自己的台詞和對方的台詞都大聲說出來。"
-          }
-        }
-      },
-      "extractionState" : "manual"
-    },
-    "Do this talk again from the start, and say every line out loud: yours the corrected way, and your fluent self's too." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Führ dieses Gespräch noch einmal von vorn und sag jeden Satz laut: deine in der korrigierten Form und auch die deines fließenden Ichs."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Repite esta conversación desde el principio y di en voz alta todas las frases: las tuyas, ya corregidas, y también las de tu yo fluido."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Refais cette conversation depuis le début et dis toutes les répliques à voix haute : les tiennes, corrigées, et aussi celles de ton moi fluide."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このトークを最初からもう一度。自分の言葉は直した形で、流暢な自分のセリフも全部声に出して言います。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "이 대화를 처음부터 다시 해요. 내 말은 고친 대로, 미래의 내 말까지 전부 소리 내어 말해요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "从头再进行一次这段对话，自己的话照修改后的说，流利的自己的话也全部大声说出来。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "從頭再進行一次這段對話，自己的話照修正後的說，流利的自己的話也全部大聲說出來。"
-          }
-        }
-      },
-      "extractionState" : "manual"
     },
     "Delete the app or change phones, and it's gone too." : {
       "localizations" : {
@@ -2203,6 +2384,98 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "同步到 Google 雲端硬碟的內容會全部刪除，所有裝置都會停止同步。這台裝置上的內容會保留。"
+          }
+        }
+      }
+    },
+    "Do this talk again from the start, and say every line out loud: yours the corrected way, and your fluent self's too." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Führ dieses Gespräch noch einmal von vorn und sag jeden Satz laut: deine in der korrigierten Form und auch die deines fließenden Ichs."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repite esta conversación desde el principio y di en voz alta todas las frases: las tuyas, ya corregidas, y también las de tu yo fluido."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refais cette conversation depuis le début et dis toutes les répliques à voix haute : les tiennes, corrigées, et aussi celles de ton moi fluide."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このトークを最初からもう一度。自分の言葉は直した形で、流暢な自分のセリフも全部声に出して言います。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 대화를 처음부터 다시 해요. 내 말은 고친 대로, 미래의 내 말까지 전부 소리 내어 말해요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从头再进行一次这段对话，自己的话照修改后的说，流利的自己的话也全部大声说出来。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "從頭再進行一次這段對話，自己的話照修正後的說，流利的自己的話也全部大聲說出來。"
+          }
+        }
+      }
+    },
+    "Do this scene again from the start, and say every line out loud, yours and the other side's." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spiel diese Szene noch einmal von vorn und sag jeden Satz laut, deine und die der anderen Seite."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repite esta escena desde el principio y di en voz alta todas las frases, las tuyas y las de la otra persona."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refais cette scène depuis le début et dis toutes les répliques à voix haute, les tiennes comme celles de l’autre."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このシーンを最初からもう一度。自分のセリフも相手のセリフも、全部声に出して言います。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 장면을 처음부터 다시 해요. 내 대사도 상대 대사도 전부 소리 내어 말해요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从头再演一次这个场景，自己的台词和对方的台词都大声说出来。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "從頭再演一次這個場景，自己的台詞和對方的台詞都大聲說出來。"
           }
         }
       }
@@ -2433,6 +2706,98 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你學過的每個單字、用語、卡片，每次跟讀、重說和情境，各算一格。"
+          }
+        }
+      }
+    },
+    "Find a topic" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thema finden"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buscar un tema"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trouver un sujet"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "話題を探す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "주제 찾기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "找话题"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "找話題"
+          }
+        }
+      }
+    },
+    "Fill in the blank" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ergänze die Lücke"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Completa el hueco"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Complète la phrase"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "空欄に入るのは？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "빈칸에 들어갈 말은?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "空格里该填什么？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "空格裡該填什麼？"
           }
         }
       }
@@ -2716,6 +3081,52 @@
         }
       }
     },
+    "Getting your quiz ready…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Quiz wird vorbereitet …"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparando tu quiz…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Je prépare ton quiz…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クイズを準備中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "퀴즈 준비 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在准备小测验…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在準備小測驗…"
+          }
+        }
+      }
+    },
     "Health" : {
       "localizations" : {
         "de" : {
@@ -2810,6 +3221,242 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "用我的聲音聽"
+          }
+        }
+      }
+    },
+    "How much can you study a day?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie viel Zeit hast du am Tag zum Lernen?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Cuánto puedes estudiar al día?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Combien de temps peux-tu étudier par jour ?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1日にどれくらい勉強できますか？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "하루에 공부는 얼마나 할 수 있어요?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一天能学习多久？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一天能學習多久？"
+          }
+        }
+      }
+    },
+    "How long a call?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie lange soll ein Anruf dauern?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Cuánto dura cada llamada?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Combien de minutes par appel ?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通話は何分にしますか？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "한 번에 몇 분 통화할까요?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每次通话几分钟？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每次通話幾分鐘？"
+          }
+        }
+      }
+    },
+    "How we read it" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "So haben wir es eingeschätzt"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cómo lo vimos"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comment on l’a évalué"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "判定の理由"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이렇게 판단했어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "判断依据"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "判斷依據"
+          }
+        }
+      }
+    },
+    "Ideas" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ideen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ideas"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Idées"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アイデア"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아이디어"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "灵感"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "靈感"
+          }
+        }
+      }
+    },
+    "I'll put review in at %@, about %lld cards. Drag it on the grid to move it later." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Wiederholung kommt um %1$@, etwa %2$lld Karten. Du kannst sie später im Raster verschieben."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "I'll put review in at %1$@, about %2$lld cards. Drag it on the grid to move it later."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pondré el repaso a las %1$@, unas %2$lld tarjetas. Luego puedes arrastrarlo en la tabla para moverlo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Je place la révision à %1$@, environ %2$lld cartes. Tu pourras la déplacer en la faisant glisser dans le tableau."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "復習は%1$@に入れておきます。カードは%2$lld枚ほどです。時間は表でドラッグして変えられます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "복습은 %1$@에 넣어 둘게요. 카드 %2$lld장쯤이에요. 시간은 표에서 끌어서 바꿀 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复习会排在 %1$@，大约 %2$lld 张卡片。之后可以在表上拖动来改时间。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "複習會排在 %1$@，大約 %2$lld 張卡片。之後可以在表上拖曳來改時間。"
           }
         }
       }
@@ -3094,6 +3741,52 @@
         }
       }
     },
+    "It moves as you talk. Progress keeps track." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es ändert sich, während du sprichst. Unter Fortschritt siehst du es."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cambia a medida que hablas. Lo verás en Progreso."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il évolue à mesure que tu parles. Tu le suis dans Progression."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "話すほど変わります。成長タブで見られます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "말할수록 달라져요. 성장 탭에서 계속 볼 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "说得越多，它就会跟着变。可以在「成长」里查看。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "說得越多，它就會跟著變。可以在「成長」裡查看。"
+          }
+        }
+      }
+    },
     "It's deleted on your other devices too." : {
       "localizations" : {
         "de" : {
@@ -3140,6 +3833,144 @@
         }
       }
     },
+    "Keep going with this routine" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit dieser Routine weitermachen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seguir con esta rutina"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continuer avec cette routine"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このルーティンで続ける"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 루틴으로 계속하기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "照这个作息继续"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "照這個作息繼續"
+          }
+        }
+      }
+    },
+    "Keep it going" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bleib dran"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sigue así"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue sur ta lancée"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このまま続けよう"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이렇게 이어가요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "继续下去"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "繼續下去"
+          }
+        }
+      }
+    },
+    "Let's make your routine" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stellen wir deine Routine zusammen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vamos a crear tu rutina"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Créons ta routine"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ルーティンを作りましょう"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 루틴을 만들어 봐요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "来安排你的作息吧"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "來安排你的作息吧"
+          }
+        }
+      }
+    },
     "Make it in my voice" : {
       "localizations" : {
         "de" : {
@@ -3182,6 +4013,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "用我的聲音生成"
+          }
+        }
+      }
+    },
+    "Make my routine" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Routine erstellen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crear mi rutina"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Créer ma routine"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ルーティンを作る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "루틴 만들기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安排作息"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安排作息"
           }
         }
       }
@@ -3324,6 +4201,52 @@
         }
       }
     },
+    "My own topic" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mein eigenes Thema"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mi propio tema"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mon propre sujet"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分で決めた話題で"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내가 정한 주제로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "聊我自己的话题"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "聊我自己的話題"
+          }
+        }
+      }
+    },
     "My situations" : {
       "localizations" : {
         "ko" : {
@@ -3366,6 +4289,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "我的情境"
+          }
+        }
+      }
+    },
+    "nawana Podcast" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nawana Podcast"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Podcast de nawana"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Podcast nawana"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nawana ポッドキャスト"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nawana 팟캐스트"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nawana 播客"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nawana Podcast"
           }
         }
       }
@@ -3462,6 +4431,98 @@
         }
       }
     },
+    "Next up" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Als Nächstes"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lo siguiente"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ensuite"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次にやること"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다음에 할 일"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接下来要做的事"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接下來要做的事"
+          }
+        }
+      }
+    },
+    "Next, your level." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jetzt dein Niveau."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ahora, tu nivel."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maintenant, ton niveau."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次はレベルです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다음은 레벨이에요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接下来看看你的等级。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接下來看看你的等級。"
+          }
+        }
+      }
+    },
     "No pause" : {
       "localizations" : {
         "ko" : {
@@ -3550,6 +4611,98 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "还没有可以听的情境"
+          }
+        }
+      }
+    },
+    "Not enough for a test yet" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch nicht genug für einen Test"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aún no hay suficiente para un test"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pas encore assez pour un test"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まだテストを作れるほどではありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아직 테스트를 만들 만큼은 아니에요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "还不够出一份测验"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "還不夠出一份測驗"
+          }
+        }
+      }
+    },
+    "Not much to quiz yet" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch nicht viel zum Abfragen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aún hay poco para preguntarte"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pas encore grand-chose à réviser"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まだ問題にできるものが少ないです"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아직 낼 문제가 별로 없어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目前还没什么可以考的"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目前還沒什麼可以考的"
           }
         }
       }
@@ -3690,8 +4843,7 @@
             "value" : "通知已關閉，所以還不能打電話給你。請到設定開啟通知。作息在對話畫面的「活動」裡。"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
     },
     "One tap keeps your plan going" : {
       "localizations" : {
@@ -4161,6 +5313,52 @@
         }
       }
     },
+    "Play all" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle abspielen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reproducir todo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tout lire"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すべて再生"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "전체 재생"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全部播放"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全部播放"
+          }
+        }
+      }
+    },
     "Player" : {
       "localizations" : {
         "ko" : {
@@ -4203,6 +5401,98 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "播放器"
+          }
+        }
+      }
+    },
+    "Podcast" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Podcast"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pódcast"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Podcast"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ポッドキャスト"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "팟캐스트"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "播客"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Podcast"
+          }
+        }
+      }
+    },
+    "Preparing" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In Vorbereitung"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En preparación"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En préparation"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "準備中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "준비 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "准备中"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "準備中"
           }
         }
       }
@@ -4345,6 +5635,190 @@
         }
       }
     },
+    "Quiz" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quiz"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quiz"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quiz"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クイズ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "퀴즈"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "小测验"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "小測驗"
+          }
+        }
+      }
+    },
+    "Read both sides" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beide Seiten lesen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leer las dos partes"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lire les deux rôles"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "両方のセリフを読む"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "양쪽 대사 모두 읽기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "两边的台词都念"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "兩邊的台詞都念"
+          }
+        }
+      }
+    },
+    "Reading your level…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Niveau wird eingeschätzt …"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calculando tu nivel…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "J’évalue ton niveau…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "レベルを判定しています…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "레벨을 살펴보는 중이에요…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在判断你的等级…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在判斷你的等級…"
+          }
+        }
+      }
+    },
+    "Reading your minutes…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Minuten werden gelesen …"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leyendo tus minutos…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Je lis tes minutes…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まとめています…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "정리하는 중이에요…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在整理…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在整理…"
+          }
+        }
+      }
+    },
     "Renews" : {
       "localizations" : {
         "de" : {
@@ -4433,6 +5907,144 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重复"
+          }
+        }
+      }
+    },
+    "Say %@'s line" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sag den Satz von %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Di la frase de %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dis la réplique de %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@のセリフです"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 대사예요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@的台词"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@的台詞"
+          }
+        }
+      }
+    },
+    "Say what you want to talk about, and the call starts there" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sag einfach, worüber du reden willst, und dort geht's los"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Di de qué quieres hablar y la llamada empieza por ahí"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dis de quoi tu veux parler, et l’appel part de là"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通話が始まったら話したいことを言うだけ。そこから話が始まります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "통화가 시작되면 하고 싶은 얘기를 말해요. 거기서부터 이어가요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通话开始后说出想聊的话题，就从那里聊起"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通話開始後說出想聊的話題，就從那裡聊起"
+          }
+        }
+      }
+    },
+    "Save a few words or have another talk, and the quiz fills up." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speichere ein paar Wörter oder sprich noch einmal, dann füllt sich das Quiz."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guarda algunas palabras o habla otra vez y el quiz se llenará."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Garde quelques mots ou parle encore une fois, et le quiz se remplira."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "単語をいくつか保存するか、もう一度トークすると問題が増えます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "단어를 몇 개 담거나 대화를 한 번 더 하면 문제가 채워져요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "收藏几个单词或再聊一次，就会有题目了。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "收藏幾個單字或再聊一次，就會有題目了。"
           }
         }
       }
@@ -4531,6 +6143,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "學校"
+          }
+        }
+      }
+    },
+    "See your level" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Niveau ansehen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ver tu nivel"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voir ton niveau"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "レベルを見る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "레벨 보기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查看你的等级"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查看你的等級"
           }
         }
       }
@@ -5146,6 +6804,144 @@
         }
       }
     },
+    "Study notes for this episode aren't in your language yet." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Lernnotizen zu dieser Folge gibt es noch nicht in deiner Sprache."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las notas de estudio de este episodio aún no están en tu idioma."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les notes d’étude de cet épisode ne sont pas encore dans ta langue."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このエピソードの学習メモは、まだあなたの言語にはありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 에피소드의 공부 노트는 아직 내 언어로 없어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这一集的学习笔记还没有你的语言版本。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這一集的學習筆記還沒有你的語言版本。"
+          }
+        }
+      }
+    },
+    "Take it, then see your level." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mach ihn, dann siehst du dein Niveau."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hazlo y luego verás tu nivel."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fais-le, puis découvre ton niveau."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "解き終わったら、レベルが出ます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "풀고 나면 레벨이 나와요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "做完就能看到你的等级。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "做完就能看到你的等級。"
+          }
+        }
+      }
+    },
+    "Take the test" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Test machen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hacer el test"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passer le test"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "テストを受ける"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "테스트 풀기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始测验"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開始測驗"
+          }
+        }
+      }
+    },
     "Take your time · tap to send" : {
       "localizations" : {
         "de" : {
@@ -5284,52 +7080,189 @@
         }
       }
     },
-    "When?" : {
+    "Tap to see it or change it." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wann?"
+            "value" : "Tippe, um sie anzusehen oder zu ändern."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "¿Cuándo?"
+            "value" : "Toca para verla o cambiarla."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Quand ?"
+            "value" : "Touche pour la voir ou la modifier."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "いつにしますか？"
+            "value" : "タップすると確認・変更できます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "언제 할까요?"
+            "value" : "눌러서 보고 바꿀 수 있어요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "什么时候？"
+            "value" : "点一下就能查看或修改。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "什麼時候？"
+            "value" : "點一下就能查看或修改。"
           }
         }
-      },
-      "extractionState" : "manual"
+      }
+    },
+    "Test %lld/%lld" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Test %lld/%lld"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Test %lld/%lld"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Test %lld/%lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "テスト %lld/%lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "테스트 %lld/%lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "测验 %lld/%lld"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "測驗 %lld/%lld"
+          }
+        }
+      }
+    },
+    "That was your free time. Here's what it showed." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das war deine Gratiszeit. Das hat sie gezeigt."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ese fue tu tiempo gratis. Esto es lo que mostró."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ton temps gratuit est écoulé. Voici ce qu’il a montré."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無料の時間はここまで。そのあいだに見えたことをまとめました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "무료 시간을 다 썼어요. 그동안 보인 걸 정리했어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "免费时间用完了。这段时间看到的，都整理在这里。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "免費時間用完了。這段時間看到的，都整理在這裡。"
+          }
+        }
+      }
+    },
+    "The ones you missed are back in your review." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was du falsch hattest, kommt wieder in deine Wiederholung."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las que fallaste vuelven a tu repaso."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Celles que tu as ratées reviennent dans ta révision."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "間違えたものは復習に戻しました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "틀린 건 복습에 다시 넣어 뒀어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "答错的已经放回复习里了。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "答錯的已經放回複習裡了。"
+          }
+        }
+      }
     },
     "The original goes to your iCloud." : {
       "localizations" : {
@@ -5607,100 +7540,6 @@
         }
       }
     },
-    "Try it just as it is for a week. You can change it any time." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Probier sie eine Woche lang genau so aus. Ändern kannst du sie jederzeit."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pruébala tal cual durante una semana. Puedes cambiarla cuando quieras."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Essaie-la telle quelle pendant une semaine. Tu peux la changer à tout moment."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "まずは1週間、このまま続けてみましょう。いつでも変えられます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "일주일만 이대로 해 봐요. 언제든 바꿀 수 있어요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "先照这样试一周，随时都能改。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "先照這樣試一週，隨時都能改。"
-          }
-        }
-      },
-      "extractionState" : "manual"
-    },
-    "Try it like this for a week. It's under Activity on the Talk screen whenever you want to change it." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Probier es eine Woche so aus. Ändern kannst du sie jederzeit unter Aktivität auf dem Sprechen-Bildschirm."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pruébala así una semana. Si quieres cambiarla, está en Actividad, en la pantalla Hablar."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Essaie-la ainsi pendant une semaine. Pour la modifier, elle est dans Activité, sur l’écran Parler."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このまま1週間やってみましょう。変えたいときはトーク画面のアクティビティからどうぞ。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "일주일 이렇게 해 봐요. 바꾸고 싶을 땐 대화 화면의 활동에서 바꾸면 돼요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "就照这样过一周吧。想改的时候，去对话界面的“活动”就行。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "就照這樣過一週吧。想改的時候，到對話畫面的「活動」就行。"
-          }
-        }
-      },
-      "extractionState" : "manual"
-    },
     "Time to say it back" : {
       "localizations" : {
         "ko" : {
@@ -5789,6 +7628,144 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "翻译"
+          }
+        }
+      }
+    },
+    "Try the missed ones" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur die falschen nochmal"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repetir las falladas"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refaire les ratées"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "間違えた問題だけもう一度"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "틀린 것만 다시 풀기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只重做答错的"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只重做答錯的"
+          }
+        }
+      }
+    },
+    "Try it like this for a week. It's under Activity on the Talk screen whenever you want to change it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Probier es eine Woche so aus. Ändern kannst du sie jederzeit unter Aktivität auf dem Sprechen-Bildschirm."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pruébala así una semana. Si quieres cambiarla, está en Actividad, en la pantalla Hablar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Essaie-la ainsi pendant une semaine. Pour la modifier, elle est dans Activité, sur l’écran Parler."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このまま1週間やってみましょう。変えたいときはトーク画面のアクティビティからどうぞ。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "일주일 이렇게 해 봐요. 바꾸고 싶을 땐 대화 화면의 활동에서 바꾸면 돼요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "就照这样过一周吧。想改的时候，去对话界面的“活动”就行。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "就照這樣過一週吧。想改的時候，到對話畫面的「活動」就行。"
+          }
+        }
+      }
+    },
+    "Try it just as it is for a week. You can change it any time." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Probier sie eine Woche lang genau so aus. Ändern kannst du sie jederzeit."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pruébala tal cual durante una semana. Puedes cambiarla cuando quieras."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Essaie-la telle quelle pendant une semaine. Tu peux la changer à tout moment."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まずは1週間、このまま続けてみましょう。いつでも変えられます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "일주일만 이대로 해 봐요. 언제든 바꿀 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先照这样试一周，随时都能改。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先照這樣試一週，隨時都能改。"
           }
         }
       }
@@ -6301,6 +8278,52 @@
         }
       }
     },
+    "What's the word?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Welches Wort ist es?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Qué palabra es?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quel est le mot ?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "どの単語でしょう？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "어떤 단어일까요?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "是哪个词？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "是哪個字？"
+          }
+        }
+      }
+    },
     "When you make a mistake, your future self says it the right way out loud, then carries on." : {
       "localizations" : {
         "de" : {
@@ -6343,6 +8366,144 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "說錯的時候，流利的自己會馬上唸出正確的說法，然後接著聊。"
+          }
+        }
+      }
+    },
+    "When?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wann?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Cuándo?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quand ?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "いつにしますか？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "언제 할까요?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "什么时候？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "什麼時候？"
+          }
+        }
+      }
+    },
+    "Whoever the situation calls for" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wer in der Situation vorkommt, spricht mit dir"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hablarás con quien pida la situación"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu parleras à la personne que la situation demande"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "状況に出てくる人が相手になります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "상황에 나오는 사람이 상대가 돼요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "情境里会出现的人就是对方"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "情境裡會出現的人就是對方"
+          }
+        }
+      }
+    },
+    "Words and phrases that became yours." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wörter und Wendungen, die deine geworden sind."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las palabras y expresiones que hiciste tuyas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les mots et expressions devenus les tiens."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分のものになった単語と表現です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 것이 된 단어와 표현이에요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "变成你的单词和用语。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "變成你的單字和用語。"
           }
         }
       }
@@ -6395,6 +8556,282 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "工作"
+          }
+        }
+      }
+    },
+    "You can change all of it later in My routine." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du kannst alles später unter Meine Routine ändern."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Puedes cambiarlo todo después en Mi rutina."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu peux tout changer plus tard dans Ma routine."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "あとからマイルーティンで全部変えられます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "나중에 나의 루틴에서 전부 바꿀 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "之后都可以在「我的作息」里修改。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "之後都可以在「我的作息」裡修改。"
+          }
+        }
+      }
+    },
+    "Your daily call" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein täglicher Anruf"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu llamada diaria"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ton appel quotidien"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "毎日の電話"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "매일 오는 전화"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每天的来电"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每天的來電"
+          }
+        }
+      }
+    },
+    "Your first %lld minutes" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine ersten %lld Minuten"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tus primeros %lld minutos"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tes %lld premières minutes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最初の%lld分"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "처음 %lld분"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最初的 %lld 分钟"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最初的 %lld 分鐘"
+          }
+        }
+      }
+    },
+    "Your first test" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein erster Test"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu primer test"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ton premier test"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "はじめてのテスト"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "첫 테스트"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第一次测验"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第一次測驗"
+          }
+        }
+      }
+    },
+    "Your fluent self calls you at this time." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein fließendes Ich ruft dich um diese Zeit an."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu yo fluido te llama a esta hora."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ton moi fluide t’appelle à cette heure-là."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この時間に流暢な自分から電話がかかってきます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 시간에 유창해진 내가 전화를 걸어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流利的自己会在这个时间给你打电话。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流利的自己會在這個時間打給你。"
+          }
+        }
+      }
+    },
+    "Your free minutes" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Gratisminuten"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tus minutos gratis"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tes minutes gratuites"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無料で話した時間"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "무료로 써 본 시간"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "免费体验的时间"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "免費體驗的時間"
           }
         }
       }
@@ -6539,6 +8976,144 @@
         }
       }
     },
+    "Your routine is here" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hier ist deine Routine"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu rutina está aquí"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta routine est ici"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ルーティンはここにあります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "루틴은 여기 있어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的作息在这里"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的作息在這裡"
+          }
+        }
+      }
+    },
+    "Your routine is ready" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Routine steht"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu rutina está lista"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta routine est prête"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ルーティンができました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "루틴이 준비됐어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "作息安排好了"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "作息安排好了"
+          }
+        }
+      }
+    },
+    "Your talks were too short to make questions from. Your report goes on without it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Gespräche waren zu kurz für Fragen. Der Bericht geht ohne Test weiter."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tus conversaciones fueron demasiado cortas para sacar preguntas. El informe sigue sin el test."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tes conversations étaient trop courtes pour en tirer des questions. Le bilan continue sans le test."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "会話が短くて、問題を作れませんでした。レポートはこのまま続きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대화가 짧아서 문제를 만들 수 없었어요. 리포트는 그대로 이어져요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "对话太短，出不了题目。报告会继续往下。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "對話太短，出不了題目。報告會繼續往下。"
+          }
+        }
+      }
+    },
     "average of your last 10 takes" : {
       "localizations" : {
         "de" : {
@@ -6579,52 +9154,6 @@
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "Whoever the situation calls for" : {
-              "localizations" : {
-                "de" : {
-                  "stringUnit" : {
-                    "state" : "translated",
-                    "value" : "Wer in der Situation vorkommt, spricht mit dir"
-                  }
-                },
-                "es" : {
-                  "stringUnit" : {
-                    "state" : "translated",
-                    "value" : "Hablarás con quien pida la situación"
-                  }
-                },
-                "fr" : {
-                  "stringUnit" : {
-                    "state" : "translated",
-                    "value" : "Tu parleras à la personne que la situation demande"
-                  }
-                },
-                "ja" : {
-                  "stringUnit" : {
-                    "state" : "translated",
-                    "value" : "状況に出てくる人が相手になります"
-                  }
-                },
-                "ko" : {
-                  "stringUnit" : {
-                    "state" : "translated",
-                    "value" : "상황에 나오는 사람이 상대가 돼요"
-                  }
-                },
-                "zh-Hans" : {
-                  "stringUnit" : {
-                    "state" : "translated",
-                    "value" : "情境里会出现的人就是对方"
-                  }
-                },
-                "zh-Hant" : {
-                  "stringUnit" : {
-                    "state" : "translated",
-                    "value" : "情境裡會出現的人就是對方"
-                  }
-                }
-              }
-            },
             "state" : "translated",
             "value" : "最近 10 次的平均"
           }
@@ -7448,194 +9977,6 @@
           }
         }
       }
-    },
-    "Your daily call" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dein täglicher Anruf"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tu llamada diaria"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ton appel quotidien"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "毎日の電話"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "매일 오는 전화"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "每天的来电"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "每天的來電"
-          }
-        }
-      },
-      "extractionState" : "manual"
-    },
-    "Your fluent self calls you at this time." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dein fließendes Ich ruft dich um diese Zeit an."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tu yo fluido te llama a esta hora."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ton moi fluide t’appelle à cette heure-là."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "この時間に流暢な自分から電話がかかってきます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "이 시간에 유창해진 내가 전화를 걸어요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "流利的自己会在这个时间给你打电话。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "流利的自己會在這個時間打給你。"
-          }
-        }
-      },
-      "extractionState" : "manual"
-    },
-    "Your routine is here" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hier ist deine Routine"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tu rutina está aquí"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ta routine est ici"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ルーティンはここにあります"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "루틴은 여기 있어요"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你的作息在这里"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你的作息在這裡"
-          }
-        }
-      },
-      "extractionState" : "manual"
-    },
-    "Your routine is ready" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deine Routine steht"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tu rutina está lista"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ta routine est prête"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ルーティンができました"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "루틴이 준비됐어요"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "作息安排好了"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "作息安排好了"
-          }
-        }
-      },
-      "extractionState" : "manual"
     },
     "watch.sky.backToMe" : {
       "localizations" : {
@@ -8647,18 +10988,6 @@
           }
         }
       }
-    },
-    "%@ / %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ / %2$@"
-          }
-        }
-      },
-      "shouldTranslate" : false,
-      "extractionState" : "manual"
     },
     "%@ %lld" : {
       "extractionState" : "stale",
@@ -32542,100 +34871,6 @@
         }
       }
     },
-    "Cloning again uses 5 credits. Your current voice is replaced and deleted on ElevenLabs — you can't go back to it. Audio already generated keeps playing." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ein erneutes Klonen kostet 5 Credits. Deine aktuelle Stimme wird ersetzt und bei ElevenLabs gelöscht – du kannst nicht zu ihr zurückkehren. Bereits erzeugte Audios bleiben abspielbar."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Volver a clonar cuesta 5 créditos. Tu voz actual se reemplaza y se elimina de ElevenLabs — no podrás recuperarla. El audio ya generado se sigue escuchando."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Refaire le clone coûte 5 crédits. Ta voix actuelle est remplacée et supprimée chez ElevenLabs — impossible de revenir en arrière. L’audio déjà généré continue de s’écouter."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "もう一度クローンすると5クレジット使います。今の声は新しい声に置き換わり、ElevenLabsからも削除されて元に戻せません。すでに作られた音声はそのまま再生されます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "다시 클론하면 5크레딧이 사용돼요. 지금 목소리는 새 목소리로 대체되고 ElevenLabs에서 삭제되어 되돌릴 수 없어요. 이미 만들어진 오디오는 계속 재생돼요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重新克隆会用掉5点数。目前的声音会被新声音取代，并从ElevenLabs删除，无法还原。已经生成的音频可以继续播放。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重新複製會用掉5點數。目前的聲音會被新聲音取代，並從ElevenLabs刪除，無法還原。已經生成的音訊可以繼續播放。"
-          }
-        }
-      }
-    },
-    "Cloning again uses a few minutes of talk time. Your current voice is replaced and deleted on ElevenLabs — you can't go back to it. Audio already generated keeps playing." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ein erneutes Klonen kostet ein paar Minuten Sprechzeit. Deine aktuelle Stimme wird ersetzt und bei ElevenLabs gelöscht — zurück geht es nicht. Bereits erzeugte Audios bleiben abspielbar."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Volver a clonar cuesta unos minutos de tiempo de conversación. Tu voz actual se reemplaza y se elimina de ElevenLabs — no podrás recuperarla. El audio ya generado se sigue escuchando."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Refaire le clone coûte quelques minutes de temps de conversation. Ta voix actuelle est remplacée et supprimée chez ElevenLabs — impossible de revenir en arrière. L’audio déjà généré continue de s’écouter."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "作り直すと通話時間が数分かかります。今の声は新しい声に置き換わり、ElevenLabsからも削除されて元に戻せません。すでに作った音声はそのまま聞けます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "다시 만들면 통화 시간이 몇 분 들어요. 지금 목소리는 새 목소리로 바뀌고 ElevenLabs에서도 지워져서 되돌릴 수 없어요. 이미 만들어 둔 소리는 계속 들려요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重新制作会用掉几分钟的通话时间。目前的声音会被新声音取代，并从ElevenLabs删除，无法还原。已经做好的音频可以继续听。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重新製作會用掉幾分鐘的通話時間。目前的聲音會被新聲音取代，並從ElevenLabs刪除，無法還原。已經做好的音訊可以繼續聽。"
-          }
-        }
-      },
-      "extractionState" : "manual"
-    },
     "Cloning your voice…" : {
       "localizations" : {
         "de" : {
@@ -55666,53 +57901,6 @@
         }
       }
     },
-    "Hear it in my voice · %lld min" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "In meiner Stimme hören · %lld Min."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Escucharlo con mi voz · %lld min"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "L’écouter avec ma voix · %lld min"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自分の声で聞く · %lld分"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "내 목소리로 듣기 · %lld분"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "用我的声音听 · %lld分钟"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "用我的聲音聽 · %lld分鐘"
-          }
-        }
-      },
-      "extractionState" : "manual"
-    },
     "Hear it in the app, write it here" : {
       "localizations" : {
         "de" : {
@@ -75302,53 +77490,6 @@
         }
       }
     },
-    "Names your clone here and on ElevenLabs. Leave it empty to go back to the default." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Benennt deinen Klon hier und bei ElevenLabs. Leer lassen für den Standardnamen."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Así se llama tu clon aquí y en ElevenLabs. Déjalo vacío para volver al nombre original."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "C’est le nom de ce clone ici et sur ElevenLabs. Laisse vide pour revenir au nom par défaut."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アプリとElevenLabsの両方で、この声を呼ぶ名前です。空のままにすると元の名前に戻ります。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "앱과 ElevenLabs 양쪽에서 이 목소리를 부르는 이름이에요. 비워 두면 기본 이름으로 돌아가요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "这是在App和ElevenLabs两边称呼这个声音的名字。留空就会回到默认名称。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "這是在App和ElevenLabs兩邊稱呼這個聲音的名字。留空就會回到預設名稱。"
-          }
-        }
-      },
-      "extractionState" : "manual"
-    },
     "Narrow it down" : {
       "localizations" : {
         "de" : {
@@ -82436,53 +84577,6 @@
           }
         }
       }
-    },
-    "Now and then your future self asks something you can answer with a word you're studying, and the mistake you make most becomes the call's focus." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ab und zu stellt dir dein fließendes Ich eine Frage, die du mit einem Wort beantworten kannst, das du gerade lernst, und dein häufigster Fehler wird zum Fokus des Anrufs."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "De vez en cuando, tu yo fluido te pregunta algo que puedes responder con una palabra que estás estudiando, y el error que más cometes se vuelve el enfoque de la llamada."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "De temps en temps, ton moi fluide te pose une question à laquelle tu peux répondre avec un mot que tu étudies, et l’erreur que tu fais le plus devient l’objectif de l’appel."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "流暢な自分がときどき、勉強中の単語で答えられる質問をして、いちばんよくするミスをこの通話のポイントにします。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "유창해진 내가 가끔 공부 중인 단어로 답할 수 있는 질문을 하고, 가장 자주 하는 실수를 통화의 초점으로 잡아 줘요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "流利的自己偶尔会问你能用正在学的单词回答的问题，并把你最常犯的错误当作这次通话的重点。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "流利的自己偶爾會問你能用正在學的單字回答的問題，並把你最常犯的錯誤當作這次通話的重點。"
-          }
-        }
-      },
-      "extractionState" : "manual"
     },
     "Nutrition" : {
       "localizations" : {
@@ -94017,100 +96111,6 @@
         }
       }
     },
-    "Read both sides" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Beide Seiten lesen"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Leer las dos partes"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lire les deux rôles"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "両方のセリフを読む"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "양쪽 대사 모두 읽기"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "两边的台词都念"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "兩邊的台詞都念"
-          }
-        }
-      },
-      "extractionState" : "manual"
-    },
-    "Say %@'s line" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sag den Satz von %@"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Di la frase de %@"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dis la réplique de %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@のセリフです"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ 대사예요"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@的台词"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@的台詞"
-          }
-        }
-      },
-      "extractionState" : "manual"
-    },
     "Ready for your first talk?" : {
       "comment" : "Text displayed in the hero when the user is on their first talk of the day.",
       "isCommentAutoGenerated" : true,
@@ -100211,53 +102211,6 @@
           }
         }
       }
-    },
-    "Saved here, but ElevenLabs didn't accept the new name: %@ It'll be applied the next time your voice is cloned." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hier gesichert, aber ElevenLabs hat den neuen Namen nicht angenommen: %@ Er wird beim nächsten Klonen deiner Stimme übernommen."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Guardado aquí, pero ElevenLabs no aceptó el nombre nuevo: %@ Se aplicará la próxima vez que se cree tu voz."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enregistré sur cet appareil, mais ElevenLabs n’a pas accepté le nouveau nom : %@ Il sera appliqué au prochain clonage de ta voix."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "この端末には保存しましたが、ElevenLabsが新しい名前を受け付けませんでした: %@ 次に声を作り直すときに反映されます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "이 기기에는 저장했는데 ElevenLabs가 새 이름을 받지 않았어요: %@ 다음에 목소리를 다시 만들 때 반영돼요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已存在这台设备上，但 ElevenLabs 没有接受新名字：%@ 下次重新克隆声音时会套用。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已存在這台裝置上，但 ElevenLabs 沒有接受新名字：%@ 下次重新複製聲音時會套用。"
-          }
-        }
-      },
-      "extractionState" : "manual"
     },
     "Saved to expressions" : {
       "localizations" : {
@@ -122844,53 +124797,6 @@
         }
       }
     },
-    "This deletes your voice model here and at ElevenLabs. Audio already generated keeps playing until you delete your account. The app can't hold a call without a voice, so it will ask you to record a new one — or you can delete your account entirely." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Damit wird dein Stimmmodell hier und bei ElevenLabs gelöscht. Bereits erzeugtes Audio bleibt abspielbar, bis du dein Konto löschst. Ohne Stimme kann die App kein Gespräch führen, du wirst also um eine neue Aufnahme gebeten – oder du löschst dein Konto ganz."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Esto borra tu modelo de voz aquí y en ElevenLabs. El audio ya generado se sigue escuchando hasta que elimines tu cuenta. La app no puede mantener una llamada sin voz, así que te pedirá grabar una nueva — o puedes eliminar la cuenta por completo."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ça supprime ton modèle de voix ici et chez ElevenLabs. L’audio déjà généré continue de se lire jusqu’à la suppression de ton compte. L’app ne peut pas tenir un appel sans voix : elle te demandera d’en enregistrer une nouvelle — ou tu peux supprimer ton compte entièrement."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アプリとElevenLabsの両方から音声モデルを削除します。すでに作られた音声は、アカウントを削除するまでそのまま再生されます。声がないと通話ができないので、新しく録音するよう求められます。アカウントごと削除することもできます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "앱과 ElevenLabs 양쪽에서 음성 모델을 지워요. 이미 만들어 둔 소리는 계정을 지우기 전까지 그대로 들려요. 목소리가 없으면 통화를 할 수 없어서 새로 녹음해 달라고 물어볼 거예요. 계정을 통째로 지우셔도 되고요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "会把你的声音模型从这里和ElevenLabs两边都删掉。已经生成的音频在你删除账号前还是会照常播放。没有声音就没办法通话，所以会请你重新录一个，或者你也可以直接删除整个账号。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "會把你的聲音模型從這裡和ElevenLabs兩邊都刪掉。已經生成的音檔在你刪除帳號前還是會照常播放。沒有聲音就沒辦法通話，所以會請你重新錄一個，或者你也可以直接刪除整個帳號。"
-          }
-        }
-      },
-      "extractionState" : "manual"
-    },
     "This day has its own plan, so this change is for this day only." : {
       "localizations" : {
         "de" : {
@@ -123991,53 +125897,6 @@
           }
         }
       }
-    },
-    "Tap to see it or change it." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tippe, um sie anzusehen oder zu ändern."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Toca para verla o cambiarla."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Touche pour la voir ou la modifier."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "タップすると確認・変更できます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "눌러서 보고 바꿀 수 있어요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "点一下就能查看或修改。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "點一下就能查看或修改。"
-          }
-        }
-      },
-      "extractionState" : "manual"
     },
     "Time for your words" : {
       "localizations" : {
@@ -133673,53 +135532,6 @@
           }
         }
       }
-    },
-    "What your clone is called, here and on ElevenLabs" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wie dein Klon heißt, hier und bei ElevenLabs"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cómo se llama tu clon aquí y en ElevenLabs"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Le nom de ton clone, ici et sur ElevenLabs"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "こことElevenLabsでこの声を呼ぶ名前"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "여기와 ElevenLabs에서 이 목소리를 부르는 이름"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "这个声音在这里和ElevenLabs上的名称"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "這個聲音在這裡和ElevenLabs上的名稱"
-          }
-        }
-      },
-      "extractionState" : "manual"
     },
     "What your fluent self knows about you" : {
       "localizations" : {
@@ -144754,53 +146566,6 @@
         }
       }
     },
-    "Your current clone will be deleted on ElevenLabs after the new one is created." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dein aktueller Klon wird bei ElevenLabs gelöscht, sobald der neue erstellt ist."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tu clon actual se elimina de ElevenLabs en cuanto se cree el nuevo."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ton clone actuel sera supprimé chez ElevenLabs dès que le nouveau sera créé."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新しいクローンができたあと、今のクローンはElevenLabsから削除されます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "새 클론이 만들어진 뒤 기존 클론은 ElevenLabs에서 삭제돼요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新的克隆声音创建后，目前的会从 ElevenLabs 删除。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新的複製聲音建立後，目前的會從 ElevenLabs 刪除。"
-          }
-        }
-      }
-    },
     "Your daily call is off, so this one won't ring. Turn it on in Me → Daily call." : {
       "localizations" : {
         "de" : {
@@ -148574,53 +150339,6 @@
         }
       }
     },
-    "Your recording is sent to ElevenLabs, which builds a voice model from it. That model is biometric data." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deine Aufnahme geht an ElevenLabs, das daraus ein Stimmmodell erstellt. Dieses Modell ist ein biometrisches Datum."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "La grabación se envía a ElevenLabs, que crea un modelo de voz a partir de ella. Ese modelo es un dato biométrico."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "L’enregistrement est envoyé à ElevenLabs, qui en construit un modèle de voix. Ce modèle est une donnée biométrique."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "録音はElevenLabsに送られ、そこで音声モデルが作られます。このモデルは生体情報です。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "녹음은 ElevenLabs로 보내고, 거기서 음성 모델을 만듭니다. 이 모델이 생체인식정보입니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "录音会送到 ElevenLabs，在那里创建语音模型。这个模型属于生物特征数据。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "錄音會送到 ElevenLabs，在那裡建立語音模型。這個模型屬於生物特徵資料。"
-          }
-        }
-      }
-    },
     "Your recordings aren't backed up to iCloud right now, so they're on this device only. If you delete the app on this device, they're deleted with it." : {
       "localizations" : {
         "de" : {
@@ -150772,53 +152490,6 @@
         }
       }
     },
-    "Your voice model is deleted here and at ElevenLabs, and this can't be undone. You'll be asked to record a new one before your next call." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dein Stimmmodell wird hier und bei ElevenLabs gelöscht – das lässt sich nicht rückgängig machen. Vor deinem nächsten Gespräch wirst du um eine neue Aufnahme gebeten."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "El modelo de voz se borra aquí y en ElevenLabs, y no se puede deshacer. Te pediremos grabar uno nuevo antes de tu próxima llamada."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Le modèle de voix est supprimé ici et chez ElevenLabs, et c’est irréversible. Il te sera demandé d’en enregistrer un nouveau avant ton prochain appel."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "音声モデルはアプリとElevenLabsの両方から削除され、元に戻せません。次の通話の前に、新しく録音するよう求められます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "앱과 ElevenLabs 양쪽에서 음성 모델이 지워지고, 되돌릴 수 없어요. 다음 통화 전에 새로 녹음해 달라고 물어볼 거예요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "语音模型会从 App 和 ElevenLabs 两边删除，无法复原。下一通电话前会请你重新录一个。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "語音模型會從 App 和 ElevenLabs 兩邊刪除，無法復原。下一通電話前會請你重新錄一個。"
-          }
-        }
-      },
-      "extractionState" : "manual"
-    },
     "Your voice recording goes too, so a new phone makes your voice again without recording." : {
       "localizations" : {
         "de" : {
@@ -152760,247 +154431,6 @@
           }
         }
       }
-    },
-    "How long a call?" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wie lange soll ein Anruf dauern?"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "¿Cuánto dura cada llamada?"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Combien de minutes par appel ?"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "通話は何分にしますか？"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "한 번에 몇 분 통화할까요?"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "每次通话几分钟？"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "每次通話幾分鐘？"
-          }
-        }
-      },
-      "extractionState" : "manual"
-    },
-    "How much can you study a day?" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wie viel Zeit hast du am Tag zum Lernen?"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "¿Cuánto puedes estudiar al día?"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Combien de temps peux-tu étudier par jour ?"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1日にどれくらい勉強できますか？"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "하루에 공부는 얼마나 할 수 있어요?"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "一天能学习多久？"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "一天能學習多久？"
-          }
-        }
-      },
-      "extractionState" : "manual"
-    },
-    "I'll put review in at %@, about %lld cards. Drag it on the grid to move it later." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Die Wiederholung kommt um %1$@, etwa %2$lld Karten. Du kannst sie später im Raster verschieben."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "I'll put review in at %1$@, about %2$lld cards. Drag it on the grid to move it later."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pondré el repaso a las %1$@, unas %2$lld tarjetas. Luego puedes arrastrarlo en la tabla para moverlo."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Je place la révision à %1$@, environ %2$lld cartes. Tu pourras la déplacer en la faisant glisser dans le tableau."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "復習は%1$@に入れておきます。カードは%2$lld枚ほどです。時間は表でドラッグして変えられます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "복습은 %1$@에 넣어 둘게요. 카드 %2$lld장쯤이에요. 시간은 표에서 끌어서 바꿀 수 있어요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "复习会排在 %1$@，大约 %2$lld 张卡片。之后可以在表上拖动来改时间。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "複習會排在 %1$@，大約 %2$lld 張卡片。之後可以在表上拖曳來改時間。"
-          }
-        }
-      },
-      "extractionState" : "manual"
-    },
-    "Let's make your routine" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Stellen wir deine Routine zusammen"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vamos a crear tu rutina"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Créons ta routine"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ルーティンを作りましょう"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "내 루틴을 만들어 봐요"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "来安排你的作息吧"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "來安排你的作息吧"
-          }
-        }
-      },
-      "extractionState" : "manual"
-    },
-    "Make my routine" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Routine erstellen"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Crear mi rutina"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Créer ma routine"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ルーティンを作る"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "루틴 만들기"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "安排作息"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "安排作息"
-          }
-        }
-      },
-      "extractionState" : "manual"
     },
     "Their own" : {
       "localizations" : {
@@ -158426,102 +159856,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "字/回合"
-          }
-        }
-      }
-    },
-    "%@ is thinking…" : {
-      "comment" : "Android: was typed into strings_catalog.xml by hand; brought into the catalog 2026-10-19.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ denkt nach…"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ está pensando…"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ réfléchit…"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@が考え中…"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ 생각하는 중…"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@正在想…"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@正在想…"
-          }
-        }
-      }
-    },
-    "Whoever the situation calls for" : {
-      "comment" : "Android: was typed into strings_catalog.xml by hand; brought into the catalog 2026-10-19.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wer in der Situation vorkommt, spricht mit dir"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hablarás con quien pida la situación"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tu parleras à la personne que la situation demande"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "状況に出てくる人が相手になります"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "상황에 나오는 사람이 상대가 돼요"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "情境里会出现的人就是对方"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "情境裡會出現的人就是對方"
           }
         }
       }

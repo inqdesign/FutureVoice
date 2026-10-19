@@ -887,7 +887,13 @@ private fun PlusFeature(icon: ImageVector, title: String, detail: String) {
  *  `67e60a53`); an edit is handed back so the prompter reads it at once. */
 @Composable
 internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (SpeechScript) -> Unit,
-                               onDismiss: () -> Unit) {
+                               onDismiss: () -> Unit,
+                               initialStudy: com.roro.futurevoice.data.ScriptStudy? = null,
+                               /** A script that arrives with its study already made (a nawana
+                                *  Podcast episode): nothing is edited, voiced or studied on this
+                                *  phone — the study was written once for everybody when the
+                                *  episode was published. */
+                               shipped: Boolean = false) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("futurevoice", Context.MODE_PRIVATE) }
     var shown by remember { mutableStateOf(script) }
@@ -897,7 +903,7 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
     // marked in the text, a note under each paragraph. Remembered across
     // scripts — someone who studies keeps studying.
     var studying by remember { mutableStateOf(capture.studyOn ?: prefs.getBoolean("speech.script.study", false)) }
-    var study by remember { mutableStateOf(capture.study) }
+    var study by remember { mutableStateOf(initialStudy ?: capture.study) }
     var studyFailed by remember { mutableStateOf(false) }
     var studyAttempt by remember { mutableStateOf(0) }
     var card by remember { mutableStateOf(capture.studyCard?.let { id -> capture.study?.highlights?.firstOrNull { it.id == id } }) }
@@ -905,7 +911,7 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
     val voiceId = rememberCloneVoiceId()
     val paragraphs = remember(shown.body) { com.roro.futurevoice.data.ScriptStudy.paragraphs(shown.body) }
     LaunchedEffect(studying, shown.body, studyAttempt) {
-        if (!studying || study != null) return@LaunchedEffect
+        if (!studying || study != null || shipped) return@LaunchedEffect
         studyFailed = false
         study = try {
             com.roro.futurevoice.data.ScriptStudyEngine.study(context, shown, native, level)
@@ -917,7 +923,7 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
         SheetHeader(stringResource(R.string.script),
             // Edit on the left, Done alone on the right (founder, 2026-10-14).
             // The bundled sample is everyone's and stays as shipped.
-            leading = if (!shown.isBuiltIn && !shown.isChallenge) ({
+            leading = if (!shown.isBuiltIn && !shown.isChallenge && !shipped) ({
                 IosGlassTextButton(stringResource(R.string.edit), onClick = { editing = true })
             }) else null,
             trailing = {
@@ -952,7 +958,13 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
             ScriptStudyLegend(shownStudy, Modifier.padding(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 8.dp))
         } else if (studying) {
             Box(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 14.dp)) {
-                ScriptStudyStatus(studyFailed) { studyAttempt += 1 }
+                if (shipped) {
+                    Text(stringResource(R.string.study_notes_for_this_episode_aren_t_in_your_language_yet),
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 8.dp))
+                } else {
+                    ScriptStudyStatus(studyFailed) { studyAttempt += 1 }
+                }
             }
         } else {
             Spacer(Modifier.padding(top = 22.dp))
@@ -980,7 +992,7 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
             .joinToString("  ·  "), style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 16.dp, top = 7.dp))
-        voiceId?.let { ScriptVoiceoverSection(shown, it) }
+        if (!shipped) voiceId?.let { ScriptVoiceoverSection(shown, it) }
         if (shown.keyTerms.isNotEmpty()) {
             FormSection(stringResource(R.string.key_terms)) {
                 shown.keyTerms.forEachIndexed { i, t ->

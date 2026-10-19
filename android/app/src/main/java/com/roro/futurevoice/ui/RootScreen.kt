@@ -115,6 +115,7 @@ import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.DirectionsRun
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Checkroom
 import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Memory
@@ -2752,7 +2753,7 @@ private const val EXAM_SHOWN = 5
  * Best-effort glyph for a free-form interest category — the fallback is the
  * newspaper, because every story is at least news.
  */
-private fun categoryIcon(category: String?): androidx.compose.ui.graphics.vector.ImageVector {
+internal fun categoryIcon(category: String?): androidx.compose.ui.graphics.vector.ImageVector {
     val c = category?.lowercase() ?: return Icons.Filled.Article
     return when {
         c.contains("ai") || c.contains("tech") -> Icons.Filled.Memory
@@ -2765,6 +2766,7 @@ private fun categoryIcon(category: String?): androidx.compose.ui.graphics.vector
         c.contains("film") || c.contains("movie") || c.contains("tv") -> Icons.Filled.Movie
         c.contains("game") -> Icons.Filled.SportsEsports
         c.contains("health") -> Icons.Filled.FavoriteBorder
+        c.contains("fashion") -> Icons.Filled.Checkroom
         c.contains("parent") -> Icons.Filled.ChildCare
         else -> Icons.Filled.Article
     }
