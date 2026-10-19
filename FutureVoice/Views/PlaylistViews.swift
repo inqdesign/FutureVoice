@@ -433,8 +433,11 @@ private struct NowPlayingCaption: View {
         guard showTranslation, let line = player.current,
               !LanguageCatalog.sameLanguage(appState.nativeLanguage, appState.targetLanguage)
         else { return }
-        if let made = line.translations?[appState.nativeLanguage] {
-            translation = made
+        // A podcast line is shown only in the translations it shipped with:
+        // made once by the publisher and read by everyone. It never asks for
+        // a new one per phone (founder, 2026-10-19: API cost).
+        if let shipped = line.translations {
+            translation = shipped[appState.nativeLanguage]
             return
         }
         if let cached = Translator.cached(line.text, to: appState.nativeLanguage) {
