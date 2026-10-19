@@ -1243,25 +1243,6 @@ enum DebugCapture {
             var p = SessionSummarizer.Progress()
             if name != "summary-progress-start" {
                 p.readBack = true
-        case "situations", "situations-playing":
-            // The listening player over seeded scenes. A capture run has no
-            // clone and no watched scene, so every seeded scene gets a short
-            // dialogue and the bundled ring tone as each line's "audio" —
-            // enough to be listed, played and captioned.
-            once("situations") {
-                seedScenarios(into: appState)
-                if appState.voiceCloneId == nil { appState.voiceCloneId = "capture-voice" }
-                seedSceneAudio(cloneId: appState.voiceCloneId!)
-            }
-            if name == "situations-playing", !PlaylistPlayer.shared.hasQueue {
-                let lines = SceneLibrary.tracks(scenarios: ScenarioStore.shared.load(),
-                                                cloneId: appState.voiceCloneId).flatMap(\.lines)
-                PlaylistPlayer.shared.play(lines, title: explain("My situations"))
-            }
-            return AnyView(Color(.systemGroupedBackground).ignoresSafeArea()
-                .sheet(isPresented: .constant(true)) {
-                    ScenePlayerSheet().environmentObject(appState)
-                })
                 p.wroteCorrections = true
                 p.phrases = 4
                 p.wroteDrills = true
@@ -1302,6 +1283,25 @@ enum DebugCapture {
             once("level") { seedSessions() }
             return AnyView(LevelInfoSheet(level: .b1, surface: .watch)
                 .environmentObject(appState))
+        case "situations", "situations-playing":
+            // The listening player over seeded scenes. A capture run has no
+            // clone and no watched scene, so every seeded scene gets a short
+            // dialogue and the bundled ring tone as each line's "audio" —
+            // enough to be listed, played and captioned.
+            once("situations") {
+                seedScenarios(into: appState)
+                if appState.voiceCloneId == nil { appState.voiceCloneId = "capture-voice" }
+                seedSceneAudio(cloneId: appState.voiceCloneId!)
+            }
+            if name == "situations-playing", !PlaylistPlayer.shared.hasQueue {
+                let lines = SceneLibrary.tracks(scenarios: ScenarioStore.shared.load(),
+                                                cloneId: appState.voiceCloneId).flatMap(\.lines)
+                PlaylistPlayer.shared.play(lines, title: explain("My situations"))
+            }
+            return AnyView(Color(.systemGroupedBackground).ignoresSafeArea()
+                .sheet(isPresented: .constant(true)) {
+                    ScenePlayerSheet().environmentObject(appState)
+                })
         case "show-script":
             // An episode's script on the Speech script page, Study on, with
             // the study made when it was published.
@@ -1382,12 +1382,6 @@ enum DebugCapture {
         case "discover-settings":
             // The Talk tab's topic settings: why you're learning, interests.
             return AnyView(DiscoverSettingsSheet().environmentObject(appState))
-        case "voice-move":
-            // "Your voice moves to the new engine" over the Talk home.
-            once("home") { seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState) }
-            return AnyView(ConversationHome().sheet(isPresented: .constant(true)) {
-                VoiceMoveSheet().environmentObject(appState).environmentObject(AuthService())
-            })
         case "voice-revival", "voice-revival-tune":
             // A parked voice brought back at the call tap (`VoiceRevival`):
             // the rebuild, then the speed + accent page.
@@ -2500,28 +2494,6 @@ enum DebugCapture {
 
     static var sampleQuietWeek: WeekRecap {
         let week = WeekRecapBuilder.lastWeek()
-    /// Give every seeded scene a short dialogue and a playable file for
-    /// each line, under the keys WatchView uses.
-    static func seedSceneAudio(cloneId: String) {
-        guard let url = Bundle.main.url(forResource: "ringtone", withExtension: "wav"),
-              let data = try? Data(contentsOf: url) else { return }
-        let people = CounterpartStore.shared.load()
-        for var scenario in ScenarioStore.shared.load() {
-            if (scenario.curriculum?.dialogue ?? []).isEmpty {
-                scenario.curriculum?.dialogue = [
-                    DialogueEngineTurn(speaker: "counterpart", text: "Hey! Did you see the news this morning?"),
-                    DialogueEngineTurn(speaker: "user", text: "I did. Honestly, it turned out better than expected."),
-                    DialogueEngineTurn(speaker: "counterpart", text: "Really? What changed your mind?"),
-                    DialogueEngineTurn(speaker: "user", text: "Let me walk you through what happened.")
-                ]
-                ScenarioStore.shared.save(scenario)
-            }
-            for line in SceneLibrary.dialogue(scenario: scenario, cloneId: cloneId, people: people) {
-                PhraseAudioStore.shared.save(data, text: line.text, voiceId: line.voiceId)
-            }
-        }
-    }
-
         return WeekRecap(
             start: week.start, end: week.end, activeDays: Array(repeating: false, count: 7), streak: 0,
             talkSeconds: 0, previousTalkSeconds: 12 * 60, talks: [],
@@ -2569,6 +2541,28 @@ enum DebugCapture {
         test.appliedAt = test.finishedAt
         items.removeAll()
         WeeklyTestStore.shared.save(test)
+    }
+
+    /// Give every seeded scene a short dialogue and a playable file for
+    /// each line, under the keys WatchView uses.
+    static func seedSceneAudio(cloneId: String) {
+        guard let url = Bundle.main.url(forResource: "ringtone", withExtension: "wav"),
+              let data = try? Data(contentsOf: url) else { return }
+        let people = CounterpartStore.shared.load()
+        for var scenario in ScenarioStore.shared.load() {
+            if (scenario.curriculum?.dialogue ?? []).isEmpty {
+                scenario.curriculum?.dialogue = [
+                    DialogueEngineTurn(speaker: "counterpart", text: "Hey! Did you see the news this morning?"),
+                    DialogueEngineTurn(speaker: "user", text: "I did. Honestly, it turned out better than expected."),
+                    DialogueEngineTurn(speaker: "counterpart", text: "Really? What changed your mind?"),
+                    DialogueEngineTurn(speaker: "user", text: "Let me walk you through what happened.")
+                ]
+                ScenarioStore.shared.save(scenario)
+            }
+            for line in SceneLibrary.dialogue(scenario: scenario, cloneId: cloneId, people: people) {
+                PhraseAudioStore.shared.save(data, text: line.text, voiceId: line.voiceId)
+            }
+        }
     }
 
     static func seedSessions(scored: Bool = false, beginner: Bool = false) {

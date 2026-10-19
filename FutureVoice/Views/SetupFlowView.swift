@@ -472,3 +472,18 @@ struct SetupFlowView: View {
         appState.preferredAccentId = picked ?? accentOptions.first?.id
     }
 }
+
+extension SetupFlowView {
+    /// "Every day", "Weekdays", or the days by name — Me's call row's rule.
+    /// The routine step that held it moved out of setup (7b6fd8fa); the week
+    /// recap's routine rows still read it.
+    static func weekdaySummary(_ days: Set<Int>) -> String {
+        if days == Set(1...7) { return explain("Every day") }
+        if days == Set(2...6) { return explain("Weekdays") }
+        if days == [1, 7] { return explain("Weekends") }
+        var cal = Calendar.current
+        cal.locale = Locale(identifier: LanguageCatalog.currentNative)
+        let names = cal.shortWeekdaySymbols
+        return [2, 3, 4, 5, 6, 7, 1].filter(days.contains).map { names[$0 - 1] }.joined(separator: " ")
+    }
+}
