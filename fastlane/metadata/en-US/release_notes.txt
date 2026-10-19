@@ -1,4 +1,7 @@
 New
+• If you're learning English, there's a new nawana Podcast episode every day: two hosts talk through the day's news, and you can open the script and turn on Study for its expressions and grammar. Find it under Podcast in the player's list.
+• Slow the player down to the speed you like.
+• In a call with a person or a role, their name now shows on their lines.
 • Take a quick quiz from the Talk screen whenever you like, with words, expressions and grammar picked for you.
 • Find a topic for today's talk with one button.
 • Listen to your situations back to back in a player. It keeps playing with the screen off.
@@ -7,6 +10,7 @@ New
 • The weekly test now lives inside your weekly report.
 
 Fixed
+• With earphones in, you can cut in while your fluent self is talking again. It used to not hear you.
 • Challenge cards no longer change size when you open one and come back.
 • You no longer slide in from the side when Watch first opens.
 • The tab bar no longer shows while a situation plays.
