@@ -1379,7 +1379,10 @@ private fun PersonRow(p: Counterpart) {
 }
 
 @Composable
-private fun PartnerAvatar(p: Counterpart?, host: ComposerHost = ComposerHost.TALK) {
+private fun PartnerAvatar(
+    p: Counterpart?, host: ComposerHost = ComposerHost.TALK,
+    face: androidx.compose.ui.graphics.vector.ImageVector? = null,
+) {
     Box(
         Modifier.size(40.dp)
             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape),
@@ -1389,7 +1392,7 @@ private fun PartnerAvatar(p: Counterpart?, host: ComposerHost = ComposerHost.TAL
             Icon(noPartnerIcon(host), contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
         } else {
-            PersonBubble(p.name, p.id, size = 40.dp)
+            PersonBubble(p.name, p.id, size = 40.dp, fallbackIcon = face)
         }
     }
 }
@@ -1592,6 +1595,8 @@ private fun PartnerPickerSheet(
         val seen = builtins.map { it.id }.toMutableSet()
         builtins + fetched.filter { seen.add(it.id) }
     }
+    // Pool rows' jobs by remote id: the face is drawn from them.
+    val jobs = remember(pool) { pool.associate { it.id to it.occupation } }
     val users = remember(pool, known) {
         pool.filter { it.isRealUser }.map { it.asCounterpart(existing, metLabel) }
     }
@@ -1622,7 +1627,7 @@ private fun PartnerPickerSheet(
             GroupedCard {
                 own.forEachIndexed { i, p ->
                     if (i > 0) GroupedRowDivider()
-                    PickerRow(p.name, partnerCaptionOf(p), p, current?.id == p.id) { onPick(p) }
+                    PickerRow(p.name, partnerCaptionOf(p), p, current?.id == p.id, jobs = jobs) { onPick(p) }
                 }
                 if (own.isNotEmpty()) GroupedRowDivider()
                 Row(
@@ -1646,7 +1651,7 @@ private fun PartnerPickerSheet(
                 GroupedCard {
                     users.forEachIndexed { i, p ->
                         if (i > 0) GroupedRowDivider()
-                        PickerRow(p.name, partnerCaptionOf(p), p, current?.id == p.id) { onPick(p) }
+                        PickerRow(p.name, partnerCaptionOf(p), p, current?.id == p.id, jobs = jobs) { onPick(p) }
                     }
                     if (poolLoading && users.isEmpty()) {
                         Row(
@@ -1666,7 +1671,7 @@ private fun PartnerPickerSheet(
             GroupedCard {
                 characters.forEachIndexed { i, p ->
                     if (i > 0) GroupedRowDivider()
-                    PickerRow(p.name, partnerCaptionOf(p), p, current?.id == p.id) { onPick(p) }
+                    PickerRow(p.name, partnerCaptionOf(p), p, current?.id == p.id, jobs = jobs) { onPick(p) }
                 }
             }
         }
@@ -1723,6 +1728,7 @@ private fun PickerRow(
     person: Counterpart?,
     selected: Boolean,
     host: ComposerHost = ComposerHost.TALK,
+    jobs: Map<String, String> = emptyMap(),
     onClick: () -> Unit,
 ) {
     Row(
@@ -1730,7 +1736,11 @@ private fun PickerRow(
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        PartnerAvatar(person, host)
+        // The map's faces: a real learner's photo, else the profile
+        // silhouette; a character's job; your own people's relationship.
+        PartnerAvatar(person, host, person?.let {
+            PeopleSky.icon(PeopleSky.symbol(it, it.remoteId?.let { r -> jobs[r] }))
+        })
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(name, style = MaterialTheme.typography.bodyLarge)

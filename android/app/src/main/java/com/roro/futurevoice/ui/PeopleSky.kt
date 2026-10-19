@@ -36,6 +36,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Brush
+import androidx.compose.material.icons.filled.Medication
+import androidx.compose.material.icons.filled.LocalCafe
+import androidx.compose.material.icons.filled.ElectricBolt
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Terrain
+import androidx.compose.material.icons.filled.Flight
+import androidx.compose.material.icons.filled.Work
+import androidx.compose.material.icons.filled.LocalHospital
+import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Edit
@@ -321,7 +330,12 @@ internal object PeopleSky {
                 "music.mic" else "star.fill"
         }
         if (c.cast == CounterpartCast.STRANGER) {
-            return jobSymbol(occupation ?: c.intro) ?: "person.fill"
+            // The profile silhouette means a REAL learner, and only that: a
+            // learner without a photo wears it, and a character never does —
+            // every character gets the icon of what they do.
+            if (c.isRealLearner) return "person.fill"
+            return jobSymbol(occupation ?: c.intro)
+                ?: jobSymbol(c.intro) ?: "bubble.left.and.bubble.right.fill"
         }
         when (c.relationshipKind) {
             "Partner" -> return "heart.fill"
@@ -352,18 +366,28 @@ internal object PeopleSky {
     private fun jobSymbol(text: String): String? {
         val t = text.lowercase()
         val jobs = listOf(
-            listOf("nurse", "간호", "看護", "pfleger", "krankenschwester") to "cross.case.fill",
+            listOf("nurse", "간호", "看護", "pflege", "krankenschwester") to "cross.case.fill",
+            listOf("pharmac", "약사", "薬剤", "apothek") to "pills.fill",
+            listOf("barista", "cafe", "café", "바리스타", "카페") to "cup.and.saucer.fill",
+            listOf("landlord", "vermieter", "중개", "집주인", "大家") to "key.fill",
+            listOf("neighbor", "neighbour", "nachbar", "이웃", "隣") to "door.left.hand.open",
+            listOf("elektriker", "electrician", "전기") to "bolt.fill",
+            listOf("analyst", "data", "분석") to "chart.bar.fill",
+            listOf("climb", "클라이밍", "kletter") to "figure.climbing",
+            listOf("어머니", "어머님", "mother", "schwieger") to "house.fill",
             listOf("doctor", "physician", "의사", "医師", "arzt", "ärztin") to "stethoscope",
             listOf("design", "디자인", "デザイン") to "paintbrush.pointed.fill",
             listOf("chef", "cook", "요리", "料理", "koch") to "fork.knife",
             listOf("developer", "engineer", "programmer", "개발", "엔지니어", "エンジニア", "entwickler") to "laptopcomputer",
-            listOf("teacher", "professor", "교사", "선생", "教師", "先生", "lehrer") to "graduationcap.fill",
-            listOf("student", "학생", "学生", "studi") to "book.fill",
+            listOf("teacher", "professor", "교사", "선생", "강사", "教師", "先生", "lehrer", "erzieher") to "graduationcap.fill",
+            listOf("student", "학생", "学生", "studi", "ausbildung") to "book.fill",
             listOf("music", "singer", "musician", "음악", "가수", "音楽", "musik") to "music.note",
             listOf("photograph", "사진", "写真", "fotograf") to "camera.fill",
             listOf("writer", "author", "journalist", "작가", "기자", "作家", "autor") to "pencil",
             listOf("market", "sales", "마케팅", "영업", "営業") to "megaphone.fill",
             listOf("parent", "mom", "dad", "엄마", "아빠", "육아", "子育て") to "figure.and.child.holdhands",
+            listOf("lead", "manager", "recruit", "선배", "회사", "team", "büro", "amt") to "briefcase.fill",
+            listOf("moved", "holiday", "einbürgerung", "seit", "이주", "이민") to "airplane",
         )
         return jobs.firstOrNull { (words, _) -> words.any { t.contains(it) } }?.second
     }
@@ -387,6 +411,15 @@ internal object PeopleSky {
         "megaphone.fill" -> Icons.Filled.Campaign
         "music.mic" -> Icons.Filled.Mic
         "star.fill" -> Icons.Filled.Star
+        "pills.fill" -> Icons.Filled.Medication
+        "cup.and.saucer.fill" -> Icons.Filled.LocalCafe
+        "bolt.fill" -> Icons.Filled.ElectricBolt
+        "chart.bar.fill" -> Icons.Filled.BarChart
+        "figure.climbing" -> Icons.Filled.Terrain
+        "airplane" -> Icons.Filled.Flight
+        "briefcase.fill" -> Icons.Filled.Work
+        "cross.case.fill" -> Icons.Filled.LocalHospital
+        "bubble.left.and.bubble.right.fill" -> Icons.Filled.Forum
         else -> Symbols.icon(symbol)
     }
 
@@ -919,3 +952,13 @@ private fun SkyNode(
         }
     }
 }
+
+/** A published learner from the pool, not a character we wrote (iOS
+ *  `Counterpart.isRealLearner`). Rows met before `personaKind` existed read
+ *  as learners, the pool's default. */
+internal val Counterpart.isRealLearner: Boolean
+    get() {
+        val r = remoteId ?: return false
+        if (r.startsWith("builtin:")) return false
+        return (personaKind ?: "user") == "user"
+    }

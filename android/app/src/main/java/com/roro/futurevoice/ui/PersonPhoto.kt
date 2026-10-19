@@ -63,7 +63,11 @@ fun rememberPersonPhoto(id: String?): ImageBitmap? {
  * cover — draws through this one view so they can't drift apart.
  */
 @Composable
-fun PersonBubble(name: String, photoId: String?, size: Dp = 64.dp, photo: ImageBitmap? = null) {
+fun PersonBubble(
+    name: String, photoId: String?, size: Dp = 64.dp, photo: ImageBitmap? = null,
+    /** Drawn instead of initials when there is no photo (iOS `fallbackSymbol`). */
+    fallbackIcon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+) {
     val shown = photo ?: rememberPersonPhoto(photoId)
     val accent = MaterialTheme.colorScheme.primary
     Box(
@@ -75,6 +79,9 @@ fun PersonBubble(name: String, photoId: String?, size: Dp = 64.dp, photo: ImageB
         if (shown != null) {
             Image(shown, contentDescription = null, contentScale = ContentScale.Crop,
                 modifier = Modifier.size(size).clip(CircleShape))
+        } else if (fallbackIcon != null) {
+            androidx.compose.material3.Icon(fallbackIcon, contentDescription = null,
+                tint = accent, modifier = Modifier.size(size * 0.42f))
         } else {
             Text(initials(name).ifEmpty { "?" },
                 fontSize = (size.value * 0.34f).sp,
