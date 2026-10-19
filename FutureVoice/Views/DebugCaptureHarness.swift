@@ -1578,6 +1578,10 @@ enum DebugCapture {
                 }
             }
             UserDefaults.standard.set(true, forKey: PeopleSky.defaultsKey)
+            // The box's price line is drawn against the gate's account.
+            if UserDefaults.standard.bool(forKey: "scenetalk") {
+                BillingGate.shared.debugSetAccount(Self.sampleLightAccount)
+            }
             return AnyView(WatchTab())
         case "watchtab-empty":
             // First-run Watch: no saved scenarios, so the "Likely situations"

@@ -535,7 +535,7 @@ struct WatchTab: View {
                 if UserDefaults.standard.bool(forKey: "skyAway") { skyAway = true }
                 // `-dockChip Work` captures creation mode with a chip picked
                 // (once the pool is in); `-dockCreate 1` just opens it.
-
+                if UserDefaults.standard.bool(forKey: "dockCreate") { creating = true }
                 #endif
             }
     }
