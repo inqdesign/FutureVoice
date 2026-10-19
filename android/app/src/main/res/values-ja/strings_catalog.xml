@@ -43,6 +43,7 @@
     <string name="a_friend_joined_with_your_code_b4caa9">"友達が招待コードで登録しました。"</string>
     <string name="a_friend_joined_with_your_code_lld_minutes_are_yours">"友達が招待コードで登録しました。%d分が追加されました。"</string>
     <string name="a_front_desk_clerk">"フロント係"</string>
+    <string name="a_good_start">"いいスタートです"</string>
     <string name="a_good_week">"いい一週間でした"</string>
     <!-- "A job interview, a call to your landlord, dinner with your partner's parents. You know enough of the language. What you don't know is what to say first, what to ask, and how to get through the awkward moment." -->
     <string name="a_job_interview_a_call_to_your_landlord_dinner_with_your_par_3ed825">"面接、大家さんへの電話、恋人の両親との食事。言葉はある程度話せても、最初に何を言えばいいか、何を聞けばいいか、気まずい瞬間をどう乗り切るかはなかなか浮かびませんよね。"</string>
@@ -99,6 +100,7 @@
     <string name="a_standard_copy_goes_to_your_icloud_the_original_stays_on_th_e68c3f">"標準画質のコピーがiCloudに送られます。オリジナルはこのデバイスに残ります。"</string>
     <!-- 'A stock voice that plays "you" — your cloned voice is never used, and nobody\'s talks with your persona are ever shown to you or anyone else.' -->
     <string name="a_stock_voice_that_plays_you_your_cloned_voice_is_never_used_920f41">"「自分」を演じる標準の声です。クローンした声は決して使われず、誰かがこの自己紹介と交わした通話も、本人を含め誰にも表示されません。"</string>
+    <string name="a_strong_start">"すばらしいスタートです"</string>
     <string name="a_strong_week">"すばらしい一週間でした"</string>
     <!-- 'A talk block rings as your daily call when the call is on (Me › Call). Up to 4 call times.' -->
     <string name="a_talk_block_rings_as_your_daily_call_when_the_call_is_on_me_815e72">"毎日の電話がオンなら、トークのブロックはその時刻に電話として鳴ります(マイページ › 電話)。電話の時刻は4つまでです。"</string>
@@ -825,6 +827,7 @@
     <!-- 'Finished books. They keep their progress — unarchive anytime.' -->
     <string name="finished_books_they_keep_their_progress_unarchive_anytime">"終えたブックです。進み具合はそのまま残り、いつでも戻せます。"</string>
     <string name="finishing_puts_you_in_line_it_doesn_t_seat_you">"埋めきると待機列に並びます。すぐに席に着くわけではありません。"</string>
+    <string name="first_test_done">"はじめてのテスト、完了です"</string>
     <string name="first_charge">"初回の決済 %s"</string>
     <string name="fix_the_sentence">"文を直す"</string>
     <string name="fluency">"流暢さ"</string>

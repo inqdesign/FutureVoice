@@ -59,6 +59,15 @@ object BillingGate {
         fetchedAt = System.currentTimeMillis()
     }
 
+    /** The account: the cached one while it is fresh, else read now (iOS
+     *  `snapshot(force:)`). Null when the read failed. */
+    suspend fun snapshot(force: Boolean = false): AccountStatus? {
+        val at = fetchedAt
+        val kept = cached
+        if (!force && kept != null && at != null && System.currentTimeMillis() - at < FRESH_FOR_MS) return kept
+        return runCatching { AccountStatus.load(AuthRepository()) }.getOrNull()?.also { remember(it) }
+    }
+
     fun invalidate() {
         cached = null
         fetchedAt = null

@@ -176,6 +176,22 @@ object WeekRecapBuilder {
         return (0L until 7L).map { first.plusDays(it).atStartOfDay(zone).toInstant().toEpochMilli() }
     }
 
+    /** Local midnights of every day from the one [start] falls on until [end]
+     *  (at least one) — the trial report's window, which can run longer than
+     *  a week (iOS `build(wholeWindow:)`). */
+    fun windowDays(start: Long, end: Long, zone: ZoneId = ZoneId.systemDefault()): List<Long> {
+        val first = Instant.ofEpochMilli(start).atZone(zone).toLocalDate()
+        val out = mutableListOf<Long>()
+        var day = first
+        while (true) {
+            val at = day.atStartOfDay(zone).toInstant().toEpochMilli()
+            if (at >= end) break
+            out += at
+            day = day.plusDays(1)
+        }
+        return out.ifEmpty { listOf(first.atStartOfDay(zone).toInstant().toEpochMilli()) }
+    }
+
     /** Metered talk, all languages, from the day [from] falls on until [to]. */
     fun talkSeconds(context: Context, from: Long, to: Long, zone: ZoneId = ZoneId.systemDefault()): Int {
         var day = Instant.ofEpochMilli(from).atZone(zone).toLocalDate()
@@ -200,10 +216,13 @@ object WeekRecapBuilder {
         return all
     }
 
-    suspend fun build(context: Context, start: Long, end: Long,
+    /** [wholeWindow]: count every day from [start] to [end] instead of the
+     *  week's seven — the trial report's window ([TrialReport]) can run
+     *  longer than a week, and its counts must cover all of it. */
+    suspend fun build(context: Context, start: Long, end: Long, wholeWindow: Boolean = false,
                       zone: ZoneId = ZoneId.systemDefault()): WeekRecap {
         val language = LanguageScope.active(context)
-        val days = days(start, zone)
+        val days = if (wholeWindow) windowDays(start, end, zone) else days(start, zone)
         val sessions = sessionsAcrossLanguages(context)
         val spokenDays = sessions.mapNotNull { s -> lastUserLine(s) }
             .map { Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }.toSet()

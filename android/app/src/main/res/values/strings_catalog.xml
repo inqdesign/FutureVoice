@@ -43,6 +43,7 @@
     <string name="a_friend_joined_with_your_code_b4caa9">"A friend joined with your code."</string>
     <string name="a_friend_joined_with_your_code_lld_minutes_are_yours">"A friend joined with your code — %d minutes are yours."</string>
     <string name="a_front_desk_clerk">"a front desk clerk"</string>
+    <string name="a_good_start">"A good start"</string>
     <string name="a_good_week">"A good week"</string>
     <!-- "A job interview, a call to your landlord, dinner with your partner's parents. You know enough of the language. What you don't know is what to say first, what to ask, and how to get through the awkward moment." -->
     <string name="a_job_interview_a_call_to_your_landlord_dinner_with_your_par_3ed825">"A job interview, a call to your landlord, dinner with your partner's parents. You know enough of the language. What you don't know is what to say first, what to ask, and how to get through the awkward moment."</string>
@@ -99,6 +100,7 @@
     <string name="a_standard_copy_goes_to_your_icloud_the_original_stays_on_th_e68c3f">"A standard copy goes to your iCloud. The original stays on this device."</string>
     <!-- 'A stock voice that plays "you" — your cloned voice is never used, and nobody\'s talks with your persona are ever shown to you or anyone else.' -->
     <string name="a_stock_voice_that_plays_you_your_cloned_voice_is_never_used_920f41">"A stock voice that plays \"you\" — your cloned voice is never used, and nobody's talks with your persona are ever shown to you or anyone else."</string>
+    <string name="a_strong_start">"A strong start"</string>
     <string name="a_strong_week">"A strong week"</string>
     <!-- 'A talk block rings as your daily call when the call is on (Me › Call). Up to 4 call times.' -->
     <string name="a_talk_block_rings_as_your_daily_call_when_the_call_is_on_me_815e72">"A talk block rings as your daily call when the call is on (Me › Call). Up to 4 call times."</string>
@@ -826,6 +828,7 @@
     <!-- 'Finished books. They keep their progress — unarchive anytime.' -->
     <string name="finished_books_they_keep_their_progress_unarchive_anytime">"Finished books. They keep their progress — unarchive anytime."</string>
     <string name="finishing_puts_you_in_line_it_doesn_t_seat_you">"Finishing puts you in line — it doesn't seat you."</string>
+    <string name="first_test_done">"First test done"</string>
     <string name="first_charge">"First charge %s"</string>
     <string name="fix_the_sentence">"Fix the sentence"</string>
     <string name="fluency">"Fluency"</string>

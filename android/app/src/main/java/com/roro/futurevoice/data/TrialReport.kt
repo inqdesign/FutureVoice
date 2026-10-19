@@ -53,14 +53,20 @@ object TrialReportStore {
      *  and a required test of two questions is still a test of the learner's
      *  own lines. Below this the test card says so and lets them past. */
     const val MIN_TEST_ITEMS = 3
+    /** The deck is on screen, so nothing else raises a second one over it
+     *  (iOS `isShowing`). */
+    @Volatile var isShowing = false
 
     private const val PREFS = "futurevoice"
     private const val OFFERS_KEY = "futurevoice.trialReport.offers"
     private const val FINISHED_KEY = "futurevoice.trialReport.finished"
-    private const val FILE_NAME = "trial_report.json"
+    private const val FILE_PREFIX = "trial_report"
 
     private fun p(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-    private fun file(c: Context) = File(c.filesDir, FILE_NAME)
+    /** One report per TARGET language: its test lives in that language's
+     *  store and its level is that language's, so a switch must neither show
+     *  the other one nor overwrite it. */
+    private fun file(c: Context, language: String) = File(c.filesDir, "${FILE_PREFIX}_$language.json")
 
     fun finished(c: Context): Boolean = p(c).getBoolean(FINISHED_KEY, false)
     fun setFinished(c: Context) { p(c).edit().putBoolean(FINISHED_KEY, true).apply() }
@@ -77,19 +83,22 @@ object TrialReportStore {
      *  spoken talk on file) is checked here too, so one call answers it. */
     suspend fun shouldOffer(c: Context, account: AccountStatus): Boolean {
         if (finished(c) || offers(c) >= MAX_OFFERS) return false
-        if (account.subscriptionStatus != "inactive" || account.unlimited || !account.needsSubscription) return false
+        // A fetch that failed reads as "never subscribed, nothing left";
+        // only an answer the server actually gave may say so.
+        if (!account.ownershipKnown || account.subscriptionStatus != "inactive" ||
+            account.unlimited || !account.needsSubscription) return false
         return spokenSessions(c).isNotEmpty()
     }
 
-    suspend fun load(c: Context): TrialReport? = withContext(Dispatchers.IO) {
-        val f = file(c)
+    suspend fun load(c: Context, language: String): TrialReport? = withContext(Dispatchers.IO) {
+        val f = file(c, language)
         if (!f.exists()) null
         else runCatching { StoreJson.json.decodeFromString(TrialReport.serializer(), f.readText()) }.getOrNull()
     }
 
     suspend fun save(c: Context, report: TrialReport) = withContext(Dispatchers.IO) {
-        val target = file(c)
-        val tmp = File(target.parentFile, "$FILE_NAME.tmp")
+        val target = file(c, report.targetLanguage)
+        val tmp = File(target.parentFile, "${target.name}.tmp")
         tmp.writeText(StoreJson.json.encodeToString(TrialReport.serializer(), report))
         if (!tmp.renameTo(target)) { target.delete(); tmp.renameTo(target) }
     }
@@ -100,11 +109,11 @@ object TrialReportStore {
      * would rewrite a coach the learner already read.
      */
     suspend fun current(c: Context, targetLanguage: String, now: Long = System.currentTimeMillis()): TrialReport {
-        load(c)?.takeIf { it.targetLanguage == targetLanguage }?.let { return it }
+        load(c, targetLanguage)?.let { return it }
         val first = spokenSessions(c).map { s -> s.turns.firstOrNull()?.timestamp ?: s.startedAt }.minOrNull() ?: now
         val zone = ZoneId.systemDefault()
         val start = Instant.ofEpochMilli(first).atZone(zone).toLocalDate().atStartOfDay(zone).toInstant().toEpochMilli()
-        var recap = WeekRecapBuilder.build(c, start, now + 1_000)
+        var recap = WeekRecapBuilder.build(c, start, now + 1_000, wholeWindow = true)
         // No week before a trial; the talk card's comparison line stays quiet.
         recap = recap.copy(previousTalkSeconds = 0, previousShadowAverage = null)
         // The meter's log is pruned at 45 days; a pool spent before that
@@ -115,9 +124,11 @@ object TrialReportStore {
         return report
     }
 
-    /** Re-read before writing: the test screen saves its id into the same file. */
-    suspend fun update(c: Context, fallback: TrialReport?, change: (TrialReport) -> TrialReport): TrialReport? {
-        val latest = load(c) ?: fallback ?: return null
+    /** Load, change, save in one step — the deck and the test screen both
+     *  write this file, and a copy read before a long wait is stale. Null
+     *  when there is no report on file. */
+    suspend fun update(c: Context, language: String, change: (TrialReport) -> TrialReport): TrialReport? {
+        val latest = load(c, language) ?: return null
         val next = change(latest)
         save(c, next)
         return next
@@ -125,7 +136,7 @@ object TrialReportStore {
 
     /** Developer: start over. */
     fun reset(c: Context) {
-        file(c).delete()
+        c.filesDir.listFiles()?.filter { it.name.startsWith(FILE_PREFIX) }?.forEach { it.delete() }
         p(c).edit().remove(OFFERS_KEY).remove(FINISHED_KEY).apply()
     }
 }

@@ -43,6 +43,7 @@
     <string name="a_friend_joined_with_your_code_b4caa9">"有朋友用你的邀请码加入了。"</string>
     <string name="a_friend_joined_with_your_code_lld_minutes_are_yours">"有朋友用你的邀请码加入了，%d分钟已经入帐。"</string>
     <string name="a_front_desk_clerk">"前台接待"</string>
+    <string name="a_good_start">"不错的开始"</string>
     <string name="a_good_week">"不错的一周"</string>
     <!-- "A job interview, a call to your landlord, dinner with your partner's parents. You know enough of the language. What you don't know is what to say first, what to ask, and how to get through the awkward moment." -->
     <string name="a_job_interview_a_call_to_your_landlord_dinner_with_your_par_3ed825">"求职面试、给房东打电话、和伴侣父母吃饭。语言你会得差不多，难的是第一句说什么、该问什么、尴尬的时候怎么接下去。"</string>
@@ -99,6 +100,7 @@
     <string name="a_standard_copy_goes_to_your_icloud_the_original_stays_on_th_e68c3f">"标准画质的副本会传到你的 iCloud，原始视频留在这台设备上。"</string>
     <!-- 'A stock voice that plays "you" — your cloned voice is never used, and nobody\'s talks with your persona are ever shown to you or anyone else.' -->
     <string name="a_stock_voice_that_plays_you_your_cloned_voice_is_never_used_920f41">"扮演「你」的默认声音。绝不会用你的克隆声音，别人和你的角色聊过什么，你和其他人也都看不到。"</string>
+    <string name="a_strong_start">"很棒的开始"</string>
     <string name="a_strong_week">"很棒的一周"</string>
     <!-- 'A talk block rings as your daily call when the call is on (Me › Call). Up to 4 call times.' -->
     <string name="a_talk_block_rings_as_your_daily_call_when_the_call_is_on_me_815e72">"开启每日来电时，对话时段会在那个时间以来电响起（我的 › 电话）。来电时间最多 4 个。"</string>
@@ -825,6 +827,7 @@
     <!-- 'Finished books. They keep their progress — unarchive anytime.' -->
     <string name="finished_books_they_keep_their_progress_unarchive_anytime">"读完的复习本。进度都会保留，随时可以取消封存。"</string>
     <string name="finishing_puts_you_in_line_it_doesn_t_seat_you">"达成后会排进队伍，不是马上有席位。"</string>
+    <string name="first_test_done">"完成第一次测验"</string>
     <string name="first_charge">"首次扣款 %s"</string>
     <string name="fix_the_sentence">"改正句子"</string>
     <string name="fluency">"流利度"</string>

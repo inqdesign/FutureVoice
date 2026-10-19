@@ -43,6 +43,7 @@
     <string name="a_friend_joined_with_your_code_b4caa9">"Un amigo se registró con tu código."</string>
     <string name="a_friend_joined_with_your_code_lld_minutes_are_yours">"Un amigo se registró con tu código. Te llegaron %d minutos."</string>
     <string name="a_front_desk_clerk">"el recepcionista"</string>
+    <string name="a_good_start">"Un buen comienzo"</string>
     <string name="a_good_week">"Una buena semana"</string>
     <!-- "A job interview, a call to your landlord, dinner with your partner's parents. You know enough of the language. What you don't know is what to say first, what to ask, and how to get through the awkward moment." -->
     <string name="a_job_interview_a_call_to_your_landlord_dinner_with_your_par_3ed825">"Una entrevista de trabajo, una llamada al casero, una cena con los padres de tu pareja. Sabes bastante del idioma. Lo que no sabes es qué decir primero, qué preguntar y cómo salir del momento incómodo."</string>
@@ -99,6 +100,7 @@
     <string name="a_standard_copy_goes_to_your_icloud_the_original_stays_on_th_e68c3f">"Una copia en calidad estándar va a tu iCloud. El original se queda en este dispositivo."</string>
     <!-- 'A stock voice that plays "you" — your cloned voice is never used, and nobody\'s talks with your persona are ever shown to you or anyone else.' -->
     <string name="a_stock_voice_that_plays_you_your_cloned_voice_is_never_used_920f41">"Una voz estándar que interpreta a \"ti\" — tu voz clonada no se usa nunca, y las llamadas que alguien tenga con tu personaje no se le muestran a nadie, ni a ti."</string>
+    <string name="a_strong_start">"Un gran comienzo"</string>
     <string name="a_strong_week">"Una gran semana"</string>
     <!-- 'A talk block rings as your daily call when the call is on (Me › Call). Up to 4 call times.' -->
     <string name="a_talk_block_rings_as_your_daily_call_when_the_call_is_on_me_815e72">"Un bloque de Hablar suena como tu llamada diaria cuando la llamada está activada (Mi perfil › Llamada). Hasta 4 horarios de llamada."</string>
@@ -822,6 +824,7 @@
     <!-- 'Finished books. They keep their progress — unarchive anytime.' -->
     <string name="finished_books_they_keep_their_progress_unarchive_anytime">"Cuadernos terminados. Conservan tu progreso — puedes recuperarlos cuando quieras."</string>
     <string name="finishing_puts_you_in_line_it_doesn_t_seat_you">"Completarlo te pone en la cola — no te da la plaza."</string>
+    <string name="first_test_done">"Primer test terminado"</string>
     <string name="first_charge">"Primer cargo %s"</string>
     <string name="fix_the_sentence">"Corrige la frase"</string>
     <string name="fluency">"Fluidez"</string>

@@ -246,6 +246,10 @@ fun WeekRecapDeck(
     var routineIsOwn by remember { mutableStateOf(false) }
     var showingPaywall by remember { mutableStateOf(false) }
     var jumpToLevel by remember { mutableStateOf(false) }
+    /** The deck's start-up runs once per opening (iOS `trialStarted`): a
+     *  second run would count a second offer and reset the thin flag under
+     *  the learner. */
+    var trialStarted by remember { mutableStateOf(false) }
     /** The trial's test is done, or could not be made — either way the level
      *  and the routine are the learner's to see. */
     val trialTestCleared = trialTest?.isFinished == true || trialState?.testThin == true
@@ -281,7 +285,7 @@ fun WeekRecapDeck(
      *  earlier sitting opens at the cover like any deck. */
     suspend fun reloadTrialTest(jump: Boolean) {
         val wasCleared = trialTest?.isFinished == true || trialState?.testThin == true
-        val saved = TrialReportStore.load(context)
+        val saved = TrialReportStore.load(context, trialState?.targetLanguage ?: language)
         if (saved != null) trialState = trialState?.copy(testThin = saved.testThin, testId = saved.testId)
         saved?.testId?.let { id ->
             WeeklyTestStore.shared(context).load(language).firstOrNull { it.id == id }?.let { trialTest = it }
@@ -290,21 +294,43 @@ fun WeekRecapDeck(
         val cleared = trialTest?.isFinished == true || trialState?.testThin == true
         if (jump && !wasCleared && cleared) jumpToLevel = true
     }
+    /** Re-read before writing: the test screen saves its id into the same file. */
     fun updateTrial(change: (TrialReport) -> TrialReport) {
+        val reportLanguage = trialState?.targetLanguage ?: return
         trialScope.launch {
-            TrialReportStore.update(context, trialState, change)?.let { trialState = it }
+            val latest = TrialReportStore.update(context, reportLanguage, change)
+            if (latest != null) trialState = latest
+            else trialState?.let { copy ->
+                val next = change(copy)
+                TrialReportStore.save(context, next)
+                trialState = next
+            }
         }
     }
 
     LaunchedEffect(recap.end) {
         if (isTrial) {
+            if (trialStarted) return@LaunchedEffect
+            trialStarted = true
             TrialReportStore.countOffer(context)
             Analytics.capture("trial_report_opened", mapOf("talk_min" to recap.talkMinutes, "cards" to cards.size))
+            // A test that could not be made last time (offline, a failed
+            // write) is tried again: the minutes can't grow, but the network
+            // can come back.
+            trialState?.takeIf { it.testThin && it.testId == null }?.let { thin ->
+                // Written before the reload below reads the file back.
+                trialState = TrialReportStore.update(context, thin.targetLanguage) { it.copy(testThin = false) }
+                    ?: thin.copy(testThin = false).also { TrialReportStore.save(context, it) }
+            }
             reloadTrialTest(jump = false)
-            // The routine: the one already chosen in setup, else the one the
-            // learner's purposes suggest.
+            // The routine: the one the learner already built (onboarding's
+            // routine builder, or setup's suggested week before it), else the
+            // one their purposes suggest. A routine they built is never
+            // replaced from here.
             val plan = StudyPlanStore.current(context)
-            if (LearningPurposeStore.routineApplied(context) && plan.blocks.isNotEmpty()) {
+            val builtOwn = LearningPurposeStore.routineApplied(context) ||
+                OnboardingFlags.seen(context, OnboardingFlags.DAILY_CALL)
+            if (builtOwn && plan.blocks.isNotEmpty()) {
                 routine = plan.blocks.map { RoutineRecipe.Line(it, 0) }
                 routineIsOwn = true
             } else {
@@ -330,7 +356,8 @@ fun WeekRecapDeck(
     LaunchedEffect(recap.end, coachAttempt) {
         if (!writeCoach || current.coach != null || !current.hasActivity) return@LaunchedEffect
         runCatching {
-            WeekRecapCoach.write(context, current, language, level, nativeLanguage(context))
+            WeekRecapCoach.write(context, current, language, level, nativeLanguage(context),
+                firstTalks = isTrial)
         }.onSuccess { coach ->
             current = current.copy(coach = coach)
             if (isTrial) {
@@ -345,8 +372,12 @@ fun WeekRecapDeck(
         }
     }
     // One row per viewing, never one per swipe.
+    // The test and the plans are Dialogs over the deck, so the deck stays
+    // composed under them: covered is not closed.
     androidx.compose.runtime.DisposableEffect(Unit) {
+        if (isTrial) TrialReportStore.isShowing = true
         onDispose {
+            if (isTrial) TrialReportStore.isShowing = false
             Analytics.capture(if (isTrial) "trial_report_closed" else "week_recap_closed",
                 mapOf("reached" to ((revealed.maxOrNull() ?: 0) + 1), "cards" to cards.size))
         }
@@ -495,7 +526,9 @@ private fun TopBar(recap: WeekRecap, count: Int, page: Int, isTrial: Boolean, on
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (isTrial) {
-                Text(stringResource(R.string.trial_your_first_minutes, AccountStatus.FREE_GRANT_SECONDS / 60),
+                Text(stringResource(R.string.trial_your_first_minutes,
+                    // Invite minutes can make the free time longer than the grant.
+                    maxOf(AccountStatus.FREE_GRANT_SECONDS / 60, recap.talkMinutes)),
                     style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f))
             } else {
@@ -1190,7 +1223,7 @@ fun WeekRecapHost(ready: Boolean, blocked: Boolean, level: CefrLevel, onShowing:
             return@LaunchedEffect
         }
         if (!wasAsked && (!recap.hasActivity || WeekRecapStore.wasShown(context, recap))) return@LaunchedEffect
-        if (showing != null || stillBlocked) return@LaunchedEffect
+        if (showing != null || stillBlocked || TrialReportStore.isShowing) return@LaunchedEffect
         showing = recap
     }
     LaunchedEffect(debug) {
@@ -1216,13 +1249,18 @@ fun WeekRecapHost(ready: Boolean, blocked: Boolean, level: CefrLevel, onShowing:
  */
 @Composable
 fun TrialReportHost(ready: Boolean, inCall: Boolean, blocked: Boolean, level: CefrLevel,
-                    onMeasuredLevel: (String) -> Unit) {
+                    onMeasuredLevel: (String) -> Unit, onShowing: (Boolean) -> Unit = {}) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val pending by com.roro.futurevoice.data.TrialReportInbox.pending.collectAsStateWithLifecycle()
     var showing by remember { mutableStateOf<TrialReport?>(null) }
     var resumes by remember { mutableStateOf(0) }
     val stillBlocked by androidx.compose.runtime.rememberUpdatedState(blocked)
+    /** Nothing else is up — another sheet, a live call (a daily call or one
+     *  launched from anywhere), or this deck already on screen (iOS
+     *  `quietForTrialReport`). */
+    fun quiet() = !stillBlocked && !com.roro.futurevoice.data.DailyCallScheduler.isLiveCall &&
+        !TrialReportStore.isShowing
     LaunchedEffect(lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) { resumes++ }
     }
@@ -1236,14 +1274,18 @@ fun TrialReportHost(ready: Boolean, inCall: Boolean, blocked: Boolean, level: Ce
         if (!ready || showing != null || TrialReportStore.finished(context) ||
             TrialReportStore.offers(context) >= TrialReportStore.MAX_OFFERS) return@LaunchedEffect
         delay(1_500)
-        val account = runCatching {
-            AccountStatus.load(com.roro.futurevoice.data.AuthRepository())
-                .also { com.roro.futurevoice.data.BillingGate.remember(it) }
-        }.getOrNull() ?: return@LaunchedEffect
+        // Cheapest first: a paying account (cached) or a pool not yet spent
+        // never reaches the network; only a likely yes is asked fresh, since
+        // a purchase a minute ago must not see the report.
+        val gate = com.roro.futurevoice.data.BillingGate
+        val cached = gate.snapshot() ?: return@LaunchedEffect
+        if (!TrialReportStore.shouldOffer(context, cached)) return@LaunchedEffect
+        val account = gate.snapshot(force = true) ?: return@LaunchedEffect
         if (!TrialReportStore.shouldOffer(context, account)) return@LaunchedEffect
-        if (showing != null || stillBlocked) return@LaunchedEffect
+        if (showing != null || !quiet()) return@LaunchedEffect
         showing = TrialReportStore.current(context, LanguageScope.active(context))
     }
+    LaunchedEffect(showing != null) { onShowing(showing != null) }
     showing?.let {
         TrialReportSheet(it, level, onMeasuredLevel) { showing = null }
     }

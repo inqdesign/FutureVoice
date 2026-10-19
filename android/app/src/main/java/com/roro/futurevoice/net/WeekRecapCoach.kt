@@ -35,11 +35,12 @@ import kotlinx.serialization.Serializable
 object WeekRecapCoach {
 
     suspend fun write(context: Context, recap: WeekRecap, targetLanguage: String,
-                      level: CefrLevel, nativeLanguage: String): WeekRecap.Coach {
+                      level: CefrLevel, nativeLanguage: String,
+                      firstTalks: Boolean = false): WeekRecap.Coach {
         val sessions = WeekRecapBuilder.sessionsAcrossLanguages(context)
         val evidence = Evidence.gather(recap, sessions, targetLanguage, level)
         var user = evidence.prompt
-        WeekRecapStore.recap(context, recap.start)?.coach?.let { previous ->
+        if (!firstTalks) WeekRecapStore.recap(context, recap.start)?.coach?.let { previous ->
             user += "\n\n# LAST WEEK'S COACHING (don't repeat it; if a pattern is STILL there, say so with this week's examples)\n"
             user += previous.grammar.joinToString("\n") { "- grammar: ${it.rule}" }
             user += "\n" + previous.upgrades.joinToString("\n") { "- upgrade: ${it.instead} → ${it.better}" }
@@ -48,7 +49,11 @@ object WeekRecapCoach {
         // arrays on the app's longest evidence prompt can sit silent past the
         // buffered client's 40 s (iOS gives this call 60 s).
         val response = GeminiClient(AuthRepository()).sendJsonStreamAccumulating(
-            system = systemPrompt(targetLanguage, nativeLanguage, evidence.level),
+            // The trial report reads the free minutes, not a week; the
+            // weekly prompt is unchanged when this is off.
+            system = systemPrompt(targetLanguage, nativeLanguage, evidence.level).let {
+                if (firstTalks) it + "\n\n" + FIRST_TALKS_NOTE else it
+            },
             messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER, user)),
             serializer = Payload.serializer(),
             // gen-3 thinks out of the same ceiling — a truncation loses it all.
@@ -60,6 +65,15 @@ object WeekRecapCoach {
         if (coach.headline.isEmpty()) throw IllegalStateException("empty coach")
         return coach
     }
+
+    /** Appended for the trial report ([com.roro.futurevoice.data.TrialReport],
+     *  iOS `firstTalksNote`). */
+    val FIRST_TALKS_NOTE = "THIS IS NOT A WEEK. The evidence is the learner's FIRST talks with the " +
+        "app: their free minutes, which have just run out. Wherever the " +
+        "instructions above say \"week\", read \"these first talks\". Never write " +
+        "\"this week\", \"last week\" or \"next week\" (or their translation) in any " +
+        "field. The headline names what these first talks showed; the plan is " +
+        "2-3 things for their next talks."
 
     fun systemPrompt(targetLanguage: String, nativeLanguage: String, level: String): String {
         val targetName = LanguageCatalog.englishName(targetLanguage)

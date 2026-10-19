@@ -639,9 +639,10 @@ fun RootScreen() {
     // over a call or another sheet.
     val updatePending by com.roro.futurevoice.data.AppUpdateService.pending.collectAsStateWithLifecycle()
     var weekRecapUp by remember { mutableStateOf(false) }
+    var trialReportUp by remember { mutableStateOf(false) }
     WeekRecapHost(
         ready = state.setupComplete && state.voiceId != null && tabsArrived,
-        blocked = inCall || paywalled || showIntroPreview || state.levelUp != null ||
+        blocked = inCall || trialReportUp || paywalled || showIntroPreview || state.levelUp != null ||
             referralJoin != null || welcomeMinutes != null || updatePending != null || guideUp ||
             showAgeCheck || showWhatsNew,
         level = state.level,
@@ -658,6 +659,7 @@ fun RootScreen() {
             showAgeCheck || showWhatsNew,
         level = state.level,
         onMeasuredLevel = { app.applyMeasuredLevel(it, announce = false) },
+        onShowing = { trialReportUp = it },
     )
 
     // A PARKED voice is rebuilt at the metered tap, on top of whatever is

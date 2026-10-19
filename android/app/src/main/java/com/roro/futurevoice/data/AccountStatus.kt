@@ -76,6 +76,13 @@ data class AccountStatus(
      *  (`talk_allowance().bonus`, iOS `bonusSeconds`) — spent before the pool.
      *  Read so a price can say how much talk time is left in all. */
     val bonusSeconds: Int = 0,
+    /** Both the credit row and the subscription row were READ, not assumed
+     *  (iOS `ownershipKnown`). Every query below swallows its failure, so a
+     *  failed fetch leaves the defaults — "inactive, 0 s" — which looks
+     *  exactly like a free account whose pool is spent. Anything that tells a
+     *  learner they have never paid ([TrialReportStore.shouldOffer]) must ask
+     *  this first. */
+    val ownershipKnown: Boolean = false,
 ) {
     val isEntitled: Boolean
         get() = subscriptionStatus in setOf("trialing", "active", "grace")
@@ -237,18 +244,19 @@ data class AccountStatus(
             val userId = auth.userId ?: return@withContext AccountStatus()
             var out = AccountStatus()
 
-            table<CreditRow>(auth, "user_credits", "balance,unlimited", userId)
-                ?.firstOrNull()?.let {
-                    out = out.copy(secondsBalance = it.balance, unlimited = it.unlimited)
-                }
+            val creditRows = table<CreditRow>(auth, "user_credits", "balance,unlimited", userId)
+            creditRows?.firstOrNull()?.let {
+                out = out.copy(secondsBalance = it.balance, unlimited = it.unlimited)
+            }
             // Both columns have existed since the original subscriptions
             // migration, so naming them here can't fail the whole query.
-            table<SubRow>(auth, "user_subscriptions",
+            val subRows = table<SubRow>(auth, "user_subscriptions",
                 "plan_id,status,cancel_at_period_end", userId)
-                ?.firstOrNull()?.let {
-                    out = out.copy(planId = it.plan_id, subscriptionStatus = it.status,
-                        cancelAtPeriodEnd = it.cancel_at_period_end == true)
-                }
+            out = out.copy(ownershipKnown = creditRows?.isEmpty() == false && subRows != null)
+            subRows?.firstOrNull()?.let {
+                out = out.copy(planId = it.plan_id, subscriptionStatus = it.status,
+                    cancelAtPeriodEnd = it.cancel_at_period_end == true)
+            }
             // Its own query: a select naming a column the database has not
             // got fails everything in it, and this one is only a reminder.
             table<TrialRow>(auth, "user_subscriptions", "trial_ends_at", userId)

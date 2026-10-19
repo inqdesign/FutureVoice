@@ -43,6 +43,7 @@
     <string name="a_friend_joined_with_your_code_b4caa9">"친구가 내 코드로 가입했어요."</string>
     <string name="a_friend_joined_with_your_code_lld_minutes_are_yours">"친구가 내 코드로 가입했어요. %d분이 들어왔어요."</string>
     <string name="a_front_desk_clerk">"프런트 직원"</string>
+    <string name="a_good_start">"좋은 시작이에요"</string>
     <string name="a_good_week">"잘한 한 주예요"</string>
     <!-- "A job interview, a call to your landlord, dinner with your partner's parents. You know enough of the language. What you don't know is what to say first, what to ask, and how to get through the awkward moment." -->
     <string name="a_job_interview_a_call_to_your_landlord_dinner_with_your_par_3ed825">"면접, 집주인과의 통화, 애인 부모님과의 저녁 식사. 말은 어느 정도 할 줄 알아도, 처음에 무슨 말을 꺼낼지, 뭘 물어볼지, 어색한 순간을 어떻게 넘길지는 잘 떠오르지 않죠."</string>
@@ -99,6 +100,7 @@
     <string name="a_standard_copy_goes_to_your_icloud_the_original_stays_on_th_e68c3f">"보통 화질 사본이 내 iCloud에 올라가요. 원본은 이 기기에 남아요."</string>
     <!-- 'A stock voice that plays "you" — your cloned voice is never used, and nobody\'s talks with your persona are ever shown to you or anyone else.' -->
     <string name="a_stock_voice_that_plays_you_your_cloned_voice_is_never_used_920f41">"\"나\"를 연기하는 기본 목소리예요 — 내 클론 목소리는 절대 쓰이지 않고, 누가 내 페르소나와 나눈 대화도 나를 포함해 누구에게도 보이지 않아요."</string>
+    <string name="a_strong_start">"훌륭한 시작이에요"</string>
     <string name="a_strong_week">"훌륭한 한 주예요"</string>
     <!-- 'A talk block rings as your daily call when the call is on (Me › Call). Up to 4 call times.' -->
     <string name="a_talk_block_rings_as_your_daily_call_when_the_call_is_on_me_815e72">"매일 전화가 켜져 있으면 대화 칸은 그 시각에 전화로 울려요(나 › 전화). 전화 시각은 4개까지예요."</string>
@@ -825,6 +827,7 @@
     <!-- 'Finished books. They keep their progress — unarchive anytime.' -->
     <string name="finished_books_they_keep_their_progress_unarchive_anytime">"끝낸 책이에요. 진행 상황은 그대로 남고, 언제든 다시 꺼낼 수 있어요."</string>
     <string name="finishing_puts_you_in_line_it_doesn_t_seat_you">"다 채우면 대기 줄에 서요. 바로 앉는 건 아니에요."</string>
+    <string name="first_test_done">"첫 테스트를 마쳤어요"</string>
     <string name="first_charge">"첫 결제 %s"</string>
     <string name="fix_the_sentence">"문장 고치기"</string>
     <string name="fluency">"유창성"</string>
