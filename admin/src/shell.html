@@ -730,7 +730,7 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   <p class="sub">한 줄이 한 사람, 한 칸이 하루예요. 진할수록 그날 오래 말한 거고, 빈 칸은 조용한 날이에요.
   하루는 <b>머리말에서 고른 시간대</b>의 하루예요. 줄은 <b>가입한 날부터</b> 칠해져요. 첫 칸 오른쪽이 비어 있으면 첫날 이후로 돌아오지 않은 거예요.
   말은 안 했지만 앱은 쓴 날은 <b>가장 옅은 칸에 점</b>이 찍혀요 — Watch 장면이나 복습만 한 날이에요.
-  테두리 칸은 <b>가입한 날</b>이에요. 묶음마다 <b>최근에 쓴 사람이 맨 위</b>예요. 줄은 <b>구독 중 · 체험 중 · 체험 취소했지만 계속 사용 · 그 외</b> 네 묶음이고,
+  테두리 칸은 <b>가입한 날</b>이에요. 묶음마다 <b>최근에 쓴 사람이 맨 위</b>예요. 줄은 <b>구독 중 · 안드로이드 테스터 · 체험 중 · 체험 취소했지만 계속 사용 · 그 외</b> 다섯 묶음이고,
   <b>구독 중인 줄은 초록</b>(해지 예정도 기간이 끝날 때까진 구독 중), <b>체험 중에 자동갱신을 끄고도 끈 날 이후에
   다시 온 사람은 금색</b>이에요. 금색 밑줄 칸이 자동갱신을 끈 날이라, 그 오른쪽에 불이 켜져 있으면 끄고도 온 거예요.
   이름 아래는 쓰는 언어 → 배우는 언어와 보이스 클론 이름,
@@ -1977,12 +1977,20 @@ function renderHeatmap(users){
   const byRecent = (a,b) => (lastDay(b) - lastDay(a))
     || signupDay(b).localeCompare(signupDay(a));
   const payRows = rows.filter(isSubscriber).sort(byRecent);
-  const trialRows = rows.filter(u => isTrialing(u) && !lapsing(u)).sort(byRecent);
-  const lapseRows = rows.filter(lapsing).sort(byRecent);
-  const restRows = rows.filter(u => !isSubscriber(u) && !isTrialing(u)).sort(byRecent);
+  // Android testers (2026-10-19) sit right under the subscribers, as their
+  // own group: they're on comp codes, so otherwise they scatter into 그 외
+  // and the question asked of them — "is the Android build being used" —
+  // gets lost among the people who never came back. A tester who actually
+  // pays stays with the subscribers.
+  const androidTester = u => u.tester === 'android' && !isSubscriber(u);
+  const testerRows = rows.filter(androidTester).sort(byRecent);
+  const trialRows = rows.filter(u => !androidTester(u) && isTrialing(u) && !lapsing(u)).sort(byRecent);
+  const lapseRows = rows.filter(u => !androidTester(u) && lapsing(u)).sort(byRecent);
+  const restRows = rows.filter(u => !androidTester(u) && !isSubscriber(u) && !isTrialing(u)).sort(byRecent);
   const endingSoon = lapseRows.filter(u => ['오늘 끝남','내일 끝남'].includes(trialEndLabel(u))).length;
   const groups = [
     {ko:'구독 중', note:`${payRows.length}명 · 돈이 들어오고 있는 사람`, rows:payRows},
+    {ko:'안드로이드 테스터', note:`${testerRows.length}명 · 테스터 코드를 받은 사람`, rows:testerRows},
     {ko:'체험 중', note:`${trialRows.length}명 · 체험이 끝나기 전에 돌아오는지`, rows:trialRows},
     {ko:'체험 취소 · 계속 사용', note:`${lapseRows.length}명 · 자동갱신을 끈 날 이후에도 다시 온 사람`
         + (endingSoon ? ` · 체험이 오늘·내일 끝나는 사람 ${endingSoon}명` : ''), rows:lapseRows},
