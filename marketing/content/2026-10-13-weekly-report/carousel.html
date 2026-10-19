@@ -1,0 +1,404 @@
+<title>한 주가 끝나면, 내 한 주를 정리해 줘요</title>
+<style>
+/* the wordmark face: Pixelify Sans, as the app's welcome page draws "nawana" (WelcomeView.swift:183).
+   Sources in order: beside this page (the preview), then the repo's web/ (record.mjs serves the repo root). */
+@font-face{font-family:"Pixelify Sans";font-display:block;
+  src:url("PixelifySans.woff2") format("woff2"),url("../../../web/PixelifySans.woff2") format("woff2"),url("/web/PixelifySans.woff2") format("woff2")}
+
+/* Layout: one 1080×1350 post at a time; fixed text block on top, a window onto the real app below.
+   Inside the phone everything is authored in iOS points (402×874) and scaled ×1.5. Light only, by choice. */
+:root{
+  color-scheme:light;
+  --page:#E9ECF1; --card:#F7F8FA; --grid:rgba(10,40,90,.045);
+  --ink:#0D1117; --sub:#5A6170; --faint:#9AA1AD; --line:#DCE0E7;
+  --blue:#0A5CF5; --ios-blue:#007AFF;
+  /* iOS system values sampled from the app's own screenshots */
+  --sys-bg:#FFFFFF; --sys-grouped:#F2F2F7; --sys-fill:#EFEFF4; --sys-gray:#8E8E93; --sys-gray3:#C7C7CC;
+  --me-bubble:#D3E2FD; --fix-bg:#EBF2FE; --btn-tint:#D6E4FB; --sys-red:#FF3B30; --sys-green:#34C759; --sys-orange:#E07B1F;
+  --pixel:"Geist Pixel","Galmuri14","Apple SD Gothic Neo",system-ui,sans-serif;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--sans)}
+.wrap{max-width:1100px;margin:0 auto;padding-inline:16px;padding-block:28px 56px;display:flex;flex-wrap:wrap;gap:28px 40px;align-items:flex-start;justify-content:center}
+.viewer{flex:0 1 540px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.side{flex:1 1 300px;min-width:0;max-width:440px;font-size:14px;line-height:1.6;color:var(--sub)}
+.side h1{font-family:var(--pixel);font-weight:400;font-size:26px;line-height:1.25;color:var(--ink);margin:0 0 10px;text-wrap:balance}
+.side h3{font-size:13px;letter-spacing:.06em;color:var(--ink);margin:22px 0 6px}
+.side ol{padding-left:18px;margin:0}
+.side li{margin-bottom:4px}
+.side .list button{all:unset;cursor:pointer;color:var(--ink)}
+.side .list button[aria-current="true"]{color:var(--blue);font-weight:600}
+.side .list button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.vp{position:relative;width:100%;aspect-ratio:4/5;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(13,17,23,.08),0 18px 50px rgba(13,17,23,.10);background:var(--card);touch-action:pan-y}
+.track{position:absolute;inset:0;display:flex;transition:transform .45s cubic-bezier(.3,.7,.2,1)}
+.slot{flex:0 0 100%;height:100%;position:relative;overflow:hidden}
+.controls{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.dots{display:flex;gap:7px}
+.dots button{width:8px;height:8px;border-radius:50%;border:0;padding:0;background:#C5CBD5;cursor:pointer}
+.dots button[aria-current="true"]{background:var(--blue);width:22px;border-radius:4px}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;height:36px;min-width:36px;padding:0 14px;font:inherit;font-size:13px;cursor:pointer}
+.btn:focus-visible,.dots button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.btn-row{display:flex;gap:6px}
+
+/* ───────── the post, authored at 1080×1350 ───────── */
+.card{position:absolute;left:0;top:0;width:1080px;height:1350px;transform-origin:0 0;transform:scale(var(--s,.5));background:var(--card);overflow:hidden;
+  background-image:linear-gradient(var(--grid) 2px,transparent 2px),linear-gradient(90deg,var(--grid) 2px,transparent 2px);background-size:54px 54px;background-position:-1px -1px}
+.cap{position:absolute;left:84px;right:84px;top:72px;display:flex;justify-content:space-between;align-items:center;font-family:var(--pixel);font-size:28px;color:var(--sub)}
+.cap .series{display:flex;align-items:center;gap:14px}
+.cap .series::before{content:"";width:14px;height:14px;background:var(--blue)}
+.cap .num{color:var(--faint)}
+.wmk{font-family:"Pixelify Sans",var(--pixel)!important;font-weight:400}
+.cap .series.wmk,.swipe b.wmk{font-size:33px}
+.c-outro .url.wmk{font-size:40px}
+.ttl{position:absolute;left:84px;right:84px;top:134px;margin:0;font-family:var(--pixel);font-weight:400;font-size:72px;line-height:88px;letter-spacing:-1px;color:var(--ink)}
+.ttl .en{color:var(--blue)}
+.desc{position:absolute;left:84px;right:96px;top:322px;margin:0;font-size:32px;line-height:47px;color:var(--sub);font-weight:500;letter-spacing:-.3px;word-break:keep-all}
+.desc b{color:var(--ink);font-weight:600}
+/* the window onto the phone: clipped at its top so a phone can pan up under the text */
+.stage{position:absolute;left:0;right:0;top:470px;bottom:0;overflow:hidden;
+  -webkit-mask-image:linear-gradient(transparent,#000 40px);mask-image:linear-gradient(transparent,#000 40px)}
+
+.phonewin{position:absolute;left:50%;top:44px;width:627px;margin-left:-313.5px;transition:transform .9s cubic-bezier(.45,0,.2,1)}
+.phonewin nw-phone{width:627px}
+/* card 07: the Shadow chapter's line opens ShadowDrillView over the book (a full-screen cover, slides up) */
+nw-shadow.sheet{z-index:5;transform:translateY(102%);transition:transform .42s cubic-bezier(.3,.8,.2,1)}
+nw-shadow.sheet.up{transform:none}
+/* ── compare ── */
+.cmp{position:absolute;left:84px;right:84px;top:60px;display:flex;flex-direction:column;gap:30px}
+.cmp .q{font-size:30px;color:var(--sub)}
+.cmp .q b{display:block;color:var(--ink);font-size:38px;line-height:52px;font-weight:600;margin-top:6px}
+.vr{position:relative;background:#fff;border-radius:40px;padding:30px 34px;display:grid;grid-template-columns:174px 1fr;gap:10px 30px;align-items:center;box-shadow:0 1px 2px rgba(0,0,0,.04);transition:box-shadow .3s,opacity .3s,outline-color .3s;outline:4px solid transparent}
+.vr .av{grid-row:1/3;width:174px;height:96px;border-radius:48px;overflow:hidden;background:var(--sys-grouped);display:grid;place-items:center}
+.vr nw-futureself.av{display:block}
+.vr .av svg{width:46px;height:46px;color:#B0B5BF}
+.vr .lab{font-size:31px;font-weight:700;display:flex;justify-content:space-between;align-items:baseline}
+.vr .lab small{font-size:24px;color:var(--faint);font-weight:500}
+.wave{display:flex;align-items:center;gap:6px;height:70px}
+.wave i{flex:1;height:100%;border-radius:4px;background:currentColor;transform:scaleY(calc(var(--h) * .3))}
+.vr.a .wave{color:#C2C6CE}.vr.b .wave{color:var(--blue)}
+.vr.playing .wave i{animation:lv .8s ease-in-out infinite alternate;animation-delay:calc(var(--d) * -1s)}
+.vr.b.win{outline-color:var(--blue)}
+.vr.dimmed{opacity:.5}
+.react{position:absolute;right:28px;bottom:-26px;background:var(--ink);color:#fff;font-size:26px;font-weight:600;padding:12px 22px;border-radius:24px 24px 6px 24px;opacity:0;transform:translateY(8px);transition:opacity .35s,transform .35s}
+.vr.b .react{background:var(--blue)}
+.react.in{opacity:1;transform:none}
+
+/* ── cover / outro ── */
+.c-cover .ttl{top:212px;font-size:110px;line-height:130px;letter-spacing:-2px}
+.wrap:lang(en) .c-cover .ttl{font-size:96px}   /* en line 2 is 20 characters; 96px keeps it on one line (as piece 02 did) */
+.c-cover .desc{top:492px}
+.c-cover nw-futureself{position:absolute;left:84px;top:792px;width:300px;height:166px}
+/* eight chapters: 32px rows, 14px apart, from 650 to ~1110 — clear of the footer at 1250 */
+.chips{position:absolute;left:432px;top:650px;display:flex;flex-direction:column;gap:14px}
+.chip{display:flex;align-items:center;gap:16px;font-size:32px;line-height:44px;font-weight:600;white-space:nowrap;opacity:0;transform:translateX(-20px);transition:opacity .4s,transform .4s}
+.chip.in{opacity:1;transform:none}
+.chip span{font-family:var(--pixel);font-weight:400;font-size:26px;color:var(--blue);width:44px}
+.swipe{position:absolute;left:84px;right:84px;bottom:72px;display:flex;justify-content:space-between;font-size:28px;color:var(--faint)}
+.swipe b{font-family:var(--pixel);font-weight:400;color:var(--blue)}
+.c-outro{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.c-outro nw-futureself{width:300px;height:166px;margin-bottom:60px}
+.c-outro .wm{font-family:var(--pixel);font-size:120px;line-height:1;letter-spacing:2px}
+.c-outro .tg{font-size:44px;line-height:64px;font-weight:600;margin-top:44px}
+.c-outro .free{margin-top:32px;font-size:30px;color:var(--sub)}
+.c-outro .url{position:absolute;bottom:80px;font-family:var(--pixel);font-size:34px;color:var(--blue)}
+
+@media (prefers-reduced-motion:reduce){
+  .track,.chip,.react,.phonewin{transition:none!important}
+  .wave i{animation:none!important}
+}
+
+/* ?solo=N — one card at its real 1080×1350, no viewer chrome: what scripts/marketing/record.mjs records */
+html.solo,html.solo body{margin:0;background:var(--card);overflow:hidden}
+html.solo .wrap{display:block;padding:0;max-width:none}
+html.solo .side,html.solo .controls{display:none}
+html.solo .viewer{display:block}
+html.solo .vp{width:1080px;max-width:none;aspect-ratio:auto;height:1350px;border-radius:0;box-shadow:none}
+html.solo .track{transition:none}
+</style>
+<style>
+/* series 07: "Your week" slides up as a sheet over the Talk tab (card 02), and its last card hands over to the test (card 07) */
+.phonewin nw-weekreport.sheet{z-index:3;transform:translateY(102%);transition:transform .5s cubic-bezier(.32,.72,0,1)}
+.phonewin nw-weekreport.sheet.up{transform:none}
+.phonewin nw-weeklytest{z-index:4;opacity:0}
+.c-cover .chips{top:660px;gap:16px}
+</style>
+<div class="wrap" lang="ko" id="wrap">
+  <div class="viewer">
+    <div class="vp" id="vp" aria-roledescription="carousel" aria-label="한 주가 끝나면, 내 한 주를 정리해 줘요">
+      <div class="track" id="track">
+
+        <div class="slot"><section class="card c-cover" data-k="cover">
+          <header class="cap"><span class="series wmk">nawana</span><span class="num">01 / 08</span></header>
+          <h2 class="ttl">열심히는 했는데<br>뭐가 늘었을까요</h2>
+          <p class="desc"><b>한 주가 끝나면, 내 한 주를 정리해 줘요.</b><br>써먹은 말, 새 표현, 자꾸 틀리는 문법까지요.</p>
+          <nw-futureself mode="speaking" level="voice"></nw-futureself>
+          <div class="chips">
+            <div class="chip"><span>02</span>한 주가 끝나면</div>
+            <div class="chip"><span>03</span>실제로 써먹은 말</div>
+            <div class="chip"><span>04</span>유창한 내가 쓴 새 표현</div>
+            <div class="chip"><span>05</span>자꾸 틀리는 문법</div>
+            <div class="chip"><span>06</span>코치의 한마디</div>
+            <div class="chip"><span>07</span>이어서 이번 주 테스트</div>
+          </div>
+          <div class="swipe"><span>옆으로 넘겨보세요 →</span><b class="wmk">nawana.app</b></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="arrive">
+          <header class="cap"><span class="series wmk">nawana</span><span class="num">02 / 08</span></header>
+          <h2 class="ttl">한 주가 끝나면<br>알아서 올라와요</h2>
+          <p class="desc">주간 테스트가 열릴 때 <b>한 주 돌아보기</b>가 한 번 저절로 올라와요. 지난주 것도 언제든 다시 볼 수 있어요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-home></nw-home><nw-weekreport class="sheet" sample="interview"></nw-weekreport></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="used">
+          <header class="cap"><span class="series wmk">nawana</span><span class="num">03 / 08</span></header>
+          <h2 class="ttl">실제로<br>써먹은 말</h2>
+          <p class="desc">공부한 단어와 표현 중 통화에서 <b>실제로 말한 것</b>만 모아요. 그때 내가 한 문장도 같이 보여 줘요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-weekreport sample="interview"></nw-weekreport></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="fresh">
+          <header class="cap"><span class="series wmk">nawana</span><span class="num">04 / 08</span></header>
+          <h2 class="ttl">유창한 내가 쓴<br>새 표현</h2>
+          <p class="desc">이번 주에 유창한 내가 쓴 표현 중 <b>나는 아직 안 써 본 것</b>들이에요. 표현 목록에 모아 둬요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-weekreport sample="interview"></nw-weekreport></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="grammar">
+          <header class="cap"><span class="series wmk">nawana</span><span class="num">05 / 08</span></header>
+          <h2 class="ttl">자꾸 틀리는<br>문법을 짚어 줘요</h2>
+          <p class="desc">문장은 달라도 <b>틀리는 곳은 같았어요.</b> 내가 한 말로 짚어 주고, 고치는 팁도 하나 줘요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-weekreport sample="interview"></nw-weekreport></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="coach">
+          <header class="cap"><span class="series wmk">nawana</span><span class="num">06 / 08</span></header>
+          <h2 class="ttl">코치의 한마디,<br>이번 주 할 일</h2>
+          <p class="desc">자주 쓰는 말 대신 써 볼 말을 알려 주고, <b>이번 주에 해 볼 세 가지</b>를 정해 줘요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-weekreport sample="interview"></nw-weekreport></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="test">
+          <header class="cap"><span class="series wmk">nawana</span><span class="num">07 / 08</span></header>
+          <h2 class="ttl">마지막 장은<br>이번 주 테스트</h2>
+          <p class="desc">다 보고 나면 바로 테스트를 시작해요. 이번 주 <b>자꾸 틀린 문법</b>도 문제로 나와요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-weekreport sample="interview"></nw-weekreport><nw-weeklytest sample="interview"></nw-weeklytest></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card c-outro" data-k="outro">
+          <nw-futureself mode="speaking" level="voice"></nw-futureself>
+          <div class="wm wmk">nawana</div>
+          <div class="tg">유창한 나에게<br>언어를 배우세요.</div>
+          <div class="free">첫 20분은 무료예요</div>
+          <div class="url wmk">nawana.app</div>
+        </section></div>
+
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn" id="prev" aria-label="이전 장">←</button>
+      <div class="dots" id="dots"></div>
+      <div class="btn-row"><button class="btn" id="replay">처음부터 재생</button><button class="btn" id="next" aria-label="다음 장">→</button></div>
+    </div>
+  </div>
+
+  <aside class="side">
+    <h1>한 주가 끝나면, 내 한 주를 정리해 줘요</h1>
+    <p>시리즈 07 · 한 주 돌아보기. 글자 자리는 고정, 아래 화면만 움직이는 8장이에요. 폰 화면은 UI 키트(<b>web/kit/nawana-ui.js</b>)의 <code>nw-weekreport sample="interview"</code>와 <code>nw-weeklytest sample="interview"</code>예요. <code>?lang=en</code>이면 영어판이에요.</p>
+    <h3>장 목록</h3>
+    <ol class="list" id="list">
+      <li><button data-go="0">커버 · 열심히는 했는데 뭐가 늘었을까요</button></li>
+      <li><button data-go="1">02 · 한 주가 끝나면 알아서 올라와요</button></li>
+      <li><button data-go="2">03 · 실제로 써먹은 말</button></li>
+      <li><button data-go="3">04 · 유창한 내가 쓴 새 표현</button></li>
+      <li><button data-go="4">05 · 자꾸 틀리는 문법을 짚어 줘요</button></li>
+      <li><button data-go="5">06 · 코치의 한마디, 이번 주 할 일</button></li>
+      <li><button data-go="6">07 · 마지막 장은 이번 주 테스트</button></li>
+      <li><button data-go="7">마지막 장 · nawana.app</button></li>
+    </ol>
+  </aside>
+</div>
+
+<script type="module">
+const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const sleep = ms => new Promise(r => setTimeout(r, RM ? 0 : ms));
+const params = new URLSearchParams(location.search);
+
+/* ?lang=en — the English text block (copy.md, written separately, not translated) */
+const EN = {
+  cover: { ttl: "You put in the work.<br>What got better?", desc: "<b>When the week ends, you get a recap of it.</b><br>What you used, new phrases, the grammar you keep missing.",
+    chips: ["When the week ends", "What you actually used", "New phrases from the fluent you", "Grammar you keep missing", "Notes from your coach", "Then this week's test"], swipe: "Swipe →" },
+  arrive: { ttl: "When the week ends,<br>it's waiting", desc: "When your weekly test opens, <b>Your week</b> pops up once on its own. Past weeks are there to open anytime." },
+  used: { ttl: "What you<br>actually used", desc: "Of the words and phrases you studied, just the ones you <b>actually said on a call</b>, with the sentence you said." },
+  fresh: { ttl: "New phrases<br>from the fluent you", desc: "Phrases the fluent you used this week that <b>you haven't said yet</b>, saved to your expressions list." },
+  grammar: { ttl: "The grammar you<br>keep getting wrong", desc: "Different sentences, <b>the same mistake</b>. It shows you where, in your own words, with one tip to fix it." },
+  coach: { ttl: "Coach's notes and<br>this week's plan", desc: "It suggests a better word for one you use a lot, and <b>three things to try this week</b>." },
+  test: { ttl: "Last card:<br>this week's test", desc: "When you're done, start the test right away. <b>The grammar you kept missing</b> shows up as a question." },
+  outro: { tg: "Learn a language<br>from your fluent self.", free: "Your first 20 minutes are free" },
+};
+if (params.get("lang") === "en") {
+  $("#wrap").lang = "en"; document.title = "Your week";
+  for (const card of $$(".card")) {
+    const k = card.dataset.k, e = EN[k];
+    if (e?.ttl) $(".ttl", card).innerHTML = e.ttl;
+    if (e?.desc) $(".desc", card).innerHTML = e.desc;
+  }
+  const cv = $('[data-k="cover"]');
+  $$(".chip", cv).forEach((ch, i) => ch.lastChild.textContent = EN.cover.chips[i]);
+  $(".swipe span", cv).textContent = EN.cover.swipe;
+  const ou = $('[data-k="outro"]'); $(".tg", ou).innerHTML = EN.outro.tg; $(".free", ou).textContent = EN.outro.free;
+}
+
+await document.fonts.load('28px "Pixelify Sans"').catch(() => {});
+await import("/web/kit/nawana-ui.js");   // after the lang switch: the kit reads lang once, when a screen is built
+
+const vp = $("#vp");
+const setScale = () => $$(".card").forEach(c => c.style.setProperty("--s", vp.clientWidth / 1080));
+new ResizeObserver(setScale).observe(vp); setScale();
+
+/* the camera: pan the phone inside the card's window (px; 1pt ≈ 1.46 px, no pan shows ~0–560 pt) */
+const pan = (c, y, instant, ms) => {
+  const w = $(".phonewin", c);
+  if (instant) { w.style.transition = "none"; w.style.transform = y ? `translateY(${-y}px)` : "none"; void w.offsetWidth; w.style.transition = ""; return; }
+  w.style.transition = ms ? `transform ${ms}ms cubic-bezier(.45,0,.2,1)` : "";
+  w.style.transform = y ? `translateY(${-y}px)` : "none";
+};
+const PAN = { deck: 120, fresh: 150, freshEnd: 250, coach: 170, start: 400, test: 330, verdict: 410 };
+
+/* the deck: put a page in place with no slide (the state a scene starts from) */
+function jump(s, name) {
+  const cards = s.$$(".card"), ins = s.$$(".card .in");
+  [...cards, ...ins].forEach(e => e.style.transition = "none");
+  s.go(s._pages.indexOf(name));
+  void s.$(".stage").offsetWidth;
+  [...cards, ...ins].forEach(e => e.style.transition = "");
+}
+const lightDots = async (s, per = 150) => {
+  const dots = s.$$('.card[data-p="cover"] .dots i'), on = s.week.activeDays;
+  dots.forEach(d => d.classList.remove("on"));
+  for (let k = 0; k < 7; k++) { await s.sleep(per); if (on[k]) dots[k].classList.add("on"); }
+};
+
+const PLAY = {
+  async cover(c, alive) {
+    const chips = $$(".chip", c); chips.forEach(x => x.classList.remove("in"));
+    await sleep(400);
+    for (const ch of chips) { if (!alive()) return; ch.classList.add("in"); await sleep(260); }
+    await sleep(3600);
+  },
+  /* 02 — the Talk tab; the week's deck slides up by itself, the days light up, the summary holds; it goes back down */
+  async arrive(c) {
+    const rep = $("nw-weekreport", c); pan(c, PAN.deck, true);
+    rep.classList.remove("up");
+    await rep.run(async s => {
+      s.$$('.card[data-p="cover"] .dots i').forEach(d => d.classList.remove("on"));
+      await s.sleep(1100);
+      rep.classList.add("up"); await s.sleep(650);
+      await lightDots(s, 160);
+      await s.sleep(4600);
+      rep.classList.remove("up"); await s.sleep(700);
+    });
+  },
+  /* 03 — the cover → Next → the talks → Next → used what you practiced (compelling, prioritize, each in my line) */
+  async used(c) {
+    const rep = $("nw-weekreport", c); pan(c, PAN.deck, true);
+    await rep.run(async s => {
+      await s.sleep(1500);
+      await s.next(); await s.sleep(1900);
+      await s.next(); await s.sleep(5200);
+    });
+  },
+  /* 04 — practice → Next → new from your fluent self (three phrases, each in its line) */
+  async fresh(c) {
+    const rep = $("nw-weekreport", c); pan(c, PAN.fresh, true);
+    await rep.run(async s => {
+      jump(s, "review"); await s.sleep(1500);
+      await s.next(); await s.sleep(2600);
+      pan(c, PAN.freshEnd, false, 1400); await s.sleep(3600);   // down to "표현 목록에 담아뒀어요"
+      pan(c, PAN.fresh, false, 600); await s.sleep(700);
+    });
+  },
+  /* 05 — where you got stuck → Next → grammar that keeps slipping: the rule over my three lines, struck → fixed, the tip */
+  async grammar(c) {
+    const rep = $("nw-weekreport", c); pan(c, PAN.deck, true);
+    await rep.run(async s => {
+      jump(s, "stumbles"); await s.sleep(1500);
+      await s.next(); await s.sleep(6800);
+    });
+  },
+  /* 06 — words to level up (very happy ×4 → thrilled) → Next → from your coach: the read, the quote, the three-step plan */
+  async coach(c) {
+    const rep = $("nw-weekreport", c); pan(c, PAN.coach, true);
+    await rep.run(async s => {
+      jump(s, "words"); await s.sleep(3600);
+      await s.next(); await s.sleep(5600);
+    });
+  },
+  /* 07 — the coach → Next → this week's test: notice offered and turned on → "Start this week's test" → the test,
+     whose grammar question is this week's slip, rebuilt with "told" */
+  async test(c) {
+    const rep = $("nw-weekreport", c), test = $("nw-weeklytest", c);
+    test.stop(); Object.assign(test.style, { transition: "none", opacity: "0", visibility: "hidden", transform: "" });
+    pan(c, PAN.deck, true);
+    await rep.run(async s => {
+      const it = { ...test.items.grammar, n: 1, of: 7 };   // the paper is shuffled: the slip can come first
+      test._outcome = null; test.show(it); test.hold("waiting", it.gaze || [0, 0]);
+      jump(s, "coach"); await s.sleep(1100);
+      await s.next(); await s.sleep(900);
+      await s.remind(); await s.sleep(1300);
+      pan(c, PAN.start, false, 700); await s.sleep(1000);   // "이번 주 테스트 풀기" in view, then pressed
+      await rep.startTest(test); test.mood("waiting");
+      pan(c, PAN.test, false, 600); await s.sleep(1000);
+      for (const w of it.answer.split(" ")) { await test.tapTile(w); await s.sleep(110); }
+      await s.sleep(350);
+      await test.tapBtn(); test.check(null);
+      pan(c, PAN.verdict, false, 600); await s.sleep(3000);
+    });
+  },
+  async outro() { await sleep(6000); },
+};
+
+/* no em dash on a posted image (BRAND): sweep the screens' shadow trees, colon (English) or full stop (Korean) */
+function undash(root) {
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+  for (let n = w.currentNode; n; n = w.nextNode()) {
+    if (n.shadowRoot) undash(n.shadowRoot);
+    if (n.nodeType === 3 && n.data.includes("—")) n.data = n.data.replace(/\s*—\s*(?=([가-힣])?)/g, (_, ko) => ko ? ". " : ": ");
+  }
+}
+setInterval(() => $$(".card").forEach(c => undash(c)), 60);
+
+const track = $("#track"), slots = $$(".slot"), cards = $$(".card"), dots = $("#dots"), list = $$("#list button");
+slots.forEach((_, i) => { const b = document.createElement("button"); b.setAttribute("aria-label", `${i + 1}번 장`); b.onclick = () => go(i); dots.append(b); });
+let idx = 0, gen = 0;
+const SCREENS = "nw-home,nw-weekreport,nw-weeklytest";
+function go(i) {
+  idx = (i + slots.length) % slots.length;
+  track.style.transform = `translateX(${-idx * 100}%)`;
+  $$("button", dots).forEach((b, j) => b.setAttribute("aria-current", j === idx));
+  list.forEach((b, j) => b.setAttribute("aria-current", j === idx));
+  $$(SCREENS).forEach(s => s.stop());
+  run(cards[idx]);
+}
+async function run(card) {
+  const g = ++gen, alive = () => g === gen;
+  for (const n of SCREENS.split(",")) await customElements.whenDefined(n);
+  await sleep(350);
+  do { const t0 = performance.now(); { const d = document.documentElement.dataset; d.loopStarts = (d.loopStarts ? d.loopStarts + "," : "") + (performance.timeOrigin + t0).toFixed(1); } const play = PLAY[card.dataset.k](card, alive); document.documentElement.dataset.scene = card.dataset.k; await play; if (alive()) document.documentElement.dataset.loopMs = Math.round(performance.now() - t0); } while (alive() && !RM);
+}
+$("#prev").onclick = () => go(idx - 1);
+$("#next").onclick = () => go(idx + 1);
+$("#replay").onclick = () => go(idx);
+list.forEach(b => b.onclick = () => go(+b.dataset.go));
+addEventListener("keydown", e => { if (e.key === "ArrowRight") go(idx + 1); if (e.key === "ArrowLeft") go(idx - 1); });
+let x0 = null;
+vp.addEventListener("pointerdown", e => x0 = e.clientX);
+vp.addEventListener("pointerup", e => { if (x0 == null) return; const d = e.clientX - x0; x0 = null; if (Math.abs(d) > 40) go(idx + (d < 0 ? 1 : -1)); });
+const solo = +(params.get("solo") || 0);
+if (solo) document.documentElement.classList.add("solo");
+const m = solo ? [0, solo] : /^#card(\d+)$/.exec(location.hash);
+go(m ? +m[1] - 1 : 0);
+</script>

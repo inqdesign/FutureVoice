@@ -60,3 +60,6 @@ radius, spacing and string comes from the app (its SwiftUI source and its simula
 - Per screen: the poses you matched, and a list of differences that REMAIN (with why).
 - Any change you need in core.js (exact).
 - Paths of your final side-by-side images.
+
+## Render quality (founder 2026-10-14: "모바일에서 너무 별로다")
+record.mjs renders at 2× density by default (`--ss 2`), PNG screencast frames, lanczos down to 1080×1350, x264 High CRF 12 `-tune animation`, BT.709 limited range (yuv420p, not yuvj). Posters are downscaled from 2× too. Never lower these for speed; a soft or 0.4 Mbps source is what Instagram's re-encode turns to mush on phones.

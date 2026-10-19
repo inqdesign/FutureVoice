@@ -1,0 +1,26 @@
+# Review — 2026-10-13-weekly-report (series 07, 한 주 돌아보기) — 2026-10-13
+Verdict: FIX — 3 items
+
+1. [truth] IG ko/en captions + Threads (copy.md and ~/Desktop/nawana-carousel-07-weekly-report/captions.txt) — "지난 글의 테스트 문제가 여기서 나와요" / "which is where the last post's questions come from" / Threads "지난 글의 시험 문제가 여기서 나와요". Only the test's `grammar` and `upgrade` kinds come from this deck's coach (`WeeklyTestEngine`, CLAUDE.md "Two kinds come from the week's REPORT"). Piece 06 showed meaning, gap, translate and listen items, and none of those come from the report (translate comes from correction cards plus profile slips). So the line is false for every question 06 actually showed. → **Copywriter:**
+   - IG ko: "지난 글의 테스트 문제가 여기서 나와요." → "자꾸 틀리는 문법은 이번 주 테스트 문제로도 나와요."
+   - IG en: "The last card opens the week's test, which is where the last post's questions come from." → "The last card opens the week's test, where the slip that keeps coming back turns into a question."
+   - Threads: "마지막 장은 이번 주 테스트예요. 지난 글의 시험 문제가 여기서 나와요." → "마지막 장은 이번 주 테스트예요. 자꾸 틀린 문법이 거기서 문제로도 나와요." (It's still a reply under 06 and still under 500 chars.)
+   - Update both copy.md and captions.txt.
+2. [story/truth] cards 03 + 04 (kit `web/kit/screens/weekreport.js` INTERVIEW) — card 03 shows the learner saying "I want to prioritize **what matters** in the first month." Card 04 then lists "prioritize what matters" as a phrase "아직 내가 안 써 본 것" (the desc and the app's own header both say so). A viewer watching 03 → 04 sees the piece contradict itself. The count is also off: the fresh card reads **5** and the cover reads "새 표현 5개", but only 3 rows are drawn. The app draws up to 4 (`newExpressions = offered.prefix(4)`), so a 5 with 3 rows can't happen. → **mkt-web:** change `used[1]` to `["prioritize", "I'll prioritize learning the team's tools first."]`. That keeps the fresh row and its link to 06's gap item. Set `newCount: 3`. **Designer:** re-render 02 (cover summary line), 03 and 04, plus posters 02–04, then refresh the Desktop export.
+3. [voice] card 02 desc — "지난 주들 것도 언제든 다시 봐요". "지난 주들 것" is not natural written Korean. → **Copywriter + designer:** "주간 테스트가 열릴 때 **한 주 돌아보기**가 한 번 저절로 올라와요. 지난 돌아보기도 언제든 다시 볼 수 있어요." Confirm it still fits in 2 lines, then re-render 02 (already needed for item 2).
+
+## Checked and fine
+- Truth vs HEAD. The deck slides up once when the test opens, and afterwards it lives in the archive (`offerWeekRecap`, `WeekRecapArchiveView`). The card order in `WeekRecapSheet.Card` (cover, talk, used, review, fresh, stumbles, grammar, words, coach, test) matches what's drawn. Used items are carryovers, each with its quote. Stumbles are fixes said ≥2 times (×3 and ×2). The grammar quotes are lines the learner said that week (`Coach.verified` → `said(was)`). Coached-call lines are NOT filtered out of stumbles or coach evidence, so quoting piece 01's call is faithful. The notice is shown only as an offer that gets tapped, and nothing says "알림이 와요". There's no level or CEFR claim, and the streak appears once, on the deck cover. The sample numbers add up: 5/7 days (토 화 수 목 금), a 4-day streak, 12+9+8+13 = 42 min, 42−28 = +14. 06 says "지난 테스트 6/7", which matches piece 06's result. The next week arrives 10월 24일 (토), which fits a Sat–Fri week.
+- Fidelity. Every ko string on the phones is in `Localizable.xcstrings` (spot-checked 9). Coaching is in Korean and material is in English. The test half of 07 has no flame and no gauge: a grammar item, the decoy "tell", 정답 and 계속.
+- Voice. Everything is 해요체, with no 당신, and there's no em dash in copy.md, carousel text or captions (the kit's dashes are swept by `undash`, and the date-range en dash is fine). It uses 입으로/써먹은 rather than "말이 안…". en reads native.
+- Safety. No real names, and the news talk "Why companies hire for soft skills" names no company.
+- Visual/channel. The 8 items are all 1080×1350, and the MP4s are H.264 30 fps at 8.2/9.9/9.1/9.0/9.8/12.7 s, silent. The Desktop files are byte-identical to renders/. Eyebrows run 01–08 / 08. Every title is 2 lines and every desc ≤2 lines, with nothing clipped and no blank first frame. Seams on 02, 03, 04 and 05 return to their first frame. The mosaic stays clipped in its pill. IG ko is 309 chars with 5 hashtags, IG en 595 with 5, and Threads 243 with none, written as a reply under 06.
+
+## Suggestions (non-blocking)
+a. 06 and 07 loop with a hard cut (coach → words, verdict → coach). A 0.3 s fade would soften them.
+b. The 04 practice card lists "walk you through" under 내 것이 된 표현, and the very next card calls it "아직 안 써 본". That's technically true (known ≠ said), but it reads oddly. Swap that chip for an unrelated item, e.g. "on the spot".
+c. The 07 desc "다 보고 나면 바로 테스트를 시작해요" sounds automatic, but it's a button. "다 보고 나면 바로 테스트로 넘어가요." would be more exact.
+d. Wording drifts between 시험 (Threads) and 테스트 (cards, IG). Pick 테스트 to match the app.
+e. captions.txt doesn't say which items go into the Threads reply. Add "Threads: 01–07".
+
+Checked frames: 02.mp4 @0 0.1 1.36 2.72 4.08 5.44 6.81 8.12 · 03.mp4 @0 0.1 1.64 3.29 4.93 6.58 8.22 9.82 · 04.mp4 @0 0.1 1.51 3.02 4.53 6.04 7.56 9.02 · 05.mp4 @0 0.1 1.49 2.99 4.48 5.98 7.47 8.92 · 06.mp4 @0 0.1 1.64 3.28 4.92 6.56 8.19 9.78 · 07.mp4 @0 0.1 2.12 4.24 6.37 8.49 10.61 12.68 · 01.png

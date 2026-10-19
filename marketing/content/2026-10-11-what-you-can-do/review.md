@@ -89,3 +89,33 @@ f. Card 06: the next card pops in hard after ~0.27 s of an empty deck. A 0.15 s 
 g. Card 09: "3일 연속" shows a beat before the dots fill in at the loop start. Harmless, but filling the dots first would make the streak read as earned.
 
 Checked frames (round 4): 05.mp4 @0 0.1 2 4.5 8 11.2 12 13.5 · 06.mp4 @0 0.1 0.5 1.8 1.9 2.0 2.1 2.3 2.5 2.6 11.6 12.0 12.2 12.3 12.4 12.6 13.6, plus a per-frame brightness probe 11.7–12.45 and 1.2–2.2 · 07.mp4 @0 7 9 11 13.7 · 08.mp4 @0 3 6 11.9 · 09.mp4 @0 0.1 1.5 13.85
+
+---
+
+# Review — what-you-can-do v4.1 (core flow, 9 cards) — 2026-10-13
+Verdict: FIX — 6 items
+
+1. [truth] card 05 desc + captions — "생각하는 동안 이렇게 말해 보세요 한 줄이 떠요" / "While you think, a line to try saying appears" states coach mode as the default for everyone. At HEAD it is on only for A1/A2 (`CoachMode.defaultOn`), off from B1, and "Try saying" never draws with it off (`ConversationView.coachMode`). → **Copywriter:** ko desc "코치 모드를 켜면 생각하는 동안 **이렇게 말해 보세요** 한 줄이 떠요. 익히던 단어도 써 보라고 짚어 줘요." / en "Turn on coach mode and a line to **try saying** appears while you think, plus a word you're learning to use." IG ko "말이 막히면 할 말을 건네줘요" → "코치 모드를 켜면 할 말도 건네줘요". IG en "when you're stuck, it offers one" → "with coach mode on, it offers one". Threads "막히면 이렇게 말해 보라고 건네주고요" → "코치 모드를 켜면 할 말도 건네주고요". Re-check that the desc fits 2 lines.
+2. [truth] card 07 desc — "단어, 표현, 고친 문장, 문법, 섀도잉을 한 장씩" names five chapters. A talk book has four: Words · Expressions · Shadowing · Grammar (`PracticeTab.swift:843`). The Grammar chapter IS the corrections (`items: $0.corrections`), and the page shows it as 드릴. So 고친 문장 and 문법 are the same chapter counted twice. → **Copywriter:** "단어, 표현, 문법을 고친 문장, 섀도잉을 한 장씩 익혀요." / en "Work through the words, phrases, grammar fixes and shadowing." (IG en "words, phrases, grammar, shadowing" is already four and stays.)
+3. [fidelity] cards 06/07 book cover (06.mp4 @4–8 s, 07.mp4 @0–1 s) — shows 점수 · 전체 75 + a B1 note. The talk on 03–05 is a coached call (05 shows coach mode), and a coached call's page shows "Practice call" in place of a score (`ConversationDetailView.practiceBlock`, `Session.coached`). → **mkt-web:** let the kit's bookpage sample take `coached` and draw the 연습 통화 block (lightbulb + "You practiced with suggestions on screen…" ko string) instead of the score. **Designer:** set it on 06/07 and re-render both.
+4. [fidelity/story] cards 06/07 book title "“Honestly, it went really well. I…”" — a summarized free talk is titled by the summary's generated title (`SessionSummarizer` → `topic`). The quoted form appears only when no summary landed, and it would quote what was SAID, "it go really…", not the fix. Right now the shelf quotes a line the learner never said on 03. → **mkt-web:** set the sample book's title to a summary title in English, e.g. "How the interview went" (shelf card, nav bar, cover). Re-render 06/07.
+5. [fidelity] card 08 — the call opens on the memory ("Hey! Last time you had that interview…"). A free talk opens on a pooled line written to be timeless (`FreeTalkOpeners`). Only the daily call's voicemail opens on the last talk, and that is out of this piece. The memory reaches the call through the prompt (`personaBlock`), so it shows in the REPLIES. → **Copywriter + designer:** fluent self "Hey! How's your week been?" · learner "Good! They call me yesterday." · fluent self "About the interview? Did you get it?" · learner "Yes! I got the job." · fluent self "No way, congrats! So when do you start?" Update the 08 alt ko/en to match ("학습자가 연락 받았다고 하자 미래의 내가 지난번 면접 이야기를 먼저 꺼내요…"). Re-render 08.
+6. [voice/visual] cards 04, 05, 07 — an em dash on screen in the correction: "Honestly, it **went** really well — I felt prepared." (`carousel.html:325`, drawn large on 07's sentence card). Also in the 07 Shadow line, "That's a compelling perspective — you clearly…" (kit sample). Posted images carry no "—". The rewrite should also keep the learner's own two sentences. → **Designer:** "Honestly, it <b>went</b> really well. I felt prepared." (copy.md 04 + designer notes too). **mkt-web:** shadow line "That's a compelling perspective. You clearly took the initiative and prioritized what mattered." Re-render 04, 05, 07.
+
+Checked and fine:
+- Story. 03 → 04 → 05 is one interview call. 06/07 book material matches the call: felt prepared (내가 쓴 말), took the initiative / what mattered most (유창한 내가 쓴 말, still open, which is right because a coached call credits nothing as used), and the Drill fix "it go → it went". 08 follows it.
+- Correction after voice. On 04 the reply bubble and "말하는 중" are up at ≈1.6 s and the card lands ≈2.3 s, under the learner's line. On 03 the loop ends on 생각하는 중 with no card.
+- Coach labels match the ko catalog: 이렇게 말해 보세요 / 써 볼 단어 / 썼어요. The hint appears only after the learner has spoken.
+- Memory claim (08 desc): `about_user` → `learnedNotes` → next call's prompt, editable in Me → Profile. True.
+- "첫 20분은 무료예요" matches `freeGrantSeconds = 1200`. No trial, price or plan size anywhere.
+- Voice. ko is natural 해요체, with no 당신, no rationale and no hype. The fluent self is casual and never longing. en reads native. No em dash in titles, descs or captions.
+- Safety. No real names or companies (the shelf's news books name Germany, a country, which is fine).
+- Visual/channel. All 1080×1350, MP4s H.264 30 fps, 8.07–15.23 s. Eyebrows 01–09 / 09. Every title is 2 lines and every desc 2 lines. 02 has an AAC track: native 0.55–2.59 s, clone 3.97–5.69 s, with the rings matching. Captions: IG ko 323 chars / 5 tags, IG en 563 / 4, Threads 246 / 0 (≤ 500).
+
+Suggestions (non-blocking):
+h. 06 seam: frame 0 already reads 학습 중 33 · 대화 26 before the book arrives, while the last frame reads 32 · 25. Start on 32/25 and tick up as the book lands.
+i. 02: the native ring lights ≈0.25 s after the voice starts (0.80 vs 0.55 s) and stays ≈0.4 s past its end. Nudge the ring to 0.55 s.
+j. 07 desc "복습은 소리 내어 답하면서 해요": only the sentence cards are answered aloud. "문장 복습은 소리 내어 답하면서 해요" would be exact if it fits.
+k. 07 Drill chapter lists "it go really well → it went really well" a second time under the whole-line fix. One item per fix reads cleaner.
+
+Checked frames: 02.mp4 @0–8 s every 1 s + 0.4–4.2 s every 0.2 s, plus audio silencedetect · 03.mp4 every 1 s · 04.mp4 every 1 s + 0.8–2.5 s @1/6 s · 05.mp4 every 1 s · 06.mp4 every 1 s · 07.mp4 every 1 s (0–15) · 08.mp4 every 1 s · 01.png · 09.png

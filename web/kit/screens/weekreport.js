@@ -2,7 +2,13 @@
  *
  * <nw-weekreport> — "Your week" (한 주 돌아보기): WeekRecapSheet's story deck and
  * WeekRecapArchiveView's list. Layout in iOS points from the SwiftUI source; the week is
- * DebugCaptureHarness.sampleWeekRecap (the data the simulator captures were taken with). */
+ * DebugCaptureHarness.sampleWeekRecap (the data the simulator captures were taken with).
+ *
+ *   el.sample = "interview"  (or attribute sample="interview")  the interview week (marketing series 07)
+ *   el.week = {...}          merge over the week (shape: WEEK below; `coachKo` = the coaching in Korean,
+ *                            `dates` = {ko:{range, range2, arrives, ready}, en:{…}})
+ *   await el.next() · el.go(i) · await el.scrollCard(px) · await el.remind() · await el.startTest()
+ *   el.pose("week" | "talk" | "used" | … | "test" | "quiet" | "archive") */
 import { NwScreen, STR, esc } from "../core.js";
 
 /* SF Symbols, traced in a 24-unit box. */
@@ -89,11 +95,57 @@ const COACH_KO = {
   plan: ["이사 이야기를 한 번 더 해 보세요. 끝날 때까지 동사는 전부 과거형으로요.",
     "다음 대화에서 “very tired” 대신 “exhausted”를 한 번 써 보세요.", "이번 주 테스트를 풀어 보세요. 틀렸던 두 문제가 다시 나와요."],
 };
-const coachFor = ko => ko ? {
-  ...WEEK.coach, headline: COACH_KO.headline, insight: COACH_KO.insight, plan: COACH_KO.plan,
-  grammar: WEEK.coach.grammar.map((g, i) => ({ ...g, rule: COACH_KO.rules[i][0], tip: COACH_KO.rules[i][1] })),
-  upgrades: WEEK.coach.upgrades.map((u, i) => ({ ...u, note: COACH_KO.notes[i] })),
-} : WEEK.coach;
+WEEK.coachKo = COACH_KO;
+const coachFor = (ko, w = WEEK) => { const K = w.coachKo; return ko && K ? {
+  ...w.coach, headline: K.headline, insight: K.insight, plan: K.plan,
+  grammar: w.coach.grammar.map((g, i) => ({ ...g, rule: K.rules[i]?.[0] ?? g.rule, tip: K.rules[i]?.[1] ?? g.tip })),
+  upgrades: w.coach.upgrades.map((u, i) => ({ ...u, note: K.notes[i] ?? u.note })),
+} : w.coach; };
+
+/* The interview week (marketing series 07): Sat Oct 10 – Fri Oct 16, the week of the book's "How the
+ * interview went" talk. Quoted lines are the learner's own from the series (pieces 01/03/05); numbers are
+ * sample data. "took the initiative" is NOT in Used: it was said in a coached call, which credits nothing. */
+const INTERVIEW = {
+  activeDays: [1, 0, 0, 1, 1, 1, 1], streak: 4, talkMin: 42, prevMin: 28, prevDays: 3,
+  talks: [["How the interview went", 0, 12, "waveform"], ["Job interview · panel round", 3, 9, "masks"],
+    ["Why companies hire for soft skills", 4, 8, "news"], ["Good news", 6, 13, "waveform"]],
+  used: [["compelling", "Yes! I got the job. They said my story was compelling."],
+    ["prioritize", "I'll prioritize learning the team's tools first."]], usedCount: 2,
+  nowYours: ["perspective", "initiative", "compelling", "prioritize", "felt prepared", "walk you through"],
+  sentencesGot: ["Honestly, it went really well. I felt prepared.", "I took the initiative and told a real story."],
+  shadowTakes: 9, shadowAvg: 84, prevShadowAvg: 76, scenes: 2,
+  newCount: 3, newExpr: [["prioritize what matters", "You clearly took the initiative and prioritized what mattered."],
+    ["walk you through", "Let me walk you through how the panel round usually goes."],
+    ["put me at ease", "The first question really put me at ease."]], newCards: 4,
+  stumbles: [["it go really well", "it went really well", 3], ["tell a real story", "told a real story", 2]], testScore: 6, testTotal: 7,
+  coach: {
+    headline: "You tell the story well, but the past tense slips away",
+    insight: "When you talk about something that already happened, the verbs fall back into the present partway through.",
+    insightQuote: "They call me yesterday.",
+    grammar: [
+      { rule: "Past tense drops out of a story",
+        ex: [["it go really well", "it went really well"], ["tell a real story", "told a real story"], ["They call me yesterday", "They called me yesterday"]],
+        tip: "Once a story is about yesterday or last week, every verb stays in the past until it ends." }],
+    upgrades: [
+      { instead: "very happy", count: 4, better: "thrilled", original: "I was very happy when they called.", rewritten: "I was thrilled when they called.",
+        note: "One word does the work of two, and it sounds like you mean it." }],
+    plan: ["Tell the interview story again, and keep every verb in the past until the end.",
+      "Say “thrilled” once in your next talk instead of “very happy”.", "Take this week's test. The one you missed comes back."],
+  },
+  coachKo: {
+    headline: "이야기는 잘 풀어내는데, 과거형이 자꾸 빠져요",
+    insight: "이미 지난 일을 말하다 보면 중간부터 동사가 현재형으로 돌아가요.",
+    rules: [["이야기 중간에 과거형이 빠져요", "어제나 지난주 이야기라면 끝날 때까지 동사를 과거형으로 두세요."]],
+    notes: ["두 단어가 하던 일을 한 단어가 해요. 진심으로 기뻤다는 게 들려요."],
+    plan: ["면접 이야기를 한 번 더 해 보세요. 끝날 때까지 동사는 전부 과거형으로요.",
+      "다음 대화에서 “very happy” 대신 “thrilled”를 한 번 써 보세요.", "이번 주 테스트를 풀어 보세요. 틀렸던 문제가 다시 나와요."],
+  },
+  dates: {
+    ko: { range: "10월 10일 – 10월 16일", range2: "10월 3일 – 10월 9일", arrives: "다음 돌아보기는 10월 24일 (토)에 도착해요", ready: "10월 24일 (토)에 정리돼요" },
+    en: { range: "Oct 10 – Oct 16", range2: "Oct 3 – Oct 9", arrives: "Next week's arrives Sat, Oct 24", ready: "Ready Sat, Oct 24" },
+  },
+};
+const SAMPLES = { interview: INTERVIEW };
 
 /* Chrome from Localizable.xcstrings (ko) and the source's English keys. */
 const L = {
@@ -275,7 +327,14 @@ class NwWeekReport extends NwScreen {
       <div class="arch"></div>`);
   }
 
-  get l() { return this.t === STR.ko ? L.ko : L.en; }
+  get l() { const ko = this.t === STR.ko; return { ...(ko ? L.ko : L.en), ...(this._wk.dates?.[ko ? "ko" : "en"] ?? {}) }; }
+  static observedAttributes = ["active", "sample"];
+  attributeChangedCallback(n) { if (n === "sample") this.sample = this.getAttribute("sample"); else super.attributeChangedCallback(); }
+  /* the week shown: the capture's, a named sample, the page's own merged over either */
+  get _wk() { return { ...(SAMPLES[this._sample ?? this.getAttribute("sample")] ?? WEEK), ...(this._week ?? {}) }; }
+  get week() { return this._wk; }
+  set week(w) { this._week = w; if (this._built) { this.stop(); this.build(); } }
+  set sample(name) { this._sample = name; if (this._built) { this.stop(); this.build(); } }
 
   build() {
     const l = this.l;
@@ -286,7 +345,7 @@ class NwWeekReport extends NwScreen {
 
   /* ── one card's content (WeekRecapSheet.cover / talk / used / …) ── */
   cardHTML(p, quiet = false) {
-    const ko = this.t === STR.ko, l = this.l, W = { ...WEEK, coach: coachFor(ko) };
+    const ko = this.t === STR.ko, l = this.l, wk = this._wk, W = { ...wk, coach: coachFor(ko, wk) };
     const kick = (txt, ic, cls = "") => `<div class="kick ${cls}">${sf(ic)}<span>${esc(txt)}</span></div>`;
     const big = (n, unit) => `<div class="big"><b>${n}</b>${unit ? `<span>${esc(unit)}</span>` : ""}</div>`;
     const t3 = (s, c = "") => `<div class="t3 ${c}">${esc(s)}</div>`;
@@ -298,7 +357,7 @@ class NwWeekReport extends NwScreen {
         if (quiet) // The secondary line wraps at the title's width, as the ScrollView lays it out in the app.
         return kick(l.lastWeek, "calendar") + `<div class="qw"><div class="quietT">${esc(l.quiet)}</div>${t3(l.quietSub, "sec qs")}</div>` + dots;
         const line = (ic, s) => `<div class="line"><span class="ic">${sf(ic)}</span><span>${esc(s)}</span></div>`;
-        return kick(l.lastWeek, "calendar") + big(5, l.of7) + t3(l.cover) + dots +
+        return kick(l.lastWeek, "calendar") + big(W.activeDays.filter(Boolean).length, l.of7) + t3(l.cover) + dots +
           `<div class="streak">${sf("flame")}<span>${esc(l.streak(W.streak))}</span></div>` +
           `<div class="sum">${line("waveform", l.sTalk(W.talkMin, W.talks.length))}${line("sealCheck", l.sUsed(W.usedCount))}${line("stack", l.sYours(W.nowYours.length))}${line("sparkles", l.sNew(W.newCount))}</div>`;
       }
@@ -346,14 +405,14 @@ class NwWeekReport extends NwScreen {
   }
 
   archiveHTML() {
-    const l = this.l;
+    const l = this.l, w = this._wk;
     return `<div class="navt">${esc(l.title)}</div><div class="glass">${esc(l.done)}</div>
       <div class="sh" style="top:126px">${esc(l.inProg)}</div>
       <div class="grp" style="top:156px"><div class="ar"><span class="ic g">${sf("hourglass")}</span><div class="tx"><b>${esc(l.ready)}</b><small>${esc(l.rowSub(2, 0))}</small></div></div></div>
       <div class="sh" style="top:248px">${esc(l.past)}</div>
       <div class="grp" style="top:278px">
-        <div class="ar"><span class="ic">${sf("stack")}</span><div class="tx"><b>${esc(l.range)}</b><small>${esc(l.rowSub(5, 42))}</small></div><em>${esc(l.newB)}</em>${sf("chevron", "sf chev")}</div>
-        <div class="ar"><span class="ic">${sf("stack")}</span><div class="tx"><b>${esc(l.range2)}</b><small>${esc(l.rowSub(3, 28))}</small></div>${sf("chevron", "sf chev")}</div>
+        <div class="ar"><span class="ic">${sf("stack")}</span><div class="tx"><b>${esc(l.range)}</b><small>${esc(l.rowSub(w.activeDays.filter(Boolean).length, w.talkMin))}</small></div><em>${esc(l.newB)}</em>${sf("chevron", "sf chev")}</div>
+        <div class="ar"><span class="ic">${sf("stack")}</span><div class="tx"><b>${esc(l.range2)}</b><small>${esc(l.rowSub(w.prevDays ?? 3, w.prevMin))}</small></div>${sf("chevron", "sf chev")}</div>
       </div>`;
   }
 
@@ -400,6 +459,18 @@ class NwWeekReport extends NwScreen {
 
   async tap(el) { el.classList.add("press"); await this.sleep(160); el.classList.remove("press"); }
   async next() { await this.tap(this.$(".btn")); this.go(this._page + 1); await this.sleep(500); }
+  /** On the test card: "Tell me when next week's is ready" tapped → "Next week's arrives …". */
+  async remind() { const c = this.$('.card[data-p="test"]'); if (!c) return; await this.tap(c.querySelector(".bord")); c.querySelector(".rem").classList.add("on"); await this.sleep(400); }
+  /** "Start this week's test" pressed. The deck is a sheet that hands over to the test: given `test`
+   *  (an <nw-weeklytest> laid over this one), the deck fades down and the test rises in its place. */
+  async startTest(test) {
+    await this.tap(this.$(".btn"));
+    if (!test) return;
+    test.style.transition = "none"; test.style.opacity = "0"; test.style.transform = "translateY(40px)"; test.style.visibility = "";
+    void test.offsetWidth;
+    test.style.transition = "opacity .4s ease, transform .5s cubic-bezier(.32,.72,0,1)"; test.style.opacity = "1"; test.style.transform = "none";
+    await this.sleep(520);
+  }
   /* scroll the current card's content (the card is a ScrollView) */
   async scrollCard(px, ms = 900) {
     const inn = this.$(".card.shown:not(.l):not(.r) .in");
@@ -414,7 +485,7 @@ class NwWeekReport extends NwScreen {
     this.beat(1);
     const dots = this.$$('.card[data-p="cover"] .dots i');
     dots.forEach(d => d.classList.remove("on"));
-    for (let k = 0; k < 7; k++) { await this.sleep(160); if (WEEK.activeDays[k]) dots[k].classList.add("on"); }
+    for (let k = 0; k < 7; k++) { await this.sleep(160); if (this._wk.activeDays[k]) dots[k].classList.add("on"); }
     await this.sleep(1400);
     /* beat 2 — what I said, what became mine (the deck advances like the app's Next) */
     this.beat(2);

@@ -1,0 +1,31 @@
+# Series 05 · 단어장 (Words)
+
+- **Stage:** design done, SILENT (designer, 2026-10-14) → next: reviewer; audio W1 later
+- **Request (founder, 2026-10-13):** "커뮤니티에 이미 좋은 섹션들이 있긴한데, 이걸 비디오로 만드는거야." Source: community e13 (+e14), turned into animated kit scenes.
+- **Carry-overs (piece 01 + shadowing):** light theme, kit screens only, Pixelify wordmark, eyebrow "nawana · NN / total", cover = a problem in the learner's words → the answer, ONE story (the interview talk), AI tutor vs my own voice only as a pointer, no em dash, captions + Threads REPLY in the series thread + Desktop export for manual upload, audio only where it proves the point.
+- **Audio:** W1 founder's Cartesia clone: "compelling." + "That's a compelling perspective.", card 03.
+- **Open for the founder:** community entry (replace the old one or add new); founder's own voice in public where a learner take is used.
+- **Kit gaps:** see brief.md "Kit gaps" (mkt-web before design).
+
+## Log
+- design (2026-10-14): `carousel.html` (piece 01 card system: fixed text block, light, #0A5CF5, Pixelify wordmark, eyebrow NN / 07, same outro). Copy verbatim from copy.md (ko + `?lang=en`); card 03's hint "소리 켜고 들어 보세요" left out (silent for now), and the IG/Threads "sound on" lines dropped from the Desktop captions.
+  - 02 `nw-bookpage`: cover → Words ribbon → initiative · perspective · compelling · prioritize (all unmarked, via `page.book`; the kit's "that" is not used), tap "compelling".
+  - 03 `nw-words`: story cloud (four words kept) → tap "compelling" → full card (MEANING / EXAMPLE / FROM YOUR TALKS, English section titles as the app) → speaker → the talk row's Listen. The card does show the call's line under FROM YOUR TALKS (answers copy.md open question 1).
+  - 04 `nw-words` deck: "prioritize" reveal → Tomorrow (folder 1), "compelling" reveal → Tomorrow (folder 2). Phone stepped back (scale .78) so card and folder chips are both in view.
+  - 05 `nw-call`, ordinary call (no coach line): chips compelling · prioritize · felt prepared, the four lines from copy.md, `tick(0)` on the last line (scale .86). The other side is labelled with the app's chrome("Future self"): "미래의 나" in ko.
+  - 06 `nw-words` cloud: compelling goes from bookmark (kept) to grey + green check, the sheet's bookmark empties and its check fills; initiative (used) and neighborhood (known) already checked. The cloud draws used and known alike; nothing on screen claims the cloud says "used".
+- **Audio slots, card 03 (seconds from the MP4's start):** speaker pressed **3.07 s** (W1a "compelling.", window to 4.97 = 1.9 s) · Listen on the talk row pressed **4.97 s** (W1b "That's a compelling perspective.", window to 9.37 = 4.4 s) · loop 9.60 s. Scene constants: `W1` in the script (`word` 3300 / `line` 5200 ms from the scene start; the MP4 starts 0.2 s into the scene). If the takes run longer, retime `W1` and re-render 03 only. In the app the speaker speaks only the word; the sentence is the talk row's Listen (the call's own audio).
+- renders/ (record.mjs HQ, two-loop recording, second loop cut at the page's loop timestamps + 0.2 s so frame 0 is the fresh state; cut re-encoded with the recorder's HQ settings, CRF 12 BT.709): 01.png · 02.mp4 8.47 s · 03.mp4 9.60 s · 04.mp4 11.02 s · 05.mp4 9.40 s · 06.mp4 8.23 s · 07.png + posters 02 Words chapter · 03 full card · 04 card over the folders · 05 chip ticked · 06 compelling checked. Frames checked at start, thirds, end; the 03 seam (full card fading over the cloud) fixed.
+- Export: ~/Desktop/nawana-carousel-05-words/ (01.png, 02–06.mp4, 07.png, posters/, captions.txt).
+- fixes after review (2026-10-14), all six applied: (1) the em-dash sweep runs every frame before paint (rAF), so 04 frame 0 reads "소리 내어 말해 보세요. 알고 있나요?"; (2) 05 label "미래의 나" in ko / "Future self" in en; (3) `<nw-call level="B1">`; (4) 05 opens with the first exchange already on screen and the camera comes in on the chip row (scale 1.3) after the tick, poster on the zoomed tick; (5) en cover desc "Words the fluent you used, learned in your own voice."; (6) Threads line replaced (copy.md + Desktop captions.txt). Re-rendered with the HQ recorder: 04.mp4 11.02 s, 05.mp4 9.40 s (cut at the visual reset frame), posters 04/05; Desktop copies overwritten. 02/03/06 and 01/07 unchanged (no em dash on them; the en cover isn't rendered).
+
+## 2026-10-14 design — Korean clarity pass (copy.md) applied
+- carousel.html ko: cover desc line 1 (모으고), chips 02/04, 03 title, 04 title + desc, 05 title + desc, 06 desc, side index 03/04/05. English untouched. Every ko title and desc renders in 2 lines (04 desc and 05 desc are the longest; both fit, no overflow).
+- Re-rendered HQ (two-loop raw take, loop 2 cut at `loopStarts` + 0.2 s, length = one period, CRF 12 BT.709, load < 8, one at a time): 01.png · 03.mp4 9.57 s · 04.mp4 11.00 s · 05.mp4 9.27 s · 06.mp4 8.20 s + posters 03/04/05/06 at the same moments. Seams checked (05 now ends on its own opening frame; was cut at the visual reset, 9.40 s). Audio slots on 03 unchanged (speaker 3.07 s, Listen 4.97 s). 02/07 untouched.
+- Desktop export: 01.png, 03–06.mp4, posters 03–06 overwritten; captions.txt left as the lead updated it.
+
+## 2026-10-14 design: English set rendered (?lang=en)
+- carousel.html `EN` block brought in line with copy.md's English clarity pass (every en title, desc and cover chip; bold spans as copy.md's **…**). Korean untouched. Cover title: en line 2 "They don't come out." wrapped to 3 lines at 110px, so the en cover title is 96px (`.wrap:lang(en) .c-cover .ttl`, the piece 02 precedent); words unchanged.
+- Every en title and desc measured at 2 lines (DOM line count). App chrome checked in frames: English throughout (kit reads the page lang); sample coaching text shows its en version.
+- Renders (record.mjs HQ settings, two-loop take, loop 2 cut at `loopStarts` + 0.2 s, length = one measured period, one render at a time under caffeinate): 01.png · 02.mp4 8.47 s · 03.mp4 9.57 s · 04.mp4 11.03 s · 05.mp4 9.30 s · 06.mp4 8.20 s · 07.png; posters 02–06 at the ko posters' moments. Seams checked (start/end frames match the ko renders' start/end states); frames checked at start, thirds, end.
+- Stored in renders/en/ (cards + posters/) and exported to ~/Desktop/nawana-carousel-05-words-en/ (cards in upload order + posters/); captions-en.txt untouched.

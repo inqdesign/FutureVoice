@@ -12,6 +12,10 @@ import { NwScreen, STR, esc } from "../core.js";
  * folder chips under it, the 10 min · Tomorrow · 3 days · Got it tray — measured from the `drills` /
  * `drills-tray` captures. The poses `card` / `revealed` are that capture (the Sentences sheet).
  *
+ * The header's weekly-test face (PracticeTab: `showingWeeklyTest`, a .sheet):
+ *   await review.openTest("word")   the face is pressed, <nw-weeklytest> slides up posed (any of its poses)
+ *   await review.closeTest()
+ *
  * Beats: 1 the book opens from its shelf card · 2 the Words / Expressions chapters · 3 the Drill
  * chapter (struck line → fixed line, the fix highlighted, why) · 4 a card answered aloud, checked, filed. */
 const T = {
@@ -26,14 +30,14 @@ const T = {
 };
 /* The talk on the shelf (<nw-book>'s top card): its book, and the cards its Drill chapter minted. */
 const TALK = {
-  title: "“Honestly, it went really well. I…”", turns: 6, mastered: 0, total: 13,
-  words: [["initiative"], ["perspective"], ["attainable"], ["compelling"], ["prioritize"]],
+  title: "How the interview went", turns: 6, mastered: 0, total: 13,
+  words: [["initiative", "used"], ["perspective"], ["attainable", "known"], ["compelling"], ["prioritize"]],
   mine: [["prepared", ""], ["relaxed", "known"]],
-  shadow: ["That's a compelling perspective — you clearly took the initiative to prioritize what mattered."],
+  shadow: ["That's a compelling perspective. You clearly took the initiative and prioritized what mattered."],
   tabs: { words: [0, 5], expressions: [0, 4], drill: [0, 3], shadow: [0, 1] },
 };
 const CARDS = [
-  { said: "Honestly, it go really well. I felt prepared.", fix: "Honestly, it <b>went</b> really well — I felt prepared.", why: { ko: "지난 일이라 과거형이에요.", en: "It already happened, so past tense." } },
+  { said: "Honestly, it go really well. I felt prepared.", fix: "Honestly, it <b>went</b> really well. I felt prepared.", why: { ko: "지난 일이라 과거형이에요.", en: "It already happened, so past tense." } },
   { said: "How relaxed I stayed, even on hard question.", fix: "How relaxed I stayed, even on <b>the</b> hard <b>questions</b>.", why: { ko: "the를 붙이고 복수형으로.", en: "Add “the” and make it plural." } },
 ];
 /* the `drills` capture's own card (the Sentences sheet) */
@@ -54,7 +58,7 @@ const FOLD = [["clock", "#FF8D28"], ["rise", "#0088FF"], ["cal", "#6155F5"], ["c
 const PUSH = "transform .5s cubic-bezier(.32,.72,0,1)";
 
 class NwReview extends NwScreen {
-  static poses = ["studying", "bookcover", "words", "expressions", "drillchapter", "card", "revealed"];
+  static poses = ["studying", "bookcover", "words", "expressions", "drillchapter", "card", "revealed", "test"];
   constructor() {
     super(`
       :host{background:#F2F2F7;letter-spacing:0}
@@ -69,6 +73,9 @@ class NwReview extends NwScreen {
       .dim.on{opacity:1}
       .sheet{position:absolute;left:0;right:0;top:0;bottom:0;transform:translateY(102%);transition:transform .55s cubic-bezier(.3,.8,.2,1);z-index:5;overflow:hidden;border-radius:38px 38px 0 0}
       .sheet.on{transform:none}
+      .wt{position:absolute;inset:0;z-index:7;transform:translateY(102%);transition:transform .55s cubic-bezier(.3,.8,.2,1);border-radius:38px 38px 0 0;overflow:hidden}
+      .wt.on{transform:none}
+      .wt nw-weeklytest{position:absolute;inset:0;width:100%;height:100%}
       .tapc{position:absolute;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:rgba(0,0,0,.12);transform:scale(.4);opacity:0;z-index:9;pointer-events:none;transition:transform .3s,opacity .3s}
       .tapc.on{transform:scale(1);opacity:1}
       /* the deck — a sheet (the capture) or pushed from the book (.pushed) */
@@ -122,6 +129,7 @@ class NwReview extends NwScreen {
         <div class="chips"></div>
         <div class="tray"></div>
       </div>
+      <div class="wt"></div>
       <div class="tapc"></div>`);
   }
   get L() { return this.t === STR.ko ? T.ko : T.en; }
@@ -129,7 +137,7 @@ class NwReview extends NwScreen {
   stop() { super.stop(); this.shadowRoot?.querySelectorAll("nw-bookpage,nw-book").forEach(e => e.stop?.()); }
   build() {
     const L = this.L;
-    this.$$("nw-book,nw-bookpage").forEach(e => { e.setAttribute("lang", this.lang); e.setAttribute("fill", ""); });
+    this.$$("nw-book,nw-bookpage").forEach(e => { e.setAttribute("lang", this.lang); e.setAttribute("fill", ""); e.toggleAttribute("coached", this.hasAttribute("coached")); });
     this.$(".done").textContent = L.done;
     this.$$(".l1").forEach(e => e.textContent = L.said); this.$(".l2").textContent = L.ask;
     this.$(".l3").textContent = L.trySay; this.$(".l4").textContent = L.why;
@@ -162,7 +170,7 @@ class NwReview extends NwScreen {
   _instant(fn) { const ls = this.$$(".lay"); ls.forEach(l => l.style.transition = "none"); fn(); ls.forEach(l => void l.offsetWidth); ls.forEach(l => l.style.transition = ""); }
   reset() {
     this._instant(() => { this._lay(".book", ""); this._lay(".bp", "right"); });
-    this.$$(".sheet").forEach(s => s.classList.remove("on")); this.$(".dim").classList.remove("on");
+    this.$$(".sheet").forEach(s => s.classList.remove("on")); this.$(".dim").classList.remove("on"); this.$(".wt").classList.remove("on");
     this.$(".tray").classList.remove("on"); this.$$(".tray span").forEach(s => s.classList.remove("pick"));
     this.$(".hint").classList.remove("say"); this.$(".listen").classList.remove("on");
     this._deck(false); this._card(CAP, 1, 20, 6); this._chips([2, 4, 2, 2]);
@@ -172,8 +180,22 @@ class NwReview extends NwScreen {
   async _tap(x, y) { const t = this.$(".tapc"); t.style.left = x + "px"; t.style.top = y + "px"; t.classList.add("on"); await this.sleep(240); t.classList.remove("on"); }
   /* centre of an element inside a nested screen, in this screen's points */
   _at(el) { const r = el.getBoundingClientRect(), me = this.$(".s").getBoundingClientRect(), k = me.width / 402; return [(r.left + r.width / 2 - me.left) / k, (r.top + r.height / 2 - me.top) / k]; }
+  /** Press the Review header's weekly-test face, then the test's sheet comes up. */
+  async openTest(pose = "word") {
+    const book = this.$("nw-book"), face = book.shadowRoot?.querySelector(".ts"), wt = this.$(".wt");
+    if (face) {
+      face.style.transition = "transform .15s"; face.style.transform = "scale(.88)";
+      await this._tap(...this._at(face)); face.style.transform = "";
+    }
+    let t = wt.querySelector("nw-weeklytest");
+    if (!t) { t = document.createElement("nw-weeklytest"); t.setAttribute("fill", ""); t.setAttribute("lang", this.lang); wt.append(t); await customElements.whenDefined("nw-weeklytest"); await this.sleep(30); }
+    await t.pose?.(pose);
+    this.$(".dim").classList.add("on"); wt.classList.add("on"); await this.sleep(600);
+  }
+  async closeTest() { this.$(".wt").classList.remove("on"); this.$(".dim").classList.remove("on"); await this.sleep(600); }
   async pose(name) {
     this.stop(); this.reset();
+    if (name === "test") { await customElements.whenDefined("nw-book"); await this.$("nw-book").pose("studying"); await this.openTest("word"); return; }
     if (name === "card" || name === "revealed") {
       this.$(".dk").classList.add("on"); this.$(".dim").classList.add("on");
       if (name === "revealed") this.$(".card").classList.add("flip");

@@ -15,6 +15,8 @@
 //     --png-at N        for a .png out: seconds after warmup    default: end of recording
 //     --fps N           output frame rate                      default: 30
 //     --scale N         device pixel ratio (3 = an iPhone capture) default: 1
+//     --ss N            supersample: render at N× the output density, then downscale (lanczos)
+//                       so text and edges stay sharp after Instagram re-encodes   default: 2
 //     --wait-for JS     poll this expression until truthy before the warmup starts, e.g.
 //                       "document.documentElement.dataset.scene" (a carousel sets it when its scene
 //                       starts), so the recording never opens on the page still loading
@@ -41,6 +43,8 @@ const [W, H] = opt("--size", "1080x1350").split("x").map(Number);
 const SECONDS = +opt("--seconds", 10), WARMUP = +opt("--warmup", 1.2), FPS = +opt("--fps", 30);
 const PNG_AT = opt("--png-at", null);
 const SCALE = +opt("--scale", 1);
+const SS = +opt("--ss", 2);            // render density multiplier; output stays W*SCALE × H*SCALE
+const DPR = SCALE * SS;
 const WAIT_FOR = opt("--wait-for", null);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -61,7 +65,7 @@ const url = /^https?:/.test(target) ? target : `http://127.0.0.1:${server.addres
 /* ── Chrome + DevTools ── */
 const profile = await mkdtemp(join(tmpdir(), "nw-rec-"));
 const chrome = spawn(CHROME, ["--headless=new", "--remote-debugging-port=0", `--user-data-dir=${profile}`,
-  "--hide-scrollbars", "--mute-audio", "--no-first-run", `--force-device-scale-factor=${SCALE}`, `--window-size=${W},${H}`, "about:blank"],
+  "--hide-scrollbars", "--mute-audio", "--no-first-run", `--force-device-scale-factor=${DPR}`, `--window-size=${W},${H}`, "about:blank"],
   { stdio: ["ignore", "ignore", "pipe"] });
 const wsUrl = await new Promise((ok, no) => {
   let buf = "";
@@ -81,7 +85,7 @@ ws.addEventListener("message", (ev) => {
 const send = (method, params = {}) => new Promise((r) => { const id = ++seq; pending.set(id, r); ws.send(JSON.stringify({ id, method, params })); });
 
 await send("Page.enable");
-await send("Emulation.setDeviceMetricsOverride", { width: W, height: H, deviceScaleFactor: SCALE, mobile: false });
+await send("Emulation.setDeviceMetricsOverride", { width: W, height: H, deviceScaleFactor: DPR, mobile: false });
 await send("Page.navigate", { url });
 await new Promise((r) => handlers.push((m) => m.method === "Page.loadEventFired" && r()));
 if (WAIT_FOR) {
@@ -103,7 +107,7 @@ handlers.push((m) => {
 });
 const wantMp4 = outs.some((o) => o.endsWith(".mp4"));
 let pngShot = null;
-if (wantMp4) await send("Page.startScreencast", { format: "jpeg", quality: 92, maxWidth: W * SCALE, maxHeight: H * SCALE, everyNthFrame: 1 });
+if (wantMp4) await send("Page.startScreencast", { format: "png", maxWidth: W * DPR, maxHeight: H * DPR, everyNthFrame: 1 });
 const t0 = Date.now();
 if (PNG_AT !== null) { await sleep(+PNG_AT * 1000); pngShot = (await send("Page.captureScreenshot", { format: "png" })).result.data; }
 await sleep(Math.max(0, SECONDS * 1000 - (Date.now() - t0)));
@@ -111,7 +115,16 @@ if (wantMp4) await send("Page.stopScreencast");
 if (!pngShot) pngShot = (await send("Page.captureScreenshot", { format: "png" })).result.data;
 
 for (const out of outs) {
-  if (out.endsWith(".png")) { await writeFile(out, Buffer.from(pngShot, "base64")); console.log("wrote", out); continue; }
+  if (out.endsWith(".png")) {
+    // the shot is taken at DPR; bring it back to the output size with a lanczos downscale
+    const raw = join(await mkdtemp(join(tmpdir(), "nw-png-")), "shot.png");
+    await writeFile(raw, Buffer.from(pngShot, "base64"));
+    await new Promise((ok, no) => {
+      const ff = spawn("ffmpeg", ["-y", "-loglevel", "error", "-i", raw, "-vf", `scale=${W * SCALE}:${H * SCALE}:flags=lanczos`, out], { stdio: "inherit" });
+      ff.on("exit", (c) => (c === 0 ? ok() : no(new Error("ffmpeg png failed"))));
+    });
+    console.log("wrote", out); continue;
+  }
   if (!frames.length) { console.error("no frames captured"); continue; }
   // the screencast sends a frame only when something changes; hold each one until the next.
   // Frames stamped after the window (delivered while the screencast was stopping) are dropped,
@@ -121,16 +134,21 @@ for (const out of outs) {
   let list = "";
   const end = frames[0].t + SECONDS;
   for (let i = 0; i < frames.length; i++) {
-    const f = join(dir, `f${String(i).padStart(5, "0")}.jpg`);
+    const f = join(dir, `f${String(i).padStart(5, "0")}.png`);
     await writeFile(f, Buffer.from(frames[i].data, "base64"));
     const next = i + 1 < frames.length ? frames[i + 1].t : end;
     list += `file '${f}'\nduration ${Math.max(0.001, next - frames[i].t).toFixed(4)}\n`;
   }
-  list += `file '${join(dir, `f${String(frames.length - 1).padStart(5, "0")}.jpg`)}'\n`;
+  list += `file '${join(dir, `f${String(frames.length - 1).padStart(5, "0")}.png`)}'\n`;
   await writeFile(join(dir, "list.txt"), list);
   await new Promise((ok, no) => {
     const ff = spawn("ffmpeg", ["-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", join(dir, "list.txt"),
-      "-vf", `fps=${FPS},scale=${W * SCALE}:${H * SCALE}:flags=lanczos,format=yuv420p`, "-c:v", "libx264", "-preset", "slow", "-crf", "18",
+      // supersampled PNG frames → lanczos down to the output size, limited-range BT.709 (what phones
+      // expect; JPEG input used to leave full-range yuvj420p), and a high-quality H.264 so Instagram's
+      // own re-encode starts from a clean source instead of a 0.4 Mbps one.
+      "-vf", `fps=${FPS},scale=${W * SCALE}:${H * SCALE}:flags=lanczos:out_color_matrix=bt709:out_range=tv,format=yuv420p`,
+      "-c:v", "libx264", "-preset", "slow", "-crf", "12", "-tune", "animation", "-profile:v", "high", "-level", "4.2",
+      "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709", "-color_range", "tv",
       "-movflags", "+faststart", "-t", String(SECONDS), out], { stdio: "inherit" });
     ff.on("exit", (c) => (c === 0 ? ok() : no(new Error("ffmpeg failed"))));
   });

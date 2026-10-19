@@ -1,0 +1,320 @@
+<title>왜 배워요 — 고르면 Talk 탭이 채워져요</title>
+<style>
+
+/* Layout: one 1080×1350 post at a time; fixed text block on top, a window onto the real app below.
+   Inside the phone everything is authored in iOS points (402×874) and scaled ×1.5625. Light only, by choice. */
+:root{
+  color-scheme:light;
+  --page:#E9ECF1; --card:#F7F8FA; --grid:rgba(10,40,90,.045);
+  --ink:#0D1117; --sub:#5A6170; --faint:#9AA1AD; --line:#DCE0E7;
+  --blue:#0A5CF5; --ios-blue:#007AFF;
+  --sys-bg:#FFFFFF; --sys-grouped:#F2F2F7; --sys-fill:#EFEFF4; --sys-gray:#8E8E93; --sys-gray3:#C7C7CC;
+  --pixel:"Geist Pixel","Galmuri14","Apple SD Gothic Neo",system-ui,sans-serif;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--sans)}
+.wrap{max-width:1100px;margin:0 auto;padding-inline:16px;padding-block:28px 56px;display:flex;flex-wrap:wrap;gap:28px 40px;align-items:flex-start;justify-content:center}
+.viewer{flex:0 1 540px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.side{flex:1 1 300px;min-width:0;max-width:440px;font-size:14px;line-height:1.6;color:var(--sub)}
+.side h1{font-family:var(--pixel);font-weight:400;font-size:26px;line-height:1.25;color:var(--ink);margin:0 0 10px;text-wrap:balance}
+.side h3{font-size:13px;letter-spacing:.06em;color:var(--ink);margin:22px 0 6px}
+.side ol{padding-left:18px;margin:0}
+.side li{margin-bottom:4px}
+.side .list button{all:unset;cursor:pointer;color:var(--ink)}
+.side .list button[aria-current="true"]{color:var(--blue);font-weight:600}
+.side .list button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.vp{position:relative;width:100%;aspect-ratio:4/5;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(13,17,23,.08),0 18px 50px rgba(13,17,23,.10);background:var(--card);touch-action:pan-y}
+.track{position:absolute;inset:0;display:flex;transition:transform .45s cubic-bezier(.3,.7,.2,1)}
+.slot{flex:0 0 100%;height:100%;position:relative;overflow:hidden}
+.controls{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.dots{display:flex;gap:7px}
+.dots button{width:8px;height:8px;border-radius:50%;border:0;padding:0;background:#C5CBD5;cursor:pointer}
+.dots button[aria-current="true"]{background:var(--blue);width:22px;border-radius:4px}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;height:36px;min-width:36px;padding:0 14px;font:inherit;font-size:13px;cursor:pointer}
+.btn:focus-visible,.dots button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.btn-row{display:flex;gap:6px}
+
+/* ───────── the post, authored at 1080×1350 ───────── */
+.card{position:absolute;left:0;top:0;width:1080px;height:1350px;transform-origin:0 0;transform:scale(var(--s,.5));background:var(--card);overflow:hidden;
+  background-image:linear-gradient(var(--grid) 2px,transparent 2px),linear-gradient(90deg,var(--grid) 2px,transparent 2px);background-size:54px 54px;background-position:-1px -1px}
+.cap{position:absolute;left:84px;right:84px;top:72px;display:flex;justify-content:space-between;align-items:center;font-family:var(--pixel);font-size:28px;color:var(--sub)}
+.cap .series{display:flex;align-items:center;gap:14px}
+.cap .series::before{content:"";width:14px;height:14px;background:var(--blue)}
+.cap .num{color:var(--faint)}
+.ttl{position:absolute;left:84px;right:84px;top:134px;margin:0;font-family:var(--pixel);font-weight:400;font-size:72px;line-height:88px;letter-spacing:-1px;color:var(--ink)}
+.ttl .en{color:var(--blue)}
+.desc{position:absolute;left:84px;right:96px;top:322px;margin:0;font-size:32px;line-height:47px;color:var(--sub);font-weight:500;letter-spacing:-.3px;word-break:keep-all}
+.desc b{color:var(--ink);font-weight:600}
+/* the window onto the phone: clipped at its top so a phone can pan up under the text */
+.stage{position:absolute;left:0;right:0;top:470px;bottom:0;overflow:hidden;
+  -webkit-mask-image:linear-gradient(transparent,#000 40px);mask-image:linear-gradient(transparent,#000 40px)}
+
+.phonewin{position:absolute;left:50%;top:44px;width:627px;margin-left:-313.5px;transition:transform .9s cubic-bezier(.45,0,.2,1)}
+.phonewin nw-phone{width:627px}
+
+/* ── cover: strong type over a very faint Talk tab, swipe footer on clean ground ── */
+.c-cover .ttl{top:250px;font-size:104px;line-height:122px;letter-spacing:-2px}
+.c-cover .desc{top:560px}
+.c-cover .stage{top:470px;bottom:150px;opacity:.10;
+  -webkit-mask-image:linear-gradient(transparent,transparent 220px,#000 340px,#000 calc(100% - 40px),transparent);mask-image:linear-gradient(transparent,transparent 220px,#000 340px,#000 calc(100% - 40px),transparent)}
+.swipe{position:absolute;left:84px;right:84px;bottom:72px;display:flex;justify-content:space-between;font-size:28px;color:var(--faint);z-index:2}
+.swipe b{font-family:var(--pixel);font-weight:400;color:var(--blue)}
+
+/* ── reasons: copy-only typographic list (no app screen, no fake chip UI) ── */
+.c-reasons .desc{top:322px}
+.reasons{position:absolute;left:84px;right:84px;top:506px;display:flex;flex-direction:column;gap:0}
+.reasons .r{display:flex;align-items:baseline;gap:26px;padding:19px 0;border-top:1.5px solid var(--line)}
+.reasons .r:last-child{border-bottom:1.5px solid var(--line)}
+.reasons .r::before{content:"";flex:0 0 auto;width:15px;height:15px;background:var(--blue);transform:translateY(2px)}
+.reasons .r .t{font-size:42px;line-height:52px;font-weight:600;color:var(--ink);letter-spacing:-.6px}
+.reasons .r .t em{font-style:normal;font-size:27px;font-weight:500;color:var(--sub);margin-left:14px;letter-spacing:0}
+
+/* ── outro ── */
+.c-outro{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.c-outro nw-futureself{width:300px;height:166px;margin-bottom:60px}
+.c-outro .wm{font-family:var(--pixel);font-size:120px;line-height:1;letter-spacing:2px}
+.c-outro .tg{font-size:44px;line-height:64px;font-weight:600;margin-top:44px}
+.c-outro .free{margin-top:32px;font-size:30px;color:var(--sub)}
+.c-outro .url{position:absolute;bottom:80px;font-family:var(--pixel);font-size:34px;color:var(--blue)}
+
+@media (prefers-reduced-motion:reduce){
+  .track,.phonewin{transition:none!important}
+}
+
+/* ?solo=N — one card at its real 1080×1350, no viewer chrome: what scripts/marketing/record.mjs records */
+html.solo,html.solo body{margin:0;background:var(--card);overflow:hidden}
+html.solo .wrap{display:block;padding:0;max-width:none}
+html.solo .side,html.solo .controls{display:none}
+html.solo .viewer{display:block}
+html.solo .vp{width:1080px;max-width:none;aspect-ratio:auto;height:1350px;border-radius:0;box-shadow:none}
+html.solo .track{transition:none}
+</style>
+<div class="wrap" lang="ko" id="wrap">
+  <div class="viewer">
+    <div class="vp" id="vp" aria-roledescription="carousel" aria-label="왜 배워요">
+      <div class="track" id="track">
+
+        <div class="slot"><section class="card c-cover" data-k="cover">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">01 / 06</span></header>
+          <h2 class="ttl">왜 배우는지<br>한 번만 골라요</h2>
+          <p class="desc">그럼 통화 첫 화면이 <b>네 이야기</b>로 채워져요.<br>“뭘 말하지?”가 없어요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-home></nw-home></nw-phone></div></div>
+          <div class="swipe"><span>옆으로 넘겨보세요 →</span><b>nawana.app</b></div>
+        </section></div>
+
+        <div class="slot"><section class="card c-reasons" data-k="reasons">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">02 / 06</span></header>
+          <h2 class="ttl">처음에 딱 한 번<br>물어봐요</h2>
+          <p class="desc">왜 배우는지 골라요. <b>하나만 골라도, 여러 개 골라도</b> 돼요.<br>나중에 바꿔도 되고요.</p>
+          <div class="reasons">
+            <div class="r"><span class="t">말문을 트고 싶어요</span></div>
+            <div class="r"><span class="t">취미로</span></div>
+            <div class="r"><span class="t">시험 준비<em>IELTS · OPIc · 토익 스피킹</em></span></div>
+            <div class="r"><span class="t">대학·공부</span></div>
+            <div class="r"><span class="t">취업·이직 준비</span></div>
+            <div class="r"><span class="t">일에서 써야 해요</span></div>
+            <div class="r"><span class="t">해외에서 살아요</span></div>
+            <div class="r"><span class="t">여행 가요</span></div>
+          </div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="interview">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">03 / 06</span></header>
+          <h2 class="ttl">취준이면<br>면접이 깔려요</h2>
+          <p class="desc">통화 첫 화면이 <b>면접 질문</b>으로 채워져요.<br>탭 한 번이면 면접관과 통화해요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-home></nw-home></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="exam">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">04 / 06</span></header>
+          <h2 class="ttl">시험이면<br>시험 주제로</h2>
+          <p class="desc">같은 Talk 탭, 이번엔 <b>IELTS 주제</b>예요.<br>Part 1·2·3 그대로 말로 연습해요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-home></nw-home></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="travel">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">05 / 06</span></header>
+          <h2 class="ttl">뭘 고르든<br>그 상황으로</h2>
+          <p class="desc">공항·호텔, 집주인·관공서·아이 학교까지.<br>고른 대로 <b>Talk 탭이 바뀌어요.</b></p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-home></nw-home></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card c-outro" data-k="outro">
+          <nw-futureself mode="speaking" level="voice"></nw-futureself>
+          <div class="wm">nawana</div>
+          <div class="tg">유창한 나에게<br>언어를 배우세요.</div>
+          <div class="free">첫 20분은 무료예요</div>
+          <div class="url">nawana.app</div>
+        </section></div>
+
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn" id="prev" aria-label="이전 장">←</button>
+      <div class="dots" id="dots"></div>
+      <div class="btn-row"><button class="btn" id="replay">처음부터 재생</button><button class="btn" id="next" aria-label="다음 장">→</button></div>
+    </div>
+  </div>
+
+  <aside class="side">
+    <h1>왜 배워요 — 고르면 Talk 탭이 채워져요</h1>
+    <p>글자 자리는 고정하고, 아래 화면만 움직이는 6장짜리 시안이에요. 폰 화면과 미래의 나 모자이크는 모두 웹사이트와 같은 UI 키트(<b>web/kit/nawana-ui.js</b>)로 그려요. 화면의 이름·수치는 모두 키트 샘플이에요. <code>?lang=en</code>이면 영어판이에요.</p>
+    <h3>장 목록</h3>
+    <ol class="list" id="list">
+      <li><button data-go="0">커버 · 왜 배우는지 한 번만</button></li>
+      <li><button data-go="1">왜 배워요? · 이유 8개(글자만)</button></li>
+      <li><button data-go="2">취준 → 면접 질문 · Talk 탭</button></li>
+      <li><button data-go="3">시험 → IELTS 주제 · Talk 탭</button></li>
+      <li><button data-go="4">여행·해외살이 → 그 상황 · Talk 탭</button></li>
+      <li><button data-go="5">마지막 장 · nawana.app</button></li>
+    </ol>
+    <h3>올리는 방법</h3>
+    <p>01·02·06장은 정지 이미지, 03–05장은 1080×1350, 한 번 도는 길이(8–12초)의 반복 MP4로 올려요. 02장은 온보딩 화면 캡처가 없어 앱 화면 대신 글자로만 보여줘요(가짜 UI 금지).</p>
+  </aside>
+</div>
+
+<script type="module">
+const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const sleep = ms => new Promise(r => setTimeout(r, RM ? 0 : ms));
+const params = new URLSearchParams(location.search);
+
+/* ?lang=en — the English text block (copy.md, written separately, not translated) */
+const EN = {
+  series: "What you can do with nawana",
+  cover: { ttl: "Pick why<br>you're learning", desc: "Your call screen fills up with <b>your stuff</b> from the first tap.<br>No more “what do I even say?”", swipe: "Swipe →" },
+  reasons: { ttl: "We ask once,<br>right at the start", desc: "Pick why you're learning. <b>One reason or a few</b>, your call.<br>You can change it anytime.",
+    rows: [["I want to start speaking"], ["For fun"], ["For an exam", "IELTS · OPIc · TOEIC Speaking"], ["For my studies"], ["For a job hunt"], ["I need it at work"], ["I live abroad"], ["For travel"]] },
+  interview: { ttl: "Job hunting?<br>Interviews, ready", desc: "Your call screen fills with <b>interview questions</b>.<br>One tap, and you're on with the interviewer." },
+  exam: { ttl: "An exam?<br>Exam topics", desc: "Same Talk tab, now <b>IELTS topics</b>.<br>Practise Part 1, 2 and 3 out loud." },
+  travel: { ttl: "Whatever you pick,<br>that situation", desc: "Airport and hotels, your landlord, the town hall, your kid's school.<br>The Talk tab shifts to match." },
+  outro: { tg: "Learn a language<br>from your fluent self.", free: "Your first 20 minutes are free" },
+};
+const isEN = params.get("lang") === "en";
+if (isEN) {
+  $("#wrap").lang = "en"; document.title = "Why are you learning?";
+  for (const card of $$(".card")) {
+    const k = card.dataset.k, e = EN[k];
+    $$(".cap .series", card).forEach(x => x.textContent = EN.series);
+    if (e?.ttl) $(".ttl", card).innerHTML = e.ttl;
+    if (e?.desc) $(".desc", card).innerHTML = e.desc;
+  }
+  const rs = $$('[data-k="reasons"] .reasons .r');
+  EN.reasons.rows.forEach(([t, sub], i) => rs[i] && (rs[i].querySelector(".t").innerHTML = `${t}${sub ? `<em>${sub}</em>` : ""}`));
+  const cv = $('[data-k="cover"]'); $(".swipe span", cv).textContent = EN.cover.swipe;
+  const ou = $('[data-k="outro"]'); $(".tg", ou).innerHTML = EN.outro.tg; $(".free", ou).textContent = EN.outro.free;
+}
+
+await import("/web/kit/nawana-ui.js");   // after the lang switch: the kit reads lang once, when a screen is built
+
+const vp = $("#vp");
+const setScale = () => $$(".card").forEach(c => c.style.setProperty("--s", vp.clientWidth / 1080));
+new ResizeObserver(setScale).observe(vp); setScale();
+
+/* ── the purpose topic lists — every row is real app content (StarterSituation / ExamTopic).
+   Titles are the English material strings; captions are Korean chrome (상대: …, IELTS · Part …).
+   Row icons use the nearest kit glyph where the app's SF symbol isn't in the kit. ── */
+const W = r => (isEN ? `with ${r.en}` : `상대: ${r.ko}`);
+/* Titles are MATERIAL and resolve in the APP language: StarterSituation.title is wrapped in
+   explain(), so in the Korean-chrome app the interview / travel rows render in Korean (the exact
+   ko catalog strings). Only ExamTopic.title is a bare literal → English in every language. */
+const T = (ko, en) => (isEN ? en : ko);
+const roles = {
+  interviewer: { ko: "면접관", en: "an interviewer" }, recruiter: { ko: "채용 담당자", en: "a recruiter" },
+  airline: { ko: "항공사 직원", en: "an airline agent" }, front: { ko: "프런트 직원", en: "a front desk clerk" },
+  ticket: { ko: "매표소 직원", en: "a ticket agent" }, passerby: { ko: "지나가는 사람", en: "a passerby" },
+};
+const LISTS = {
+  interview: [
+    ["person", T("자기소개 해 주세요", "Tell me about yourself"), W(roles.interviewer)],
+    ["people", T("지원 동기", "Why do you want this job?"), W(roles.interviewer)],
+    ["stack", T("강점과 약점", "Strengths and weaknesses"), W(roles.interviewer)],
+    ["briefcase", T("자랑하고 싶은 프로젝트", "A project you're proud of"), W(roles.interviewer)],
+    ["bag", T("연봉 이야기", "Talking about salary"), W(roles.recruiter)],
+  ],
+  exam: [
+    ["stack", "Describe a skill you learned as an adult", "IELTS · Part 2"],
+    ["stack", "Your hometown", "IELTS · Part 1"],
+    ["stack", "Should children have smartphones?", "IELTS · Part 3"],
+    ["stack", "Describe a time you helped a stranger", "IELTS · Part 2"],
+    ["stack", "Work or study", "IELTS · Part 1"],
+  ],
+  travel: [
+    ["bag", T("체크인 카운터에서", "At the check-in desk"), W(roles.airline)],
+    ["bed", T("문제가 생겼을 때", "When something goes wrong"), W(roles.front)],
+    ["house", T("호텔에서", "At a hotel"), W(roles.front)],
+    ["tram", T("기차역에서", "At the train station"), W(roles.ticket)],
+    ["map", T("길에서", "On the street"), W(roles.passerby)],
+  ],
+};
+
+/* The camera: pan the phone inside the window. */
+const pan = (c, y, instant) => {
+  const w = $(".phonewin", c);
+  if (instant) { w.style.transition = "none"; w.style.transform = y ? `translateY(${-y}px)` : "none"; void w.offsetWidth; w.style.transition = ""; }
+  else w.style.transform = y ? `translateY(${-y}px)` : "none";
+};
+/* Resting camera + home scroll, read off the renders: the purpose topic list fills the call screen,
+   the device bottom at the window edge, the "뉴스/일상/상황" chip row left above the mask — the kit
+   can't draw the real 면접/시험/여행 chip, so the claim rests on the real rows + copy, never a chip. */
+const LIST = 758, SCROLL = 300;
+
+/* A feature card: one Talk tab, its first tab's content swapped to this purpose. The camera rests
+   on the topics (seamless loop); tapping a row is the one move — a tap starts that call. */
+async function featureCard(c, key, taps) {
+  const home = $("nw-home", c);
+  home.lists = { news: LISTS[key] };     // override the first (active) tab's content only
+  await home.run(async h => {
+    h.scrollTo(SCROLL); pan(c, LIST, true);
+    await h.sleep(1900);                 // hold on the purpose topics (the --png-at moment)
+    for (const i of taps) { await h.tapRow(i); await h.sleep(1700); }
+    await h.sleep(900);
+  });
+}
+
+const PLAY = {
+  async cover(c) {
+    const home = $("nw-home", c);
+    home.lists = { news: LISTS.interview };
+    home.stop(); home.reset(); home.scrollTo(SCROLL); pan(c, LIST, true);
+    await sleep(4200);
+  },
+  async reasons() { await sleep(5000); },
+  async interview(c) { await featureCard(c, "interview", [1, 4]); },
+  async exam(c) { await featureCard(c, "exam", [1, 3]); },
+  async travel(c) { await featureCard(c, "travel", [1, 4]); },
+  async outro() { await sleep(6000); },
+};
+
+const track = $("#track"), slots = $$(".slot"), cards = $$(".card"), dots = $("#dots"), list = $$("#list button");
+slots.forEach((_, i) => { const b = document.createElement("button"); b.setAttribute("aria-label", `${i + 1}번 장`); b.onclick = () => go(i); dots.append(b); });
+let idx = 0, gen = 0;
+function go(i) {
+  idx = (i + slots.length) % slots.length;
+  track.style.transform = `translateX(${-idx * 100}%)`;
+  $$("button", dots).forEach((b, j) => b.setAttribute("aria-current", j === idx));
+  list.forEach((b, j) => b.setAttribute("aria-current", j === idx));
+  $$("nw-home").forEach(s => s.stop());
+  run(cards[idx]);
+}
+async function run(card) {
+  const g = ++gen, alive = () => g === gen;
+  await customElements.whenDefined("nw-home");
+  await sleep(350);
+  do { const t0 = performance.now(); const play = PLAY[card.dataset.k](card, alive); document.documentElement.dataset.scene = card.dataset.k; await play; if (alive()) document.documentElement.dataset.loopMs = Math.round(performance.now() - t0); } while (alive() && !RM);
+}
+$("#prev").onclick = () => go(idx - 1);
+$("#next").onclick = () => go(idx + 1);
+$("#replay").onclick = () => go(idx);
+list.forEach(b => b.onclick = () => go(+b.dataset.go));
+addEventListener("keydown", e => { if (e.key === "ArrowRight") go(idx + 1); if (e.key === "ArrowLeft") go(idx - 1); });
+let x0 = null;
+vp.addEventListener("pointerdown", e => x0 = e.clientX);
+vp.addEventListener("pointerup", e => { if (x0 == null) return; const d = e.clientX - x0; x0 = null; if (Math.abs(d) > 40) go(idx + (d < 0 ? 1 : -1)); });
+const solo = +(params.get("solo") || 0);
+if (solo) document.documentElement.classList.add("solo");
+const m = solo ? [0, solo] : /^#card(\d+)$/.exec(location.hash);
+go(m ? +m[1] - 1 : 0);
+</script>

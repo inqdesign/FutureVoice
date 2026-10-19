@@ -12,7 +12,15 @@ import { NwScreen, STR, esc, mmss } from "../core.js";
  * Attributes: autoplay; nochallenges — the tab as shipped before challenges (SpeechTab /
  * SpeechResultView at 34e25c0e..HEAD): no Challenges section, the bundled sample is the first row
  * under Scripts ("· Sample"), open() taps it, the result has no challenge entry (the playback
- * section moves up into its place), rankUp() is a no-op and demo() ends on the result. */
+ * section moves up into its place), rankUp() is a no-op and demo() ends on the result.
+ * The learner's OWN script (unset = the fixed samples, unchanged):
+ *   <nw-speech script-title="My interview intro" script-text="Para one.\nPara two." script-seconds="60">
+ *   or speech.script = { title, text, seconds }  (text: "\n"-separated paragraphs, or an array).
+ * It becomes the newest row under Scripts (SpeechStore.reload: saved scripts newest first, after the
+ * sample when there is no challenge), pencil.line + "N sec · My script"; open() taps that row, the
+ * prompter reads its text (no camera note: only a challenge asks for the camera), the result is
+ * titled with it and has no challenge entry; demo() then stays mic-only and ends on the result.
+ * open("challenge") still opens the challenge. */
 
 /* SF Symbols, traced at 24×24. */
 const SF = {
@@ -127,6 +135,7 @@ class NwSpeech extends NwScreen {
       .noch .ch-only,.noch .ehd,.noch .entry{display:none}
       .noch .shd{top:135px!important}.noch .scripts{top:156px!important}
       .noch .vid{top:366px}
+      .ownr .ehd,.ownr .entry{display:none}.ownr .vid,.ownr .aud{top:366px}   /* an own script: no challenge section, playback moves up */
 
       /* ── Prompter (SpeechPrompterView) ── */
       .l-prompt{background:#fff}
@@ -248,7 +257,7 @@ class NwSpeech extends NwScreen {
       <div class="layer l-result">
         <div class="rdate"></div>
         <div class="hd rtitle" style="top:136px;left:33px">How noise-cancelling headphones work</div>
-        <div class="rcard"><div class="gauge"><svg viewBox="0 0 75 75"><circle cx="37.5" cy="37.5" r="34.25" fill="none" stroke="#FFD7B4" stroke-width="6.5"/><circle class="arc" cx="37.5" cy="37.5" r="34.25" fill="none" stroke="var(--orange)" stroke-width="6.5" stroke-linecap="round" stroke-dasharray="215.2" stroke-dashoffset="215.2"/></svg><b>0</b></div>
+        <div class="rcard"><div class="gauge"><svg viewBox="0 0 75 75"><circle class="trk" cx="37.5" cy="37.5" r="34.25" fill="none" stroke="var(--orange)" stroke-opacity=".35" stroke-width="6.5"/><circle class="arc" cx="37.5" cy="37.5" r="34.25" fill="none" stroke="var(--orange)" stroke-width="6.5" stroke-linecap="round" stroke-dasharray="215.2" stroke-dashoffset="215.2"/></svg><b>0</b></div>
           <div class="head"></div>
           <div class="rsep"></div>
           <div class="tip">${sf("arrowFwd")}<span class="tipt"></span></div></div>
@@ -263,6 +272,33 @@ class NwSpeech extends NwScreen {
   }
   get x() { return this.t === STR.ko ? TX.ko : TX.en; }
   get noCh() { return this.hasAttribute("nochallenges"); }
+  static observedAttributes = ["active", "script-title", "script-text", "script-seconds"];
+  attributeChangedCallback(name) {
+    if (name.startsWith("script-")) { if (this._built) this._scriptFromAttrs(true); return; }
+    super.attributeChangedCallback();
+  }
+  /** The learner's own script: { title, text, seconds } or null for the samples. */
+  get script() { return this._own || null; }
+  set script(v) {
+    if (v) {
+      const paras = (Array.isArray(v.text) ? v.text : String(v.text || "").split(/\n+/)).map(p => p.trim()).filter(Boolean);
+      // seconds: the script's own length; else ~2.5 words a second (Hangul/kana: ~6 characters)
+      const n = paras.join(" "), words = /[\u3040-\u30ff\uac00-\ud7af\u4e00-\u9fff]/.test(n) ? n.replace(/\s/g, "").length / 2.4 : n.split(/\s+/).length;
+      this._own = { title: v.title || "", paras, seconds: +v.seconds || Math.max(5, Math.round(words / 2.5)) };
+    } else this._own = null;
+    if (this._built) { this._applyScript(); this.reset(); }
+  }
+  _scriptFromAttrs(force) {
+    const a = k => this.getAttribute(k);
+    if (a("script-title") != null || a("script-text") != null) this.script = { title: a("script-title"), text: a("script-text"), seconds: a("script-seconds") };
+    else if (force) this.script = null;
+  }
+  /* what depends on the script: the prompter's text and the Scripts list */
+  _applyScript() {
+    const paras = this._own?.paras.length ? this._own.paras : BODY;
+    this.$(".pt").innerHTML = paras.map(p => `<p>${esc(p)}</p>`).join("");
+    this.scripts(this._rows);
+  }
   build() {
     const x = this.x;
     this.$(".lt").textContent = x.speech;
@@ -274,7 +310,9 @@ class NwSpeech extends NwScreen {
     this.$(".l-list").parentNode.classList.toggle("noch", this.noCh);
     if (this.noCh) this.$(".rtitle").textContent = SAMPLE;
     this.$(".aaa").innerHTML = x.aa ? `<span class="aa">${x.aa}</span>` : `<span class="aa"><small>A</small>A</span>`;
-    this.scripts();
+    this._rtitle = this.$(".rtitle").textContent;
+    this._scriptFromAttrs();
+    this._applyScript();
     this.audio();
     this.taking(41);
     this.reset();
@@ -287,14 +325,17 @@ class NwSpeech extends NwScreen {
   }
   scripts(rows) {
     const x = this.x, g = x.genre;
+    this._rows = rows;
     rows ??= [["person", "Marie Curie, twice a Nobel winner", 27, g.person], ["bulb", "Why the sky is blue", 11, g.explainer],
       ["bulb", "How noise-cancelling works", 32, g.explainer], ["pencilLine", "My team intro for Monday", 45, g.own],
       ["person", "Ada Lovelace and the first program", 38, g.person], ["bulb", "Why bread rises", 24, g.explainer],
       ["person", "Nelson Mandela's long walk", 41, g.person], ["pencilLine", "A toast for Sam's leaving drinks", 30, g.own]];
     // Before challenges the bundled sample was an ordinary row, always first (SpeechStore.reload).
+    // The learner's own script is the newest save, so the first saved row (SpeechStore.reload).
+    if (this._own) rows = [["pencilLine", this._own.title, this._own.seconds, g.own, false, true], ...rows.slice(0, -1)];
     if (this.noCh) rows = [["bulb", SAMPLE, 0, g.explainer, true], ...rows.slice(0, -1)];
-    this.$(".scripts").innerHTML = rows.map(([i, ti, s, b, sample]) =>
-      `<div class="srow"><span class="si">${sf(i)}</span><span class="st">${esc(ti)}</span><span class="sm"><span>${sample ? x.min(1) : x.sec(s)}</span><span>·</span><span>${esc(b)}</span>${sample ? `<span>·</span><span>${esc(x.sample)}</span>` : ""}</span></div>`).join("");
+    this.$(".scripts").innerHTML = rows.map(([i, ti, s, b, sample, own]) =>
+      `<div class="srow${own ? " own" : ""}"><span class="si">${sf(i)}</span><span class="st">${esc(ti)}</span><span class="sm"><span>${sample ? x.min(1) : x.sec(s)}</span><span>·</span><span>${esc(b)}</span>${sample ? `<span>·</span><span>${esc(x.sample)}</span>` : ""}</span></div>`).join("");
   }
   /* SpeechResultView for a take with no video: playbackSection's audio row, "Measured" (metricRow ×5,
    * value tinted by SpeechScoreColor: ≥85 green, ≥65 orange, else red), the transcript disclosure.
@@ -310,6 +351,12 @@ class NwSpeech extends NwScreen {
       <div class="acard">${row("textCheck", m.acc, "94%", 94)}${row("speedometer", m.pace, m.wpm(148), 100, m.band(120, 160))}${row("pauseCircle", m.pauses, m.of(4, 5), 80, m.breaths)}${row("ellBubble", m.fillers, "2", 80)}${row("wavePath", m.steady, "76", 76, m.hold)}</div>
       <div class="agap"></div>
       <div class="acard"><div class="arow dg"><span class="lb">${esc(x.heard)}</span>${sf("chevR")}</div></div>`;
+  }
+  /** The gauge's arc and track take SpeechScoreColor.color(overall) (SpeechTab.swift): ≥85 green, ≥65 orange, else red.
+   * Set from the FINAL score before the count-up, so the ring never changes colour mid-animation. */
+  tint(score) {
+    const c = score >= 85 ? "var(--green)" : score >= 65 ? "var(--orange)" : "var(--red)";
+    this.$(".arc").setAttribute("stroke", c); this.$(".gauge .trk").setAttribute("stroke", c);
   }
   /** The result's lower half follows the take: a camera take shows its video, a mic-only take the audio row + Measured. */
   takeKind(camera) { this.$(".vid").style.visibility = camera ? "" : "hidden"; this.$(".aud").classList.toggle("on", !camera); }
@@ -328,16 +375,25 @@ class NwSpeech extends NwScreen {
   reset() {
     this.show("list"); this.$$(".srow").forEach(r => r.classList.remove("tap"));
     this.$(".pt").style.transform = "none"; this.$(".tm").textContent = "0:00";
-    this._challenge = !this.noCh; this.setRecording(false); this.setCamera(false);
+    this._challenge = !this.noCh; this._opened = null; this.setRecording(false); this.setCamera(false);
+    this.$(".rtitle").textContent = this.noCh ? SAMPLE : this._rtitle; this._ownResult(false);
     this.$(".arc").style.strokeDashoffset = 215.2; this.$(".gauge b").textContent = "0";
     this.$(".entry").style.visibility = "hidden"; this.takeKind(true);
     this.$(".dim").classList.remove("on"); this.$(".sheet").classList.remove("on");
   }
+  _ownResult(on) {
+    this.$(".l-result").classList.toggle("ownr", !!on);
+    if (on) this.$(".rtitle").textContent = this._own.title;
+  }
   async tap(el, ms = 160) { el.classList.add("dn"); await this.sleep(ms); el.classList.remove("dn"); }
-  async open() {
-    const r = this.noCh ? this.$(".scripts .srow") : this.$(".chal");
+  /** Tap a row and open the prompter. which: "own" (the default when a script is set) or "challenge". */
+  async open(which) {
+    const own = this._own && which !== "challenge";
+    const r = own ? this.$(".scripts .srow.own") : this.noCh ? this.$(".scripts .srow") : this.$(".chal");
     r.classList.add("tap"); await this.sleep(260); r.classList.remove("tap");
-    this._challenge = !this.noCh; this.setRecording(false); this.setCamera(false);
+    this._opened = own ? "own" : null;
+    this._ownResult(own);
+    this._challenge = !this.noCh && !own; this.setRecording(false); this.setCamera(false);
     this.show("prompt"); await this.sleep(500);
   }
   /** Turn the camera on (or off) from the card's left button — only offered before a take. */
@@ -349,9 +405,10 @@ class NwSpeech extends NwScreen {
     await this.sleep(ms / (steps + .5) / 2);
   }
   async result(score = 81, rank = 14, of = 41) {
-    if (!this.noCh) { this.$(".et").textContent = this.x.up(rank, of); this.$(".entry").style.visibility = ""; }
+    if (!this.noCh && this._opened !== "own") { this.$(".et").textContent = this.x.up(rank, of); this.$(".entry").style.visibility = ""; }
     this.takeKind(this.$(".l-prompt").classList.contains("cam-on"));
     this.show("result"); await this.sleep(400);
+    this.tint(score);
     this.$(".arc").style.strokeDashoffset = 215.2 * (1 - score / 100);
     await this.countUp(this.$(".gauge b"), score, 1100);
   }
@@ -371,7 +428,7 @@ class NwSpeech extends NwScreen {
     }).join("");
   }
   async rankUp(from = 14, to = 8, rows = [["Camille", 88], [null, 87], ["Yuna", 85]]) {
-    if (this.noCh) return;   // no board before challenges
+    if (this.noCh || this._opened === "own") return;   // no board before challenges, none on an own script
     this.moment({ kind: to <= 3 ? "podium" : "up", rank: to, from, rows });
     this.$(".dim").classList.add("on"); this.$(".sheet").classList.add("on");
     await this.sleep(560); const mi = this.$(".mi"); mi.classList.add("pop"); await this.sleep(240); mi.classList.remove("pop");
@@ -389,11 +446,13 @@ class NwSpeech extends NwScreen {
     }
     // result page under the moment sheet
     this.show("result"); this.$(".et").textContent = this.x.up(14, 41); this.$(".entry").style.visibility = "";
-    this.$(".arc").style.strokeDashoffset = 215.2 * (1 - .81); this.$(".gauge b").textContent = "81";
+    this.tint(81); this.$(".arc").style.strokeDashoffset = 215.2 * (1 - .81); this.$(".gauge b").textContent = "81";
     if (name === "result") this.moment({ kind: "podium", rank: 3, rows: [["Haruto", 94], [null, 93], ["Lena", 91]] });
     if (name === "challenge") this.moment({ kind: "podium", rank: 1, rows: [[null, 97], ["Minji", 96]] });
     if (name === "rank-up") this.moment({ kind: "up", rank: 8, from: 14, rows: [["Camille", 88], [null, 87], ["Yuna", 85]] });
     this.takeKind(false); // the simulator takes are mic-only: the audio row + Measured, as under the capture's sheet
+    // an own script's result: its title, no challenge entry, no sheet
+    if (this._own && name === "result") { this._opened = "own"; this._ownResult(true); return; }
     if (this.noCh) { this.$(".entry").style.visibility = "hidden"; return; }   // every result pose: the page alone
     this.$(".dim").classList.add("on"); this.$(".sheet").classList.add("on");
     void ko;
@@ -402,10 +461,11 @@ class NwSpeech extends NwScreen {
     await this.sleep(1300); await this.open(); await this.sleep(600);
     // With challenges the board only takes camera takes, so the camera goes on. Before challenges
     // nothing asked for it and the default is off (SpeechPrompterView), so that take is mic-only.
-    if (!this.noCh) { await this.camera(true); await this.sleep(500); }
+    const board = !this.noCh && this._opened !== "own";
+    if (board) { await this.camera(true); await this.sleep(500); }
     this.beat(1); await this.record();
     await this.sleep(500); this.beat(2); await this.result(81); await this.sleep(900);
-    if (this.noCh) { await this.sleep(2400); return; }
+    if (!board) { await this.sleep(2400); return; }
     await this.rankUp(14, 8); await this.sleep(3200);
   }
 }

@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>nawana 티저</title>
+<style>
+/* Layout: one continuous 1080×1920 vertical video (Reel / Story / Shorts). The carousel template's look —
+   ground #F7F8FA with the 54px grid, a fixed text block on top, the real app below in the kit's nw-phone —
+   stretched to 9:16. One phone per screen, stacked in the same place: a cut is a short crossfade of the
+   screen, the bezel never moves. Light only. Top ~250px and the lower edge are left for the Reels chrome. */
+:root{
+  color-scheme:light;
+  --card:#F7F8FA; --grid:rgba(10,40,90,.045);
+  --ink:#0D1117; --sub:#5A6170; --faint:#9AA1AD; --blue:#0A5CF5;
+  --pixel:"Geist Pixel","Galmuri14","Apple SD Gothic Neo",system-ui,sans-serif;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:#E9ECF1;overflow:hidden;height:100%}
+.v{position:absolute;left:0;top:0;width:1080px;height:1920px;transform-origin:0 0;overflow:hidden;background:var(--card);font-family:var(--sans);color:var(--ink);
+  background-image:linear-gradient(var(--grid) 2px,transparent 2px),linear-gradient(90deg,var(--grid) 2px,transparent 2px);background-size:54px 54px;background-position:-1px -1px}
+
+/* the text block */
+.cap{position:absolute;left:84px;top:262px;display:flex;align-items:center;gap:14px;font-family:var(--pixel);font-size:30px;color:var(--sub);transition:opacity .3s}
+.cap::before{content:"";width:14px;height:14px;background:var(--blue)}
+.ttl{position:absolute;left:84px;right:84px;top:322px;margin:0;font-family:var(--pixel);font-weight:400;font-size:84px;line-height:102px;letter-spacing:-1px;color:var(--ink);
+  word-break:keep-all;opacity:0;transform:translateY(14px);transition:opacity .12s ease,transform 0s .12s}
+.ttl.in{opacity:1;transform:none;transition:opacity .2s ease .14s,transform .3s ease .14s}
+.v.noText .cap{opacity:0}
+
+/* 01 — the voice: the pill, the tag, the clone's own sentence */
+.hero{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding-bottom:60px;transition:opacity .3s ease}
+.hero .tag{font-family:var(--pixel);font-size:44px;color:var(--sub);margin-bottom:56px}
+.hero nw-futureself{width:600px;height:332px}
+.hero .say{margin:72px 90px 0;font-family:var(--pixel);font-size:66px;line-height:86px;text-align:center;color:var(--ink);word-break:keep-all;text-wrap:balance}
+.hero .say i{font-style:normal;color:var(--sub);transition:color .12s}
+.hero .say i.on{color:var(--ink)}
+.v:not(.s-hero) .hero{opacity:0;pointer-events:none}
+
+/* the phones: all in one place, one shown */
+.stage{position:absolute;left:0;right:0;top:572px;bottom:0;overflow:hidden}
+.ph{position:absolute;left:50%;top:22px;width:600px;margin-left:-300px;opacity:0;visibility:hidden;transition:opacity .26s ease,visibility 0s .26s}
+.ph.on{opacity:1;visibility:visible;transition:opacity .26s ease,visibility 0s}
+.ph.warm{visibility:visible}
+.ph nw-phone{width:600px}
+
+/* end card */
+.end{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding-bottom:80px;opacity:0;transition:opacity .35s ease}
+.v.s-end .end{opacity:1;transition:opacity .35s ease .3s}
+.end nw-futureself{width:340px;height:188px;margin-bottom:72px}
+.end .wm{font-family:var(--pixel);font-size:140px;line-height:1;letter-spacing:2px}
+.end .tg{font-size:54px;line-height:76px;font-weight:600;margin-top:56px;word-break:keep-all}
+.end .free{margin-top:36px;font-size:36px;color:var(--sub)}
+.end .url{margin-top:120px;font-family:var(--pixel);font-size:42px;color:var(--blue)}
+@media (prefers-reduced-motion:reduce){.ttl,.ph,.hero,.end{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="v s-hero noText" id="v" lang="ko">
+  <header class="cap">nawana</header>
+  <h2 class="ttl" id="t0"></h2><h2 class="ttl" id="t1"></h2>
+
+  <div class="hero">
+    <div class="tag" id="tag">이거, 내 목소리예요</div>
+    <nw-futureself id="pill" mode="speaking" level="0.35"></nw-futureself>
+    <p class="say" id="say"></p>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="ph" data-s="call"><nw-phone><nw-call></nw-call></nw-phone></div>
+    <div class="ph" data-s="ring"><nw-phone><nw-ring></nw-ring></nw-phone></div>
+    <div class="ph" data-s="home"><nw-phone><nw-home></nw-home></nw-phone></div>
+    <div class="ph" data-s="people"><nw-phone><nw-people></nw-people></nw-phone></div>
+    <div class="ph" data-s="watch"><nw-phone><nw-watch material="none"></nw-watch></nw-phone></div>
+    <div class="ph" data-s="review"><nw-phone><nw-review></nw-review></nw-phone></div>
+    <div class="ph" data-s="words"><nw-phone><nw-words></nw-words></nw-phone></div>
+    <div class="ph" data-s="shadow"><nw-phone><nw-shadow></nw-shadow></nw-phone></div>
+    <div class="ph" data-s="sayagain"><nw-phone><nw-sayagain></nw-sayagain></nw-phone></div>
+    <div class="ph" data-s="speech"><nw-phone><nw-speech nochallenges></nw-speech></nw-phone></div>
+    <div class="ph" data-s="routine"><nw-phone><nw-routine></nw-routine></nw-phone></div>
+    <div class="ph" data-s="weekreport"><nw-phone><nw-weekreport></nw-weekreport></nw-phone></div>
+    <div class="ph" data-s="weeklytest"><nw-phone><nw-weeklytest></nw-weeklytest></nw-phone></div>
+    <div class="ph" data-s="progress"><nw-phone><nw-progress></nw-progress></nw-phone></div>
+  </div>
+
+  <div class="end">
+    <nw-futureself id="endpill" mode="speaking" level="voice"></nw-futureself>
+    <div class="wm">nawana</div>
+    <div class="tg" id="endtg">유창한 나에게<br>언어를 배우세요.</div>
+    <div class="free" id="endfree">첫 20분은 무료예요</div>
+    <div class="url">nawana.app</div>
+  </div>
+</div>
+
+<script type="module">
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const params = new URLSearchParams(location.search);
+const EN = params.get("lang") === "en";
+const V = $("#v");
+
+/* fit the 1080×1920 frame to any window (the recorder opens it at exactly 1080×1920 → scale 1) */
+const fit = () => { const k = Math.min(innerWidth / 1080, innerHeight / 1920); V.style.transform = `scale(${k})`; V.style.left = `${(innerWidth - 1080 * k) / 2}px`; };
+addEventListener("resize", fit); fit();
+
+/* copy.md, beat by beat. Korean renders; ?lang=en is the English beats (copy decisions 05 / 13 applied). */
+const BEATS = {
+  "02": ["몇 년 뒤,<br>이미 유창한 나", "Me, a few years on.<br>Already fluent."],
+  "03": ["나는 그냥 말해요", "I just talk."],
+  "04": ["어색한 말은<br>통화 중에 고쳐줘요", "Anything awkward<br>gets fixed mid-call."],
+  "05": ["정해 둔 시간에 울려요", "It rings at the time I set."],
+  "06": ["주제는 뭐든 좋아요", "Any topic."],
+  "07": ["아는 사람이랑도요", "Or someone I know."],
+  "08": ["실제로 겪기 전에<br>미리 봐요", "See it before it happens."],
+  "09": ["끝난 통화는", "The call turns into…"],
+  "10": ["나만의 교재가 돼요", "…a book of my own."],
+  "11": ["바로잡은 내 문장", "My mistakes, fixed."],
+  "12": ["통화에서 써 본 단어", "Words I actually used."],
+  "13": ["유창한 나를<br>따라 말해요", "Then say it after the fluent me."],
+  "14": ["같은 통화를<br>처음부터, 제대로", "The whole call again,<br>done right."],
+  "15": ["읽으면 점수가 나와요", "Read it, get a score."],
+  "16": ["나와 한 약속", "A promise to myself."],
+  "17": ["내 한 주를 돌아봐요", "My week, read back."],
+  "18": ["내 한 주로 만든 테스트", "A test made from my week."],
+  "19": ["지금 어디쯤인지 봐요", "See where I am."],
+  "20": ["다시, 유창한 나와 통화해요", "Back on the call<br>with the fluent me."],
+};
+if (EN) {
+  V.lang = "en"; document.documentElement.lang = "en"; document.title = "nawana teaser";
+  $("#tag").textContent = "That's my own voice.";
+  $("#endtg").innerHTML = "Learn a language<br>from your fluent self."; $("#endfree").textContent = "Your first 20 minutes are free";
+}
+const CAPTION = "Now I can say what I mean, the way I mean it.";
+$("#say").innerHTML = CAPTION.split(" ").map(w => `<i>${w}</i>`).join(" ").replace("mean,</i> ", "mean,</i><br>");
+
+await import("/web/kit/nawana-ui.js");   // after the lang switch: the kit reads lang when a screen is built
+for (const n of ["nw-call", "nw-ring", "nw-home", "nw-people", "nw-watch", "nw-review", "nw-words", "nw-shadow", "nw-sayagain", "nw-speech", "nw-routine", "nw-weekreport", "nw-weeklytest", "nw-progress"]) await customElements.whenDefined(n);
+await new Promise(r => setTimeout(r, 300));   // fonts + first layout
+
+/* ── the clock: every cut is an absolute second; all scripts wait on it ── */
+let T0 = 0;
+const now = () => (performance.now() - T0) / 1000;
+const until = s => new Promise(r => setTimeout(r, Math.max(0, T0 + s * 1000 - performance.now())));
+const scr = n => $(`.ph[data-s="${n}"]`).firstElementChild.firstElementChild;
+const safe = p => p?.catch?.(() => {});
+
+/* the cuts (s). Act 2 runs ~1.4–1.8 s a screen, longer for Say it again; Act 3 returns to the call. */
+const CUT = {
+  call: 2.6, b03: 4.5, b04: 7.0,
+  ring: 9.6, home: 11.4, people: 12.6, watch: 14.0,
+  review: 15.8, b10: 17.2, b11: 18.4,
+  words: 19.8, shadow: 21.2, sayagain: 22.8, speech: 25.0, routine: 27.2, weekreport: 29.0, weeklytest: 30.6, progress: 32.2,
+  back: 33.6, end: 36.2, len: 39.2,
+};
+
+/* text beats: two layers so the old one fades as the new one rises */
+let tl = 0;
+function beat(k) {
+  const a = $("#t" + tl), b = $("#t" + (1 - tl)); tl = 1 - tl;
+  a.classList.remove("in");
+  if (!k) return;
+  b.innerHTML = BEATS[k][EN ? 1 : 0]; void b.offsetWidth; b.classList.add("in");
+}
+let shown = null;
+function show(name) {
+  if (shown) $(`.ph[data-s="${shown}"]`).classList.remove("on", "warm");
+  shown = name;
+  if (name) { const p = $(`.ph[data-s="${name}"]`); p.classList.add("on"); }
+}
+const warm = name => $(`.ph[data-s="${name}"]`).classList.add("warm");
+
+/* ── 01: the clone's sentence, the pill lit by the file's own loudness ──
+   3-clone.mp3: 2.183 s, laid in the MP4 at 0.4 s. Envelope measured from the file (as card 03 of
+   2026-10-11-what-you-can-do). Words light at onsets read off the same envelope. */
+const AUD = { at: 0.4, dur: 2.183 };
+const ENV = [0.14, 0.24, 1.0, 0.89, 0.57, 0.83, 0.53, 0.71, 0.59, 0.56, 0.64, 0.59, 0.63, 0.5, 0.63, 0.72, 0.67, 0.64, 0.64, 0.58, 0.49, 0.13, 0.15, 0.13];
+const ONSET = [0.17, 0.33, 0.45, 0.58, 0.74, 0.86, 0.98, 1.16, 1.3, 1.44, 1.6];   // s into the file, one per caption word
+async function voice() {
+  const pill = $("#pill"), words = $$("#say i");
+  await new Promise(res => { const step = () => {
+    const p = (now() - AUD.at) / AUD.dur;
+    if (p >= 0 && p < 1) { pill.mode = "speaking"; pill.level = (.5 + .5 * ENV[Math.min(ENV.length - 1, Math.floor(p * ENV.length))]).toFixed(2); }
+    else if (p >= 1) { pill.mode = "speaking"; pill.level = "0.35"; }
+    const ts = now() - AUD.at; words.forEach((w, i) => w.classList.toggle("on", ts >= ONSET[i]));
+    now() < CUT.call ? requestAnimationFrame(step) : res(); }; requestAnimationFrame(step); });
+}
+
+/* ── the call: opener, the learner's turn, the reply starting and the correction landing into it.
+   Act 3 comes back to the same call and lets the reply play out. ── */
+const OPENER = "Hey, it's you, a few years from now. So, how was your week?";
+const SAID = "It was a busy week. I go to three meetings a day.";
+const REPLY = "Three a day? No wonder you sound tired. Which one went best?";
+const FIX = () => ({ text: "It was a busy week. I <b>went</b> to three meetings a day.", note: EN ? "It already happened, so past tense." : "지난 일이라 과거형이에요",
+  fixes: [{ was: "I go to three meetings a day", now: "I went to three meetings a day" }] });
+const GOALS = ["busy week", "catch up", "no wonder"];
+function callAct1() {
+  const call = scr("call");
+  return call.run(async s => {
+    s.goals(GOALS);
+    await until(CUT.call + 0.12);
+    await s.say(OPENER, { per: 100 });
+    await s.listen();
+    s.coach({ line: "It was a <u>busy</u> week, honestly.", gloss: EN ? "" : "솔직히 <u>바쁜</u> 한 주였어." });
+    await s.sleep(500);
+    await s.user(SAID);
+    s.tick(0);
+    // the correction waits for the voice (as in the app): the reply starts, then the card lands
+    safe(s.say(REPLY, { per: 150 }));
+    await s.sleep(300);
+    s.fix(FIX());
+  });
+}
+function callAct3() {
+  const call = scr("call");
+  return call.run(async s => {
+    // the same call, picked up where it was: the turn and its correction on screen, the reply speaking
+    s.goals(GOALS); s.tick(0);
+    s._line("Future self", OPENER).querySelector(".acc").innerHTML = s._meaning();
+    const me = s._line("You", SAID, { me: true }); me.classList.add("in"); me.querySelector(".acc").innerHTML = s._meaning();
+    s.fix(FIX(), true); s._clock(31);
+    await until(CUT.back + 0.1);
+    await s.say(REPLY, { per: 110 });
+    s.tick(2); s.done();
+  });
+}
+
+/* ── Act 2: each screen is posed before its cut (while hidden), then plays its one moment ── */
+const SCENES = {
+  async ring() {   // the alarm at 8:00, Answer, the call it opens
+    const r = scr("ring");
+    await r.run(async s => {
+      s._ringing("8:00");
+      await until(CUT.ring + 0.95);
+      const call = await s.answer();
+      safe(call.say("Morning! You had the interview yesterday, right? How did it go?", { per: 110 }));
+      await until(CUT.home);
+    });
+  },
+  async home() {
+    const h = scr("home");
+    await h.pose("home");
+    await until(CUT.home + 0.55);
+    await safe(h.tapRing());
+  },
+  async people() {   // the people row, a person tapped, their card up
+    const p = scr("people");
+    await p.pose("row");
+    await until(CUT.people + 0.35);
+    const mark = p.$$(".pb.p")[1];
+    mark.classList.add("tap"); await until(CUT.people + 0.57); mark.classList.remove("tap");
+    p.$(".dim").classList.add("on"); p.$(".sheet").classList.add("on");
+  },
+  async watch() {   // the interview scene playing, the next line arriving ringed
+    const w = scr("watch");
+    await w.pose("playing");
+    await until(CUT.watch + 0.6);
+    const [who, t, me] = w._interview()[2];
+    w.$$(".sc .ln.now").forEach(e => e.classList.remove("now"));
+    const l = w._line(who, t, me); l.classList.add("new"); void l.offsetWidth; l.classList.remove("new"); l.classList.add("now");
+    const sc = w.$(".sc"), over = sc.offsetTop + sc.scrollHeight - 750; sc.style.transform = over > 0 ? `translateY(${-over}px)` : "none";
+  },
+  async review() {   // 09–11 in one take: the talk's book lands on the shelf → tapped → its Drill chapter
+    const r = scr("review");
+    await r.run(async s => {
+      const book = s.$("nw-book"), bp = s.$("nw-bookpage");
+      await book.pose("before"); s._bookPage();
+      await until(CUT.review + 0.2);
+      safe(book.arrive());
+      await until(CUT.b10 + 0.1);
+      const card = book.shadowRoot.querySelector(".shelf .bk");
+      if (card) await s._tap(...s._at(card));
+      s._lay(".book", "left"); s._lay(".bp", "");
+      await until(CUT.b11 + 0.15);
+      await bp.open("drill");
+      await until(CUT.words);
+    });
+  },
+  async words() {   // green checks land on the words said in talks
+    const w = scr("words");
+    await w.run(async s => {
+      await until(CUT.words + 0.1);
+      s.$('[data-w="guarantee"]').classList.add("used");
+      await until(CUT.words + 0.35);
+      const e = s.$('[data-w="substantial"]');
+      e.classList.add("tap"); await s.sleep(140); e.classList.remove("tap");
+      const b = s.$(".body"); b.style.opacity = 0; await s.sleep(160); s.card("substantial"); b.style.opacity = 1;
+      await until(CUT.words + 0.75);
+      const ck = s.$(".ck"), c = ck.querySelector("circle"), pth = ck.querySelector("path");   // the kit's checkFill (words.js SF.checkFill): filled circle, white tick
+      if (c) { c.setAttribute("r", "10.4"); c.setAttribute("fill", "currentColor"); c.removeAttribute("stroke"); }
+      if (pth) { pth.setAttribute("stroke", "#fff"); pth.setAttribute("stroke-width", "2.1"); }
+      ck.classList.add("on"); e.classList.add("used");
+      await until(CUT.shadow);
+    });
+  },
+  async shadow() {   // the target lights up as it plays, then the take on the learner's own clock
+    const sh = scr("shadow");
+    await sh.run(async s => {
+      await until(CUT.shadow + 0.05);
+      await s._play(0, 3);
+      s._ws.forEach((w, i) => s._color(i, ""));
+      s._timeline(false); s._mic("xmark", "rec");
+      await s._karaoke(0, 17, 1, 0);
+    });
+  },
+  async sayagain() {   // the prompter's line read, then it joins the call scored
+    const a = scr("sayagain");
+    await a.pose("reading");
+    await until(CUT.sayagain + 1.1);
+    a._panel("lis");
+    const row = a._row(STEPS[1]);
+    await until(CUT.sayagain + 1.45);
+    a._score(row, STEPS[1]);
+  },
+  async speech() {   // recording on the prompter → the score (no board: nochallenges)
+    const sp = scr("speech");
+    await sp.pose("prompter");
+    await until(CUT.speech);
+    await safe(sp.result(81));
+  },
+  async routine() {   // the day fills, the day is kept, the flame lights
+    const r = scr("routine");
+    await r.run(async s => {
+      const l = s.l;
+      await until(CUT.routine + 0.15);
+      for (const p of [.5, 1]) { s._fill(0, p); s._mark(3, "today", p * .2); await s.sleep(160); }
+      for (let i = 1; i < 5; i++) { s._fill(i, 1); s._mark(3, "today", (i + 1) / 5); await s.sleep(190); }
+      s._mark(3, "kept"); s._streak(l.kept(4), true);
+      await until(CUT.weekreport);
+    });
+  },
+  async weekreport() {   // the grammar point that keeps slipping, over the learner's own lines
+    const w = scr("weekreport");
+    await w.pose(PAGE);
+    await until(CUT.weekreport + 0.5);
+    await safe(w.scrollCard(90, 700));
+  },
+  async weeklytest() {   // a sentence from the week, built from tiles, right
+    const t = scr("weeklytest");
+    await t.pose("translate");
+    await until(CUT.weeklytest - 0.45);
+    try {
+      for (const x of ["I've", "been", "working", "at", "this", "startup", "for", "two", "years."]) await t.tapTile(x);
+      await t.tapBtn(); t.check(null);
+    } catch {}
+  },
+  async progress() {   // the measured level swaps (sample data, never claimed)
+    const p = scr("progress");
+    await p.run(async s => {
+      s.$$(".sk b").forEach(b => b.classList.remove("hide")); s._talk(10);
+      await until(CUT.progress + 0.45);
+      const can = s.$(".can"); can.classList.add("fade");
+      s.$(".lvl .a").className = "a out"; s.$(".lvl .b").className = "b";
+      await s.sleep(400);
+      s._level("B2", true); can.classList.remove("fade"); s._talk(0);
+      await until(CUT.back);
+    });
+  },
+};
+const PAGE = params.get("report") || "grammar";
+/* sayagain's demo talk (the kit's STEPS, the two lines this cut uses) */
+const STEPS = [
+  { who: "self", text: "So — how did the interview go yesterday?" },
+  { who: "me", text: "Honestly, it [went] really well — I felt prepared.", note: { ko: "지난 일이라 과거형이에요", en: "It already happened, so past tense." }, score: 92 },
+];
+
+/* ── run ── */
+const ORDER = ["ring", "home", "people", "watch", "review", "words", "shadow", "sayagain", "speech", "routine", "weekreport", "weeklytest", "progress"];
+const BEAT_AT = [["02", CUT.call], ["03", CUT.b03], ["04", CUT.b04], ["05", CUT.ring], ["06", CUT.home], ["07", CUT.people], ["08", CUT.watch],
+  ["09", CUT.review], ["10", CUT.b10], ["11", CUT.b11], ["12", CUT.words], ["13", CUT.shadow], ["14", CUT.sayagain], ["15", CUT.speech],
+  ["16", CUT.routine], ["17", CUT.weekreport], ["18", CUT.weeklytest], ["19", CUT.progress], ["20", CUT.back]];
+
+/* the recorder waits for data-scene, then 1.2 s of warmup: start the clock after that so t = 0 is the
+   MP4's first frame (the audio is muxed against this clock) */
+document.documentElement.dataset.scene = "teaser";
+const lead = params.has("now") ? 0 : +(params.get("lead") || 1200);
+await new Promise(r => setTimeout(r, lead));
+T0 = performance.now();
+
+voice();
+const call1 = callAct1();
+for (const [k, t] of BEAT_AT) until(t).then(() => { V.classList.remove("noText"); beat(k); });
+until(CUT.call).then(() => { V.classList.remove("s-hero"); show("call"); });
+// each Act 2 screen: warmed (visible, transparent) and posed 0.7 s before its cut, shown at the cut
+for (const n of ORDER) {
+  until(CUT[n] - 0.7).then(() => { warm(n); SCENES[n](); });
+  until(CUT[n]).then(() => show(n));
+}
+until(CUT.back - 0.7).then(() => { scr("call").stop(); callAct3(); });
+until(CUT.back).then(() => show("call"));
+until(CUT.end).then(() => { beat(null); V.classList.add("noText", "s-end"); show(null); });
+until(CUT.len - 1.3).then(() => { const p = $("#endpill"); p.level = "0.45"; });   // the last second holds still (loop point)
+until(CUT.len).then(() => { document.documentElement.dataset.done = "1"; });
+safe(call1);
+</script>
+</body>
+</html>

@@ -34,9 +34,10 @@ Details and limits: `CLAUDE.md`. If a feature isn't there, it doesn't exist.
   you do, not who you are.
 - **Honest floor:** nawana is not for absolute beginners — the floor is “building a
   sentence, stumbling”. Never promise zero-to-fluent.
-- **Native-speaker comparison** (founder's framing): imitating a native speaker feels like
-  acting, not like you; hearing your own voice says “I can say it like this too”. Don't
-  belittle native speakers.
+- **The comparison is an AI tutor vs me** (founder, 2026-10-13): an AI tutor speaks in
+  someone else's voice; the fluent self speaks in mine, so the line sounds like "I could say
+  that too". Imitating someone else's voice feels like acting. Don't belittle AI tutors or
+  native speakers.
 - Conversation lines, scripts, words = the learning MATERIAL → in the target language
   (English by default). Labels and explanations around them → the reader's language.
 - No emoji as decoration in visuals. No hype words (혁신, 최고의, revolutionary).

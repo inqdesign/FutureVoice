@@ -1,0 +1,399 @@
+<title>나와나는 무조건 말하게 만들어요</title>
+<style>
+/* the wordmark face: Pixelify Sans, as the app's welcome page draws "nawana" (WelcomeView.swift:183). */
+@font-face{font-family:"Pixelify Sans";font-display:block;
+  src:url("PixelifySans.woff2") format("woff2"),url("../../../web/PixelifySans.woff2") format("woff2"),url("/web/PixelifySans.woff2") format("woff2")}
+
+/* Layout: one 1080×1350 post at a time; fixed text block on top, a window onto the real app below.
+   Series 08 (founder: "header font too big"): titles 54px (was 72), cover 76px (was 96–110), descs 29px
+   (was 32), so the window onto the app starts at 420 (was 470). Light only. */
+:root{
+  color-scheme:light;
+  --page:#E9ECF1; --card:#F7F8FA; --grid:rgba(10,40,90,.045);
+  --ink:#0D1117; --sub:#5A6170; --faint:#9AA1AD; --line:#DCE0E7;
+  --blue:#0A5CF5; --ios-blue:#007AFF;
+  --pixel:"Geist Pixel","Galmuri14","Apple SD Gothic Neo",system-ui,sans-serif;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--sans)}
+.wrap{max-width:1100px;margin:0 auto;padding-inline:16px;padding-block:28px 56px;display:flex;flex-wrap:wrap;gap:28px 40px;align-items:flex-start;justify-content:center}
+.viewer{flex:0 1 540px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.side{flex:1 1 300px;min-width:0;max-width:440px;font-size:14px;line-height:1.6;color:var(--sub)}
+.side h1{font-family:var(--pixel);font-weight:400;font-size:26px;line-height:1.25;color:var(--ink);margin:0 0 10px;text-wrap:balance}
+.side h3{font-size:13px;letter-spacing:.06em;color:var(--ink);margin:22px 0 6px}
+.side ol{padding-left:18px;margin:0}
+.side li{margin-bottom:4px}
+.side .list button{all:unset;cursor:pointer;color:var(--ink)}
+.side .list button[aria-current="true"]{color:var(--blue);font-weight:600}
+.side .list button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.vp{position:relative;width:100%;aspect-ratio:4/5;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(13,17,23,.08),0 18px 50px rgba(13,17,23,.10);background:var(--card);touch-action:pan-y}
+.track{position:absolute;inset:0;display:flex;transition:transform .45s cubic-bezier(.3,.7,.2,1)}
+.slot{flex:0 0 100%;height:100%;position:relative;overflow:hidden}
+.controls{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.dots{display:flex;gap:7px}
+.dots button{width:8px;height:8px;border-radius:50%;border:0;padding:0;background:#C5CBD5;cursor:pointer}
+.dots button[aria-current="true"]{background:var(--blue);width:22px;border-radius:4px}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;height:36px;min-width:36px;padding:0 14px;font:inherit;font-size:13px;cursor:pointer}
+.btn:focus-visible,.dots button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.btn-row{display:flex;gap:6px}
+
+/* ───────── the post, authored at 1080×1350 ───────── */
+.card{position:absolute;left:0;top:0;width:1080px;height:1350px;transform-origin:0 0;transform:scale(var(--s,.5));background:var(--card);overflow:hidden;
+  background-image:linear-gradient(var(--grid) 2px,transparent 2px),linear-gradient(90deg,var(--grid) 2px,transparent 2px);background-size:54px 54px;background-position:-1px -1px}
+.cap{position:absolute;left:84px;right:84px;top:62px;display:flex;justify-content:space-between;align-items:center;font-family:var(--pixel);font-size:28px;color:var(--sub)}
+.cap .series{display:flex;align-items:center;gap:14px}
+.cap .series::before{content:"";width:14px;height:14px;background:var(--blue)}
+.cap .num{color:var(--faint)}
+.wmk{font-family:"Pixelify Sans",var(--pixel)!important;font-weight:400}
+.cap .series.wmk,.swipe b.wmk{font-size:33px}
+/* the mode label: the founder's numbering in front of the title, the same on all five cards and the cover chips */
+.mode{position:absolute;left:84px;top:128px;margin:0;display:flex;align-items:baseline;gap:14px;font-size:30px;line-height:36px;font-weight:600;color:var(--blue)}
+.mode span{font-family:var(--pixel);font-weight:400}
+.ttl{position:absolute;left:84px;right:84px;top:172px;margin:0;font-family:var(--pixel);font-weight:400;font-size:54px;line-height:66px;letter-spacing:-.5px;color:var(--ink)}
+.desc{position:absolute;left:84px;right:84px;top:316px;margin:0;font-size:29px;line-height:42px;color:var(--sub);font-weight:500;letter-spacing:-.3px;word-break:keep-all;white-space:nowrap}
+#wrap[lang=en] .desc{font-size:28px;letter-spacing:-.4px}
+.desc b{color:var(--ink);font-weight:600}
+/* the window onto the phone: clipped at its top so a phone can pan up under the text */
+.stage{position:absolute;left:0;right:0;top:420px;bottom:0;overflow:hidden;
+  -webkit-mask-image:linear-gradient(transparent,#000 40px);mask-image:linear-gradient(transparent,#000 40px)}
+.phonewin{position:absolute;left:50%;top:44px;width:627px;margin-left:-313.5px;transform-origin:50% 0;transition:transform .9s cubic-bezier(.45,0,.2,1)}
+.phonewin nw-phone{width:627px}
+
+/* ── cover / outro ── */
+.c-cover .ttl{top:160px;font-size:76px;line-height:96px;letter-spacing:-1.5px}
+#wrap[lang=en] .c-cover .ttl{font-size:72px;letter-spacing:-1.5px}
+.c-cover .desc{top:388px;font-size:30px;line-height:46px}
+.c-cover nw-futureself{position:absolute;left:84px;top:658px;width:300px;height:166px}
+.chips{position:absolute;left:432px;top:580px;display:flex;flex-direction:column;gap:26px}
+.chip{display:flex;align-items:center;gap:18px;font-size:38px;line-height:52px;font-weight:600;white-space:nowrap;opacity:0;transform:translateX(-20px);transition:opacity .4s,transform .4s}
+.chip.in{opacity:1;transform:none}
+.chip span{font-family:var(--pixel);font-weight:400;font-size:32px;color:var(--blue);width:72px}
+.swipe{position:absolute;left:84px;right:84px;bottom:72px;display:flex;justify-content:space-between;font-size:28px;color:var(--faint)}
+.swipe b{font-family:var(--pixel);font-weight:400;color:var(--blue)}
+.c-outro{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.c-outro .close{font-family:var(--pixel);font-size:52px;line-height:66px;margin:-40px 0 76px;color:var(--ink)}
+.c-outro nw-futureself{width:300px;height:166px;margin-bottom:52px}
+.c-outro .wm{font-family:var(--pixel);font-size:110px;line-height:1;letter-spacing:2px}
+.c-outro .tg{font-size:40px;line-height:58px;font-weight:600;margin-top:40px}
+.c-outro .free{margin-top:28px;font-size:30px;color:var(--sub)}
+.c-outro .url{position:absolute;bottom:80px;font-size:40px;color:var(--blue)}
+
+@media (prefers-reduced-motion:reduce){ .track,.chip,.phonewin{transition:none!important} }
+
+/* ?solo=N — one card at its real 1080×1350, no viewer chrome: what scripts/marketing/record.mjs records */
+html.solo,html.solo body{margin:0;background:var(--card);overflow:hidden}
+html.solo .wrap{display:block;padding:0;max-width:none}
+html.solo .side,html.solo .controls{display:none}
+html.solo .viewer{display:block}
+html.solo .vp{width:1080px;max-width:none;aspect-ratio:auto;height:1350px;border-radius:0;box-shadow:none}
+html.solo .track{transition:none}
+</style>
+<div class="wrap" lang="ko" id="wrap">
+  <div class="viewer">
+    <div class="vp" id="vp" aria-roledescription="carousel" aria-label="나와나는 무조건 말하게 만들어요">
+      <div class="track" id="track">
+
+        <div class="slot"><section class="card c-cover" data-k="cover">
+          <header class="cap"><span class="series wmk">nawana</span><span class="num">01 / 07</span></header>
+          <h2 class="ttl">몇 년 공부했는데<br>말해 본 적은 없어요</h2>
+          <p class="desc"><b>나와나는 무조건 말하게 만들어요.</b><br>어디서 시작하든, 결국 내 입으로 소리 내 말해요.</p>
+          <nw-futureself mode="speaking" level="voice"></nw-futureself>
+          <div class="chips">
+            <div class="chip"><span>1-0</span>프리토킹</div>
+            <div class="chip"><span>1-1</span>코치 모드</div>
+            <div class="chip"><span>2</span>섀도잉</div>
+            <div class="chip"><span>3</span>다시 말하기</div>
+            <div class="chip"><span>4</span>스피치</div>
+          </div>
+          <div class="swipe"><span>옆으로 넘겨보세요 →</span><b class="wmk">nawana.app</b></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="free">
+          <header class="cap"><span class="series wmk">nawana</span><span class="num">02 / 07</span></header>
+          <p class="mode"><span>1-0</span>프리토킹</p>
+          <h2 class="ttl">대화가 되면<br>그냥 말해요</h2>
+          <p class="desc">주제도 대본도 없이 유창한 나와 통화해요.<br><b>내가 꺼낸 얘기</b>를 유창한 내가 이어받아요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-call></nw-call></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="coach">
+          <header class="cap"><span class="series wmk">nawana</span><span class="num">03 / 07</span></header>
+          <p class="mode"><span>1-1</span>코치 모드</p>
+          <h2 class="ttl">말이 막혀도<br>할 말이 떠 있어요</h2>
+          <p class="desc">유창한 내가 물을 때마다 <b>이렇게 말해 보세요</b>가 떠요.<br>표시된 부분만 내 얘기로 바꿔서 말해요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-call></nw-call></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="shadow">
+          <header class="cap"><span class="series wmk">nawana</span><span class="num">04 / 07</span></header>
+          <p class="mode"><span>2</span>섀도잉</p>
+          <h2 class="ttl">한 문장을<br>내 목소리 따라</h2>
+          <p class="desc">유창한 내가 통화에서 한 말을 <b>내 목소리로</b> 들어요.<br>그대로 따라 말하면 마이크에 들린 말이 보여요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-shadow></nw-shadow></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="again">
+          <header class="cap"><span class="series wmk">nawana</span><span class="num">05 / 07</span></header>
+          <p class="mode"><span>3</span>다시 말하기</p>
+          <h2 class="ttl">그 통화를<br>이번엔 제대로</h2>
+          <p class="desc">방금 그 통화를 처음부터 다시 해요.<br>내 차례엔 <b>고친 말</b>로, 대답은 그때 그대로예요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-sayagain sample="interview"></nw-sayagain></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="speech">
+          <header class="cap"><span class="series wmk">nawana</span><span class="num">06 / 07</span></header>
+          <p class="mode"><span>4</span>스피치</p>
+          <h2 class="ttl">원고 한 편을<br>끝까지</h2>
+          <p class="desc">내가 쓴 원고를 프롬프터로 보며 처음부터 끝까지 읽어요.<br>점수는 <b>다섯 가지로</b> 나눠서 나와요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-speech></nw-speech></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card c-outro" data-k="outro">
+          <div class="close">어디서 시작하든,<br>결국 말하게 돼요.</div>
+          <nw-futureself mode="speaking" level="voice"></nw-futureself>
+          <div class="wm wmk">nawana</div>
+          <div class="tg">유창한 나에게<br>언어를 배우세요.</div>
+          <div class="free">첫 20분은 무료예요</div>
+          <div class="url wmk">nawana.app</div>
+        </section></div>
+
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn" id="prev" aria-label="이전 장">←</button>
+      <div class="dots" id="dots"></div>
+      <div class="btn-row"><button class="btn" id="replay">처음부터 재생</button><button class="btn" id="next" aria-label="다음 장">→</button></div>
+    </div>
+  </div>
+
+  <aside class="side">
+    <h1>나와나는 무조건 말하게 만들어요</h1>
+    <p>시리즈 08 · 다섯 가지 모드 묶음. 제목은 54px, 표지 76px로 줄이고 그만큼 화면 창을 키웠어요. 화면은 모두 UI 키트(<b>web/kit</b>)의 <code>nw-call</code>, <code>nw-shadow</code>, <code>nw-sayagain</code>, <code>nw-speech</code>예요. <code>?lang=en</code>이면 영어판이에요. 무음판이에요.</p>
+    <h3>장 목록</h3>
+    <ol class="list" id="list">
+      <li><button data-go="0">커버 · 몇 년 공부했는데 말해 본 적은 없어요</button></li>
+      <li><button data-go="1">02 · 1-0 프리토킹</button></li>
+      <li><button data-go="2">03 · 1-1 코치 모드</button></li>
+      <li><button data-go="3">04 · 2 섀도잉</button></li>
+      <li><button data-go="4">05 · 3 다시 말하기</button></li>
+      <li><button data-go="5">06 · 4 스피치</button></li>
+      <li><button data-go="6">마지막 장 · nawana.app</button></li>
+    </ol>
+  </aside>
+</div>
+
+<script type="module">
+const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const sleep = ms => new Promise(r => setTimeout(r, RM ? 0 : ms));
+const params = new URLSearchParams(location.search);
+
+/* ?lang=en — the English text block (copy.md, written separately, not translated) */
+const EN = {
+  cover: { ttl: "Years of study,<br>barely a word spoken", desc: "<b>nawana makes you speak. No matter what.</b><br>Five ways in, and every one ends with you saying it out loud.",
+    chips: ["Free talk", "Coach mode", "Shadowing", "Say it again", "Speech"], swipe: "Swipe →" },
+  free: { mode: "Free talk", ttl: "If you can chat,<br>just call", desc: "No script, no topic. Just a call with your fluent self,<br>who picks up <b>whatever you bring up</b>." },
+  coach: { mode: "Coach mode", ttl: "Words won't come?<br>A line is waiting", desc: "Each time your fluent self asks, <b>Try saying</b> offers an answer.<br>Swap the marked part for your own story." },
+  shadow: { mode: "Shadowing", ttl: "One line,<br>after your own voice", desc: "Hear a line your fluent self said on your call, <b>in your voice</b>.<br>Say it after it and see what the mic heard." },
+  again: { mode: "Say it again", ttl: "That call,<br>done right", desc: "Run the whole call again from the top.<br>Your turns <b>the fixed way</b>, the answers just as they were." },
+  speech: { mode: "Speech", ttl: "A whole script,<br>start to finish", desc: "Read your own script on a prompter, all the way through.<br>Your score comes <b>in five parts</b>." },
+  outro: { close: "Wherever you start,<br>you end up speaking.", tg: "Learn a language<br>from your fluent self.", free: "Your first 20 minutes are free" },
+};
+const EN_ON = params.get("lang") === "en";
+/* card 06: the learner's own script (copy.md) — material, English in both versions */
+const SCRIPT = { title: EN_ON ? "Interview intro" : "면접 자기소개", seconds: 25,
+  text: "Hi, thanks for having me. For the past three years, I've worked as a product designer at a small startup. Last year I led the redesign of our app, and I learned to take the initiative when things weren't clear. I'm looking for a team where I can keep growing, and this role feels like a great fit." };
+if (EN_ON) {
+  $("#wrap").lang = "en"; document.title = "nawana makes you speak";
+  for (const card of $$(".card")) {
+    const e = EN[card.dataset.k]; if (!e) continue;
+    if (e.ttl) $(".ttl", card).innerHTML = e.ttl;
+    if (e.desc) $(".desc", card).innerHTML = e.desc;
+    if (e.mode) $(".mode", card).lastChild.textContent = e.mode;
+  }
+  const cv = $('[data-k="cover"]');
+  $$(".chip", cv).forEach((ch, i) => ch.lastChild.textContent = EN.cover.chips[i]);
+  $(".swipe span", cv).textContent = EN.cover.swipe;
+  const ou = $('[data-k="outro"]'); $(".close", ou).innerHTML = EN.outro.close; $(".tg", ou).innerHTML = EN.outro.tg; $(".free", ou).textContent = EN.outro.free;
+}
+
+await document.fonts.load('28px "Pixelify Sans"').catch(() => {});
+await import("/web/kit/nawana-ui.js");   // after the lang switch: the kit reads lang once, when a screen is built
+
+const vp = $("#vp");
+const setScale = () => $$(".card").forEach(c => c.style.setProperty("--s", vp.clientWidth / 1080));
+new ResizeObserver(setScale).observe(vp); setScale();
+
+for (const n of ["nw-call", "nw-shadow", "nw-sayagain", "nw-speech"]) await customElements.whenDefined(n);
+$("nw-speech").script = SCRIPT;
+
+/* camera: pan the phone inside the card's window (px; 1pt = 1.56px). z < 1 steps back. */
+const pan = (c, y, instant, z = 1) => {
+  const w = $(".phonewin", c), tf = `translateY(${-y}px)` + (z !== 1 ? ` scale(${z})` : "");
+  if (instant) { w.style.transition = "none"; w.style.transform = tf; void w.offsetWidth; w.style.transition = ""; }
+  else w.style.transform = tf;
+};
+/* a beat timeline: at(ms) waits until ms after the scene start (stoppable through the screen's sleep) */
+const clock = scr => { const t0 = performance.now(); return ms => scr.sleep(Math.max(0, t0 + ms - performance.now())); };
+/* finish a screen's finite entry animations/transitions at once, so frame 0 is the settled layout */
+const settle = el => { void el.offsetWidth; for (const a of el.shadowRoot.getAnimations()) if (a.effect?.getComputedTiming().iterations !== Infinity) a.finish(); };
+/* a call line laid down at once (a settled opening frame, never a blank phone) */
+const laid = (call, who, text, me) => { const el = call._line(who, text, { me }); el.classList.add("in"); el.querySelector(".acc").innerHTML = call._meaning(); call._follow(); return el; };
+
+/* ── shadowing (piece 02): the fluent self's line from the interview talk; word times as piece 02 ── */
+const LINE = "You clearly took the initiative and prioritized what mattered.";
+const TIMES = [[.12, .30], [.34, .80], [.85, 1.10], [1.13, 1.24], [1.27, 2.05], [2.18, 2.36], [2.42, 3.36], [3.40, 3.62], [3.66, 4.30]];
+const TAKE72 = { heard: "You clearly took the initiative and prioritize what matter", score: 72, rhythm: 64,
+  dev: [30, 60, -40, null, 90, 140, 260, 300, 240], target: 4.2, you: 5.0, pace: 1.19 };
+
+/* ── say it again (piece 03): the kit's interview talk, beats through the screen's own pieces ── */
+const SA = {
+  blank(sa) { sa.$(".hero").classList.add("off"); sa.$(".feed").innerHTML = ""; sa._scores = new Map(); },
+  lay(sa, n) { SA.blank(sa); for (let i = 0; i < n; i++) { const r = sa._row(i), st = sa.steps[i]; if (st.who === "me") sa._score(r, i, st.score, st.heard); } },
+  settle(sa) { void sa.offsetWidth; for (const a of sa.shadowRoot.getAnimations()) if (a.effect?.getComputedTiming().iterations !== Infinity) a.finish(); },
+  answer(sa, i) { sa._panel("lis"); return sa._row(i, { cur: true }); },
+  prompt(sa, i) { sa._uncur(); sa._reading(i); },
+  live(sa, on) { sa.$(".p-read .card").classList.toggle("live", on); },
+  join(sa, i) { SA.live(sa, false); sa._panel("lis"); return sa._row(i); },
+};
+
+const PLAY = {
+  async cover(c, alive) {
+    const chips = $$(".chip", c); chips.forEach(x => x.classList.remove("in"));
+    await sleep(400);
+    for (const ch of chips) { if (!alive()) return; ch.classList.add("in"); await sleep(260); }
+    await sleep(3600);
+  },
+  /* 02 · 1-0 free talk: the question is on screen → the learner talks at length → the fluent self picks up THEIR project */
+  async free(c) {
+    const call = $("nw-call", c); pan(c, 470, true);
+    await call.run(async s => {
+      const at = clock(s);
+      laid(s, s._otherName, "Hey! So, how did the interview go?");
+      s._pill("speaking"); s._hint("hintSpeak"); settle(s);
+      await at(900); await s.listen();
+      await at(1500); await s.user("Honestly, better than I expected. They asked about a project I led last year, and I actually had a lot to say.");
+      await at(6700); await s.say("Wait, the one you led? What part were you proudest of?");
+      s.done();
+      await at(11000);
+    });
+  },
+  /* 03 · 1-1 coach mode: one quick exchange already said → the question → "Try saying" + the word to try
+     → the learner puts their own feeling in → the hint ticks to "Used it" → the turn goes */
+  async coach(c) {
+    const call = $("nw-call", c); pan(c, 470, true);
+    const ko = !EN_ON;
+    await call.run(async s => {
+      const at = clock(s);
+      s.goals(["prepared"]);
+      laid(s, s._otherName, "So, how did the interview go?");
+      laid(s, s.l.you, "It went well.", true);
+      s._clock(6); clearInterval(s._clockT); settle(s);
+      await at(300); await s.say("Nice! How did you feel going in?");
+      await at(2300); await s.listen();
+      s.coach({ line: "I felt <u>a little nervous</u>, but prepared.", gloss: ko ? "<u>좀 떨렸</u>지만, 준비는 돼 있었어." : "", word: "prepared" });
+      // the learner's turn, typed as it is heard; the hint ticks the moment "prepared" is said
+      await at(5200);
+      const ln = s._meLn, b = ln.querySelector(".bub"); b.classList.remove("listen");
+      await s.typeInto(b, "I was really nervous, but I felt prepared."); s._meLn = null; s._follow();
+      s.tick(0);
+      await at(8600);
+      s.coach(null); ln.querySelector(".acc").innerHTML = s._meaning();
+      s._pill("thinking"); s._hint("hintThink");
+      s._think = s._add(`<div class="think"><i class="spin"></i>${s._thinkText}</div>`);
+      await at(11000);
+    });
+  },
+  /* 04 · 2 shadowing: the target plays in the learner's voice (karaoke) → 3·2·1 → the take → 72 + what the mic heard */
+  async shadow(c) {
+    const sh = $("nw-shadow", c);
+    sh.stop(); sh.line = { text: LINE, times: TIMES, phrase: [6, 8] }; sh.take = TAKE72; sh.reset(); settle(sh);
+    pan(c, 150, true);                                       // full size, the target line right under the text block
+    await sh.run(async () => {
+      sh.line = { text: LINE, times: TIMES, phrase: [6, 8] };
+      const at = clock(sh);
+      await at(300); await sh._press(sh.$(".pl"));
+      await sh.playTarget(1);                                // the line, in the learner's own voice (karaoke)
+      await at(4900); await sh._press(sh.$(".ct .mic"));
+      await sh.record(TAKE72, { speed: 1.7 });                // compressed for the card
+      pan(c, 60, false, .9);                                  // step back for the result
+      await at(12000);
+    });
+  },
+  /* 05 · 3 say it again: the corrected line on the prompter ("went") is read → the call's own answer plays → the next line */
+  async again(c) {
+    const sa = $("nw-sayagain", c); pan(c, 470, true);
+    await sa.run(async s => {
+      const at = clock(s);
+      SA.lay(s, 1); SA.prompt(s, 1); SA.settle(s);
+      await at(900); SA.live(s, true);                      // "Honestly, it went really well. I felt prepared."
+      await at(4100); const row = SA.join(s, 1);
+      await at(4450); s._score(row, 1, 92);
+      await at(4700); SA.answer(s, 2);                      // "Nice, you sound relieved! Which question was the hardest?"
+      await at(8300); SA.prompt(s, 3);                      // the talk goes on: my next line, fixed
+      await at(10500);
+    });
+  },
+  /* 06 · 4 speech: Scripts → my own script → the prompter scrolls → the gauge counts up → the five rows */
+  async speech(c) {
+    const sp = $("nw-speech", c); sp.stop(); sp.reset(); settle(sp); pan(c, 0, true);
+    await sp.run(async s => {
+      const at = clock(s);
+      await at(1300); await s.open();
+      pan(c, 330);
+      await at(2600); await s.record(4200, 25);
+      await at(7200); pan(c, 120); await s.result(86);
+      await at(9000); pan(c, 280);
+      await at(12500);
+    });
+  },
+  async outro() { await sleep(6000); },
+};
+
+/* no em dash on a posted image (BRAND): sweep the screens' text */
+function undash(root) {
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+  for (let n = w.currentNode; n; n = w.nextNode()) {
+    if (n.shadowRoot) undash(n.shadowRoot);
+    if (n.nodeType === 3 && n.data.includes("—")) n.data = n.data.replace(/\s*—\s*(?=([가-힣])?)/g, (_, ko) => ko ? ". " : ": ");
+  }
+}
+setInterval(() => $$(".card").forEach(c => undash(c)), 60);
+
+const track = $("#track"), slots = $$(".slot"), cards = $$(".card"), dots = $("#dots"), list = $$("#list button");
+slots.forEach((_, i) => { const b = document.createElement("button"); b.setAttribute("aria-label", `${i + 1}번 장`); b.onclick = () => go(i); dots.append(b); });
+let idx = 0, gen = 0;
+const SCREENS = "nw-call,nw-shadow,nw-sayagain,nw-speech";
+function go(i) {
+  idx = (i + slots.length) % slots.length;
+  track.style.transform = `translateX(${-idx * 100}%)`;
+  $$("button", dots).forEach((b, j) => b.setAttribute("aria-current", j === idx));
+  list.forEach((b, j) => b.setAttribute("aria-current", j === idx));
+  $$(SCREENS).forEach(s => s.stop());
+  run(cards[idx]);
+}
+async function run(card) {
+  const g = ++gen, alive = () => g === gen;
+  await sleep(350);
+  do {
+    const t0 = performance.now(), d = document.documentElement.dataset;
+    d.loopStarts = (d.loopStarts ? d.loopStarts + "," : "") + (performance.timeOrigin + t0).toFixed(1);
+    const play = PLAY[card.dataset.k](card, alive); d.scene = card.dataset.k; await play;
+    if (alive()) d.loopMs = Math.round(performance.now() - t0);
+  } while (alive() && !RM);
+}
+$("#prev").onclick = () => go(idx - 1);
+$("#next").onclick = () => go(idx + 1);
+$("#replay").onclick = () => go(idx);
+list.forEach(b => b.onclick = () => go(+b.dataset.go));
+addEventListener("keydown", e => { if (e.key === "ArrowRight") go(idx + 1); if (e.key === "ArrowLeft") go(idx - 1); });
+let x0 = null;
+vp.addEventListener("pointerdown", e => x0 = e.clientX);
+vp.addEventListener("pointerup", e => { if (x0 == null) return; const d = e.clientX - x0; x0 = null; if (Math.abs(d) > 40) go(idx + (d < 0 ? 1 : -1)); });
+const solo = +(params.get("solo") || 0);
+if (solo) document.documentElement.classList.add("solo");
+const m = solo ? [0, solo] : /^#card(\d+)$/.exec(location.hash);
+go(m ? +m[1] - 1 : 0);
+</script>

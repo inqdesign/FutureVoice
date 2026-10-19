@@ -394,7 +394,10 @@ tr.detail td{background:var(--page); font-size:12.5px; padding:14px}
 .hm .who .s .langpair{margin:0 4px 0 0; font-size:12px}
 .hm .sd{width:7px; height:7px; border-radius:50%; flex:none}
 .pstar{color:var(--warn); font-size:12px; line-height:1; flex:none; cursor:help}
-.refico{display:inline-flex; vertical-align:-1px; margin-left:4px; color:var(--good); cursor:help}
+.hm .who .s.refs{white-space:normal; overflow:visible; display:flex; flex-wrap:wrap; gap:4px; margin-top:3px}
+.hm .who .s.refs .refico{margin-left:0; display:inline-block; max-width:100%; overflow:hidden; text-overflow:ellipsis}
+.refico{display:inline-flex; margin-left:5px; padding:0 6px; border-radius:999px; font-size:11px; line-height:16px;
+  color:var(--good); border:1px solid currentColor; white-space:nowrap; cursor:help}
 .hm .c{width:var(--cs); height:var(--cs); border-radius:5px; position:relative}
 .hm .c.su{outline:1.5px solid var(--ink-2); outline-offset:1.5px}
 .hm .c.used::after{content:""; position:absolute; left:50%; top:50%; width:5px; height:5px;
@@ -1032,6 +1035,7 @@ function personCardHtml(id){
     + row('가입', `${fmtTs(u.signedUpAt)} <span class="muted">${ago(u.signedUpAt)}</span>`
         + (u.provider ? ` <span class="muted">· ${PROVIDER_KO[u.provider]||esc(u.provider)}</span>` : ''))
     + row('통화', u.talkSessions ? `${num(u.talkSessions)}번 · ${fmtMin(u.talkSecs)} · 턴 ${num(u.turns)}` : '<span class="muted">없음</span>')
+    + row('남은 시간', (()=>{ const t = talkLeft(u); return t ? `${talkLeftHtml(u)} <span class="muted">· ${esc(t.tip)}</span>` : ''; })())
     + row('장면', u.scenes ? `${num(u.scenes)}개` : '')
     + row('마지막', u.lastTalkAt ? `통화 ${ago(u.lastTalkAt)}` : u.lastSignIn ? `로그인 ${ago(u.lastSignIn)}` : '')
     + row('위치', u.location ? esc(u.location) : '')
@@ -1262,16 +1266,41 @@ function verChip(u, b){
     + `${esc(version||'')} (${esc(build)})</span>`;
 }
 const badge = u => verChip(u) + badgeOnly(u);
-/** Joined through a friend's invite (index.ts referralRows) — a strong
- *  subscribe signal, so it sits beside the name on every tab. */
-const refIcon = u => {
-  if(!u || !u.referredAt) return '';
-  const inv = u.referredBy && (DATA.users||[]).find(x=>x.id===u.referredBy);
-  const tip = `친구 초대로 가입 · ${fmtD(u.referredAt.slice(0,10))}${inv?` · ${nameOf(inv)}의 초대`:''}`;
-  return `<span class="refico" title="${esc(tip)}"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">`
-    + `<circle cx="8" cy="5" r="3" fill="currentColor"/><path d="M2 15c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5z" fill="currentColor"/></svg></span>`;
+/** Invites, both directions, beside the name on every tab (index.ts
+ *  referralRows). Joined through a friend: "← who invited them". Invited
+ *  others: "→ who joined". Names are written out, not hidden in a tooltip,
+ *  so the pair can be read at a glance and on a phone. */
+let _invitees = null;
+const inviteesOf = id => {
+  if(!_invitees){
+    _invitees = new Map();
+    for(const x of DATA.users||[]) if(x.referredBy){
+      if(!_invitees.has(x.referredBy)) _invitees.set(x.referredBy, []);
+      _invitees.get(x.referredBy).push(x);
+    }
+  }
+  return _invitees.get(id) || [];
 };
-const badgeOnly = u => refIcon(u) + (u.owner ? '<span class="ownchip">본인</span>'
+const refIcon = u => {
+  if(!u) return '';
+  let out = '';
+  if(u.referredAt){
+    const inv = u.referredBy && (DATA.users||[]).find(x=>x.id===u.referredBy);
+    const who = inv ? nameOf(inv) : '친구';
+    const tip = `${who}의 초대로 가입 · ${fmtD(u.referredAt.slice(0,10))}`;
+    out += `<span class="refico" title="${esc(tip)}">← ${esc(who)}</span>`;
+  }
+  const mine = inviteesOf(u.id);
+  if(mine.length){
+    const names = mine.map(nameOf);
+    const tip = `초대해서 가입한 사람 ${mine.length}명 · ${names.join(', ')}`;
+    const shown = mine.length <= 2 ? names.join(', ') : `${names[0]} 외 ${mine.length-1}명`;
+    out += `<span class="refico" title="${esc(tip)}">→ ${esc(shown)}</span>`;
+  }
+  return out;
+};
+const badgeOnly = u => refIcon(u) + badgeCore(u);
+const badgeCore = u => (u.owner ? '<span class="ownchip">본인</span>'
   : u.dev ? '<span class="devchip">TEST</span>'
   // Cloned a voice, never reached Apple sign-in — not a signup. Swept 30 min
   // after creation, so one on screen is either mid-onboarding right now or
@@ -1978,8 +2007,10 @@ function renderHeatmap(users){
     html += `<div class="r${isSubscriber(u)?' paying':lapsing(u)?' lapsing':''}" style="grid-template-columns:${cols}">`
       + `<div class="who" title="${esc(u.realEmail||u.email||u.label)}">`
       +   `<div class="n">${prospectFor(u) ? prospectStar(prospectFor(u)) : `<span class="sd" style="background:${st?st.color:'var(--grid)'}"></span>`}`
-      +     `<span style="overflow:hidden;text-overflow:ellipsis"${whoAttr(u)}>${esc(nameOf(u))}</span>${badge(u)}</div>`
+      +     `<span style="overflow:hidden;text-overflow:ellipsis"${whoAttr(u)}>${esc(nameOf(u))}</span>${verChip(u)}${badgeCore(u)}</div>`
       +   `<div class="s">${langPair(u.idx)}${u.voiceName ? esc(u.voiceName) : '<span class="muted">클론 없음</span>'}</div>`
+      // Invites get their own line: beside the name they squeezed it to "y…".
+      +   (refIcon(u) ? `<div class="s refs">${refIcon(u)}</div>` : '')
       +   (narrow ? `<div class="s left">남은 통화 ${talkLeftHtml(u)}</div>` : '')
       + `</div>`;
     for(let i=first;i<n;i++){
@@ -2693,7 +2724,13 @@ const PEOPLE_FILTERS = [
   ['silent','통화 없음', u=>!u.firstTalkAt && !u.turns],
   ['paying','체험·결제', u=>isSale(u)],
   ['lost','체험 취소', u=>stateOf(u)==='trial_cancelled'],
+  ['tester','베타 테스터', u=>!!u.tester],
 ];
+/* Beta testers (index.ts testerRows): grouped apart in the people table so
+   they don't read as real learners. */
+const TESTER_KO = {android:'안드로이드 테스터', ios:'iOS 테스터'};
+const testerChip = u => u && u.tester
+  ? `<span class="devchip" title="${TESTER_KO[u.tester]||'테스터'}">베타</span>` : '';
 function renderPeopleTiles(users){
   const talked = users.filter(u=>u.firstTalkAt || u.turns>0).length;
   const secs = users.reduce((a,u)=>a+u.talkSecs,0);
@@ -2724,13 +2761,7 @@ const langsOf = idx => forUser(DATA.userLangs, idx).slice()
   .sort((a,b)=> b.secs-a.secs || String(a.lang).localeCompare(String(b.lang)));
 const langLabel = code => LANG_KO[code] || code;
 /** "영어 9분 · 한국어 2분" — the subtitle under a name. */
-  ['tester','베타 테스터', u=>!!u.tester],
 function langSummary(idx){
-/* Beta testers (index.ts testerRows): grouped apart in the people table so
-   they don't read as real learners. */
-const TESTER_KO = {android:'안드로이드 테스터', ios:'iOS 테스터'};
-const testerChip = u => u && u.tester
-  ? `<span class="devchip" title="${TESTER_KO[u.tester]||'테스터'}">베타</span>` : '';
   const rows = langsOf(idx);
   if(!rows.length) return '';
   return rows.map(r => `${langLabel(r.lang)}${r.secs?` ${fmtMin(r.secs)}`:''}`).join(' · ');

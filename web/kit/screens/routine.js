@@ -35,9 +35,9 @@ const L = {
 
 /* The capture's day: what happened, mostly outside the plan. */
 const CAP_ROWS = l => [["talk", "Coffee with Sarah", "8:02–8:14", l.extra, 1], ["again", l.ko ? "다시 말하기" : "Say it again", "8:20–8:25", l.extra, 1],
-  ["test", l.test, "10:00", null, 0, true], ["talk", "“Honestly, it went really well. I…”", "21:11–21:21", l.extra, 1],
-  ["talk", "“Honestly, it went really well. I…”", "21:11–21:21", l.extra, 1], ["talk", "Weekend plans", "21:40–21:52", l.extra, 1],
-  ["talk", "“Honestly, it went really well. I…”", "23:11–23:21", l.extra, 1], ["talk", "“Honestly, it went really well. I…”", "23:12–23:22", l.extra, 1]];
+  ["test", l.test, "10:00", null, 0, true], ["talk", "How the interview went", "21:11–21:21", l.extra, 1],
+  ["talk", "How the interview went", "21:11–21:21", l.extra, 1], ["talk", "Weekend plans", "21:40–21:52", l.extra, 1],
+  ["talk", "How the interview went", "23:11–23:21", l.extra, 1], ["talk", "How the interview went", "23:12–23:22", l.extra, 1]];
 
 const TEST_CAP = { prompt: "In a loose or not taut manner; without tension.", opts: ["that", "mover", "mine", "initiative"], n: "1/13", right: -1 };
 const TEST_DEMO = { prompt: "Feeling like you have too much to deal with.", opts: ["tremendous", "overwhelmed", "forbidden", "substantial"], n: "3/13", right: 1 };

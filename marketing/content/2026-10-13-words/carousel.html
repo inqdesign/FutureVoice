@@ -1,0 +1,418 @@
+<title>통화에서 모이고, 통화에서 써요</title>
+<style>
+/* the wordmark face: Pixelify Sans, as the app's welcome page draws "nawana" (WelcomeView.swift:183).
+   Sources in order: beside this page (the preview), then the repo's web/ (record.mjs serves the repo root). */
+@font-face{font-family:"Pixelify Sans";font-display:block;
+  src:url("PixelifySans.woff2") format("woff2"),url("../../../web/PixelifySans.woff2") format("woff2"),url("/web/PixelifySans.woff2") format("woff2")}
+
+/* Layout: one 1080×1350 post at a time; fixed text block on top, a window onto the real app below.
+   Inside the phone everything is authored in iOS points (402×874) and scaled ×1.5. Light only, by choice. */
+:root{
+  color-scheme:light;
+  --page:#E9ECF1; --card:#F7F8FA; --grid:rgba(10,40,90,.045);
+  --ink:#0D1117; --sub:#5A6170; --faint:#9AA1AD; --line:#DCE0E7;
+  --blue:#0A5CF5; --ios-blue:#007AFF;
+  /* iOS system values sampled from the app's own screenshots */
+  --sys-bg:#FFFFFF; --sys-grouped:#F2F2F7; --sys-fill:#EFEFF4; --sys-gray:#8E8E93; --sys-gray3:#C7C7CC;
+  --me-bubble:#D3E2FD; --fix-bg:#EBF2FE; --btn-tint:#D6E4FB; --sys-red:#FF3B30; --sys-green:#34C759; --sys-orange:#E07B1F;
+  --pixel:"Geist Pixel","Galmuri14","Apple SD Gothic Neo",system-ui,sans-serif;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--sans)}
+.wrap{max-width:1100px;margin:0 auto;padding-inline:16px;padding-block:28px 56px;display:flex;flex-wrap:wrap;gap:28px 40px;align-items:flex-start;justify-content:center}
+.viewer{flex:0 1 540px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.side{flex:1 1 300px;min-width:0;max-width:440px;font-size:14px;line-height:1.6;color:var(--sub)}
+.side h1{font-family:var(--pixel);font-weight:400;font-size:26px;line-height:1.25;color:var(--ink);margin:0 0 10px;text-wrap:balance}
+.side h3{font-size:13px;letter-spacing:.06em;color:var(--ink);margin:22px 0 6px}
+.side ol{padding-left:18px;margin:0}
+.side li{margin-bottom:4px}
+.side .list button{all:unset;cursor:pointer;color:var(--ink)}
+.side .list button[aria-current="true"]{color:var(--blue);font-weight:600}
+.side .list button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.vp{position:relative;width:100%;aspect-ratio:4/5;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(13,17,23,.08),0 18px 50px rgba(13,17,23,.10);background:var(--card);touch-action:pan-y}
+.track{position:absolute;inset:0;display:flex;transition:transform .45s cubic-bezier(.3,.7,.2,1)}
+.slot{flex:0 0 100%;height:100%;position:relative;overflow:hidden}
+.controls{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.dots{display:flex;gap:7px}
+.dots button{width:8px;height:8px;border-radius:50%;border:0;padding:0;background:#C5CBD5;cursor:pointer}
+.dots button[aria-current="true"]{background:var(--blue);width:22px;border-radius:4px}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;height:36px;min-width:36px;padding:0 14px;font:inherit;font-size:13px;cursor:pointer}
+.btn:focus-visible,.dots button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.btn-row{display:flex;gap:6px}
+
+/* ───────── the post, authored at 1080×1350 ───────── */
+.card{position:absolute;left:0;top:0;width:1080px;height:1350px;transform-origin:0 0;transform:scale(var(--s,.5));background:var(--card);overflow:hidden;
+  background-image:linear-gradient(var(--grid) 2px,transparent 2px),linear-gradient(90deg,var(--grid) 2px,transparent 2px);background-size:54px 54px;background-position:-1px -1px}
+.cap{position:absolute;left:84px;right:84px;top:72px;display:flex;justify-content:space-between;align-items:center;font-family:var(--pixel);font-size:28px;color:var(--sub)}
+.cap .series{display:flex;align-items:center;gap:14px}
+.cap .series::before{content:"";width:14px;height:14px;background:var(--blue)}
+.cap .num{color:var(--faint)}
+.wmk{font-family:"Pixelify Sans",var(--pixel)!important;font-weight:400}
+.cap .series.wmk,.swipe b.wmk{font-size:33px}
+.c-outro .url.wmk{font-size:40px}
+.ttl{position:absolute;left:84px;right:84px;top:134px;margin:0;font-family:var(--pixel);font-weight:400;font-size:72px;line-height:88px;letter-spacing:-1px;color:var(--ink)}
+.ttl .en{color:var(--blue)}
+.desc{position:absolute;left:84px;right:96px;top:322px;margin:0;font-size:32px;line-height:47px;color:var(--sub);font-weight:500;letter-spacing:-.3px;word-break:keep-all}
+.desc b{color:var(--ink);font-weight:600}
+/* the window onto the phone: clipped at its top so a phone can pan up under the text */
+.stage{position:absolute;left:0;right:0;top:470px;bottom:0;overflow:hidden;
+  -webkit-mask-image:linear-gradient(transparent,#000 40px);mask-image:linear-gradient(transparent,#000 40px)}
+
+.phonewin{position:absolute;left:50%;top:44px;width:627px;margin-left:-313.5px;transition:transform .9s cubic-bezier(.45,0,.2,1)}
+.phonewin nw-phone{width:627px}
+/* card 07: the Shadow chapter's line opens ShadowDrillView over the book (a full-screen cover, slides up) */
+nw-shadow.sheet{z-index:5;transform:translateY(102%);transition:transform .42s cubic-bezier(.3,.8,.2,1)}
+nw-shadow.sheet.up{transform:none}
+/* ── compare ── */
+.cmp{position:absolute;left:84px;right:84px;top:60px;display:flex;flex-direction:column;gap:30px}
+.cmp .q{font-size:30px;color:var(--sub)}
+.cmp .q b{display:block;color:var(--ink);font-size:38px;line-height:52px;font-weight:600;margin-top:6px}
+.vr{position:relative;background:#fff;border-radius:40px;padding:30px 34px;display:grid;grid-template-columns:174px 1fr;gap:10px 30px;align-items:center;box-shadow:0 1px 2px rgba(0,0,0,.04);transition:box-shadow .3s,opacity .3s,outline-color .3s;outline:4px solid transparent}
+.vr .av{grid-row:1/3;width:174px;height:96px;border-radius:48px;overflow:hidden;background:var(--sys-grouped);display:grid;place-items:center}
+.vr nw-futureself.av{display:block}
+.vr .av svg{width:46px;height:46px;color:#B0B5BF}
+.vr .lab{font-size:31px;font-weight:700;display:flex;justify-content:space-between;align-items:baseline}
+.vr .lab small{font-size:24px;color:var(--faint);font-weight:500}
+.wave{display:flex;align-items:center;gap:6px;height:70px}
+.wave i{flex:1;height:100%;border-radius:4px;background:currentColor;transform:scaleY(calc(var(--h) * .3))}
+.vr.a .wave{color:#C2C6CE}.vr.b .wave{color:var(--blue)}
+.vr.playing .wave i{animation:lv .8s ease-in-out infinite alternate;animation-delay:calc(var(--d) * -1s)}
+.vr.b.win{outline-color:var(--blue)}
+.vr.dimmed{opacity:.5}
+.react{position:absolute;right:28px;bottom:-26px;background:var(--ink);color:#fff;font-size:26px;font-weight:600;padding:12px 22px;border-radius:24px 24px 6px 24px;opacity:0;transform:translateY(8px);transition:opacity .35s,transform .35s}
+.vr.b .react{background:var(--blue)}
+.react.in{opacity:1;transform:none}
+
+/* ── cover / outro ── */
+.c-cover .ttl{top:212px;font-size:110px;line-height:130px;letter-spacing:-2px}
+.wrap:lang(en) .c-cover .ttl{font-size:96px}   /* en line 2 is 20 characters; 96px keeps it on one line (as piece 02 did) */
+.c-cover .desc{top:492px}
+.c-cover nw-futureself{position:absolute;left:84px;top:792px;width:300px;height:166px}
+/* eight chapters: 32px rows, 14px apart, from 650 to ~1110 — clear of the footer at 1250 */
+.chips{position:absolute;left:432px;top:650px;display:flex;flex-direction:column;gap:14px}
+.chip{display:flex;align-items:center;gap:16px;font-size:32px;line-height:44px;font-weight:600;white-space:nowrap;opacity:0;transform:translateX(-20px);transition:opacity .4s,transform .4s}
+.chip.in{opacity:1;transform:none}
+.chip span{font-family:var(--pixel);font-weight:400;font-size:26px;color:var(--blue);width:44px}
+.swipe{position:absolute;left:84px;right:84px;bottom:72px;display:flex;justify-content:space-between;font-size:28px;color:var(--faint)}
+.swipe b{font-family:var(--pixel);font-weight:400;color:var(--blue)}
+.c-outro{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.c-outro nw-futureself{width:300px;height:166px;margin-bottom:60px}
+.c-outro .wm{font-family:var(--pixel);font-size:120px;line-height:1;letter-spacing:2px}
+.c-outro .tg{font-size:44px;line-height:64px;font-weight:600;margin-top:44px}
+.c-outro .free{margin-top:32px;font-size:30px;color:var(--sub)}
+.c-outro .url{position:absolute;bottom:80px;font-family:var(--pixel);font-size:34px;color:var(--blue)}
+
+@media (prefers-reduced-motion:reduce){
+  .track,.chip,.react,.phonewin{transition:none!important}
+  .wave i{animation:none!important}
+}
+
+/* ?solo=N — one card at its real 1080×1350, no viewer chrome: what scripts/marketing/record.mjs records */
+html.solo,html.solo body{margin:0;background:var(--card);overflow:hidden}
+html.solo .wrap{display:block;padding:0;max-width:none}
+html.solo .side,html.solo .controls{display:none}
+html.solo .viewer{display:block}
+html.solo .vp{width:1080px;max-width:none;aspect-ratio:auto;height:1350px;border-radius:0;box-shadow:none}
+html.solo .track{transition:none}
+</style>
+<style>
+.phonewin{transform-origin:50% 0}
+.c-cover .chips{top:660px}
+</style>
+<div class="wrap" lang="ko" id="wrap">
+  <div class="viewer">
+    <div class="vp" id="vp" aria-roledescription="carousel" aria-label="통화에서 모이고, 통화에서 써요">
+      <div class="track" id="track">
+
+        <div class="slot"><section class="card c-cover" data-k="cover">
+          <header class="cap"><span class="series wmk">nawana</span><span class="num">01 / 07</span></header>
+          <h2 class="ttl">적어 둔 단어,<br>말할 땐 안 나와요</h2>
+          <p class="desc"><b>통화에서 모으고, 통화에서 써요.</b><br>유창한 내가 쓴 단어를 내 목소리로 익혀요.</p>
+          <nw-futureself mode="speaking" level="voice"></nw-futureself>
+          <div class="chips">
+            <div class="chip"><span>02</span>통화에서 저절로 모이고</div>
+            <div class="chip"><span>03</span>내 목소리로 듣고</div>
+            <div class="chip"><span>04</span>카드로 외우고</div>
+            <div class="chip"><span>05</span>다음 통화에서 쓰고</div>
+            <div class="chip"><span>06</span>말하면 '썼어요'</div>
+          </div>
+          <div class="swipe"><span>옆으로 넘겨보세요 →</span><b class="wmk">nawana.app</b></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="book">
+          <header class="cap"><span class="series wmk">nawana</span><span class="num">02 / 07</span></header>
+          <h2 class="ttl">통화 한 번이면<br>단어가 모여요</h2>
+          <p class="desc">유창한 내가 통화에서 쓴 단어 중 <b>내 수준에 맞는 것</b>이 교재와 단어장에 알아서 모여요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-bookpage></nw-bookpage></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="card">
+          <header class="cap"><span class="series wmk">nawana</span><span class="num">03 / 07</span></header>
+          <h2 class="ttl">뜻과 예문,<br>발음은 내 목소리로</h2>
+          <p class="desc">단어를 누르면 뜻과 예문이 나와요. 발음은 <b>유창한 내 목소리</b>로 들어요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-words></nw-words></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="deck">
+          <header class="cap"><span class="series wmk">nawana</span><span class="num">04 / 07</span></header>
+          <h2 class="ttl">하루 몇 장씩<br>넘기며 외워요</h2>
+          <p class="desc">뜻을 떠올려 보고 넘겨요. <b>10분, 내일, 3일</b> 중 언제 다시 볼지 고르고, 아는 건 '알아요'로 보내요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-words></nw-words></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="call">
+          <header class="cap"><span class="series wmk">nawana</span><span class="num">05 / 07</span></header>
+          <h2 class="ttl">다음 통화 화면에<br>그 단어가 떠요</h2>
+          <p class="desc">오늘 익힐 단어가 통화 화면 위에 <b>따라와요</b>. 대화하다 그 단어를 말하면 바로 초록색으로 체크돼요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-call level="B1"></nw-call></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="used">
+          <header class="cap"><span class="series wmk">nawana</span><span class="num">06 / 07</span></header>
+          <h2 class="ttl">말한 단어는<br>'썼어요'</h2>
+          <p class="desc">통화에서 <b>직접 말한 단어</b>는 '썼어요'로 바뀌어요. 안다고 체크만 한 것보다 확실하게 내 단어가 된 거예요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-words></nw-words></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card c-outro" data-k="outro">
+          <nw-futureself mode="speaking" level="voice"></nw-futureself>
+          <div class="wm wmk">nawana</div>
+          <div class="tg">유창한 나에게<br>언어를 배우세요.</div>
+          <div class="free">첫 20분은 무료예요</div>
+          <div class="url wmk">nawana.app</div>
+        </section></div>
+
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn" id="prev" aria-label="이전 장">←</button>
+      <div class="dots" id="dots"></div>
+      <div class="btn-row"><button class="btn" id="replay">처음부터 재생</button><button class="btn" id="next" aria-label="다음 장">→</button></div>
+    </div>
+  </div>
+
+  <aside class="side">
+    <h1>통화에서 모이고, 통화에서 써요</h1>
+    <p>시리즈 05. 글자 자리는 고정하고 아래 화면만 움직이는 7장짜리 캐러셀이에요. 폰 화면은 모두 UI 키트(<b>web/kit/nawana-ui.js</b>)의 교재 단어 장, 단어 지도·단어 카드·오늘의 단어 덱, 통화 화면이에요. 지금은 무음이고, 03장에 발음 자리를 비워 뒀어요. <code>?lang=en</code>이면 영어판이에요.</p>
+    <h3>장 목록</h3>
+    <ol class="list" id="list">
+      <li><button data-go="0">커버 · 적어 둔 단어, 말할 땐 안 나와요</button></li>
+      <li><button data-go="1">02 · 통화 한 번이면 단어가 모여요</button></li>
+      <li><button data-go="2">03 · 뜻과 예문, 발음은 내 목소리로</button></li>
+      <li><button data-go="3">04 · 하루 몇 장씩 넘기며 외워요</button></li>
+      <li><button data-go="4">05 · 다음 통화 화면에 그 단어가 떠요</button></li>
+      <li><button data-go="5">06 · 말한 단어는 '썼어요'</button></li>
+      <li><button data-go="6">마지막 장 · nawana.app</button></li>
+    </ol>
+    <h3>샘플 데이터</h3>
+    <p>면접 통화 교재의 단어(initiative · perspective · compelling · prioritize), 단어 지도의 B1 · 16 / 2113, 폴더 숫자는 모두 예시예요.</p>
+  </aside>
+</div>
+
+<script type="module">
+const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const sleep = ms => new Promise(r => setTimeout(r, RM ? 0 : ms));
+const params = new URLSearchParams(location.search);
+
+/* ?lang=en: the English text block (copy.md, written separately, not translated) */
+const EN = {
+  cover: { ttl: "Saved words?<br>They don't come out.", desc: "<b>Collect words on a call. Use them on the next.</b><br>Words the fluent you used, learned in your own voice.",
+    chips: ["Collected on their own", "Heard in your voice", "Learned on flashcards", "Used on the next call", "Say it, and you've used it"], swipe: "Swipe →" },
+  book: { ttl: "One call,<br>new words", desc: "Words the fluent you used on the call, <b>at your level</b>, go into the book and your word list on their own." },
+  card: { ttl: "Meaning, examples,<br>and your voice", desc: "Tap a word for its meanings and examples, and <b>hear it in your own fluent voice</b>." },
+  deck: { ttl: "A few cards a day,<br>flip and learn", desc: "Guess the meaning, then flip. See it again in <b>10 minutes, tomorrow or 3 days</b>, or mark it Got it." },
+  call: { ttl: "Next call,<br>your words are there", desc: "Today's words <b>stay at the top</b> of your next call. Say one while you talk and it turns green." },
+  used: { ttl: "Said it?<br>Then you've used it.", desc: "A word you <b>actually say on a call</b> is marked Used it. That counts for more than tapping I know it." },
+  outro: { tg: "Learn a language<br>from your fluent self.", free: "Your first 20 minutes are free" },
+};
+if (params.get("lang") === "en") {
+  $("#wrap").lang = "en"; document.title = "Collect words on a call. Use them on the next.";
+  for (const card of $$(".card")) {
+    const e = EN[card.dataset.k];
+    if (e?.ttl) $(".ttl", card).innerHTML = e.ttl;
+    if (e?.desc) $(".desc", card).innerHTML = e.desc;
+  }
+  const cv = $('[data-k="cover"]');
+  $$(".chip", cv).forEach((ch, i) => ch.lastChild.textContent = EN.cover.chips[i]);
+  $(".swipe span", cv).textContent = EN.cover.swipe;
+  const ou = $('[data-k="outro"]'); $(".tg", ou).innerHTML = EN.outro.tg; $(".free", ou).textContent = EN.outro.free;
+}
+
+await document.fonts.load('28px "Pixelify Sans"').catch(() => {});
+await import("/web/kit/nawana-ui.js");   // after the lang switch: the kit reads lang once, when a screen is built
+
+const vp = $("#vp");
+const setScale = () => $$(".card").forEach(c => c.style.setProperty("--s", vp.clientWidth / 1080));
+new ResizeObserver(setScale).observe(vp); setScale();
+
+/* the camera: the phone pans (and may step back) inside the window. 1pt = 1.56px at k = 1. */
+const pan = (c, y, instant, k = 1) => {
+  const w = $(".phonewin", c), t = `translateY(${-y}px)` + (k !== 1 ? ` scale(${k})` : "");
+  if (instant) { w.style.transition = "none"; w.style.transform = t; void w.offsetWidth; w.style.transition = ""; }
+  else w.style.transform = t;
+};
+
+/* the interview talk's book: its Words chapter, freshly collected (nothing said or known yet) */
+const BOOK = { words: [["initiative"], ["perspective"], ["compelling"], ["prioritize"]] };
+const CHIPS = ["compelling", "prioritize", "felt prepared"];
+
+/* AUDIO SLOTS (silent for now). Times are from the scene's start (= the MP4's start, one loop each).
+   Card 03 · W1: the pronounce button speaks the word, the talk row's Listen plays the line. */
+const W1 = { word: 3300, wordLen: 1400, line: 5200, lineLen: 3600 };
+
+const PLAY = {
+  async cover(c, alive) {
+    const chips = $$(".chip", c); chips.forEach(x => x.classList.remove("in"));
+    await sleep(400);
+    for (const ch of chips) { if (!alive()) return; ch.classList.add("in"); await sleep(260); }
+    await sleep(3600);
+  },
+  /* 02: the book's cover → the Words ribbon → the four words the fluent self used */
+  async book(c) {
+    const page = $("nw-bookpage", c);
+    await customElements.whenDefined("nw-bookpage");
+    page.book = BOOK;
+    await page.run(async s => {
+      pan(c, 0, true);
+      await s.sleep(1400);
+      await s.open("words");
+      await s.sleep(2400);
+      await s.tapLine(2);
+      await s.sleep(3600);
+    });
+  },
+  /* 03: the word map → tap "compelling" → its whole card → pronounce (W1 word) → the talk line (W1 line) */
+  async card(c) {
+    const w = $("nw-words", c);
+    await customElements.whenDefined("nw-words");
+    await w.run(async s => {
+      settle(s); s.story(); s.mark("perspective", "study"); s.mark("compelling", "study"); s.mark("prioritize", "study"); s.mark("initiative", "study");
+      s.card("perspective");
+      pan(c, 461, true);
+      await s.sleep(900);
+      await s.select("compelling");
+      await s.sleep(700);
+      await s.openCard();
+      pan(c, 133);
+      await s.sleep(Math.max(0, W1.word - 2600));
+      await s.play();                                   // ← W1 "compelling." starts here
+      await s.sleep(W1.line - W1.word - 360);
+      await listen(s);                                  // ← W1 "That's a compelling perspective." starts here
+      await s.sleep(W1.lineLen + 600);
+    });
+  },
+  /* 04: the day's deck: "prioritize" → reveal → Tomorrow; "compelling" → reveal → Tomorrow */
+  async deck(c) {
+    const w = $("nw-words", c);
+    await customElements.whenDefined("nw-words");
+    await w.run(async s => {
+      s.reset(); s.story();
+      await s.openDeck(["prioritize", "compelling", "perspective", "initiative"], { folders: [0, 0, 0, 0], instant: true });
+      pan(c, 170, true, .78);
+      await s.sleep(1000);
+      await s.reveal(); await s.sleep(1400);
+      await s.file(1); await s.sleep(800);
+      await s.reveal(); await s.sleep(1300);
+      await s.file(1); await s.sleep(1600);
+    });
+  },
+  /* 05: an ordinary call (no coach line): the chips ride on top, "compelling" ticks when it's said */
+  async call(c) {
+    const call = $("nw-call", c);
+    await customElements.whenDefined("nw-call");
+    /* the other side's label is the app's chrome("Future self"): ko "미래의 나" (the kit falls back to English) */
+    Object.defineProperty(call, "_otherName", { configurable: true, get: () => $("#wrap").lang === "en" ? "Future self" : "미래의 나" });
+    await call.run(async k => {
+      k.goals(CHIPS);
+      pan(c, 128, true, .86);
+      /* the first exchange is already on screen, so the loop never opens on an empty call */
+      const first = (who, text, me) => { const el = k._line(who, text, { me }); el.style.transition = "none"; el.classList.add("in"); void el.offsetWidth; el.style.transition = ""; el.querySelector(".acc").innerHTML = k._meaning(); };
+      first(k._otherName, "Hey! How's your week been?", false);
+      first(k.l.you, "Good! They call me yesterday.", true);
+      k._clock(9); k._follow();
+      await k.sleep(900);
+      await k.say("About the interview? Did you get it?");
+      await k.listen();
+      await k.user("Yes! I got the job. They said my story was compelling.");
+      k.tick(0);
+      await k.sleep(500);
+      pan(c, 40, false, 1.3);                   // the camera comes in on the chip row
+      await k.sleep(3200);
+    });
+  },
+  /* 06: the word map after that call: "compelling" goes from kept (bookmark) to grey with the green check */
+  async used(c) {
+    const w = $("nw-words", c);
+    await customElements.whenDefined("nw-words");
+    await w.run(async s => {
+      s.reset(); s.story();
+      s.mark("initiative", "used"); s.mark("neighborhood", "known");
+      s.mark("compelling", "study"); s.mark("prioritize", "study"); s.mark("perspective", "study");
+      s.card("compelling");
+      pan(c, 400, true);
+      await s.sleep(2800);
+      s.mark("compelling", "used");
+      s._kept.compelling = false; s._known.compelling = true; s.card("compelling");
+      await s.sleep(5400);
+    });
+  },
+  async outro() { await sleep(6000); },
+};
+/* the loop's reset drops the full card at once (no fade-out over the cloud at the seam) */
+function settle(s) {
+  const els = [...s.shadowRoot.querySelectorAll(".sheet,.full,.acts,.body")];
+  els.forEach(e => e.style.transition = "none"); void s.offsetWidth;
+  s.reset(); void s.shadowRoot.querySelector(".sheet").offsetWidth;
+  els.forEach(e => e.style.transition = "");
+}
+/* the talk row's Listen (FROM YOUR TALKS) pressed: the system button highlight */
+async function listen(s) {
+  const b = s.shadowRoot.querySelectorAll(".src .sr span")[1]; if (!b) return;
+  b.style.transition = "opacity .1s"; b.style.opacity = .35; await s.sleep(180); b.style.opacity = "";
+}
+
+/* no em dash on a posted image (BRAND): sweep the screens' shadow trees (app strings carrying one) */
+function undash(root) {
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+  for (let n = w.currentNode; n; n = w.nextNode()) {
+    if (n.shadowRoot) undash(n.shadowRoot);
+    if (n.nodeType === 3 && n.data.includes("—")) n.data = n.data.replace(/\s*—\s*(?=([가-힣])?)/g, (_, ko) => ko ? ". " : ": ");
+  }
+}
+/* every frame, before paint (an interval let frame 0 show the deck's "—") */
+(function sweep() { $$(".card").forEach(c => undash(c)); requestAnimationFrame(sweep); })();
+
+const track = $("#track"), slots = $$(".slot"), cards = $$(".card"), dots = $("#dots"), list = $$("#list button");
+slots.forEach((_, i) => { const b = document.createElement("button"); b.setAttribute("aria-label", `${i + 1}번 장`); b.onclick = () => go(i); dots.append(b); });
+let idx = 0, gen = 0;
+const SCREENS = "nw-bookpage,nw-words,nw-call";
+function go(i) {
+  idx = (i + slots.length) % slots.length;
+  track.style.transform = `translateX(${-idx * 100}%)`;
+  $$("button", dots).forEach((b, j) => b.setAttribute("aria-current", j === idx));
+  list.forEach((b, j) => b.setAttribute("aria-current", j === idx));
+  $$(SCREENS).forEach(s => s.stop());
+  run(cards[idx]);
+}
+async function run(card) {
+  const g = ++gen, alive = () => g === gen;
+  for (const n of SCREENS.split(",")) await customElements.whenDefined(n);
+  await sleep(350);
+  do { const t0 = performance.now(); { const d = document.documentElement.dataset; d.loopStarts = (d.loopStarts ? d.loopStarts + "," : "") + (performance.timeOrigin + t0).toFixed(1); } const play = PLAY[card.dataset.k](card, alive); document.documentElement.dataset.scene = card.dataset.k; await play; if (alive()) document.documentElement.dataset.loopMs = Math.round(performance.now() - t0); } while (alive() && !RM);
+}
+$("#prev").onclick = () => go(idx - 1);
+$("#next").onclick = () => go(idx + 1);
+$("#replay").onclick = () => go(idx);
+list.forEach(b => b.onclick = () => go(+b.dataset.go));
+addEventListener("keydown", e => { if (e.key === "ArrowRight") go(idx + 1); if (e.key === "ArrowLeft") go(idx - 1); });
+let x0 = null;
+vp.addEventListener("pointerdown", e => x0 = e.clientX);
+vp.addEventListener("pointerup", e => { if (x0 == null) return; const d = e.clientX - x0; x0 = null; if (Math.abs(d) > 40) go(idx + (d < 0 ? 1 : -1)); });
+const solo = +(params.get("solo") || 0);
+if (solo) document.documentElement.classList.add("solo");
+const m = solo ? [0, solo] : /^#card(\d+)$/.exec(location.hash);
+go(m ? +m[1] - 1 : 0);
+</script>

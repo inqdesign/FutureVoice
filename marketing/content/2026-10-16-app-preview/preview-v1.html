@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>nawana — App Store preview</title>
+<!--
+  App Store preview, 886×1920, 29.5 s. Every screen is a real simulator capture (shots/, English,
+  `scripts/marketing/capture.sh`). Motion is a pure function of time: window.__render(t).
+  Render: node22 scripts/marketing/render-frames.mjs marketing/content/2026-10-16-app-preview/preview.html \
+          --out marketing/content/2026-10-16-app-preview/preview-en.mp4 --seconds 29.5 --silent-audio
+  Scrub in a browser: open with ?t=12.3, or ?play to loop in real time.
+-->
+<style>
+@font-face{font-family:"Geist Pixel";src:url(/web/GeistPixel.ttf) format("truetype")}
+:root{--bg:#F7F8FA;--ink:#0D1117;--sub:#5B6472;--blue:#0A5CF5;--grid:rgba(10,40,90,.05);
+  --sans:-apple-system,"SF Pro Display",system-ui,sans-serif}
+html,body{margin:0;width:886px;height:1920px;overflow:hidden;background:var(--bg)}
+#stage{position:relative;width:886px;height:1920px;overflow:hidden;background:var(--bg)}
+.world{position:absolute;inset:0;overflow:hidden;display:none}
+.grid{position:absolute;inset:0;background:var(--bg);
+  background-image:linear-gradient(var(--grid) 2px,transparent 2px),linear-gradient(90deg,var(--grid) 2px,transparent 2px);
+  background-size:54px 54px;background-position:-1px -1px}
+.flip{position:absolute;inset:0;transform-origin:443px 1250px}
+.cam{position:absolute;left:0;top:0;transform-origin:0 0}
+.phone{position:absolute;left:-42px;top:-42px;width:1290px;height:2706px}
+.body{position:absolute;inset:0;border-radius:207px;background:#0B0B0C;
+  box-shadow:inset 0 0 0 6.6px #6E7076,inset 0 0 0 10px #2A2B2E,0 90px 210px rgba(10,30,70,.20),0 18px 42px rgba(0,0,0,.16)}
+.btn{position:absolute;width:10px;background:linear-gradient(90deg,#4A4C51,#76797F);border-radius:6px}
+.scr{position:absolute;left:42px;top:42px;width:1206px;height:2622px;border-radius:165px;overflow:hidden;background:#fff;isolation:isolate}
+.screen{position:absolute;inset:0}
+.screen>img{position:absolute;left:0;top:0;width:1206px;height:2622px}
+.cover{position:absolute;background:#fff}
+.spr{position:absolute;background-repeat:no-repeat;background-size:1206px 2622px}
+.ov{position:absolute;left:0;top:0;width:1206px;height:2622px;overflow:visible;pointer-events:none}
+.band{position:absolute;left:0;right:0;top:0;height:600px;
+  -webkit-mask-image:linear-gradient(#000 68%,transparent);mask-image:linear-gradient(#000 68%,transparent)}
+.head{position:absolute;left:62px;right:40px;top:140px;font-family:"Geist Pixel";font-size:90px;line-height:104px;
+  letter-spacing:-1px;color:var(--ink);margin:0;font-weight:400}
+.head .ln{display:block;overflow:hidden;padding:0 0 10px;margin-bottom:-10px;white-space:nowrap}
+.head .w{display:inline-block;will-change:transform}
+.head .b{color:var(--blue)}
+.sub{position:absolute;left:64px;top:372px;font:600 40px/1.2 var(--sans);color:var(--sub);letter-spacing:-.3px}
+.sub i{font-style:normal;color:var(--blue)}
+#ring{position:absolute;border-radius:50%;border:16px solid var(--blue);box-sizing:border-box;display:none;pointer-events:none}
+#blue{position:absolute;inset:0;background:var(--blue);opacity:0;pointer-events:none}
+.wave{position:absolute;display:flex;align-items:center;gap:13px;padding:0 34px;border-radius:999px;background:var(--blue);
+  box-shadow:0 14px 34px rgba(10,92,245,.35)}
+.wave b{display:block;width:13px;border-radius:7px;background:#fff}
+.deckcard{position:absolute;border-radius:120px}
+/* end card */
+#end{position:absolute;inset:0;display:none}
+#end .icon{position:absolute;left:343px;top:560px;width:200px;height:200px;border-radius:45px;
+  box-shadow:0 30px 70px rgba(10,30,70,.22),0 6px 16px rgba(0,0,0,.12);overflow:hidden}
+#end .icon img{width:100%;height:100%;display:block}
+#end .wm{position:absolute;left:0;right:0;top:820px;text-align:center;font-family:"Geist Pixel";font-size:150px;line-height:1;
+  color:var(--ink);letter-spacing:4px}
+#end .wm span{display:inline-block}
+#end .tag{position:absolute;left:0;right:0;top:1040px;text-align:center;font:600 46px/1.28 var(--sans);color:var(--ink);letter-spacing:-.4px}
+#end .tag .b{color:var(--blue)}
+#end .voice{position:absolute;left:0;right:0;top:1230px;text-align:center}
+</style></head>
+<body><div id="stage"></div>
+<script>
+/* ───────────── easing / time helpers ───────────── */
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const lerp = (a, b, x) => a + (b - a) * x;
+const E = {
+  lin: (x) => x,
+  io: (x) => (x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2),
+  io5: (x) => (x < .5 ? 16 * x ** 5 : 1 - Math.pow(-2 * x + 2, 5) / 2),
+  out: (x) => 1 - Math.pow(1 - x, 3),
+  out5: (x) => 1 - Math.pow(1 - x, 5),
+  in: (x) => x * x * x,
+  back: (x) => { const c = 1.25; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); },
+};
+const SHOT = (n) => `shots/${n}.png`;
+const el = (tag, cls, parent, css) => { const e = document.createElement(tag); if (cls) e.className = cls; if (css) Object.assign(e.style, css); parent && parent.appendChild(e); return e; };
+const px = (v) => `${v}px`;
+
+/* camera: keyframes {t, fx, fy, z, px, py, e}; focus (fx,fy) in screen px lands on canvas (px,py) at zoom z.
+   zoom interpolates in log space so a 4× push feels even. */
+function camAt(t, kf) {
+  if (t <= kf[0].t) return kf[0];
+  for (let i = 0; i < kf.length - 1; i++) {
+    const a = kf[i], b = kf[i + 1];
+    if (t <= b.t) {
+      const x = (E[b.e || "io"])(prog(t, a.t, b.t));
+      return { fx: lerp(a.fx, b.fx, x), fy: lerp(a.fy, b.fy, x), z: Math.exp(lerp(Math.log(a.z), Math.log(b.z), x)),
+        px: lerp(a.px, b.px, x), py: lerp(a.py, b.py, x) };
+    }
+  }
+  return kf[kf.length - 1];
+}
+const camCSS = (c) => `translate(${c.px - c.fx * c.z}px,${c.py - c.fy * c.z}px) scale(${c.z})`;
+const BASE = { fx: 603, fy: 1311, z: .465, px: 443, py: 1250 };
+
+/* ───────────── world: grid + phone + headline ───────────── */
+function makeWorld(name) {
+  const w = { name };
+  w.el = el("div", "world", stage);
+  w.grid = el("div", "grid", w.el);
+  w.back = el("div", "", w.el, { position: "absolute", inset: 0 });          // canvas-space, behind the phone
+  w.flip = el("div", "flip", w.el);
+  w.cam = el("div", "cam", w.flip);
+  w.behind = el("div", "", w.cam, { position: "absolute", left: 0, top: 0 }); // screen-space, behind the phone
+  w.phone = el("div", "phone", w.cam);
+  el("div", "body", w.phone);
+  [["l", 300, 90], ["l", 470, 190], ["l", 700, 190], ["r", 560, 290]].forEach(([s, top, h]) =>
+    el("div", "btn", w.phone, { [s === "l" ? "left" : "right"]: "-7px", top: px(top), height: px(h) }));
+  w.scr = el("div", "scr", w.phone);
+  w.ov = el("div", "ov", w.scr);                                              // screen-space overlay, above screens
+  w.band = el("div", "grid band", w.el);
+  w.front = el("div", "", w.el, { position: "absolute", inset: 0 });         // canvas-space, above everything
+  w.screens = {};
+  return w;
+}
+function addScreen(w, shot) {
+  const s = el("div", "screen", null); w.scr.insertBefore(s, w.ov);
+  const img = el("img", "", s); img.src = SHOT(shot);
+  w.screens[shot] = s; s.shot = shot; return s;
+}
+/* a piece of the capture that can move on its own; `cover` blanks the same rect in the base first */
+function sprite(screen, [x0, y0, x1, y1], { pad = 6, radius = 0, cover = true, bg = "#fff" } = {}) {
+  x0 -= pad; y0 -= pad; x1 += pad; y1 += pad;
+  const box = { left: px(x0), top: px(y0), width: px(x1 - x0), height: px(y1 - y0) };
+  if (cover) el("div", "cover", screen, { ...box, background: bg });
+  const s = el("div", "spr", screen, { ...box, borderRadius: px(radius),
+    backgroundImage: `url(${SHOT(screen.shot)})`, backgroundPosition: `${-x0}px ${-y0}px` });
+  s.cx = (x0 + x1) / 2; s.cy = (y0 + y1) / 2; return s;
+}
+function reveal(s, t, t0, { dur = .6, dy = 70, from = .94, origin = "center bottom" } = {}) {
+  const x = E.out5(prog(t, t0, t0 + dur));
+  s.style.opacity = clamp(prog(t, t0, t0 + dur * .45));
+  s.style.transformOrigin = origin;
+  s.style.transform = `translateY(${(1 - x) * dy}px) scale(${lerp(from, 1, x)})`;
+}
+/* lift: the piece comes off the screen toward the viewer */
+function lift(s, amount, { scale = 1.06, dx = 0, dy = -10 } = {}) {
+  const a = clamp(amount);
+  s.style.transform = `translate(${dx * a}px,${dy * a}px) scale(${lerp(1, scale, a)})`;
+  s.style.boxShadow = a > 0 ? `0 ${40 * a}px ${110 * a}px rgba(10,30,70,${.22 * a}),0 ${8 * a}px ${22 * a}px rgba(10,30,70,${.12 * a})` : "none";
+  s.style.zIndex = a > 0 ? 5 : "";
+}
+/* headline: words rise out of a mask, staggered; leave by rising again */
+function headline(w, lines, sub) {
+  const h = el("h1", "head", w.front);
+  w.words = [];
+  lines.forEach((ln) => {
+    const l = el("span", "ln", h);
+    ln.split(" ").forEach((word, i, arr) => {
+      const blue = word.startsWith("*"); const txt = word.replace(/^\*/, "");
+      const s = el("span", "w" + (blue ? " b" : ""), l); s.textContent = txt;
+      w.words.push(s);
+      if (i < arr.length - 1) l.appendChild(document.createTextNode(" "));
+    });
+  });
+  if (sub) { w.sub = el("div", "sub", w.front); w.sub.innerHTML = sub; }
+}
+function headlineAt(w, t, tin, tout, subIn) {
+  w.words.forEach((s, i) => {
+    const a = E.out5(prog(t, tin + i * .075, tin + i * .075 + .7));
+    const b = E.in(prog(t, tout + i * .04, tout + i * .04 + .38));
+    s.style.transform = `translateY(${(1 - a) * 115 - b * 115}%)`;
+  });
+  if (w.sub) {
+    const a = E.out5(prog(t, subIn, subIn + .7)), b = E.in(prog(t, tout, tout + .35));
+    w.sub.style.opacity = a * (1 - b);
+    w.sub.style.transform = `translateY(${(1 - a) * 30 - b * 30}px)`;
+  }
+}
+const show = (w, t, a, b) => { w.el.style.display = t >= a && t < b ? "block" : "none"; return t >= a && t < b; };
+
+/* svg overlays in screen px */
+const SVGNS = "http://www.w3.org/2000/svg";
+function svgPath(parent, d, { stroke = "#0A5CF5", width = 8, fill = "none" } = {}) {
+  let svg = parent.querySelector("svg");
+  if (!svg) { svg = document.createElementNS(SVGNS, "svg"); svg.setAttribute("width", 1206); svg.setAttribute("height", 2622);
+    svg.style.cssText = "position:absolute;left:0;top:0;overflow:visible"; parent.appendChild(svg); }
+  const p = document.createElementNS(SVGNS, "path");
+  p.setAttribute("d", d); p.setAttribute("fill", fill); p.setAttribute("stroke", stroke); p.setAttribute("stroke-width", width);
+  p.setAttribute("stroke-linecap", "round"); p.setAttribute("stroke-linejoin", "round");
+  svg.appendChild(p); p.len = p.getTotalLength(); p.style.strokeDasharray = p.len; p.style.strokeDashoffset = p.len;
+  return p;
+}
+const draw = (p, x) => { p.style.strokeDashoffset = p.len * (1 - clamp(x)); };
+const rrect = (x0, y0, x1, y1, r) => `M${x0 + r},${y0} H${x1 - r} A${r},${r} 0 0 1 ${x1},${y0 + r} V${y1 - r} A${r},${r} 0 0 1 ${x1 - r},${y1} H${x0 + r} A${r},${r} 0 0 1 ${x0},${y1 - r} V${y0 + r} A${r},${r} 0 0 1 ${x0 + r},${y0} Z`;
+
+/* expanding outlines from a rounded rect (voice going out) */
+function ripples(parent, rect, r, n = 3) {
+  const [x0, y0, x1, y1] = rect;
+  return Array.from({ length: n }, () => el("div", "", parent, { position: "absolute", left: px(x0), top: px(y0),
+    width: px(x1 - x0), height: px(y1 - y0), borderRadius: px(r), border: "7px solid #0A5CF5", boxSizing: "border-box", opacity: 0 }));
+}
+function ripplesAt(rs, t, a, b, { period = 1.5, grow = 140 } = {}) {
+  rs.forEach((d, i) => {
+    const local = t - a - i * period / rs.length;
+    if (t < a || t > b + period || local < 0) { d.style.opacity = 0; return; }
+    const ph = (local % period) / period, cycle = Math.floor(local / period);
+    if (a + i * period / rs.length + cycle * period > b) { d.style.opacity = 0; return; }
+    d.style.opacity = .55 * (1 - ph);
+    d.style.transform = `scale(${1 + ph * grow / 500})`;
+  });
+}
+
+/* ═════════════════ the scenes ═════════════════ */
+const stage = document.getElementById("stage");
+const ring = el("div", "", stage); ring.id = "ring";
+
+/* 1 · the call (0 – 6.5) ─────────────────────────── */
+const W1 = makeWorld("call");
+const s1 = addScreen(W1, "call-coach");
+const c1 = {
+  you: sprite(s1, [396, 536, 1145, 770], { radius: 60 }),
+  fut: sprite(s1, [60, 832, 1016, 1132], { radius: 60 }),
+  lis: sprite(s1, [778, 1194, 1145, 1373], { radius: 60 }),
+  try: sprite(s1, [191, 2053, 1010, 2159]),
+};
+const wave1 = el("div", "wave", W1.ov, { left: "818px", top: "776px", height: "124px" });
+const bars1 = Array.from({ length: 9 }, () => el("b", "", wave1));
+const pill1 = ripples(W1.ov, [369, 2191, 836, 2383], 96);
+headline(W1, ["Talk with your", "*fluent *self."], "In <i>your own voice.</i>");
+const K1 = [
+  { t: 0, fx: 603, fy: 860, z: .64, px: 443, py: 1010 },
+  { t: 2.7, fx: 603, fy: 1311, z: .465, px: 443, py: 1250, e: "io" },
+  { t: 4.6, fx: 603, fy: 1311, z: .48, px: 443, py: 1250, e: "io" },
+  { t: 6.1, fx: 602, fy: 2287, z: .62, px: 443, py: 1480, e: "io" },
+];
+
+/* 2 · the slip, caught (5.75 – 12.0) ─────────────── */
+const W2 = makeWorld("caught");
+const s2 = addScreen(W2, "transcript");
+const c2 = {
+  q: sprite(s2, [60, 513, 763, 747], { radius: 60 }),
+  u: sprite(s2, [469, 833, 1145, 1067], { radius: 60 }),
+  card: sprite(s2, [180, 1079, 1145, 1576], { radius: 54, pad: 2 }),
+  r: sprite(s2, [60, 1650, 1025, 1950], { radius: 60 }),
+  u2: sprite(s2, [390, 2036, 1145, 2270], { radius: 60 }),
+};
+const goMark = svgPath(W2.ov, "M748,990 C775,1000 812,999 840,988", { stroke: "#FF9500", width: 9 });
+const goRing = svgPath(W2.ov, "M793,903 C845,903 862,925 862,950 C862,980 830,997 793,997 C752,997 724,978 724,950 C724,922 752,905 800,906",
+  { stroke: "#FF9500", width: 8 });
+const wentBox = svgPath(W2.ov, rrect(440, 1186, 588, 1259, 22), { stroke: "#0A5CF5", width: 8 });
+const wentFill = el("div", "", W2.ov, { position: "absolute", left: "440px", top: "1186px", width: "148px", height: "73px",
+  borderRadius: "22px", background: "rgba(10,92,245,.10)", opacity: 0 });
+headline(W2, ["Every slip,", "*caught."]);
+const K2 = [
+  { t: 5.75, fx: 603, fy: 1180, z: .5, px: 443, py: 1200 },
+  { t: 8.6, fx: 603, fy: 1180, z: .5, px: 443, py: 1200 },
+  { t: 9.55, fx: 662, fy: 1300, z: .82, px: 443, py: 1220, e: "io" },
+  { t: 10.85, fx: 640, fy: 1290, z: .86, px: 443, py: 1220, e: "lin" },
+  { t: 11.8, fx: 514, fy: 1222, z: 3.3, px: 443, py: 1120, e: "io5" },
+];
+
+/* 3 · say it again (11.65 – 18.3) ────────────────── */
+const W3 = makeWorld("again");
+const s3a = addScreen(W3, "say-again-reading");
+const s3b = addScreen(W3, "say-again-done");
+const prompt3 = ripples(W3.ov, [60, 1941, 1145, 2478], 90);
+const chip3 = sprite(s3b, [762, 1250, 925, 1322], { radius: 36, pad: 4, cover: false });
+headline(W3, ["Say it again,", "the *right *way."]);
+const WENT_Z = 3.3 * (114 / 156);
+const K3 = [
+  { t: 11.8, fx: 559, fy: 2126, z: WENT_Z, px: 443, py: 1120 },
+  { t: 13.1, fx: 603, fy: 1480, z: .5, px: 443, py: 1250, e: "io5" },
+  { t: 15.2, fx: 603, fy: 1420, z: .5, px: 443, py: 1250, e: "io" },
+  { t: 16.25, fx: 770, fy: 1180, z: .86, px: 443, py: 1240, e: "io" },
+  { t: 16.95, fx: 760, fy: 1190, z: .88, px: 443, py: 1240, e: "lin" },
+  { t: 17.65, fx: 603, fy: 1311, z: .465, px: 443, py: 1250, e: "io" },
+];
+
+/* 4 · your review (17.95 – 23.4) ─────────────────── */
+const W4 = makeWorld("review");
+const s4 = addScreen(W4, "review-item-sentence");
+const deck = [
+  el("div", "deckcard", W4.behind, { background: "#8FB4FA" }),
+  el("div", "deckcard", W4.behind, { background: "#4C86F7" }),
+];
+deck.forEach((d) => Object.assign(d.style, { left: "48px", top: "515px", width: "1110px", height: "1761px" }));
+const shimmer = el("div", "", W4.ov, { position: "absolute", left: "48px", top: "515px", width: "1110px", height: "1761px",
+  borderRadius: "84px", overflow: "hidden" });
+const shine = el("div", "", shimmer, { position: "absolute", top: 0, bottom: 0, width: "420px",
+  background: "linear-gradient(100deg,transparent,rgba(255,255,255,.28),transparent)" });
+headline(W4, ["Every mistake", "comes *back."]);
+const K4 = [
+  { t: 17.95, fx: 603, fy: 1311, z: .465, px: 443, py: 1250 },
+  { t: 22.3, fx: 603, fy: 1360, z: .5, px: 443, py: 1260, e: "io" },
+  { t: 23.15, fx: 603, fy: 1395, z: 3.4, px: 443, py: 960, e: "in" },
+];
+
+/* 5 · your level (22.95 – 27.2) ──────────────────── */
+const W5 = makeWorld("level");
+const s5 = addScreen(W5, "progress");
+const b2 = sprite(s5, [114, 716, 308, 838], { pad: 10, radius: 20, cover: false });
+const b2line = svgPath(W5.ov, "M112,868 H312", { stroke: "#0A5CF5", width: 10 });
+headline(W5, ["Your level,", "*measured."]);
+const K5 = [
+  { t: 23.1, fx: 211, fy: 777, z: 7, px: 443, py: 960 },
+  { t: 24.35, fx: 603, fy: 1080, z: .52, px: 443, py: 1180, e: "io5" },
+  { t: 26.2, fx: 603, fy: 1120, z: .53, px: 443, py: 1200, e: "lin" },
+];
+
+/* end card (26.4 – 29.5) ──────────────────────────── */
+const END = el("div", "", stage); END.id = "end";
+el("div", "grid", END, { position: "absolute", inset: 0 });
+const icon = el("div", "icon", END); el("img", "", icon).src = SHOT("icon");
+const wm = el("div", "wm", END);
+const wmL = "nawana".split("").map((c) => { const s = el("span", "", wm); s.textContent = c; return s; });
+const tag = el("div", "tag", END); tag.innerHTML = "Learn a language from<br>your <span class=b>fluent self.</span>";
+const endWave = el("div", "wave", END, { left: "343px", top: "1250px", height: "96px", padding: "0 30px" });
+const endBars = Array.from({ length: 9 }, () => el("b", "", endWave));
+
+stage.appendChild(ring);
+const blue = el("div", "", stage); blue.id = "blue";
+
+/* bars that read as a voice: deterministic, smooth */
+function barsAt(bars, t, on, maxH, minH = 14) {
+  bars.forEach((b, i) => {
+    const v = .5 + .5 * Math.sin(t * 9.1 + i * 1.7) * Math.sin(t * 5.3 + i * .9 + 1);
+    const env = Math.sin(Math.PI * (i + .5) / bars.length);
+    b.style.height = px(minH + on * (maxH - minH) * (.25 + .75 * Math.abs(v)) * (.45 + .55 * env));
+  });
+}
+
+/* ═════════════════ render(t) ═════════════════ */
+function render(t) {
+  /* 1 */
+  if (show(W1, t, 0, 6.6)) {
+    W1.cam.style.transform = camCSS(camAt(t, K1));
+    reveal(c1.you, t, .2, { origin: "right bottom" });
+    reveal(c1.fut, t, .8, { origin: "left bottom" });
+    reveal(c1.lis, t, 2.25, { origin: "right bottom" });
+    reveal(c1.try, t, 2.7, { dy: 40 });
+    if (t > 2.85) { const b = .5 + .5 * Math.sin((t - 2.85) * 4.2); c1.lis.style.opacity = lerp(.62, 1, b); }
+    const wOn = E.out5(prog(t, .95, 1.35)) * (1 - E.in(prog(t, 2.05, 2.35)));
+    wave1.style.opacity = wOn; wave1.style.transform = `scale(${lerp(.6, 1, E.back(prog(t, .95, 1.45)))})`;
+    barsAt(bars1, t, wOn, 92);
+    ripplesAt(pill1, t, 2.6, 5.3);
+    headlineAt(W1, t, .3, 5.45, 1.25);
+  }
+  /* 1 → 2: a blue ring opens from the talk pill */
+  const wp = prog(t, 5.75, 6.6);
+  if (t >= 5.75 && wp < 1) {
+    const r = E.io(wp) * 2350;
+    W2.el.style.clipPath = `circle(${r}px at 443px 1480px)`;
+    Object.assign(ring.style, { display: "block", left: px(443 - r - 8), top: px(1480 - r - 8), width: px(2 * r + 16), height: px(2 * r + 16),
+      borderWidth: px(lerp(18, 60, wp)), opacity: 1 - E.in(prog(wp, .55, 1)) });
+  } else { ring.style.display = "none"; W2.el.style.clipPath = "none"; }
+
+  /* 2 */
+  if (show(W2, t, 5.75, 12.05)) {
+    W2.cam.style.transform = camCSS(camAt(t, K2));
+    reveal(c2.q, t, 6.3, { origin: "left bottom" });
+    reveal(c2.u, t, 6.85, { origin: "right bottom" });
+    draw(goRing, E.io(prog(t, 7.45, 7.95)));
+    goRing.style.opacity = 1 - prog(t, 10.6, 10.9);
+    goMark.style.opacity = 0;
+    // the correction unfolds downward under the line
+    { const x = E.out5(prog(t, 8.05, 8.75));
+      c2.card.style.opacity = clamp(prog(t, 8.05, 8.3));
+      c2.card.style.clipPath = `inset(0 0 ${(1 - x) * 100}% 0 round 54px)`;
+      c2.card.style.transform = `translateY(${(1 - x) * -24}px)`; }
+    reveal(c2.r, t, 8.5, { origin: "left bottom", dy: 50 });
+    reveal(c2.u2, t, 8.75, { origin: "right bottom", dy: 50 });
+    if (t > 9.3) { lift(c2.card, E.out5(prog(t, 9.3, 9.9)) * (1 - E.io(prog(t, 10.9, 11.5))), { scale: 1.04 }); c2.card.style.clipPath = "inset(0 0 0 0 round 54px)"; }
+    draw(wentBox, E.io(prog(t, 9.95, 10.45)));
+    wentFill.style.opacity = E.out(prog(t, 10.25, 10.6));
+    const fade = 1 - prog(t, 11.05, 11.45);
+    wentBox.style.opacity = fade; wentFill.style.opacity *= fade;
+    headlineAt(W2, t, 6.15, 10.7);
+  }
+  /* 3 — opens on the same word, then pulls out */
+  if (show(W3, t, 11.65, 18.35)) {
+    W3.el.style.opacity = E.io(prog(t, 11.72, 11.9));
+    W3.cam.style.transform = camCSS(camAt(t, K3));
+    const done = E.io(prog(t, 15.0, 15.45));
+    s3b.style.opacity = done; s3a.style.opacity = 1;
+    ripplesAt(prompt3, t, 13.3, 14.7);
+    lift(chip3, E.back(prog(t, 16.25, 16.85)) * (1 - E.io(prog(t, 16.95, 17.35))), { scale: 1.75, dx: -70, dy: -40 });
+    chip3.style.opacity = prog(t, 16.2, 16.3);
+    headlineAt(W3, t, 12.75, 17.3);
+    const f = E.in(prog(t, 17.62, 17.98));
+    W3.flip.style.transform = `perspective(2600px) rotateY(${f * 90}deg)`;
+  }
+  /* 4 */
+  if (show(W4, t, 17.98, 23.16)) {
+    const f = 1 - E.out5(prog(t, 17.98, 18.6));
+    W4.flip.style.transform = `perspective(2600px) rotateY(${-f * 90}deg)`;
+    W4.cam.style.transform = camCSS(camAt(t, K4));
+    const d = E.out5(prog(t, 18.75, 19.55)) * (1 - E.in(prog(t, 22.3, 22.6)));
+    deck[0].style.transform = `translate(${-d * 330}px,${d * 60}px) rotate(${-d * 9}deg)`;
+    deck[1].style.transform = `translate(${d * 330}px,${d * 40}px) rotate(${d * 8}deg)`;
+    deck.forEach((c) => (c.style.opacity = d > 0 ? 1 : 0));
+    const sh = prog(t, 19.6, 21.0);
+    shine.style.left = px(lerp(-450, 1200, E.io(sh)));
+    shine.style.opacity = sh > 0 && sh < 1 ? 1 : 0;
+    headlineAt(W4, t, 18.55, 22.25);
+    W4.band.style.opacity = 1 - prog(t, 22.35, 22.75);
+  }
+  blue.style.opacity = E.lin(prog(t, 22.85, 23.12)) * (1 - E.io(prog(t, 23.2, 23.6)));
+  /* 5 */
+  if (show(W5, t, 23.16, 27.3)) {
+    W5.band.style.opacity = E.io(prog(t, 23.7, 24.3));
+    W5.cam.style.transform = camCSS(camAt(t, K5));
+    lift(b2, E.out5(prog(t, 24.6, 25.1)) * (1 - E.io(prog(t, 25.9, 26.3))), { scale: 1.18, dy: -6 });
+    draw(b2line, E.io(prog(t, 25.0, 25.45)));
+    b2line.style.opacity = 1 - prog(t, 25.9, 26.2);
+    headlineAt(W5, t, 24.15, 26.25);
+    const out = E.in(prog(t, 26.35, 26.95));
+    W5.flip.style.transform = `translateY(${out * 900}px) scale(${1 - out * .12})`;
+    W5.flip.style.opacity = 1 - prog(t, 26.6, 26.95);
+  }
+  /* end */
+  END.style.display = t >= 26.7 ? "block" : "none";
+  if (t >= 26.7) {
+    const i = E.back(prog(t, 26.8, 27.35));
+    icon.style.opacity = clamp(prog(t, 26.8, 27.0));
+    icon.style.transform = `scale(${lerp(.55, 1, i)})`;
+    wmL.forEach((s, k) => {
+      const a = prog(t, 27.15 + k * .07, 27.15 + k * .07 + .35);
+      s.style.opacity = Math.round(a * 4) / 4;          // stepped, like a pixel face settling
+      s.style.transform = `translateY(${(1 - E.out5(a)) * 30}px)`;
+    });
+    const g = E.out5(prog(t, 27.75, 28.35));
+    tag.style.opacity = g; tag.style.transform = `translateY(${(1 - g) * 26}px)`;
+    const v = E.out5(prog(t, 28.2, 28.7));
+    endWave.style.opacity = v; endWave.style.transform = `scale(${lerp(.6, 1, v)})`;
+    barsAt(endBars, t, v, 64, 12);
+    END.style.opacity = clamp(prog(t, 26.7, 26.95));
+  }
+}
+window.__render = render;
+window.__ready = Promise.all([document.fonts.load('90px "Geist Pixel"'),
+  ...[...document.images].map((im) => im.decode().catch(() => {})),
+  ...Object.values({ a: "call-coach", b: "transcript", c: "say-again-reading", d: "say-again-done", e: "review-item-sentence", f: "progress" })
+    .map((n) => new Promise((r) => { const i = new Image(); i.onload = r; i.onerror = r; i.src = SHOT(n); }))]).then(() => render(0));
+
+const q = new URLSearchParams(location.search);
+if (q.has("t")) window.__ready.then(() => render(+q.get("t")));
+if (q.has("play")) window.__ready.then(() => { const t0 = performance.now(); const tick = () => { render(((performance.now() - t0) / 1000) % 29.5); requestAnimationFrame(tick); }; tick(); });
+</script>
+</body></html>

@@ -10,7 +10,8 @@ import { NwScreen, STR, RM, esc, icon, wordsHTML, mmss } from "../core.js";
  *              fixes: [{ was: "I go to", now: "I went to", why: "" }] })   the correction card
  *   call.coach({ line: "It was <u>a busy</u> week.", gloss: "…", word: "busy week" }) / call.coach(null)
  *   call.goals(["busy week", "catch up"]); call.tick(0)
- * Attributes: title, level (default B2), autoplay.
+ * Attributes: title, level (default B2), other (the other side's name: a person, a scenario's role;
+ * default the fluent self: "Future self", "미래의 나" on ko), autoplay. `call.other = "Sarah"` does the same from script.
  *
  * Drawn from the app, point for point:
  *   toolbar     ✕ (Label "Close", xmark) · LevelHeaderTitle (headline + "B2 ›" caption2 semibold
@@ -19,8 +20,9 @@ import { NwScreen, STR, RM, esc, icon, wordsHTML, mmss } from "../core.js";
  *               capsule secondarySystemBackground, 10×5 padding, spacing 8, row padding 20×7,
  *               Divider at 0.15 opacity
  *   feed        LazyVStack spacing 18, padding 20 / top 12, bottom-anchored (defaultScrollAnchor)
- *   lines       DialogueLine .call: name caption secondary (the app passes "You"/"Future self" as
- *               String, so they are never localised), title3 (20pt) text, padding 14×10, radius 14,
+ *   lines       DialogueLine .call: name caption secondary (the learner's is chrome("You"), localised;
+ *               the other side is its name: counterpart → linked person → role → "Future self"),
+ *               title3 (20pt) text, padding 14×10, radius 14,
  *               fill secondarySystemBackground / accent 18%, 40pt opposite gutter
  *   accessory   "Meaning" (character.bubble, caption, secondary) then SuggestionChip
  *   card        SuggestionChip: sparkles (footnote, tint) + [alternative (subheadline, changed words
@@ -46,12 +48,12 @@ const S = {
 
 /* The chrome the call writes (Localizable.xcstrings ko values). */
 const L = {
-  ko: { talk: "대화하기", end: "종료", meaning: "뜻", explain: "내 언어로 설명", trySaying: "이렇게 말해 보세요",
-    tryUsing: "써 볼 단어", usedIt: "썼어요", listening: "듣는 중…", thinking: "유창해진 내가 생각하는 중…",
+  ko: { self: "미래의 나", talk: "대화하기", end: "종료", meaning: "뜻", explain: "내 언어로 설명", trySaying: "이렇게 말해 보세요",
+    tryUsing: "써 볼 단어", usedIt: "썼어요", listening: "듣는 중…", thinking: "유창해진 내가 생각하는 중…", thinkingAs: n => `${n} 생각하는 중…`, you: "나",
     hintListen: "듣는 중 · 잠깐 멈추면 전송 · 누르면 종료", hintThink: "생각하는 중 · 누르면 종료",
     hintSpeak: "말하는 중… · 끼어들어도 돼요 · 탭하면 멈춤", hintIdle: "통화 중 · 누르면 종료" },
-  en: { talk: "Let's talk", end: "End", meaning: "Meaning", explain: "Explain in my language", trySaying: "Try saying",
-    tryUsing: "Try using", usedIt: "Used it", listening: "Listening…", thinking: "Future self is thinking…",
+  en: { self: "Future self", talk: "Let's talk", end: "End", meaning: "Meaning", explain: "Explain in my language", trySaying: "Try saying",
+    tryUsing: "Try using", usedIt: "Used it", listening: "Listening…", thinking: "Future self is thinking…", thinkingAs: n => `${n} is thinking…`, you: "You",
     hintListen: "Listening · pause to send · tap to stop", hintThink: "Thinking… · tap to stop",
     hintSpeak: "Speaking… · talk over it · tap to stop", hintIdle: "On call · tap to stop" },
 };
@@ -150,6 +152,11 @@ class NwCall extends NwScreen {
       </div>`);
   }
   get l() { return this.t === STR.ko ? L.ko : L.en; }
+  /* the other side's name (ConversationView.otherSideName); unset = the fluent self, as before */
+  get other() { return this._other ?? this.getAttribute("other") ?? ""; }
+  set other(v) { this._other = v || ""; }
+  get _otherName() { return this.other || this.l.self; }   // chrome("Future self"): 미래의 나 on ko
+  get _thinkText() { return this.other ? this.l.thinkingAs(this.other) : this.l.thinking; }
   build() {
     this.$(".navt b").textContent = this.getAttribute("title") || this.l.talk;
     this.$(".lv").textContent = (this.getAttribute("level") || "B2").toUpperCase();
@@ -206,7 +213,7 @@ class NwCall extends NwScreen {
   async say(text, { who, per = 160 } = {}) {
     this._dropThink(); this.coach(null);
     this._pill("speaking"); this._hint("hintSpeak");
-    const el = this._line(who || "Future self", text, { sing: true });
+    const el = this._line(who || this._otherName, text, { sing: true });
     await this.sleep(250);
     await this.sing(el.querySelector(".bub"), per);
     el.querySelector(".acc").innerHTML = this._meaning(); this._follow();
@@ -214,7 +221,7 @@ class NwCall extends NwScreen {
   }
   async listen() {
     this._pill("listening"); this._hint("hintListen");
-    this._meLn = this._line("You", this.l.listening, { me: true });
+    this._meLn = this._line(this.l.you, this.l.listening, { me: true });
     this._meLn.querySelector(".bub").classList.add("listen");
     await this.sleep(400);
   }
@@ -226,7 +233,7 @@ class NwCall extends NwScreen {
     this.coach(null);
     ln.querySelector(".acc").innerHTML = this._meaning();
     this._pill("thinking"); this._hint("hintThink");
-    this._think = this._add(`<div class="think"><i class="spin"></i>${esc(this.l.thinking)}</div>`);
+    this._think = this._add(`<div class="think"><i class="spin"></i>${esc(this._thinkText)}</div>`);
     await this.sleep(500);
   }
   /* SuggestionChip, under the learner's last line. `text` is the whole turn re-said with the
@@ -270,9 +277,9 @@ class NwCall extends NwScreen {
     const ko = this.t === STR.ko;
     if (name === "coach") {                      // real/call-coach.png
       this.goals(["total", "battery", "next"]); this.tick(2);
-      this._line("You", "Not yet, but I want to go there next week.", { me: true }).classList.add("in");
-      this._line("Future self", "Oh, nice! Next week will be here before you know it. Do you have a specific place in mind?");
-      this._meLn = this._line("You", this.l.listening, { me: true }); this._meLn.classList.add("in");
+      this._line(this.l.you, "Not yet, but I want to go there next week.", { me: true }).classList.add("in");
+      this._line(this._otherName, "Oh, nice! Next week will be here before you know it. Do you have a specific place in mind?");
+      this._meLn = this._line(this.l.you, this.l.listening, { me: true }); this._meLn.classList.add("in");
       this._meLn.querySelector(".bub").classList.add("listen");
       this.$$(".ln:not(:last-child) .acc").forEach(a => (a.innerHTML = this._meaning()));
       this._pill("listening");
@@ -280,21 +287,21 @@ class NwCall extends NwScreen {
       this._clock(25); clearInterval(this._clockT);
     } else if (name === "fix") {                 // shots/device-call-coach.jpg — the card under the line
       this.goals(["flame", "love your take on", "splinter", "take it all in"]);
-      this._line("You", "Everything looks okay, and I am just having a cup of coffee to get it sorted.", { me: true }).classList.add("in");
+      this._line(this.l.you, "Everything looks okay, and I am just having a cup of coffee to get it sorted.", { me: true }).classList.add("in");
       this.$(".ln.me .acc").innerHTML = this._meaning();
       this.fix({ text: "Everything looks okay, and <b>I'm</b> just having a cup of coffee to get <b>things</b> sorted.",
         note: ko ? "get it sorted 대신 get things sorted를 쓰는 것이 자연스럽습니다." : "“Get things sorted” is the natural way to say it here.",
         fixes: [{ was: "and just having a cup of coffee to get it sorted", now: "and I'm just having a cup of coffee to get things sorted",
           why: ko ? "막연한 상황 정리에는 get it sorted보다 get things sorted가 맞습니다." : "For things in general, “get things sorted” fits better than “get it sorted”." }] }, true);
-      this._line("Future self", "Ah, nice. There's nothing better than that first cup of coffee to get your mind right for the day. Are you planning out your work schedule while you drink it, or just taking a moment to relax?")
+      this._line(this._otherName, "Ah, nice. There's nothing better than that first cup of coffee to get your mind right for the day. Are you planning out your work schedule while you drink it, or just taking a moment to relax?")
         .querySelector(".acc").innerHTML = this._meaning();
-      this._meLn = this._line("You", this.l.listening, { me: true }); this._meLn.classList.add("in");
+      this._meLn = this._line(this.l.you, this.l.listening, { me: true }); this._meLn.classList.add("in");
       this._meLn.querySelector(".bub").classList.add("listen");
       this._pill("listening");
       this._clock(25); clearInterval(this._clockT);
     } else if (name === "speaking") {
       this.goals(["busy week", "catch up", "no wonder"]);
-      const el = this._line("Future self", "Hey, it's you, a few years from now. So, how was your week?");
+      const el = this._line(this._otherName, "Hey, it's you, a few years from now. So, how was your week?");
       el.querySelector(".acc").innerHTML = this._meaning();
       this._pill("speaking"); this._hint("hintSpeak");
     }

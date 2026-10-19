@@ -1,0 +1,305 @@
+<title>내 목소리로 말하는 나와 통화해요</title>
+<style>
+
+/* Layout: one 1080×1350 post at a time; fixed text block on top, a window onto the real app below.
+   Inside the phone everything is authored in iOS points (402×874) and scaled ×1.5. Light only, by choice. */
+:root{
+  color-scheme:light;
+  --page:#E9ECF1; --card:#F7F8FA; --grid:rgba(10,40,90,.045);
+  --ink:#0D1117; --sub:#5A6170; --faint:#9AA1AD; --line:#DCE0E7;
+  --blue:#0A5CF5; --ios-blue:#007AFF;
+  /* iOS system values sampled from the app's own screenshots */
+  --sys-bg:#FFFFFF; --sys-grouped:#F2F2F7; --sys-fill:#EFEFF4; --sys-gray:#8E8E93; --sys-gray3:#C7C7CC;
+  --me-bubble:#D3E2FD; --fix-bg:#EBF2FE; --btn-tint:#D6E4FB; --sys-red:#FF3B30; --sys-green:#34C759; --sys-orange:#E07B1F;
+  --pixel:"Geist Pixel","Galmuri14","Apple SD Gothic Neo",system-ui,sans-serif;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--sans)}
+.wrap{max-width:1100px;margin:0 auto;padding-inline:16px;padding-block:28px 56px;display:flex;flex-wrap:wrap;gap:28px 40px;align-items:flex-start;justify-content:center}
+.viewer{flex:0 1 540px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.side{flex:1 1 300px;min-width:0;max-width:440px;font-size:14px;line-height:1.6;color:var(--sub)}
+.side h1{font-family:var(--pixel);font-weight:400;font-size:26px;line-height:1.25;color:var(--ink);margin:0 0 10px;text-wrap:balance}
+.side h3{font-size:13px;letter-spacing:.06em;color:var(--ink);margin:22px 0 6px}
+.side ol{padding-left:18px;margin:0}
+.side li{margin-bottom:4px}
+.side .list button{all:unset;cursor:pointer;color:var(--ink)}
+.side .list button[aria-current="true"]{color:var(--blue);font-weight:600}
+.side .list button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.vp{position:relative;width:100%;aspect-ratio:4/5;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(13,17,23,.08),0 18px 50px rgba(13,17,23,.10);background:var(--card);touch-action:pan-y}
+.track{position:absolute;inset:0;display:flex;transition:transform .45s cubic-bezier(.3,.7,.2,1)}
+.slot{flex:0 0 100%;height:100%;position:relative;overflow:hidden}
+.controls{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.dots{display:flex;gap:7px}
+.dots button{width:8px;height:8px;border-radius:50%;border:0;padding:0;background:#C5CBD5;cursor:pointer}
+.dots button[aria-current="true"]{background:var(--blue);width:22px;border-radius:4px}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;height:36px;min-width:36px;padding:0 14px;font:inherit;font-size:13px;cursor:pointer}
+.btn:focus-visible,.dots button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.btn-row{display:flex;gap:6px}
+
+/* ───────── the post, authored at 1080×1350 ───────── */
+.card{position:absolute;left:0;top:0;width:1080px;height:1350px;transform-origin:0 0;transform:scale(var(--s,.5));background:var(--card);overflow:hidden;
+  background-image:linear-gradient(var(--grid) 2px,transparent 2px),linear-gradient(90deg,var(--grid) 2px,transparent 2px);background-size:54px 54px;background-position:-1px -1px}
+.cap{position:absolute;left:84px;right:84px;top:72px;display:flex;justify-content:space-between;align-items:center;font-family:var(--pixel);font-size:28px;color:var(--sub)}
+.cap .series{display:flex;align-items:center;gap:14px}
+.cap .series::before{content:"";width:14px;height:14px;background:var(--blue)}
+.cap .num{color:var(--faint)}
+.ttl{position:absolute;left:84px;right:84px;top:134px;margin:0;font-family:var(--pixel);font-weight:400;font-size:72px;line-height:88px;letter-spacing:-1px;color:var(--ink)}
+.ttl .en{color:var(--blue)}
+.desc{position:absolute;left:84px;right:96px;top:322px;margin:0;font-size:32px;line-height:47px;color:var(--sub);font-weight:500;letter-spacing:-.3px;word-break:keep-all}
+.desc b{color:var(--ink);font-weight:600}
+/* the window onto the phone: clipped at its top so a phone can pan up under the text */
+.stage{position:absolute;left:0;right:0;top:470px;bottom:0;overflow:hidden;
+  -webkit-mask-image:linear-gradient(transparent,#000 40px);mask-image:linear-gradient(transparent,#000 40px)}
+
+.phonewin{position:absolute;left:50%;top:44px;width:627px;margin-left:-313.5px;transition:transform .9s cubic-bezier(.45,0,.2,1)}
+.phonewin nw-phone{width:627px}
+
+/* ── cover: nw-home framed on the call ring, with a swipe footer on clean ground ── */
+.cover-home .stage{top:470px;bottom:166px;
+  -webkit-mask-image:linear-gradient(transparent,#000 40px,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(transparent,#000 40px,#000 calc(100% - 36px),transparent)}
+.swipe{position:absolute;left:84px;right:84px;bottom:72px;display:flex;justify-content:space-between;font-size:28px;color:var(--faint)}
+.swipe b{font-family:var(--pixel);font-weight:400;color:var(--blue)}
+
+/* ── outro ── */
+.c-outro{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.c-outro nw-futureself{width:300px;height:166px;margin-bottom:60px}
+.c-outro .wm{font-family:var(--pixel);font-size:120px;line-height:1;letter-spacing:2px}
+.c-outro .tg{font-size:44px;line-height:64px;font-weight:600;margin-top:44px}
+.c-outro .free{margin-top:32px;font-size:30px;color:var(--sub)}
+.c-outro .url{position:absolute;bottom:80px;font-family:var(--pixel);font-size:34px;color:var(--blue)}
+
+@media (prefers-reduced-motion:reduce){
+  .track,.phonewin{transition:none!important}
+}
+
+/* ?solo=N — one card at its real 1080×1350, no viewer chrome: what scripts/marketing/record.mjs records */
+html.solo,html.solo body{margin:0;background:var(--card);overflow:hidden}
+html.solo .wrap{display:block;padding:0;max-width:none}
+html.solo .side,html.solo .controls{display:none}
+html.solo .viewer{display:block}
+html.solo .vp{width:1080px;max-width:none;aspect-ratio:auto;height:1350px;border-radius:0;box-shadow:none}
+html.solo .track{transition:none}
+</style>
+<div class="wrap" lang="ko" id="wrap">
+  <div class="viewer">
+    <div class="vp" id="vp" aria-roledescription="carousel" aria-label="내 목소리로 말하는 나와 통화해요">
+      <div class="track" id="track">
+
+        <div class="slot"><section class="card cover-home" data-k="cover">
+          <header class="cap"><span class="series">내 목소리로 말하는 나</span><span class="num">01 / 06</span></header>
+          <h2 class="ttl">내 목소리로<br>나와 통화해요</h2>
+          <p class="desc">탭 한 번이면 유창한 나와 통화가 시작돼요.<br>그 목소리는 바로 <b>내 목소리</b>예요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-home></nw-home></nw-phone></div></div>
+          <div class="swipe"><span>옆으로 넘겨보세요 →</span><b>nawana.app</b></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="opener">
+          <header class="cap"><span class="series">내 목소리로 말하는 나</span><span class="num">02 / 06</span></header>
+          <h2 class="ttl">몇 년 뒤의<br>내가 받아요</h2>
+          <p class="desc">외국어가 이미 편해진 몇 년 뒤의 내가,<br><b>내 목소리 그대로</b> 전화를 받아요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-call></nw-call></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="hero">
+          <header class="cap"><span class="series">내 목소리로 말하는 나</span><span class="num">03 / 06</span></header>
+          <h2 class="ttl">내가 말하면<br>유창한 내가 답해요</h2>
+          <p class="desc">전화처럼 번갈아 말해요. 내가 말하면<br>유창한 내가 <b>내 목소리로</b> 대답해요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-call></nw-call></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="voice">
+          <header class="cap"><span class="series">내 목소리로 말하는 나</span><span class="num">04 / 06</span></header>
+          <h2 class="ttl">왜 하필<br>내 목소리일까요?</h2>
+          <p class="desc">원어민을 따라 하면 연기 같아요. 내 목소리로 들으면<br><b>‘나도 이렇게 말할 수 있구나.’</b> 싶어요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-call></nw-call></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="fast">
+          <header class="cap"><span class="series">내 목소리로 말하는 나</span><span class="num">05 / 06</span></header>
+          <h2 class="ttl">말을 멈추면<br>바로 대답해요</h2>
+          <p class="desc">말을 멈추면 유창한 내가 바로 대답해요.<br><b>기다리는 어색함 없이</b>, 진짜 통화처럼요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-call></nw-call></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card c-outro" data-k="outro">
+          <nw-futureself mode="speaking" level="voice"></nw-futureself>
+          <div class="wm">nawana</div>
+          <div class="tg">유창한 나에게<br>언어를 배우세요.</div>
+          <div class="free">첫 20분은 무료예요</div>
+          <div class="url">nawana.app</div>
+        </section></div>
+
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn" id="prev" aria-label="이전 장">←</button>
+      <div class="dots" id="dots"></div>
+      <div class="btn-row"><button class="btn" id="replay">처음부터 재생</button><button class="btn" id="next" aria-label="다음 장">→</button></div>
+    </div>
+  </div>
+
+  <aside class="side">
+    <h1>내 목소리로 말하는 나와 통화해요</h1>
+    <p>글자 자리는 고정하고, 아래 화면만 움직이는 6장짜리 시안이에요. 폰 화면, 미래의 나 모자이크, 말풍선은 모두 웹사이트와 같은 UI 키트(<b>web/kit/nawana-ui.js</b>)로 그려요. <code>?lang=en</code>이면 영어판이에요.</p>
+    <h3>장 목록</h3>
+    <ol class="list" id="list">
+      <li><button data-go="0">커버 · 통화 링 (nw-home)</button></li>
+      <li><button data-go="1">몇 년 뒤의 내가 받아요 · 통화 인사</button></li>
+      <li><button data-go="2">내가 말하면 유창한 내가 답해요</button></li>
+      <li><button data-go="3">왜 하필 내 목소리일까요?</button></li>
+      <li><button data-go="4">말을 멈추면 바로 대답해요</button></li>
+      <li><button data-go="5">마지막 장 · nawana.app</button></li>
+    </ol>
+    <h3>올리는 방법</h3>
+    <p>커버와 마지막 장은 정지 이미지, 02–05장은 1080×1350, 한 번 도는 길이(8–12초)의 반복 MP4로 올려요.</p>
+  </aside>
+</div>
+
+<script type="module">
+const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const sleep = ms => new Promise(r => setTimeout(r, RM ? 0 : ms));
+const params = new URLSearchParams(location.search);
+
+/* ?lang=en — the English text block (copy.md, written separately, not translated) */
+const EN = {
+  series: "In your own voice",
+  cover: { ttl: "Call the<br>fluent you", desc: "One tap, and you're on a call with the fluent you.<br>And that voice is <b>your own.</b>", swipe: "Swipe →" },
+  opener: { ttl: "It's you,<br>years from now", desc: "A few years on and already fluent, you pick up the phone, sounding <b>exactly like you.</b>" },
+  hero: { ttl: "You talk,<br>it answers", desc: "Take turns like a real call. You speak, and the fluent you answers, <b>in your voice.</b>" },
+  voice: { ttl: "Why your<br>own voice?", desc: "Copying a native feels like acting. In your own voice, it becomes <b>“I can say it like that too.”</b>" },
+  fast: { ttl: "Stop, and<br>it answers", desc: "Stop talking and the fluent you answers right away, <b>no awkward wait</b>, like a real call." },
+  outro: { tg: "Learn a language<br>from your fluent self.", free: "Your first 20 minutes are free" },
+};
+if (params.get("lang") === "en") {
+  $("#wrap").lang = "en"; document.title = "In your own voice";
+  for (const card of $$(".card")) {
+    const k = card.dataset.k, e = EN[k];
+    $$(".cap .series", card).forEach(x => x.textContent = EN.series);
+    if (e?.ttl) $(".ttl", card).innerHTML = e.ttl;
+    if (e?.desc) $(".desc", card).innerHTML = e.desc;
+  }
+  const cv = $('[data-k="cover"]'); $(".swipe span", cv).textContent = EN.cover.swipe;
+  const ou = $('[data-k="outro"]'); $(".tg", ou).innerHTML = EN.outro.tg; $(".free", ou).textContent = EN.outro.free;
+}
+const EN_ON = params.get("lang") === "en";
+
+await import("/web/kit/nawana-ui.js");   // after the lang switch: the kit reads lang once, when a screen is built
+
+const vp = $("#vp");
+const setScale = () => $$(".card").forEach(c => c.style.setProperty("--s", vp.clientWidth / 1080));
+new ResizeObserver(setScale).observe(vp); setScale();
+
+/* Each card: one loop of its scene. Screens are scripted through the kit's own API;
+   the only thing the post adds is the camera — panning the phone inside the window. */
+const pan = (c, y, instant) => {
+  const w = $(".phonewin", c);
+  if (instant) { w.style.transition = "none"; w.style.transform = y ? `translateY(${-y}px)` : "none"; void w.offsetWidth; w.style.transition = ""; }
+  else w.style.transform = y ? `translateY(${-y}px)` : "none";
+};
+/* camera positions (px) — read off the renders */
+const PAN = { cover: 282, call: 380, opener: 420, voice: 420 };
+
+const PLAY = {
+  /* 01 — the Talk tab framed on the "Let's talk" ring: one tap to call. A still (PNG). */
+  async cover(c) {
+    const home = $("nw-home", c); pan(c, PAN.cover, true);
+    await home.pose("home");
+    await sleep(4000);
+  },
+  /* 02 — the opener only: the fluent self greets first, in the learner's own voice (pill speaking).
+     Don't run into a correction here. */
+  async opener(c) {
+    const call = $("nw-call", c); pan(c, PAN.opener, true);
+    await call.run(async s => {
+      s.goals(["busy week", "catch up", "no wonder"]);
+      await s.sleep(700);
+      await s.say("Hey, it's you, a few years from now. So, how was your week?");
+      await s.sleep(5200);
+    });
+  },
+  /* 03 (hero) — take turns: the learner speaks, the fluent self answers in their voice. The small
+     fix card lands WITH the reply (never before it), kept a side beat. */
+  async hero(c) {
+    const call = $("nw-call", c); pan(c, PAN.call, true);
+    await call.run(async s => {
+      s.goals(["busy week", "catch up", "no wonder"]);
+      await s.sleep(500);
+      await s.say("Hey, it's you, a few years from now. So, how was your week?");
+      await s.listen();
+      s.coach({ line: "It was a <u>busy</u> week, honestly.", gloss: EN_ON ? "" : "솔직히 <u>바쁜</u> 한 주였어." });
+      await s.sleep(1300);
+      await s.user("It was a busy week. I go to three meetings a day.");
+      s.tick(0);
+      await s.sleep(400);
+      // the correction waits for the voice (as in the app): reply starts, then the card lands
+      const reply = s.say("Three a day? No wonder you sound tired. Which one went best?");
+      await s.sleep(300);
+      s.fix({ text: "It was a busy week. I <b>went</b> to three meetings a day.", note: EN_ON ? "It already happened, so past tense." : "지난 일이라 과거형이에요" });
+      await reply;
+      s.tick(2); s.done();
+      await s.sleep(1900);
+    });
+  },
+  /* 04 — the voice itself: one fluent-self line, spoken in the learner's own voice, the pill
+     blooming as it speaks. Shown as the feeling, never captioned as an improvement. */
+  async voice(c) {
+    const call = $("nw-call", c); pan(c, PAN.voice, true);
+    await call.run(async s => {
+      s.goals([]);
+      await s.sleep(800);
+      await s.say("I'd love to tell you about my project.");
+      await s.sleep(5800);
+    });
+  },
+  /* 05 — the reply lands promptly after the learner stops: a natural turn cadence. No number,
+     no benchmark, no drawn-out wait. */
+  async fast(c) {
+    const call = $("nw-call", c); pan(c, PAN.call, true);
+    await call.run(async s => {
+      s.goals([]);
+      await s.sleep(700);
+      await s.listen();
+      await s.user("Honestly, I'm a little nervous about the demo.");
+      await s.sleep(200);
+      await s.say("That makes sense. Want to run the opening line by me?");
+      s.done();
+      await s.sleep(3000);
+    });
+  },
+  async outro() { await sleep(6000); },
+};
+
+const track = $("#track"), slots = $$(".slot"), cards = $$(".card"), dots = $("#dots"), list = $$("#list button");
+slots.forEach((_, i) => { const b = document.createElement("button"); b.setAttribute("aria-label", `${i + 1}번 장`); b.onclick = () => go(i); dots.append(b); });
+let idx = 0, gen = 0;
+const SCREENS = "nw-call,nw-home";
+function go(i) {
+  idx = (i + slots.length) % slots.length;
+  track.style.transform = `translateX(${-idx * 100}%)`;
+  $$("button", dots).forEach((b, j) => b.setAttribute("aria-current", j === idx));
+  list.forEach((b, j) => b.setAttribute("aria-current", j === idx));
+  $$(SCREENS).forEach(s => s.stop());
+  run(cards[idx]);
+}
+async function run(card) {
+  const g = ++gen, alive = () => g === gen;
+  for (const n of SCREENS.split(",")) await customElements.whenDefined(n);
+  await sleep(350);
+  do { const t0 = performance.now(); const play = PLAY[card.dataset.k](card, alive); document.documentElement.dataset.scene = card.dataset.k; await play; if (alive()) document.documentElement.dataset.loopMs = Math.round(performance.now() - t0); } while (alive() && !RM);
+}
+$("#prev").onclick = () => go(idx - 1);
+$("#next").onclick = () => go(idx + 1);
+$("#replay").onclick = () => go(idx);
+list.forEach(b => b.onclick = () => go(+b.dataset.go));
+addEventListener("keydown", e => { if (e.key === "ArrowRight") go(idx + 1); if (e.key === "ArrowLeft") go(idx - 1); });
+let x0 = null;
+vp.addEventListener("pointerdown", e => x0 = e.clientX);
+vp.addEventListener("pointerup", e => { if (x0 == null) return; const d = e.clientX - x0; x0 = null; if (Math.abs(d) > 40) go(idx + (d < 0 ? 1 : -1)); });
+const solo = +(params.get("solo") || 0);
+if (solo) document.documentElement.classList.add("solo");
+const m = solo ? [0, solo] : /^#card(\d+)$/.exec(location.hash);
+go(m ? +m[1] - 1 : 0);
+</script>

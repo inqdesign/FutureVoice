@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>nawana — App Store preview v2</title>
+<!--
+  App Store preview v2, 886×1920, 29.5 s. Idea: what a conversation produces gathers into ONE book.
+  Every UI piece is cut from a real simulator capture (shots/, English); the pill is the app's own
+  Futureself mosaic (a port of web/kit's <nw-futureself>, driven by t so frames are deterministic).
+  Nothing here draws UI the app doesn't have.
+  Render: node22 scripts/marketing/render-frames.mjs marketing/content/2026-10-16-app-preview/preview.html \
+          --out marketing/content/2026-10-16-app-preview/preview-en.mp4 --seconds 29.5 --silent-audio
+-->
+<style>
+@font-face{font-family:"Geist Pixel";src:url(/web/GeistPixel.ttf) format("truetype")}
+:root{--bg:#F7F8FA;--ink:#0D1117;--sub:#5B6472;--blue:#0A5CF5;--grid:rgba(10,40,90,.05);
+  --sans:-apple-system,"SF Pro Display",system-ui,sans-serif}
+html,body{margin:0;width:886px;height:1920px;overflow:hidden;background:var(--bg)}
+#stage{position:relative;width:886px;height:1920px;overflow:hidden;background:var(--bg);
+  background-image:linear-gradient(var(--grid) 2px,transparent 2px),linear-gradient(90deg,var(--grid) 2px,transparent 2px);
+  background-size:54px 54px;background-position:-1px -1px}
+.layer{position:absolute;inset:0}
+.pc{position:absolute;left:0;top:0;background-repeat:no-repeat;background-size:1206px 2622px;transform-origin:50% 50%;will-change:transform}
+.pill{position:absolute;left:0;top:0;width:640px;height:256px;border-radius:999px;overflow:hidden;transform-origin:50% 50%}
+.pill canvas{width:100%;height:100%;display:block}
+.pill i{position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 1.5px rgba(60,60,67,.16)}
+.tx{position:absolute;margin:0;font-family:"Geist Pixel";font-weight:400;color:var(--ink);white-space:nowrap;line-height:1}
+.tx .m{display:inline-block;overflow:hidden;vertical-align:top;padding:.04em 0 .1em;margin:-.04em 0 -.1em}
+.tx .w{display:inline-block}
+.tx.b,.tx .b{color:var(--blue)}
+.tx.sans{font-family:var(--sans);font-weight:600;letter-spacing:-.4px}
+.tx.sub{color:var(--sub)}
+</style></head>
+<body><div id="stage"></div>
+<script>
+/* ───────────── helpers ───────────── */
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const lerp = (a, b, x) => a + (b - a) * x;
+const E = {
+  io: (x) => (x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2),
+  io5: (x) => (x < .5 ? 16 * x ** 5 : 1 - Math.pow(-2 * x + 2, 5) / 2),
+  out: (x) => 1 - Math.pow(1 - x, 3), out5: (x) => 1 - Math.pow(1 - x, 5), in: (x) => x * x * x,
+  back: (x) => { const c = 1.6; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); },
+};
+const px = (v) => `${v}px`;
+const SHOT = (n) => `shots/${n}.png`;
+const stage = document.getElementById("stage");
+const el = (tag, cls, parent, css) => { const e = document.createElement(tag); if (cls) e.className = cls; if (css) Object.assign(e.style, css); (parent || stage).appendChild(e); return e; };
+/* keyframed number: [[t, v, ease], …] */
+const kf = (t, ks) => {
+  if (t <= ks[0][0]) return ks[0][1];
+  for (let i = 1; i < ks.length; i++) if (t <= ks[i][0]) return lerp(ks[i - 1][1], ks[i][1], (E[ks[i][2] || "io"])(prog(t, ks[i - 1][0], ks[i][0])));
+  return ks[ks.length - 1][1];
+};
+const bez = (a, c, b, x) => (1 - x) * (1 - x) * a + 2 * (1 - x) * x * c + x * x * b;
+
+/* a piece cut from a capture; placed by its CENTER in canvas px; s = canvas px per capture px */
+function piece(shot, [x0, y0, x1, y1], { radius = 0, parent } = {}) {
+  const e = el("div", "pc", parent, { width: px(x1 - x0), height: px(y1 - y0), borderRadius: px(radius),
+    backgroundImage: `url(${SHOT(shot)})`, backgroundPosition: `${-x0}px ${-y0}px` });
+  e.r = [x0, y0, x1, y1]; e.w = x1 - x0; e.h = y1 - y0; e.cx = (x0 + x1) / 2; e.cy = (y0 + y1) / 2;
+  return e;
+}
+function place(e, { x, y, s = 1, r = 0, o = 1, lift = 0, blur = 0, ry = 0, shadow = .35 }) {
+  if (o <= 0.001) { e.style.display = "none"; return; }
+  e.style.display = "block";
+  e.style.transform = `translate(${x - e.w / 2}px,${y - e.h / 2}px) scale(${s}) rotateY(${ry}deg) rotate(${r}deg)`;
+  e.style.opacity = o;
+  const a = shadow + lift;
+  e.style.boxShadow = `0 ${(14 + 40 * lift) / s}px ${(40 + 90 * lift) / s}px rgba(10,30,70,${.07 * a + .12 * lift})`;
+  e.style.filter = blur > .05 ? `blur(${blur / s}px)` : "none";
+}
+/* canvas position of a capture point inside a placed piece */
+const inside = (e, p, cx, cy) => ({ x: p.x + (cx - e.cx) * p.s, y: p.y + (cy - e.cy) * p.s });
+
+/* kinetic type: words rise out of a mask */
+function text(content, css, cls = "") {
+  const e = el("h2", "tx " + cls, null, css); e.ws = [];
+  content.split("\n").forEach((line, li) => {
+    if (li) e.appendChild(document.createElement("br"));
+    line.split(" ").forEach((w, i, arr) => {
+      const m = el("span", "m", e); const s = el("span", "w" + (w.startsWith("*") ? " b" : ""), m);
+      s.textContent = w.replace(/^\*/, ""); e.ws.push(s);
+      if (i < arr.length - 1) e.appendChild(document.createTextNode(" "));
+    });
+  });
+  return e;
+}
+function textAt(e, t, tin, tout, { stagger = .09, dur = .62, outDur = .34 } = {}) {
+  const vis = t >= tin - .01 && t < tout + outDur + e.ws.length * .04 + .05;
+  e.style.display = vis ? "block" : "none"; if (!vis) return;
+  e.ws.forEach((s, i) => {
+    const a = E.out5(prog(t, tin + i * stagger, tin + i * stagger + dur));
+    const b = E.in(prog(t, tout + i * .04, tout + i * .04 + outDur));
+    s.style.transform = `translateY(${(1 - a) * 110 - b * 110}%)`;
+  });
+}
+
+/* ───────────── the Futureself mosaic (port of web/kit <nw-futureself>, time-driven) ───────────── */
+const RAMP = [[.965, .972, 1], [.900, .922, .970], [.720, .830, 1], [.450, .680, 1], [.030, .340, .950]].map((c) => `rgb(${c.map((v) => Math.round(v * 255)).join(",")})`);
+const fract = (v) => v - Math.floor(v);
+function hash21(x, y) { let qx = fract(x * 123.34), qy = fract(y * 456.21); const d = qx * (qx + 45.32) + qy * (qy + 45.32); qx += d; qy += d; return fract(qx * qy); }
+const smooth = (e0, e1, x) => { const u = clamp((x - e0) / (e1 - e0)); return u * u * (3 - 2 * u); };
+function makePill() {
+  const p = el("div", "pill"); const c = el("canvas", "", p); el("i", "", p);
+  c.width = 1280; c.height = 512; p.ctx = c.getContext("2d"); p.w = 640; p.h = 256;
+  p.recess = recess(1280, 512); return p;
+}
+function voice(t, seed = 3) {
+  const syl = Math.max(0, Math.sin(t * 9.1 + seed) * .5 + Math.sin(t * 5.3 + seed * 2) * .35 + .25);
+  return Math.min(1, .18 + .62 * syl * (.55 + .45 * Math.sin(t * 1.3 + seed)));
+}
+function drawPill(p, t, mode, lvl) {
+  const ctx = p.ctx, cw = 640, ch = 256, k = 2;
+  ctx.setTransform(k, 0, 0, k, 0, 0); ctx.fillStyle = RAMP[0]; ctx.fillRect(0, 0, cw, ch);
+  const cell = ch / 5, cols = Math.ceil(cw / cell), rows = Math.ceil(ch / cell);
+  const ox = (cw - cols * cell) / 2, oy = (ch - rows * cell) / 2, drive = clamp(lvl) * 1.15, gap = 1;
+  const M = { idle: 0, listening: 1, thinking: 2, speaking: 3 }[mode];
+  for (let cy = 0; cy < rows; cy++) for (let cx = 0; cx < cols; cx++) {
+    const x = ox + cx * cell, y = oy + cy * cell, ux = (x + cell / 2) / cw, uy = (y + cell / 2) / ch;
+    const r1 = hash21(cx + .13, cy + .13), r2 = hash21(cx + 7.77, cy + 7.77), r3 = hash21(cx + 23.19, cy + 23.19);
+    let v = .16 + .14 * Math.sin(t * (.35 + .55 * r2) + r3 * 2 * Math.PI);
+    const bias = M === 3 ? Math.abs(ux - .5) * 2 : 1 - uy;
+    const order = clamp(r1 + (bias - r1) * .45);
+    const ig = smooth(order, order + .22, drive);
+    v += ig * (.55 + .30 * r2) + ig * .08 * Math.sin(t * (2 + 3 * r1) + r2 * 2 * Math.PI);
+    if (M === 0) v *= .7;
+    const step = Math.min(Math.max(Math.floor(v * 4 + (r3 - .5) * .9 + .5), 0), 4);
+    ctx.fillStyle = RAMP[step]; ctx.fillRect(x + gap / 2, y + gap / 2, cell - gap, cell - gap);
+  }
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(p.recess, 0, 0);
+}
+function recess(W, H) {
+  const c = document.createElement("canvas"); c.width = W; c.height = H;
+  const g = c.getContext("2d"), img = g.createImageData(W, H), d = img.data;
+  const rad = H / 2, ax = Math.max(W / 2 - rad, 0), fall = 7 * (H / 64);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const qx0 = x + .5 - W / 2, py = y + .5 - H / 2, qx = Math.min(Math.max(qx0, -ax), ax);
+    const rim = Math.exp(-Math.max(rad - Math.hypot(qx0 - qx, py), 0) / fall);
+    const topW = clamp(.5 - py / H);
+    const a = rim * (.14 + .34 * topW) * .45 - rim * (1 - topW) * .05, i = (y * W + x) * 4;
+    d[i] = d[i + 1] = d[i + 2] = a >= 0 ? 0 : 255; d[i + 3] = Math.round(Math.abs(a) * 255);
+  }
+  g.putImageData(img, 0, 0); return c;
+}
+function placePill(p, x, y, s, o) {
+  p.style.display = o > .001 ? "block" : "none";
+  p.style.transform = `translate(${x - p.w / 2}px,${y - p.h / 2}px) scale(${s})`;
+  p.style.opacity = o;
+  p.style.boxShadow = `0 ${30 / s}px ${80 / s}px rgba(10,60,180,.16)`;
+}
+
+/* ═════════════════ cast ═════════════════ */
+const S = .74;                                 // conversation scale
+const back = el("div", "layer"), mid = el("div", "layer"), top_ = el("div", "layer", null, { perspective: "1800px" });
+
+/* the call: bubbles only (no labels), cut from the talk's transcript */
+const T = "transcript";
+const q = piece(T, [60, 560, 764, 747], { radius: 54, parent: mid });
+const u = piece(T, [469, 880, 1146, 1067], { radius: 54, parent: mid });
+const card = piece(T, [180, 1079, 1146, 1576], { radius: 50, parent: mid });
+const rr = piece(T, [60, 1697, 1026, 1950], { radius: 54, parent: mid });
+const u2 = piece(T, [390, 2083, 1146, 2271], { radius: 54, parent: mid });
+const convo = [ // home position (canvas), side for the entrance
+  { e: q, x: 44 + 521 / 2, y: 520, t: 3.55, side: -1 },
+  { e: u, x: 842 - 501 / 2, y: 700, t: 4.15, side: 1 },
+  { e: card, x: 842 - 715 / 2, y: 700 + 69 + 9 + 184, t: 4.7, side: 1, unfold: true },
+  { e: rr, x: 44 + 715 / 2, y: 1293, t: 5.45, side: -1 },
+  { e: u2, x: 842 - 559 / 2, y: 1507, t: 6.15, side: 1 },
+];
+
+/* the book: this talk's own card on the Review shelf — its title IS the corrected line */
+const P = "practice-studying";
+const book = piece(P, [54, 884, 1151, 1495], { radius: 66, parent: mid });
+const titleCover = el("div", "", book, { position: "absolute", left: "26px", top: "236px", width: "720px", height: "72px", background: "#fff" });
+const BTN = [[42, 388, 277, 568], [302, 388, 537, 568], [562, 388, 797, 568], [821, 388, 1056, 568]];
+const btns = BTN.map(([a, b, c, d]) => el("div", "", book, { position: "absolute", left: px(a), top: px(b), width: px(c - a), height: px(d - b),
+  borderRadius: "34px", backgroundImage: `url(${SHOT(P)})`, backgroundSize: "1206px 2622px",
+  backgroundPosition: `${-(a + 54)}px ${-(b + 884)}px`, transformOrigin: "50% 50%" }));
+const BOOK_C = { x: 548.5, y: 305.5 };
+const btnCenter = (i) => ({ x: (BTN[i][0] + BTN[i][2]) / 2, y: (BTN[i][1] + BTN[i][3]) / 2 });
+const TITLE_C = { x: 385, y: 273 };
+
+/* what the talk gave: each flies from where it was said into its chapter */
+const flights = [
+  { e: piece(T, [534, 1730, 828, 1794], { radius: 14, parent: top_ }), from: rr, to: () => btnCenter(0), t: 8.55, end: .3 },
+  { e: piece(T, [438, 1796, 655, 1863], { radius: 14, parent: top_ }), from: rr, to: () => btnCenter(0), t: 8.9, end: .3 },
+  { e: piece(T, [245, 1796, 655, 1863], { radius: 14, parent: top_ }), from: rr, to: () => btnCenter(1), t: 9.3, end: .3 },
+  { e: piece(T, [200, 1186, 886, 1314], { radius: 18, parent: top_ }), from: card, to: () => TITLE_C, t: 9.75, end: .72, title: true },
+  { e: piece(T, [60, 1697, 1026, 1950], { radius: 54, parent: top_ }), from: rr, to: () => btnCenter(3), t: 10.2, end: .14, whole: true },
+];
+
+/* inside the book: its chapter pages */
+const pages = [
+  { e: piece("talkdetail-words", [132, 366, 1157, 1345], { radius: 60, parent: top_ }), s: .72, x: 470, y: 1180, t: 13.35,
+    label: text("Words.", { left: "60px", top: "330px", fontSize: "190px" }), icon: [189, 1312, 239, 1376] },
+  { e: piece("talkdetail-expressions", [132, 366, 1157, 1395], { radius: 60, parent: top_ }), s: .72, x: 420, y: 760, t: 15.0,
+    label: text("Expressions.", { right: "50px", top: "1350px", fontSize: "116px" }, "b") },
+  { e: piece(T, [180, 1079, 1146, 1576], { radius: 50, parent: top_ }), s: .86, x: 443, y: 1130, t: 16.65,
+    label: text("Your\n*fixes.", { left: "64px", top: "330px", fontSize: "170px", lineHeight: "1.02" }) },
+  { e: piece("talkdetail-lines", [132, 366, 1157, 860], { radius: 60, parent: top_ }), s: .8, x: 443, y: 1250, t: 18.3,
+    label: text("Shadow\n*it.", { left: "64px", top: "380px", fontSize: "170px", lineHeight: "1.02" }) },
+];
+
+/* say it again */
+const SA = "say-again-reading", SD = "say-again-done";
+const sq = piece(SA, [60, 1651, 764, 1838], { radius: 54, parent: mid });
+const prompter = piece(SA, [60, 1941, 1146, 2478], { radius: 64, parent: mid });
+const doneLine = piece(SD, [358, 1047, 1146, 1250], { radius: 54, parent: mid });
+const score = piece(SD, [790, 1252, 935, 1321], { radius: 34, parent: top_ });
+
+const pill = makePill(); top_.appendChild(pill);
+
+/* type */
+const T1a = text("Talk", { left: "56px", top: "300px", fontSize: "270px" });
+const T1b = text("with your", { left: "68px", top: "590px", fontSize: "80px" });
+const T1c = text("*fluent *self.", { left: "54px", top: "680px", fontSize: "128px" });
+const T1d = text("In your own voice.", { left: 0, right: 0, textAlign: "center", top: "1440px", fontSize: "46px" }, "sans sub");
+const T3a = text("Every talk", { left: 0, right: 0, textAlign: "center", top: "440px", fontSize: "118px" });
+const T3b = text("becomes", { left: "70px", top: "1300px", fontSize: "100px" });
+const T3c = text("*a *book.", { left: "64px", top: "1410px", fontSize: "210px" });
+const T5a = text("Then say it", { left: "64px", top: "1320px", fontSize: "100px" });
+const T5b = text("*again.", { left: "52px", top: "1430px", fontSize: "236px" });
+const T6a = text("nawana", { left: 0, right: 0, textAlign: "center", top: "1080px", fontSize: "176px", letterSpacing: "4px" });
+const T6b = text("Learn a language from\nyour *fluent *self.", { left: 0, right: 0, textAlign: "center", top: "1330px", fontSize: "50px", lineHeight: "1.3" }, "sans");
+
+/* ═════════════════ render(t) ═════════════════ */
+function render(t) {
+  /* ── the pill: the fluent self, speaking or listening ── */
+  let mode = "speaking", lvl = voice(t);
+  const listening = (t > 3.95 && t < 5.2) || (t > 5.95 && t < 7.4) || (t > 21.0 && t < 22.9);
+  if (listening) { mode = "listening"; lvl = .28 + .22 * Math.abs(Math.sin(t * 6.3)) * Math.abs(Math.sin(t * 2.1)); }
+  drawPill(pill, t, mode, lvl);
+  // where it is
+  let pp;
+  if (t < 3.0) pp = { x: 443, y: 1200, s: lerp(.62, 1.04, E.out5(prog(t, 0, .9))), o: prog(t, 0, .35) };
+  else if (t < 7.9) { const a = E.io5(prog(t, 2.85, 3.55)); pp = { x: 443, y: lerp(1200, 230, a), s: lerp(1.04, .44, a), o: 1 - prog(t, 7.4, 7.9) }; }
+  else if (t < 19.5) pp = { o: 0 };
+  else if (t < 25.0) { const a = E.out5(prog(t, 19.6, 20.2)); pp = { x: 443, y: 250, s: lerp(.3, .44, a), o: prog(t, 19.6, 19.85) * (1 - prog(t, 24.6, 25.0)) }; }
+  else { const a = E.out5(prog(t, 25.3, 26.1)); pp = { x: 443, y: 820, s: lerp(.5, .98, a), o: prog(t, 25.3, 25.6) }; }
+  placePill(pill, pp.x ?? 443, pp.y ?? 0, pp.s ?? 1, pp.o);
+
+  /* ── 1 · Talk with your fluent self ── */
+  textAt(T1a, t, .35, 2.75, { dur: .7 });
+  textAt(T1b, t, .75, 2.8);
+  textAt(T1c, t, 1.0, 2.85, { stagger: .14 });
+  textAt(T1d, t, 1.65, 2.7, { stagger: .06 });
+
+  /* ── 2 · the conversation, in space ── */
+  const drift = kf(t, [[3.4, 0], [7.6, -120, "io"], [8.5, -330, "io"]]);
+  const gs = kf(t, [[7.6, 1], [8.5, .86, "io"]]);
+  const gfade = kf(t, [[10.7, 1], [11.2, 0, "in"]]);
+  const G = (x, y) => ({ x: 443 + (x - 443) * gs, y: 600 + (y - 600) * gs + drift });
+  const rrGone = prog(t, 10.2, 10.25);
+  convo.forEach((c) => {
+    const a = E.out5(prog(t, c.t, c.t + .7));
+    const p = G(c.x + c.side * (1 - a) * 70, c.y + (1 - a) * 90);
+    const o = clamp(prog(t, c.t, c.t + .25)) * gfade * (c.e === rr ? 1 - rrGone : 1);
+    place(c.e, { ...p, s: S * gs * lerp(.9, 1, a), o, blur: (1 - gfade) * 14, shadow: .25 });
+    if (c.unfold) c.e.style.clipPath = `inset(0 0 ${(1 - E.out5(prog(t, c.t, c.t + .8))) * 100}% 0 round 50px)`;
+    c.e.pos = { ...p, s: S * gs };
+  });
+
+  /* ── 3 · it all goes into one book ── */
+  const bIn = E.out5(prog(t, 7.7, 8.5));
+  const bCenter = E.io5(prog(t, 10.85, 11.65));
+  const dive = E.in(prog(t, 12.85, 13.45));
+  let bp = { x: 443, y: lerp(2350, 1560, bIn), s: .72 };
+  bp = { x: 443, y: lerp(bp.y, 940, bCenter), s: lerp(.72, .74, bCenter) };
+  // dive into the Words chapter
+  const b0 = btnCenter(0);
+  const dz = lerp(1, 7, dive);
+  {
+    const zs = bp.s * dz;
+    // keep the Words button under one anchor that slides to the centre while the zoom grows
+    const ax = lerp(bp.x + (b0.x - BOOK_C.x) * bp.s, 443, E.io(prog(t, 12.85, 13.3)));
+    const ay = lerp(bp.y + (b0.y - BOOK_C.y) * bp.s, 960, E.io(prog(t, 12.85, 13.3)));
+    const P2 = dive > 0 ? { x: ax - (b0.x - BOOK_C.x) * zs, y: ay - (b0.y - BOOK_C.y) * zs, s: zs } : bp;
+    place(book, { ...P2, o: t < 7.7 ? 0 : (t < 13.45 ? 1 : 0), shadow: .5 });
+    book.pos = P2;
+  }
+  // flights
+  flights.forEach((f) => {
+    const src = f.from.pos; if (!src || t < f.t) { place(f.e, { x: 0, y: 0, o: 0 }); return; }
+    const p0 = inside(f.from, src, f.e.cx, f.e.cy);
+    const liftA = E.out5(prog(t, f.t, f.t + .4)), fly = E.io(prog(t, f.t + .35, f.t + 1.15));
+    const to = f.to(), bpos = book.pos;
+    const p1 = { x: bpos.x + (to.x - BOOK_C.x) * bpos.s, y: bpos.y + (to.y - BOOK_C.y) * bpos.s };
+    const lifted = { x: p0.x, y: p0.y - 46 * liftA };
+    const ctrl = { x: lerp(lifted.x, p1.x, .5) + (f.whole ? 260 : 120), y: Math.min(lifted.y, p1.y) - 160 };
+    const x = bez(lifted.x, ctrl.x, p1.x, fly), y = bez(lifted.y, ctrl.y, p1.y, fly);
+    const s0 = src.s * lerp(1, f.whole ? 1.04 : 1.55, liftA);
+    const s1 = bpos.s * f.end;
+    const s = Math.exp(lerp(Math.log(s0), Math.log(s1), fly));
+    const arrive = f.t + 1.15;
+    const o = clamp(prog(t, f.t, f.t + .05)) * (1 - prog(t, arrive - .12, arrive + .02));
+    place(f.e, { x, y, s, o, lift: liftA * (1 - fly * .6), r: Math.sin(fly * Math.PI) * (f.whole ? -4 : 3) });
+  });
+  // chapter buttons pulse as things land in them
+  const landed = [[0, 9.7], [0, 10.05], [1, 10.45], [3, 11.35]];
+  btns.forEach((b, i) => {
+    let k = 0; landed.forEach(([j, ta]) => { if (j === i) k = Math.max(k, Math.sin(Math.PI * prog(t, ta, ta + .38))); });
+    b.style.transform = `scale(${1 + .13 * k})`;
+    b.style.boxShadow = k > 0 ? `0 0 0 ${8 * k}px rgba(10,92,245,${.35 * k})` : "none";
+  });
+  titleCover.style.opacity = 1 - prog(t, 10.8, 10.95);
+  textAt(T3a, t, 11.05, 12.75);
+  textAt(T3b, t, 11.35, 12.75);
+  textAt(T3c, t, 11.6, 12.8, { stagger: .14 });
+
+  /* ── 4 · inside the book ── */
+  const wash = prog(t, 13.2, 13.45) * (1 - prog(t, 13.45, 13.7));
+  stage.style.setProperty("--wash", wash);
+  pages.forEach((pg, i) => {
+    const tin = pg.t, tout = pg.t + 1.62, side = i % 2 ? -1 : 1;
+    const a = E.out5(prog(t, tin, tin + .65)), b = E.in(prog(t, tout, tout + .45));
+    const vis = t > tin - .01 && t < tout + .5;
+    place(pg.e, { x: pg.x + side * ((1 - a) * 520 - b * 620), y: pg.y + (1 - a) * 40, s: pg.s * lerp(.92, 1, a),
+      ry: side * ((1 - a) * -28 + b * 24), r: side * lerp(2.5, 0, a) - side * b * 3, o: vis ? clamp(prog(t, tin, tin + .2)) * (1 - prog(t, tout + .25, tout + .45)) : 0, shadow: .8 });
+    textAt(pg.label, t, tin + .12, tout - .05, { stagger: .12, dur: .55, outDur: .28 });
+  });
+
+  /* ── 5 · then say it again ── */
+  {
+    const qa = E.out5(prog(t, 19.95, 20.6)), pa = E.out5(prog(t, 20.55, 21.3));
+    const swap = E.io(prog(t, 22.9, 23.3)), out = E.in(prog(t, 24.55, 25.05));
+    place(sq, { x: 44 + 521 / 2 * 1.06, y: 560 + (1 - qa) * 80 - out * 300, s: .78, o: prog(t, 19.95, 20.2) * (1 - out) });
+    place(prompter, { x: 443, y: 960 + (1 - pa) * 120 - out * 300, s: .78 * lerp(.94, 1, pa), o: prog(t, 20.55, 20.8) * (1 - swap) * (t < 25.1 ? 1 : 0), shadow: .7 });
+    const d = { x: 443 + 30, y: 900 - out * 300, s: .92 * lerp(.96, 1, swap) };
+    place(doneLine, { ...d, o: swap * (1 - out), shadow: .5 });
+    const sp = inside(doneLine, d, score.cx, score.cy);
+    const pop = E.back(prog(t, 23.45, 24.0));
+    place(score, { x: sp.x - 30 * pop, y: sp.y + 50 * pop, s: d.s * lerp(.6, 1.9, pop), o: prog(t, 23.45, 23.55) * (1 - out), lift: pop });
+    textAt(T5a, t, 21.0, 24.5);
+    textAt(T5b, t, 21.3, 24.55, { dur: .8 });
+  }
+
+  /* ── end ── */
+  textAt(T6a, t, 25.9, 99, { stagger: .1 });
+  textAt(T6b, t, 26.55, 99, { stagger: .05 });
+}
+/* chapter dive: a short white flash as the Words button opens */
+const flash = el("div", "layer", null, { background: "#F2F2F7", opacity: "var(--wash)", pointerEvents: "none" });
+
+window.__render = render;
+window.__ready = Promise.all([document.fonts.load('100px "Geist Pixel"'), document.fonts.load('600 40px -apple-system'),
+  ...["transcript", P, "talkdetail-words", "talkdetail-expressions", "talkdetail-lines", SA, SD]
+    .map((n) => new Promise((r) => { const i = new Image(); i.onload = r; i.onerror = r; i.src = SHOT(n); }))]).then(() => render(0));
+const qs = new URLSearchParams(location.search);
+if (qs.has("t")) window.__ready.then(() => render(+qs.get("t")));
+if (qs.has("play")) window.__ready.then(() => { const t0 = performance.now(); const tick = () => { render(((performance.now() - t0) / 1000) % 29.5); requestAnimationFrame(tick); }; tick(); });
+</script>
+</body></html>

@@ -112,7 +112,7 @@ class NwBook extends NwScreen {
   }
   _talk(sub, bars) {
     const ko = this._ko;
-    return this._card({ kind: "t", tag: ko ? "대화 · 자유 대화" : "Talk · Free talk", title: "“Honestly, it went really well. I…”", sub, score: 75, bars });
+    return this._card({ kind: "t", tag: ko ? "대화 · 자유 대화" : "Talk · Free talk", title: "How the interview went", sub, score: this.hasAttribute("coached") ? 0 : 75, bars });
   }
   _scenes() {
     const ko = this._ko, w = r => ko ? `상대: ${r}` : `with ${r}`, tag = ko ? "상황연습 · 뉴스" : "Watch · News";

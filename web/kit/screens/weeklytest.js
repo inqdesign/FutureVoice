@@ -10,7 +10,14 @@ import { NwScreen, STR, RM, esc } from "../core.js";
  * row + Continue, green on a right answer). The result is a grouped List: the host, the headline,
  * "N of M", the missed items with their kind's icon, a footer, and "Try the missed ones again".
  * The run-of-right-answers flame CLAUDE.md mentions was pulled from the source (progressLabel's
- * comment, 2026-09-23), so it is not drawn. Geometry read off the simulator captures (ko, iPhone 17). */
+ * comment, 2026-09-23), so it is not drawn. Geometry read off the simulator captures (ko, iPhone 17).
+ *
+ *   el.sample = "interview"  (or attribute sample="interview")  the interview week's paper: perspective · took the
+ *                            initiative · 어제 면접관이 다시 전화했어 · listen · told (grammar) · result 6/7 · the gap "Again"
+ *   el.items = { gap: {...}, … }   merge items over the paper (keys = pose names in camelCase; shape as ITEMS below;
+ *                            `again: true` draws the retake badge; rule/note may be {ko, en})
+ *   el.show(el.items.gap); await el.tapOpt(o); el.choose(o); await el.tapTile(w); await el.tapBtn(); el.check()
+ *   el.result({ score, total, missed: [{ kind, answer, sub? }] })   no flame, no gauge (WeeklyTestView.resultView) */
 
 const SF = {
   book: '<path d="M6.2 2.6h11.3c.9 0 1.6.7 1.6 1.6v14.1c0 .5-.4.9-.9.9H7.4c-.6 0-1 .4-1 1s.4 1 1 1h10.8c.5 0 .9.4.9.9s-.4.9-.9.9H7.3c-1.6 0-2.9-1.3-2.9-2.9V4.4c0-1 .8-1.8 1.8-1.8z" fill="currentColor"/><path d="M8.6 6.4h6.8M8.6 9.4h4.6" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>',
@@ -40,17 +47,17 @@ const T = {
     fluent: "유창한 표현", tip: "팁", why: "이 문장을 고친 이유", natural: f => `“${f}” 대신 더 자연스러운 말은?`,
     strong: "훌륭한 한 주예요", good: "잘한 한 주예요", inBook: "이번 주도 기록했어요", of: (a, b) => `${a} / ${b}`,
     missed: "틀린 것", backDue: "이것들은 복습으로 돌아가서 지금 바로 나와요.", retry: "틀린 것 다시 풀기", youSaidC: p => `내가 한 말: ${p}`,
-    tapPlaced: "놓은 단어를 누르면 그 뒤에 넣어요. 한 번 더 누르면 빼요.", glyph: "가" },
+    tapPlaced: "놓은 단어를 누르면 그 뒤에 넣어요. 한 번 더 누르면 빼요.", glyph: "가", again: "다시" },
   en: { title: "Weekly test", done: "Done", meaning: "Which word means this?", gap: "Fill the blank", listen: "Listen and build it",
     speak: "Say it out loud", grammar: "A mistake you keep making", upgrade: "A better word", translate: "Say it in English",
-    build: "Fix the sentence", hint: "Show a hint", write: "Write it as a correct sentence.", traps: "Some words are traps — you don't have to use them all.",
-    lastTime: "Last time you said", trapsMine: "Trap words — from your mistake", trapsBefore: "Trap words — what you said before the fix",
+    build: "Fix the sentence", hint: "Show a hint", write: "Write it as a correct sentence.", traps: "Some words are traps. You don't have to use them all.",
+    lastTime: "Last time you said", trapsMine: "Trap words · from your mistake", trapsBefore: "Trap words · what you said before the fix",
     right: "Right", notThis: "Not this time", cont: "Continue", seeResult: "See result", check: "Check", youSaid: "You said",
     tapOrder: "Tap the words in order", speakHint: "Tap, say the line, tap again", skip: "Skip",
     fluent: "Fluent version", tip: "Tip", why: "Why it was corrected", natural: f => `A more natural choice than “${f}”?`,
     strong: "A strong week", good: "A good week", inBook: "The week is in the book", of: (a, b) => `${a} of ${b}`,
     missed: "Missed", backDue: "These are back in your review, due now.", retry: "Try the missed ones again", youSaidC: p => `You said: ${p}`,
-    tapPlaced: "Tap a placed word to add after it. Tap it again to take it out.", glyph: "A" },
+    tapPlaced: "Tap a placed word to add after it. Tap it again to take it out.", glyph: "A", again: "Again" },
 };
 const ICONS = { meaning: "book", gap: "quote", translate: "charBubble", grammar: "cycle", upgrade: "upCircle", listen: "ear", speak: "waveMic", build: "stack" };
 
@@ -124,7 +131,43 @@ const ITEMS = {
   upgradeRight: { kind: "upgrade", n: 2, of: 13, prompt: "I was very tired after the move.", focus: "very tired", options: ["exhausted", "insufficient", "impartial", "decent"], answer: "exhausted", chosen: "exhausted",
     example: "I was exhausted after the move.", exNote: "One word does the work of two. Use it when tired isn't strong enough." },
   listen: { kind: "listen", n: 1, of: 13, options: ["Honestly,", "on", "doing", "sounds", "next", "I'd", "That", "alone.", "push", "time", "back", "it", "exhausting."], answer: "Honestly, I'd push back on doing it alone.", gaze: [0, 0.25] },
-  speak: { kind: "speak", n: 1, of: 13, answer: "That's a compelling perspective — you clearly took the initiative to prioritize what mattered.", gaze: [-0.5, 0.25] },
+  speak: { kind: "speak", n: 1, of: 13, answer: "That's a compelling perspective. You clearly took the initiative and prioritized what mattered.", gaze: [-0.5, 0.25] },
+  again: { kind: "gap", n: 1, of: 13, prompt: "_____?", options: ["what surprised you most", "a chore", "how did it go", "catch up on"], again: true, gaze: [0, 0.25] },
+};
+ITEMS.translate.wrong = { order: ["years.", "been", "working", "at", "this", "startup", "for", "two", "I've"], verdicts: [false, true, true, true, true, true, true, true, false] };
+/* The capture's result: one word and one phrase missed (a `build` row is an old paper's — not dealt any more) */
+const RESULT = { score: 5, total: 7, missed: [
+  { kind: "meaning", answer: "exhausting", sub: "Making you feel very tired." },
+  { kind: "gap", answer: "what surprised you most" }] };
+
+/* The interview week (marketing series 06/07): the book's Words chapter, the fluent self's phrase, the past-tense
+ * slip asked in a new sentence, the shadowing line heard, the report's grammar point. Sample data — the translate
+ * sentence must be swapped for the engine's own output before it goes out. */
+const PAST = { ko: "과거 시제", en: "Past tense" };
+const IV = {
+  word: { kind: "meaning", n: 1, of: 7, prompt: "A particular way of thinking about something; a point of view.", options: ["initiative", "perspective", "relief", "deadline"], answer: "perspective", gaze: [1, 0] },
+  gap: { kind: "gap", n: 2, of: 7, prompt: "You clearly _____ and prioritized what mattered.", options: ["walked me through", "took the initiative", "put me at ease", "felt prepared"], answer: "took the initiative", gaze: [0, 0.25] },
+  translate: { kind: "translate", n: 3, of: 7, prompt: "어제 면접관이 다시 전화했어.",
+    options: ["again", "The", "called", "yesterday.", "call", "interviewer", "me", "calls"],
+    answer: "The interviewer called me again yesterday.", decoys: ["call", "calls"],
+    rule: PAST, note: { ko: "어제처럼 이미 지난 일은 과거형으로 말해요.", en: "Something that already happened, like yesterday, takes the past tense." },
+    was: "it go really well", fixed: "it went really well",
+    wrong: { order: ["The", "interviewer", "call", "me", "again", "yesterday."], verdicts: [true, true, false, true, true, true] }, gaze: [0, 0.25] },
+  listen: { kind: "listen", n: 4, of: 7, options: ["prioritized", "You", "the", "what", "and", "clearly", "mattered.", "initiative", "took"],
+    answer: "You clearly took the initiative and prioritized what mattered.", gaze: [0, 0.25] },
+  grammar: { kind: "grammar", n: 5, of: 7, rule: { ko: "이야기 중간에 과거형이 빠져요", en: "Past tense drops out halfway through a story" },
+    prompt: "I took the initiative and tell a real story.", focus: "tell",
+    options: ["real", "I", "tell", "took", "a", "initiative", "story.", "the", "told", "and"], answer: "I took the initiative and told a real story.", decoys: ["tell"],
+    note: { ko: "이야기는 끝까지 과거형으로 이어가요.", en: "Keep the story in the past." }, gaze: [-0.5, 0.25] },
+  speak: { kind: "speak", n: 6, of: 7, answer: "Honestly, it went really well. I felt prepared.", gaze: [-0.5, 0.25] },
+};
+IV.wordRight = { ...IV.word, chosen: "perspective" };
+IV.gapWrong = { ...IV.gap, chosen: "put me at ease" };
+IV.gapRight = { ...IV.gap, chosen: "took the initiative" };
+IV.again = { ...IV.gap, n: 1, of: 8, again: true };   // next week's paper: the miss comes back
+const SAMPLES = {
+  interview: { items: IV, result: { score: 6, total: 7, missed: [{ kind: "gap", answer: "took the initiative" }] },
+    demo: [IV.word, IV.gap, IV.translate, IV.listen] },
 };
 /* The demo's paper: a word, a phrase, a mistake — all from this learner's own week. */
 const DEMO = {
@@ -135,7 +178,7 @@ const DEMO = {
 
 class NwWeeklyTest extends NwScreen {
   static poses = ["word", "word-right", "gap", "gap-wrong", "translate", "translate-right", "translate-wrong", "grammar", "grammar-right",
-    "upgrade", "upgrade-right", "listen", "speak", "result"];
+    "upgrade", "upgrade-right", "listen", "speak", "again", "result"];
   constructor() {
     super(`
       :host{--acc:#0A5CF5;--accFill:#D3E2FD;--green:#34C759;--greenFill:#DAF5E1;--red:#FF383C;--redFill:#FFDBDC;--grayT:#8E8E93;--grayFill:#EBEBEC;--sec:#8A8A8E;--ter:#C4C4C6}
@@ -151,7 +194,9 @@ class NwWeeklyTest extends NwScreen {
       .play{position:absolute;left:0;right:0;top:0;bottom:0;transition:opacity .3s}
       .scroll{position:absolute;left:0;right:0;top:226px;bottom:var(--bar,74px);overflow:hidden;padding:0 20px}
       .capl{display:flex;align-items:center;gap:12px;height:20px;margin-top:0;color:var(--sec);font-size:15px;font-weight:600}
-      .capl .lb{display:flex;align-items:center;gap:8px;flex:1}
+      .capl .lb{display:flex;align-items:center;gap:8px}
+      .capl .fl{flex:1}
+      .capl .ag{font-size:11px;line-height:13px;font-weight:600;padding:3px 7px;border-radius:10px;background:rgba(118,118,128,.12);color:var(--sec);letter-spacing:.1px}
       .capl .lb .g{font-size:20px}
       .capl .pg{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:.3px}
       .v{display:flex;flex-direction:column;gap:18px;padding-top:0}
@@ -219,6 +264,15 @@ class NwWeeklyTest extends NwScreen {
   }
 
   get L() { return this.t === STR.ko ? T.ko : T.en; }
+  /* coaching text may carry both languages */
+  _n(x) { return x == null ? "" : typeof x === "object" ? (x[this.t === STR.ko ? "ko" : "en"] ?? x.en) : x; }
+  static observedAttributes = ["active", "sample"];
+  attributeChangedCallback(n) { if (n === "sample") this.sample = this.getAttribute("sample"); else super.attributeChangedCallback(); }
+  get _set() { return SAMPLES[this._sample ?? this.getAttribute("sample")] ?? null; }
+  set sample(name) { this._sample = name; if (this._built) { this.stop(); this.reset(); } }
+  /** the paper: the capture's items, the sample's over them, then the page's own */
+  get items() { return { ...ITEMS, ...(this._set?.items ?? {}), ...(this._items ?? {}) }; }
+  set items(o) { this._items = { ...(this._items ?? {}), ...o }; }
 
   build() {
     this.$(".nav .c").textContent = this.L.title;
@@ -262,7 +316,7 @@ class NwWeeklyTest extends NwScreen {
     if (k === "meaning") prompt = `<div class="p-title2">${esc(it.prompt)}</div>`;
     if (k === "gap") prompt = `<div class="p-title3 gapq">${this._gapHTML(it)}</div>`;
     if (k === "translate") prompt = `<div class="stack" style="gap:12px"><div class="p-title3 w6">${esc(it.prompt)}</div><div class="tx-after"><span class="hintb">${sf("bulb")}${esc(L.hint)}</span></div></div>`;
-    if (k === "grammar") prompt = `<div class="stack" style="gap:12px"><div class="p-title3 w6">${esc(it.rule)}</div><div class="stack" style="gap:6px"><div class="cap">${esc(L.youSaid)}</div><div class="body sec">“${quote(it.prompt, it.focus)}”</div></div></div>`;
+    if (k === "grammar") prompt = `<div class="stack" style="gap:12px"><div class="p-title3 w6">${esc(this._n(it.rule))}</div><div class="stack" style="gap:6px"><div class="cap">${esc(L.youSaid)}</div><div class="body sec">“${quote(it.prompt, it.focus)}”</div></div></div>`;
     if (k === "upgrade") prompt = `<div class="stack" style="gap:12px"><div class="stack" style="gap:6px"><div class="cap">${esc(L.youSaid)}</div><div class="p-title3">“${quote(it.prompt, it.focus)}”</div></div>
       <div class="sub w6">${esc(L.natural(it.focus))}</div><div class="stack ex fade" style="gap:4px;display:none"><div class="body w5" style="color:var(--green)">${esc(it.example || "")}</div><div class="foot sec">${esc(it.exNote || "")}</div></div></div>`;
     if (k === "listen") prompt = `<div style="padding:8px 0;display:flex;justify-content:center"><div class="bigc" style="font-size:34px">${sf("play")}</div></div>`;
@@ -277,7 +331,7 @@ class NwWeeklyTest extends NwScreen {
     }
     if (k === "speak") area = `<div class="center" style="padding-top:8px"><div class="bigc">${sf("mic")}</div><div class="foot sec">${esc(L.speakHint)}</div><div class="foot sec">${esc(L.skip)}</div></div>`;
     const icn = k === "translate" ? sf("charBubble", L.glyph) : sf(ICONS[k]);
-    this.$(".scroll").innerHTML = `<div class="v"><div class="capl"><span class="lb">${icn}<span>${esc(cap)}</span></span><span class="pg">${it.n}/${it.of}</span></div>${prompt}${area}</div>`;
+    this.$(".scroll").innerHTML = `<div class="v"><div class="capl"><span class="lb">${icn}<span>${esc(cap)}</span></span>${it.again ? `<span class="ag">${esc(L.again)}</span>` : ""}<span class="fl"></span><span class="pg">${it.n}/${it.of}</span></div>${prompt}${area}</div>`;
     const needsCheck = ["translate", "grammar", "listen"].includes(k);
     const btn = this.$(".btn");
     btn.className = "btn" + (needsCheck ? " dis" : " hide"); btn.textContent = L.check;
@@ -324,7 +378,7 @@ class NwWeeklyTest extends NwScreen {
     this.$$(".tray .tile").forEach(t => t.classList.add("off"));
     const instr = this.$(".instr"); if (instr) instr.remove();
     if (it.kind === "translate") {
-      this.$(".tx-after").innerHTML = `<div class="stack" style="gap:4px"><div class="foot w6">${esc(it.rule)}</div><div class="foot sec">${esc(it.note)}</div></div>
+      this.$(".tx-after").innerHTML = `<div class="stack" style="gap:4px"><div class="foot w6">${esc(this._n(it.rule))}</div><div class="foot sec">${esc(this._n(it.note))}</div></div>
         <div class="stack" style="gap:4px;margin-top:10px"><div class="cap">${esc(L.lastTime)}</div><div class="foot sec" style="white-space:pre-wrap"><span class="strike">${esc(it.was)}</span>  →  <b style="font-weight:600">${esc(it.fixed)}</b></div></div>`;
     }
     if (it.decoys?.length) {
@@ -347,12 +401,12 @@ class NwWeeklyTest extends NwScreen {
   }
 
   /* ── the result ── */
-  result({ score = 6, total = 7, missed = [] } = {}) {
+  result({ score = 6, total = 7, missed = [] } = this._set?.result ?? {}) {
     const L = this.L, ratio = score / total;
     const head = ratio >= 0.9 ? L.strong : ratio >= 0.6 ? L.good : L.inBook;
     this.$(".res").innerHTML = `<div class="hd"><div class="h">${esc(head)}</div><div class="sc">${L.of(`<span class="n">${score}</span>`, total)}</div></div>
       <div class="shd">${esc(L.missed)}</div>
-      <div class="card">${missed.map(m => `<div class="row"><span class="ic">${sf(ICONS[m.kind])}</span><div class="tx" style="padding-top:${0}px"><div class="t1">${esc(m.answer)}</div>${m.sub ? `<div class="t2">${esc(m.kind === "meaning" ? m.sub : L.youSaidC(m.sub))}</div>` : ""}</div></div>`).join("")}</div>
+      <div class="card">${missed.map(m => `<div class="row"><span class="ic">${sf(ICONS[m.kind])}</span><div class="tx" style="padding-top:${0}px"><div class="t1">${esc(m.answer)}</div>${m.sub && ["meaning", "build", "grammar", "upgrade"].includes(m.kind) ? `<div class="t2">${esc(m.kind === "meaning" ? m.sub : L.youSaidC(m.sub))}</div>` : ""}</div></div>`).join("")}</div>
       <div class="ft">${esc(L.backDue)}</div>
       <div class="btn">${esc(L.retry)}</div>`;
     this.$(".root").classList.add("list");
@@ -364,46 +418,58 @@ class NwWeeklyTest extends NwScreen {
   reset() {
     this._outcome = null;
     this.$(".res").innerHTML = "";
-    this.show(DEMO.word);
+    this.show(this._set?.demo?.[0] ?? DEMO.word);
   }
 
   async pose(name) {
     if (name === "demo") { this.removeAttribute("static"); this.loop(); return; }   // dev check: plays the demo under the harness
     const P = name.replace(/-(\w)/g, (_, c) => c.toUpperCase());
     if (name === "result") {
-      this.result({ score: 5, total: 7, missed: [
-        { kind: "meaning", answer: "exhausting", sub: "Making you feel very tired." },
-        { kind: "build", answer: "I ended up carrying most of the boxes myself.", sub: "I end up carrying most boxes myself." }] });
+      this.result(this._set?.result ?? RESULT);
       this.hold("waiting", [0, 0], 0.92);
       return;
     }
+    const items = this.items;
     const base = { translateRight: "translate", translateWrong: "translate", grammarRight: "grammar" }[P];
-    const it = ITEMS[base || P];
-    if (base) { this.show({ ...it, n: 2 }); }
+    const it = items[base || P]; if (!it) return;
+    if (base) { this.show({ ...it, n: this._set ? it.n : 2 }); }
     else this.show(it);
     if (it.chosen) this.choose(it.chosen);
-    if (P === "translateRight" || P === "translateWrong") {
-      const order = P === "translateRight" ? ["I've", "been", "working", "at", "this", "startup", "for", "two", "years."]
-        : ["years.", "been", "working", "at", "this", "startup", "for", "two", "I've"];
-      order.forEach(w => this.lay(it.options.indexOf(w)));
-      this.check(P === "translateWrong" ? [false, true, true, true, true, true, true, true, false] : null);
-    }
-    if (P === "grammarRight") {
-      ["I", "ended", "up", "carrying", "most", "boxes", "myself."].forEach(w => this.lay(it.options.indexOf(w)));
-      this.check(null);
-    }
+    if (P === "translateRight" || P === "grammarRight") { this._layWords(it.answer.split(" ")); this.check(null); }
+    if (P === "translateWrong" && it.wrong) { this._layWords(it.wrong.order); this.check(it.wrong.verdicts); }
     if (this._outcome == null) this.hold("waiting", it.gaze || [0, 0]);
     else this.hold(this._outcome ? "happy" : "sad");
   }
+  /* lay words in order; a repeated word takes the next tile still in the tray */
+  _layWords(ws) { ws.forEach(w => this.lay(this._tileOf(w))); }
+  _tileOf(w) { return this._it.options.findIndex((o, j) => o === w && !this._laid.includes(j)); }
 
   async tapOpt(o) { const el = this.$(`.opt[data-o="${CSS.escape(o)}"]`); el?.classList.add("tap"); await this.sleep(140); el?.classList.remove("tap"); }
   async tapTile(w) {
-    const i = this._it.options.indexOf(w), el = this.$(`.tray .tile[data-i="${i}"]`);
+    const i = this._tileOf(w), el = this.$(`.tray .tile[data-i="${i}"]`);
     el?.classList.add("tap"); await this.sleep(110); el?.classList.remove("tap"); this.lay(i);
   }
   async tapBtn() { const b = this.$(".btn"); b.style.opacity = ".7"; await this.sleep(150); b.style.opacity = ""; }
 
   async demo() {
+    const set = this._set;
+    if (set?.demo) {
+      /* the sample's paper, each item answered right, then the result */
+      for (let k = 0; k < set.demo.length; k++) {
+        const it = set.demo[k];
+        this.beat(k + 1); this._outcome = null; this.show(it);
+        await this.sleep(1600);
+        if (it.options && ["meaning", "gap", "upgrade"].includes(it.kind)) { await this.tapOpt(it.answer); this.choose(it.answer); }
+        else if (it.options) { for (const w of it.answer.split(" ")) await this.tapTile(w), await this.sleep(150); await this.sleep(400); await this.tapBtn(); this.check(null); }
+        await this.sleep(it.kind === "translate" ? 3200 : 1900);
+        await this.tapBtn();
+      }
+      this.beat(set.demo.length + 1);
+      this.result(set.result);
+      const n = this.$(".res .sc .n"); if (n) await this.countUp(n, set.result.score, 900);
+      await this.sleep(3600);
+      return;
+    }
     /* beat 1 — a word from my own week, answered right */
     this.beat(1);
     this.show(DEMO.word);
@@ -427,9 +493,9 @@ class NwWeeklyTest extends NwScreen {
     await this.tapBtn(); this.check(null);
     await this.sleep(3200);
     await this.tapBtn();
-    /* beat 4 — the result; the miss comes back */
+    /* beat 4 — the result; the miss (a phrase from the week) goes back into review */
     this.beat(4);
-    this.result({ score: 6, total: 7, missed: [{ kind: "build", answer: "I ended up carrying most of the boxes myself.", sub: "I end up carrying most boxes myself." }] });
+    this.result({ score: 6, total: 7, missed: [{ kind: "gap", answer: "catch up on" }] });
     const n = this.$(".res .sc .n");
     if (n) await this.countUp(n, 6, 900);
     await this.sleep(3600);
