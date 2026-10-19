@@ -10,7 +10,7 @@ New
 • The weekly test now lives inside your weekly report.
 
 Fixed
-• With earphones in, you can cut in while your fluent self is talking again. It used to not hear you.
+• Cut in while your fluent self is talking and it stops right away. It used to stop late, or not at all.
 • Challenge cards no longer change size when you open one and come back.
 • You no longer slide in from the side when Watch first opens.
 • The tab bar no longer shows while a situation plays.
