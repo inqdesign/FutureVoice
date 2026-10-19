@@ -21,7 +21,9 @@ class PcmStreamPlayer(
     private val forCall: Boolean = false,
 ) {
 
-    private var track: AudioTrack? = null
+    @Volatile private var track: AudioTrack? = null
+    /** Set by [cutNow]: every write still queued or in progress gives up. */
+    @Volatile private var cut = false
     private var writtenFrames: Int = 0
 
     /**
@@ -76,6 +78,7 @@ class PcmStreamPlayer(
             .build()
         writtenFrames = 0
         carry = null
+        cut = false
         track?.setVolume(volume)
         track?.play()
     }
@@ -98,12 +101,13 @@ class PcmStreamPlayer(
      * 16-bit write of odd length, which dropped the whole chunk.
      */
     fun writeNow(chunk: ByteArray) = synchronized(this) {
+        if (cut) return@synchronized
         val t = track ?: return@synchronized
         var data = chunk
         carry?.let { data = byteArrayOf(it) + chunk; carry = null }
         if (data.size % 2 == 1) { carry = data[data.size - 1]; data = data.copyOf(data.size - 1) }
         var offset = 0
-        while (offset < data.size) {
+        while (offset < data.size && !cut) {
             val written = t.write(data, offset, data.size - offset)
             if (written <= 0) break
             offset += written
@@ -119,6 +123,22 @@ class PcmStreamPlayer(
         ) {
             delay(30)
         }
+    }
+
+    /**
+     * Silence NOW, from any thread, without the lock (2026-10-20, founder:
+     * cutting in on Android showed the words but the voice played on). A
+     * blocking [writeNow] holds the lock until the ring buffer takes its
+     * bytes — with a whole line arrived that is most of the line — so a
+     * [stop] queued behind it waited out the very audio it was meant to cut.
+     * Pause + flush stops the sound and lets the write return; [stop] still
+     * releases the track later, on the audio thread, as before.
+     */
+    fun cutNow() {
+        cut = true
+        val t = track ?: return
+        runCatching { t.pause() }
+        runCatching { t.flush() }
     }
 
     fun stop() = synchronized(this) {

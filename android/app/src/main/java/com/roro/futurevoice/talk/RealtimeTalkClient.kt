@@ -820,7 +820,10 @@ class RealtimeTalkClient(private val context: Context) {
     /** Stop the line the learner is talking over — from the gateway's
      *  `interrupted`, or from the phone's own judge ([considerBarge]). */
     private fun applyInterrupted(reopened: Boolean) {
-        // Stop local playback NOW and drop what was buffered.
+        // Stop local playback NOW and drop what was buffered: silenced here,
+        // on this thread (a stop queued on the audio thread waited behind the
+        // line's own writes), released there as before.
+        player?.cutNow()
         scope.launch(audioThread) { runCatching { player?.stop() }; player = null }
         // A barge-in means the learner IS talking — the gate would
         // only stand in their way now.
