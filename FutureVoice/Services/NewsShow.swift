@@ -24,7 +24,7 @@ struct NewsShowEpisode: Identifiable, Hashable {
 enum NewsShow {
     /// The bucket's public r2.dev address. English and German only for now
     /// (founder: other languages once there are learners for them).
-    static let base = URL(string: "https://pub-REPLACE.r2.dev/shows")!
+    static let base = URL(string: "https://pub-83c97a52f2e549718b126bf60f710f1a.r2.dev/shows")!
     static let languages: Set<String> = ["en", "de"]
 
     private struct Manifest: Codable {

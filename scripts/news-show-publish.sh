@@ -13,7 +13,7 @@ set -euo pipefail
 DAY_DIR="${1:?usage: news-show-publish.sh <day folder>}"
 BUCKET="${BUCKET:-nawana-shows}"
 export PATH="/opt/homebrew/opt/node@22/bin:$PATH"
-cd "$(dirname "$0")/../gateway"
+cd "${GATEWAY_DIR:-$(dirname "$0")/../gateway}"
 
 put() {  # <key> <file> <content-type> <cache-control>
   npx wrangler r2 object put "$BUCKET/$1" --file "$2" --content-type "$3" \
