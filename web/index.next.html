@@ -1030,7 +1030,6 @@ h2 { font-size: clamp(24px, 3vw, 44px); }
       <dl class="p-specs">
         <div><dt>Talk</dt><dd data-talk="light">—</dd></div>
         <div class="p-sub"><dt></dt><dd data-perday="light">—</dd></div>
-        <div><dt>Watch scenes</dt><dd data-scenes="light">—</dd></div>
         <div><dt>Personalized review textbook</dt><dd>Unlimited</dd></div>
         <div><dt>Shadowing · words · replay · drills</dt><dd>Unlimited</dd></div>
       </dl>
@@ -1044,7 +1043,6 @@ h2 { font-size: clamp(24px, 3vw, 44px); }
       <dl class="p-specs">
         <div><dt>Talk</dt><dd data-talk="plus">—</dd></div>
         <div class="p-sub"><dt></dt><dd data-perday="plus">—</dd></div>
-        <div><dt>Watch scenes</dt><dd data-scenes="plus">—</dd></div>
         <div><dt>Speech</dt><dd>Included</dd></div>
         <div><dt>Personalized review textbook</dt><dd>Unlimited</dd></div>
         <div><dt>Shadowing · words · replay · drills</dt><dd>Unlimited</dd></div>
@@ -1061,7 +1059,6 @@ h2 { font-size: clamp(24px, 3vw, 44px); }
       <dl class="p-specs">
         <div><dt>Talk</dt><dd data-talk="max">—</dd></div>
         <div class="p-sub"><dt></dt><dd data-perday="max">—</dd></div>
-        <div><dt>Watch scenes</dt><dd data-scenes="max">—</dd></div>
         <div><dt>Speech</dt><dd>Included</dd></div>
         <div><dt>Personalized review textbook</dt><dd>Unlimited</dd></div>
         <div><dt>Shadowing · words · replay · drills</dt><dd>Unlimited</dd></div>
@@ -1079,7 +1076,7 @@ h2 { font-size: clamp(24px, 3vw, 44px); }
       <button class="sp-x" type="button" data-signin-close>Close</button>
     </div></div>
     <p class="p-fine" id="manage-sub" hidden>Already subscribed on the web? <a href="#" id="manage-link">Manage your subscription</a></p>
-    <p class="p-fine">Talk time only runs while the conversation is moving. Pauses are free. Watch scenes play on a single tap, so they are counted per scene, and the two allowances are separate: watching never uses talk time. In a month you run short, you can add minutes in the app, and you can cancel anytime.</p>
+    <p class="p-fine">Talk time only runs while the conversation is moving. Pauses are free. A new Watch scene uses 5 minutes of that same time, and watching one again is free. In a month you run short, you can add minutes in the app, and you can cancel anytime.</p>
   </div>
 </section>
 
@@ -1113,7 +1110,7 @@ h2 { font-size: clamp(24px, 3vw, 44px); }
     </details>
     <details>
       <summary><span class="ix">03</span>What does a subscription buy?</summary>
-      <p class="a"><span>A month of talk time. Light comes with 150 minutes; Plus is unlimited. Watch scenes are a separate pool, so watching never spends your talk time. Review, replay, and building situations are always free.</span></p>
+      <p class="a"><span>A month of talk time. Light comes with 150 minutes, Plus 600 and Max 1,200. A new Watch scene uses 5 of those minutes, and watching one again is free. Review, replay, and building situations are always free.</span></p>
     </details>
     <details>
       <summary><span class="ix">04</span>Can a complete beginner use it?</summary>
@@ -1686,21 +1683,23 @@ const BILLING = {
 // Allowances are MONTHLY POOLS, bounded on every tier since 2026-09-26 (Light 150 min +
 // 10 scenes, Plus 600 + 30, Max 1,200 + 30). They must match subscription_plans and App
 // Store Connect; the prices are the App Store's live USA prices (read 2026-10-11) and the
-// Stripe prices carry the same figures.
+// Stripe prices carry the same figures. Since 2026-10-19 a new subscriber's
+// Watch scene costs 5 talk minutes (`20261019120000`), so the cards print the
+// minutes alone, like the app's paywall, and the fine print says the price.
 const PLANS = {
   light: {
-    talk: "150 min / mo", perDay: "About 5 min a day", scenes: "10 / mo",
+    talk: "150 min / mo", perDay: "About 5 min a day",
     monthly: { id: "light_monthly", price: "$9.99",   per: "/ mo" },
     annual:  { id: "light_annual",  price: "$99.99",  per: "/ yr · 2 months free" },
   },
   plus: {
-    talk: "600 min / mo", perDay: "About 20 min a day", scenes: "30 / mo",
+    talk: "600 min / mo", perDay: "About 20 min a day",
     monthly: { id: "plus_monthly",  price: "$24.99",  per: "/ mo" },
     annual:  { id: "plus_annual",   price: "$249.99", per: "/ yr · 2 months free" },
   },
   max: {
     // Monthly only (the app's ladder greys it out under Annual).
-    talk: "1,200 min / mo", perDay: "About 40 min a day", scenes: "30 / mo",
+    talk: "1,200 min / mo", perDay: "About 40 min a day",
     monthly: { id: "max_monthly",   price: "$49.99",  per: "/ mo" },
   },
 }
@@ -1723,7 +1722,6 @@ const TIERS = ["light", "plus", "max"]
       // the scenes row below it.
       const talkEl = document.querySelector(`[data-talk="${tier}"]`)
       if (talkEl) talkEl.textContent = t.talk
-      document.querySelector(`[data-scenes="${tier}"]`).textContent = t.scenes
     }
   }
   paint()

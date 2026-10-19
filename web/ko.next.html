@@ -1332,7 +1332,6 @@ footer.night { background: #04081A; }
       <dl class="p-specs">
         <div><dt>통화</dt><dd data-talk="light">—</dd></div>
         <div class="p-sub"><dt></dt><dd data-perday="light">—</dd></div>
-        <div><dt>상황연습</dt><dd data-scenes="light">—</dd></div>
         <div><dt>개인화된 복습교재</dt><dd>무제한</dd></div>
         <div><dt>섀도잉·단어학습·대화 재생·드릴 복습</dt><dd>무제한</dd></div>
       </dl>
@@ -1346,7 +1345,6 @@ footer.night { background: #04081A; }
       <dl class="p-specs">
         <div><dt>통화</dt><dd data-talk="plus">—</dd></div>
         <div class="p-sub"><dt></dt><dd data-perday="plus">—</dd></div>
-        <div><dt>상황연습</dt><dd data-scenes="plus">—</dd></div>
         <div><dt>스피치 기능</dt><dd>포함</dd></div>
         <div><dt>개인화된 복습교재</dt><dd>무제한</dd></div>
         <div><dt>섀도잉·단어학습·대화 재생·드릴 복습</dt><dd>무제한</dd></div>
@@ -1363,7 +1361,6 @@ footer.night { background: #04081A; }
       <dl class="p-specs">
         <div><dt>통화</dt><dd data-talk="max">—</dd></div>
         <div class="p-sub"><dt></dt><dd data-perday="max">—</dd></div>
-        <div><dt>상황연습</dt><dd data-scenes="max">—</dd></div>
         <div><dt>스피치 기능</dt><dd>포함</dd></div>
         <div><dt>개인화된 복습교재</dt><dd>무제한</dd></div>
         <div><dt>섀도잉·단어학습·대화 재생·드릴 복습</dt><dd>무제한</dd></div>
@@ -1381,7 +1378,7 @@ footer.night { background: #04081A; }
       <button class="sp-x" type="button" data-signin-close>닫기</button>
     </div></div>
     <p class="p-fine" id="manage-sub" hidden>웹에서 구독 중이라면 <a href="#" id="manage-link">구독 관리</a>에서 변경·해지할 수 있습니다.</p>
-    <p class="p-fine">통화 시간은 대화가 오가는 동안만 줄고, 말이 멈춘 동안은 세지 않습니다. 상황연습은 탭 한 번에 재생되니 편수로 셉니다. 두 몫은 따로라, 상황연습을 봐도 통화 시간은 줄지 않습니다. 시간이 모자란 달에는 50분을 ₩5,900에 더할 수 있고, 구독은 App Store에서 언제든 해지할 수 있습니다.</p>
+    <p class="p-fine">통화 시간은 대화가 오가는 동안만 줄고, 말이 멈춘 동안은 세지 않습니다. 새 상황연습은 같은 통화 시간에서 1개에 5분을 쓰고, 이미 본 장면은 다시 봐도 무료입니다. 시간이 모자란 달에는 50분을 ₩5,900에 더할 수 있고, 구독은 App Store에서 언제든 해지할 수 있습니다.</p>
   </div>
 </section>
 
@@ -1415,7 +1412,7 @@ footer.night { background: #04081A; }
     </details>
     <details>
       <summary><span class="ix">03</span>구독하면 뭘 얻나요?</summary>
-      <p class="a"><span>한 달 치 통화 시간을 사는 거예요. 라이트는 150분, 플러스는 600분, 맥스는 1,200분이에요. 상황연습은 별도 몫이라 봐도 통화 시간이 줄지 않아요. 복습·다시 듣기·섀도잉은 어느 요금제든 무제한이에요.</span></p>
+      <p class="a"><span>한 달 치 통화 시간을 사는 거예요. 라이트는 150분, 플러스는 600분, 맥스는 1,200분이에요. 새 상황연습은 이 시간에서 1개에 5분씩 쓰고, 이미 본 장면은 다시 봐도 무료예요. 복습·다시 듣기·섀도잉은 어느 요금제든 무제한이에요.</span></p>
     </details>
     <details>
       <summary><span class="ix">04</span>완전 초보도 할 수 있나요?</summary>
@@ -1995,21 +1992,23 @@ const BILLING = {
 // "2 months free" (back on sale 2026-10-07). These figures are the ONE thing
 // on this page that must match the database and App Store Connect — the
 // app's paywall reads them live, so a stale number here is a promise the
-// app then breaks.
+// app then breaks. Since 2026-10-19 a new subscriber's Watch scene costs 5
+// talk minutes (`20261019120000`), so the cards print the minutes alone, like
+// the app's paywall, and the fine print says the price.
 const PLANS = {
   light: {
-    talk: "150분/월", perDay: "하루 5분꼴", scenes: "10개/월",
+    talk: "150분/월", perDay: "하루 5분꼴",
     monthly: { id: "light_monthly", price: "₩15,000",  per: "/ 월" },
     annual:  { id: "light_annual",  price: "₩149,000", per: "/ 년 · 2개월 무료" },
   },
   plus: {
-    talk: "600분/월", perDay: "하루 20분꼴", scenes: "30개/월",
+    talk: "600분/월", perDay: "하루 20분꼴",
     monthly: { id: "plus_monthly",  price: "₩29,000",  per: "/ 월" },
     annual:  { id: "plus_annual",   price: "₩290,000", per: "/ 년 · 2개월 무료" },
   },
   max: {
     // Monthly only (the app's ladder greys it out under Annual).
-    talk: "1,200분/월", perDay: "하루 40분꼴", scenes: "30개/월",
+    talk: "1,200분/월", perDay: "하루 40분꼴",
     monthly: { id: "max_monthly",   price: "₩58,000",  per: "/ 월" },
     annual:  null,
   },
@@ -2035,7 +2034,6 @@ const TIERS = ["light", "plus", "max"]
       // the scenes row below it.
       const talkEl = document.querySelector(`[data-talk="${tier}"]`)
       if (talkEl) talkEl.textContent = t.talk
-      document.querySelector(`[data-scenes="${tier}"]`).textContent = t.scenes
     }
   }
   paint()

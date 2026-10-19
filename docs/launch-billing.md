@@ -743,3 +743,22 @@ are still `notified_at IS NULL` — `waitlist-launch-mail.py` now refuses to
 send for exactly that reason, and anyone mailed from here on is offered
 today's plans, not a code. Nothing was changed in the database: the grant rows
 are a record of what was dealt, and Apple is what enforces redemption.
+
+## 2026-10-19 revision: a Watch scene costs 5 talk minutes
+
+For everyone who subscribes from this date, a new Watch scene is paid for out
+of the plan's talk pool: 5 minutes a scene, charged once on the scene's first
+line (`20261019120000_scenes_cost_talk_time`). A scene is ~930 characters,
+about 3 talk minutes upstream, so 5 minutes is above cost and any mix of
+talking and watching costs no more than the same minutes spent talking. The
+plan's margin is the talk minute's alone; `monthly_scenes` stops meaning
+anything for these accounts.
+
+- Every account with a subscription row on that day keeps its scene COUNT
+  (`scene_count_billing`, 37 rows) until the founder moves it.
+- A free account gets one sample scene, ever, taking no free minutes.
+- Watching a scene again is free, always (`record_scene_replay`).
+- Short of 5 minutes (plan + extra), the app answers the tap with the
+  spent-pool sheet before any script is written.
+- The paywall, store descriptions and web cards print the minutes only; the
+  scene's price is said in the fine print and under the box that starts one.
