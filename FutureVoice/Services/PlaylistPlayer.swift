@@ -25,7 +25,7 @@ final class PlaylistPlayer: ObservableObject {
     enum Gap: String, CaseIterable {
         /// Straight on.
         case none
-        /// Two seconds to let the line land.
+        /// A beat to let the line land (one second — two read as slow).
         case short
         /// As long as the line itself — time to say it back out loud.
         case echo
@@ -33,7 +33,7 @@ final class PlaylistPlayer: ObservableObject {
         func seconds(after duration: TimeInterval) -> TimeInterval {
             switch self {
             case .none: return 0
-            case .short: return 2
+            case .short: return 1
             case .echo: return min(max(duration, 1.5), 20)
             }
         }
@@ -62,10 +62,20 @@ final class PlaylistPlayer: ObservableObject {
     @Published var gap: Gap {
         didSet { UserDefaults.standard.set(gap.rawValue, forKey: Self.gapKey) }
     }
+    /// Playback speed. Time-stretched (`AVAudioPlayer.rate`), so the voice
+    /// keeps its pitch and the caption follows the audio as it plays.
+    @Published var speed: Float {
+        didSet {
+            UserDefaults.standard.set(speed, forKey: Self.speedKey)
+            audio.setRate(speed)
+        }
+    }
+    static let speeds: [Float] = [0.75, 0.9, 1.0]
 
     private static let repeatKey = "futurevoice.playlist.repeat"
     private static let shuffleKey = "futurevoice.playlist.shuffle"
     private static let gapKey = "futurevoice.playlist.gap"
+    private static let speedKey = "futurevoice.playlist.speed"
 
     /// Bumped on every jump, so a line that finishes after the learner has
     /// already moved on can't advance the list a second time.
@@ -80,6 +90,9 @@ final class PlaylistPlayer: ObservableObject {
         repeatMode = RepeatMode(rawValue: d.string(forKey: Self.repeatKey) ?? "") ?? .all
         shuffle = d.bool(forKey: Self.shuffleKey)
         gap = Gap(rawValue: d.string(forKey: Self.gapKey) ?? "") ?? .none
+        let saved = d.float(forKey: Self.speedKey)
+        speed = Self.speeds.contains(saved) ? saved : 1.0
+        audio.setRate(speed)
         interruptionObserver = NotificationCenter.default.addObserver(
             forName: AVAudioSession.interruptionNotification, object: nil, queue: .main
         ) { [weak self] note in
@@ -321,7 +334,10 @@ final class PlaylistPlayer: ObservableObject {
     /// breath, so one conversation doesn't run straight into the next.
     private func pause(after duration: TimeInterval) -> TimeInterval {
         guard let line = current else { return 0 }
-        var wait = gap == .echo && !line.isFluentSelf ? 0 : gap.seconds(after: duration)
+        // The pause to say a line back is as long as the line SOUNDED, so
+        // at a slower speed it is longer.
+        let heard = duration / Double(max(speed, 0.5))
+        var wait = gap == .echo && !line.isToSayBack ? 0 : gap.seconds(after: heard)
         let nextPosition = position + 1
         if order.indices.contains(nextPosition), repeatMode != .one,
            lines[order[nextPosition]].bookId != line.bookId {

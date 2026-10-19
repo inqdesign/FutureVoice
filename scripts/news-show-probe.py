@@ -83,7 +83,16 @@ def post(url, body, headers):
         return r.read()
 
 
-def gemini(system, user, search=False, max_tokens=8192):
+# The app's own languages. Every line ships with its meaning in each of these
+# (one call per episode per language, made once for everybody); a learner
+# with another native language falls back to the app's per-line Translator.
+NATIVES = ["ko", "ja", "zh-Hant", "zh-Hans", "es", "fr", "de", "en"]
+NATIVE_NAME = {"ko": "Korean", "ja": "Japanese", "zh-Hant": "Traditional Chinese (Taiwan)",
+               "zh-Hans": "Simplified Chinese", "es": "Spanish", "fr": "French",
+               "de": "German", "en": "English"}
+
+
+def gemini(system, user, search=False, max_tokens=8192, model=None):
     body = {
         "contents": [{"role": "user", "parts": [{"text": user}]}],
         "generationConfig": {"maxOutputTokens": max_tokens,
@@ -96,7 +105,7 @@ def gemini(system, user, search=False, max_tokens=8192):
     else:
         body["generationConfig"]["responseMimeType"] = "application/json"
     data = json.loads(post(
-        f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent?key={GEMINI_KEY}",
+        f"https://generativelanguage.googleapis.com/v1beta/models/{model or MODEL}:generateContent?key={GEMINI_KEY}",
         body, {}))
     cand = data["candidates"][0]
     text = "".join(p.get("text", "") for p in cand["content"]["parts"])
@@ -253,6 +262,32 @@ def to_mp3(pcm, path, bitrate):
                     "-ac", "1", "-b:a", bitrate, path], input=wav_bytes(pcm), check=True)
 
 
+def translate_lines(lang, texts):
+    """Each line's meaning in every native language, keyed like the app's
+    `nativeLanguage`. The same model and instruction as the app's own
+    `translate` function, a whole episode per call."""
+    out = [{} for _ in texts]
+
+    def one(native):
+        system = (f"You are a translator. Translate each line into {NATIVE_NAME[native]}. "
+                  "Translate it as said, naturally, one line for one line. No quotes, no "
+                  "romanization, no notes, no original text.\n"
+                  'Return JSON: { "lines": ["...", ...] } with exactly as many lines as given.')
+        user = json.dumps({"lines": texts}, ensure_ascii=False)
+        for _ in range(2):
+            got = gemini(system, user, model="gemini-3.1-flash-lite").get("lines", [])
+            if len(got) == len(texts) and all(isinstance(t, str) and t.strip() for t in got):
+                return native, got
+        return native, None
+
+    with cf.ThreadPoolExecutor(4) as pool:
+        for native, got in pool.map(one, [n for n in NATIVES if n != lang]):
+            if got:
+                for i, t in enumerate(got):
+                    out[i][native] = t.strip()
+    return out
+
+
 def make_episode(lang, idx, topic, folder):
     """One episode as ONE file (the podcast) and one file PER LINE (the
     app's player plays and captions a line at a time, like a scene)."""
@@ -285,6 +320,8 @@ def make_episode(lang, idx, topic, folder):
     episode += silence(0.8)
     to_mp3(bytes(episode), os.path.join(folder, "episode.mp3"), "128k")
 
+    for line, meaning in zip(script["lines"], translate_lines(lang, [l["text"] for l in script["lines"]])):
+        line["translations"] = meaning
     chars = sum(len(p[2]) for p in pieces)
     script["facts"] = topic["facts"]
     script["area"] = topic.get("area", "news")
@@ -300,7 +337,24 @@ def make_episode(lang, idx, topic, folder):
             "words": words, "chars": chars, "script": script}
 
 
+def add_translations(day_dir):
+    """Give a day made before translations shipped its meanings, in place."""
+    for lang in os.listdir(day_dir):
+        path = os.path.join(day_dir, lang, "show.json")
+        if not os.path.exists(path):
+            continue
+        show = json.load(open(path))
+        for ep in show["episodes"]:
+            meanings = translate_lines(lang, [l["text"] for l in ep["lines"]])
+            for line, meaning in zip(ep["lines"], meanings):
+                line["translations"] = meaning
+            print(f"  [{lang}] EP {ep.get('number')}: {len(meanings[0]) if meanings else 0} languages")
+        json.dump(show, open(path, "w"), ensure_ascii=False, indent=2)
+
+
 def main():
+    if len(sys.argv) == 3 and sys.argv[1] == "--translate":
+        return add_translations(sys.argv[2])
     if os.path.exists(OUT) and os.listdir(OUT):
         sys.exit(f"{OUT} already has files; set OUT_DIR to another folder")
     total_chars = 0
@@ -327,7 +381,8 @@ def main():
                 "seconds": r["seconds"],
                 "audio": f"{TODAY}/{slug}/episode.mp3",
                 "lines": [{"speaker": l["speaker"], "text": l["text"],
-                           "audio": f"{TODAY}/{slug}/{l['audio']}"} for l in sc["lines"]],
+                           "audio": f"{TODAY}/{slug}/{l['audio']}",
+                           "translations": l.get("translations", {})} for l in sc["lines"]],
                 "expressions": [e.get("phrase", "") for e in sc.get("expressions", [])],
             })
             print(f"  {i}. {r['title']}  {r['seconds'] // 60}:{r['seconds'] % 60:02d}  "

@@ -39,7 +39,17 @@ struct PlaylistLine: Hashable, Identifiable {
     /// downloaded to the cache (`NewsShow`). Played as is.
     var localFile: URL? = nil
 
+    /// The line's meaning per native language, made once where the line was
+    /// (the podcast's publisher), so a thousand listeners don't each ask
+    /// for the same translation. Nil for a scene line.
+    var translations: [String: String]? = nil
+
     var isFluentSelf: Bool { !isOther }
+
+    /// A line worth saying back in the "time to say it back" pause: the
+    /// fluent self's in a scene (the other person's is answered, not
+    /// repeated), and every host line in the podcast.
+    var isToSayBack: Bool { isFluentSelf || localFile != nil }
 
     /// The file that plays: any speed's take, the file Watch played it from,
     /// or a take under an older voice id. A scene watched before a speed or

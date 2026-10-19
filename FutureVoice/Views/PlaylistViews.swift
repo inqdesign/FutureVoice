@@ -433,6 +433,10 @@ private struct NowPlayingCaption: View {
         guard showTranslation, let line = player.current,
               !LanguageCatalog.sameLanguage(appState.nativeLanguage, appState.targetLanguage)
         else { return }
+        if let made = line.translations?[appState.nativeLanguage] {
+            translation = made
+            return
+        }
         if let cached = Translator.cached(line.text, to: appState.nativeLanguage) {
             translation = cached
             return
@@ -520,10 +524,18 @@ private struct PlayerOptionsMenu: View {
             Toggle(isOn: $showTranslation) { Label("Translation", systemImage: "character.bubble") }
             Picker(selection: $player.gap) {
                 Text("No pause").tag(PlaylistPlayer.Gap.none)
-                Text("2 seconds").tag(PlaylistPlayer.Gap.short)
+                Text("1 second").tag(PlaylistPlayer.Gap.short)
                 Text("Time to say it back").tag(PlaylistPlayer.Gap.echo)
             } label: {
                 Label("Pause between lines", systemImage: "pause")
+            }
+            .pickerStyle(.menu)
+            Picker(selection: $player.speed) {
+                ForEach(PlaylistPlayer.speeds, id: \.self) { s in
+                    Text(verbatim: s == 1 ? "1×" : String(format: "%.2g×", s)).tag(s)
+                }
+            } label: {
+                Label("Speed", systemImage: "gauge.with.dots.needle.33percent")
             }
             .pickerStyle(.menu)
             if player.hasQueue {

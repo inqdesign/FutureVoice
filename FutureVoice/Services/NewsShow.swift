@@ -46,6 +46,8 @@ enum NewsShow {
             let speaker: String
             let text: String
             let audio: String
+            /// Native language → meaning, made by the publisher.
+            let translations: [String: String]?
         }
     }
 
@@ -84,7 +86,8 @@ enum NewsShow {
             let lines = episode.lines.map { line in
                 PlaylistLine(bookId: id, text: line.text, voiceId: "", speaker: line.speaker,
                              isOther: true, bookTitle: episode.title,
-                             localFile: dir.appendingPathComponent(line.audio))
+                             localFile: dir.appendingPathComponent(line.audio),
+                             translations: line.translations)
             }.filter(\.hasAudio)
             guard !lines.isEmpty else { return nil }
             return NewsShowEpisode(id: id, title: episode.title,
