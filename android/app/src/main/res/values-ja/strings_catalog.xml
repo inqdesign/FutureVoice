@@ -56,7 +56,11 @@
     <string name="a_neighbor">"近所の人"</string>
     <string name="a_new_assessment_is_due_it_runs_after_your_next_talk">"新しい評価の時期です。次の通話が終わると実行されます。"</string>
     <string name="a_new_episode_every_day_in_english_for_now">"毎日新しいエピソードが1本届きます。今は英語だけです。"</string>
+    <!-- 'A new scene is paid for out of the same minutes. Watching it again is free.' -->
+    <string name="a_new_scene_is_paid_for_out_of_the_same_minutes_watching_it_238960">"新しいシーン練習を見るたびに、通話時間から引かれます。もう一度見るのは無料です。"</string>
     <string name="a_new_watch">"新しくなったシーン練習"</string>
+    <!-- 'A new Watch scene uses %lld min of the same talk time. Watching it again is free.' -->
+    <string name="a_new_watch_scene_uses_lld_min_of_the_same_talk_time_watchin_280e12">"新しいシーン練習は、同じ通話時間から1回%d分使います。もう一度見るのは無料です。"</string>
     <string name="a_new_week_starts_now_start_small">"新しい週の始まりです。軽く始めましょう。"</string>
     <string name="a_passerby">"通りがかりの人"</string>
     <!-- 'A person you describe once: someone real in your life, someone famous, or someone you invent. Save who they are, how the two of you know each other and how you talk, and they become a character you can bring back.' -->
@@ -1285,6 +1289,7 @@
     <string name="lld_min_a_month_once_your_plan_starts">"プランが始まれば毎月%d分"</string>
     <!-- '%lld min' -->
     <string name="lld_min_b61908">"%d分"</string>
+    <string name="lld_min_each">"1回%d分"</string>
     <string name="lld_min_left">"残り%d分"</string>
     <string name="lld_min_more_than_the_week_before">"前の週より%d分多く話しました"</string>
     <string name="lld_min_of_talk_left">"通話時間 残り%d分"</string>
@@ -1321,6 +1326,7 @@
     <string name="lld_of_lld_min_talked">"%2$d分のうち%1$d分通話"</string>
     <string name="lld_of_lld_min_talked_this_month">"今月%2$d分のうち%1$d分通話"</string>
     <string name="lld_of_lld_min_today">"今日 %1$d / %2$d分"</string>
+    <string name="lld_of_lld_scenes_left">"シーン練習 残り%1$d回(全%2$d回)"</string>
     <string name="lld_of_lld_seats_taken">"%2$d席のうち%1$d席が埋まりました。"</string>
     <string name="lld_of_your_turns_lld_min">"自分の発話%1$d回 · %2$d分"</string>
     <string name="lld_out_of_5">"5点中%d点"</string>
@@ -2186,6 +2192,7 @@
     <string name="scene">"シーン練習"</string>
     <string name="scene_partner_voice">"シーン練習の相手の声: %s"</string>
     <string name="scenes">"シーン"</string>
+    <string name="scenes_lld_min_each">"+ シーン練習(1回%d分)"</string>
     <string name="scenes_refill_at_the_start_of_each_billing_period">"シーン練習は、請求期間が始まるたびに補充されます。"</string>
     <string name="scenes_refill_on">"シーン練習は%sに補充されます。"</string>
     <!-- "Scenes you've already watched replay free forever and never use a new one." -->
@@ -2462,6 +2469,7 @@
     <string name="take_your_intro_out_of_the_pool_learners_who_already_met_you_863b54">"自己紹介をプールから取り下げますか？すでにこのペルソナと話した学習者には、過去の通話がそのまま残ります。"</string>
     <string name="take_your_time_tap_to_send">"ゆっくりどうぞ · 話したらタップで送信"</string>
     <string name="take_your_time_your_future_self_waits_until_you_press_send">"ゆっくりで大丈夫。送信を押すまで、流暢な自分が待っています。"</string>
+    <string name="taken_from_the_talk_time_above">"上の通話時間から引かれます"</string>
     <string name="takes">"テイク"</string>
     <string name="takes_this_week">"今週の回数"</string>
     <string name="talk">"トーク"</string>
@@ -2599,6 +2607,8 @@
     <string name="the_board_only_takes_camera_takes_your_video_stays_on_your_p_49f52d">"ランキングに載るのはカメラをオンにした挑戦だけ。動画はこのスマホから出ません。"</string>
     <string name="the_book_couldn_t_be_written_to_a_file_try_again">"ブックをファイルに保存できませんでした。もう一度お試しください。"</string>
     <string name="the_buttons_at_the_top">"上のボタン"</string>
+    <!-- 'The call clock and new scenes spend your talk minutes. Everything you replay is free.' -->
+    <string name="the_call_clock_and_new_scenes_spend_your_talk_minutes_everyt_1d05bf">"通話時間が減るのは、通話しているときと新しいシーン練習を見るときだけです。もう一度見る・聞くのはすべて無料です。"</string>
     <!-- 'The call clock is the meter — a 10-minute call uses 10 minutes. Thinking pauses cost the same as talking, just like a phone call.' -->
     <string name="the_call_clock_is_the_meter_a_10_minute_call_uses_10_minutes_6bb450">"通話した時間がそのまま使った時間です。10分通話すれば10分。電話と同じで、考えて止まった時間も同じように数えます。"</string>
     <string name="the_call_dropped">"通話が切れました"</string>
@@ -2675,6 +2685,8 @@
     <string name="the_same_plan_comes_back_every_week_leave_a_day_empty_to_res_b4c72d">"毎週同じ計画がくり返されます。休みたい曜日は空けておきましょう。"</string>
     <string name="the_same_plan_you_picked_cancel_any_time_in_settings">"選んだプランのままです。いつでも設定から解約できます。"</string>
     <string name="the_same_point_in_different_sentences">"文は違っても、つまずく場所は同じでした。"</string>
+    <!-- 'The same price whichever way it runs, a long scene or a short one. Watching it again is free.' -->
+    <string name="the_same_price_whichever_way_it_runs_a_long_scene_or_a_short_94d481">"長くても短くても、1回の値段は同じです。もう一度見るのは無料です。"</string>
     <!-- 'The same setting as Me → Level. The next assessment overwrites it with what your talks show.' -->
     <string name="the_same_setting_as_me_level_the_next_assessment_overwrites_9d19dc">"マイページ → レベルと同じ項目です。次の評価で、実際の通話が示した値に上書きされます。"</string>
     <!-- 'The sample script stays free to practise. With Plus or Max, practise any text you like.' -->
@@ -2972,6 +2984,7 @@
     <string name="watch_has_its_own_pool_separate_from_your_talk_minutes_a_sce_98932d">"シーン練習には通話時間とは別の枠があります。長くても短くても、1回は1回と数えます。"</string>
     <string name="watch_scene">"シーン練習"</string>
     <string name="watch_scenes">"シーン練習"</string>
+    <string name="watch_scenes_lld_min_each">"シーン練習は1回%d分"</string>
     <!-- "Watch shows that situation played out by your fluent self, in your voice. You come away with ideas: how to open, what to ask, which expressions work. Then you practice them until they're yours." -->
     <string name="watch_shows_that_situation_played_out_by_your_fluent_self_in_214796">"シーン練習では、その状況を流暢な自分が自分の声でこなすシーンを見せます。どう切り出し、何を聞き、どんな表現を使うかのアイデアをもらったら、練習して自分のものにしましょう。"</string>
     <string name="watch_sky_backtome">"自分に戻る"</string>
@@ -2984,6 +2997,7 @@
     <string name="watch_the_scene_and_notice_the_moves_you_d_never_have_though_b126d7">"シーンを見ながら、自分では思いつかなかった言い方や進め方を見つけましょう。"</string>
     <string name="watch_the_scene_first">"先にシーンを見てください。"</string>
     <string name="watching">"視聴中"</string>
+    <string name="watching_a_new_scene">"新しいシーン練習を見る"</string>
     <string name="watching_a_scene">"シーン練習を見る"</string>
     <string name="watching_for_ideas">"アイデアを探しながら見る"</string>
     <string name="we_debate_everything">"何でも議論する"</string>
@@ -3409,6 +3423,7 @@
     <string name="your_fluent_self_used_this_you_didn_t">"流暢な自分が使った表現です。自分はまだ使っていません。"</string>
     <string name="your_fluent_self_wants_to_know_you">"自分を知ってこそ、自分らしく話せます"</string>
     <string name="your_free_minutes">"無料で話した時間"</string>
+    <string name="your_free_scene_it_takes_no_talk_time">"無料のシーン練習1回 · 通話時間は減りません"</string>
     <string name="your_free_talk_time_is_used_up">"無料通話の時間を使い切りました"</string>
     <string name="your_free_trial_ends_soon">"無料トライアルがもうすぐ終わります"</string>
     <!-- "Your friend enters this code when they sign up, and you both get %lld minutes. You're rewarded for your first %lld friends." -->
@@ -3448,6 +3463,8 @@
     <string name="your_manager">"上司"</string>
     <string name="your_match">"一致度"</string>
     <string name="your_material">"自分の教材"</string>
+    <string name="your_minutes_refill_at_the_start_of_each_billing_period">"通話時間は、請求期間が始まるたびに補充されます。"</string>
+    <string name="your_minutes_refill_on">"通話時間は%sに補充されます。"</string>
     <!-- 'Your minutes, streak and book from this call all count. As a practice call, it has no score.' -->
     <string name="your_minutes_streak_and_book_from_this_call_all_count_as_a_p_a87a3a">"このトークの時間・連続記録・教材はそのまま残ります。練習の会話なので、スコアはつきません。"</string>
     <string name="your_name">"名前"</string>

@@ -748,6 +748,11 @@ internal fun ScenarioComposer(
                 }),
             )
         }
+        // What the scene this box starts will cost, under the box whose
+        // button starts it (a scene costs talk time since 2026-10-19).
+        if (host == ComposerHost.WATCH && editing == null) {
+            SceneCostNote(Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, bottom = 12.dp))
+        }
     }
     /** Everything the box can raise, whichever way it is hosted. */
     val dialogs: @Composable () -> Unit = {
@@ -981,7 +986,7 @@ internal fun ScenarioComposer(
                 when {
                     editing != null -> Unit
 
-                    path.isEmpty() && draft.isNotBlank() -> LeafSentence(draft, ctaTitle)
+                    path.isEmpty() && draft.isNotBlank() -> LeafSentence(draft, ctaTitle, showsSceneCost = host == ComposerHost.WATCH && editing == null)
 
                     path.isEmpty() -> {
                         GroupedSectionHeader(stringResource(R.string.pick_a_category))
@@ -1048,7 +1053,7 @@ internal fun ScenarioComposer(
                     // The end of the drill-down: the assembled situation,
                     // READ-ONLY. Knowing what is about to be generated is not
                     // the same as being asked to write it.
-                    else -> LeafSentence(draft, ctaTitle)
+                    else -> LeafSentence(draft, ctaTitle, showsSceneCost = host == ComposerHost.WATCH && editing == null)
                 }
 
                 // MARK: The other person — one row, because the choice is a
@@ -1303,7 +1308,7 @@ private fun MaterialSection(
 
 /** The browse door's end: the assembled situation, read-only, above the CTA. */
 @Composable
-private fun LeafSentence(text: String, ctaTitle: String) {
+private fun LeafSentence(text: String, ctaTitle: String, showsSceneCost: Boolean = false) {
     GroupedSectionSpacer()
     GroupedCard {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1316,6 +1321,7 @@ private fun LeafSentence(text: String, ctaTitle: String) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            if (showsSceneCost) SceneCostNote()
         }
     }
 }

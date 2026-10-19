@@ -70,6 +70,9 @@ class VoiceClient(private val auth: AuthRepository) {
         val purpose: String? = null,
         /** One key per SCENE — the server claims the scene count once on it. */
         val scene_key: String? = null,
+        /** "talk" = this build shows a scene's price in talk minutes, so the
+         *  server may charge it that way (iOS 20261019120000). */
+        val scene_billing: String? = null,
         /** `voice_settings.speed` (0.7–1.2) — the learner's rung, see `SpeechSpeed`. */
         val speed: Double? = null,
         /** Pins the line's language upstream — Korean only ([pinnedLanguage]). */
@@ -304,6 +307,7 @@ class VoiceClient(private val auth: AuthRepository) {
             stream = if (stream) true else null,
             purpose = purpose,
             scene_key = sceneKey,
+            scene_billing = if (sceneKey != null) "talk" else null,
             speed = speed ?: com.roro.futurevoice.data.SpeechSpeed.currentMultiplier(),
             language_code = pinnedLanguage(text, com.roro.futurevoice.data.CoreVocabulary.activeLanguage()),
             voiceover_key = voiceoverKey,

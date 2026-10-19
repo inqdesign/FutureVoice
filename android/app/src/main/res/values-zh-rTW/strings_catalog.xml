@@ -56,7 +56,11 @@
     <string name="a_neighbor">"鄰居"</string>
     <string name="a_new_assessment_is_due_it_runs_after_your_next_talk">"該做新的評估了。下一次通話結束後會執行。"</string>
     <string name="a_new_episode_every_day_in_english_for_now">"每天更新一集，目前只有英文。"</string>
+    <!-- 'A new scene is paid for out of the same minutes. Watching it again is free.' -->
+    <string name="a_new_scene_is_paid_for_out_of_the_same_minutes_watching_it_238960">"每看一個新的情境練習，都會從通話時間裡扣。重看免費。"</string>
     <string name="a_new_watch">"全新的情境練習"</string>
+    <!-- 'A new Watch scene uses %lld min of the same talk time. Watching it again is free.' -->
+    <string name="a_new_watch_scene_uses_lld_min_of_the_same_talk_time_watchin_280e12">"每看一個新的情境練習，會從同一份通話時間裡扣 %d 分鐘。重看免費。"</string>
     <string name="a_new_week_starts_now_start_small">"新的一週開始了，輕鬆開始就好。"</string>
     <string name="a_passerby">"路人"</string>
     <!-- 'A person you describe once: someone real in your life, someone famous, or someone you invent. Save who they are, how the two of you know each other and how you talk, and they become a character you can bring back.' -->
@@ -1285,6 +1289,7 @@
     <string name="lld_min_a_month_once_your_plan_starts">"方案開始後每月%d分鐘"</string>
     <!-- '%lld min' -->
     <string name="lld_min_b61908">"%d分鐘"</string>
+    <string name="lld_min_each">"每次 %d 分鐘"</string>
     <string name="lld_min_left">"剩%d分鐘"</string>
     <string name="lld_min_more_than_the_week_before">"比前一週多聊%d分鐘"</string>
     <string name="lld_min_of_talk_left">"通話時間剩%d分鐘"</string>
@@ -1321,6 +1326,7 @@
     <string name="lld_of_lld_min_talked">"%2$d分鐘中已通話%1$d分鐘"</string>
     <string name="lld_of_lld_min_talked_this_month">"本月%2$d分鐘中已通話%1$d分鐘"</string>
     <string name="lld_of_lld_min_today">"今天%1$d / %2$d分鐘"</string>
+    <string name="lld_of_lld_scenes_left">"情境練習剩餘 %1$d 次(共 %2$d 次)"</string>
     <string name="lld_of_lld_seats_taken">"%2$d席中已坐了%1$d席。"</string>
     <string name="lld_of_your_turns_lld_min">"我的發言%1$d輪 · %2$d分鐘"</string>
     <string name="lld_out_of_5">"5 分中 %d 分"</string>
@@ -2186,6 +2192,7 @@
     <string name="scene">"情境練習"</string>
     <string name="scene_partner_voice">"情境練習對方的聲音：%s"</string>
     <string name="scenes">"情境"</string>
+    <string name="scenes_lld_min_each">"+ 情境練習(每次 %d 分鐘)"</string>
     <string name="scenes_refill_at_the_start_of_each_billing_period">"情境練習的次數會在每個帳單週期開始時補滿。"</string>
     <string name="scenes_refill_on">"情境練習的次數會在%s補滿。"</string>
     <!-- "Scenes you've already watched replay free forever and never use a new one." -->
@@ -2462,6 +2469,7 @@
     <string name="take_your_intro_out_of_the_pool_learners_who_already_met_you_863b54">"要把自我介紹從人物池撤下嗎？已經和你的角色聊過的學習者，會保留他們自己的過往通話。"</string>
     <string name="take_your_time_tap_to_send">"慢慢說 · 說完點一下傳送"</string>
     <string name="take_your_time_your_future_self_waits_until_you_press_send">"慢慢說沒關係。按下傳送之前，流利的自己會一直等你。"</string>
+    <string name="taken_from_the_talk_time_above">"從上面的通話時間裡扣"</string>
     <string name="takes">"版本"</string>
     <string name="takes_this_week">"本週次數"</string>
     <string name="talk">"對話"</string>
@@ -2599,6 +2607,8 @@
     <string name="the_board_only_takes_camera_takes_your_video_stays_on_your_p_49f52d">"要開相機才能上榜，影片只會留在你的手機裡。"</string>
     <string name="the_book_couldn_t_be_written_to_a_file_try_again">"複習本無法存成檔案，請再試一次。"</string>
     <string name="the_buttons_at_the_top">"上方按鈕"</string>
+    <!-- 'The call clock and new scenes spend your talk minutes. Everything you replay is free.' -->
+    <string name="the_call_clock_and_new_scenes_spend_your_talk_minutes_everyt_1d05bf">"通話時間只在通話和看新的情境練習時減少。重看、重聽全部免費。"</string>
     <!-- 'The call clock is the meter — a 10-minute call uses 10 minutes. Thinking pauses cost the same as talking, just like a phone call.' -->
     <string name="the_call_clock_is_the_meter_a_10_minute_call_uses_10_minutes_6bb450">"通話多久就算多久，10分鐘的通話就是10分鐘。和打電話一樣，停下來想的時間也照算。"</string>
     <string name="the_call_dropped">"通話中斷了"</string>
@@ -2675,6 +2685,8 @@
     <string name="the_same_plan_comes_back_every_week_leave_a_day_empty_to_res_b4c72d">"同樣的計畫每週都會重複。想休息的日子就留空。"</string>
     <string name="the_same_plan_you_picked_cancel_any_time_in_settings">"就是你選的方案。隨時都能在設定中取消。"</string>
     <string name="the_same_point_in_different_sentences">"句子不一樣，錯的地方卻一樣。"</string>
+    <!-- 'The same price whichever way it runs, a long scene or a short one. Watching it again is free.' -->
+    <string name="the_same_price_whichever_way_it_runs_a_long_scene_or_a_short_94d481">"不管長短，一次都是這個價。重看免費。"</string>
     <!-- 'The same setting as Me → Level. The next assessment overwrites it with what your talks show.' -->
     <string name="the_same_setting_as_me_level_the_next_assessment_overwrites_9d19dc">"和「我的 → 程度」是同一個設定。下次評估會用實際通話顯示的結果覆蓋。"</string>
     <!-- 'The sample script stays free to practise. With Plus or Max, practise any text you like.' -->
@@ -2972,6 +2984,7 @@
     <string name="watch_has_its_own_pool_separate_from_your_talk_minutes_a_sce_98932d">"情境練習有自己的額度，和通話時間分開。不管長短，一場算一場。"</string>
     <string name="watch_scene">"情境練習"</string>
     <string name="watch_scenes">"情境練習"</string>
+    <string name="watch_scenes_lld_min_each">"情境練習每次 %d 分鐘"</string>
     <!-- "Watch shows that situation played out by your fluent self, in your voice. You come away with ideas: how to open, what to ask, which expressions work. Then you practice them until they're yours." -->
     <string name="watch_shows_that_situation_played_out_by_your_fluent_self_in_214796">"情境分頁會讓流利的自己用你的聲音演出那個情境。看完你會得到點子：怎麼開口、要問什麼、哪些用語好用。接著再練到變成自己的。"</string>
     <string name="watch_sky_backtome">"回到我"</string>
@@ -2984,6 +2997,7 @@
     <string name="watch_the_scene_and_notice_the_moves_you_d_never_have_though_b126d7">"看情境時，找出你自己想不到的說法和做法。"</string>
     <string name="watch_the_scene_first">"先看場景。"</string>
     <string name="watching">"觀看中"</string>
+    <string name="watching_a_new_scene">"看新的情境練習"</string>
     <string name="watching_a_scene">"看情境練習"</string>
     <string name="watching_for_ideas">"邊看邊找點子"</string>
     <string name="we_debate_everything">"什麼都要辯"</string>
@@ -3409,6 +3423,7 @@
     <string name="your_fluent_self_used_this_you_didn_t">"這是流利的自己用過的用語，你還沒用過。"</string>
     <string name="your_fluent_self_wants_to_know_you">"要先認識你，才說得像你"</string>
     <string name="your_free_minutes">"免費體驗的時間"</string>
+    <string name="your_free_scene_it_takes_no_talk_time">"免費情境練習 1 次 · 不扣通話時間"</string>
     <string name="your_free_talk_time_is_used_up">"免費通話時間已用完"</string>
     <string name="your_free_trial_ends_soon">"免費試用快結束了"</string>
     <!-- "Your friend enters this code when they sign up, and you both get %lld minutes. You're rewarded for your first %lld friends." -->
@@ -3448,6 +3463,8 @@
     <string name="your_manager">"主管"</string>
     <string name="your_match">"吻合度"</string>
     <string name="your_material">"我的教材"</string>
+    <string name="your_minutes_refill_at_the_start_of_each_billing_period">"通話時間會在每個帳單週期開始時補滿。"</string>
+    <string name="your_minutes_refill_on">"通話時間會在%s補滿。"</string>
     <!-- 'Your minutes, streak and book from this call all count. As a practice call, it has no score.' -->
     <string name="your_minutes_streak_and_book_from_this_call_all_count_as_a_p_a87a3a">"這次對話的通話時間、連續紀錄和教材都會照常保留。這是練習對話，所以沒有評分。"</string>
     <string name="your_name">"我的名字"</string>

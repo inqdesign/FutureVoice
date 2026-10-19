@@ -760,6 +760,7 @@ private fun PlansStep(
                     period = period,
                     selected = tier == t,
                     isCurrent = currentPlanId == "${t}_$period",
+                    sceneMinutes = account?.takeIf { it.scenesCostTalk }?.sceneTalkMinutes,
                     onSelect = { onTier(t) },
                 )
             }
@@ -790,6 +791,11 @@ private fun PlansStep(
         Column(Modifier.padding(horizontal = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             FootnoteRow(Icons.Filled.CheckCircle, stringResource(R.string.paywall_shared_unlimited))
             FootnoteRow(Icons.Filled.Phone, stringResource(R.string.paywall_tutor_call))
+            account?.takeIf { it.scenesCostTalk }?.let {
+                FootnoteRow(Icons.Filled.PlayCircle, stringResource(
+                    R.string.a_new_watch_scene_uses_lld_min_of_the_same_talk_time_watchin_280e12,
+                    it.sceneTalkMinutes))
+            }
         }
 
         SubscriptionLegal()
@@ -820,6 +826,9 @@ private fun LadderRow(
     period: String,
     selected: Boolean,
     isCurrent: Boolean,
+    /** A scene's price in talk minutes (since 2026-10-19), or null when the
+     *  viewer would still buy a scene count. */
+    sceneMinutes: Int? = null,
     onSelect: () -> Unit,
 ) {
     val accent = MaterialTheme.colorScheme.primary
@@ -890,7 +899,10 @@ private fun LadderRow(
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            if (scenes > 0) {
+            if (sceneMinutes != null) {
+                Text(stringResource(R.string.scenes_lld_min_each, sceneMinutes),
+                    style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+            } else if (scenes > 0) {
                 Text(stringResource(R.string.paywall_plus_scenes, scenes),
                     style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
             }

@@ -38,9 +38,16 @@ data class AccountStatus(
     /** A FREE account's scenes, ever (`scene_allowance.free_used`) — the
      *  server counts distinct scenes across the account's whole life. */
     val freeScenesUsed: Int = 0,
-    /** How many scenes a free account gets (2); null = no free count (an
+    /** How many scenes a free account gets (one sample since
+     *  `20261019120000`, taking no talk time); null = no free count (an
      *  entitled or admin account, or a server from before the field). */
     val freeScenesCap: Int? = null,
+    /** What ONE Watch scene costs in talk time, in seconds, or null when this
+     *  account's scenes are counted instead ([monthlyScenesCap]). Since
+     *  2026-10-19 a scene costs five minutes for anyone who subscribes from
+     *  then on; accounts that had a subscription keep their count. With no
+     *  plan it is what a PURCHASE would bring (iOS `sceneTalkSeconds`). */
+    val sceneTalkSeconds: Int? = null,
     /** When this billing period ends, `yyyy-MM-dd` from `talk_allowance`. */
     val periodEnd: String? = null,
     /** The plan is set to STOP at [periodEnd] rather than renew. A date on a
@@ -122,6 +129,12 @@ data class AccountStatus(
             return TIER_ORDER.drop(i + 1).firstOrNull { it in tiersOnSale }
         }
 
+    /** Scenes are paid for out of the talk pool rather than counted. */
+    val scenesCostTalk: Boolean get() = sceneTalkSeconds != null
+
+    /** A scene's price in whole talk minutes. */
+    val sceneTalkMinutes: Int get() = (sceneTalkSeconds ?: 0) / 60
+
     /** A free account that has had its scenes — the next one is the plans
      *  (iOS `freeScenesSpent`). It can still talk off its balance. */
     val freeScenesSpent: Boolean
@@ -189,6 +202,8 @@ data class AccountStatus(
             val free_used: Int? = null,
             val free_cap: Int? = null,
             val bonus: Int? = null,
+            val scene_billing: String? = null,
+            val scene_talk_seconds: Int? = null,
         )
 
         /**
@@ -226,8 +241,13 @@ data class AccountStatus(
                     periodEnd = it.period_end, bonusSeconds = it.bonus ?: out.secondsBalance)
             }
             rpc(auth, "scene_allowance")?.let {
-                out = out.copy(scenesUsedPeriod = it.used, monthlyScenesCap = it.cap,
-                    freeScenesUsed = it.free_used ?: 0, freeScenesCap = it.free_cap)
+                out = out.copy(freeScenesUsed = it.free_used ?: 0, freeScenesCap = it.free_cap)
+                val talkSeconds = it.scene_talk_seconds
+                out = if (it.scene_billing == "talk" && talkSeconds != null && talkSeconds > 0)
+                    // The count still comes back for older builds; this one is
+                    // charged in minutes, so it must not draw "N of M scenes".
+                    out.copy(sceneTalkSeconds = talkSeconds)
+                else out.copy(scenesUsedPeriod = it.used, monthlyScenesCap = it.cap)
             }
             // The plan's own pool, in a query of its OWN: a failure here costs
             // one sentence on the trial screens, never the entitlement above.

@@ -95,7 +95,8 @@ fun CreditGuideScreen(onBack: () -> Unit) {
             // Gated on the SCENE cap, not the talk one: Plus has no talk cap,
             // and gating on it made this whole section vanish for the tier
             // whose shape most needs explaining.
-            account?.takeIf { it.monthlyScenesCap != null }?.let { a ->
+            val sceneTalk = account?.scenesCostTalk == true
+            account?.takeIf { it.monthlyScenesCap != null || (it.isEntitled && it.scenesCostTalk) }?.let { a ->
                 GroupedSectionHeader(stringResource(R.string.what_your_plan_holds))
                 GroupedCard {
                     // Uncapped reads off the TIER, never off the cap the
@@ -119,12 +120,20 @@ fun CreditGuideScreen(onBack: () -> Unit) {
                             stringResource(R.string.no_limit_and_no_rationing_talking_takes_real_effort_so_there_9058ba)
                         else stringResource(R.string.use_them_however_you_like_all_in_one_call_today_or_spread_ov_1df811),
                     )
-                    a.monthlyScenesCap?.let { scenes ->
+                    val scenes = a.monthlyScenesCap
+                    if (scenes != null) {
                         GroupedRowDivider()
                         PlainRow(
                             icon = Icons.Filled.PlayCircle,
                             title = stringResource(R.string.lld_watch_scenes_a_month, scenes),
                             detail = stringResource(R.string.a_separate_pool_watching_a_scene_never_takes_a_minute_off_yo_ed6523),
+                        )
+                    } else if (a.scenesCostTalk) {
+                        GroupedRowDivider()
+                        PlainRow(
+                            icon = Icons.Filled.PlayCircle,
+                            title = stringResource(R.string.watch_scenes_lld_min_each, a.sceneTalkMinutes),
+                            detail = stringResource(R.string.a_new_scene_is_paid_for_out_of_the_same_minutes_watching_it_238960),
                         )
                     }
                 }
@@ -132,8 +141,10 @@ fun CreditGuideScreen(onBack: () -> Unit) {
                 // opposite promise.
                 val renews = a.renewalLabel(locale)
                 GroupedFooter(when {
+                    renews.isEmpty() && a.scenesCostTalk -> stringResource(R.string.your_minutes_refill_at_the_start_of_each_billing_period)
                     renews.isEmpty() -> stringResource(R.string.scenes_refill_at_the_start_of_each_billing_period)
                     a.cancelAtPeriodEnd -> stringResource(R.string.your_plan_ends_on_lld, renews)
+                    a.scenesCostTalk -> stringResource(R.string.your_minutes_refill_on, renews)
                     else -> stringResource(R.string.scenes_refill_on, renews)
                 })
             }
@@ -148,16 +159,28 @@ fun CreditGuideScreen(onBack: () -> Unit) {
                     stringResource(R.string.re_cloning_your_voice),
                     stringResource(R.string.s_1_min),
                     stringResource(R.string.setup_is_free_including_re_records_in_the_first_day_later_re_d175df))
+                // Since 2026-10-19 a scene is paid for out of the same
+                // minutes, for anyone subscribing from then on.
+                if (sceneTalk) {
+                    GroupedRowDivider()
+                    CostRow(Icons.Filled.PlayCircle, stringResource(R.string.watching_a_new_scene),
+                        stringResource(R.string.lld_min_b61908, account?.sceneTalkMinutes ?: 5),
+                        stringResource(R.string.the_same_price_whichever_way_it_runs_a_long_scene_or_a_short_94d481))
+                }
             }
-            GroupedFooter(stringResource(R.string.only_the_call_clock_spends_your_talk_minutes_watching_a_scen_d6c32d))
+            GroupedFooter(if (sceneTalk)
+                stringResource(R.string.the_call_clock_and_new_scenes_spend_your_talk_minutes_everyt_1d05bf)
+            else stringResource(R.string.only_the_call_clock_spends_your_talk_minutes_watching_a_scen_d6c32d))
 
-            GroupedSectionHeader(stringResource(R.string.watch_scenes))
-            GroupedCard {
-                CostRow(Icons.Filled.PlayCircle, stringResource(R.string.watching_a_scene),
-                    stringResource(R.string.s_1_scene),
-                    stringResource(R.string.watch_has_its_own_pool_separate_from_your_talk_minutes_a_sce_98932d))
+            if (!sceneTalk) {
+                GroupedSectionHeader(stringResource(R.string.watch_scenes))
+                GroupedCard {
+                    CostRow(Icons.Filled.PlayCircle, stringResource(R.string.watching_a_scene),
+                        stringResource(R.string.s_1_scene),
+                        stringResource(R.string.watch_has_its_own_pool_separate_from_your_talk_minutes_a_sce_98932d))
+                }
+                GroupedFooter(stringResource(R.string.scenes_you_ve_already_watched_replay_free_forever_and_never_d6d2d2))
             }
-            GroupedFooter(stringResource(R.string.scenes_you_ve_already_watched_replay_free_forever_and_never_d6d2d2))
 
             GroupedSectionHeader(stringResource(R.string.always_free))
             GroupedCard {

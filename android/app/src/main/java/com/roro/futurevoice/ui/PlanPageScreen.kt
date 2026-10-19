@@ -180,6 +180,13 @@ fun PlanPageScreen(
                     ValueRow(Icons.Filled.PlayCircle, stringResource(R.string.watch_scenes),
                         stringResource(R.string.scene_fraction,
                             a.scenesUsedPeriod, a.monthlyScenesCap!!))
+                } else if (a?.isEntitled == true && a.scenesCostTalk) {
+                    // Paid for out of the minutes above (2026-10-19): no pool
+                    // of its own to count, so the row says the price.
+                    GroupedRowDivider()
+                    ValueRow(Icons.Filled.PlayCircle, stringResource(R.string.watch_scenes),
+                        stringResource(R.string.lld_min_each, a.sceneTalkMinutes),
+                        subtitle = stringResource(R.string.taken_from_the_talk_time_above))
                 }
                 val renews = a?.renewalLabel(locale).orEmpty()
                 if (a?.isEntitled == true && renews.isNotEmpty()) {

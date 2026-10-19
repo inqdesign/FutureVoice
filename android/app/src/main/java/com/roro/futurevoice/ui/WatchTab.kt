@@ -1063,8 +1063,12 @@ private fun SavedScenariosSheet(
                         if (pair.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
-                Spacer(Modifier.height(24.dp).windowInsetsPadding(WindowInsets.navigationBars))
+                Spacer(Modifier.height(24.dp))
             }
+            // Every Watch from here writes a NEW take, which is a new scene
+            // to pay for (iOS savedScenariosPage, 2026-10-19).
+            SceneCostNote(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp)
+                .windowInsetsPadding(WindowInsets.navigationBars))
         }
     }
 }
