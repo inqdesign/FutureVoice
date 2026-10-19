@@ -130,6 +130,8 @@ fun StudyDeckScreen(
      *  block goes on to its shadow lines). Drawn as the done state's button
      *  (iOS `StudyDeckView.nextStep`). */
     nextStep: StudyDeckNextStep? = null,
+    /** In a page sheet: [DeckSheetHeader] instead of a page's top bar. */
+    asSheet: Boolean = false,
 ) {
     androidx.activity.compose.BackHandler(onBack = onBack)
     val context = LocalContext.current
@@ -254,8 +256,12 @@ fun StudyDeckScreen(
     }
 
     Scaffold(
+        containerColor = if (asSheet) AppSurfaces.ground else MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
+            if (asSheet) PageSheetHeader(title, onDone = onBack,
+                subtitle = if (items.isEmpty()) null else stringResource(R.string.lld_of_lld,
+                    (resolved + 1).coerceAtMost(items.size), items.size))
+            else TopAppBar(
                 colors = AppSurfaces.topBarColors(),
                 title = {
                     Column {
@@ -719,3 +725,4 @@ private fun DeckDoneState(
         Spacer(Modifier.weight(1f))
     }
 }
+

@@ -72,6 +72,10 @@ fun StudyDeckHost(
     emptyMessage: String? = null,
     /** What comes after the last card (iOS `StudyDeckView.nextStep`). */
     nextStep: StudyDeckNextStep? = null,
+    /** Drawn in a page sheet (the put-off pile): a sheet's header — the
+     *  title centred, Done on the right — not a page's back arrow (iOS
+     *  `DueReviewView`'s inline title + Done). */
+    asSheet: Boolean = false,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -92,7 +96,7 @@ fun StudyDeckHost(
     val dealt = items
     if (dealt == null) return
     if (dealt.isEmpty()) {
-        EmptyDeck(kind, onBack, handTitle, emptyTitle, emptyMessage)
+        EmptyDeck(kind, onBack, handTitle, emptyTitle, emptyMessage, asSheet)
         return
     }
 
@@ -148,6 +152,7 @@ fun StudyDeckHost(
         },
         onBack = onBack,
         nextStep = nextStep,
+        asSheet = asSheet,
     )
 }
 
@@ -155,18 +160,18 @@ fun StudyDeckHost(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EmptyDeck(kind: StudyScheduleStore.Kind?, onBack: () -> Unit, handTitle: String? = null,
-                      emptyTitle: String? = null, emptyMessage: String? = null) {
+                      emptyTitle: String? = null, emptyMessage: String? = null, asSheet: Boolean = false) {
     androidx.activity.compose.BackHandler(onBack = onBack)
+    val title = handTitle ?: stringResource(
+        if (kind == null) R.string.back_from_earlier
+        else if (kind == StudyScheduleStore.Kind.WORD) R.string.words
+        else R.string.expressions)
     Scaffold(
+        containerColor = if (asSheet) AppSurfaces.ground else androidx.compose.material3.MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
+            if (asSheet) PageSheetHeader(title, onDone = onBack) else TopAppBar(
                 colors = AppSurfaces.topBarColors(),
-                title = {
-                    Text(handTitle ?: stringResource(
-                        if (kind == null) R.string.back_from_earlier
-                        else if (kind == StudyScheduleStore.Kind.WORD) R.string.words
-                        else R.string.expressions))
-                },
+                title = { Text(title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)

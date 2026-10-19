@@ -1019,14 +1019,7 @@ private fun SavedScenariosSheet(
     // iOS: a plain `.sheet` — the tabs' page sheet, like Me and Find people.
     PageSheet(onDismiss = onDismiss) {
         Column(Modifier.fillMaxSize()) {
-            SheetHeader(
-                title = stringResource(R.string.your_scenarios),
-                leading = {
-                    com.roro.futurevoice.ui.brand.IosGlassTextButton(stringResource(R.string.done),
-                        onClick = onDismiss)
-                },
-                modifier = Modifier.padding(horizontal = 16.dp).padding(top = 8.dp, bottom = 4.dp),
-            )
+            PageSheetHeader(stringResource(R.string.your_scenarios), onDone = onDismiss)
             if (categories.size > 1) {
                 Row(
                     Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())

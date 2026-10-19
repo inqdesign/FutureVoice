@@ -1211,6 +1211,7 @@ fun RootScreen() {
             nativeLanguage = state.nativeLanguage,
             level = state.level,
             focus = focusStudyItem,
+            asSheet = true,
             onBack = { showDueReview = false; focusStudyItem = null },
         )
 

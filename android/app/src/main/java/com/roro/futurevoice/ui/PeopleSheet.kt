@@ -670,12 +670,20 @@ internal fun SheetHeader(
     leading: (@Composable () -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
     modifier: Modifier = Modifier.padding(top = 12.dp, bottom = 8.dp),
+    /** A line under the title (a deck's "3 of 10"). */
+    subtitle: String? = null,
 ) {
     androidx.compose.ui.layout.Layout(
         content = {
             Box { leading?.invoke() }
-            Text(title, style = DisplayFace.style(title, MaterialTheme.typography.bodyLarge),
-                maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(title, style = DisplayFace.style(title, MaterialTheme.typography.bodyLarge),
+                    maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                if (subtitle != null) {
+                    Text(subtitle, style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                }
+            }
             Box { trailing?.invoke() }
         },
         modifier = modifier.fillMaxWidth().height(48.dp),
@@ -697,6 +705,20 @@ internal fun SheetHeader(
             trail.place(w - trail.width, (h - trail.height) / 2)
         }
     }
+}
+
+/**
+ * The header of every page sheet over the tabs ([PageSheet], Find people, the
+ * put-off pile, the week archive, Your scenarios): the title centred, Done on
+ * the right, at one height and one inset. Four sheets built their own and no
+ * two sat at the same distance from the sheet's top edge (founder, 2026-10-20).
+ */
+@Composable
+internal fun PageSheetHeader(title: String, onDone: () -> Unit, subtitle: String? = null) {
+    SheetHeader(title, subtitle = subtitle,
+        trailing = { com.roro.futurevoice.ui.brand.IosGlassTextButton(
+            androidx.compose.ui.res.stringResource(com.roro.futurevoice.R.string.done), onClick = onDone) },
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp))
 }
 
 /** A white card with iOS 26's continuous corners, rows edge to edge. */

@@ -45,6 +45,8 @@ import com.roro.futurevoice.data.WeekRecap
 import com.roro.futurevoice.data.WeekRecapBuilder
 import com.roro.futurevoice.data.WeekRecapStore
 import com.roro.futurevoice.ui.brand.AppSurfaces
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.background
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
@@ -80,11 +82,10 @@ fun WeekRecapArchiveSheet(level: CefrLevel, onDismiss: (WeekRecapAction?) -> Uni
     // iOS: a plain `.sheet` — the large detent, full height however short
     // the list: the tabs' page sheet, like Me and Find people.
     PageSheet(onDismiss = { onDismiss(null) }) {
-        Column(Modifier.fillMaxWidth().fillMaxHeight().verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp).padding(top = 8.dp, bottom = 32.dp)) {
-            SheetHeader(stringResource(R.string.wr_your_week),
-                trailing = { com.roro.futurevoice.ui.brand.IosGlassTextButton(
-                    stringResource(R.string.done), { close(null) }, bold = true) })
+        Column(Modifier.fillMaxSize().background(AppSurfaces.ground)) {
+        PageSheetHeader(stringResource(R.string.wr_your_week), onDone = { close(null) })
+        Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp).padding(bottom = 32.dp)) {
             thisWeek?.let { week ->
                 FormSection(header = stringResource(R.string.wr_in_progress)) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 11.dp),
@@ -115,6 +116,7 @@ fun WeekRecapArchiveSheet(level: CefrLevel, onDismiss: (WeekRecapAction?) -> Uni
                     PastWeekRow(recap, isNew = !WeekRecapStore.wasShown(context, recap), locale) { open = recap }
                 }
             }
+        }
         }
     }
 

@@ -505,11 +505,9 @@ fun FindPeopleScreen(
             Modifier.fillMaxWidth().align(Alignment.TopCenter)
                 .background(androidx.compose.ui.graphics.Brush.verticalGradient(
                     0.75f to AppSurfaces.ground, 1f to AppSurfaces.ground.copy(alpha = 0f)))
-                .statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp),
+                .statusBarsPadding().padding(bottom = 4.dp),
         ) {
-            SheetHeader(stringResource(R.string.people), modifier = Modifier,
-                trailing = { com.roro.futurevoice.ui.brand.IosGlassTextButton(
-                    stringResource(R.string.done), onClick = onBack) })
+            PageSheetHeader(stringResource(R.string.people), onDone = onBack)
         }
 
         // The list dissolves under the capsule, the same feather the tab bar
