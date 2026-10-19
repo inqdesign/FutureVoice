@@ -88,7 +88,6 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import com.roro.futurevoice.ui.brand.Symbols
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.filled.PersonAddAlt
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material.icons.filled.Tune
 import com.roro.futurevoice.R
@@ -1906,18 +1905,11 @@ internal fun HomeScreen(
                             onOpenActivity = onOpenActivity,
                             heroTop = padding.calculateTopPadding(),
                         )
-                        // After the first talk, the only card above Discover is the
-                        // one asking for the learner's life. Before it, nothing: the
-                        // greeting and the ring already say what to do (iOS, 2026-10-08).
-                        val revision by StoreEvents.revision.collectAsStateWithLifecycle()
-                        var talkCount by remember { mutableStateOf(-1) }
-                        LaunchedEffect(state.targetLanguage, revision) {
-                            talkCount = com.roro.futurevoice.data.SessionStore.shared(context)
-                                .load(state.targetLanguage).count { it.endedAt != null }
-                        }
-                        if (talkCount > 0 && personaNeedsDepth(state.persona)) {
-                            DeepenRow(onClick = { showDeepen = true })
-                        }
+                        // No card between the ring and Discover: the "tell me more
+                        // about you" row was removed 2026-10-18 (iOS 3b927c6f —
+                        // founder: it didn't sit with the rest of the page). The
+                        // sheet still auto-shows once after the first talk; Me →
+                        // Profile is the way back.
                         // One Discover section, two chips — what to talk about
                         // today: the day's stories, or a situation you built.
                         DiscoverSection(
@@ -2926,36 +2918,6 @@ private fun personaNeedsDepth(p: com.roro.futurevoice.talk.UserPersona?): Boolea
     if (p == null) return false
     if (p.learnedNotes.isNotEmpty()) return false
     return listOf(p.occupation, p.household, p.freeNotes).all { it.isBlank() }
-}
-
-/**
- * The persistent re-entry once the auto-prompt has passed — visible only
- * while those fields stay empty, so it disappears the moment it is answered
- * rather than sitting on the home as a permanent chore.
- */
-@Composable
-private fun DeepenRow(onClick: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth()
-            .background(AppSurfaces.card, ContinuousShape(20.dp))
-            .clickable(onClick = onClick)
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Icon(Icons.Filled.PersonAddAlt, contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary)
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(stringResource(R.string.tell_me_more_about_you),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold)
-            Text(stringResource(R.string.talks_get_more_real_when_i_know_your_life),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
 }
 
 /** Which call is on screen — retained across activity recreation (see [RootScreen]). */
