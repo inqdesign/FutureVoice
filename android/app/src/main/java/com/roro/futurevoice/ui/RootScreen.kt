@@ -904,11 +904,8 @@ fun RootScreen() {
         if (showActivity) add(RootRoute.Activity)
         // Under Activity: its "Calendar and routine" link opens the routine on top.
         if (showEffort) add(RootRoute.Effort)
-        if (showDueReview) add(RootRoute.DueReview)
         studyDeckKind?.let { add(RootRoute.StudyDeck(it)) }
-        personDetailId?.let { add(RootRoute.Person(it)) }
         if (showMyProfileSheet) add(RootRoute.MyProfile(sheet = true))
-        if (showPeople) add(RootRoute.People)
         finishedBooks?.let { add(RootRoute.Finished(it)) }
         // Settings is a SHEET over the tabs (iOS `.sheet` from the Talk
         // header), and what it pushes lives inside it — see [meSheetStack].
@@ -975,6 +972,19 @@ fun RootScreen() {
         if (showCreditGuide) add(RootRoute.CreditGuide)
         if (showPrivacy) add(RootRoute.Privacy)
         if (showPublicIntro) add(RootRoute.PublicIntro)
+    }
+    /** Find people and the put-off deck are sheets over the tabs too (iOS
+     *  `WatchTab`'s `.sheet(isPresented: $showingFind)`, `PracticeTab`'s
+     *  `DueReviewView` sheet), in the same host as Me: one sheet at a time,
+     *  Me first. A person opened from Find people is pushed inside it. */
+    val tabSheetStack: List<RootRoute>? = when {
+        showMe -> meSheetStack
+        showPeople -> buildList {
+            add(RootRoute.People)
+            personDetailId?.let { add(RootRoute.Person(it)) }
+        }
+        showDueReview -> listOf(RootRoute.DueReview)
+        else -> null
     }
     /** The whole sheet goes, whichever of its pages is showing. */
     fun dismissMe() {
@@ -1463,12 +1473,23 @@ fun RootScreen() {
           // `RootView.tabs(buildingRoutine:)`).
           LaunchedEffect(buildingRoutine) { if (buildingRoutine) tab = HomeTab.TALK }
           Box(Modifier.fillMaxSize()) {
+          // Held while the sheet slides away, so it doesn't empty mid-exit.
+          var sheetShown by remember { mutableStateOf(tabSheetStack) }
+          if (tabSheetStack != null) sheetShown = tabSheetStack
           IosSheetHost(
-            presented = showMe,
-            onDismiss = { dismissMe() },
+            presented = tabSheetStack != null,
+            onDismiss = {
+                when {
+                    showMe -> dismissMe()
+                    showPeople -> { showPeople = false; personDetailId = null }
+                    else -> { showDueReview = false; focusStudyItem = null }
+                }
+            },
             sheet = {
-                IosNavStack(stack = meSheetStack, onPop = { popRoute(meSheetStack.last()) },
-                    pageKey = { it.key }) { DrawRoute(it) }
+                sheetShown?.let { stack ->
+                    IosNavStack(stack = stack, onPop = { popRoute(stack.last()) },
+                        pageKey = { it.key }) { DrawRoute(it) }
+                }
             },
             background = {
           HomeScreen(
