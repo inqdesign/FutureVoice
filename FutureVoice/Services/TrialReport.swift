@@ -68,8 +68,14 @@ enum TrialReportStore {
     /// The account side of the gate. The device side (`offers`, `finished`,
     /// a spoken talk on file) is checked here too, so one call answers it.
     static func shouldOffer(_ account: AccountStatus) -> Bool {
-        guard !finished, offers < maxOffers,
-              account.subscriptionStatus == "inactive",
+        !finished && offers < maxOffers && canOpen(account)
+    }
+
+    /// Whether the report has anything to say to this account at all — the
+    /// gate a tapped link (`futurevoice://trialreport`, the push to those who
+    /// left at the wall) answers, since a tap is asking even after two offers.
+    static func canOpen(_ account: AccountStatus) -> Bool {
+        guard account.subscriptionStatus == "inactive",
               !account.unlimited, account.needsSubscription else { return false }
         return !spokenSessions().isEmpty
     }

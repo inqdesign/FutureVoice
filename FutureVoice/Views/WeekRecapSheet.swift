@@ -134,7 +134,7 @@ struct WeekRecapSheet: View {
             Analytics.capture(isTrial ? "trial_report_closed" : "week_recap_closed",
                               ["reached": (revealed.max() ?? 0) + 1, "cards": cards.count])
         }
-        .fullScreenCover(isPresented: $showingTrialTest, onDismiss: reloadTrialTest) {
+        .fullScreenCover(isPresented: $showingTrialTest, onDismiss: { reloadTrialTest(jump: true) }) {
             WeeklyTestView(trialScope: .init(start: recap.start, minimum: TrialReportStore.minTestItems,
                                              coach: recap.coach))
                 .environmentObject(appState)
@@ -484,7 +484,8 @@ struct WeekRecapSheet: View {
             kicker(Text("Practice"), "rectangle.stack.fill")
             if !recap.nowYours.isEmpty {
                 bigNumber(recap.nowYours.count)
-                Text("Words and phrases that became yours this week.")
+                (isTrial ? Text("Words and phrases that became yours.")
+                         : Text("Words and phrases that became yours this week."))
                     .font(.title3)
                     .fixedSize(horizontal: false, vertical: true)
                 FlowChips(items: Array(recap.nowYours.prefix(12)))
@@ -1029,7 +1030,7 @@ struct WeekRecapSheet: View {
     private func startTrial() async {
         TrialReportStore.offers += 1
         Analytics.capture("trial_report_opened", ["talk_min": recap.talkMinutes, "cards": cards.count])
-        reloadTrialTest()
+        reloadTrialTest(jump: false)
         // The routine: the one already chosen in setup, else the one the
         // learner's purposes suggest.
         if UserDefaults.standard.bool(forKey: LearningPurposeStore.routineAppliedKey),
@@ -1040,6 +1041,9 @@ struct WeekRecapSheet: View {
             routine = RoutineRecipe.lines(for: LearningPurposeStore.purposes,
                                           goalMinutes: StudyPlanStore.goalMinutes)
         }
+        #if DEBUG
+        if UserDefaults.standard.bool(forKey: "trialtest") { showingTrialTest = true }
+        #endif
         async let level: Void = loadTrialLevel()
         await writeCoachIfNeeded()
         await level
@@ -1058,7 +1062,9 @@ struct WeekRecapSheet: View {
         }
     }
 
-    private func reloadTrialTest() {
+    /// `jump`: back from the test sheet. Opening a report whose test was
+    /// done in an earlier sitting starts at the cover like any deck.
+    private func reloadTrialTest(jump: Bool) {
         let wasCleared = trialTestCleared
         let saved = TrialReportStore.load()
         if let saved { trial?.testThin = saved.testThin; trial?.testId = saved.testId }
@@ -1066,7 +1072,7 @@ struct WeekRecapSheet: View {
             trialTest = WeeklyTestStore.shared.load().first { $0.id == id }
         }
         // Done in this sitting: straight on to the level.
-        if !wasCleared, trialTestCleared, let index = cards.firstIndex(of: .level) {
+        if jump, !wasCleared, trialTestCleared, let index = cards.firstIndex(of: .level) {
             withAnimation { page = index }
         }
     }

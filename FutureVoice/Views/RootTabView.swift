@@ -576,6 +576,7 @@ struct RootTabView: View {
         #if DEBUG
         // `-trialreport 1`: raise the deck on this device's talks, past the gate.
         if UserDefaults.standard.bool(forKey: "trialreport"), trialReport == nil {
+            if UserDefaults.standard.bool(forKey: "trialdemo") { TrialReportDemo.seed() }
             trialReport = TrialReportStore.current(targetLanguage: appState.targetLanguage)
             return
         }
@@ -591,6 +592,17 @@ struct RootTabView: View {
                   !showingAgeCheck, !showingPaywall, !showingWelcome, !showingIntroPreview,
                   appState.levelUpAnnouncement == nil, referralInbox.pendingJoin == nil,
                   updates.pending == nil else { return }
+            trialReport = TrialReportStore.current(targetLanguage: appState.targetLanguage)
+        }
+    }
+
+    private func openTrialReportFromLink() {
+        selection = .home
+        Task { @MainActor in
+            guard let account = await BillingGate.shared.snapshot(force: true) else { return }
+            let opens = TrialReportStore.canOpen(account)
+            Analytics.capture("trial_report_link", ["opened": opens])
+            guard opens, trialReport == nil, weekRecap == nil else { return }
             trialReport = TrialReportStore.current(targetLanguage: appState.targetLanguage)
         }
     }
@@ -654,6 +666,9 @@ struct RootTabView: View {
         case "weeklytest":
             selection = .practice
             appState.pendingPracticeRoute = .weeklyTest
+        case "trialreport":
+            // The push to learners who left at the end of their free minutes.
+            openTrialReportFromLink()
         case "book":
             // Continue widget: open a specific book's detail page.
             let comps = URLComponents(url: url, resolvingAgainstBaseURL: false)

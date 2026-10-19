@@ -1930,8 +1930,18 @@ routine to keep going." `TrialReport.swift`, and `WeekRecapSheet(trial:)`.
   in place of the post-call pitch, and by `RootTabView.offerTrialReport` on
   launch/foreground (which also reaches accounts that spent their minutes
   before this build) — at most `maxOffers` (2) openings, then never again.
+- **The ones who already left get a PUSH** (`scripts/push-trial-report.sh`,
+  dry run by default, `--send` delivers): the same audience read from the
+  database, last talk over a day ago, a production token. The tap opens
+  `futurevoice://trialreport`, whose gate is `TrialReportStore.canOpen` (a
+  tap is asking, so the two-offer cap does not apply). Fixed dedupe key, so
+  each learner gets it once and the script can be re-run daily. Send only
+  after the build with the report is live: an older build opens at Talk.
+  Android has no server push.
 - Debug: `-capture tabs -trialreport 1` raises it past the gate,
-  `-trialthin 1` skips the test, `-trialpage N` opens on a card.
+  `-trialthin 1` skips the test, `-trialpage N` opens on a card,
+  `-trialdemo 1` seeds a finished twenty-minute trial (`TrialReportDemo`),
+  `-trialtest 1` opens the test (its result, on the demo).
 
 ## Japanese as a TARGET language (2026-09-18)
 
