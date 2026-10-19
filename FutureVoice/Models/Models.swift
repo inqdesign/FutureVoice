@@ -1459,6 +1459,31 @@ struct VoicePreset: Hashable, Identifiable {
         return ["en": english, "de": german, "ko": korean, "ja": japanese, "es": spanish]
     }()
 
+    /// What the slots spoke as in Korean and Japanese from 2026-09-28 until
+    /// Cartesia on 2026-10-12. Nothing synthesizes in these any more; lines
+    /// made in them are still on phones, and listening back finds them here.
+    private static let retiredVoicedBySlot: [String: String] = [
+        "NDTYOmYEjbDIVCKB35i3": "5n5gqmaQi9Ewevrz7bOS",
+        "UgBBYS2sOqTuMpoF3BR0": "L4az9Gb378GIycFl2nAB",
+        "FF59babHL8N8gfTgtBMT": "8jHHF8rMqMlg8if2mOUe",
+        "L0Dsvb3SLTyegXwtm47J": "AKF7f2y1L8ktV5vxXILw",
+    ]
+
+    /// Every voice a preset has ever spoken in, `slot`'s own first, then the
+    /// other slots'. For finding audio already made, never for synthesis: a
+    /// line on file in another slot's voice was made for this same text, and
+    /// a person re-voiced on 2026-10-12 spoke in whichever slot the learner
+    /// had picked.
+    static func everyVoiceEverUsed(startingWith slot: String?) -> [String] {
+        func voices(of s: String) -> [String] {
+            [s] + voicedBySlot.keys.sorted().compactMap { voicedBySlot[$0]?[s] }
+                + [retiredVoicedBySlot[s]].compactMap { $0 }
+        }
+        let slots = [slot].compactMap { $0 } + catalog.map(\.id).filter { $0 != slot }
+        var seen = Set<String>()
+        return slots.flatMap(voices).filter { seen.insert($0).inserted }
+    }
+
     /// The voice that speaks a stored voice id in `language`. Anything that
     /// isn't a preset slot — the learner's clone, a retired preset id —
     /// passes through untouched.

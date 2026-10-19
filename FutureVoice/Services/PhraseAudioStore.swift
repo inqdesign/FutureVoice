@@ -173,6 +173,75 @@ final class PhraseAudioStore {
         }
     }
 
+    // MARK: - Scene lines, found by what was PLAYED (2026-10-19)
+    //
+    // A file's name is a hash of the voice that made it, so a lookup has to
+    // re-derive that voice — and the voice behind a preset slot or a
+    // Find-people person has changed twice (2026-09-28, 2026-10-12). The
+    // listening playlist then lost every scene whose lines sat under the old
+    // id, with the audio still on disk. So Watch writes down which file each
+    // line actually played from, by speaker side and text, and the playlist
+    // reads that before it re-derives anything. Local only, beside the files
+    // it names (a cache clear takes both).
+
+    private lazy var sceneLines: [String: String] = {
+        guard let data = try? Data(contentsOf: sceneLinesURL),
+              let map = try? JSONDecoder().decode([String: String].self, from: data) else { return [:] }
+        return map
+    }()
+    private let sceneLinesLock = NSLock()
+    private var sceneLinesURL: URL { dir.appendingPathComponent("scene-lines.json") }
+
+    private func sceneLineId(text: String, isOther: Bool) -> String {
+        (isOther ? "other\n" : "me\n") + text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Watch, once a line has played: remember the file it came from.
+    func rememberSceneLine(text: String, voiceId: String, isOther: Bool) {
+        guard let k = resolvedKey(text: text, voiceId: voiceId, allowLineage: true) else { return }
+        let id = sceneLineId(text: text, isOther: isOther)
+        sceneLinesLock.lock(); defer { sceneLinesLock.unlock() }
+        guard sceneLines[id] != k else { return }
+        sceneLines[id] = k
+        if let data = try? JSONEncoder().encode(sceneLines) {
+            try? data.write(to: sceneLinesURL, options: [.atomic])
+        }
+    }
+
+    /// The file a scene line plays from, for listening back: the voice it is
+    /// asked for (any speed), then the file Watch played it from, then any of
+    /// `fallbackVoices` — the ids that voice went by before. Never synthesizes.
+    func sceneLineKey(text: String, voiceId: String, isOther: Bool,
+                      fallbackVoices: [String]) -> String? {
+        if let k = resolvedKey(text: text, voiceId: voiceId, allowLineage: true, anySpeed: true) {
+            return k
+        }
+        sceneLinesLock.lock()
+        let played = sceneLines[sceneLineId(text: text, isOther: isOther)]
+        sceneLinesLock.unlock()
+        if let played, exists(played) { return played }
+        for tag in SpeechSpeed.allCases.map(\.cacheTag) {
+            for voice in fallbackVoices {
+                let k = rawKey(text: text, voiceId: voice, speedTag: tag)
+                if exists(k) { return k }
+            }
+        }
+        return nil
+    }
+
+    func url(forKey key: String) -> URL { dir.appendingPathComponent("\(key).mp3") }
+
+    func timings(forKey key: String) -> [WordTiming]? {
+        guard let data = try? Data(contentsOf: dir.appendingPathComponent("\(key).timings.json")) else {
+            return nil
+        }
+        return try? JSONDecoder().decode([WordTiming].self, from: data)
+    }
+
+    private func exists(_ key: String) -> Bool {
+        FileManager.default.fileExists(atPath: dir.appendingPathComponent("\(key).mp3").path)
+    }
+
     // MARK: - Word timings
 
     func timings(text: String, voiceId: String, allowLineage: Bool = true,

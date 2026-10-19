@@ -29,19 +29,29 @@ struct PlaylistLine: Hashable, Identifiable {
     var isOther: Bool
     var bookTitle: String
 
+    /// The ids the other person's voice went by before (preset slots were
+    /// re-voiced on 2026-09-28 and 2026-10-12), so a scene watched back then
+    /// still finds its lines. Empty for the fluent self, whose older clones
+    /// resolve through `PhraseAudioStore`'s lineage.
+    var fallbackVoices: [String] = []
+
     var isFluentSelf: Bool { !isOther }
 
-    /// Any speed's take: a scene watched before the speech speed was changed
-    /// still plays as it was heard.
-    var audioURL: URL? {
-        PhraseAudioStore.shared.url(text: text, voiceId: voiceId, anySpeed: true)
+    /// The file that plays: any speed's take, the file Watch played it from,
+    /// or a take under an older voice id. A scene watched before a speed or
+    /// voice change still plays as it was heard.
+    var audioKey: String? {
+        PhraseAudioStore.shared.sceneLineKey(text: text, voiceId: voiceId, isOther: isOther,
+                                             fallbackVoices: fallbackVoices)
     }
 
-    var hasAudio: Bool { audioURL != nil }
+    var audioURL: URL? { audioKey.map(PhraseAudioStore.shared.url(forKey:)) }
+
+    var hasAudio: Bool { audioKey != nil }
 
     /// Word timings measured on the take that plays, if any were kept.
     var storedTimings: [WordTiming]? {
-        PhraseAudioStore.shared.timings(text: text, voiceId: voiceId, anySpeed: true)
+        audioKey.flatMap(PhraseAudioStore.shared.timings(forKey:))
     }
 }
 
@@ -62,6 +72,7 @@ enum SceneLibrary {
                          people: [Counterpart]) -> [PlaylistLine] {
         let other = otherPerson(for: scenario, in: people)
         let me = explain("Your fluent self")
+        let otherVoices = VoicePreset.everyVoiceEverUsed(startingWith: other.voicePresetId)
         return (scenario.curriculum?.dialogue ?? []).compactMap { turn in
             let mine = turn.speaker == "user"
             let text = turn.text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -70,7 +81,8 @@ enum SceneLibrary {
                                 voiceId: mine ? cloneId : other.voicePresetId,
                                 speaker: mine ? me : other.name,
                                 isOther: !mine,
-                                bookTitle: scenario.displayTitle)
+                                bookTitle: scenario.displayTitle,
+                                fallbackVoices: mine ? [] : otherVoices)
         }
     }
 

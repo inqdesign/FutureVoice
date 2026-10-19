@@ -839,6 +839,11 @@ struct WatchView: View {
                     // Streaming unavailable — classic fetch-then-play.
                     try await playAndWait(try await loadOrSynthesize(request))
                 }
+                // The listening playlist finds the line by this, whatever
+                // the voice behind the id is called later.
+                PhraseAudioStore.shared.rememberSceneLine(
+                    text: request.text, voiceId: request.voiceId,
+                    isOther: turns[i].speaker != .user)
                 if !loggedScene {
                     loggedScene = true
                     PracticeLog.shared.record(.scene)
