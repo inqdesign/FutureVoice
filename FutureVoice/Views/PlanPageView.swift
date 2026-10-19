@@ -71,6 +71,13 @@ struct PlanPageView: View {
                     row(icon: "play.circle.fill",
                         title: explain("Watch scenes"),
                         value: sceneAllowanceValue)
+                } else if account.isEntitled, account.scenesCostTalk {
+                    // Paid for out of the minutes above (2026-10-19): no pool
+                    // of its own to count, so the row says the price.
+                    row(icon: "play.circle.fill",
+                        title: explain("Watch scenes"),
+                        subtitle: explain("Taken from the talk time above"),
+                        value: explain("\(account.sceneTalkMinutes) min each"))
                 }
                 if account.isEntitled, !account.renewalLabel.isEmpty {
                     // A trial's date is not a refill — it is the day it starts

@@ -62,12 +62,19 @@ struct AccountStatus {
     /// and no count applies.
     var scenesUsedPeriod: Int = 0
     var monthlyScenesCap: Int?
-    /// A FREE account's scenes, ever, and how many it gets (2, since
-    /// `20260928160000_free_accounts_two_scenes`). Nil cap = no free ceiling:
-    /// an entitled account (its pool is `monthlyScenesCap`), the admin flag,
-    /// or a server that predates the migration.
+    /// A FREE account's scenes, ever, and how many it gets (one sample
+    /// scene since `20261019120000_scenes_cost_talk_time`, and it takes no
+    /// talk time). Nil cap = no free ceiling: an entitled account, the admin
+    /// flag, or a server that predates the migration.
     var freeScenesUsed: Int = 0
     var freeScenesCap: Int?
+    /// What ONE Watch scene costs in talk time, in seconds — or nil when this
+    /// account's scenes are counted instead (`monthlyScenesCap`). Since
+    /// 2026-10-19 a scene costs five minutes out of the talk pool for anyone
+    /// who subscribes from then on; every account that had a subscription
+    /// before keeps its count until the founder moves it. With no plan this
+    /// is what a PURCHASE would bring, so the paywall can say it.
+    var sceneTalkSeconds: Int?
     /// When this pool refills — the end of the billing period. Nil for free
     /// accounts, whose balance never refills at all.
     var periodEnd: Date?
@@ -220,6 +227,12 @@ struct AccountStatus {
         guard !isEntitled, !unlimited, let cap = freeScenesCap else { return false }
         return freeScenesUsed >= cap
     }
+
+    /// Scenes are paid for out of the talk pool rather than counted.
+    var scenesCostTalk: Bool { sceneTalkSeconds != nil }
+
+    /// "5" — a scene's price in whole talk minutes.
+    var sceneTalkMinutes: Int { (sceneTalkSeconds ?? 0) / 60 }
 
     /// Scenes left in this period's pool.
     var scenesRemaining: Int {
@@ -644,6 +657,8 @@ struct AccountStatus {
             let period_end: String?
             let free_used: Int?
             let free_cap: Int?
+            let scene_billing: String?
+            let scene_talk_seconds: Int?
         }
         if let talk: AllowanceRow = try? await SupabaseProvider.shared
             .rpc("talk_allowance")
@@ -665,10 +680,16 @@ struct AccountStatus {
             .rpc("scene_allowance")
             .execute()
             .value {
-            out.scenesUsedPeriod = scenes.used
-            out.monthlyScenesCap = scenes.cap
             out.freeScenesUsed = scenes.free_used ?? 0
             out.freeScenesCap = scenes.free_cap
+            if scenes.scene_billing == "talk", let seconds = scenes.scene_talk_seconds, seconds > 0 {
+                // The count still comes back for older builds; this one is
+                // charged in minutes, so it must not draw "N of M scenes".
+                out.sceneTalkSeconds = seconds
+            } else {
+                out.scenesUsedPeriod = scenes.used
+                out.monthlyScenesCap = scenes.cap
+            }
         }
         return out
     }

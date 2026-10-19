@@ -286,7 +286,12 @@ final class VoiceClient {
         // scene COUNT is charged once and the scene's seconds stop coming out
         // of the talk allowance. An edge deploy that predates this ignores it
         // and the scene meters in seconds exactly as it used to.
-        if let sceneKey { body["scene_key"] = sceneKey }
+        if let sceneKey {
+            body["scene_key"] = sceneKey
+            // This build names a scene's price in talk minutes, so the server
+            // may charge it that way (20261019120000).
+            body["scene_billing"] = "talk"
+        }
         if let code = Self.pinnedLanguage(for: text) { body["language_code"] = code }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
@@ -373,7 +378,10 @@ final class VoiceClient {
         // synthesizes exactly as it used to.
         body["speed"] = SpeechSpeed.current.multiplier
         if let purpose { body["purpose"] = purpose }
-        if let sceneKey { body["scene_key"] = sceneKey }
+        if let sceneKey {
+            body["scene_key"] = sceneKey
+            body["scene_billing"] = "talk"
+        }
         if let code = Self.pinnedLanguage(for: text) { body["language_code"] = code }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 

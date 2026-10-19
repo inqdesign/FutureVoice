@@ -1052,6 +1052,14 @@ struct WatchTab: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: savedCategory)
+        // Every tap here writes a NEW take, which is a new scene to pay for.
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            SceneCostNote()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 10)
+                .background(Color(.systemGroupedBackground))
+        }
     }
 
     @ViewBuilder

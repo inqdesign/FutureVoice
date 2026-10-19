@@ -328,7 +328,7 @@ export async function chargePooledTTS(opts: {
    * behaviour where scene seconds share the talk meter — which is what an
    * un-updated client (no scene key) still gets.
    */
-  pool?: "scene_seconds" | "scene_counted"
+  pool?: "scene_seconds" | "scene_counted" | "scene_paid"
 }): Promise<ChargeResult | ChargeError> {
   const { supabase, userId, action, chars, sourceFn, idempotencyKey, metadata, pool } = opts
   const { data, error } = await billingClient().rpc("charge_tts_pooled", {
@@ -530,17 +530,29 @@ export async function beginScenePlay(opts: {
   supabase: SupabaseClient
   userId: string
   sceneKey: string
+  /**
+   * The app can show a scene's price in talk minutes (`scene_billing: "talk"`,
+   * 2026-10-19). Only then may the claim charge five minutes; an older build
+   * names a scene count on screen and is metered by count.
+   */
+  talk?: boolean
 }): Promise<
-  | { ok: true; counted: boolean; used?: number; cap?: number }
-  | { ok: false; reason: "scene_cap" | "free_scene_cap" | "db_error"; detail?: string }
+  | { ok: true; counted: boolean; paid: boolean; used?: number; cap?: number }
+  | { ok: false; reason: "scene_cap" | "free_scene_cap" | "talk_spent" | "db_error"; detail?: string }
 > {
   const { data, error } = await billingClient().rpc("begin_scene_play", {
     p_user_id: opts.userId,
     p_scene_key: opts.sceneKey,
+    ...(opts.talk ? { p_talk: true } : {}),
   })
   if (error) {
     if (error.message?.includes("SCENE_CAP_REACHED")) {
       return { ok: false, reason: "scene_cap", detail: error.message }
+    }
+    // The five minutes a scene costs aren't left in the month's (or the
+    // trial's) talk pool: the talk meter's own wall, never a paywall.
+    if (error.message?.includes("DAILY_CAP_REACHED")) {
+      return { ok: false, reason: "talk_spent", detail: error.message }
     }
     // A FREE account past its two scenes (20260928160000). Its wall is the
     // paywall, not the subscriber's spent-pool sheet.
@@ -549,10 +561,13 @@ export async function beginScenePlay(opts: {
     }
     return { ok: false, reason: "db_error", detail: error.message }
   }
-  const parsed = data as { metered_by?: string; used?: number; cap?: number }
+  const parsed = data as { metered_by?: string; used?: number; cap?: number; paid?: boolean }
   return {
     ok: true,
     counted: parsed?.metered_by === "scenes",
+    // Already paid for at the claim (five minutes of talk, or the free
+    // sample): its lines spend nothing.
+    paid: parsed?.paid === true,
     used: parsed?.used,
     cap: parsed?.cap,
   }

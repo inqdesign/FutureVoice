@@ -228,6 +228,9 @@ struct PaywallView: View {
             // Screenshot harness: the plan cards are two taps in, and a
             // capture run can't tap. Never reachable outside `-capture`.
             let capture = UserDefaults.standard.string(forKey: "capture")
+            if Self.seededCapture != nil, UserDefaults.standard.bool(forKey: "scenetalk") {
+                account.sceneTalkSeconds = 300
+            }
             if capture == "paywall-plans" || Self.seededCapture != nil {
                 step = .plans
             }
@@ -663,6 +666,10 @@ struct PaywallView: View {
                       systemImage: "checkmark.circle")
                 Label(explain("A 10-minute tutor call every weekday is about 200 minutes a month. Here, minutes count only while the conversation is going — pauses are free."),
                       systemImage: "phone")
+                if account.scenesCostTalk {
+                    Label(explain("A new Watch scene uses \(account.sceneTalkMinutes) min of the same talk time. Watching it again is free."),
+                          systemImage: "play.circle")
+                }
             }
             .font(.footnote)
             .foregroundStyle(.secondary)
@@ -785,7 +792,14 @@ struct PaywallView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                    if scenes > 0 {
+                    // Since 2026-10-19 a scene is paid for out of the same
+                    // minutes (five each) for anyone subscribing from then on;
+                    // the count is printed only to an account that is still
+                    // on it, which is what that account would buy.
+                    if account.scenesCostTalk {
+                        Text(explain("+ Scenes, \(account.sceneTalkMinutes) min each"))
+                            .font(.subheadline.weight(.medium))
+                    } else if scenes > 0 {
                         Text(explain("+ \(scenes) scenes"))
                             .font(.subheadline.weight(.medium))
                     }

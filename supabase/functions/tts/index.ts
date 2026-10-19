@@ -92,6 +92,10 @@ Deno.serve(async (req) => {
     // out of the talk allowance; without it — an un-updated app — the scene
     // is metered in seconds against the talk allowance exactly as before.
     scene_key?: string
+    // "talk" = this build shows a scene's price as talk minutes, so the claim
+    // may charge them (20261019120000). Absent = an older build, metered by
+    // the plan's scene count exactly as before.
+    scene_billing?: string
     // How fast the fluent self speaks — the learner's choice in Me → Voice,
     // mapped onto Cartesia's speed scale (`cartesiaSpeed`). Absent means normal,
     // which is what every build before 2026-09-23 sends.
@@ -235,18 +239,23 @@ Deno.serve(async (req) => {
     if (!(await ratePromise).ok) return rateLimitedResponse(cors())
     const ownershipFailure = await ownershipPromise
     if (ownershipFailure) return ownershipFailure
-    let scenePool: "scene_seconds" | "scene_counted" = "scene_seconds"
+    let scenePool: "scene_seconds" | "scene_counted" | "scene_paid" = "scene_seconds"
     const claim = await beginScenePlay({
       supabase, userId: user.id, sceneKey: body.scene_key,
+      talk: body.scene_billing === "talk",
     })
     if (!claim.ok) {
       if (claim.reason === "scene_cap") return sceneCapResponse(cors())
       if (claim.reason === "free_scene_cap") return insufficientCreditsResponse(cors())
+      if (claim.reason === "talk_spent") return dailyCapResponse(cors())
       return errorResponse(500, "scene claim failed", claim.detail)
     }
-    // Only an entitled user's scene was paid for with a count; a free user's
-    // scene still owes seconds against their balance.
-    if (claim.counted) scenePool = "scene_counted"
+    // A scene paid for at its claim (five minutes of talk, or a free
+    // account's one sample) spends nothing per line; one paid with a count
+    // keeps its seconds off the talk pool; anything else (the admin flag)
+    // still owes seconds against the balance.
+    if (claim.paid) scenePool = "scene_paid"
+    else if (claim.counted) scenePool = "scene_counted"
     ch = await chargePooledTTS({ ...chargeArgs, action: "tts_scene", pool: scenePool })
   } else {
     // Hot path (turn / opener / review): the charge runs CONCURRENTLY with

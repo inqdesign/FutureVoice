@@ -409,6 +409,13 @@ enum DebugCapture {
         out.renewalOfferType = 3
         out.renewalPriceMilliunits = 7_500_000
         out.renewalCurrency = "KRW"
+        // `-scenetalk 1`: the same account subscribed after 2026-10-19, whose
+        // scenes cost five minutes of talk time instead of a count.
+        if UserDefaults.standard.bool(forKey: "scenetalk") {
+            out.monthlyScenesCap = nil
+            out.scenesUsedPeriod = 0
+            out.sceneTalkSeconds = 300
+        }
         return out
     }
 
@@ -1690,6 +1697,7 @@ enum DebugCapture {
             .background(Color(.systemBackground)))
         case "composer-box":
             // The "Your own situation" box with the category chips over it.
+            BillingGate.shared.debugSetAccount(Self.sampleLightAccount)
             return AnyView(ScenarioComposerSheet(person: nil, host: .watch, mode: .custom,
                                                  ctaTitle: "Watch", ctaIcon: "play.fill") { _ in }
                 .environmentObject(appState))

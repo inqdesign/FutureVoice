@@ -139,6 +139,9 @@ struct UsageBreakdown {
         switch action {
         case "talk_time": return (explain("Talking"), "phone.fill")
         case "tts_scene": return (explain("Watch scenes"), "play.circle.fill")
+        // A scene paid for with five minutes of talk time at its first line
+        // (20261019120000), one row per scene.
+        case "scene_play": return (explain("Watch scenes"), "play.circle.fill")
         default: return nil
         }
     }
@@ -199,7 +202,7 @@ struct UsageBreakdown {
                 }
 
                 var totals = dayTotals[day] ?? Day(date: day)
-                if row.action == "tts_scene" { totals.sceneSeconds += seconds }
+                if row.action == "tts_scene" || row.action == "scene_play" { totals.sceneSeconds += seconds }
                 else { totals.talkSeconds += seconds }
                 dayTotals[day] = totals
 
@@ -227,7 +230,7 @@ struct UsageBreakdown {
         }
 
         // Talking first, then scenes — the order they cost, most first.
-        let order = ["talk_time", "tts_scene"]
+        let order = ["talk_time", "tts_scene", "scene_play"]
         out.today = order.compactMap { todayMeters[$0] }
         out.period = order.compactMap { periodMeters[$0] }
         out.freeToday = free.values.sorted { $0.count > $1.count }

@@ -548,9 +548,21 @@ struct ScenarioComposerSheet: View {
             .background(RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(Color(.secondarySystemGroupedBackground)))
             .padding(.horizontal, 12)
-            .padding(.bottom, 12)
+            .padding(.bottom, showsSceneCost ? 6 : 12)
+            // What the scene this box starts will cost, under the box whose
+            // button starts it (a scene costs talk time since 2026-10-19).
+            if showsSceneCost {
+                SceneCostNote()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 12)
+            }
         }
     }
+
+    /// Only a NEW Watch scene is priced; editing saves, and Talk's composer
+    /// starts a call, which the talk ring already describes.
+    private var showsSceneCost: Bool { host == .watch && editing == nil }
 
     /// The box as the Watch tab hosts it, under the people map.
     private var embeddedBox: some View {
@@ -1109,6 +1121,7 @@ struct ScenarioComposerSheet: View {
                 Label("Specific enough — \(ctaTitle) it, or tap a breadcrumb to explore more.",
                       systemImage: "checkmark.circle")
                     .font(.footnote).foregroundStyle(.secondary)
+                if showsSceneCost { SceneCostNote() }
             }
             .padding(.vertical, 2)
         }

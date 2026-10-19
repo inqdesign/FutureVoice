@@ -20,6 +20,9 @@ struct CreditGuideView: View {
     /// doesn't apply to is worse than no rule.
     var account: AccountStatus? = nil
 
+    /// This account's scenes (or a purchase's) are paid in talk minutes.
+    private var sceneTalk: Bool { account?.scenesCostTalk == true }
+
     var body: some View {
         List {
             // The pool sits FIRST: it is the shape of the whole plan, and
@@ -28,7 +31,8 @@ struct CreditGuideView: View {
             // Gated on the SCENE cap, not the talk one: Plus has no talk cap
             // any more, and gating on it made this whole section vanish for
             // the tier whose shape most needs explaining.
-            if let account, account.monthlyScenesCap != nil {
+            if let account, account.monthlyScenesCap != nil
+                || (account.isEntitled && account.scenesCostTalk) {
                 Section {
                     plainRow(icon: "calendar",
                              title: account.monthlyCapSeconds.map {
@@ -49,16 +53,24 @@ struct CreditGuideView: View {
                         plainRow(icon: "play.circle.fill",
                                  title: explain("\(scenes) Watch scenes a month"),
                                  detail: explain("A separate pool. Watching a scene never takes a minute off your talk time."))
+                    } else if account.scenesCostTalk {
+                        plainRow(icon: "play.circle.fill",
+                                 title: explain("Watch scenes, \(account.sceneTalkMinutes) min each"),
+                                 detail: explain("A new scene is paid for out of the same minutes. Watching it again is free."))
                     }
                 } header: {
                     Text("What your plan holds")
                 } footer: {
                     // A cancelled plan refills nothing — see PlanPageView.
                     Text(account.renewalLabel.isEmpty
-                         ? explain("Scenes refill at the start of each billing period.")
+                         ? (account.scenesCostTalk
+                            ? explain("Your minutes refill at the start of each billing period.")
+                            : explain("Scenes refill at the start of each billing period."))
                          : account.cancelAtPeriodEnd
                            ? explain("Your plan ends on \(account.renewalLabel).")
-                           : explain("Scenes refill on \(account.renewalLabel)."))
+                           : (account.scenesCostTalk
+                              ? explain("Your minutes refill on \(account.renewalLabel).")
+                              : explain("Scenes refill on \(account.renewalLabel).")))
                 }
             }
 
@@ -69,20 +81,32 @@ struct CreditGuideView: View {
                 costRow(icon: "person.wave.2.fill",
                         title: explain("Re-cloning your voice"), cost: explain("~1 min"),
                         detail: explain("Setup is free, including re-records in the first day. Later re-records cost a little."))
+                // Since 2026-10-19 a scene is paid for out of the same
+                // minutes, for anyone subscribing from then on.
+                if sceneTalk {
+                    costRow(icon: "play.circle.fill",
+                            title: explain("Watching a new scene"),
+                            cost: explain("\(account?.sceneTalkMinutes ?? 5) min"),
+                            detail: explain("The same price whichever way it runs, a long scene or a short one. Watching it again is free."))
+                }
             } header: {
                 Text("Uses talk time")
             } footer: {
-                Text(explain("Only the call clock spends your talk minutes. Watching a scene never takes a second off them."))
+                Text(sceneTalk
+                     ? explain("The call clock and new scenes spend your talk minutes. Everything you replay is free.")
+                     : explain("Only the call clock spends your talk minutes. Watching a scene never takes a second off them."))
             }
 
-            Section {
-                costRow(icon: "play.circle.fill",
-                        title: explain("Watching a scene"), cost: explain("1 scene"),
-                        detail: explain("Watch has its own pool, separate from your talk minutes. A scene costs one whichever way it runs — a long one and a short one cost the same."))
-            } header: {
-                Text("Watch scenes")
-            } footer: {
-                Text(explain("Scenes you've already watched replay free forever and never use a new one."))
+            if !sceneTalk {
+                Section {
+                    costRow(icon: "play.circle.fill",
+                            title: explain("Watching a scene"), cost: explain("1 scene"),
+                            detail: explain("Watch has its own pool, separate from your talk minutes. A scene costs one whichever way it runs — a long one and a short one cost the same."))
+                } header: {
+                    Text("Watch scenes")
+                } footer: {
+                    Text(explain("Scenes you've already watched replay free forever and never use a new one."))
+                }
             }
 
             Section {
