@@ -227,9 +227,10 @@ fun PracticeBody(
                     onSentences = onOpenSentencesAll,
                     onShadowing = onShadowAll,
                 )
-                // The weekly test's door, under the four lists (iOS
-                // 2026-10-16; it was the header's face).
-                WeeklyTestBanner(language = language, level = level)
+                // No weekly test banner here (iOS 4f706d92, 2026-10-19): the
+                // test lives inside the week's report — its deck ends on the
+                // test card — and the quick quiz on Talk checks what is being
+                // studied any time.
                 d?.feed?.forEach { book ->
                     // The shelf's own card, with its chapter buttons under it
                     // on the same ground.
