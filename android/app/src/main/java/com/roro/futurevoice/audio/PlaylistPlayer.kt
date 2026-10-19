@@ -20,6 +20,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.roro.futurevoice.MainActivity
@@ -61,14 +62,14 @@ object PlaylistPlayer {
     enum class Gap(val raw: String) {
         /** Straight on. */
         NONE("none"),
-        /** Two seconds to let the line land. */
+        /** A beat to let the line land (one second — two read as slow). */
         SHORT("short"),
         /** As long as the line itself — time to say it back out loud. */
         ECHO("echo");
 
         fun seconds(after: Double): Double = when (this) {
             NONE -> 0.0
-            SHORT -> 2.0
+            SHORT -> 1.0
             ECHO -> after.coerceIn(1.5, 20.0)
         }
     }
@@ -89,11 +90,22 @@ object PlaylistPlayer {
     var repeatMode by mutableStateOf(RepeatMode.ALL); private set
     var shuffle by mutableStateOf(false); private set
     var gap by mutableStateOf(Gap.NONE); private set
+    /** Playback speed. Time-stretched ([PlaybackParams], pitch kept), so the
+     *  voice keeps its pitch and the caption follows the audio as it plays. */
+    var speed by mutableFloatStateOf(1.0f); private set
+    val speeds: List<Float> = listOf(0.75f, 0.9f, 1.0f)
+
+    /** Live output level, 0…1, while a line is audible — iOS
+     *  `AudioPlayer.level`. Drives the playing bars. */
+    var level by mutableFloatStateOf(0f); private set
 
     private const val PREFS = "futurevoice"
     private const val REPEAT_KEY = "futurevoice.playlist.repeat"
     private const val SHUFFLE_KEY = "futurevoice.playlist.shuffle"
     private const val GAP_KEY = "futurevoice.playlist.gap"
+    private const val SPEED_KEY = "futurevoice.playlist.speed"
+    private const val TRANSLATION_KEY = "futurevoice.playlist.translation"
+    private const val CAPTIONS_KEY = "futurevoice.playlist.captions"
 
     private var app: Context? = null
     private val main = Handler(Looper.getMainLooper())
@@ -113,6 +125,8 @@ object PlaylistPlayer {
         repeatMode = RepeatMode.entries.firstOrNull { it.raw == p.getString(REPEAT_KEY, null) } ?: RepeatMode.ALL
         shuffle = p.getBoolean(SHUFFLE_KEY, false)
         gap = Gap.entries.firstOrNull { it.raw == p.getString(GAP_KEY, null) } ?: Gap.NONE
+        val saved = p.getFloat(SPEED_KEY, 1.0f)
+        speed = if (saved in speeds) saved else 1.0f
     }
 
     // ── State ──
@@ -145,6 +159,8 @@ object PlaylistPlayer {
         val playable = newLines.filter { it.hasAudio }
         if (playable.isEmpty()) return
         val start = newLines.getOrNull(startAt)?.let { s -> playable.indexOfFirst { it.id == s.id }.takeIf { it >= 0 } } ?: 0
+        flushListening(finished = false)
+        startedEpisodes.clear()
         this.title = title
         lines = playable
         order = makeOrder(playable, shuffle, start)
@@ -169,11 +185,13 @@ object PlaylistPlayer {
 
     fun pause() {
         if (!isPlaying && !isInGap) return
+        flushListening(finished = false)
         generation += 1
         cancelGap()
         isInGap = false
         isPlaying = false
         runCatching { player?.pause() }
+        stopMeter()
         publishNowPlaying()
     }
 
@@ -229,9 +247,22 @@ object PlaylistPlayer {
         app?.getSharedPreferences(PREFS, 0)?.edit()?.putString(GAP_KEY, value.raw)?.apply()
     }
 
+    fun chooseSpeed(value: Float) {
+        speed = value
+        app?.getSharedPreferences(PREFS, 0)?.edit()?.putFloat(SPEED_KEY, value)?.apply()
+        // Only a line that is playing takes it now: setting a speed on a
+        // paused MediaPlayer starts it.
+        player?.takeIf { runCatching { it.isPlaying }.getOrDefault(false) }?.let { applySpeed(it) }
+    }
+
+    private fun applySpeed(mp: MediaPlayer) {
+        runCatching { mp.playbackParams = mp.playbackParams.setSpeed(speed).setPitch(1f) }
+    }
+
     /** Stop and forget the list. */
     fun close() {
         pause()
+        flushListening(finished = false)
         lines = emptyList()
         order = emptyList()
         position = 0
@@ -284,6 +315,7 @@ object PlaylistPlayer {
             }
             mp.setOnCompletionListener {
                 if (generation != mine) return@setOnCompletionListener
+                stopMeter()
                 advance(mp.duration / 1000.0, mine, skipping = false)
             }
             mp.setOnErrorListener { _, _, _ ->
@@ -294,6 +326,8 @@ object PlaylistPlayer {
             if (fromMs > 0) mp.seekTo(fromMs)
             requestFocus()
             mp.start()
+            if (speed != 1.0f) applySpeed(mp)
+            startMeter(file, mine)
             val stored = line.storedTimings(c).orEmpty().filter { it.endMs > it.startMs }
             timings = stored.ifEmpty {
                 WordTimings.estimate(line.text, mp.duration,
@@ -310,6 +344,7 @@ object PlaylistPlayer {
 
     private fun advance(duration: Double, mine: Int, skipping: Boolean) {
         if (generation != mine) return
+        if (!skipping) current?.let { heard(it, duration) }
         // A whole lap of lines with no audio must end, not spin.
         skipStreak = if (skipping) skipStreak + 1 else 0
         val wait = if (skipping) 0.0 else pauseAfter(duration)
@@ -327,6 +362,7 @@ object PlaylistPlayer {
                 startCurrent()
             } else {
                 // The end of the list: stay on the last line, stopped.
+                flushListening(finished = true)
                 isPlaying = false
                 publishNowPlaying()
             }
@@ -344,18 +380,127 @@ object PlaylistPlayer {
     }
 
     /** The gap after the line that just played. "Time to say it back" is for
-     *  the learner's own lines — the other person's line in a scene is
-     *  answered by the next one, not repeated. Between two scenes a short
-     *  breath, so one conversation doesn't run straight into the next. */
+     *  the learner's own lines and the podcast's — the other person's line in
+     *  a scene is answered by the next one, not repeated. Between two scenes a
+     *  short breath, so one conversation doesn't run straight into the next. */
     private fun pauseAfter(duration: Double): Double {
         val line = current ?: return 0.0
-        var wait = if (gap == Gap.ECHO && !line.isFluentSelf) 0.0 else gap.seconds(duration)
+        // The pause to say a line back is as long as the line SOUNDED, so at
+        // a slower speed it is longer.
+        val heard = duration / maxOf(speed, 0.5f)
+        var wait = if (gap == Gap.ECHO && !line.isToSayBack) 0.0 else gap.seconds(heard)
         val nextPosition = position + 1
         if (nextPosition < order.size && repeatMode != RepeatMode.ONE &&
             lines[order[nextPosition]].bookId != line.bookId) {
             wait = maxOf(wait, 1.2)
         }
         return wait
+    }
+
+    // ── Output level (iOS `AudioPlayer.level`, AVAudioPlayer metering) ──
+
+    /** The playing file's loudness, one dBFS reading per [METER_BLOCK_MS],
+     *  read off the decoded audio (MediaPlayer has no meter; a Visualizer
+     *  needs the microphone permission). */
+    private var envelope: FloatArray? = null
+    private const val METER_BLOCK_MS = 30
+    private val meterTick = object : Runnable {
+        override fun run() {
+            val p = player
+            val e = envelope
+            if (p == null || !isPlaying || isInGap) { level = 0f; return }
+            if (e != null && e.isNotEmpty()) {
+                val i = (positionMs() / METER_BLOCK_MS).coerceIn(0, e.size - 1)
+                level = normalizedLevel(e[i])
+            }
+            main.postDelayed(this, 1000L / 30)
+        }
+    }
+
+    private fun startMeter(file: java.io.File, mine: Int) {
+        main.removeCallbacks(meterTick)
+        envelope = null
+        Thread {
+            val e = runCatching { decibels(file) }.getOrNull()
+            main.post { if (generation == mine) envelope = e }
+        }.start()
+        main.post(meterTick)
+    }
+
+    private fun stopMeter() {
+        main.removeCallbacks(meterTick)
+        level = 0f
+    }
+
+    private fun decibels(file: java.io.File): FloatArray? {
+        val pcm = (if (file.name.endsWith(".wav", ignoreCase = true)) WavPcm.read(file) else null)
+            ?: AudioDecode.decode(file.readBytes()) ?: return null
+        val block = maxOf(1, pcm.sampleRate * METER_BLOCK_MS / 1000)
+        val count = pcm.samples.size / block
+        return FloatArray(count) { b ->
+            var sum = 0.0
+            val base = b * block
+            for (k in 0 until block) { val v = pcm.samples[base + k] / 32768.0; sum += v * v }
+            val rms = kotlin.math.sqrt(sum / block)
+            if (rms <= 0.0) -160f else (20 * kotlin.math.log10(rms)).toFloat()
+        }
+    }
+
+    /** dBFS → 0…1 on the same perceptual scale iOS uses for the mic and
+     *  playback (`AudioPlayer.normalizedLevel`). */
+    private fun normalizedLevel(dBFS: Float): Float = ((dBFS + 50f) / 44f).coerceIn(0f, 1f)
+
+    // ── Listening record (nawana Podcast) ──
+
+    /** What has been heard of the episode playing now, sent as ONE
+     *  `podcast_listened` row when the listener leaves it (another episode,
+     *  pause, stop, the list's end). Pausing and coming back makes a second
+     *  row for the same episode; analysis sums them per learner + episode. */
+    private class Listening(val bookId: String, val number: Int, val category: String) {
+        var seconds = 0.0
+        val lines = mutableSetOf<String>()
+        var lastLineHeard = false
+    }
+    private var listening: Listening? = null
+    /** Episodes already reported as started in this list, so a pause and a
+     *  resume isn't a second start. */
+    private val startedEpisodes = mutableSetOf<String>()
+
+    private fun heard(line: PlaylistLine, seconds: Double) {
+        val number = line.episodeNumber ?: return
+        if (listening?.bookId != line.bookId) {
+            flushListening(finished = false)
+            listening = Listening(line.bookId, number, line.episodeCategory ?: "")
+            if (startedEpisodes.add(line.bookId)) {
+                Analytics.capture("podcast_started", mapOf("episode" to number,
+                    "category" to (line.episodeCategory ?: "")))
+            }
+        }
+        val l = listening ?: return
+        l.seconds += seconds
+        l.lines.add(line.id)
+        if (lines.lastOrNull { it.bookId == line.bookId }?.id == line.id) l.lastLineHeard = true
+    }
+
+    @Suppress("UNUSED_PARAMETER")
+    private fun flushListening(finished: Boolean) {
+        val l = listening
+        listening = null
+        if (l == null || l.lines.isEmpty()) return
+        val total = lines.count { it.bookId == l.bookId }
+        val p = app?.getSharedPreferences(PREFS, 0)
+        Analytics.capture("podcast_listened", mapOf(
+            "episode" to l.number,
+            "category" to l.category,
+            "seconds" to Math.round(l.seconds).toInt(),
+            "lines_heard" to l.lines.size,
+            "lines_total" to total,
+            "completed" to l.lastLineHeard,
+            "speed" to speed.toDouble(),
+            "gap" to gap.raw,
+            "translation" to (p?.getBoolean(TRANSLATION_KEY, false) ?: false),
+            "captions" to (p?.getBoolean(CAPTIONS_KEY, true) ?: true),
+        ))
     }
 
     private fun releasePlayer() {

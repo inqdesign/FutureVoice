@@ -35,6 +35,14 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Headphones
+import androidx.compose.material.icons.filled.Newspaper
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.PauseCircle
 import androidx.compose.material.icons.filled.PlayCircle
@@ -80,6 +88,8 @@ import androidx.compose.ui.unit.dp
 import com.roro.futurevoice.R
 import com.roro.futurevoice.audio.PlaylistPlayer
 import com.roro.futurevoice.data.LanguageCatalog
+import com.roro.futurevoice.data.NewsShow
+import com.roro.futurevoice.data.NewsShowEpisode
 import com.roro.futurevoice.data.PlaylistLine
 import com.roro.futurevoice.data.SceneLibrary
 import com.roro.futurevoice.data.SceneTrack
@@ -125,9 +135,71 @@ fun PlaylistButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
                         style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round))
                 }
             }
-            Icon(if (player.isPlaying) Icons.Filled.GraphicEq else Icons.Filled.Headphones,
-                contentDescription = null, modifier = Modifier.size(22.dp),
-                tint = if (hasQueue) accent else MaterialTheme.colorScheme.onSurface)
+            if (player.isPlaying) {
+                PlayingBars(isAnimating = true, color = accent, modifier = Modifier.size(18.dp, 16.dp))
+            } else {
+                Icon(Icons.Filled.Headphones,
+                    contentDescription = null, modifier = Modifier.size(22.dp),
+                    tint = if (hasQueue) accent else MaterialTheme.colorScheme.onSurface)
+            }
+        }
+    }
+}
+
+// ── Playing bars (iOS `PlayingBars`) ──
+
+private val RESTING_BARS = listOf(0.2f, 0.35f, 0.28f, 0.18f)
+/** The lowest a bar goes: about its own width, a dot. */
+private const val BAR_FLOOR = 0.12f
+
+/**
+ * The "this is playing" mark: four bars driven by the LOUDNESS of what is
+ * playing right now ([PlaylistPlayer.level], read off the audio itself), so
+ * they rise with a voice and settle in the pause between lines (founder,
+ * 2026-10-19: a made-up wave out of step with the sound read as random).
+ * Every bar follows the SAME moment — each at its own share of it, re-drawn
+ * as the voice moves — so the four rise and fall together and never lean
+ * one way. Paused, they rest low; with animations off they keep still.
+ */
+@Composable
+internal fun PlayingBars(isAnimating: Boolean, color: Color, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val reduceMotion = remember {
+        android.provider.Settings.Global.getFloat(context.contentResolver,
+            android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+    }
+    var bars by remember { mutableStateOf(RESTING_BARS) }
+    var loudness by remember { mutableStateOf(0.0) }
+    val level = PlaylistPlayer.level
+    LaunchedEffect(level) {
+        if (!isAnimating || reduceMotion) return@LaunchedEffect
+        // Fast up, slower down: a syllable shows, a pause eases out.
+        loudness = maxOf(level.toDouble(), loudness * 0.8)
+        // The meter rarely reads under ~0.3 while someone is talking, so that
+        // much is taken off and the rest curved: quiet syllables sit near the
+        // floor and only the loud ones reach the top.
+        val shown = Math.pow(maxOf(0.0, (loudness - 0.25) / 0.75), 1.4).toFloat()
+        bars = bars.indices.map {
+            BAR_FLOOR + (1 - BAR_FLOOR) * shown * kotlin.random.Random.nextDouble(0.5, 1.0).toFloat()
+        }
+    }
+    LaunchedEffect(isAnimating) {
+        if (!isAnimating) { bars = RESTING_BARS; loudness = 0.0 }
+    }
+    val shown = bars.map {
+        androidx.compose.animation.core.animateFloatAsState(it,
+            tween(100, easing = androidx.compose.animation.core.LinearOutSlowInEasing), label = "bar").value
+    }
+    Canvas(modifier) {
+        val count = shown.size
+        val gap = size.width * 0.12f
+        val width = (size.width - gap * (count - 1)) / count
+        shown.forEachIndexed { i, h ->
+            val barH = size.height * h
+            drawRoundRect(color,
+                topLeft = androidx.compose.ui.geometry.Offset(i * (width + gap), (size.height - barH) / 2),
+                size = androidx.compose.ui.geometry.Size(width, barH),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(width / 2, width / 2))
         }
     }
 }
@@ -158,11 +230,14 @@ fun ScenePlayerSheet(
     val context = LocalContext.current
     val density = LocalDensity.current
     var tracks by remember { mutableStateOf<List<SceneTrack>>(emptyList()) }
+    var shows by remember { mutableStateOf<List<NewsShowEpisode>>(emptyList()) }
     var loaded by remember { mutableStateOf(false) }
     var showingList by remember { mutableStateOf(false) }
     var large by remember { mutableStateOf(false) }
     var drag by remember { mutableStateOf(0f) }
+    val scope = rememberCoroutineScope()
     val listTitle = stringResource(R.string.my_situations)
+    val showTitle = stringResource(R.string.nawana_podcast)
     val allLines = remember(tracks) { tracks.flatMap { it.lines } }
 
     LaunchedEffect(Unit) {
@@ -172,9 +247,30 @@ fun ScenePlayerSheet(
                 state.voiceId, state.targetLanguage)
         }
         loaded = true
+        shows = NewsShow.episodes(context, state.targetLanguage)
     }
 
-    fun playAll() { PlaylistPlayer.play(context, allLines, listTitle) }
+    /** Every episode, newest first. Files are fetched when asked for. */
+    suspend fun playAllShows() {
+        kotlinx.coroutines.coroutineScope {
+            shows.filter { !it.isReady }.map { e -> async { NewsShow.prepare(context, e) } }.awaitAll()
+        }
+        PlaylistPlayer.play(context, shows.flatMap { it.lines }, showTitle)
+    }
+
+    /** One episode on its own (founder: the whole show, or just the episode).
+     *  Picked again while it is playing, it carries on rather than restarting. */
+    suspend fun playShow(episode: NewsShowEpisode) {
+        val p = PlaylistPlayer
+        if (p.title == showTitle && p.current?.bookId == episode.id) return
+        NewsShow.prepare(context, episode)
+        p.play(context, episode.lines, showTitle)
+    }
+
+    fun playAll() {
+        if (allLines.isEmpty()) scope.launch { playAllShows() }
+        else PlaylistPlayer.play(context, allLines, listTitle)
+    }
 
     /** Every situation plays on from the one picked, so picking a scene
      *  starts listening rather than ending at its last line. */
@@ -228,12 +324,13 @@ fun ScenePlayerSheet(
                     .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f)))
             }
             if (showingList) {
-                SituationList(tracks, onBack = { showingList = false },
-                    onPick = { play(it); showingList = false })
+                PlayerLibrary(tracks, shows, state, onBack = { showingList = false },
+                    onPick = { play(it); showingList = false },
+                    onPickShow = { playShow(it) }, onPlayAllShows = { playAllShows() })
             } else {
                 SheetHeader(stringResource(R.string.player),
                     leading = {
-                        val enabled = tracks.isNotEmpty()
+                        val enabled = tracks.isNotEmpty() || shows.isNotEmpty()
                         IosGlassButton({ if (enabled) showingList = true }, circle = true) {
                             Icon(Icons.AutoMirrored.Filled.FormatListBulleted,
                                 contentDescription = stringResource(R.string.situations),
@@ -244,9 +341,9 @@ fun ScenePlayerSheet(
                     modifier = Modifier.padding(horizontal = 16.dp).padding(top = 4.dp, bottom = 4.dp))
                 Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 24.dp).padding(top = 4.dp)) {
                     Box(Modifier.weight(1f).fillMaxWidth()) {
-                        NowPlayingCaption(isEmpty = loaded && tracks.isEmpty(), state = state)
+                        NowPlayingCaption(isEmpty = loaded && tracks.isEmpty() && shows.isEmpty(), state = state)
                     }
-                    PlayerControls(onPlayAll = { playAll() }, canPlay = tracks.isNotEmpty(),
+                    PlayerControls(onPlayAll = { playAll() }, canPlay = tracks.isNotEmpty() || shows.isNotEmpty(),
                         modifier = Modifier.padding(top = 12.dp, bottom = 20.dp))
                 }
                 Spacer(Modifier.height(with(density) {
@@ -257,36 +354,185 @@ fun ScenePlayerSheet(
     }
 }
 
-/** The situations, newest first. Picking one plays from there and goes back
- *  to the player. */
+private const val LIBRARY_TAB_KEY = "futurevoice.playlist.tab"
+
+/**
+ * What there is to hear, behind two tabs: the nawana Podcast (the platform's
+ * daily episodes) and the learner's own situations. Picking one plays it and
+ * goes back to the player.
+ */
 @Composable
-private fun SituationList(tracks: List<SceneTrack>, onBack: () -> Unit, onPick: (SceneTrack) -> Unit) {
-    val player = PlaylistPlayer
-    SheetHeader(stringResource(R.string.situations),
+private fun PlayerLibrary(
+    tracks: List<SceneTrack>,
+    shows: List<NewsShowEpisode>,
+    state: AppState,
+    onBack: () -> Unit,
+    onPick: (SceneTrack) -> Unit,
+    onPickShow: suspend (NewsShowEpisode) -> Unit,
+    onPlayAllShows: suspend () -> Unit,
+) {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("futurevoice", 0) }
+    var podcastTab by remember { mutableStateOf(prefs.getString(LIBRARY_TAB_KEY, "podcast") != "situations") }
+    /** What is being fetched right now: an episode, or [ALL_ID] for Play all. */
+    var fetching by remember { mutableStateOf<String?>(null) }
+    var reading by remember { mutableStateOf<NewsShowEpisode?>(null) }
+    val scope = rememberCoroutineScope()
+
+    /** Fetch, play, then back to the player. One fetch at a time. */
+    fun fetch(id: String, action: suspend () -> Unit) {
+        if (fetching != null) return
+        fetching = id
+        scope.launch {
+            action()
+            fetching = null
+            onBack()
+        }
+    }
+
+    SheetHeader(stringResource(R.string.listen),
         leading = { com.roro.futurevoice.ui.brand.IosBackButton(onBack, Modifier) },
         modifier = Modifier.padding(end = 16.dp).padding(top = 4.dp, bottom = 4.dp))
+    // The two tabs sit under the bar at full width, the system's own segmented
+    // row (founder: squeezed into the bar beside Back, it looked off).
+    com.roro.futurevoice.ui.brand.IosSegmented(
+        listOf(stringResource(R.string.podcast), stringResource(R.string.my_situations)),
+        selected = if (podcastTab) 0 else 1,
+        onSelect = { i ->
+            podcastTab = i == 0
+            prefs.edit().putString(LIBRARY_TAB_KEY, if (podcastTab) "podcast" else "situations").apply()
+        },
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp))
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp)) {
-        GroupedCard {
-            tracks.forEachIndexed { i, track ->
-                if (i > 0) GroupedRowDivider()
-                val playing = player.hasQueue && player.current?.bookId == track.id
-                Row(
-                    Modifier.fillMaxWidth().clickable { onPick(track) }
+        if (podcastTab) {
+            if (shows.isEmpty()) {
+                LibraryEmpty(Icons.Filled.Newspaper, stringResource(R.string.nawana_podcast),
+                    stringResource(R.string.a_new_episode_every_day_in_english_for_now))
+            } else {
+                GroupedCard {
+                    Row(Modifier.fillMaxWidth().clickable { fetch(ALL_ID) { onPlayAllShows() } }
                         .padding(horizontal = 16.dp, vertical = 11.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Icon(if (playing) Icons.Filled.GraphicEq else Icons.Filled.Forum, contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary, modifier = Modifier.width(24.dp).size(22.dp))
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(track.title, style = MaterialTheme.typography.bodyLarge,
-                            color = if (playing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                            maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        Text(track.otherName, style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Icon(Icons.Filled.PlayArrow, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                        Text(stringResource(R.string.play_all), style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+                        if (fetching == ALL_ID) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    }
+                    shows.forEach { episode ->
+                        GroupedRowDivider()
+                        Row(Modifier.fillMaxWidth().padding(end = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Box(Modifier.weight(1f).clickable { fetch(episode.id) { onPickShow(episode) } }
+                                .padding(start = 16.dp, top = 11.dp, bottom = 11.dp)) {
+                                EpisodeRow(episode, fetching == episode.id)
+                            }
+                            // The script, on the Speech tab's own page, with Study.
+                            val scriptLabel = stringResource(R.string.script)
+                            Box(Modifier.size(36.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                                .clickable {
+                                    com.roro.futurevoice.core.Analytics.capture("podcast_script_opened",
+                                        mapOf("episode" to episode.number, "category" to (episode.category ?: "")))
+                                    reading = episode
+                                }
+                                .semantics { contentDescription = scriptLabel },
+                                contentAlignment = Alignment.Center) {
+                                Icon(Icons.Outlined.Description, contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                            }
+                        }
                     }
                 }
             }
+        } else if (tracks.isEmpty()) {
+            LibraryEmpty(Icons.Filled.Headphones, stringResource(R.string.no_situations_to_hear_yet),
+                stringResource(R.string.watch_a_situation_once_and_it_plays_here_both_voices_wheneve_11cd3e))
+        } else {
+            val player = PlaylistPlayer
+            GroupedCard {
+                tracks.forEachIndexed { i, track ->
+                    if (i > 0) GroupedRowDivider()
+                    val playing = player.hasQueue && player.current?.bookId == track.id
+                    Row(
+                        Modifier.fillMaxWidth().clickable { onPick(track) }
+                            .padding(horizontal = 16.dp, vertical = 11.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Box(Modifier.width(24.dp), contentAlignment = Alignment.Center) {
+                            if (playing) {
+                                PlayingBars(player.isPlaying || player.isInGap, MaterialTheme.colorScheme.primary,
+                                    Modifier.size(16.dp, 14.dp))
+                            } else {
+                                Icon(Icons.Filled.Forum, contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                            }
+                        }
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(track.title, style = MaterialTheme.typography.bodyLarge,
+                                color = if (playing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Text(track.otherName, style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
+        }
+    }
+    reading?.let { episode ->
+        com.roro.futurevoice.ui.speech.SpeechScriptSheet(episode.script, state.nativeLanguage,
+            onEdited = {}, onDismiss = { reading = null },
+            initialStudy = episode.study(state.nativeLanguage), shipped = true)
+    }
+}
+
+private const val ALL_ID = "all"
+
+/** iOS `ContentUnavailableView`, as a list row. */
+@Composable
+private fun LibraryEmpty(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, description: String) {
+    Column(Modifier.fillMaxWidth().padding(top = 40.dp, start = 16.dp, end = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(44.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(12.dp))
+        Text(title, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+            textAlign = TextAlign.Center)
+        Spacer(Modifier.height(6.dp))
+        Text(description, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun EpisodeRow(episode: NewsShowEpisode, fetching: Boolean) {
+    val context = LocalContext.current
+    val player = PlaylistPlayer
+    val playing = player.hasQueue && player.current?.bookId == episode.id
+    val locale = java.util.Locale.forLanguageTag(
+        com.roro.futurevoice.core.UILanguage.current(context) ?: java.util.Locale.getDefault().toLanguageTag())
+    val day = java.text.SimpleDateFormat(
+        android.text.format.DateFormat.getBestDateTimePattern(locale, "MMMd"), locale).format(java.util.Date(episode.date))
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Box(Modifier.width(24.dp), contentAlignment = Alignment.Center) {
+            when {
+                fetching -> CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                playing -> PlayingBars(player.isPlaying || player.isInGap, MaterialTheme.colorScheme.primary,
+                    Modifier.size(16.dp, 14.dp))
+                else -> Icon(categoryIcon(episode.category), contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+            }
+        }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(episode.title, style = MaterialTheme.typography.bodyLarge,
+                color = if (playing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                maxLines = 2, overflow = TextOverflow.Ellipsis)
+            // The hosts are the same on every episode; how long it is helps choose.
+            Text(stringResource(R.string.lld_min_a6e2ff, "EP ${episode.number} · $day", episode.minutes),
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -347,6 +593,10 @@ private fun NowPlayingCaption(isEmpty: Boolean, state: AppState) {
         translation = null
         if (!showTranslation || line == null ||
             LanguageCatalog.sameLanguage(state.nativeLanguage, state.targetLanguage)) return@LaunchedEffect
+        // A podcast line is shown only in the translations it shipped with:
+        // made once by the publisher and read by everyone. It never asks for
+        // a new one per phone (founder, 2026-10-19: API cost).
+        line.translations?.let { shipped -> translation = shipped[state.nativeLanguage]; return@LaunchedEffect }
         Translator.cached(context, line.text, state.nativeLanguage)?.let { translation = it; return@LaunchedEffect }
         val t = Translator.translate(context, line.text, state.nativeLanguage)
         if (player.current?.id == line.id) translation = t
@@ -501,10 +751,17 @@ private fun PlayerOptionsMenu() {
             // iOS nests the picker as a submenu; it is drawn inline here.
             IosMenuHeader(stringResource(R.string.pause_between_lines))
             listOf(PlaylistPlayer.Gap.NONE to R.string.no_pause,
-                PlaylistPlayer.Gap.SHORT to R.string.s_2_seconds,
+                PlaylistPlayer.Gap.SHORT to R.string.s_1_second,
                 PlaylistPlayer.Gap.ECHO to R.string.time_to_say_it_back).forEach { (g, label) ->
                 IosMenuItem(stringResource(label), checked = player.gap == g,
                     onClick = { open = false; player.chooseGap(g) })
+            }
+            IosMenuDivider()
+            IosMenuHeader(stringResource(R.string.speed))
+            player.speeds.forEach { sp ->
+                IosMenuItem(if (sp == 1f) "1×" else "${java.math.BigDecimal(sp.toString()).stripTrailingZeros().toPlainString()}×",
+                    checked = player.speed == sp,
+                    onClick = { open = false; player.chooseSpeed(sp) })
             }
             if (player.hasQueue) {
                 IosMenuDivider()

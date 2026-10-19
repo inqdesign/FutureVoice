@@ -48,16 +48,32 @@ data class PlaylistLine(
      *  speed's take, the file Watch played it from, or a take under an older
      *  voice id. */
     val audioKey: String? = null,
+    /** A line that is not one of the app's own takes: a news-show line,
+     *  downloaded to the cache ([NewsShow]). Played as is. */
+    val localFile: File? = null,
+    /** The line's meaning per native language, made once where the line was
+     *  (the podcast's publisher), so a thousand listeners don't each ask
+     *  for the same translation. Null for a scene line. */
+    val translations: Map<String, String>? = null,
+    /** A podcast line's episode number and category (the listening record). */
+    val episodeNumber: Int? = null,
+    val episodeCategory: String? = null,
 ) {
     val isFluentSelf: Boolean get() = !isOther
-    val hasAudio: Boolean get() = audioKey != null
+
+    /** A line worth saying back in the "time to say it back" pause: the
+     *  fluent self's in a scene (the other person's is answered, not
+     *  repeated), and every host line in the podcast. */
+    val isToSayBack: Boolean get() = isFluentSelf || localFile != null
+
+    val hasAudio: Boolean get() = localFile?.exists() ?: (audioKey != null)
 
     fun audioFile(context: Context): File? =
-        audioKey?.let { PhraseAudioStore.shared(context).fileForKey(it) }
+        localFile ?: audioKey?.let { PhraseAudioStore.shared(context).fileForKey(it) }
 
     /** Word timings measured on the take that plays, if any were kept. */
     fun storedTimings(context: Context): List<WordTiming>? =
-        audioKey?.let { PhraseAudioStore.shared(context).timingsForKey(it) }
+        if (localFile != null) null else audioKey?.let { PhraseAudioStore.shared(context).timingsForKey(it) }
 }
 
 /** One situation, ready to play. */
