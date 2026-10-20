@@ -1739,6 +1739,27 @@ final class AppState: ObservableObject {
         await adoptAccentSwap(newId, accentId: nil)
     }
 
+    /// Put an accent on the live voice in one tap (2026-10-20, founder: the
+    /// meet act's pills opened the take picker, but on Cartesia every accent
+    /// has exactly one take, so there was nothing to pick). The same voice
+    /// told to speak the accent: one save, nothing cloned. False when the
+    /// voice isn't a Cartesia voice, where only the picker can help.
+    func applyVoiceAccent(_ accent: VoiceAccent, source: String) async throws -> Bool {
+        guard let current = voiceCloneId, let uuid = VoiceClient.cartesiaUUID(current) else { return false }
+        guard voiceAccentId != accent.id else { return true }
+        // The bare uuid, so the server reads the accent off the description
+        // (an `original-` mark on the id would win over it).
+        let newId = try await VoiceClient.shared.saveRemixedVoice(
+            generatedVoiceId: uuid, name: voiceDisplayName,
+            voiceDescription: accent.prompt)
+        if newId == current {
+            voiceAccentId = accent.id
+        } else {
+            await adoptRemixedVoice(newId, accentId: accent.id, source: source)
+        }
+        return true
+    }
+
     /// The live voice id becomes another accent of the voice (or a new
     /// voice). Nothing waits on the network when it is the same Cartesia
     /// voice: no upstream delete is staged (the server keeps a voice another

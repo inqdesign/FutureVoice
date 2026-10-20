@@ -221,8 +221,10 @@ struct VoiceCloneOnboardingView: View {
 
     /// The accent whose takes the picker sheet opens on (see `accentSection`).
     @State private var accentToPick: VoiceAccent?
-    /// "Original" is rebuilding the clone from the saved recording.
+    /// "Original" is being saved.
     @State private var removingAccent = false
+    /// The accent a pill is putting on the voice.
+    @State private var applyingAccentId: String?
     /// The native-language script once it's on the device — nil until the
     /// generation lands (or forever, for a native language it never does,
     /// in which case the picker simply never appears).
@@ -1208,17 +1210,15 @@ struct VoiceCloneOnboardingView: View {
                     ForEach(options) { option in
                         accentPill(label: LocalizedStringKey(option.label),
                                    selected: appState.voiceAccentId == option.id,
-                                   loading: false) {
-                            player.stop()
-                            meetAsk = nil
-                            accentToPick = option
+                                   loading: applyingAccentId == option.id) {
+                            applyAccentFromMeet(option)
                         }
                         // With no change left, only the voice they have stays
                         // tappable — the rest would end at a refusal.
                         .disabled(!appState.canChangeVoice && appState.voiceAccentId != option.id)
                     }
                 }
-                .disabled(removingAccent)
+                .disabled(removingAccent || applyingAccentId != nil)
                 if !appState.canChangeVoice {
                     Text(VoiceChangeStatus.againLine(appState.voiceChangeStatus?.nextAt))
                         .font(.caption2)
@@ -1228,6 +1228,30 @@ struct VoiceCloneOnboardingView: View {
             }
             .padding(.horizontal, 24)
             .task { await appState.refreshVoiceChangeStatus() }
+        }
+    }
+
+    /// An accent pill puts that accent on the voice at once and speaks the
+    /// greeting in it — no take picker (2026-10-20, founder): on Cartesia an
+    /// accent has exactly one take, so the sheet had nothing to choose from.
+    /// The picker stays only for a voice that isn't a Cartesia voice.
+    private func applyAccentFromMeet(_ option: VoiceAccent) {
+        guard appState.voiceAccentId != option.id, applyingAccentId == nil, !removingAccent else { return }
+        player.stop()
+        meetAsk = nil
+        applyingAccentId = option.id
+        Task {
+            defer { applyingAccentId = nil }
+            do {
+                if try await appState.applyVoiceAccent(option, source: "meet") {
+                    HapticEngine.success()
+                    refreshGreetingForNewVoice()
+                } else {
+                    accentToPick = option
+                }
+            } catch {
+                self.error = error.localizedDescription
+            }
         }
     }
 

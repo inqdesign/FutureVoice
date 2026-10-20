@@ -79,6 +79,7 @@ struct VoiceRevivalView: View {
     @State private var paceLoading: SpeechSpeed?
     @State private var accentToPick: VoiceAccent?
     @State private var removingAccent = false
+    @State private var applyingAccentId: String?
     /// The recording the voice was rebuilt from (fetched, if `sample` was nil).
     @State private var resolvedSample: URL?
 
@@ -266,14 +267,13 @@ struct VoiceRevivalView: View {
                     ForEach(options) { option in
                         accentPill(label: LocalizedStringKey(option.label),
                                    selected: appState.voiceAccentId == option.id,
-                                   loading: false) {
-                            player.stop()
-                            accentToPick = option
+                                   loading: applyingAccentId == option.id) {
+                            applyAccent(option)
                         }
                         .disabled(!appState.canChangeVoice && appState.voiceAccentId != option.id)
                     }
                 }
-                .disabled(removingAccent)
+                .disabled(removingAccent || applyingAccentId != nil)
                 // Bringing the voice back was free; changing it after is the
                 // learner's one change, like anywhere else.
                 if !appState.canChangeVoice {
@@ -336,6 +336,20 @@ struct VoiceRevivalView: View {
             stage = .tune
         } catch {
             stage = .failed(error.localizedDescription)
+        }
+    }
+
+    /// One tap puts the accent on (`AppState.applyVoiceAccent`); the picker
+    /// only for a voice that isn't a Cartesia voice.
+    private func applyAccent(_ option: VoiceAccent) {
+        guard appState.voiceAccentId != option.id, applyingAccentId == nil, !removingAccent else { return }
+        player.stop()
+        applyingAccentId = option.id
+        Task {
+            defer { applyingAccentId = nil }
+            if (try? await appState.applyVoiceAccent(option, source: "revival")) == false {
+                accentToPick = option
+            }
         }
     }
 
