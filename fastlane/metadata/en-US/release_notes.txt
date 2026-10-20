@@ -1,18 +1,13 @@
 New
-• If you're learning English, there's a new nawana Podcast episode every day: two hosts talk through the day's news, and you can open the script and turn on Study for its expressions and grammar. Find it under Podcast in the player's list.
-• Slow the player down to the speed you like.
-• In a call with a person or a role, their name now shows on their lines.
-• Take a quick quiz from the Talk screen whenever you like, with words, expressions and grammar picked for you.
-• Find a topic for today's talk with one button.
-• Listen to your situations back to back in a player. It keeps playing with the screen off.
-• When you learn Japanese, readings now appear above the kanji.
-• On a free trial in Korea, the app tells you ahead of time that you'll need to agree before you're charged.
-• The weekly test now lives inside your weekly report.
+• Setup now walks you through what you can practice, one card at a time: calls, Say it again, review, shadowing, listening and speech. Add the ones you want and that's your routine.
+• Shadowing and listening can each have their own spot in your routine.
+• Learning German? The nawana Podcast now comes in German too.
+• Pick a British or Australian English accent, or Castilian Spanish, and your fluent self uses that variety's words too. Your own words from the other side are never marked wrong.
+• Accent buttons now switch right away, no extra screen.
+• The free-minutes sheet has a Later button, so you can close it without starting a call.
 
 Fixed
-• Cut in while your fluent self is talking and it stops right away. It used to stop late, or not at all.
-• Challenge cards no longer change size when you open one and come back.
-• You no longer slide in from the side when Watch first opens.
-• The tab bar no longer shows while a situation plays.
-• Icons on blue buttons are visible again.
-• Hear it in my voice on a script now shows what it costs and a clearer button.
+• Choosing Original under accents brings back your voice exactly as you recorded it.
+• Sounds no longer overlap on the screen where you first hear your voice.
+• Tapping anywhere on a colour tile now selects it.
+• The tab bar no longer shows on the topics page.
