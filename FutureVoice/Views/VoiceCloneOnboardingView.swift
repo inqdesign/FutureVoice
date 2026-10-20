@@ -108,20 +108,49 @@ struct VoiceCloneOnboardingView: View {
 
     // Meet: the greeting in the user's cloned voice, and the burst that
     // blooms the orb when the act opens even if synthesis failed.
-    @State private var greetingData: Data?
+    /// Kept per VOICE ID (2026-10-20): British → Original → British is the
+    /// same two voices again, and each used to be synthesized afresh.
+    @State private var greetingTakes: [String: Data] = [:]
     @State private var meetBurst = false
     @AppStorage("futureselfTheme") private var storedTheme = FutureselfTheme.blue.rawValue
     /// The pick the meet act's pills write through, read everywhere else as
     /// `SpeechSpeed.current`. Nothing here has to be undone on the way out:
     /// the rung the learner last heard IS the one they chose.
     @AppStorage(SpeechSpeed.key) private var speechSpeed = SpeechSpeed.default.rawValue
-    /// One take of `paceSample` per rung, in memory only. Warmed during the
-    /// becoming act so a pill never waits on a round trip, and thrown away
-    /// with the voice that spoke them (a re-record or an accent remix).
-    @State private var paceTakes: [SpeechSpeed: Data] = [:]
-    /// The rung whose take is being fetched, so the pill can say so rather
-    /// than looking like a button that did nothing.
-    @State private var paceLoading: SpeechSpeed?
+    /// One take of `paceSample` per rung, in memory only, per voice id like
+    /// the greeting.
+    @State private var paceTakesByVoice: [String: [SpeechSpeed: Data]] = [:]
+    /// Takes being fetched (`MeetSound.key`), so a second tap on a pill
+    /// that is still waiting doesn't ask for the same take again.
+    @State private var meetInFlight: Set<String> = []
+    /// What the learner last asked to hear. A take that lands plays only if
+    /// it is still this: before, every request played whenever it landed, so
+    /// a tap on the orb and a tap on a pill came out late and one after the
+    /// other.
+    @State private var meetAsk: MeetSound?
+
+    private enum MeetSound: Equatable {
+        case greeting(voice: String)
+        case pace(voice: String, speed: SpeechSpeed)
+        var key: String {
+            switch self {
+            case .greeting(let v): return "g|\(v)"
+            case .pace(let v, let s): return "p|\(v)|\(s.rawValue)"
+            }
+        }
+    }
+
+    private var meetVoiceKey: String { appState.voiceCloneId ?? "" }
+    private var greetingData: Data? { greetingTakes[meetVoiceKey] }
+    private var paceTakes: [SpeechSpeed: Data] { paceTakesByVoice[meetVoiceKey] ?? [:] }
+    /// The rung being waited on, so the pill can say so rather than looking
+    /// like a button that did nothing.
+    private var paceLoading: SpeechSpeed? {
+        guard case .pace(let v, let s)? = meetAsk, v == meetVoiceKey,
+              paceTakes[s] == nil, meetInFlight.contains(MeetSound.pace(voice: v, speed: s).key)
+        else { return nil }
+        return s
+    }
 
     /// The meet act is the first time the user HEARS the clone — and the only
     /// honest moment to judge it. If it doesn't sound like them, they can go
@@ -130,8 +159,6 @@ struct VoiceCloneOnboardingView: View {
     /// walking the wizard backwards, and a failed re-clone doesn't strand them.
     @State private var isReRecordingClone = false
     @State private var confirmReRecord = false
-    /// "No accent" rebuilds the voice — the learner's one change — so asked.
-    @State private var confirmingRemoveFromMeet = false
     /// A/B against the recording — the meet act's answer to "is this me?".
     @State private var comparingVoice = false
 
@@ -1176,17 +1203,14 @@ struct VoiceCloneOnboardingView: View {
                     accentPill(label: "accent.original",
                                selected: appState.voiceAccentId == nil,
                                loading: removingAccent,
-                               action: {
-                                   guard appState.voiceAccentId != nil else { return }
-                                   confirmingRemoveFromMeet = true
-                               })
-                        .disabled(appState.voiceAccentId != nil
-                                  && (!VoiceSampleStore.shared.exists || !appState.canChangeVoice))
+                               action: { removeAccentFromMeet() })
+                        .disabled(appState.voiceAccentId != nil && !appState.canRemoveAccent)
                     ForEach(options) { option in
                         accentPill(label: LocalizedStringKey(option.label),
                                    selected: appState.voiceAccentId == option.id,
                                    loading: false) {
                             player.stop()
+                            meetAsk = nil
                             accentToPick = option
                         }
                         // With no change left, only the voice they have stays
@@ -1204,11 +1228,6 @@ struct VoiceCloneOnboardingView: View {
             }
             .padding(.horizontal, 24)
             .task { await appState.refreshVoiceChangeStatus() }
-            .confirmationDialog("Remove the accent?", isPresented: $confirmingRemoveFromMeet,
-                                titleVisibility: .visible) {
-                Button("Remove", role: .destructive) { removeAccentFromMeet() }
-                Button("Cancel", role: .cancel) {}
-            }
         }
     }
 
@@ -1236,19 +1255,19 @@ struct VoiceCloneOnboardingView: View {
         }
     }
 
-    /// Back to the voice the recording makes on its own — the same rebuild as
-    /// the sheet's "Remove accent", without the confirmation: here it is one
-    /// of four equal choices, and any of the others brings an accent back.
+    /// Back to the voice without an accent — the same voice with the accent
+    /// dropped from its id (`AppState.removeVoiceAccent`), so no confirmation:
+    /// nothing is rebuilt or deleted, and any other pill brings an accent back.
     private func removeAccentFromMeet() {
-        guard appState.voiceAccentId != nil, !removingAccent,
-              let url = VoiceSampleStore.shared.url else { return }
+        guard appState.voiceAccentId != nil, !removingAccent else { return }
         player.stop()
+        meetAsk = nil
         removingAccent = true
         Analytics.capture("voice_accent_removed", ["from": "meet"])
         Task {
             defer { removingAccent = false }
             do {
-                try await appState.regenerateVoiceClone(fromSampleAt: url)
+                try await appState.removeVoiceAccent()
                 HapticEngine.success()
                 refreshGreetingForNewVoice()
             } catch {
@@ -1729,14 +1748,11 @@ struct VoiceCloneOnboardingView: View {
                     // character cost of one short line is the cheapest thing
                     // we spend money on. The extra latency lands inside the
                     // "Becoming…" act, which is already a wait.
-                    greetingData = try? await VoiceClient.shared.synthesize(
+                    greetingTakes[voiceId] = try? await VoiceClient.shared.synthesize(
                         voiceId: voiceId, text: greetingLine,
                         purpose: "greeting")
-                    // The takes belong to the voice that spoke them — a new
-                    // clone invalidates every one of them. They are NOT made
-                    // here: see `audition`, which pays for a rung only once
-                    // somebody asks to hear it.
-                    paceTakes = [:]
+                    // The pace takes are NOT made here: see `audition`, which
+                    // pays for a rung only once somebody asks to hear it.
                 }
                 HapticEngine.success()
                 isReRecordingClone = false
@@ -1766,25 +1782,33 @@ struct VoiceCloneOnboardingView: View {
     /// release handles the exhale), then the greeting takes over the orb.
     private func openMeet() {
         meetBurst = true
+        let ask = MeetSound.greeting(voice: meetVoiceKey)
+        meetAsk = ask
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 700_000_000)
             meetBurst = false
+            // A pill tapped during the bloom is what they want to hear now.
+            guard meetAsk == ask else { return }
             playGreeting()
         }
     }
 
     /// Whether the orb can speak right now: the meet act, with a take on
-    /// hand. It replays the GREETING — the speed pills own the pace line, and
-    /// this take is the arrival line at the default rung whatever rung is
-    /// selected, because it is a recording of a moment rather than a sample
-    /// of a setting.
+    /// hand or on its way. It replays the GREETING — the speed pills own the
+    /// pace line, and this take is the arrival line at the default rung
+    /// whatever rung is selected, because it is a recording of a moment
+    /// rather than a sample of a setting.
     private var canReplayGreeting: Bool {
-        status == .meet && greetingData != nil
+        status == .meet && (greetingData != nil
+            || meetInFlight.contains(MeetSound.greeting(voice: meetVoiceKey).key))
     }
 
+    /// A tap while the take is still being made is remembered, not dropped:
+    /// it plays the moment it lands (unless something else was asked since).
     private func replayGreeting() {
         guard canReplayGreeting else { return }
         HapticEngine.light()
+        meetAsk = .greeting(voice: meetVoiceKey)
         playGreeting()
     }
 
@@ -1794,21 +1818,32 @@ struct VoiceCloneOnboardingView: View {
         try? player.play(data, forceSessionReset: true)
     }
 
-    /// After an accent pick replaces the voice, the stored greeting still
-    /// speaks with the OLD voice — re-synthesize so "Hear it again" and the
-    /// theme-pick replay speak with the voice the user just chose. Same
-    /// fidelity-model reasoning as the original greeting: fires at most once
-    /// per accent adoption, at the exact moment the user judges the voice.
+    /// After an accent pick replaces the voice id, the greeting has to speak
+    /// with the voice the learner just chose — from the per-voice cache when
+    /// that voice was heard before, synthesized once otherwise. Played here,
+    /// and only here: the voice itself changed, so this is a first hearing.
     private func refreshGreetingForNewVoice() {
-        greetingData = nil
-        paceTakes = [:]
         guard let voiceId = appState.voiceCloneId else { return }
+        meetAsk = .greeting(voice: voiceId)
+        if greetingTakes[voiceId] != nil {
+            playGreeting()
+            return
+        }
+        fetchGreeting(voiceId: voiceId)
+    }
+
+    private func fetchGreeting(voiceId: String) {
+        let sound = MeetSound.greeting(voice: voiceId)
+        guard greetingTakes[voiceId] == nil, !meetInFlight.contains(sound.key) else { return }
+        meetInFlight.insert(sound.key)
+        let line = greetingLine
         Task {
-            greetingData = try? await VoiceClient.shared.synthesize(
-                voiceId: voiceId, text: greetingLine,
-                purpose: "greeting")
-            // The greeting IS replayed here, and only here: the voice itself
-            // changed, so this is a first hearing of a different clone.
+            let data = try? await VoiceClient.shared.synthesize(
+                voiceId: voiceId, text: line, purpose: "greeting")
+            meetInFlight.remove(sound.key)
+            guard let data else { return }
+            greetingTakes[voiceId] = data
+            guard meetAsk == sound, appState.voiceCloneId == voiceId else { return }
             playGreeting()
         }
     }
@@ -1833,6 +1868,8 @@ struct VoiceCloneOnboardingView: View {
     private func audition(_ speed: SpeechSpeed) {
         speechSpeed = speed.rawValue
         HapticEngine.light()
+        let voiceKey = meetVoiceKey
+        meetAsk = .pace(voice: voiceKey, speed: speed)
         // Playing what is already in hand must not depend on there being a
         // voice to synthesize WITH: the debug preview has takes on disk and
         // no clone, and gating the whole function on the id made every pill
@@ -1848,24 +1885,31 @@ struct VoiceCloneOnboardingView: View {
             return
         }
         guard let voiceId = appState.voiceCloneId else { return }
-        paceLoading = speed
+        // Whatever was playing is not what they asked for any more.
+        player.stop()
+        fetchPace(speed, voiceId: voiceId)
+        warmOtherRungs(besides: speed, voiceId: voiceId)
+    }
+
+    /// One request per take, however many times its pill is tapped while it
+    /// is on its way; it plays on landing only if it is still the ask.
+    private func fetchPace(_ speed: SpeechSpeed, voiceId: String) {
+        let sound = MeetSound.pace(voice: voiceId, speed: speed)
+        guard paceTakesByVoice[voiceId]?[speed] == nil,
+              !meetInFlight.contains(sound.key) else { return }
+        meetInFlight.insert(sound.key)
+        let line = paceLine
         Task {
             let data = try? await VoiceClient.shared.synthesize(
-                voiceId: voiceId, text: paceLine,
+                voiceId: voiceId, text: line,
                 purpose: "greeting",
                 speed: speed)
-            // Only the rung still being waited on may clear the spinner: a
-            // learner who taps a second rung while the first is in flight is
-            // waiting on the second one now.
-            if paceLoading == speed { paceLoading = nil }
+            meetInFlight.remove(sound.key)
             guard let data else { return }
-            paceTakes[speed] = data
-            // They may have tapped another rung while this landed; playing it
-            // then would contradict the pill they are looking at.
-            guard speechSpeed == speed.rawValue else { return }
+            paceTakesByVoice[voiceId, default: [:]][speed] = data
+            guard meetAsk == sound, appState.voiceCloneId == voiceId else { return }
             player.stop()
             try? player.play(data, forceSessionReset: true)
-            warmOtherRungs(besides: speed, voiceId: voiceId)
         }
     }
 
@@ -1878,18 +1922,11 @@ struct VoiceCloneOnboardingView: View {
     /// on every learner including the ones who accept the default rung
     /// without touching it. Now the first tap pays its own ~1 s wait and
     /// buys the other two with it, so comparing three rungs costs one wait
-    /// and never touching the control costs nothing at all.
+    /// and never touching the control costs nothing at all. Through
+    /// `fetchPace`, so a rung tapped while it warms is not asked for twice.
     private func warmOtherRungs(besides tapped: SpeechSpeed, voiceId: String) {
-        let line = paceLine
-        Task {
-            for speed in SpeechSpeed.allCases where speed != tapped && paceTakes[speed] == nil {
-                if let data = try? await VoiceClient.shared.synthesize(
-                    voiceId: voiceId, text: line,
-                    purpose: "greeting",
-                    speed: speed) {
-                    paceTakes[speed] = data
-                }
-            }
+        for speed in SpeechSpeed.allCases where speed != tapped {
+            fetchPace(speed, voiceId: voiceId)
         }
     }
 
@@ -2077,10 +2114,12 @@ struct VoiceCloneOnboardingView: View {
         let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("debug_pace")
         guard FileManager.default.fileExists(atPath: dir.path) else { return }
+        let key = meetVoiceKey
         for speed in SpeechSpeed.allCases {
-            paceTakes[speed] = try? Data(contentsOf: dir.appendingPathComponent("\(speed.rawValue).mp3"))
+            paceTakesByVoice[key, default: [:]][speed] =
+                try? Data(contentsOf: dir.appendingPathComponent("\(speed.rawValue).mp3"))
         }
-        greetingData = try? Data(contentsOf: dir.appendingPathComponent("greeting.mp3"))
+        greetingTakes[key] = try? Data(contentsOf: dir.appendingPathComponent("greeting.mp3"))
         if greetingData != nil { openMeet() }
     }
     #endif

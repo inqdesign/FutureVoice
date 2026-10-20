@@ -79,7 +79,6 @@ struct VoiceRevivalView: View {
     @State private var paceLoading: SpeechSpeed?
     @State private var accentToPick: VoiceAccent?
     @State private var removingAccent = false
-    @State private var confirmingRemove = false
     /// The recording the voice was rebuilt from (fetched, if `sample` was nil).
     @State private var resolvedSample: URL?
 
@@ -262,11 +261,8 @@ struct VoiceRevivalView: View {
                     accentPill(label: "accent.original",
                                selected: appState.voiceAccentId == nil,
                                loading: removingAccent,
-                               action: {
-                                   guard appState.voiceAccentId != nil else { return }
-                                   confirmingRemove = true
-                               })
-                        .disabled(appState.voiceAccentId != nil && !appState.canChangeVoice)
+                               action: { removeAccent() })
+                        .disabled(appState.voiceAccentId != nil && !appState.canRemoveAccent)
                     ForEach(options) { option in
                         accentPill(label: LocalizedStringKey(option.label),
                                    selected: appState.voiceAccentId == option.id,
@@ -287,11 +283,6 @@ struct VoiceRevivalView: View {
                 }
             }
             .task { await appState.refreshVoiceChangeStatus() }
-            .confirmationDialog("Remove the accent?", isPresented: $confirmingRemove,
-                                titleVisibility: .visible) {
-                Button("Remove", role: .destructive) { removeAccent() }
-                Button("Cancel", role: .cancel) {}
-            }
         }
     }
 
@@ -348,15 +339,15 @@ struct VoiceRevivalView: View {
         }
     }
 
-    /// Back to the voice as recorded, after picking an accent here.
+    /// Back to the voice without an accent: the same voice with the accent
+    /// dropped from its id (`AppState.removeVoiceAccent`), nothing rebuilt.
     private func removeAccent() {
         guard appState.voiceAccentId != nil, !removingAccent else { return }
         player.stop()
         removingAccent = true
         Task {
             defer { removingAccent = false }
-            guard let recording = resolvedSample ?? sample else { return }
-            try? await appState.regenerateVoiceClone(fromSampleAt: recording)
+            try? await appState.removeVoiceAccent()
         }
     }
 

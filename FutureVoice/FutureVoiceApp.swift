@@ -1699,13 +1699,62 @@ final class AppState: ObservableObject {
     /// synthesized keeps playing through the PhraseAudioStore lineage.
     func adoptRemixedVoice(_ newId: String, accentId: String, source: String = "picker") async {
         guard newId != voiceCloneId else { return }
-        if let old = voiceCloneId { pendingDeleteVoiceId = old }
+        await adoptAccentSwap(newId, accentId: accentId)
+        Analytics.capture("voice_accent_applied", ["accent": accentId, "source": source])
+    }
+
+    /// Whether "Original" can be reached: an accent is on, and either the
+    /// accent can simply be dropped from the id (every Cartesia voice) or
+    /// there is a recording to rebuild from.
+    var canRemoveAccent: Bool {
+        guard voiceAccentId != nil, let id = voiceCloneId else { return false }
+        return VoiceClient.cartesiaUUID(id) != nil || VoiceSampleStore.shared.exists
+    }
+
+    /// Back to the voice without an accent (2026-10-20). On Cartesia an
+    /// accent is only a suffix on the SAME voice ("<uuid>:british"), so
+    /// "Original" is the bare uuid: one save, no new clone. It used to
+    /// re-clone from the recording (the ElevenLabs way), which took tens of
+    /// seconds, minted a new voice, and left every accent and every take to
+    /// be made again on it. Only an id that isn't a Cartesia voice is still
+    /// rebuilt.
+    func removeVoiceAccent() async throws {
+        guard voiceAccentId != nil, let current = voiceCloneId else { return }
+        guard let uuid = VoiceClient.cartesiaUUID(current) else {
+            guard let url = VoiceSampleStore.shared.url else { return }
+            try await regenerateVoiceClone(fromSampleAt: url)
+            return
+        }
+        // Marked, not bare: a bare id speaks English and Spanish in the
+        // language's default accent (American, Mexican), which made
+        // "Original" sound exactly like the first pill. The mark tells the
+        // server to send this language's lines with no accent at all — the
+        // voice as recorded (founder, by ear, 2026-10-20).
+        let code = LanguageCatalog.language(targetLanguage)?.code ?? "en"
+        let original = "\(uuid):original-\(code)"
+        let newId = original == current ? original
+            : try await VoiceClient.shared.saveRemixedVoice(
+                generatedVoiceId: original, name: voiceDisplayName,
+                voiceDescription: "original")
+        await adoptAccentSwap(newId, accentId: nil)
+    }
+
+    /// The live voice id becomes another accent of the voice (or a new
+    /// voice). Nothing waits on the network when it is the same Cartesia
+    /// voice: no upstream delete is staged (the server keeps a voice another
+    /// id still uses anyway), and the allowance is read in the background.
+    private func adoptAccentSwap(_ newId: String, accentId: String?) async {
+        if let old = voiceCloneId, old != newId,
+           VoiceClient.cartesiaUUID(old) == nil || VoiceClient.cartesiaUUID(old) != VoiceClient.cartesiaUUID(newId) {
+            pendingDeleteVoiceId = old
+        }
         voiceCloneId = newId
         voiceAccentId = accentId
-        Analytics.capture("voice_accent_applied", ["accent": accentId, "source": source])
-        await cleanupPreviousVoiceClone()
         warmFreeTalkOpeners()
-        await refreshVoiceChangeStatus()
+        Task {
+            await cleanupPreviousVoiceClone()
+            await refreshVoiceChangeStatus()
+        }
     }
 
     /// Remix takes already made from THIS recording, per accent id

@@ -32,7 +32,6 @@ struct VoiceAccentSheet: View {
     @State private var saving = false
     /// Rebuilding the un-accented voice from the saved recording.
     @State private var removing = false
-    @State private var confirmingRemove = false
     @State private var playingId: String?
     @State private var error: String?
     /// The live voice was rebuilt from the recording on the way to a new
@@ -51,16 +50,9 @@ struct VoiceAccentSheet: View {
         options.first { $0.id == appState.voiceAccentId }
     }
 
-    /// Whether "no accent" is reachable at all.
-    ///
-    /// Applying an accent REPLACES the clone and deletes the outgoing voice
-    /// upstream (`AppState.adoptRemixedVoice`), so there is no id to switch
-    /// back to — the only way to un-accent a voice is to build a fresh clone
-    /// from the recording. No recording on disk, no way back, so the row
-    /// stays hidden rather than offering a dead end.
-    private var canRemoveAccent: Bool {
-        appState.voiceAccentId != nil && VoiceSampleStore.shared.exists
-    }
+    /// Whether "no accent" is reachable at all (`AppState.canRemoveAccent`:
+    /// on Cartesia the accent is dropped from the same voice's id).
+    private var canRemoveAccent: Bool { appState.canRemoveAccent }
 
     var body: some View {
         NavigationStack {
@@ -117,12 +109,6 @@ struct VoiceAccentSheet: View {
             // Closing mid-generate also loses the request: it is already
             // charged against the daily cap and nothing reattaches to it.
             .interactiveDismissDisabled(generating || saving || removing)
-            .alert("Remove the accent?", isPresented: $confirmingRemove) {
-                Button("Cancel", role: .cancel) {}
-                Button("Remove", role: .destructive) { removeAccent() }
-            } message: {
-                Text(explain("Rebuilds your voice from your saved recording, which takes a moment. The accented voice is deleted — audio already made keeps playing."))
-            }
             .task { await appState.refreshVoiceChangeStatus() }
             .alert("Couldn't remix your voice", isPresented: Binding(
                 get: { error != nil },
@@ -185,12 +171,22 @@ struct VoiceAccentSheet: View {
         }
     }
 
-    /// The voice as recorded. Checked when no accent is applied; with one
-    /// applied, a tap asks and then rebuilds from the saved recording.
+    /// The voice as recorded. Checked when no accent is applied. With one
+    /// applied, a tap drops it (instant, nothing rebuilt). With none applied
+    /// and another accent's takes on screen, a tap is "keep the original":
+    /// it used to do nothing at all, which read as a broken button.
     private var originalRow: some View {
         Button {
-            guard appState.voiceAccentId != nil else { return }
-            confirmingRemove = true
+            if appState.voiceAccentId != nil {
+                removeAccent()
+            } else {
+                player.stop()
+                playingId = nil
+                accent = nil
+                previews = []
+                pickedPreviewId = nil
+                dismiss()
+            }
         } label: {
             HStack {
                 Text("accent.original")
@@ -204,8 +200,8 @@ struct VoiceAccentSheet: View {
                 }
             }
         }
-        .disabled(generating || saving || removing
-                  || (appState.voiceAccentId != nil && (!canRemoveAccent || !appState.canChangeVoice)))
+        .disabled(saving || removing
+                  || (appState.voiceAccentId != nil && !canRemoveAccent))
     }
 
     private func accentRow(_ option: VoiceAccent) -> some View {
@@ -366,11 +362,9 @@ struct VoiceAccentSheet: View {
         try? player.play(preview.audio, source: "accent_preview")
     }
 
-    /// Back to the voice the recording makes on its own. Goes through the
-    /// same rebuild Me → Voice uses, which clears `voiceAccentId` as part of
-    /// minting an un-remixed clone.
+    /// Back to the voice without an accent (`AppState.removeVoiceAccent`).
     private func removeAccent() {
-        guard let url = VoiceSampleStore.shared.url, !removing else { return }
+        guard !removing else { return }
         player.stop()
         playingId = nil
         removing = true
@@ -378,7 +372,7 @@ struct VoiceAccentSheet: View {
         Task {
             defer { removing = false }
             do {
-                try await appState.regenerateVoiceClone(fromSampleAt: url)
+                try await appState.removeVoiceAccent()
                 HapticEngine.success()
                 onApplied?()
                 dismiss()

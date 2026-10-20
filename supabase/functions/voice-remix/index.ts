@@ -85,7 +85,8 @@ async function cartesiaAccent(
       return errorResponse(409, "no Cartesia voice to apply the accent to")
     }
     const { uuid } = cartesia.parseVoice(current.voice_id)
-    if (accent) {
+    // "Original" is a mark on the id, not an accent the voice carries.
+    if (accent && !accent.startsWith("original-")) {
       const ready = await cartesia.ensureAccent(uuid, accent)
       if (!ready.ok) return errorResponse(502, "cartesia accent failed", ready.detail ?? "")
     }

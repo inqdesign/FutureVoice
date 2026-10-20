@@ -86,6 +86,15 @@ export const LANGUAGE_DEFAULT_ACCENT: Record<string, string> = {
   es: "mexican",
 }
 
+/** "Original" (2026-10-20): `<uuid>:original-<lang>` is the voice as
+ *  recorded for lines in `<lang>` — sent with no accent, which Cartesia
+ *  speaks as the voice itself (founder, by ear, against the same voice told
+ *  general-american). Without the mark an id naming no accent still gets
+ *  LANGUAGE_DEFAULT_ACCENT, so ids from older builds keep their sound. */
+export function isOriginalFor(accent: string | null, language: string): boolean {
+  return accent === `original-${language.toLowerCase().split("-")[0]}`
+}
+
 /** Per isolate: does voice `uuid` carry `accent` (`<uuid>:<accent>`)? */
 const accentReady = new Map<string, boolean>()
 
@@ -116,6 +125,7 @@ async function hasAccent(uuid: string, accent: string): Promise<boolean> {
  *  (`LANGUAGE_DEFAULT_ACCENT`). */
 export async function withDefaultAccent(line: CartesiaLine): Promise<CartesiaLine> {
   const { uuid, accent } = parseVoice(line.voiceId)
+  if (isOriginalFor(accent, line.language)) return { ...line, voiceId: uuid }
   try {
     if (accent && ACCENT_LANGUAGE[accent] === line.language) {
       return (await hasAccent(uuid, accent)) ? line : { ...line, voiceId: uuid }

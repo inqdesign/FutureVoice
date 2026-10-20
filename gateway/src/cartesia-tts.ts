@@ -69,11 +69,14 @@ const germanReady = new Map<string, boolean>()
 export async function withGermanDefault(apiKey: string | undefined, voiceId: string, language: string): Promise<string> {
   const lang = language.toLowerCase().split("-")[0]
   const fallback = LANGUAGE_DEFAULT_ACCENT[lang]
-  if (!apiKey || !fallback) return voiceId
   const m = VOICE.exec(voiceId)
   if (!m) return voiceId
   const uuid = m[1].toLowerCase()
   const accent = m[2]?.toLowerCase()
+  // "Original" (`<uuid>:original-<lang>`, 2026-10-20): the voice as recorded
+  // for its own language — no accent, no default (mirror of isOriginalFor).
+  if (accent === `original-${lang}`) return uuid
+  if (!apiKey || !fallback) return voiceId
   // The id's own German accent is checked too, not trusted: a voice moved to
   // Cartesia was saved as `<uuid>:standard-german` while the accent had never
   // been added, and every line of its calls was refused (2026-10-14).

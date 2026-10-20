@@ -18,6 +18,13 @@ final class VoiceClient {
                  options: .regularExpression) != nil
     }
 
+    /// The Cartesia voice under an id, without its accent; nil when the id
+    /// isn't a Cartesia voice.
+    static func cartesiaUUID(_ id: String) -> String? {
+        guard isCartesiaVoice(id) else { return nil }
+        return String(id.prefix(36)).lowercased()
+    }
+
     static let shared = VoiceClient()
 
     private let session: URLSession
