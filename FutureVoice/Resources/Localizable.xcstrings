@@ -24627,52 +24627,6 @@
         }
       }
     },
-    "Add to my routine" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zur Routine hinzufügen"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Añadir a mi rutina"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ajouter à ma routine"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ルーティンに入れる"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "루틴에 넣기"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "加进作息"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "加進作息"
-          }
-        }
-      }
-    },
     "Add your own" : {
       "localizations" : {
         "de" : {
@@ -33905,6 +33859,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "這通電話的卡片"
+          }
+        }
+      }
+    },
+    "Cards with the words, expressions and corrected sentences from your talks, 10 at a time." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Karten mit den Wörtern, Wendungen und korrigierten Sätzen aus deinen Gesprächen, 10 auf einmal."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tarjetas con las palabras, expresiones y frases corregidas de tus conversaciones, de 10 en 10."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Des cartes avec les mots, expressions et phrases corrigées de tes conversations, 10 à la fois."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "会話で出てきた単語・表現・直した文を、カードで10枚ずつめくります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대화에서 나온 단어, 표현, 고친 문장을 카드로 10장씩 넘겨요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "把对话里的单词、用语和改过的句子做成卡片，一次 10 张。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "把對話裡的單字、用語和改過的句子做成卡片，一次 10 張。"
           }
         }
       }
@@ -43764,52 +43764,6 @@
         }
       }
     },
-    "Do a talk you just had again, saying your part the better way." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Führ ein Gespräch noch einmal, und sag deinen Teil diesmal besser."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Repite una conversación que acabas de tener, diciendo tu parte mejor."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Refais une conversation que tu viens d’avoir, en disant ta partie mieux."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "さっきの会話をもう一度。自分のセリフは、もっと自然な言い方で。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "방금 한 대화를 한 번 더 해요. 내 말은 더 자연스러운 표현으로요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "把刚才的对话再来一次，自己的话换成更自然的说法。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "把剛才的對話再來一次，自己的話換成更自然的說法。"
-          }
-        }
-      }
-    },
     "Do this scene again from the start, and say your part out loud. The other side plays just as it did." : {
       "localizations" : {
         "de" : {
@@ -44970,6 +44924,98 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "送小孩時"
+          }
+        }
+      }
+    },
+    "Every day at these times to start with. You can change the times, the days and how much under Activity on the Talk screen." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Für den Anfang jeden Tag zu diesen Zeiten. Zeiten, Tage und Menge kannst du jederzeit unter Aktivität auf dem Sprechen-Bildschirm ändern."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Para empezar, todos los días a estas horas. Puedes cambiar las horas, los días y cuánto en Actividad, en la pantalla Hablar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pour commencer, tous les jours à ces heures-là. Tu peux changer les heures, les jours et la quantité dans Activité, sur l’écran Parler."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最初は毎日この時間に入れておきます。時間・曜日・量は、トーク画面のアクティビティでいつでも変えられます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "처음엔 매일 이 시간에 넣어 둘게요. 시간, 요일, 양은 대화 화면의 활동에서 언제든 바꿀 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先每天排在这些时间。时间、星期和份量，随时都能在对话界面的“活动”里修改。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先每天排在這些時間。時間、星期和份量，隨時都能在對話畫面的「活動」裡修改。"
+          }
+        }
+      }
+    },
+    "Every day · %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeden Tag · %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todos los días · %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tous les jours · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "毎日 · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "매일 · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每天 · %@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每天 · %@"
           }
         }
       }
@@ -56942,52 +56988,6 @@
         }
       }
     },
-    "Go through the words, expressions and sentences your talks left you." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Geh die Wörter, Wendungen und Sätze aus deinen Gesprächen durch."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Repasa las palabras, expresiones y frases que te dejaron tus conversaciones."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Révise les mots, expressions et phrases que tes conversations t’ont laissés."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "会話で出てきた単語・表現・文をおさらいします。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "대화에서 나온 단어, 표현, 문장을 다시 봐요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "复习对话里出现的单词、用语和句子。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "複習對話裡出現的單字、用語和句子。"
-          }
-        }
-      }
-    },
     "Go to Review" : {
       "localizations" : {
         "de" : {
@@ -57071,6 +57071,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "改為無限制"
+          }
+        }
+      }
+    },
+    "Go back through the call you just had. Your lines come up the way a fluent speaker would say them, and you read them out loud." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geh das Gespräch von eben noch einmal durch. Deine Sätze erscheinen so, wie ein Muttersprachler sie sagen würde, und du liest sie laut vor."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repite desde el principio la llamada que acabas de tener. En tu turno aparecen tus frases como las diría un nativo, y las lees en voz alta."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refais depuis le début l’appel que tu viens de passer. À ton tour, tes phrases s’affichent comme les dirait un natif, et tu les lis à voix haute."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "さっきの会話を最初からもう一度。自分の番には、ネイティブらしく直した文が出るので、それを声に出して読みます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "방금 한 대화를 처음부터 다시 해요. 내 차례엔 원어민처럼 다듬은 문장이 떠서, 그걸 소리 내어 읽으면 돼요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "把刚才的通话从头再来一次。轮到你时会出现改得更地道的句子，大声读出来就好。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "把剛才的通話從頭再來一次。輪到你時會出現改得更道地的句子，大聲唸出來就好。"
           }
         }
       }
@@ -58777,6 +58823,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "健康時好時壞"
+          }
+        }
+      }
+    },
+    "Hear a line from your fluent self and say it along with them, in the same rhythm. You get a score." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hör einen Satz deines fließenden Ichs und sprich ihn im gleichen Rhythmus mit. Du bekommst eine Punktzahl."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escucha una frase de tu yo fluido y dila a la vez, con el mismo ritmo. Te da una puntuación."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Écoute une phrase de ton moi fluide et dis-la en même temps, au même rythme. Tu obtiens un score."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流暢な自分の文を聞いて、同じリズムで重ねて話します。スコアも出ます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "유창해진 나의 문장을 듣고 같은 리듬으로 따라 말해요. 점수도 나와요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "听流利的自己说一句，用一样的节奏跟着说，还会打分。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "聽流利的自己說一句，用一樣的節奏跟著說，還會打分數。"
           }
         }
       }
@@ -71841,52 +71933,6 @@
         }
       }
     },
-    "Listen to the nawana Podcast and the situations you've watched, one after another." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hör den nawana Podcast und deine angesehenen Situationen am Stück."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Escucha seguidos el Podcast de nawana y las situaciones que has visto."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Écoute à la suite le Podcast nawana et les situations que tu as regardées."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "nawana ポッドキャストと、見たシーンを続けて聞きます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "nawana 팟캐스트와 내가 본 상황을 이어서 들어요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "连续收听 nawana 播客和你看过的情境。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "連續收聽 nawana Podcast 和你看過的情境。"
-          }
-        }
-      }
-    },
     "Listen to your recording" : {
       "localizations" : {
         "de" : {
@@ -83270,52 +83316,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "不在今天的作息裡"
-          }
-        }
-      }
-    },
-    "Not interested" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kein Interesse"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No me interesa"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ça ne m’intéresse pas"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "興味なし"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "관심 없어요"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "没兴趣"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "沒興趣"
           }
         }
       }
@@ -95976,48 +95976,48 @@
         }
       }
     },
-    "Read a script out loud on camera and see how it went." : {
+    "Read a script out loud on camera and get a score for pronunciation and pace." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lies ein Skript laut vor der Kamera und sieh dir an, wie es lief."
+            "value" : "Lies ein Skript laut vor der Kamera und bekomm eine Punktzahl für Aussprache und Tempo."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lee un guion en voz alta ante la cámara y mira cómo te fue."
+            "value" : "Lee un guion en voz alta ante la cámara y recibe una puntuación de pronunciación y ritmo."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lis un texte à voix haute face à la caméra et vois comment ça s’est passé."
+            "value" : "Lis un texte à voix haute face à la caméra et obtiens un score de prononciation et de débit."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "原稿をカメラの前で声に出して読み、結果を見ます。"
+            "value" : "原稿をカメラの前で声に出して読み、発音とスピードのスコアをもらいます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "원고를 카메라 앞에서 소리 내어 읽고, 어땠는지 봐요."
+            "value" : "원고를 카메라 앞에서 소리 내어 읽고 발음과 속도 점수를 받아요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "对着镜头大声读讲稿，再看看表现如何。"
+            "value" : "对着镜头大声读讲稿，拿到发音和语速的分数。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "對著鏡頭大聲唸講稿，再看看表現如何。"
+            "value" : "對著鏡頭大聲唸講稿，拿到發音和語速的分數。"
           }
         }
       }
@@ -102174,6 +102174,52 @@
         }
       }
     },
+    "Right after the call" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Direkt nach dem Anruf"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Justo después de la llamada"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Juste après l’appel"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "トークのすぐあと"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대화 바로 뒤"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通话一结束"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通話一結束"
+          }
+        }
+      }
+    },
     "Right now" : {
       "localizations" : {
         "de" : {
@@ -104512,52 +104558,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "先把單字唸出來，再點一下卡片看意思和例句。"
-          }
-        }
-      }
-    },
-    "Say your fluent self's lines along with them, in the same rhythm." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sprich die Sätze deines fließenden Ichs mit, im gleichen Rhythmus."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Di las frases de tu yo fluido a la vez que él, con el mismo ritmo."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dis les phrases de ton moi fluide en même temps que lui, au même rythme."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "流暢な自分のセリフを、同じリズムでなぞって話します。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "유창해진 나의 말을 같은 리듬으로 따라 해요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "跟着流利的自己说，抓住一样的节奏。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "跟著流利的自己說，抓住一樣的節奏。"
           }
         }
       }
@@ -121979,6 +121979,52 @@
         }
       }
     },
+    "The nawana Podcast and the situations you've watched, played one after another. Good for the commute." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der nawana Podcast und deine angesehenen Situationen, eins nach dem anderen. Ideal für den Arbeitsweg."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El Podcast de nawana y las situaciones que has visto, una tras otra. Ideal para el trayecto."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le Podcast nawana et les situations que tu as regardées, à la suite. Parfait pour les trajets."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nawana ポッドキャストと、見たシーンを続けて再生します。通勤中にぴったりです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nawana 팟캐스트와 내가 본 상황을 이어서 들려줘요. 출퇴근길에 좋아요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连续播放 nawana 播客和你看过的情境，通勤时听正合适。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "連續播放 nawana Podcast 和你看過的情境，通勤時聽剛好。"
+          }
+        }
+      }
+    },
     "Travel plans" : {
       "localizations" : {
         "de" : {
@@ -135401,6 +135447,52 @@
         }
       }
     },
+    "What goes in your routine?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was kommt in deine Routine?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Qué pones en tu rutina?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Qu’est-ce que tu mets dans ta routine ?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ルーティンに何を入れますか？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "루틴에 뭘 넣을까요?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "作息要放进哪些？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "作息要放進哪些？"
+          }
+        }
+      }
+    },
     "What it is" : {
       "localizations" : {
         "de" : {
@@ -148544,6 +148636,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "流利的自己會先打來"
+          }
+        }
+      }
+    },
+    "Your fluent self calls you, in your own voice. Talk for 5 minutes about anything." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein fließendes Ich ruft dich an, mit deiner eigenen Stimme. Ihr redet 5 Minuten über alles Mögliche."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu yo fluido te llama con tu propia voz. Charlas 5 minutos de lo que quieras."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ton moi fluide t’appelle, avec ta propre voix. Vous parlez 5 minutes de ce que tu veux."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流暢になった自分が、自分の声で電話をかけてきます。なんでも5分おしゃべりしましょう。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "유창해진 내가 내 목소리로 전화를 걸어요. 아무 이야기나 5분 동안 나눠요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流利的自己用你的声音给你打电话，随便聊 5 分钟。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流利的自己用你的聲音打電話給你，隨便聊 5 分鐘。"
           }
         }
       }

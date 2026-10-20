@@ -44,9 +44,9 @@ skips every step it has a flag for.
 4. "Your practice stays on your phone" (`LocalDataOnboardingView`) — all of
    it is on this device only, nothing on our servers, it goes with the app;
    a copy can live in the learner's own iCloud (Android: Google Drive)
-5. The routine builder over the Talk tab (`RoutineOnboardingView`: one
-   card per thing to do — call, say it again, review, shadowing, listening,
-   speech — each added or passed on), shrinking into the Activity chip
+5. The routine builder over the Talk tab (`RoutineOnboardingView`: a list
+   of every kind of block — call, say it again, listening, shadowing,
+   speech, review — ticked as many as wanted), shrinking into the Activity chip
 
 No paywall in onboarding (plans at the first paid tap). Steps 4 and 5 share
 the flag `futurevoice.dailyCall.onboarded`, so an install past the routine
@@ -758,19 +758,21 @@ ONE now: `RoutineOnboardingView`, the last onboarding step, shown over the
 Talk tab with the My routine grid (`WeeklyPlanEditor(onboarding: true)`,
 editing off) behind a sheet.
 
-- **The sheet shows what there is to do, one card at a time** (2026-10-20,
+- **The sheet asks what goes in, as ONE multi-select list** (2026-10-20,
   founder: not "how much will you study a day" but "here is what you can
-  study, put in what you want"). Cards in order: the call (5/10/15/20 min,
-  default 5, also the daily goal; time; WEEKDAYS), say it again (right
-  after the call), review (21:00, 10/20/40, default 10), shadowing (12:30,
-  1/3/5, default 1), listening (08:30, no amount), speech (20:00). Each
-  says what it is in one line; **Add to my routine** writes the block
-  (`StudyPlan.withOnboardingRoutine`, on the call card's days; the rest
-  become rest days) and rings it on the grid (`spotlight`); **Not
-  interested** moves on and takes back a block added before. The call's
-  card asks the alarm/notification permission, any other the notification
-  one. Every card can be passed on, the call too (then nothing rings); an
-  empty routine ends on "You can make it later" and no promise.
+  study, put in what you want"). Every kind is a row — icon, name, two
+  lines on what it is for someone who has never done it, and when it would
+  go — ticked or not; the call starts ticked. "Make my routine" writes the
+  ticked ones (`StudyPlan.withOnboardingRoutine`) every day at fixed
+  defaults (`RoutineOnboardingView.slot`: call 08:00 for 5 min, say it again
+  right after, listening 08:30, shadowing 12:30 ×1, speech 20:00, review
+  21:00 ×10), and the footer says times, days and amounts change later in
+  Activity. With the call in, the alarm/notification permission is asked;
+  without, the notification one and the daily call stays off. Nothing
+  ticked → "Not now" → "You can make it later", no promise. A card per
+  kind asking for a time was built and cut the same day: the times were
+  the app's guess anyway, six sheets of different heights read as a form,
+  and nobody new knew what "say it again" was from one line.
 - **Done** drops the sheet and shrinks the page into the Talk header's
   Activity chip (`RoutineHandoff.chipFrame`); the chip bounces and a popover
   says the routine lives there. Talk's first-run sheets (age check, guide,
@@ -781,7 +783,7 @@ editing off) behind a sheet.
   onboarding.
 - Flag: `futurevoice.dailyCall.onboarded` (the old daily-call screen's), so
   existing installs never see it. Capture: `-onboardingPreview routine`
-  (`-routineStep call|sayItAgain|review|shadow|listen|speech|done|finish`).
+  (`-routineStep pick|done|finish`).
 
 ## Shadowing and listening are blocks (2026-10-20)
 
