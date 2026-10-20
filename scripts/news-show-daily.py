@@ -155,6 +155,22 @@ def put(key, path, content_type, cache):
                    cwd=GATEWAY_DIR, check=True, stdout=subprocess.DEVNULL, env=wrangler_env())
 
 
+def recent_categories(feed, n=2):
+    return {e.get("category") for e in feed["episodes"][:n]}
+
+
+def todays_category(feed):
+    """The weekday's category, unless the feed has just had it: then the
+    next one in the week that it hasn't."""
+    start = datetime.date.fromisoformat(TODAY).weekday()
+    recent = recent_categories(feed)
+    for step in range(len(CATEGORY_BY_WEEKDAY)):
+        category = CATEGORY_BY_WEEKDAY[(start + step) % len(CATEGORY_BY_WEEKDAY)]
+        if category not in recent:
+            return category
+    return CATEGORY_BY_WEEKDAY[start]
+
+
 def publish_from_stock(LANG, feed, number):
     """Episodes already made go out first, one a day, before anything new is
     made (founder, 2026-10-19). Their audio is already in R2, so publishing
@@ -166,7 +182,13 @@ def publish_from_stock(LANG, feed, number):
         return False
     if not stock:
         return False
-    episode = {**stock[0], "id": f"{TODAY}-{LANG}", "number": number, "date": TODAY}
+    # The first one in stock whose category the feed hasn't just had, so
+    # the stock's order can't air two of a kind in a row (founder,
+    # 2026-10-20: two tech episodes back to back).
+    recent = recent_categories(feed)
+    pick = next((i for i, e in enumerate(stock) if e.get("category") not in recent), 0)
+    chosen = stock.pop(pick)
+    episode = {**chosen, "id": f"{TODAY}-{LANG}", "number": number, "date": TODAY}
     folder = os.path.join(lang_dir(LANG), TODAY)
     os.makedirs(folder, exist_ok=True)
     feed = {"feed": True, "language": LANG, "hosts": [h[0] for h in probe.HOSTS[LANG]],
@@ -175,11 +197,12 @@ def publish_from_stock(LANG, feed, number):
     with open(manifest, "w") as f:
         json.dump(feed, f, ensure_ascii=False, indent=2)
     with open(os.path.join(folder, "from-stock.json"), "w") as f:
-        json.dump(stock[0], f, ensure_ascii=False, indent=2)
+        json.dump(chosen, f, ensure_ascii=False, indent=2)
     put(f"shows/{LANG}/latest.json", manifest, "application/json", "public, max-age=300")
     with open(stock_file, "w") as f:
-        json.dump(stock[1:], f, ensure_ascii=False, indent=2)
-    print(f"[{LANG}] EP {number} · {TODAY} · from stock · {episode['title']} · {len(stock) - 1} left in stock")
+        json.dump(stock, f, ensure_ascii=False, indent=2)
+    print(f"[{LANG}] EP {number} · {TODAY} · from stock · {episode.get('category')} · "
+          f"{episode['title']} · {len(stock)} left in stock")
     return True
 
 
@@ -205,7 +228,7 @@ def run(LANG, reset):
     number = max([e.get("number", 0) for e in feed["episodes"]], default=0) + 1
     if publish_from_stock(LANG, feed, number):
         return
-    category = CATEGORY_BY_WEEKDAY[datetime.date.fromisoformat(TODAY).weekday()]
+    category = todays_category(feed)
 
     # Checked before anything is spent: a folder for today means a run
     # already made (or half made) it.
