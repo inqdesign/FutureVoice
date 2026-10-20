@@ -47,15 +47,20 @@ struct FreeTalkWelcomeSheet: View {
 
             Spacer()
 
-            Button {
-                onStart()
-                dismiss()
-            } label: {
-                Text("Start talking")
-                    .frame(maxWidth: .infinity)
+            VStack(spacing: 4) {
+                Button {
+                    onStart()
+                    dismiss()
+                } label: {
+                    Text("Start talking")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+
+                Button("Later") { dismiss() }
+                    .controlSize(.large)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
             .padding(.horizontal, 20)
             .padding(.bottom, 12)
         }
