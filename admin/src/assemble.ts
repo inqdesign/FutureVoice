@@ -29,7 +29,13 @@ const TEST_IDS = new Set([
 // Store review accounts, matched by email so a re-created account stays
 // filtered: Google Play's reviewer signs in as this one (2026-10-06,
 // `20261006150000_play_review_account_comp`).
-const TEST_EMAILS = new Set(["nawana.review@gmail.com"]);
+// The owner's own Google accounts (2026-10-20), by email so an account
+// made later under the same address is filtered too.
+const TEST_EMAILS = new Set([
+  "nawana.review@gmail.com",
+  "hi.superpower.lab@gmail.com",
+  "buchhaltung.dearroro@gmail.com",
+]);
 
 // Apple's cut and the sticker prices. Prices live in docs/launch-billing.md;
 // they are NOT in the database (there is no price column), so they are stated
