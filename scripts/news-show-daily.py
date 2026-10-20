@@ -1,9 +1,17 @@
 #!/usr/bin/env python3
-"""The nawana Podcast's daily run: ONE English episode a day, one category
-per weekday, numbered across days, appended to the feed the app reads.
+"""The nawana Podcast's daily run: ONE episode a day PER LANGUAGE, one
+category per weekday, numbered across days, appended to the feed the app reads.
 
-    python3 scripts/news-show-daily.py            # today's episode, if not made yet
-    python3 scripts/news-show-daily.py --reset    # start the feed over at EP 1
+    python3 scripts/news-show-daily.py              # today's episodes, if not made yet
+    python3 scripts/news-show-daily.py --lang de    # one language only
+    python3 scripts/news-show-daily.py --reset      # start the feed(s) over at EP 1
+
+Which languages run is OUT_DIR/languages.txt (one code a line; "en" if the
+file is missing). The app has no list of its own: a language is on in every
+build the day its feed is in R2 (founder, 2026-10-20: "no app update").
+Adding a language = its hosts in news-show-probe.py's HOSTS/REGION/LANG_NAME,
+then a line in languages.txt. English keeps OUT_DIR itself; every other
+language works in OUT_DIR/<lang>.
 
 Founder, 2026-10-19: Mon–Sun each its own category, English only while the
 reaction is tested. Idempotent: a day already in the feed is never made
@@ -36,7 +44,6 @@ spec = importlib.util.spec_from_file_location("probe", os.path.join(HERE, "news-
 probe = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(probe)
 
-LANG = "en"
 # Monday first, one of the app's own interests a day, written as the app
 # stores them (founder, 2026-10-19: "Monday tech, Tuesday fashion, like that").
 CATEGORY_BY_WEEKDAY = ["AI / tech", "fashion", "science", "travel",
@@ -48,7 +55,20 @@ OUT = os.environ.get("OUT_DIR", os.path.expanduser("~/Desktop/beta audio/nawana-
 GATEWAY_DIR = os.environ.get("GATEWAY_DIR", os.path.join(os.path.dirname(HERE), "gateway"))
 
 
-def load_feed():
+def lang_dir(lang):
+    return OUT if lang == "en" else os.path.join(OUT, lang)
+
+
+def languages():
+    try:
+        got = [l.strip() for l in open(os.path.join(OUT, "languages.txt")) if l.strip()
+               and not l.startswith("#")]
+    except OSError:
+        got = []
+    return got or ["en"]
+
+
+def load_feed(LANG):
     """The feed as the BUCKET has it. The public URL is cached for five
     minutes, and a stale read is how a day gets made twice or two episodes
     get one number."""
@@ -60,14 +80,14 @@ def load_feed():
     except ValueError:
         if "not found" in (got.stderr + got.stdout).lower():
             return {"episodes": []}
-        sys.exit(f"couldn't read the feed: {got.stderr.strip()[-300:]}")
+        raise RuntimeError(f"couldn't read the {LANG} feed: {got.stderr.strip()[-300:]}")
     # The first test day (2026-10-19) was a per-day manifest, not a feed.
     if "feed" not in feed:
         return {"episodes": []}
     return feed
 
 
-def pooled_topic(category):
+def pooled_topic(LANG, category):
     """Today's stories for this category from the Talk tab's news pool, if
     someone has already opened it today. Saves the search."""
     url = probe.VARS["SUPABASE_URL"].strip().strip('"')
@@ -88,8 +108,8 @@ def pooled_topic(category):
     system = (
         "Pick the ONE story below that people would most enjoy talking about over coffee "
         "today. Not one whose core is deaths, violence or a disaster.\n"
-        'Return JSON: { "index": 0, "title": "..." } (title: an English episode title, '
-        "8 words or fewer)."
+        f'Return JSON: {{ "index": 0, "title": "..." }} (title: a {probe.LANG_NAME[LANG]} '
+        "episode title, 8 words or fewer)."
     )
     listing = "\n\n".join(f"[{i}] {t['title']}\n" + "\n".join(f"- {f}" for f in t["facts"])
                           for i, t in enumerate(stories))
@@ -99,12 +119,12 @@ def pooled_topic(category):
             "facts": story["facts"]}, {"source": "news_topics"}
 
 
-def searched_topic(category):
+def searched_topic(LANG, category):
     """No pool row today: search for this category alone."""
     probe.EPISODES = 1
     research = (
         f"Search the web now: what are the most talked-about news stories about {category} in "
-        f"the US and the UK today, {TODAY} (last 48 hours)? Give 5, each with 6-8 facts: what "
+        f"{probe.REGION[LANG]} today, {TODAY} (last 48 hours)? Give 5, each with 6-8 facts: what "
         "happened, who, when, key numbers, reactions."
     )
     for _ in range(3):
@@ -112,13 +132,13 @@ def searched_topic(category):
         if grounding["sources"]:
             break
     else:
-        sys.exit("the model never searched; no episode today")
+        raise RuntimeError("the model never searched; no episode today")
     system = (
         "From the RESEARCH below, pick the ONE story people would most enjoy talking about "
         "over coffee. Not one whose core is deaths, violence or a disaster. Facts only from "
         "the RESEARCH.\n"
-        'Return JSON: { "title": "...", "facts": ["...", "..."] } (title: English, 8 words '
-        "or fewer; facts: 6-8, each 25 words or fewer)."
+        f'Return JSON: {{ "title": "...", "facts": ["...", "..."] }} (title: '
+        f"{probe.LANG_NAME[LANG]}, 8 words or fewer; facts: 6-8, each 25 words or fewer)."
     )
     topic = probe.gemini(system, "RESEARCH:\n" + notes)
     topic["area"] = category
@@ -135,11 +155,11 @@ def put(key, path, content_type, cache):
                    cwd=GATEWAY_DIR, check=True, stdout=subprocess.DEVNULL, env=wrangler_env())
 
 
-def publish_from_stock(feed, number):
+def publish_from_stock(LANG, feed, number):
     """Episodes already made go out first, one a day, before anything new is
     made (founder, 2026-10-19). Their audio is already in R2, so publishing
     one is a feed write and costs nothing. OUT_DIR/stock.json, oldest first."""
-    stock_file = os.path.join(OUT, "stock.json")
+    stock_file = os.path.join(lang_dir(LANG), "stock.json")
     try:
         stock = json.load(open(stock_file))
     except (OSError, ValueError):
@@ -147,7 +167,7 @@ def publish_from_stock(feed, number):
     if not stock:
         return False
     episode = {**stock[0], "id": f"{TODAY}-{LANG}", "number": number, "date": TODAY}
-    folder = os.path.join(OUT, TODAY)
+    folder = os.path.join(lang_dir(LANG), TODAY)
     os.makedirs(folder, exist_ok=True)
     feed = {"feed": True, "language": LANG, "hosts": [h[0] for h in probe.HOSTS[LANG]],
             "episodes": ([episode] + feed["episodes"])[:FEED_CAP]}
@@ -159,27 +179,40 @@ def publish_from_stock(feed, number):
     put(f"shows/{LANG}/latest.json", manifest, "application/json", "public, max-age=300")
     with open(stock_file, "w") as f:
         json.dump(stock[1:], f, ensure_ascii=False, indent=2)
-    print(f"EP {number} · {TODAY} · from stock · {episode['title']} · {len(stock) - 1} left in stock")
+    print(f"[{LANG}] EP {number} · {TODAY} · from stock · {episode['title']} · {len(stock) - 1} left in stock")
     return True
 
 
 def main():
-    reset = "--reset" in sys.argv
-    feed = {"episodes": []} if reset else load_feed()
+    only = sys.argv[sys.argv.index("--lang") + 1] if "--lang" in sys.argv else None
+    failed = False
+    for lang in [only] if only else languages():
+        # One language failing must not cost the others their day.
+        try:
+            run(lang, reset="--reset" in sys.argv)
+        except Exception as error:
+            failed = True
+            print(f"[{lang}] failed: {error}")
+    if failed:
+        sys.exit(1)
+
+
+def run(LANG, reset):
+    feed = {"episodes": []} if reset else load_feed(LANG)
     if any(e.get("date") == TODAY for e in feed["episodes"]):
-        print(f"{TODAY} is already in the feed; nothing to do")
+        print(f"[{LANG}] {TODAY} is already in the feed; nothing to do")
         return
     number = max([e.get("number", 0) for e in feed["episodes"]], default=0) + 1
-    if publish_from_stock(feed, number):
+    if publish_from_stock(LANG, feed, number):
         return
     category = CATEGORY_BY_WEEKDAY[datetime.date.fromisoformat(TODAY).weekday()]
 
     # Checked before anything is spent: a folder for today means a run
     # already made (or half made) it.
-    folder = os.path.join(OUT, TODAY)
+    folder = os.path.join(lang_dir(LANG), TODAY)
     if os.path.exists(folder) and os.listdir(folder):
-        sys.exit(f"{folder} already has files; move them before making {TODAY} again")
-    topic, how = pooled_topic(category) or searched_topic(category)
+        raise RuntimeError(f"{folder} already has files; move them before making {TODAY} again")
+    topic, how = pooled_topic(LANG, category) or searched_topic(LANG, category)
     r = probe.make_episode(LANG, number, topic, folder)
     sc = r["script"]
     with open(os.path.join(folder, "topic.json"), "w") as f:
@@ -217,7 +250,7 @@ def main():
     # answered from, and the folder still marks the day as made.
     shutil.rmtree(os.path.join(folder, "lines"))
     os.remove(os.path.join(folder, "episode.mp3"))
-    print(f"EP {number} · {TODAY} · {category} · {episode['title']} · "
+    print(f"[{LANG}] EP {number} · {TODAY} · {category} · {episode['title']} · "
           f"{r['seconds'] // 60}:{r['seconds'] % 60:02d} · {r['chars']} chars "
           f"${r['chars'] * probe.USD_PER_CHAR:.2f} · topic from {how['source']}")
 

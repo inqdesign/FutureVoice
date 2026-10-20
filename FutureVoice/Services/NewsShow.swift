@@ -59,10 +59,11 @@ struct NewsShowEpisode: Identifiable, Hashable {
 }
 
 enum NewsShow {
-    /// The bucket's public r2.dev address. English only while the show's
-    /// reaction is tested (founder, 2026-10-19).
+    /// The bucket's public r2.dev address. Which languages have a show is
+    /// the BUCKET's to say, never the build's (founder, 2026-10-20): a
+    /// language is on the day its `<lang>/latest.json` is published, and a
+    /// language with none answers 404 and shows the empty state.
     static let base = URL(string: "https://pub-83c97a52f2e549718b126bf60f710f1a.r2.dev/shows")!
-    static let languages: Set<String> = ["en"]
 
     fileprivate struct ShippedStudy: Codable, Hashable {
         struct Highlight: Codable, Hashable {
@@ -105,17 +106,22 @@ enum NewsShow {
     /// Nothing is downloaded here; `prepare` fetches an episode when picked.
     static func episodes(language: String) async -> [NewsShowEpisode] {
         let lang = language.lowercased().split(separator: "-").first.map(String.init) ?? language
-        guard languages.contains(lang), let dir = cacheDirectory(lang) else { return [] }
+        guard let dir = cacheDirectory(lang) else { return [] }
         let feedFile = dir.appendingPathComponent("latest.json")
 
         var feed: Feed?
         let request = URLRequest(url: base.appendingPathComponent("\(lang)/latest.json"),
                                  cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 15)
-        if let (data, response) = try? await URLSession.shared.data(for: request),
-           (response as? HTTPURLResponse)?.statusCode == 200,
+        let fetched = try? await URLSession.shared.data(for: request)
+        let status = (fetched?.1 as? HTTPURLResponse)?.statusCode
+        if status == 200, let data = fetched?.0,
            let fresh = try? JSONDecoder().decode(Feed.self, from: data) {
             feed = fresh
             try? data.write(to: feedFile, options: .atomic)
+        } else if status == 404 {
+            // Taken down (or never published): nothing, not yesterday's copy.
+            try? FileManager.default.removeItem(at: dir)
+            return []
         } else if let data = try? Data(contentsOf: feedFile) {
             feed = try? JSONDecoder().decode(Feed.self, from: data)
         }
