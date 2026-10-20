@@ -261,6 +261,7 @@ struct ConversationHome: View {
                     onBuildScenario: { showingBuilder = true },
                     onOwnTopic: { runOwnTopic() })
                     .environmentObject(appState)
+                    .toolbar(.hidden, for: .tabBar)
             }
             .navigationDestination(isPresented: $showingAllScenarios) {
                 TalkScenariosListView(onPick: runScenario)
