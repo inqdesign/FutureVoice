@@ -7,6 +7,10 @@ links.
 
   python3 scripts/android-tester-invite-mail.py            # dry run (prints the first)
   python3 scripts/android-tester-invite-mail.py --send     # sends all 8
+
+English (2026-10-20), one tester at a time:
+  python3 scripts/android-tester-invite-mail.py --en EMAIL CODE          # dry run
+  python3 scripts/android-tester-invite-mail.py --en EMAIL CODE --send
 """
 
 import argparse
@@ -81,14 +85,53 @@ BLOCKS = [
 ]
 
 
-def text_body(code: str) -> str:
+SUBJECT_EN = "Testing nawana on Android"
+CAMPAIGN_EN = "android-tester-invite-en-2026-10-20"
+
+BLOCKS_EN = [
+    ("p", "Hi, I'm Eunggyu, the person building nawana."),
+    ("p", "Thank you for joining the Android test. Here is everything you need to get started."),
+    ("p", "Google Play only opens a public release once twelve testers have kept the app "
+          "installed for 14 days. Please keep it on your phone for those two weeks and use it "
+          "whenever you like."),
+    ("h", "How to start"),
+    ("ol", [
+        f'On your Android phone, open this link and tap "Become a tester": {OPT_IN}',
+        "Install nawana from the Play Store link on that page.",
+        "Record your voice and sign up with your Google account.",
+    ]),
+    ("p", "You start like any new user, with 20 free minutes. After that, subscribe with the "
+          "code below and the Light plan is yours, free for a month."),
+    ("code",),
+    ("p", "No need to wait until the 20 minutes are used up. Enter it whenever you find "
+          "yourself thinking you'd actually pay for this."),
+    ("b", 'Tap your profile photo at the top right of the Talk tab, then Subscribe, then '
+          '"Have a code?" at the bottom of the plans screen.'),
+    ("h", "What I'd love to hear"),
+    ("p", "Rather than testing it like a tester, try it as someone deciding whether to pay for "
+          "it every month."),
+    ("p", "Small bugs are quick to fix. What I really want to know is this:"),
+    ("ul", [
+        "Compared with what else is out there, would you pay for nawana?",
+        "If not, what would you use instead?",
+        "If you already use another app, would you use nawana alongside it, and if not, why?",
+    ]),
+    ("p", "An honest answer helps far more than a kind one. Just reply to this email, and if "
+          "something breaks, I'll fix it and ship an update."),
+    ("p", "I'm building nawana on my own in Germany, with big hopes for it. Thank you for being "
+          "one of the first people to try it on Android."),
+    ("p", "Eunggyu"),
+]
+
+
+def text_body(code: str, blocks=BLOCKS, label="코드") -> str:
     out = []
-    for b in BLOCKS:
+    for b in blocks:
         kind = b[0]
         if kind in ("p", "b", "h"):
             out.append(b[1])
         elif kind == "code":
-            out.append(f"코드: {code}")
+            out.append(f"{label}: {code}")
         elif kind == "ol":
             out.append("\n".join(f"{i}. {t}" for i, t in enumerate(b[1], 1)))
         elif kind == "ul":
@@ -101,10 +144,10 @@ def _link(t: str) -> str:
     return e.replace(OPT_IN, f'<a href="{OPT_IN}" style="color:#1E5BD8;">{OPT_IN}</a>')
 
 
-def html_body(code: str) -> str:
+def html_body(code: str, blocks=BLOCKS, label="코드") -> str:
     p = 'font-size:16px;line-height:1.7;color:#111;margin:16px 0 0;'
     parts = []
-    for b in BLOCKS:
+    for b in blocks:
         kind = b[0]
         if kind == "p":
             parts.append(f'<p style="{p}">{_link(b[1])}</p>')
@@ -114,7 +157,7 @@ def html_body(code: str) -> str:
             parts.append(f'<p style="{p}margin-top:24px;"><b>{html.escape(b[1])}</b></p>')
         elif kind == "code":
             parts.append(
-                f'<p style="{p}">코드: <span style="font-family:ui-monospace,Menlo,monospace;'
+                f'<p style="{p}">{label}: <span style="font-family:ui-monospace,Menlo,monospace;'
                 f'font-size:18px;font-weight:700;letter-spacing:1px;background:#F2F2F7;'
                 f'padding:4px 10px;border-radius:8px;">{html.escape(code)}</span></p>')
         elif kind in ("ol", "ul"):
@@ -125,13 +168,16 @@ def html_body(code: str) -> str:
     return f'<div style="font-family:-apple-system,sans-serif;max-width:560px;">{"".join(parts)}</div>'
 
 
-def send(key: str, to: str, code: str) -> str:
-    idem = f"{CAMPAIGN}:{to}"
+def send(key: str, to: str, code: str, en: bool = False) -> str:
+    campaign = CAMPAIGN_EN if en else CAMPAIGN
+    idem = f"{campaign}:{to}"
+    blocks, label, subject = (BLOCKS_EN, "Code", SUBJECT_EN) if en else (BLOCKS, "코드", SUBJECT)
     payload = {
         "from": L.FROM, "to": [to], "reply_to": L.REPLY_TO,
-        "subject": SUBJECT, "text": text_body(code), "html": html_body(code),
+        "subject": subject, "text": text_body(code, blocks, label),
+        "html": html_body(code, blocks, label),
         "headers": {"X-Entity-Ref-ID": idem},
-        "tags": [{"name": "campaign", "value": CAMPAIGN}],
+        "tags": [{"name": "campaign", "value": campaign}],
     }
     req = urllib.request.Request("https://api.resend.com/emails",
                                  data=json.dumps(payload).encode(), method="POST")
@@ -149,7 +195,18 @@ def send(key: str, to: str, code: str) -> str:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--send", action="store_true")
+    ap.add_argument("--en", nargs=2, metavar=("EMAIL", "CODE"))
     args = ap.parse_args()
+    if args.en:
+        to, code = args.en
+        body = text_body(code, BLOCKS_EN, "Code")
+        assert "—" not in body, "em dash in copy"
+        print(f"from     {L.FROM}\nreply_to {L.REPLY_TO}\nsubject  {SUBJECT_EN}\nto       {to}\n\n{body}")
+        if not args.send:
+            print("\nDRY RUN")
+            return
+        print(f"sent {to} {code} {send(L.resend_key(), to, code, en=True)}")
+        return
     assert "—" not in text_body("X"), "em dash in copy"
     to, code = TESTERS[0]
     print(f"from     {L.FROM}\nreply_to {L.REPLY_TO}\nsubject  {SUBJECT}\n"
