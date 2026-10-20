@@ -1,0 +1,138 @@
+{
+  "id": "first-weeks-2026-10",
+  "langs": ["ko", "en"],
+  "page": {
+    "ko": {
+      "title": "나와나를 써 주셔서 고마워요",
+      "intro": "1분이면 끝나요. 남겨 주신 이야기는 만든 사람이 직접 읽어요.",
+      "submit": "보내기",
+      "sending": "보내는 중…",
+      "required": "이 질문에 답해 주세요",
+      "error": "보내지 못했어요. 잠시 뒤 다시 눌러 주세요.",
+      "thanks_title": "고맙습니다",
+      "thanks_body": "보내 주신 이야기는 빠짐없이 읽고 앱에 반영할게요.",
+      "edit": "답 고치기",
+      "back_to_app": "나와나 열기",
+      "multi_hint": "여러 개 골라도 돼요",
+      "optional": "선택"
+    },
+    "en": {
+      "title": "Thanks for trying nawana",
+      "intro": "Takes a minute. I read every answer myself.",
+      "submit": "Send",
+      "sending": "Sending…",
+      "required": "Please answer this one",
+      "error": "That didn't go through. Please try again in a moment.",
+      "thanks_title": "Thank you",
+      "thanks_body": "I'll read every word, and it will shape what I build next.",
+      "edit": "Change my answers",
+      "back_to_app": "Open nawana",
+      "multi_hint": "Pick as many as you like",
+      "optional": "optional"
+    }
+  },
+  "questions": [
+    {
+      "id": "overall",
+      "type": "single",
+      "required": true,
+      "ko": "써 보니 어땠어요?",
+      "en": "How was it?",
+      "options": [
+        { "v": "5", "ko": "아주 좋았어요", "en": "Loved it" },
+        { "v": "4", "ko": "좋았어요", "en": "Liked it" },
+        { "v": "3", "ko": "그저 그랬어요", "en": "It was OK" },
+        { "v": "2", "ko": "별로였어요", "en": "Not for me" },
+        { "v": "0", "ko": "아직 제대로 못 써 봤어요", "en": "I haven't really tried it yet" }
+      ]
+    },
+    {
+      "id": "again",
+      "type": "single",
+      "required": true,
+      "ko": "앞으로도 쓰고 싶으세요?",
+      "en": "Would you keep using it?",
+      "options": [
+        { "v": "yes", "ko": "계속 쓰고 싶어요", "en": "Yes, regularly" },
+        { "v": "sometimes", "ko": "가끔 쓸 것 같아요", "en": "Now and then" },
+        { "v": "unsure", "ko": "잘 모르겠어요", "en": "Not sure" },
+        { "v": "no", "ko": "안 쓸 것 같아요", "en": "Probably not" }
+      ]
+    },
+    {
+      "id": "blockers",
+      "type": "multi",
+      "required": true,
+      "ko": "망설여지는 점이 있다면요?",
+      "en": "What holds you back, if anything?",
+      "options": [
+        { "v": "price", "ko": "가격이 부담돼요", "en": "The price" },
+        { "v": "too_fast", "ko": "무료 20분이 너무 빨리 끝났어요", "en": "The free 20 minutes ran out too fast" },
+        { "v": "too_hard", "ko": "대화가 어려웠어요", "en": "The conversation was too hard" },
+        { "v": "too_easy", "ko": "대화가 쉬워서 얻는 게 적었어요", "en": "Too easy, I didn't learn much" },
+        { "v": "what_to_say", "ko": "무슨 말을 해야 할지 몰랐어요", "en": "I didn't know what to talk about" },
+        { "v": "voice", "ko": "내 목소리가 어색했어요", "en": "My own voice felt strange" },
+        { "v": "call_quality", "ko": "통화가 끊기거나 잘 안 들렸어요", "en": "The call dropped or was hard to hear" },
+        { "v": "no_time", "ko": "쓸 시간이 없었어요", "en": "I didn't have time" },
+        { "v": "nothing", "ko": "딱히 없어요", "en": "Nothing really", "exclusive": true }
+      ]
+    },
+    {
+      "id": "price",
+      "type": "single",
+      "required": true,
+      "ko": "한 달에 얼마면 내고 쓰시겠어요?",
+      "en": "What would you pay per month?",
+      "options": [
+        { "v": "lt5", "ko": "5,000원 이하", "en": "$5 or less" },
+        { "v": "5to10", "ko": "5,000원 ~ 10,000원", "en": "$5 to $10" },
+        { "v": "10to20", "ko": "10,000원 ~ 20,000원", "en": "$10 to $20" },
+        { "v": "gt20", "ko": "20,000원 이상", "en": "More than $20" },
+        { "v": "wouldnt", "ko": "돈 내고 쓸 생각은 없어요", "en": "I wouldn't pay for it" }
+      ]
+    },
+    {
+      "id": "note",
+      "type": "text",
+      "required": false,
+      "ko": "한마디 남겨 주세요",
+      "en": "Anything else?",
+      "placeholder_ko": "좋았던 점, 아쉬웠던 점, 무엇이든요",
+      "placeholder_en": "What you liked, what you missed, anything"
+    }
+  ],
+  "mail": {
+    "ko": {
+      "subject": "나와나를 써 주셔서 고맙습니다",
+      "open": [
+        "안녕하세요. 나와나를 만든 이응규입니다.",
+        "나와나를 써 주셔서 정말 고맙습니다. 직접 써 보신 분이 느끼신 경험이 앱을 만들어 가는 데 가장 큰 도움이 됩니다.",
+        "짧은 질문 다섯 개를 준비했습니다. 1분이면 끝납니다."
+      ],
+      "button": "1분 설문 답하기",
+      "or_reply": "설문이 번거로우시면 이 메일에 한 줄만 답장해 주셔도 충분합니다. 스레드나 인스타그램 DM도 좋습니다.",
+      "close": "보내 주신 이야기는 제가 빠짐없이 읽겠습니다. 고맙습니다.",
+      "sign": "이응규 드림",
+      "reply_label": "답장하기",
+      "threads_label": "스레드",
+      "instagram_label": "인스타그램 DM",
+      "unsub": "더 이상 메일을 받고 싶지 않으시면 답장으로 알려 주세요."
+    },
+    "en": {
+      "subject": "Thank you for trying nawana",
+      "open": [
+        "Hi, I'm Eunggyu, and I make nawana.",
+        "Thank you for giving it a try. How it felt to you is the most useful thing I can learn while I build it.",
+        "I put together five short questions. It takes about a minute."
+      ],
+      "button": "Answer in a minute",
+      "or_reply": "If a form is too much, a one-line reply to this email is plenty. Threads or an Instagram DM work too.",
+      "close": "I'll read every word. Thank you.",
+      "sign": "Eunggyu",
+      "reply_label": "Reply",
+      "threads_label": "Threads",
+      "instagram_label": "Instagram DM",
+      "unsub": "If you'd rather not get mail from us, just reply and let me know."
+    }
+  }
+}

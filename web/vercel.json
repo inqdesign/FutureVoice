@@ -9,6 +9,10 @@
       "destination": "/community.html"
     },
     {
+      "source": "/s/:survey",
+      "destination": "/survey.html"
+    },
+    {
       "source": "/admin",
       "destination": "https://nawana-admin.futurevoice-gateway.workers.dev/admin"
     },
