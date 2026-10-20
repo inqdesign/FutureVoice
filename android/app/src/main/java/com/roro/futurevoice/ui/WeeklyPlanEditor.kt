@@ -730,18 +730,21 @@ fun PlanBlockSheet(target: BlockTarget, onDismiss: () -> Unit, onRefused: () -> 
                         }
                     }
                 }
-                GroupedRowDivider()
-                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(if (kind.isTimed) R.string.routine_length else R.string.routine_how_many),
-                        Modifier.weight(1f))
-                    Text(RoutineText.amount(res, kind, amount).ifEmpty { "1" },
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    IconButton(onClick = { amount = (amount - step).coerceIn(range) }, enabled = amount > range.first) {
-                        Icon(Icons.Filled.Remove, null)
-                    }
-                    IconButton(onClick = { amount = (amount + step).coerceIn(range) }, enabled = amount < range.last) {
-                        Icon(Icons.Filled.Add, null)
+                // Listening has nothing to count: anything heard is it.
+                if (!kind.hasNoAmount) {
+                    GroupedRowDivider()
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(if (kind.isTimed) R.string.routine_length else R.string.routine_how_many),
+                            Modifier.weight(1f))
+                        Text(RoutineText.amount(res, kind, amount).ifEmpty { "1" },
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        IconButton(onClick = { amount = (amount - step).coerceIn(range) }, enabled = amount > range.first) {
+                            Icon(Icons.Filled.Remove, null)
+                        }
+                        IconButton(onClick = { amount = (amount + step).coerceIn(range) }, enabled = amount < range.last) {
+                            Icon(Icons.Filled.Add, null)
+                        }
                     }
                 }
                 if (kind != StudyPlan.Kind.TALK) {
@@ -753,6 +756,7 @@ fun PlanBlockSheet(target: BlockTarget, onDismiss: () -> Unit, onRefused: () -> 
                 StudyPlan.Kind.TALK -> GroupedFooter(stringResource(R.string.routine_talk_block_footer))
                 StudyPlan.Kind.SAY_IT_AGAIN -> GroupedFooter(stringResource(R.string.routine_say_again_footer))
                 StudyPlan.Kind.SPEECH -> GroupedFooter(stringResource(R.string.any_script_counts_once_you_finish_a_take))
+                StudyPlan.Kind.LISTEN -> GroupedFooter(stringResource(R.string.routine_listen_footer))
                 else -> Unit
             }
             if (existing != null) {

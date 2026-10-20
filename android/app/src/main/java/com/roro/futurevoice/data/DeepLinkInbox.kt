@@ -66,6 +66,8 @@ object DeepLinkInbox {
             "sayitagain" -> { PlanReminder.pendingSayItAgain.value = true; return }
             // A routine's Speech reminder: the Speech tab.
             "speech" -> { PlanReminder.pendingSpeech.value = true; return }
+            // A routine's listening reminder: the player, already playing.
+            "listen" -> { PlanReminder.pendingListen.value = true; return }
             // Continue widget: that book's page, else the shelf.
             "book" -> uri.getQueryParameter("id")?.takeIf { it.isNotBlank() }?.let { id ->
                 widgetRoute.value = WidgetRoute.Book(uri.getQueryParameter("type") ?: "talk", id)

@@ -87,4 +87,17 @@
     <string name="routine_s_as_planned">%1$s, como lo planeaste.</string>
     <string name="routine_no_timed_talk">Tu rutina no tiene ninguna conversación con hora, así que no sonará nada.</string>
     <string name="routine_change_in_routine">Cambiar en mi rutina</string>
+    <string name="routine_kind_listening">Escuchar</string>
+    <string name="routine_add_to_my_routine">Añadir a mi rutina</string>
+    <string name="routine_not_interested">No me interesa</string>
+    <string name="routine_listen_footer">Cuenta cualquier episodio del podcast o situación que hayas visto. El aviso abre el reproductor ya sonando.</string>
+    <string name="routine_pitch_say_it_again">Repite una conversación que acabas de tener, diciendo tu parte mejor.</string>
+    <string name="routine_pitch_review">Repasa las palabras, expresiones y frases que te dejaron tus conversaciones.</string>
+    <string name="routine_pitch_shadow">Di las frases de tu yo fluido a la vez que él, con el mismo ritmo.</string>
+    <string name="routine_pitch_listen">Escucha seguidos el Podcast de nawana y las situaciones que has visto.</string>
+    <string name="routine_pitch_speech">Lee un guion en voz alta ante la cámara y mira cómo te fue.</string>
+    <string name="routine_time_to_listen">Es hora de escuchar</string>
+    <string name="routine_listen_body">Ponte los auriculares y toca. Empieza a sonar enseguida.</string>
+    <string name="routine_make_it_later">Puedes hacerla más tarde</string>
+    <string name="routine_under_activity_whenever">Cuando quieras una rutina, está en Actividad, en la pantalla Hablar.</string>
 </resources>

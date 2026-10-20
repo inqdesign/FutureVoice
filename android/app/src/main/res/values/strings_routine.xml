@@ -87,4 +87,17 @@
     <string name="routine_s_as_planned">%1$s, as planned.</string>
     <string name="routine_no_timed_talk">No talk with a set time in your routine, so nothing rings.</string>
     <string name="routine_change_in_routine">Change in my routine</string>
+    <string name="routine_kind_listening">Listening</string>
+    <string name="routine_add_to_my_routine">Add to my routine</string>
+    <string name="routine_not_interested">Not interested</string>
+    <string name="routine_listen_footer">Any podcast episode or situation you\'ve watched counts. The reminder opens the player, already playing.</string>
+    <string name="routine_pitch_say_it_again">Do a talk you just had again, saying your part the better way.</string>
+    <string name="routine_pitch_review">Go through the words, expressions and sentences your talks left you.</string>
+    <string name="routine_pitch_shadow">Say your fluent self\'s lines along with them, in the same rhythm.</string>
+    <string name="routine_pitch_listen">Listen to the nawana Podcast and the situations you\'ve watched, one after another.</string>
+    <string name="routine_pitch_speech">Read a script out loud on camera and see how it went.</string>
+    <string name="routine_time_to_listen">Time to listen</string>
+    <string name="routine_listen_body">Put your headphones in. It starts playing when you tap.</string>
+    <string name="routine_make_it_later">You can make it later</string>
+    <string name="routine_under_activity_whenever">Your routine is under Activity on the Talk screen whenever you want one.</string>
 </resources>

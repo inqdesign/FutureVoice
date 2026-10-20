@@ -161,6 +161,7 @@ object PlaylistPlayer {
         val start = newLines.getOrNull(startAt)?.let { s -> playable.indexOfFirst { it.id == s.id }.takeIf { it >= 0 } } ?: 0
         flushListening(finished = false)
         startedEpisodes.clear()
+        recordedPieces.clear()
         this.title = title
         lines = playable
         order = makeOrder(playable, shuffle, start)
@@ -466,7 +467,20 @@ object PlaylistPlayer {
      *  resume isn't a second start. */
     private val startedEpisodes = mutableSetOf<String>()
 
+    /** Episodes and situations already written to the routine's log in this
+     *  list — one listening event per piece, not per line. */
+    private val recordedPieces = mutableSetOf<String>()
+
     private fun heard(line: PlaylistLine, seconds: Double) {
+        // The routine's listening block: any piece heard is listening done
+        // (iOS `4c0d8d7c`).
+        app?.let { c ->
+            if (recordedPieces.add(line.bookId)) {
+                com.roro.futurevoice.data.ActivityEventLog.record(c, com.roro.futurevoice.data.ActivityEventLog.Kind.LISTEN)
+                // The streak counts it; the widget's face should say so.
+                com.roro.futurevoice.widget.StudyWidgetRefresher.schedule(c)
+            }
+        }
         val number = line.episodeNumber ?: return
         if (listening?.bookId != line.bookId) {
             flushListening(finished = false)

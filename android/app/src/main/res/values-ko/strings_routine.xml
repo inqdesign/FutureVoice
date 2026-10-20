@@ -87,4 +87,17 @@
     <string name="routine_s_as_planned">계획대로 %1$s.</string>
     <string name="routine_no_timed_talk">루틴에 시간이 정해진 대화가 없어서 전화가 오지 않아요.</string>
     <string name="routine_change_in_routine">내 루틴에서 바꾸기</string>
+    <string name="routine_kind_listening">듣기</string>
+    <string name="routine_add_to_my_routine">루틴에 넣기</string>
+    <string name="routine_not_interested">관심 없어요</string>
+    <string name="routine_listen_footer">팟캐스트든 내가 본 상황이든 하나만 들으면 돼요. 알림을 누르면 플레이어가 바로 재생돼요.</string>
+    <string name="routine_pitch_say_it_again">방금 한 대화를 한 번 더 해요. 내 말은 더 자연스러운 표현으로요.</string>
+    <string name="routine_pitch_review">대화에서 나온 단어, 표현, 문장을 다시 봐요.</string>
+    <string name="routine_pitch_shadow">유창해진 나의 말을 같은 리듬으로 따라 해요.</string>
+    <string name="routine_pitch_listen">nawana 팟캐스트와 내가 본 상황을 이어서 들어요.</string>
+    <string name="routine_pitch_speech">원고를 카메라 앞에서 소리 내어 읽고, 어땠는지 봐요.</string>
+    <string name="routine_time_to_listen">들을 시간이에요</string>
+    <string name="routine_listen_body">이어폰을 끼고 눌러 봐요. 바로 재생돼요.</string>
+    <string name="routine_make_it_later">나중에 만들어도 돼요</string>
+    <string name="routine_under_activity_whenever">루틴은 대화 화면의 활동에서 언제든 만들 수 있어요.</string>
 </resources>

@@ -351,6 +351,15 @@ fun RootScreen() {
         showActivity = false; showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false
         tab = HomeTab.SPEECH
     }
+    // A listening block's reminder or routine line: the player, already
+    // playing (iOS `pendingListen`). The player floats over the home shell,
+    // so whatever is open in front of it closes; the shell opens the player
+    // and takes the flag.
+    val listenPending by com.roro.futurevoice.data.PlanReminder.pendingListen.collectAsStateWithLifecycle()
+    LaunchedEffect(listenPending) {
+        if (!listenPending) return@LaunchedEffect
+        showActivity = false; showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false
+    }
     val deepLink by DeepLinkInbox.pending.collectAsStateWithLifecycle()
     LaunchedEffect(deepLink) {
         when (DeepLinkInbox.consume()) {
@@ -1845,6 +1854,15 @@ internal fun HomeScreen(
     var showDeepen by remember { mutableStateOf(false) }
     /** The situation player sheet (iOS `PlaylistButton`'s `.sheet`). */
     var showPlayer by remember { mutableStateOf(false) }
+    /** Opened from the routine's listening block: it starts playing. */
+    var playerAutoplay by remember { mutableStateOf(false) }
+    val listenPending by com.roro.futurevoice.data.PlanReminder.pendingListen.collectAsStateWithLifecycle()
+    LaunchedEffect(listenPending) {
+        if (!listenPending) return@LaunchedEffect
+        com.roro.futurevoice.data.PlanReminder.pendingListen.value = false
+        playerAutoplay = true
+        showPlayer = true
+    }
     // "Why & how" — each tab's guide, the first time it is opened (iOS
     // `RootTabView.offerPageIntro`).
     PageIntroHost(tab.guidePage(), blocked = guideBlocked || showDeepen)
@@ -2165,7 +2183,7 @@ internal fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                    PlaylistButton(onClick = { showPlayer = true })
+                    PlaylistButton(onClick = { playerAutoplay = false; showPlayer = true })
                 }
                 // Drawn exactly like Watch's "New situation": glass capsule,
                 // accent label.
@@ -2203,7 +2221,8 @@ internal fun HomeScreen(
         }
         // The player floats over the page, the bar included (iOS sheet).
         ScenePlayerSheet(visible = showPlayer, state = state,
-            topInset = padding.calculateTopPadding(), onDismiss = { showPlayer = false })
+            topInset = padding.calculateTopPadding(), autoplay = playerAutoplay,
+            onDismiss = { showPlayer = false; playerAutoplay = false })
       }
     }
 }

@@ -78,7 +78,9 @@ object StudyPlanStore {
         ensure(c)
         val old = _plan.value
         val now = System.currentTimeMillis()
-        var next = new.foldingIntoReview()
+        // Whatever is handed in now is written in today's terms: its
+        // shadowing blocks are shadowing (iOS `4c0d8d7c`).
+        var next = new.copy(shadowIsOwn = true).foldingIntoReview()
         next = when {
             next.blocks.isEmpty() -> next.copy(streakSince = null)
             byLearner && next.streakSince == null -> next.copy(streakSince = StudyPlan.startOfDay(now))

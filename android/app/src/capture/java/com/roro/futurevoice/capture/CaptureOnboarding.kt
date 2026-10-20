@@ -71,8 +71,10 @@ object CaptureOnboarding {
         "routine-onboarding" to { _ -> com.roro.futurevoice.ui.RoutineOnboardingOverlay(onFinished = {}) },
         "routine-onboarding-call" to { _ ->
             com.roro.futurevoice.ui.RoutineOnboardingOverlay(onFinished = {}, debugStep = "call") },
-        "routine-onboarding-study" to { _ ->
-            com.roro.futurevoice.ui.RoutineOnboardingOverlay(onFinished = {}, debugStep = "study") },
+        "routine-onboarding-review" to { _ ->
+            com.roro.futurevoice.ui.RoutineOnboardingOverlay(onFinished = {}, debugStep = "review") },
+        "routine-onboarding-listen" to { _ ->
+            com.roro.futurevoice.ui.RoutineOnboardingOverlay(onFinished = {}, debugStep = "listen") },
         "routine-onboarding-done" to { _ ->
             com.roro.futurevoice.ui.RoutineOnboardingOverlay(onFinished = {}, debugStep = "done") },
         // The voice act, one stage each (the debug app's `--es cloneStage`,

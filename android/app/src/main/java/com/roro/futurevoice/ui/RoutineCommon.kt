@@ -42,6 +42,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.MicExternalOn
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Phone
@@ -116,6 +117,9 @@ fun StudyPlan.Kind.color(): Color = when (this) {
     StudyPlan.Kind.TEST -> Color(0xFFFF9500)
     // Purple is the folded `words` kind's, which nothing draws any more.
     StudyPlan.Kind.SPEECH -> Color(0xFFAF52DE)
+    // Cyan: the one system colour left that no kind here uses (indigo is
+    // the Core's).
+    StudyPlan.Kind.LISTEN -> Color(0xFF32ADE6)
 }
 
 fun StudyPlan.Kind.icon(): ImageVector = when (this) {
@@ -127,14 +131,17 @@ fun StudyPlan.Kind.icon(): ImageVector = when (this) {
     StudyPlan.Kind.SAY_IT_AGAIN -> Icons.Filled.Replay
     StudyPlan.Kind.TEST -> Icons.Filled.Verified
     StudyPlan.Kind.SPEECH -> Icons.Filled.MicExternalOn
+    StudyPlan.Kind.LISTEN -> Icons.Filled.Headphones
 }
 
 fun PlannerDay.Actual.Kind.color(): Color = when (this) {
     PlannerDay.Actual.Kind.TALK -> Color(0xFF007AFF)
     PlannerDay.Actual.Kind.REVIEW -> Color(0xFF34C759)
-    PlannerDay.Actual.Kind.SHADOW, PlannerDay.Actual.Kind.SAY_IT_AGAIN -> Color(0xFF30B0C7)
+    PlannerDay.Actual.Kind.SHADOW -> Color(0xFFFFCC00)
+    PlannerDay.Actual.Kind.SAY_IT_AGAIN -> Color(0xFF30B0C7)
     PlannerDay.Actual.Kind.SCENE -> Color(0xFF8E8E93)
     PlannerDay.Actual.Kind.SPEECH -> Color(0xFFAF52DE)
+    PlannerDay.Actual.Kind.LISTEN -> Color(0xFF32ADE6)
 }
 
 fun PlannerDay.Actual.Kind.icon(): ImageVector = when (this) {
@@ -144,6 +151,7 @@ fun PlannerDay.Actual.Kind.icon(): ImageVector = when (this) {
     PlannerDay.Actual.Kind.SAY_IT_AGAIN -> Icons.Filled.Replay
     PlannerDay.Actual.Kind.SCENE -> Icons.Filled.PlayCircle
     PlannerDay.Actual.Kind.SPEECH -> Icons.Filled.MicExternalOn
+    PlannerDay.Actual.Kind.LISTEN -> Icons.Filled.Headphones
 }
 
 @Composable
@@ -154,6 +162,7 @@ fun PlannerDay.Actual.Kind.label(): String = stringResource(when (this) {
     PlannerDay.Actual.Kind.SAY_IT_AGAIN -> R.string.routine_kind_say_it_again
     PlannerDay.Actual.Kind.SCENE -> R.string.routine_watch_scene
     PlannerDay.Actual.Kind.SPEECH -> R.string.speech_d00d85
+    PlannerDay.Actual.Kind.LISTEN -> R.string.routine_kind_listening
 })
 
 /** 24-hour "8:05" — the axis beside it is 24-hour, and a 12-hour time with

@@ -87,4 +87,17 @@
     <string name="routine_s_as_planned">予定どおり %1$s。</string>
     <string name="routine_no_timed_talk">ルーティンに時間の決まったトークがないので、電話は鳴りません。</string>
     <string name="routine_change_in_routine">ルーティンで変更</string>
+    <string name="routine_kind_listening">リスニング</string>
+    <string name="routine_add_to_my_routine">ルーティンに入れる</string>
+    <string name="routine_not_interested">興味なし</string>
+    <string name="routine_listen_footer">ポッドキャストでも、見たシーンでも、ひとつ聞けばOK。通知をタップするとプレーヤーがすぐ再生します。</string>
+    <string name="routine_pitch_say_it_again">さっきの会話をもう一度。自分のセリフは、もっと自然な言い方で。</string>
+    <string name="routine_pitch_review">会話で出てきた単語・表現・文をおさらいします。</string>
+    <string name="routine_pitch_shadow">流暢な自分のセリフを、同じリズムでなぞって話します。</string>
+    <string name="routine_pitch_listen">nawana ポッドキャストと、見たシーンを続けて聞きます。</string>
+    <string name="routine_pitch_speech">原稿をカメラの前で声に出して読み、結果を見ます。</string>
+    <string name="routine_time_to_listen">リスニングの時間です</string>
+    <string name="routine_listen_body">イヤホンをつけてタップすると、すぐ再生されます。</string>
+    <string name="routine_make_it_later">あとで作ってもOK</string>
+    <string name="routine_under_activity_whenever">ルーティンはトーク画面のアクティビティからいつでも作れます。</string>
 </resources>

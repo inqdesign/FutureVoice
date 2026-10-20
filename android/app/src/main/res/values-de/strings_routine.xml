@@ -87,4 +87,17 @@
     <string name="routine_s_as_planned">%1$s, wie geplant.</string>
     <string name="routine_no_timed_talk">Deine Routine hat kein Gespräch mit fester Uhrzeit, also klingelt nichts.</string>
     <string name="routine_change_in_routine">In meiner Routine ändern</string>
+    <string name="routine_kind_listening">Hören</string>
+    <string name="routine_add_to_my_routine">Zur Routine hinzufügen</string>
+    <string name="routine_not_interested">Kein Interesse</string>
+    <string name="routine_listen_footer">Jede Podcast-Folge und jede angesehene Situation zählt. Die Erinnerung öffnet den Player und spielt gleich los.</string>
+    <string name="routine_pitch_say_it_again">Führ ein Gespräch noch einmal, und sag deinen Teil diesmal besser.</string>
+    <string name="routine_pitch_review">Geh die Wörter, Wendungen und Sätze aus deinen Gesprächen durch.</string>
+    <string name="routine_pitch_shadow">Sprich die Sätze deines fließenden Ichs mit, im gleichen Rhythmus.</string>
+    <string name="routine_pitch_listen">Hör den nawana Podcast und deine angesehenen Situationen am Stück.</string>
+    <string name="routine_pitch_speech">Lies ein Skript laut vor der Kamera und sieh dir an, wie es lief.</string>
+    <string name="routine_time_to_listen">Zeit zum Hören</string>
+    <string name="routine_listen_body">Kopfhörer rein und tippen. Es spielt sofort los.</string>
+    <string name="routine_make_it_later">Das geht auch später</string>
+    <string name="routine_under_activity_whenever">Eine Routine kannst du jederzeit unter Aktivität auf dem Sprechen-Bildschirm anlegen.</string>
 </resources>

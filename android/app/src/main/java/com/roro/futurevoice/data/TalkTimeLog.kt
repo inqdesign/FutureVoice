@@ -116,6 +116,8 @@ object TalkTimeLog {
         val out = HashSet<String>(spokenDays(context))
         load(context).forEach { (k, v) -> if (v > 0) out += k.substringBefore(SEPARATOR) }
         PracticeLog.recent(context, days, now).forEach { (k, d) -> if (d.didSomething) out += k }
+        // Listening in the player is studying too (iOS `4c0d8d7c`).
+        out += listenDayKeys(context)
         return out
     }
 
@@ -200,8 +202,17 @@ object TalkTimeLog {
         val talked = load(context).entries.any { (k, v) ->
             v > 0 && (k == prefix || k.startsWith(prefix + SEPARATOR))
         }
-        return talked || PracticeLog.day(context, at)?.didSomething == true
+        return talked || PracticeLog.day(context, at)?.didSomething == true ||
+            prefix in listenDayKeys(context)
     }
+
+    /** Days something was heard in the player (iOS `PracticeStats.activeDays`,
+     *  2026-10-20, founder: listening is studying too). The event log keeps
+     *  60 days, so older listening-only days drop out. */
+    private fun listenDayKeys(context: Context): Set<String> =
+        ActivityEventLog.events(context, 0L, Long.MAX_VALUE)
+            .filter { it.kind == ActivityEventLog.Kind.LISTEN }
+            .map { dayKey(it.at) }.toSet()
 
     // MARK: - Server backfill (iOS `syncFromServer`)
 

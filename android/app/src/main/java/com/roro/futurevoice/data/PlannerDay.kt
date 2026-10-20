@@ -25,7 +25,7 @@ object PlannerDay {
         val count: Int = 1,
     ) {
         enum class Kind(val raw: String) { TALK("talk"), REVIEW("review"), SHADOW("shadow"),
-            SCENE("scene"), SAY_IT_AGAIN("sayItAgain"), SPEECH("speech") }
+            SCENE("scene"), SAY_IT_AGAIN("sayItAgain"), SPEECH("speech"), LISTEN("listen") }
 
         val id: String get() = sessionId?.let { "talk-$it" } ?: "${kind.raw}-$start"
 
@@ -36,15 +36,18 @@ object PlannerDay {
             Kind.SHADOW -> StudyPlan.Kind.SHADOW
             Kind.SAY_IT_AGAIN -> StudyPlan.Kind.SAY_IT_AGAIN
             Kind.SPEECH -> StudyPlan.Kind.SPEECH
+            Kind.LISTEN -> StudyPlan.Kind.LISTEN
             Kind.SCENE -> null
         }
 
         /** Whether this sitting is the kind of practice a planned block asks for. */
         fun covers(planned: StudyPlan.Kind): Boolean = when (kind) {
             Kind.TALK -> planned == StudyPlan.Kind.TALK
-            Kind.SHADOW -> planned == StudyPlan.Kind.SHADOW
+            // Shadowing still covers a review block (iOS `4c0d8d7c`).
+            Kind.SHADOW -> planned == StudyPlan.Kind.SHADOW || planned == StudyPlan.Kind.REVIEW
             Kind.SAY_IT_AGAIN -> planned == StudyPlan.Kind.SAY_IT_AGAIN
             Kind.SPEECH -> planned == StudyPlan.Kind.SPEECH
+            Kind.LISTEN -> planned == StudyPlan.Kind.LISTEN
             Kind.REVIEW -> planned == StudyPlan.Kind.REVIEW || planned.isFoldedIntoReview
             Kind.SCENE -> false
         }
@@ -65,12 +68,16 @@ object PlannerDay {
                 title = it.title, sessionId = it.id)
         }.toMutableList()
         fun group(k: ActivityEventLog.Kind): Actual.Kind = when (k) {
-            // Every kind of review is one sitting of review (iOS 2026-10-03).
+            // Every kind of review is one sitting of review (iOS 2026-10-03);
+            // shadowing is its own again since it has its own block (iOS
+            // 2026-10-20), and still covers a review block.
             ActivityEventLog.Kind.DRILL, ActivityEventLog.Kind.WORD,
-            ActivityEventLog.Kind.EXPRESSION, ActivityEventLog.Kind.SHADOW -> Actual.Kind.REVIEW
+            ActivityEventLog.Kind.EXPRESSION -> Actual.Kind.REVIEW
+            ActivityEventLog.Kind.SHADOW -> Actual.Kind.SHADOW
             ActivityEventLog.Kind.SCENE -> Actual.Kind.SCENE
             ActivityEventLog.Kind.SAY_IT_AGAIN -> Actual.Kind.SAY_IT_AGAIN
             ActivityEventLog.Kind.SPEECH -> Actual.Kind.SPEECH
+            ActivityEventLog.Kind.LISTEN -> Actual.Kind.LISTEN
         }
         for ((kind, events) in events.groupBy { group(it.kind) }) {
             var start = 0L; var last = 0L; var count = 0
@@ -96,17 +103,22 @@ object PlannerDay {
         val sayItAgain: Double = 0.0,
         val speech: Double = 0.0,
         val test: Double = 0.0,
+        val listen: Double = 0.0,
     ) {
         fun amount(kind: StudyPlan.Kind): Double = when (kind) {
             StudyPlan.Kind.TALK -> talkMinutes
             StudyPlan.Kind.WORDS -> words
             StudyPlan.Kind.EXPRESSIONS -> expressions
-            // Review is every kind of review counted together.
+            // Review is every kind of review counted together: words and
+            // expressions judged, sentence cards, shadow lines. On a day with
+            // a shadowing block the lines go to that block instead
+            // ([progress]), so one take is never counted twice.
             StudyPlan.Kind.REVIEW -> words + expressions + cards + shadow
             StudyPlan.Kind.SHADOW -> shadow
             StudyPlan.Kind.SAY_IT_AGAIN -> sayItAgain
             StudyPlan.Kind.SPEECH -> speech
             StudyPlan.Kind.TEST -> test
+            StudyPlan.Kind.LISTEN -> listen
         }
     }
 
@@ -134,6 +146,7 @@ object PlannerDay {
             sayItAgain = events.count { it.kind == ActivityEventLog.Kind.SAY_IT_AGAIN }.toDouble(),
             speech = events.count { it.kind == ActivityEventLog.Kind.SPEECH }.toDouble(),
             test = if (testFinished) 1.0 else 0.0,
+            listen = events.count { it.kind == ActivityEventLog.Kind.LISTEN }.toDouble(),
         )
     }
 
@@ -145,9 +158,13 @@ object PlannerDay {
     fun progress(planned: List<StudyPlan.Occurrence>, totals: Totals): Map<String, Double> {
         val out = LinkedHashMap<String, Double>()
         val left = HashMap<StudyPlan.Kind, Double>()
+        val shadowPlanned = planned.any { it.kind == StudyPlan.Kind.SHADOW }
         for (occ in planned.sortedBy { it.start }) {
-            val have = left[occ.kind] ?: totals.amount(occ.kind)
-            val need = maxOf(1, occ.amount).toDouble()
+            var total = totals.amount(occ.kind)
+            if (occ.kind == StudyPlan.Kind.REVIEW && shadowPlanned) total -= totals.shadow
+            val have = left[occ.kind] ?: total
+            // Listening has no amount: anything heard is the block done.
+            val need = if (occ.kind.hasNoAmount) 1.0 else maxOf(1, occ.amount).toDouble()
             out[occ.id] = (have / need).coerceIn(0.0, 1.0)
             left[occ.kind] = maxOf(0.0, have - need)
         }
@@ -180,10 +197,13 @@ object PlannerDay {
         return actuals.filter { a ->
             when (a.kind) {
                 Actual.Kind.TALK -> { talkSeen += 1; talkSeen > talkPlans }
-                Actual.Kind.REVIEW -> kinds.none { it == StudyPlan.Kind.REVIEW || it.isFoldedIntoReview }
-                Actual.Kind.SHADOW -> StudyPlan.Kind.SHADOW !in kinds
+                Actual.Kind.REVIEW -> kinds.none {
+                    it == StudyPlan.Kind.REVIEW || it == StudyPlan.Kind.SHADOW || it.isFoldedIntoReview
+                }
+                Actual.Kind.SHADOW -> StudyPlan.Kind.SHADOW !in kinds && StudyPlan.Kind.REVIEW !in kinds
                 Actual.Kind.SAY_IT_AGAIN -> StudyPlan.Kind.SAY_IT_AGAIN !in kinds
                 Actual.Kind.SPEECH -> StudyPlan.Kind.SPEECH !in kinds
+                Actual.Kind.LISTEN -> StudyPlan.Kind.LISTEN !in kinds
                 Actual.Kind.SCENE -> true
             }
         }

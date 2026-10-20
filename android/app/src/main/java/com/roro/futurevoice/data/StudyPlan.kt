@@ -45,6 +45,12 @@ data class StudyPlan(
     val streakSince: Long? = null,
     /** `yyyy-MM-dd` → that date's own blocks, replacing the template's. */
     val exceptions: Map<String, List<Block>> = emptyMap(),
+    /**
+     * null = saved while shadowing blocks were folded into review (iOS
+     * 2026-10-03 to 2026-10-20); such a plan's shadow blocks are folded once
+     * on load. true = shadowing is a block of its own.
+     */
+    val shadowIsOwn: Boolean? = null,
 ) {
     @Serializable
     enum class Kind(val raw: String) {
@@ -58,7 +64,10 @@ data class StudyPlan(
         @SerialName("test") TEST("test"),
         /** A take of any script in the Speech tab, counted when it saves
          *  (iOS `8f135c24`). */
-        @SerialName("speech") SPEECH("speech");
+        @SerialName("speech") SPEECH("speech"),
+        /** A podcast episode or a watched situation heard in the player —
+         *  no amount to promise (iOS `4c0d8d7c`). */
+        @SerialName("listen") LISTEN("listen");
 
         /** Only a talk is measured in MINUTES (the talk meter). Every other
          *  kind is a COUNT the app actually keeps. */
@@ -72,7 +81,7 @@ data class StudyPlan(
             EXPRESSIONS -> 3
             REVIEW -> 20
             SHADOW -> 2
-            SAY_IT_AGAIN, TEST, SPEECH -> 1
+            SAY_IT_AGAIN, TEST, SPEECH, LISTEN -> 1
         }
 
         /** How tall the block is drawn in the editor, in minutes — a count
@@ -86,15 +95,25 @@ data class StudyPlan(
             else -> 15
         }
 
-        val isFoldedIntoReview: Boolean get() = this == WORDS || this == EXPRESSIONS || this == SHADOW
+        /** LEGACY kinds: plans saved with them are folded into review on
+         *  load ([foldingIntoReview]); nothing places them any more. */
+        val isFoldedIntoReview: Boolean get() = this == WORDS || this == EXPRESSIONS
+
+        /** Kinds promised with no amount: done once it happened at all. */
+        val hasNoAmount: Boolean get() = this == LISTEN
 
         companion object {
             /** Review cards a quarter hour holds ([defaultAmount]). */
             const val REVIEW_CARDS_PER_QUARTER = 20
 
             /** Kinds the learner places by hand — whole ACTIONS (iOS
-             *  2026-10-03): talk, review, say it again. */
-            val placeable = listOf(TALK, REVIEW, SAY_IT_AGAIN, SPEECH)
+             *  2026-10-03): talk, review, say it again. Review counts words
+             *  and expressions judged and sentence cards, and shadow lines on
+             *  a day with no shadowing block. Shadowing came back as its own
+             *  block and listening joined on 2026-10-20 (iOS `4c0d8d7c`):
+             *  listening is the player — any podcast episode or watched
+             *  situation heard that day — with no amount to promise. */
+            val placeable = listOf(TALK, REVIEW, SAY_IT_AGAIN, SHADOW, LISTEN, SPEECH)
         }
     }
 
@@ -372,11 +391,13 @@ data class StudyPlan(
      * blocks landing on the same slot add up into one.
      */
     fun foldingIntoReview(): StudyPlan {
+        val foldShadow = shadowIsOwn != true
+        fun folds(k: Kind) = k.isFoldedIntoReview || (foldShadow && k == Kind.SHADOW)
         fun fold(list: List<Block>): List<Block> {
-            if (list.none { it.kind.isFoldedIntoReview }) return list
+            if (list.none { folds(it.kind) }) return list
             val out = mutableListOf<Block>()
             for (raw in list) {
-                val b = if (raw.kind.isFoldedIntoReview) raw.copy(kind = Kind.REVIEW) else raw
+                val b = if (folds(raw.kind)) raw.copy(kind = Kind.REVIEW) else raw
                 val i = if (b.kind != Kind.REVIEW) -1 else out.indexOfFirst {
                     it.kind == Kind.REVIEW && it.weekdays == b.weekdays && it.isAnytime == b.isAnytime &&
                         (b.isAnytime || (it.hour == b.hour && it.minute == b.minute))
@@ -385,28 +406,22 @@ data class StudyPlan(
             }
             return out
         }
-        val plan = copy(blocks = fold(blocks), exceptions = exceptions.mapValues { fold(it.value) })
-        return if (plan != this) plan.mergingTwins() else plan
+        var plan = copy(blocks = fold(blocks), exceptions = exceptions.mapValues { fold(it.value) })
+        if (plan.blocks != blocks || plan.exceptions != exceptions) plan = plan.mergingTwins()
+        return plan.copy(shadowIsOwn = true)
     }
 
     /**
      * The routine onboarding builds ([RoutineOnboardingOverlay], iOS
-     * `withOnboardingRoutine`): the daily call — [callMinutes] of talk at
-     * [callMinute] on [days] — and the study time as review at [reviewMinute]
-     * on the same days. Every other day is a rest day. Blocks of other kinds
-     * the plan already holds stay.
+     * `withOnboardingRoutine`): one block per kind the learner put in, on
+     * [days]; every other day is a rest day. Every placeable kind the plan
+     * held before is replaced — a kind they passed on is not in their
+     * routine.
      */
-    fun withOnboardingRoutine(callMinutes: Int, callMinute: Int, days: Set<Int>,
-                              studyMinutes: Int?, reviewMinute: Int): StudyPlan {
-        val kept = blocks.filter { it.kind != Kind.TALK && it.kind != Kind.SAY_IT_AGAIN && it.kind != Kind.REVIEW }
-        val talk = Block(kind = Kind.TALK, weekdays = days, hour = callMinute / 60,
-            minute = callMinute % 60, minutes = maxOf(5, callMinutes))
-        val review = studyMinutes?.let {
-            Block(kind = Kind.REVIEW, weekdays = days, hour = reviewMinute / 60, minute = reviewMinute % 60,
-                minutes = it * Kind.REVIEW_CARDS_PER_QUARTER / 15)
-        }
+    fun withOnboardingRoutine(picked: List<Block>, days: Set<Int>): StudyPlan {
+        val kept = blocks.filter { it.kind !in Kind.placeable }
         val off = (1..7).toSet() - days
-        return copy(blocks = kept + talk + listOfNotNull(review), exceptions = emptyMap(),
+        return copy(blocks = kept + picked.map { it.copy(weekdays = days) }, exceptions = emptyMap(),
             offWeekdays = off.ifEmpty { null })
     }
 

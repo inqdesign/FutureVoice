@@ -28,7 +28,11 @@ object ActivityEventLog {
         @SerialName("scene") SCENE,
         @SerialName("sayItAgain") SAY_IT_AGAIN,
         /** A saved Speech take (iOS `8f135c24`) — a cancelled or unheard take is not one. */
-        @SerialName("speech") SPEECH;
+        @SerialName("speech") SPEECH,
+        /** A podcast episode or a watched situation heard in the player —
+         *  one per piece per list ([com.roro.futurevoice.audio.PlaylistPlayer],
+         *  iOS `4c0d8d7c`). */
+        @SerialName("listen") LISTEN;
 
         companion object {
             fun of(kind: PracticeLog.Kind): Kind = when (kind) {

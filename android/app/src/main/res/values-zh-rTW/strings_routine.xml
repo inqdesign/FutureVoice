@@ -87,4 +87,17 @@
     <string name="routine_s_as_planned">依計畫：%1$s。</string>
     <string name="routine_no_timed_talk">你的例行計畫裡沒有設定時間的對話，所以不會打來。</string>
     <string name="routine_change_in_routine">在例行計畫中修改</string>
+    <string name="routine_kind_listening">聽力</string>
+    <string name="routine_add_to_my_routine">加進作息</string>
+    <string name="routine_not_interested">沒興趣</string>
+    <string name="routine_listen_footer">Podcast 或看過的情境，聽一集就算。點通知會直接開始播放。</string>
+    <string name="routine_pitch_say_it_again">把剛才的對話再來一次，自己的話換成更自然的說法。</string>
+    <string name="routine_pitch_review">複習對話裡出現的單字、用語和句子。</string>
+    <string name="routine_pitch_shadow">跟著流利的自己說，抓住一樣的節奏。</string>
+    <string name="routine_pitch_listen">連續收聽 nawana Podcast 和你看過的情境。</string>
+    <string name="routine_pitch_speech">對著鏡頭大聲唸講稿，再看看表現如何。</string>
+    <string name="routine_time_to_listen">該聽一下了</string>
+    <string name="routine_listen_body">戴上耳機點一下，馬上開始播放。</string>
+    <string name="routine_make_it_later">之後再安排也可以</string>
+    <string name="routine_under_activity_whenever">想安排作息時，隨時到對話畫面的「活動」。</string>
 </resources>

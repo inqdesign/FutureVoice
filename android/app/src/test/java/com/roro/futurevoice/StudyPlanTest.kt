@@ -186,6 +186,44 @@ class StudyPlanTest {
         assertTrue(Kind.SPEECH in Kind.placeable)
     }
 
+    /** iOS `testShadowBlockStaysAndCountsItsTakesOnce` (`4c0d8d7c`):
+     *  shadowing is its own block again — only a plan saved before that
+     *  folds it — and a take is counted once. */
+    @Test fun shadowBlockStaysAndCountsItsTakesOnce() {
+        val plan = StudyPlan(shadowIsOwn = true, blocks = listOf(
+            Block(kind = Kind.SHADOW, weekdays = setOf(3), hour = 12, minute = 30, minutes = 1),
+            Block(kind = Kind.REVIEW, weekdays = setOf(3), hour = 21, minute = 0, minutes = 10)))
+        assertEquals(listOf(Kind.SHADOW, Kind.REVIEW), plan.foldingIntoReview().blocks.map { it.kind })
+        val occ = plan.occurrences(at(6, 0), zone = zone)
+        val p = PlannerDay.progress(occ, PlannerDay.Totals(shadow = 1.0, cards = 9.0))
+        assertEquals(1.0, p[occ.first { it.kind == Kind.SHADOW }.id]!!, 0.001)
+        assertEquals(0.9, p[occ.first { it.kind == Kind.REVIEW }.id] ?: 0.0, 0.001)
+    }
+
+    /** iOS `testAnyListeningKeepsAListeningBlock`: listening has no amount —
+     *  one piece heard is the block done. */
+    @Test fun anyListeningKeepsAListeningBlock() {
+        val plan = StudyPlan(blocks = listOf(Block(kind = Kind.LISTEN, weekdays = setOf(3), hour = 8, minute = 30, minutes = 1)))
+        val occ = plan.occurrences(at(6, 0), zone = zone)
+        assertTrue(PlannerDay.done(occ, PlannerDay.Totals()).isEmpty())
+        assertEquals(setOf(occ[0].id), PlannerDay.done(occ, PlannerDay.Totals(listen = 3.0)))
+        val acts = PlannerDay.actuals(emptyList(), listOf(ActivityEventLog.Event(ActivityEventLog.Kind.LISTEN, at(6, 8, 40))))
+        assertEquals(listOf(PlannerDay.Actual.Kind.LISTEN), acts.map { it.kind })
+        assertTrue(Kind.LISTEN in Kind.placeable)
+    }
+
+    /** iOS `testOnboardingKeepsOnlyWhatWasPicked`. */
+    @Test fun onboardingKeepsOnlyWhatWasPicked() {
+        val plan = StudyPlan(blocks = listOf(Block(kind = Kind.TALK, weekdays = every(), hour = 0, minute = 0,
+            minutes = 10, anytime = true)))
+        val picked = listOf(Block(kind = Kind.REVIEW, weekdays = emptySet(), hour = 21, minute = 0, minutes = 10),
+            Block(kind = Kind.LISTEN, weekdays = emptySet(), hour = 8, minute = 30, minutes = 1))
+        val out = plan.withOnboardingRoutine(picked, setOf(2, 3, 4, 5, 6))
+        assertEquals(listOf(Kind.REVIEW, Kind.LISTEN), out.blocks.map { it.kind })
+        assertTrue(out.blocks.all { it.weekdays == setOf(2, 3, 4, 5, 6) })
+        assertEquals(setOf(1, 7), out.offWeekdays)
+    }
+
     @Test fun repsCloseTogetherAreOneSitting() {
         val events = listOf(at(6, 20, 0), at(6, 20, 4), at(6, 20, 9), at(6, 21, 0))
             .map { ActivityEventLog.Event(ActivityEventLog.Kind.DRILL, it) }

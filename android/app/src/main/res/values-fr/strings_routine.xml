@@ -87,4 +87,17 @@
     <string name="routine_s_as_planned">%1$s, comme prévu.</string>
     <string name="routine_no_timed_talk">Ta routine n’a aucune conversation à heure fixe, donc rien ne sonnera.</string>
     <string name="routine_change_in_routine">Modifier dans ma routine</string>
+    <string name="routine_kind_listening">Écoute</string>
+    <string name="routine_add_to_my_routine">Ajouter à ma routine</string>
+    <string name="routine_not_interested">Ça ne m’intéresse pas</string>
+    <string name="routine_listen_footer">N’importe quel épisode du podcast ou situation regardée compte. Le rappel ouvre le lecteur, déjà en lecture.</string>
+    <string name="routine_pitch_say_it_again">Refais une conversation que tu viens d’avoir, en disant ta partie mieux.</string>
+    <string name="routine_pitch_review">Révise les mots, expressions et phrases que tes conversations t’ont laissés.</string>
+    <string name="routine_pitch_shadow">Dis les phrases de ton moi fluide en même temps que lui, au même rythme.</string>
+    <string name="routine_pitch_listen">Écoute à la suite le Podcast nawana et les situations que tu as regardées.</string>
+    <string name="routine_pitch_speech">Lis un texte à voix haute face à la caméra et vois comment ça s’est passé.</string>
+    <string name="routine_time_to_listen">C’est l’heure d’écouter</string>
+    <string name="routine_listen_body">Mets tes écouteurs et touche. La lecture démarre tout de suite.</string>
+    <string name="routine_make_it_later">Tu peux la faire plus tard</string>
+    <string name="routine_under_activity_whenever">Quand tu voudras une routine, c’est dans Activité, sur l’écran Parler.</string>
 </resources>

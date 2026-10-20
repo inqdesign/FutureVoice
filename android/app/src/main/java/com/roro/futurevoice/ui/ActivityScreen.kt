@@ -206,6 +206,8 @@ fun ActivityScreen(
             StudyPlan.Kind.SAY_IT_AGAIN -> picking = true
             // The root closes this page and opens the Speech tab.
             StudyPlan.Kind.SPEECH -> com.roro.futurevoice.data.PlanReminder.pendingSpeech.value = true
+            // The root closes this page and opens the player, already playing.
+            StudyPlan.Kind.LISTEN -> com.roro.futurevoice.data.PlanReminder.pendingListen.value = true
             StudyPlan.Kind.TEST -> onOpenTest()
             StudyPlan.Kind.REVIEW -> onOpenRoutineReview()
             else -> onOpenReview()

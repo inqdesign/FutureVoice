@@ -230,6 +230,9 @@ fun ScenePlayerSheet(
     state: AppState,
     /** Room the sheet's large height leaves above it (the page header). */
     topInset: Dp,
+    /** Opened from the routine's listening block: start playing at once,
+     *  unless something is already playing (iOS `autoplay`). */
+    autoplay: Boolean = false,
     onDismiss: () -> Unit,
 ) {
     // Rises from the bottom edge and settles, and goes back down the same
@@ -240,7 +243,7 @@ fun ScenePlayerSheet(
         enter = slideInVertically(spring(dampingRatio = 1f, stiffness = 380f)) { it },
         exit = slideOutVertically(spring(dampingRatio = 1f, stiffness = 520f)) { it },
     ) {
-        ScenePlayerSheetContent(state, topInset, onDismiss)
+        ScenePlayerSheetContent(state, topInset, autoplay, onDismiss)
     }
 }
 
@@ -248,6 +251,7 @@ fun ScenePlayerSheet(
 private fun ScenePlayerSheetContent(
     state: AppState,
     topInset: Dp,
+    autoplay: Boolean,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -270,6 +274,18 @@ private fun ScenePlayerSheetContent(
         }
         loaded = true
         shows = NewsShow.episodes(context, state.targetLanguage)
+        // A list left paused carries on where it stopped.
+        if (autoplay && !PlaylistPlayer.isPlaying) {
+            val all = tracks.flatMap { it.lines }
+            if (PlaylistPlayer.hasQueue) PlaylistPlayer.resume()
+            else if (all.isNotEmpty()) PlaylistPlayer.play(context, all, listTitle)
+            else if (shows.isNotEmpty()) {
+                kotlinx.coroutines.coroutineScope {
+                    shows.filter { !it.isReady }.map { e -> async { NewsShow.prepare(context, e) } }.awaitAll()
+                }
+                PlaylistPlayer.play(context, shows.flatMap { it.lines }, showTitle)
+            }
+        }
     }
 
     /** Every episode, newest first. Files are fetched when asked for. */
