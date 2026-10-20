@@ -1,0 +1,10 @@
+Novedades
+• ¿Aprendes inglés? Cada día, un episodio nuevo del pódcast de nawana, con su guion para estudiar.
+• Encuentra el tema de hoy y haz un quiz rápido con los botones de abajo en Hablar.
+• Baja la velocidad del reproductor.
+• Al terminar tus minutos gratis, recibes un informe.
+
+Correcciones
+• Si interrumpes en una llamada, tu yo fluido se calla al momento.
+• El reproductor se abre suave y se amplía o reduce con el dedo.
+• El botón Siguiente del quiz ya no cambia de sitio.

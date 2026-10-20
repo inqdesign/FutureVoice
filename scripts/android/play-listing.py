@@ -156,7 +156,8 @@ def call(method: str, url: str, body=None, raw: bytes | None = None, ctype=None)
     if data is not None:
         req.add_header("Content-Type", ctype or "application/json")
     try:
-        with urllib.request.urlopen(req, timeout=120) as r:
+        # A bundle upload is ~150 MB; 120 s timed out on 2026-10-20.
+        with urllib.request.urlopen(req, timeout=900 if raw is not None else 120) as r:
             out = r.read()
             return json.loads(out) if out else {}
     except urllib.error.HTTPError as e:

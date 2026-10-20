@@ -1,0 +1,10 @@
+Nouveautés
+• Tu apprends l’anglais ? Un épisode du podcast nawana chaque jour, avec son texte à étudier.
+• Trouve le sujet du jour et fais un quiz rapide en bas de Parler.
+• Ralentis la vitesse du lecteur.
+• Quand tes minutes gratuites sont finies, tu reçois un bilan.
+
+Corrections
+• Quand tu coupes la parole en appel, ton moi fluide s’arrête tout de suite.
+• Le lecteur s’ouvre en douceur et s’agrandit ou se réduit au doigt.
+• Le bouton Suivant du quiz ne bouge plus.

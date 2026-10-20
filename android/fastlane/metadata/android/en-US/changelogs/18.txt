@@ -1,0 +1,10 @@
+New
+• Learning English? A new nawana Podcast episode every day. Open the script and turn on Study for its expressions and grammar.
+• Find today's topic and take a quick quiz from the buttons at the bottom of Talk.
+• Slow the player down.
+• When your free minutes run out, you get a report.
+
+Fixed
+• Cut in during a call and your fluent self stops right away.
+• The player opens smoothly and expands or collapses with your finger.
+• The quiz's Next button stays in one place.
