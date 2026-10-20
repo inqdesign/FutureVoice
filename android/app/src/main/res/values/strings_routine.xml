@@ -94,13 +94,16 @@
     <string name="routine_make_it_later">You can make it later</string>
     <string name="routine_under_activity_whenever">Your routine is under Activity on the Talk screen whenever you want one.</string>
     <string name="routine_what_goes_in">What goes in your routine?</string>
-    <string name="routine_pick_footer">Every day at these times to start with. You can change the times, the days and how much under Activity on the Talk screen.</string>
     <string name="routine_every_day_at">Every day · %1$s</string>
     <string name="routine_right_after_call">Right after the call</string>
-    <string name="routine_pitch_talk">Your fluent self calls you, in your own voice. Talk for 5 minutes about anything.</string>
     <string name="routine_pitch_say_it_again">Go back through the call you just had. Your lines come up the way a fluent speaker would say them, and you read them out loud.</string>
     <string name="routine_pitch_listen">The nawana Podcast and the situations you\'ve watched, played one after another. Good for the commute.</string>
     <string name="routine_pitch_shadow">Hear a line from your fluent self and say it along with them, in the same rhythm. You get a score.</string>
     <string name="routine_pitch_speech">Read a script out loud on camera and get a score for pronunciation and pace.</string>
     <string name="routine_pitch_review">Cards with the words, expressions and corrected sentences from your talks, 10 at a time.</string>
+    <string name="routine_add_more">Add more</string>
+    <string name="routine_days_footer">Everything in your routine runs on these days.</string>
+    <string name="routine_pick_as_many">Pick as many as you like.</string>
+    <string name="routine_add_more_footer">These go in at the times shown to start with. You can change the times and how much under Activity on the Talk screen.</string>
+    <string name="routine_pitch_talk">Your fluent self calls you, in your own voice, and you talk about anything.</string>
 </resources>

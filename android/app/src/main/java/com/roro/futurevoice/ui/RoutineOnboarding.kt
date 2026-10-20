@@ -7,6 +7,8 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.animateDpAsState
@@ -26,6 +28,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -33,7 +36,10 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -49,6 +55,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -82,6 +89,8 @@ import com.roro.futurevoice.data.StudyPlanStore
 import com.roro.futurevoice.data.WeeklyTestReminder
 import com.roro.futurevoice.data.WeeklyTestSettings
 import com.roro.futurevoice.ui.brand.AppSurfaces
+import com.roro.futurevoice.ui.brand.IosCompactTimePicker
+import com.roro.futurevoice.ui.brand.IosSegmented
 import com.roro.futurevoice.ui.brand.IosButton as Button
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -93,6 +102,7 @@ import kotlinx.coroutines.launch
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import java.time.format.TextStyle
 
 /**
  * Where the routine builder lands when it is done (iOS `RoutineHandoff`): the
@@ -128,22 +138,28 @@ object RoutineHandoff {
     }
 }
 
-private enum class RoutineStep { INTRO, PICK, DONE }
+/** The first sheet is the intro AND the list: "Make my routine" grows it in
+ *  place into the list (founder: no second window). */
+private enum class RoutineStep { INTRO, DONE }
 
-/** The rows, in the order of a day. */
+/** Every kind, in the order of a day. The call is set by hand (length, time,
+ *  days); the rest are ticked from a list. */
 private val ROUTINE_KINDS = listOf(StudyPlan.Kind.TALK, StudyPlan.Kind.SAY_IT_AGAIN, StudyPlan.Kind.LISTEN,
     StudyPlan.Kind.SHADOW, StudyPlan.Kind.SPEECH, StudyPlan.Kind.REVIEW)
 
-private const val CALL_MINUTES = 5
+private val ROUTINE_OTHERS = ROUTINE_KINDS.filter { it != StudyPlan.Kind.TALK }
+private val CALL_CHOICES = listOf(5, 10, 15, 20)
 
 /** Where each block goes and how much it asks for (iOS
  *  `RoutineOnboardingView.slot`). Say it again sits right after the call, as
- *  it is in the day. */
+ *  it is in the day. [callStart] is minutes past midnight. */
 private data class RoutineSlot(val hour: Int, val minute: Int, val amount: Int)
 
-private fun slot(kind: StudyPlan.Kind): RoutineSlot = when (kind) {
-    StudyPlan.Kind.TALK -> RoutineSlot(8, 0, CALL_MINUTES)
-    StudyPlan.Kind.SAY_IT_AGAIN -> RoutineSlot(8, CALL_MINUTES, 1)
+private fun slot(kind: StudyPlan.Kind, callStart: Int, callMinutes: Int): RoutineSlot = when (kind) {
+    StudyPlan.Kind.TALK -> RoutineSlot(callStart / 60, callStart % 60, callMinutes)
+    StudyPlan.Kind.SAY_IT_AGAIN -> (callStart + callMinutes).let { end ->
+        if (end + StudyPlan.SAY_IT_AGAIN_MINUTES <= 24 * 60) RoutineSlot(end / 60, end % 60, 1) else RoutineSlot(8, 15, 1)
+    }
     StudyPlan.Kind.LISTEN -> RoutineSlot(8, 30, 1)
     StudyPlan.Kind.SHADOW -> RoutineSlot(12, 30, 1)
     StudyPlan.Kind.SPEECH -> RoutineSlot(20, 0, 1)
@@ -158,15 +174,14 @@ private fun slot(kind: StudyPlan.Kind): RoutineSlot = when (kind) {
  * screen and a daily-call screen after the clone — with ONE: the My routine
  * grid itself, and a sheet over it.
  *
- * The sheet asks what goes IN the routine (iOS `72e4610f`, 2026-10-20,
- * founder): every kind of block as a row of a list — what it is, in two
- * lines, and when it would go — and the learner ticks as many as they like.
- * Times and amounts are the defaults in [slot] and the footer says they can
- * be changed later; a card per kind asking for a time was tried the same day
- * and cut, because the times were the app's guess anyway and six cards of
- * different heights read as a form. Every picked block runs every day. Shown
- * over the Talk tab once; Done shrinks it into the Activity chip, which is
- * where it lives from then on.
+ * The sheet asks what goes IN the routine (iOS `72e4610f` / `82cc3d3b`,
+ * 2026-10-20, founder): "Make my routine" grows the intro sheet itself into
+ * the list — no second window. On top, the daily call as before (length,
+ * time, the days the whole routine runs on); under "Add more", every other
+ * kind as a row — what it is, in two lines, and when it would go — ticked
+ * as many as they like, at the defaults in [slot]. Dragging the sheet up
+ * opens it too; it never folds back. Shown over the Talk tab once; Done
+ * shrinks it into the Activity chip, which is where it lives from then on.
  *
  * The sheet is drawn in place, not as a modal: iOS lets the grid behind it
  * scroll (`presentationBackgroundInteraction(.enabled)`) and it cannot be
@@ -181,6 +196,13 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
     var sheetUp by remember { mutableStateOf(false) }
     var spotlight by remember { mutableStateOf<PlanSpotlight?>(null) }
     var working by remember { mutableStateOf(false) }
+    var callMinutes by remember { mutableIntStateOf(5) }
+    var callHour by remember { mutableIntStateOf(8) }
+    var callMinute by remember { mutableIntStateOf(0) }
+    /** The days the whole routine runs on; the rest are rest days. */
+    var days by remember { mutableStateOf((1..7).toSet()) }
+    /** The intro has grown into the list. */
+    var expanded by remember { mutableStateOf(false) }
     /** Notifications weren't allowed: the routine stands, but nothing can ring. */
     var callBlocked by remember { mutableStateOf(false) }
     /** The call is ticked to begin with: it is what the app is. */
@@ -227,7 +249,9 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
 
     fun finish() {
         com.roro.futurevoice.core.Analytics.capture("routine_onboarding", mapOf(
-            "call_minutes" to (if (StudyPlan.Kind.TALK in saved) CALL_MINUTES else 0),
+            "call_minutes" to (if (StudyPlan.Kind.TALK in saved) callMinutes else 0),
+            "call_hour" to callHour,
+            "days" to days.size,
             "picked" to ROUTINE_KINDS.filter { it in saved }.joinToString(",") { it.raw },
             "call_on" to (StudyPlan.Kind.TALK in saved && !callBlocked),
         ))
@@ -249,9 +273,14 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
         delay(500)
         sheetUp = true
         // Capture build: `routine-onboarding-<step>` lands on a step
-        // (pick | done | finish); `finish` runs Done by itself after a moment.
+        // (pick | advance | done | finish); `advance` grows the intro into
+        // the list after a moment (for a recording), `finish` runs Done.
         when (debugStep) {
-            "pick" -> step = RoutineStep.PICK
+            "pick" -> expanded = true
+            "advance" -> {
+                delay(2_500)
+                expanded = true
+            }
             "done" -> step = RoutineStep.DONE
             "finish" -> {
                 step = RoutineStep.DONE
@@ -266,12 +295,12 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
      *  reminders. */
     suspend fun save() {
         val blocks = ROUTINE_KINDS.filter { it in selected }.map { kind ->
-            val s = slot(kind)
-            StudyPlan.Block(kind = kind, weekdays = (1..7).toSet(), hour = s.hour, minute = s.minute,
+            val s = slot(kind, callHour * 60 + callMinute, callMinutes)
+            StudyPlan.Block(kind = kind, weekdays = days, hour = s.hour, minute = s.minute,
                 minutes = s.amount)
         }
         saved = selected
-        val plan = StudyPlanStore.current(context).withOnboardingRoutine(blocks, (1..7).toSet())
+        val plan = StudyPlanStore.current(context).withOnboardingRoutine(blocks, days)
         StudyPlanStore.update(context, plan, byLearner = true)
         step = RoutineStep.DONE
         val first = blocks.firstOrNull() ?: return
@@ -279,7 +308,7 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
         delay(700)
         if (StudyPlan.Kind.TALK in saved) {
             context.getSharedPreferences("futurevoice", 0).edit()
-                .putInt("futurevoice.dailyGoalMinutes", CALL_MINUTES).apply()
+                .putInt("futurevoice.dailyGoalMinutes", callMinutes).apply()
             StoreEvents.bump()
             // The weekly test's "it's ready" notice rides on the same answer.
             WeeklyTestSettings.setReminderOn(context, true)
@@ -316,21 +345,24 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
         val insets = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() +
             WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
         val large = maxHeight - insets - 10.dp
-        val height by animateDpAsState(if (step == RoutineStep.PICK) large else 300.dp, tween(250),
-            label = "routineSheet")
+        val height by animateDpAsState(if (step == RoutineStep.INTRO && expanded) large else 300.dp,
+            tween(350), label = "routineSheet")
         AnimatedVisibility(visible = sheetUp, modifier = Modifier.align(Alignment.BottomCenter),
             enter = slideInVertically(tween(300)) { it }, exit = slideOutVertically(tween(300)) { it }) {
             Column(Modifier.fillMaxWidth()
                 .shadow(16.dp, RoundedCornerShape(topStart = 38.dp, topEnd = 38.dp))
                 .background(AppSurfaces.ground, RoundedCornerShape(topStart = 38.dp, topEnd = 38.dp))
                 // The panel swallows touches — the grid behind still scrolls.
-                .clickable(interactionSource = null, indication = null) {}) {
+                .clickable(interactionSource = null, indication = null) {}
+                // Dragged up, the intro opens into the list; the list never
+                // folds back into the intro.
+                .then(if (step == RoutineStep.INTRO && !expanded) Modifier.pointerInput(Unit) {
+                    detectVerticalDragGestures { change, dy ->
+                        if (dy < -4f) { change.consume(); expanded = true }
+                    }
+                } else Modifier)) {
                 Box(Modifier.fillMaxWidth().height(height)) {
                     when (step) {
-                        RoutineStep.INTRO -> RoutineMessage(Icons.Filled.EditCalendar, MaterialTheme.colorScheme.primary,
-                            stringResource(R.string.let_s_make_your_routine),
-                            stringResource(R.string.try_it_just_as_it_is_for_a_week_you_can_change_it_any_time),
-                            stringResource(R.string.make_my_routine)) { step = RoutineStep.PICK }
                         RoutineStep.DONE -> {
                             val empty = saved.isEmpty()
                             RoutineMessage(if (empty) Icons.Filled.CalendarMonth else Icons.Filled.CheckCircle,
@@ -344,12 +376,22 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
                                 }),
                                 stringResource(R.string.done)) { finish() }
                         }
-                        RoutineStep.PICK -> RoutinePick(
+                        RoutineStep.INTRO -> RoutinePick(
+                            expanded = expanded,
                             selected = selected,
                             onToggle = { k -> selected = if (k in selected) selected - k else selected + k },
-                            onBack = { step = RoutineStep.INTRO },
+                            callMinutes = callMinutes, onCallMinutes = { callMinutes = it },
+                            callHour = callHour, callMinute = callMinute,
+                            onCallTime = { h, m -> callHour = h; callMinute = m },
+                            days = days,
+                            onToggleDay = { wd ->
+                                days = if (wd in days) { if (days.size > 1) days - wd else days } else days + wd
+                            },
                             saving = working,
-                            onSave = { working = true; scope.launch { save(); working = false } },
+                            onButton = {
+                                if (!expanded) expanded = true
+                                else { working = true; scope.launch { save(); working = false } }
+                            },
                         )
                     }
                 }
@@ -359,40 +401,111 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
     }
 }
 
-/** What goes in: an inline title with a back chevron, the list, and the
- *  button pinned at the foot on an opaque ground — the list scrolls under
- *  it and must not show through. */
+/** The intro, and — once "Make my routine" is tapped — the list under it,
+ *  in the same sheet. The button stays pinned at the foot on an opaque
+ *  ground: the list scrolls under it and must not show through. */
 @Composable
-private fun RoutinePick(selected: Set<StudyPlan.Kind>, onToggle: (StudyPlan.Kind) -> Unit, onBack: () -> Unit,
-                        saving: Boolean, onSave: () -> Unit) {
+private fun RoutinePick(expanded: Boolean, selected: Set<StudyPlan.Kind>, onToggle: (StudyPlan.Kind) -> Unit,
+                        callMinutes: Int, onCallMinutes: (Int) -> Unit,
+                        callHour: Int, callMinute: Int, onCallTime: (Int, Int) -> Unit,
+                        days: Set<Int>, onToggleDay: (Int) -> Unit,
+                        saving: Boolean, onButton: () -> Unit) {
+    val res = LocalContext.current.resources
+    val callStart = callHour * 60 + callMinute
     Column(Modifier.fillMaxSize()) {
-        Box(Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 8.dp)) {
-            IconButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart)) {
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = stringResource(R.string.back))
+        Column(Modifier.weight(1f)
+            .then(if (expanded) Modifier.verticalScroll(rememberScrollState()) else Modifier)
+            .padding(horizontal = 16.dp)) {
+            Column(Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = if (expanded) 16.dp else 28.dp,
+                bottom = 4.dp), horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Icon(Icons.Filled.EditCalendar, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(if (expanded) 34.dp else 44.dp))
+                Text(stringResource(if (expanded) R.string.routine_what_goes_in else R.string.let_s_make_your_routine),
+                    style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center)
+                Text(stringResource(if (expanded) R.string.routine_pick_as_many
+                    else R.string.try_it_just_as_it_is_for_a_week_you_can_change_it_any_time),
+                    style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Text(stringResource(R.string.routine_what_goes_in), style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold, maxLines = 1,
-                modifier = Modifier.align(Alignment.Center).padding(horizontal = 48.dp))
-        }
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
-            Spacer(Modifier.height(16.dp))
-            GroupedCard {
-                ROUTINE_KINDS.forEachIndexed { i, kind ->
-                    if (i > 0) GroupedRowDivider()
-                    RoutineRow(kind, kind in selected) { onToggle(kind) }
+            AnimatedVisibility(visible = expanded, enter = fadeIn(tween(350)), exit = fadeOut()) {
+                Column {
+                    GroupedSectionHeader(stringResource(R.string.your_daily_call))
+                    GroupedCard {
+                        RoutineRow(StudyPlan.Kind.TALK, StudyPlan.Kind.TALK in selected, whenLine = null) {
+                            onToggle(StudyPlan.Kind.TALK)
+                        }
+                        if (StudyPlan.Kind.TALK in selected) {
+                            GroupedRowDivider()
+                            Box(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                                IosSegmented(CALL_CHOICES.map { res.getString(R.string.lld_min_b61908, it) },
+                                    selected = CALL_CHOICES.indexOf(callMinutes).coerceAtLeast(0),
+                                    onSelect = { onCallMinutes(CALL_CHOICES[it]) },
+                                    modifier = Modifier.fillMaxWidth())
+                            }
+                            GroupedRowDivider()
+                            Row(Modifier.fillMaxWidth().heightIn(min = 44.dp).padding(horizontal = 16.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically) {
+                                Text(stringResource(R.string.calls_at), style = MaterialTheme.typography.bodyLarge,
+                                    modifier = Modifier.weight(1f))
+                                IosCompactTimePicker(callHour, callMinute, onCallTime)
+                            }
+                        }
+                        GroupedRowDivider()
+                        DayChips(days, onToggleDay)
+                    }
+                    GroupedFooter(stringResource(R.string.routine_days_footer))
+                    GroupedSectionHeader(stringResource(R.string.routine_add_more))
+                    GroupedCard {
+                        ROUTINE_OTHERS.forEachIndexed { i, kind ->
+                            if (i > 0) GroupedRowDivider()
+                            RoutineRow(kind, kind in selected,
+                                whenLine = whenText(kind, callStart, callMinutes, days.size == 7)) { onToggle(kind) }
+                        }
+                    }
+                    GroupedFooter(stringResource(R.string.routine_add_more_footer))
+                    Spacer(Modifier.height(16.dp))
                 }
             }
-            GroupedFooter(stringResource(R.string.routine_pick_footer))
-            Spacer(Modifier.height(16.dp))
         }
         Box(Modifier.fillMaxWidth().background(AppSurfaces.ground)
             .padding(horizontal = 20.dp, vertical = 8.dp)) {
-            Button(onClick = onSave, enabled = !saving, modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = onButton, enabled = !saving, modifier = Modifier.fillMaxWidth()) {
                 if (saving) {
                     CircularProgressIndicator(Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
                     Spacer(Modifier.width(8.dp))
                 }
-                Text(stringResource(if (selected.isEmpty()) R.string.not_now else R.string.make_my_routine))
+                Text(stringResource(when {
+                    !expanded -> R.string.make_my_routine
+                    selected.isEmpty() -> R.string.not_now
+                    else -> R.string.done
+                }))
+            }
+        }
+    }
+}
+
+/** The days the routine runs on. Lit = a study day; at least one. */
+@Composable
+private fun DayChips(days: Set<Int>, onToggle: (Int) -> Unit) {
+    val locale = LocalConfiguration.current.locales[0]
+    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        StudyPlan.weekOrder().forEach { wd ->
+            val on = wd in days
+            // Gregorian 1 = Sunday … 7 = Saturday.
+            val dow = java.time.DayOfWeek.of(if (wd == 1) 7 else wd - 1)
+            Box(Modifier.weight(1f).heightIn(min = 32.dp)
+                .background(if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                    CircleShape)
+                .semantics { selected = on }
+                .clickable(role = Role.Checkbox) { onToggle(wd) },
+                contentAlignment = Alignment.Center) {
+                Text(dow.getDisplayName(TextStyle.NARROW_STANDALONE, locale),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal,
+                    color = if (on) Color.White else MaterialTheme.colorScheme.onSurface)
             }
         }
     }
@@ -401,7 +514,7 @@ private fun RoutinePick(selected: Set<StudyPlan.Kind>, onToggle: (StudyPlan.Kind
 /** One kind: icon, name, two lines on what it is, when it would go, and a
  *  tick. */
 @Composable
-private fun RoutineRow(kind: StudyPlan.Kind, on: Boolean, onToggle: () -> Unit) {
+private fun RoutineRow(kind: StudyPlan.Kind, on: Boolean, whenLine: String?, onToggle: () -> Unit) {
     val res = LocalContext.current.resources
     Row(Modifier.fillMaxWidth()
         .semantics { selected = on }
@@ -415,7 +528,8 @@ private fun RoutineRow(kind: StudyPlan.Kind, on: Boolean, onToggle: () -> Unit) 
                 fontWeight = FontWeight.SemiBold)
             Text(pitch(kind), style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(whenText(kind), style = MaterialTheme.typography.bodySmall,
+            // The call's time is set right under it.
+            if (whenLine != null) Text(whenLine, style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
         }
         Icon(if (on) Icons.Filled.CheckCircle else Icons.Outlined.Circle, contentDescription = null,
@@ -436,16 +550,17 @@ private fun pitch(kind: StudyPlan.Kind): String = when (kind) {
     else -> ""
 }
 
-/** "Every day · 8:00 AM", or "Right after the call" — the time in the app
- *  language's own format, as iOS formats it with the UI locale. */
+/** "Every day · 8:00 AM" (just the time when the routine skips a day), or
+ *  "Right after the call" — the time in the app language's own format, as
+ *  iOS formats it with the UI locale. */
 @Composable
-private fun whenText(kind: StudyPlan.Kind): String {
+private fun whenText(kind: StudyPlan.Kind, callStart: Int, callMinutes: Int, everyDay: Boolean): String {
     if (kind == StudyPlan.Kind.SAY_IT_AGAIN) return stringResource(R.string.routine_right_after_call)
-    val s = slot(kind)
+    val s = slot(kind, callStart, callMinutes)
     val locale = LocalConfiguration.current.locales[0]
     val time = LocalTime.of(s.hour, s.minute)
         .format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale))
-    return stringResource(R.string.routine_every_day_at, time)
+    return if (everyDay) stringResource(R.string.routine_every_day_at, time) else time
 }
 
 /** SwiftUI's `.easeIn`. */

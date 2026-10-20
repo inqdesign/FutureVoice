@@ -94,13 +94,16 @@
     <string name="routine_make_it_later">之後再安排也可以</string>
     <string name="routine_under_activity_whenever">想安排作息時，隨時到對話畫面的「活動」。</string>
     <string name="routine_what_goes_in">作息要放進哪些？</string>
-    <string name="routine_pick_footer">先每天排在這些時間。時間、星期和份量，隨時都能在對話畫面的「活動」裡修改。</string>
     <string name="routine_every_day_at">每天 · %1$s</string>
     <string name="routine_right_after_call">通話一結束</string>
-    <string name="routine_pitch_talk">流利的自己用你的聲音打電話給你，隨便聊 5 分鐘。</string>
     <string name="routine_pitch_say_it_again">把剛才的通話從頭再來一次。輪到你時會出現改得更道地的句子，大聲唸出來就好。</string>
     <string name="routine_pitch_listen">連續播放 nawana Podcast 和你看過的情境，通勤時聽剛好。</string>
     <string name="routine_pitch_shadow">聽流利的自己說一句，用一樣的節奏跟著說，還會打分數。</string>
     <string name="routine_pitch_speech">對著鏡頭大聲唸講稿，拿到發音和語速的分數。</string>
     <string name="routine_pitch_review">把對話裡的單字、用語和改過的句子做成卡片，一次 10 張。</string>
+    <string name="routine_add_more">再加點什麼</string>
+    <string name="routine_days_footer">作息都排在這幾天。</string>
+    <string name="routine_pick_as_many">想選幾個都可以。</string>
+    <string name="routine_add_more_footer">先排在顯示的時間。時間和份量，隨時都能在對話畫面的「活動」裡修改。</string>
+    <string name="routine_pitch_talk">流利的自己用你的聲音打電話給你，想聊什麼都可以。</string>
 </resources>

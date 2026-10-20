@@ -94,13 +94,16 @@
     <string name="routine_make_it_later">Puedes hacerla más tarde</string>
     <string name="routine_under_activity_whenever">Cuando quieras una rutina, está en Actividad, en la pantalla Hablar.</string>
     <string name="routine_what_goes_in">¿Qué pones en tu rutina?</string>
-    <string name="routine_pick_footer">Para empezar, todos los días a estas horas. Puedes cambiar las horas, los días y cuánto en Actividad, en la pantalla Hablar.</string>
     <string name="routine_every_day_at">Todos los días · %1$s</string>
     <string name="routine_right_after_call">Justo después de la llamada</string>
-    <string name="routine_pitch_talk">Tu yo fluido te llama con tu propia voz. Charlas 5 minutos de lo que quieras.</string>
     <string name="routine_pitch_say_it_again">Repite desde el principio la llamada que acabas de tener. En tu turno aparecen tus frases como las diría un nativo, y las lees en voz alta.</string>
     <string name="routine_pitch_listen">El Podcast de nawana y las situaciones que has visto, una tras otra. Ideal para el trayecto.</string>
     <string name="routine_pitch_shadow">Escucha una frase de tu yo fluido y dila a la vez, con el mismo ritmo. Te da una puntuación.</string>
     <string name="routine_pitch_speech">Lee un guion en voz alta ante la cámara y recibe una puntuación de pronunciación y ritmo.</string>
     <string name="routine_pitch_review">Tarjetas con las palabras, expresiones y frases corregidas de tus conversaciones, de 10 en 10.</string>
+    <string name="routine_add_more">Añade más</string>
+    <string name="routine_days_footer">Toda tu rutina va en estos días.</string>
+    <string name="routine_pick_as_many">Elige todos los que quieras.</string>
+    <string name="routine_add_more_footer">Para empezar, van a las horas que ves. Puedes cambiar las horas y cuánto en Actividad, en la pantalla Hablar.</string>
+    <string name="routine_pitch_talk">Tu yo fluido te llama con tu propia voz, y charlas de lo que quieras.</string>
 </resources>

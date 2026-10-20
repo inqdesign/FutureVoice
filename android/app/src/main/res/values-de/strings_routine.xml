@@ -94,13 +94,16 @@
     <string name="routine_make_it_later">Das geht auch später</string>
     <string name="routine_under_activity_whenever">Eine Routine kannst du jederzeit unter Aktivität auf dem Sprechen-Bildschirm anlegen.</string>
     <string name="routine_what_goes_in">Was kommt in deine Routine?</string>
-    <string name="routine_pick_footer">Für den Anfang jeden Tag zu diesen Zeiten. Zeiten, Tage und Menge kannst du jederzeit unter Aktivität auf dem Sprechen-Bildschirm ändern.</string>
     <string name="routine_every_day_at">Jeden Tag · %1$s</string>
     <string name="routine_right_after_call">Direkt nach dem Anruf</string>
-    <string name="routine_pitch_talk">Dein fließendes Ich ruft dich an, mit deiner eigenen Stimme. Ihr redet 5 Minuten über alles Mögliche.</string>
     <string name="routine_pitch_say_it_again">Geh das Gespräch von eben noch einmal durch. Deine Sätze erscheinen so, wie ein Muttersprachler sie sagen würde, und du liest sie laut vor.</string>
     <string name="routine_pitch_listen">Der nawana Podcast und deine angesehenen Situationen, eins nach dem anderen. Ideal für den Arbeitsweg.</string>
     <string name="routine_pitch_shadow">Hör einen Satz deines fließenden Ichs und sprich ihn im gleichen Rhythmus mit. Du bekommst eine Punktzahl.</string>
     <string name="routine_pitch_speech">Lies ein Skript laut vor der Kamera und bekomm eine Punktzahl für Aussprache und Tempo.</string>
     <string name="routine_pitch_review">Karten mit den Wörtern, Wendungen und korrigierten Sätzen aus deinen Gesprächen, 10 auf einmal.</string>
+    <string name="routine_add_more">Mehr dazu</string>
+    <string name="routine_days_footer">Deine ganze Routine läuft an diesen Tagen.</string>
+    <string name="routine_pick_as_many">Such dir so viele aus, wie du willst.</string>
+    <string name="routine_add_more_footer">Für den Anfang zu den angezeigten Zeiten. Zeiten und Menge kannst du jederzeit unter Aktivität auf dem Sprechen-Bildschirm ändern.</string>
+    <string name="routine_pitch_talk">Dein fließendes Ich ruft dich an, mit deiner eigenen Stimme, und ihr redet über alles Mögliche.</string>
 </resources>
