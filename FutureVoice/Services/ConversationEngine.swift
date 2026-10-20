@@ -378,7 +378,7 @@ enum ConversationEngine {
           Drop fillers in occasionally where a real speaker would: "yeah", "well", \
           "I mean", "honestly", "you know", "uh", "hm". Not every turn — sparingly, \
           where it fits.
-        - \(CoachingLanguage.breathPunctuation)
+        - \(CoachingLanguage.breathPunctuation)\(varietyGuard(targetLanguage))
         - Real conversation is lots of brief turns, not paragraphs. Never a \
           paragraph, at any level.
         - VARY turn length — DOWNWARD from the ceiling, never past it. Sometimes \
@@ -608,7 +608,7 @@ enum ConversationEngine {
         first word ("went to the park" for "I went…"). Feedback a. and b. \
         must change something you can HEAR said out loud; if yours wouldn't, \
         it's c. If you can't tell whether the learner or the transcriber \
-        made it, it isn't a mistake.\(scriptGuard(targetLanguage))\(spacingGuard(targetLanguage))\(registerGuard(targetLanguage))
+        made it, it isn't a mistake.\(scriptGuard(targetLanguage))\(spacingGuard(targetLanguage))\(registerGuard(targetLanguage))\(varietyGuard(targetLanguage))
         - Those guards were written for a correction card; wherever one says \
           "return null", here it means: not a mistake — feedback c.\(LanguageCatalog.base(targetLanguage) == "ko" ? "\n- Spacing is never heard. Never mention 띄어쓰기 and never say a line back only to space it (할수 → 할 수 is the same sound)." : "")
         - Short answers, fragments, a missing subject, casual register and \
@@ -954,7 +954,7 @@ enum ConversationEngine {
           natural speech, never something to report or "fix" anywhere. Every
           fluent_alternative / correction / suggested_drill must sound like a
           line said out loud in casual conversation — the user's own register,
-          contractions welcome — never a written-essay rewrite.\(registerGuard(targetLanguage))\(relationshipRegisterLine(targetLanguage, counterpart: counterpart))\(politeSettingLine(targetLanguage, counterpart: counterpart, inScene: inScene))
+          contractions welcome — never a written-essay rewrite.\(registerGuard(targetLanguage))\(varietyGuard(targetLanguage))\(relationshipRegisterLine(targetLanguage, counterpart: counterpart))\(politeSettingLine(targetLanguage, counterpart: counterpart, inScene: inScene))
         - cefr_level: a single holistic CEFR estimate of the user's SPEAKING in
           this whole conversation, weighing vocabulary range, grammatical
           control, fluency, and how well they express ideas together. Anchor to
@@ -1264,7 +1264,7 @@ enum ConversationEngine {
           "I am" → "I'm", "do not" → "don't", "it is" → "it's" — is correcting
           the transcriber, not the learner, and tells them they made a mistake
           they did not make. NEVER offer one. If the only thing you would
-          change in a line is a contraction, the line was fine: return null.\(scriptGuard(targetLanguage))\(spacingGuard(targetLanguage))\(registerGuard(targetLanguage))\(relationshipRegisterLine(targetLanguage, counterpart: counterpart))\(politeSettingLine(targetLanguage, counterpart: counterpart, inScene: inScene))
+          change in a line is a contraction, the line was fine: return null.\(scriptGuard(targetLanguage))\(spacingGuard(targetLanguage))\(registerGuard(targetLanguage))\(varietyGuard(targetLanguage))\(relationshipRegisterLine(targetLanguage, counterpart: counterpart))\(politeSettingLine(targetLanguage, counterpart: counterpart, inScene: inScene))
         - "suggestion" answers TWO different questions about the user's most
           recent line, and both are needed: "alternative" is how a fluent
           speaker would say THE WHOLE THING here, and "fixes" lists the
@@ -1394,7 +1394,7 @@ enum ConversationEngine {
           building" arrives as "I am building" every time. A suggestion whose
           only change is contracting what you received is correcting the
           transcriber, not the learner. If that is the only change you would
-          make, the line was fine: return null.\(scriptGuard(targetLanguage))\(spacingGuard(targetLanguage))\(registerGuard(targetLanguage))\(relationshipRegisterLine(targetLanguage, counterpart: counterpart))\(politeSettingLine(targetLanguage, counterpart: counterpart, inScene: inScene))
+          make, the line was fine: return null.\(scriptGuard(targetLanguage))\(spacingGuard(targetLanguage))\(registerGuard(targetLanguage))\(varietyGuard(targetLanguage))\(relationshipRegisterLine(targetLanguage, counterpart: counterpart))\(politeSettingLine(targetLanguage, counterpart: counterpart, inScene: inScene))
         - Judge it as SPEECH, never as writing. Contractions, casual register
           and fragments ("Sounds good.", "Maybe tomorrow?") are how fluent
           speakers talk, not slips.
@@ -1550,6 +1550,26 @@ enum ConversationEngine {
                 + "\n  to them."
         }
         return text
+    }
+
+    /// The variety of the target language the learner picked through their
+    /// voice's accent (British, Australian, Castilian): what the model writes
+    /// follows it, and a word from another variety is never a mistake. Goes
+    /// on every prompt that writes or corrects material. Empty for the
+    /// default accent and for no accent, so those prompts are byte-identical.
+    static func varietyGuard(_ targetLanguage: String,
+                             accentId: String? = UserDefaults.standard.string(forKey: VoiceAccentCatalog.storedAccentKey)) -> String {
+        guard let variety = VoiceAccentCatalog.writingVariety(for: targetLanguage, accentId: accentId)
+        else { return "" }
+        let languageName = LanguageCatalog.englishName(targetLanguage)
+        return "\n- LANGUAGE VARIETY: the learner speaks \(variety.name), and their voice"
+            + "\n  has that accent. Wherever YOU choose a word (your own lines, examples,"
+            + "\n  expressions, a word you add to a rewrite), choose the \(variety.name)"
+            + "\n  one (\(variety.examples)). The learner's OWN words are theirs: a word,"
+            + "\n  spelling or form from another variety of \(languageName)"
+            + "\n  (\(variety.others)) is NEVER a mistake. Never put it in \"fixes\", never"
+            + "\n  swap it for the \(variety.name) word in a rewrite of their line, and"
+            + "\n  never mention the difference."
     }
 
     /// True when a Korean "fix" only puts the SAME words in another order.

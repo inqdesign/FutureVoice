@@ -88,6 +88,44 @@ enum VoiceAccentCatalog {
         ],
     ]
 
+    /// Where `AppState.voiceAccentId` is stored. Prompt builders read it here
+    /// rather than taking it as a parameter, the way `TalkMeter` reads the
+    /// language: they are called from many surfaces.
+    static let storedAccentKey = "futurevoice.voiceAccentId"
+
+    /// The variety of the target language the learner's WORDS should follow,
+    /// from the accent their voice speaks in (2026-10-20). Picking British
+    /// only changed the sound: the model wrote American words and spelling
+    /// in a British voice, and could "fix" a learner's "flat" to
+    /// "apartment". Nil for the language's default accent (the first option,
+    /// which is the variety the model writes anyway) and for no accent, so
+    /// every prompt stays byte-identical for them.
+    static func writingVariety(for language: String,
+                               accentId: String? = UserDefaults.standard.string(forKey: storedAccentKey))
+        -> Variety? {
+        let options = options(for: language)
+        guard let accentId, options.first?.id != accentId,
+              options.contains(where: { $0.id == accentId }) else { return nil }
+        return varieties[accentId]
+    }
+
+    /// `examples` are the variety's own words, for the words the model picks;
+    /// `others` are words from the other varieties a learner may well say,
+    /// named so the model sees they are not mistakes.
+    struct Variety { let name: String; let examples: String; let others: String }
+
+    private static let varieties: [String: Variety] = [
+        "en-GB": Variety(name: "British English",
+                         examples: "flat, lift, mobile, queue, holiday, rubbish, colour, \"have got\"",
+                         others: "apartment, elevator, store, gotten, color"),
+        "en-AU": Variety(name: "Australian English",
+                         examples: "mobile, petrol, footpath, uni, holiday, colour, \"no worries\"",
+                         others: "apartment, cell phone, gas, gotten, color, flat, lift"),
+        "es-ES": Variety(name: "Castilian Spanish as spoken in Spain",
+                         examples: "vosotros for \"you all\", ordenador, coche, móvil, zumo, vale",
+                         others: "ustedes, computadora, carro, celular, jugo"),
+    ]
+
     private static let samples: [String: String] = [
         // Kept just over upstream's 100-character floor (2026-10-08): the
         // line is only what the takes say, and 330 characters spent ~3x the

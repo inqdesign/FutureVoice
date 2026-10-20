@@ -217,7 +217,7 @@ enum ScenarioCurriculumEngine {
           neither side owns the move (a catch-up, talking a story through),
           either may open.
           Real spoken \(languageName) — contractions, hedges, natural register.
-          \(CoachingLanguage.breathPunctuation)
+          \(CoachingLanguage.breathPunctuation)\(ConversationEngine.varietyGuard(targetLanguage))
           \(sceneTurnStyle)
           The USER speaks as a confident, fluent version of the learner
           (slightly above \(proficiency.rawValue.uppercased()), never textbook-stiff). Every user turn must

@@ -355,7 +355,7 @@ enum CoachSuggester {
 
         - "say": in \(targetName) ONLY — always, even when the line contains \
           names or words in another language. 3–10 words, one sentence (two \
-          very short ones at most). \(scale.vocabulary)
+          very short ones at most). \(scale.vocabulary)\(ConversationEngine.varietyGuard(target))
         - Where the answer depends on something only the learner knows (their \
           name, a time, a place, what they did, what they like, which drink \
           or dish or item they want), put a \

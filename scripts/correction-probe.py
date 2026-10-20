@@ -9,6 +9,9 @@
 #   LEVEL=B2 EXTRA='...appended prompt text...' scripts/correction-probe.py ja cases.json
 #   scripts/correction-probe.py de --show      # print the reconstructed prompt
 #   NO_REGISTER=1 …                            # run without the speech-level guard
+#   VARIETY=en-GB …                            # as a learner whose voice has that accent
+# A case with "keep": [words] flags a rewrite that swaps one of the learner's
+# own words away (SWAPPED) — a variety word is not a mistake.
 # A case with "scene": true runs the prompt as a practice SCENE call
 # (`politeSettingLine` with no counterpart, Korean only); every other case is
 # a talk with the future self, where both per-call lines are empty.
@@ -54,6 +57,22 @@ prompt = (prompt.replace("\\(targetName)", target_name).replace("\\(nativeName)"
   .replace("\\(scriptGuard(targetLanguage))", swift_guard("scriptGuard"))
   .replace("\\(spacingGuard(targetLanguage))", swift_guard("spacingGuard"))
   .replace("\\(registerGuard(targetLanguage))", "" if os.environ.get("NO_REGISTER") else swift_guard("registerGuard")))
+
+def variety_guard():
+    """Mirror `varietyGuard(_:accentId:)` for VARIETY=<accent id> (en-GB,
+    en-AU, es-ES); empty without it, as for the default accent."""
+    accent = os.environ.get("VARIETY")
+    if not accent: return ""
+    vsrc = open(os.path.join(ROOT, "FutureVoice/Services/VoiceAccent.swift")).read()
+    m = re.search(r'"%s": Variety\(name: "((?:[^"\\]|\\.)*)",\s*examples: "((?:[^"\\]|\\.)*)",\s*others: "((?:[^"\\]|\\.)*)"\)' % re.escape(accent), vsrc)
+    name, examples, others = (g.replace('\\"', '"') for g in m.groups())
+    start = src.index("static func varietyGuard(")
+    body = src[start:src.index("\n    }\n", start)]
+    text = literals(body.partition("else { return \"\" }")[2])
+    return (text.replace("\\(variety.name)", name).replace("\\(variety.examples)", examples)
+            .replace("\\(variety.others)", others)
+            .replace("\\(languageName)", target_name))
+prompt = prompt.replace("\\(varietyGuard(targetLanguage))", variety_guard())
 
 def scene_line():
     """Mirror `politeSettingLine(_, counterpart: nil, inScene: true)`."""
@@ -153,7 +172,7 @@ def quoted(was, line):
     return len(aw) >= 3 and len(aw & bw) / len(aw) >= 0.75
 short = unq = nfix = 0
 
-fp = fn = frag = 0
+fp = fn = frag = sw = 0
 for (c, i), s in zip(jobs, results):
     fixes = (s or {}).get("fixes") or []
     alt = (s or {}).get("alternative") or ""
@@ -162,13 +181,16 @@ for (c, i), s in zip(jobs, results):
     bad_fix = c["expect"] == "ok" and fixes
     miss = c["expect"] == "err" and not fixes
     fragment = bool(alt) and not whole(alt, c["line"])
+    swapped = [k for k in c.get("keep", []) if alt and k.lower() not in alt.lower()]
+    if swapped: sw += 1
     if bad_fix: fp += 1
     if miss: fn += 1
     if fragment: frag += 1
-    mark = "!!" if (bad_fix or miss or fragment) else "  "
+    mark = "!!" if (bad_fix or miss or fragment or swapped) else "  "
     print(f"{mark} [{c['expect']}] {c['line']}")
     if alt: print(f"      -> {alt}   [{words(c['line'])}w -> {words(alt)}w]"
-                  + ("  FRAGMENT" if fragment else ""))
+                  + ("  FRAGMENT" if fragment else "")
+                  + (f"  SWAPPED {swapped}" if swapped else ""))
     for f in fixes:
         nfix += 1
         # Korean credits by syllables, spaces ignored (`minKoreanSyllables`).
@@ -180,7 +202,7 @@ for (c, i), s in zip(jobs, results):
         print(f"      fix: {f.get('was')} -> {f.get('now')}  ({f.get('why')}){tag}")
 n_ok = sum(1 for j in jobs if j[0]["expect"] == "ok"); n_err = len(jobs) - n_ok
 print(f"\nfalse grammar accusations: {fp}/{n_ok}   missed real errors: {fn}/{n_err}"
-      f"   fragment rewrites: {frag}/{len(jobs)}"
+      f"   fragment rewrites: {frag}/{len(jobs)}   own words swapped: {sw}/{sum(1 for j in jobs if j[0].get('keep'))}"
       f"\nfixes too short to credit: {short}/{nfix}   fixes not quoting the learner: {unq}/{nfix}")
 print(f"thinking={os.environ.get('THINKING', 'low')}  calls={USAGE['calls']}"
       f"  thought tokens/call={USAGE['thoughts'] / max(1, USAGE['calls']):.0f}"

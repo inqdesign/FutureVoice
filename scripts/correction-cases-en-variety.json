@@ -1,0 +1,18 @@
+[
+ {"expect":"ok","heard":"How's the new place?","line":"Yeah it's nice, it's a two-bed flat right by the station, but the lift is broken half the time.","keep":["flat","lift"]},
+ {"expect":"ok","heard":"Why didn't you answer?","line":"Sorry, my mobile died, I'll ring you back tomorrow morning.","keep":["mobile","ring"]},
+ {"expect":"ok","heard":"How was the trip?","line":"Um it was lovely, we went on holiday to Cornwall but we queued for ages at the petrol station.","keep":["holiday","queued","petrol"]},
+ {"expect":"ok","heard":"Do you have a car?","line":"No, I haven't got a car, I just take the tube or the bus.","keep":["haven't got","tube"]},
+ {"expect":"ok","heard":"What are you doing tonight?","line":"Not much, I fancy a takeaway and then maybe a film.","keep":["takeaway","film"]},
+ {"expect":"ok","heard":"How was school today?","line":"It was fine, we had maths first and then a really boring lesson about rubbish collection.","keep":["maths","rubbish"]},
+ {"expect":"ok","heard":"Where do you live?","line":"I live in an apartment downtown, it's on the fifth floor so I take the elevator every day.","keep":["apartment","elevator"]},
+ {"expect":"ok","heard":"What did you do this weekend?","line":"I went to the movies and then we got fries and a soda.","keep":["movies","fries"]},
+ {"expect":"ok","heard":"Is your sister at uni?","line":"Yeah she's in her second year at uni, she's studying maths.","keep":["uni","maths"]},
+ {"expect":"ok","heard":"Did you get the stuff?","line":"Yeah, I've gotten most of it, I'll pick up the rest at the store later.","keep":["gotten","store"]},
+ {"expect":"err","heard":"How's the new flat?","line":"It's nice but the lift don't work and I am living there since two months.","keep":["lift"]},
+ {"expect":"err","heard":"What happened to your phone?","line":"My mobile was fall in the water yesterday, so I must to buy a new one.","keep":["mobile"]},
+ {"expect":"err","heard":"Where did you go on holiday?","line":"We have gone to Spain last summer, it was the best holiday of my life.","keep":["holiday"]},
+ {"expect":"err","heard":"How was the queue?","line":"Terrible, we was queuing for one hour and the staff didn't said anything.","keep":["queuing"]},
+ {"expect":"err","heard":"What did you do yesterday?","line":"I watched a film with my flatmate and then we eat a takeaway.","keep":["film","flatmate","takeaway"]},
+ {"expect":"err","heard":"Where do you live now?","line":"I am living in apartment near the subway, it is more cheap than my old one.","keep":["apartment","subway"]}
+]

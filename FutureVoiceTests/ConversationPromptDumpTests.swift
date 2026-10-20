@@ -13,6 +13,14 @@ final class ConversationPromptDumpTests: XCTestCase {
         guard let dir = ProcessInfo.processInfo.environment["PROMPT_DUMP_DIR"] else {
             throw XCTSkip("PROMPT_DUMP_DIR not set")
         }
+        // The probes measure the default accent; a simulator that once had a
+        // British voice would otherwise dump the variety rule into every prompt.
+        // TEST_RUNNER_PROMPT_ACCENT=en-GB dumps as that learner instead.
+        let defaults = UserDefaults.standard
+        let savedAccent = defaults.string(forKey: VoiceAccentCatalog.storedAccentKey)
+        defaults.set(ProcessInfo.processInfo.environment["PROMPT_ACCENT"],
+                     forKey: VoiceAccentCatalog.storedAccentKey)
+        defer { defaults.set(savedAccent, forKey: VoiceAccentCatalog.storedAccentKey) }
         let url = URL(fileURLWithPath: dir, isDirectory: true)
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         for lang in ["en", "ko", "ja", "de", "es"] {

@@ -594,7 +594,7 @@ final class AppState: ObservableObject {
     private static let unclaimedVoiceSinceKey = "futurevoice.unclaimedVoiceSince"
     private static let voiceWasReclaimedKey = "futurevoice.voiceWasReclaimed"
     private static let voiceNameKey = "futurevoice.voiceName"
-    private static let voiceAccentIdKey = "futurevoice.voiceAccentId"
+    private static let voiceAccentIdKey = VoiceAccentCatalog.storedAccentKey
     private static let cloneScriptLanguageKey = "futurevoice.cloneScriptLanguage"
     private static let pendingDeleteVoiceIdKey = "futurevoice.pendingDeleteVoiceId"
     private static let voiceIsStandInKey = "futurevoice.voiceIsStandIn"

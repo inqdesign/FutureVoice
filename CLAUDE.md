@@ -2514,6 +2514,20 @@ construction:
   fallback: it is kept for 24 h to listen to a clone that came out wrong, and
   the consent screen says exactly that.
 
+- **The accent also picks the WORDS** (2026-10-20, `ConversationEngine.varietyGuard`,
+  `VoiceAccentCatalog.writingVariety`). A non-default accent (British,
+  Australian, Castilian) adds one LANGUAGE VARIETY line to the call, every
+  correction prompt, the summary, scenes, dialogue, the voicemail and coach
+  suggestions: the model's own words follow that variety, and the learner's
+  words from another variety are never a mistake and never swapped. The
+  default accent and "no accent" add nothing, so those prompts are
+  byte-identical. The first wording ("use British words") made the model
+  convert the learner's own "apartment" to "flat" and once filed it as a fix;
+  measured after the rewrite with `VARIETY=en-GB scripts/correction-probe.py
+  en scripts/correction-cases-en-variety.json` (the `keep` field flags a
+  swapped word): 0/30 false, 0/18 missed, 0/48 swapped; call replies went
+  from 5 British / 10 American words to 14 / 0.
+
 ## A parked voice (2026-09-28, parking stopped 2026-10-12)
 
 Voices used to be deleted upstream after 7 idle days with no plan, because
