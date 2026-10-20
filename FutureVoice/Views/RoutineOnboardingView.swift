@@ -34,18 +34,26 @@ struct RoutineOnboardingView: View {
     @ObservedObject private var handoff = RoutineHandoff.shared
     var onFinished: () -> Void
 
-    private enum Step { case intro, pick, done }
+    /// The first sheet is the intro AND the list: "Make my routine" grows
+    /// it in place into the list (founder: no second window).
+    private enum Step { case intro, done }
 
-    /// The rows, in the order of a day.
+    /// Every kind, in the order of a day. The call is set by hand (length,
+    /// time, days); the rest are ticked from a list.
     static let kinds: [StudyPlan.Kind] = [.talk, .sayItAgain, .listen, .shadow, .speech, .review]
+    static let others: [StudyPlan.Kind] = kinds.filter { $0 != .talk }
+    static let callChoices = [5, 10, 15, 20]
 
     /// Where each block goes and how much it asks for. Say it again sits
     /// right after the call, as it is in the day.
-    static let callMinutes = 5
-    static func slot(_ kind: StudyPlan.Kind) -> (hour: Int, minute: Int, amount: Int) {
+    private func slot(_ kind: StudyPlan.Kind) -> (hour: Int, minute: Int, amount: Int) {
+        let c = cal.dateComponents([.hour, .minute], from: callTime)
+        let start = (c.hour ?? 8) * 60 + (c.minute ?? 0)
+        let end = start + callMinutes
         switch kind {
-        case .talk: return (8, 0, callMinutes)
-        case .sayItAgain: return (8, callMinutes, 1)
+        case .talk: return (start / 60, start % 60, callMinutes)
+        case .sayItAgain:
+            return end + StudyPlan.sayItAgainMinutes <= 24 * 60 ? (end / 60, end % 60, 1) : (8, 15, 1)
         case .listen: return (8, 30, 1)
         case .shadow: return (12, 30, 1)
         case .speech: return (20, 0, 1)
@@ -55,6 +63,13 @@ struct RoutineOnboardingView: View {
     }
 
     @State private var step: Step = .intro
+    @State private var callMinutes = 5
+    @State private var callTime = Calendar.current.date(bySettingHour: 8, minute: 0, second: 0, of: Date()) ?? Date()
+    /// The days the whole routine runs on; the rest are rest days.
+    @State private var days: Set<Int> = Set(1...7)
+    /// The intro has grown into the list.
+    @State private var expanded = false
+    @State private var detent: PresentationDetent = .height(300)
     @State private var sheetUp = false
     @State private var spotlight: WeeklyPlanEditor.Spotlight?
     @State private var working = false
@@ -85,10 +100,13 @@ struct RoutineOnboardingView: View {
                 // A beat for the grid to be seen on its own first.
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { sheetUp = true }
                 #if DEBUG
-                // `-routineStep pick|done|finish`: a step for a capture;
+                // `-routineStep pick|done|finish|advance`: a step for a capture;
                 // `finish` runs Done by itself after a moment.
                 switch UserDefaults.standard.string(forKey: "routineStep") {
-                case "pick": step = .pick
+                case "pick": expand()
+                case "advance":
+                    // The intro growing into the list, for a recording.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { expand() }
                 case "done": step = .done
                 case "finish":
                     step = .done
@@ -99,7 +117,14 @@ struct RoutineOnboardingView: View {
             }
             .sheet(isPresented: $sheetUp) {
                 sheet
-                    .presentationDetents([step == .pick ? .large : .height(300)])
+                    .presentationDetents([.height(300), .large], selection: $detent)
+                    // Dragged up, the intro opens into the list; the list
+                    // never folds back into the intro.
+                    .onChange(of: detent) { _, d in
+                        guard step == .intro else { return }
+                        if d == .large, !expanded { expand() }
+                        if d != .large, expanded { detent = .large }
+                    }
                     .presentationBackgroundInteraction(.enabled)
                     .presentationDragIndicator(.hidden)
                     .interactiveDismissDisabled()
@@ -125,7 +150,9 @@ struct RoutineOnboardingView: View {
 
     private func finish() {
         Analytics.capture("routine_onboarding", [
-            "call_minutes": saved.contains(.talk) ? Self.callMinutes : 0,
+            "call_minutes": saved.contains(.talk) ? callMinutes : 0,
+            "call_hour": cal.component(.hour, from: callTime),
+            "days": days.count,
             "picked": Self.kinds.filter { saved.contains($0) }.map(\.rawValue).joined(separator: ","),
             "call_on": saved.contains(.talk) && !callBlocked
         ])
@@ -152,18 +179,8 @@ struct RoutineOnboardingView: View {
     @ViewBuilder
     private var sheet: some View {
         switch step {
-        case .intro: intro
-        case .pick: pick
+        case .intro: pick
         case .done: done
-        }
-    }
-
-    private var intro: some View {
-        message(icon: "calendar.badge.clock", tint: .accentColor,
-                title: explain("Let's make your routine"),
-                body: explain("Try it just as it is for a week. You can change it any time."),
-                button: explain("Make my routine")) {
-            withAnimation { step = .pick }
         }
     }
 
@@ -210,49 +227,91 @@ struct RoutineOnboardingView: View {
 
     // MARK: - What goes in
 
+    private func expand() {
+        withAnimation(.easeInOut(duration: 0.35)) {
+            expanded = true
+            detent = .large
+        }
+    }
+
+    /// The intro, and — once "Make my routine" is tapped — the list under it,
+    /// in the same sheet.
     private var pick: some View {
-        NavigationStack {
-            List {
+        List {
+            Section {
+                VStack(spacing: 10) {
+                    Image(systemName: "calendar.badge.clock")
+                        .font(.system(size: expanded ? 30 : 40))
+                        .foregroundStyle(.tint)
+                        .accessibilityHidden(true)
+                    Text(expanded ? explain("What goes in your routine?") : explain("Let's make your routine"))
+                        .font(.title2.bold())
+                        .multilineTextAlignment(.center)
+                    Text(expanded
+                         ? explain("Pick as many as you like.")
+                         : explain("Try it just as it is for a week. You can change it any time."))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity)
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: expanded ? 8 : 20, leading: 24, bottom: 4, trailing: 24))
+            }
+            if expanded {
                 Section {
-                    ForEach(Self.kinds) { kind in row(kind) }
+                    row(.talk)
+                    if selected.contains(.talk) {
+                        Picker("Minutes", selection: $callMinutes) {
+                            ForEach(Self.callChoices, id: \.self) { m in
+                                Text("\(m) min").tag(m)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        DatePicker("Calls at", selection: $callTime, displayedComponents: .hourAndMinute)
+                            .environment(\.locale, uiLocale)
+                    }
+                    dayChips
+                } header: {
+                    Text(explain("Your daily call"))
                 } footer: {
-                    Text(explain("Every day at these times to start with. You can change the times, the days and how much under Activity on the Talk screen."))
+                    Text(explain("Everything in your routine runs on these days."))
                 }
-            }
-            .navigationTitle(explain("What goes in your routine?"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button {
-                        withAnimation { step = .intro }
-                    } label: {
-                        Image(systemName: "chevron.left")
-                    }
-                    .accessibilityLabel(Text("Back"))
+                .transition(.opacity)
+                Section {
+                    ForEach(Self.others) { kind in row(kind) }
+                } header: {
+                    Text(explain("Add more"))
+                } footer: {
+                    Text(explain("These go in at the times shown to start with. You can change the times and how much under Activity on the Talk screen."))
                 }
+                .transition(.opacity)
             }
-            .safeAreaInset(edge: .bottom) {
-                Button {
-                    working = true
-                    Task {
-                        await save()
-                        working = false
-                    }
-                } label: {
-                    HStack {
-                        if working { ProgressView().tint(.white) }
-                        Text(selected.isEmpty ? explain("Not now") : explain("Make my routine"))
-                    }
-                    .frame(maxWidth: .infinity)
+        }
+        .scrollDisabled(!expanded)
+        .safeAreaInset(edge: .bottom) {
+            Button {
+                guard expanded else { expand(); return }
+                working = true
+                Task {
+                    await save()
+                    working = false
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .disabled(working)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 8)
-                // The list scrolls under the button; it must not show through.
-                .background(Color(.systemGroupedBackground))
+            } label: {
+                HStack {
+                    if working { ProgressView().tint(.white) }
+                    Text(expanded && selected.isEmpty ? explain("Not now") : expanded ? explain("Done") : explain("Make my routine"))
+                }
+                .frame(maxWidth: .infinity)
             }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .disabled(working)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 8)
+            // The list scrolls under the button; it must not show through.
+            .background(Color(.systemGroupedBackground))
         }
     }
 
@@ -273,9 +332,12 @@ struct RoutineOnboardingView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
-                    Text(whenText(kind))
-                        .font(.footnote)
-                        .foregroundStyle(.tertiary)
+                    // The call's time is set right under it.
+                    if kind != .talk {
+                        Text(whenText(kind))
+                            .font(.footnote)
+                            .foregroundStyle(.tertiary)
+                    }
                 }
                 Spacer(minLength: 8)
                 Image(systemName: on ? "checkmark.circle.fill" : "circle")
@@ -289,10 +351,34 @@ struct RoutineOnboardingView: View {
         .accessibilityAddTraits(on ? .isSelected : [])
     }
 
+    /// The days the routine runs on. Lit = a study day; at least one.
+    private var dayChips: some View {
+        var c = cal
+        c.locale = uiLocale
+        let symbols = c.veryShortWeekdaySymbols
+        let order = (0..<7).map { (cal.firstWeekday - 1 + $0) % 7 + 1 }
+        return HStack(spacing: 6) {
+            ForEach(order, id: \.self) { wd in
+                let on = days.contains(wd)
+                Button {
+                    if on { if days.count > 1 { days.remove(wd) } } else { days.insert(wd) }
+                } label: {
+                    Text(symbols[wd - 1])
+                        .font(.subheadline.weight(on ? .semibold : .regular))
+                        .frame(maxWidth: .infinity, minHeight: 32)
+                        .background(Capsule().fill(on ? Color.accentColor : Color(.tertiarySystemFill)))
+                        .foregroundStyle(on ? Color.white : Color.primary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(on ? .isSelected : [])
+            }
+        }
+    }
+
     /// What each block is, for someone who has never done it.
     private func pitch(_ kind: StudyPlan.Kind) -> String {
         switch kind {
-        case .talk: return explain("Your fluent self calls you, in your own voice. Talk for 5 minutes about anything.")
+        case .talk: return explain("Your fluent self calls you, in your own voice, and you talk about anything.")
         case .sayItAgain: return explain("Go back through the call you just had. Your lines come up the way a fluent speaker would say them, and you read them out loud.")
         case .listen: return explain("The nawana Podcast and the situations you've watched, played one after another. Good for the commute.")
         case .shadow: return explain("Hear a line from your fluent self and say it along with them, in the same rhythm. You get a score.")
@@ -305,9 +391,10 @@ struct RoutineOnboardingView: View {
     /// "Every day · 8:00", or "Right after the call".
     private func whenText(_ kind: StudyPlan.Kind) -> String {
         if kind == .sayItAgain { return explain("Right after the call") }
-        let s = Self.slot(kind)
+        let s = slot(kind)
         let d = cal.date(bySettingHour: s.hour, minute: s.minute, second: 0, of: Date()) ?? Date()
-        return explain("Every day · \(d.formatted(Date.FormatStyle(locale: uiLocale).hour().minute()))")
+        let time = d.formatted(Date.FormatStyle(locale: uiLocale).hour().minute())
+        return days.count == 7 ? explain("Every day · \(time)") : time
     }
 
     /// The ticked blocks on the grid, then the permission they need — the
@@ -315,11 +402,12 @@ struct RoutineOnboardingView: View {
     /// reminders.
     private func save() async {
         let blocks = Self.kinds.filter { selected.contains($0) }.map { kind in
-            let s = Self.slot(kind)
-            return StudyPlan.Block(kind: kind, weekdays: Set(1...7), hour: s.hour, minute: s.minute, minutes: s.amount)
+            let s = slot(kind)
+            return StudyPlan.Block(kind: kind, weekdays: days, hour: s.hour, minute: s.minute, minutes: s.amount)
         }
         saved = selected
-        let plan = StudyPlanStore.shared.plan.withOnboardingRoutine(blocks, days: Set(1...7))
+        detent = .height(300)
+        let plan = StudyPlanStore.shared.plan.withOnboardingRoutine(blocks, days: days)
         StudyPlanStore.shared.update(plan, byLearner: true)
         guard let first = blocks.first else {
             withAnimation { step = .done }
@@ -329,7 +417,7 @@ struct RoutineOnboardingView: View {
         spotlight = .init(kind: first.kind, minute: first.startMinute, token: (spotlight?.token ?? 0) + 1)
         try? await Task.sleep(for: .milliseconds(700))
         if saved.contains(.talk) {
-            UserDefaults.standard.set(Self.callMinutes, forKey: "futurevoice.dailyGoalMinutes")
+            UserDefaults.standard.set(callMinutes, forKey: "futurevoice.dailyGoalMinutes")
             // The weekly test's "it's ready" notice rides on the same answer.
             WeeklyTestSettings.shared.reminderOn = true
             let granted = await DailyCallScheduler.requestPermission()

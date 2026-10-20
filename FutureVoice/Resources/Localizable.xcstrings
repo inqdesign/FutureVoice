@@ -24534,6 +24534,52 @@
         }
       }
     },
+    "Add more" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mehr dazu"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añade más"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajoute d’autres choses"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ほかに入れるもの"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "더 넣을 것"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再加点什么"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再加點什麼"
+          }
+        }
+      }
+    },
     "Add my own script" : {
       "localizations" : {
         "de" : {
@@ -44928,52 +44974,6 @@
         }
       }
     },
-    "Every day at these times to start with. You can change the times, the days and how much under Activity on the Talk screen." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Für den Anfang jeden Tag zu diesen Zeiten. Zeiten, Tage und Menge kannst du jederzeit unter Aktivität auf dem Sprechen-Bildschirm ändern."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Para empezar, todos los días a estas horas. Puedes cambiar las horas, los días y cuánto en Actividad, en la pantalla Hablar."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pour commencer, tous les jours à ces heures-là. Tu peux changer les heures, les jours et la quantité dans Activité, sur l’écran Parler."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最初は毎日この時間に入れておきます。時間・曜日・量は、トーク画面のアクティビティでいつでも変えられます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "처음엔 매일 이 시간에 넣어 둘게요. 시간, 요일, 양은 대화 화면의 활동에서 언제든 바꿀 수 있어요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "先每天排在这些时间。时间、星期和份量，随时都能在对话界面的“活动”里修改。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "先每天排在這些時間。時間、星期和份量，隨時都能在對話畫面的「活動」裡修改。"
-          }
-        }
-      }
-    },
     "Every day · %@" : {
       "localizations" : {
         "de" : {
@@ -45016,6 +45016,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "每天 · %@"
+          }
+        }
+      }
+    },
+    "Everything in your routine runs on these days." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine ganze Routine läuft an diesen Tagen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toda tu rutina va en estos días."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toute ta routine se fait ces jours-là."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ルーティンはすべてこの曜日に行います。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "루틴은 모두 이 요일에 해요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "作息都排在这几天。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "作息都排在這幾天。"
           }
         }
       }
@@ -91365,6 +91411,52 @@
         }
       }
     },
+    "Pick as many as you like." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Such dir so viele aus, wie du willst."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elige todos los que quieras."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisis-en autant que tu veux."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "好きなだけ選んでください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "원하는 만큼 골라요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "想选几个都可以。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "想選幾個都可以。"
+          }
+        }
+      }
+    },
     "Pick from categories" : {
       "localizations" : {
         "de" : {
@@ -125062,6 +125154,52 @@
         }
       }
     },
+    "These go in at the times shown to start with. You can change the times and how much under Activity on the Talk screen." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Für den Anfang zu den angezeigten Zeiten. Zeiten und Menge kannst du jederzeit unter Aktivität auf dem Sprechen-Bildschirm ändern."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Para empezar, van a las horas que ves. Puedes cambiar las horas y cuánto en Actividad, en la pantalla Hablar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pour commencer, ils se placent aux heures indiquées. Tu peux changer les heures et la quantité dans Activité, sur l’écran Parler."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最初は表示の時間に入れておきます。時間と量は、トーク画面のアクティビティでいつでも変えられます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "처음엔 보이는 시간에 넣어 둘게요. 시간과 양은 대화 화면의 활동에서 언제든 바꿀 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先排在显示的时间。时间和份量，随时都能在对话界面的“活动”里修改。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先排在顯示的時間。時間和份量，隨時都能在對話畫面的「活動」裡修改。"
+          }
+        }
+      }
+    },
     "They got %lld minutes too. That's %lld of your %lld rewarded invites." : {
       "localizations" : {
         "de" : {
@@ -148640,48 +148778,48 @@
         }
       }
     },
-    "Your fluent self calls you, in your own voice. Talk for 5 minutes about anything." : {
+    "Your fluent self calls you, in your own voice, and you talk about anything." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dein fließendes Ich ruft dich an, mit deiner eigenen Stimme. Ihr redet 5 Minuten über alles Mögliche."
+            "value" : "Dein fließendes Ich ruft dich an, mit deiner eigenen Stimme, und ihr redet über alles Mögliche."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tu yo fluido te llama con tu propia voz. Charlas 5 minutos de lo que quieras."
+            "value" : "Tu yo fluido te llama con tu propia voz, y charlas de lo que quieras."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ton moi fluide t’appelle, avec ta propre voix. Vous parlez 5 minutes de ce que tu veux."
+            "value" : "Ton moi fluide t’appelle, avec ta propre voix, et tu parles de ce que tu veux."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "流暢になった自分が、自分の声で電話をかけてきます。なんでも5分おしゃべりしましょう。"
+            "value" : "流暢になった自分が、自分の声で電話をかけてきます。なんでも気軽に話しましょう。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "유창해진 내가 내 목소리로 전화를 걸어요. 아무 이야기나 5분 동안 나눠요."
+            "value" : "유창해진 내가 내 목소리로 전화를 걸어요. 아무 이야기나 편하게 나눠요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "流利的自己用你的声音给你打电话，随便聊 5 分钟。"
+            "value" : "流利的自己用你的声音给你打电话，想聊什么都可以。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "流利的自己用你的聲音打電話給你，隨便聊 5 分鐘。"
+            "value" : "流利的自己用你的聲音打電話給你，想聊什麼都可以。"
           }
         }
       }

@@ -758,21 +758,25 @@ ONE now: `RoutineOnboardingView`, the last onboarding step, shown over the
 Talk tab with the My routine grid (`WeeklyPlanEditor(onboarding: true)`,
 editing off) behind a sheet.
 
-- **The sheet asks what goes in, as ONE multi-select list** (2026-10-20,
-  founder: not "how much will you study a day" but "here is what you can
-  study, put in what you want"). Every kind is a row — icon, name, two
-  lines on what it is for someone who has never done it, and when it would
-  go — ticked or not; the call starts ticked. "Make my routine" writes the
-  ticked ones (`StudyPlan.withOnboardingRoutine`) every day at fixed
-  defaults (`RoutineOnboardingView.slot`: call 08:00 for 5 min, say it again
-  right after, listening 08:30, shadowing 12:30 ×1, speech 20:00, review
-  21:00 ×10), and the footer says times, days and amounts change later in
-  Activity. With the call in, the alarm/notification permission is asked;
-  without, the notification one and the daily call stays off. Nothing
-  ticked → "Not now" → "You can make it later", no promise. A card per
-  kind asking for a time was built and cut the same day: the times were
-  the app's guess anyway, six sheets of different heights read as a form,
-  and nobody new knew what "say it again" was from one line.
+- **One sheet that grows** (2026-10-20, founder). The intro's "Make my
+  routine" does not open a second screen: the same sheet grows to full
+  height and the list appears under the intro. On top, **the call is set
+  like before** — ticked (it starts ticked), its length 5/10/15/20, its
+  time and the WEEKDAYS, which every block follows. Under it, **"Add more"**:
+  say it again, listening, shadowing, speech, review as rows — icon, name,
+  two lines on what it is for someone who has never done it, and its time
+  — ticked as many as wanted ("not how much will you study a day, but here
+  is what you can study, put in what you want"). Those go in at fixed
+  slots (`RoutineOnboardingView.slot`: say it again right after the call,
+  listening 08:30, shadowing 12:30 ×1, speech 20:00, review 21:00 ×10) and
+  the footer says times and amounts change later in Activity. "Done"
+  writes them (`StudyPlan.withOnboardingRoutine`). With the call in, the
+  alarm/notification permission is asked; without, the notification one
+  and the daily call stays off. Nothing ticked → "Not now" → "You can make
+  it later", no promise. Tried and cut the same day: a card per kind asking
+  for its time (six sheets of different heights, times that were the app's
+  guess anyway, "say it again" unexplained in one line), and a list that
+  put the call's time on a fixed 08:00.
 - **Done** drops the sheet and shrinks the page into the Talk header's
   Activity chip (`RoutineHandoff.chipFrame`); the chip bounces and a popover
   says the routine lives there. Talk's first-run sheets (age check, guide,
