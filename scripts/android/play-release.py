@@ -8,6 +8,19 @@
     scripts/android/play-release.py --send --track alpha   # closed testing
     scripts/android/play-release.py --no-build --send   # upload the AAB already built
     scripts/android/play-release.py --match-ios         # versionName = the iOS marketing version
+    scripts/android/play-release.py released            # the update sheet → what Play is serving
+    scripts/android/play-release.py released 18 --force # same, without the proof below
+
+THE UPDATE SHEET IS TWO STEPS, like iOS's (`beta.sh` / `beta.sh released`).
+`--send` moves `app_release.latest_beta_build` (a sideloaded install). A
+Play install compares against `latest_build`, and that may only move once
+Play is actually SERVING the build — Play reviews every release, testing
+tracks included, and a sheet that opens a Play page still offering the old
+build is the iOS 2026-09-11 bug. The Publisher API has no review status, so
+`released` takes its proof from the one place that can't lie: a learner who
+is not on the team reporting that build. 2026-10-20: 1.2.0 (18) was served
+to testers all afternoon while the row still said 17, so nobody on 17 was
+told — `scripts/release-watch.sh` now runs `released --watch` every 30 min.
 
 Release notes ride on the release, one per language, from
 android/fastlane/metadata/android/<folder>/changelogs/<versionCode>.txt —
@@ -94,6 +107,139 @@ def notes(code: int) -> list[dict]:
 SUPABASE_REF = "chhzjtigzdotacutwcyo"
 
 
+def supabase_sql(query: str):
+    """One statement through the Management API; the parsed rows, or None."""
+    import base64
+    import json
+    raw = subprocess.run(["security", "find-generic-password", "-s", "Supabase CLI", "-w"],
+                         capture_output=True, text=True).stdout.strip()
+    if not raw:
+        return None
+    token = base64.b64decode(raw.removeprefix("go-keyring-base64:")).decode()
+    r = subprocess.run(
+        ["curl", "-sf", "-X", "POST",
+         f"https://api.supabase.com/v1/projects/{SUPABASE_REF}/database/query",
+         "-H", f"Authorization: Bearer {token}", "-H", "Content-Type: application/json",
+         "-d", json.dumps({"query": query})],
+        capture_output=True, text=True)
+    if r.returncode != 0:
+        return None
+    try:
+        return json.loads(r.stdout or "[]")
+    except ValueError:
+        return None
+
+
+def sql_text(t: str | None) -> str:
+    """Dollar-quoted literal — release notes carry apostrophes."""
+    if t is None:
+        return "null"
+    tag = "n"
+    while f"${tag}$" in t:
+        tag += "n"
+    return f"${tag}${t}${tag}$"
+
+
+def changelog(code: int, folder: str) -> str | None:
+    path = os.path.join(pl.META, folder, "changelogs", f"{code}.txt")
+    return open(path).read().strip() if os.path.exists(path) else None
+
+
+def flat_notes(text: str | None) -> str | None:
+    """The bullets alone, for a sheet that draws one list (beta.sh's
+    `sheet_notes`). The headed copy goes to notes_sections_*."""
+    if not text:
+        return text
+    marks = ("- ", "• ", "· ", "* ")
+    lines = text.splitlines()
+    if any(l.strip().startswith(marks) for l in lines):
+        lines = [l for l in lines if l.strip().startswith(marks)]
+    return "\n".join(lines).strip()
+
+
+def test_user_ids() -> set[str]:
+    """The team's own accounts — the admin console's TEST_IDS, read from the
+    iOS worktree so there is one list. Their phones carry sideloaded builds,
+    which prove nothing about what Play serves."""
+    first = subprocess.run(["git", "-C", pl.ROOT, "worktree", "list", "--porcelain"],
+                           text=True, capture_output=True).stdout.splitlines()
+    ios = next((l.split(" ", 1)[1] for l in first if l.startswith("worktree ")), "")
+    path = os.path.join(ios, "admin/src/assemble.ts")
+    if not os.path.exists(path):
+        return set()
+    src = open(path).read()
+    block = re.search(r"const TEST_IDS = new Set\(\[(.*?)\]\)", src, re.S)
+    return set(re.findall(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+                          block.group(1) if block else ""))
+
+
+def released(args: list[str]) -> None:
+    """Move the update sheet for Play installs to the build Play is serving."""
+    watch, force = "--watch", "--force"
+    positional = [a for a in args if not a.startswith("--")]
+    rows = supabase_sql("select latest_build, latest_beta_build from public.app_release "
+                        "where platform = 'android'")
+    if not rows:
+        sys.exit("app_release (android) could not be read.")
+    current = rows[0]["latest_build"] or 0
+
+    # What Play has: production once it has a release, else the newest
+    # completed release on any testing track (every tester installs from Play).
+    pl.TOKEN = pl.token()
+    edit = pl.call("POST", "/edits", {})["id"]
+    try:
+        tracks = pl.call("GET", f"/edits/{edit}/tracks").get("tracks", [])
+    finally:
+        pl.call("DELETE", f"/edits/{edit}")
+    def completed(t):
+        return [(int(c), r.get("name") or "") for r in t.get("releases", [])
+                if r.get("status") == "completed" for c in r.get("versionCodes", [])]
+    prod = next((completed(t) for t in tracks if t["track"] == "production"), [])
+    served = prod or [x for t in tracks for x in completed(t)]
+    if not served:
+        sys.exit("Nothing completed on any Play track.")
+    on_play, rel_name = max(served)
+    code = int(positional[0]) if positional else on_play
+    if code > on_play:
+        sys.exit(f"Play has no completed release of {code} (newest is {on_play}).")
+    if code <= current:
+        if watch not in args:
+            print(f"Update sheet already on {current} — nothing to do.")
+        return
+
+    if force not in args:
+        team = test_user_ids()
+        seen = supabase_sql(
+            "select user_id::text as id, min(created_at)::text as at from client_events "
+            f"where properties->>'platform' = 'android' and properties->>'build' = '{code}' "
+            # The admin flag marks the founder's own accounts too.
+            "and user_id not in (select user_id from user_credits where unlimited) "
+            "group by user_id") or []
+        proof = [r for r in seen if r["id"] not in team]
+        if not proof:
+            msg = (f"Play has {code} committed, but no learner outside the team has run it yet — "
+                   "review may still be going. Re-run later, or --force once Play Console shows it.")
+            if watch in args:
+                return
+            sys.exit(msg)
+        print(f"Proof: {len(proof)} learner(s) on {code}, first at {min(r['at'] for r in proof)} UTC")
+
+    m = re.match(r"\s*([0-9][0-9.]*)", rel_name)
+    name = m.group(1) if (m and code == on_play) else version()[1]
+    ko, en = changelog(code, "ko-KR"), changelog(code, "en-US")
+    ok = supabase_sql(
+        f"update public.app_release set latest_build = {code}, "
+        f"latest_beta_build = greatest(coalesce(latest_beta_build, 0), {code}), "
+        f"latest_version = {sql_text(name)}, "
+        f"notes_ko = coalesce({sql_text(flat_notes(ko))}, notes_ko), "
+        f"notes_en = coalesce({sql_text(flat_notes(en))}, notes_en), updated_at = now() "
+        "where platform = 'android';")
+    if ok is None:
+        sys.exit("app_release update failed.")
+    print(f"✓ app_release (android).latest_build → {code} ({name}). Play installs now see the update sheet.")
+    publish_note_sections(code)
+
+
 def publish_note_sections(code: int) -> None:
     """The same changelogs WITH their headings, for the update sheet's
     sections (New / Fixed / Improved) — beta.sh's `publish_note_sections`,
@@ -101,37 +247,10 @@ def publish_note_sections(code: int) -> None:
     en-US. Its own statement, and a failure only warns: a database without
     the columns (20261018150000), or no token in the keychain, costs the
     sections, never the release."""
-    import base64
-    import json
-
-    def read(folder: str) -> str | None:
-        path = os.path.join(pl.META, folder, "changelogs", f"{code}.txt")
-        return open(path).read().strip() if os.path.exists(path) else None
-
-    def sql_text(t: str | None) -> str:
-        if t is None:
-            return "null"
-        tag = "n"
-        while f"${tag}$" in t:
-            tag += "n"
-        return f"${tag}${t}${tag}$"
-
-    ko, en = read("ko-KR"), read("en-US")
-    raw = subprocess.run(["security", "find-generic-password", "-s", "Supabase CLI", "-w"],
-                         capture_output=True, text=True).stdout.strip()
-    if not raw:
-        print("  ! Supabase token not in the keychain — notes_sections not updated.", file=sys.stderr)
-        return
-    token = base64.b64decode(raw.removeprefix("go-keyring-base64:")).decode()
-    query = (f"update public.app_release set notes_sections_ko = {sql_text(ko)}, "
-             f"notes_sections_en = {sql_text(en)} where platform = 'android';")
-    r = subprocess.run(
-        ["curl", "-sf", "-X", "POST",
-         f"https://api.supabase.com/v1/projects/{SUPABASE_REF}/database/query",
-         "-H", f"Authorization: Bearer {token}", "-H", "Content-Type: application/json",
-         "-d", json.dumps({"query": query})],
-        capture_output=True, text=True)
-    if r.returncode == 0:
+    ko, en = changelog(code, "ko-KR"), changelog(code, "en-US")
+    ok = supabase_sql(f"update public.app_release set notes_sections_ko = {sql_text(ko)}, "
+                      f"notes_sections_en = {sql_text(en)} where platform = 'android';")
+    if ok is not None:
         print("▸ app_release (android).notes_sections → this version's changelogs")
     else:
         print("  ! notes_sections update failed (migration 20261018150000 not applied?) — "
@@ -202,6 +321,9 @@ def android_gate(track: str, send: bool) -> None:
 
 def main() -> None:
     args = sys.argv[1:]
+    if args[:1] == ["released"]:
+        released(args[1:])
+        return
     send = "--send" in args
     track = args[args.index("--track") + 1] if "--track" in args else "internal"
     if "--bump" in args:
@@ -250,7 +372,15 @@ def main() -> None:
         pl.call("POST", f"/edits/{edit}:commit")
         edit = None
         print(f"Committed to {track} as {status}.")
+        # A sideloaded install can be told now; a Play install waits for
+        # review — `released` (release-watch runs it) moves latest_build.
+        if supabase_sql("update public.app_release set latest_beta_build = "
+                        f"greatest(coalesce(latest_beta_build, 0), {code}) "
+                        "where platform = 'android';") is not None:
+            print(f"▸ app_release (android).latest_beta_build → {code}")
         publish_note_sections(code)
+        print("Play installs are told once review is done: release-watch runs "
+              "`play-release.py released --watch` every 30 min.")
     finally:
         if edit:
             try:
