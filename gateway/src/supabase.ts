@@ -14,7 +14,7 @@ export interface Env {
   GEMINI_API_KEY: string
   /** Half-cascade Live model ("models/..."); see README before changing. */
   GEMINI_LIVE_MODEL?: string
-  /** off (default) · all · comma-separated user ids — see session.ts gateQuietFrames. */
+  /** off (default) · all · comma-separated user ids — see session.ts onForUser. */
   TRANSCRIBE_GATE?: string
   /** Cartesia key — a Cartesia clone's call voice (cartesia-tts.ts). */
   CARTESIA_API_KEY: string
@@ -26,6 +26,14 @@ export interface Env {
   GEMINI_REPLY_MODEL?: string
   /** Hedge target when the reply model stalls (default flash-lite). */
   GEMINI_REPLY_FALLBACK_MODEL?: string
+  /** Who gets the reply on Claude (claude-reply.ts): unset/"off" = nobody,
+   *  "all", or comma-separated user ids — the TRANSCRIBE_GATE shape, so it
+   *  can be tried on one account before anyone else. */
+  CLAUDE_REPLY?: string
+  /** The Claude reply model (default claude-haiku-5-5). */
+  CLAUDE_REPLY_MODEL?: string
+  /** Anthropic key for the Claude reply. */
+  ANTHROPIC_API_KEY?: string
   /** Streaming PCM format for the call's voice (default pcm_22050). */
   TTS_OUTPUT_FORMAT?: string
   /** "1" allows unauthenticated sessions — `wrangler dev` ONLY, never set

@@ -19,7 +19,7 @@
 #
 # Reads GEMINI_API_KEY from gateway/.dev.vars. Baselines (2026-09-25): see
 # CLAUDE.md "The SPEECH LEVEL is the learner's".
-import json, os, re, sys, urllib.request, concurrent.futures as cf
+import json, os, re, sys, time, urllib.request, concurrent.futures as cf
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "FutureVoice/Services/ConversationEngine.swift")
@@ -111,7 +111,31 @@ import threading
 USAGE = {"calls": 0, "thoughts": 0, "out": 0}
 USAGE_LOCK = threading.Lock()
 
+def ask_claude(line, system):
+    """MODEL=claude-… — the same prompt through the Messages API (no thinking,
+    JSON read out of the text). Key from ~/keys/anthropic.txt."""
+    body = {"model": os.environ["MODEL"], "max_tokens": 2048, "system": system,
+            "messages": [{"role": "user", "content": line}]}
+    req = urllib.request.Request("https://api.anthropic.com/v1/messages", json.dumps(body).encode(), {
+        "content-type": "application/json", "anthropic-version": "2023-06-01",
+        "x-api-key": open(os.path.expanduser("~/keys/anthropic.txt")).read().strip()})
+    err = None
+    for attempt in range(5):
+        try:
+            r = json.load(urllib.request.urlopen(req, timeout=60))
+            with USAGE_LOCK:
+                USAGE["calls"] += 1
+                USAGE["out"] += r.get("usage", {}).get("output_tokens", 0)
+            text = "".join(b.get("text", "") for b in r["content"])
+            return json.loads(text[text.index("{"):text.rindex("}") + 1]).get("suggestion")
+        except Exception as e:
+            err = e
+            time.sleep(2 * (attempt + 1))
+    return {"alternative": f"ERR {err}", "reason": ""}
+
 def ask(line, system=None):
+    if os.environ.get("MODEL", "").startswith("claude-"):
+        return ask_claude(line, system or prompt)
     body = {"systemInstruction": {"parts": [{"text": system or prompt}]},
             "contents": [{"role": "user", "parts": [{"text": line}]}],
             "generationConfig": {"maxOutputTokens": 2048,

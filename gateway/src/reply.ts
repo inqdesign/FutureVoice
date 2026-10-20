@@ -11,6 +11,7 @@
 // async call in Phase 2 — the voice must never wait on coaching.
 
 import { steerTurnText } from "./steer-turn"
+import { claudeMessages, isClaudeModel, streamClaude, type ClaudeUsage } from "./claude-reply"
 
 const API_HOST = "https://generativelanguage.googleapis.com"
 
@@ -23,11 +24,16 @@ export interface ReplyUsage {
   cachedTokens: number
   outputTokens: number
   thoughtTokens: number
+  /** Claude only: input written to its cache (billed at 1.25× input). */
+  cacheWriteTokens: number
 }
 
 export interface ReplyConfig {
   apiKey: string
-  /** e.g. "gemini-3.6-flash" — mirror GeminiClient.Model's default. */
+  /** For a "claude-…" model (claude-reply.ts). */
+  anthropicKey?: string
+  /** e.g. "gemini-3.6-flash" — mirror GeminiClient.Model's default — or a
+   *  "claude-…" model, answered by claude-reply.ts. */
   model: string
   /** Hedge target when `model` is slow or failing ("" / same = no hedge). */
   fallbackModel?: string
@@ -52,17 +58,18 @@ export class ReplyEngine {
   /** Per model: the hedge's fallback is priced differently from the primary. */
   readonly usageByModel = new Map<string, ReplyUsage>()
   get usage(): ReplyUsage {
-    const sum: ReplyUsage = { calls: 0, promptTokens: 0, cachedTokens: 0, outputTokens: 0, thoughtTokens: 0 }
+    const sum: ReplyUsage = { calls: 0, promptTokens: 0, cachedTokens: 0, outputTokens: 0, thoughtTokens: 0, cacheWriteTokens: 0 }
     for (const u of this.usageByModel.values()) {
       sum.calls += u.calls; sum.promptTokens += u.promptTokens; sum.cachedTokens += u.cachedTokens
       sum.outputTokens += u.outputTokens; sum.thoughtTokens += u.thoughtTokens
+      sum.cacheWriteTokens += u.cacheWriteTokens
     }
     return sum
   }
   private usageFor(model: string): ReplyUsage {
     let u = this.usageByModel.get(model)
     if (!u) {
-      u = { calls: 0, promptTokens: 0, cachedTokens: 0, outputTokens: 0, thoughtTokens: 0 }
+      u = { calls: 0, promptTokens: 0, cachedTokens: 0, outputTokens: 0, thoughtTokens: 0, cacheWriteTokens: 0 }
       this.usageByModel.set(model, u)
     }
     return u
@@ -146,7 +153,9 @@ export class ReplyEngine {
     onDelta: (text: string) => void,
   ): Promise<string> {
     this.lastHistory = history
-    this.ensureCache(history)
+    // A Claude primary caches by marking blocks (claude-reply.ts); the
+    // Gemini cache object is only ever made for a Gemini primary.
+    if (!isClaudeModel(this.config.model)) this.ensureCache(history)
     const contents = history.map((t) => ({ role: t.role, parts: [{ text: t.text }] }))
     const last = contents[contents.length - 1]
     if (this.steer && last?.role === "user") {
@@ -176,13 +185,17 @@ export class ReplyEngine {
           }) }
     }
 
+    const run = (model: string, s: AbortSignal, d: (text: string) => void) => isClaudeModel(model)
+      ? this.streamClaude(model, history, s, d)
+      : this.stream(model, body, s, d)
+
     const primary = this.config.model
     const fallback = this.config.fallbackModel
     if (!fallback || fallback === primary) {
-      return this.stream(primary, body, signal, onDelta)
+      return run(primary, signal, onDelta)
     }
     if (Date.now() < primaryDegradedUntil) {
-      return this.stream(fallback, body, signal, onDelta)
+      return run(fallback, signal, onDelta)
     }
 
     // The race. The first attempt to produce text (or to finish) is the
@@ -217,7 +230,7 @@ export class ReplyEngine {
       const launch = (model: string) => {
         const attempt: Attempt = { model, abort: new AbortController() }
         attempts.push(attempt)
-        this.stream(model, body, attempt.abort.signal, (delta) => {
+        run(model, attempt.abort.signal, (delta) => {
           claim(attempt)
           if (winner === attempt && !signal.aborted) onDelta(delta)
         }).then((full) => {
@@ -253,6 +266,37 @@ export class ReplyEngine {
         if (winner === null && !settled && attempts.length === 1) launch(fallback)
       }, this.hedgeAfterMs)
     })
+  }
+
+  /** One streaming generation on Claude: the steer rides on the learner's
+   *  last line as it does on Gemini, and the settled prefix is the cache
+   *  mark. */
+  private async streamClaude(
+    model: string,
+    history: Line[],
+    signal: AbortSignal,
+    onDelta: (text: string) => void,
+  ): Promise<string> {
+    const last = history[history.length - 1]
+    const steered = this.steer && last?.role === "user"
+      ? [...history.slice(0, -1), { role: "user" as const, text: steerTurnText(last.text, this.steer) }]
+      : history
+    const system = this.steer && last?.role !== "user" ? `${this.config.system}\n\n${this.steer}` : this.config.system
+    const raw: ClaudeUsage = { input: 0, cacheRead: 0, cacheWrite: 0, output: 0 }
+    const usage = this.usageFor(model)
+    try {
+      return await streamClaude({
+        apiKey: this.config.anthropicKey, model, system, signal, onDelta, usage: raw,
+        messages: claudeMessages(steered, ReplyEngine.settledPrefix(history).length),
+      })
+    } finally {
+      // Counted once it answered, like a Gemini stream that got past `ok`.
+      if (raw.input + raw.cacheRead + raw.cacheWrite > 0) usage.calls += 1
+      usage.promptTokens += raw.input + raw.cacheRead + raw.cacheWrite
+      usage.cachedTokens += raw.cacheRead
+      usage.cacheWriteTokens += raw.cacheWrite
+      usage.outputTokens += raw.output
+    }
   }
 
   /** One streaming generation against one model. */

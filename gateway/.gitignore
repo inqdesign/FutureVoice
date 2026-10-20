@@ -4,3 +4,4 @@ node_modules/
 out.wav
 test/.reread-native/
 .reply-check.mjs
+.claude-check.mjs

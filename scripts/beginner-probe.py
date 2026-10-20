@@ -15,10 +15,11 @@
 #   LEVELS=a1,a2 RUNS=3 scripts/beginner-probe.py
 #   MODEL=gemini-3.1-flash-lite scripts/beginner-probe.py   # the hedge model
 #   NO_DUMP=1 …                               # reuse the last dump
+#   EXTRA='…' …                               # text appended to the system prompt
 #
 # Reads GEMINI_API_KEY from gateway/.dev.vars. Full output → $OUT_DIR
 # (default the scratch dir below) as beginner-probe.out.json.
-import json, os, re, subprocess, sys, urllib.request, concurrent.futures as cf
+import json, os, re, subprocess, sys, time, urllib.request, concurrent.futures as cf
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DUMP = os.environ.get("DUMP_DIR", "/tmp/fv-prompt-dump")
@@ -113,7 +114,30 @@ OPEN = {
 key = dict(l.split("=", 1) for l in open(os.path.join(ROOT, "gateway/.dev.vars")) if "=" in l)["GEMINI_API_KEY"].strip().strip('"')
 URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent?key={key}"
 
+def reply_claude(system, history):
+    """MODEL=claude-… — the same call through the Messages API, no thinking.
+    A history that opens on the fluent self gets a placeholder user turn
+    (Claude requires the first message to be the user's)."""
+    msgs = [{"role": "assistant" if r == "m" else "user", "content": t} for r, t in history]
+    if msgs[0]["role"] == "assistant":
+        msgs.insert(0, {"role": "user", "content": "(call connected)"})
+    body = json.dumps({"model": MODEL, "max_tokens": 1024, "system": system, "messages": msgs}).encode()
+    key = open(os.path.expanduser("~/keys/anthropic.txt")).read().strip()
+    err = None
+    for attempt in range(5):
+        try:
+            req = urllib.request.Request("https://api.anthropic.com/v1/messages", body, {
+                "content-type": "application/json", "anthropic-version": "2023-06-01", "x-api-key": key})
+            data = json.load(urllib.request.urlopen(req, timeout=60))
+            return "".join(b.get("text", "") for b in data["content"]).strip()
+        except Exception as e:
+            err = e
+            time.sleep(2 * (attempt + 1))
+    return f"<error {err}>"
+
 def reply(system, history):
+    if MODEL.startswith("claude-"):
+        return reply_claude(system, history)
     body = json.dumps({
         "systemInstruction": {"parts": [{"text": system}]},
         "contents": [{"role": "model" if r == "m" else "user", "parts": [{"text": t}]} for r, t in history],
@@ -141,7 +165,7 @@ jobs = []
 for level in LEVELS:
     for lang in LANGS:
         for first in (False, True):
-            system = open(os.path.join(DUMP, f"{lang}-{level}{'-first' if first else ''}.txt")).read() + "\n" + style
+            system = open(os.path.join(DUMP, f"{lang}-{level}{'-first' if first else ''}.txt")).read() + "\n" + style + os.environ.get("EXTRA", "")
             for i, case in enumerate(FIRST[lang] if first else CASES[lang]):
                 for run in range(RUNS):
                     jobs.append((level, lang, (f"f{i}" if first else i), run, system, case))

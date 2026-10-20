@@ -31,6 +31,7 @@ import { TalkBilling, type WallCode } from "./billing"
 const DEFAULT_TRANSCRIBE_MODEL = "models/gemini-3.5-transcribe-live"
 const DEFAULT_REPLY_MODEL = "gemini-3.6-flash"
 const DEFAULT_REPLY_FALLBACK_MODEL = "gemini-3.1-flash-lite"
+const DEFAULT_CLAUDE_REPLY_MODEL = "claude-haiku-5-5"
 const DEFAULT_OUTPUT_FORMAT = "pcm_22050"
 
 /** Coach mode's steer is a sentence or two; anything longer is not what the
@@ -810,11 +811,16 @@ export class CallSession implements DurableObject {
     this.native = msg.native && base(msg.native) !== base(this.language) ? msg.native : null
     this.replyEngine = new ReplyEngine({
       apiKey: this.env.GEMINI_API_KEY,
+      anthropicKey: this.env.ANTHROPIC_API_KEY,
       // An env var, so a bad model release can be rolled back without a
       // deploy — and so the reply-failure path can be exercised on purpose
       // (point it at a model that does not exist and every generation
-      // fails while the transcriber keeps working).
-      model: this.env.GEMINI_REPLY_MODEL ?? DEFAULT_REPLY_MODEL,
+      // fails while the transcriber keeps working). `CLAUDE_REPLY` moves
+      // chosen accounts to Claude (claude-reply.ts); the hedge below stays
+      // Gemini, so a Claude outage costs 2.5 s, not the call.
+      model: onForUser(this.env.CLAUDE_REPLY, this.userId)
+        ? this.env.CLAUDE_REPLY_MODEL ?? DEFAULT_CLAUDE_REPLY_MODEL
+        : this.env.GEMINI_REPLY_MODEL ?? DEFAULT_REPLY_MODEL,
       // Hedge target when the primary stalls or errors (reply.ts). Set the
       // var to the primary's own name to turn the hedge off.
       fallbackModel: this.env.GEMINI_REPLY_FALLBACK_MODEL ?? DEFAULT_REPLY_FALLBACK_MODEL,
@@ -966,7 +972,7 @@ export class CallSession implements DurableObject {
         // itself survives.
         onError: (message) => this.fail("transcriber", message),
       },
-      gateQuietFrames(this.env.TRANSCRIBE_GATE, this.userId) ? new SpeechGate() : null,
+      onForUser(this.env.TRANSCRIBE_GATE, this.userId) ? new SpeechGate() : null,
     )
 
     // The transcriber's handshake is NOT awaited before the greeting. It is
@@ -1960,6 +1966,7 @@ export class CallSession implements DurableObject {
         cached_input_tokens: u.cachedTokens,
         output_tokens: u.outputTokens,
         thought_tokens: u.thoughtTokens,
+        ...(u.cacheWriteTokens > 0 ? { cache_write_tokens: u.cacheWriteTokens } : {}),
         total_tokens: u.promptTokens + u.outputTokens + u.thoughtTokens,
         calls: u.calls,
         turns: this.turnCount,
@@ -1986,11 +1993,12 @@ export class CallSession implements DurableObject {
   }
 }
 
-/** `TRANSCRIBE_GATE` (2026-10-11): unset/"off" = only the echo-mute zeros are
- *  dropped, as before; "all" = every call holds back quiet-room frames too;
- *  otherwise a comma-separated list of user ids, so it can ride one account's
- *  calls on a real phone before it rides everyone's. */
-function gateQuietFrames(setting: string | undefined, userId: string | null): boolean {
+/** A per-account switch: unset/"off" = nobody, "all" = everyone, otherwise a
+ *  comma-separated list of user ids, so a change can ride one account's calls
+ *  on a real phone before it rides everyone's. `TRANSCRIBE_GATE` (2026-10-11):
+ *  on = every call holds back quiet-room frames, not only the echo-mute
+ *  zeros. `CLAUDE_REPLY` (2026-10-21): on = the reply runs on Claude. */
+function onForUser(setting: string | undefined, userId: string | null): boolean {
   const v = (setting ?? "").trim().toLowerCase()
   if (!v || v === "off") return false
   if (v === "all") return true
