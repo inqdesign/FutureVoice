@@ -148,6 +148,7 @@ final class PlaylistPlayer: ObservableObject {
             : 0
         flushListening(finished: false)
         startedEpisodes = []
+        recordedPieces = []
         self.title = title
         self.lines = playable
         order = Self.makeOrder(lines: playable, shuffled: shuffle, first: start)
@@ -421,7 +422,17 @@ final class PlaylistPlayer: ObservableObject {
     /// resume isn't a second start.
     private var startedEpisodes: Set<UUID> = []
 
+    /// Episodes and situations already written to the routine's log in this
+    /// list — one listening event per piece, not per line.
+    private var recordedPieces: Set<UUID> = []
+
     private func heard(_ line: PlaylistLine, seconds: TimeInterval) {
+        // The routine's listening block: any piece heard is listening done.
+        if recordedPieces.insert(line.bookId).inserted {
+            ActivityEventLog.shared.record(.listen)
+            // The streak counts it; the widget's face should say so.
+            StudyWidgetRefresher.schedule()
+        }
         guard let number = line.episodeNumber else { return }
         if listening?.bookId != line.bookId {
             flushListening(finished: false)

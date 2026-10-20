@@ -345,6 +345,11 @@ enum PracticeStats {
         // leaves no Session. It keeps 45 days; sessions and the practice log
         // keep everything, so an older streak is still counted in full.
         days.formUnion(TalkTimeLog.activeDays(calendar: calendar))
+        // Listening in the player is studying too (2026-10-20, founder).
+        // The event log keeps 60 days, so older listening-only days drop out.
+        for e in ActivityEventLog.shared.events(from: .distantPast, to: .distantFuture) where e.kind == .listen {
+            days.insert(calendar.startOfDay(for: e.at))
+        }
         for session in SessionStore.shared.loadAcrossLanguages() {
             for turn in session.turns where turn.role == .user {
                 days.insert(calendar.startOfDay(for: turn.timestamp))

@@ -17,7 +17,7 @@ import Combine
 /// both ring.
 struct StudyPlan: Codable, Equatable {
     enum Kind: String, Codable, CaseIterable, Identifiable {
-        case talk, review, sayItAgain, words, expressions, shadow, test, speech
+        case talk, review, sayItAgain, words, expressions, shadow, test, speech, listen
         var id: String { rawValue }
 
         /// Only a talk is measured in MINUTES (the talk meter). Every other
@@ -36,7 +36,7 @@ struct StudyPlan: Codable, Equatable {
             case .expressions: return 3
             case .review: return 20
             case .shadow: return 2
-            case .sayItAgain, .test, .speech: return 1
+            case .sayItAgain, .test, .speech, .listen: return 1
             }
         }
 
@@ -55,16 +55,23 @@ struct StudyPlan: Codable, Equatable {
         static let reviewCardsPerQuarter = 20
 
         /// Kinds the learner can place by hand — whole ACTIONS (founder,
-        /// 2026-10-03: talk, review, say it again — not words or shadowing
-        /// as blocks of their own). Review counts every kind of review the
-        /// app keeps: words and expressions judged, sentence cards, shadow
-        /// lines. The test comes from its own settings. Speech (2026-10-05)
-        /// is a take of any script in the Speech tab, counted when it saves.
-        static let placeable: [Kind] = [.talk, .review, .sayItAgain, .speech]
+        /// 2026-10-03: talk, review, say it again — not words as blocks of
+        /// their own). Review counts words and expressions judged and
+        /// sentence cards, and shadow lines on a day with no shadowing block.
+        /// The test comes from its own settings. Speech (2026-10-05) is a
+        /// take of any script in the Speech tab, counted when it saves.
+        /// Shadowing came back as its own block and listening joined on
+        /// 2026-10-20 (founder, with the onboarding that offers each one):
+        /// listening is the player — any podcast episode or watched
+        /// situation heard that day — with no amount to promise.
+        static let placeable: [Kind] = [.talk, .review, .sayItAgain, .shadow, .listen, .speech]
 
         /// LEGACY kinds: plans saved with them are folded into review on
         /// load (`foldingIntoReview`); nothing places them any more.
-        var isFoldedIntoReview: Bool { self == .words || self == .expressions || self == .shadow }
+        var isFoldedIntoReview: Bool { self == .words || self == .expressions }
+
+        /// Kinds promised with no amount: done once it happened at all.
+        var hasNoAmount: Bool { self == .listen }
     }
 
     struct Block: Codable, Equatable, Hashable, Identifiable {
@@ -102,6 +109,10 @@ struct StudyPlan: Codable, Equatable {
     /// nil = saved while every block was measured in minutes; converted to
     /// counts on load (`convertingToCounts`). 1 = counts.
     var unitsVersion: Int? = 1
+    /// nil = saved while shadowing blocks were folded into review
+    /// (2026-10-03 to 2026-10-20); such a plan's shadow blocks are folded
+    /// once on load. true = shadowing is a block of its own.
+    var shadowIsOwn: Bool? = nil
     /// LEGACY: "say it again" used to be derived, right after the day's
     /// first talk. Plans saved then are converted into ordinary blocks on
     /// load (`convertingLegacySayItAgain`); nothing reads it otherwise.
@@ -458,22 +469,15 @@ struct StudyPlan: Codable, Equatable {
         return plan
     }
 
-    /// The routine onboarding builds (`RoutineOnboardingView`): the daily
-    /// call — `callMinutes` of talk at `callTime` on `days` — and the study
-    /// time as review at `reviewTime` on the same days. Every other day is
-    /// a rest day. Blocks of other kinds the plan already holds stay.
-    func withOnboardingRoutine(callMinutes: Int, callTime: DailyCallStore.CallTime, days: Set<Int>,
-                               studyMinutes: Int?, reviewTime: DailyCallStore.CallTime) -> StudyPlan {
+    /// The routine onboarding builds (`RoutineOnboardingView`): one block
+    /// per kind the learner put in, on `days`; every other day is a rest
+    /// day. Every placeable kind the plan held before is replaced — a kind
+    /// they passed on is not in their routine.
+    func withOnboardingRoutine(_ picked: [Block], days: Set<Int>) -> StudyPlan {
         var plan = self
-        plan.blocks.removeAll { $0.kind == .talk || $0.kind == .sayItAgain || $0.kind == .review }
+        plan.blocks.removeAll { Kind.placeable.contains($0.kind) }
         plan.exceptions = [:]
-        plan.blocks.append(Block(kind: .talk, weekdays: days, hour: callTime.hour,
-                                 minute: callTime.minute, minutes: max(5, callMinutes)))
-        if let studyMinutes {
-            plan.blocks.append(Block(kind: .review, weekdays: days, hour: reviewTime.hour,
-                                     minute: reviewTime.minute,
-                                     minutes: studyMinutes * Kind.reviewCardsPerQuarter / 15))
-        }
+        plan.blocks.append(contentsOf: picked.map { var b = $0; b.weekdays = days; return b })
         let off = Set(1...7).subtracting(days)
         plan.offWeekdays = off.isEmpty ? nil : off
         return plan
@@ -541,11 +545,13 @@ struct StudyPlan: Codable, Equatable {
     /// count (every one of them is now counted by review). Two review blocks
     /// landing at the same time on the same days add up into one.
     func foldingIntoReview() -> StudyPlan {
+        let foldShadow = shadowIsOwn != true
         func fold(_ list: [Block]) -> [Block] {
-            guard list.contains(where: { $0.kind.isFoldedIntoReview }) else { return list }
+            guard list.contains(where: { $0.kind.isFoldedIntoReview || (foldShadow && $0.kind == .shadow) })
+            else { return list }
             var out: [Block] = []
             for var b in list {
-                if b.kind.isFoldedIntoReview { b.kind = .review }
+                if b.kind.isFoldedIntoReview || (foldShadow && b.kind == .shadow) { b.kind = .review }
                 if b.kind == .review, let i = out.firstIndex(where: {
                     $0.kind == .review && $0.weekdays == b.weekdays && $0.isAnytime == b.isAnytime
                         && (b.isAnytime || ($0.hour == b.hour && $0.minute == b.minute))
@@ -560,7 +566,8 @@ struct StudyPlan: Codable, Equatable {
         var plan = self
         plan.blocks = fold(blocks)
         plan.exceptions = exceptions.mapValues(fold)
-        if plan != self { plan.mergeTwins() }
+        if plan.blocks != blocks || plan.exceptions != exceptions { plan.mergeTwins() }
+        plan.shadowIsOwn = true
         return plan
     }
 
@@ -660,7 +667,11 @@ final class StudyPlanStore: ObservableObject {
     ///   app seeded is never a promise; neither is an empty one.
     @discardableResult
     func update(_ new: StudyPlan, byLearner: Bool = false) -> Bool {
-        var new = new.foldingIntoReview()
+        // Whatever is handed in now is written in today's terms: its
+        // shadowing blocks are shadowing.
+        var new = new
+        new.shadowIsOwn = true
+        new = new.foldingIntoReview()
         if new.blocks.isEmpty {
             new.streakSince = nil
         } else if byLearner, new.streakSince == nil {

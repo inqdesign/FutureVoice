@@ -183,6 +183,47 @@ final class StudyPlanTests: XCTestCase {
         XCTAssertEqual(totals.amount(for: .review), 12)
     }
 
+    /// Shadowing is its own block again (2026-10-20): only a plan saved
+    /// before that folds it, and a take is counted once.
+    func testShadowBlockStaysAndCountsItsTakesOnce() {
+        var plan = StudyPlan()
+        plan.shadowIsOwn = true
+        plan.blocks = [.init(kind: .shadow, weekdays: [3], hour: 12, minute: 30, minutes: 1),
+                       .init(kind: .review, weekdays: [3], hour: 21, minute: 0, minutes: 10)]
+        XCTAssertEqual(plan.foldingIntoReview().blocks.map(\.kind), [.shadow, .review])
+        let occ = plan.occurrences(on: at(6, 0), calendar: cal)
+        var totals = PlannerDay.Totals()
+        totals.shadow = 1; totals.cards = 9
+        let p = PlannerDay.progress(planned: occ, totals: totals)
+        XCTAssertEqual(p[occ.first { $0.kind == .shadow }!.id], 1)
+        XCTAssertEqual(p[occ.first { $0.kind == .review }!.id] ?? 0, 0.9, accuracy: 0.001)
+    }
+
+    /// Listening has no amount: one piece heard is the block done.
+    func testAnyListeningKeepsAListeningBlock() {
+        var plan = StudyPlan()
+        plan.blocks = [.init(kind: .listen, weekdays: [3], hour: 8, minute: 30, minutes: 1)]
+        let occ = plan.occurrences(on: at(6, 0), calendar: cal)
+        var totals = PlannerDay.Totals()
+        XCTAssertTrue(PlannerDay.done(planned: occ, totals: totals).isEmpty)
+        totals.listen = 3
+        XCTAssertEqual(PlannerDay.done(planned: occ, totals: totals), [occ[0].id])
+        let acts = PlannerDay.actuals(talks: [], events: [.init(kind: .listen, at: at(6, 8, 40))])
+        XCTAssertEqual(acts.map(\.kind), [.listen])
+        XCTAssertTrue(StudyPlan.Kind.placeable.contains(.listen))
+    }
+
+    func testOnboardingKeepsOnlyWhatWasPicked() {
+        var plan = StudyPlan()
+        plan.blocks = [.init(kind: .talk, weekdays: Set(1...7), hour: 0, minute: 0, minutes: 10, anytime: true)]
+        let picked = [StudyPlan.Block(kind: .review, weekdays: [], hour: 21, minute: 0, minutes: 10),
+                      StudyPlan.Block(kind: .listen, weekdays: [], hour: 8, minute: 30, minutes: 1)]
+        let out = plan.withOnboardingRoutine(picked, days: [2, 3, 4, 5, 6])
+        XCTAssertEqual(out.blocks.map(\.kind), [.review, .listen])
+        XCTAssertTrue(out.blocks.allSatisfy { $0.weekdays == [2, 3, 4, 5, 6] })
+        XCTAssertEqual(out.offWeekdays, [1, 7])
+    }
+
     func testASpeechTakeKeepsASpeechBlock() {
         var plan = StudyPlan()
         plan.blocks = [.init(kind: .speech, weekdays: [3], hour: 20, minute: 0, minutes: 1)]

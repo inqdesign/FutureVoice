@@ -44,8 +44,9 @@ skips every step it has a flag for.
 4. "Your practice stays on your phone" (`LocalDataOnboardingView`) — all of
    it is on this device only, nothing on our servers, it goes with the app;
    a copy can live in the learner's own iCloud (Android: Google Drive)
-5. The routine builder over the Talk tab (`RoutineOnboardingView`: the
-   daily call, study time), shrinking into the Activity chip
+5. The routine builder over the Talk tab (`RoutineOnboardingView`: one
+   card per thing to do — call, say it again, review, shadowing, listening,
+   speech — each added or passed on), shrinking into the Activity chip
 
 No paywall in onboarding (plans at the first paid tap). Steps 4 and 5 share
 the flag `futurevoice.dailyCall.onboarded`, so an install past the routine
@@ -745,24 +746,31 @@ its own branch so the founder picks the build it ships in.
 - Captures: `-capture activity-week` / `activity-week-edit` / `plan-settings`
   / `plan-block`. Tests: `StudyPlanTests`.
 - Not built: Talk tab's "today" list, per-block topics,
-  syncing the plan.
+  syncing the plan. Kinds placed by hand: talk, review, say it again,
+  shadowing, listening, speech (`Kind.placeable`).
 
-## Onboarding builds the routine (2026-10-18)
+## Onboarding builds the routine (2026-10-18, cards since 2026-10-20)
 
 Founder: "making the routine is the core". The schedule used to be set in
 four places: setup's daily goal and a purpose-made week (`RoutineRecipe`),
 then a weekly-test screen and a daily-call screen after the clone. They are
 ONE now: `RoutineOnboardingView`, the last onboarding step, shown over the
 Talk tab with the My routine grid (`WeeklyPlanEditor(onboarding: true)`,
-editing off) behind a sheet that asks two things.
+editing off) behind a sheet.
 
-- **The call**: minutes (5/10/15/20, also the daily goal), time, weekdays.
-  Save writes a talk block (`StudyPlan.withOnboardingRoutine`), rings it on
-  the grid (`spotlight`), then asks the alarm/notification permission. The
-  weekdays not picked become rest days.
-- **Study time**: 15 min / 30 min / 1 hour, written as a review block at
-  21:00 on the same days, 20 cards per quarter hour. A review block is
-  drawn at that length (`Kind.drawnMinutes`).
+- **The sheet shows what there is to do, one card at a time** (2026-10-20,
+  founder: not "how much will you study a day" but "here is what you can
+  study, put in what you want"). Cards in order: the call (5/10/15/20 min,
+  default 5, also the daily goal; time; WEEKDAYS), say it again (right
+  after the call), review (21:00, 10/20/40, default 10), shadowing (12:30,
+  1/3/5, default 1), listening (08:30, no amount), speech (20:00). Each
+  says what it is in one line; **Add to my routine** writes the block
+  (`StudyPlan.withOnboardingRoutine`, on the call card's days; the rest
+  become rest days) and rings it on the grid (`spotlight`); **Not
+  interested** moves on and takes back a block added before. The call's
+  card asks the alarm/notification permission, any other the notification
+  one. Every card can be passed on, the call too (then nothing rings); an
+  empty routine ends on "You can make it later" and no promise.
 - **Done** drops the sheet and shrinks the page into the Talk header's
   Activity chip (`RoutineHandoff.chipFrame`); the chip bounces and a popover
   says the routine lives there. Talk's first-run sheets (age check, guide,
@@ -773,7 +781,26 @@ editing off) behind a sheet that asks two things.
   onboarding.
 - Flag: `futurevoice.dailyCall.onboarded` (the old daily-call screen's), so
   existing installs never see it. Capture: `-onboardingPreview routine`
-  (`-routineStep call|study|done|finish`).
+  (`-routineStep call|sayItAgain|review|shadow|listen|speech|done|finish`).
+
+## Shadowing and listening are blocks (2026-10-20)
+
+- **Shadowing is its own block again** (it was folded into review on
+  2026-10-03). Plans saved before carry `shadowIsOwn == nil` and are folded
+  once on load; everything written through `StudyPlanStore.update` sets it.
+  On a day with a shadowing block, shadow takes fill that block and NOT the
+  review block (`PlannerDay.progress`), so one take is never counted twice;
+  shadow takes are their own sitting in the day list and still cover a
+  review block on a day without one.
+- **Listening is the player** (`ScenePlayerSheet`: the nawana Podcast and
+  the learner's watched situations). The block has no amount
+  (`Kind.hasNoAmount`): any piece heard is the block done. `PlaylistPlayer`
+  writes one `ActivityEventLog` `.listen` per episode/situation per list.
+  Its reminder and its line in Activity open the player ALREADY PLAYING
+  (`DailyCallInbox.pendingListen`, `ScenePlayerSheet(autoplay:)`; a paused
+  list resumes). Cyan, the one system colour no other kind uses.
+- **Listening is studying** (founder): a day with listening counts in
+  `PracticeStats.activeDays`, so the plain streak keeps it.
 
 ## The Core (100 seats, per language)
 

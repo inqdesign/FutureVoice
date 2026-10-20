@@ -122,12 +122,15 @@ struct PlanBlockEditor: View {
                     }
                     // A talk is promised in minutes; everything else in the
                     // count the app actually keeps.
-                    Stepper(value: $minutes, in: amountRange, step: amountStep) {
-                        HStack {
-                            Text(kind.isTimed ? explain("Length") : explain("How many"))
-                            Spacer()
-                            Text(kind.amountText(minutes).isEmpty ? "1" : kind.amountText(minutes))
-                                .foregroundStyle(.secondary).monospacedDigit()
+                    // Listening has nothing to count: anything heard is it.
+                    if !kind.hasNoAmount {
+                        Stepper(value: $minutes, in: amountRange, step: amountStep) {
+                            HStack {
+                                Text(kind.isTimed ? explain("Length") : explain("How many"))
+                                Spacer()
+                                Text(kind.amountText(minutes).isEmpty ? "1" : kind.amountText(minutes))
+                                    .foregroundStyle(.secondary).monospacedDigit()
+                            }
                         }
                     }
                     if kind != .talk {
@@ -140,6 +143,8 @@ struct PlanBlockEditor: View {
                         Text("When it's time, you pick which recent talk to say again.")
                     } else if kind == .speech {
                         Text("Any script counts, once you finish a take.")
+                    } else if kind == .listen {
+                        Text("Any podcast episode or situation you've watched counts. The reminder opens the player, already playing.")
                     }
                 }
                 if existingId != nil {

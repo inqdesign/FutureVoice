@@ -244,6 +244,7 @@ struct ActivityView: View {
         case .talk: appState.requestFreeTalk(from: .routine)
         case .sayItAgain: showSayItAgainPicker = true
         case .speech: DailyCallInbox.shared.pendingSpeech = true
+        case .listen: DailyCallInbox.shared.pendingListen = true
         case .words: routineSheet = .words
         case .expressions: routineSheet = .expressions
         case .review:

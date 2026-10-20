@@ -10,7 +10,7 @@ import Foundation
 enum PlannerDay {
     /// What actually happened, grouped into blocks.
     struct Actual: Identifiable, Equatable {
-        enum Kind: String { case talk, review, shadow, scene, sayItAgain, speech }
+        enum Kind: String { case talk, review, shadow, scene, sayItAgain, speech, listen }
         var kind: Kind
         var start: Date
         var end: Date
@@ -31,6 +31,7 @@ enum PlannerDay {
             case .shadow: return .shadow
             case .sayItAgain: return .sayItAgain
             case .speech: return .speech
+            case .listen: return .listen
             case .scene: return nil
             }
         }
@@ -38,8 +39,9 @@ enum PlannerDay {
         /// Whether this sitting is the kind of practice a planned block asks for.
         func covers(_ planned: StudyPlan.Kind) -> Bool {
             switch (kind, planned) {
-            case (.talk, .talk), (.shadow, .shadow), (.sayItAgain, .sayItAgain), (.speech, .speech): return true
-            case (.review, .review), (.review, .words), (.review, .expressions), (.review, .shadow): return true
+            case (.talk, .talk), (.shadow, .shadow), (.sayItAgain, .sayItAgain), (.speech, .speech),
+                 (.listen, .listen): return true
+            case (.review, .review), (.review, .words), (.review, .expressions), (.shadow, .review): return true
             default: return false
             }
         }
@@ -65,11 +67,15 @@ enum PlannerDay {
         }
         func group(_ kind: ActivityEventLog.Kind) -> Actual.Kind {
             switch kind {
-            // Every kind of review is one sitting of review (2026-10-03).
-            case .drill, .word, .expression, .shadow: return .review
+            // Every kind of review is one sitting of review (2026-10-03);
+            // shadowing is its own again since it has its own block
+            // (2026-10-20), and still covers a review block.
+            case .drill, .word, .expression: return .review
+            case .shadow: return .shadow
             case .scene: return .scene
             case .sayItAgain: return .sayItAgain
             case .speech: return .speech
+            case .listen: return .listen
             }
         }
         var byGroup: [Actual.Kind: [Date]] = [:]
@@ -105,6 +111,7 @@ enum PlannerDay {
         var sayItAgain: Double = 0
         var speech: Double = 0
         var test: Double = 0
+        var listen: Double = 0
 
         func amount(for kind: StudyPlan.Kind) -> Double {
             switch kind {
@@ -112,12 +119,15 @@ enum PlannerDay {
             case .words: return words
             case .expressions: return expressions
             // Review is every kind of review counted together: words and
-            // expressions judged, sentence cards, shadow lines.
+            // expressions judged, sentence cards, shadow lines. On a day
+            // with a shadowing block the lines go to that block instead
+            // (`progress`), so one take is never counted twice.
             case .review: return words + expressions + cards + shadow
             case .shadow: return shadow
             case .sayItAgain: return sayItAgain
             case .speech: return speech
             case .test: return test
+            case .listen: return listen
             }
         }
     }
@@ -141,7 +151,8 @@ enum PlannerDay {
                       shadow: Double(log.shadowDone),
                       sayItAgain: Double(events.filter { $0.kind == .sayItAgain }.count),
                       speech: Double(events.filter { $0.kind == .speech }.count),
-                      test: testFinished ? 1 : 0)
+                      test: testFinished ? 1 : 0,
+                      listen: Double(events.filter { $0.kind == .listen }.count))
     }
 
     /// How far along each planned block is, 0…1. Blocks of the same kind
@@ -151,9 +162,13 @@ enum PlannerDay {
     static func progress(planned: [StudyPlan.Occurrence], totals: Totals) -> [String: Double] {
         var out: [String: Double] = [:]
         var left: [StudyPlan.Kind: Double] = [:]
+        let shadowPlanned = planned.contains { $0.kind == .shadow }
         for occ in planned.sorted(by: { $0.start < $1.start }) {
-            let have = left[occ.kind] ?? totals.amount(for: occ.kind)
-            let need = Double(max(1, occ.amount))
+            var total = totals.amount(for: occ.kind)
+            if occ.kind == .review, shadowPlanned { total -= totals.shadow }
+            let have = left[occ.kind] ?? total
+            // Listening has no amount: anything heard is the block done.
+            let need = occ.kind.hasNoAmount ? 1 : Double(max(1, occ.amount))
             out[occ.id] = min(1, max(0, have / need))
             left[occ.kind] = max(0, have - need)
         }
@@ -198,9 +213,10 @@ enum PlannerDay {
                 return talkSeen > talkPlans
             case .review:
                 return plannedKinds.isDisjoint(with: [.review, .words, .expressions, .shadow])
-            case .shadow: return !plannedKinds.contains(.shadow)
+            case .shadow: return plannedKinds.isDisjoint(with: [.shadow, .review])
             case .sayItAgain: return !plannedKinds.contains(.sayItAgain)
             case .speech: return !plannedKinds.contains(.speech)
+            case .listen: return !plannedKinds.contains(.listen)
             case .scene: return true
             }
         }

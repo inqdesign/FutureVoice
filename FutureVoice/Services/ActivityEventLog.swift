@@ -15,6 +15,9 @@ final class ActivityEventLog: @unchecked Sendable {
 
     enum Kind: String, Codable {
         case drill, shadow, word, expression, scene, sayItAgain, speech
+        /// A podcast episode or a watched situation heard in the player —
+        /// one per piece per sitting (`PlaylistPlayer`).
+        case listen
     }
 
     struct Event: Codable, Equatable {

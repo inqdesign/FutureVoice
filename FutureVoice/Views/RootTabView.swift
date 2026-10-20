@@ -221,6 +221,9 @@ struct RootTabView: View {
         .sheet(isPresented: $callInbox.pendingSayItAgain) {
             SayItAgainPicker().environmentObject(appState)
         }
+        .sheet(isPresented: $callInbox.pendingListen) {
+            ScenePlayerSheet(autoplay: true).environmentObject(appState)
+        }
         .sheet(isPresented: $showingAgeCheck) { AgeCheckSheet() }
         // The voice queued at signup (the month's voices were spent) was
         // just built from their recording — said once, here.

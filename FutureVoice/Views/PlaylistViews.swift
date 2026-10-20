@@ -137,10 +137,14 @@ struct ScenePlayerSheet: View {
     @State private var shows: [NewsShowEpisode] = []
     @State private var loaded = false
     @State private var showingList: Bool
+    /// Opened from the routine's listening block: start playing at once,
+    /// unless something is already playing.
+    private let autoplay: Bool
 
     /// `startOnList` opens straight on the library (the capture harness).
-    init(startOnList: Bool = false) {
+    init(startOnList: Bool = false, autoplay: Bool = false) {
         _showingList = State(initialValue: startOnList)
+        self.autoplay = autoplay
     }
 
     private static var listTitle: String { explain("My situations") }
@@ -186,6 +190,11 @@ struct ScenePlayerSheet: View {
                                          cloneId: appState.voiceCloneId)
             loaded = true
             shows = await NewsShow.episodes(language: appState.targetLanguage)
+            // A list left paused carries on where it stopped.
+            if autoplay, !player.isPlaying {
+                if player.hasQueue { player.resume() }
+                else if !tracks.isEmpty || !shows.isEmpty { playAll() }
+            }
         }
         .presentationDetents([.medium, .large])
         .presentationBackgroundInteraction(.enabled(upThrough: .medium))

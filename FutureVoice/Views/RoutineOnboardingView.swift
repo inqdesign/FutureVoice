@@ -18,18 +18,27 @@ final class RoutineHandoff: ObservableObject {
 /// core"). It replaced three places that each set a piece of it — setup's
 /// daily goal and purpose-made week, then a weekly-test screen and a
 /// daily-call screen after the clone — with ONE: the My routine grid itself,
-/// and a sheet over it that asks two things. How long the daily call is,
-/// when and on which days; then how much study time there is, which goes in
-/// as review at 21:00 on the same days. Each answer is written to the plan
-/// on Save, so the learner watches it land on the grid. Shown over the Talk
-/// tab once; Done shrinks it into the Activity chip, which is where it
-/// lives from then on.
+/// and a sheet over it.
+///
+/// The sheet shows what there IS to do, one card at a time (2026-10-20,
+/// founder: not "how much will you study a day" but "here is what you can
+/// study — put in what you want"): the daily call, say it again, review,
+/// shadowing, listening, speech. Each card says what it is in one line and
+/// asks when; "Add to my routine" puts it on the grid on the days chosen on
+/// the first card, "Not interested" moves on. The call's card picks the
+/// days because it comes first, and passing on it still keeps them. Shown
+/// over the Talk tab once; Done shrinks it into the Activity chip, which is
+/// where it lives from then on.
 struct RoutineOnboardingView: View {
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var handoff = RoutineHandoff.shared
     var onFinished: () -> Void
 
-    private enum Step { case intro, call, study, done }
+    private enum Step: Equatable { case intro, item(StudyPlan.Kind), done }
+
+    /// The cards, in order. The call first (it sets the days), say it again
+    /// right after it, as it is in the day.
+    static let kinds: [StudyPlan.Kind] = [.talk, .sayItAgain, .review, .shadow, .listen, .speech]
 
     @State private var step: Step = .intro
     @State private var sheetUp = false
@@ -39,19 +48,22 @@ struct RoutineOnboardingView: View {
     /// but nothing can ring.
     @State private var callBlocked = false
 
-    @State private var callMinutes = 10
+    @State private var callMinutes = 5
     @State private var callTime = Calendar.current.date(bySettingHour: 8, minute: 0, second: 0, of: Date()) ?? Date()
     @State private var days: Set<Int> = Set(1...7)
-    @State private var studyMinutes = 30
+    /// Times chosen on the other cards; a card not visited yet reads its
+    /// default (`defaultTime`).
+    @State private var times: [StudyPlan.Kind: Date] = [:]
+    @State private var amounts: [StudyPlan.Kind: Int] = [.review: 10, .shadow: 1]
+    /// What went in, by kind.
+    @State private var picked: [StudyPlan.Kind: StudyPlan.Block] = [:]
 
     @State private var ownFrame: CGRect = .zero
     @State private var shrink: CGFloat = 0
     @State private var fade = false
 
     static let callChoices = [5, 10, 15, 20]
-    static let studyChoices = [15, 30, 60]
-    /// "Around 9 in the evening" — the review slot study time goes into.
-    static let reviewTime = DailyCallStore.CallTime(hour: 21, minute: 0)
+    static let amountChoices: [StudyPlan.Kind: [Int]] = [.review: [10, 20, 40], .shadow: [1, 3, 5]]
 
     private var cal: Calendar { Calendar.current }
     private var uiLocale: Locale { Locale(identifier: LanguageCatalog.currentNative) }
@@ -68,15 +80,17 @@ struct RoutineOnboardingView: View {
                 // A beat for the grid to be seen on its own first.
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { sheetUp = true }
                 #if DEBUG
-                // `-routineStep call|study|done|finish`: a step for a capture;
+                // `-routineStep call|sayItAgain|review|shadow|listen|speech|done|finish`:
+                // a step for a capture;
                 // `finish` runs Done by itself after a moment.
                 switch UserDefaults.standard.string(forKey: "routineStep") {
-                case "call": step = .call
-                case "study": step = .study
+                case "call": step = .item(.talk)
                 case "done": step = .done
                 case "finish":
                     step = .done
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { finish() }
+                case let name?:
+                    if let k = StudyPlan.Kind(rawValue: name), Self.kinds.contains(k) { step = .item(k) }
                 default: break
                 }
                 #endif
@@ -109,11 +123,11 @@ struct RoutineOnboardingView: View {
 
     private func finish() {
         Analytics.capture("routine_onboarding", [
-            "call_minutes": callMinutes,
+            "call_minutes": picked[.talk] == nil ? 0 : callMinutes,
             "call_hour": cal.component(.hour, from: callTime),
             "days": days.count,
-            "study_minutes": studyMinutes,
-            "call_on": !callBlocked
+            "picked": Self.kinds.filter { picked[$0] != nil }.map(\.rawValue).joined(separator: ","),
+            "call_on": picked[.talk] != nil && !callBlocked
         ])
         sheetUp = false
         // The sheet goes down first, then the page is drawn into the chip:
@@ -138,8 +152,8 @@ struct RoutineOnboardingView: View {
     private var detent: PresentationDetent {
         switch step {
         case .intro: return .height(300)
-        case .call: return .height(470)
-        case .study: return .height(330)
+        case .item(.talk): return .height(520)
+        case .item(let k): return .height(Self.amountChoices[k] == nil ? 400 : 470)
         case .done: return .height(300)
         }
     }
@@ -148,8 +162,8 @@ struct RoutineOnboardingView: View {
     private var sheet: some View {
         switch step {
         case .intro: intro
-        case .call: callStep
-        case .study: studyStep
+        case .item(.talk): callStep
+        case .item(let k): itemStep(k)
         case .done: done
         }
     }
@@ -159,14 +173,17 @@ struct RoutineOnboardingView: View {
                 title: explain("Let's make your routine"),
                 body: explain("Try it just as it is for a week. You can change it any time."),
                 button: explain("Make my routine")) {
-            withAnimation { step = .call }
+            withAnimation { step = .item(.talk) }
         }
     }
 
     private var done: some View {
-        message(icon: "checkmark.circle.fill", tint: .green,
-                title: explain("Your routine is ready"),
-                body: callBlocked
+        message(icon: picked.isEmpty ? "calendar" : "checkmark.circle.fill",
+                tint: picked.isEmpty ? .secondary : .green,
+                title: picked.isEmpty ? explain("You can make it later") : explain("Your routine is ready"),
+                body: picked.isEmpty
+                    ? explain("Your routine is under Activity on the Talk screen whenever you want one.")
+                    : picked[.talk] != nil && callBlocked
                     ? explain("Notifications are off, so I can't call you yet. Turn them on in Settings. Your routine is under Activity on the Talk screen.")
                     : explain("Try it like this for a week. It's under Activity on the Talk screen whenever you want to change it."),
                 button: explain("Done")) {
@@ -226,33 +243,45 @@ struct RoutineOnboardingView: View {
             .navigationTitle(explain("Your daily call"))
             .navigationBarTitleDisplayMode(.inline)
             .safeAreaInset(edge: .bottom) {
-                saveButton { await saveCall() }
+                buttons(.talk) { await saveCall() }
             }
         }
     }
 
-    private var studyStep: some View {
+    /// One thing the routine can hold: what it is, when, how much.
+    private func itemStep(_ kind: StudyPlan.Kind) -> some View {
         NavigationStack {
             Form {
                 Section {
-                    Picker("Study time", selection: $studyMinutes) {
-                        ForEach(Self.studyChoices, id: \.self) { m in
-                            Text(m == 60 ? explain("1 hour") : chrome("\(m) min")).tag(m)
-                        }
+                    Label {
+                        Text(pitch(kind))
+                            .font(.subheadline)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } icon: {
+                        Image(systemName: kind.symbol).foregroundStyle(kind.color)
                     }
-                    .pickerStyle(.segmented)
+                }
+                Section {
+                    DatePicker("Time", selection: timeBinding(kind), displayedComponents: .hourAndMinute)
+                        .environment(\.locale, uiLocale)
+                    if let choices = Self.amountChoices[kind] {
+                        Picker("How many", selection: amountBinding(kind)) {
+                            ForEach(choices, id: \.self) { n in
+                                Text(kind.amountText(n)).tag(n)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                    }
                 } header: {
-                    Text(explain("How much can you study a day?"))
-                } footer: {
-                    Text(explain("I'll put review in at \(reviewTimeText), about \(studyMinutes * StudyPlan.Kind.reviewCardsPerQuarter / 15) cards. Drag it on the grid to move it later."))
+                    Text(explain("When?"))
                 }
             }
-            .navigationTitle(explain("Study time"))
+            .navigationTitle(kind.label)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button {
-                        withAnimation { step = .call }
+                        withAnimation { step = previous(kind) }
                     } label: {
                         Image(systemName: "chevron.left")
                     }
@@ -260,9 +289,75 @@ struct RoutineOnboardingView: View {
                 }
             }
             .safeAreaInset(edge: .bottom) {
-                saveButton { saveStudy() }
+                buttons(kind) { await save(kind) }
             }
         }
+    }
+
+    /// What each card is, in one line.
+    private func pitch(_ kind: StudyPlan.Kind) -> String {
+        switch kind {
+        case .sayItAgain: return explain("Do a talk you just had again, saying your part the better way.")
+        case .review: return explain("Go through the words, expressions and sentences your talks left you.")
+        case .shadow: return explain("Say your fluent self's lines along with them, in the same rhythm.")
+        case .listen: return explain("Listen to the nawana Podcast and the situations you've watched, one after another.")
+        case .speech: return explain("Read a script out loud on camera and see how it went.")
+        default: return ""
+        }
+    }
+
+    /// Where each card's block goes if the learner doesn't move it. Say it
+    /// again sits right after the call, as it is in the day.
+    private func defaultTime(_ kind: StudyPlan.Kind) -> Date {
+        let callEnd = callTimeValue.hour * 60 + callTimeValue.minute + callMinutes
+        let afterCall = callEnd + StudyPlan.sayItAgainMinutes <= 24 * 60 ? (callEnd / 60, callEnd % 60) : (8, 15)
+        let (h, m): (Int, Int) = switch kind {
+        case .sayItAgain: picked[.talk] != nil ? afterCall : (8, 15)
+        case .review: (21, 0)
+        case .shadow: (12, 30)
+        case .listen: (8, 30)
+        case .speech: (20, 0)
+        default: (8, 0)
+        }
+        return cal.date(bySettingHour: h, minute: m, second: 0, of: Date()) ?? Date()
+    }
+
+    private func timeBinding(_ kind: StudyPlan.Kind) -> Binding<Date> {
+        Binding(get: { times[kind] ?? defaultTime(kind) }, set: { times[kind] = $0 })
+    }
+
+    private func amountBinding(_ kind: StudyPlan.Kind) -> Binding<Int> {
+        Binding(get: { amounts[kind] ?? kind.defaultAmount }, set: { amounts[kind] = $0 })
+    }
+
+    private func previous(_ kind: StudyPlan.Kind) -> Step {
+        guard let i = Self.kinds.firstIndex(of: kind), i > 0 else { return .intro }
+        return .item(Self.kinds[i - 1])
+    }
+
+    private func next(after kind: StudyPlan.Kind) -> Step {
+        guard let i = Self.kinds.firstIndex(of: kind), i + 1 < Self.kinds.count else { return .done }
+        return .item(Self.kinds[i + 1])
+    }
+
+    /// Add it, or pass on it. Passing takes back one added before (Back,
+    /// then a change of mind).
+    private func buttons(_ kind: StudyPlan.Kind, save: @escaping () async -> Void) -> some View {
+        VStack(spacing: 4) {
+            saveButton(save)
+            Button(explain("Not interested")) {
+                if picked.removeValue(forKey: kind) != nil {
+                    apply()
+                    // No call in the routine: nothing rings.
+                    if kind == .talk { DailyCallStore.shared.isEnabled = false }
+                }
+                withAnimation { step = next(after: kind) }
+            }
+            .controlSize(.large)
+            .disabled(working)
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 8)
     }
 
     private func saveButton(_ action: @escaping () async -> Void) -> some View {
@@ -275,18 +370,16 @@ struct RoutineOnboardingView: View {
         } label: {
             HStack {
                 if working { ProgressView().tint(.white) }
-                Text("Save")
+                Text(explain("Add to my routine"))
             }
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
         .disabled(working || days.isEmpty)
-        .padding(.horizontal, 20)
-        .padding(.bottom, 8)
     }
 
-    /// The days the call (and review) run on. Lit = a study day; at least one.
+    /// The days the routine runs on. Lit = a study day; at least one.
     private var dayChips: some View {
         var c = cal
         c.locale = uiLocale
@@ -310,27 +403,23 @@ struct RoutineOnboardingView: View {
         }
     }
 
-    private var reviewTimeText: String {
-        let d = cal.date(bySettingHour: Self.reviewTime.hour, minute: Self.reviewTime.minute, second: 0, of: Date()) ?? Date()
-        return d.formatted(Date.FormatStyle(locale: uiLocale).hour().minute())
-    }
-
     private var callTimeValue: DailyCallStore.CallTime {
         let c = cal.dateComponents([.hour, .minute], from: callTime)
         return DailyCallStore.CallTime(hour: c.hour ?? 8, minute: c.minute ?? 0)
     }
 
-    private func apply(study: Int?) {
-        let plan = StudyPlanStore.shared.plan.withOnboardingRoutine(
-            callMinutes: callMinutes, callTime: callTimeValue, days: days,
-            studyMinutes: study, reviewTime: Self.reviewTime)
+    private func apply() {
+        let blocks = Self.kinds.compactMap { picked[$0] }
+        let plan = StudyPlanStore.shared.plan.withOnboardingRoutine(blocks, days: days)
         StudyPlanStore.shared.update(plan, byLearner: true)
     }
 
     /// The call lands on the grid first, then the permission it needs is
     /// asked — with the block it is for in view behind the alert.
     private func saveCall() async {
-        apply(study: nil)
+        picked[.talk] = StudyPlan.Block(kind: .talk, weekdays: days, hour: callTimeValue.hour,
+                                        minute: callTimeValue.minute, minutes: callMinutes)
+        apply()
         UserDefaults.standard.set(callMinutes, forKey: "futurevoice.dailyGoalMinutes")
         spotlight = .init(kind: .talk, minute: callTimeValue.id, token: (spotlight?.token ?? 0) + 1)
         try? await Task.sleep(for: .milliseconds(700))
@@ -341,13 +430,21 @@ struct RoutineOnboardingView: View {
         DailyCallStore.shared.isEnabled = granted
         callBlocked = !granted
         if granted { appState.refreshDailyCall(force: true) }
-        withAnimation { step = .study }
+        withAnimation { step = next(after: .talk) }
     }
 
-    private func saveStudy() {
-        apply(study: studyMinutes)
-        spotlight = .init(kind: .review, minute: Self.reviewTime.id, token: (spotlight?.token ?? 0) + 1)
-        withAnimation { step = .done }
+    /// Any other card: on the grid, then — the first time a block that
+    /// reminds goes in — the notification permission its reminder needs.
+    private func save(_ kind: StudyPlan.Kind) async {
+        let c = cal.dateComponents([.hour, .minute], from: timeBinding(kind).wrappedValue)
+        let block = StudyPlan.Block(kind: kind, weekdays: days, hour: c.hour ?? 8, minute: c.minute ?? 0,
+                                    minutes: amountBinding(kind).wrappedValue)
+        picked[kind] = block
+        apply()
+        spotlight = .init(kind: kind, minute: block.startMinute, token: (spotlight?.token ?? 0) + 1)
+        try? await Task.sleep(for: .milliseconds(500))
+        await PlanReminder.requestPermissionIfNeeded()
+        withAnimation { step = next(after: kind) }
     }
 }
 
