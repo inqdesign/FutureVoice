@@ -21,6 +21,7 @@ import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/au
 import { recordFreeUsage, enforceRequestRate, rateLimitedResponse,
          recordProviderUsage, background, geminiUsageFields,
          type ChargeableAction } from "../_shared/credits.ts"
+import { claudeCorrection, isCorrectionRequest, onForUser } from "../_shared/claude-correction.ts"
 
 const SOURCE_FN = "gemini"
 
@@ -92,6 +93,15 @@ Deno.serve(async (req) => {
   const speculative = body.spec === true || idemKey.startsWith("turn-spec:")
   const { model: _m, purpose: _p, stream: _s, spec: _sp, ...geminiBody } = body
 
+  // The per-turn correction rides on Claude for the accounts CLAUDE_CORRECTION
+  // names (_shared/claude-correction.ts). Decided before the ledger row so
+  // the row carries the model that answers; a Claude failure falls through
+  // to Gemini below and the row is corrected to say so.
+  const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY")
+  const claudeModel = anthropicKey && onForUser(Deno.env.get("CLAUDE_CORRECTION"), user.id)
+    && isCorrectionRequest(purpose, stream, idemKey, geminiBody)
+    ? Deno.env.get("CLAUDE_CORRECTION_MODEL") ?? "claude-haiku-5-5" : null
+
   // Ledger action keys stay split for the historically-priced purposes so
   // spend dashboards keep their series; everything else lands on "gemini".
   const action: ChargeableAction =
@@ -117,13 +127,27 @@ Deno.serve(async (req) => {
       supabase, userId: user.id, action, purpose: purposeKey,
       dailyCap: DAILY_CAPS[purposeKey] ?? DEFAULT_DAILY_CAP,
       sourceFn: SOURCE_FN, idempotencyKey: idemKey,
-      metadata: { model, purpose: purpose ?? null, spec: speculative },
+      metadata: { model: claudeModel ?? model, purpose: purpose ?? null, spec: speculative },
     }),
   ])
   if (!rate.ok) return rateLimitedResponse(cors())
   if (!rec.ok) {
     if (rec.reason === "rate_limited") return rateLimitedResponse(cors())
     return errorResponse(500, "usage record failed", rec.detail)
+  }
+
+  if (claudeModel && anthropicKey) {
+    const answer = await claudeCorrection(anthropicKey, claudeModel, geminiBody)
+    if (answer) {
+      background(recordProviderUsage({ idempotencyKey: idemKey, usage: answer.usage }))
+      return new Response(answer.json, {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...cors() },
+      })
+    }
+    background(recordProviderUsage({
+      idempotencyKey: idemKey, usage: { model, claude_fallback: true },
+    }))
   }
 
   const endpoint = stream
