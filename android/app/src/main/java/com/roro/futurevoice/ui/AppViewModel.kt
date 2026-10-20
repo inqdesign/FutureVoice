@@ -171,6 +171,10 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
     } }
 
     init {
+        // The prompts write in the variety the voice speaks (LanguageVariety).
+        viewModelScope.launch {
+            _state.collect { com.roro.futurevoice.talk.LanguageVariety.accentId = it.voiceAccentId }
+        }
         viewModelScope.launch {
             val persona = PersonaStore.shared(appContext).load()
             _state.update { it.copy(persona = persona, personaResolved = true) }

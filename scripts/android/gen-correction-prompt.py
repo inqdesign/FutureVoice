@@ -34,6 +34,9 @@ body = kotlin(literal_at(src, 'return """', src.index("static func correctionOnl
     "scriptGuard(targetLanguage)": "scriptGuard(targetLanguage)",
     "spacingGuard(targetLanguage)": "spacingGuard(targetLanguage)",
     "registerGuard(targetLanguage)": "registerGuard(targetLanguage)",
+    # A non-default voice accent's variety (British, Australian, Castilian);
+    # hand-written in talk/LanguageVariety.kt, "" otherwise.
+    "varietyGuard(targetLanguage)": "LanguageVariety.guard(targetLanguage)",
     # A call with someone the learner SET a form of address for: the one
     # register slip a coach may name. Built by the caller
     # (`ConversationCharacter.relationshipRegisterLine`), "" otherwise.

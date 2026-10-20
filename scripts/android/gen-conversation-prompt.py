@@ -112,6 +112,7 @@ system = kotlin_conv(literal_at(engine, 'return """', main_anchor), {
     "scale.structure": "speechStructure(level)",
     "maxTurnSentences": "MAX_TURN_SENTENCES",
     "CoachingLanguage.breathPunctuation": "CoachingLanguage.breathPunctuation",
+    "varietyGuard(targetLanguage)": "LanguageVariety.guard(targetLanguage)",
     "CoachingLanguage.selfWarmth": "CoachingLanguage.selfWarmth",
     "tutor": "tutor",
     "beginnerQuestions(level)": "beginnerQuestions(level)",
@@ -124,6 +125,7 @@ guards = {
     "scriptGuard(targetLanguage)": "CorrectionOnlyPrompt.scriptGuard(targetLanguage)",
     "spacingGuard(targetLanguage)": "CorrectionOnlyPrompt.spacingGuard(targetLanguage)",
     "registerGuard(targetLanguage)": "CorrectionOnlyPrompt.registerGuard(targetLanguage)",
+    "varietyGuard(targetLanguage)": "LanguageVariety.guard(targetLanguage)",
 }
 tutor = kotlin_conv(literal_at(engine, "static func tutorBlock(targetLanguage: String, languageName: String)"),
                {"languageName": "languageName", **guards})

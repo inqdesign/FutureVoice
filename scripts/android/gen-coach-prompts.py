@@ -30,6 +30,9 @@ suggester = kotlin(literal_at(coach, 'return """', fn), {
     "nativeName": "nativeName",
     "scale.vocabulary": "ConversationPrompt.speechVocabulary(level)",
     "address": "address",
+    # A non-default voice accent's variety, built by the caller
+    # (`LanguageVariety.guard`), "" otherwise.
+    "ConversationEngine.varietyGuard(target)": "variety",
 })
 
 st = coach.index("static func coachSteer(for items: [TalkGoalItem]")
@@ -62,7 +65,8 @@ object CoachPrompts {{
             {addr_any}
 
     /** iOS `CoachSuggester.system(target:native:level:register:)`. */
-    fun suggesterSystem(targetName: String, nativeName: String, level: CefrLevel, address: String): String =
+    fun suggesterSystem(targetName: String, nativeName: String, level: CefrLevel, address: String,
+                        variety: String = ""): String =
         {suggester}
 
     /** iOS `coachSteer`'s COACH MODE paragraph; [list] is the quoted items. */

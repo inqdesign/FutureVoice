@@ -356,7 +356,8 @@ object CoachSuggester {
         val address = CoachPrompts.suggesterAddress(
             if (register != null && SpeechRegister.hasForms(target)) register.promptDescription(target) else null)
         return CoachPrompts.suggesterSystem(
-            LanguageCatalog.englishName(target), LanguageCatalog.englishName(native), level, address)
+            LanguageCatalog.englishName(target), LanguageCatalog.englishName(native), level, address,
+            LanguageVariety.guard(target))
     }
 }
 
