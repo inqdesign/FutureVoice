@@ -87,6 +87,15 @@ def load_feed(LANG):
     return feed
 
 
+def no_ai(category):
+    """Founder, 2026-10-21: not just AI. Only the tech day may be about AI,
+    and even then not by default."""
+    if category == "AI / tech":
+        return ("Prefer phones, gadgets, apps, games, the internet or space tech; a story "
+                "about artificial intelligence only if nothing else is worth talking about. ")
+    return "Not a story about artificial intelligence. "
+
+
 def pooled_topic(LANG, category):
     """Today's stories for this category from the Talk tab's news pool, if
     someone has already opened it today. Saves the search."""
@@ -107,7 +116,7 @@ def pooled_topic(LANG, category):
         return None
     system = (
         "Pick the ONE story below that people would most enjoy talking about over coffee "
-        "today. Not one whose core is deaths, violence or a disaster.\n"
+        "today. Not one whose core is deaths, violence or a disaster. " + no_ai(category) + "\n"
         f'Return JSON: {{ "index": 0, "title": "..." }} (title: a {probe.LANG_NAME[LANG]} '
         "episode title, 8 words or fewer)."
     )
@@ -123,9 +132,10 @@ def searched_topic(LANG, category):
     """No pool row today: search for this category alone."""
     probe.EPISODES = 1
     research = (
-        f"Search the web now: what are the most talked-about news stories about {category} in "
+        f"Search the web now: what are the most talked-about news stories about "
+        f"{'technology' if category == 'AI / tech' else category} in "
         f"{probe.REGION[LANG]} today, {TODAY} (last 48 hours)? Give 5, each with 6-8 facts: what "
-        "happened, who, when, key numbers, reactions."
+        "happened, who, when, key numbers, reactions. " + no_ai(category)
     )
     for _ in range(3):
         notes, grounding = probe.gemini(None, research, search=True)
@@ -135,7 +145,8 @@ def searched_topic(LANG, category):
         raise RuntimeError("the model never searched; no episode today")
     system = (
         "From the RESEARCH below, pick the ONE story people would most enjoy talking about "
-        "over coffee. Not one whose core is deaths, violence or a disaster. Facts only from "
+        "over coffee. Not one whose core is deaths, violence or a disaster. " + no_ai(category) +
+        "Facts only from "
         "the RESEARCH.\n"
         f'Return JSON: {{ "title": "...", "facts": ["...", "..."] }} (title: '
         f"{probe.LANG_NAME[LANG]}, 8 words or fewer; facts: 6-8, each 25 words or fewer)."
