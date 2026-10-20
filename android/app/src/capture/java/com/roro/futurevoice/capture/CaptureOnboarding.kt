@@ -69,14 +69,12 @@ object CaptureOnboarding {
         // iOS `-onboardingPreview routine` (+ `-routineStep`): the routine
         // builder after the voice, one step each.
         "routine-onboarding" to { _ -> com.roro.futurevoice.ui.RoutineOnboardingOverlay(onFinished = {}) },
-        "routine-onboarding-call" to { _ ->
-            com.roro.futurevoice.ui.RoutineOnboardingOverlay(onFinished = {}, debugStep = "call") },
-        "routine-onboarding-review" to { _ ->
-            com.roro.futurevoice.ui.RoutineOnboardingOverlay(onFinished = {}, debugStep = "review") },
-        "routine-onboarding-listen" to { _ ->
-            com.roro.futurevoice.ui.RoutineOnboardingOverlay(onFinished = {}, debugStep = "listen") },
+        "routine-onboarding-pick" to { _ ->
+            com.roro.futurevoice.ui.RoutineOnboardingOverlay(onFinished = {}, debugStep = "pick") },
         "routine-onboarding-done" to { _ ->
             com.roro.futurevoice.ui.RoutineOnboardingOverlay(onFinished = {}, debugStep = "done") },
+        "routine-onboarding-finish" to { _ ->
+            com.roro.futurevoice.ui.RoutineOnboardingOverlay(onFinished = {}, debugStep = "finish") },
         // The voice act, one stage each (the debug app's `--es cloneStage`,
         // which only answers on an install that isn't set up yet).
     ) + listOf("intro", "consent", "mic", "spot", "script", "recording", "reviewing", "uploading", "meet")

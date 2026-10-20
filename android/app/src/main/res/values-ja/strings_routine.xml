@@ -88,16 +88,19 @@
     <string name="routine_no_timed_talk">ルーティンに時間の決まったトークがないので、電話は鳴りません。</string>
     <string name="routine_change_in_routine">ルーティンで変更</string>
     <string name="routine_kind_listening">リスニング</string>
-    <string name="routine_add_to_my_routine">ルーティンに入れる</string>
-    <string name="routine_not_interested">興味なし</string>
     <string name="routine_listen_footer">ポッドキャストでも、見たシーンでも、ひとつ聞けばOK。通知をタップするとプレーヤーがすぐ再生します。</string>
-    <string name="routine_pitch_say_it_again">さっきの会話をもう一度。自分のセリフは、もっと自然な言い方で。</string>
-    <string name="routine_pitch_review">会話で出てきた単語・表現・文をおさらいします。</string>
-    <string name="routine_pitch_shadow">流暢な自分のセリフを、同じリズムでなぞって話します。</string>
-    <string name="routine_pitch_listen">nawana ポッドキャストと、見たシーンを続けて聞きます。</string>
-    <string name="routine_pitch_speech">原稿をカメラの前で声に出して読み、結果を見ます。</string>
     <string name="routine_time_to_listen">リスニングの時間です</string>
     <string name="routine_listen_body">イヤホンをつけてタップすると、すぐ再生されます。</string>
     <string name="routine_make_it_later">あとで作ってもOK</string>
     <string name="routine_under_activity_whenever">ルーティンはトーク画面のアクティビティからいつでも作れます。</string>
+    <string name="routine_what_goes_in">ルーティンに何を入れますか？</string>
+    <string name="routine_pick_footer">最初は毎日この時間に入れておきます。時間・曜日・量は、トーク画面のアクティビティでいつでも変えられます。</string>
+    <string name="routine_every_day_at">毎日 · %1$s</string>
+    <string name="routine_right_after_call">トークのすぐあと</string>
+    <string name="routine_pitch_talk">流暢になった自分が、自分の声で電話をかけてきます。なんでも5分おしゃべりしましょう。</string>
+    <string name="routine_pitch_say_it_again">さっきの会話を最初からもう一度。自分の番には、ネイティブらしく直した文が出るので、それを声に出して読みます。</string>
+    <string name="routine_pitch_listen">nawana ポッドキャストと、見たシーンを続けて再生します。通勤中にぴったりです。</string>
+    <string name="routine_pitch_shadow">流暢な自分の文を聞いて、同じリズムで重ねて話します。スコアも出ます。</string>
+    <string name="routine_pitch_speech">原稿をカメラの前で声に出して読み、発音とスピードのスコアをもらいます。</string>
+    <string name="routine_pitch_review">会話で出てきた単語・表現・直した文を、カードで10枚ずつめくります。</string>
 </resources>

@@ -88,16 +88,19 @@
     <string name="routine_no_timed_talk">Ta routine n’a aucune conversation à heure fixe, donc rien ne sonnera.</string>
     <string name="routine_change_in_routine">Modifier dans ma routine</string>
     <string name="routine_kind_listening">Écoute</string>
-    <string name="routine_add_to_my_routine">Ajouter à ma routine</string>
-    <string name="routine_not_interested">Ça ne m’intéresse pas</string>
     <string name="routine_listen_footer">N’importe quel épisode du podcast ou situation regardée compte. Le rappel ouvre le lecteur, déjà en lecture.</string>
-    <string name="routine_pitch_say_it_again">Refais une conversation que tu viens d’avoir, en disant ta partie mieux.</string>
-    <string name="routine_pitch_review">Révise les mots, expressions et phrases que tes conversations t’ont laissés.</string>
-    <string name="routine_pitch_shadow">Dis les phrases de ton moi fluide en même temps que lui, au même rythme.</string>
-    <string name="routine_pitch_listen">Écoute à la suite le Podcast nawana et les situations que tu as regardées.</string>
-    <string name="routine_pitch_speech">Lis un texte à voix haute face à la caméra et vois comment ça s’est passé.</string>
     <string name="routine_time_to_listen">C’est l’heure d’écouter</string>
     <string name="routine_listen_body">Mets tes écouteurs et touche. La lecture démarre tout de suite.</string>
     <string name="routine_make_it_later">Tu peux la faire plus tard</string>
     <string name="routine_under_activity_whenever">Quand tu voudras une routine, c’est dans Activité, sur l’écran Parler.</string>
+    <string name="routine_what_goes_in">Qu’est-ce que tu mets dans ta routine ?</string>
+    <string name="routine_pick_footer">Pour commencer, tous les jours à ces heures-là. Tu peux changer les heures, les jours et la quantité dans Activité, sur l’écran Parler.</string>
+    <string name="routine_every_day_at">Tous les jours · %1$s</string>
+    <string name="routine_right_after_call">Juste après l’appel</string>
+    <string name="routine_pitch_talk">Ton moi fluide t’appelle, avec ta propre voix. Vous parlez 5 minutes de ce que tu veux.</string>
+    <string name="routine_pitch_say_it_again">Refais depuis le début l’appel que tu viens de passer. À ton tour, tes phrases s’affichent comme les dirait un natif, et tu les lis à voix haute.</string>
+    <string name="routine_pitch_listen">Le Podcast nawana et les situations que tu as regardées, à la suite. Parfait pour les trajets.</string>
+    <string name="routine_pitch_shadow">Écoute une phrase de ton moi fluide et dis-la en même temps, au même rythme. Tu obtiens un score.</string>
+    <string name="routine_pitch_speech">Lis un texte à voix haute face à la caméra et obtiens un score de prononciation et de débit.</string>
+    <string name="routine_pitch_review">Des cartes avec les mots, expressions et phrases corrigées de tes conversations, 10 à la fois.</string>
 </resources>

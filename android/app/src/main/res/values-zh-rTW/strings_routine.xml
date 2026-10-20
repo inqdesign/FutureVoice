@@ -88,16 +88,19 @@
     <string name="routine_no_timed_talk">你的例行計畫裡沒有設定時間的對話，所以不會打來。</string>
     <string name="routine_change_in_routine">在例行計畫中修改</string>
     <string name="routine_kind_listening">聽力</string>
-    <string name="routine_add_to_my_routine">加進作息</string>
-    <string name="routine_not_interested">沒興趣</string>
     <string name="routine_listen_footer">Podcast 或看過的情境，聽一集就算。點通知會直接開始播放。</string>
-    <string name="routine_pitch_say_it_again">把剛才的對話再來一次，自己的話換成更自然的說法。</string>
-    <string name="routine_pitch_review">複習對話裡出現的單字、用語和句子。</string>
-    <string name="routine_pitch_shadow">跟著流利的自己說，抓住一樣的節奏。</string>
-    <string name="routine_pitch_listen">連續收聽 nawana Podcast 和你看過的情境。</string>
-    <string name="routine_pitch_speech">對著鏡頭大聲唸講稿，再看看表現如何。</string>
     <string name="routine_time_to_listen">該聽一下了</string>
     <string name="routine_listen_body">戴上耳機點一下，馬上開始播放。</string>
     <string name="routine_make_it_later">之後再安排也可以</string>
     <string name="routine_under_activity_whenever">想安排作息時，隨時到對話畫面的「活動」。</string>
+    <string name="routine_what_goes_in">作息要放進哪些？</string>
+    <string name="routine_pick_footer">先每天排在這些時間。時間、星期和份量，隨時都能在對話畫面的「活動」裡修改。</string>
+    <string name="routine_every_day_at">每天 · %1$s</string>
+    <string name="routine_right_after_call">通話一結束</string>
+    <string name="routine_pitch_talk">流利的自己用你的聲音打電話給你，隨便聊 5 分鐘。</string>
+    <string name="routine_pitch_say_it_again">把剛才的通話從頭再來一次。輪到你時會出現改得更道地的句子，大聲唸出來就好。</string>
+    <string name="routine_pitch_listen">連續播放 nawana Podcast 和你看過的情境，通勤時聽剛好。</string>
+    <string name="routine_pitch_shadow">聽流利的自己說一句，用一樣的節奏跟著說，還會打分數。</string>
+    <string name="routine_pitch_speech">對著鏡頭大聲唸講稿，拿到發音和語速的分數。</string>
+    <string name="routine_pitch_review">把對話裡的單字、用語和改過的句子做成卡片，一次 10 張。</string>
 </resources>
