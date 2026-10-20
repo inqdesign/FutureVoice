@@ -20,6 +20,18 @@ cd "$(dirname "$0")/.."
 
 log() { printf '%s %s\n' "$(date '+%F %T')" "$*"; }
 
+# Android first, on its own: Play serves a build once review is done, and
+# `play-release.py released --watch` moves the android row's latest_build
+# when a learner outside the team is running it (no Play review API exists).
+# Silent when there is nothing new; a failure never stops the iOS half.
+# 2026-10-20: 1.2.0 (18) reached testers while the row said 17.
+android_tree=$(git worktree list --porcelain | awk '/^worktree /{w=$2} /^branch refs\/heads\/feat\/android$/{print w}')
+if [[ -n "$android_tree" && -f "$android_tree/scripts/android/play-release.py" ]]; then
+  out=$(python3 "$android_tree/scripts/android/play-release.py" released --watch 2>&1) \
+    || log "android: released failed: $out"
+  if [[ -n "$out" ]]; then log "android: $out"; fi
+fi
+
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
 read -r version build < <(python3 scripts/asc-live-build.py "$tmp/ko.txt" "$tmp/en.txt") \
   || { log "ASC lookup failed"; exit 1; }
