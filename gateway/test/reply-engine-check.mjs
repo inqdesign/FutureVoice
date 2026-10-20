@@ -11,7 +11,13 @@ const { ReplyEngine } = await import(out)
 const vars = readFileSync(new URL("../.dev.vars", import.meta.url), "utf8")
 const apiKey = vars.match(/^GEMINI_API_KEY\s*=\s*"?([^"\n]+)/m)[1]
 const API = "https://generativelanguage.googleapis.com/v1beta"
-const system = readFileSync("/tmp/fv-prompt-dump/en-a2.txt", "utf8")
+import { existsSync } from "node:fs"
+// The live prompt when ConversationPromptDumpTests has dumped it; otherwise a
+// stand-in long enough to cache (the API's minimum is ~1k tokens).
+const dumped = "/tmp/fv-prompt-dump/en-a2.txt"
+const system = existsSync(dumped) ? readFileSync(dumped, "utf8")
+  : "You are the learner's fluent future self on a phone call, speaking English at A2. Reply in at most three short spoken sentences, react to what they said, then ask one simple concrete question.\n\n"
+    + Array.from({ length: 120 }, (_, i) => `Rule ${i + 1}: keep the conversation natural and friendly, use everyday A2 words, never lecture, never correct grammar out loud, and follow what the learner actually said rather than a script.`).join("\n")
 const H = [{ role: "model", text: "How was your weekend?" }, { role: "user", text: "I stayed home. I was very tired." }]
 const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 let failures = 0
@@ -60,7 +66,7 @@ const getCache = (name) => fetch(`${API}/${name}?key=${apiKey}`).then(async (r) 
   const e = new ReplyEngine({ apiKey, model: "gemini-does-not-exist", fallbackModel: "gemini-3.1-flash-lite", system })
   let fell = ""; e.onFallback = (d) => { fell = d }
   const a = await gen(e); await wait(2000)
-  check("6 broken primary → fallback answers", a.length > 0 && fell !== "", `${fell} | cache=${e.cacheState}`)
+  check("6 broken primary → fallback answers", a.length > 0 && fell !== "", `${fell} | cacheOff=${e.cacheOff}`)
   e.dispose()
 }
 
@@ -68,7 +74,7 @@ const getCache = (name) => fetch(`${API}/${name}?key=${apiKey}`).then(async (r) 
 {
   const e = new ReplyEngine({ apiKey, model: "gemini-3.6-flash", fallbackModel: "gemini-3.1-flash-lite", system: "You are a friendly English tutor. Reply in one short sentence." })
   const a = await gen(e); await wait(2000); const b = await gen(e)
-  check("7 short prompt → uncached, answers", a.length > 0 && b.length > 0 && e.cacheState === "off", `state=${e.cacheState}`)
+  check("7 short prompt → uncached, answers", a.length > 0 && b.length > 0 && e.cacheOff === true, `cacheOff=${e.cacheOff}`)
   e.dispose()
 }
 
@@ -80,6 +86,46 @@ const getCache = (name) => fetch(`${API}/${name}?key=${apiKey}`).then(async (r) 
   const p = e.generate(H, ac.signal, () => ac.abort())
   const r = await p.catch((x) => `THREW ${x}`)
   check("8 abort resolves, doesn't throw", !String(r).startsWith("THREW"), `"${String(r).slice(0, 40)}"`)
+  e.dispose()
+}
+// 9. The call so far rides in the cache (2026-10-20): a long history makes a
+//    cache holding its settled prefix, the next generation sends only the
+//    tail, a reopened last turn still fits, and a changed early line falls
+//    back to the whole history uncached and still answers.
+{
+  const lines = ["How was your weekend?", "I stayed home. I was very tired.", "Oh no, why were you so tired?",
+    "I worked a lot this week.", "What do you do for work?", "I am a nurse in a hospital.",
+    "That sounds hard. Do you work at night?", "Sometimes. This week I worked three nights.",
+    "Three nights is a lot. How do you sleep in the day?", "I use a mask and earplugs.",
+    "Smart. Does it work well?", "Mostly yes, but my neighbours are loud.", "Ugh. What do they do?",
+    "They have a dog. It barks every afternoon."]
+  const h = lines.map((text, i) => ({ role: i % 2 === 0 ? "model" : "user", text }))
+  // No hedge here: a slow primary would let the uncached fallback answer and
+  // its tokens would read as the cache missing.
+  const e = new ReplyEngine({ apiKey, model: "gemini-3.6-flash", system })
+  await gen(e, h); await wait(3000)
+  check("9a prefix cached", e.cache && e.cache.prefix.length === 11, `prefix=${e.cache?.prefix.length}`)
+  const before = { ...e.usage }
+  const a = await gen(e, h)
+  const uncached = (e.usage.promptTokens - before.promptTokens) - (e.usage.cachedTokens - before.cachedTokens)
+  check("9b only the tail is sent", a.length > 0 && uncached < 150, `uncached=${uncached} cached=${e.usage.cachedTokens - before.cachedTokens}`)
+  const reopened = [...h.slice(0, 13), { role: "user", text: "They have a dog and it barks every afternoon, so I wake up." }]
+  const name = e.cache.name
+  const b = await gen(e, reopened)
+  check("9c reopened turn still fits", b.length > 0 && e.cache.name === name, `"${b.slice(0, 50)}"`)
+  const changed = h.map((t, i) => i === 3 ? { ...t, text: "I worked a lot." } : t)
+  // (Gemini's own implicit cache may still count some of it as cached.)
+  const c = await gen(e, changed); await wait(3000)
+  check("9d changed early line → whole history, answers, new cache", c.length > 0
+    && e.cache.name !== name && e.cache.prefix[3].text === "I worked a lot.", `"${c.slice(0, 50)}"`)
+  const grown = [...h, { role: "model", text: "A dog every afternoon is hard. Did you talk to them?" },
+    { role: "user", text: "Not yet. I am a bit shy." }, { role: "model", text: "I get that. What would you say?" },
+    { role: "user", text: "Maybe I say please keep the dog inside." }, { role: "model", text: "That is polite and clear." },
+    { role: "user", text: "Thanks, I will try tomorrow." }, { role: "model", text: "Good luck! Tell me how it goes." },
+    { role: "user", text: "OK. And you, did you sleep well?" }]
+  const prev = e.cache.prefix.length
+  await gen(e, grown); await wait(3000)
+  check("9e outgrown cache rebuilt longer", e.cache.prefix.length > prev, `${prev} → ${e.cache.prefix.length}`)
   e.dispose()
 }
 console.log(failures === 0 ? "ALL PASS" : `${failures} FAILED`)

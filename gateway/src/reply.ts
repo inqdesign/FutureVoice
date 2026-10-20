@@ -34,8 +34,10 @@ export interface ReplyConfig {
   system: string
 }
 
-/** One generation request, and whether it reads the cached system prompt. */
+/** One generation request, and whether it reads the cache. */
 type Body = { json: string; cached: boolean }
+
+type Line = { role: "user" | "model"; text: string }
 
 /** Isolate-wide: calls on the same isolate share what the last race taught. */
 let primaryDegradedUntil = 0
@@ -83,10 +85,32 @@ export class ReplyEngine {
    *  a DO that dies without disposing loses at most one TTL of storage. Any
    *  failure here — creating, extending, a generation the cache refuses — is
    *  the old uncached request, never a failed turn. Primary model only: the
-   *  hedge's fallback runs uncached (a cache belongs to one model). */
-  private cache: { name: string; model: string; expiresAt: number } | null = null
-  private cacheState: "none" | "creating" | "ready" | "off" = "none"
+   *  hedge's fallback runs uncached (a cache belongs to one model).
+   *
+   *  The cache carries the CALL SO FAR too (2026-10-20). With only the
+   *  system prompt in it, the history was still re-sent at full price on
+   *  every generation — ~6 a turn with speculation — and was the largest
+   *  line left on the bill (Oct 12–19: 19.7M uncached 3.6-flash input
+   *  tokens, €13 of €33). The cache now holds the system prompt plus a
+   *  settled PREFIX of the history; a generation whose history starts with
+   *  exactly that prefix sends only what came after it. The prefix stops
+   *  short of the last exchange, the one thing `reopenLastTurn` can take
+   *  back. Once `rebuildAfterLines` lines sit past it, a new cache is made
+   *  with the longer prefix and swapped in when it lands; the old one keeps
+   *  answering meanwhile. A history that doesn't start with the prefix is
+   *  sent whole, uncached, as before. */
+  private cache: { name: string; model: string; expiresAt: number; prefix: Line[] } | null = null
+  /** No cache can be made for this prompt or model; stop asking. */
+  private cacheOff = false
+  private cacheCreating = false
+  /** A longer prefix was refused: keep the running cache, stop rebuilding. */
+  private rebuildOff = false
+  /** The history of the latest generation, for a cache made outside one. */
+  private lastHistory: Line[] = []
   static readonly cacheTtlSeconds = 600
+  /** Lines past the cached prefix before a longer prefix is cached. Four
+   *  exchanges: a rebuild pays for itself within the next turn either way. */
+  static readonly rebuildAfterLines = 8
   /** Stretch the TTL when less than this is left. */
   static readonly cacheRefreshBelowMs = 240_000
 
@@ -117,11 +141,12 @@ export class ReplyEngine {
    *  fallback; after it the primary is tried (hedged) again, so recovery
    *  needs no deploy. */
   async generate(
-    history: { role: "user" | "model"; text: string }[],
+    history: Line[],
     signal: AbortSignal,
     onDelta: (text: string) => void,
   ): Promise<string> {
-    this.ensureCache()
+    this.lastHistory = history
+    this.ensureCache(history)
     const contents = history.map((t) => ({ role: t.role, parts: [{ text: t.text }] }))
     const last = contents[contents.length - 1]
     if (this.steer && last?.role === "user") {
@@ -139,9 +164,10 @@ export class ReplyEngine {
     // generation answers one) keeps the old place, uncached.
     const steerInSystem = this.steer && last?.role !== "user"
     const body = (model: string, useCache: boolean): Body => {
-      const cache = useCache && !steerInSystem && this.cache?.model === model ? this.cache : null
+      const cache = useCache && !steerInSystem && this.cache?.model === model
+        && ReplyEngine.startsWith(history, this.cache.prefix) ? this.cache : null
       return { cached: cache !== null, json: JSON.stringify(cache
-        ? { cachedContent: cache.name, contents, generationConfig }
+        ? { cachedContent: cache.name, contents: contents.slice(cache.prefix.length), generationConfig }
         : {
             systemInstruction: {
               parts: [{ text: steerInSystem ? `${this.config.system}\n\n${this.steer}` : this.config.system }],
@@ -248,8 +274,7 @@ export class ReplyEngine {
       const detail = (await resp.text()).slice(0, 200)
       console.log(`reply cache refused (${resp.status}): ${detail}`)
       this.cache = null
-      this.cacheState = "none"
-      this.ensureCache()   // a new one for the next turn, made while this one answers
+      this.ensureCache(this.lastHistory)   // a new one for the next turn, made while this one answers
       resp = await post(body(model, false).json)
     }
     if (!resp.ok || !resp.body) {
@@ -304,27 +329,43 @@ export class ReplyEngine {
     return full
   }
 
-  /** Make the cache if there is none, stretch it if it is running out. Never
-   *  awaited: a generation never waits on its cache. */
-  private ensureCache(): void {
-    if (this.cacheState === "off" || this.cacheState === "creating") return
-    const model = this.config.model
-    if (this.cacheState === "ready" && this.cache) {
-      if (this.cache.expiresAt - Date.now() > ReplyEngine.cacheRefreshBelowMs) return
-      const cache = this.cache
-      cache.expiresAt = Date.now() + ReplyEngine.cacheTtlSeconds * 1000   // one stretch in flight
-      void fetch(`${API_HOST}/v1beta/${cache.name}?updateMask=ttl&key=${this.config.apiKey}`, {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ttl: `${ReplyEngine.cacheTtlSeconds}s` }),
-      }).then(async (r) => {
-        if (!r.ok) {
-          console.log(`reply cache extend failed (${r.status}): ${(await r.text()).slice(0, 200)}`)
-          if (this.cache === cache) { this.cache = null; this.cacheState = "none" }
-        }
-      }).catch(() => { if (this.cache === cache) { this.cache = null; this.cacheState = "none" } })
-      return
+  /** Make the cache if there is none, a longer one once the history has
+   *  outgrown it, and stretch it if it is running out. Never awaited: a
+   *  generation never waits on its cache. */
+  private ensureCache(history: Line[]): void {
+    if (this.cacheOff || this.cacheCreating) return
+    const cache = this.cache
+    if (cache) {
+      const fits = ReplyEngine.startsWith(history, cache.prefix)
+      if (this.rebuildOff
+          || (fits && history.length - cache.prefix.length < ReplyEngine.rebuildAfterLines)) {
+        this.stretch(cache)
+        return
+      }
+      // Outgrown, or a history it doesn't fit: a new cache below; this one
+      // keeps answering what it fits until that lands.
+      this.stretch(cache)
     }
-    this.cacheState = "creating"
+    this.createCache(ReplyEngine.settledPrefix(history))
+  }
+
+  private stretch(cache: NonNullable<ReplyEngine["cache"]>): void {
+    if (cache.expiresAt - Date.now() > ReplyEngine.cacheRefreshBelowMs) return
+    cache.expiresAt = Date.now() + ReplyEngine.cacheTtlSeconds * 1000   // one stretch in flight
+    void fetch(`${API_HOST}/v1beta/${cache.name}?updateMask=ttl&key=${this.config.apiKey}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ttl: `${ReplyEngine.cacheTtlSeconds}s` }),
+    }).then(async (r) => {
+      if (!r.ok) {
+        console.log(`reply cache extend failed (${r.status}): ${(await r.text()).slice(0, 200)}`)
+        if (this.cache === cache) this.cache = null
+      }
+    }).catch(() => { if (this.cache === cache) this.cache = null })
+  }
+
+  private createCache(prefix: Line[]): void {
+    const model = this.config.model
+    this.cacheCreating = true
     const startedAt = Date.now()
     const version = this.systemVersion
     void fetch(`${API_HOST}/v1beta/cachedContents?key=${this.config.apiKey}`, {
@@ -332,9 +373,13 @@ export class ReplyEngine {
       body: JSON.stringify({
         model: `models/${model}`,
         systemInstruction: { parts: [{ text: this.config.system }] },
+        ...(prefix.length > 0
+          ? { contents: prefix.map((t) => ({ role: t.role, parts: [{ text: t.text }] })) }
+          : {}),
         ttl: `${ReplyEngine.cacheTtlSeconds}s`,
       }),
     }).then(async (r) => {
+      this.cacheCreating = false
       const j: any = await r.json().catch(() => null)
       if (this.disposed || version !== this.systemVersion) {
         if (j?.name) void this.deleteCache(j.name)
@@ -343,18 +388,42 @@ export class ReplyEngine {
       if (!r.ok || typeof j?.name !== "string") {
         // A 4xx is an answer about this prompt or model (too short, no such
         // model, not cacheable) and will be the same next turn: don't ask
-        // again for the rest of the call. A 5xx may pass.
+        // again for the rest of the call. A 5xx may pass. A refused LONGER
+        // prefix leaves the cache already running in place.
         console.log(`reply cache create failed (${r.status}): ${JSON.stringify(j?.error ?? j).slice(0, 200)}`)
-        this.cacheState = r.status >= 400 && r.status < 500 ? "off" : "none"
+        if (r.status >= 400 && r.status < 500) {
+          if (this.cache === null) this.cacheOff = true
+          else this.rebuildOff = true
+        }
         return
       }
-      this.cache = { name: j.name, model, expiresAt: startedAt + ReplyEngine.cacheTtlSeconds * 1000 }
-      this.cacheState = "ready"
-      console.log(`reply cache ready ${Date.now() - startedAt}ms, ${j.usageMetadata?.totalTokenCount ?? "?"} tokens`)
+      const old = this.cache
+      this.cache = { name: j.name, model, expiresAt: startedAt + ReplyEngine.cacheTtlSeconds * 1000, prefix }
+      // A generation may have been sent against the old one a moment ago.
+      if (old) setTimeout(() => void this.deleteCache(old.name), 10_000)
+      console.log(`reply cache ready ${Date.now() - startedAt}ms, ${prefix.length} lines, ${j.usageMetadata?.totalTokenCount ?? "?"} tokens`)
     }).catch((e) => {
-      this.cacheState = "none"
+      this.cacheCreating = false
       console.log(`reply cache create error: ${String(e).slice(0, 120)}`)
     })
+  }
+
+  /** The part of a history no later event can change: everything before the
+   *  last exchange (`reopenLastTurn` takes back the last learner line and
+   *  the reply to it), ending on a model line so the uncached rest starts
+   *  with the learner. A speculation's unfinished line is never in it. */
+  static settledPrefix(history: Line[]): Line[] {
+    let n = Math.max(0, history.length - 2)
+    while (n > 0 && history[n - 1].role !== "model") n -= 1
+    return history.slice(0, n).map((t) => ({ role: t.role, text: t.text }))
+  }
+
+  static startsWith(history: Line[], prefix: Line[]): boolean {
+    if (prefix.length >= history.length) return prefix.length === 0
+    for (let i = 0; i < prefix.length; i++) {
+      if (history[i].role !== prefix[i].role || history[i].text !== prefix[i].text) return false
+    }
+    return true
   }
 
   private disposed = false
@@ -371,7 +440,6 @@ export class ReplyEngine {
     this.systemVersion += 1
     if (this.cache) void this.deleteCache(this.cache.name)
     this.cache = null
-    if (this.cacheState !== "off") this.cacheState = "none"
   }
 
   /** The call is over: delete the cache rather than pay storage until its
@@ -380,7 +448,7 @@ export class ReplyEngine {
     this.disposed = true
     if (this.cache) void this.deleteCache(this.cache.name)
     this.cache = null
-    this.cacheState = "off"
+    this.cacheOff = true
   }
 
   private deleteCache(name: string): Promise<void> {
