@@ -80,10 +80,11 @@ data class NewsShowEpisode(
 }
 
 object NewsShow {
-    /** The bucket's public r2.dev address. English only while the show's
-     *  reaction is tested (founder, 2026-10-19). */
+    /** The bucket's public r2.dev address. Which languages have a show is
+     *  the BUCKET's to say, never the build's (founder, 2026-10-20): a
+     *  language is on the day its `<lang>/latest.json` is published, and a
+     *  language with none answers 404 and shows the empty state. */
     const val BASE = "https://pub-83c97a52f2e549718b126bf60f710f1a.r2.dev/shows"
-    val languages: Set<String> = setOf("en")
 
     @Serializable
     data class ShippedStudy(val highlights: List<Highlight> = emptyList()) {
@@ -135,17 +136,23 @@ object NewsShow {
      *  Nothing is downloaded here; [prepare] fetches an episode when picked. */
     suspend fun episodes(context: Context, language: String): List<NewsShowEpisode> = withContext(Dispatchers.IO) {
         val lang = language.lowercase().split("-").first()
-        if (lang !in languages) return@withContext emptyList()
         val dir = cacheDirectory(context, lang)
         val feedFile = File(dir, "latest.json")
 
+        var status = 0
         val fresh = runCatching {
             val request = Request.Builder().url("$BASE/$lang/latest.json")
                 .header("Cache-Control", "no-cache").build()
             http.newCall(request).execute().use { r ->
+                status = r.code
                 if (r.code != 200) null else r.body?.string()
             }
         }.getOrNull()
+        // Taken down (or never published): nothing, not yesterday's copy.
+        if (status == 404) {
+            dir.deleteRecursively()
+            return@withContext emptyList()
+        }
         val feed: Feed = fresh?.let { text -> runCatching { json.decodeFromString(Feed.serializer(), text) }.getOrNull() }
             ?.also { runCatching { feedFile.writeText(fresh) } }
             ?: runCatching { json.decodeFromString(Feed.serializer(), feedFile.readText()) }.getOrNull()
