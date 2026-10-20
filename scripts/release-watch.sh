@@ -17,6 +17,9 @@
 # Runs from launchd every 30 min (scripts/release-watch.plist).
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# launchd's PATH puts /usr/bin first, whose python3 is 3.9 and can't read the
+# Play scripts' `str | None` (every Android run failed from 2026-10-20).
+export PATH="/opt/homebrew/bin:$PATH"
 
 log() { printf '%s %s\n' "$(date '+%F %T')" "$*"; }
 
