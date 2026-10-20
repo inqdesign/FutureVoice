@@ -1071,10 +1071,14 @@ struct VoiceCloneOnboardingView: View {
                                 .font(.caption2)
                                 .foregroundStyle(selected ? .primary : .secondary)
                         }
-                        .frame(minHeight: 70)
+                        // The whole cell is the target, set INSIDE the label:
+                        // the swatch doesn't hit-test (`Futureself`), so with
+                        // the shape outside only the name and the rim took a
+                        // tap, and a tap on the colour itself was lost.
+                        .frame(maxWidth: .infinity, minHeight: 70)
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .contentShape(Rectangle())
                     .accessibilityLabel(Text("\(theme.label) theme"))
                     .accessibilityAddTraits(selected ? .isSelected : [])
                 }
