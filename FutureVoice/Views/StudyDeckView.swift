@@ -624,7 +624,9 @@ struct StudyDeckView: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .redacted(reason: revealed ? [] : .placeholder)
                 }
-                if revealed, !item.cardReason.isEmpty {
+                if revealed, !item.cardSaid.isEmpty {
+                    CardCorrectionNotes(said: item.cardSaid, fix: text, reason: item.cardReason)
+                } else if revealed, !item.cardReason.isEmpty {
                     labeled("Why") {
                         Text(item.cardReason)
                             .font(.subheadline)

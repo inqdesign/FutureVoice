@@ -883,7 +883,11 @@ private extension DrillView {
                     .redacted(reason: revealed ? [] : .placeholder)
             }
 
-            if revealed, !card.reason.isEmpty {
+            if revealed, !card.sourcePhrase.isEmpty {
+                CardCorrectionNotes(said: DrillStore.relevantFragment(of: card.sourcePhrase,
+                                                                      matching: card.targetPhrase),
+                                    fix: card.targetPhrase, reason: card.reason)
+            } else if revealed, !card.reason.isEmpty {
                 labeled("Why") {
                     Text(card.reason)
                         .font(.subheadline)
