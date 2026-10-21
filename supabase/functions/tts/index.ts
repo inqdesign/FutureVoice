@@ -258,7 +258,8 @@ Deno.serve(async (req) => {
     sourceFn: SOURCE_FN, idempotencyKey: idemKey,
     // The model that ACTUALLY spoke, so a char count can be costed.
     metadata: { chars: body.text.length, voice_id: body.voice_id,
-                purpose: body.purpose ?? null, model_id: cartesia.CARTESIA_MODEL },
+                purpose: body.purpose ?? null, model_id: cartesia.CARTESIA_MODEL,
+                ...(body.scene_key ? { scene_key: body.scene_key } : {}) },
   }
   const baseAction = timestamped ? "tts_timestamps" as const : "tts" as const
   let ch: Awaited<ReturnType<typeof chargePooledTTS>>
@@ -289,6 +290,23 @@ Deno.serve(async (req) => {
     // account's one sample) spends nothing per line; one paid with a count
     // keeps its seconds off the talk pool; anything else (the admin flag)
     // still owes seconds against the balance.
+    // A claimed scene key paid for ONE scene (2026-10-21). Every later line
+    // under it is free, and nothing bounded the key: no age, no size — a
+    // free account's one sample scene was a key to unlimited synthesis. A
+    // scene is ~930–1,160 characters; a key carries 4,000, for a day.
+    const since = new Date(Date.now() - 2 * 86_400_000).toISOString()
+    const { data: lines } = await billingClient()
+      .from("usage_ledger")
+      .select("created_at, chars:metadata->>chars")
+      .eq("user_id", user.id)
+      .eq("metadata->>scene_key", body.scene_key)
+      .gte("created_at", since)
+    const prior = (lines ?? []) as { created_at: string; chars: string | null }[]
+    const used = prior.reduce((n, r) => n + (Number(r.chars) || 0), 0)
+    const first = prior.reduce((t, r) => Math.min(t, new Date(r.created_at).getTime()), Date.now())
+    if (used + body.text.length > 4000 || Date.now() - first > 86_400_000) {
+      return errorResponse(429, "scene key exhausted")
+    }
     if (claim.paid) scenePool = "scene_paid"
     else if (claim.counted) scenePool = "scene_counted"
     ch = await chargePooledTTS({ ...chargeArgs, action: "tts_scene", pool: scenePool })
