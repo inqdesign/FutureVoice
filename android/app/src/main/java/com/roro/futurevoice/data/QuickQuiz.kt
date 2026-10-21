@@ -46,14 +46,19 @@ data class QuickQuizItem(
  *   expression a line with the expression blanked → pick it
  *   grammar    a new everyday line with a blank → pick the form that fits
  *
- * The learner's OWN material comes first — notebook words, the "To study"
- * list in the line the fluent self said it in — and the LEVEL fills the rest:
- * graded words of their CEFR band they have not marked known or used, and
- * written questions from [QuickQuizStock]. A first-day learner gets a full quiz.
+ * The quiz is what has NOT been learned yet; the weekly test is what HAS been
+ * studied (iOS 6912c9db, 2026-10-21, founder). So every item is at the
+ * learner's LEVEL or above and was NEVER USED — not said in a talk, not marked
+ * known, and not put off in the deck (that is studying, the weekly test's).
  *
- * Nothing here rests on what the RECOGNIZER heard: words and expressions come
- * from the fluent self's own lines (model-written), and grammar items are
- * written fresh.
+ * The learner's OWN material comes first — notebook words, their own "To
+ * study" expressions — and the LEVEL fills the rest: graded words of their
+ * CEFR band, and written questions from [QuickQuizStock]. A first-day learner
+ * gets a full quiz. Every expression question is a NEW sentence written and
+ * checked by [QuickQuizStock], the learner's own phrases too.
+ *
+ * Nothing here rests on what the RECOGNIZER heard: words come from the fluent
+ * self's own lines (model-written), and every line is written fresh.
  *
  * A quiz is built when it opens and gone when it closes. An answer is weaker
  * evidence than a test's, so only a MISS writes back: the word or phrase goes
@@ -82,8 +87,7 @@ object QuickQuizEngine {
                 QuickQuizStock.available(context, language, native, level, grammar = SIZE, expressions = SIZE)
             }
             val words = wordItems(context, language, native, level, rng)
-            val ownExpressions = expressionItems(context, language, rng)
-            val (stockGrammar, stockExpressions) = stockTask.await()
+            val (stockGrammar, stockExpressions, ownExpressions) = stockTask.await()
 
             // The learner's own first, each kind its share; then the level.
             val ownWords = words.filter { it.isOwn }
@@ -109,13 +113,22 @@ object QuickQuizEngine {
     // ── Kinds
 
     /** Notebook words first, then level words, each with its meaning. The
-     *  meanings are looked up together, capped at [GLOSS_BUDGET_MS]. */
+     *  meanings are looked up together, capped at [GLOSS_BUDGET_MS]. A notebook
+     *  word below the learner's level, or one put off in the deck, is not the
+     *  quiz's; a word the graded list can't place keeps its seat. */
     private suspend fun wordItems(context: Context, language: String, native: String, level: CefrLevel,
                                   rng: kotlin.random.Random): List<QuickQuizItem> = coroutineScope {
         val vocab = VocabStore.shared(context)
-        val studying = vocab.studying(language).filter { TextScript.isInTargetScript(it, language) }
+        val notebook = vocab.studying(language)
+        val recorded = vocab.recordedWords(language).map { it.lowercase() }.toSet()
+        val schedule = StudyScheduleStore.shared(context).snapshot(language)
+        val studying = notebook.filter { word ->
+            TextScript.isInTargetScript(word, language) && word.lowercase() !in recorded &&
+                schedule.nextReview(StudyScheduleStore.Kind.WORD, word) == null &&
+                (CoreVocabulary.level(word, language)?.let { it.ordinal >= level.ordinal } ?: true)
+        }
         val own = studying.shuffled(rng)
-        val taken = (studying.map { it.lowercase() } + vocab.recordedWords(language).map { it.lowercase() }).toSet()
+        val taken = (notebook.map { it.lowercase() } + recorded).toSet()
         val levelWords = CoreVocabulary.headwords(level, language)
             .filter { it.lowercase() !in taken }
             .filter { TextScript.isInTargetScript(it, language) }
@@ -155,40 +168,6 @@ object QuickQuizEngine {
                 options = (listOf(word) + decoys).shuffled(rng), isOwn = word.lowercase() in ownSet)
         }
         out
-    }
-
-    private suspend fun expressionItems(context: Context, language: String,
-                                        rng: kotlin.random.Random): List<QuickQuizItem> {
-        val sessions = SessionStore.shared(context).load(language)
-            .filter { it.archivedAt == null && it.mode == SessionMode.CONVERSATION }
-        // The top of the list is what is being studied now; shuffled within
-        // it so two quizzes in a row don't ask the same three.
-        val toStudy = runCatching {
-            ExpressionCatalog.library(context, language).filter { !it.known }.map { it.text }
-        }.getOrDefault(emptyList()).filter { TextScript.isInTargetScript(it, language) }
-        val recent = toStudy.take(15).shuffled(rng)
-        if (recent.isEmpty()) return emptyList()
-        val openers = sessions.mapNotNull { s -> s.turns.firstOrNull { it.role == TurnRole.FLUENT_SELF }?.id }.toSet()
-        val fluent = sessions.flatMap { s ->
-            s.turns.filter { it.role == TurnRole.FLUENT_SELF && !it.excludedFromScoring && it.id !in openers }
-                .map { s to it }
-        }
-        val sceneExamples = runCatching {
-            val out = LinkedHashMap<String, String>()
-            for (sc in ScenarioStore.shared(context).load(language)) {
-                for (e in sc.curriculum?.expressions.orEmpty()) {
-                    val example = e.example ?: continue
-                    out.putIfAbsent(e.text.trim().lowercase(), example)
-                }
-            }
-            out.toMap()
-        }.getOrDefault(emptyMap())
-        val library = runCatching { ExpressionCatalog.all(context, language).map { it.text } }
-            .getOrDefault(emptyList())
-        return WeeklyTestEngine.gapItems(recent, sessions, fluent, sessions, openers, sceneExamples,
-            library, language, rng)
-            .map { QuickQuizItem(QuickQuizItem.Kind.EXPRESSION, prompt = it.prompt, answer = it.answer,
-                options = it.options, isOwn = true) }
     }
 
     // ── Writing back

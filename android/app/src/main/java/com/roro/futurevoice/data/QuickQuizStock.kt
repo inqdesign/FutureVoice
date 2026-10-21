@@ -38,8 +38,12 @@ import java.security.MessageDigest
  * - grammar: the learner's own recurring grammar points first (said in two
  *   talks or more, judged a grammar point by [GrammarFocus.describe]) and,
  *   with fewer than [MIN_POINTS] of those, the grammar of their level.
- * - expression: common expressions of their level. The learner's OWN study
- *   list is asked by [QuickQuizEngine] from the lines they heard.
+ * - expression: common expressions of their level.
+ * - own: the learner's OWN expressions — on the "To study" list, never said
+ *   in a talk, never marked known, never put off in the deck (those are the
+ *   weekly test's) — each in a NEW sentence, and only when [rate] puts it at
+ *   the learner's level or above (iOS 6912c9db, 2026-10-21: the old blanked
+ *   fluent-self line asked "So ______?" with four choices that all fit).
  *
  * Never the learner's transcript: every line is written fresh, so nothing a
  * recognizer misheard can become an answer. The model writes; code decides
@@ -49,7 +53,7 @@ import java.security.MessageDigest
  */
 object QuickQuizStock {
     @Serializable
-    enum class Kind { grammar, expression }
+    enum class Kind { grammar, expression, own }
 
     @Serializable
     data class Stored(
@@ -63,6 +67,8 @@ object QuickQuizStock {
         val wrong: List<String>,
         val asked: Int = 0,
         val createdAt: Long,
+        /** own: the CEFR level [rate] gave the phrase. */
+        val level: String? = null,
     )
 
     /** Below this many unasked questions of either kind, a batch is written. */
@@ -78,6 +84,12 @@ object QuickQuizStock {
     /** A question is retired once asked this often; the stock is capped. */
     const val MAX_ASKED = 2
     const val MAX_STORED = 60
+    /** The learner's own expressions sent per batch to be written. */
+    const val OWN_PER_BATCH = 8
+    /** How many batches each own phrase is sent to. One whose question keeps
+     *  failing the check stops being sent, or a learner with a few such
+     *  phrases would start a batch on every quiz. */
+    const val MAX_TRIES = 2
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private val lock = Any()
@@ -119,9 +131,122 @@ object QuickQuizStock {
         task
     }
 
-    private fun needsBatch(context: Context): Boolean {
+    private suspend fun needsBatch(context: Context, language: String, level: CefrLevel): Boolean {
         val unasked = load(context).filter { it.asked == 0 }
-        return Kind.entries.any { kind -> unasked.count { it.kind == kind } < REFILL_BELOW }
+        val low = listOf(Kind.grammar, Kind.expression).any { kind -> unasked.count { it.kind == kind } < REFILL_BELOW }
+        // Own questions need a phrase still to rate or to write.
+        val ownLow = unasked.count { it.kind == Kind.own } < REFILL_BELOW &&
+            (unratedOwn(context, language).isNotEmpty() || unwrittenOwn(context, language, level).isNotEmpty())
+        return low || ownLow
+    }
+
+    // ── The learner's own expressions
+
+    private fun levelsFile(context: Context) = File(LanguageScope.activeDirectory(context), "quiz_levels.json")
+    private fun triesFile(context: Context) = File(LanguageScope.activeDirectory(context), "quiz_own_tries.json")
+
+    /** [rate]'s CEFR rating per own phrase (normalized key → a1…c2, or "none"
+     *  for a phrase that is not an expression). */
+    fun levels(context: Context): Map<String, String> = synchronized(lock) {
+        runCatching { json.decodeFromString<Map<String, String>>(levelsFile(context).readText()) }.getOrDefault(emptyMap())
+    }
+
+    private fun tries(context: Context): Map<String, Int> = synchronized(lock) {
+        runCatching { json.decodeFromString<Map<String, Int>>(triesFile(context).readText()) }.getOrDefault(emptyMap())
+    }
+
+    private fun writeMap(file: File, text: String) = synchronized(lock) {
+        runCatching {
+            val tmp = File(file.parentFile, file.name + ".tmp")
+            tmp.writeText(text)
+            tmp.renameTo(file)
+        }
+    }
+
+    private fun normalizedKey(text: String) = text.trim().lowercase()
+
+    /** Still quiz material: never said, never marked known, never put off. */
+    suspend fun isOpen(context: Context, phrase: String, language: String): Boolean =
+        !VocabStore.shared(context).hasUsedExpression(phrase, language) &&
+            StudyScheduleStore.shared(context).nextReview(StudyScheduleStore.Kind.EXPRESSION, phrase, language) == null
+
+    /** At the learner's level or above. */
+    fun atLevel(raw: String?, level: CefrLevel): Boolean {
+        val l = CefrLevel.entries.firstOrNull { it.code.equals(raw, ignoreCase = true) } ?: return false
+        return l.ordinal >= level.ordinal
+    }
+
+    /** A phrase with a slot in it ("end up -ing", "make up one's mind",
+     *  "remind sb of sth") cannot stand in a sentence as written, and the
+     *  answer must be the phrase as written. */
+    fun hasSlot(phrase: String): Boolean {
+        if (phrase.any { it in "~…/()[]" } || phrase.contains("...")) return true
+        val slots = setOf("sb", "sth", "sb's", "sth's", "one's")
+        return phrase.split(" ").any { it.startsWith("-") || it.lowercase() in slots }
+    }
+
+    private suspend fun ownCandidates(context: Context, language: String): List<String> {
+        val all = runCatching { ExpressionCatalog.library(context, language) }.getOrDefault(emptyList())
+        val out = ArrayList<String>()
+        for (item in all) {
+            if (item.known || !TextScript.isInTargetScript(item.text, language) || hasSlot(item.text)) continue
+            if (isOpen(context, item.text, language)) out += item.text
+        }
+        return out
+    }
+
+    /** Own expressions with no rating yet, newest first. */
+    private suspend fun unratedOwn(context: Context, language: String): List<String> {
+        val rated = levels(context)
+        return ownCandidates(context, language).filter { normalizedKey(it) !in rated }
+    }
+
+    /** Own expressions rated at the learner's level with no question yet. */
+    private suspend fun unwrittenOwn(context: Context, language: String, level: CefrLevel): List<String> {
+        val rated = levels(context)
+        val written = load(context).filter { it.kind == Kind.own }.map { normalizedKey(it.answer) }.toSet()
+        val tried = tries(context)
+        return ownCandidates(context, language).filter {
+            val k = normalizedKey(it)
+            k !in written && (tried[k] ?: 0) < MAX_TRIES && atLevel(rated[k], level)
+        }
+    }
+
+    @Serializable
+    private data class Ratings(val results: List<Rating> = emptyList()) {
+        @Serializable data class Rating(val n: Int = 0, val level: String? = null)
+    }
+
+    /** Rates each phrase's CEFR level, or "none" when it is not a reusable
+     *  expression at all. Never told the learner's level — told it, the model
+     *  rated "what's on your mind" a2 for an A2 learner and b1 for a B1 one
+     *  (iOS probe, 2026-10-21). A phrase the call leaves out stays unrated. */
+    private suspend fun rate(context: Context, client: GeminiClient, phrases: List<String>, targetName: String) {
+        if (phrases.isEmpty()) return
+        val user = phrases.mapIndexed { i, p -> "${i + 1}. $p" }.joinToString("\n")
+        val key = MessageDigest.getInstance("SHA-256").digest(user.toByteArray(Charsets.UTF_8))
+            .take(8).joinToString("") { "%02x".format(it) }
+        val r: Ratings = try {
+            withTimeoutOrNull(30_000) {
+                client.sendJson(
+                    system = QuickQuizPrompts.rateSystem(targetName),
+                    messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER, user)),
+                    serializer = Ratings.serializer(),
+                    maxTokens = 1500, purpose = "quiz",
+                    idempotencyKey = "quiz-rate:$key")
+            } ?: return
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException && e !is kotlinx.coroutines.TimeoutCancellationException) throw e
+            return
+        }
+        val map = levels(context).toMutableMap()
+        for (it in r.results) {
+            val phrase = phrases.getOrNull(it.n - 1) ?: continue
+            val lvl = it.level?.lowercase() ?: continue
+            if (lvl != "none" && CefrLevel.entries.none { c -> c.code == lvl }) continue
+            map[normalizedKey(phrase)] = lvl
+        }
+        writeMap(levelsFile(context), json.encodeToString(map))
     }
 
     /** Fill the stock before anyone opens a quiz, so the first one is full
@@ -129,8 +254,9 @@ object QuickQuizStock {
     fun prewarm(context: Context, language: String, native: String, level: CefrLevel) {
         // A batch that just failed (offline, signed out) is not retried on
         // every return to the tab.
-        if (!needsBatch(context) || System.currentTimeMillis() - lastFailure <= 600_000L) return
-        startWriting(context, language, native, level)
+        if (System.currentTimeMillis() - lastFailure <= 600_000L) return
+        val app = context.applicationContext
+        scope.async { if (needsBatch(app, language, level)) startWriting(app, language, native, level) }
     }
 
     /**
@@ -140,9 +266,9 @@ object QuickQuizStock {
      * marks what it actually used ([markAsked]).
      */
     suspend fun available(context: Context, language: String, native: String, level: CefrLevel,
-                          grammar: Int, expressions: Int): Pair<List<QuickQuizItem>, List<QuickQuizItem>> {
+                          grammar: Int, expressions: Int): Triple<List<QuickQuizItem>, List<QuickQuizItem>, List<QuickQuizItem>> {
         var stock = load(context).filter { it.asked < MAX_ASKED }
-        if (needsBatch(context)) {
+        if (needsBatch(context, language, level)) {
             val task = startWriting(context, language, native, level)
             val short = stock.count { it.kind == Kind.grammar } < grammar ||
                 stock.count { it.kind == Kind.expression } < expressions
@@ -161,19 +287,28 @@ object QuickQuizStock {
         val e = ordered.filter { it.kind == Kind.expression }
             .filter { phrases.add(CarryoverDetector.normalized(it.answer)) }
             .take(expressions)
-        return g.map(::item) to e.map(::item)
+        // Re-judged at every quiz: a phrase said or put off since it was
+        // written is no longer the quiz's, and the level may have moved.
+        val o = ArrayList<Stored>()
+        for (q in ordered) {
+            if (o.size >= expressions) break
+            if (q.kind != Kind.own || !atLevel(q.level, level) || !isOpen(context, q.answer, language)) continue
+            if (phrases.add(CarryoverDetector.normalized(q.answer))) o += q
+        }
+        return Triple(g.map(::item), e.map(::item), o.map(::item))
     }
 
     private fun item(q: Stored): QuickQuizItem = when (q.kind) {
         Kind.grammar -> QuickQuizItem(QuickQuizItem.Kind.GRAMMAR, prompt = q.sentence, answer = q.answer,
             options = (listOf(q.answer) + q.wrong).shuffled(),
             heading = q.point.ifEmpty { null }, note = q.tip.ifEmpty { null }, stockId = q.id)
-        Kind.expression -> {
+        Kind.expression, Kind.own -> {
             // The meaning is the note: it says what was just picked.
             val meaning = listOf(q.point, q.tip).filter { it.isNotEmpty() }.joinToString(" · ")
             QuickQuizItem(QuickQuizItem.Kind.EXPRESSION, prompt = q.sentence, answer = q.answer,
                 options = (listOf(q.answer) + q.wrong).shuffled(),
-                note = if (meaning.isEmpty()) null else "${q.answer} — $meaning", stockId = q.id)
+                note = if (meaning.isEmpty()) null else "${q.answer} — $meaning", stockId = q.id,
+                isOwn = q.kind == Kind.own)
         }
     }
 
@@ -225,7 +360,12 @@ object QuickQuizStock {
         val answer = string("answer", "correct", "correct_answer") ?: return null
         var wrong = strings("wrong", "wrong_choices", "distractors", "incorrect") ?: emptyList()
         if (wrong.isEmpty()) strings("choices", "options")?.let { all -> wrong = all.filter { it != answer } }
-        val kind = if ((string("type", "kind") ?: "").lowercase().startsWith("expr")) Kind.expression else Kind.grammar
+        val type = (string("type", "kind") ?: "").lowercase()
+        val kind = when {
+            type.startsWith("own") -> Kind.own
+            type.startsWith("expr") -> Kind.expression
+            else -> Kind.grammar
+        }
         return Written(kind, point = string("point", "meaning", "grammar_point", "grammar") ?: "",
             tip = string("tip", "explanation", "why"), sentence = sentence, answer = answer, wrong = wrong)
     }
@@ -261,11 +401,18 @@ object QuickQuizStock {
         if (known.isNotEmpty()) {
             user += "\nExpressions already used — pick others: " + known.joinToString(", ")
         }
+        val client = GeminiClient(AuthRepository())
+        // Rate first, in a call that is never told the learner's level.
+        rate(context, client, unratedOwn(context, target).take(OWN_PER_BATCH * 2), targetName)
+        val ownPhrases = unwrittenOwn(context, target, level).take(OWN_PER_BATCH)
+        if (ownPhrases.isNotEmpty()) {
+            user += "\nThe learner's own expressions (type \"own\"):\n" +
+                ownPhrases.joinToString("\n") { "- $it" }
+        }
 
         val key = MessageDigest.getInstance("SHA-256")
             .digest((system + user + "${System.currentTimeMillis() / 1000.0}").toByteArray(Charsets.UTF_8))
             .take(8).joinToString("") { "%02x".format(it) }
-        val client = GeminiClient(AuthRepository())
         val written: List<Written> = try {
             withTimeoutOrNull(45_000) {
                 parsePayload(client.sendJson(
@@ -281,11 +428,25 @@ object QuickQuizStock {
             return null
         }
 
+        val rated = levels(context)
+        val sentKeys = ownPhrases.map(::normalizedKey).toSet()
+        if (sentKeys.isNotEmpty()) {
+            val t = tries(context).toMutableMap()
+            for (k in sentKeys) t[k] = (t[k] ?: 0) + 1
+            writeMap(triesFile(context), json.encodeToString(t))
+        }
+
         val seen = load(context).map { CarryoverDetector.normalized(it.sentence) }.toHashSet()
         val valid = ArrayList<Stored>()
         for (it in written) {
-            val q = validated(it, target) ?: continue
+            var q = validated(it, target) ?: continue
             if (!seen.add(CarryoverDetector.normalized(q.sentence))) continue
+            if (q.kind == Kind.own) {
+                // The answer must be the phrase itself, rated at the level.
+                val k = normalizedKey(q.answer)
+                if (k !in sentKeys || !atLevel(rated[k], level)) continue
+                q = q.copy(level = rated[k])
+            }
             valid += q
         }
         val added = check(client, valid, targetName, key)
@@ -294,6 +455,7 @@ object QuickQuizStock {
         Telemetry.log("quiz_stock_batch", mapOf("stage" to "done", "written" to "${written.size}",
             "valid" to "${valid.size}", "kept" to "${added.size}",
             "kept_expressions" to "${added.count { it.kind == Kind.expression }}",
+            "own_sent" to "${ownPhrases.size}", "kept_own" to "${added.count { it.kind == Kind.own }}",
             "own_points" to "${own.size}", "lang" to target))
         if (added.isEmpty()) return null
         synchronized(lock) { save(context, load(context) + added) }

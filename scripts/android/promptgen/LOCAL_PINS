@@ -7,8 +7,9 @@ gen-script-study-prompt.py 18f1fbf7
 gen-conversation-prompt.py 3709fd0e
 # The "my own topic" opener (topicOpeners, iOS deed6cf4).
 gen-free-talk-openers.py deed6cf4
-# The quick quiz's written questions (QuickQuizStock, iOS 9c61e6de).
-gen-quiz-prompts.py 9c61e6de
+# The quick quiz's written questions (QuickQuizStock, iOS 9c61e6de; own expressions
+# rated and written fresh, 6912c9db).
+gen-quiz-prompts.py 6912c9db
 # The accent's language variety (varietyGuard, iOS 3709fd0e).
 gen-correction-prompt.py 3709fd0e
 gen-coach-prompts.py 3709fd0e
