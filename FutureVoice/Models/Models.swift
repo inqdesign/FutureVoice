@@ -146,6 +146,8 @@ enum TalkEntry: String {
     case routine
     case scenarioBook = "scenario_book"
     case practiceBook = "practice_book"
+    /// The empty Review page's "Start a talk".
+    case practiceEmpty = "practice_empty"
     case watchPerson = "watch_person"
     case resume
     case other

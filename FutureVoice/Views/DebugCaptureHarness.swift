@@ -1540,6 +1540,9 @@ enum DebugCapture {
                     appState.pendingPracticeRoute =
                         .reviewItem(kind: "sentence", value: firstCard.uuidString)
                 })
+        case "practice-empty":
+            // Nothing seeded — run on a fresh install to see the empty page.
+            return AnyView(PracticeTab(initialShelf: .studying).environmentObject(appState))
         case "practice-studying":
             once("practice-studying") { seedSessions(scored: true); seedScenarios(into: appState) }
             return AnyView(PracticeTab(initialShelf: .studying).environmentObject(appState))

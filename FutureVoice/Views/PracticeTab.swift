@@ -763,6 +763,7 @@ struct PracticeTab: View {
             // off (2026-10-03, user decision: an index at the bottom of a
             // long feed was nowhere).
             libraryList
+                .opacity(books.isEmpty && libraryIsEmpty ? 0.45 : 1)
                 .padding(.bottom, 8)
             ForEach(books) { book in
                 // The shelf's own card, with its chapter buttons under it on
@@ -775,10 +776,66 @@ struct PracticeTab: View {
                     .fill(Color(.secondarySystemGroupedBackground)))
             }
             if books.isEmpty {
-                shelfHint(explain("Nothing here yet. Have a talk or watch a scene on Home — the material it generates becomes books here; open one and master your first word or line."))
+                firstBookPlaceholder
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var libraryIsEmpty: Bool {
+        let s = libraryStats
+        return s.words.checked + s.expressions.checked + s.sentences.checked + s.shadow.checked == 0
+    }
+
+    /// Where the first book will sit (2026-10-22, user pick over a centred
+    /// empty state): the card's own shape, dashed, with its four chapters
+    /// dimmed so the learner sees what a talk turns into before having one.
+    private var firstBookPlaceholder: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Your first book goes here")
+                    .font(.headline)
+                Text("Every talk becomes a book of its own.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            HStack(spacing: 8) {
+                ForEach([(StudyIcon.words, "Words"),
+                         (StudyIcon.expressions, "Expressions"),
+                         (StudyIcon.shadowing, "Shadowing"),
+                         (StudyIcon.grammar, "Grammar")], id: \.0) { icon, title in
+                    VStack(spacing: 6) {
+                        Image(systemName: icon)
+                            .font(.title3)
+                            .frame(height: 24)
+                        Text(LocalizedStringKey(title))
+                            .font(.caption2)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    }
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity)
+                    .background(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color(.quaternarySystemFill)))
+                }
+            }
+            .opacity(0.6)
+            .accessibilityHidden(true)
+            Button {
+                appState.requestFreeTalk(from: .practiceEmpty)
+            } label: {
+                Label("Start a talk", systemImage: "mic.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 18, style: .continuous)
+            .strokeBorder(Color(.separator), style: StrokeStyle(lineWidth: 1.5, dash: [6, 5])))
     }
 
     @ViewBuilder
