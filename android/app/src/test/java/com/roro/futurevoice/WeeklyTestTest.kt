@@ -312,9 +312,9 @@ class WeeklyTestTest {
             hasAudio = { it.role == TurnRole.FLUENT_SELF },
             graded = { band -> if (band == CefrLevel.B2) listOf("decent", "weary", "drained", "fatigued",
                 "awful", "amazing", "brilliant") else emptyList() },
-            bookWords = { listOf("chore" to false, "exhausting" to false) },
+            putOffWords = listOf("chore", "exhausting"),
             coach = coach,
-            toStudy = listOf("end up", "push back on", "catch up on", "walk you through"),
+            putOffExpressions = listOf("end up", "push back on", "catch up on", "walk you through"),
         )
     }
 
@@ -596,16 +596,16 @@ class WeeklyTestTest {
 
     // ── iOS 1.1.4: words from the books, the report's two kinds, trap tiles
 
-    /** Meaning items come from the week's book Words chapters only — never the
-     *  notebook — and unmastered words lead (iOS `36342dd`). */
-    @Test fun meaningItemsComeFromTheBooksUnmasteredFirst() = runBlocking {
+    /** Meaning items come from the words put off in the deck only — never the
+     *  rest of the notebook (iOS 2026-10-21: the test is what was studied). */
+    @Test fun meaningItemsComeFromPutOffWords() = runBlocking {
         val now = System.currentTimeMillis()
         val m = week(now)
         val books = WeeklyTestEngine.Material(m.sessions, studying = listOf("house", "chore"),
             usedRecently = listOf("house"), recorded = m.recorded, cards = emptyList(),
             libraryExpressions = emptyList(), hasAudio = { false },
-            bookWords = { listOf("exhausting" to true, "chore" to false, "appreciate" to false) },
-            toStudy = m.toStudy)
+            putOffWords = listOf("exhausting", "chore", "appreciate"),
+            putOffExpressions = m.putOffExpressions)
         val glosses = mapOf("chore" to "a tedious task", "exhausting" to "making you very tired",
             "appreciate" to "to be grateful", "house" to "a building to live in")
         val test = WeeklyTestEngine.build(books, null, "en", CefrLevel.B1, now) { glosses[it] }
@@ -614,7 +614,7 @@ class WeeklyTestTest {
         assertEquals(setOf("chore", "appreciate", "exhausting"), words.toSet())
         val noBooks = WeeklyTestEngine.Material(m.sessions, studying = listOf("chore", "exhausting"),
             usedRecently = emptyList(), recorded = m.recorded, cards = m.cards,
-            libraryExpressions = m.libraryExpressions, hasAudio = m.hasAudio, toStudy = m.toStudy)
+            libraryExpressions = m.libraryExpressions, hasAudio = m.hasAudio, putOffExpressions = m.putOffExpressions)
         val plain = WeeklyTestEngine.build(noBooks, null, "en", CefrLevel.B1, now) { glosses[it] }
         assertTrue(plain!!.items.none { it.kind == WeeklyTestItem.Kind.MEANING })
     }
@@ -626,12 +626,12 @@ class WeeklyTestTest {
         val now = System.currentTimeMillis()
         val m = week(now)
         val fallback = WeeklyTestEngine.Material(m.sessions, m.studying, m.usedRecently, m.recorded, m.cards,
-            m.libraryExpressions, m.hasAudio, bookWords = m.bookWords,
+            m.libraryExpressions, m.hasAudio, putOffWords = m.putOffWords,
             mistakes = listOf(
                 LearnerPattern(mistake = "I was very tired", correction = "I was so tired", context = ""),
                 LearnerPattern(mistake = "since two years", correction = "for two years", context = "")),
             describeMistake = { p -> if (p.mistake.startsWith("I was")) "intensifiers" to "Use so." else null },
-            toStudy = m.toStudy)
+            putOffExpressions = m.putOffExpressions)
         val test = WeeklyTestEngine.build(fallback, null, "en", CefrLevel.B1, now) { null }
         val grammar = test!!.items.filter { it.kind == WeeklyTestItem.Kind.GRAMMAR }
         assertEquals(1, grammar.size)

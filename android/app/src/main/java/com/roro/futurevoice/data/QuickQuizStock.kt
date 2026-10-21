@@ -467,6 +467,18 @@ object QuickQuizStock {
         @Serializable data class Result(val n: Int = 0, val ok: List<String> = emptyList())
     }
 
+    /** The weekly test's way in to [check]: its blanked lines are kept only
+     *  when the answer alone fits them (iOS `keepOnlyAnswer`). */
+    suspend fun keepOnlyAnswer(questions: List<Stored>, targetName: String, key: String): List<Stored> =
+        check(GeminiClient(AuthRepository()), questions, targetName, key)
+
+    /** The weekly test's way in to [rate]: rates whichever of [phrases] has
+     *  no rating yet (the same cache the quiz reads). */
+    suspend fun rateMissing(context: Context, phrases: List<String>, targetName: String) {
+        val rated = levels(context)
+        rate(context, GeminiClient(AuthRepository()), phrases.filter { normalizedKey(it) !in rated }, targetName)
+    }
+
     /** Keeps the questions whose ONLY working choice is the answer, as judged
      *  by a call that is never told which one was meant. A failed check keeps
      *  nothing: an unchecked question is the bug this exists for. */

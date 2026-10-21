@@ -269,10 +269,10 @@ object WeeklyTestEngine {
         val hasAudio: (Turn) -> Boolean,
         /** Graded headwords by band (empty for a language with no list). */
         val graded: (CefrLevel) -> List<String> = { emptyList() },
-        /** A talk's book Words chapter: each word and whether it is mastered
-         *  (`TalkCurriculum.build(...).words`). The ONLY source of meaning
-         *  items (iOS `36342dd`). */
-        val bookWords: suspend (Session) -> List<Pair<String, Boolean>> = { emptyList() },
+        /** The words put off in the deck, still in the notebook, at the
+         *  learner's level or above — the ONLY source of meaning items (iOS
+         *  `studiedMaterial`, 2026-10-21: the test is what was studied). */
+        val putOffWords: List<String> = emptyList(),
         /** The closed week's report coach, written at gather time if missing. */
         val coach: WeekRecap.Coach? = null,
         /** The profile's recurring mistakes, fresh and frequent enough to be a
@@ -280,9 +280,15 @@ object WeeklyTestEngine {
         val mistakes: List<LearnerPattern> = emptyList(),
         /** Names a mistake for the learner: (label, tip) in their language. */
         val describeMistake: suspend (LearnerPattern) -> Pair<String, String>? = { null },
-        /** What the Expressions page lists under "To study"
-         *  (iOS `ExpressionCatalog.toStudy`), newest first. */
-        val toStudy: List<String> = emptyList(),
+        /** The expressions put off in the deck, never used, rated at the
+         *  learner's level or above ([QuickQuizStock.rateMissing]). */
+        val putOffExpressions: List<String> = emptyList(),
+        /** The sentence cards put off in the deck ([DrillStore.putOffCards]) —
+         *  what translate items are built on. */
+        val putOffCards: List<DrillCard> = emptyList(),
+        /** Keeps the gap items whose answer alone fits ([QuickQuizStock.keepOnlyAnswer]);
+         *  null = no check (a JVM test has no model). */
+        val checkGaps: (suspend (List<WeeklyTestItem>, String) -> List<WeeklyTestItem>)? = null,
         /** A scene's own example line for an expression, by its normalized
          *  key (trimmed, lowercased). */
         val sceneExamples: Map<String, String> = emptyMap(),
@@ -329,6 +335,24 @@ object WeeklyTestEngine {
         }.getOrDefault(emptyList())
         val mistakes = profileMistakes
             .filter { it.frequency >= GrammarFocus.MIN_FREQUENCY && it.lastSeenAt >= fresh }
+        // What was studied (iOS `studiedMaterial`): put off in the deck, still
+        // on the learner's lists, at their level or above. A word the graded
+        // list can't place keeps its seat.
+        val schedule = StudyScheduleStore.shared(context).snapshot(language)
+        val put = schedule.dueItems(now) + schedule.upcoming(now)
+        val seenPut = HashSet<String>()
+        val putOffWords = put.filter { it.kind == StudyScheduleStore.Kind.WORD }.map { it.text }.filter { w ->
+            seenPut.add("w|" + w.lowercase()) && vocab.isStudying(w, language) &&
+                TextScript.isInTargetScript(w, language) &&
+                (CoreVocabulary.level(w, language)?.let { it.ordinal >= level.ordinal } ?: true)
+        }
+        val putPhrases = put.filter { it.kind == StudyScheduleStore.Kind.EXPRESSION }.map { it.text }.filter { p ->
+            seenPut.add("e|" + p.trim().lowercase()) && !vocab.hasUsedExpression(p, language) &&
+                TextScript.isInTargetScript(p, language)
+        }
+        runCatching { QuickQuizStock.rateMissing(context, putPhrases, LanguageCatalog.englishName(language)) }
+        val rated = QuickQuizStock.levels(context)
+        val putOffExpressions = putPhrases.filter { QuickQuizStock.atLevel(rated[it.trim().lowercase()], level) }
         return Material(
             sessions = SessionStore.shared(context).load(language)
                 .filter { it.archivedAt == null && it.mode == SessionMode.CONVERSATION },
@@ -340,18 +364,24 @@ object WeeklyTestEngine {
                 .getOrDefault(emptyList()),
             hasAudio = { turn -> turnAudio(app, turn) != null },
             graded = { band -> CoreVocabulary.headwords(band, language) },
-            bookWords = { session ->
-                TalkCurriculum.build(session, level, language, vocab, emptyList(), emptyList())
-                    .words.map { it.text to (it.masteredAt != null) }
-            },
+            putOffWords = putOffWords,
             coach = if (scope != null) scope.coach else weekCoach(app, language, level, native),
             mistakes = mistakes,
             describeMistake = { p ->
                 GrammarFocus.describe(app, p, language, native)?.let { it.label to it.tip }
             },
-            toStudy = runCatching {
-                ExpressionCatalog.library(context, language).filter { !it.known }.map { it.text }
-            }.getOrDefault(emptyList()),
+            putOffExpressions = putOffExpressions,
+            putOffCards = runCatching { DrillStore.shared(context).putOffCards(language) }.getOrDefault(emptyList()),
+            checkGaps = { items, testId ->
+                val stored = items.map { i ->
+                    QuickQuizStock.Stored(kind = QuickQuizStock.Kind.expression, point = "", tip = "",
+                        sentence = i.prompt, answer = i.answer, wrong = i.options.filter { it != i.answer },
+                        createdAt = System.currentTimeMillis())
+                }
+                val kept = QuickQuizStock.keepOnlyAnswer(stored, LanguageCatalog.englishName(language),
+                    "weekly-gap-$testId").map { CarryoverDetector.normalized(it.sentence) }.toSet()
+                items.filter { CarryoverDetector.normalized(it.prompt) in kept }
+            },
             sceneExamples = runCatching {
                 val out = LinkedHashMap<String, String>()
                 for (sc in ScenarioStore.shared(context).load(language)) {
@@ -453,20 +483,21 @@ object WeeklyTestEngine {
         }
 
         val items = ArrayList<WeeklyTestItem>()
-        items += meaningItems(windowSessions, material, language, level, rng, gloss)
-        // What the Expressions page lists under "To study" — the learner's
-        // own study list, and the reason a fluent-self line is worth a
-        // question at all.
-        val toStudy = material.toStudy.filter { TextScript.isInTargetScript(it, language) }
-        val studyPhrases = toStudy.map { it.lowercase() }
+        items += meaningItems(material, language, level, rng, gloss)
+        // The expressions the learner put off in the deck — what they
+        // studied, and the reason a fluent-self line is worth a question.
+        val studied = material.putOffExpressions.filter { TextScript.isInTargetScript(it, language) }
+        val studyPhrases = studied.map { it.lowercase() }
         // A call's first fluent-self line is its greeting — the same few
         // words every call, never the material.
         val openers = material.sessions.mapNotNull { s ->
             s.turns.firstOrNull { it.role == TurnRole.FLUENT_SELF }?.id
         }.toSet()
         val teachingTurns = fluentTurns.filter { it.second.id !in openers }
-        items += gapItems(toStudy, windowSessions, teachingTurns, material.sessions, openers,
-            material.sceneExamples, material.libraryExpressions, language, rng)
+        val gaps = gapItems(studied, windowSessions, teachingTurns, material.sessions, openers,
+            material.sceneExamples, material.libraryExpressions, language, rng, limit = MAX_GAP * 2)
+        items += (material.checkGaps?.let { check -> runCatching { check(gaps, id) }.getOrDefault(emptyList()) }
+            ?: gaps).take(MAX_GAP)
         items += translateItems(material, start, end, now, windowSessions, language, level, id)
         val listens = listenItems(teachingTurns, studyPhrases, material.hasAudio, language, rng)
         items += listens
@@ -632,28 +663,13 @@ object WeeklyTestEngine {
 
     // ── meaning
 
-    private suspend fun meaningItems(sessions: List<Session>, material: Material, language: String,
+    private suspend fun meaningItems(material: Material, language: String,
                                      level: CefrLevel, rng: Random,
                                      gloss: suspend (String) -> String?): List<WeeklyTestItem> {
-        // The words come from the week's talk BOOKS and nowhere else (iOS
-        // `36342dd`): a book's Words chapter is already the fluent self's
-        // words at or above the learner's level, minus every word the learner
-        // said in that talk. The old sources (the whole notebook, then words
-        // the learner had USED this week) could hand a B2 learner "house".
-        // Not yet mastered first; a thin week asks fewer word questions
-        // rather than reaching outside.
-        val unmastered = ArrayList<String>()
-        val mastered = ArrayList<String>()
-        val seen = HashSet<String>()
-        for (session in sessions.sortedByDescending { it.endedAt ?: it.startedAt }) {
-            for ((w, done) in material.bookWords(session)) {
-                val k = w.lowercase()
-                if (k.isEmpty() || k in seen || !TextScript.isInTargetScript(w, language)) continue
-                seen += k
-                if (done) mastered += w else unmastered += w
-            }
-        }
-        val candidates = unmastered.shuffled(rng) + mastered.shuffled(rng)
+        // The words put off in the deck (iOS `studiedMaterial`, 2026-10-21):
+        // what the learner studied. The week's talk books fed this before.
+        val seen = material.putOffWords.map { it.lowercase() }.toHashSet()
+        val candidates = material.putOffWords.shuffled(rng)
 
         // Decoys: the graded list at the learner's level, then the two
         // neighbouring bands; the learner's own words where there's no list.
@@ -712,14 +728,16 @@ object WeeklyTestEngine {
 
     private fun exprKey(p: String) = CarryoverDetector.normalized(p)
 
-    /** A "To study" expression with its line blanked out, newest first —
-     *  the list the learner keeps on the Expressions page, in the sentence
-     *  they met it in: this week's talks first, then any talk, then the
-     *  scene that taught it. A phrase with no such line is skipped. */
+    /** A studied expression with its line blanked out, in the sentence the
+     *  learner met it in: this week's talks first, then any talk, then the
+     *  scene that taught it. A phrase with no such line is skipped. The
+     *  caller still runs the check ([Material.checkGaps]): the decoys are
+     *  other phrases, and nothing here can tell whether one fits too. */
     fun gapItems(toStudy: List<String>, sessions: List<Session>,
                          fluentTurns: List<Pair<Session, Turn>>, allSessions: List<Session>,
                          openers: Set<String>, sceneExamples: Map<String, String>,
-                         library: List<String>, language: String, rng: Random): List<WeeklyTestItem> {
+                         library: List<String>, language: String, rng: Random,
+                         limit: Int = MAX_GAP): List<WeeklyTestItem> {
         data class Candidate(val phrase: String, val sentence: String, val session: Session?, val turn: Turn?)
         val anyFluent = allSessions.flatMap { s ->
             s.turns.filter { it.role == TurnRole.FLUENT_SELF && !it.excludedFromScoring && it.id !in openers }
@@ -727,14 +745,15 @@ object WeeklyTestEngine {
         }
         val candidates = ArrayList<Candidate>()
         for (phrase in toStudy) {
-            if (candidates.size >= MAX_GAP * 3) break
+            if (candidates.size >= limit * 3) break
             val hit = firstSentence(phrase, fluentTurns, language) ?: firstSentence(phrase, anyFluent, language)
             if (hit != null) {
                 candidates += Candidate(phrase, hit.first, hit.second, hit.third)
                 continue
             }
             val example = sceneExamples[phrase.trim().lowercase()] ?: continue
-            if (foldedRange(example, phrase, language) != null && TextScript.isInTargetScript(example, language)) {
+            if (foldedRange(example, phrase, language) != null && leavesContext(phrase, example, language) &&
+                TextScript.isInTargetScript(example, language)) {
                 candidates += Candidate(phrase, example, null, null)
             }
         }
@@ -753,7 +772,7 @@ object WeeklyTestEngine {
         // Newest first, as the list shows them — the top of it is what the
         // learner is studying now.
         for (c in candidates) {
-            if (out.size >= MAX_GAP) break
+            if (out.size >= limit) break
             val key = exprKey(c.phrase)
             fun fits(p: String) = exprKey(p) != key && !c.sentence.lowercase().contains(p.lowercase()) &&
                 TextScript.isInTargetScript(p, language)
@@ -768,20 +787,33 @@ object WeeklyTestEngine {
         return out
     }
 
-    /** The first sentence in [turns] containing [phrase], short enough to
-     *  read as one line — a gap item never shows a whole turn. */
+    /** The sentence in [turns] containing [phrase] that leaves the most
+     *  context around the blank, short enough to read as one line — a gap
+     *  item never shows a whole turn. It took the FIRST hit until iOS
+     *  2026-10-21, and "So what's on your mind?" left "So ______?". */
     private fun firstSentence(phrase: String, turns: List<Pair<Session, Turn>>,
                               language: String): Triple<String, Session, Turn>? {
+        var best: Triple<String, Session, Turn>? = null
+        var bestLeft = -1
         for ((session, turn) in turns) {
             for (sentence in TalkCurriculum.sentences(turn.transcript)) {
                 if (foldedRange(sentence, phrase, language) == null) continue
                 val n = WordSplitter.count(sentence, language)
-                if (n < 4 || n > 30 || !TextScript.isInTargetScript(sentence, language)) continue
-                return Triple(sentence, session, turn)
+                if (n > 30 || !leavesContext(phrase, sentence, language) ||
+                    !TextScript.isInTargetScript(sentence, language)) continue
+                val left = n - WordSplitter.count(phrase, language)
+                if (left > bestLeft) { best = Triple(sentence, session, turn); bestLeft = left }
             }
         }
-        return null
+        return best
     }
+
+    /** Words left around the blank, at least: under this the line can't say
+     *  which phrase it wants. */
+    const val MIN_GAP_CONTEXT = 4
+
+    fun leavesContext(phrase: String, sentence: String, language: String): Boolean =
+        WordSplitter.count(sentence, language) - WordSplitter.count(phrase, language) >= MIN_GAP_CONTEXT
 
     /** [sentence] with the first case- and diacritic-insensitive occurrence
      *  of [phrase] replaced by the blank mark. */
@@ -871,30 +903,17 @@ object WeeklyTestEngine {
      *  should be, why, and the card it came from (for write-back). */
     data class Slip(val was: String, val now: String, val why: String, val cardId: String?)
 
-    /** The mistakes to build on: this window's correction cards, due first
-     *  then newest, then the profile's recurring mistakes — deduped. */
-    fun slips(cards: List<DrillCard>, mistakes: List<LearnerPattern>, start: Long, end: Long, now: Long,
-              language: String, sessions: List<Session> = emptyList()): List<Slip> {
-        val window = cards.filter { card ->
-            if (card.box >= DrillIngest.MAX_BOX || card.sourcePhrase.isBlank()) return@filter false
-            if (!TextScript.isInTargetScript(card.targetPhrase, language) ||
-                !TextScript.isInTargetScript(card.sourcePhrase, language)) return@filter false
-            listOfNotNull(card.createdAt, card.lastReviewedAt).any { it > start && it <= end }
-        }.sortedWith(compareBy<DrillCard> { if (it.nextReviewAt <= now) 0 else 1 }
-            .thenByDescending { it.createdAt })
+    /** The mistakes to build on: the sentence cards the learner put off in
+     *  the deck ([DrillStore.putOffCards], soonest return first) — what they
+     *  studied (iOS 2026-10-21; it was the window's cards plus the profile's
+     *  recurring mistakes). */
+    fun slips(putOff: List<DrillCard>, language: String): List<Slip> {
         val out = ArrayList<Slip>()
         val seen = HashSet<String>()
-        fun add(s: Slip) { if (seen.add(CarryoverDetector.normalized(s.was))) out += s }
-        for (c in window) add(Slip(c.sourcePhrase, c.targetPhrase, c.reason, c.id))
-        val fresh = now - GrammarFocus.FRESH_DAYS * 86_400_000L
-        // A profile pattern only when the learner really said it in a talk
-        // (`GrammarFocus.evidence`) — its frequency was inflated for weeks.
-        for (p in mistakes) {
-            if (p.lastSeenAt < fresh) continue
-            if (!TextScript.isInTargetScript(p.mistake, language) ||
-                !TextScript.isInTargetScript(p.correction, language)) continue
-            if (GrammarFocus.evidence(p, sessions, now) < 1) continue
-            add(Slip(p.mistake, p.correction, p.context, null))
+        for (c in putOff) {
+            if (c.sourcePhrase.isBlank() || !TextScript.isInTargetScript(c.targetPhrase, language) ||
+                !TextScript.isInTargetScript(c.sourcePhrase, language)) continue
+            if (seen.add(CarryoverDetector.normalized(c.sourcePhrase))) out += Slip(c.sourcePhrase, c.targetPhrase, c.reason, c.id)
         }
         return out.take(10)
     }
@@ -914,7 +933,7 @@ object WeeklyTestEngine {
         val write = material.writeTranslate ?: return emptyList()
         val native = material.nativeLanguage
         if (native.isEmpty() || LanguageCatalog.sameLanguage(target, native)) return emptyList()
-        val list = slips(material.cards, material.profileMistakes, start, end, now, target, material.sessions)
+        val list = slips(material.putOffCards, target)
         if (list.isEmpty()) return emptyList()
         val topics = windowSessions.mapNotNull { it.topic }.filter { it.isNotEmpty() }.take(6)
         val targetName = LanguageCatalog.englishName(target)
