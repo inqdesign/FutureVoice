@@ -90,41 +90,49 @@ struct CoreSeatGrid: View {
 
     private let columns = 10
 
+    private let gap: CGFloat = 2
+
+    /// ONE view whose height is fixed by its width, drawn in a Canvas.
+    ///
+    /// It was a `LazyVGrid` of a hundred `aspectRatio(1)` cells, and inside a
+    /// `List` row that is a self-sizing loop: the row's height depends on the
+    /// cells' widths, which round differently each pass on some screen widths,
+    /// so the collection view re-laid the row until UIKit aborted
+    /// (`_updateVisibleCellsNow` 100 deep, iPhone 13 mini, 375 pt, 1.2.0 —
+    /// the Core page closed the app on open). An aspect ratio on the whole
+    /// block gives the row one answer for any width.
     var body: some View {
-        let seats = map?.seats ?? 100
-        LazyVGrid(
-            columns: Array(repeating: GridItem(.flexible(), spacing: 2), count: columns),
-            spacing: 2
-        ) {
-            ForEach(0..<seats, id: \.self) { i in
-                seat(i)
+        let seats = max(map?.seats ?? 100, 0)
+        let rows = max(1, (seats + columns - 1) / columns)
+        Canvas { context, size in
+            let side = (size.width - gap * CGFloat(columns - 1)) / CGFloat(columns)
+            guard side > 0 else { return }
+            for index in 0..<seats {
+                let rect = CGRect(x: CGFloat(index % columns) * (side + gap),
+                                  y: CGFloat(index / columns) * (side + gap),
+                                  width: side, height: side)
+                // Barely-rounded rather than sharp: at this size a true right
+                // angle reads as a rendering artifact next to iOS's own
+                // geometry, and a radius any larger starts turning the block
+                // back into dots.
+                let cell = Path(roundedRect: rect, cornerRadius: 2, style: .continuous)
+                let color = fill(index)
+                context.fill(cell, with: .color(color == .clear ? Color.secondary.opacity(0.14) : color))
+                // Your own pixel is outlined in place, never recoloured or
+                // enlarged: the colour is already saying "this is me" to
+                // everyone else, and pulling the cell out of the grid would
+                // take you out of the wall you're meant to be part of.
+                if map?.mine == index {
+                    let inner = Path(roundedRect: rect.insetBy(dx: 1, dy: 1), cornerRadius: 2, style: .continuous)
+                    context.stroke(inner, with: .color(.primary), lineWidth: 2)
+                }
             }
         }
+        .aspectRatio(CGFloat(columns) / CGFloat(rows), contentMode: .fit)
         .padding(.vertical, 8)
         .accessibilityElement()
         .accessibilityLabel(Text("The Core"))
         .accessibilityValue(Text(verbatim: "\(map?.taken ?? 0) / \(seats)"))
-    }
-
-    @ViewBuilder
-    private func seat(_ index: Int) -> some View {
-        let color = fill(index)
-        // Barely-rounded rather than sharp: at this size a true right angle
-        // reads as a rendering artifact next to iOS's own geometry, and a
-        // radius any larger starts turning the block back into dots.
-        RoundedRectangle(cornerRadius: 2, style: .continuous)
-            .fill(color == .clear ? Color.secondary.opacity(0.14) : color)
-            .aspectRatio(1, contentMode: .fit)
-            // Your own pixel is outlined in place, never recoloured or
-            // enlarged: the colour is already saying "this is me" to everyone
-            // else, and pulling the cell out of the grid would take you out of
-            // the wall you're meant to be part of.
-            .overlay {
-                if map?.mine == index {
-                    RoundedRectangle(cornerRadius: 2, style: .continuous)
-                        .strokeBorder(Color.primary, lineWidth: 2)
-                }
-            }
     }
 
     private func fill(_ index: Int) -> Color {

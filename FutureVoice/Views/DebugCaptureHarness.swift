@@ -539,6 +539,12 @@ enum DebugCapture {
                           handoff: .init(title: "Study this", action: {}))
                     .environmentObject(appState)
             })
+        case "core":
+            let pj = #"{"seats":100,"member":null,"streak":1,"language":"en","club_size":0,"keep_grace":1,"bar_seconds":240,"queue_ahead":null,"entry_streak":30,"requalifying":false,"days_to_entry":29,"missed_recent":19,"days_to_return":null,"waiting_for_seat":false}"#
+            let mj = #"{"mine":null,"seats":100,"taken":0,"themes":[],"language":"en"}"#
+            let p = try! JSONDecoder().decode(CoreClubService.Progress.self, from: Data(pj.utf8))
+            let m = try! JSONDecoder().decode(CoreClubService.SeatMap.self, from: Data(mj.utf8))
+            return AnyView(NavigationStack { CoreClubView(preview: (p, m)) }.environmentObject(appState))
         case "me":
             // The reorganized settings list, for IA review.
             return AnyView(MeTab().environmentObject(appState))

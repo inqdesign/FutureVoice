@@ -44,6 +44,10 @@ struct CoreClubView: View {
     @State private var progress: CoreClubService.Progress?
     @State private var seatMap: CoreClubService.SeatMap?
     @State private var isLoading = true
+    #if DEBUG
+    /// `-capture core`: the page drawn from a fixed server answer.
+    var preview: (CoreClubService.Progress, CoreClubService.SeatMap)? = nil
+    #endif
 
     var body: some View {
         List {
@@ -279,6 +283,9 @@ struct CoreClubView: View {
 
     private func load() async {
         isLoading = true
+        #if DEBUG
+        if let preview { (progress, seatMap) = preview; isLoading = false; return }
+        #endif
         // Two calls, one screen: the room is drawn from the club's seats and
         // the rest from the learner's own days. Concurrent so the grid isn't
         // waiting behind a month of activity.
