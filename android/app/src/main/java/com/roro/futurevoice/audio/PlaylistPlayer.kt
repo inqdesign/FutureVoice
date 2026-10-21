@@ -101,6 +101,8 @@ object PlaylistPlayer {
 
     private const val PREFS = "futurevoice"
     private const val REPEAT_KEY = "futurevoice.playlist.repeat"
+    /** Silence between the end of one piece and the start of the next. */
+    private const val PIECE_BREATH = 2.0
     private const val SHUFFLE_KEY = "futurevoice.playlist.shuffle"
     private const val GAP_KEY = "futurevoice.playlist.gap"
     private const val SPEED_KEY = "futurevoice.playlist.speed"
@@ -382,18 +384,21 @@ object PlaylistPlayer {
 
     /** The gap after the line that just played. "Time to say it back" is for
      *  the learner's own lines and the podcast's — the other person's line in
-     *  a scene is answered by the next one, not repeated. Between two scenes a
-     *  short breath, so one conversation doesn't run straight into the next. */
+     *  a scene is answered by the next one, not repeated. Between two pieces
+     *  (scenes, episodes) a breath, so one doesn't run straight into the next
+     *  — and the same breath when the list starts over from the top. */
     private fun pauseAfter(duration: Double): Double {
         val line = current ?: return 0.0
         // The pause to say a line back is as long as the line SOUNDED, so at
         // a slower speed it is longer.
         val heard = duration / maxOf(speed, 0.5f)
         var wait = if (gap == Gap.ECHO && !line.isToSayBack) 0.0 else gap.seconds(heard)
+        if (repeatMode == RepeatMode.ONE) return wait
         val nextPosition = position + 1
-        if (nextPosition < order.size && repeatMode != RepeatMode.ONE &&
-            lines[order[nextPosition]].bookId != line.bookId) {
-            wait = maxOf(wait, 1.2)
+        if (nextPosition < order.size) {
+            if (lines[order[nextPosition]].bookId != line.bookId) wait = maxOf(wait, PIECE_BREATH)
+        } else if (repeatMode == RepeatMode.ALL) {
+            wait = maxOf(wait, PIECE_BREATH)
         }
         return wait
     }
