@@ -31,6 +31,13 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
+import { recordFreeUsage } from "../_shared/credits.ts"
+
+// Generations one user may START per day (2026-10-21). A category is the
+// learner's own interest, so it can't be allowlisted, and each new
+// (category, language) pair started a search-grounded batch with no
+// per-user bound. Reading what exists is never limited.
+const STARTS_PER_USER_DAY = 12
 
 const MAX_CATEGORIES = 6
 const TOPICS_PER_CATEGORY = 3
@@ -59,7 +66,7 @@ Deno.serve(async (req) => {
   try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
   const wantsMore = body.refresh === true
 
-  const language = typeof body.language === "string" && body.language.trim()
+  const language = typeof body.language === "string" && /^[a-z]{2,3}(-[a-z0-9]{2,8})?$/i.test(body.language.trim())
     ? body.language.trim().toLowerCase()
     : "en"
   const categories = normalizeCategories(body.categories)
@@ -98,11 +105,21 @@ Deno.serve(async (req) => {
   const apiKey = Deno.env.get("GEMINI_API_KEY")
   const jobs: Promise<void>[] = []
   let growing = false
+  // Over the day's starts: not generated, and not reported as pending, so
+  // the client doesn't poll for a batch nobody is writing.
+  const refused = new Set<string>()
+  const mayStart = async (key: string) => (await recordFreeUsage({
+    supabase: authed.supabase, userId: authed.user.id, action: "gemini", purpose: "news-topics",
+    dailyCap: STARTS_PER_USER_DAY, sourceFn: "news-topics",
+    idempotencyKey: `news:${authed.user.id}:${language}:${today}:${key}`,
+  })).ok
 
   if (apiKey) {
-    for (const category of missing) {
+    const allowed = await Promise.all(missing.map((c) => mayStart(`fill:${c}`)))
+    missing.forEach((category, i) => {
+      if (!allowed[i]) { refused.add(category); return }
       jobs.push(fillCategory(service, category, language, today, apiKey, rows.get(category)?.id))
-    }
+    })
 
     // Refresh: grow each category's pool by one more batch, capped per day.
     // The prompt excludes titles already in the pool so the new batch covers
@@ -113,6 +130,7 @@ Deno.serve(async (req) => {
         const row = rows.get(category)
         if (!row || (row.topics?.length ?? 0) === 0) continue
         if ((row.topics?.length ?? 0) >= MAX_TOPICS_PER_DAY) continue
+        if (!(await mayStart(`grow:${category}:${row.topics?.length ?? 0}`))) continue
         jobs.push(growCategory(service, row, language, apiKey))
         growing = true
       }
@@ -167,7 +185,7 @@ Deno.serve(async (req) => {
   // has stories on screen — so it gets its own flag: the client polls for a
   // bigger pool only when a batch was actually started (not when the day's
   // cap already stopped it).
-  const pending = apiKey ? categories.filter((c) => !filled.has(c)) : []
+  const pending = apiKey ? categories.filter((c) => !filled.has(c) && !refused.has(c)) : []
   return jsonResponse({ topics: out, pending, growing })
 })
 

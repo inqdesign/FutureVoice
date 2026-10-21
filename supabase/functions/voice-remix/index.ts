@@ -103,6 +103,8 @@ async function cartesiaAccent(
   }
 
   if (!body.voice_id || !body.text) return errorResponse(400, "voice_id and text required")
+  // The app sends one ~200-character line (2026-10-21: unchecked until now).
+  if (body.text.length > 400) return errorResponse(413, "text too long")
   const { uuid } = cartesia.parseVoice(body.voice_id)
   if (!(await owns(uuid))) return errorResponse(403, "voice not owned by caller")
   const accent = cartesia.accentFromDescription(body.voice_description ?? "")

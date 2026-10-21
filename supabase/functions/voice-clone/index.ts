@@ -11,6 +11,7 @@ import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/au
 import { recordVoiceChange } from "../_shared/voice-changes.ts"
 import {
   recordFreeUsage, rateLimitedResponse, billingClient, serviceRoleClient, background,
+  enforceRequestRate,
 } from "../_shared/credits.ts"
 import * as cartesia from "../_shared/cartesia.ts"
 
@@ -27,6 +28,12 @@ Deno.serve(async (req) => {
 
   const idemKey = req.headers.get("X-Idempotency-Key")
   if (!idemKey) return errorResponse(400, "missing X-Idempotency-Key header")
+
+  // Free clones (the first, and any within the onboarding day) had no bound
+  // at all (2026-10-21). An onboarding re-records a handful of times.
+  if (!(await enforceRequestRate({ userId: user.id, sourceFn: SOURCE_FN, limit: 12 })).ok) {
+    return rateLimitedResponse(cors())
+  }
 
   const contentType = req.headers.get("Content-Type") ?? ""
   if (!contentType.includes("multipart/form-data")) {

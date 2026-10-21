@@ -17,6 +17,12 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
+import { recordFreeUsage } from "../_shared/credits.ts"
+
+// Model calls one user may cause per day (2026-10-21): every new field or
+// language string ran a canonicalize call and a generation, into shared
+// tables, with no per-user bound. Reading an existing pool is never limited.
+const GENERATIONS_PER_USER_DAY = 20
 
 const BATCH = 8
 const MAX_TOPICS = 32
@@ -43,11 +49,18 @@ Deno.serve(async (req) => {
   if (!apiKey) return errorResponse(503, "not configured")
 
   const service = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!)
+  const today = new Date().toISOString().slice(0, 10)
+  const mayGenerate = async (key: string) => (await recordFreeUsage({
+    supabase: authed.supabase, userId: authed.user.id, action: "gemini", purpose: "field-topics",
+    dailyCap: GENERATIONS_PER_USER_DAY, sourceFn: "field-topics",
+    idempotencyKey: `field:${authed.user.id}:${today}:${key}`,
+  })).ok
 
   // 1. Canonical field.
   const aliasKey = `${kind}:${raw}`
   let { data: alias } = await service.from("field_aliases").select("slug,name").eq("raw", aliasKey).maybeSingle()
   if (!alias) {
+    if (!(await mayGenerate(`alias:${aliasKey}`))) return errorResponse(429, "too many new fields today")
     try {
       alias = await canonicalize(kind, raw, apiKey)
       await service.from("field_aliases").upsert({ raw: aliasKey, kind, ...alias }, { ignoreDuplicates: true })
@@ -64,13 +77,17 @@ Deno.serve(async (req) => {
 
   try {
     if (topics.length === 0) {
+      if (!(await mayGenerate(`pool:${alias.slug}:${language}:${band}`))) {
+        return errorResponse(429, "too many new fields today")
+      }
       topics = await generate(kind, alias.name, language, band, [], apiKey)
       if (topics.length > 0) {
         await service.from("field_topics").upsert(
           { kind, slug: alias.slug, name: alias.name, language, band, topics },
           { onConflict: "kind,slug,language,band" })
       }
-    } else if (body.refresh === true && topics.length < MAX_TOPICS && row) {
+    } else if (body.refresh === true && topics.length < MAX_TOPICS && row
+               && await mayGenerate(`more:${alias.slug}:${language}:${band}:${topics.length}`)) {
       const fresh = await generate(kind, alias.name, language, band, topics.map((t) => t.title), apiKey)
       const known = new Set(topics.map((t) => t.title.toLowerCase()))
       const add = fresh.filter((t) => !known.has(t.title.toLowerCase()))
