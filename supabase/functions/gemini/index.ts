@@ -20,7 +20,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
 import { recordFreeUsage, enforceRequestRate, rateLimitedResponse,
          recordProviderUsage, background, geminiUsageFields,
-         type ChargeableAction } from "../_shared/credits.ts"
+         billingClient, type ChargeableAction } from "../_shared/credits.ts"
 import { claudeCorrection, isCorrectionRequest, onForUser } from "../_shared/claude-correction.ts"
 
 const SOURCE_FN = "gemini"
@@ -54,11 +54,31 @@ const DAILY_CAPS: Record<string, number> = {
   "enrichment": 200,
   "parse": 60,
   "brief": 20,                 // a scenario's attached material, read once
-  "daily-call-script": 20,
+  "daily-call-script": 60,     // was 20; a heavy day reached 17
+  "coach": 800,                // one per fluent-self line; a heavy day reached 239
   "clone-script": 20,
   "script-study": 60,          // a Speech script's study notes, cached per script
 }
 const DEFAULT_DAILY_CAP = 300
+
+// Every purpose a build has sent in the last 60 days (2026-10-21). Any other
+// string used to get its own fresh DEFAULT_DAILY_CAP, so renaming the purpose
+// was a way round every cap; an unknown one now gets UNKNOWN_DAILY_CAP.
+const KNOWN_PURPOSES = new Set([
+  ...Object.keys(DAILY_CAPS),
+  "greeting", "public-intro", "speech-review", "speech-script", "week-recap",
+  "quiz", "weekly-test", "mission-course", "listen-summary", "generic",
+])
+const UNKNOWN_DAILY_CAP = 30
+
+// Paid search/url tools only where the app uses them: a scenario's material
+// (`brief`) and confirming a public figure (`parse`). Elsewhere they are
+// stripped, not refused — the request is still answered.
+const TOOL_PURPOSES = new Set(["brief", "parse"])
+// The app's largest ceiling (summary, script study).
+const MAX_OUTPUT_TOKENS = 8192
+// Text in one request. A long call's summary is ~30k characters.
+const MAX_TEXT_CHARS = 300_000
 
 Deno.serve(async (req) => {
   const pre = handlePreflight(req)
@@ -93,6 +113,49 @@ Deno.serve(async (req) => {
   const speculative = body.spec === true || idemKey.startsWith("turn-spec:")
   const { model: _m, purpose: _p, stream: _s, spec: _sp, ...geminiBody } = body
 
+  // The body goes upstream as the client wrote it, so bound what it can buy
+  // (2026-10-21): no paid tools outside the two purposes that use them, no
+  // ceiling above the app's own, no book-length prompt.
+  if ((geminiBody as { tools?: unknown }).tools && !TOOL_PURPOSES.has(purpose ?? "")) {
+    delete (geminiBody as { tools?: unknown }).tools
+  }
+  const gen = (geminiBody as { generationConfig?: { maxOutputTokens?: number } }).generationConfig
+  if (gen && (typeof gen.maxOutputTokens !== "number" || gen.maxOutputTokens > MAX_OUTPUT_TOKENS)) {
+    gen.maxOutputTokens = MAX_OUTPUT_TOKENS
+  }
+  let textChars = 0
+  const countText = (v: unknown): void => {
+    if (typeof v === "string") textChars += v.length
+    else if (Array.isArray(v)) v.forEach(countText)
+    else if (v && typeof v === "object") {
+      for (const [k, x] of Object.entries(v)) if (k !== "inlineData" && k !== "inline_data") countText(x)
+    }
+  }
+  countText((geminiBody as { contents?: unknown }).contents)
+  countText((geminiBody as { system_instruction?: unknown }).system_instruction)
+  countText((geminiBody as { systemInstruction?: unknown }).systemInstruction)
+  if (textChars > MAX_TEXT_CHARS) return errorResponse(413, "request too long")
+
+  // A replayed key is a RETRY, never a new request (2026-10-21):
+  // record_free_usage answers a key it has seen without counting it, so one
+  // key could carry any number of different requests past the daily caps.
+  // Same user, same purpose, within ten minutes — else 409. Beside the
+  // record below, so it may see this request's own fresh row, which matches.
+  const replayPromise: Promise<Response | null> = (async () => {
+    const { data: prior } = await billingClient()
+      .from("usage_ledger")
+      .select("user_id, created_at, metadata")
+      .eq("idempotency_key", idemKey)
+      .limit(1)
+      .maybeSingle()
+    if (!prior) return null
+    const p = prior as { user_id: string; created_at: string; metadata: Record<string, unknown> | null }
+    const ok = p.user_id === user.id
+      && Date.now() - new Date(p.created_at).getTime() < 10 * 60_000
+      && (p.metadata?.purpose ?? null) === (purpose ?? null)
+    return ok ? null : errorResponse(409, "idempotency key already used")
+  })()
+
   // The per-turn correction rides on Claude for the accounts CLAUDE_CORRECTION
   // names (_shared/claude-correction.ts). Decided before the ledger row so
   // the row carries the model that answers; a Claude failure falls through
@@ -125,12 +188,15 @@ Deno.serve(async (req) => {
     }),
     recordFreeUsage({
       supabase, userId: user.id, action, purpose: purposeKey,
-      dailyCap: DAILY_CAPS[purposeKey] ?? DEFAULT_DAILY_CAP,
+      dailyCap: DAILY_CAPS[purposeKey]
+        ?? (KNOWN_PURPOSES.has(purposeKey) ? DEFAULT_DAILY_CAP : UNKNOWN_DAILY_CAP),
       sourceFn: SOURCE_FN, idempotencyKey: idemKey,
       metadata: { model: claudeModel ?? model, purpose: purpose ?? null, spec: speculative },
     }),
   ])
   if (!rate.ok) return rateLimitedResponse(cors())
+  const replayFailure = await replayPromise
+  if (replayFailure) return replayFailure
   if (!rec.ok) {
     if (rec.reason === "rate_limited") return rateLimitedResponse(cors())
     return errorResponse(500, "usage record failed", rec.detail)
@@ -159,6 +225,9 @@ Deno.serve(async (req) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(geminiBody),
+      // The app gave up (a timeout, a retry, a closed screen): stop the
+      // upstream too, or Gemini finishes — and bills — a reply nobody reads.
+      signal: req.signal,
     },
   )
 
