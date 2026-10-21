@@ -21,7 +21,8 @@ import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/au
 import { recordFreeUsage, enforceRequestRate, rateLimitedResponse,
          recordProviderUsage, background, geminiUsageFields,
          billingClient, type ChargeableAction } from "../_shared/credits.ts"
-import { claudeCorrection, isCorrectionRequest, onForUser } from "../_shared/claude-correction.ts"
+import { claudeCorrection, claudePurpose, isCorrectionRequest, isMovableRequest, onForUser }
+  from "../_shared/claude-correction.ts"
 
 const SOURCE_FN = "gemini"
 
@@ -161,8 +162,13 @@ Deno.serve(async (req) => {
   // the row carries the model that answers; a Claude failure falls through
   // to Gemini below and the row is corrected to say so.
   const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY")
-  const claudeModel = anthropicKey && onForUser(Deno.env.get("CLAUDE_CORRECTION"), user.id)
+  const isCorrection = !!anthropicKey && onForUser(Deno.env.get("CLAUDE_CORRECTION"), user.id)
     && isCorrectionRequest(purpose, stream, idemKey, geminiBody)
+  // Other measured purposes: `CLAUDE_PURPOSES` lists them ("coach,…").
+  const listed = (Deno.env.get("CLAUDE_PURPOSES") ?? "").split(",").map((x) => x.trim()).filter(Boolean)
+  const isMoved = !isCorrection && !!anthropicKey && !!purpose && listed.includes(purpose)
+    && isMovableRequest(purpose, model, stream, geminiBody)
+  const claudeModel = isCorrection || isMoved
     ? Deno.env.get("CLAUDE_CORRECTION_MODEL") ?? "claude-haiku-5-5" : null
 
   // Ledger action keys stay split for the historically-priced purposes so
@@ -203,7 +209,9 @@ Deno.serve(async (req) => {
   }
 
   if (claudeModel && anthropicKey) {
-    const answer = await claudeCorrection(anthropicKey, claudeModel, geminiBody)
+    const answer = isCorrection
+      ? await claudeCorrection(anthropicKey, claudeModel, geminiBody)
+      : await claudePurpose(anthropicKey, claudeModel, purpose!, geminiBody)
     if (answer) {
       background(recordProviderUsage({ idempotencyKey: idemKey, usage: answer.usage }))
       return new Response(answer.json, {

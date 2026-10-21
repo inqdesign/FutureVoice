@@ -315,8 +315,10 @@ enum CoachSuggester {
         return (CoachReply(say: say, meaning: meaning, turnId: turnId), item)
     }
 
-    private static func system(target: String, native: String, level: CEFRLevel,
-                               register: SpeechRegister?) -> String {
+    /// Internal, not private, so `CoachPromptDumpTests` can hand the live
+    /// prompt to `scripts/coach-probe.py`.
+    static func system(target: String, native: String, level: CEFRLevel,
+                       register: SpeechRegister?) -> String {
         let targetName = LanguageCatalog.englishName(target)
         let address: String
         if let register, SpeechRegister.hasForms(target) {

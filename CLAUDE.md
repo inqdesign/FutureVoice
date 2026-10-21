@@ -2711,8 +2711,11 @@ PLUS talk-kept notebook words (`coachExtras`) — the first device test had
   hint wait for `learnerSpokeThisCall`; the "try saying" below does not.
 - **Every line gets a "try saying"** (2026-10-01, founder: "every turn, a
   suggestion of how to answer"; `CoachSuggester`, which replaced
-  `CoachJudge`). One flash-lite call per fluent-self line, the opener
-  included: a short answer at the learner's level, `___` where only they
+  `CoachJudge`). One call per fluent-self line, the opener
+  included — on 3.6-flash since 2026-10-04 (flash-lite wrote stiff lines the
+  prompt forbids), routed by the server to Claude Haiku 5.5 since 2026-10-21
+  (`CLAUDE_PURPOSES=coach`, `scripts/coach-probe.py`: a blind judge preferred
+  Haiku 131/160 vs 26; ~3 s): a short answer at the learner's level, `___` where only they
   know the fact (a faded example in `[brackets]` since the same day), its meaning in the native language (hidden when native ==
   target). A studied item that fits rides inside it and becomes the word
   hint (still rationed by `CoachPlan`). Drawn ABOVE THE PILL, never in the

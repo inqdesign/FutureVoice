@@ -28,6 +28,12 @@ BEFORE YOU ANSWER — what is and is not a mistake in speech:
 
 Answer with the JSON object only.`
 
+/** Appended on Claude to a JSON purpose that has no addendum of its own:
+ *  Gemini was asked for JSON at the API level, Claude is asked here. */
+const JSON_ONLY = `
+
+Answer with the JSON object only.`
+
 const CORRECTION_KEY_PREFIXES = ["rt-suggest:", "say-again-fill:"]
 
 /** Unset/"off" = nobody, "all" = everyone, else comma-separated user ids —
@@ -65,8 +71,38 @@ export interface ClaudeAnswer {
 
 /** One buffered correction on Claude, or null when it could not answer (the
  *  caller then makes the Gemini request it was going to make anyway). */
-export async function claudeCorrection(apiKey: string, model: string,
-                                       body: GeminiBody): Promise<ClaudeAnswer | null> {
+export function claudeCorrection(apiKey: string, model: string,
+                                 body: GeminiBody): Promise<ClaudeAnswer | null> {
+  return claudeAnswer(apiKey, model, body, CORRECTION_ADDENDUM)
+}
+
+/** Purposes the `CLAUDE_PURPOSES` secret moves to Claude (2026-10-21), each
+ *  measured first against 3.6-flash on its live prompt:
+ *  - coach (scripts/coach-probe.py): blind judge preferred Haiku 131/160 vs
+ *    26, no format failures in 5 languages; ~3 s vs ~1.3 s, which the fluent
+ *    self's own line covers. Only its 3.6-flash call moves (the two
+ *    flash-lite coach calls were not measured).
+ *  A purpose may only be listed here after its probe. */
+export const CLAUDE_PURPOSE_ADDENDA: Record<string, string> = {
+  coach: JSON_ONLY,
+}
+
+/** A buffered request a listed purpose can move: not streamed, no tools, no
+ *  audio or files, and asking for the model it was measured against. */
+export function isMovableRequest(purpose: string | undefined, model: string, stream: boolean,
+                                 body: GeminiBody): boolean {
+  if (!purpose || !(purpose in CLAUDE_PURPOSE_ADDENDA)) return false
+  if (stream || model !== "gemini-3.6-flash" || body.tools) return false
+  return (body.contents ?? []).every((c) => (c.parts ?? []).every((p) => p.inlineData === undefined))
+}
+
+export function claudePurpose(apiKey: string, model: string, purpose: string,
+                              body: GeminiBody): Promise<ClaudeAnswer | null> {
+  return claudeAnswer(apiKey, model, body, CLAUDE_PURPOSE_ADDENDA[purpose] ?? JSON_ONLY)
+}
+
+async function claudeAnswer(apiKey: string, model: string, body: GeminiBody,
+                            addendum: string): Promise<ClaudeAnswer | null> {
   const system = (body.system_instruction ?? body.systemInstruction)?.parts
     ?.map((p) => p.text ?? "").join("") ?? ""
   const messages: { role: "user" | "assistant"; content: string }[] = []
@@ -92,7 +128,7 @@ export async function claudeCorrection(apiKey: string, model: string,
         max_tokens: body.generationConfig?.maxOutputTokens ?? 2048,
         // The prompt is the same for every turn of a call (language, level,
         // register), so it is cached: a read is a tenth of the input price.
-        system: [{ type: "text", text: system + CORRECTION_ADDENDUM, cache_control: { type: "ephemeral" } }],
+        system: [{ type: "text", text: system + addendum, cache_control: { type: "ephemeral" } }],
         messages,
       }),
       signal: AbortSignal.timeout(12_000),
