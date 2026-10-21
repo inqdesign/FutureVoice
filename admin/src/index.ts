@@ -345,7 +345,8 @@ async function ledgerSince(env: Env, since: string, maxRows: number): Promise<un
   for (let from = 0; from < maxRows; from += page) {
     const url = `${env.SUPABASE_URL}/rest/v1/client_events`
       + `?select=u:user_id,at:created_at,event,language:properties->>language,`
-      + `err:properties->>error,code:properties->>code,build:properties->>build,version:properties->>version`
+      + `err:properties->>error,code:properties->>code,auto:properties->>auto,`
+      + `build:properties->>build,version:properties->>version`
       + `&created_at=gte.${encodeURIComponent(since)}&user_id=not.is.null&order=created_at.asc`;
     const r = await fetch(url, {
       headers: {

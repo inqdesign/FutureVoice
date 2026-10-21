@@ -1222,22 +1222,23 @@ const RT_REASON_KO = {
 // else is.
 const RT_OK   = new Set(['hangup','idle']);
 const RT_WALL = new Set(['insufficient_credits','daily_cap_reached','fair_use_limit']);
-const isDroppedCall = r => !RT_OK.has(r.reason) && !RT_WALL.has(r.reason);
+// A dropped socket the app reconnected by itself, without failing again in
+// the next minute, is `recovered` (admin_raw, 20261021150000): the learner
+// heard a beat of silence at most and the call went on. 28 of the 31
+// reconnects in the month before were these, and each one read as a drop.
+const isDroppedCall = r => !RT_OK.has(r.reason) && !RT_WALL.has(r.reason) && !r.recovered;
 // A problem is something that BROKE. `client_events` carries every kind of
 // record the app writes — shadowing timings, paywall views, the wrap-up
 // closing — and the week of 2026-09-16 the console drew all of it as red
 // dots: 33 of 34 people had "문제", 13 had a failure. So this is an
 // allowlist, never a denylist; a new telemetry event is not a problem until
-// it is named here. `talk_rt_failed` counts by its code (see RT_WALL).
+// it is named here. `talk_rt_failed` is not counted here: those rows are
+// aggregated by code, so a silently reconnected socket can't be told from a
+// real drop; the per-call rows (`rtSessions`, `isDroppedCall`) count them.
 const FAILURE_EVENTS = new Set(['talk_turn_error','talk_summary_error',
-  'talk_tts_split_open_failed','talk_tts_split_rest_failed','shadow_rescore_failed',
-  'talk_rt_failed']);
+  'talk_tts_split_open_failed','talk_tts_split_rest_failed','shadow_rescore_failed']);
 const isFailure = e => {
-  if(!FAILURE_EVENTS.has(e.event)) return false;
-  // `code` arrives with 20260923150000; a Worker on the older function sees
-  // none and counts every rt failure, as before.
-  if(e.event==='talk_rt_failed' && e.code) return isDroppedCall({reason:e.code});
-  return true;
+  return FAILURE_EVENTS.has(e.event);
 };
 /** "통화 끊김 · 소켓 끊김" — the event, then which failure it was. */
 const failureLabel = e => (EVENT_KO[e.event]||e.event)
@@ -1607,6 +1608,10 @@ function buildFeed(users){
         add(r.at, 'talk','var(--s2)', `${who} 통화 끝남`, `${RT_REASON_KO[r.reason]} · 턴 ${r.turns}`);
         continue;
       }
+      if(r.recovered){
+        add(r.at, 'talk','var(--s2)', `${who} 통화 자동 재연결`, `${RT_REASON_KO[r.reason]||r.reason} · 턴 ${r.turns}`);
+        continue;
+      }
       add(r.at, 'trouble','var(--crit)', `${who} 통화 끊김`, RT_REASON_KO[r.reason]||r.reason);
     }
   }
@@ -1672,7 +1677,8 @@ function renderNotes(){
      <b>'누가 어느 날 말했나' 히트맵은 고른 시간대의 하루</b>로 다시 묶어요.`,
     `<b>대화 턴</b>은 응답 생성 호출 1건이에요. 전사 호출과 둘로 쪼갠 TTS, 버려지는 투기 호출은 빼요.`,
     `<b>통화 시간</b>은 서버가 실제로 과금한 초예요. 학습자가 말하기 전에는 0이고, 유휴는 세지 않아요.`,
-    `<b>통화 끊김</b> 기록은 2026-09-13 이후 빌드부터 올라와요. 그 전 통화는 서버에 흔적이 없어요.`,
+    `<b>통화 끊김</b> 기록은 2026-09-13 이후 빌드부터 올라와요. 그 전 통화는 서버에 흔적이 없어요.
+     앱이 5초 안에 혼자 다시 연결하고 1분 안에 또 끊기지 않은 경우는 <b>자동 재연결</b>로 따로 적고 끊김에 세지 않아요.`,
     `<b>체험은 결제가 아니에요.</b> 금액은 전부 "이대로 가면 청구될 월 매출"이고, 애플 수수료 ${Math.round(DATA.revenue.commission*100)}%는
      순매출에서만 뺐어요.`,
     `출처: 프로덕션 Supabase — usage_ledger · scene_plays · free_usage_daily · client_events ·
@@ -3049,8 +3055,9 @@ function personDetail(u){
       + ` · ${s.summarized?'<span class="ok">요약 ✓</span>':'<span class="muted">요약 없음</span>'}</li>`),
       '통화 기록 없음')}
     ${col('통화 종료', rt.map(r => {
-      const cls = RT_OK.has(r.reason) ? 'ok' : RT_WALL.has(r.reason) ? 'muted' : 'bad';
+      const cls = RT_OK.has(r.reason) ? 'ok' : RT_WALL.has(r.reason) || r.recovered ? 'muted' : 'bad';
       return `<li>${fmtTs(r.at)} · <b class="${cls}">${RT_REASON_KO[r.reason]||r.reason}</b>`
+        + (r.recovered ? ' <span class="muted">→ 자동 재연결</span>' : '')
         + ` · 턴 ${r.turns}${r.src==='failed'?'':` · ${fmtMin(r.secs)}`}`
         + (r.p50?` · 응답 ${(r.p50/1000).toFixed(1)}초`:'')
         + (r.warnings?` <span class="muted">복구 ${r.warnings}회</span>`:'')
@@ -3955,6 +3962,10 @@ const FAIL_KO = {opener_audio_failed:'첫 인사 음성 못 받음', freetalk_op
   talk_rt_failed:'통화 끊김', talk_summary_error:'통화 요약 실패'};
 function failOf(r){
   const m = /^event:(.+_(?:failed|error))$/.exec(r.action||''); if(!m) return null;
+  // A call that ended on a wall or on idle, or a socket the app reconnected
+  // by itself, comes through the same door as a drop and is none (see
+  // isDroppedCall).
+  if(m[1]==='talk_rt_failed' && (r.recovered || RT_OK.has(r.code) || RT_WALL.has(r.code))) return null;
   const err = String(r.err||'');
   const why = /timed out/i.test(err) ? '시간 초과' : /offline|not connected/i.test(err) ? '오프라인'
     : (/Code=(-?\d+)/.exec(err)||[])[1] ? `코드 ${/Code=(-?\d+)/.exec(err)[1]}` : (r.code || '');
@@ -3984,11 +3995,30 @@ const KIND_META = {
   try:{e:'📞', t:'통화 시도 · 과금 0초'}, prep:{e:'👋', t:'통화 준비만'}, pay:{e:'💳', t:'요금제 화면'},
   app:{e:'📱', t:'앱 열어봄'},
 };
+/** The live twin of admin_raw's `recovered`: a socket drop followed within
+ *  5 s by the app's own reconnect (auto=1), with no other drop in the next
+ *  minute. `rows` is one person's, oldest first. */
+function markRecoveredDrops(rows){
+  rows.forEach((r, i) => {
+    if(r.action!=='event:talk_rt_failed' || r.code!=='socket') return;
+    const t = +new Date(r.at);
+    let reconnected = false;
+    for(let j = 0; j < rows.length; j++){
+      const o = rows[j], dt = +new Date(o.at) - t;
+      if(j===i || dt < -5e3) continue;
+      if(dt > 60e3) break;
+      if(o.action==='event:talk_rt_reconnect' && o.auto==='1' && dt <= 5e3) reconnected = true;
+      if(o.action==='event:talk_rt_failed' && dt > 0) return;
+    }
+    r.recovered = reconnected;
+  });
+}
 function sessionsOf(events){
   const byUser = new Map();
   for(const r of events){ if(!byUser.has(r.u)) byUser.set(r.u, []); byUser.get(r.u).push(r); }
   const out = [], GAP = 10*60e3;
   for(const [u, rows] of byUser){
+    markRecoveredDrops(rows);
     let cur = null;
     for(const r of rows){
       const t = +new Date(r.at);
