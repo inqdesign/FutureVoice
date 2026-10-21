@@ -410,7 +410,7 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
                 .clickable(interactionSource = null, indication = null) {}
                 .animateContentSize(tween(350))) {
                 when (step) {
-                    RoutineStep.INTRO -> Box(Modifier.fillMaxWidth().height(if (tall) large else 300.dp)) {
+                    RoutineStep.INTRO -> Box(Modifier.fillMaxWidth().then(if (tall) Modifier.height(large) else Modifier)) {
                         RoutinePick(
                             expanded = expanded,
                             selected = selected,
@@ -437,7 +437,7 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
                         // rewrites the blocks from the list.
                         onBack = { step = RoutineStep.INTRO; expanded = true },
                         onKeep = { finish() })
-                    RoutineStep.DONE -> Box(Modifier.fillMaxWidth().height(300.dp)) {
+                    RoutineStep.DONE -> Box(Modifier.fillMaxWidth()) {
                         val empty = saved.isEmpty()
                         RoutineMessage(if (empty) Icons.Filled.CalendarMonth else Icons.Filled.CheckCircle,
                             if (empty) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF34C759),
@@ -468,24 +468,15 @@ private fun RoutinePick(expanded: Boolean, selected: Set<StudyPlan.Kind>,
                         saving: Boolean, onButton: () -> Unit) {
     val res = LocalContext.current.resources
     val callStart = callHour * 60 + callMinute
-    Column(Modifier.fillMaxSize()) {
-        Column(Modifier.weight(1f)
-            .then(if (expanded) Modifier.verticalScroll(rememberScrollState()) else Modifier)
-            .padding(horizontal = 16.dp)) {
-            Column(Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = if (expanded) 16.dp else 28.dp,
-                bottom = 4.dp), horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Icon(Icons.Filled.EditCalendar, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(if (expanded) 34.dp else 44.dp))
-                Text(stringResource(if (expanded) R.string.routine_what_goes_in else R.string.let_s_make_your_routine),
-                    style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center)
-                Text(stringResource(if (expanded) R.string.routine_pick_as_many
-                    else R.string.try_it_just_as_it_is_for_a_week_you_can_change_it_any_time),
-                    style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            AnimatedVisibility(visible = expanded, enter = fadeIn(tween(350)), exit = fadeOut()) {
+    // Closed, the card is only as tall as its words and button; open, the
+    // list fills it.
+    Column(if (expanded) Modifier.fillMaxSize() else Modifier.fillMaxWidth()) {
+        if (!expanded) {
+            PickHeader(expanded = false,
+                modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 28.dp, bottom = 20.dp))
+        } else Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
+            PickHeader(expanded = true,
+                modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 16.dp, bottom = 4.dp))
                 Column {
                     GroupedSectionHeader(stringResource(R.string.your_daily_call))
                     GroupedCard {
@@ -540,7 +531,6 @@ private fun RoutinePick(expanded: Boolean, selected: Set<StudyPlan.Kind>,
                     GroupedFooter(stringResource(R.string.routine_add_more_footer))
                     Spacer(Modifier.height(16.dp))
                 }
-            }
         }
         // Below the list, inside the card — not floating over it.
         Box(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 28.dp)) {
@@ -556,6 +546,23 @@ private fun RoutinePick(expanded: Boolean, selected: Set<StudyPlan.Kind>,
                 }))
             }
         }
+    }
+}
+
+/** The card's top: the intro's words, then the list's. */
+@Composable
+private fun PickHeader(expanded: Boolean, modifier: Modifier) {
+    Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Icon(Icons.Filled.EditCalendar, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(if (expanded) 34.dp else 44.dp))
+        Text(stringResource(if (expanded) R.string.routine_what_goes_in else R.string.let_s_make_your_routine),
+            style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center)
+        Text(stringResource(if (expanded) R.string.routine_pick_as_many
+            else R.string.try_it_just_as_it_is_for_a_week_you_can_change_it_any_time),
+            style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -672,14 +679,13 @@ private val EaseInCurve = CubicBezierEasing(0.42f, 0f, 1f, 1f)
 @Composable
 private fun RoutineMessage(icon: androidx.compose.ui.graphics.vector.ImageVector, tint: Color,
                            title: String, body: String, button: String, onClick: () -> Unit) {
-    Column(Modifier.fillMaxSize().padding(start = 24.dp, end = 24.dp, top = 28.dp, bottom = 28.dp),
+    Column(Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 28.dp, bottom = 28.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(44.dp))
         Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center)
         Text(body, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.weight(1f))
+            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 12.dp))
         Button(onClick = onClick, modifier = Modifier.fillMaxWidth()) { Text(button) }
     }
 }
