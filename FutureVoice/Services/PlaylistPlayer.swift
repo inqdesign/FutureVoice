@@ -337,21 +337,29 @@ final class PlaylistPlayer: ObservableObject {
 
     /// The gap after the line that just played. "Time to say it back" is for
     /// the learner's own lines — the other person's line in a scene is
-    /// answered by the next one, not repeated. Between two scenes a short
-    /// breath, so one conversation doesn't run straight into the next.
+    /// answered by the next one, not repeated. Between two pieces (scenes,
+    /// episodes) a breath, so one doesn't run straight into the next — and
+    /// the same breath when the list starts over from the top.
     private func pause(after duration: TimeInterval) -> TimeInterval {
         guard let line = current else { return 0 }
         // The pause to say a line back is as long as the line SOUNDED, so
         // at a slower speed it is longer.
         let heard = duration / Double(max(speed, 0.5))
         var wait = gap == .echo && !line.isToSayBack ? 0 : gap.seconds(after: heard)
+        guard repeatMode != .one else { return wait }
         let nextPosition = position + 1
-        if order.indices.contains(nextPosition), repeatMode != .one,
-           lines[order[nextPosition]].bookId != line.bookId {
-            wait = max(wait, 1.2)
+        if order.indices.contains(nextPosition) {
+            if lines[order[nextPosition]].bookId != line.bookId {
+                wait = max(wait, Self.pieceBreath)
+            }
+        } else if repeatMode == .all {
+            wait = max(wait, Self.pieceBreath)
         }
         return wait
     }
+
+    /// Silence between the end of one piece and the start of the next.
+    private static let pieceBreath: TimeInterval = 2
 
     /// True while this player is the one calling `AudioPlayer.play`, so the
     /// "someone else wants the speaker" hook doesn't pause us for our own line.
