@@ -177,7 +177,7 @@ struct RootTabView: View {
             // rather than the outer chain so it can't collide with the beta
             // welcome cover.
             .fullScreenCover(item: $answeredCall) { plan in
-                ConversationView(initialOpener: plan.script,
+                ConversationView(initialOpener: plan.scriptFits(answeredAt: Date()) ? plan.script : nil,
                                  entry: .dailyCall,
                                  onClose: { answeredCall = nil })
                     .environmentObject(appState)

@@ -250,6 +250,23 @@ struct StudyPlan: Codable, Equatable {
         return []
     }
 
+    /// Every timed talk from `now` through the next `days` days, soonest
+    /// first — what the daily call ARMS. `callDates` is still the call's own
+    /// next ring; this is the week behind it, so a call declined or slept
+    /// through doesn't leave the days after it silent until the app is next
+    /// opened (2026-10-21: a learner who declined went five days unrung).
+    func upcomingCallDates(after now: Date, days: Int,
+                           calendar: Calendar = .current) -> [Date] {
+        let today = calendar.startOfDay(for: now)
+        var dates: [Date] = []
+        for offset in 0...days {
+            guard let day = calendar.date(byAdding: .day, value: offset, to: today) else { continue }
+            dates += occurrences(on: day, calendar: calendar)
+                .filter { $0.kind == .talk && !$0.anytime && $0.start > now }.map(\.start)
+        }
+        return Array(Set(dates)).sorted()
+    }
+
     /// The distinct times of day talk blocks ring at, across the template and
     /// every exception still ahead — what `DailyCallStore.times` mirrors.
     var callTimes: [DailyCallStore.CallTime] {

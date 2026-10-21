@@ -53,8 +53,18 @@ struct DailyCallPlan: Codable, Equatable, Identifiable {
     /// whose message is still unplayed is what the Talk tab surfaces — the
     /// "someone tried to reach you" trace an alarm can never leave.
     var heardAt: Date?
+    /// The ring the script was written for (`VoicemailEngine.Context.ringDates`).
+    /// nil = `scheduledFor`, which it always was until a plan could be
+    /// carried onto the following days (`DailyCallScheduler.carryOver`).
+    var scriptDay: Date?
 
     var isSettled: Bool { outcome != nil }
+
+    /// The script speaks of "yesterday" and "this morning" from the day it was
+    /// written for, so a later day's ring opens with an ordinary hello instead.
+    func scriptFits(answeredAt now: Date, calendar: Calendar = .current) -> Bool {
+        calendar.isDate(now, inSameDayAs: scriptDay ?? scheduledFor)
+    }
     /// A call that went unanswered and whose message is still sitting there.
     var hasUnheardVoicemail: Bool {
         heardAt == nil && (outcome == .missed || outcome == .declined)

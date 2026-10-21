@@ -151,6 +151,9 @@ enum DailyCallScheduler {
             && existing?.isSettled == false
             && existing?.matches(language: context.targetLanguage, voiceId: voiceId) == true
             && (existing?.scheduledFor ?? .distantPast) > now
+            // A message carried onto a later day (`carryOver`) is rewritten
+            // the first time the app gets the chance.
+            && existing.map { $0.scriptFits(answeredAt: $0.scheduledFor) } == true
 
         if let plan = existing, reusable {
             await schedule(plan, callerName: callerName)
@@ -180,7 +183,13 @@ enum DailyCallScheduler {
         context.ringDates = Array(Set(fireDates(after: now) + [fireDate])).sorted()
 
         guard let script = try? await VoicemailEngine.writeScript(context),
-              !script.isEmpty else { return }
+              !script.isEmpty else {
+            // No new script (offline). The armed rings may belong to a plan
+            // just settled above, which Answer would ignore, so the old
+            // message carries on rather than leaving the week dead.
+            if let existing, existing.isSettled { await carryOver(existing) }
+            return
+        }
 
         let plan = DailyCallPlan(
             id: UUID(),
@@ -231,7 +240,7 @@ enum DailyCallScheduler {
             store.save(plan)
         } else {
             settle(plan, as: .declined)
-            await cancelPendingRequest()
+            await carryOver(plan)
         }
     }
 
@@ -244,7 +253,7 @@ enum DailyCallScheduler {
         // Picking up clears any older message still waiting: they're talking
         // to the same person right now, so "you missed me" is no longer true.
         DailyCallStore.shared.clearUnheard()
-        Task { await cancelPendingRequest() }
+        Task { await carryOver(plan) }
     }
 
     /// The learner played the message back from the missed-call row. It stops
@@ -354,7 +363,7 @@ enum DailyCallScheduler {
                 Analytics.capture("daily_call_during_talk", [:])
                 settle(plan, as: .answered, heard: true)
                 store.clearUnheard()
-                await cancelPendingRequest()
+                await carryOver(plan)
                 return
             }
             await schedule(plan, callerName: nil)
@@ -389,7 +398,7 @@ enum DailyCallScheduler {
     private static func cancelPendingRequest() async {
         // One id per slot (see `schedule`), plus the legacy single id so an
         // install updating mid-day can't leave an orphaned ring behind.
-        let ids = [requestId] + (0..<DailyCallStore.maxTimes).map { "\(requestId).\($0)" }
+        let ids = [requestId] + (0..<maxArmed).map { "\(requestId).\($0)" }
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
         DailyCallAlarm.cancelIfSupported()
     }
@@ -431,6 +440,48 @@ enum DailyCallScheduler {
         StudyPlanStore.shared.plan.callDates(after: now, calendar: calendar)
     }
 
+    /// How far ahead the call is armed, and how many rings at most. A ring
+    /// is only re-armed when the app runs, so arming just today's slots and
+    /// tomorrow's first meant one decline or one missed day went silent until
+    /// the learner happened to open the app (2026-10-21, from a subscriber's
+    /// report: five days without a call after declining). Twelve is two a day
+    /// for six days or four a day for three, well inside iOS's 64 pending
+    /// notifications shared with the review and plan reminders.
+    static let armDays = 7
+    static let maxArmed = 12
+
+    static func armedDates(after now: Date, calendar: Calendar = .current) -> [Date] {
+        StudyPlanStore.shared.plan.upcomingCallDates(after: now, days: armDays, calendar: calendar)
+    }
+
+    /// Today's call is over — answered, or declined with nothing left today.
+    /// The days after it still ring: the same message moves onto tomorrow's
+    /// first slot under a new id (the settled plan's rings would no-op, since
+    /// Answer and Decline both guard on `!isSettled`). The next session end
+    /// rewrites it as usual; this only covers the learner who doesn't open
+    /// the app before then. Its script is dated to the day it was written, so
+    /// a later ring opens with an ordinary hello (`scriptFits`).
+    private static func carryOver(_ plan: DailyCallPlan) async {
+        let now = Date()
+        let calendar = Calendar.current
+        guard let tomorrow = calendar.date(byAdding: .day, value: 1,
+                                           to: calendar.startOfDay(for: now)),
+              let next = armedDates(after: now).first(where: { $0 >= tomorrow }) else {
+            await cancelPendingRequest()
+            return
+        }
+        var successor = plan
+        successor.id = UUID()
+        successor.scheduledFor = next
+        successor.scriptDay = plan.scriptDay ?? plan.scheduledFor
+        successor.callbackCount = 0
+        successor.outcome = nil
+        successor.endedAt = nil
+        successor.heardAt = nil
+        DailyCallStore.shared.save(successor)
+        await schedule(successor, callerName: nil)
+    }
+
     /// The timetable changed: put the rings where it now says. The stored
     /// voicemail is kept (it is still the same unheard message) but moved to
     /// the next slot if its own time is no longer one; nothing planned in the
@@ -440,7 +491,7 @@ enum DailyCallScheduler {
         Task {
             let store = DailyCallStore.shared
             guard store.isEnabled, var plan = store.load(), !plan.isSettled else { return }
-            let dates = fireDates(after: Date())
+            let dates = armedDates(after: Date())
             guard let first = dates.first else {
                 await cancelPendingRequest()
                 return
@@ -480,17 +531,17 @@ enum DailyCallScheduler {
         // re-arms from the stored plan.
         guard liveCallSince == nil else { return }
 
-        // Every remaining slot today, not just the plan's own time — see
-        // `fireDates`. They all carry this same still-unheard message;
+        // Every slot from the plan's own time through the next week — see
+        // `armedDates`. They all carry this same still-unheard message;
         // whichever rings first and gets answered cancels the rest.
         let now = Date()
-        var dates = fireDates(after: now)
+        var dates = armedDates(after: now).filter { $0 >= plan.scheduledFor }
         if plan.scheduledFor > now, !dates.contains(plan.scheduledFor) {
             // A plan written for a time the learner has since removed, or an
             // older build's callback: it still rings when it said it would.
             dates.append(plan.scheduledFor)
         }
-        dates = Array(Set(dates)).sorted().prefix(DailyCallStore.maxTimes).map { $0 }
+        dates = Array(Set(dates)).sorted().prefix(maxArmed).map { $0 }
         guard !dates.isEmpty else { return }
 
         let caller = callerName ?? cachedCallerName ?? explain("Your future self")
@@ -529,9 +580,16 @@ enum DailyCallScheduler {
             let comps = Calendar.current.dateComponents(
                 [.year, .month, .day, .hour, .minute], from: date)
             let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)
+            // A later day's ring opens with a plain hello (`scriptFits`), so
+            // its banner must not print the script written for another day.
+            let slotContent = plan.scriptFits(answeredAt: date) ? content : {
+                let c = content.mutableCopy() as! UNMutableNotificationContent
+                c.body = ""
+                return c
+            }()
             try? await UNUserNotificationCenter.current().add(
                 UNNotificationRequest(identifier: "\(requestId).\(index)",
-                                      content: content, trigger: trigger))
+                                      content: slotContent, trigger: trigger))
         }
         if liveCallSince != nil { await cancelPendingRequest() }
     }

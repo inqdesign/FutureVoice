@@ -31,6 +31,19 @@ final class StudyPlanTests: XCTestCase {
         XCTAssertEqual(plan.callDates(after: at(5, 14), calendar: cal), [at(6, 8)])
     }
 
+    /// The call is armed a week ahead, so a decline or a missed day can't
+    /// leave the days after it silent until the app is opened again.
+    func testUpcomingCallDatesCoverTheWeek() {
+        var plan = StudyPlan()
+        plan.blocks = [.init(kind: .talk, weekdays: [2, 4], hour: 8, minute: 0, minutes: 10)]
+        // Monday 09:00 → Wed, next Mon, next Wed (7 days ahead reaches Mon 12).
+        XCTAssertEqual(plan.upcomingCallDates(after: at(5, 9), days: 7, calendar: cal),
+                       [at(7, 8), at(12, 8)])
+        // Before today's: today's is included.
+        XCTAssertEqual(plan.upcomingCallDates(after: at(5, 7), days: 2, calendar: cal),
+                       [at(5, 8), at(7, 8)])
+    }
+
     func testWeekdaysAndRestDaysAreSkipped() {
         var plan = StudyPlan()
         // Mon (2) and Wed (4) only.

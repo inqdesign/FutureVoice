@@ -261,6 +261,18 @@ final class DailyCallTests: XCTestCase {
         XCTAssertFalse(plan.matches(language: "en", voiceId: nil))
     }
 
+    /// A message carried onto a later day opens with a plain hello: the
+    /// script speaks of "yesterday" from the day it was written for.
+    func testCarriedScriptOnlyFitsItsOwnDay() {
+        let written = Date()
+        var p = plan(outcome: nil)
+        p.scheduledFor = written
+        XCTAssertTrue(p.scriptFits(answeredAt: written))
+        p.scriptDay = written
+        p.scheduledFor = written.addingTimeInterval(86_400)
+        XCTAssertFalse(p.scriptFits(answeredAt: p.scheduledFor))
+    }
+
     // MARK: - The missed-call trace
 
     /// The one behaviour that separates this from an alarm: a call nobody
