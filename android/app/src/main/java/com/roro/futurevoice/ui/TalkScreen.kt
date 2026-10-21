@@ -569,18 +569,42 @@ fun TalkScreen(
     // bubble that was itself animating its height, so the list wobbled and
     // blinked through every reply (founder, 2026-10-16).
     var followBottom by remember { mutableStateOf(true) }
+    // The key of the line drawn at the very bottom (index 0), from the data.
+    val newestItemKey: Any? = when {
+        !showsTranscript -> if (state.turns.isNotEmpty()) "subtitles-off" else "starting"
+        state.phase == TalkPhase.LISTENING && (state.turns.isNotEmpty() || state.partial.isNotBlank()) ->
+            "partial-listening"
+        else -> visibleTurns.lastOrNull()?.id ?: "starting"
+    }
+    val currentNewestKey by androidx.compose.runtime.rememberUpdatedState(newestItemKey)
+    val endSlackPx = with(LocalDensity.current) { 24.dp.roundToPx() }
     // Only the LEARNER's own drag decides whether the list follows the end:
     // dragging up stops following, coming back down to the end resumes it.
+    // "The end" is judged by the line that was newest when the drag BEGAN,
+    // with a little slack. A line that arrives under the finger — the "You"
+    // placeholder lands the moment a reply finishes, which is exactly when a
+    // learner who scrolled up to read a correction comes back — is inserted
+    // below and keeps the old line in place, so `canScrollBackward` read
+    // "scrolled up" at the bottom and every later line went below the fold
+    // until the learner found it by hand (Android report, 2026-10-21).
     LaunchedEffect(listState) {
+        var newestAtStart: Any? = null
         listState.interactionSource.interactions.collect { i ->
             when (i) {
-                is androidx.compose.foundation.interaction.DragInteraction.Start -> followBottom = false
+                is androidx.compose.foundation.interaction.DragInteraction.Start -> {
+                    followBottom = false
+                    newestAtStart = currentNewestKey
+                }
                 is androidx.compose.foundation.interaction.DragInteraction.Stop,
                 is androidx.compose.foundation.interaction.DragInteraction.Cancel -> {
                     // Let the fling settle before judging where it ended.
                     androidx.compose.runtime.snapshotFlow { listState.isScrollInProgress }
                         .first { !it }
-                    followBottom = !listState.canScrollBackward
+                    val bottom = listState.layoutInfo.visibleItemsInfo.firstOrNull()
+                    val nearEnd = listState.firstVisibleItemScrollOffset <= endSlackPx
+                    followBottom = bottom == null || (nearEnd &&
+                        (bottom.index == 0 || bottom.key == newestAtStart))
+                    if (followBottom && listState.canScrollBackward) listState.animateScrollToItem(0)
                 }
             }
         }
