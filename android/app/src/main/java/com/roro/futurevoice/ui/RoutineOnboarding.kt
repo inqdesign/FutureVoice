@@ -225,6 +225,8 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
     var callMinutes by remember { mutableIntStateOf(5) }
     var callHour by remember { mutableIntStateOf(8) }
     var callMinute by remember { mutableIntStateOf(0) }
+    /** A block on the grid is being dragged (review step). */
+    var dragging by remember { mutableStateOf(false) }
     /** Times set by hand on an "Add more" block, minutes past midnight. */
     var times by remember { mutableStateOf<Map<StudyPlan.Kind, Int>>(emptyMap()) }
     /** The days the whole routine runs on; the rest are rest days. */
@@ -377,7 +379,7 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
             clip = s > 0f
         }) {
             WeeklyPlanEditor(onClose = {}, onboarding = true, onboardingEditing = step == RoutineStep.REVIEW,
-                spotlight = spotlight)
+                spotlight = spotlight, onDragChange = { dragging = it })
         }
 
         // iOS's `.large` detent: the whole screen but the status bar and a
@@ -393,6 +395,11 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
             modifier = Modifier.align(Alignment.BottomCenter),
             enter = slideInVertically(tween(300)) { it } + fadeIn(tween(300)),
             exit = slideOutVertically(tween(300)) { it } + fadeOut(tween(300))) {
+            // Out of the way while a block is dragged: it covers the evening
+            // hours the block may be going to.
+            AnimatedVisibility(visible = !dragging,
+                enter = slideInVertically(tween(150)) { it } + fadeIn(tween(150)),
+                exit = slideOutVertically(tween(150)) { it } + fadeOut(tween(150))) {
             ConfirmBar(callBlocked = callBlocked, working = working,
                 // Back to the list, ticks as they were. Saving again
                 // rewrites the blocks from the list.
@@ -402,6 +409,7 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
                     scope.launch { delay(200); sheetUp = true }
                 },
                 onKeep = { finish() })
+            }
         }
         AnimatedVisibility(visible = sheetUp, modifier = Modifier.align(Alignment.BottomCenter),
             enter = slideInVertically(tween(300)) { it }, exit = slideOutVertically(tween(300)) { it }) {

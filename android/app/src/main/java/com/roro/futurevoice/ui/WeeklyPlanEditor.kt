@@ -155,6 +155,9 @@ fun WeeklyPlanEditor(
      *  taps, drags and adds work, the page's own chrome (+, gear, Done)
      *  still doesn't. */
     onboardingEditing: Boolean = false,
+    /** Told when a block drag starts and ends, so a host's own bar over the
+     *  grid can step aside like the + does. */
+    onDragChange: ((Boolean) -> Unit)? = null,
     /** A block just placed from outside (the onboarding sheet). */
     spotlight: PlanSpotlight? = null,
 ) {
@@ -346,7 +349,9 @@ fun WeeklyPlanEditor(
                             else if (occ.kind == StudyPlan.Kind.TEST) showTest = true
                         },
                         onMove = { occ, day, start -> if (canEdit) handleMove(occ, day, start) },
-                        onDragTarget = { t -> dragTarget = t; if (t != null) { landedId = null; landedNote = null } },
+                        onDragTarget = { t ->
+                            if ((t != null) != (dragTarget != null)) onDragChange?.invoke(t != null)
+                            dragTarget = t; if (t != null) { landedId = null; landedNote = null } },
                     )
                 }
                 val pill = dragTarget?.let {
