@@ -234,7 +234,12 @@ export class ReplyEngine {
         if (hedgeTimer !== null) { clearTimeout(hedgeTimer); hedgeTimer = null }
         for (const other of attempts) if (other !== attempt) other.abort.abort()
         if (attempt.model !== primary) {
-          if (!primaryLeaked) primaryDegradedUntil = Date.now() + this.degradedForMs
+          // A Claude primary is never degraded for the whole isolate
+          // (2026-10-21): one slow first token (thinking) sent EVERY call on
+          // the isolate to flash-lite for 60 s — 11 of one call's
+          // generations. Its errors already hand the turn over at once; a
+          // slow turn costs that turn only.
+          if (!primaryLeaked && !isClaudeModel(primary)) primaryDegradedUntil = Date.now() + this.degradedForMs
           this.onFallback?.(`${primary} → ${attempt.model}${primaryLeaked ? " (leak)" : ""}`)
         }
       }
@@ -297,10 +302,12 @@ export class ReplyEngine {
       signal.addEventListener("abort", onOuterAbort)
 
       launch(primary)
+      // Claude thinks before its first token; give it a little longer.
+      const hedgeAfter = isClaudeModel(primary) ? Math.max(this.hedgeAfterMs, 3000) : this.hedgeAfterMs
       hedgeTimer = setTimeout(() => {
         hedgeTimer = null
         if (winner === null && !settled && attempts.length === 1) launch(fallback)
-      }, this.hedgeAfterMs)
+      }, hedgeAfter)
     })
   }
 
