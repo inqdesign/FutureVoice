@@ -109,11 +109,13 @@ struct RoutineOnboardingView: View {
     private var uiLocale: Locale { Locale(identifier: LanguageCatalog.currentNative) }
 
     var body: some View {
-        // Down to the screen's bottom edge: the grid must cover what is
-        // behind it (the tab bar), and the card sits 7 pt from the edge
-        // like a sheet does, not above the home indicator's safe area.
+        // Edge to edge: the grid must cover what is behind it (the status
+        // bar's strip, the tab bar), and the card sits 7 pt from the bottom
+        // edge like a sheet does, not above the home indicator's safe area.
         ZStack(alignment: .bottom) {
-            grid
+            // Under the status bar too: otherwise the screen behind shows
+            // there in another colour than the title bar.
+            grid.ignoresSafeArea(.container)
             // ONE card for the whole builder (founder: two sheets read as
             // two things) — intro, list, check, done are the same card
             // changing size. Not a system sheet: a sheet up would stop the
@@ -121,10 +123,11 @@ struct RoutineOnboardingView: View {
             // the way while a block is dragged: it covers the evening hours
             // the block may be going to.
             if sheetUp && !(step == .review && dragging) {
-                card.transition(.move(edge: .bottom).combined(with: .opacity))
+                card
+                    .ignoresSafeArea(.container, edges: .bottom)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .ignoresSafeArea(.container, edges: .bottom)
     }
 
     private var grid: some View {
