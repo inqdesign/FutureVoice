@@ -1,7 +1,13 @@
 New
 • Your daily call doesn't keep coming back to the same subject. It takes turns: picking up your last talk, light chat about films or music, a story from today's news, and a question that asks your opinion (from B1).
 • Me → Say hello now has Email and Threads too.
+• Add the My routine widget to your Home Screen. It shows what's on today and what's up now, and a tap starts it.
+• An empty Review page now shows where your first book will appear, with a button to start a call.
 
 Fixed
 • Your next daily call now rings on time even if you declined or answered the last one and didn't open the app.
 • When your free minutes run out, a report on what those talks showed opens. It no longer goes missing if you close the call screen right after the talk ends.
+• Quick quizzes now use expressions at your level you haven't used yet, and the weekly test uses the words, expressions and sentences you put off in your deck. No more questions where several choices fit.
+• Opening The Core on a smaller iPhone no longer closes the app.
+• Card sentences and buttons no longer get cut off on small screens.
+• In Listen, there's a short pause before the next episode starts.

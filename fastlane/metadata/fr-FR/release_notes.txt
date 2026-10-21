@@ -1,7 +1,13 @@
 Nouveautés
 • Ton appel quotidien ne revient plus toujours sur le même sujet. Il alterne : reprendre ta dernière conversation, discuter de films ou de musique, une info du jour et une question qui te demande ton avis (à partir de B1).
 • Dans Mon profil → Dis bonjour, tu peux maintenant nous écrire aussi par e-mail et sur Threads.
+• Ajoute le widget Ma routine à ton écran d’accueil. Il montre ce qui est prévu aujourd’hui et ce qui t’attend maintenant, et un toucher le lance.
+• Quand Révision est encore vide, tu vois où apparaîtra ton premier carnet, avec un bouton pour lancer un appel.
 
 Corrigé
 • Ton prochain appel quotidien sonne maintenant à l’heure, même si tu as refusé ou décroché le précédent sans rouvrir l’app.
 • Quand tes minutes gratuites sont épuisées, un bilan de tes conversations s’ouvre. Il ne disparaît plus si tu fermes l’appel juste après la fin de la conversation.
+• Les quiz rapides portent sur des expressions de ton niveau que tu n’as pas encore utilisées, et le test hebdo sur les mots, expressions et phrases que tu as remis à plus tard. Fini les questions où plusieurs réponses marchent.
+• Ouvrir Le Noyau sur un petit iPhone ne ferme plus l’app.
+• Sur les petits écrans, les phrases et les boutons des cartes ne sont plus coupés.
+• Dans l’écoute, une courte pause précède l’épisode suivant.

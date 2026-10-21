@@ -1,7 +1,13 @@
 Novedades
 • Tu llamada diaria ya no vuelve siempre al mismo tema. Se va turnando: retomar tu última conversación, charla ligera sobre películas o música, una noticia del día y una pregunta que pide tu opinión (desde B1).
 • En Mi perfil → Saluda ahora también puedes escribirnos por correo y por Threads.
+• Pon el widget Mi rutina en tu pantalla de inicio. Muestra lo que toca hoy y lo que toca ahora, y con un toque empiezas.
+• Si Repaso todavía está vacío, ahora ves dónde aparecerá tu primer cuaderno y un botón para empezar una llamada.
 
 Corregido
 • Tu siguiente llamada diaria ahora llega a su hora aunque hayas rechazado o contestado la anterior y no hayas abierto la app.
 • Cuando se acaban tus minutos gratis, se abre un informe sobre lo que mostraron tus conversaciones. Ya no se pierde si cierras la llamada justo al terminar.
+• Los quiz rápidos usan expresiones de tu nivel que aún no has usado, y el test semanal, las palabras, expresiones y frases que pospusiste en tu mazo. Ya no salen preguntas en las que varias opciones sirven.
+• Abrir El Núcleo en un iPhone pequeño ya no cierra la app.
+• En pantallas pequeñas, las frases y los botones de las tarjetas ya no se cortan.
+• En Escuchar, hay una pausa corta antes del siguiente episodio.
