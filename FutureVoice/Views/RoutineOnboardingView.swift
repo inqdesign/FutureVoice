@@ -90,7 +90,6 @@ struct RoutineOnboardingView: View {
     @State private var days: Set<Int> = Set(1...7)
     /// The intro has grown into the list.
     @State private var expanded = false
-    @State private var detent: PresentationDetent = .height(300)
     @State private var sheetUp = false
     @State private var spotlight: WeeklyPlanEditor.Spotlight?
     @State private var working = false
@@ -120,9 +119,11 @@ struct RoutineOnboardingView: View {
             .allowsHitTesting(shrink == 0)
             .onAppear {
                 // A beat for the grid to be seen on its own first.
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { if step != .review { sheetUp = true } }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    withAnimation(.easeOut(duration: 0.3)) { sheetUp = true }
+                }
                 #if DEBUG
-                // `-routineStep pick|pickall|review|done|finish|advance`: a step for a capture;
+                // `-routineStep pick|pickall|review|done|finish|advance|flow`: a step for a capture;
                 // `finish` runs Done by itself after a moment.
                 switch UserDefaults.standard.string(forKey: "routineStep") {
                 case "pick": expand()
@@ -131,6 +132,10 @@ struct RoutineOnboardingView: View {
                     // The intro growing into the list, for a recording.
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { expand() }
                 case "done": step = .done
+                case "flow":
+                    // Intro → list → check on its own, for a recording.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) { expand() }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 4.5) { Task { await save() } }
                 case "review": saved = [.talk]; step = .review
                 case "finish":
                     step = .done
@@ -140,27 +145,15 @@ struct RoutineOnboardingView: View {
                 #endif
             }
             .overlay(alignment: .bottom) {
-                // Out of the way while a block is dragged: it covers the
-                // evening hours the block may be going to.
-                if step == .review && !dragging {
-                    confirmBar
-                        .ignoresSafeArea(edges: .bottom)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                // ONE card for the whole builder (founder: two sheets read
+                // as two things) — intro, list, check, done are the same
+                // card changing size. Not a system sheet: a sheet up would
+                // stop the grid from opening a block's editor in the check
+                // step. Out of the way while a block is dragged: it covers
+                // the evening hours the block may be going to.
+                if sheetUp && !(step == .review && dragging) {
+                    card.transition(.move(edge: .bottom).combined(with: .opacity))
                 }
-            }
-            .sheet(isPresented: $sheetUp) {
-                sheet
-                    .presentationDetents([.height(300), .large], selection: $detent)
-                    // Dragged up, the intro opens into the list; the list
-                    // never folds back into the intro.
-                    .onChange(of: detent) { _, d in
-                        guard step == .intro else { return }
-                        if d == .large, !expanded { expand() }
-                        if d != .large, expanded { detent = .large }
-                    }
-                    .presentationBackgroundInteraction(.enabled)
-                    .presentationDragIndicator(.hidden)
-                    .interactiveDismissDisabled()
             }
     }
 
@@ -189,8 +182,8 @@ struct RoutineOnboardingView: View {
             "picked": Self.kinds.filter { saved.contains($0) }.map(\.rawValue).joined(separator: ","),
             "call_on": saved.contains(.talk) && !callBlocked
         ])
-        sheetUp = false
-        // The sheet goes down first, then the page is drawn into the chip:
+        withAnimation(.easeIn(duration: 0.25)) { sheetUp = false }
+        // The card goes down first, then the page is drawn into the chip:
         // a quick pull back, then in, fading out as it reaches the chip.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
             withAnimation(.easeIn(duration: 0.5)) { shrink = 1 }
@@ -209,17 +202,28 @@ struct RoutineOnboardingView: View {
 
     // MARK: - The sheet
 
-    @ViewBuilder
-    private var sheet: some View {
-        switch step {
-        case .intro: pick
-        case .review, .done: done
+    private var isTall: Bool { step == .intro && expanded }
+
+    /// The one card, in the size its step needs.
+    private var card: some View {
+        Group {
+            switch step {
+            case .intro: pick.frame(height: expanded ? nil : 300)
+            case .review: confirmContent
+            case .done: done.frame(height: 300)
+            }
         }
+        .frame(maxWidth: .infinity, maxHeight: isTall ? .infinity : nil)
+        .modifier(SheetLikeCard())
+        .padding(.horizontal, 7)
+        .padding(.bottom, 7)
+        .padding(.top, isTall ? 8 : 0)
+        .ignoresSafeArea(edges: .bottom)
     }
 
     /// Under the grid once the blocks are on it: fix them on the grid, then
     /// say it's right.
-    private var confirmBar: some View {
+    private var confirmContent: some View {
         VStack(spacing: 10) {
             Text(explain("How does this look?"))
                 .font(.headline)
@@ -234,9 +238,7 @@ struct RoutineOnboardingView: View {
                 // Back to the list, ticks as they were. Saving again
                 // rewrites the blocks from the list.
                 Button {
-                    withAnimation(.easeOut(duration: 0.2)) { step = .intro }
-                    detent = .large
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { sheetUp = true }
+                    withAnimation(.easeInOut(duration: 0.35)) { step = .intro }
                 } label: {
                     Text("Back").frame(maxWidth: .infinity)
                 }
@@ -257,13 +259,6 @@ struct RoutineOnboardingView: View {
         .padding(.horizontal, 20)
         .padding(.top, 22)
         .padding(.bottom, 28)
-        .frame(maxWidth: .infinity)
-        // Drawn like the sheet before it — a floating card, inset from the
-        // screen's edges — because a real sheet here would stop the grid
-        // from opening a block's editor.
-        .modifier(SheetLikeCard())
-        .padding(.horizontal, 7)
-        .padding(.bottom, 7)
     }
 
     private var done: some View {
@@ -304,21 +299,19 @@ struct RoutineOnboardingView: View {
         }
         .padding(.horizontal, 24)
         .padding(.top, 28)
-        .padding(.bottom, 12)
+        .padding(.bottom, 28)
     }
 
     // MARK: - What goes in
 
     private func expand() {
-        withAnimation(.easeInOut(duration: 0.35)) {
-            expanded = true
-            detent = .large
-        }
+        withAnimation(.easeInOut(duration: 0.35)) { expanded = true }
     }
 
     /// The intro, and — once "Make my routine" is tapped — the list under it,
     /// in the same sheet.
     private var pick: some View {
+        VStack(spacing: 0) {
         List {
             Section {
                 VStack(spacing: 10) {
@@ -380,7 +373,7 @@ struct RoutineOnboardingView: View {
             }
         }
         .scrollDisabled(!expanded)
-        .safeAreaInset(edge: .bottom) {
+        .scrollContentBackground(.hidden)
             Button {
                 guard expanded else { expand(); return }
                 working = true
@@ -399,9 +392,8 @@ struct RoutineOnboardingView: View {
             .controlSize(.large)
             .disabled(working)
             .padding(.horizontal, 20)
-            .padding(.vertical, 8)
-            // The list scrolls under the button; it must not show through.
-            .background(Color(.systemGroupedBackground))
+            .padding(.top, 8)
+            .padding(.bottom, 28)
         }
     }
 
@@ -503,16 +495,14 @@ struct RoutineOnboardingView: View {
             return StudyPlan.Block(kind: kind, weekdays: days, hour: s.hour, minute: s.minute, minutes: s.amount)
         }
         saved = selected
-        detent = .height(300)
         let plan = StudyPlanStore.shared.plan.withOnboardingRoutine(blocks, days: days)
         StudyPlanStore.shared.update(plan, byLearner: true)
         guard let first = blocks.first else {
-            withAnimation { step = .done }
+            withAnimation(.easeInOut(duration: 0.35)) { step = .done }
             return
         }
-        // The sheet goes down and the grid becomes the page to check.
-        sheetUp = false
-        withAnimation(.easeOut(duration: 0.3).delay(0.3)) { step = .review }
+        // The card shrinks to the check and the grid becomes the page to edit.
+        withAnimation(.easeInOut(duration: 0.35)) { step = .review }
         spotlight = .init(kind: first.kind, minute: first.startMinute, token: (spotlight?.token ?? 0) + 1)
         try? await Task.sleep(for: .milliseconds(700))
         if saved.contains(.talk) {

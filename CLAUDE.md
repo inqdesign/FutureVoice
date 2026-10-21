@@ -781,15 +781,20 @@ editing off) behind a sheet.
   guess anyway, "say it again" unexplained in one line), and a list that
   put the call's time on a fixed 08:00.
 - **Then the grid is checked, and confirmed** (2026-10-20, founder). After
-  "Done" the sheet goes DOWN (a block's editor is a sheet of its own and
-  can't open under another) and the grid becomes editable
+  "Done" the same card shrinks to a check — "How does this look?", **Back**
+  (the list again, ticks kept; saving again rewrites the blocks from it, so
+  a grid edit made before going back is replaced) and **Keep it like
+  this**, which finishes — and the grid becomes editable
   (`WeeklyPlanEditor(onboardingEditing:)`: tap a block to change it, hold
   and drag to move it, tap an empty spot to add; the page's +, gear and
-  Done stay hidden) under a bar — "How does this look?", **Back** (the
-  list again, ticks kept; saving again rewrites the blocks from it, so a
-  grid edit made before going back is replaced) and **Keep it like this**,
-  which finishes. A routine left empty skips this for the "You can
-  make it later" card.
+  Done stay hidden; the card steps aside while a block is dragged). A
+  routine left empty skips this for the "You can make it later" card.
+- **It is ONE card, not a system sheet** (same day, founder: "there seem
+  to be two sheets"). Intro, list, check and done are the same card
+  (`SheetLikeCard`: a floating rounded card inset 7 pt, glass on iOS 26)
+  changing height. A real sheet was used first and had to go down before
+  the check, because a block's editor is a sheet of its own and can't open
+  under another — so for a moment two sheets were on screen.
 - **Keep it like this** shrinks the page into the Talk header's
   Activity chip (`RoutineHandoff.chipFrame`); the chip bounces and a popover
   says the routine lives there. Talk's first-run sheets (age check, guide,
