@@ -906,18 +906,12 @@ private extension DrillView {
                         // Cards ingested before the fragment trim carry the
                         // WHOLE turn transcript — trim at render too, so the
                         // stored backlog doesn't blow the card off the screen.
-                        let said = DrillStore.relevantFragment(of: card.sourcePhrase,
-                                                               matching: card.targetPhrase)
-                        Group {
-                            if revealed {
-                                Text(cardProofread(said, fix: card.targetPhrase))
-                            } else {
-                                Text(said)
-                            }
-                        }
-                        .font(compact ? .subheadline : .callout)
-                        .foregroundStyle(Self.onCardSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                        Text(DrillStore.relevantFragment(of: card.sourcePhrase,
+                                                         matching: card.targetPhrase))
+                            .font(compact ? .subheadline : .callout)
+                            .foregroundStyle(Self.onCardSecondary)
+                            .strikethrough(revealed)
+                            .fixedSize(horizontal: false, vertical: true)
                         // The transcript is STT output and occasionally wrong —
                         // when the user's actual recording survives on disk,
                         // let them replay what they REALLY said.
@@ -967,11 +961,7 @@ private extension DrillView {
                     .redacted(reason: revealed ? [] : .placeholder)
             }
 
-            if revealed, !card.sourcePhrase.isEmpty {
-                CardCorrectionNotes(said: DrillStore.relevantFragment(of: card.sourcePhrase,
-                                                                      matching: card.targetPhrase),
-                                    fix: card.targetPhrase, reason: card.reason)
-            } else if revealed, !card.reason.isEmpty {
+            if revealed, !card.reason.isEmpty {
                 labeled("Why") {
                     Text(card.reason)
                         .font(.subheadline)

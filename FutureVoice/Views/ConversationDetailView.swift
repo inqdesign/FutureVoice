@@ -1710,94 +1710,13 @@ struct TurnFixRows: View {
 /// comparison words, hence `owner`: a token is highlighted only when EVERY
 /// word inside it went unmatched.
 func highlightedCorrection(_ alternative: String, original: String, baseFont: Font) -> AttributedString {
-    diffMarked(alternative, against: original) { piece, changed in
-        if changed {
-            piece.foregroundColor = .accentColor
-            piece.font = baseFont.weight(.semibold)
-        }
-    }
-}
-
-/// A correction drawn on the decks' accent-filled card the way a teacher
-/// marks a notebook (2026-10-21): the learner's own sentence, each word the
-/// fix took out struck through with the fix's words written right after it,
-/// the rest left as said. One line to read, no second sentence to compare
-/// against. Words in an unspaced language are marked by character.
-func cardProofread(_ said: String, fix: String) -> AttributedString {
-    let spaced = WordSplitter.spaced
-    func pieces(_ t: String) -> [String] {
-        spaced ? t.split(separator: " ", omittingEmptySubsequences: true).map(String.init)
-               : t.map { String($0) }
-    }
-    func key(_ token: String) -> String {
-        let k = ConversationEngine.spokenWords(token).joined(separator: " ")
-        return k.isEmpty ? token : k
-    }
-    let a = pieces(said), b = pieces(fix)
-    let ka = a.map(key), kb = b.map(key)
-    let m = a.count, n = b.count
-    var dp = Array(repeating: Array(repeating: 0, count: n + 1), count: m + 1)
-    for i in stride(from: m - 1, through: 0, by: -1) {
-        for j in stride(from: n - 1, through: 0, by: -1) {
-            dp[i][j] = ka[i] == kb[j] ? dp[i + 1][j + 1] + 1 : max(dp[i + 1][j], dp[i][j + 1])
-        }
-    }
-    // Walk the alignment into runs: kept, removed, added. Within one hunk
-    // the removed words come first, so the cross-out sits before its fix.
-    enum Kind { case kept, removed, added }
-    var runs: [(Kind, [String])] = []
-    func push(_ kind: Kind, _ word: String) {
-        if let last = runs.last, last.0 == kind { runs[runs.count - 1].1.append(word) }
-        else { runs.append((kind, [word])) }
-    }
-    var i = 0, j = 0
-    var pendingAdds: [String] = []
-    func flushAdds() { pendingAdds.forEach { push(.added, $0) }; pendingAdds = [] }
-    while i < m || j < n {
-        if i < m, j < n, ka[i] == kb[j] {
-            flushAdds(); push(.kept, a[i]); i += 1; j += 1
-        } else if j < n, i == m || dp[i][j + 1] >= dp[i + 1][j] {
-            pendingAdds.append(b[j]); j += 1
-        } else {
-            push(.removed, a[i]); i += 1
-        }
-    }
-    flushAdds()
-
-    let sep = spaced ? " " : ""
-    var out = AttributedString()
-    for (idx, run) in runs.enumerated() {
-        var piece = AttributedString(run.1.joined(separator: sep))
-        switch run.0 {
-        case .kept:
-            piece.foregroundColor = .white.opacity(0.85)
-        case .removed:
-            piece.foregroundColor = .white.opacity(0.5)
-            piece.strikethroughStyle = .single
-        case .added:
-            piece.foregroundColor = .white
-            piece.inlinePresentationIntent = .stronglyEmphasized
-            piece.underlineStyle = .single
-        }
-        if idx > 0 { out += AttributedString(sep) }
-        out += piece
-    }
-    return out
-}
-
-/// `text` with every word `other` doesn't have passed to `mark` as changed,
-/// every other piece as unchanged — the one diff all correction highlights
-/// draw from.
-func diffMarked(_ text: String, against original: String,
-                mark: (inout AttributedString, Bool) -> Void) -> AttributedString {
-    let alternative = text
     // Japanese is diffed and painted by CHARACTER: its segments are cut
     // differently on each side of a fix (面倒|くさかっ|た against
     // 面倒|くさい|でし|た), so no segment-level answer can say "かっ" changed
     // and "くさ" didn't.
     let spaced = WordSplitter.spaced
     if !spaced {
-        return highlightedCharacters(alternative, original: original, mark: mark)
+        return highlightedCharacters(alternative, original: original, baseFont: baseFont)
     }
     let altWords: [JapaneseMorph.Piece] = alternative
         .split(separator: " ", omittingEmptySubsequences: true)
@@ -1840,16 +1759,12 @@ func diffMarked(_ text: String, against original: String,
     var out = AttributedString()
     for (idx, word) in altWords.enumerated() {
         var piece = AttributedString(word.text)
-        let changed = tokenChanged[idx] && tokenHasWord[idx]
-        mark(&piece, changed)
-        out += piece
-        if idx < altWords.count - 1 {
-            // The space between two changed words is part of the change, so a
-            // marker or a strike runs through it as one band.
-            var space = AttributedString(" ")
-            mark(&space, changed && tokenChanged[idx + 1] && tokenHasWord[idx + 1])
-            out += space
+        if tokenChanged[idx], tokenHasWord[idx] {
+            piece.foregroundColor = .accentColor
+            piece.font = baseFont.weight(.semibold)
         }
+        out += piece
+        if idx < altWords.count - 1 { out += AttributedString(" ") }
     }
     return out
 }
@@ -1860,7 +1775,7 @@ func diffMarked(_ text: String, against original: String,
 /// change reads as the few characters it is — くさ[かっ]た — and a pure
 /// re-spelling never gets this far (`saysTheSameThing` compares readings).
 private func highlightedCharacters(_ alternative: String, original: String,
-                                   mark: (inout AttributedString, Bool) -> Void) -> AttributedString {
+                                   baseFont: Font) -> AttributedString {
     let alt = Array(alternative)
     func isLetter(_ c: Character) -> Bool { c.isLetter || c.isNumber }
     let aIdx = alt.indices.filter { isLetter(alt[$0]) }
@@ -1883,7 +1798,10 @@ private func highlightedCharacters(_ alternative: String, original: String,
     var out = AttributedString()
     for (k, ch) in alt.enumerated() {
         var piece = AttributedString(String(ch))
-        mark(&piece, changed.contains(k))
+        if changed.contains(k) {
+            piece.foregroundColor = .accentColor
+            piece.font = baseFont.weight(.semibold)
+        }
         out += piece
     }
     return out

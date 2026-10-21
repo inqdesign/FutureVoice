@@ -662,10 +662,10 @@ struct StudyDeckView: View {
                 // what you said, then the fluent version, hidden until the tap.
                 if !item.cardSaid.isEmpty {
                     labeled("You said") {
-                        Text(revealed ? cardProofread(item.cardSaid, fix: text)
-                                      : AttributedString(item.cardSaid))
+                        Text(item.cardSaid)
                             .font(compact ? .subheadline : .callout)
                             .foregroundStyle(Self.onCardSecondary)
+                            .strikethrough(revealed)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
@@ -677,9 +677,7 @@ struct StudyDeckView: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .redacted(reason: revealed ? [] : .placeholder)
                 }
-                if revealed, !item.cardSaid.isEmpty {
-                    CardCorrectionNotes(said: item.cardSaid, fix: text, reason: item.cardReason)
-                } else if revealed, !item.cardReason.isEmpty {
+                if revealed, !item.cardReason.isEmpty {
                     labeled("Why") {
                         Text(item.cardReason)
                             .font(.subheadline)
