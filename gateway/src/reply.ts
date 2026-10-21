@@ -11,7 +11,7 @@
 // async call in Phase 2 — the voice must never wait on coaching.
 
 import { steerTurnText } from "./steer-turn"
-import { claudeMessages, isClaudeModel, streamClaude, type ClaudeUsage } from "./claude-reply"
+import { claudeMessages, isClaudeModel, SpokenLeakError, streamClaude, type ClaudeUsage } from "./claude-reply"
 
 const API_HOST = "https://generativelanguage.googleapis.com"
 
@@ -38,6 +38,12 @@ export interface ReplyConfig {
   /** Hedge target when `model` is slow or failing ("" / same = no hedge). */
   fallbackModel?: string
   system: string
+  /** The call's target language — the Claude path checks each sentence is
+   *  speech in it before it is voiced (claude-reply.ts `spokenLeak`). */
+  language?: string
+  /** Claude only (claude-reply.ts): thinking type and effort, "" = default. */
+  claudeThinking?: string
+  claudeEffort?: string
 }
 
 /** One generation request, and whether it reads the cache. */
@@ -208,6 +214,10 @@ export class ReplyEngine {
       let winner: Attempt | null = null
       let settled = false
       let failed = 0
+      // The primary refused its own reply as unspeakable (SpokenLeakError):
+      // the fallback answers this turn, but the primary is NOT degraded —
+      // one bad line says nothing about the next call.
+      let primaryLeaked = false
       let hedgeTimer: ReturnType<typeof setTimeout> | null = null
 
       const settle = (fn: () => void) => {
@@ -223,8 +233,8 @@ export class ReplyEngine {
         if (hedgeTimer !== null) { clearTimeout(hedgeTimer); hedgeTimer = null }
         for (const other of attempts) if (other !== attempt) other.abort.abort()
         if (attempt.model !== primary) {
-          primaryDegradedUntil = Date.now() + this.degradedForMs
-          this.onFallback?.(`${primary} → ${attempt.model}`)
+          if (!primaryLeaked) primaryDegradedUntil = Date.now() + this.degradedForMs
+          this.onFallback?.(`${primary} → ${attempt.model}${primaryLeaked ? " (leak)" : ""}`)
         }
       }
       const launch = (model: string) => {
@@ -242,6 +252,10 @@ export class ReplyEngine {
           if (signal.aborted) return settle(() => resolve(""))
           if (winner === attempt) return settle(() => reject(e))
           if (winner !== null) return            // lost anyway
+          if (e instanceof SpokenLeakError && attempt.model === primary) {
+            primaryLeaked = true
+            console.log(e.message)
+          }
           failed += 1
           // The primary erroring is a reason to hedge NOW, not in 2.5 s.
           if (attempts.length === 1) {
@@ -287,6 +301,8 @@ export class ReplyEngine {
     try {
       return await streamClaude({
         apiKey: this.config.anthropicKey, model, system, signal, onDelta, usage: raw,
+        language: this.config.language ?? "en",
+        thinking: this.config.claudeThinking, effort: this.config.claudeEffort,
         messages: claudeMessages(steered, ReplyEngine.settledPrefix(history).length),
       })
     } finally {

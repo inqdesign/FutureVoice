@@ -23,14 +23,139 @@
 
 export type Line = { role: "user" | "model"; text: string }
 
-/** Appended to the app's system prompt on Claude only. The rules are already
- *  in the prompt; Haiku keeps them far better when they are restated last
- *  (scripts/beginner-probe.py with EXTRA, 2026-10-21). Gemini never sees it. */
+/** Appended to the app's system prompt on Claude only; Gemini never sees it.
+ *
+ *  The first version was a checklist ("BEFORE YOU WRITE — the two rules most
+ *  often broken"), and Haiku ran the check IN THE REPLY: "Wait, that's two
+ *  questions. Let me redo it." — read aloud on the founder's call, 6/351 in
+ *  scripts/reply-leak-probe.py. Telling it that every character is spoken
+ *  stopped that (0/378 with thinking off; the residue with thinking on is
+ *  what `SpokenGate` catches). The question rules are restated because
+ *  Haiku keeps them far better when they come last. */
 export const CLAUDE_ADDENDUM = `
 
-BEFORE YOU WRITE — the two rules most often broken on this call:
-- At most ONE question per turn, and it is the last thing you say. Never a second question after the first, not even a short one. If two things interest you, ask one now and keep the other for a later turn.
-- If the prompt above has a "HOW TO ASK — THIS LEARNER IS A BEGINNER" section, it outranks everything else, greetings and first turns included: the one question must be short and answerable in a few words — never "tell me about…", "how was your day?", "how are you feeling?", "what kind of…", "why…". Ask a fact instead ("Are you at home?", "Did you work today?").`
+HOW YOUR WORDS REACH THEM: everything you write is read aloud, as it is written, to the person on the call, the moment you write it. So write only the words you say to them, once. No notes, no plans, no drafts, no checking your own line, no "wait" followed by a correction, nothing in brackets. Decide what to say before you write; then say it.
+
+ONE QUESTION MARK PER TURN, at most, and it ends the turn. A reaction is a statement, not a question: "Oh, tired." not "Oh, tired?"; "Busy with work, I see." not "Busy with work, huh?". After your question, stop — no second question, not even a guess at their answer ("…? At home?"). If you want to offer a choice, put it inside the one question ("Coffee or tea?").
+If the prompt above has a "HOW TO ASK — THIS LEARNER IS A BEGINNER" section, it holds for every turn, the first one too: the question is short and answerable in a few words ("Are you at home?", "Did you work today?"), never "how was your day?" or "tell me about…".
+`
+
+/** Thrown when the reply opens with something that must not be spoken —
+ *  the hedge then answers the turn on Gemini instead (reply.ts). */
+export class SpokenLeakError extends Error {
+  constructor(readonly reason: string, readonly sentence: string) {
+    super(`reply leak (${reason}): ${sentence.slice(0, 120)}`)
+  }
+}
+
+/** Is this sentence something no one would SAY to the caller? (2026-10-21.)
+ *  Haiku sometimes writes its planning into the reply — "[reaction] 오, …",
+ *  "Let's answer: 너가 만드는 건…", "Oops, I slipped in English there" — and
+ *  the call reads text aloud as it arrives. Checked one sentence at a time,
+ *  before the sentence reaches the voice. Conservative on purpose: English
+ *  meta words only where no English speaker would use them in a chat, and
+ *  Latin text only in a reply whose language doesn't write it. */
+export function spokenLeak(sentence: string, language: string): string | null {
+  const lang = language.toLowerCase().split("-")[0]
+  if (/[\[\]{}<>]/.test(sentence)) return "bracket"
+  // Talking ABOUT the reply instead of giving it. English in every target
+  // language, because the model plans in English whatever it speaks.
+  if (/\b(the user|the learner|the caller|the reply|my reply|this reply|the prompt|system prompt|the notes|per the notes|my notes say|word count|let's answer|reply must|the rules?:|i broke a rule|let me (redo|rewrite|fix|recheck|check)|(re)?write:|fix(ing)?:|correction:|redo it|one question only|that's two questions|two questions here|i must (not )?(use|reply|answer|write)|i need to check)\b/i.test(sentence)) return "meta"
+  if (/≤|\b[AB][12] (words|level)\b/.test(sentence)) return "meta"
+  if (lang === "en") return null
+  if (lang === "ko" || lang === "ja" || lang === "zh") {
+    const latin = sentence.match(/[A-Za-z][A-Za-z'’-]+/g) ?? []
+    if (latin.length >= 4) return "latin"
+    return null
+  }
+  // A Latin-script target: an English sentence inside it. Only words that
+  // are not also German, Spanish or French ("no", "me", "so", "die" are).
+  const english = sentence.match(/\b(the|that|that's|this|it's|wait|should|would|which|question|questions|only|must|need|check|rule|rules|reply|redo|rewrite|fix|fixing|sentence|sentences|words|too|many|let's|i'm|i'll|i've|my|good|fine)\b/gi) ?? []
+  if (english.length >= 3) return "english"
+  return null
+}
+
+/** A question that is a reaction, not a question to answer: a short echo
+ *  opening the reply ("Oh, tired?", "그랬구나?") or a tag ("…, huh?"). */
+function isEchoQuestion(sentence: string, first: boolean): boolean {
+  const s = sentence.trim()
+  if (/(\bhuh|\bright|isn't it|aren't you|don't you|\beh|\bno|\boder|\bnicht|\bne|\bhein|\bnon)\s*[?？]$/i.test(s)) return true
+  if (!first) return false
+  // Korean reacts with a rising "so that's how it is?" ending.
+  if (/(구나|군|거야|거지|잖아)\s*[?？]$/.test(s)) return true
+  const latin = /[A-Za-zÀ-ÿ]/.test(s)
+  return latin ? s.split(/\s+/).length <= 3 : s.replace(/\s/g, "").length <= 8
+}
+
+/** Holds the stream back to whole sentences and checks each before it goes
+ *  on. The voice is sent sentence by sentence anyway (session.ts
+ *  `routeDelta`), so this costs the call no audio latency — only the text on
+ *  screen arrives a sentence at a time.
+ *
+ *  Two things stop a reply here. A sentence that must not be spoken
+ *  (`spokenLeak`). And a SECOND question: the prompt asks for one question
+ *  that ends the turn, and Haiku asks two two-to-three times as often as
+ *  3.6-flash did (probe, 2026-10-21: ~8% of turns vs 2.7%); words could not
+ *  close the gap, so the code holds the line — the turn ends where the first
+ *  real question did. A choice continuing it ("…? Or …?") is the same
+ *  question. */
+export class SpokenGate {
+  private pending = ""
+  private sentences = 0
+  private asked = false
+  emitted = ""
+  constructor(private language: string, private emit: (text: string) => void) {}
+
+  /** Returns false once the reply should stop after what was already said:
+   *  the caller stops the stream and keeps `emitted`. Throws when the very
+   *  first sentence leaks, so the turn can go to the fallback whole. */
+  push(delta: string): boolean {
+    this.pending += delta
+    // A sentence ends at a terminator followed by space, at a CJK terminator,
+    // or at a line break. The tail after the last such point waits.
+    const re = /[.!?…](?=\s)|[。！？]|\n/g
+    let ok = true
+    for (let m; ok && (m = re.exec(this.pending)) !== null;) {
+      const end = m.index + m[0].length
+      const sentence = this.pending.slice(0, end)
+      this.pending = this.pending.slice(end)
+      re.lastIndex = 0
+      ok = this.release(sentence)
+    }
+    return ok
+  }
+
+  /** The stream ended: the tail is a sentence too. */
+  finish(): boolean {
+    const tail = this.pending
+    this.pending = ""
+    return tail.trim().length === 0 ? true : this.release(tail)
+  }
+
+  private release(text: string): boolean {
+    if (text.trim().length === 0) {
+      // Whitespace between sentences: keep it, it is the word boundary.
+      this.emitted += text
+      this.emit(text)
+      return true
+    }
+    const reason = spokenLeak(text, this.language)
+    if (reason) {
+      if (this.emitted.trim().length === 0) throw new SpokenLeakError(reason, text)
+      console.log(`reply leak cut (${reason}): ${text.slice(0, 160)}`)
+      return false
+    }
+    const trimmed = text.trim()
+    const question = /[?？]$/.test(trimmed)
+    const choice = /^(or\b|oder\b|아니면|それとも|o\b|ou\b)/i.test(trimmed)
+    if (question && this.asked && !choice) return false
+    if (question && !isEchoQuestion(trimmed, this.sentences === 0)) this.asked = true
+    this.sentences += 1
+    this.emitted += text
+    this.emit(text)
+    return true
+  }
+}
 
 export function isClaudeModel(model: string): boolean {
   return model.startsWith("claude-")
@@ -78,12 +203,32 @@ export async function streamClaude(opts: {
   model: string
   system: string
   messages: Message[]
+  /** The call's language, for the spoken-leak check. */
+  language: string
+  /** "" = the API default (adaptive); "adaptive" | "disabled". */
+  thinking?: string
+  /** "" = the model default (medium on Haiku 5.5); low | medium | high. */
+  effort?: string
   signal: AbortSignal
   onDelta: (text: string) => void
   usage: ClaudeUsage
 }): Promise<string> {
   if (!opts.apiKey) throw new Error("reply upstream claude: ANTHROPIC_API_KEY not set")
-  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+  // Its own abort, so a leak found mid-reply can stop the upstream without
+  // the caller's signal (which means a barge-in) being involved. A barge-in
+  // also CANCELS the reader: measured 2026-10-21 (test/claude-reply-check.mjs
+  // barge-in loop), aborting the fetch alone left a pending `read()` that
+  // never settled about half the time, and the reply — and the turn — hung.
+  const upstream = new AbortController()
+  let reader: ReadableStreamDefaultReader<Uint8Array> | null = null
+  const onOuterAbort = () => {
+    upstream.abort()
+    reader?.cancel().catch(() => { /* already closed */ })
+  }
+  if (opts.signal.aborted) return ""
+  opts.signal.addEventListener("abort", onOuterAbort)
+  let resp: Response
+  try { resp = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -96,19 +241,28 @@ export async function streamClaude(opts: {
       stream: true,
       system: [{ type: "text", text: opts.system + CLAUDE_ADDENDUM, cache_control: { type: "ephemeral" } }],
       messages: opts.messages,
+      ...(opts.thinking ? { thinking: { type: opts.thinking } } : {}),
+      ...(opts.effort ? { output_config: { effort: opts.effort } } : {}),
     }),
-    signal: opts.signal,
-  })
+    signal: upstream.signal,
+  }) } catch (e) {
+    opts.signal.removeEventListener("abort", onOuterAbort)
+    if (opts.signal.aborted) return ""   // barge-in before the first byte
+    throw e
+  }
   if (!resp.ok || !resp.body) {
+    opts.signal.removeEventListener("abort", onOuterAbort)
     throw new Error(`reply upstream ${opts.model} ${resp.status}: ${(await resp.text()).slice(0, 300)}`)
   }
 
-  let full = ""
-  const reader = resp.body.getReader()
+  const gate = new SpokenGate(opts.language, opts.onDelta)
+  let cut = false
+  reader = resp.body.getReader()
   const decoder = new TextDecoder()
   let buffer = ""
   try {
     for (;;) {
+      if (opts.signal.aborted) return gate.emitted
       const { done, value } = await reader.read()
       if (done) break
       buffer += decoder.decode(value, { stream: true })
@@ -127,20 +281,24 @@ export async function streamClaude(opts: {
           opts.usage.output += event.usage?.output_tokens ?? 0
         } else if (event?.type === "content_block_delta" && event.delta?.type === "text_delta") {
           const text = event.delta.text
-          if (typeof text === "string" && text.length > 0) {
-            full += text
-            opts.onDelta(text)
+          if (typeof text === "string" && text.length > 0 && !gate.push(text)) {
+            cut = true
+            upstream.abort()
+            return gate.emitted
           }
         } else if (event?.type === "error") {
           throw new Error(`reply upstream ${opts.model} stream error: ${JSON.stringify(event.error).slice(0, 200)}`)
         }
       }
     }
+    if (!gate.finish()) cut = true
   } catch (e) {
-    if (opts.signal.aborted) return full   // barge-in: keep what was voiced
+    if (e instanceof SpokenLeakError) { upstream.abort(); throw e }
+    if (opts.signal.aborted || cut) return gate.emitted   // barge-in: keep what was voiced
     throw e
   } finally {
+    opts.signal.removeEventListener("abort", onOuterAbort)
     try { reader.releaseLock() } catch { /* released */ }
   }
-  return full
+  return gate.emitted
 }

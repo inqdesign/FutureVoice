@@ -32,6 +32,10 @@ export interface Env {
   CLAUDE_REPLY?: string
   /** The Claude reply model (default claude-haiku-5-5). */
   CLAUDE_REPLY_MODEL?: string
+  /** Claude reply thinking ("adaptive" | "disabled") and effort (low |
+   *  medium | high); unset = the model's defaults (adaptive, medium). */
+  CLAUDE_REPLY_THINKING?: string
+  CLAUDE_REPLY_EFFORT?: string
   /** Anthropic key for the Claude reply. */
   ANTHROPIC_API_KEY?: string
   /** Streaming PCM format for the call's voice (default pcm_22050). */

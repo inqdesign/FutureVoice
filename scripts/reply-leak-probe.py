@@ -54,7 +54,7 @@ ADDENDUM = (open(os.environ["ADDENDUM_FILE"]).read() if os.environ.get("ADDENDUM
 # family, and dated lines heard on calls — the "notes" the leaked reasoning
 # was arguing with.
 NOTES = """About the user (use these naturally, don't list them):
-- Name: Eunggyu
+- Name: Minji
 - Lives in: Munich, Germany (3 years)
 - Does: founder, building a language app
 - Household: wife and a 4-year-old daughter

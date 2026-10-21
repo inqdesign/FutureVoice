@@ -825,6 +825,9 @@ export class CallSession implements DurableObject {
       // var to the primary's own name to turn the hedge off.
       fallbackModel: this.env.GEMINI_REPLY_FALLBACK_MODEL ?? DEFAULT_REPLY_FALLBACK_MODEL,
       system: this.pendingSystem ?? msg.system,
+      language: this.language,
+      claudeThinking: this.env.CLAUDE_REPLY_THINKING,
+      claudeEffort: this.env.CLAUDE_REPLY_EFFORT,
     })
     this.replyEngine.steer = this.pendingSteer
     // Once per call, not per turn: during an outage every turn falls back,

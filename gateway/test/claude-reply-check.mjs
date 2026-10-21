@@ -32,7 +32,7 @@ const call = [
 
 // 1. A call that opens on our greeting answers, in the target language.
 {
-  const e = new ReplyEngine({ apiKey, anthropicKey, model, fallbackModel: "gemini-3.1-flash-lite", system })
+  const e = new ReplyEngine({ apiKey, anthropicKey, model, fallbackModel: "gemini-3.1-flash-lite", system, language: "ko" })
   const a = await timed(e, call.slice(0, 2))
   check("1 answers a greeting-first call", /[가-힣]/.test(a.text), `${a.first}ms "${a.text.slice(0, 60)}"`)
 
@@ -52,8 +52,11 @@ const call = [
 
   // 4. Barge-in: abort mid-stream resolves with what was written.
   const ac = new AbortController()
+  const keep = setTimeout(() => {}, 20000)   // the race must resolve on its own; this only keeps node alive to see it
+  e.onFallback = (x) => console.log("     fallback:", x)
   const p = e.generate(call, ac.signal, () => ac.abort())
-  const d = await p
+  const d = await Promise.race([p, new Promise((r) => setTimeout(() => r("<HUNG>"), 15000))])
+  clearTimeout(keep)
   check("4 abort keeps the partial", typeof d === "string", `"${d.slice(0, 30)}"`)
   e.dispose()
 }
@@ -67,12 +70,25 @@ const call = [
   check("5 Claude refused → Gemini answers", r.text.length > 0 && fellBack.includes("gemini"), `${r.first}ms ${fellBack}`)
 }
 
-// 6. Latency side by side on the same history.
-for (const m of [model, "gemini-3.6-flash"]) {
-  const e = new ReplyEngine({ apiKey, anthropicKey, model: m, fallbackModel: m, system })
+// 6. Time to the first SPOKEN sentence (the gate holds text back to whole
+//    sentences), side by side, over a few histories in two languages.
+const histories = [
+  ["ko", call],
+  ["ko", [{ role: "model", text: "주말에 뭐 했어?" }, { role: "user", text: "친구랑 카페 가서 일 얘기 많이 했어." }]],
+  ["en", [{ role: "model", text: "Hey! What did you do this weekend?" }, { role: "user", text: "I went to a cafe with my friend and we talked a lot about our jobs." }]],
+]
+const enSystem = existsSync("/tmp/fv-prompt-dump/en-a2.txt") ? readFileSync("/tmp/fv-prompt-dump/en-a2.txt", "utf8") : system
+for (const [label, m, extra] of [
+  ["haiku medium", model, {}], ["haiku low", model, { claudeEffort: "low" }],
+  ["haiku off", model, { claudeThinking: "disabled" }], ["gemini 3.6-flash", "gemini-3.6-flash", {}],
+]) {
   const firsts = []
-  for (let i = 0; i < 4; i++) firsts.push((await timed(e, call)).first)
-  console.log(`     ${m.padEnd(18)} first token ms: ${firsts.join(", ")}`)
-  e.dispose()
+  for (const [lang, h] of histories) {
+    const e = new ReplyEngine({ apiKey, anthropicKey, model: m, fallbackModel: m, system: lang === "en" ? enSystem : system, language: lang, ...extra })
+    for (let i = 0; i < 3; i++) firsts.push((await timed(e, h)).first)
+    e.dispose()
+  }
+  firsts.sort((a, b) => a - b)
+  console.log(`     ${label.padEnd(18)} first sentence ms: median ${firsts[Math.floor(firsts.length / 2)]}  p90 ${firsts[Math.floor(firsts.length * 0.9)]}  (${firsts.join(", ")})`)
 }
 process.exit(failures ? 1 : 0)

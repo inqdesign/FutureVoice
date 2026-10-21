@@ -16,6 +16,7 @@
 #   MODEL=gemini-3.1-flash-lite scripts/beginner-probe.py   # the hedge model
 #   NO_DUMP=1 …                               # reuse the last dump
 #   EXTRA='…' …                               # text appended to the system prompt
+#   THINKING=disabled EFFORT=low …            # Claude only: thinking / effort
 #
 # Reads GEMINI_API_KEY from gateway/.dev.vars. Full output → $OUT_DIR
 # (default the scratch dir below) as beginner-probe.out.json.
@@ -121,7 +122,10 @@ def reply_claude(system, history):
     msgs = [{"role": "assistant" if r == "m" else "user", "content": t} for r, t in history]
     if msgs[0]["role"] == "assistant":
         msgs.insert(0, {"role": "user", "content": "(call connected)"})
-    body = json.dumps({"model": MODEL, "max_tokens": 1024, "system": system, "messages": msgs}).encode()
+    req_body = {"model": MODEL, "max_tokens": 1024, "system": system, "messages": msgs}
+    if os.environ.get("THINKING"): req_body["thinking"] = {"type": os.environ["THINKING"]}
+    if os.environ.get("EFFORT"): req_body["output_config"] = {"effort": os.environ["EFFORT"]}
+    body = json.dumps(req_body).encode()
     key = open(os.path.expanduser("~/keys/anthropic.txt")).read().strip()
     err = None
     for attempt in range(5):
