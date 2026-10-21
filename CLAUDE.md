@@ -769,7 +769,9 @@ editing off) behind a sheet.
   is what you can study, put in what you want"). Those go in at fixed
   slots (`RoutineOnboardingView.slot`: listening 08:30, shadowing 12:30 ×1,
   and an evening sitting from 21:00 — say it again, review ×10, speech —
-  where the ticked ones follow one another with no gap) and
+  where the ticked ones follow one another with no gap). A ticked block
+  grows a Time row right under it, so its time is changed on the block
+  itself; a time set by hand wins and drops out of the evening chain and
   the footer says times and amounts change later in Activity. "Done"
   writes them (`StudyPlan.withOnboardingRoutine`). With the call in, the
   alarm/notification permission is asked; without, the notification one

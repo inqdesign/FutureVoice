@@ -52,11 +52,16 @@ struct RoutineOnboardingView: View {
     static let evening: [StudyPlan.Kind] = [.sayItAgain, .review, .speech]
     static let eveningStart = 21 * 60
 
-    /// Where each block goes and how much it asks for. The evening kinds
-    /// that are ticked follow one another from 21:00 with no gap; a row not
-    /// ticked shows where it WOULD go.
+    /// Where each block goes and how much it asks for. A time the learner
+    /// set on the block wins; otherwise the evening kinds that are ticked
+    /// (and not set by hand) follow one another from 21:00 with no gap, and
+    /// a row not ticked shows where it WOULD go.
     private func slot(_ kind: StudyPlan.Kind) -> (hour: Int, minute: Int, amount: Int) {
         let amount = kind == .review ? 10 : kind == .talk ? callMinutes : 1
+        if kind != .talk, let set = times[kind] {
+            let c = cal.dateComponents([.hour, .minute], from: set)
+            return (c.hour ?? 21, c.minute ?? 0, amount)
+        }
         switch kind {
         case .talk:
             let c = cal.dateComponents([.hour, .minute], from: callTime)
@@ -65,7 +70,7 @@ struct RoutineOnboardingView: View {
         case .shadow: return (12, 30, amount)
         default:
             var start = Self.eveningStart
-            for k in Self.evening where k != kind && selected.contains(k) {
+            for k in Self.evening where k != kind && selected.contains(k) && times[k] == nil {
                 guard let i = Self.evening.firstIndex(of: k), let mine = Self.evening.firstIndex(of: kind),
                       i < mine else { continue }
                 start += k.drawnMinutes(amount: k == .review ? 10 : 1)
@@ -77,6 +82,8 @@ struct RoutineOnboardingView: View {
     @State private var step: Step = .intro
     @State private var callMinutes = 5
     @State private var callTime = Calendar.current.date(bySettingHour: 8, minute: 0, second: 0, of: Date()) ?? Date()
+    /// Times set by hand on an "Add more" block.
+    @State private var times: [StudyPlan.Kind: Date] = [:]
     /// The days the whole routine runs on; the rest are rest days.
     @State private var days: Set<Int> = Set(1...7)
     /// The intro has grown into the list.
@@ -341,7 +348,15 @@ struct RoutineOnboardingView: View {
                 }
                 .transition(.opacity)
                 Section {
-                    ForEach(Self.others) { kind in row(kind) }
+                    ForEach(Self.others) { kind in
+                        row(kind)
+                        // A ticked block's time, changed right on it.
+                        if selected.contains(kind) {
+                            DatePicker("Time", selection: timeBinding(kind), displayedComponents: .hourAndMinute)
+                                .environment(\.locale, uiLocale)
+                                .padding(.leading, 42)
+                        }
+                    }
                 } header: {
                     Text(explain("Add more"))
                 } footer: {
@@ -393,8 +408,9 @@ struct RoutineOnboardingView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
-                    // The call's time is set right under it.
-                    if kind != .talk {
+                    // The call's time — and a ticked block's — is set
+                    // right under it.
+                    if kind != .talk && !on {
                         Text(whenText(kind))
                             .font(.footnote)
                             .foregroundStyle(.tertiary)
@@ -410,6 +426,13 @@ struct RoutineOnboardingView: View {
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(on ? .isSelected : [])
+    }
+
+    private func timeBinding(_ kind: StudyPlan.Kind) -> Binding<Date> {
+        Binding(get: {
+            let s = slot(kind)
+            return cal.date(bySettingHour: s.hour, minute: s.minute, second: 0, of: Date()) ?? Date()
+        }, set: { times[kind] = $0 })
     }
 
     /// The days the routine runs on. Lit = a study day; at least one.
