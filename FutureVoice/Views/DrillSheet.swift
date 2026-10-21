@@ -846,9 +846,43 @@ private extension DrillView {
         // marks, notes and buttons: the second layout sets the sentences a
         // step smaller (the notes also give way on their own), so the buttons
         // stay on the card instead of spilling under it.
-        ViewThatFits(in: .vertical) {
-            cardContent(card, revealed: revealed, compact: false)
-            cardContent(card, revealed: revealed, compact: true)
+        VStack(alignment: .leading, spacing: 18) {
+            // Only the TEXT is measured: a ViewThatFits that also held the
+            // Spacer below sized the card to anything mid-drag (it grew past
+            // the screen and flashed on drop).
+            ViewThatFits(in: .vertical) {
+                cardContent(card, revealed: revealed, compact: false)
+                cardContent(card, revealed: revealed, compact: true)
+            }
+
+            Spacer(minLength: 12)
+
+            if revealed {
+                HStack(spacing: 8) {
+                    pillButton(systemImage: isLoadingAudio ? nil : "speaker.wave.2.fill",
+                               text: isLoadingAudio ? "Loading…" : "Hear it",
+                               showSpinner: isLoadingAudio) {
+                        Task { await playTarget(card) }
+                    }
+                    .disabled(isLoadingAudio)
+
+                    pillButton(systemImage: "waveform.badge.mic", text: "Shadow") {
+                        // Shadow runs its own recognizer — never two at once.
+                        cancelAlignment()
+                        shadowingCard = card
+                    }
+
+                    pillButton(systemImage: card.enrichment == nil ? "books.vertical" : "books.vertical.fill",
+                               text: "Examples") {
+                        showingEnrichmentFor = card
+                    }
+                }
+            } else {
+                Label("Tap to reveal", systemImage: "eye")
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(.tint)
+                    .frame(maxWidth: .infinity)
+            }
         }
         .padding(24)
         // Dropped the 360pt minHeight — long targetPhrases were being
@@ -958,37 +992,7 @@ private extension DrillView {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
-
-            Spacer(minLength: 12)
-
-            if revealed {
-                HStack(spacing: 8) {
-                    pillButton(systemImage: isLoadingAudio ? nil : "speaker.wave.2.fill",
-                               text: isLoadingAudio ? "Loading…" : "Hear it",
-                               showSpinner: isLoadingAudio) {
-                        Task { await playTarget(card) }
-                    }
-                    .disabled(isLoadingAudio)
-
-                    pillButton(systemImage: "waveform.badge.mic", text: "Shadow") {
-                        // Shadow runs its own recognizer — never two at once.
-                        cancelAlignment()
-                        shadowingCard = card
-                    }
-
-                    pillButton(systemImage: card.enrichment == nil ? "books.vertical" : "books.vertical.fill",
-                               text: "Examples") {
-                        showingEnrichmentFor = card
-                    }
-                }
-            } else {
-                Label("Tap to reveal", systemImage: "eye")
-                    .font(.footnote.weight(.medium))
-                    .foregroundStyle(.tint)
-                    .frame(maxWidth: .infinity)
-            }
         }
-
     }
 
     /// Content color on the accent card.

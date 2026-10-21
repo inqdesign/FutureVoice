@@ -603,12 +603,42 @@ struct StudyDeckView: View {
         // Same as the drill card: if the sentence card doesn't fit its
         // height, the second layout sets the sentences a step smaller so the
         // buttons stay on the card.
-        ViewThatFits(in: .vertical) {
-            cardContent(item, revealed: revealed, showHint: showHint, compact: false)
-                .padding(24)
-            cardContent(item, revealed: revealed, showHint: showHint, compact: true)
-                .padding(24)
+        VStack(alignment: .leading, spacing: 18) {
+            // Only the TEXT is measured, never the Spacer below (a
+            // ViewThatFits holding it sized the card to anything mid-drag).
+            // A word card's meaning side measures itself.
+            if item.isSentence {
+                ViewThatFits(in: .vertical) {
+                    cardContent(item, revealed: revealed, compact: false)
+                    cardContent(item, revealed: revealed, compact: true)
+                }
+            } else {
+                cardContent(item, revealed: revealed, compact: false)
+            }
+
+            Spacer(minLength: 12)
+
+            if showHint {
+                if revealed {
+                    if appState.voiceCloneId != nil {
+                        HStack(spacing: 8) {
+                            pillButton(systemImage: loadingAudio ? nil : "speaker.wave.2.fill",
+                                       text: loadingAudio ? "Loading…" : "Hear it",
+                                       showSpinner: loadingAudio) {
+                                Task { await speak(item.text) }
+                            }
+                            .disabled(loadingAudio)
+                        }
+                    }
+                } else {
+                    Label("Tap to check the meaning", systemImage: "eye")
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(.tint)
+                        .frame(maxWidth: .infinity)
+                }
+            }
         }
+        .padding(24)
         .frame(maxWidth: .infinity, minHeight: height, maxHeight: height,
                alignment: .topLeading)
         .background(
@@ -623,7 +653,7 @@ struct StudyDeckView: View {
         .shadow(color: Color.accentColor.opacity(0.28), radius: 8, y: 4)
     }
 
-    private func cardContent(_ item: StudyDeckItem, revealed: Bool, showHint: Bool,
+    private func cardContent(_ item: StudyDeckItem, revealed: Bool,
                              compact: Bool) -> some View {
         let text = item.text
         return VStack(alignment: .leading, spacing: 18) {
@@ -668,28 +698,6 @@ struct StudyDeckView: View {
 
                 if revealed {
                     meaningBlock
-                }
-            }
-
-            Spacer(minLength: 12)
-
-            if showHint {
-                if revealed {
-                    if appState.voiceCloneId != nil {
-                        HStack(spacing: 8) {
-                            pillButton(systemImage: loadingAudio ? nil : "speaker.wave.2.fill",
-                                       text: loadingAudio ? "Loading…" : "Hear it",
-                                       showSpinner: loadingAudio) {
-                                Task { await speak(text) }
-                            }
-                            .disabled(loadingAudio)
-                        }
-                    }
-                } else {
-                    Label("Tap to check the meaning", systemImage: "eye")
-                        .font(.footnote.weight(.medium))
-                        .foregroundStyle(.tint)
-                        .frame(maxWidth: .infinity)
                 }
             }
         }
