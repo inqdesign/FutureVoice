@@ -287,13 +287,14 @@ fun CloneFlowScreen(
     var level by remember { mutableFloatStateOf(0f) }
     var quality by remember { mutableStateOf<SampleQuality?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
-    var greeting by remember { mutableStateOf<ByteArray?>(null) }
+    /** The greeting and the pace takes, kept per VOICE ID (iOS 2026-10-20):
+     *  British → Original → British is the same two voices again, and each
+     *  used to be synthesized afresh. */
+    val sounds = remember { MeetSounds() }
     var clonedVoiceId by remember { mutableStateOf<String?>(null) }
     var accentId by remember { mutableStateOf<String?>(null) }
     var accentToPick by remember { mutableStateOf<com.roro.futurevoice.data.VoiceAccent?>(null) }
     var removingAccent by remember { mutableStateOf(false) }
-    /** "No accent" rebuilds the voice — the learner's one change — so asked. */
-    var confirmingRemoveFromMeet by remember { mutableStateOf(false) }
     /** The month's one voice change (iOS `canChangeVoice`, 2026-10-09). */
     val voiceChange by com.roro.futurevoice.data.VoiceChanges.status
         .collectAsStateWithLifecycle()
@@ -359,7 +360,7 @@ fun CloneFlowScreen(
     }
 
     fun playGreeting() {
-        val g = greeting ?: return
+        val g = clonedVoiceId?.let { sounds.greetings[it] } ?: return
         mp3.stop()
         scope.launch { mp3.play(g) }
     }
@@ -368,11 +369,47 @@ fun CloneFlowScreen(
      *  takes over the orb. Said ONCE on arrival. */
     fun openMeet() {
         meetBurst = true
+        val ask = MeetSounds.greetingKey(clonedVoiceId ?: "")
+        sounds.ask = ask
         scope.launch {
             delay(700)
             meetBurst = false
+            // A pill tapped during the bloom is what they want to hear now.
+            if (sounds.ask != ask) return@launch
             playGreeting()
         }
+    }
+
+    /** The greeting in [voiceId], made once: one request however often it
+     *  is asked for, played on landing only if it is still the ask. */
+    fun fetchGreeting(voiceId: String) {
+        val key = MeetSounds.greetingKey(voiceId)
+        if (sounds.greetings[voiceId] != null || key in sounds.inFlight) return
+        sounds.inFlight.add(key)
+        scope.launch {
+            val data = runCatching {
+                VoiceClient(AuthRepository()).synthesize(
+                    voiceId = voiceId,
+                    text = VoiceCloneScript.greeting(targetLanguage),
+                    purpose = "greeting",
+                )
+            }.getOrNull()
+            sounds.inFlight.remove(key)
+            if (data == null) return@launch
+            sounds.greetings[voiceId] = data
+            if (sounds.ask == key && clonedVoiceId == voiceId) playGreeting()
+        }
+    }
+
+    /** After an accent pick replaces the voice id, the greeting speaks with
+     *  the voice the learner just chose — from the per-voice cache when that
+     *  voice was heard before, synthesized once otherwise. Played here: the
+     *  voice itself changed, so this is a first hearing. */
+    fun refreshGreetingForNewVoice() {
+        val voiceId = clonedVoiceId ?: return
+        sounds.ask = MeetSounds.greetingKey(voiceId)
+        if (sounds.greetings[voiceId] != null) { playGreeting(); return }
+        fetchGreeting(voiceId)
     }
 
     fun stopAndReview() {
@@ -465,32 +502,30 @@ fun CloneFlowScreen(
         val old = clonedVoiceId
         clonedVoiceId = newId
         accentId = accent?.takeIf { it.isNotEmpty() }
-        if (old != null && old != newId) scope.launch {
-            runCatching { com.roro.futurevoice.data.AccountEraser.deleteVoice(old) }
+        // Another accent of the SAME Cartesia voice deletes nothing (iOS
+        // `adoptAccentSwap`): the server keeps a voice another id still uses.
+        val oldUuid = old?.let { VoiceClient.cartesiaUUID(it) }
+        if (old != null && old != newId && (oldUuid == null || oldUuid != VoiceClient.cartesiaUUID(newId))) {
+            scope.launch { runCatching { com.roro.futurevoice.data.AccountEraser.deleteVoice(old) } }
         }
-        greeting = null
-        scope.launch {
-            greeting = runCatching {
-                VoiceClient(AuthRepository()).synthesize(
-                    voiceId = newId,
-                    text = VoiceCloneScript.greeting(targetLanguage),
-                    purpose = "greeting",
-                )
-            }.getOrNull()
-            if (greet) playGreeting()
-        }
+        if (greet) refreshGreetingForNewVoice() else fetchGreeting(newId)
     }
 
-    /** Back to the voice as recorded — the meet act's "Original" pill. */
+    /** Back to the voice without an accent — the same voice with the accent
+     *  dropped from its id ([originalVoiceId]), so no confirmation: nothing
+     *  is rebuilt or deleted, and any other pill brings an accent back. Only
+     *  a voice that isn't a Cartesia voice is rebuilt from the recording. */
     fun removeAccentFromMeet() {
         if (accentId == null || removingAccent) return
+        val current = clonedVoiceId ?: return
         mp3.stop()
+        sounds.ask = null
         removingAccent = true
         com.roro.futurevoice.core.Analytics.capture(
             "voice_accent_removed", mapOf("from" to "meet"))
         scope.launch {
             runCatching {
-                VoiceCloneClient(AuthRepository()).cloneVoice(
+                originalVoiceId(context, current, targetLanguage) ?: VoiceCloneClient(AuthRepository()).cloneVoice(
                     // iOS sends `voiceDisplayName` — the library entry says whose it is.
                     name = com.roro.futurevoice.data.VoiceName.display(context, com.roro.futurevoice.data.PersonaStore.shared(context).load()?.displayName),
                     sample = sampleFile,
@@ -574,14 +609,14 @@ fun CloneFlowScreen(
                 // First words in the user's own voice — best-effort: a failed
                 // synthesis opens the act silent, never blocks. Said once, at
                 // the default rung; the pills below are how speed is heard.
-                greeting = runCatching {
+                runCatching {
                     VoiceClient(auth).synthesize(
                         voiceId = greetVoice,
                         text = VoiceCloneScript.greeting(targetLanguage),
                         purpose = "greeting",
                         speed = com.roro.futurevoice.data.SpeechSpeed.DEFAULT.multiplier(context),
                     )
-                }.getOrNull()
+                }.getOrNull()?.let { sounds.greetings[greetVoice] = it }
                 HapticEngine.success(context)
                 reRecording = false
                 act = CloneAct.MEET
@@ -718,7 +753,11 @@ fun CloneFlowScreen(
         act == CloneAct.SCRIPT -> if (shortScreen) 56.dp else 72.dp
         else -> if (shortScreen) 112.dp else 168.dp
     }
-    val canReplayGreeting = act == CloneAct.MEET && greeting != null
+    /** The orb can speak with a take on hand or on its way: a tap while it
+     *  is being made is remembered and plays the moment it lands. */
+    val canReplayGreeting = act == CloneAct.MEET && clonedVoiceId?.let {
+        sounds.greetings[it] != null || MeetSounds.greetingKey(it) in sounds.inFlight
+    } == true
     val stageTitle = stringResource(when (act) {
         CloneAct.INTRO -> if (reclaimed) R.string.let_s_make_your_voice_again else R.string.your_fluent_self
         CloneAct.CONSENT -> R.string.your_voice_in_safe_hands
@@ -814,7 +853,9 @@ fun CloneFlowScreen(
                         // On the meet act the orb IS the fluent self, so
                         // tapping it is how the greeting is heard again.
                         .then(if (canReplayGreeting) Modifier.clickable {
-                            HapticEngine.light(context); playGreeting()
+                            HapticEngine.light(context)
+                            sounds.ask = MeetSounds.greetingKey(clonedVoiceId ?: "")
+                            playGreeting()
                         } else Modifier),
                 )
             }
@@ -1085,6 +1126,7 @@ fun CloneFlowScreen(
                                     voiceId = clonedVoiceId,
                                     line = VoiceCloneScript.paceSample(targetLanguage),
                                     player = mp3,
+                                    sounds = sounds,
                                 )
                             }
                         }
@@ -1114,9 +1156,10 @@ fun CloneFlowScreen(
                                         label = stringResource(R.string.accent_original),
                                         selected = accentId == null, loading = removingAccent,
                                         enabled = !removingAccent && (accentId == null ||
-                                            (sampleFile.exists() && canChangeVoice)),
+                                            clonedVoiceId?.let { VoiceClient.cartesiaUUID(it) } != null ||
+                                            sampleFile.exists()),
                                         modifier = Modifier.weight(1f),
-                                    ) { if (accentId != null) confirmingRemoveFromMeet = true }
+                                    ) { removeAccentFromMeet() }
                                     accentOptions.forEach { o ->
                                         // With no change left, only the voice they have
                                         // stays tappable — the rest would end at a refusal.
@@ -1126,7 +1169,7 @@ fun CloneFlowScreen(
                                             loading = false,
                                             enabled = !removingAccent && (canChangeVoice || accentId == o.id),
                                             modifier = Modifier.weight(1f),
-                                        ) { mp3.stop(); accentToPick = o }
+                                        ) { mp3.stop(); sounds.ask = null; accentToPick = o }
                                     }
                                 }
                                 if (!canChangeVoice) {
@@ -1386,22 +1429,6 @@ fun CloneFlowScreen(
             onDismiss = { accentToPick = null },
         )
     }
-    if (confirmingRemoveFromMeet) {
-        AlertDialog(
-            onDismissRequest = { confirmingRemoveFromMeet = false },
-            title = { Text(stringResource(R.string.remove_the_accent)) },
-            confirmButton = {
-                TextButton(onClick = { confirmingRemoveFromMeet = false; removeAccentFromMeet() }) {
-                    Text(stringResource(R.string.remove), color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirmingRemoveFromMeet = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            },
-        )
-    }
     val compareVoice = clonedVoiceId
     if (comparing && compareVoice != null) {
         VoiceComparisonSheet(voiceId = compareVoice, targetLanguage = targetLanguage,
@@ -1537,6 +1564,32 @@ private fun ConsentPoint(icon: androidx.compose.ui.graphics.vector.ImageVector, 
     }
 }
 
+/**
+ * The meet act's sounds (iOS 2026-10-20, `MeetSound`): the greeting and one
+ * pace take per rung, kept per VOICE ID so a voice heard before is never made
+ * again; one request per take however often it is asked for; and the one
+ * thing the learner last asked to hear — a take that lands plays only if it
+ * is still that. Before, every request played whenever it landed, so a tap on
+ * the orb and a tap on a pill came out late and one after the other.
+ */
+internal class MeetSounds {
+    val greetings = mutableStateMapOf<String, ByteArray>()
+    val pace = mutableStateMapOf<String, ByteArray>()
+    val inFlight = androidx.compose.runtime.mutableStateListOf<String>()
+    var ask by mutableStateOf<String?>(null)
+
+    companion object {
+        fun greetingKey(voice: String) = "g|$voice"
+        fun paceKey(voice: String, speed: com.roro.futurevoice.data.SpeechSpeed) = "p|$voice|${speed.name}"
+    }
+}
+
+/**
+ * The three speed pills (iOS meet act): a tap selects the rung and speaks the
+ * pace line in it. Lazy: nothing is made until a pill is tapped, and the
+ * first tap buys the other two. With [sounds] the takes are kept per voice
+ * and only the last ask plays (the meet act); without, a fresh set.
+ */
 @Composable
 internal fun SpeedAudition(
     voiceId: String?,
@@ -1544,37 +1597,58 @@ internal fun SpeedAudition(
     player: com.roro.futurevoice.audio.Mp3Player,
     /** The "change both later in settings" footnote — onboarding's alone. */
     showLaterHint: Boolean = true,
+    sounds: MeetSounds = remember { MeetSounds() },
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var selected by remember { mutableStateOf(com.roro.futurevoice.data.SpeechSpeed.current(context)) }
-    val takes = remember { mutableStateMapOf<com.roro.futurevoice.data.SpeechSpeed, ByteArray>() }
-    var loading by remember { mutableStateOf<com.roro.futurevoice.data.SpeechSpeed?>(null) }
-    suspend fun take(s: com.roro.futurevoice.data.SpeechSpeed): ByteArray? {
-        takes[s]?.let { return it }
-        val id = voiceId ?: return null
-        return runCatching {
-            VoiceClient(com.roro.futurevoice.data.AuthRepository()).synthesize(
-                voiceId = id, text = line, purpose = "greeting", speed = s.multiplier(context))
-        }.getOrNull()?.also { takes[s] = it }
+    val voiceKey = voiceId ?: ""
+    /** One request per take; it plays on landing only if it is still the ask. */
+    fun fetch(s: com.roro.futurevoice.data.SpeechSpeed, id: String) {
+        val key = MeetSounds.paceKey(id, s)
+        if (sounds.pace[key] != null || key in sounds.inFlight) return
+        sounds.inFlight.add(key)
+        scope.launch {
+            val data = runCatching {
+                VoiceClient(com.roro.futurevoice.data.AuthRepository()).synthesize(
+                    voiceId = id, text = line, purpose = "greeting", speed = s.multiplier(context))
+            }.getOrNull()
+            sounds.inFlight.remove(key)
+            if (data == null) return@launch
+            sounds.pace[key] = data
+            if (sounds.ask == key && voiceId == id) {
+                player.stop()
+                player.play(data)
+            }
+        }
+    }
+    /** The rung being waited on, so the pill can say so. */
+    val loading = com.roro.futurevoice.data.SpeechSpeed.entries.firstOrNull { s ->
+        val key = MeetSounds.paceKey(voiceKey, s)
+        sounds.ask == key && sounds.pace[key] == null && key in sounds.inFlight
     }
     Column(Modifier.fillMaxWidth().padding(top = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             com.roro.futurevoice.data.SpeechSpeed.entries.forEach { s ->
-                val onClick: () -> Unit = {
+                val onClick: () -> Unit = onClick@{
                     selected = s
                     com.roro.futurevoice.data.SpeechSpeed.set(context, s)
-                    scope.launch {
-                        loading = s
-                        val audio = take(s)
-                        loading = null
-                        audio?.let { player.play(it) }
-                        // Warm the other two so the next tap answers at once.
-                        com.roro.futurevoice.data.SpeechSpeed.entries.filter { it != s && takes[it] == null }
-                            .forEach { launch { take(it) } }
+                    val key = MeetSounds.paceKey(voiceKey, s)
+                    sounds.ask = key
+                    val have = sounds.pace[key]
+                    if (have != null) {
+                        player.stop()
+                        scope.launch { player.play(have) }
+                        return@onClick
                     }
+                    val id = voiceId ?: return@onClick
+                    // Whatever was playing is not what they asked for any more.
+                    player.stop()
+                    fetch(s, id)
+                    // Warm the other two so the next tap answers at once.
+                    com.roro.futurevoice.data.SpeechSpeed.entries.filter { it != s }.forEach { fetch(it, id) }
                 }
                 val label: @Composable () -> Unit = {
                     if (loading == s) CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)

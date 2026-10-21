@@ -542,18 +542,70 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
     val canChangeVoice: Boolean get() = com.roro.futurevoice.data.VoiceChanges.canChange
 
     fun adoptRemixedVoice(newId: String, accentId: String, source: String = "picker") {
-        val old = _state.value.voiceId
-        if (newId == old) return
+        if (newId == _state.value.voiceId) return
+        // An empty accent is the voice without one (the sheet's "Original",
+        // a rebuild from the recording): a swap, not an accent applied.
+        if (accentId.isEmpty()) { adoptAccentSwap(newId, null); return }
+        adoptAccentSwap(newId, accentId)
         com.roro.futurevoice.core.Analytics.capture("voice_accent_applied",
             mapOf("accent" to accentId, "source" to source))
+    }
+
+    /** Whether "Original" can be reached (iOS `canRemoveAccent`): an accent
+     *  is on, and either the accent can simply be dropped from the id (every
+     *  Cartesia voice) or there is a recording to rebuild from. */
+    val canRemoveAccent: Boolean get() {
+        val st = _state.value
+        val id = st.voiceId ?: return false
+        if (st.voiceAccentId.isNullOrEmpty()) return false
+        return com.roro.futurevoice.net.VoiceClient.cartesiaUUID(id) != null ||
+            VoiceComparison.exists(appContext.filesDir)
+    }
+
+    /**
+     * Back to the voice without an accent (iOS `removeVoiceAccent`,
+     * 2026-10-20). On Cartesia an accent is only a suffix on the SAME voice,
+     * so "Original" is one save, no new clone ([originalVoiceId]). It used
+     * to re-clone from the recording, which took tens of seconds, minted a
+     * new voice and left every accent to be made again on it. Only an id
+     * that isn't a Cartesia voice is still rebuilt.
+     */
+    suspend fun removeVoiceAccent() {
+        val st = _state.value
+        if (st.voiceAccentId.isNullOrEmpty()) return
+        val current = st.voiceId ?: return
+        val newId = originalVoiceId(appContext, current, st.targetLanguage) ?: run {
+            val sample = VoiceComparison.sampleFile(appContext.filesDir)
+            if (!sample.exists()) return
+            com.roro.futurevoice.net.VoiceCloneClient(auth).cloneVoice(
+                name = com.roro.futurevoice.data.VoiceName.display(appContext,
+                    com.roro.futurevoice.data.PersonaStore.shared(appContext).load()?.displayName),
+                sample = sample)
+        }
+        adoptAccentSwap(newId, null)
+    }
+
+    /**
+     * The live voice id becomes another accent of the voice (or a new voice)
+     * (iOS `adoptAccentSwap`). Nothing waits on the network when it is the
+     * same Cartesia voice: no upstream delete (the server keeps a voice
+     * another id still uses anyway), and the allowance is read in the
+     * background.
+     */
+    private fun adoptAccentSwap(newId: String, accentId: String?) {
+        val old = _state.value.voiceId
+        val oldUuid = old?.let { com.roro.futurevoice.net.VoiceClient.cartesiaUUID(it) }
+        val deleteOld = old != null && old != newId &&
+            (oldUuid == null || oldUuid != com.roro.futurevoice.net.VoiceClient.cartesiaUUID(newId))
         _state.update { it.copy(voiceId = newId, voiceAccentId = accentId) }
-        prefs.edit().putString(ACCENT_KEY, accentId).apply()
+        if (accentId == null) prefs.edit().remove(ACCENT_KEY).apply()
+        else prefs.edit().putString(ACCENT_KEY, accentId).apply()
         warmFreeTalkOpeners()
-        refreshVoiceChangeStatus()
         viewModelScope.launch {
-            if (old != null) {
+            if (deleteOld && old != null) {
                 runCatching { com.roro.futurevoice.data.AccountEraser.deleteVoice(old) }
             }
+            com.roro.futurevoice.data.VoiceChanges.refresh()
         }
     }
 

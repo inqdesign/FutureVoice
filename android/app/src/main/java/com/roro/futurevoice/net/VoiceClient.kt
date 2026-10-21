@@ -30,6 +30,11 @@ class VoiceClient(private val auth: AuthRepository) {
          *  `VoiceClient.isCartesiaVoice`). */
         fun isCartesiaVoice(id: String) = CARTESIA.matches(id)
 
+        /** The Cartesia voice under an id, without its accent; null when the
+         *  id isn't a Cartesia voice (iOS `VoiceClient.cartesiaUUID`). */
+        fun cartesiaUUID(id: String): String? =
+            if (isCartesiaVoice(id)) id.take(36).lowercase() else null
+
         /**
          * The language a line is pinned to upstream (`language_code`), or null
          * to let the model guess as it always has (iOS `pinnedLanguage`,

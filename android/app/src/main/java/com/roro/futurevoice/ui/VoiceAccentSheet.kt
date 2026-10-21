@@ -104,10 +104,12 @@ fun VoiceAccentSheet(
     val againLine = com.roro.futurevoice.data.VoiceChangeStatus.againLine(context, changeStatus?.nextAt)
     LaunchedEffect(Unit) { com.roro.futurevoice.data.VoiceChanges.refresh() }
     var removing by remember { mutableStateOf(false) }
-    var confirmingRemove by remember { mutableStateOf(false) }
-    /** No recording on disk, no way back: "Original" can't be reached. */
+    /** Whether "no accent" is reachable at all (iOS `canRemoveAccent`): on
+     *  Cartesia the accent is dropped from the same voice's id; otherwise
+     *  only a recording on disk can rebuild it. */
     val canRemoveAccent = !appliedAccentId.isNullOrEmpty() &&
-        VoiceComparison.exists(context.filesDir)
+        (com.roro.futurevoice.net.VoiceClient.cartesiaUUID(voiceId) != null ||
+            VoiceComparison.exists(context.filesDir))
     var previews by remember { mutableStateOf<List<VoiceRemixClient.Preview>>(emptyList()) }
     var picked by remember { mutableStateOf<String?>(null) }
     var playing by remember { mutableStateOf<String?>(null) }
@@ -235,7 +237,10 @@ fun VoiceAccentSheet(
         }
     }
 
-    /** Back to the voice the recording makes on its own (iOS `removeAccent`). */
+    /** Back to the voice without an accent (iOS `removeAccent` →
+     *  `AppState.removeVoiceAccent`): the same voice with the accent dropped
+     *  from its id, nothing rebuilt — only a voice that isn't a Cartesia
+     *  voice is still rebuilt from the recording. */
     fun removeAccent() {
         if (removing) return
         player.stop(); playing = null
@@ -243,11 +248,12 @@ fun VoiceAccentSheet(
         Analytics.capture("voice_accent_removed")
         scope.launch {
             runCatching {
-                com.roro.futurevoice.net.VoiceCloneClient(AuthRepository()).cloneVoice(
-                    name = com.roro.futurevoice.data.VoiceName.display(context,
-                        com.roro.futurevoice.data.PersonaStore.shared(context).load()?.displayName),
-                    sample = VoiceComparison.sampleFile(context.filesDir),
-                )
+                originalVoiceId(context, voiceId, targetLanguage)
+                    ?: com.roro.futurevoice.net.VoiceCloneClient(AuthRepository()).cloneVoice(
+                        name = com.roro.futurevoice.data.VoiceName.display(context,
+                            com.roro.futurevoice.data.PersonaStore.shared(context).load()?.displayName),
+                        sample = VoiceComparison.sampleFile(context.filesDir),
+                    )
             }.onSuccess { newId ->
                 HapticEngine.success(context)
                 onApplied(newId, "")
@@ -309,15 +315,25 @@ fun VoiceAccentSheet(
                 },
             ) {
                 // "Original" is an option (iOS 2026-10-12): the voice as
-                // recorded, checked whenever no accent is applied; with one
-                // applied, a tap asks and rebuilds from the saved recording.
+                // recorded, checked whenever no accent is applied. With one
+                // applied, a tap drops it (instant, nothing rebuilt). With
+                // none applied and another accent's takes on screen, a tap is
+                // "keep the original": it used to do nothing at all, which
+                // read as a broken button (iOS 2026-10-20).
                 AccentSheetRow(
                     title = stringResource(R.string.accent_original),
                     checked = appliedAccentId.isNullOrEmpty() && accent == null,
                     busy = removing,
-                    enabled = !generating && !saving && !removing &&
-                        (appliedAccentId.isNullOrEmpty() || (canRemoveAccent && canChange)),
-                    onClick = { if (!appliedAccentId.isNullOrEmpty()) confirmingRemove = true })
+                    enabled = !saving && !removing &&
+                        (appliedAccentId.isNullOrEmpty() || canRemoveAccent),
+                    onClick = {
+                        if (!appliedAccentId.isNullOrEmpty()) removeAccent()
+                        else {
+                            player.stop(); playing = null
+                            accent = null; previews = emptyList(); picked = null
+                            onDismiss()
+                        }
+                    })
                 options.forEach { o ->
                     GroupedRowDivider(inset = false)
                     AccentSheetRow(
@@ -361,24 +377,6 @@ fun VoiceAccentSheet(
         }
     }
 
-    if (confirmingRemove) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { confirmingRemove = false },
-            title = { Text(stringResource(R.string.remove_the_accent)) },
-            text = { Text(stringResource(R.string.rebuilds_your_voice_from_your_saved_recording_which_takes_a_90f303)) },
-            confirmButton = {
-                androidx.compose.material3.TextButton(onClick = {
-                    confirmingRemove = false
-                    removeAccent()
-                }) { Text(stringResource(R.string.remove), color = MaterialTheme.colorScheme.error) }
-            },
-            dismissButton = {
-                androidx.compose.material3.TextButton(onClick = { confirmingRemove = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            },
-        )
-    }
     error?.let { msg ->
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { error = null },
@@ -542,6 +540,30 @@ internal object RemixTakeCache {
  * clone — it works. Null without a capture when the language has no default.
  * The caller adopts the returned voice (and deletes the outgoing one).
  */
+/**
+ * The same voice without an accent (iOS `AppState.removeVoiceAccent`,
+ * 2026-10-20). On Cartesia an accent is only a suffix on the SAME voice, so
+ * "Original" is a save of `<uuid>:original-<lang>` — no new clone. Marked,
+ * not bare: a bare id speaks English and Spanish in the language's default
+ * accent, which made "Original" sound exactly like the first pill; the mark
+ * tells the server to send this language's lines with no accent at all.
+ * Null when [current] isn't a Cartesia voice — only a rebuild from the
+ * recording can help then.
+ */
+internal suspend fun originalVoiceId(
+    context: android.content.Context,
+    current: String,
+    targetLanguage: String,
+): String? {
+    val uuid = com.roro.futurevoice.net.VoiceClient.cartesiaUUID(current) ?: return null
+    val original = "$uuid:original-$targetLanguage"
+    if (original == current) return original
+    return VoiceRemixClient(AuthRepository()).save(original,
+        com.roro.futurevoice.data.VoiceName.display(context,
+            com.roro.futurevoice.data.PersonaStore.shared(context).load()?.displayName),
+        "original")
+}
+
 internal suspend fun remixIntoDefaultAccent(
     context: android.content.Context,
     voiceId: String,

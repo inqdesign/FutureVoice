@@ -130,7 +130,6 @@ internal fun VoiceRevivalScreen(
     var attempt by remember { mutableIntStateOf(0) }
     var accentToPick by remember { mutableStateOf<VoiceAccent?>(null) }
     var removingAccent by remember { mutableStateOf(false) }
-    var confirmingRemove by remember { mutableStateOf(false) }
     /** The month's one voice change (iOS `canChangeVoice`, 2026-10-09).
      *  Bringing the voice back was free; changing it after is the
      *  learner's one change, like anywhere else. */
@@ -138,20 +137,16 @@ internal fun VoiceRevivalScreen(
         .collectAsStateWithLifecycle()
     val canChangeVoice = voiceChange?.canChange ?: true
 
-    /** Back to the voice as recorded — the "Original" pill. */
+    /** Back to the voice without an accent — the "Original" pill: the same
+     *  voice with the accent dropped from its id (`AppState.removeVoiceAccent`),
+     *  nothing rebuilt. */
     fun removeAccent() {
         if (state.voiceAccentId.isNullOrEmpty() || removingAccent) return
         player.stop()
         removingAccent = true
         scope.launch {
-            runCatching {
-                com.roro.futurevoice.net.VoiceCloneClient(AuthRepository()).cloneVoice(
-                    name = "Future Self",
-                    sample = VoiceComparison.sampleFile(context.filesDir),
-                )
-            }.onSuccess { app.adoptRemixedVoice(it, "") }
+            runCatching { app.removeVoiceAccent() }
             removingAccent = false
-            com.roro.futurevoice.data.VoiceChanges.refresh()
         }
     }
 
@@ -270,9 +265,9 @@ internal fun VoiceRevivalScreen(
                                     label = stringResource(R.string.accent_original),
                                     selected = state.voiceAccentId.isNullOrEmpty(), loading = removingAccent,
                                     enabled = !removingAccent &&
-                                        (state.voiceAccentId.isNullOrEmpty() || canChangeVoice),
+                                        (state.voiceAccentId.isNullOrEmpty() || app.canRemoveAccent),
                                     modifier = Modifier.weight(1f),
-                                ) { if (!state.voiceAccentId.isNullOrEmpty()) confirmingRemove = true }
+                                ) { removeAccent() }
                                 options.forEach { o ->
                                     AccentPill(
                                         label = accentLabel(o),
@@ -310,22 +305,6 @@ internal fun VoiceRevivalScreen(
         }
     }
 
-    if (confirmingRemove) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { confirmingRemove = false },
-            title = { Text(stringResource(R.string.remove_the_accent)) },
-            confirmButton = {
-                androidx.compose.material3.TextButton(onClick = { confirmingRemove = false; removeAccent() }) {
-                    Text(stringResource(R.string.remove), color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                androidx.compose.material3.TextButton(onClick = { confirmingRemove = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            },
-        )
-    }
     accentToPick?.let {
         val voiceId = state.voiceId
         if (voiceId != null) {
