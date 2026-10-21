@@ -858,24 +858,11 @@ private extension DrillView {
             Spacer(minLength: 12)
 
             if revealed {
-                HStack(spacing: 8) {
-                    pillButton(systemImage: isLoadingAudio ? nil : "speaker.wave.2.fill",
-                               text: isLoadingAudio ? "Loading…" : "Hear it",
-                               showSpinner: isLoadingAudio) {
-                        Task { await playTarget(card) }
-                    }
-                    .disabled(isLoadingAudio)
-
-                    pillButton(systemImage: "waveform.badge.mic", text: "Shadow") {
-                        // Shadow runs its own recognizer — never two at once.
-                        cancelAlignment()
-                        shadowingCard = card
-                    }
-
-                    pillButton(systemImage: card.enrichment == nil ? "books.vertical" : "books.vertical.fill",
-                               text: "Examples") {
-                        showingEnrichmentFor = card
-                    }
+                // All three keep their labels or all three drop them: a
+                // narrow phone cut them to "Exampl…" one at a time.
+                ViewThatFits(in: .horizontal) {
+                    pillRow(card, iconOnly: false)
+                    pillRow(card, iconOnly: true)
                 }
             } else {
                 Label("Tap to reveal", systemImage: "eye")
@@ -1001,7 +988,30 @@ private extension DrillView {
     static var onCardSecondary: Color { .white.opacity(0.72) }
 
     @ViewBuilder
-    func pillButton(systemImage: String?, text: LocalizedStringKey, showSpinner: Bool = false, action: @escaping () -> Void) -> some View {
+    func pillRow(_ card: DrillCard, iconOnly: Bool) -> some View {
+        HStack(spacing: 8) {
+            pillButton(systemImage: isLoadingAudio ? nil : "speaker.wave.2.fill",
+                       text: isLoadingAudio ? "Loading…" : "Hear it",
+                       showSpinner: isLoadingAudio, iconOnly: iconOnly) {
+                Task { await playTarget(card) }
+            }
+            .disabled(isLoadingAudio)
+
+            pillButton(systemImage: "waveform.badge.mic", text: "Shadow", iconOnly: iconOnly) {
+                // Shadow runs its own recognizer — never two at once.
+                cancelAlignment()
+                shadowingCard = card
+            }
+
+            pillButton(systemImage: card.enrichment == nil ? "books.vertical" : "books.vertical.fill",
+                       text: "Examples", iconOnly: iconOnly) {
+                showingEnrichmentFor = card
+            }
+        }
+    }
+
+    func pillButton(systemImage: String?, text: LocalizedStringKey, showSpinner: Bool = false,
+                    iconOnly: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 5) {
                 if showSpinner {
@@ -1009,11 +1019,18 @@ private extension DrillView {
                 } else if let systemImage {
                     Image(systemName: systemImage)
                 }
-                Text(text)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
+                if !iconOnly {
+                    // Its full width, never shrunk or cut: when the row
+                    // can't hold it, the icon-only row is used instead.
+                    Text(text).fixedSize()
+                }
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(text))
             .font(.footnote.weight(.semibold))
+            // Inside the measured width, so a label that would touch the
+            // capsule's ends counts as not fitting.
+            .padding(.horizontal, 12)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 10)
             .background(Capsule().fill(Color.white.opacity(0.18)))
