@@ -184,7 +184,11 @@ struct StudyDeckView: View {
                 if queue.isEmpty && dealt {
                     doneState
                 } else if !queue.isEmpty {
+                    // Top-aligned: a sentence card is only as tall as its
+                    // sentence, and the folders follow it rather than wait
+                    // at the bottom across an empty band.
                     deckBody(offered: geo.size.height)
+                        .frame(maxHeight: .infinity, alignment: .top)
                 } else {
                     Color.clear
                 }
@@ -530,13 +534,10 @@ struct StudyDeckView: View {
 
     private func deck(height: CGFloat) -> some View {
         ZStack {
-            // Peek of the next card so the user feels there's a deck.
-            if queue.count > 1 {
-                cardSurface(queue[1], revealed: false, showHint: false, height: height)
-                    .scaleEffect(0.95)
-                    .opacity(0.45)
-                    .offset(y: 14)
-            }
+            // Peek of the next card so the user feels there's a deck — a
+            // plain slab the top card's size, since a sentence card is only
+            // as tall as its sentence and the next card's own height would
+            // poke out.
             cardSurface(queue[0], revealed: revealed, showHint: true, height: height)
                 .scaleEffect(flyScale)
                 .opacity(flyOpacity)
@@ -561,6 +562,15 @@ struct StudyDeckView: View {
                     revealed = false
                     await reloadEntry()
                 }
+        }
+        .background {
+            if queue.count > 1 {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color.accentColor)
+                    .scaleEffect(0.95)
+                    .opacity(0.45)
+                    .offset(y: 14)
+            }
         }
         .padding(.horizontal, 16)
     }
@@ -600,6 +610,31 @@ struct StudyDeckView: View {
     /// the revealed card, "tap to reveal" on the concealed one.
     private func cardSurface(_ item: StudyDeckItem, revealed: Bool, showHint: Bool,
                              height: CGFloat) -> some View {
+        // Measured with the margin notes and without, inside the card's
+        // height: a phone that can't hold them drops the notes, never the
+        // buttons (the marks in "You said" still show every change).
+        ViewThatFits(in: .vertical) {
+            cardContent(item, revealed: revealed, showHint: showHint, notes: true)
+                .padding(24)
+            cardContent(item, revealed: revealed, showHint: showHint, notes: false)
+                .padding(24)
+        }
+        .frame(maxWidth: .infinity, minHeight: item.isSentence ? nil : height,
+               maxHeight: height, alignment: .topLeading)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.accentColor)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+        )
+        .tint(Self.onCard)
+        .shadow(color: Color.accentColor.opacity(0.28), radius: 8, y: 4)
+    }
+
+    private func cardContent(_ item: StudyDeckItem, revealed: Bool, showHint: Bool,
+                             notes: Bool) -> some View {
         let text = item.text
         return VStack(alignment: .leading, spacing: 18) {
             if item.isSentence {
@@ -623,7 +658,9 @@ struct StudyDeckView: View {
                         .redacted(reason: revealed ? [] : .placeholder)
                 }
                 if revealed, !item.cardSaid.isEmpty {
-                    CardCorrectionNotes(said: item.cardSaid, fix: text, reason: item.cardReason)
+                    if notes {
+                        CardCorrectionNotes(said: item.cardSaid, fix: text, reason: item.cardReason)
+                    }
                 } else if revealed, !item.cardReason.isEmpty {
                     labeled("Why") {
                         Text(item.cardReason)
@@ -646,7 +683,13 @@ struct StudyDeckView: View {
                 }
             }
 
-            Spacer(minLength: 12)
+            // A word card keeps its full height (the meaning side measures
+            // against it); a sentence card is only as tall as what's on it.
+            if item.isSentence {
+                Color.clear.frame(height: 0)
+            } else {
+                Spacer(minLength: 12)
+            }
 
             if showHint {
                 if revealed {
@@ -668,19 +711,6 @@ struct StudyDeckView: View {
                 }
             }
         }
-        .padding(24)
-        .frame(maxWidth: .infinity, minHeight: height, maxHeight: height,
-               alignment: .topLeading)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.accentColor)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.white.opacity(0.14), lineWidth: 1)
-        )
-        .tint(Self.onCard)
-        .shadow(color: Color.accentColor.opacity(0.28), radius: 8, y: 4)
     }
 
     /// Caption-over-content, exactly the drill card's `labeled`.
