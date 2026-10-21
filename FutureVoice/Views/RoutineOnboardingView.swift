@@ -40,25 +40,34 @@ struct RoutineOnboardingView: View {
 
     /// Every kind, in the order of a day. The call is set by hand (length,
     /// time, days); the rest are ticked from a list.
-    static let kinds: [StudyPlan.Kind] = [.talk, .sayItAgain, .listen, .shadow, .speech, .review]
+    static let kinds: [StudyPlan.Kind] = [.talk, .listen, .shadow, .sayItAgain, .review, .speech]
     static let others: [StudyPlan.Kind] = kinds.filter { $0 != .talk }
     static let callChoices = [5, 10, 15, 20]
 
-    /// Where each block goes and how much it asks for. Say it again sits
-    /// right after the call, as it is in the day.
+    /// The evening sitting (founder, 2026-10-20: say it again, review and
+    /// speech around 9, one after another), in this order.
+    static let evening: [StudyPlan.Kind] = [.sayItAgain, .review, .speech]
+    static let eveningStart = 21 * 60
+
+    /// Where each block goes and how much it asks for. The evening kinds
+    /// that are ticked follow one another from 21:00 with no gap; a row not
+    /// ticked shows where it WOULD go.
     private func slot(_ kind: StudyPlan.Kind) -> (hour: Int, minute: Int, amount: Int) {
-        let c = cal.dateComponents([.hour, .minute], from: callTime)
-        let start = (c.hour ?? 8) * 60 + (c.minute ?? 0)
-        let end = start + callMinutes
+        let amount = kind == .review ? 10 : kind == .talk ? callMinutes : 1
         switch kind {
-        case .talk: return (start / 60, start % 60, callMinutes)
-        case .sayItAgain:
-            return end + StudyPlan.sayItAgainMinutes <= 24 * 60 ? (end / 60, end % 60, 1) : (8, 15, 1)
-        case .listen: return (8, 30, 1)
-        case .shadow: return (12, 30, 1)
-        case .speech: return (20, 0, 1)
-        case .review: return (21, 0, 10)
-        default: return (20, 0, kind.defaultAmount)
+        case .talk:
+            let c = cal.dateComponents([.hour, .minute], from: callTime)
+            return (c.hour ?? 8, c.minute ?? 0, callMinutes)
+        case .listen: return (8, 30, amount)
+        case .shadow: return (12, 30, amount)
+        default:
+            var start = Self.eveningStart
+            for k in Self.evening where k != kind && selected.contains(k) {
+                guard let i = Self.evening.firstIndex(of: k), let mine = Self.evening.firstIndex(of: kind),
+                      i < mine else { continue }
+                start += k.drawnMinutes(amount: k == .review ? 10 : 1)
+            }
+            return (start / 60, start % 60, amount)
         }
     }
 
@@ -100,10 +109,11 @@ struct RoutineOnboardingView: View {
                 // A beat for the grid to be seen on its own first.
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { sheetUp = true }
                 #if DEBUG
-                // `-routineStep pick|done|finish|advance`: a step for a capture;
+                // `-routineStep pick|pickall|done|finish|advance`: a step for a capture;
                 // `finish` runs Done by itself after a moment.
                 switch UserDefaults.standard.string(forKey: "routineStep") {
                 case "pick": expand()
+                case "pickall": selected = Set(Self.kinds); expand()
                 case "advance":
                     // The intro growing into the list, for a recording.
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { expand() }
@@ -379,7 +389,7 @@ struct RoutineOnboardingView: View {
     private func pitch(_ kind: StudyPlan.Kind) -> String {
         switch kind {
         case .talk: return explain("Your fluent self calls you, in your own voice, and you talk about anything.")
-        case .sayItAgain: return explain("Go back through the call you just had. Your lines come up the way a fluent speaker would say them, and you read them out loud.")
+        case .sayItAgain: return explain("Go back through a call from today. Your lines come up the way a fluent speaker would say them, and you read them out loud.")
         case .listen: return explain("The nawana Podcast and the situations you've watched, played one after another. Good for the commute.")
         case .shadow: return explain("Hear a line from your fluent self and say it along with them, in the same rhythm. You get a score.")
         case .speech: return explain("Read a script out loud on camera and get a score for pronunciation and pace.")
@@ -388,9 +398,8 @@ struct RoutineOnboardingView: View {
         }
     }
 
-    /// "Every day · 8:00", or "Right after the call".
+    /// "Every day · 21:15".
     private func whenText(_ kind: StudyPlan.Kind) -> String {
-        if kind == .sayItAgain { return explain("Right after the call") }
         let s = slot(kind)
         let d = cal.date(bySettingHour: s.hour, minute: s.minute, second: 0, of: Date()) ?? Date()
         let time = d.formatted(Date.FormatStyle(locale: uiLocale).hour().minute())

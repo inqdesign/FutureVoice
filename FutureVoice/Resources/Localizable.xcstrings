@@ -57121,48 +57121,48 @@
         }
       }
     },
-    "Go back through the call you just had. Your lines come up the way a fluent speaker would say them, and you read them out loud." : {
+    "Go back through a call from today. Your lines come up the way a fluent speaker would say them, and you read them out loud." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Geh das Gespräch von eben noch einmal durch. Deine Sätze erscheinen so, wie ein Muttersprachler sie sagen würde, und du liest sie laut vor."
+            "value" : "Geh ein Gespräch von heute noch einmal durch. Deine Sätze erscheinen so, wie ein Muttersprachler sie sagen würde, und du liest sie laut vor."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Repite desde el principio la llamada que acabas de tener. En tu turno aparecen tus frases como las diría un nativo, y las lees en voz alta."
+            "value" : "Repite desde el principio una llamada de hoy. En tu turno aparecen tus frases como las diría un nativo, y las lees en voz alta."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Refais depuis le début l’appel que tu viens de passer. À ton tour, tes phrases s’affichent comme les dirait un natif, et tu les lis à voix haute."
+            "value" : "Refais depuis le début un appel d’aujourd’hui. À ton tour, tes phrases s’affichent comme les dirait un natif, et tu les lis à voix haute."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "さっきの会話を最初からもう一度。自分の番には、ネイティブらしく直した文が出るので、それを声に出して読みます。"
+            "value" : "今日の会話を最初からもう一度。自分の番には、ネイティブらしく直した文が出るので、それを声に出して読みます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "방금 한 대화를 처음부터 다시 해요. 내 차례엔 원어민처럼 다듬은 문장이 떠서, 그걸 소리 내어 읽으면 돼요."
+            "value" : "오늘 한 대화를 처음부터 다시 해요. 내 차례엔 원어민처럼 다듬은 문장이 떠서, 그걸 소리 내어 읽으면 돼요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "把刚才的通话从头再来一次。轮到你时会出现改得更地道的句子，大声读出来就好。"
+            "value" : "把今天的通话从头再来一次。轮到你时会出现改得更地道的句子，大声读出来就好。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "把剛才的通話從頭再來一次。輪到你時會出現改得更道地的句子，大聲唸出來就好。"
+            "value" : "把今天的通話從頭再來一次。輪到你時會出現改得更道地的句子，大聲唸出來就好。"
           }
         }
       }
@@ -102262,52 +102262,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "答對了"
-          }
-        }
-      }
-    },
-    "Right after the call" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Direkt nach dem Anruf"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Justo después de la llamada"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Juste après l’appel"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "トークのすぐあと"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "대화 바로 뒤"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "通话一结束"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "通話一結束"
           }
         }
       }

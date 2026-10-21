@@ -767,8 +767,9 @@ editing off) behind a sheet.
   two lines on what it is for someone who has never done it, and its time
   — ticked as many as wanted ("not how much will you study a day, but here
   is what you can study, put in what you want"). Those go in at fixed
-  slots (`RoutineOnboardingView.slot`: say it again right after the call,
-  listening 08:30, shadowing 12:30 ×1, speech 20:00, review 21:00 ×10) and
+  slots (`RoutineOnboardingView.slot`: listening 08:30, shadowing 12:30 ×1,
+  and an evening sitting from 21:00 — say it again, review ×10, speech —
+  where the ticked ones follow one another with no gap) and
   the footer says times and amounts change later in Activity. "Done"
   writes them (`StudyPlan.withOnboardingRoutine`). With the call in, the
   alarm/notification permission is asked; without, the notification one
