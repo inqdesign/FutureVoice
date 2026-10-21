@@ -29,6 +29,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.outlined.AddCircleOutline
@@ -550,8 +551,11 @@ fun MeScreen(
                         channels.forEachIndexed { i, channel ->
                             if (i > 0) GroupedRowDivider()
                             MeRow(
-                                if (channel == com.roro.futurevoice.data.SupportChannel.INSTAGRAM)
-                                    Icons.Filled.Forum else Icons.AutoMirrored.Filled.Send,
+                                when (channel) {
+                                    com.roro.futurevoice.data.SupportChannel.INSTAGRAM -> Icons.Filled.Forum
+                                    com.roro.futurevoice.data.SupportChannel.EMAIL -> Icons.Filled.Email
+                                    else -> Icons.AutoMirrored.Filled.Send
+                                },
                                 stringResource(channel.titleRes), channel.subtitle,
                                 kind = MeRowKind.ACTION,
                                 onClick = channel.url?.let { url -> {

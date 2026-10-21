@@ -6,11 +6,12 @@ import com.roro.futurevoice.R
  * Where a learner reaches the person building this, in one tap — port of
  * `SupportChannel.swift`.
  *
- * **Not email.** A mail draft is a form: a subject line, a signature, an
- * empty body that asks to be composed — and the answer comes back hours
- * later into an inbox nobody opens for fun. A DM is a sentence. The whole
- * point of a one-person app is that the person is reachable, and the channel
- * has to feel like reaching a person.
+ * **A DM first, email beside it.** A mail draft is a form: a subject line, a
+ * signature, an empty body that asks to be composed — a DM is a sentence, and
+ * the whole point of a one-person app is that the person is reachable. But
+ * not everyone has Instagram, and some things (a receipt, a screenshot of a
+ * charge) are easier to send as a mail, so email sits under the DM
+ * (2026-10-21, founder) at the same address the Privacy page names.
  *
  * **Instagram is the primary, and Threads deliberately is not.** Threads has
  * no direct messages at all — a reply there is a public post, which is a
@@ -31,6 +32,7 @@ enum class SupportChannel(
     val titleRes: Int,
 ) {
     INSTAGRAM("nawana.app", R.string.instagram_dm),
+    EMAIL(ConsentStore.CONTACT_EMAIL, R.string.email),
     TELEGRAM("", R.string.telegram);   // e.g. "nawanaapp"
 
     /** `ig.me/m/` is Instagram's own "message this account" link: it opens
@@ -39,10 +41,11 @@ enum class SupportChannel(
         get() = when {
             handle.isEmpty() -> null
             this == INSTAGRAM -> "https://ig.me/m/$handle"
+            this == EMAIL -> "mailto:$handle"
             else -> "https://t.me/$handle"
         }
 
-    val subtitle: String get() = "@$handle"
+    val subtitle: String get() = if (this == EMAIL) handle else "@$handle"
 
     companion object {
         /** Channels that are actually set up, in the order they show. */
