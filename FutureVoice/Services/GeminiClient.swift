@@ -10,6 +10,11 @@ import Supabase
 /// caller's Supabase access token; the Edge Function verifies it before
 /// forwarding to Google.
 final class GeminiClient {
+    #if DEBUG
+    /// Test-only: when set, requests are written here instead of sent.
+    nonisolated(unsafe) static var captureDirectory: URL?
+    struct CaptureStop: Error {}
+    #endif
     static let shared = GeminiClient()
 
     /// For calls the learner is NOT waiting on — see
@@ -275,6 +280,18 @@ final class GeminiClient {
             purpose: purpose,
             stream: stream ? true : nil
         )
+
+        #if DEBUG
+        // Probes (2026-10-21): a test sets `captureDirectory`, calls a real
+        // engine, and gets the exact request it would send — written to disk,
+        // never sent. `scripts/purpose-probe.py` runs those on two models.
+        if let dir = Self.captureDirectory {
+            let data = try JSONEncoder().encode(body)
+            let name = "\(purpose ?? "generic")-\(UUID().uuidString.prefix(8)).json"
+            try data.write(to: dir.appendingPathComponent(name))
+            throw CaptureStop()
+        }
+        #endif
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
