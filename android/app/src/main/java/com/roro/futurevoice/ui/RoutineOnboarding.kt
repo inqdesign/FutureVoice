@@ -387,7 +387,15 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
             modifier = Modifier.align(Alignment.BottomCenter),
             enter = slideInVertically(tween(300)) { it } + fadeIn(tween(300)),
             exit = slideOutVertically(tween(300)) { it } + fadeOut(tween(300))) {
-            ConfirmBar(callBlocked = callBlocked, working = working) { finish() }
+            ConfirmBar(callBlocked = callBlocked, working = working,
+                // Back to the list, ticks as they were. Saving again
+                // rewrites the blocks from the list.
+                onBack = {
+                    step = RoutineStep.INTRO
+                    expanded = true
+                    scope.launch { delay(200); sheetUp = true }
+                },
+                onKeep = { finish() })
         }
         AnimatedVisibility(visible = sheetUp, modifier = Modifier.align(Alignment.BottomCenter),
             enter = slideInVertically(tween(300)) { it }, exit = slideOutVertically(tween(300)) { it }) {
@@ -608,7 +616,7 @@ private fun whenText(kind: StudyPlan.Kind, callStart: Int, callMinutes: Int, sel
 /** The review step's bar: a title, how to fix the grid (or why nothing can
  *  ring), and the confirm button. */
 @Composable
-private fun ConfirmBar(callBlocked: Boolean, working: Boolean, onKeep: () -> Unit) {
+private fun ConfirmBar(callBlocked: Boolean, working: Boolean, onBack: () -> Unit, onKeep: () -> Unit) {
     Column(Modifier.fillMaxWidth()
         .shadow(8.dp)
         .background(MaterialTheme.colorScheme.surface)
@@ -621,8 +629,14 @@ private fun ConfirmBar(callBlocked: Boolean, working: Boolean, onKeep: () -> Uni
             else R.string.routine_review_hint),
             style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Button(onClick = onKeep, enabled = !working, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.routine_keep_it_like_this))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            com.roro.futurevoice.ui.brand.IosTonalButton(onClick = onBack, enabled = !working,
+                modifier = Modifier.width(120.dp)) {
+                Text(stringResource(R.string.back), maxLines = 1)
+            }
+            Button(onClick = onKeep, enabled = !working, modifier = Modifier.weight(1f)) {
+                Text(stringResource(R.string.routine_keep_it_like_this))
+            }
         }
         Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
     }
