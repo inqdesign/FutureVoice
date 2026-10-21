@@ -2,11 +2,12 @@ import Foundation
 
 /// Where a learner reaches the person building this, in one tap.
 ///
-/// **Not email.** A mail draft is a form: a subject line, a signature, an
-/// empty body that asks to be composed — and the answer comes back hours
-/// later into an inbox nobody opens for fun. A DM is a sentence. The whole
-/// point of a one-person app is that the person is reachable, and the channel
-/// has to feel like reaching a person.
+/// **A DM first, email beside it.** A mail draft is a form: a subject line, a
+/// signature, an empty body that asks to be composed — a DM is a sentence, and
+/// the whole point of a one-person app is that the person is reachable. But
+/// not everyone has Instagram, and some things (a receipt, a screenshot of a
+/// charge) are easier to send as a mail, so email sits under the DM
+/// (2026-10-21, founder) at the same address the Privacy page names.
 ///
 /// **Instagram is the primary, and Threads deliberately is not.** Threads has
 /// no direct messages at all — a reply there is a public post, which is a
@@ -25,6 +26,7 @@ import Foundation
 /// turns the section on.
 enum SupportChannel: String, CaseIterable, Identifiable {
     case instagram
+    case email
     case telegram
 
     var id: String { rawValue }
@@ -33,6 +35,7 @@ enum SupportChannel: String, CaseIterable, Identifiable {
     var handle: String {
         switch self {
         case .instagram: return "nawana.app"
+        case .email:     return ConsentStore.contactEmail
         case .telegram:  return ""      // e.g. "nawanaapp"
         }
     }
@@ -48,6 +51,7 @@ enum SupportChannel: String, CaseIterable, Identifiable {
         // `ig.me/m/` is Instagram's own "message this account" link: it opens
         // the app on a DM thread, and the web on a desktop.
         case .instagram: return URL(string: "https://ig.me/m/\(handle)")
+        case .email:     return URL(string: "mailto:\(handle)")
         case .telegram:  return URL(string: "https://t.me/\(handle)")
         }
     }
@@ -55,6 +59,7 @@ enum SupportChannel: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .instagram: return explain("Instagram DM")
+        case .email:     return explain("Email")
         case .telegram:  return explain("Telegram")
         }
     }
@@ -65,9 +70,10 @@ enum SupportChannel: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .instagram: return "bubble.left.and.bubble.right"
+        case .email:     return "envelope"
         case .telegram:  return "paperplane"
         }
     }
 
-    var subtitle: String { "@\(handle)" }
+    var subtitle: String { self == .email ? handle : "@\(handle)" }
 }
