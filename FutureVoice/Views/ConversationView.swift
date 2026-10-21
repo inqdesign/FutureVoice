@@ -93,6 +93,9 @@ struct ConversationView: View {
     /// of what they showed comes up in place of the plans, which are its
     /// last card (`TrialReport`).
     @State private var trialReport: TrialReport?
+    /// The report actually came up on this screen. A close before that
+    /// hands it to the root (`close()`).
+    @State private var trialReportAppeared = false
     /// Wall-clock talk metering (4.5 cr/min via `talk-tick`). Started when
     /// the call seat opens, stopped on end/teardown; its 402 ends the call
     /// gracefully through the same out-of-credits alert as a turn failure.
@@ -1189,6 +1192,7 @@ struct ConversationView: View {
                    onDismiss: { close() }) {
                 if let trialReport {
                     WeekRecapSheet(trial: trialReport).environmentObject(appState)
+                        .onAppear { trialReportAppeared = true }
                 }
             }
             .sheet(isPresented: $showingFirstCallCheck, onDismiss: {
@@ -4567,6 +4571,12 @@ struct ConversationView: View {
             return
         }
         if let onClose { onClose() } else { dismiss() }
+        // The report waits ~1.5 s on the account after Done, with only the ✕
+        // on screen; a close in that gap took the report away with this
+        // screen and nothing raised it again until the next launch (prod
+        // 2026-10-21, the whole twenty minutes spent and no report). The
+        // root's own gate decides whether it is due.
+        if !trialReportAppeared { DailyCallInbox.shared.pendingTrialReport = true }
         // Staged AFTER the screen is gone, never before: the Practice tab
         // lives UNDER this overlay, and a route consumed while the call is
         // still fading would present the review deck on top of it.

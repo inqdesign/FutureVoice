@@ -331,6 +331,11 @@ struct RootTabView: View {
             if phase == .active { offerWeekRecap(); offerTrialReport() }
         }
         .onChange(of: callInbox.pendingWeekRecap) { _, _ in offerWeekRecap() }
+        .onChange(of: callInbox.pendingTrialReport) { _, asked in
+            guard asked else { return }
+            callInbox.pendingTrialReport = false
+            offerTrialReport()
+        }
         .onChange(of: callInbox.debugWeekRecap) { _, recap in
             guard let recap else { return }
             callInbox.debugWeekRecap = nil
@@ -634,7 +639,15 @@ struct RootTabView: View {
                   TrialReportStore.shouldOffer(cached),
                   let account = await BillingGate.shared.snapshot(force: true),
                   TrialReportStore.shouldOffer(account) else { return }
-            guard quietForTrialReport else { return }
+            // WAIT for the screen to clear, never give up on it: the report
+            // is raised once, right after a call, which is exactly when the
+            // learner taps on into a tab whose own sheet comes up (prod
+            // 2026-10-21: Watch's intro preview, 2 s after the call closed,
+            // and the report was never seen).
+            for _ in 0..<120 where !quietForTrialReport {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+            }
+            guard quietForTrialReport, trialReport == nil else { return }
             trialReport = TrialReportStore.current(targetLanguage: appState.targetLanguage)
         }
     }

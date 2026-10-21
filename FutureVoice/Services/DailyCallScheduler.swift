@@ -639,6 +639,10 @@ final class DailyCallInbox: ObservableObject {
     @Published var pendingWeekRecap = false
     /// Developer: a recap built on demand (any window), raised as is.
     @Published var debugWeekRecap: WeekRecap?
+    /// A call screen closed before the free-minutes report it was about to
+    /// raise could appear (the ✕ during its account lookup): `RootTabView`
+    /// offers it instead, so the screen that owned it can't take it along.
+    @Published var pendingTrialReport = false
     /// A server push carried a `futurevoice://` link (`push-send`'s `url`):
     /// `RootTabView` routes it exactly as if the link had been opened.
     @Published var pendingURL: URL?
