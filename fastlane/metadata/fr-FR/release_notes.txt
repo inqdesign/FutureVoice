@@ -1,13 +1,7 @@
 Nouveautés
-• Au démarrage, tu te composes maintenant ta propre routine. Choisis l’heure et les jours de ton appel quotidien, puis ce que tu veux faire d’autre et quand : redire, révision, shadowing, écoute, discours. Une fois que tout est dans ta semaine, tu peux le déplacer ou le modifier sur place avant de valider.
-• Le shadowing et l’écoute peuvent chacun avoir leur place dans ta routine. Le rappel d’écoute ouvre le lecteur déjà en lecture, et un jour où tu as écouté compte comme un jour d’étude.
-• Tu apprends l’allemand ? Le podcast nawana existe maintenant aussi en allemand.
-• Si tu choisis l’accent britannique ou australien en anglais, ou castillan en espagnol, ton moi fluide utilise aussi les mots de cette variante. Tes propres mots de l’autre variante ne sont jamais comptés comme des erreurs.
-• Les boutons d’accent changent tout de suite, sans écran en plus.
-• Le message sur les minutes gratuites a un bouton « Plus tard » pour le fermer sans lancer d’appel.
+• Ton appel quotidien ne revient plus toujours sur le même sujet. Il alterne : reprendre ta dernière conversation, discuter de films ou de musique, une info du jour et une question qui te demande ton avis (à partir de B1).
+• Dans Mon profil → Dis bonjour, tu peux maintenant nous écrire aussi par e-mail et sur Threads.
 
-Corrections
-• Choisir « Original » dans les accents te rend ta voix telle que tu l’as enregistrée.
-• Sur l’écran où tu entends ta voix pour la première fois, les sons ne se chevauchent plus.
-• Pour choisir une couleur, tu peux maintenant toucher n’importe où dans la case.
-• La barre d’onglets n’apparaît plus sur la page des sujets.
+Corrigé
+• Ton prochain appel quotidien sonne maintenant à l’heure, même si tu as refusé ou décroché le précédent sans rouvrir l’app.
+• Quand tes minutes gratuites sont épuisées, un bilan de tes conversations s’ouvre. Il ne disparaît plus si tu fermes l’appel juste après la fin de la conversation.

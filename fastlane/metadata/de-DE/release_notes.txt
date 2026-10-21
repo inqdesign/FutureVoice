@@ -1,13 +1,7 @@
 Neu
-• Beim Einstieg stellst du dir jetzt deine eigene Routine zusammen. Leg Uhrzeit und Tage für deinen täglichen Anruf fest und such dir aus, was du sonst noch machen willst und wann: Nochmal sagen, Wiederholen, Nachsprechen, Hören, Rede. Sobald alles in deiner Woche steht, kannst du es direkt dort verschieben oder ändern und dann bestätigen.
-• Nachsprechen und Hören bekommen jeweils einen eigenen Platz in deiner Routine. Die Erinnerung zum Hören öffnet den Player und spielt sofort los, und ein Tag, an dem du gehört hast, zählt als Lerntag.
-• Du lernst Deutsch? Den nawana Podcast gibt es jetzt auch auf Deutsch.
-• Wählst du britisches oder australisches Englisch oder kastilisches Spanisch als Akzent, benutzt dein fließendes Ich auch die Wörter von dort. Deine eigenen Wörter aus der anderen Variante gelten nie als Fehler.
-• Die Akzent-Tasten wechseln jetzt sofort, ohne zusätzlichen Bildschirm.
-• Im Hinweis zu den Gratisminuten gibt es „Später“: So schließt du ihn, ohne einen Anruf zu starten.
+• Dein täglicher Anruf kommt nicht mehr immer aufs selbe Thema zurück. Er wechselt ab: dein letztes Gespräch weiterführen, lockerer Smalltalk über Filme oder Musik, eine Meldung aus den Nachrichten des Tages und eine Frage nach deiner Meinung (ab B1).
+• Unter Ich → Schreib uns erreichst du uns jetzt auch per E-Mail und über Threads.
 
 Behoben
-• Wählst du bei den Akzenten „Original“, klingt deine Stimme wieder genau wie aufgenommen.
-• Auf dem Bildschirm, auf dem du deine Stimme zum ersten Mal hörst, überlagern sich die Töne nicht mehr.
-• Ein Farbfeld lässt sich jetzt an jeder Stelle antippen.
-• Auf der Themenseite ist die Tab-Leiste nicht mehr zu sehen.
+• Dein nächster täglicher Anruf kommt jetzt pünktlich, auch wenn du den letzten abgelehnt oder angenommen und die App danach nicht geöffnet hast.
+• Wenn deine kostenlosen Minuten aufgebraucht sind, öffnet sich ein Bericht über deine bisherigen Gespräche. Er geht jetzt nicht mehr verloren, wenn du den Anruf direkt nach dem Gespräch schließt.
