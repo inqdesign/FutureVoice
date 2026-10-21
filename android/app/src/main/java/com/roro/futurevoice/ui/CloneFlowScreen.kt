@@ -295,6 +295,8 @@ fun CloneFlowScreen(
     var accentId by remember { mutableStateOf<String?>(null) }
     var accentToPick by remember { mutableStateOf<com.roro.futurevoice.data.VoiceAccent?>(null) }
     var removingAccent by remember { mutableStateOf(false) }
+    /** The accent a pill is putting on the voice. */
+    var applyingAccentId by remember { mutableStateOf<String?>(null) }
     /** The month's one voice change (iOS `canChangeVoice`, 2026-10-09). */
     val voiceChange by com.roro.futurevoice.data.VoiceChanges.status
         .collectAsStateWithLifecycle()
@@ -537,6 +539,41 @@ fun CloneFlowScreen(
                 }
             removingAccent = false
             com.roro.futurevoice.data.VoiceChanges.refresh()
+        }
+    }
+
+    /**
+     * An accent pill puts that accent on the voice at once and speaks the
+     * greeting in it — no take picker (iOS 2026-10-20, founder): on Cartesia
+     * an accent has exactly one take, so the sheet had nothing to choose
+     * from. The picker stays only for a voice that isn't a Cartesia voice.
+     */
+    fun applyAccentFromMeet(option: com.roro.futurevoice.data.VoiceAccent) {
+        if (accentId == option.id || applyingAccentId != null || removingAccent) return
+        val current = clonedVoiceId ?: return
+        mp3.stop()
+        sounds.ask = null
+        applyingAccentId = option.id
+        scope.launch {
+            runCatching { accentedVoiceId(context, current, option) }
+                .onSuccess { newId ->
+                    if (newId == null) { accentToPick = option; return@onSuccess }
+                    HapticEngine.success(context)
+                    if (newId == current) {
+                        accentId = option.id
+                        refreshGreetingForNewVoice()
+                    } else {
+                        com.roro.futurevoice.core.Analytics.capture("voice_accent_applied",
+                            mapOf("accent" to option.id, "source" to "meet"))
+                        adoptVoice(newId, option.id, greet = true)
+                    }
+                }
+                .onFailure { e ->
+                    if (e is kotlinx.coroutines.CancellationException) throw e
+                    error = (e as? com.roro.futurevoice.data.VoiceChangeLimit)?.line(context)
+                        ?: (e as? com.roro.futurevoice.data.VoiceQuotaFull)?.line(context) ?: e.message
+                }
+            applyingAccentId = null
         }
     }
 
@@ -1155,7 +1192,7 @@ fun CloneFlowScreen(
                                     AccentPill(
                                         label = stringResource(R.string.accent_original),
                                         selected = accentId == null, loading = removingAccent,
-                                        enabled = !removingAccent && (accentId == null ||
+                                        enabled = !removingAccent && applyingAccentId == null && (accentId == null ||
                                             clonedVoiceId?.let { VoiceClient.cartesiaUUID(it) } != null ||
                                             sampleFile.exists()),
                                         modifier = Modifier.weight(1f),
@@ -1166,10 +1203,11 @@ fun CloneFlowScreen(
                                         AccentPill(
                                             label = accentLabel(o),
                                             selected = accentId == o.id,
-                                            loading = false,
-                                            enabled = !removingAccent && (canChangeVoice || accentId == o.id),
+                                            loading = applyingAccentId == o.id,
+                                            enabled = !removingAccent && applyingAccentId == null &&
+                                                (canChangeVoice || accentId == o.id),
                                             modifier = Modifier.weight(1f),
-                                        ) { mp3.stop(); sounds.ask = null; accentToPick = o }
+                                        ) { applyAccentFromMeet(o) }
                                     }
                                 }
                                 if (!canChangeVoice) {

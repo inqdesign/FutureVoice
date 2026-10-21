@@ -130,6 +130,8 @@ internal fun VoiceRevivalScreen(
     var attempt by remember { mutableIntStateOf(0) }
     var accentToPick by remember { mutableStateOf<VoiceAccent?>(null) }
     var removingAccent by remember { mutableStateOf(false) }
+    /** The accent a pill is putting on the voice. */
+    var applyingAccentId by remember { mutableStateOf<String?>(null) }
     /** The month's one voice change (iOS `canChangeVoice`, 2026-10-09).
      *  Bringing the voice back was free; changing it after is the
      *  learner's one change, like anywhere else. */
@@ -147,6 +149,20 @@ internal fun VoiceRevivalScreen(
         scope.launch {
             runCatching { app.removeVoiceAccent() }
             removingAccent = false
+        }
+    }
+
+    /** One tap puts the accent on (`AppState.applyVoiceAccent`); the picker
+     *  only for a voice that isn't a Cartesia voice. */
+    fun applyAccent(option: VoiceAccent) {
+        if (state.voiceAccentId == option.id || applyingAccentId != null || removingAccent) return
+        player.stop()
+        applyingAccentId = option.id
+        scope.launch {
+            if (runCatching { app.applyVoiceAccent(option, "revival") }.getOrNull() == false) {
+                accentToPick = option
+            }
+            applyingAccentId = null
         }
     }
 
@@ -264,7 +280,7 @@ internal fun VoiceRevivalScreen(
                                 AccentPill(
                                     label = stringResource(R.string.accent_original),
                                     selected = state.voiceAccentId.isNullOrEmpty(), loading = removingAccent,
-                                    enabled = !removingAccent &&
+                                    enabled = !removingAccent && applyingAccentId == null &&
                                         (state.voiceAccentId.isNullOrEmpty() || app.canRemoveAccent),
                                     modifier = Modifier.weight(1f),
                                 ) { removeAccent() }
@@ -272,11 +288,11 @@ internal fun VoiceRevivalScreen(
                                     AccentPill(
                                         label = accentLabel(o),
                                         selected = state.voiceAccentId == o.id,
-                                        loading = false,
-                                        enabled = !removingAccent &&
+                                        loading = applyingAccentId == o.id,
+                                        enabled = !removingAccent && applyingAccentId == null &&
                                             (canChangeVoice || state.voiceAccentId == o.id),
                                         modifier = Modifier.weight(1f),
-                                    ) { player.stop(); accentToPick = o }
+                                    ) { applyAccent(o) }
                                 }
                             }
                             if (!canChangeVoice) {

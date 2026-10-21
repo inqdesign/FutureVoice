@@ -586,6 +586,27 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
     }
 
     /**
+     * Put an accent on the live voice in one tap (iOS `applyVoiceAccent`,
+     * 2026-10-20, founder: the pills opened the take picker, but on Cartesia
+     * every accent has exactly one take, so there was nothing to pick). The
+     * same voice told to speak the accent: one save, nothing cloned. False
+     * when the voice isn't a Cartesia voice, where only the picker can help.
+     */
+    suspend fun applyVoiceAccent(accent: com.roro.futurevoice.data.VoiceAccent, source: String): Boolean {
+        val current = _state.value.voiceId ?: return false
+        if (com.roro.futurevoice.net.VoiceClient.cartesiaUUID(current) == null) return false
+        if (_state.value.voiceAccentId == accent.id) return true
+        val newId = accentedVoiceId(appContext, current, accent) ?: return false
+        if (newId == current) {
+            _state.update { it.copy(voiceAccentId = accent.id) }
+            prefs.edit().putString(ACCENT_KEY, accent.id).apply()
+        } else {
+            adoptRemixedVoice(newId, accent.id, source)
+        }
+        return true
+    }
+
+    /**
      * The live voice id becomes another accent of the voice (or a new voice)
      * (iOS `adoptAccentSwap`). Nothing waits on the network when it is the
      * same Cartesia voice: no upstream delete (the server keeps a voice

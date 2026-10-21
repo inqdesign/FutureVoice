@@ -564,6 +564,25 @@ internal suspend fun originalVoiceId(
         "original")
 }
 
+/**
+ * The same voice told to speak [accent] (iOS `AppState.applyVoiceAccent`,
+ * 2026-10-20): one save of the bare uuid with the accent's description — the
+ * server reads the accent off it (an `original-` mark on the id would win
+ * over it). Null when [current] isn't a Cartesia voice, where only the take
+ * picker can help.
+ */
+internal suspend fun accentedVoiceId(
+    context: android.content.Context,
+    current: String,
+    accent: VoiceAccent,
+): String? {
+    val uuid = com.roro.futurevoice.net.VoiceClient.cartesiaUUID(current) ?: return null
+    return VoiceRemixClient(AuthRepository()).save(uuid,
+        com.roro.futurevoice.data.VoiceName.display(context,
+            com.roro.futurevoice.data.PersonaStore.shared(context).load()?.displayName),
+        accent.prompt)
+}
+
 internal suspend fun remixIntoDefaultAccent(
     context: android.content.Context,
     voiceId: String,
