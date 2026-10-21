@@ -82,6 +82,8 @@ struct RoutineOnboardingView: View {
     @State private var step: Step = .intro
     @State private var callMinutes = 5
     @State private var callTime = Calendar.current.date(bySettingHour: 8, minute: 0, second: 0, of: Date()) ?? Date()
+    /// A block on the grid is being dragged (review step).
+    @State private var dragging = false
     /// Times set by hand on an "Add more" block.
     @State private var times: [StudyPlan.Kind: Date] = [:]
     /// The days the whole routine runs on; the rest are rest days.
@@ -108,7 +110,8 @@ struct RoutineOnboardingView: View {
     private var uiLocale: Locale { Locale(identifier: LanguageCatalog.currentNative) }
 
     var body: some View {
-        WeeklyPlanEditor(onboarding: true, onboardingEditing: step == .review, spotlight: spotlight)
+        WeeklyPlanEditor(onboarding: true, onboardingEditing: step == .review, spotlight: spotlight,
+                         onDragChange: { d in withAnimation(.easeOut(duration: 0.15)) { dragging = d } })
             .clipShape(RoundedRectangle(cornerRadius: 44 * min(1, shrink * 3), style: .continuous))
             .scaleEffect(x: scale.width, y: scale.height)
             .offset(x: offset.width, y: offset.height)
@@ -137,7 +140,9 @@ struct RoutineOnboardingView: View {
                 #endif
             }
             .overlay(alignment: .bottom) {
-                if step == .review { confirmBar.transition(.move(edge: .bottom).combined(with: .opacity)) }
+                // Out of the way while a block is dragged: it covers the
+                // evening hours the block may be going to.
+                if step == .review && !dragging { confirmBar.transition(.move(edge: .bottom).combined(with: .opacity)) }
             }
             .sheet(isPresented: $sheetUp) {
                 sheet

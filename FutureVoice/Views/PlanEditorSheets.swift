@@ -314,6 +314,9 @@ struct WeeklyPlanEditor: View {
     /// A block just placed from outside (the onboarding sheet): scrolled
     /// to and ringed for a moment, like a block the + adds.
     var spotlight: Spotlight? = nil
+    /// Told when a block drag starts and ends, so a host's own bar over the
+    /// grid can step aside like the + does.
+    var onDragChange: ((Bool) -> Void)? = nil
 
     struct Spotlight: Equatable {
         var kind: StudyPlan.Kind
@@ -376,6 +379,7 @@ struct WeeklyPlanEditor: View {
                                                                      hour: c.hour ?? 20, minute: c.minute ?? 0)
                                         },
                                         onDragTarget: { t in
+                                            if (t != nil) != (dragTarget != nil) { onDragChange?(t != nil) }
                                             withAnimation(.easeOut(duration: 0.15)) {
                                                 dragTarget = t
                                                 if t != nil { landedNote = nil; landedId = nil }
