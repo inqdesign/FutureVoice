@@ -51,6 +51,7 @@ enum StudyWidgetRefresher {
         refreshWords()
         refreshExpressions()
         refreshProgress()
+        refreshRoutine()
     }
 
     /// Fire-and-forget hook for nonisolated call sites (store writes may not
@@ -153,6 +154,50 @@ enum StudyWidgetRefresher {
         WidgetCenter.shared.reloadTimelines(ofKind: progressWidgetKind)
         // The streak widget reads the same snapshot.
         WidgetCenter.shared.reloadTimelines(ofKind: streakWidgetKind)
+    }
+
+    // MARK: - Routine widget
+
+    /// Today's and tomorrow's planned blocks, each already judged done or
+    /// not by the same rule Activity's day list uses (`PlannerSnapshot`).
+    /// The widget then changes face at each block's start and end on its own
+    /// timeline; a write here is only needed when something gets DONE.
+    @MainActor
+    private static func refreshRoutine() {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        let plan = StudyPlanStore.shared.plan
+        let snap = PlannerSnapshot.make(weekStart: today, plan: plan)
+        func blocks(on day: Date) -> [RoutineWidgetBlock] {
+            let done = snap.done[day] ?? []
+            let progress = snap.progress[day] ?? [:]
+            return (snap.planned[day] ?? []).map { occ in
+                RoutineWidgetBlock(id: occ.id, kind: occ.kind.rawValue,
+                                   start: occ.start, end: occ.end, anytime: occ.anytime,
+                                   // Review is named without its count.
+                                   title: occ.kind == .review ? occ.kind.label
+                                                              : occ.kind.titled(occ.amount),
+                                   nowLine: PlanReminder.nowLine(for: occ.kind),
+                                   symbol: occ.kind.symbol,
+                                   done: done.contains(occ.id),
+                                   progress: progress[occ.id] ?? 0)
+            }
+        }
+        let tomorrow = cal.date(byAdding: .day, value: 1, to: today) ?? today
+        StudyWidgetSnapshotStore.saveRoutine(RoutineWidgetSnapshot(
+            updatedAt: Date(), day: today,
+            today: blocks(on: today), tomorrow: blocks(on: tomorrow),
+            labels: ["title": explain("My routine"),
+                     "now": explain("Now"),
+                     "next": explain("Up next"),
+                     "today": explain("Today"),
+                     "tomorrow": explain("Tomorrow"),
+                     "anytime": explain("Anytime"),
+                     "allDone": explain("Done for today"),
+                     // A plan with blocks on other days rests today.
+                     "empty": plan.blocks.isEmpty ? explain("Nothing planned this day.")
+                                                  : explain("Rest day.")]))
+        WidgetCenter.shared.reloadTimelines(ofKind: routineWidgetKind)
     }
 
     // MARK: - Continue widget (one in-progress book → its detail page)

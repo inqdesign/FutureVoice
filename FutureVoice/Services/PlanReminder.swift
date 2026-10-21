@@ -69,6 +69,17 @@ enum PlanReminder {
         _ = try? await center.requestAuthorization(options: [.alert, .sound])
     }
 
+    /// What the routine widget says while a block's time is on — the
+    /// reminder's own title, so the notice and the widget say one thing.
+    static func nowLine(for kind: StudyPlan.Kind) -> String {
+        switch kind {
+        case .talk: return explain("Time to talk")
+        case .review: return explain("Ready to review")
+        case .test: return explain("Time for the weekly test")
+        default: return title(for: kind)
+        }
+    }
+
     private static func title(for kind: StudyPlan.Kind) -> String {
         switch kind {
         case .words: return explain("Time for your words")

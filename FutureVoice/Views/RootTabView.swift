@@ -764,6 +764,11 @@ struct RootTabView: View {
                 selection = .practice
                 appState.pendingPracticeRoute = .studying
             }
+        case "routine":
+            // The routine widget: a block tapped opens that block.
+            openRoutineBlock(URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?.first(where: { $0.name == "kind" })?.value
+                .flatMap(StudyPlan.Kind.init(rawValue:)))
         case "vocab":
             selection = .practice
             appState.pendingPracticeRoute = .vocabulary(word: q)
@@ -774,6 +779,29 @@ struct RootTabView: View {
             appState.focusPhrase = q
         default:
             break
+        }
+    }
+
+    /// A routine block's door, the same one its reminder opens. With no
+    /// kind, or one whose door is Activity's own list, My routine opens.
+    private func openRoutineBlock(_ kind: StudyPlan.Kind?) {
+        switch kind {
+        case .talk:
+            selection = .home
+            appState.requestFreeTalk(from: .widget)
+        case .review, .words, .expressions:
+            selection = .practice
+            appState.pendingPracticeRoute = .review
+        case .test:
+            selection = .practice
+            appState.pendingPracticeRoute = .weeklyTest
+        case .sayItAgain: callInbox.pendingSayItAgain = true
+        case .listen: callInbox.pendingListen = true
+        case .speech: selection = .speech
+        case .shadow, nil:
+            selection = .home
+            appState.routinePageOpens = kind
+            appState.openRoutinePage = true
         }
     }
 

@@ -134,6 +134,9 @@ final class TalkMeter: ObservableObject {
         task?.cancel()
         task = nil
         Self.isRunning = false
+        // A talk block is done by these minutes; the routine widget hears
+        // of them once, when the call ends, never per tick.
+        StudyWidgetRefresher.schedule()
     }
 
     private struct TickBody: Encodable {

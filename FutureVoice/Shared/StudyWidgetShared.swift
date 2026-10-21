@@ -190,6 +190,66 @@ let bookWidgetKind = "FutureVoiceBookWidget"
 /// snapshot (streak + whether today's goal is met).
 let streakWidgetKind = "FutureVoiceStreakWidget"
 
+/// WidgetKit `kind` for the routine widget — today's planned blocks
+/// (`StudyPlan`), with the one that is due now said out loud.
+let routineWidgetKind = "FutureVoiceRoutineWidget"
+
+/// One planned block of the day, as the routine widget draws it. Everything
+/// the learner reads is resolved APP-side (titles, the "now" line) because
+/// the extension can't reach the plan, the stores or the app's catalog.
+struct RoutineWidgetBlock: Codable, Hashable {
+    var id: String
+    var kind: String        // `StudyPlan.Kind.rawValue`, for the tint and the deep link
+    var start: Date
+    var end: Date
+    var anytime: Bool       // no set time today; `start` is midnight
+    var title: String       // "Review 20 items"
+    var nowLine: String     // "Ready to review" — shown while its time is on
+    var symbol: String
+    var done: Bool
+    /// How far along, 0…1 — Activity's ring. Optional so a snapshot written
+    /// before it still decodes.
+    var progress: Double?
+
+    /// Same deep link for every surface that means "do this block".
+    var deepLink: URL? { URL(string: "futurevoice://routine?kind=\(kind)") }
+
+    /// Its time is on: started, not finished, not done. An anytime block is
+    /// never "now" — it has no moment to arrive at.
+    func isNow(at date: Date) -> Bool {
+        !done && !anytime && start <= date && date < end
+    }
+}
+
+struct RoutineWidgetSnapshot: Codable {
+    var updatedAt: Date
+    var day: Date                       // start of the day `today` belongs to
+    var today: [RoutineWidgetBlock]
+    var tomorrow: [RoutineWidgetBlock]
+    /// Chrome, resolved app-side for the same reason as the titles.
+    var labels: [String: String]
+
+    func label(_ key: String) -> String { labels[key] ?? "" }
+
+    static let empty = RoutineWidgetSnapshot(updatedAt: .distantPast, day: .distantPast,
+                                             today: [], tomorrow: [], labels: [:])
+}
+
+/// `StudyPlan.Kind.color`, which lives in the app target. Keep in step.
+func routineTint(_ kind: String) -> Color {
+    switch kind {
+    case "talk": return .blue
+    case "sayItAgain": return .teal
+    case "review": return .green
+    case "words", "speech": return .purple
+    case "expressions": return .pink
+    case "shadow": return .yellow
+    case "test": return .orange
+    case "listen": return .cyan
+    default: return .gray
+    }
+}
+
 /// The single most-recently-studied in-progress book (a Talk or a Watch book),
 /// mirrored to the App Group so the Continue widget can render its title +
 /// mastery progress and deep-link to its detail page.
@@ -314,6 +374,29 @@ enum StudyWidgetSnapshotStore {
 
     static func saveBook(_ snapshot: StudyBookSnapshot) {
         guard let url = bookURL,
+              let data = try? encoder.encode(snapshot) else { return }
+        try? data.write(to: url, options: [.atomic])
+    }
+
+    // MARK: Routine snapshot (its own file)
+
+    private static var routineURL: URL? {
+        FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: appGroupID)?
+            .appendingPathComponent("widget_routine.json")
+    }
+
+    static func loadRoutine() -> RoutineWidgetSnapshot {
+        guard let url = routineURL,
+              let data = try? Data(contentsOf: url),
+              let snapshot = try? decoder.decode(RoutineWidgetSnapshot.self, from: data) else {
+            return .empty
+        }
+        return snapshot
+    }
+
+    static func saveRoutine(_ snapshot: RoutineWidgetSnapshot) {
+        guard let url = routineURL,
               let data = try? encoder.encode(snapshot) else { return }
         try? data.write(to: url, options: [.atomic])
     }

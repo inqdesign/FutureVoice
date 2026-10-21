@@ -54,6 +54,8 @@ final class ActivityEventLog: @unchecked Sendable {
         if let data = try? Self.encoder.encode(snapshot) {
             try? data.write(to: url, options: [.atomic])
         }
+        // Every rep passes here: the routine widget's ticks follow.
+        StudyWidgetRefresher.schedule()
     }
 
     /// Events within `[start, end)`, oldest first.

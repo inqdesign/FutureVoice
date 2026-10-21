@@ -142,7 +142,12 @@ struct ActivityView: View {
             if let m = UserDefaults.standard.string(forKey: "activityMode").flatMap(ViewMode.init(rawValue:)) { viewMode = m }
             #endif
             if selectedDay == nil { selectedDay = cal.startOfDay(for: Date()) }
-            offerIntro()
+            if let kind = appState.routinePageOpens {
+                appState.routinePageOpens = nil
+                open(kind)
+            } else {
+                offerIntro()
+            }
         }
         .sheet(isPresented: $showIntro) {
             PageIntroSheet(page: .routine)

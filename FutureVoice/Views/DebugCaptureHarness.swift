@@ -1902,6 +1902,9 @@ enum DebugCapture {
         case "widget-streak":
             // Just the Streak widget (small + medium), for design review.
             return AnyView(StreakWidgetGallery().fontDesign(nil))
+        case "widget-routine":
+            // The routine widget (small + medium), for design review.
+            return AnyView(RoutineWidgetGallery().fontDesign(nil))
         case "widget-freetalk":
             // The Free Talk widget — small (circle) and medium (pill).
             return AnyView(FreeTalkWidgetGallery(page: 0).fontDesign(nil))
@@ -3162,6 +3165,67 @@ private struct BookWidgetGallery: View {
                       hasBook: Bool) -> some View {
         BookCard(theme: theme, hasBook: hasBook, kind: kind, title: title,
                  subtitle: subtitle, mastered: mastered, total: total, compact: compact)
+            .frame(width: size.width, height: size.height)
+            .background(WidgetGrid(theme: theme,
+                                   shape: AnyShape(RoundedRectangle(cornerRadius: 24, style: .continuous))))
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .shadow(color: .black.opacity(0.25), radius: 10, y: 5)
+    }
+}
+
+/// The routine widget: due now, up next, all done, and a rest day.
+private struct RoutineWidgetGallery: View {
+    var body: some View {
+        // A fixed evening, so the states don't depend on when it is captured.
+        let now = Calendar.current.date(bySettingHour: 19, minute: 0, second: 0, of: Date()) ?? Date()
+        // The sample in the app language, worded the way the refresher words it.
+        var sample = RoutineWidgetSnapshot.sample(now: now)
+        sample.today = sample.today.map { b in
+            var b = b
+            if let kind = StudyPlan.Kind(rawValue: b.kind) {
+                b.title = kind == .review ? kind.label : kind.titled(kind.defaultAmount)
+                b.nowLine = PlanReminder.nowLine(for: kind)
+            }
+            return b
+        }
+        sample.labels = ["title": explain("My routine"), "now": explain("Now"),
+                         "next": explain("Up next"), "today": explain("Today"),
+                         "tomorrow": explain("Tomorrow"), "anytime": explain("Anytime"),
+                         "allDone": explain("Done for today"), "empty": explain("Rest day.")]
+        var allDone = sample
+        allDone.today = sample.today.map { var b = $0; b.done = true; return b }
+        var rest = sample
+        rest.today = []
+        rest.tomorrow = Array(sample.today.prefix(1)).map {
+            var b = $0; b.start = b.start.addingTimeInterval(86_400); return b
+        }
+        return ScrollView {
+            VStack(spacing: 26) {
+                HStack(alignment: .top, spacing: 18) {
+                    tile(sample, now, theme: 0, compact: true)
+                    tile(sample, now.addingTimeInterval(20 * 60), theme: 0, compact: true)
+                }
+                HStack(alignment: .top, spacing: 18) {
+                    // Speech's time passed undone: still on the day.
+                    tile(sample, now.addingTimeInterval(3 * 3600), theme: 0, compact: true)
+                    tile(allDone, now, theme: 2, compact: true)
+                }
+                HStack(alignment: .top, spacing: 18) {
+                    tile(rest, now, theme: 3, compact: true)
+                    Color.clear.frame(width: 158, height: 158)
+                }
+                tile(sample, now, theme: 0, compact: false)
+                tile(sample, now.addingTimeInterval(20 * 60), theme: 5, compact: false)
+                tile(rest, now, theme: 1, compact: false)
+            }
+            .padding(24)
+        }
+        .background(Color(.systemGroupedBackground))
+    }
+
+    private func tile(_ snap: RoutineWidgetSnapshot, _ date: Date, theme: Int, compact: Bool) -> some View {
+        let size = compact ? CGSize(width: 158, height: 158) : CGSize(width: 338, height: 158)
+        return RoutineCard(theme: theme, snapshot: snap, date: date, compact: compact)
             .frame(width: size.width, height: size.height)
             .background(WidgetGrid(theme: theme,
                                    shape: AnyShape(RoundedRectangle(cornerRadius: 24, style: .continuous))))

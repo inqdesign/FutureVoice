@@ -251,6 +251,11 @@ final class AppState: ObservableObject {
     }
     @Published var pendingPracticeRoute: PracticeRoute?
 
+    /// The routine widget: open My routine (Talk → Activity), and, when set,
+    /// the block of this kind in it — for the kinds whose door is that page.
+    @Published var openRoutinePage = false
+    var routinePageOpens: StudyPlan.Kind?
+
     /// A specific item to focus (open its card) from a widget note tap. Kept
     /// separate from the route so it reaches the page EVEN WHEN it's already
     /// on screen — VocabularyView/ExpressionsView observe these and open the

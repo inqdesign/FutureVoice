@@ -175,6 +175,11 @@ struct ConversationHome: View {
             // The hero line moves on to the next one here — a finished call is
             // the only moment the home is covered (by the call's backdrop), so
             // the swap is never seen happening.
+            .onChange(of: appState.openRoutinePage, initial: true) { _, open in
+                guard open else { return }
+                appState.openRoutinePage = false
+                showingActivity = true
+            }
             .onChange(of: appState.talkHomeReloadToken) { _, _ in
                 HeroGreeting.advanceRotation()
                 reload()

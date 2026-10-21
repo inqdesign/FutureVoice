@@ -750,5 +750,7 @@ final class StudyPlanStore: ObservableObject {
         enc.outputFormatting = [.sortedKeys]
         guard let data = try? enc.encode(plan) else { return }
         try? data.write(to: url, options: [.atomic])
+        // The routine widget draws this plan.
+        StudyWidgetRefresher.schedule()
     }
 }
