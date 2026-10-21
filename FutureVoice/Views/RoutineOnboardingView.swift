@@ -214,13 +214,28 @@ struct RoutineOnboardingView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
-            Button {
-                finish()
-            } label: {
-                Text(explain("Keep it like this")).frame(maxWidth: .infinity)
+            HStack(spacing: 10) {
+                // Back to the list, ticks as they were. Saving again
+                // rewrites the blocks from the list.
+                Button {
+                    withAnimation(.easeOut(duration: 0.2)) { step = .intro }
+                    detent = .large
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { sheetUp = true }
+                } label: {
+                    Text("Back").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+                .frame(maxWidth: 120)
+
+                Button {
+                    finish()
+                } label: {
+                    Text(explain("Keep it like this")).frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
             .disabled(working)
         }
         .padding(.horizontal, 20)

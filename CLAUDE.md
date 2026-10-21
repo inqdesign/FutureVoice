@@ -783,8 +783,10 @@ editing off) behind a sheet.
   can't open under another) and the grid becomes editable
   (`WeeklyPlanEditor(onboardingEditing:)`: tap a block to change it, hold
   and drag to move it, tap an empty spot to add; the page's +, gear and
-  Done stay hidden) under a bar — "How does this look?" and **Keep it like
-  this**, which finishes. A routine left empty skips this for the "You can
+  Done stay hidden) under a bar — "How does this look?", **Back** (the
+  list again, ticks kept; saving again rewrites the blocks from it, so a
+  grid edit made before going back is replaced) and **Keep it like this**,
+  which finishes. A routine left empty skips this for the "You can
   make it later" card.
 - **Keep it like this** shrinks the page into the Talk header's
   Activity chip (`RoutineHandoff.chipFrame`); the chip bounces and a popover
