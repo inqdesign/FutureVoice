@@ -24,6 +24,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -653,9 +656,11 @@ private fun whenText(kind: StudyPlan.Kind, callStart: Int, callMinutes: Int, sel
 private fun ConfirmBar(callBlocked: Boolean, working: Boolean, onBack: () -> Unit, onKeep: () -> Unit) {
     // Drawn like the sheet before it — a floating card, inset from the
     // screen's edges (iOS `SheetLikeCard`) — because a real sheet here would
-    // stop the grid from opening a block's editor. It ignores the bottom
-    // inset, as the sheet does.
+    // stop the grid from opening a block's editor. It sits above the
+    // navigation bar, as the routine sheet does, then the 7 dp gap — it
+    // never covers the gesture handle.
     Column(Modifier.fillMaxWidth()
+        .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom))
         .padding(start = 7.dp, end = 7.dp, bottom = 7.dp)
         .shadow(16.dp, SHEET_CARD_SHAPE)
         .background(AppSurfaces.ground, SHEET_CARD_SHAPE)
