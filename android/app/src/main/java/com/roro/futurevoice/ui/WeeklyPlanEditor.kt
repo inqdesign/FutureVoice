@@ -449,7 +449,8 @@ private fun TooManyCallsAlert(onDismiss: () -> Unit) {
 @Composable
 private fun WeekdayHeader(snapshot: PlannerSnapshot, onTap: (StudyPlan.Occurrence) -> Unit) {
     val anytime = snapshot.days.map { d -> snapshot.planned[d].orEmpty().filter { it.anytime } }
-    Column(Modifier.fillMaxWidth().background(AppSurfaces.card).padding(horizontal = 8.dp, vertical = 8.dp),
+    // The title bar's own ground: status bar, title and weekdays read as one band.
+    Column(Modifier.fillMaxWidth().background(AppSurfaces.ground).padding(horizontal = 8.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(GAP)) {
             Spacer(Modifier.width(LABEL_WIDTH))
