@@ -651,11 +651,16 @@ private fun whenText(kind: StudyPlan.Kind, callStart: Int, callMinutes: Int, sel
  *  ring), and the confirm button. */
 @Composable
 private fun ConfirmBar(callBlocked: Boolean, working: Boolean, onBack: () -> Unit, onKeep: () -> Unit) {
+    // Drawn like the sheet before it — a floating card, inset from the
+    // screen's edges (iOS `SheetLikeCard`) — because a real sheet here would
+    // stop the grid from opening a block's editor. It ignores the bottom
+    // inset, as the sheet does.
     Column(Modifier.fillMaxWidth()
-        .shadow(8.dp)
-        .background(MaterialTheme.colorScheme.surface)
+        .padding(start = 7.dp, end = 7.dp, bottom = 7.dp)
+        .shadow(16.dp, SHEET_CARD_SHAPE)
+        .background(AppSurfaces.ground, SHEET_CARD_SHAPE)
         .clickable(interactionSource = null, indication = null) {}
-        .padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 8.dp),
+        .padding(start = 20.dp, end = 20.dp, top = 22.dp, bottom = 28.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(stringResource(R.string.routine_how_does_this_look), style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold)
@@ -672,9 +677,12 @@ private fun ConfirmBar(callBlocked: Boolean, working: Boolean, onBack: () -> Uni
                 Text(stringResource(R.string.routine_keep_it_like_this))
             }
         }
-        Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
     }
 }
+
+/** The routine sheet's corner, all round: the confirm bar is the sheet's
+ *  look as a card. */
+private val SHEET_CARD_SHAPE = RoundedCornerShape(38.dp)
 
 /** SwiftUI's `.easeIn`. */
 private val EaseInCurve = CubicBezierEasing(0.42f, 0f, 1f, 1f)
