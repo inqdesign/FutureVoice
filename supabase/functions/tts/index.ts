@@ -21,7 +21,7 @@ import * as cartesia from "../_shared/cartesia.ts"
 import { chargePooledTTS, chargeFreePooledTTS, chargeTurnTTSFloored, refund,
          beginScenePlay, enforceRequestRate, insufficientCreditsResponse,
          dailyCapResponse, sceneCapResponse, rateLimitedResponse,
-         billingClient, recordSceneReplay } from "../_shared/credits.ts"
+         billingClient, recordSceneReplay, recordFreeUsage } from "../_shared/credits.ts"
 
 // The ledger's name for this function.
 const SOURCE_FN = "tts"
@@ -325,7 +325,17 @@ Deno.serve(async (req) => {
       ? recordSceneReplay({ userId: user.id, chars: body.text.length, sourceFn: SOURCE_FN,
                             idempotencyKey: idemKey, metadata: chargeArgs.metadata })
       : isFreeEntry
-      ? Promise.resolve({ ok: true as const, balanceAfter: -1, charged: 0, idempotencyKey: idemKey })
+      // Free, but counted and capped (2026-10-21): these wrote no ledger row
+      // at all, so the spend was invisible, and nothing but the hourly
+      // backstop limited them. An onboarding uses ~5 greetings.
+      ? recordFreeUsage({
+          supabase, userId: user.id, action: baseAction, purpose: body.purpose!,
+          dailyCap: isFreeGreeting ? 30 : 20, sourceFn: SOURCE_FN, idempotencyKey: idemKey,
+          metadata: chargeArgs.metadata,
+        }).then((r) => r.ok
+          ? { ok: true as const, balanceAfter: -1, charged: 0, idempotencyKey: idemKey }
+          : { ok: false as const, reason: r.reason === "rate_limited" ? "replay_cap" as const : "db_error" as const,
+              detail: r.detail })
       : FREE_PURPOSES.has(body.purpose ?? "")
       ? chargeFreePooledTTS({ ...chargeArgs, action: baseAction })
       : action === "tts_scene"
