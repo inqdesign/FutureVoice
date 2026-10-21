@@ -1,17 +1,13 @@
 Neu
-• Wenn du Englisch lernst, gibt es jetzt jeden Tag eine neue Folge des nawana Podcasts: Zwei Moderatoren sprechen über eine Nachricht des Tages, und im Skript zeigt dir „Lernen“ die Wendungen und die Grammatik. Du findest ihn in der Liste des Players unter „Podcast“.
-• Im Player kannst du das Tempo herunterdrehen.
-• In Anrufen mit einer Person oder einer Rolle steht ihr Name jetzt über ihren Sätzen.
-• Auf dem Sprechen-Bildschirm kannst du jederzeit ein schnelles Quiz machen, mit Wörtern, Wendungen und Grammatik, die für dich ausgesucht sind.
-• Mit einer Taste findest du ein Thema für dein heutiges Gespräch.
-• Hör dir deine Situationen nacheinander im Player an, auch bei ausgeschaltetem Bildschirm.
-• Beim Japanischlernen steht die Lesung jetzt über den Kanji.
-• Der Wochentest ist jetzt direkt in deinem Wochenbericht.
+• Beim Einstieg stellst du dir jetzt deine eigene Routine zusammen. Leg Uhrzeit und Tage für deinen täglichen Anruf fest und such dir aus, was du sonst noch machen willst und wann: Nochmal sagen, Wiederholen, Nachsprechen, Hören, Rede. Sobald alles in deiner Woche steht, kannst du es direkt dort verschieben oder ändern und dann bestätigen.
+• Nachsprechen und Hören bekommen jeweils einen eigenen Platz in deiner Routine. Die Erinnerung zum Hören öffnet den Player und spielt sofort los, und ein Tag, an dem du gehört hast, zählt als Lerntag.
+• Du lernst Deutsch? Den nawana Podcast gibt es jetzt auch auf Deutsch.
+• Wählst du britisches oder australisches Englisch oder kastilisches Spanisch als Akzent, benutzt dein fließendes Ich auch die Wörter von dort. Deine eigenen Wörter aus der anderen Variante gelten nie als Fehler.
+• Die Akzent-Tasten wechseln jetzt sofort, ohne zusätzlichen Bildschirm.
+• Im Hinweis zu den Gratisminuten gibt es „Später“: So schließt du ihn, ohne einen Anruf zu starten.
 
 Behoben
-• Wenn du deinem fließenden Ich ins Wort fällst, hört es sofort auf. Vorher stoppte es spät oder gar nicht.
-• Challenge-Karten ändern beim Zurückkehren nicht mehr ihre Größe.
-• Beim ersten Öffnen von Ansehen rutschst du nicht mehr von der Seite herein.
-• Die Tableiste bleibt ausgeblendet, während eine Situation läuft.
-• Symbole auf blauen Tasten sind wieder zu sehen.
-• „In meiner Stimme hören“ zeigt jetzt deutlicher, was es kostet.
+• Wählst du bei den Akzenten „Original“, klingt deine Stimme wieder genau wie aufgenommen.
+• Auf dem Bildschirm, auf dem du deine Stimme zum ersten Mal hörst, überlagern sich die Töne nicht mehr.
+• Ein Farbfeld lässt sich jetzt an jeder Stelle antippen.
+• Auf der Themenseite ist die Tab-Leiste nicht mehr zu sehen.

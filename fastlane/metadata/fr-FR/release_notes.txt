@@ -1,17 +1,13 @@
 Nouveautés
-• Si tu apprends l’anglais, un nouvel épisode du podcast nawana t’attend chaque jour : deux animateurs parlent d’une actualité du jour, et dans le texte, « Étudier » te montre les expressions et la grammaire. Il se trouve dans la liste du lecteur, sous « Podcast ».
-• Tu peux ralentir la vitesse du lecteur.
-• Dans les appels avec une personne ou un rôle, son nom s’affiche au-dessus de ses phrases.
-• Fais un quiz rapide quand tu veux depuis l’écran Parler, avec des mots, des expressions et de la grammaire choisis pour toi.
-• Trouve un sujet pour la conversation du jour en un seul bouton.
-• Écoute tes situations à la suite dans le lecteur, même écran éteint.
-• Quand tu apprends le japonais, la lecture s’affiche au-dessus des kanji.
-• Le test de la semaine se trouve maintenant dans ton bilan de la semaine.
+• Au démarrage, tu te composes maintenant ta propre routine. Choisis l’heure et les jours de ton appel quotidien, puis ce que tu veux faire d’autre et quand : redire, révision, shadowing, écoute, discours. Une fois que tout est dans ta semaine, tu peux le déplacer ou le modifier sur place avant de valider.
+• Le shadowing et l’écoute peuvent chacun avoir leur place dans ta routine. Le rappel d’écoute ouvre le lecteur déjà en lecture, et un jour où tu as écouté compte comme un jour d’étude.
+• Tu apprends l’allemand ? Le podcast nawana existe maintenant aussi en allemand.
+• Si tu choisis l’accent britannique ou australien en anglais, ou castillan en espagnol, ton moi fluide utilise aussi les mots de cette variante. Tes propres mots de l’autre variante ne sont jamais comptés comme des erreurs.
+• Les boutons d’accent changent tout de suite, sans écran en plus.
+• Le message sur les minutes gratuites a un bouton « Plus tard » pour le fermer sans lancer d’appel.
 
 Corrections
-• Quand tu coupes la parole à ton moi fluide, il s’arrête tout de suite. Avant, il s’arrêtait trop tard, ou pas du tout.
-• Les cartes des défis ne changent plus de taille quand tu reviens.
-• À la première ouverture de Scènes, tu n’arrives plus en glissant depuis le côté.
-• La barre d’onglets ne s’affiche plus pendant une situation.
-• Les icônes des boutons bleus sont de nouveau visibles.
-• « Écouter avec ma voix » indique plus clairement ce que ça coûte.
+• Choisir « Original » dans les accents te rend ta voix telle que tu l’as enregistrée.
+• Sur l’écran où tu entends ta voix pour la première fois, les sons ne se chevauchent plus.
+• Pour choisir une couleur, tu peux maintenant toucher n’importe où dans la case.
+• La barre d’onglets n’apparaît plus sur la page des sujets.

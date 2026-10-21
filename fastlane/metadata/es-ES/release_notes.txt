@@ -1,17 +1,13 @@
 Novedades
-• Si estás aprendiendo inglés, cada día hay un episodio nuevo del pódcast de nawana: dos presentadores comentan una noticia del día y, en el guion, «Estudiar» te marca las expresiones y la gramática. Lo tienes en la lista del reproductor, en «Pódcast».
-• Puedes bajar la velocidad del reproductor.
-• En las llamadas con una persona o un papel, su nombre aparece sobre sus frases.
-• Haz un quiz rápido cuando quieras desde la pantalla de hablar, con palabras, expresiones y gramática elegidas para ti.
-• Encuentra un tema para la conversación de hoy con un solo botón.
-• Escucha tus situaciones una tras otra en el reproductor, incluso con la pantalla apagada.
-• Si aprendes japonés, ahora ves la lectura encima de los kanji.
-• La prueba semanal ahora está dentro de tu informe semanal.
+• Al empezar, ahora armas tu propia rutina. Elige la hora y los días de tu llamada diaria y escoge qué más quieres hacer y cuándo: volver a decirlo, repaso, shadowing, escuchar y discurso. Cuando aparezca en tu semana, puedes moverlo o cambiarlo ahí mismo y luego confirmar.
+• El shadowing y la escucha pueden tener cada uno su propio lugar en tu rutina. El aviso de escuchar abre el reproductor ya sonando, y un día en que escuchaste cuenta como día de estudio.
+• ¿Estás aprendiendo alemán? El pódcast de nawana ahora también está en alemán.
+• Si eliges el acento británico o australiano en inglés, o el castellano en español, tu yo fluido también usa las palabras de esa variedad. Tus palabras de la otra variedad nunca se marcan como error.
+• Los botones de acento cambian al instante, sin pantalla extra.
+• El aviso de minutos gratis tiene un botón «Más tarde» para cerrarlo sin empezar una llamada.
 
 Correcciones
-• Si interrumpes a tu yo fluido, se calla al momento. Antes paraba tarde o no paraba.
-• Las tarjetas de los retos ya no cambian de tamaño al volver.
-• Al abrir Escenas por primera vez ya no entras deslizándote desde un lado.
-• La barra de pestañas ya no aparece mientras se reproduce una situación.
-• Los iconos de los botones azules se ven de nuevo.
-• «Escuchar con mi voz» muestra mejor lo que cuesta.
+• Si eliges «Original» en los acentos, vuelve tu voz tal como la grabaste.
+• En la pantalla donde oyes tu voz por primera vez, los sonidos ya no se superponen.
+• Al elegir un color, ahora puedes tocar cualquier parte de la casilla.
+• La barra de pestañas ya no aparece en la página de temas.

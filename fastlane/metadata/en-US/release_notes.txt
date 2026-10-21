@@ -1,6 +1,6 @@
 New
-• Setup now walks you through what you can practice, one card at a time: calls, Say it again, review, shadowing, listening and speech. Add the ones you want and that's your routine.
-• Shadowing and listening can each have their own spot in your routine.
+• Setup now helps you build your own routine. Set the time and days for your daily call, then pick what else you want to do (Say it again, review, shadowing, listening, speech) and when. Once it's on your week, move or change anything right there, then confirm.
+• Shadowing and listening can each have their own spot in your routine. A listening reminder opens the player already playing, and a day you listened counts as a day you studied.
 • Learning German? The nawana Podcast now comes in German too.
 • Pick a British or Australian English accent, or Castilian Spanish, and your fluent self uses that variety's words too. Your own words from the other side are never marked wrong.
 • Accent buttons now switch right away, no extra screen.
