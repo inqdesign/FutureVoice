@@ -40,6 +40,10 @@ class VoicemailClient(private val auth: AuthRepository) {
          *  server measures the gap to the RING in calendar days (iOS
          *  `lastTalkAt` + `ringDates`, 632c2ce). */
         lastTalkAt: Long? = null, ringDates: List<Long> = emptyList(),
+        /** What this call is about (iOS `VoicemailEngine.Angle`); the server
+         *  writes the old prompt when it is absent. */
+        angle: String? = null, newsTitle: String? = null, newsBlurb: String? = null,
+        recentScripts: List<String> = emptyList(),
     ): String = withContext(Dispatchers.IO) {
         val body: JsonObject = buildJsonObject {
             put("target_language", targetLanguage)
@@ -57,6 +61,10 @@ class VoicemailClient(private val auth: AuthRepository) {
             // The budget the prompt asks for at the learner's speed (iOS puts
             // `maxScriptCharacters` straight into the prompt).
             put("max_script_characters", MAX_SCRIPT_CHARACTERS)
+            angle?.let { put("angle", it) }
+            newsTitle?.takeIf { it.isNotBlank() }?.let { put("news_title", it) }
+            newsBlurb?.takeIf { it.isNotBlank() }?.let { put("news_blurb", it) }
+            if (recentScripts.isNotEmpty()) putJsonArray("recent_scripts") { recentScripts.take(3).forEach { add(it) } }
             put("utc_offset_minutes", java.util.TimeZone.getDefault()
                 .getOffset(ringDates.firstOrNull() ?: System.currentTimeMillis()) / 60_000)
         }

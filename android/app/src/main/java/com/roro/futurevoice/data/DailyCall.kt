@@ -87,6 +87,45 @@ object DailyCallStore {
         setTimes(c, enabled, listOf(hour * 60 + minute))
 
     private const val SCRIPT = "futurevoice.dailyCall.script"
+    private const val RECENT_SCRIPTS = "futurevoice.dailyCall.recentScripts"
+
+    /** What a call is about takes turns (iOS `VoicemailEngine.Angle`,
+     *  2026-10-21): left to the model, every call picked up the last talk, so
+     *  a learner who talks about work was asked about work every time. */
+    enum class Angle(val raw: String) {
+        CONTINUE_THREAD("continueThread"), SMALL_TALK("smallTalk"), NEWS("news"), DEBATE("debate")
+    }
+
+    /** iOS `VoicemailEngine.pickAngle`: the next one after [previous] that can
+     *  be written now, never the same twice unless nothing else can. */
+    fun pickAngle(previous: Angle?, level: CefrLevel, hasNews: Boolean, hasLastTalk: Boolean): Angle {
+        fun available(a: Angle) = when (a) {
+            Angle.CONTINUE_THREAD -> hasLastTalk
+            Angle.SMALL_TALK -> true
+            Angle.NEWS -> hasNews
+            Angle.DEBATE -> level != CefrLevel.A1 && level != CefrLevel.A2
+        }
+        if (previous == null) return if (hasLastTalk) Angle.CONTINUE_THREAD else Angle.SMALL_TALK
+        val order = Angle.entries
+        val start = order.indexOf(previous)
+        for (step in 1..order.size) {
+            val next = order[(start + step) % order.size]
+            if (available(next)) return next
+        }
+        return Angle.SMALL_TALK
+    }
+
+    /** The last few voicemails written, newest first, as (angle, script). */
+    fun recentScripts(c: Context): List<Pair<String, String>> =
+        prefs(c).getString(RECENT_SCRIPTS, null)?.split('\n')?.mapNotNull { line ->
+            val i = line.indexOf('|').takeIf { it > 0 } ?: return@mapNotNull null
+            line.substring(0, i) to line.substring(i + 1)
+        }.orEmpty()
+
+    fun rememberScript(c: Context, script: String, angle: Angle) {
+        val all = (listOf(angle.raw to script.replace('\n', ' ')) + recentScripts(c)).take(5)
+        prefs(c).edit().putString(RECENT_SCRIPTS, all.joinToString("\n") { "${it.first}|${it.second}" }).apply()
+    }
 
     /** Tomorrow's opening words, written at session end; cleared on answer. */
     fun script(c: Context): String? = prefs(c).getString(SCRIPT, null)

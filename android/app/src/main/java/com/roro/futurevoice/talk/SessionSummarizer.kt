@@ -419,6 +419,11 @@ object SessionSummarizer {
         // effort; a failed script just means a generic opener.
         if (DailyCallStore.isEnabled(context)) {
             runCatching {
+                val recent = DailyCallStore.recentScripts(context)
+                val story = com.roro.futurevoice.data.NewsTopicStore.shared(context).recent(language).randomOrNull()
+                val angle = DailyCallStore.pickAngle(
+                    previous = recent.firstOrNull()?.let { r -> DailyCallStore.Angle.entries.firstOrNull { it.raw == r.first } },
+                    level = level, hasNews = story != null, hasLastTalk = true)
                 val script = com.roro.futurevoice.net.VoicemailClient(AuthRepository()).writeScript(
                     targetLanguage = language,
                     nativeLanguage = nativeLanguage,
@@ -437,8 +442,13 @@ object SessionSummarizer {
                     lastTalkAt = session.endedAt ?: turns.maxOfOrNull { it.timestamp }
                         ?: System.currentTimeMillis(),
                     ringDates = runCatching { com.roro.futurevoice.data.DailyCallScheduler.fireDates(context) }.getOrDefault(emptyList()),
+                    angle = angle.raw, newsTitle = story?.title, newsBlurb = story?.blurb,
+                    recentScripts = recent.map { it.second },
                 )
-                if (script.isNotBlank()) DailyCallStore.setScript(context, script)
+                if (script.isNotBlank()) {
+                    DailyCallStore.setScript(context, script)
+                    DailyCallStore.rememberScript(context, script, angle)
+                }
             }
         }
 

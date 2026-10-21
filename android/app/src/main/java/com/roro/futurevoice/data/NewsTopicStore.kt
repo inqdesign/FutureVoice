@@ -72,6 +72,14 @@ class NewsTopicStore private constructor(context: Context) {
         write(language, c.copy(seenTitles = seen))
     }
 
+    /** The newest batch if under [maxDays] old, whatever interest set it was
+     *  fetched for — the daily call's news angle needs one current story
+     *  (iOS `NewsTopicStore.recent`). */
+    fun recent(language: String, maxDays: Double = 3.0, now: Long = System.currentTimeMillis()): List<SuggestedTopic> {
+        val c = load(language) ?: return emptyList()
+        return if (now - c.fetchedAt < maxDays * 86_400_000) c.topics else emptyList()
+    }
+
     private fun load(language: String): Cached? {
         val f = file(language)
         if (!f.exists()) return null
