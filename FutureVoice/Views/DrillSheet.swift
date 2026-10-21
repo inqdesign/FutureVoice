@@ -823,7 +823,7 @@ private extension DrillView {
                                                                matching: card.targetPhrase)
                         Group {
                             if revealed {
-                                Text(cardSaidMarked(said, fix: card.targetPhrase))
+                                Text(cardProofread(said, fix: card.targetPhrase))
                             } else {
                                 Text(said)
                             }
@@ -871,11 +871,7 @@ private extension DrillView {
             }
 
             labeled(revealed ? "Try saying" : "How would a fluent speaker say it?") {
-                Text(revealed && !card.sourcePhrase.isEmpty
-                     ? cardFixMarked(card.targetPhrase,
-                                     said: DrillStore.relevantFragment(of: card.sourcePhrase,
-                                                                       matching: card.targetPhrase))
-                     : AttributedString(card.targetPhrase))
+                Text(card.targetPhrase)
                     .font(Self.targetFont(for: card.targetPhrase))
                     .foregroundStyle(Self.onCard)
                     .multilineTextAlignment(.leading)

@@ -607,7 +607,7 @@ struct StudyDeckView: View {
                 // what you said, then the fluent version, hidden until the tap.
                 if !item.cardSaid.isEmpty {
                     labeled("You said") {
-                        Text(revealed ? cardSaidMarked(item.cardSaid, fix: text)
+                        Text(revealed ? cardProofread(item.cardSaid, fix: text)
                                       : AttributedString(item.cardSaid))
                             .font(.callout)
                             .foregroundStyle(Self.onCardSecondary)
@@ -615,9 +615,7 @@ struct StudyDeckView: View {
                     }
                 }
                 labeled(revealed ? "Try saying" : "How would a fluent speaker say it?") {
-                    Text(revealed && !item.cardSaid.isEmpty
-                         ? cardFixMarked(text, said: item.cardSaid)
-                         : AttributedString(text))
+                    Text(text)
                         .font(DrillView.targetFont(for: text))
                         .foregroundStyle(Self.onCard)
                         .multilineTextAlignment(.leading)

@@ -1,9 +1,9 @@
 import CryptoKit
 import Foundation
 
-/// What a sentence card's back says about its correction: each change as
-/// "what you said → what to say" with a sentence or two on WHY, in the
-/// native language (2026-10-21). The card used to carry only the live
+/// The margin notes on a sentence card's back: each change with the few
+/// words a teacher scribbles beside it, in the native language (2026-10-21;
+/// the first cut wrote a sentence or two per change and read as a lesson). The card used to carry only the live
 /// correction's `why` — "the grammar point, ≤ 12 words" by contract — which
 /// arrives as a category ("word order and preposition") and tells nobody
 /// what was wrong with their sentence. That contract stays (the call has to
@@ -17,7 +17,7 @@ struct CorrectionExplanation: Codable, Equatable {
         var was: String
         /// Verbatim from the fix; empty when the fix only took words OUT.
         var now: String
-        /// Native language, plain words.
+        /// A margin note in the native language — a few words, not a lesson.
         var why: String
     }
     var changes: [Change]
@@ -48,9 +48,9 @@ enum CorrectionExplainer {
             messages: [GeminiClient.Message(role: .user, content: lines.joined(separator: "\n"))],
             // Native prose is token-hungry for CJK, and gen-3 spends its
             // thinking from the same ceiling. Only produced tokens are billed.
-            maxTokens: 1536,
+            maxTokens: 1024,
             purpose: "enrichment",
-            idempotencyKey: "explain:" + k
+            idempotencyKey: "explain2:" + k
         )
         let result = CorrectionExplanation(changes: verified(payload, said: said, fix: fix))
         guard !result.changes.isEmpty else { throw CocoaError(.coderValueNotFound) }
@@ -99,25 +99,25 @@ enum CorrectionExplainer {
           Empty string if words were only added.
         - "now": the exact words from "fluent" that replace them, copied
           verbatim. Empty string if words were only removed.
-        - "why": 1–2 short sentences in \(nativeName), plain words a learner
-          understands without grammar training. Say what was wrong with what
-          they said and the rule they can reuse next time. Name a grammar
-          term only if you explain it in the same sentence. Never just name
-          a category ("word order", "preposition") — say what about it.
-          \(lang) words quoted inside stay in \(lang), in plain double
-          quotes. Talk to the learner like a friendly tutor (in Korean,
-          해요체: ~해요, never 합니다체 and never 당신).
+        - "why": a MARGIN NOTE in \(nativeName), the few words a teacher
+          scribbles beside the fix — at most 8 words (Korean/Japanese/Chinese:
+          at most 15 characters), WRITTEN IN \(nativeName) whatever language
+          these examples are in. It says the reason, not the category — the
+          shape is "it was yesterday, so past", "making an app: build",
+          "a field takes in", "misheard". Never a grammar term alone ("word
+          order", "preposition"). \(lang) words stay in \(lang). Plain; in
+          Korean a bare note or 해요체, never 합니다체.
         - If a word in "said" looks like the recognizer mishearing a similar
           sounding word (it makes no sense there, and the fluent version has
-          a word that sounds like it), say in "why" that it was probably
-          misheard rather than calling it their mistake.
+          a word that sounds like it), the note says it was misheard, never
+          that it was their mistake.
         - "coach_note", when given, is a short hint from the live coach; use
           it, but explain fully.
         """
     }
 
     private static func key(said: String, fix: String, target: String, native: String) -> String {
-        let seed = "v1\n\(target)\n\(native)\n\(said.lowercased())\n\(fix.lowercased())"
+        let seed = "v2\n\(target)\n\(native)\n\(said.lowercased())\n\(fix.lowercased())"
         return SHA256.hash(data: Data(seed.utf8)).map { String(format: "%02x", $0) }.joined()
     }
 

@@ -1,14 +1,13 @@
 import SwiftUI
 
-/// The back of a sentence card, under the fluent line: every change as
-/// "what you said → what to say" and why, on the decks' accent slab
-/// (`DrillView`, `StudyDeckView`). Falls back to the card's own short reason
-/// while the explanation is written, and for good if it can't be.
+/// Margin notes under a sentence card's fluent line (`DrillView`,
+/// `StudyDeckView`): one short line per change — the fixed words, then why
+/// in a few native-language words. The marking itself is on the learner's
+/// sentence (`cardProofread`) and needs no network; these arrive when
+/// they're written, and if they can't be, the card's own reason stands in.
 ///
-/// The card has a fixed height and a small phone can't hold three
-/// explanations under a long sentence, so the card shows as many as FIT
-/// (`ViewThatFits`) and the rest open in a sheet — never clipped off the
-/// card's edge.
+/// The card has a fixed height, so it shows as many notes as FIT
+/// (`ViewThatFits`) and the rest open in a sheet, never clipped.
 struct CardCorrectionNotes: View {
     let said: String
     let fix: String
@@ -18,8 +17,6 @@ struct CardCorrectionNotes: View {
     @ObservedObject private var cache = CorrectionExplanationCache.shared
     @State private var showingAll = false
 
-    private static let secondary = Color.white.opacity(0.72)
-
     private var cacheKey: CorrectionExplanationCache.Key {
         .init(said: said, fix: fix, target: appState.targetLanguage, native: appState.nativeLanguage)
     }
@@ -28,13 +25,17 @@ struct CardCorrectionNotes: View {
         let changes = cache.explanations[cacheKey]?.changes
         ViewThatFits(in: .vertical) {
             if let changes {
-                ForEach((0...min(changes.count, 3)).reversed(), id: \.self) { shown in
+                ForEach((1...max(min(changes.count, 3), 1)).reversed(), id: \.self) { shown in
                     notes(changes, shown: shown)
                 }
-            } else {
-                fallback
+                moreButton(changes.count)
+            } else if cache.failed.contains(cacheKey), !reason.isEmpty {
+                Text(reason)
+                    .font(.footnote)
+                    .foregroundStyle(Color.white.opacity(0.72))
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            seeAllButton(label: "See what changed")
+            Color.clear.frame(height: 0)
         }
         .task(id: cacheKey) { await cache.load(cacheKey, reason: reason) }
         .sheet(isPresented: $showingAll) {
@@ -44,112 +45,66 @@ struct CardCorrectionNotes: View {
 
     private func notes(_ changes: [CorrectionExplanation.Change], shown: Int) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            caption
-            VStack(alignment: .leading, spacing: 14) {
-                ForEach(changes.prefix(shown), id: \.self) { change in
-                    CorrectionChangeRow(change: change, onCard: true)
-                }
+            ForEach(changes.prefix(shown), id: \.self) { change in
+                CorrectionNoteLine(change: change, onCard: true)
             }
-            if shown < changes.count {
-                seeAllButton(label: "\(changes.count - shown) more")
-            }
+            if shown < changes.count { moreButton(changes.count - shown) }
         }
     }
 
-    private var fallback: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            caption
-            if !reason.isEmpty {
-                Text(reason)
-                    .font(.subheadline)
-                    .foregroundStyle(Self.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            if cache.loading.contains(cacheKey) {
-                HStack(spacing: 6) {
-                    ProgressView().controlSize(.mini).tint(.white)
-                    Text("Explaining…")
-                }
-                .font(.footnote)
-                .foregroundStyle(Self.secondary)
-            }
-        }
-    }
-
-    private var caption: some View {
-        Text("What changed")
-            .font(.caption)
-            .foregroundStyle(Self.secondary)
-    }
-
-    private func seeAllButton(label: LocalizedStringKey) -> some View {
+    private func moreButton(_ count: Int) -> some View {
         Button { showingAll = true } label: {
-            Label(label, systemImage: "text.magnifyingglass")
+            Text("\(count) more")
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(.white)
         }
         .buttonStyle(.plain)
-        .disabled(cache.explanations[cacheKey] == nil)
     }
 }
 
-/// One change: what they said struck out → what to say, then why.
-struct CorrectionChangeRow: View {
+/// One note: the fixed words, then the reason in a few words.
+struct CorrectionNoteLine: View {
     let change: CorrectionExplanation.Change
-    /// On the accent slab (white text) or in an ordinary list.
     var onCard: Bool = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                if !change.was.isEmpty {
-                    Text(change.was)
-                        .strikethrough()
-                        .foregroundStyle(onCard ? Color.white.opacity(0.72) : .secondary)
-                }
-                Image(systemName: "arrow.right")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(onCard ? Color.white.opacity(0.72) : .secondary)
-                Text(change.now.isEmpty ? "—" : change.now)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(onCard ? Color.white : .primary)
-            }
-            .font(.callout)
-            .fixedSize(horizontal: false, vertical: true)
-            Text(change.why)
-                .font(.subheadline)
-                .foregroundStyle(onCard ? Color.white.opacity(0.9) : .primary)
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: "pencil")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(onCard ? Color.white.opacity(0.72) : .secondary)
+            (Text(change.now.isEmpty ? change.was : change.now)
+                .fontWeight(.semibold)
+                .strikethrough(change.now.isEmpty)
+             + Text("  ")
+             + Text(change.why)
+                .foregroundStyle(onCard ? Color.white.opacity(0.85) : .secondary))
+                .font(.footnote)
+                .foregroundStyle(onCard ? Color.white : .primary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
 
-/// Every change, for a card that couldn't hold them all.
+/// Every note, for a card that couldn't hold them all.
 private struct CorrectionChangesSheet: View {
     let changes: [CorrectionExplanation.Change]
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
-            List(changes, id: \.self) { change in
-                CorrectionChangeRow(change: change)
-                    .padding(.vertical, 4)
-            }
-            .navigationTitle("What changed")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+            List(changes, id: \.self) { CorrectionNoteLine(change: $0) }
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { dismiss() }
+                    }
                 }
-            }
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.medium])
     }
 }
 
 /// One copy of each explanation in memory, so the card's several
-/// `ViewThatFits` candidates (and the deck's card behind it) share a single
-/// load instead of each asking.
+/// `ViewThatFits` candidates share a single load instead of each asking.
 @MainActor
 final class CorrectionExplanationCache: ObservableObject {
     static let shared = CorrectionExplanationCache()
@@ -157,7 +112,8 @@ final class CorrectionExplanationCache: ObservableObject {
     struct Key: Hashable { let said, fix, target, native: String }
 
     @Published private(set) var explanations: [Key: CorrectionExplanation] = [:]
-    @Published private(set) var loading: Set<Key> = []
+    @Published private(set) var failed: Set<Key> = []
+    private var loading: Set<Key> = []
 
     func load(_ key: Key, reason: String) async {
         guard explanations[key] == nil, !loading.contains(key) else { return }
@@ -168,9 +124,11 @@ final class CorrectionExplanationCache: ObservableObject {
         }
         loading.insert(key)
         defer { loading.remove(key) }
-        if let got = try? await CorrectionExplainer.explain(said: key.said, fix: key.fix, reason: reason,
-                                                            target: key.target, native: key.native) {
-            explanations[key] = got
+        do {
+            explanations[key] = try await CorrectionExplainer.explain(
+                said: key.said, fix: key.fix, reason: reason, target: key.target, native: key.native)
+        } catch {
+            if !Task.isCancelled { failed.insert(key) }
         }
     }
 }
