@@ -105,4 +105,7 @@
     <string name="routine_pick_as_many">원하는 만큼 골라요.</string>
     <string name="routine_add_more_footer">처음엔 보이는 시간에 넣어 둘게요. 시간과 양은 대화 화면의 활동에서 언제든 바꿀 수 있어요.</string>
     <string name="routine_pitch_talk">유창해진 내가 내 목소리로 전화를 걸어요. 아무 이야기나 편하게 나눠요.</string>
+    <string name="routine_how_does_this_look">이렇게 해 볼까요?</string>
+    <string name="routine_keep_it_like_this">이대로 할게요</string>
+    <string name="routine_review_hint">블록을 누르면 고칠 수 있고, 길게 눌러 끌면 옮겨져요. 빈 곳을 누르면 추가돼요.</string>
 </resources>

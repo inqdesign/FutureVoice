@@ -105,4 +105,7 @@
     <string name="routine_pick_as_many">想選幾個都可以。</string>
     <string name="routine_add_more_footer">先排在顯示的時間。時間和份量，隨時都能在對話畫面的「活動」裡修改。</string>
     <string name="routine_pitch_talk">流利的自己用你的聲音打電話給你，想聊什麼都可以。</string>
+    <string name="routine_how_does_this_look">這樣安排可以嗎？</string>
+    <string name="routine_keep_it_like_this">就這樣</string>
+    <string name="routine_review_hint">點一下區塊可以修改，按住拖曳可以移動，點空白處就能新增。</string>
 </resources>

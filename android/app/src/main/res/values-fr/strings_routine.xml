@@ -105,4 +105,7 @@
     <string name="routine_pick_as_many">Choisis-en autant que tu veux.</string>
     <string name="routine_add_more_footer">Pour commencer, ils se placent aux heures indiquées. Tu peux changer les heures et la quantité dans Activité, sur l’écran Parler.</string>
     <string name="routine_pitch_talk">Ton moi fluide t’appelle, avec ta propre voix, et tu parles de ce que tu veux.</string>
+    <string name="routine_how_does_this_look">Ça te va comme ça ?</string>
+    <string name="routine_keep_it_like_this">C’est bon comme ça</string>
+    <string name="routine_review_hint">Touche un bloc pour le modifier, maintiens-le et fais-le glisser pour le déplacer, ou touche un espace vide pour en ajouter un.</string>
 </resources>

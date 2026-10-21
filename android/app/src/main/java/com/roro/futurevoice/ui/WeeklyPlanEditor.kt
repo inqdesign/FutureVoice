@@ -150,12 +150,18 @@ fun WeeklyPlanEditor(
      *  sheet's answers land on, so nothing here edits it — no +, no gear, no
      *  Done, no taps or drags on blocks. Scrolling still works. */
     onboarding: Boolean = false,
+    /** The routine builder's last step (iOS `onboardingEditing`): the blocks
+     *  are on the grid and the learner fixes them here before confirming —
+     *  taps, drags and adds work, the page's own chrome (+, gear, Done)
+     *  still doesn't. */
+    onboardingEditing: Boolean = false,
     /** A block just placed from outside (the onboarding sheet). */
     spotlight: PlanSpotlight? = null,
 ) {
     // Onboarding has no way out of the grid but its sheet (iOS: no Done).
     androidx.activity.compose.BackHandler { if (!onboarding) onClose() }
     if (!onboarding) NavCoverGuard()
+    val canEdit = !onboarding || onboardingEditing
     val context = LocalContext.current
     val res = context.resources
     val haptic = LocalHapticFeedback.current
@@ -328,18 +334,18 @@ fun WeeklyPlanEditor(
                     .padding(bottom = if (onboarding) ONBOARDING_SHEET_CLEARANCE else ADD_BUTTON_CLEARANCE)) {
                     WeekGrid(
                         snapshot = snapshot, highlightId = landedId,
-                        readOnly = onboarding,
+                        readOnly = !canEdit,
                         onAdd = { day, minute ->
-                            if (!onboarding)
+                            if (canEdit)
                                 blockEditor = BlockTarget.NewInWeek(StudyPlan.weekday(day), minute / 60, minute % 60)
                         },
                         onEdit = { occ ->
                             val id = occ.blockId
-                            if (onboarding) Unit
+                            if (!canEdit) Unit
                             else if (id != null) blockEditor = BlockTarget.InWeek(id)
                             else if (occ.kind == StudyPlan.Kind.TEST) showTest = true
                         },
-                        onMove = { occ, day, start -> if (!onboarding) handleMove(occ, day, start) },
+                        onMove = { occ, day, start -> if (canEdit) handleMove(occ, day, start) },
                         onDragTarget = { t -> dragTarget = t; if (t != null) { landedId = null; landedNote = null } },
                     )
                 }

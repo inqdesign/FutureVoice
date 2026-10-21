@@ -105,4 +105,7 @@
     <string name="routine_pick_as_many">想选几个都可以。</string>
     <string name="routine_add_more_footer">先排在显示的时间。时间和份量，随时都能在对话界面的“活动”里修改。</string>
     <string name="routine_pitch_talk">流利的自己用你的声音给你打电话，想聊什么都可以。</string>
+    <string name="routine_how_does_this_look">这样安排可以吗？</string>
+    <string name="routine_keep_it_like_this">就这样</string>
+    <string name="routine_review_hint">点一下区块可以修改，按住拖动可以移动，点空白处就能添加。</string>
 </resources>

@@ -139,8 +139,11 @@ object RoutineHandoff {
 }
 
 /** The first sheet is the intro AND the list: "Make my routine" grows it in
- *  place into the list (founder: no second window). */
-private enum class RoutineStep { INTRO, DONE }
+ *  place into the list (founder: no second window). `REVIEW`: the blocks are
+ *  on the grid, the sheet is down so the grid can be edited (a block's
+ *  editor is a sheet of its own), and a bar under it asks for the learner's
+ *  OK. `DONE` is only for a routine left empty. */
+private enum class RoutineStep { INTRO, REVIEW, DONE }
 
 /** Every kind, in the order of a day. The call is set by hand (length, time,
  *  days); the rest are ticked from a list. */
@@ -288,11 +291,12 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
     }
 
     LaunchedEffect(Unit) {
+        if (debugStep == "review") { saved = setOf(StudyPlan.Kind.TALK); step = RoutineStep.REVIEW }
         // A beat for the grid to be seen on its own first.
         delay(500)
-        sheetUp = true
+        if (step != RoutineStep.REVIEW) sheetUp = true
         // Capture build: `routine-onboarding-<step>` lands on a step
-        // (pick | advance | done | finish); `advance` grows the intro into
+        // (pick | pickall | review | advance | done | finish); `advance` grows the intro into
         // the list after a moment (for a recording), `finish` runs Done.
         when (debugStep) {
             "pick" -> expanded = true
@@ -322,8 +326,17 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
         saved = selected
         val plan = StudyPlanStore.current(context).withOnboardingRoutine(blocks, days)
         StudyPlanStore.update(context, plan, byLearner = true)
-        step = RoutineStep.DONE
-        val first = blocks.firstOrNull() ?: return
+        val first = blocks.firstOrNull()
+        if (first == null) {
+            step = RoutineStep.DONE
+            return
+        }
+        // The sheet goes down and the grid becomes the page to check.
+        sheetUp = false
+        scope.launch {
+            delay(300)
+            step = RoutineStep.REVIEW
+        }
         spotlight = PlanSpotlight(first.kind, first.startMinute, (spotlight?.token ?: 0) + 1)
         delay(700)
         if (StudyPlan.Kind.TALK in saved) {
@@ -357,7 +370,8 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
             shape = RoundedCornerShape((44 * minOf(1f, s * 3)).dp)
             clip = s > 0f
         }) {
-            WeeklyPlanEditor(onClose = {}, onboarding = true, spotlight = spotlight)
+            WeeklyPlanEditor(onClose = {}, onboarding = true, onboardingEditing = step == RoutineStep.REVIEW,
+                spotlight = spotlight)
         }
 
         // iOS's `.large` detent: the whole screen but the status bar and a
@@ -367,6 +381,14 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
         val large = maxHeight - insets - 10.dp
         val height by animateDpAsState(if (step == RoutineStep.INTRO && expanded) large else 300.dp,
             tween(350), label = "routineSheet")
+        // Under the grid once the blocks are on it: fix them on the grid,
+        // then say it's right.
+        AnimatedVisibility(visible = step == RoutineStep.REVIEW && shrink.value == 0f,
+            modifier = Modifier.align(Alignment.BottomCenter),
+            enter = slideInVertically(tween(300)) { it } + fadeIn(tween(300)),
+            exit = slideOutVertically(tween(300)) { it } + fadeOut(tween(300))) {
+            ConfirmBar(callBlocked = callBlocked, working = working) { finish() }
+        }
         AnimatedVisibility(visible = sheetUp, modifier = Modifier.align(Alignment.BottomCenter),
             enter = slideInVertically(tween(300)) { it }, exit = slideOutVertically(tween(300)) { it }) {
             Column(Modifier.fillMaxWidth()
@@ -383,7 +405,7 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
                 } else Modifier)) {
                 Box(Modifier.fillMaxWidth().height(height)) {
                     when (step) {
-                        RoutineStep.DONE -> {
+                        RoutineStep.REVIEW, RoutineStep.DONE -> {
                             val empty = saved.isEmpty()
                             RoutineMessage(if (empty) Icons.Filled.CalendarMonth else Icons.Filled.CheckCircle,
                                 if (empty) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF34C759),
@@ -581,6 +603,29 @@ private fun whenText(kind: StudyPlan.Kind, callStart: Int, callMinutes: Int, sel
     val time = LocalTime.of(s.hour, s.minute)
         .format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale))
     return if (everyDay) stringResource(R.string.routine_every_day_at, time) else time
+}
+
+/** The review step's bar: a title, how to fix the grid (or why nothing can
+ *  ring), and the confirm button. */
+@Composable
+private fun ConfirmBar(callBlocked: Boolean, working: Boolean, onKeep: () -> Unit) {
+    Column(Modifier.fillMaxWidth()
+        .shadow(8.dp)
+        .background(MaterialTheme.colorScheme.surface)
+        .clickable(interactionSource = null, indication = null) {}
+        .padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(stringResource(R.string.routine_how_does_this_look), style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold)
+        Text(stringResource(if (callBlocked) R.string.notifications_are_off_so_i_can_t_call_you_yet_turn_them_on_i_52c0b7
+            else R.string.routine_review_hint),
+            style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Button(onClick = onKeep, enabled = !working, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.routine_keep_it_like_this))
+        }
+        Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
+    }
 }
 
 /** SwiftUI's `.easeIn`. */

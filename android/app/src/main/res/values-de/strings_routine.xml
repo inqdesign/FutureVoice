@@ -105,4 +105,7 @@
     <string name="routine_pick_as_many">Such dir so viele aus, wie du willst.</string>
     <string name="routine_add_more_footer">Für den Anfang zu den angezeigten Zeiten. Zeiten und Menge kannst du jederzeit unter Aktivität auf dem Sprechen-Bildschirm ändern.</string>
     <string name="routine_pitch_talk">Dein fließendes Ich ruft dich an, mit deiner eigenen Stimme, und ihr redet über alles Mögliche.</string>
+    <string name="routine_how_does_this_look">Passt das so?</string>
+    <string name="routine_keep_it_like_this">So passt es</string>
+    <string name="routine_review_hint">Tippe auf einen Block, um ihn zu ändern, halte und zieh ihn, um ihn zu verschieben, oder tippe auf eine freie Stelle, um einen hinzuzufügen.</string>
 </resources>

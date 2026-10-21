@@ -105,4 +105,7 @@
     <string name="routine_pick_as_many">Pick as many as you like.</string>
     <string name="routine_add_more_footer">These go in at the times shown to start with. You can change the times and how much under Activity on the Talk screen.</string>
     <string name="routine_pitch_talk">Your fluent self calls you, in your own voice, and you talk about anything.</string>
+    <string name="routine_how_does_this_look">How does this look?</string>
+    <string name="routine_keep_it_like_this">Keep it like this</string>
+    <string name="routine_review_hint">Tap a block to change it, hold and drag to move it, or tap an empty spot to add one.</string>
 </resources>

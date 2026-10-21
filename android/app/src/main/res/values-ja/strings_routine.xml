@@ -105,4 +105,7 @@
     <string name="routine_pick_as_many">好きなだけ選んでください。</string>
     <string name="routine_add_more_footer">最初は表示の時間に入れておきます。時間と量は、トーク画面のアクティビティでいつでも変えられます。</string>
     <string name="routine_pitch_talk">流暢になった自分が、自分の声で電話をかけてきます。なんでも気軽に話しましょう。</string>
+    <string name="routine_how_does_this_look">これでどうですか？</string>
+    <string name="routine_keep_it_like_this">これでいく</string>
+    <string name="routine_review_hint">ブロックをタップすると変更、長押しでドラッグすると移動できます。空いているところをタップすると追加されます。</string>
 </resources>

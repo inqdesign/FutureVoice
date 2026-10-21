@@ -105,4 +105,7 @@
     <string name="routine_pick_as_many">Elige todos los que quieras.</string>
     <string name="routine_add_more_footer">Para empezar, van a las horas que ves. Puedes cambiar las horas y cuánto en Actividad, en la pantalla Hablar.</string>
     <string name="routine_pitch_talk">Tu yo fluido te llama con tu propia voz, y charlas de lo que quieras.</string>
+    <string name="routine_how_does_this_look">¿Qué te parece?</string>
+    <string name="routine_keep_it_like_this">Así está bien</string>
+    <string name="routine_review_hint">Toca un bloque para cambiarlo, mantenlo pulsado y arrástralo para moverlo, o toca un hueco vacío para añadir uno.</string>
 </resources>
