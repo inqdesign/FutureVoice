@@ -35,8 +35,11 @@ struct RoutineOnboardingView: View {
     var onFinished: () -> Void
 
     /// The first sheet is the intro AND the list: "Make my routine" grows
-    /// it in place into the list (founder: no second window).
-    private enum Step { case intro, done }
+    /// it in place into the list (founder: no second window). `review`: the
+    /// blocks are on the grid, the sheet is down so the grid can be edited
+    /// (a block's editor is a sheet of its own), and a bar under it asks for
+    /// the learner's OK. `done` is only for a routine left empty.
+    private enum Step { case intro, review, done }
 
     /// Every kind, in the order of a day. The call is set by hand (length,
     /// time, days); the rest are ticked from a list.
@@ -98,7 +101,7 @@ struct RoutineOnboardingView: View {
     private var uiLocale: Locale { Locale(identifier: LanguageCatalog.currentNative) }
 
     var body: some View {
-        WeeklyPlanEditor(onboarding: true, spotlight: spotlight)
+        WeeklyPlanEditor(onboarding: true, onboardingEditing: step == .review, spotlight: spotlight)
             .clipShape(RoundedRectangle(cornerRadius: 44 * min(1, shrink * 3), style: .continuous))
             .scaleEffect(x: scale.width, y: scale.height)
             .offset(x: offset.width, y: offset.height)
@@ -107,9 +110,9 @@ struct RoutineOnboardingView: View {
             .allowsHitTesting(shrink == 0)
             .onAppear {
                 // A beat for the grid to be seen on its own first.
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { sheetUp = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { if step != .review { sheetUp = true } }
                 #if DEBUG
-                // `-routineStep pick|pickall|done|finish|advance`: a step for a capture;
+                // `-routineStep pick|pickall|review|done|finish|advance`: a step for a capture;
                 // `finish` runs Done by itself after a moment.
                 switch UserDefaults.standard.string(forKey: "routineStep") {
                 case "pick": expand()
@@ -118,12 +121,16 @@ struct RoutineOnboardingView: View {
                     // The intro growing into the list, for a recording.
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { expand() }
                 case "done": step = .done
+                case "review": saved = [.talk]; step = .review
                 case "finish":
                     step = .done
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { finish() }
                 default: break
                 }
                 #endif
+            }
+            .overlay(alignment: .bottom) {
+                if step == .review { confirmBar.transition(.move(edge: .bottom).combined(with: .opacity)) }
             }
             .sheet(isPresented: $sheetUp) {
                 sheet
@@ -190,8 +197,37 @@ struct RoutineOnboardingView: View {
     private var sheet: some View {
         switch step {
         case .intro: pick
-        case .done: done
+        case .review, .done: done
         }
+    }
+
+    /// Under the grid once the blocks are on it: fix them on the grid, then
+    /// say it's right.
+    private var confirmBar: some View {
+        VStack(spacing: 10) {
+            Text(explain("How does this look?"))
+                .font(.headline)
+            Text(callBlocked
+                 ? explain("Notifications are off, so I can't call you yet. Turn them on in Settings. Your routine is under Activity on the Talk screen.")
+                 : explain("Tap a block to change it, hold and drag to move it, or tap an empty spot to add one."))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            Button {
+                finish()
+            } label: {
+                Text(explain("Keep it like this")).frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .disabled(working)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 16)
+        .padding(.bottom, 8)
+        .frame(maxWidth: .infinity)
+        .background(Color(.systemBackground).shadow(.drop(color: .black.opacity(0.08), radius: 8, y: -2)))
     }
 
     private var done: some View {
@@ -422,7 +458,9 @@ struct RoutineOnboardingView: View {
             withAnimation { step = .done }
             return
         }
-        withAnimation { step = .done }
+        // The sheet goes down and the grid becomes the page to check.
+        sheetUp = false
+        withAnimation(.easeOut(duration: 0.3).delay(0.3)) { step = .review }
         spotlight = .init(kind: first.kind, minute: first.startMinute, token: (spotlight?.token ?? 0) + 1)
         try? await Task.sleep(for: .milliseconds(700))
         if saved.contains(.talk) {

@@ -60620,6 +60620,52 @@
         }
       }
     },
+    "How does this look?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passt das so?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Qué te parece?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ça te va comme ça ?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "これでどうですか？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이렇게 해 볼까요?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这样安排可以吗？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這樣安排可以嗎？"
+          }
+        }
+      }
+    },
     "How does today look?" : {
       "localizations" : {
         "de" : {
@@ -68575,6 +68621,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "收藏"
+          }
+        }
+      }
+    },
+    "Keep it like this" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "So passt es"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Así está bien"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "C’est bon comme ça"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "これでいく"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이대로 할게요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "就这样"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "就這樣"
           }
         }
       }
@@ -116396,6 +116488,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "越了解你的生活，對話就越真實。"
+          }
+        }
+      }
+    },
+    "Tap a block to change it, hold and drag to move it, or tap an empty spot to add one." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tippe auf einen Block, um ihn zu ändern, halte und zieh ihn, um ihn zu verschieben, oder tippe auf eine freie Stelle, um einen hinzuzufügen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toca un bloque para cambiarlo, mantenlo pulsado y arrástralo para moverlo, o toca un hueco vacío para añadir uno."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touche un bloc pour le modifier, maintiens-le et fais-le glisser pour le déplacer, ou touche un espace vide pour en ajouter un."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ブロックをタップすると変更、長押しでドラッグすると移動できます。空いているところをタップすると追加されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "블록을 누르면 고칠 수 있고, 길게 눌러 끌면 옮겨져요. 빈 곳을 누르면 추가돼요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "点一下区块可以修改，按住拖动可以移动，点空白处就能添加。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "點一下區塊可以修改，按住拖曳可以移動，點空白處就能新增。"
           }
         }
       }

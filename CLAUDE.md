@@ -778,7 +778,15 @@ editing off) behind a sheet.
   for its time (six sheets of different heights, times that were the app's
   guess anyway, "say it again" unexplained in one line), and a list that
   put the call's time on a fixed 08:00.
-- **Done** drops the sheet and shrinks the page into the Talk header's
+- **Then the grid is checked, and confirmed** (2026-10-20, founder). After
+  "Done" the sheet goes DOWN (a block's editor is a sheet of its own and
+  can't open under another) and the grid becomes editable
+  (`WeeklyPlanEditor(onboardingEditing:)`: tap a block to change it, hold
+  and drag to move it, tap an empty spot to add; the page's +, gear and
+  Done stay hidden) under a bar — "How does this look?" and **Keep it like
+  this**, which finishes. A routine left empty skips this for the "You can
+  make it later" card.
+- **Keep it like this** shrinks the page into the Talk header's
   Activity chip (`RoutineHandoff.chipFrame`); the chip bounces and a popover
   says the routine lives there. Talk's first-run sheets (age check, guide,
   free minutes) wait until that hint closes (`RootTabView.holdingForRoutine`).

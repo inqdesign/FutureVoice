@@ -306,6 +306,11 @@ struct WeeklyPlanEditor: View {
     /// sheet's answers land on, so nothing here edits it — no +, no gear,
     /// no Done, no taps or drags on blocks. Scrolling still works.
     var onboarding = false
+    /// The routine builder's last step: the blocks are on the grid and the
+    /// learner fixes them here before confirming — taps, drags and adds
+    /// work, the page's own chrome (+, gear, Done) still doesn't.
+    var onboardingEditing = false
+    private var canEdit: Bool { !onboarding || onboardingEditing }
     /// A block just placed from outside (the onboarding sheet): scrolled
     /// to and ringed for a moment, like a block the + adds.
     var spotlight: Spotlight? = nil
@@ -357,15 +362,15 @@ struct WeeklyPlanEditor: View {
                         PlannerWeekCard(snapshot: snapshot, mode: .master, hourHeight: Self.hourHeight,
                                         selectedDay: $noDay,
                                         onMove: { occ, day, start in
-                                            if !onboarding { handleMove(occ, day, start) }
+                                            if canEdit { handleMove(occ, day, start) }
                                         },
                                         onEdit: { occ, _ in
-                                            guard !onboarding else { return }
+                                            guard canEdit else { return }
                                             if let id = occ.blockId { blockEditor = .inWeek(blockId: id) }
                                             else if occ.kind == .test { showTestEditor = true }
                                         },
                                         onAdd: { start in
-                                            guard !onboarding else { return }
+                                            guard canEdit else { return }
                                             let c = cal.dateComponents([.weekday, .hour, .minute], from: start)
                                             blockEditor = .newInWeek(weekday: c.weekday ?? 2,
                                                                      hour: c.hour ?? 20, minute: c.minute ?? 0)
