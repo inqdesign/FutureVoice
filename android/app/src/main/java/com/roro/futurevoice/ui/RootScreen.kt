@@ -496,6 +496,9 @@ fun RootScreen() {
     // balance, so without this nobody is told the minutes exist (iOS
     // `ef9af00`). Once per install, and never to someone who has talked.
     var welcomeMinutes by remember { mutableStateOf<Int?>(null) }
+    /** The store's trial, offered once after onboarding when the server says
+     *  so (iOS `showingTrialOffer`, `BillingConfig.trialOfferAt`). */
+    var showTrialOffer by remember { mutableStateOf(false) }
     var startAfterWelcome by remember { mutableStateOf(false) }
     // The welcome waits behind the Talk guide on a first launch: "this is
     // Talk" reads before "here are your minutes" (iOS `welcomeAfterIntro`).
@@ -555,6 +558,14 @@ fun RootScreen() {
         if (!checkWelcome) return@LaunchedEffect
         // Asked before the check, which marks the install shown: a repeat is
         // time ADDED to the pool, and the two read nothing alike in the funnel.
+        // The trial comes first when the server asks for it there; the
+        // welcome follows when the plans close.
+        if (com.roro.futurevoice.data.BillingConfig.onboardingTrialIsDue(context)) {
+            com.roro.futurevoice.core.Analytics.capture("onboarding_trial_offered")
+            showTrialOffer = true
+            checkWelcome = false
+            return@LaunchedEffect
+        }
         val repeatWelcome = FreeTalkWelcome.hasBeenShown(context)
         FreeTalkWelcome.minutesToAnnounce(context)?.let { minutes ->
             com.roro.futurevoice.core.Analytics.capture("free_talk_welcome_shown",
@@ -581,7 +592,7 @@ fun RootScreen() {
         delay(1200)
         // The tab's guide counts as a sheet too: on iOS a second `.sheet`
         // over the page intro is dropped by SwiftUI, here both would stack.
-        val anotherSheetUp = showAgeCheck || paywalled || welcomeMinutes != null || showIntroPreview ||
+        val anotherSheetUp = showAgeCheck || paywalled || showTrialOffer || welcomeMinutes != null || showIntroPreview ||
             inCall || state.levelUp != null || referralJoin != null ||
             com.roro.futurevoice.data.AppUpdateService.pending.value != null ||
             com.roro.futurevoice.data.PageIntroStore.showing.value
@@ -619,6 +630,11 @@ fun RootScreen() {
             },
         )
     }
+    if (showTrialOffer) PaywallDialog(onDismiss = {
+        showTrialOffer = false
+        com.roro.futurevoice.data.BillingConfig.markOnboardingTrialOffered(context)
+        checkWelcome = true
+    })
     welcomeMinutes?.let { minutes ->
         FreeTalkWelcomeSheet(
             minutes = minutes,
@@ -3037,7 +3053,7 @@ private fun HeaderAvatar(initials: String, onClick: () -> Unit) {
             // The full tank is this account's own pool, never a constant: the
             // period's cap for a subscriber, the signup grant otherwise.
             val cap = a.monthlyCapSeconds?.takeIf { a.isEntitled }
-            val tank = cap ?: FREE_GRANT_SECONDS
+            val tank = cap ?: com.roro.futurevoice.data.BillingConfig.freeTalkSeconds(LocalContext.current)
             val left = if (cap != null) (cap - a.secondsUsedPeriod).coerceAtLeast(0)
             else a.secondsBalance.coerceAtLeast(0)
             val used = 1f - (left.toFloat() / tank.coerceAtLeast(1)).coerceIn(0f, 1f)
@@ -3069,14 +3085,6 @@ private fun HeaderAvatar(initials: String, onClick: () -> Unit) {
     }
 }
 
-/**
- * The free tier's full tank — the signup grant, ten minutes since
- * 2026-09-21 (`20260921120000_ten_free_minutes`), 20 since 2026-09-26
- * (`20260926100000_twenty_free_minutes`). It used to be 66, which drew a ring
- * that barely moved for an account that now decides within a few calls.
- * Keep it equal to `handle_new_user_credits`.
- */
-private const val FREE_GRANT_SECONDS = 1200
 
 /**
  * A header control that looks like one.

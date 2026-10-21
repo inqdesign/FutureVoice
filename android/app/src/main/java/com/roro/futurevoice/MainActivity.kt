@@ -83,6 +83,9 @@ class MainActivity : ComponentActivity() {
         // Friends who joined with my code since last time — polled here
         // because there is no push infrastructure.
         lifecycleScope.launch { com.roro.futurevoice.data.ReferralJoins.announce(this@MainActivity) }
+        // The free offer as the server sets it (free minutes, where a trial is
+        // offered) — changeable without a build (iOS `BillingConfig`).
+        lifecycleScope.launch { com.roro.futurevoice.data.BillingConfig.refresh(this@MainActivity) }
         // The store waiting on the learner's consent before it charges
         // (Korea's second consent after a trial): read it, and say what it
         // is before they meet it in Play.

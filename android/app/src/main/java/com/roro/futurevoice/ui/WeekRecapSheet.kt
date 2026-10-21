@@ -528,7 +528,7 @@ private fun TopBar(recap: WeekRecap, count: Int, page: Int, isTrial: Boolean, on
             if (isTrial) {
                 Text(stringResource(R.string.trial_your_first_minutes,
                     // Invite minutes can make the free time longer than the grant.
-                    maxOf(AccountStatus.FREE_GRANT_SECONDS / 60, recap.talkMinutes)),
+                    maxOf(com.roro.futurevoice.data.BillingConfig.freeTalkSeconds(LocalContext.current) / 60, recap.talkMinutes)),
                     style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f))
             } else {
