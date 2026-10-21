@@ -129,6 +129,38 @@ Deno.serve(async (req) => {
     })
   }
 
+  // A line is a line (2026-10-21). The longest real request in 30 days was
+  // 301 characters (a scene line); nothing capped it, and with the replay
+  // hole below closed only by key, one request could still have carried a
+  // book. A voiceover line is a script's sentence and can run longer.
+  const maxChars = body.purpose === "script-voiceover" ? 1500 : 600
+  if (body.text.length > maxChars) return errorResponse(413, "text too long")
+
+  // A replayed key is a RETRY of the same line, never a new one (2026-10-21).
+  // Every charge RPC answers an idempotency key it has already seen with
+  // "charged 0" — right for a retry, and until now also a way to synthesize
+  // ANY text for free: spend one cheap key, then send whatever you like under
+  // it. A key already on file passes only for the same user, the same length
+  // and the same voice, within ten minutes; anything else is 409. Run beside
+  // the charge, so it may see this request's own fresh row — which matches.
+  const replayPromise: Promise<Response | null> = (async () => {
+    const { data: prior } = await billingClient()
+      .from("usage_ledger")
+      .select("user_id, created_at, metadata")
+      .eq("idempotency_key", idemKey)
+      .limit(1)
+      .maybeSingle()
+    if (!prior) return null
+    const p = prior as { user_id: string; created_at: string; metadata: Record<string, unknown> | null }
+    const sameUser = p.user_id === user.id
+    const fresh = Date.now() - new Date(p.created_at).getTime() < 10 * 60_000
+    const chars = p.metadata?.chars
+    const voice = p.metadata?.voice_id
+    const sameLine = (chars === undefined || chars === body.text!.length)
+      && (voice === undefined || voice === body.voice_id)
+    return sameUser && fresh && sameLine ? null : errorResponse(409, "idempotency key already used")
+  })()
+
   // Idempotency-proof hourly backstop, before any upstream spend. FIRED here,
   // awaited beside the charge below: the rate bump, the ownership check and
   // the charge are three independent DB round trips, and this function sits
@@ -297,6 +329,9 @@ Deno.serve(async (req) => {
       return ownershipFailure ?? rateLimitedResponse(cors())
     }
   }
+  const replayFailure = await replayPromise
+  if (replayFailure) return replayFailure
+
   if (!ch.ok) {
     if (ch.reason === "insufficient_credits" || ch.reason === "no_credit_row") {
       return insufficientCreditsResponse(cors())
