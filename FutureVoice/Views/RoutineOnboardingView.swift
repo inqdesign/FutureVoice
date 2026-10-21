@@ -123,9 +123,16 @@ struct RoutineOnboardingView: View {
             // the way while a block is dragged: it covers the evening hours
             // the block may be going to.
             if sheetUp && !(step == .review && dragging) {
-                card
-                    .ignoresSafeArea(.container, edges: .bottom)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                // The layer reaches the screen's bottom edge, so the card's
+                // 7 pt is measured from the edge, not from the home
+                // indicator's safe area (40 pt up, with the grid showing
+                // under it).
+                VStack(spacing: 0) {
+                    Spacer(minLength: 0)
+                    card
+                }
+                .ignoresSafeArea(.container, edges: .bottom)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
     }
