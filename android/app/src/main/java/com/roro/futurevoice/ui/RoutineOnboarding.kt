@@ -159,9 +159,10 @@ private val ROUTINE_EVENING = listOf(StudyPlan.Kind.SAY_IT_AGAIN, StudyPlan.Kind
 private const val EVENING_START = 21 * 60
 
 /** Where each block goes and how much it asks for (iOS
- *  `RoutineOnboardingView.slot`). The evening kinds that are [selected]
- *  follow one another from 21:00 with no gap; a row not ticked shows where it
- *  WOULD go. [callStart] is minutes past midnight. */
+ *  `RoutineOnboardingView.slot`). A time the learner set on the block
+ *  ([times], minutes past midnight) wins; otherwise the evening kinds that
+ *  are [selected] (and not set by hand) follow one another from 21:00 with
+ *  no gap, and a row not ticked shows where it WOULD go. [callStart] is minutes past midnight. */
 private data class RoutineSlot(val hour: Int, val minute: Int, val amount: Int)
 
 private fun routineAmount(kind: StudyPlan.Kind, callMinutes: Int): Int = when (kind) {
@@ -170,8 +171,11 @@ private fun routineAmount(kind: StudyPlan.Kind, callMinutes: Int): Int = when (k
     else -> 1
 }
 
-private fun slot(kind: StudyPlan.Kind, callStart: Int, callMinutes: Int, selected: Set<StudyPlan.Kind>): RoutineSlot {
+private fun slot(kind: StudyPlan.Kind, callStart: Int, callMinutes: Int, selected: Set<StudyPlan.Kind>,
+                 times: Map<StudyPlan.Kind, Int>): RoutineSlot {
     val amount = routineAmount(kind, callMinutes)
+    // A time the learner set on the block wins.
+    if (kind != StudyPlan.Kind.TALK) times[kind]?.let { return RoutineSlot(it / 60, it % 60, amount) }
     return when (kind) {
         StudyPlan.Kind.TALK -> RoutineSlot(callStart / 60, callStart % 60, callMinutes)
         StudyPlan.Kind.LISTEN -> RoutineSlot(8, 30, amount)
@@ -180,7 +184,7 @@ private fun slot(kind: StudyPlan.Kind, callStart: Int, callMinutes: Int, selecte
             val mine = ROUTINE_EVENING.indexOf(kind)
             var start = EVENING_START
             ROUTINE_EVENING.forEachIndexed { i, k ->
-                if (k != kind && k in selected && mine >= 0 && i < mine) {
+                if (k != kind && k in selected && k !in times && mine >= 0 && i < mine) {
                     start += k.drawnMinutes(if (k == StudyPlan.Kind.REVIEW) 10 else 1)
                 }
             }
@@ -221,6 +225,8 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
     var callMinutes by remember { mutableIntStateOf(5) }
     var callHour by remember { mutableIntStateOf(8) }
     var callMinute by remember { mutableIntStateOf(0) }
+    /** Times set by hand on an "Add more" block, minutes past midnight. */
+    var times by remember { mutableStateOf<Map<StudyPlan.Kind, Int>>(emptyMap()) }
     /** The days the whole routine runs on; the rest are rest days. */
     var days by remember { mutableStateOf((1..7).toSet()) }
     /** The intro has grown into the list. */
@@ -319,7 +325,7 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
      *  reminders. */
     suspend fun save() {
         val blocks = ROUTINE_KINDS.filter { it in selected }.map { kind ->
-            val s = slot(kind, callHour * 60 + callMinute, callMinutes, selected)
+            val s = slot(kind, callHour * 60 + callMinute, callMinutes, selected, times)
             StudyPlan.Block(kind = kind, weekdays = days, hour = s.hour, minute = s.minute,
                 minutes = s.amount)
         }
@@ -429,6 +435,7 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
                         RoutineStep.INTRO -> RoutinePick(
                             expanded = expanded,
                             selected = selected,
+                            times = times, onTime = { k, at -> times = times + (k to at) },
                             onToggle = { k -> selected = if (k in selected) selected - k else selected + k },
                             callMinutes = callMinutes, onCallMinutes = { callMinutes = it },
                             callHour = callHour, callMinute = callMinute,
@@ -455,7 +462,9 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
  *  in the same sheet. The button stays pinned at the foot on an opaque
  *  ground: the list scrolls under it and must not show through. */
 @Composable
-private fun RoutinePick(expanded: Boolean, selected: Set<StudyPlan.Kind>, onToggle: (StudyPlan.Kind) -> Unit,
+private fun RoutinePick(expanded: Boolean, selected: Set<StudyPlan.Kind>,
+                        times: Map<StudyPlan.Kind, Int>, onTime: (StudyPlan.Kind, Int) -> Unit,
+                        onToggle: (StudyPlan.Kind) -> Unit,
                         callMinutes: Int, onCallMinutes: (Int) -> Unit,
                         callHour: Int, callMinute: Int, onCallTime: (Int, Int) -> Unit,
                         days: Set<Int>, onToggleDay: (Int) -> Unit,
@@ -510,8 +519,25 @@ private fun RoutinePick(expanded: Boolean, selected: Set<StudyPlan.Kind>, onTogg
                     GroupedCard {
                         ROUTINE_OTHERS.forEachIndexed { i, kind ->
                             if (i > 0) GroupedRowDivider()
-                            RoutineRow(kind, kind in selected,
-                                whenLine = whenText(kind, callStart, callMinutes, selected, days.size == 7)) { onToggle(kind) }
+                            val on = kind in selected
+                            // The call's time — and a ticked block's — is set
+                            // right under it.
+                            RoutineRow(kind, on, whenLine = if (on) null
+                                else whenText(kind, callStart, callMinutes, selected, times, days.size == 7)) {
+                                onToggle(kind)
+                            }
+                            // A ticked block's time, changed right on it.
+                            if (on) {
+                                val s = slot(kind, callStart, callMinutes, selected, times)
+                                GroupedRowDivider(inset = true)
+                                Row(Modifier.fillMaxWidth().heightIn(min = 44.dp)
+                                    .padding(start = 54.dp, end = 16.dp, top = 6.dp, bottom = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically) {
+                                    Text(stringResource(R.string.routine_time), style = MaterialTheme.typography.bodyLarge,
+                                        modifier = Modifier.weight(1f))
+                                    IosCompactTimePicker(s.hour, s.minute) { h, m -> onTime(kind, h * 60 + m) }
+                                }
+                            }
                         }
                     }
                     GroupedFooter(stringResource(R.string.routine_add_more_footer))
@@ -605,8 +631,8 @@ private fun pitch(kind: StudyPlan.Kind): String = when (kind) {
  *  locale. */
 @Composable
 private fun whenText(kind: StudyPlan.Kind, callStart: Int, callMinutes: Int, selected: Set<StudyPlan.Kind>,
-                     everyDay: Boolean): String {
-    val s = slot(kind, callStart, callMinutes, selected)
+                     times: Map<StudyPlan.Kind, Int>, everyDay: Boolean): String {
+    val s = slot(kind, callStart, callMinutes, selected, times)
     val locale = LocalConfiguration.current.locales[0]
     val time = LocalTime.of(s.hour, s.minute)
         .format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale))
