@@ -95,8 +95,7 @@
     <string name="routine_under_activity_whenever">ルーティンはトーク画面のアクティビティからいつでも作れます。</string>
     <string name="routine_what_goes_in">ルーティンに何を入れますか？</string>
     <string name="routine_every_day_at">毎日 · %1$s</string>
-    <string name="routine_right_after_call">トークのすぐあと</string>
-    <string name="routine_pitch_say_it_again">さっきの会話を最初からもう一度。自分の番には、ネイティブらしく直した文が出るので、それを声に出して読みます。</string>
+    <string name="routine_pitch_say_it_again">今日の会話を最初からもう一度。自分の番には、ネイティブらしく直した文が出るので、それを声に出して読みます。</string>
     <string name="routine_pitch_listen">nawana ポッドキャストと、見たシーンを続けて再生します。通勤中にぴったりです。</string>
     <string name="routine_pitch_shadow">流暢な自分の文を聞いて、同じリズムで重ねて話します。スコアも出ます。</string>
     <string name="routine_pitch_speech">原稿をカメラの前で声に出して読み、発音とスピードのスコアをもらいます。</string>

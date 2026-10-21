@@ -95,8 +95,7 @@
     <string name="routine_under_activity_whenever">Cuando quieras una rutina, está en Actividad, en la pantalla Hablar.</string>
     <string name="routine_what_goes_in">¿Qué pones en tu rutina?</string>
     <string name="routine_every_day_at">Todos los días · %1$s</string>
-    <string name="routine_right_after_call">Justo después de la llamada</string>
-    <string name="routine_pitch_say_it_again">Repite desde el principio la llamada que acabas de tener. En tu turno aparecen tus frases como las diría un nativo, y las lees en voz alta.</string>
+    <string name="routine_pitch_say_it_again">Repite desde el principio una llamada de hoy. En tu turno aparecen tus frases como las diría un nativo, y las lees en voz alta.</string>
     <string name="routine_pitch_listen">El Podcast de nawana y las situaciones que has visto, una tras otra. Ideal para el trayecto.</string>
     <string name="routine_pitch_shadow">Escucha una frase de tu yo fluido y dila a la vez, con el mismo ritmo. Te da una puntuación.</string>
     <string name="routine_pitch_speech">Lee un guion en voz alta ante la cámara y recibe una puntuación de pronunciación y ritmo.</string>

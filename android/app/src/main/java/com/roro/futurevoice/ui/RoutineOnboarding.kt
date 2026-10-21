@@ -144,27 +144,46 @@ private enum class RoutineStep { INTRO, DONE }
 
 /** Every kind, in the order of a day. The call is set by hand (length, time,
  *  days); the rest are ticked from a list. */
-private val ROUTINE_KINDS = listOf(StudyPlan.Kind.TALK, StudyPlan.Kind.SAY_IT_AGAIN, StudyPlan.Kind.LISTEN,
-    StudyPlan.Kind.SHADOW, StudyPlan.Kind.SPEECH, StudyPlan.Kind.REVIEW)
+private val ROUTINE_KINDS = listOf(StudyPlan.Kind.TALK, StudyPlan.Kind.LISTEN, StudyPlan.Kind.SHADOW,
+    StudyPlan.Kind.SAY_IT_AGAIN, StudyPlan.Kind.REVIEW, StudyPlan.Kind.SPEECH)
 
 private val ROUTINE_OTHERS = ROUTINE_KINDS.filter { it != StudyPlan.Kind.TALK }
 private val CALL_CHOICES = listOf(5, 10, 15, 20)
 
+/** The evening sitting (founder, 2026-10-20: say it again, review and speech
+ *  around 9, one after another), in this order. */
+private val ROUTINE_EVENING = listOf(StudyPlan.Kind.SAY_IT_AGAIN, StudyPlan.Kind.REVIEW, StudyPlan.Kind.SPEECH)
+private const val EVENING_START = 21 * 60
+
 /** Where each block goes and how much it asks for (iOS
- *  `RoutineOnboardingView.slot`). Say it again sits right after the call, as
- *  it is in the day. [callStart] is minutes past midnight. */
+ *  `RoutineOnboardingView.slot`). The evening kinds that are [selected]
+ *  follow one another from 21:00 with no gap; a row not ticked shows where it
+ *  WOULD go. [callStart] is minutes past midnight. */
 private data class RoutineSlot(val hour: Int, val minute: Int, val amount: Int)
 
-private fun slot(kind: StudyPlan.Kind, callStart: Int, callMinutes: Int): RoutineSlot = when (kind) {
-    StudyPlan.Kind.TALK -> RoutineSlot(callStart / 60, callStart % 60, callMinutes)
-    StudyPlan.Kind.SAY_IT_AGAIN -> (callStart + callMinutes).let { end ->
-        if (end + StudyPlan.SAY_IT_AGAIN_MINUTES <= 24 * 60) RoutineSlot(end / 60, end % 60, 1) else RoutineSlot(8, 15, 1)
+private fun routineAmount(kind: StudyPlan.Kind, callMinutes: Int): Int = when (kind) {
+    StudyPlan.Kind.REVIEW -> 10
+    StudyPlan.Kind.TALK -> callMinutes
+    else -> 1
+}
+
+private fun slot(kind: StudyPlan.Kind, callStart: Int, callMinutes: Int, selected: Set<StudyPlan.Kind>): RoutineSlot {
+    val amount = routineAmount(kind, callMinutes)
+    return when (kind) {
+        StudyPlan.Kind.TALK -> RoutineSlot(callStart / 60, callStart % 60, callMinutes)
+        StudyPlan.Kind.LISTEN -> RoutineSlot(8, 30, amount)
+        StudyPlan.Kind.SHADOW -> RoutineSlot(12, 30, amount)
+        else -> {
+            val mine = ROUTINE_EVENING.indexOf(kind)
+            var start = EVENING_START
+            ROUTINE_EVENING.forEachIndexed { i, k ->
+                if (k != kind && k in selected && mine >= 0 && i < mine) {
+                    start += k.drawnMinutes(if (k == StudyPlan.Kind.REVIEW) 10 else 1)
+                }
+            }
+            RoutineSlot(start / 60, start % 60, amount)
+        }
     }
-    StudyPlan.Kind.LISTEN -> RoutineSlot(8, 30, 1)
-    StudyPlan.Kind.SHADOW -> RoutineSlot(12, 30, 1)
-    StudyPlan.Kind.SPEECH -> RoutineSlot(20, 0, 1)
-    StudyPlan.Kind.REVIEW -> RoutineSlot(21, 0, 10)
-    else -> RoutineSlot(20, 0, kind.defaultAmount)
 }
 
 /**
@@ -277,6 +296,7 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
         // the list after a moment (for a recording), `finish` runs Done.
         when (debugStep) {
             "pick" -> expanded = true
+            "pickall" -> { selected = ROUTINE_KINDS.toSet(); expanded = true }
             "advance" -> {
                 delay(2_500)
                 expanded = true
@@ -295,7 +315,7 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
      *  reminders. */
     suspend fun save() {
         val blocks = ROUTINE_KINDS.filter { it in selected }.map { kind ->
-            val s = slot(kind, callHour * 60 + callMinute, callMinutes)
+            val s = slot(kind, callHour * 60 + callMinute, callMinutes, selected)
             StudyPlan.Block(kind = kind, weekdays = days, hour = s.hour, minute = s.minute,
                 minutes = s.amount)
         }
@@ -461,7 +481,7 @@ private fun RoutinePick(expanded: Boolean, selected: Set<StudyPlan.Kind>, onTogg
                         ROUTINE_OTHERS.forEachIndexed { i, kind ->
                             if (i > 0) GroupedRowDivider()
                             RoutineRow(kind, kind in selected,
-                                whenLine = whenText(kind, callStart, callMinutes, days.size == 7)) { onToggle(kind) }
+                                whenLine = whenText(kind, callStart, callMinutes, selected, days.size == 7)) { onToggle(kind) }
                         }
                     }
                     GroupedFooter(stringResource(R.string.routine_add_more_footer))
@@ -550,13 +570,13 @@ private fun pitch(kind: StudyPlan.Kind): String = when (kind) {
     else -> ""
 }
 
-/** "Every day · 8:00 AM" (just the time when the routine skips a day), or
- *  "Right after the call" — the time in the app language's own format, as
- *  iOS formats it with the UI locale. */
+/** "Every day · 21:15" (just the time when the routine skips a day) — the
+ *  time in the app language's own format, as iOS formats it with the UI
+ *  locale. */
 @Composable
-private fun whenText(kind: StudyPlan.Kind, callStart: Int, callMinutes: Int, everyDay: Boolean): String {
-    if (kind == StudyPlan.Kind.SAY_IT_AGAIN) return stringResource(R.string.routine_right_after_call)
-    val s = slot(kind, callStart, callMinutes)
+private fun whenText(kind: StudyPlan.Kind, callStart: Int, callMinutes: Int, selected: Set<StudyPlan.Kind>,
+                     everyDay: Boolean): String {
+    val s = slot(kind, callStart, callMinutes, selected)
     val locale = LocalConfiguration.current.locales[0]
     val time = LocalTime.of(s.hour, s.minute)
         .format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale))

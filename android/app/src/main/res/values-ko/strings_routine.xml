@@ -95,8 +95,7 @@
     <string name="routine_under_activity_whenever">루틴은 대화 화면의 활동에서 언제든 만들 수 있어요.</string>
     <string name="routine_what_goes_in">루틴에 뭘 넣을까요?</string>
     <string name="routine_every_day_at">매일 · %1$s</string>
-    <string name="routine_right_after_call">대화 바로 뒤</string>
-    <string name="routine_pitch_say_it_again">방금 한 대화를 처음부터 다시 해요. 내 차례엔 원어민처럼 다듬은 문장이 떠서, 그걸 소리 내어 읽으면 돼요.</string>
+    <string name="routine_pitch_say_it_again">오늘 한 대화를 처음부터 다시 해요. 내 차례엔 원어민처럼 다듬은 문장이 떠서, 그걸 소리 내어 읽으면 돼요.</string>
     <string name="routine_pitch_listen">nawana 팟캐스트와 내가 본 상황을 이어서 들려줘요. 출퇴근길에 좋아요.</string>
     <string name="routine_pitch_shadow">유창해진 나의 문장을 듣고 같은 리듬으로 따라 말해요. 점수도 나와요.</string>
     <string name="routine_pitch_speech">원고를 카메라 앞에서 소리 내어 읽고 발음과 속도 점수를 받아요.</string>
