@@ -934,6 +934,23 @@ struct ConversationView: View {
                 didAutoStart = true
                 phoneCallActive = true
                 #if DEBUG
+                // `-trialhandoff normal|close`: the free pool runs out and the
+                // summary is closed with Done (`endAndClose`, what its
+                // onDismiss runs); `close` also taps ✕ inside the account
+                // lookup, which is where the report went missing in prod.
+                if let mode = UserDefaults.standard.string(forKey: "trialhandoff"), !mode.isEmpty {
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 3_000_000_000)
+                        print("[trialhandoff] pool spent, Done")
+                        BillingGate.debugTrialSpent = true
+                        freeCallSpent = true
+                        endAndClose()
+                        guard mode == "close" else { return }
+                        try? await Task.sleep(nanoseconds: 500_000_000)
+                        print("[trialhandoff] ✕ tapped inside the lookup")
+                        close()
+                    }
+                }
                 // A beat, so the presentation isn't requested inside the
                 // screen's own first appear — SwiftUI drops those.
                 if DebugCapture.previewCallSettings {
@@ -1192,7 +1209,12 @@ struct ConversationView: View {
                    onDismiss: { close() }) {
                 if let trialReport {
                     WeekRecapSheet(trial: trialReport).environmentObject(appState)
-                        .onAppear { trialReportAppeared = true }
+                        .onAppear {
+                            trialReportAppeared = true
+                            #if DEBUG
+                            print("[trialhandoff] report up on the call screen")
+                            #endif
+                        }
                 }
             }
             .sheet(isPresented: $showingFirstCallCheck, onDismiss: {

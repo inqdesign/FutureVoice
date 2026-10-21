@@ -314,6 +314,13 @@ struct RootTabView: View {
         }
         #if DEBUG
         .task {
+            // `-trialhandoff`: open a free talk by itself; the call does the rest.
+            guard let mode = UserDefaults.standard.string(forKey: "trialhandoff"), !mode.isEmpty else { return }
+            TrialReportDemo.seed()
+            try? await Task.sleep(for: .seconds(3))
+            beginFreeTalkMorph()
+        }
+        .task {
             // `-tabcycle 1`: walk the tabs by themselves for the hitch probe.
             guard UserDefaults.standard.bool(forKey: "tabcycle") else { return }
             try? await Task.sleep(for: .seconds(4))
@@ -648,6 +655,9 @@ struct RootTabView: View {
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
             }
             guard quietForTrialReport, trialReport == nil else { return }
+            #if DEBUG
+            print("[trialhandoff] report raised by the root")
+            #endif
             trialReport = TrialReportStore.current(targetLanguage: appState.targetLanguage)
         }
     }

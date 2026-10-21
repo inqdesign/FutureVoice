@@ -77,6 +77,18 @@ final class BillingGate: ObservableObject {
     /// callers treat that as a pass, never as a refusal.
     @discardableResult
     func snapshot(force: Bool = false) async -> AccountStatus? {
+        #if DEBUG
+        // `-trialhandoff normal|close`: a never-subscribed account whose free
+        // minutes run out when the debug call says so; a forced read takes
+        // the network's 1.5 s, which is the gap the ✕ race lives in.
+        if let mode = UserDefaults.standard.string(forKey: "trialhandoff"), !mode.isEmpty {
+            if force { try? await Task.sleep(nanoseconds: 1_500_000_000) }
+            var out = AccountStatus.empty
+            out.secondsBalance = Self.debugTrialSpent ? 0 : 600
+            out.ownershipKnown = true
+            return out
+        }
+        #endif
         if !force, let account, !isStale { return account }
         if let inFlight { return await inFlight.value }
         let task = Task { await Self.load() }
@@ -140,6 +152,8 @@ final class BillingGate: ObservableObject {
     }
 
     #if DEBUG
+    /// `-trialhandoff`: the debug call has spent the free pool.
+    static var debugTrialSpent = false
     /// Screenshot captures: an account to draw prices and pools against.
     func debugSetAccount(_ account: AccountStatus?) {
         self.account = account
