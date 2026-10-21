@@ -1,12 +1,13 @@
 import SwiftUI
 
 /// Margin notes under a sentence card's fluent line (`DrillView`,
-/// `StudyDeckView`): one short line per change, at most three — the fixed
-/// words, then why in a few native-language words. The marking itself is on
-/// the learner's sentence (`cardProofread`) and needs no network; these
-/// arrive when they're written, and if they can't be, the card's own reason
-/// stands in. A card too small for them leaves them out whole (the cards'
-/// own `ViewThatFits`).
+/// `StudyDeckView`): one short line per change — the fixed words, then why
+/// in a few native-language words. The marking itself is on the learner's
+/// sentence (`cardProofread`) and needs no network; these arrive when
+/// they're written, and if they can't be, the card's own reason stands in.
+///
+/// The card has a fixed height, so it shows as many notes as FIT
+/// (`ViewThatFits`) and the rest open in a sheet, never clipped.
 struct CardCorrectionNotes: View {
     let said: String
     let fix: String
@@ -14,29 +15,50 @@ struct CardCorrectionNotes: View {
 
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var cache = CorrectionExplanationCache.shared
+    @State private var showingAll = false
 
     private var cacheKey: CorrectionExplanationCache.Key {
         .init(said: said, fix: fix, target: appState.targetLanguage, native: appState.nativeLanguage)
     }
 
     var body: some View {
-        Group {
-            if let changes = cache.explanations[cacheKey]?.changes {
-                VStack(alignment: .leading, spacing: 6) {
-                    ForEach(changes, id: \.self) { CorrectionNoteLine(change: $0, onCard: true) }
+        let changes = cache.explanations[cacheKey]?.changes
+        ViewThatFits(in: .vertical) {
+            if let changes {
+                ForEach((1...max(min(changes.count, 3), 1)).reversed(), id: \.self) { shown in
+                    notes(changes, shown: shown)
                 }
+                moreButton(changes.count)
             } else if cache.failed.contains(cacheKey), !reason.isEmpty {
                 Text(reason)
                     .font(.footnote)
                     .foregroundStyle(Color.white.opacity(0.72))
                     .fixedSize(horizontal: false, vertical: true)
-            } else {
-                // An empty Group draws nothing, and a view that isn't drawn
-                // never runs its task.
-                Color.clear.frame(height: 0)
             }
+            Color.clear.frame(height: 0)
         }
         .task(id: cacheKey) { await cache.load(cacheKey, reason: reason) }
+        .sheet(isPresented: $showingAll) {
+            if let changes { CorrectionChangesSheet(changes: changes) }
+        }
+    }
+
+    private func notes(_ changes: [CorrectionExplanation.Change], shown: Int) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(changes.prefix(shown), id: \.self) { change in
+                CorrectionNoteLine(change: change, onCard: true)
+            }
+            if shown < changes.count { moreButton(changes.count - shown) }
+        }
+    }
+
+    private func moreButton(_ count: Int) -> some View {
+        Button { showingAll = true } label: {
+            Text("\(count) more")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.white)
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -63,8 +85,26 @@ struct CorrectionNoteLine: View {
     }
 }
 
-/// One copy of each explanation in memory, so the top card and the same
-/// card met again in one sitting share a single load.
+/// Every note, for a card that couldn't hold them all.
+private struct CorrectionChangesSheet: View {
+    let changes: [CorrectionExplanation.Change]
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List(changes, id: \.self) { CorrectionNoteLine(change: $0) }
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { dismiss() }
+                    }
+                }
+        }
+        .presentationDetents([.medium])
+    }
+}
+
+/// One copy of each explanation in memory, so the card's several
+/// `ViewThatFits` candidates share a single load instead of each asking.
 @MainActor
 final class CorrectionExplanationCache: ObservableObject {
     static let shared = CorrectionExplanationCache()

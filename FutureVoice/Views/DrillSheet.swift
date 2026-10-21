@@ -127,10 +127,7 @@ struct DrillView: View {
     @ViewBuilder private var bodyContent: some View {
         Group {
             if !queue.isEmpty {
-                // Top-aligned: the card is as tall as its sentence and the
-                // folders follow it.
                 cardDeck
-                    .frame(maxHeight: .infinity, alignment: .top)
             } else {
                 emptyState
             }
@@ -260,9 +257,12 @@ struct DrillView: View {
                 // Peek of the next card so the user feels there's a deck.
                 // Recall cards stay concealed in the peek so the upcoming
                 // answer doesn't leak while grading the current one.
-                // The card is as tall as its sentence, so the peek is a plain
-                // slab the top card's size: a second card's own height would
-                // poke out above or below it.
+                if queue.count > 1 {
+                    cardSurface(queue[1], revealed: !needsReveal(queue[1]))
+                        .scaleEffect(0.95)
+                        .opacity(0.45)
+                        .offset(y: 14)
+                }
                 cardSurface(queue[0], revealed: isTopRevealed, isTop: true)
                     .scaleEffect(flyScale)
                     .opacity(flyOpacity)
@@ -280,17 +280,6 @@ struct DrillView: View {
                     }
                     .accessibilityElement(children: .contain)
                     .accessibilityActions { binAccessibilityActions }
-            }
-            // On the stack, not the card, so it stays put while the card is
-            // dragged; the stack is laid out at the card's own size.
-            .background {
-                if queue.count > 1 {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(Color.accentColor)
-                        .scaleEffect(0.95)
-                        .opacity(0.45)
-                        .offset(y: 14)
-                }
             }
             .padding(.horizontal, 16)
             .background {
@@ -816,35 +805,8 @@ private extension DrillView {
 
     // MARK: - Card surface
 
+    @ViewBuilder
     func cardSurface(_ card: DrillCard, revealed: Bool = true, isTop: Bool = false) -> some View {
-        // The whole card is measured with its margin notes and without: a
-        // phone that can't hold them drops the notes, never the buttons (the
-        // marks in "You said" still show every change).
-        ViewThatFits(in: .vertical) {
-            cardContent(card, revealed: revealed, notes: true)
-            cardContent(card, revealed: revealed, notes: false)
-        }
-        .padding(24)
-        // As tall as its content (2026-10-21); the deck puts the slack under
-        // the folders.
-        .frame(maxWidth: .infinity, alignment: .topLeading)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.accentColor)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.white.opacity(0.14), lineWidth: 1)
-        )
-        // The accent IS the card now, so every foreground on it reads against
-        // the accent, not the system background. Setting the tint once here
-        // carries `.foregroundStyle(.tint)` descendants (play glyph, "Tap to
-        // reveal", pill labels) along with it.
-        .tint(Self.onCard)
-        .shadow(color: Color.accentColor.opacity(0.28), radius: 8, y: 4)
-    }
-
-    func cardContent(_ card: DrillCard, revealed: Bool, notes: Bool) -> some View {
         VStack(alignment: .leading, spacing: 18) {
             // Every text below is `fixedSize(vertical:)` — when the card runs
             // out of room SwiftUI otherwise compresses the texts and elides
@@ -918,11 +880,9 @@ private extension DrillView {
             }
 
             if revealed, !card.sourcePhrase.isEmpty {
-                if notes {
-                    CardCorrectionNotes(said: DrillStore.relevantFragment(of: card.sourcePhrase,
+                CardCorrectionNotes(said: DrillStore.relevantFragment(of: card.sourcePhrase,
                                                                       matching: card.targetPhrase),
-                                        fix: card.targetPhrase, reason: card.reason)
-                }
+                                    fix: card.targetPhrase, reason: card.reason)
             } else if revealed, !card.reason.isEmpty {
                 labeled("Why") {
                     Text(card.reason)
@@ -932,8 +892,8 @@ private extension DrillView {
                 }
             }
 
-            // No Spacer: the card is as tall as what's on it. A greedy one
-            // stretched a four-word sentence over the whole screen.
+            Spacer(minLength: 12)
+
             if revealed {
                 HStack(spacing: 8) {
                     pillButton(systemImage: isLoadingAudio ? nil : "speaker.wave.2.fill",
@@ -961,6 +921,26 @@ private extension DrillView {
                     .frame(maxWidth: .infinity)
             }
         }
+        .padding(24)
+        // Dropped the 360pt minHeight — long targetPhrases were being
+        // clipped because Spacer + tight box left no room. Now the card
+        // grows to fit the text; minHeight kept just for visual presence
+        // on short cards.
+        .frame(maxWidth: .infinity, minHeight: 240, alignment: .topLeading)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.accentColor)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+        )
+        // The accent IS the card now, so every foreground on it reads against
+        // the accent, not the system background. Setting the tint once here
+        // carries `.foregroundStyle(.tint)` descendants (play glyph, "Tap to
+        // reveal", pill labels) along with it.
+        .tint(Self.onCard)
+        .shadow(color: Color.accentColor.opacity(0.28), radius: 8, y: 4)
     }
 
     /// Content color on the accent card.
