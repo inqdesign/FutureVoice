@@ -951,7 +951,6 @@ class RealtimeTalkClient(private val context: Context) {
                 }
                 level = peak
                 val frame = bytes.array().copyOf(n * 2)
-                userPCM.write(frame)
                 // Continuous, paced by the read itself — roughly realtime,
                 // which is what Gemini Live's own VAD wants.
                 if (micGated) { level = 0f; continue }
@@ -968,6 +967,13 @@ class RealtimeTalkClient(private val context: Context) {
                 }
                 socket?.send(frame.toByteString())
                 micBytesSent += frame.size
+                // The learner's take for listen-back: every frame that went
+                // up as REAL audio, none that went as silence or was held
+                // back (iOS `userPCM`, appended only when `!muted`). It was
+                // written before the gate, so the cached greeting played
+                // through the speaker opened the first "You" line on Replay
+                // (reported 2026-10-21) and each reply's echo led the next.
+                if (userPCM.size() < MIC_RATE * 2 * 120) userPCM.write(frame)
             }
             } finally {
                 // Only this thread ever stops/releases the recorder — it is
