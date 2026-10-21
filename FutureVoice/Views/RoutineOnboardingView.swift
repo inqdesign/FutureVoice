@@ -219,9 +219,9 @@ struct RoutineOnboardingView: View {
     private var card: some View {
         Group {
             switch step {
-            case .intro: pick.frame(height: expanded ? nil : 300)
+            case .intro: pick
             case .review: confirmContent
-            case .done: done.frame(height: 300)
+            case .done: done
             }
         }
         .frame(maxWidth: .infinity, maxHeight: isTall ? .infinity : nil)
@@ -301,7 +301,7 @@ struct RoutineOnboardingView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
+                .padding(.bottom, 12)
             Button(action: action) {
                 Text(button).frame(maxWidth: .infinity)
             }
@@ -321,10 +321,8 @@ struct RoutineOnboardingView: View {
 
     /// The intro, and — once "Make my routine" is tapped — the list under it,
     /// in the same sheet.
-    private var pick: some View {
-        VStack(spacing: 0) {
-        List {
-            Section {
+    /// The card's top: the intro's words, then the list's.
+    private var pickHeader: some View {
                 VStack(spacing: 10) {
                     Image(systemName: "calendar.badge.clock")
                         .font(.system(size: expanded ? 30 : 40))
@@ -342,8 +340,23 @@ struct RoutineOnboardingView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .frame(maxWidth: .infinity)
+    }
+
+    /// Closed, the card is only as tall as its words and button; open, the
+    /// list fills it.
+    private var pick: some View {
+        VStack(spacing: 0) {
+        if !expanded {
+            pickHeader
+                .padding(.horizontal, 24)
+                .padding(.top, 28)
+                .padding(.bottom, 20)
+        } else {
+        List {
+            Section {
+                pickHeader
                 .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets(top: expanded ? 8 : 20, leading: 24, bottom: 4, trailing: 24))
+                .listRowInsets(EdgeInsets(top: 8, leading: 24, bottom: 4, trailing: 24))
             }
             if expanded {
                 Section {
@@ -383,8 +396,8 @@ struct RoutineOnboardingView: View {
                 .transition(.opacity)
             }
         }
-        .scrollDisabled(!expanded)
         .scrollContentBackground(.hidden)
+        }
             Button {
                 guard expanded else { expand(); return }
                 working = true
