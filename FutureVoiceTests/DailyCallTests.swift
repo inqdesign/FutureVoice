@@ -273,6 +273,58 @@ final class DailyCallTests: XCTestCase {
         XCTAssertFalse(p.scriptFits(answeredAt: p.scheduledFor))
     }
 
+    // MARK: - What the call is about
+
+    /// The call takes turns instead of always picking up the last talk.
+    func testAngleNeverRepeatsAndSkipsWhatCantBeWritten() {
+        typealias A = VoicemailEngine.Angle
+        // First call with a talk on file: the thread.
+        XCTAssertEqual(VoicemailEngine.pickAngle(previous: nil, proficiency: .b1,
+                                                 hasNews: true, hasLastTalk: true), .continueThread)
+        // Then the others in turn.
+        XCTAssertEqual(VoicemailEngine.pickAngle(previous: .continueThread, proficiency: .b1,
+                                                 hasNews: true, hasLastTalk: true), .smallTalk)
+        XCTAssertEqual(VoicemailEngine.pickAngle(previous: .smallTalk, proficiency: .b1,
+                                                 hasNews: true, hasLastTalk: true), .news)
+        XCTAssertEqual(VoicemailEngine.pickAngle(previous: .news, proficiency: .b1,
+                                                 hasNews: true, hasLastTalk: true), .debate)
+        // No news cached: skipped. A2: no debate.
+        XCTAssertEqual(VoicemailEngine.pickAngle(previous: .smallTalk, proficiency: .b1,
+                                                 hasNews: false, hasLastTalk: true), .debate)
+        XCTAssertEqual(VoicemailEngine.pickAngle(previous: .news, proficiency: .a2,
+                                                 hasNews: true, hasLastTalk: true), .continueThread)
+        // Every angle, every combination: never the same twice in a row,
+        // except small talk when it is the only one left (A1/A2, no news,
+        // no talk).
+        for prev in A.allCases {
+            for level in CEFRLevel.allCases {
+                for news in [true, false] {
+                    for talk in [true, false] {
+                        if prev == .smallTalk, !news, !talk, [.a1, .a2].contains(level) { continue }
+                        XCTAssertNotEqual(VoicemailEngine.pickAngle(
+                            previous: prev, proficiency: level, hasNews: news, hasLastTalk: talk), prev)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Off the thread, the prompt says so and drops the last talk's phrases.
+    func testOffThreadPromptLeavesTheLastTalkAlone() {
+        var c = VoicemailEngine.Context(
+            targetLanguage: "en", nativeLanguage: "ko", proficiency: .b1,
+            personaName: nil, lastTopic: "a deadline at work",
+            lastPhrases: ["hit a wall"], lastTalkAt: Date(), dueCount: 0)
+        c.angle = .smallTalk
+        c.recentScripts = ["How's the project going?"]
+        let prompt = VoicemailEngine.systemPrompt(c)
+        XCTAssertTrue(prompt.contains("NOT the last talk"))
+        XCTAssertFalse(prompt.contains("hit a wall"))
+        XCTAssertTrue(prompt.contains("How's the project going?"))
+        c.angle = .continueThread
+        XCTAssertTrue(VoicemailEngine.systemPrompt(c).contains("hit a wall"))
+    }
+
     // MARK: - The missed-call trace
 
     /// The one behaviour that separates this from an alarm: a call nobody

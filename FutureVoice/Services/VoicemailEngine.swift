@@ -67,6 +67,59 @@ enum VoicemailEngine {
         /// (`DailyCallScheduler.fireDates`). Filled in by the scheduler; empty
         /// means "now", which only a test or a preview ever wants.
         var ringDates: [Date] = []
+
+        // MARK: What this call is about
+
+        /// Chosen in code (`pickAngle`), not by the model: left to itself the
+        /// model always picked up the last talk, so a learner who talks about
+        /// work was asked about work on every call (2026-10-20, a subscriber:
+        /// "it keeps asking about my work, and then I don't want to talk").
+        /// `.continueThread` is the old behaviour.
+        var angle: Angle = .continueThread
+        /// The story for `.news`, from the Talk tab's own news cache — the
+        /// model has no search, so it is told the story rather than asked
+        /// for one.
+        var newsTitle: String?
+        var newsBlurb: String?
+        /// The last few voicemails, newest first, so the question changes.
+        var recentScripts: [String] = []
+    }
+
+    /// The four kinds of call, in the order they take turns.
+    enum Angle: String, CaseIterable {
+        /// Picks up the last talk (what every call did before 2026-10-21).
+        case continueThread
+        /// Small talk: films, series, music, famous people.
+        case smallTalk
+        /// One current story from the news cache.
+        case news
+        /// An opinion question on society or the economy. B1 and up only:
+        /// below that, an argument can't be made in the language yet.
+        case debate
+    }
+
+    /// The next angle after the last one written, skipping any that can't be
+    /// written now (no news cached, a level below B1, no last talk). Never the
+    /// same twice in a row unless nothing else is available.
+    static func pickAngle(previous: Angle?, proficiency: CEFRLevel,
+                          hasNews: Bool, hasLastTalk: Bool) -> Angle {
+        let order = Angle.allCases
+        func available(_ a: Angle) -> Bool {
+            switch a {
+            case .continueThread: return hasLastTalk
+            case .smallTalk: return true
+            case .news: return hasNews
+            case .debate: return ![.a1, .a2].contains(proficiency)
+            }
+        }
+        guard let previous, let start = order.firstIndex(of: previous) else {
+            return hasLastTalk ? .continueThread : .smallTalk
+        }
+        for step in 1...order.count {
+            let next = order[(start + step) % order.count]
+            if available(next) { return next }
+        }
+        return .smallTalk
     }
 
     /// One Gemini call. Cheap tier: this is six seconds of warm small talk, not
@@ -142,6 +195,56 @@ enum VoicemailEngine {
         Int(Double(baseScriptCharacters) * SpeechSpeed.current.multiplier)
     }
 
+    /// What this call is about, and the rule that keeps it from becoming the
+    /// last talk again.
+    static func angleRules(_ c: Context) -> String {
+        var lines: [String] = []
+        switch c.angle {
+        case .continueThread:
+            lines.append("""
+            - THIS CALL picks up the last talk. Sentence 1 picks up something
+              CONCRETE from the grounding above — the last call's outcome first
+              if there was one, otherwise the last talk. If there is nothing to
+              pick up, say something specific about today instead — never a
+              generic "ready to practice?" opener. The question is about their
+              own life.
+            """)
+        case .smallTalk:
+            lines.append("""
+            - THIS CALL is small talk, NOT the last talk: do not bring up their
+              work or the last talk's subject at all, beyond a word about the
+              last call's outcome. Open on something light — a film or series,
+              music, a famous person everyone talks about, food, the weekend —
+              and ask what THEY like or think. Never state a release, a chart
+              or any recent news as fact: you cannot look anything up.
+            """)
+        case .news:
+            let blurb = (c.newsBlurb ?? "").isEmpty ? "" : " — \(c.newsBlurb!)"
+            lines.append("""
+            - THIS CALL is about a story in the news, NOT the last talk: do not
+              bring up their work or the last talk's subject at all, beyond a
+              word about the last call's outcome. The story: \(c.newsTitle ?? "")\(blurb)
+              Mention it the way a friend would ("did you see…"), using only
+              what is written here, and ask what they think of it.
+            """)
+        case .debate:
+            lines.append("""
+            - THIS CALL is a small debate, NOT the last talk: do not bring up
+              their work or the last talk's subject at all, beyond a word about
+              the last call's outcome. Ask their opinion on one question about
+              society, politics or the economy that reasonable people disagree
+              on (remote work, AI and jobs, housing, social media and kids…).
+              Take no side, and state no current facts — no names in office, no
+              numbers, nothing that changes.
+            """)
+        }
+        if !c.recentScripts.isEmpty {
+            lines.append("- Your last voicemails, newest first. Ask something DIFFERENT:\n"
+                         + c.recentScripts.prefix(3).map { "  \"\($0)\"" }.joined(separator: "\n"))
+        }
+        return lines.joined(separator: "\n")
+    }
+
     static func systemPrompt(_ c: Context, calendar: Calendar = .current) -> String {
         let targetName = LanguageCatalog.englishName(c.targetLanguage)
         let name = (c.personaName?.isEmpty == false) ? c.personaName! : "the learner"
@@ -150,7 +253,7 @@ enum VoicemailEngine {
         if let topic = c.lastTopic, !topic.isEmpty {
             grounding.append("Their last talk was about: \(topic)")
         }
-        if !c.lastPhrases.isEmpty {
+        if c.angle == .continueThread, !c.lastPhrases.isEmpty {
             grounding.append("Phrases that came up in it: "
                              + c.lastPhrases.prefix(4).map { "\"\($0)\"" }.joined(separator: ", "))
         }
@@ -204,13 +307,10 @@ enum VoicemailEngine {
         WRITE ONE VOICEMAIL in \(targetName):
         - 2–3 sentences, UNDER \(maxScriptCharacters) characters total. It is
           spoken aloud in under 25 seconds — that ceiling is hard.
-        - Sentence 1 picks up something CONCRETE from the grounding above —
-          the last call's outcome first if there was one, otherwise the last
-          talk. If there is nothing to pick up, say something specific about
-          today instead — never a generic "ready to practice?" opener.
-        - The LAST sentence is a QUESTION they can answer out loud immediately,
-          about their own life. This is the whole point of the call: they
-          should feel a question waiting, not an invitation.
+        \(angleRules(c))
+        - The LAST sentence is a QUESTION they can answer out loud immediately.
+          This is the whole point of the call: they should feel a question
+          waiting, not an invitation.
         - Natural spoken \(targetName) a CEFR \(c.proficiency.rawValue.uppercased())
           learner follows at speed. Contractions, no literary phrasing.
         - \(CoachingLanguage.breathPunctuation)\(ConversationEngine.varietyGuard(c.targetLanguage))

@@ -104,6 +104,15 @@ final class NewsTopicStore: LanguageScopedStore {
         try? data.write(to: fileURL, options: [.atomic])
     }
 
+    /// The newest batch on disk if it is under `maxDays` old, whatever
+    /// interest set it was fetched for — the daily call's news angle only
+    /// needs one current story, not the section's exact set.
+    func recent(maxDays: Double = 3, now: Date = Date()) -> [SuggestedTopic] {
+        guard let cached = load(),
+              now.timeIntervalSince(cached.fetchedAt) < maxDays * 86_400 else { return [] }
+        return cached.topics
+    }
+
     private func load() -> Cached? {
         guard let data = try? Data(contentsOf: fileURL) else { return nil }
         return try? decoder.decode(Cached.self, from: data)

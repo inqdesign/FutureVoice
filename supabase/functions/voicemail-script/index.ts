@@ -7,7 +7,12 @@
 // Body: { target_language, native_language, proficiency, persona_name?,
 //         last_topic?, last_phrases?, days_since_last_talk?, due_count?,
 //         last_outcome?: "answered"|"declined"|"missed", last_callbacks?,
-//         consecutive_unanswered?, max_callbacks? }
+//         consecutive_unanswered?, max_callbacks?,
+//         angle?: "continueThread"|"smallTalk"|"news"|"debate",
+//         news_title?, news_blurb?, recent_scripts? }
+// `angle` is picked by the app (iOS `VoicemailEngine.pickAngle`, 2026-10-21)
+// so a call isn't the last talk again every time; absent, the prompt is
+// byte-identical to before.
 // Returns Gemini's own body; the JSON inside is { "script": "..." }.
 // flash-lite, purpose "daily-call-script".
 
@@ -61,7 +66,8 @@ Deno.serve(async (req) => {
   const phrases = Array.isArray(c.last_phrases)
     ? (c.last_phrases as unknown[]).filter((x): x is string => typeof x === "string").slice(0, 4)
     : []
-  if (phrases.length > 0) {
+  const angle = str("angle") ?? "continueThread"
+  if (phrases.length > 0 && angle === "continueThread") {
     grounding.push('Phrases that came up in it: ' + phrases.map((p) => `"${p}"`).join(", "))
   }
   const days = num("days_since_last_talk")
@@ -85,6 +91,49 @@ Deno.serve(async (req) => {
   const groundingBlock = grounding.length === 0
     ? "You have no history with them yet — this is the first call."
     : grounding.map((g) => `- ${g}`).join("\n")
+
+  const recent = Array.isArray(c.recent_scripts)
+    ? (c.recent_scripts as unknown[]).filter((x): x is string => typeof x === "string").slice(0, 3)
+    : []
+  const offThread = "do not bring up\n  their work or the last talk's subject at all, beyond a word about the\n  last call's outcome."
+  const newsBlurb = str("news_blurb") ? ` — ${str("news_blurb")}` : ""
+  const angleRules = (() => {
+    switch (angle) {
+      case "smallTalk": return `- THIS CALL is small talk, NOT the last talk: ${offThread} Open on
+  something light — a film or series, music, a famous person everyone talks
+  about, food, the weekend — and ask what THEY like or think. Never state a
+  release, a chart or any recent news as fact: you cannot look anything up.`
+      case "news": return `- THIS CALL is about a story in the news, NOT the last talk: ${offThread}
+  The story: ${str("news_title") ?? ""}${newsBlurb}
+  Mention it the way a friend would ("did you see…"), using only what is
+  written here, and ask what they think of it.`
+      case "debate": return `- THIS CALL is a small debate, NOT the last talk: ${offThread} Ask
+  their opinion on one question about society, politics or the economy that
+  reasonable people disagree on (remote work, AI and jobs, housing, social
+  media and kids…). Take no side, and state no current facts — no names in
+  office, no numbers, nothing that changes.`
+      default: return null
+    }
+  })()
+  const recentBlock = recent.length === 0 ? ""
+    : "\n- Your last voicemails, newest first. Ask something DIFFERENT:\n"
+      + recent.map((r) => `  "${r}"`).join("\n")
+  const openingRules = angleRules === null && recent.length === 0
+    ? `- Sentence 1 picks up something CONCRETE from the grounding above —
+  the last call's outcome first if there was one, otherwise the last
+  talk. If there is nothing to pick up, say something specific about
+  today instead — never a generic "ready to practice?" opener.
+- The LAST sentence is a QUESTION they can answer out loud immediately,
+  about their own life. This is the whole point of the call: they
+  should feel a question waiting, not an invitation.`
+    : `${angleRules ?? `- THIS CALL picks up the last talk. Sentence 1 picks up something
+  CONCRETE from the grounding above — the last call's outcome first if there
+  was one, otherwise the last talk. If there is nothing to pick up, say
+  something specific about today instead — never a generic "ready to
+  practice?" opener. The question is about their own life.`}${recentBlock}
+- The LAST sentence is a QUESTION they can answer out loud immediately.
+  This is the whole point of the call: they should feel a question
+  waiting, not an invitation.`
 
   const rec = await recordFreeUsage({
     supabase, userId: user.id, action: "gemini", purpose: "daily-call-script",
@@ -113,13 +162,7 @@ makes people stop picking up.
 WRITE ONE VOICEMAIL in ${targetName}:
 - 2–3 sentences, UNDER ${MAX_SCRIPT_CHARACTERS} characters total. It is
   spoken aloud in under 25 seconds — that ceiling is hard.
-- Sentence 1 picks up something CONCRETE from the grounding above —
-  the last call's outcome first if there was one, otherwise the last
-  talk. If there is nothing to pick up, say something specific about
-  today instead — never a generic "ready to practice?" opener.
-- The LAST sentence is a QUESTION they can answer out loud immediately,
-  about their own life. This is the whole point of the call: they
-  should feel a question waiting, not an invitation.
+${openingRules}
 - Natural spoken ${targetName} a CEFR ${prof}
   learner follows at speed. Contractions, no literary phrasing.
 - In a language that separates formal from informal address (Korean

@@ -865,7 +865,7 @@ final class AppState: ObservableObject {
             + (last?.summary?.newWordsUsed ?? [])
 
 
-        return VoicemailEngine.Context(
+        var context = VoicemailEngine.Context(
             targetLanguage: targetLanguage,
             nativeLanguage: nativeLanguage,
             proficiency: proficiency,
@@ -876,6 +876,19 @@ final class AppState: ObservableObject {
             lastTalkAt: last?.endedAt,
             dueCount: DrillStore.shared.dueCount()
         )
+        // What this call is about takes turns (`VoicemailEngine.Angle`), so
+        // a call isn't the last talk again every time.
+        let recent = DailyCallStore.shared.recentScripts()
+        let story = NewsTopicStore.shared.recent().randomElement()
+        context.angle = VoicemailEngine.pickAngle(
+            previous: recent.first.flatMap { VoicemailEngine.Angle(rawValue: $0.angle) },
+            proficiency: proficiency,
+            hasNews: story != nil,
+            hasLastTalk: last != nil)
+        context.newsTitle = story?.title
+        context.newsBlurb = story?.blurb
+        context.recentScripts = recent.map(\.script)
+        return context
     }
 
     /// Write and schedule the next call. Fire-and-forget: the learner never

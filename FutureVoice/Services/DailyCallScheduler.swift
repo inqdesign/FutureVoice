@@ -204,8 +204,10 @@ enum DailyCallScheduler {
             heardAt: nil
         )
         store.save(plan)
+        store.rememberScript(script, angle: context.angle)
         await schedule(plan, callerName: callerName)
         Analytics.capture("daily_call_scheduled", [
+            "angle": context.angle.rawValue,
             "hour": DailyCallStore.shared.hour,
             "consecutive_unanswered": context.consecutiveUnanswered
         ])

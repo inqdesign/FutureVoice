@@ -304,4 +304,27 @@ final class DailyCallStore: ObservableObject {
     func consecutiveUnanswered() -> Int {
         history().prefix { $0.outcome != .answered }.count
     }
+
+    // MARK: - What the last voicemails were about
+
+    /// The angle and script of the last few voicemails written, newest first
+    /// (`VoicemailEngine.Angle`). The next one is written to a different
+    /// angle and is shown these so it doesn't ask the same question again.
+    /// Device-local, like the rest of the call.
+    struct WrittenScript: Codable, Equatable {
+        var angle: String
+        var script: String
+    }
+    private static let recentScriptsKey = "futurevoice.dailyCall.recentScripts"
+
+    func recentScripts() -> [WrittenScript] {
+        UserDefaults.standard.data(forKey: Self.recentScriptsKey)
+            .flatMap { try? JSONDecoder().decode([WrittenScript].self, from: $0) } ?? []
+    }
+
+    func rememberScript(_ script: String, angle: VoicemailEngine.Angle) {
+        let all = [WrittenScript(angle: angle.rawValue, script: script)] + recentScripts()
+        UserDefaults.standard.set(try? JSONEncoder().encode(Array(all.prefix(5))),
+                                  forKey: Self.recentScriptsKey)
+    }
 }
