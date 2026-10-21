@@ -7,11 +7,11 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -37,12 +37,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -301,30 +298,6 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
         }
     }
 
-    LaunchedEffect(Unit) {
-        if (debugStep == "review") { saved = setOf(StudyPlan.Kind.TALK); step = RoutineStep.REVIEW }
-        // A beat for the grid to be seen on its own first.
-        delay(500)
-        if (step != RoutineStep.REVIEW) sheetUp = true
-        // Capture build: `routine-onboarding-<step>` lands on a step
-        // (pick | pickall | review | advance | done | finish); `advance` grows the intro into
-        // the list after a moment (for a recording), `finish` runs Done.
-        when (debugStep) {
-            "pick" -> expanded = true
-            "pickall" -> { selected = ROUTINE_KINDS.toSet(); expanded = true }
-            "advance" -> {
-                delay(2_500)
-                expanded = true
-            }
-            "done" -> step = RoutineStep.DONE
-            "finish" -> {
-                step = RoutineStep.DONE
-                delay(2_500)
-                finish()
-            }
-        }
-    }
-
     /** The ticked blocks on the grid, then the permission they need — the
      *  call's when the call is in, otherwise notifications for the
      *  reminders. */
@@ -342,12 +315,9 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
             step = RoutineStep.DONE
             return
         }
-        // The sheet goes down and the grid becomes the page to check.
-        sheetUp = false
-        scope.launch {
-            delay(300)
-            step = RoutineStep.REVIEW
-        }
+        // The card folds down into the check, and the grid becomes the page
+        // to check.
+        step = RoutineStep.REVIEW
         spotlight = PlanSpotlight(first.kind, first.startMinute, (spotlight?.token ?: 0) + 1)
         delay(700)
         if (StudyPlan.Kind.TALK in saved) {
@@ -363,6 +333,37 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
         } else {
             DailyCallStore.setTimes(context, false, DailyCallStore.times(context))
             requestReminderPermissionIfNeeded()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (debugStep == "review") { saved = setOf(StudyPlan.Kind.TALK); step = RoutineStep.REVIEW }
+        // A beat for the grid to be seen on its own first.
+        delay(500)
+        sheetUp = true
+        // Capture build: `routine-onboarding-<step>` lands on a step
+        // (pick | pickall | review | advance | flow | done | finish); `advance`
+        // grows the intro into the list after a moment (for a recording),
+        // `flow` then saves too, `finish` runs Done.
+        when (debugStep) {
+            "flow" -> {
+                delay(1_500)
+                expanded = true
+                delay(2_500)
+                save()
+            }
+            "pick" -> expanded = true
+            "pickall" -> { selected = ROUTINE_KINDS.toSet(); expanded = true }
+            "advance" -> {
+                delay(2_500)
+                expanded = true
+            }
+            "done" -> step = RoutineStep.DONE
+            "finish" -> {
+                step = RoutineStep.DONE
+                delay(2_500)
+                finish()
+            }
         }
     }
 
@@ -385,65 +386,32 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
                 spotlight = spotlight, onDragChange = { dragging = it })
         }
 
-        // iOS's `.large` detent: the whole screen but the status bar and a
-        // sliver of the page behind.
-        val insets = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() +
-            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-        val large = maxHeight - insets - 10.dp
-        val height by animateDpAsState(if (step == RoutineStep.INTRO && expanded) large else 300.dp,
-            tween(350), label = "routineSheet")
-        // Under the grid once the blocks are on it: fix them on the grid,
-        // then say it's right.
-        AnimatedVisibility(visible = step == RoutineStep.REVIEW && shrink.value == 0f,
+        // One card from start to end (iOS `98c7f9fb`): the intro, the list,
+        // the check and the done card are the SAME surface, and only its
+        // height moves — intro 300, the list to just under the status bar,
+        // the check its content's height, done 300. It sits above the
+        // navigation bar, as the routine sheet always has.
+        val tall = step == RoutineStep.INTRO && expanded
+        val large = maxHeight - WindowInsets.statusBars.asPaddingValues().calculateTopPadding() -
+            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() - 8.dp - 7.dp
+        AnimatedVisibility(visible = sheetUp && !(step == RoutineStep.REVIEW && dragging),
             modifier = Modifier.align(Alignment.BottomCenter),
-            enter = slideInVertically(tween(300)) { it } + fadeIn(tween(300)),
-            exit = slideOutVertically(tween(300)) { it } + fadeOut(tween(300))) {
-            // Out of the way while a block is dragged: it covers the evening
-            // hours the block may be going to.
-            AnimatedVisibility(visible = !dragging,
-                enter = slideInVertically(tween(150)) { it } + fadeIn(tween(150)),
-                exit = slideOutVertically(tween(150)) { it } + fadeOut(tween(150))) {
-            ConfirmBar(callBlocked = callBlocked, working = working,
-                // Back to the list, ticks as they were. Saving again
-                // rewrites the blocks from the list.
-                onBack = {
-                    step = RoutineStep.INTRO
-                    expanded = true
-                    scope.launch { delay(200); sheetUp = true }
-                },
-                onKeep = { finish() })
-            }
-        }
-        AnimatedVisibility(visible = sheetUp, modifier = Modifier.align(Alignment.BottomCenter),
-            enter = slideInVertically(tween(300)) { it }, exit = slideOutVertically(tween(300)) { it }) {
+            // Out of the way quickly while a block is dragged: it covers the
+            // evening hours the block may be going to.
+            enter = slideInVertically(tween(if (dragging) 150 else 300)) { it } + fadeIn(tween(300)),
+            exit = slideOutVertically(tween(if (step == RoutineStep.REVIEW) 150 else 250)) { it } +
+                fadeOut(tween(250))) {
             Column(Modifier.fillMaxWidth()
-                .shadow(16.dp, RoundedCornerShape(topStart = 38.dp, topEnd = 38.dp))
-                .background(AppSurfaces.ground, RoundedCornerShape(topStart = 38.dp, topEnd = 38.dp))
-                // The panel swallows touches — the grid behind still scrolls.
+                .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom))
+                .padding(start = 7.dp, end = 7.dp, bottom = 7.dp)
+                .shadow(16.dp, SHEET_CARD_SHAPE)
+                .background(AppSurfaces.ground, SHEET_CARD_SHAPE)
+                // The card swallows touches — the grid behind still scrolls.
                 .clickable(interactionSource = null, indication = null) {}
-                // Dragged up, the intro opens into the list; the list never
-                // folds back into the intro.
-                .then(if (step == RoutineStep.INTRO && !expanded) Modifier.pointerInput(Unit) {
-                    detectVerticalDragGestures { change, dy ->
-                        if (dy < -4f) { change.consume(); expanded = true }
-                    }
-                } else Modifier)) {
-                Box(Modifier.fillMaxWidth().height(height)) {
-                    when (step) {
-                        RoutineStep.REVIEW, RoutineStep.DONE -> {
-                            val empty = saved.isEmpty()
-                            RoutineMessage(if (empty) Icons.Filled.CalendarMonth else Icons.Filled.CheckCircle,
-                                if (empty) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF34C759),
-                                stringResource(if (empty) R.string.routine_make_it_later else R.string.your_routine_is_ready),
-                                stringResource(when {
-                                    empty -> R.string.routine_under_activity_whenever
-                                    StudyPlan.Kind.TALK in saved && callBlocked ->
-                                        R.string.notifications_are_off_so_i_can_t_call_you_yet_turn_them_on_i_52c0b7
-                                    else -> R.string.try_it_like_this_for_a_week_it_s_under_activity_on_the_talk_f71c6f
-                                }),
-                                stringResource(R.string.done)) { finish() }
-                        }
-                        RoutineStep.INTRO -> RoutinePick(
+                .animateContentSize(tween(350))) {
+                when (step) {
+                    RoutineStep.INTRO -> Box(Modifier.fillMaxWidth().height(if (tall) large else 300.dp)) {
+                        RoutinePick(
                             expanded = expanded,
                             selected = selected,
                             times = times, onTime = { k, at -> times = times + (k to at) },
@@ -462,16 +430,34 @@ fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) 
                             },
                         )
                     }
+                    // Under the grid once the blocks are on it: fix them on
+                    // the grid, then say it's right.
+                    RoutineStep.REVIEW -> ConfirmContent(callBlocked = callBlocked, working = working,
+                        // Back to the list, ticks as they were. Saving again
+                        // rewrites the blocks from the list.
+                        onBack = { step = RoutineStep.INTRO; expanded = true },
+                        onKeep = { finish() })
+                    RoutineStep.DONE -> Box(Modifier.fillMaxWidth().height(300.dp)) {
+                        val empty = saved.isEmpty()
+                        RoutineMessage(if (empty) Icons.Filled.CalendarMonth else Icons.Filled.CheckCircle,
+                            if (empty) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF34C759),
+                            stringResource(if (empty) R.string.routine_make_it_later else R.string.your_routine_is_ready),
+                            stringResource(when {
+                                empty -> R.string.routine_under_activity_whenever
+                                StudyPlan.Kind.TALK in saved && callBlocked ->
+                                    R.string.notifications_are_off_so_i_can_t_call_you_yet_turn_them_on_i_52c0b7
+                                else -> R.string.try_it_like_this_for_a_week_it_s_under_activity_on_the_talk_f71c6f
+                            }),
+                            stringResource(R.string.done)) { finish() }
+                    }
                 }
-                Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
             }
         }
     }
 }
 
 /** The intro, and — once "Make my routine" is tapped — the list under it,
- *  in the same sheet. The button stays pinned at the foot on an opaque
- *  ground: the list scrolls under it and must not show through. */
+ *  in the same card. The button sits below the list, inside the card. */
 @Composable
 private fun RoutinePick(expanded: Boolean, selected: Set<StudyPlan.Kind>,
                         times: Map<StudyPlan.Kind, Int>, onTime: (StudyPlan.Kind, Int) -> Unit,
@@ -556,8 +542,8 @@ private fun RoutinePick(expanded: Boolean, selected: Set<StudyPlan.Kind>,
                 }
             }
         }
-        Box(Modifier.fillMaxWidth().background(AppSurfaces.ground)
-            .padding(horizontal = 20.dp, vertical = 8.dp)) {
+        // Below the list, inside the card — not floating over it.
+        Box(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 28.dp)) {
             Button(onClick = onButton, enabled = !saving, modifier = Modifier.fillMaxWidth()) {
                 if (saving) {
                     CircularProgressIndicator(Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
@@ -650,21 +636,11 @@ private fun whenText(kind: StudyPlan.Kind, callStart: Int, callMinutes: Int, sel
     return if (everyDay) stringResource(R.string.routine_every_day_at, time) else time
 }
 
-/** The review step's bar: a title, how to fix the grid (or why nothing can
+/** The review step's card content: a title, how to fix the grid (or why nothing can
  *  ring), and the confirm button. */
 @Composable
-private fun ConfirmBar(callBlocked: Boolean, working: Boolean, onBack: () -> Unit, onKeep: () -> Unit) {
-    // Drawn like the sheet before it — a floating card, inset from the
-    // screen's edges (iOS `SheetLikeCard`) — because a real sheet here would
-    // stop the grid from opening a block's editor. It sits above the
-    // navigation bar, as the routine sheet does, then the 7 dp gap — it
-    // never covers the gesture handle.
+private fun ConfirmContent(callBlocked: Boolean, working: Boolean, onBack: () -> Unit, onKeep: () -> Unit) {
     Column(Modifier.fillMaxWidth()
-        .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom))
-        .padding(start = 7.dp, end = 7.dp, bottom = 7.dp)
-        .shadow(16.dp, SHEET_CARD_SHAPE)
-        .background(AppSurfaces.ground, SHEET_CARD_SHAPE)
-        .clickable(interactionSource = null, indication = null) {}
         .padding(start = 20.dp, end = 20.dp, top = 22.dp, bottom = 28.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(stringResource(R.string.routine_how_does_this_look), style = MaterialTheme.typography.titleMedium,
@@ -685,8 +661,8 @@ private fun ConfirmBar(callBlocked: Boolean, working: Boolean, onBack: () -> Uni
     }
 }
 
-/** The routine sheet's corner, all round: the confirm bar is the sheet's
- *  look as a card. */
+/** The routine card's corner, all round: one floating card from the intro
+ *  to the done card (iOS `SheetLikeCard`). */
 private val SHEET_CARD_SHAPE = RoundedCornerShape(38.dp)
 
 /** SwiftUI's `.easeIn`. */
@@ -696,7 +672,7 @@ private val EaseInCurve = CubicBezierEasing(0.42f, 0f, 1f, 1f)
 @Composable
 private fun RoutineMessage(icon: androidx.compose.ui.graphics.vector.ImageVector, tint: Color,
                            title: String, body: String, button: String, onClick: () -> Unit) {
-    Column(Modifier.fillMaxSize().padding(start = 24.dp, end = 24.dp, top = 28.dp, bottom = 12.dp),
+    Column(Modifier.fillMaxSize().padding(start = 24.dp, end = 24.dp, top = 28.dp, bottom = 28.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(44.dp))
         Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,

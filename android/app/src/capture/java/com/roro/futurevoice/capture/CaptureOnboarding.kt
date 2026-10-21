@@ -77,6 +77,8 @@ object CaptureOnboarding {
             com.roro.futurevoice.ui.RoutineOnboardingOverlay(onFinished = {}, debugStep = "advance") },
         "routine-onboarding-review" to { _ ->
             com.roro.futurevoice.ui.RoutineOnboardingOverlay(onFinished = {}, debugStep = "review") },
+        "routine-onboarding-flow" to { _ ->
+            com.roro.futurevoice.ui.RoutineOnboardingOverlay(onFinished = {}, debugStep = "flow") },
         "routine-onboarding-done" to { _ ->
             com.roro.futurevoice.ui.RoutineOnboardingOverlay(onFinished = {}, debugStep = "done") },
         "routine-onboarding-finish" to { _ ->
