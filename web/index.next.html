@@ -1689,18 +1689,18 @@ const BILLING = {
 const PLANS = {
   light: {
     talk: "150 min / mo", perDay: "About 5 min a day",
-    monthly: { id: "light_monthly", price: "$9.99",   per: "/ mo" },
-    annual:  { id: "light_annual",  price: "$99.99",  per: "/ yr · 2 months free" },
+    monthly: { id: "light_monthly", price: "$8.99",   was: "$9.99",   per: "/ mo" },
+    annual:  { id: "light_annual",  price: "$89.99",  was: "$99.99",  per: "/ yr · 2 months free" },
   },
   plus: {
     talk: "600 min / mo", perDay: "About 20 min a day",
-    monthly: { id: "plus_monthly",  price: "$24.99",  per: "/ mo" },
-    annual:  { id: "plus_annual",   price: "$249.99", per: "/ yr · 2 months free" },
+    monthly: { id: "plus_monthly",  price: "$22.49",  was: "$24.99",  per: "/ mo" },
+    annual:  { id: "plus_annual",   price: "$224.99", was: "$249.99", per: "/ yr · 2 months free" },
   },
   max: {
     // Monthly only (the app's ladder greys it out under Annual).
     talk: "1,200 min / mo", perDay: "About 40 min a day",
-    monthly: { id: "max_monthly",   price: "$49.99",  per: "/ mo" },
+    monthly: { id: "max_monthly",   price: "$44.99",  was: "$49.99",  per: "/ mo" },
   },
 }
 const TIERS = ["light", "plus", "max"]
@@ -1712,7 +1712,13 @@ const TIERS = ["light", "plus", "max"]
     for (const tier of TIERS) {
       const t = PLANS[tier], p = t[cycle]
       const priceEl = document.querySelector(`[data-price="${tier}"]`)
-      priceEl.innerHTML = p ? p.price + ' <span>' + p.per + "</span>" : "<span>Monthly only</span>"
+      // `price` is the web (Stripe) price, App Store minus 10% since 2026-10-21;
+      // `was` is the App Store's. With web checkout off the page sells through
+      // the App Store, so it shows that price alone.
+      priceEl.innerHTML = !p ? "<span>Monthly only</span>"
+        : BILLING.enabled
+          ? p.price + ' <span>' + p.per + '</span><span class="p-was" style="display:block;margin-top:6px;font-size:13px">App Store <s>' + p.was + '</s> · 10% off on the web</span>'
+          : p.was + ' <span>' + p.per + "</span>"
       priceEl.closest(".plan").classList.toggle("monthly-only", !p)
       const dayEl = document.querySelector(`[data-perday="${tier}"]`)
       if (dayEl) dayEl.textContent = t.perDay

@@ -1998,18 +1998,18 @@ const BILLING = {
 const PLANS = {
   light: {
     talk: "150분/월", perDay: "하루 5분꼴",
-    monthly: { id: "light_monthly", price: "₩15,000",  per: "/ 월" },
-    annual:  { id: "light_annual",  price: "₩149,000", per: "/ 년 · 2개월 무료" },
+    monthly: { id: "light_monthly", price: "₩13,500",  was: "₩15,000",  per: "/ 월" },
+    annual:  { id: "light_annual",  price: "₩134,000", was: "₩149,000", per: "/ 년 · 2개월 무료" },
   },
   plus: {
     talk: "600분/월", perDay: "하루 20분꼴",
-    monthly: { id: "plus_monthly",  price: "₩29,000",  per: "/ 월" },
-    annual:  { id: "plus_annual",   price: "₩290,000", per: "/ 년 · 2개월 무료" },
+    monthly: { id: "plus_monthly",  price: "₩26,000",  was: "₩29,000",  per: "/ 월" },
+    annual:  { id: "plus_annual",   price: "₩261,000", was: "₩290,000", per: "/ 년 · 2개월 무료" },
   },
   max: {
     // Monthly only (the app's ladder greys it out under Annual).
     talk: "1,200분/월", perDay: "하루 40분꼴",
-    monthly: { id: "max_monthly",   price: "₩58,000",  per: "/ 월" },
+    monthly: { id: "max_monthly",   price: "₩52,000",  was: "₩58,000",  per: "/ 월" },
     annual:  null,
   },
 }
@@ -2022,8 +2022,13 @@ const TIERS = ["light", "plus", "max"]
     for (const tier of TIERS) {
       const t = PLANS[tier], p = t[cycle]
       const priceEl = document.querySelector(`[data-price="${tier}"]`)
+      // `price` is the web (Stripe) price, App Store minus 10% since 2026-10-21;
+      // `was` is the App Store's. With web checkout off the page sells through
+      // the App Store, so it shows that price alone.
       priceEl.innerHTML = p
-        ? p.price + ' <span>' + p.per + "</span>"
+        ? (BILLING.enabled
+            ? p.price + ' <span>' + p.per + '</span><span class="p-was" style="display:block;margin-top:6px;font-size:13px">App Store <s>' + p.was + '</s> · 웹에서 10% 할인</span>'
+            : p.was + ' <span>' + p.per + "</span>")
         : '<span>월간만 있어요</span>'
       priceEl.closest(".plan").classList.toggle("monthly-only", !p)
       const dayEl = document.querySelector(`[data-perday="${tier}"]`)
