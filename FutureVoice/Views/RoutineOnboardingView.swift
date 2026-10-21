@@ -142,7 +142,11 @@ struct RoutineOnboardingView: View {
             .overlay(alignment: .bottom) {
                 // Out of the way while a block is dragged: it covers the
                 // evening hours the block may be going to.
-                if step == .review && !dragging { confirmBar.transition(.move(edge: .bottom).combined(with: .opacity)) }
+                if step == .review && !dragging {
+                    confirmBar
+                        .ignoresSafeArea(edges: .bottom)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
             }
             .sheet(isPresented: $sheetUp) {
                 sheet
@@ -251,10 +255,15 @@ struct RoutineOnboardingView: View {
             .disabled(working)
         }
         .padding(.horizontal, 20)
-        .padding(.top, 16)
-        .padding(.bottom, 8)
+        .padding(.top, 22)
+        .padding(.bottom, 28)
         .frame(maxWidth: .infinity)
-        .background(Color(.systemBackground).shadow(.drop(color: .black.opacity(0.08), radius: 8, y: -2)))
+        // Drawn like the sheet before it — a floating card, inset from the
+        // screen's edges — because a real sheet here would stop the grid
+        // from opening a block's editor.
+        .modifier(SheetLikeCard())
+        .padding(.horizontal, 7)
+        .padding(.bottom, 7)
     }
 
     private var done: some View {
@@ -518,6 +527,24 @@ struct RoutineOnboardingView: View {
         } else {
             DailyCallStore.shared.isEnabled = false
             await PlanReminder.requestPermissionIfNeeded()
+        }
+    }
+}
+
+/// The look of a partial-height system sheet, for a bar that can't be one.
+private struct SheetLikeCard: ViewModifier {
+    private let shape = RoundedRectangle(cornerRadius: 36, style: .continuous)
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            // A sheet's glass is denser than a control's: the grid must not
+            // read through the text.
+            content
+                .background(shape.fill(Color(.systemBackground).opacity(0.7)))
+                .glassEffect(.regular, in: shape)
+        } else {
+            content.background(shape.fill(Color(.systemBackground))
+                .shadow(color: .black.opacity(0.12), radius: 12, y: 2))
         }
     }
 }
