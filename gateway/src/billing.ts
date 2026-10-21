@@ -27,6 +27,10 @@ export class TalkBilling {
   private timer: number | null = null
   private flushing = false
   private walled = false
+  /** `stop` ran while a flush was in flight: flush again once it lands, or
+   *  the last batch (up to a flush interval) was never sent (2026-10-21). */
+  private stopped = false
+  private lastSendOk = true
 
   /** ~voiceGraceSeconds on the client: how recently the learner must have
    *  been heard for a second to count as theirs. */
@@ -73,12 +77,16 @@ export class TalkBilling {
   /** Final flush; safe to call more than once. */
   stop(): void {
     if (this.timer !== null) { clearInterval(this.timer); this.timer = null }
+    this.stopped = true
     void this.flush()
   }
 
   private async flush(): Promise<void> {
     if (this.flushing || this.walled) return
-    const seconds = Math.floor(this.billable)
+    // talk-tick takes 1–600 s per call. A backlog past that (re-queued after
+    // failed sends) was refused as a 400 and re-queued forever, so the rest
+    // of the call was never billed (2026-10-21) — send it in slices.
+    const seconds = Math.min(600, Math.floor(this.billable))
     if (seconds < 1) return
     this.flushing = true
     this.billable -= seconds
@@ -89,7 +97,13 @@ export class TalkBilling {
     if (wall) {
       this.walled = true
       this.onWall(wall)
+      return
     }
+    // The call ended while this one was in flight, or a backlog remains:
+    // send the rest now rather than never.
+    // Only after a send that LANDED: a failing one (an expired token) would
+    // otherwise retry in a tight loop after the call is over.
+    if (this.stopped && this.lastSendOk && this.billable >= 1) void this.flush()
   }
 
   /** One talk-tick call. Returns a wall code on 402, null on success.
@@ -128,6 +142,7 @@ export class TalkBilling {
           ? "daily_cap_reached"
           : "insufficient_credits"
       }
+      this.lastSendOk = r.ok
       if (!r.ok) {
         console.log(`billing: talk-tick ${r.status} — re-queueing ${seconds}s`)
         this.billable += seconds
@@ -135,6 +150,7 @@ export class TalkBilling {
       }
       return null
     } catch (e) {
+      this.lastSendOk = false
       console.log(`billing: talk-tick failed (${String(e)}) — re-queueing ${seconds}s`)
       this.billable += seconds
       if (spoke) this.speechSent -= spoke
