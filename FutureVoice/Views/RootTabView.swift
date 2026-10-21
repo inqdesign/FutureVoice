@@ -76,6 +76,9 @@ struct RootTabView: View {
     /// The first-visit welcome and the minutes it announces. Two values so the
     /// number doesn't blank out while the sheet animates away.
     @State private var showingWelcome = false
+    /// The store's trial, offered once after onboarding when the server
+    /// says so (`BillingConfig.trialOfferAt`).
+    @State private var showingTrialOffer = false
     @State private var welcomeMinutes = 0
     /// "Start talking" on the welcome — the call opens once the sheet is gone,
     /// so the ring's morph never plays underneath a sheet.
@@ -233,6 +236,12 @@ struct RootTabView: View {
             Text("From now on your fluent self speaks in your own voice.")
         }
         .sheet(isPresented: $showingPaywall) { PaywallView(source: "free_talk") }
+        .sheet(isPresented: $showingTrialOffer, onDismiss: {
+            BillingConfig.markOnboardingTrialOffered()
+            checkFreeTalkWelcome()
+        }) {
+            PaywallView(source: "onboarding_trial")
+        }
         .sheet(isPresented: $showingWelcome, onDismiss: {
                    Analytics.capture("free_talk_welcome_closed",
                                      ["started": startTalkAfterWelcome])
@@ -488,6 +497,13 @@ struct RootTabView: View {
     /// visit, and again whenever the free pool grows.
     private func checkFreeTalkWelcome() {
         Task {
+            // The trial comes first when the server asks for it there; the
+            // welcome follows when the plans close.
+            if await BillingConfig.onboardingTrialIsDue(), !anotherSheetUp {
+                Analytics.capture("onboarding_trial_offered")
+                showingTrialOffer = true
+                return
+            }
             // Asked before the check, which marks the install shown:
             // a repeat is time ADDED to the pool, and the two read
             // nothing alike in the funnel.
@@ -507,6 +523,7 @@ struct RootTabView: View {
     /// silently, so it waits its turn instead.
     private var anotherSheetUp: Bool {
         showingAgeCheck || showingPaywall || showingWelcome || showingIntroPreview
+            || showingTrialOffer
             || showingWhatsNew || weekRecap != nil || freeTalkCallId != nil
             || callInbox.pendingAnswer != nil || answeredCall != nil
             || appState.levelUpAnnouncement != nil

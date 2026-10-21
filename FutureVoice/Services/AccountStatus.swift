@@ -279,10 +279,10 @@ struct AccountStatus {
 
     /// The free tier's full tank — the signup grant (1200 s = 20 min since
     /// `20260926100000`; 600 s from 2026-09-21, and before that the beta's
-    /// 3960 s, which drew a new account's ring 85% spent on day one). The
-    /// server's constant lives in `handle_new_user_credits`; keep the two
-    /// the same, or a fresh account's ring reads full for its first minutes.
-    static let freeGrantSeconds = 1200
+    /// 3960 s, which drew a new account's ring 85% spent on day one). Since
+    /// 2026-10-21 it is a server setting (`billing_config`, read by both the
+    /// signup grant and `BillingConfig`), so the two can no longer disagree.
+    static var freeGrantSeconds: Int { BillingConfig.freeTalkSeconds }
     /// The admin account's tank: the server auto-resets it to 6600 s
     /// (110 min) when it would overdraw, so that's what "full" means there.
     static let adminResetSeconds = 6600

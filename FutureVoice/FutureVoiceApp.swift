@@ -197,6 +197,9 @@ struct FutureVoiceApp: App {
                 // an offer code redeemed in the App Store, a restore on a
                 // new phone. Signed by Apple, verified server-side.
                 Task { await StoreKitService.claimCurrentEntitlements() }
+                // The free offer as the server sets it (free minutes, where a
+                // trial is offered) — changeable without a build.
+                Task { await BillingConfig.refresh() }
                 // Apple waiting on the learner's consent before it charges
                 // (Korea's second consent after a trial): read it, and say
                 // what it is before Apple's own sheet asks.
