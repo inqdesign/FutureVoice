@@ -117,6 +117,10 @@ struct DrillView: View {
 
     var body: some View {
         bodyContent
+            // "1 of 20" rides under the host's title instead of a row of its
+            // own above the card: on a small phone that row and its gaps were
+            // the header eating space the card needed (2026-10-21).
+            .modifier(CounterSubtitle(text: queue.isEmpty ? nil : counterText))
             // A parked voice (see `VoiceParking`) can't make new audio;
             // the answer to the tap is the paywall, not a dead button.
             .sheet(isPresented: $parkedPaywall) { PaywallView(source: "drill_audio") }
@@ -225,7 +229,11 @@ struct DrillView: View {
 
     private var cardDeck: some View {
         VStack(spacing: 12) {
-            counterRow
+            // Under the title on iOS 26 (`counterSubtitle`); a row of its own
+            // only where the bar can't carry a subtitle.
+            if #unavailable(iOS 26) {
+                counterRow
+            }
             deck
             binHintRow
             // The folders live where the tray will rise — at rest they're
@@ -397,6 +405,12 @@ struct DrillView: View {
                 apply(bin)
             }
         }
+    }
+
+    private var counterText: Text {
+        let position = Text("\(initialCount - queue.count + 1) of \(initialCount)")
+        guard remainingDue > 0 else { return position }
+        return position + Text(" · \(remainingDue) waiting")
     }
 
     private var counterRow: some View {
@@ -773,11 +787,33 @@ extension DrillView {
     /// Bigger phrases get smaller type so the full sentence always shows —
     /// truncating a line the user has to read OUT LOUD is fatal. Shared with
     /// `PracticeSessionView`'s shadow stage.
+    /// One step under `targetFont`, for a card that doesn't fit otherwise.
+    static func compactTargetFont(for text: String) -> Font {
+        switch text.count {
+        case ..<60:    return .title2.weight(.semibold)
+        case 60..<120: return .title3.weight(.semibold)
+        default:       return .headline
+        }
+    }
+
     static func targetFont(for text: String) -> Font {
         switch text.count {
         case ..<60:    return .title.weight(.semibold)
         case 60..<120: return .title2.weight(.semibold)
         default:       return .title3.weight(.semibold)
+        }
+    }
+}
+
+/// The deck's counter as the navigation bar's subtitle, where there is one.
+private struct CounterSubtitle: ViewModifier {
+    let text: Text?
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26, *), let text {
+            content.navigationSubtitle(text.monospacedDigit())
+        } else {
+            content
         }
     }
 }
@@ -805,8 +841,38 @@ private extension DrillView {
 
     // MARK: - Card surface
 
-    @ViewBuilder
     func cardSurface(_ card: DrillCard, revealed: Bool = true, isTop: Bool = false) -> some View {
+        // A small phone can't hold a long sentence at full size with its
+        // marks, notes and buttons: the second layout sets the sentences a
+        // step smaller (the notes also give way on their own), so the buttons
+        // stay on the card instead of spilling under it.
+        ViewThatFits(in: .vertical) {
+            cardContent(card, revealed: revealed, compact: false)
+            cardContent(card, revealed: revealed, compact: true)
+        }
+        .padding(24)
+        // Dropped the 360pt minHeight — long targetPhrases were being
+        // clipped because Spacer + tight box left no room. Now the card
+        // grows to fit the text; minHeight kept just for visual presence
+        // on short cards.
+        .frame(maxWidth: .infinity, minHeight: 240, alignment: .topLeading)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.accentColor)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+        )
+        // The accent IS the card now, so every foreground on it reads against
+        // the accent, not the system background. Setting the tint once here
+        // carries `.foregroundStyle(.tint)` descendants (play glyph, "Tap to
+        // reveal", pill labels) along with it.
+        .tint(Self.onCard)
+        .shadow(color: Color.accentColor.opacity(0.28), radius: 8, y: 4)
+    }
+
+    func cardContent(_ card: DrillCard, revealed: Bool, compact: Bool) -> some View {
         VStack(alignment: .leading, spacing: 18) {
             // Every text below is `fixedSize(vertical:)` — when the card runs
             // out of room SwiftUI otherwise compresses the texts and elides
@@ -828,7 +894,7 @@ private extension DrillView {
                                 Text(said)
                             }
                         }
-                        .font(.callout)
+                        .font(compact ? .subheadline : .callout)
                         .foregroundStyle(Self.onCardSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                         // The transcript is STT output and occasionally wrong —
@@ -872,7 +938,8 @@ private extension DrillView {
 
             labeled(revealed ? "Try saying" : "How would a fluent speaker say it?") {
                 Text(card.targetPhrase)
-                    .font(Self.targetFont(for: card.targetPhrase))
+                    .font(compact ? Self.compactTargetFont(for: card.targetPhrase)
+                                  : Self.targetFont(for: card.targetPhrase))
                     .foregroundStyle(Self.onCard)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
@@ -921,26 +988,7 @@ private extension DrillView {
                     .frame(maxWidth: .infinity)
             }
         }
-        .padding(24)
-        // Dropped the 360pt minHeight — long targetPhrases were being
-        // clipped because Spacer + tight box left no room. Now the card
-        // grows to fit the text; minHeight kept just for visual presence
-        // on short cards.
-        .frame(maxWidth: .infinity, minHeight: 240, alignment: .topLeading)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.accentColor)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.white.opacity(0.14), lineWidth: 1)
-        )
-        // The accent IS the card now, so every foreground on it reads against
-        // the accent, not the system background. Setting the tint once here
-        // carries `.foregroundStyle(.tint)` descendants (play glyph, "Tap to
-        // reveal", pill labels) along with it.
-        .tint(Self.onCard)
-        .shadow(color: Color.accentColor.opacity(0.28), radius: 8, y: 4)
+
     }
 
     /// Content color on the accent card.

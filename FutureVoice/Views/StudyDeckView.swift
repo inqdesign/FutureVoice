@@ -600,6 +600,31 @@ struct StudyDeckView: View {
     /// the revealed card, "tap to reveal" on the concealed one.
     private func cardSurface(_ item: StudyDeckItem, revealed: Bool, showHint: Bool,
                              height: CGFloat) -> some View {
+        // Same as the drill card: if the sentence card doesn't fit its
+        // height, the second layout sets the sentences a step smaller so the
+        // buttons stay on the card.
+        ViewThatFits(in: .vertical) {
+            cardContent(item, revealed: revealed, showHint: showHint, compact: false)
+                .padding(24)
+            cardContent(item, revealed: revealed, showHint: showHint, compact: true)
+                .padding(24)
+        }
+        .frame(maxWidth: .infinity, minHeight: height, maxHeight: height,
+               alignment: .topLeading)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.accentColor)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+        )
+        .tint(Self.onCard)
+        .shadow(color: Color.accentColor.opacity(0.28), radius: 8, y: 4)
+    }
+
+    private func cardContent(_ item: StudyDeckItem, revealed: Bool, showHint: Bool,
+                             compact: Bool) -> some View {
         let text = item.text
         return VStack(alignment: .leading, spacing: 18) {
             if item.isSentence {
@@ -609,14 +634,14 @@ struct StudyDeckView: View {
                     labeled("You said") {
                         Text(revealed ? cardProofread(item.cardSaid, fix: text)
                                       : AttributedString(item.cardSaid))
-                            .font(.callout)
+                            .font(compact ? .subheadline : .callout)
                             .foregroundStyle(Self.onCardSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 labeled(revealed ? "Try saying" : "How would a fluent speaker say it?") {
                     Text(text)
-                        .font(DrillView.targetFont(for: text))
+                        .font(compact ? DrillView.compactTargetFont(for: text) : DrillView.targetFont(for: text))
                         .foregroundStyle(Self.onCard)
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
@@ -668,19 +693,6 @@ struct StudyDeckView: View {
                 }
             }
         }
-        .padding(24)
-        .frame(maxWidth: .infinity, minHeight: height, maxHeight: height,
-               alignment: .topLeading)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.accentColor)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.white.opacity(0.14), lineWidth: 1)
-        )
-        .tint(Self.onCard)
-        .shadow(color: Color.accentColor.opacity(0.28), radius: 8, y: 4)
     }
 
     /// Caption-over-content, exactly the drill card's `labeled`.
