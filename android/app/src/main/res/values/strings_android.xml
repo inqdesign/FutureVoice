@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="threads_channel" translatable="false">Threads</string>
     <string name="review_reminders">Review reminders</string>
     <string name="back_for_review">Back for review</string>
     <string name="ten_min">10 min</string>

@@ -13,11 +13,12 @@ import com.roro.futurevoice.R
  * charge) are easier to send as a mail, so email sits under the DM
  * (2026-10-21, founder) at the same address the Privacy page names.
  *
- * **Instagram is the primary, and Threads deliberately is not.** Threads has
- * no direct messages at all — a reply there is a public post, which is a
- * different thing with a different audience, and the one time someone most
- * wants to write is when something went wrong in private. Threads accounts
- * are Instagram accounts, so the same person is behind `ig.me`.
+ * **Instagram first, Threads beside it.** `https://ig.me/m/<handle>` opens
+ * Instagram straight into a DM thread (the web when it isn't installed).
+ * Threads has had DMs since July 2025, but in its OWN inbox, not Instagram's,
+ * and there is no link that opens a thread with an account — so its row opens
+ * the profile, where Message is one more tap (checked 2026-10-21). It is the
+ * founder's own account, the one every mail to learners links to.
  *
  * Telegram is offered beside it for learners who don't use Instagram — the
  * app ships in several UI languages and Instagram is not universal.
@@ -32,6 +33,7 @@ enum class SupportChannel(
     val titleRes: Int,
 ) {
     INSTAGRAM("nawana.app", R.string.instagram_dm),
+    THREADS("adaywithboram", R.string.threads_channel),
     EMAIL(ConsentStore.CONTACT_EMAIL, R.string.email),
     TELEGRAM("", R.string.telegram);   // e.g. "nawanaapp"
 
@@ -41,6 +43,7 @@ enum class SupportChannel(
         get() = when {
             handle.isEmpty() -> null
             this == INSTAGRAM -> "https://ig.me/m/$handle"
+            this == THREADS -> "https://www.threads.com/@$handle"
             this == EMAIL -> "mailto:$handle"
             else -> "https://t.me/$handle"
         }

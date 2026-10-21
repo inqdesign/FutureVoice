@@ -29,6 +29,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.AlternateEmail
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -554,6 +555,7 @@ fun MeScreen(
                                 when (channel) {
                                     com.roro.futurevoice.data.SupportChannel.INSTAGRAM -> Icons.Filled.Forum
                                     com.roro.futurevoice.data.SupportChannel.EMAIL -> Icons.Filled.Email
+                                    com.roro.futurevoice.data.SupportChannel.THREADS -> Icons.Filled.AlternateEmail
                                     else -> Icons.AutoMirrored.Filled.Send
                                 },
                                 stringResource(channel.titleRes), channel.subtitle,
