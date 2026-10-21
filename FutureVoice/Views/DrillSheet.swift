@@ -819,12 +819,18 @@ private extension DrillView {
                         // Cards ingested before the fragment trim carry the
                         // WHOLE turn transcript — trim at render too, so the
                         // stored backlog doesn't blow the card off the screen.
-                        Text(DrillStore.relevantFragment(of: card.sourcePhrase,
-                                                         matching: card.targetPhrase))
-                            .font(.callout)
-                            .foregroundStyle(Self.onCardSecondary)
-                            .strikethrough(revealed)
-                            .fixedSize(horizontal: false, vertical: true)
+                        let said = DrillStore.relevantFragment(of: card.sourcePhrase,
+                                                               matching: card.targetPhrase)
+                        Group {
+                            if revealed {
+                                Text(cardSaidMarked(said, fix: card.targetPhrase))
+                            } else {
+                                Text(said)
+                            }
+                        }
+                        .font(.callout)
+                        .foregroundStyle(Self.onCardSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
                         // The transcript is STT output and occasionally wrong —
                         // when the user's actual recording survives on disk,
                         // let them replay what they REALLY said.
@@ -865,7 +871,11 @@ private extension DrillView {
             }
 
             labeled(revealed ? "Try saying" : "How would a fluent speaker say it?") {
-                Text(card.targetPhrase)
+                Text(revealed && !card.sourcePhrase.isEmpty
+                     ? cardFixMarked(card.targetPhrase,
+                                     said: DrillStore.relevantFragment(of: card.sourcePhrase,
+                                                                       matching: card.targetPhrase))
+                     : AttributedString(card.targetPhrase))
                     .font(Self.targetFont(for: card.targetPhrase))
                     .foregroundStyle(Self.onCard)
                     .multilineTextAlignment(.leading)

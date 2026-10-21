@@ -1710,13 +1710,54 @@ struct TurnFixRows: View {
 /// comparison words, hence `owner`: a token is highlighted only when EVERY
 /// word inside it went unmatched.
 func highlightedCorrection(_ alternative: String, original: String, baseFont: Font) -> AttributedString {
+    diffMarked(alternative, against: original) { piece, changed in
+        if changed {
+            piece.foregroundColor = .accentColor
+            piece.font = baseFont.weight(.semibold)
+        }
+    }
+}
+
+/// A correction drawn on the decks' accent-filled card, where an accent
+/// highlight is invisible and a whole-line strikethrough says only "this was
+/// wrong", not WHAT (reported 2026-10-21). Both halves mark the same diff:
+/// what they said strikes out only the words the fix took away and dims the
+/// rest; the fix lifts only the words it put in, on a light marker.
+func cardSaidMarked(_ said: String, fix: String) -> AttributedString {
+    diffMarked(said, against: fix) { piece, changed in
+        if changed {
+            piece.foregroundColor = .white
+            piece.strikethroughStyle = .single
+        } else {
+            piece.foregroundColor = .white.opacity(0.6)
+        }
+    }
+}
+
+func cardFixMarked(_ fix: String, said: String) -> AttributedString {
+    diffMarked(fix, against: said) { piece, changed in
+        if changed {
+            piece.foregroundColor = .white
+            piece.backgroundColor = .white.opacity(0.24)
+        } else {
+            piece.foregroundColor = .white.opacity(0.78)
+        }
+    }
+}
+
+/// `text` with every word `other` doesn't have passed to `mark` as changed,
+/// every other piece as unchanged — the one diff all correction highlights
+/// draw from.
+func diffMarked(_ text: String, against original: String,
+                mark: (inout AttributedString, Bool) -> Void) -> AttributedString {
+    let alternative = text
     // Japanese is diffed and painted by CHARACTER: its segments are cut
     // differently on each side of a fix (面倒|くさかっ|た against
     // 面倒|くさい|でし|た), so no segment-level answer can say "かっ" changed
     // and "くさ" didn't.
     let spaced = WordSplitter.spaced
     if !spaced {
-        return highlightedCharacters(alternative, original: original, baseFont: baseFont)
+        return highlightedCharacters(alternative, original: original, mark: mark)
     }
     let altWords: [JapaneseMorph.Piece] = alternative
         .split(separator: " ", omittingEmptySubsequences: true)
@@ -1759,12 +1800,16 @@ func highlightedCorrection(_ alternative: String, original: String, baseFont: Fo
     var out = AttributedString()
     for (idx, word) in altWords.enumerated() {
         var piece = AttributedString(word.text)
-        if tokenChanged[idx], tokenHasWord[idx] {
-            piece.foregroundColor = .accentColor
-            piece.font = baseFont.weight(.semibold)
-        }
+        let changed = tokenChanged[idx] && tokenHasWord[idx]
+        mark(&piece, changed)
         out += piece
-        if idx < altWords.count - 1 { out += AttributedString(" ") }
+        if idx < altWords.count - 1 {
+            // The space between two changed words is part of the change, so a
+            // marker or a strike runs through it as one band.
+            var space = AttributedString(" ")
+            mark(&space, changed && tokenChanged[idx + 1] && tokenHasWord[idx + 1])
+            out += space
+        }
     }
     return out
 }
@@ -1775,7 +1820,7 @@ func highlightedCorrection(_ alternative: String, original: String, baseFont: Fo
 /// change reads as the few characters it is — くさ[かっ]た — and a pure
 /// re-spelling never gets this far (`saysTheSameThing` compares readings).
 private func highlightedCharacters(_ alternative: String, original: String,
-                                   baseFont: Font) -> AttributedString {
+                                   mark: (inout AttributedString, Bool) -> Void) -> AttributedString {
     let alt = Array(alternative)
     func isLetter(_ c: Character) -> Bool { c.isLetter || c.isNumber }
     let aIdx = alt.indices.filter { isLetter(alt[$0]) }
@@ -1798,10 +1843,7 @@ private func highlightedCharacters(_ alternative: String, original: String,
     var out = AttributedString()
     for (k, ch) in alt.enumerated() {
         var piece = AttributedString(String(ch))
-        if changed.contains(k) {
-            piece.foregroundColor = .accentColor
-            piece.font = baseFont.weight(.semibold)
-        }
+        mark(&piece, changed.contains(k))
         out += piece
     }
     return out
