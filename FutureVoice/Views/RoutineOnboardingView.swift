@@ -540,11 +540,14 @@ private struct SheetLikeCard: ViewModifier {
         if #available(iOS 26.0, *) {
             // A sheet's glass is denser than a control's: the grid must not
             // read through the text.
+            // What scrolls inside is cut by the card's own corners, not by a
+            // square edge poking past them.
             content
+                .clipShape(shape)
                 .background(shape.fill(Color(.systemBackground).opacity(0.7)))
                 .glassEffect(.regular, in: shape)
         } else {
-            content.background(shape.fill(Color(.systemBackground))
+            content.clipShape(shape).background(shape.fill(Color(.systemBackground))
                 .shadow(color: .black.opacity(0.12), radius: 12, y: 2))
         }
     }
