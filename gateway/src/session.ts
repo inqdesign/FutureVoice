@@ -1038,8 +1038,19 @@ export class CallSession implements DurableObject {
     this.speakOpener(say.text)
   }
 
-  /** Speak a line the app chose, with no model call at all. */
+  /** Speak a line the app chose, with no model call at all. Bounded
+   *  (2026-10-21): it is voiced before any talk-time is billed, so an
+   *  unbounded line was free synthesis of any length. Real openers and the
+   *  daily call's voicemail stay well under this; a longer one is cut at its
+   *  last sentence end. */
+  static readonly maxOpenerChars = 600
   private speakOpener(text: string): void {
+    if (text.length > CallSession.maxOpenerChars) {
+      const head = text.slice(0, CallSession.maxOpenerChars)
+      const end = Math.max(head.lastIndexOf(". "), head.lastIndexOf("? "), head.lastIndexOf("! "),
+                           head.lastIndexOf("。"), head.lastIndexOf("？"), head.lastIndexOf("！"))
+      text = end > 0 ? head.slice(0, end + 1) : head
+    }
     this.turnCount += 1
     const context = `t${this.turnCount}`
     this.activeContext = context

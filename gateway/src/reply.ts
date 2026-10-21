@@ -191,9 +191,10 @@ export class ReplyEngine {
           }) }
     }
 
-    const run = (model: string, s: AbortSignal, d: (text: string) => void) => isClaudeModel(model)
-      ? this.streamClaude(model, history, s, d)
-      : this.stream(model, body, s, d)
+    const run = (model: string, s: AbortSignal, d: (text: string) => void, started?: () => void) =>
+      isClaudeModel(model)
+        ? this.streamClaude(model, history, s, d, started)
+        : this.stream(model, body, s, d)
 
     const primary = this.config.model
     const fallback = this.config.fallbackModel
@@ -237,12 +238,22 @@ export class ReplyEngine {
           this.onFallback?.(`${primary} → ${attempt.model}${primaryLeaked ? " (leak)" : ""}`)
         }
       }
+      // Attempts whose text already reached the caller: past that, a refusal
+      // can no longer hand the turn to the fallback.
+      const forwarded = new Set<Attempt>()
       const launch = (model: string) => {
         const attempt: Attempt = { model, abort: new AbortController() }
         attempts.push(attempt)
         run(model, attempt.abort.signal, (delta) => {
           claim(attempt)
-          if (winner === attempt && !signal.aborted) onDelta(delta)
+          if (winner === attempt && !signal.aborted) { forwarded.add(attempt); onDelta(delta) }
+        }, () => {
+          // Claude holds its text to whole sentences (SpokenGate), so its
+          // first DELTA comes a sentence late; its first raw token is when it
+          // started answering. Counting the delta made the 2.5 s hedge fire
+          // on a Claude reply that was already being written — 66 of 714
+          // generations went to flash-lite in the first hours (2026-10-21).
+          claim(attempt)
         }).then((full) => {
           // Aborted as the loser: its (empty) result means nothing.
           if (winner !== null && winner !== attempt) return
@@ -250,12 +261,23 @@ export class ReplyEngine {
           settle(() => resolve(full))
         }, (e) => {
           if (signal.aborted) return settle(() => resolve(""))
-          if (winner === attempt) return settle(() => reject(e))
-          if (winner !== null) return            // lost anyway
           if (e instanceof SpokenLeakError && attempt.model === primary) {
             primaryLeaked = true
             console.log(e.message)
           }
+          if (winner === attempt) {
+            // Claimed at its first token, then its first sentence was a note
+            // nobody may hear: nothing reached the caller, so the turn is
+            // still the fallback's to answer.
+            if (e instanceof SpokenLeakError && !forwarded.has(attempt) && attempt.model !== fallback) {
+              winner = null
+              failed += 1
+              launch(fallback)
+              return
+            }
+            return settle(() => reject(e))
+          }
+          if (winner !== null) return            // lost anyway
           failed += 1
           // The primary erroring is a reason to hedge NOW, not in 2.5 s.
           if (attempts.length === 1) {
@@ -290,6 +312,7 @@ export class ReplyEngine {
     history: Line[],
     signal: AbortSignal,
     onDelta: (text: string) => void,
+    onFirstText?: () => void,
   ): Promise<string> {
     const last = history[history.length - 1]
     const steered = this.steer && last?.role === "user"
@@ -300,7 +323,7 @@ export class ReplyEngine {
     const usage = this.usageFor(model)
     try {
       return await streamClaude({
-        apiKey: this.config.anthropicKey, model, system, signal, onDelta, usage: raw,
+        apiKey: this.config.anthropicKey, model, system, signal, onDelta, onFirstText, usage: raw,
         language: this.config.language ?? "en",
         thinking: this.config.claudeThinking, effort: this.config.claudeEffort,
         messages: claudeMessages(steered, ReplyEngine.settledPrefix(history).length),

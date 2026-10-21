@@ -211,6 +211,9 @@ export async function streamClaude(opts: {
   effort?: string
   signal: AbortSignal
   onDelta: (text: string) => void
+  /** The model's first raw text, before the gate holds it to a sentence —
+   *  what the hedge counts as "started answering". */
+  onFirstText?: () => void
   usage: ClaudeUsage
 }): Promise<string> {
   if (!opts.apiKey) throw new Error("reply upstream claude: ANTHROPIC_API_KEY not set")
@@ -257,6 +260,7 @@ export async function streamClaude(opts: {
 
   const gate = new SpokenGate(opts.language, opts.onDelta)
   let cut = false
+  let startedText = false
   reader = resp.body.getReader()
   const decoder = new TextDecoder()
   let buffer = ""
@@ -281,6 +285,10 @@ export async function streamClaude(opts: {
           opts.usage.output += event.usage?.output_tokens ?? 0
         } else if (event?.type === "content_block_delta" && event.delta?.type === "text_delta") {
           const text = event.delta.text
+          if (typeof text === "string" && text.length > 0 && !startedText) {
+            startedText = true
+            opts.onFirstText?.()
+          }
           if (typeof text === "string" && text.length > 0 && !gate.push(text)) {
             cut = true
             upstream.abort()
