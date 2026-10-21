@@ -1282,6 +1282,10 @@ fun TrialReportHost(ready: Boolean, inCall: Boolean, blocked: Boolean, level: Ce
         if (!TrialReportStore.shouldOffer(context, cached)) return@LaunchedEffect
         val account = gate.snapshot(force = true) ?: return@LaunchedEffect
         if (!TrialReportStore.shouldOffer(context, account)) return@LaunchedEffect
+        // WAIT for the screen to clear, never give up on it (iOS, prod
+        // 2026-10-21: a tab's own sheet came up 2 s after the call and the
+        // report was never seen).
+        repeat(120) { if (showing == null && !quiet()) delay(1_000) }
         if (showing != null || !quiet()) return@LaunchedEffect
         showing = TrialReportStore.current(context, LanguageScope.active(context))
     }
