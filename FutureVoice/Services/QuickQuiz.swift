@@ -134,7 +134,7 @@ enum QuickQuizEngine {
             return i >= levelIndex
         }
         let own = studying.shuffled(using: &rng)
-        let taken = Set(studying.map { $0.lowercased() })
+        let taken = Set(vocab.studying.map { $0.lowercased() })
             .union(vocab.records.keys.map { $0.lowercased() })
         let level = CoreVocabulary.entries
             .filter { $0.level == appState.proficiency && !taken.contains($0.word.lowercased()) }
