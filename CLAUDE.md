@@ -1935,6 +1935,20 @@ Practice Today card, settings section in `StudyGoalsSheet`, route
   `weekCoach` writes it at build time if missing (saved into the report,
   paid once) and waits at most `coachWait` (25 s). Captures:
   `-capture weekly-test-{grammar,upgrade}[-right|-wrong]`.
+- **The test is what was STUDIED; the quick quiz is what was NOT**
+  (2026-10-21, founder, from a quiz that asked "So ______?" with four
+  choices that all fit). Test: words, expressions and sentence cards the
+  learner PUT OFF in the deck (10 min · tomorrow · 3 days —
+  `StudyScheduleStore`, `DrillStore.putOffCards`), words and phrases at the
+  learner's level or above (`studiedMaterial`). Quiz (`QuickQuizEngine`):
+  level or above and never used — not said, not marked known, not put off.
+  A phrase's level is `QuickQuizStock.rate`, a call that is NEVER told the
+  learner's level (told it, it rated "what's on your mind" a2 for an A2
+  learner and b1 for a B1 one), cached in `quiz_levels.json`; "none" = not
+  an expression. Every quiz expression is a new sentence checked to have
+  one right choice; a test gap keeps the heard line but needs 4+ words
+  around the blank and passes the same check (`onlyAnswerFits`). This
+  supersedes the two bullets below on where word and gap items come from.
 - **Word items come from the week's talk BOOKS only** (2026-10-03): the
   Words chapter (`TalkCurriculum.build(...).words`) — the fluent self's
   words at or above the level, minus what the learner said — unmastered

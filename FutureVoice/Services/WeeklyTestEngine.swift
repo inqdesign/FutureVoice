@@ -6,11 +6,22 @@ import Foundation
 /// drawn from a generic bank. Four kinds, each from one shelf of the review
 /// loop (see CLAUDE.md "The learning loop"):
 ///
-///   meaning  ← the notebook (words the talks taught, `VocabStore.studying`)
-///   gap      ← the Expressions page's "To study" list (`ExpressionCatalog
-///              .toStudy`), in the line it was heard in
-///   translate← the corrections (`DrillStore` cards) and the profile's
-///              recurring mistakes, asked in a NEW sentence: a native-language
+/// The test is what the learner STUDIED; the quick quiz is what they have
+/// not learned yet (2026-10-21, founder). "Studied" is one thing the app can
+/// see: a card the learner put off in the deck — 10 min · tomorrow · 3 days
+/// (`StudyScheduleStore` for words and expressions, `DrillStore.putOffCards`
+/// for sentences) — and words and expressions must also be at the learner's
+/// LEVEL or above (a word by the graded list, a phrase by
+/// `QuickQuizStock.rateMissing`, the quiz's own rating). Before this the
+/// gap item took the whole "To study" list, so a test asked "So ______?"
+/// about a phrase nobody had studied.
+///
+///   meaning  ← the words put off in the deck
+///   gap      ← the expressions put off in the deck, in the line they were
+///              heard in, kept only when the blank leaves real context and
+///              the answer alone fits (`QuickQuizStock.keepOnlyAnswer`)
+///   translate← the sentence cards put off in the deck, asked in a NEW
+///              sentence: a native-language
 ///              line to say in the target language, graded in code against
 ///              the pattern's required spans and the learner's own wrong
 ///              forms (replaced `build`, 2026-10-08 — founder: "a mistake is
@@ -21,7 +32,7 @@ import Foundation
 ///   speak    ← the fluent self's lines, said out loud and scored like a
 ///              shadow take (`ShadowTranscriber` + `ShadowEngine`)
 ///
-/// listen and speak take only lines that carry a "To study" expression, and
+/// listen and speak take only lines that carry a put-off expression, and
 /// never a call's opening line. A learner reported (2026-10-08) that the
 /// test "felt random": the opener's greeting came up to be repeated, and a
 /// correction card — one clause since 2026-09-27 — was shuffled into four
@@ -141,19 +152,17 @@ enum WeeklyTestEngine {
         }
 
         var items: [WeeklyTestItem] = []
-        items += await meaningItems(sessions: windowSessions, appState: appState, rng: &rng)
-        // What the Expressions page lists under "To study" — the learner's
-        // own study list, and the reason a fluent-self line is worth a
-        // question at all.
-        let toStudy = ExpressionCatalog.toStudy(scenarios: appState.scenarios, sessions: allSessions)
-            .filter { isInTargetScript($0.text) }
-        let studyPhrases = toStudy.map { $0.text.lowercased() }
+        let studied = await studiedMaterial(appState: appState)
+        items += await meaningItems(words: studied.words, appState: appState, rng: &rng)
+        let studyPhrases = studied.expressions.map { $0.lowercased() }
         // A call's first fluent-self line is its greeting — the same few
         // words every call, never the material.
         let openers = Set(allSessions.compactMap { s in s.turns.first { $0.role == .fluentSelf }?.id })
         let teachingTurns = fluentTurns.filter { !openers.contains($0.turn.id) }
-        items += gapItems(toStudy: toStudy, sessions: windowSessions, fluentTurns: teachingTurns,
-                          allSessions: allSessions, openers: openers, appState: appState, rng: &rng)
+        let gaps = gapItems(phrases: studied.expressions, sessions: windowSessions, fluentTurns: teachingTurns,
+                            allSessions: allSessions, openers: openers, appState: appState,
+                            limit: maxGap * 2, rng: &rng)
+        items += Array(await onlyAnswerFits(gaps, appState: appState, testId: id).prefix(maxGap))
         items += await translateItems(start: start, end: end, now: now, sessions: allSessions,
                                       windowSessions: windowSessions, appState: appState, testId: id)
         let listens = listenItems(fluentTurns: teachingTurns, studyPhrases: studyPhrases, rng: &rng)
@@ -363,34 +372,44 @@ enum WeeklyTestEngine {
 
     // MARK: meaning
 
+    /// What the learner studied: the words and expressions put off in the
+    /// deck and still on their lists, at their level or above, longest
+    /// waiting first. A word the graded list can't place keeps its seat.
+    static func studiedMaterial(appState: AppState) async -> (words: [String], expressions: [String]) {
+        let vocab = VocabStore.shared
+        let schedule = StudyScheduleStore.shared
+        let put = schedule.dueItems() + schedule.upcoming()
+        let levelIndex = CEFRLevel.allCases.firstIndex(of: appState.proficiency) ?? 0
+        var seen = Set<String>()
+        let words = put.filter { $0.kind == .word }.map(\.text).filter { w in
+            guard seen.insert("w|" + w.lowercased()).inserted, vocab.isStudying(w), isInTargetScript(w) else {
+                return false
+            }
+            guard let l = CoreVocabulary.level(of: w),
+                  let i = CEFRLevel.allCases.firstIndex(of: l) else { return true }
+            return i >= levelIndex
+        }
+        let phrases = put.filter { $0.kind == .expression }.map(\.text).filter {
+            seen.insert("e|" + ExpressionCatalog.normalizedKey($0)).inserted
+                && !vocab.hasUsedExpression($0) && isInTargetScript($0)
+        }
+        await QuickQuizStock.rateMissing(phrases, targetName: LanguageCatalog.englishName(appState.targetLanguage))
+        let rated = QuickQuizStock.levels()
+        let expressions = phrases.filter {
+            QuickQuizStock.atLevel(rated[ExpressionCatalog.normalizedKey($0)], appState.proficiency)
+        }
+        return (words, expressions)
+    }
+
     private static func meaningItems(
-        sessions: [Session], appState: AppState, rng: inout WeeklyTestRandom
+        words: [String], appState: AppState, rng: inout WeeklyTestRandom
     ) async -> [WeeklyTestItem] {
         let vocab = VocabStore.shared
-        // The words come from the week's talk BOOKS and nowhere else (user,
-        // 2026-10-03): a book's Words chapter is already the fluent self's
-        // words at or above the learner's level, minus every word the learner
-        // said in that talk — exactly "what this talk taught you". The old
-        // sources (the whole notebook, then words the learner had USED this
-        // week) could hand a B2 learner "house": a word they had just proven
-        // they know, tested as if it were new. Not yet mastered first; a
-        // thin week asks fewer word questions rather than reaching outside.
-        var unmastered: [String] = []
-        var mastered: [String] = []
-        var seen = Set<String>()
-        for session in sessions.sorted(by: { ($0.endedAt ?? $0.startedAt) > ($1.endedAt ?? $1.startedAt) }) {
-            let book = TalkCurriculum.build(session: session, proficiency: appState.proficiency,
-                                            shadowAttempts: [], drillCards: [])
-            for item in book.words {
-                let w = item.text
-                let k = w.lowercased()
-                guard !k.isEmpty, !seen.contains(k), isInTargetScript(w) else { continue }
-                seen.insert(k)
-                if item.masteredAt == nil { unmastered.append(w) } else { mastered.append(w) }
-            }
-            await Task.yield()
-        }
-        let candidates = unmastered.shuffled(using: &rng) + mastered.shuffled(using: &rng)
+        // The words put off in the deck (`studiedMaterial`) — what the learner
+        // studied. The talk books' Words chapter fed this until 2026-10-21;
+        // the notebook and "words used this week" before that.
+        let seen = Set(words.map { $0.lowercased() })
+        let candidates = words.shuffled(using: &rng)
 
         // Decoys: the graded list at the learner's level leads, the two
         // neighbouring bands follow — a same-class word one band off beats an
@@ -472,17 +491,19 @@ enum WeeklyTestEngine {
 
     // MARK: gap
 
-    /// A "To study" expression with its line blanked out, newest first —
-    /// the list the learner keeps on the Expressions page, in the sentence
-    /// they met it in: this week's talks first, then any talk, then the
-    /// scene that taught it. A phrase with no such line is skipped.
+    /// A studied expression with its line blanked out, in the sentence the
+    /// learner met it in: this week's talks first, then any talk, then the
+    /// scene that taught it. A phrase with no such line is skipped. The caller
+    /// still has to run `onlyAnswerFits`: the decoys are other phrases, and
+    /// nothing here can tell whether one of them fits the line too.
     static func gapItems(
-        toStudy: [ExpressionCatalog.Item],
+        phrases: [String],
         sessions: [Session],
         fluentTurns: [(session: Session, turn: Turn)],
         allSessions: [Session],
         openers: Set<UUID>,
         appState: AppState,
+        limit: Int = maxGap,
         rng: inout WeeklyTestRandom
     ) -> [WeeklyTestItem] {
         struct Candidate { let phrase: String; let sentence: String; let session: Session?; let turn: Turn? }
@@ -499,16 +520,17 @@ enum WeeklyTestEngine {
             uniquingKeysWith: { first, _ in first })
 
         var candidates: [Candidate] = []
-        for entry in toStudy {
-            guard candidates.count < maxGap * 3 else { break }
-            if let hit = firstSentence(containing: entry.text, in: fluentTurns)
-                ?? firstSentence(containing: entry.text, in: anyFluent) {
-                candidates.append(Candidate(phrase: entry.text, sentence: hit.sentence,
+        for phrase in phrases {
+            guard candidates.count < limit * 3 else { break }
+            if let hit = firstSentence(containing: phrase, in: fluentTurns)
+                ?? firstSentence(containing: phrase, in: anyFluent) {
+                candidates.append(Candidate(phrase: phrase, sentence: hit.sentence,
                                             session: hit.session, turn: hit.turn))
-            } else if let example = sceneExamples[entry.key],
-                      DrillStore.wholeWordRange(of: entry.text, in: example) != nil,
+            } else if let example = sceneExamples[ExpressionCatalog.normalizedKey(phrase)],
+                      DrillStore.wholeWordRange(of: phrase, in: example) != nil,
+                      leavesContext(phrase, in: example),
                       isInTargetScript(example) {
-                candidates.append(Candidate(phrase: entry.text, sentence: example, session: nil, turn: nil))
+                candidates.append(Candidate(phrase: phrase, sentence: example, session: nil, turn: nil))
             }
         }
 
@@ -519,7 +541,7 @@ enum WeeklyTestEngine {
         for s in sessions {
             weekPool += (s.summary?.expressionsOffered ?? []) + (s.summary?.expressionsUsed ?? [])
         }
-        weekPool = dedupe(weekPool + toStudy.map(\.text), key: ExpressionCatalog.normalizedKey)
+        weekPool = dedupe(weekPool + phrases, key: ExpressionCatalog.normalizedKey)
         let libraryPool = dedupe(ExpressionCatalog.all(scenarios: appState.scenarios).map(\.text),
                                  key: ExpressionCatalog.normalizedKey)
 
@@ -527,7 +549,7 @@ enum WeeklyTestEngine {
         // Newest first, as the list shows them — the top of it is what the
         // learner is studying now.
         for c in candidates {
-            guard out.count < maxGap else { break }
+            guard out.count < limit else { break }
             let key = ExpressionCatalog.normalizedKey(c.phrase)
             func fits(_ p: String) -> Bool {
                 ExpressionCatalog.normalizedKey(p) != key && !c.sentence.lowercased().contains(p.lowercased())
@@ -546,21 +568,50 @@ enum WeeklyTestEngine {
         return out
     }
 
-    /// The first sentence in `turns` containing `phrase`, case-insensitive,
-    /// short enough to read as one line. Sentences come from
-    /// `TalkCurriculum.sentences(in:)` so a gap item never shows a whole turn.
+    /// The sentence in `turns` containing `phrase` that leaves the most
+    /// context around the blank, short enough to read as one line. Sentences
+    /// come from `TalkCurriculum.sentences(in:)` so a gap item never shows a
+    /// whole turn. It took the FIRST hit until 2026-10-21, and "So what's on
+    /// your mind?" left "So ______?" — nothing to answer from.
     private static func firstSentence(
         containing phrase: String, in turns: [(session: Session, turn: Turn)]
     ) -> (sentence: String, session: Session, turn: Turn)? {
+        var best: (sentence: String, session: Session, turn: Turn, left: Int)?
         for entry in turns {
             for sentence in TalkCurriculum.sentences(in: entry.turn.transcript) {
                 guard DrillStore.wholeWordRange(of: phrase, in: sentence) != nil else { continue }
                 let n = WordSplitter.count(sentence)
-                guard n >= 4, n <= 30, isInTargetScript(sentence) else { continue }
-                return (sentence, entry.session, entry.turn)
+                guard n <= 30, leavesContext(phrase, in: sentence), isInTargetScript(sentence) else { continue }
+                let left = n - WordSplitter.count(phrase)
+                if left > (best?.left ?? -1) { best = (sentence, entry.session, entry.turn, left) }
             }
         }
-        return nil
+        return best.map { ($0.sentence, $0.session, $0.turn) }
+    }
+
+    /// Words left around the blank, at least: under this the line can't say
+    /// which phrase it wants.
+    static let minGapContext = 4
+
+    static func leavesContext(_ phrase: String, in sentence: String) -> Bool {
+        WordSplitter.count(sentence) - WordSplitter.count(phrase) >= minGapContext
+    }
+
+    /// The gap items whose answer ALONE fits their line, as read by the quick
+    /// quiz's blind check. Nothing when the check can't run: an unchecked gap
+    /// with four phrases that all fit is the bug this exists for.
+    static func onlyAnswerFits(_ items: [WeeklyTestItem], appState: AppState, testId: UUID) async -> [WeeklyTestItem] {
+        guard !items.isEmpty else { return [] }
+        let stored = items.map { item in
+            QuickQuizStock.Stored(kind: .expression, point: "", tip: "", sentence: item.prompt,
+                                  answer: item.answer, wrong: item.options.filter { $0 != item.answer },
+                                  createdAt: Date())
+        }
+        let kept = await QuickQuizStock.keepOnlyAnswer(
+            stored, targetName: LanguageCatalog.englishName(appState.targetLanguage),
+            key: "weekly-gap-\(testId.uuidString)")
+        let ok = Set(kept.map { CarryoverDetector.normalized($0.sentence) })
+        return items.filter { ok.contains(CarryoverDetector.normalized($0.prompt)) }
     }
 
     static let blankMark = "______"
@@ -705,35 +756,17 @@ enum WeeklyTestEngine {
     /// should be, why, and the card it came from (for write-back).
     struct Slip { let was: String; let now: String; let why: String; let cardId: UUID? }
 
-    /// The mistakes to build on: this window's correction cards, due first
-    /// then newest, then the profile's recurring mistakes — deduped.
-    static func slips(start: Date, end: Date, now: Date, profile: LearnerProfile,
-                      sessions: [Session] = []) -> [Slip] {
-        let cards = DrillStore.shared.load().filter { card in
-            guard card.box < DrillStore.maxBox,
-                  !card.sourcePhrase.trimmingCharacters(in: .whitespaces).isEmpty,
-                  isInTargetScript(card.targetPhrase), isInTargetScript(card.sourcePhrase) else { return false }
-            let touched = [card.createdAt, card.lastReviewedAt].compactMap { $0 }
-            return touched.contains(where: { $0 > start && $0 <= end })
-        }.sorted {
-            let aDue = $0.nextReviewAt <= now, bDue = $1.nextReviewAt <= now
-            if aDue != bDue { return aDue }
-            return $0.createdAt > $1.createdAt
-        }
+    /// The mistakes to build on: the sentence cards the learner put off in
+    /// the deck (`DrillStore.putOffCards`), soonest return first — what they
+    /// studied. Until 2026-10-21 it was every card touched this window plus
+    /// the profile's recurring mistakes.
+    static func slips() -> [Slip] {
         var out: [Slip] = []
         var seen = Set<String>()
-        func add(_ s: Slip) {
-            guard seen.insert(CarryoverDetector.normalized(s.was)).inserted else { return }
-            out.append(s)
-        }
-        for c in cards { add(Slip(was: c.sourcePhrase, now: c.targetPhrase, why: c.reason, cardId: c.id)) }
-        let fresh = now.addingTimeInterval(-Double(GrammarFocus.freshDays) * 86_400)
-        // A profile pattern only when the learner really said it in a talk
-        // (`GrammarFocus.evidence`) — its frequency was inflated for weeks.
-        for p in profile.recurringMistakes where p.lastSeenAt >= fresh
-            && isInTargetScript(p.mistake) && isInTargetScript(p.correction)
-            && GrammarFocus.evidence(p, sessions: sessions, now: now) >= 1 {
-            add(Slip(was: p.mistake, now: p.correction, why: p.context, cardId: nil))
+        for c in DrillStore.putOffCards() where !c.sourcePhrase.trimmingCharacters(in: .whitespaces).isEmpty
+            && isInTargetScript(c.targetPhrase) && isInTargetScript(c.sourcePhrase) {
+            guard seen.insert(CarryoverDetector.normalized(c.sourcePhrase)).inserted else { continue }
+            out.append(Slip(was: c.sourcePhrase, now: c.targetPhrase, why: c.reason, cardId: c.id))
         }
         return Array(out.prefix(10))
     }
@@ -766,8 +799,7 @@ enum WeeklyTestEngine {
     ) async -> [WeeklyTestItem] {
         let target = appState.targetLanguage, native = appState.nativeLanguage
         guard !LanguageCatalog.sameLanguage(target, native) else { return [] }
-        let list = slips(start: start, end: end, now: now, profile: appState.learnerProfile,
-                         sessions: sessions)
+        let list = slips()
         guard !list.isEmpty else { return [] }
         let topics = windowSessions.compactMap { $0.topic }
             .filter { !$0.isEmpty }.prefix(6)

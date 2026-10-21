@@ -517,6 +517,19 @@ enum QuickQuizStock {
         let results: [Result]
     }
 
+    /// The weekly test's way in to `check`: its blanked lines are kept only
+    /// when the answer alone fits them.
+    static func keepOnlyAnswer(_ questions: [Stored], targetName: String, key: String) async -> [Stored] {
+        await check(questions, targetName: targetName, key: key)
+    }
+
+    /// The weekly test's way in to `rate`: rates whichever of `phrases` has
+    /// no rating yet (the same cache the quiz reads).
+    static func rateMissing(_ phrases: [String], targetName: String) async {
+        let rated = levels()
+        await rate(phrases.filter { rated[ExpressionCatalog.normalizedKey($0)] == nil }, targetName: targetName)
+    }
+
     /// Keeps the questions whose ONLY working choice is the answer, as judged
     /// by a call that is never told which one was meant. A failed check keeps
     /// nothing: an unchecked question is the bug this exists for.
