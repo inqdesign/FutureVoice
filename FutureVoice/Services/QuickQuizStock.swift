@@ -18,8 +18,14 @@ import Foundation
 ///   talks or more, judged a grammar point by `describe`) — and, when there
 ///   are fewer than `minPoints` of those, the grammar of their level.
 /// - expression: common expressions of their level (collocations, phrasal
-///   verbs, set phrases). The learner's OWN study list is asked by
-///   `QuickQuizEngine` from the lines they heard; these fill in around it.
+///   verbs, set phrases).
+/// - own: the learner's OWN expressions — on the "To study" list, never
+///   said in a talk, never marked known, never put off in the deck (those
+///   are the weekly test's) — each in a NEW sentence, and only when the
+///   model rates it at the learner's level or above (`levels`, cached per
+///   phrase). Until 2026-10-21 these were the fluent self's line with the
+///   phrase blanked, unchecked: a learner got "So ______?" for "what's on
+///   your mind", four choices that all fit, and nothing said its level.
 ///
 /// Never the learner's transcript: every line is written fresh, so nothing a
 /// recognizer misheard can become an answer.
@@ -33,7 +39,7 @@ import Foundation
 /// sandwich"); the check dropped all three, plus a few stricter calls.
 @MainActor
 enum QuickQuizStock {
-    enum Kind: String, Codable, CaseIterable { case grammar, expression }
+    enum Kind: String, Codable, CaseIterable { case grammar, expression, own }
 
     struct Stored: Codable, Identifiable {
         var id = UUID()
@@ -46,6 +52,8 @@ enum QuickQuizStock {
         let wrong: [String]
         var asked: Int = 0
         let createdAt: Date
+        /// own: the CEFR level the model gave the phrase.
+        var level: String? = nil
     }
 
     /// Below this many unasked questions of either kind, a batch is written.
@@ -61,6 +69,8 @@ enum QuickQuizStock {
     /// A question is retired once asked this often; the stock is capped.
     static let maxAsked = 2
     static let maxStored = 60
+    /// The learner's own expressions sent per batch to be rated and written.
+    static let ownPerBatch = 8
 
     private static var fileURL: URL {
         LanguageScope.activeDirectory.appendingPathComponent("quiz_stock.json")
@@ -93,9 +103,134 @@ enum QuickQuizStock {
         return task
     }
 
-    private static var needsBatch: Bool {
+    private static func needsBatch(appState: AppState) -> Bool {
         let unasked = load().filter { $0.asked == 0 }
-        return Kind.allCases.contains { kind in unasked.filter { $0.kind == kind }.count < refillBelow }
+        let low = [Kind.grammar, .expression].contains { kind in
+            unasked.filter { $0.kind == kind }.count < refillBelow
+        }
+        // Own questions need a phrase still to rate or to write.
+        let ownLow = unasked.filter { $0.kind == .own }.count < refillBelow
+            && !(unratedOwn(appState: appState).isEmpty && unwrittenOwn(appState: appState).isEmpty)
+        return low || ownLow
+    }
+
+    // MARK: - The learner's own expressions
+
+    private static var levelsURL: URL {
+        LanguageScope.activeDirectory.appendingPathComponent("quiz_levels.json")
+    }
+
+    /// The model's CEFR rating per own phrase (normalized key → a1…c2, or
+    /// "none" for a phrase that is not an expression).
+    static func levels() -> [String: String] {
+        guard let data = try? Data(contentsOf: levelsURL),
+              let map = try? JSONDecoder().decode([String: String].self, from: data) else { return [:] }
+        return map
+    }
+
+    private static func saveLevels(_ map: [String: String]) {
+        guard let data = try? JSONEncoder().encode(map) else { return }
+        try? data.write(to: levelsURL, options: .atomic)
+    }
+
+    /// Still quiz material: never said, never marked known, never put off.
+    static func isOpen(_ phrase: String) -> Bool {
+        !VocabStore.shared.hasUsedExpression(phrase)
+            && StudyScheduleStore.shared.nextReview(.expression, phrase) == nil
+    }
+
+    /// At the learner's level or above.
+    static func atLevel(_ raw: String?, _ level: CEFRLevel) -> Bool {
+        guard let raw, let l = CEFRLevel(rawValue: raw.lowercased()),
+              let a = CEFRLevel.allCases.firstIndex(of: l),
+              let b = CEFRLevel.allCases.firstIndex(of: level) else { return false }
+        return a >= b
+    }
+
+    private static func ownCandidates(appState: AppState) -> [String] {
+        ExpressionCatalog.toStudy(scenarios: appState.scenarios)
+            .map(\.text)
+            .filter { TextScript.isInTargetScript($0, language: appState.targetLanguage)
+                && isOpen($0) && !hasSlot($0) }
+    }
+
+    /// A phrase with a slot in it ("end up -ing", "make up one's mind",
+    /// "remind sb of sth") cannot stand in a sentence as written, and the
+    /// answer must be the phrase as written — the probe got "did ______
+    /// paying".
+    static func hasSlot(_ phrase: String) -> Bool {
+        if phrase.contains(where: { "~…/()[]".contains($0) }) || phrase.contains("...") { return true }
+        let slots: Set<String> = ["sb", "sth", "sb's", "sth's", "one's"]
+        return phrase.split(separator: " ").contains { word in
+            word.hasPrefix("-") || slots.contains(word.lowercased())
+        }
+    }
+
+    private static var triesURL: URL {
+        LanguageScope.activeDirectory.appendingPathComponent("quiz_own_tries.json")
+    }
+
+    /// How many batches each own phrase was sent to. One whose question keeps
+    /// failing the check stops being sent at `maxTries`, or a learner with a
+    /// few such phrases would start a batch on every quiz.
+    static let maxTries = 2
+
+    private static func tries() -> [String: Int] {
+        guard let data = try? Data(contentsOf: triesURL),
+              let map = try? JSONDecoder().decode([String: Int].self, from: data) else { return [:] }
+        return map
+    }
+
+    /// Own expressions with no rating yet, newest first.
+    private static func unratedOwn(appState: AppState) -> [String] {
+        let rated = levels()
+        return ownCandidates(appState: appState).filter { rated[ExpressionCatalog.normalizedKey($0)] == nil }
+    }
+
+    /// Own expressions rated at the learner's level with no question yet.
+    private static func unwrittenOwn(appState: AppState) -> [String] {
+        let rated = levels()
+        let written = Set(load().filter { $0.kind == .own }.map { ExpressionCatalog.normalizedKey($0.answer) })
+        let tried = tries()
+        return ownCandidates(appState: appState).filter {
+            let k = ExpressionCatalog.normalizedKey($0)
+            return !written.contains(k) && (tried[k] ?? 0) < maxTries && atLevel(rated[k], appState.proficiency)
+        }
+    }
+
+    private struct Ratings: Decodable {
+        struct Rating: Decodable { let n: Int; let level: String? }
+        let results: [Rating]
+    }
+
+    /// Rates each phrase's CEFR level, or "none" when it is not a reusable
+    /// expression at all (a piece of one conversation: "stick around on
+    /// someone's phone"). Never told the learner's level. A phrase the call
+    /// leaves out stays unrated for the next batch.
+    private static func rate(_ phrases: [String], targetName: String) async {
+        guard !phrases.isEmpty else { return }
+        let system = """
+            You rate \(targetName) expressions for a learner's study list. For each \
+            numbered expression give the CEFR level at which a learner of \
+            \(targetName) is expected to USE it in speech (a1, a2, b1, b2, c1, c2). \
+            Rate an idiom made of easy words by the idiom, not by its words. If it \
+            is not a reusable expression at all — a piece of one particular \
+            conversation, or a whole ordinary sentence — rate it "none".
+            Return {"results":[{"n":1,"level":"b1"}]}. JSON only.
+            """
+        let user = phrases.enumerated().map { "\($0.offset + 1). \($0.element)" }.joined(separator: "\n")
+        let key = SHA256.hash(data: Data(user.utf8)).prefix(8).map { String(format: "%02x", $0) }.joined()
+        guard let r: Ratings = try? await GeminiClient.shared.sendJSON(
+            system: system, messages: [.init(role: .user, content: user)],
+            maxTokens: 1500, purpose: "quiz",
+            idempotencyKey: "quiz-rate:\(key)", requestTimeout: 30) else { return }
+        var map = levels()
+        for it in r.results where phrases.indices.contains(it.n - 1) {
+            guard let lvl = it.level?.lowercased(),
+                  lvl == "none" || CEFRLevel(rawValue: lvl) != nil else { continue }
+            map[ExpressionCatalog.normalizedKey(phrases[it.n - 1])] = lvl
+        }
+        saveLevels(map)
     }
 
     /// Fill the stock before anyone opens a quiz, so the first one is full
@@ -103,7 +238,7 @@ enum QuickQuizStock {
     static func prewarm(appState: AppState) {
         // A batch that just failed (offline, signed out) is not retried on
         // every return to the tab.
-        guard needsBatch, Date().timeIntervalSince(lastFailure) > 600 else { return }
+        guard needsBatch(appState: appState), Date().timeIntervalSince(lastFailure) > 600 else { return }
         _ = startWriting(appState: appState)
     }
 
@@ -112,9 +247,9 @@ enum QuickQuizStock {
     /// is too little to ask without it. Nothing is marked asked here: the
     /// quiz marks what it actually used (`markAsked`).
     static func available(appState: AppState, grammar: Int, expressions: Int) async
-        -> (grammar: [QuickQuizItem], expressions: [QuickQuizItem]) {
+        -> (grammar: [QuickQuizItem], expressions: [QuickQuizItem], own: [QuickQuizItem]) {
         var stock = load().filter { $0.asked < maxAsked }
-        if needsBatch {
+        if needsBatch(appState: appState) {
             let writing = startWriting(appState: appState)
             let short = stock.filter { $0.kind == .grammar }.count < grammar
                 || stock.filter { $0.kind == .expression }.count < expressions
@@ -142,7 +277,13 @@ enum QuickQuizStock {
         let e = ordered.filter { $0.kind == .expression }
             .filter { phrases.insert(CarryoverDetector.normalized($0.answer)).inserted }
             .prefix(expressions)
-        return (g.map(item), e.map(item))
+        // Re-judged at every quiz: a phrase said or put off since it was
+        // written is no longer the quiz's, and the level may have moved.
+        let o = ordered.filter { $0.kind == .own }
+            .filter { isOpen($0.answer) && atLevel($0.level, appState.proficiency) }
+            .filter { phrases.insert(CarryoverDetector.normalized($0.answer)).inserted }
+            .prefix(expressions)
+        return (g.map(item), e.map(item), o.map(item))
     }
 
     private static func item(_ q: Stored) -> QuickQuizItem {
@@ -152,12 +293,13 @@ enum QuickQuizStock {
                                  options: ([q.answer] + q.wrong).shuffled(),
                                  heading: q.point.isEmpty ? nil : q.point,
                                  note: q.tip.isEmpty ? nil : q.tip, stockId: q.id)
-        case .expression:
+        case .expression, .own:
             // The meaning is the note: it says what was just picked.
             let meaning = [q.point, q.tip].filter { !$0.isEmpty }.joined(separator: " · ")
             return QuickQuizItem(kind: .expression, prompt: q.sentence, answer: q.answer,
                                  options: ([q.answer] + q.wrong).shuffled(),
-                                 note: meaning.isEmpty ? nil : "\(q.answer) — \(meaning)", stockId: q.id)
+                                 note: meaning.isEmpty ? nil : "\(q.answer) — \(meaning)", stockId: q.id,
+                                 isOwn: q.kind == .own)
         }
     }
 
@@ -235,7 +377,8 @@ enum QuickQuizStock {
             if wrong.isEmpty, let all = strings("choices", "options") {
                 wrong = all.filter { $0 != answer }
             }
-            let kind: Kind = (string("type", "kind") ?? "").lowercased().hasPrefix("expr") ? .expression : .grammar
+            let type = (string("type", "kind") ?? "").lowercased()
+            let kind: Kind = type.hasPrefix("own") ? .own : type.hasPrefix("expr") ? .expression : .grammar
             item = Payload.Item(kind: kind,
                                 point: string("point", "meaning", "grammar_point", "grammar") ?? "",
                                 tip: string("tip", "explanation", "why"),
@@ -264,9 +407,9 @@ enum QuickQuizStock {
             You write quick quiz questions for a \(targetName) learner whose own \
             language is \(nativeName), level \(level). Each question is ONE everyday \
             \(targetName) sentence with exactly one blank "\(WeeklyTestEngine.blankMark)" \
-            and four choices for it. Exactly ONE choice is correct. Two types:
+            and four choices for it. Exactly ONE choice is correct. Types:
 
-            Return {"items":[{"type":"grammar|expression","point":"...","tip":"...","sentence":"...","answer":"...","wrong":["...","...","..."]}]}
+            Return {"items":[{"type":"grammar|expression|own","point":"...","tip":"...","sentence":"...","answer":"...","wrong":["...","...","..."]}]}
             - sentence: spoken and ordinary, \(WordSplitter.spaced ? "5–12 words" : "8–25 characters"), \
               at their level, about everyday life\(spokenTopics.isEmpty ? "" : " (their recent topics: \(spokenTopics.joined(separator: "; ")))").
             - The sentence must leave ONLY the answer possible. Never write a blank \
@@ -285,6 +428,10 @@ enum QuickQuizStock {
               same shape that do not fit this sentence's meaning; never a synonym of \
               the answer. point: what the expression means, in \(nativeName), at most \
               8 words. tip: "".
+            - type "own": one question for EACH expression the user message lists \
+              as the learner's own. The answer is EXACTLY that expression as listed \
+              and the blank replaces all of it. wrong, point and tip as for \
+              "expression".
             - Every sentence, answer and choice is in \(targetName). point and tip are \
               in \(nativeName).
             Write \(batchPerKind) grammar questions (at most 2 per grammar point) and \
@@ -306,6 +453,16 @@ enum QuickQuizStock {
         if !known.isEmpty {
             user += "\nExpressions already used — pick others: " + known.sorted().joined(separator: ", ")
         }
+        // Rate first, in a call that is never told the learner's level — told
+        // it, the model rated "what's on your mind" a2 for an A2 learner and
+        // b1 for a B1 one (2026-10-21 probe), which filters nothing.
+        await rate(Array(unratedOwn(appState: appState).prefix(ownPerBatch * 2)),
+                   targetName: targetName)
+        let ownPhrases = Array(unwrittenOwn(appState: appState).prefix(ownPerBatch))
+        if !ownPhrases.isEmpty {
+            user += "\nThe learner's own expressions (type \"own\"):\n"
+                + ownPhrases.map { "- \($0)" }.joined(separator: "\n")
+        }
 
         let key = SHA256.hash(data: Data((system + user + "\(Date().timeIntervalSince1970)").utf8))
             .prefix(8).map { String(format: "%02x", $0) }.joined()
@@ -320,11 +477,25 @@ enum QuickQuizStock {
             return nil
         }
 
+        let rated = levels()
+        let sentKeys = Set(ownPhrases.map(ExpressionCatalog.normalizedKey))
+        if !sentKeys.isEmpty {
+            var t = tries()
+            for k in sentKeys { t[k, default: 0] += 1 }
+            if let data = try? JSONEncoder().encode(t) { try? data.write(to: triesURL, options: .atomic) }
+        }
+
         var seen = Set(load().map { CarryoverDetector.normalized($0.sentence) })
         var written: [Stored] = []
         for it in payload.items {
-            guard let q = validated(it, language: target),
+            guard var q = validated(it, language: target),
                   seen.insert(CarryoverDetector.normalized(q.sentence)).inserted else { continue }
+            if q.kind == .own {
+                // The answer must be the phrase itself, rated at the level.
+                let k = ExpressionCatalog.normalizedKey(q.answer)
+                guard sentKeys.contains(k), atLevel(rated[k], appState.proficiency) else { continue }
+                q.level = rated[k]
+            }
             written.append(q)
         }
         let added = await check(written, targetName: targetName, key: key)
@@ -333,6 +504,8 @@ enum QuickQuizStock {
         Telemetry.log("quiz_stock_batch", ["stage": "done", "written": "\(payload.items.count)",
                                              "valid": "\(written.count)", "kept": "\(added.count)",
                                              "kept_expressions": "\(added.filter { $0.kind == .expression }.count)",
+                                             "own_sent": "\(ownPhrases.count)",
+                                             "kept_own": "\(added.filter { $0.kind == .own }.count)",
                                              "own_points": "\(own.count)", "lang": target])
         guard !added.isEmpty else { return nil }
         save(load() + added)

@@ -35,17 +35,28 @@ struct QuickQuizItem: Identifiable, Equatable {
 ///   expression a line with the expression blanked → pick it
 ///   grammar    a new everyday line with a blank → pick the form that fits
 ///
-/// The learner's OWN material comes first — notebook words, the "To study"
-/// list in the line the fluent self said it in — and the LEVEL fills the
-/// rest (same day, founder: "someone who has made no scene and had no call
-/// still gets a quiz at their level"): graded words of their CEFR band they
-/// have not marked known or used, and written questions from `QuickQuizStock`
-/// (common expressions of the level; grammar from their recurring slips,
-/// else the level's). A first-day learner gets a full quiz.
+/// The quiz is what has NOT been learned yet; the weekly test is what HAS
+/// been studied (2026-10-21, founder: "the quiz is mostly what I haven't
+/// learned; the test is what I studied"). So every item here passes two
+/// filters: it is at the learner's LEVEL or above, and it was NEVER USED —
+/// not said in a talk, not marked known, and not put off in the deck
+/// (10 min · tomorrow · 3 days is studying, which is the weekly test's).
 ///
-/// Nothing here rests on what the RECOGNIZER heard. Words and expressions
-/// come from the fluent self's own lines (model-written), and grammar items
-/// are written fresh. Sentence cards were in the first cut and came out the
+/// The learner's own material comes first — notebook words, their own "To
+/// study" expressions — and the level fills the rest (2026-10-18, founder:
+/// "someone who has made no scene and had no call still gets a quiz at their
+/// level"): graded words of their CEFR band, and written questions from
+/// `QuickQuizStock` (common expressions of the level; grammar from their
+/// recurring slips, else the level's). A first-day learner gets a full quiz.
+///
+/// Every expression question is a NEW sentence written by `QuickQuizStock`
+/// and checked to have one right choice — the learner's own phrases too,
+/// rated for level by the same call. Until 2026-10-21 an own phrase was the
+/// fluent self's line with it blanked, which asked "So ______?" with four
+/// choices that all fit.
+///
+/// Nothing here rests on what the RECOGNIZER heard. Words come from the
+/// fluent self's own lines (model-written), and every line is written fresh. Sentence cards were in the first cut and came out the
 /// same day (founder): a card is the learner's transcript plus a fix, and a
 /// misheard app name ("나와나는" → "나와 나는") had been "corrected" into a
 /// different sentence, which the quiz then marked as the right answer.
@@ -77,8 +88,8 @@ enum QuickQuizEngine {
         async let stockTask = QuickQuizStock.available(appState: appState,
                                                        grammar: size, expressions: size)
         let words = await wordItems(appState: appState, rng: &rng)
-        let ownExpressions = expressionItems(appState: appState, rng: &rng)
         let stock = await stockTask
+        let ownExpressions = stock.own
 
         // The learner's own first, each kind its share; then the level.
         let ownWords = words.filter { $0.isOwn }
@@ -106,12 +117,22 @@ enum QuickQuizEngine {
     // MARK: - Kinds
 
     /// Notebook words first, then level words, each with its meaning. The
-    /// meanings are looked up together, capped at `glossBudget`.
+    /// meanings are looked up together, capped at `glossBudget`. A notebook
+    /// word below the learner's level, or one put off in the deck, is not the
+    /// quiz's; a word the graded list can't place keeps its seat.
     private static func wordItems(appState: AppState, rng: inout WeeklyTestRandom) async -> [QuickQuizItem] {
         let vocab = VocabStore.shared
         let language = appState.targetLanguage
         let native = appState.nativeLanguage
-        let studying = vocab.studying.filter { WeeklyTestEngine.isInTargetScript($0) }
+        let levelIndex = CEFRLevel.allCases.firstIndex(of: appState.proficiency) ?? 0
+        let studying = vocab.studying.filter { word in
+            guard WeeklyTestEngine.isInTargetScript(word),
+                  vocab.records[word.lowercased()] == nil,
+                  StudyScheduleStore.shared.nextReview(.word, word) == nil else { return false }
+            guard let l = CoreVocabulary.level(of: word),
+                  let i = CEFRLevel.allCases.firstIndex(of: l) else { return true }
+            return i >= levelIndex
+        }
         let own = studying.shuffled(using: &rng)
         let taken = Set(studying.map { $0.lowercased() })
             .union(vocab.records.keys.map { $0.lowercased() })
@@ -165,27 +186,6 @@ enum QuickQuizEngine {
                                      isOwn: ownSet.contains(word.lowercased())))
         }
         return out
-    }
-
-    private static func expressionItems(appState: AppState, rng: inout WeeklyTestRandom) -> [QuickQuizItem] {
-        let sessions = SessionStore.shared.load()
-            .filter { $0.archivedAt == nil && $0.mode == .conversation }
-        // The top of the list is what is being studied now; shuffled within
-        // it so two quizzes in a row don't ask the same three.
-        let toStudy = ExpressionCatalog.toStudy(scenarios: appState.scenarios, sessions: sessions)
-            .filter { WeeklyTestEngine.isInTargetScript($0.text) }
-        let recent = Array(toStudy.prefix(15)).shuffled(using: &rng)
-        guard !recent.isEmpty else { return [] }
-        let openers = Set(sessions.compactMap { s in s.turns.first { $0.role == .fluentSelf }?.id })
-        let fluent = sessions.flatMap { s in
-            s.turns.filter { $0.role == .fluentSelf && !$0.excludedFromScoring && !openers.contains($0.id) }
-                .map { (session: s, turn: $0) }
-        }
-        return WeeklyTestEngine.gapItems(toStudy: recent, sessions: sessions, fluentTurns: fluent,
-                                         allSessions: sessions, openers: openers,
-                                         appState: appState, rng: &rng)
-            .map { QuickQuizItem(kind: .expression, prompt: $0.prompt, answer: $0.answer, options: $0.options,
-                                 isOwn: true) }
     }
 
     // MARK: - Writing back
