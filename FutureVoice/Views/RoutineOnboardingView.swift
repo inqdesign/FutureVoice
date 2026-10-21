@@ -109,6 +109,25 @@ struct RoutineOnboardingView: View {
     private var uiLocale: Locale { Locale(identifier: LanguageCatalog.currentNative) }
 
     var body: some View {
+        // Down to the screen's bottom edge: the grid must cover what is
+        // behind it (the tab bar), and the card sits 7 pt from the edge
+        // like a sheet does, not above the home indicator's safe area.
+        ZStack(alignment: .bottom) {
+            grid
+            // ONE card for the whole builder (founder: two sheets read as
+            // two things) — intro, list, check, done are the same card
+            // changing size. Not a system sheet: a sheet up would stop the
+            // grid from opening a block's editor in the check step. Out of
+            // the way while a block is dragged: it covers the evening hours
+            // the block may be going to.
+            if sheetUp && !(step == .review && dragging) {
+                card.transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .ignoresSafeArea(.container, edges: .bottom)
+    }
+
+    private var grid: some View {
         WeeklyPlanEditor(onboarding: true, onboardingEditing: step == .review, spotlight: spotlight,
                          onDragChange: { d in withAnimation(.easeOut(duration: 0.15)) { dragging = d } })
             .clipShape(RoundedRectangle(cornerRadius: 44 * min(1, shrink * 3), style: .continuous))
@@ -143,17 +162,6 @@ struct RoutineOnboardingView: View {
                 default: break
                 }
                 #endif
-            }
-            .overlay(alignment: .bottom) {
-                // ONE card for the whole builder (founder: two sheets read
-                // as two things) — intro, list, check, done are the same
-                // card changing size. Not a system sheet: a sheet up would
-                // stop the grid from opening a block's editor in the check
-                // step. Out of the way while a block is dragged: it covers
-                // the evening hours the block may be going to.
-                if sheetUp && !(step == .review && dragging) {
-                    card.transition(.move(edge: .bottom).combined(with: .opacity))
-                }
             }
     }
 
