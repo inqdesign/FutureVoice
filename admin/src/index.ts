@@ -185,6 +185,22 @@ async function fetchData(env: Env) {
       return null;
     });
   }
+  // Time in the app and the podcast (2026-10-22): both live in PostHog only.
+  // App time is iOS's Application Opened → Backgrounded pairs (Android sends
+  // no lifecycle events), summed per user per UTC day. Optional.
+  {
+    const uidx = new Map((data.users as { id: string }[]).map((u, i) => [u.id, i]));
+    const keyed = <T extends { u: string }>(rows: T[]) => rows
+      .filter((r) => uidx.has(r.u)).map((r) => ({ ...r, u: uidx.get(r.u) }));
+    (data as any).appTime = await appTimeRows(env).then(keyed).catch((e) => {
+      console.log(`appTime: ${(e as Error).message}`);
+      return null;
+    });
+    (data as any).podcast = await podcastRows(env).then(keyed).catch((e) => {
+      console.log(`podcast: ${(e as Error).message}`);
+      return null;
+    });
+  }
   // Joined through a friend's invite (2026-10-08): the invitee's
   // `referral_invitee` grant names who invited them. A strong subscribe
   // signal — the page marks the name and scores it. Optional.
@@ -513,6 +529,62 @@ async function speechRows(env: Env): Promise<Array<Record<string, any>>> {
     event: String(x[2]),
     seconds: n(x[3]), overall: n(x[4]), accuracy: n(x[5]),
     genre: (x[6] as string) || null, builtIn: b(x[7]), camera: b(x[8]),
+  }));
+}
+
+async function hogql(env: Env, query: string): Promise<unknown[][]> {
+  if (!env.POSTHOG_API_KEY) throw new Error("no_key");
+  const project = env.POSTHOG_PROJECT_ID || "@current";
+  const r = await fetch(`https://eu.posthog.com/api/projects/${project}/query/`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${env.POSTHOG_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ query: { kind: "HogQLQuery", query } }),
+  });
+  if (!r.ok) throw new Error(`posthog ${r.status}`);
+  return ((await r.json()) as { results?: unknown[][] }).results ?? [];
+}
+
+/** Foreground time per user per UTC day, from iOS's Application Opened →
+ *  the very next Application Backgrounded. An Opened followed by another
+ *  Opened (killed, crashed) counts nothing; one stint is capped at an hour,
+ *  so a phone left open on a table can't make a day. */
+async function appTimeRows(env: Env): Promise<Array<{ u: string; day: string; sessions: number; secs: number }>> {
+  const rows = await hogql(env, `
+    with s as (
+      select distinct_id d, event e, timestamp t,
+        leadInFrame(event) over w ne, leadInFrame(timestamp) over w nt
+      from events
+      where event in ('Application Opened', 'Application Backgrounded')
+        and timestamp > now() - interval 60 day
+        and properties.app = 'nawana'
+      window w as (partition by distinct_id order by timestamp rows between current row and 1 following))
+    select lower(d), toString(toDate(t)), count(), sum(least(dateDiff('second', t, nt), 3600))
+    from s
+    where e = 'Application Opened' and ne = 'Application Backgrounded'
+    group by d, toDate(t)
+    limit 50000`);
+  return rows.map((x) => ({ u: String(x[0]), day: String(x[1]), sessions: Number(x[2]), secs: Number(x[3]) }));
+}
+
+/** Every podcast event: a list started, an episode started, an episode
+ *  listened to (sent when the player leaves it, with the seconds heard). */
+async function podcastRows(env: Env): Promise<Array<Record<string, any> & { u: string }>> {
+  const rows = await hogql(env, `
+    select lower(distinct_id), timestamp, event,
+      properties.episode, properties.category, properties.seconds, properties.completed
+    from events
+    where event in ('playlist_started', 'podcast_started', 'podcast_listened')
+      and timestamp > now() - interval 60 day
+      and (properties.app = 'nawana' or properties.product = 'nawana')
+    order by timestamp
+    limit 50000`);
+  const n = (v: unknown) => (v === null || v === "" || v === undefined ? null : Number(v));
+  return rows.map((x) => ({
+    u: String(x[0]),
+    at: new Date(String(x[1]).replace(" ", "T") + (/Z|[+-]\d\d:?\d\d$/.test(String(x[1])) ? "" : "Z")).toISOString(),
+    event: String(x[2]),
+    episode: n(x[3]), category: (x[4] as string) || null, seconds: n(x[5]),
+    completed: x[6] === true || x[6] === 1 || String(x[6]).toLowerCase() === "true",
   }));
 }
 

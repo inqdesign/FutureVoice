@@ -810,6 +810,23 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   <div class="tiles" id="sayAgainTiles"></div>
   <div class="card scroll" style="margin-top:12px"><table id="sayAgainTable"></table></div>
 </section>
+<section data-tab="funnel" hidden id="appTimeSec" data-nav="앱 사용 시간">
+  <h2>앱을 얼마나 켜 두나</h2>
+  <p class="sub">통화만이 아니라 앱이 화면에 떠 있던 시간 전부예요. iOS의 앱 열림(<code>Application Opened</code>)부터
+  바로 다음 백그라운드 전환까지를 한 번으로 셌고, 한 번은 최대 1시간까지만 세요. 안드로이드는 이 이벤트를 안 보내서
+  빠져 있어요. 최근 60일, 하루는 UTC 기준이에요. 왼쪽 아래 토글을 따라요.</p>
+  <div class="tiles" id="appTimeTiles"></div>
+  <div class="card bars" id="appTimeDaily" style="margin-top:12px"></div>
+  <div class="card scroll" style="margin-top:12px"><table id="appTimeTable"></table></div>
+</section>
+<section data-tab="funnel" hidden id="podcastSec" data-nav="팟캐스트">
+  <h2>팟캐스트는 누가 듣나</h2>
+  <p class="sub">듣기 플레이어에서 nawana 팟캐스트를 들은 기록이에요(PostHog만). 한 편 시작(<code>podcast_started</code>),
+  플레이어가 그 편을 떠날 때 들은 시간(<code>podcast_listened</code>), 목록 재생 시작(<code>playlist_started</code>).
+  왼쪽 아래 토글을 따라요.</p>
+  <div class="tiles" id="podcastTiles"></div>
+  <div class="card scroll" style="margin-top:12px"><table id="podcastTable"></table></div>
+</section>
 
 <section data-tab="funnel" hidden>
   <h2>어디서 왔나</h2>
@@ -2108,6 +2125,107 @@ function renderSpeech(users){
         + `<td class="num">${o.n ? `${Math.round(o.sum/o.n)} · ${o.best}` : '—'}</td>`
         + `<td>${[...o.genres].map(esc).join(', ') || '<span class="muted">—</span>'}</td>`
         + `<td class="num">${o.scripts || '—'}</td>`
+        + `<td title="${esc(fmtTs(o.last))}">${ago(o.last)}</td></tr>`; }).join('');
+}
+
+/* ---- 앱 사용 시간 ----------------------------------------------------------
+ * DATA.appTime (index.ts appTimeRows): one row per user per UTC day —
+ * foreground stints and seconds, iOS only. */
+function renderAppTime(users){
+  const tiles = document.getElementById('appTimeTiles'), tbl = document.getElementById('appTimeTable'),
+        daily = document.getElementById('appTimeDaily');
+  if(!tiles) return;
+  if(!DATA.appTime){ tiles.innerHTML='<div class="empty">기록을 못 읽었어요 (Worker 로그의 appTime).</div>'; tbl.innerHTML=''; daily.innerHTML=''; return; }
+  const vis = new Set(users.map(u=>u.idx));
+  const rows = DATA.appTime.filter(r=>vis.has(r.u) && r.secs>0);
+  const by = new Map();
+  for(const r of rows){
+    const o = by.get(r.u) || {u:r.u, days:0, secs:0, sessions:0, secs7:0, days7:0, last:null};
+    o.days++; o.secs += r.secs; o.sessions += r.sessions;
+    if(r.day >= dayAgo(7)){ o.secs7 += r.secs; o.days7++; }
+    if(!o.last || r.day>o.last) o.last = r.day;
+    by.set(r.u, o);
+  }
+  const list = [...by.values()];
+  const med = a => { if(!a.length) return null; const s=[...a].sort((x,y)=>x-y), m=s.length>>1;
+    return s.length%2 ? s[m] : (s[m-1]+s[m])/2; };
+  const perDay = list.map(o=>o.secs/o.days);
+  const active7 = list.filter(o=>o.days7);
+  const allSecs = rows.reduce((a,r)=>a+r.secs,0), allSess = rows.reduce((a,r)=>a+r.sessions,0);
+  const t = [
+    {k:'쓴 사람', v:num(list.length), d:`최근 7일 ${num(active7.length)}명`},
+    {k:'하루 사용 (중간값)', v: list.length ? fmtMin(med(perDay)) : '—', d:'쓴 날 하루에, 한 사람 기준'},
+    {k:'최근 7일 (중간값)', v: active7.length ? fmtMin(med(active7.map(o=>o.secs7))) : '—', d:'그 주에 쓴 사람의 일주일 합계'},
+    {k:'한 번 열면', v: allSess ? fmtMin(allSecs/allSess) : '—', d:`평균 · 연 횟수 ${num(allSess)}`},
+    {k:'합계', v: fmtMin(allSecs), d:'60일'},
+  ];
+  tiles.innerHTML = t.map(x=>`<div class="tile"><div class="k">${x.k}</div>`
+    + `<div class="v">${x.v}</div><div class="d">${x.d}</div></div>`).join('');
+  // Last 14 UTC days: minutes per person who opened the app that day.
+  const days = [...Array(14)].map((_,i)=>dayAgo(13-i));
+  const dayStat = days.map(d=>{ const r = rows.filter(x=>x.day===d);
+    return {d, people:r.length, secs:r.reduce((a,x)=>a+x.secs,0)}; });
+  const max = Math.max(1, ...dayStat.map(x=>x.people ? x.secs/x.people : 0));
+  daily.innerHTML = dayStat.map(x=>{ const per = x.people ? x.secs/x.people : 0;
+    return `<div class="row"><div class="lbl">${fmtDate(x.d)}</div>`
+      + `<div class="track"><div class="fill" style="width:${per/max*100}%"></div></div>`
+      + `<div class="val">${x.people ? `1인 ${fmtMin(per)} · ${x.people}명` : '—'}</div></div>`; }).join('')
+    + '<div class="legend">그날 앱을 연 사람 한 명당 평균 사용 시간 (UTC)</div>';
+  if(!list.length){ tbl.innerHTML='<tr><td class="empty">기록이 없어요.</td></tr>'; return; }
+  list.sort((a,b)=>b.secs7-a.secs7 || b.secs-a.secs);
+  tbl.innerHTML = '<tr><th>사람</th><th class="num">최근 7일</th><th class="num">쓴 날(7일)</th>'
+    + '<th class="num">하루 평균</th><th class="num">60일 합계</th><th class="num">쓴 날</th><th class="num">연 횟수</th><th>마지막</th></tr>'
+    + list.map(o => { const u = DATA.users[o.u];
+      return `<tr><td><b${whoAttr(u)}>${esc(nameOf(u))}</b> ${badge(u)}</td>`
+        + `<td class="num">${o.secs7 ? fmtMin(o.secs7) : '—'}</td><td class="num">${o.days7 || '—'}</td>`
+        + `<td class="num">${fmtMin(o.secs/o.days)}</td><td class="num">${fmtMin(o.secs)}</td>`
+        + `<td class="num">${num(o.days)}</td><td class="num">${num(o.sessions)}</td>`
+        + `<td>${fmtDate(o.last)}</td></tr>`; }).join('');
+}
+/** UTC calendar day n days back, as yyyy-mm-dd — the key appTime rows use. */
+const dayAgo = n => new Date(Date.now() - n*86400000).toISOString().slice(0,10);
+
+/* ---- 팟캐스트 --------------------------------------------------------------
+ * DATA.podcast (index.ts podcastRows): playlist_started · podcast_started ·
+ * podcast_listened, keyed by user index. */
+function renderPodcast(users){
+  const tiles = document.getElementById('podcastTiles'), tbl = document.getElementById('podcastTable');
+  if(!tiles) return;
+  if(!DATA.podcast){ tiles.innerHTML='<div class="empty">기록을 못 읽었어요 (Worker 로그의 podcast).</div>'; tbl.innerHTML=''; return; }
+  const vis = new Set(users.map(u=>u.idx));
+  const rows = DATA.podcast.filter(r=>vis.has(r.u));
+  const week = Date.now() - 7*86400000;
+  const listened = rows.filter(r=>r.event==='podcast_listened'), started = rows.filter(r=>r.event==='podcast_started');
+  const lists = rows.filter(r=>r.event==='playlist_started');
+  const people = s => new Set(s.map(r=>r.u)).size;
+  const secs = listened.reduce((a,r)=>a+(r.seconds||0),0);
+  const done = listened.filter(r=>r.completed).length;
+  const t = [
+    {k:'들은 사람', v:num(people(started.concat(listened))), d:`최근 7일 ${num(people(started.concat(listened).filter(r=>Date.parse(r.at)>=week)))}명 · 플레이어 연 사람 ${num(people(lists))}`, good: people(started)>0},
+    {k:'시작한 편', v:num(started.length), d:`최근 7일 ${num(started.filter(r=>Date.parse(r.at)>=week).length)}편`},
+    {k:'끝까지', v: listened.length ? `${Math.round(done/listened.length*100)}%` : '—', d:`들은 기록 ${num(listened.length)} 중 ${num(done)}`},
+    {k:'들은 시간', v: secs ? fmtMin(secs) : '—', d: listened.length ? `한 편 평균 ${fmtMin(secs/listened.length)}` : ''},
+  ];
+  tiles.innerHTML = t.map(x=>`<div class="tile${x.good?' good':''}"><div class="k">${x.k}</div>`
+    + `<div class="v">${x.v}</div><div class="d">${x.d}</div></div>`).join('');
+  const by = new Map();
+  for(const r of rows){
+    const o = by.get(r.u) || {u:r.u, lists:0, started:0, done:0, secs:0, cats:new Set(), last:null};
+    if(r.event==='playlist_started') o.lists++;
+    else if(r.event==='podcast_started'){ o.started++; if(r.category) o.cats.add(r.category); }
+    else { o.secs += r.seconds||0; if(r.completed) o.done++; if(r.category) o.cats.add(r.category); }
+    if(!o.last || r.at>o.last) o.last = r.at;
+    by.set(r.u, o);
+  }
+  const list = [...by.values()].sort((a,b)=>b.last.localeCompare(a.last));
+  if(!list.length){ tbl.innerHTML='<tr><td class="empty">아직 아무도 안 들었어요.</td></tr>'; return; }
+  tbl.innerHTML = '<tr><th>사람</th><th class="num">플레이어</th><th class="num">시작한 편</th><th class="num">끝까지</th>'
+    + '<th class="num">들은 시간</th><th>분야</th><th>마지막</th></tr>'
+    + list.map(o => { const u = DATA.users[o.u];
+      return `<tr><td><b${whoAttr(u)}>${esc(nameOf(u))}</b> ${badge(u)}</td>`
+        + `<td class="num">${o.lists || '—'}</td><td class="num">${o.started || '—'}</td><td class="num">${o.done || '—'}</td>`
+        + `<td class="num">${o.secs ? fmtMin(o.secs) : '—'}</td>`
+        + `<td>${[...o.cats].map(esc).join(', ') || '<span class="muted">—</span>'}</td>`
         + `<td title="${esc(fmtTs(o.last))}">${ago(o.last)}</td></tr>`; }).join('');
 }
 
@@ -3705,7 +3823,7 @@ function render(){
   renderPeopleTiles(users); renderLangs(users); renderLevels(users); renderTotalsPeriod(); renderTotals(); renderPeople(users);
   renderMoneyTiles(); renderCancelShape(); renderTrials();
   renderPlanUsage(); renderUnitTiles(); renderTiers(); renderGemini();
-  renderSpeech(users); renderProspects(users);
+  renderSpeech(users); renderAppTime(users); renderPodcast(users); renderProspects(users);
   renderBurn(); renderCostMonths(); renderCostTable(); renderFairUse();
 }
 /** Only the width-dependent drawings. Same code path as the first paint, so a
