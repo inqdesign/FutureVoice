@@ -46,8 +46,29 @@ spec.loader.exec_module(probe)
 
 # Monday first, one of the app's own interests a day, written as the app
 # stores them (founder, 2026-10-19: "Monday tech, Tuesday fashion, like that").
+# Founder, 2026-10-22: the listeners are mostly women in their 20s-40s, so
+# Saturday's sports became art (films, series, books, shows) and every pick
+# is made for them (AUDIENCE).
 CATEGORY_BY_WEEKDAY = ["AI / tech", "fashion", "science", "travel",
-                       "music", "sports", "cooking"]
+                       "music", "art", "cooking"]
+
+# What each day means for these listeners. Passed to the search and the pick.
+ANGLE = {
+    "AI / tech": "phones, apps, social media trends, gadgets for everyday life",
+    "fashion": "fashion and beauty: trends, brands, skincare, what people are wearing",
+    "science": "science about the body, health, sleep, food, the mind, animals",
+    "travel": "destinations, trips, hotels, travel trends and tips",
+    "music": "artists, new releases, tours, K-pop and pop culture",
+    "art": "films, TV series, books, exhibitions, celebrities",
+    "cooking": "food, restaurants, recipes, cafes and food trends",
+}
+
+AUDIENCE = (
+    "The listeners are mostly women in their 20s to 40s: working, travelling, some "
+    "raising kids. Pick what THEY would bring up with a friend: everyday life, "
+    "wellbeing, relationships, work life, culture, style, food, places. Not "
+    "business deals, markets, politics or company news. "
+)
 FEED_CAP = 60
 BUCKET = "nawana-shows"
 TODAY = probe.TODAY
@@ -116,7 +137,8 @@ def pooled_topic(LANG, category):
         return None
     system = (
         "Pick the ONE story below that people would most enjoy talking about over coffee "
-        "today. Not one whose core is deaths, violence or a disaster. " + no_ai(category) + "\n"
+        "today. Not one whose core is deaths, violence or a disaster. " + AUDIENCE +
+        no_ai(category) + "\n"
         f'Return JSON: {{ "index": 0, "title": "..." }} (title: a {probe.LANG_NAME[LANG]} '
         "episode title, 8 words or fewer)."
     )
@@ -133,9 +155,9 @@ def searched_topic(LANG, category):
     probe.EPISODES = 1
     research = (
         f"Search the web now: what are the most talked-about news stories about "
-        f"{'technology' if category == 'AI / tech' else category} in "
+        f"{ANGLE.get(category, category)} in "
         f"{probe.REGION[LANG]} today, {TODAY} (last 48 hours)? Give 5, each with 6-8 facts: what "
-        "happened, who, when, key numbers, reactions. " + no_ai(category)
+        "happened, who, when, key numbers, reactions. " + AUDIENCE + no_ai(category)
     )
     for _ in range(3):
         notes, grounding = probe.gemini(None, research, search=True)
@@ -145,7 +167,8 @@ def searched_topic(LANG, category):
         raise RuntimeError("the model never searched; no episode today")
     system = (
         "From the RESEARCH below, pick the ONE story people would most enjoy talking about "
-        "over coffee. Not one whose core is deaths, violence or a disaster. " + no_ai(category) +
+        "over coffee. Not one whose core is deaths, violence or a disaster. " + AUDIENCE +
+        no_ai(category) +
         "Facts only from "
         "the RESEARCH.\n"
         f'Return JSON: {{ "title": "...", "facts": ["...", "..."] }} (title: '
