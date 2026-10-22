@@ -69,6 +69,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import com.roro.futurevoice.ui.brand.IosOutlinedButton as OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import com.roro.futurevoice.ui.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -267,8 +268,8 @@ fun WeekRecapDeck(
         if (r.hasActivity) { add(RecapCard.GRAMMAR); add(RecapCard.WORDS) }
         add(RecapCard.COACH)
         if (isTrial) {
-            add(RecapCard.TRIAL_TEST)
-            if (trialTestCleared) { add(RecapCard.LEVEL); add(RecapCard.ROUTINE) }
+            // The test is offered, never required (2026-10-22, founder).
+            add(RecapCard.TRIAL_TEST); add(RecapCard.LEVEL); add(RecapCard.ROUTINE)
         } else {
             add(RecapCard.TEST)
         }
@@ -474,9 +475,17 @@ fun WeekRecapDeck(
                     card == RecapCard.ROUTINE ->
                         Primary(stringResource(R.string.trial_keep_routine)) { keepRoutine() }
                     trialTestCleared -> Primary(stringResource(R.string.trial_see_level)) { advance() }
-                    t != null && t.answers.isNotEmpty() ->
-                        Primary(stringResource(R.string.wr_continue_test)) { showingTrialTest = true }
-                    else -> Primary(stringResource(R.string.trial_take_test)) { showingTrialTest = true }
+                    else -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        if (t != null && t.answers.isNotEmpty())
+                            Primary(stringResource(R.string.wr_continue_test)) { showingTrialTest = true }
+                        else Primary(stringResource(R.string.trial_take_test)) { showingTrialTest = true }
+                        TextButton(onClick = {
+                            Analytics.capture("trial_test_skipped", emptyMap())
+                            advance()
+                        }, modifier = Modifier.fillMaxWidth().height(48.dp)) {
+                            Text(stringResource(R.string.skip))
+                        }
+                    }
                 }
             } else if (card == RecapCard.TEST) {
                 when (testState) {
@@ -1049,7 +1058,6 @@ private fun TrialTestCard(test: WeeklyTest?, thin: Boolean) {
             Lead(stringResource(R.string.wr_test_in_progress, test.answers.size, test.total))
         else -> {
             Lead(stringResource(R.string.trial_test_body))
-            Secondary(stringResource(R.string.trial_take_then_level))
         }
     }
 }
