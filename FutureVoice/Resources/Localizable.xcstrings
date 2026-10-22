@@ -1918,6 +1918,52 @@
         }
       }
     },
+    "All expressions" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle Wendungen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todas"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toutes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すべての表現"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "모든 표현"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "所有用语"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "所有用語"
+          }
+        }
+      }
+    },
     "Allow Google Drive access to keep syncing" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3027,6 +3073,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "要刪除 Google 雲端硬碟裡的練習紀錄嗎？"
+          }
+        }
+      }
+    },
+    "Did you mean" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meintest du"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Quisiste decir?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu voulais dire"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "もしかして"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "혹시 이건가요?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你是不是要找"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你是不是要找"
           }
         }
       }
@@ -5028,6 +5120,52 @@
         }
       }
     },
+    "Names of people, places and brands don't go on the list." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Namen von Personen, Orten und Marken kommen nicht auf die Liste."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los nombres de personas, lugares y marcas no van en la lista."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les noms de personnes, de lieux et de marques ne vont pas dans la liste."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "人や場所、ブランドの名前はリストに入れられません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "사람, 장소, 브랜드 이름은 목록에 넣을 수 없어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "人名、地名和品牌名称不能加入列表。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "人名、地名和品牌名稱不能加入清單。"
+          }
+        }
+      }
+    },
     "Taken from the talk time above" : {
       "localizations" : {
         "de" : {
@@ -5074,6 +5212,98 @@
         }
       }
     },
+    "That can't go on the list." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das kann nicht auf die Liste."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eso no puede ir en la lista."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ça ne peut pas aller dans la liste."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "これはリストに入れられません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이건 목록에 넣을 수 없어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这个不能加入列表。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這個不能加入清單。"
+          }
+        }
+      }
+    },
+    "That doesn't look like the language you're learning." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das sieht nicht nach der Sprache aus, die du lernst."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eso no parece el idioma que estás aprendiendo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ça ne ressemble pas à la langue que tu apprends."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "学んでいる言語ではないようです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "배우고 있는 언어가 아닌 것 같아요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这看起来不是你在学的语言。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這看起來不是你在學的語言。"
+          }
+        }
+      }
+    },
     "That reads like a rule, not something you'd say. Write the sentence itself." : {
       "localizations" : {
         "de" : {
@@ -5116,6 +5346,98 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "這看起來像規則，不像會說出口的話。請寫下句子本身。"
+          }
+        }
+      }
+    },
+    "That's a single word. Add it under Words." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das ist ein einzelnes Wort. Füg es unter Wörter hinzu."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es una sola palabra. Añádela en Palabras."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "C’est un seul mot. Ajoute-le dans Mots."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1語です。単語に追加してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "한 단어예요. 단어에 추가해 주세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这是一个单词。请加到单词里。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這是一個單字。請加到單字裡。"
+          }
+        }
+      }
+    },
+    "That's more than one word. Add it under Expressions." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das sind mehrere Wörter. Füg es unter Wendungen hinzu."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Son varias palabras. Añádelo en Expresiones."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il y a plusieurs mots. Ajoute-le dans Expressions."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1語ではありません。表現に追加してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "한 단어가 아니에요. 표현에 추가해 주세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这不止一个词。请加到用语里。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這不只一個字。請加到用語裡。"
           }
         }
       }
@@ -5304,6 +5626,98 @@
         }
       }
     },
+    "We couldn't find that expression. Check the spelling, or write it the way people usually say it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Wendung haben wir nicht gefunden. Prüf die Schreibweise oder schreib sie so, wie man sie meistens sagt."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No encontramos esa expresión. Revisa cómo se escribe o ponla como la dice la gente."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On ne trouve pas cette expression. Vérifie l’orthographe, ou écris-la comme on la dit d’habitude."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "その表現が見つかりませんでした。つづりを確認するか、よく使われる形で書いてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그런 표현을 찾지 못했어요. 철자를 확인하거나, 사람들이 흔히 쓰는 형태로 써 주세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "找不到这个用语。请检查拼写，或按大家常说的方式写。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "找不到這個用語。請檢查拼寫，或照大家常說的方式寫。"
+          }
+        }
+      }
+    },
+    "We couldn't find that word. Check the spelling." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieses Wort haben wir nicht gefunden. Prüf die Schreibweise."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No encontramos esa palabra. Revisa cómo se escribe."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On ne trouve pas ce mot. Vérifie l’orthographe."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "その単語が見つかりませんでした。つづりを確認してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그런 단어를 찾지 못했어요. 철자를 확인해 주세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "找不到这个单词，请检查拼写。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "找不到這個單字，請檢查拼寫。"
+          }
+        }
+      }
+    },
     "Write it in either language. It comes with a translation and goes into your review deck." : {
       "localizations" : {
         "de" : {
@@ -5350,48 +5764,48 @@
         }
       }
     },
-    "Write it in either language. Its meanings come with it, like everything else on the list." : {
+    "Write it in either language. One the library doesn't have yet is checked, given a level and added for everyone learning this language." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Schreib es in einer der beiden Sprachen. Die Bedeutung kommt von selbst dazu, wie bei allem anderen auf der Liste."
+            "value" : "Schreib es in einer der beiden Sprachen. Was der Bibliothek noch fehlt, wird geprüft, bekommt ein Niveau und kommt für alle dazu, die diese Sprache lernen."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Escríbelo en cualquiera de los dos idiomas. Su significado aparece solo, como todo lo demás de la lista."
+            "value" : "Escríbelo en cualquiera de los dos idiomas. Si la biblioteca aún no lo tiene, se revisa, recibe un nivel y se suma para todos los que aprenden este idioma."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Écris-le dans l’une ou l’autre langue. Ses sens arrivent avec, comme pour tout le reste de la liste."
+            "value" : "Écris-le dans l’une ou l’autre langue. S’il manque à la bibliothèque, il est vérifié, reçoit un niveau et s’ajoute pour tous ceux qui apprennent cette langue."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "どちらの言語で書いても大丈夫です。意味はリストのほかの項目と同じように付きます。"
+            "value" : "どちらの言語で書いても大丈夫です。ライブラリにまだないものは、確認してレベルを付け、この言語を学ぶみんなのライブラリに加わります。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "어느 언어로 써도 돼요. 뜻은 목록의 다른 것들처럼 알아서 붙어요."
+            "value" : "어느 언어로 써도 돼요. 라이브러리에 아직 없는 건 확인을 거쳐 레벨이 매겨지고, 이 언어를 배우는 모두의 라이브러리에 들어가요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用哪种语言写都可以。意思会像列表里的其他条目一样自动附上。"
+            "value" : "用哪种语言写都可以。词库里还没有的，会先确认、标上级别，再加入所有学这门语言的人的词库。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用哪種語言寫都可以。意思會像清單上的其他項目一樣自動附上。"
+            "value" : "用哪種語言寫都可以。資料庫裡還沒有的，會先確認、標上程度，再加入所有學這個語言的人的資料庫。"
           }
         }
       }

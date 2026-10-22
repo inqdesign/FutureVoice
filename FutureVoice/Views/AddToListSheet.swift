@@ -28,6 +28,10 @@ struct AddToListSheet: View {
     @State private var working = false
     @State private var failed = false
     @State private var refused = false
+    /// The library's "did you mean": what was typed is misspelt.
+    @State private var suggestion: String?
+    /// Why the library refused what was typed (`library-add`'s reason).
+    @State private var rejection: String?
     @FocusState private var focused: Bool
     /// Everything this list already holds (plus, for words, the graded pool),
     /// read once when the sheet opens: what the field searches as they type.
@@ -66,6 +70,8 @@ struct AddToListSheet: View {
                             converted = nil
                             failed = false
                             refused = false
+                            suggestion = nil
+                            rejection = nil
                         }
                 } footer: {
                     Text(footer)
@@ -90,6 +96,27 @@ struct AddToListSheet: View {
                             .font(.system(.title3, design: .rounded, weight: .semibold))
                     } header: {
                         Text(LanguageCatalog.name(appState.targetLanguage, in: appState.nativeLanguage))
+                    }
+                }
+
+                if let suggestion {
+                    Section {
+                        Button {
+                            text = suggestion
+                            add()
+                        } label: {
+                            Label(Self.display(suggestion), systemImage: "arrow.uturn.right")
+                                .font(.system(.title3, design: .rounded, weight: .semibold))
+                        }
+                    } header: {
+                        Text("Did you mean")
+                    }
+                }
+
+                if let rejection {
+                    Section {
+                        Label(rejectionMessage(rejection), systemImage: "exclamationmark.bubble")
+                            .foregroundStyle(.secondary)
                     }
                 }
 
@@ -149,7 +176,7 @@ struct AddToListSheet: View {
     private var footer: String {
         switch kind {
         case .word, .expression:
-            return explain("Write it in either language. Its meanings come with it, like everything else on the list.")
+            return explain("Write it in either language. One the library doesn't have yet is checked, given a level and added for everyone learning this language.")
         case .sentence:
             return explain("Write it in either language. It comes with a translation and goes into your review deck.")
         }
@@ -173,7 +200,10 @@ struct AddToListSheet: View {
             for item in toStudy + WordCatalog.known(store: store) { take(item.text) }
             for entry in CoreVocabulary.entries { take(entry.word) }
         case .expression:
-            for item in ExpressionCatalog.all(scenarios: appState.scenarios, store: store) { take(item.text) }
+            let mine = ExpressionCatalog.all(scenarios: appState.scenarios, store: store)
+            listedKeys = Set(mine.map(\.key))
+            for item in mine { take(item.text) }
+            for term in SharedLibrary.expressions(appState.targetLanguage) { take(term.term) }
         case .sentence:
             for card in DrillStore.shared.load().sorted(by: { $0.createdAt > $1.createdAt }) {
                 take(card.targetPhrase)
@@ -215,7 +245,8 @@ struct AddToListSheet: View {
                     Text(status)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
-                } else if let level = CoreVocabulary.level(of: match.key) {
+                } else if let level = CoreVocabulary.level(of: match.key)
+                            ?? SharedLibrary.expressionLevel(of: match.key, language: appState.targetLanguage) {
                     // A pool word nobody has kept yet: tapping it keeps it.
                     Text(level.rawValue.uppercased())
                         .font(.footnote)
@@ -243,15 +274,18 @@ struct AddToListSheet: View {
             return listedKeys.contains(match.key) ? explain("To study") : nil
         case .expression:
             if store.isStudyingExpression(match.text) { return explain("Studying") }
-            return store.hasUsedExpression(match.text) ? explain("Known") : explain("To study")
+            if store.hasUsedExpression(match.text) { return explain("Known") }
+            // Only in the shared library: tapping it keeps it.
+            return listedKeys.contains(match.key) ? explain("To study") : nil
         case .sentence:
             return explain("Saved")
         }
     }
 
     private func open(_ match: Candidate, onList: Bool) {
-        if kind == .word, !onList {
-            VocabStore.shared.addStudying(match.key)
+        if !onList {
+            if kind == .word { VocabStore.shared.addStudying(match.key) }
+            if kind == .expression { VocabStore.shared.addExpression(match.text) }
         }
         Analytics.capture("own_item_matched", ["kind": kind.rawValue, "added": !onList])
         dismiss()
@@ -296,12 +330,22 @@ struct AddToListSheet: View {
         case .word:
             let key = VocabStore.lookupKey(for: Self.bare(entry))
             guard !key.isEmpty else { return }
-            store.addStudying(key)
-            finish(key)
+            // Already in the library (bundled or shared): nothing to check.
+            if CoreVocabulary.set.contains(key) {
+                store.addStudying(key)
+                finish(key)
+            } else {
+                checkWithLibrary(Self.bare(entry))
+            }
         case .expression:
             let phrase = Self.bare(entry)
-            store.addExpression(phrase)
-            finish(phrase)
+            if listedKeys.contains(phrase)
+                || SharedLibrary.expressionLevel(of: phrase, language: appState.targetLanguage) != nil {
+                store.addExpression(phrase)
+                finish(phrase)
+            } else {
+                checkWithLibrary(phrase)
+            }
         case .sentence:
             working = true
             Task {
@@ -315,6 +359,58 @@ struct AddToListSheet: View {
             }
         }
     }
+
+    /// Something the library doesn't carry: `library-add` reads it once
+    /// (a typo, a made-up word or a name never goes in) and, if it passes,
+    /// it joins the shared library with a level and lands on this list.
+    private func checkWithLibrary(_ entry: String) {
+        working = true
+        Task {
+            let result = await SharedLibrary.add(entry, kind: kind.rawValue,
+                                                 target: appState.targetLanguage,
+                                                 native: appState.nativeLanguage)
+            working = false
+            switch result {
+            case .added(let term):
+                if kind == .word {
+                    VocabStore.shared.addStudying(term.key)
+                    finish(term.key)
+                } else {
+                    VocabStore.shared.addExpression(term.term)
+                    finish(term.key)
+                }
+            case .typo(let s):
+                suggestion = s
+                Analytics.capture("own_item_refused", ["kind": kind.rawValue, "reason": "typo"])
+            case .rejected(let reason):
+                rejection = reason
+                Analytics.capture("own_item_refused", ["kind": kind.rawValue, "reason": reason])
+            case .failed:
+                failed = true
+            }
+        }
+    }
+
+    private func rejectionMessage(_ reason: String) -> String {
+        switch reason {
+        case "proper_name":
+            return explain("Names of people, places and brands don't go on the list.")
+        case "not_target":
+            return explain("That doesn't look like the language you're learning.")
+        case "wrong_kind":
+            return kind == .word
+                ? explain("That's more than one word. Add it under Expressions.")
+                : explain("That's a single word. Add it under Words.")
+        case "offensive":
+            return explain("That can't go on the list.")
+        default:
+            return kind == .word
+                ? explain("We couldn't find that word. Check the spelling.")
+                : explain("We couldn't find that expression. Check the spelling, or write it the way people usually say it.")
+        }
+    }
+
+    static func display(_ s: String) -> String { ExpressionsView.display(s) }
 
     private func finish(_ entry: String) {
         Analytics.capture("own_item_added", ["kind": kind.rawValue,

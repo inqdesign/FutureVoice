@@ -29,7 +29,7 @@ struct ExpressionsView: View {
     /// expression is in exactly one — "to study" is simply everything not yet
     /// marked known, so nothing hides behind a third tab.
     enum Filter: String, CaseIterable, Identifiable {
-        case toStudy, known
+        case toStudy, known, all
         var id: String { rawValue }
         var label: String {
             // Through `explain` — a `String` never sees the locale on its own
@@ -37,8 +37,20 @@ struct ExpressionsView: View {
             switch self {
             case .toStudy: return explain("To study")
             case .known:   return explain("Known")
+            case .all:     return explain("All expressions")
             }
         }
+    }
+
+    /// Your expressions, then the rest of the language's shared library —
+    /// the words page's All lens, for phrases.
+    private func union(_ mine: [ExpressionCatalog.Item]) -> [ExpressionCatalog.Item] {
+        var seen = Set(mine.map(\.key))
+        let library = SharedLibrary.expressions(appState.targetLanguage)
+            .filter { seen.insert($0.key).inserted }
+            .map { ExpressionCatalog.Item(text: $0.term, key: $0.key, origin: .library, at: .distantPast) }
+            .sorted { $0.key < $1.key }
+        return mine + library
     }
 
     /// Every source in one list — phrases you SAID (VocabStore), the ones your
@@ -46,8 +58,9 @@ struct ExpressionsView: View {
     /// They used to be separate worlds: a book could show six expressions that
     /// this page had never heard of, while the daily deck dealt them anyway.
     private var entries: [ExpressionCatalog.Item] {
-        let all = ExpressionCatalog.all(scenarios: appState.scenarios, store: store)
+        let mine = ExpressionCatalog.all(scenarios: appState.scenarios, store: store)
         if !searchQuery.isEmpty {
+            let all = union(mine)
             // Search reads BOTH lenses, whatever is up — the words page's rule.
             let q = searchQuery.lowercased()
             return all.filter { $0.text.lowercased().contains(q) }
@@ -58,8 +71,9 @@ struct ExpressionsView: View {
                 }
         }
         switch filter {
-        case .toStudy: return all.filter { !store.hasUsedExpression($0.text) }
-        case .known:   return all.filter { store.hasUsedExpression($0.text) }
+        case .toStudy: return mine.filter { !store.hasUsedExpression($0.text) }
+        case .known:   return mine.filter { store.hasUsedExpression($0.text) }
+        case .all:     return union(mine)
         }
     }
 
@@ -161,14 +175,14 @@ struct ExpressionsView: View {
 
     private var emptyTitle: String {
         switch filter {
-        case .toStudy: return explain("Nothing to study yet")
-        case .known:   return explain("Nothing marked known")
+        case .toStudy, .all: return explain("Nothing to study yet")
+        case .known:         return explain("Nothing marked known")
         }
     }
     private var emptyMessage: String {
         switch filter {
-        case .toStudy: return explain("Expressions from your calls — yours and your fluent self's — and the ones your watched scenes hand you collect here.")
-        case .known:   return explain("Mark expressions you've got down as known.")
+        case .toStudy, .all: return explain("Expressions from your calls — yours and your fluent self's — and the ones your watched scenes hand you collect here.")
+        case .known:         return explain("Mark expressions you've got down as known.")
         }
     }
 
@@ -247,6 +261,12 @@ struct ExpressionsView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+            case .library:
+                if let level = SharedLibrary.expressionLevel(of: entry.text, language: appState.targetLanguage) {
+                    Text(level.rawValue.uppercased())
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
             case .heard(let title):
                 // Says where it came from AND that it's still unsaid — the
                 // whole difference between this row and a "Used 3 times" one.

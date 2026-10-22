@@ -29,7 +29,20 @@ enum CoreVocabulary {
     private static func pool(for code: String) -> Pool {
         lock.lock(); defer { lock.unlock() }
         if let cached = pools[code] { return cached }
-        let entries = loadEntries(for: code)
+        // The bundled list, then the words learners added to the shared
+        // library (`SharedLibrary`) that it doesn't carry — one pool, every
+        // word with its level. A bundled word keeps the bundled level.
+        let bundled = loadEntries(for: code)
+        let bundledKeys = Set(bundled.map { $0.word.lowercased() })
+        let shared = SharedLibrary.words(code).compactMap { t -> Entry? in
+            guard let level = t.cefr, !bundledKeys.contains(t.key) else { return nil }
+            return Entry(word: t.term, level: level)
+        }
+        let entries = shared.isEmpty ? bundled : (bundled + shared).sorted {
+            levelRank($0.level) != levelRank($1.level)
+                ? levelRank($0.level) < levelRank($1.level)
+                : $0.word < $1.word
+        }
         // Match keys are lowercased so cased headwords (German nouns stay
         // "Haus" for display) still hit the lowercase lemma pipeline.
         let pool = Pool(
@@ -41,6 +54,12 @@ enum CoreVocabulary {
         )
         pools[code] = pool
         return pool
+    }
+
+    /// Rebuild a language's pool on next use — the shared library grew.
+    static func invalidate(_ code: String) {
+        lock.lock(); defer { lock.unlock() }
+        pools[code] = nil
     }
 
     static var entries: [Entry] { current.entries }

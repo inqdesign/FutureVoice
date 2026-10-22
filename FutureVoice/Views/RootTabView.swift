@@ -318,6 +318,11 @@ struct RootTabView: View {
             }
         }
         .onAppear { offerWhatsNew() }
+        // The shared library: words and expressions other learners of this
+        // language added since the last pull (`SharedLibrary`).
+        .task(id: appState.targetLanguage) {
+            await SharedLibrary.refreshIfStale(language: appState.targetLanguage)
+        }
         .sheet(isPresented: $showingWhatsNew) {
             WhatsNewSheet().environmentObject(appState)
         }

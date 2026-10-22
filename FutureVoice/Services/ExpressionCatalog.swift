@@ -48,6 +48,9 @@ enum ExpressionCatalog {
             /// The fluent self said it in a talk, named here — material the
             /// learner has heard in their own voice but not yet produced.
             case heard(String)
+            /// In the shared library of the language (`SharedLibrary`) and
+            /// nowhere in this learner's own material yet.
+            case library
         }
 
         var isFromScene: Bool {
