@@ -130,75 +130,107 @@ struct QuickQuizView: View {
         .padding(.horizontal, 32)
     }
 
+    /// The question sits in the middle of the space above, the choices at
+    /// the bottom where the thumb is, and Next keeps one slot under them
+    /// (2026-10-22, founder: the first layout stacked everything at the top
+    /// and left the lower half empty).
     private var question: some View {
         let item = items[index]
+        let waiting = chosen != nil && item.note != nil
         return VStack(spacing: 0) {
             ProgressView(value: Double(index), total: Double(max(items.count, 1)))
+                .tint(.accentColor)
                 .padding(.horizontal, 20)
-            ScrollView {
-                VStack(spacing: 20) {
-                    face
-                        .padding(.top, 16)
-                    Text(heading(item))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    if !item.prompt.isEmpty {
-                        Text(item.prompt)
-                            .font(item.kind == .word ? .title2.weight(.semibold) : .title3)
-                            .multilineTextAlignment(.center)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    VStack(spacing: 10) {
-                        ForEach(item.options, id: \.self) { option in
-                            optionButton(option, item: item)
+                .padding(.top, 4)
+            GeometryReader { geo in
+                ScrollView {
+                    VStack(spacing: 0) {
+                        Spacer(minLength: 16)
+                        VStack(spacing: 14) {
+                            face
+                            Text(heading(item))
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(.secondary)
+                            if !item.prompt.isEmpty {
+                                Text(item.prompt)
+                                    .font(item.kind == .word ? .title.weight(.semibold) : .title2.weight(.semibold))
+                                    .multilineTextAlignment(.center)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .padding(.top, 4)
+                            }
+                            // A note (why, or what it means) waits to be read.
+                            if chosen != nil, let note = item.note {
+                                Text(note)
+                                    .font(.callout)
+                                    .foregroundStyle(.secondary)
+                                    .multilineTextAlignment(.center)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .padding(.top, 6)
+                                    .transition(.opacity)
+                            }
                         }
+                        .padding(.horizontal, 28)
+                        Spacer(minLength: 24)
+                        VStack(spacing: 10) {
+                            ForEach(item.options, id: \.self) { option in
+                                optionButton(option, item: item)
+                            }
+                        }
+                        .padding(.horizontal, 20)
                     }
-                    .padding(.top, 4)
-                    // A note (why, or what it means) waits to be read.
-                    if chosen != nil, let note = item.note {
-                        Text(note)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                    .frame(minHeight: geo.size.height)
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 24)
+                .scrollBounceBehavior(.basedOnSize)
             }
-            // Next sits in ONE place at the bottom, whatever the question's
-            // length (founder, 2026-10-19: under the note it moved with the
-            // content). Its room is kept while it is hidden, so the question
-            // never shifts when it appears.
-            let waiting = chosen != nil && item.note != nil
-            Button("Next") { next() }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .opacity(waiting ? 1 : 0)
-                .disabled(!waiting)
-                .padding(.top, 8)
-                .padding(.bottom, 20)
+            // Next keeps its room while hidden, so nothing shifts when it
+            // appears (founder, 2026-10-19).
+            Button {
+                next()
+            } label: {
+                Text("Next").frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .padding(.horizontal, 20)
+            .opacity(waiting ? 1 : 0)
+            .disabled(!waiting)
+            .padding(.top, 12)
+            .padding(.bottom, 12)
         }
+        .animation(.easeOut(duration: 0.2), value: chosen)
     }
 
+    /// Neutral until answered; then the answer turns green, a wrong pick red,
+    /// and the rest step back.
     private func optionButton(_ option: String, item: QuickQuizItem) -> some View {
         let isAnswer = option == item.answer
+        let isPicked = option == chosen
         let tint: Color = {
-            guard let chosen else { return .accentColor }
+            guard chosen != nil else { return .gray }
             if isAnswer { return .green }
-            return option == chosen ? .red : .secondary
+            return isPicked ? .red : .gray
         }()
         return Button { pick(option, item: item) } label: {
-            Text(option)
-                .font(.body)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, minHeight: 32)
+            HStack(spacing: 10) {
+                Text(option)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(chosen == nil || isAnswer || isPicked ? Color.primary : Color.secondary)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+                if chosen != nil, isAnswer || isPicked {
+                    Image(systemName: isAnswer ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        .foregroundStyle(tint)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 30, alignment: .leading)
+            .padding(.horizontal, 6)
         }
         .buttonStyle(.bordered)
         .buttonBorderShape(.roundedRectangle(radius: 14))
         .controlSize(.large)
         .tint(tint)
+        .opacity(chosen == nil || isAnswer || isPicked ? 1 : 0.55)
         .allowsHitTesting(chosen == nil)
     }
 
@@ -268,6 +300,18 @@ struct QuickQuizView: View {
     // MARK: - Flow
 
     private func start() async {
+        #if DEBUG
+        // Capture harness: `-quizsample 1` deals fixed questions (no network),
+        // `-quizindex N` opens on one, `-quizanswer 1` answers it right.
+        if UserDefaults.standard.bool(forKey: "quizsample") {
+            items = Self.sampleItems
+            index = min(max(UserDefaults.standard.integer(forKey: "quizindex"), 0), items.count - 1)
+            setMood(.waiting)
+            stage = .asking
+            if UserDefaults.standard.bool(forKey: "quizanswer") { pick(items[index].answer, item: items[index]) }
+            return
+        }
+        #endif
         if let paused = QuickQuizEngine.takeUnfinished(language: appState.targetLanguage) {
             items = paused.items
             index = paused.index
@@ -338,6 +382,20 @@ struct QuickQuizView: View {
         setMood(.waiting)
         stage = .asking
     }
+
+    #if DEBUG
+    static let sampleItems: [QuickQuizItem] = [
+        QuickQuizItem(kind: .expression, prompt: "You look so quiet today. \(WeeklyTestEngine.blankMark)?",
+                      answer: "What's on your mind",
+                      options: ["How does that sound", "What's on your mind", "Where are you headed", "What brings you here"],
+                      note: "What's on your mind — 무슨 생각해?", isOwn: true),
+        QuickQuizItem(kind: .word, prompt: "어떤 일을 하기 싫어서 미루다", answer: "procrastinate",
+                      options: ["procrastinate", "negotiate", "hesitate", "appreciate"]),
+        QuickQuizItem(kind: .grammar, prompt: "I \(WeeklyTestEngine.blankMark) here since 2020.",
+                      answer: "have worked", options: ["work", "have worked", "am working", "worked"],
+                      heading: "현재완료", note: "since로 지금까지 이어지는 일은 현재완료예요."),
+    ]
+    #endif
 
     private func setMood(_ m: WeeklyTestCharacter.Mood) {
         mood = m

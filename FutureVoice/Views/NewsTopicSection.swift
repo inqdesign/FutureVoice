@@ -17,6 +17,9 @@ struct DiscoverSection: View {
     let onPickScenario: (Scenario) -> Void
     let onAllScenarios: () -> Void
     let onBuildScenario: () -> Void
+    /// The settings page, opened from the HOST's header (the page's nav bar),
+    /// not from the chip row: the row is for switching ideas.
+    @Binding var showingSettings: Bool
 
     @EnvironmentObject private var appState: AppState
 
@@ -38,8 +41,13 @@ struct DiscoverSection: View {
     /// error: with a list on screen it means "these may be yesterday's",
     /// with none it means "tap to retry".
     @State private var newsFetchFailed = false
-    /// The one settings page for the whole row (`DiscoverSettingsSheet`).
-    @State private var showingSettings = false
+    /// Which way the last switch went, so a swipe slides the new list in
+    /// from the side it came from.
+    @State private var forward = true
+    /// A sideways drag is under way (or just ended). Every card's action
+    /// checks it: a horizontal drag doesn't cancel the Button under the
+    /// finger, so without it the swipe also opened the card it started on.
+    @State private var swiping = false
     /// Bumped when settings close, so the row re-reads its chips.
     @State private var settingsVersion = 0
 
@@ -63,14 +71,45 @@ struct DiscoverSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             header
-            switch tab {
-            case .news:      newsContent
-            case .scenarios: scenariosContent
-            case .exam:      examContent
-            case .study, .work, .interview: fieldContent(tab)
-            default:         startersContent(tab.starters ?? StarterSituation.all)
+            Group {
+                switch tab {
+                case .news:      newsContent
+                case .scenarios: scenariosContent
+                case .exam:      examContent
+                case .study, .work, .interview: fieldContent(tab)
+                default:         startersContent(tab.starters ?? StarterSituation.all)
+                }
             }
+            // Tall even when the chip has one row: the drag below a short
+            // list hit nothing of ours, so it became the system's back swipe
+            // and closed the page instead of going to the previous chip.
+            .frame(maxWidth: .infinity, minHeight: 440, alignment: .topLeading)
+            .id(tab)
+            .transition(.asymmetric(
+                insertion: .move(edge: forward ? .trailing : .leading).combined(with: .opacity),
+                removal: .opacity))
+            .contentShape(Rectangle())
+            // Sideways = the next or previous chip. Simultaneous so the page
+            // still scrolls and the cards still tap; only a clearly
+            // horizontal drag switches.
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 12)
+                    .onChanged { v in
+                        let dx = v.translation.width, dy = v.translation.height
+                        if !swiping, abs(dx) > 12, abs(dx) > abs(dy) { swiping = true }
+                    }
+                    .onEnded { v in
+                        let dx = v.translation.width, dy = v.translation.height
+                        if abs(dx) > 60, abs(dx) > abs(dy) * 1.5 { step(dx < 0 ? 1 : -1) }
+                        // Held past the release, which is when the Button fires.
+                        Task {
+                            try? await Task.sleep(for: .milliseconds(300))
+                            swiping = false
+                        }
+                    }
+            )
         }
+        .clipped()
         .sheet(isPresented: $showingSettings, onDismiss: settingsClosed) {
             DiscoverSettingsSheet()
                 .environmentObject(appState)
@@ -115,6 +154,22 @@ struct DiscoverSection: View {
         }
     }
 
+    /// Select a chip; `forward` follows its place in the row.
+    private func select(_ t: DiscoverChip) {
+        guard t != tab else { return }
+        let from = chips.firstIndex(of: tab) ?? 0, to = chips.firstIndex(of: t) ?? 0
+        forward = to > from
+        withAnimation(.easeOut(duration: 0.22)) { tab = t }
+    }
+
+    /// One chip over, by swipe. No wrap-around at either end.
+    private func step(_ delta: Int) {
+        guard let i = chips.firstIndex(of: tab) else { return }
+        let j = i + delta
+        guard chips.indices.contains(j) else { return }
+        select(chips[j])
+    }
+
     // MARK: - Header (chips + per-tab accessories)
 
     private var header: some View {
@@ -125,9 +180,19 @@ struct DiscoverSection: View {
                 // Clipped BEFORE the buttons, and faded at that edge so the
                 // cut reads as "slide for more" rather than a chip broken in
                 // half. Unclipped, the chips ran under the buttons.
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) { ForEach(chips) { chip($0) } }
-                        .padding(.trailing, 16)
+                // The row runs to the screen's LEFT edge, with the 20 pt inset
+                // as a content margin: padded from outside, a scrolled chip was
+                // cut off hard 20 pt into the screen.
+                ScrollViewReader { proxy in
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) { ForEach(chips) { chip($0).id($0) } }
+                            .padding(.trailing, 16)
+                    }
+                    .contentMargins(.leading, 20, for: .scrollContent)
+                    // A swipe can land on a chip that is off the row's edge.
+                    .onChange(of: tab) { _, t in
+                        withAnimation(.easeOut(duration: 0.22)) { proxy.scrollTo(t, anchor: .center) }
+                    }
                 }
                 .frame(maxWidth: .infinity)
                 .mask(
@@ -171,25 +236,15 @@ struct DiscoverSection: View {
                     }
                     .disabled(loadingNews)
                     .accessibilityLabel("Refresh stories")
-                } else if tab == .scenarios {
-                    Button(action: onBuildScenario) {
-                        Image(systemName: "plus")
-                    }
-                    .accessibilityLabel("Build a scenario")
                 }
-                // One settings button whatever chip is showing — the chips,
-                // the exam and the interests are one page.
-                Button { showingSettings = true } label: {
-                    Image(systemName: "slider.horizontal.3")
-                }
-                .accessibilityLabel("Talk settings")
             }
         }
-        .padding(.horizontal, 20)
+        .padding(.leading, chips.count > 3 ? 0 : 20)
+        .padding(.trailing, 20)
     }
 
     private func chip(_ t: DiscoverChip) -> some View {
-        Button { withAnimation(.easeOut(duration: 0.15)) { tab = t } } label: {
+        Button { select(t) } label: {
             Text(t.label)
                 .font(.subheadline.weight(.medium))
                 .padding(.horizontal, 14).padding(.vertical, 8)
@@ -213,20 +268,20 @@ struct DiscoverSection: View {
         HStack(spacing: 12) {
             ZStack {
                 Circle().fill(Color.accentColor.opacity(0.15))
-                    .frame(width: 36, height: 36)
+                    .frame(width: 42, height: 42)
                 icon()
                     .foregroundStyle(.tint)
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.subheadline.weight(.medium))
+                    .font(.body.weight(.semibold))
                     .foregroundStyle(.primary)
-                    .lineLimit(2)
+                    .lineLimit(3)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
                 if let caption, !caption.isEmpty {
                     Text(caption)
-                        .font(.caption)
+                        .font(.body)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
@@ -241,7 +296,7 @@ struct DiscoverSection: View {
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(.tertiary)
         }
-        .padding(14)
+        .padding(.horizontal, 16).padding(.vertical, 16)
         .background(RoundedRectangle(cornerRadius: 18, style: .continuous)
             .fill(Color(.secondarySystemGroupedBackground)))
         .contentShape(Rectangle())
@@ -270,9 +325,9 @@ struct DiscoverSection: View {
     @ViewBuilder
     private var newsContent: some View {
         if interests.isEmpty {
-            Button { showingSettings = true } label: {
+            Button { if swiping { return }; showingSettings = true } label: {
                 Label("Add interests", systemImage: "plus.circle")
-                    .font(.subheadline)
+                    .font(.body)
             }
             .padding(.horizontal, 20)
         } else if newsTopics.isEmpty {
@@ -285,22 +340,22 @@ struct DiscoverSection: View {
             } else {
                 // Auto-load happens on open; this is the retry path when
                 // that failed or returned nothing.
-                Button {
+                Button { if swiping { return };
                     Task { await fetchNews() }
                 } label: {
                     Label("Load stories", systemImage: "newspaper")
-                        .font(.subheadline)
+                        .font(.body)
                 }
                 .padding(.horizontal, 20)
             }
         } else {
             list {
                 ForEach(newsTopics) { item in
-                    Button { onPickNews(item) } label: {
+                    Button { if swiping { return }; onPickNews(item) } label: {
                         listCard(title: item.title,
                                  caption: item.category?.capitalized) {
                             Image(systemName: Self.categoryIcon(item.category))
-                                .font(.subheadline)
+                                .font(.body)
                         }
                     }
                     .buttonStyle(.plain)
@@ -326,10 +381,10 @@ struct DiscoverSection: View {
         let shown = (0..<min(Self.examShown, all.count)).map { all[(start + $0) % all.count] }
         return list {
             ForEach(shown) { topic in
-                Button { onPickExam(topic, exam) } label: {
+                Button { if swiping { return }; onPickExam(topic, exam) } label: {
                     listCard(title: topic.title, caption: "\(exam.name) · \(topic.part)") {
                         Image(systemName: "graduationcap.fill")
-                            .font(.subheadline)
+                            .font(.body)
                     }
                 }
                 .buttonStyle(.plain)
@@ -354,9 +409,9 @@ struct DiscoverSection: View {
         VStack(alignment: .leading, spacing: 10) {
             if fieldContext(chip) == nil {
                 list {
-                    Button { showingSettings = true } label: {
+                    Button { if swiping { return }; showingSettings = true } label: {
                         listCard(title: Self.askLine(chip), caption: nil) {
-                            Image(systemName: "square.and.pencil").font(.subheadline)
+                            Image(systemName: "square.and.pencil").font(.body)
                         }
                     }
                     .buttonStyle(.plain)
@@ -364,22 +419,22 @@ struct DiscoverSection: View {
             } else if let pool = fieldTopics[chip], !pool.isEmpty {
                 list {
                     ForEach(shownField(chip, pool)) { t in
-                        Button {
+                        Button { if swiping { return };
                             onPickTopic(SuggestedTopic(
                                 title: t.title,
                                 blurb: PurposeTopicEngine.launchBlurb(t, chip: chip, details: details)))
                         } label: {
                             listCard(title: t.title, caption: nil) {
-                                Image(systemName: Self.fieldIcon(chip)).font(.subheadline)
+                                Image(systemName: Self.fieldIcon(chip)).font(.body)
                             }
                         }
                         .buttonStyle(.plain)
                     }
                 }
             } else if failedTopics.contains(chip) {
-                Button { Task { await loadFieldTopics(chip, fresh: true) } } label: {
+                Button { if swiping { return }; Task { await loadFieldTopics(chip, fresh: true) } } label: {
                     Label("Couldn't write topics — try again", systemImage: "arrow.clockwise")
-                        .font(.subheadline)
+                        .font(.body)
                 }
                 .padding(.horizontal, 20)
             } else {
@@ -451,11 +506,16 @@ struct DiscoverSection: View {
     @ViewBuilder
     private var scenariosContent: some View {
         if scenarios.isEmpty {
-            Button(action: onBuildScenario) {
-                Label("Build your first scenario", systemImage: "plus")
-                    .font(.subheadline)
+            list {
+                Button { if swiping { return }; onBuildScenario() } label: {
+                    listCard(title: chrome("Build your first scenario"),
+                             caption: explain("Describe a situation and practice it in a call")) {
+                        Image(systemName: "plus")
+                            .font(.body.weight(.semibold))
+                    }
+                }
+                .buttonStyle(.plain)
             }
-            .padding(.horizontal, 20)
         } else {
             ownScenarios
         }
@@ -470,7 +530,7 @@ struct DiscoverSection: View {
             list {
                 ForEach(starters) { starter in
                     let existing = appState.scenarios.first { $0.starterId == starter.id }
-                    Button {
+                    Button { if swiping { return };
                         onPickScenario(starter.scenario(in: appState.scenarios,
                                                         language: appState.targetLanguage))
                     } label: {
@@ -478,7 +538,7 @@ struct DiscoverSection: View {
                                  caption: starter.showsRole ? chrome("with \(starter.role)") : nil,
                                  done: existing?.lastUsedAt != nil) {
                             Image(systemName: starter.icon)
-                                .font(.subheadline)
+                                .font(.body)
                         }
                     }
                     .buttonStyle(.plain)
@@ -490,6 +550,16 @@ struct DiscoverSection: View {
     private var ownScenarios: some View {
         Group {
             list {
+                // Making one leads the list, as the same card as the empty
+                // state's — it was a bare "+" at the end of the chip row.
+                Button { if swiping { return }; onBuildScenario() } label: {
+                    listCard(title: chrome("New scenario"),
+                             caption: explain("Describe a situation and practice it in a call")) {
+                        Image(systemName: "plus")
+                            .font(.body.weight(.semibold))
+                    }
+                }
+                .buttonStyle(.plain)
                 ForEach(scenarios.prefix(5)) { s in
                     let name = personaName(s)
                     let partner: String? = {
@@ -497,16 +567,16 @@ struct DiscoverSection: View {
                         let r = s.role.trimmingCharacters(in: .whitespaces)
                         return r.isEmpty ? nil : r
                     }()
-                    Button { onPickScenario(s) } label: {
+                    Button { if swiping { return }; onPickScenario(s) } label: {
                         // The tidy summary as the title, NOT the raw prompt.
                         listCard(title: s.cardTitle,
                                  caption: partner.map { chrome("with \($0)") }) {
                             if let name {
                                 Text(Books.initials(name))
-                                    .font(.caption.weight(.semibold))
+                                    .font(.subheadline.weight(.semibold))
                             } else {
                                 Image(systemName: s.categoryIcon ?? Books.roleIcon(for: s.role))
-                                    .font(.subheadline)
+                                    .font(.body)
                             }
                         }
                     }
@@ -521,11 +591,11 @@ struct DiscoverSection: View {
                     }
                 }
                 // List tail — the door to the full collection.
-                Button(action: onAllScenarios) {
+                Button { if swiping { return }; onAllScenarios() } label: {
                     listCard(title: chrome("All scenarios"),
                              caption: "\(scenarios.count)") {
                         Image(systemName: "rectangle.stack")
-                            .font(.subheadline)
+                            .font(.body)
                     }
                 }
                 .buttonStyle(.plain)
