@@ -67,7 +67,10 @@ AUDIENCE = (
     "The listeners are mostly women in their 20s to 40s: working, travelling, some "
     "raising kids. Pick what THEY would bring up with a friend: everyday life, "
     "wellbeing, relationships, work life, culture, style, food, places. Not "
-    "business deals, markets, politics or company news. "
+    "business deals, markets, politics or company news. They live all over the "
+    "world, many in Korea, so pick a story that makes sense without knowing the "
+    "region: not one whose point is a local name (a pope, a minister, a TV host, a "
+    "league) only people there would recognise. "
 )
 FEED_CAP = 60
 BUCKET = "nawana-shows"
