@@ -618,44 +618,27 @@ private fun DrillCardFace(
 ) {
     val onCard = Color.White
     val onCardSecondary = Color.White.copy(alpha = 0.72f)
+    Box(modifier) {
     Column(
-        modifier
+        Modifier
+            .fillMaxSize()
             .heightIn(min = 240.dp)
             // The accent IS the card, so it needs its own lift off the page.
             .shadow(10.dp, ContinuousShape(22.dp),
                 ambientColor = MaterialTheme.colorScheme.primary,
                 spotColor = MaterialTheme.colorScheme.primary)
             .background(MaterialTheme.colorScheme.primary, ContinuousShape(22.dp))
-            .padding(24.dp),
+            .padding(start = 24.dp, top = 24.dp, bottom = 24.dp,
+                // Room for the corner menu, so a long line never runs under it.
+                end = if (onMisheard != null) 44.dp else 24.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         if (card.sourcePhrase.isNotBlank()) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 // The LABEL "You said" — `you_said` is the quoting sentence
                 // with a %s, which printed its placeholder here.
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(R.string.you_said_f105ab), style = MaterialTheme.typography.bodyMedium,
-                        color = onCardSecondary, modifier = Modifier.weight(1f))
-                    if (onMisheard != null) {
-                        var menu by remember { mutableStateOf(false) }
-                        Box {
-                            Icon(Icons.Filled.MoreHoriz,
-                                contentDescription = stringResource(R.string.misheard_exclude_from_scoring),
-                                tint = onCardSecondary,
-                                modifier = Modifier.size(28.dp).clip(CircleShape)
-                                    .clickable { menu = true }.padding(2.dp))
-                            com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = menu,
-                                onDismissRequest = { menu = false }) {
-                                com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
-                                    text = { Text(stringResource(R.string.misheard_exclude_from_scoring),
-                                        color = MaterialTheme.colorScheme.error) },
-                                    leadingIcon = { Icon(Icons.Filled.MicOff, contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.error) },
-                                    onClick = { menu = false; onMisheard() })
-                            }
-                        }
-                    }
-                }
+                Text(stringResource(R.string.you_said_f105ab), style = MaterialTheme.typography.bodyMedium,
+                    color = onCardSecondary)
                 // Cards minted before the fragment trim carry the WHOLE turn,
                 // so trim at render too — a minute-long transcript struck
                 // through reads as "everything you said was wrong".
@@ -712,6 +695,26 @@ private fun DrillCardFace(
                     style = MaterialTheme.typography.bodyLarge, color = onCard)
             }
         }
+    }
+    // Pinned to the card's corner (iOS `misheardMenu`), not beside a line:
+    // it stays in one place whatever the sentence's length.
+    if (onMisheard != null) {
+        var menu by remember { mutableStateOf(false) }
+        Box(Modifier.align(Alignment.TopEnd).padding(6.dp)) {
+            Icon(Icons.Filled.MoreHoriz,
+                contentDescription = stringResource(R.string.misheard_exclude_from_scoring),
+                tint = onCardSecondary,
+                modifier = Modifier.size(44.dp).clip(CircleShape)
+                    .clickable { menu = true }.padding(10.dp))
+            com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = menu,
+                onDismissRequest = { menu = false }) {
+                com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
+                    text = { Text(stringResource(R.string.misheard_exclude_from_scoring)) },
+                    leadingIcon = { Icon(Icons.Filled.MicOff, contentDescription = null) },
+                    onClick = { menu = false; onMisheard() })
+            }
+        }
+    }
     }
 }
 
