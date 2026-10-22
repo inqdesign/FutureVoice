@@ -4100,8 +4100,13 @@ function sessionsOf(events){
       // The store's free trial on the paywall: opened on it (pitch/timeline
       // steps only exist then), tapped, and how the purchase ended.
       if(a.k==='pay'){
-        const ev = r.action.slice(6), trial = r.ptrial==='1' || r.ttrial==='1'
-          || ((ev==='paywall_step' || ev==='paywall_shown') && (r.step==='pitch' || r.step==='timeline'));
+        // A subscriber's paywall is never a trial: StoreKit can still call a
+        // second Apple ID eligible while this account already pays. Only
+        // paywall_shown says who opened it, so it marks the whole session.
+        const ev = r.action.slice(6);
+        if(ev==='paywall_shown' && r.psub==='1') cur.paySub = true;
+        const trial = !cur.paySub && (r.ptrial==='1' || r.ttrial==='1'
+          || ((ev==='paywall_step' || ev==='paywall_shown') && (r.step==='pitch' || r.step==='timeline')));
         if(trial){
           const p = cur.payTrial = cur.payTrial || {};
           if(ev==='paywall_purchase_tapped') p.tapped = r.plan || true;

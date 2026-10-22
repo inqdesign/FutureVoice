@@ -120,7 +120,11 @@ struct PaywallView: View {
     /// free credits to have "already spent", and Apple already returns false
     /// once a trial has been used. False means: skip the pitch, open on plans,
     /// and say "Subscribe" instead of "Try for free".
-    private var showsTrial: Bool { store.trialEligible }
+    ///
+    /// Never for an account that already pays (2026-10-22): eligibility is
+    /// the Apple ID's, so a phone signed into a second Apple ID read as
+    /// eligible and a Plus subscriber was shown "Start my free trial".
+    private var showsTrial: Bool { store.trialEligible && !isSubscriber }
 
     /// Already entitled — paid or in trial.
     private var isSubscriber: Bool { account.isEntitled }

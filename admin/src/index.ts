@@ -367,7 +367,7 @@ async function ledgerSince(env: Env, since: string, maxRows: number): Promise<un
       // (`trial_eligible` on paywall_shown, `trial` on a purchase), which
       // step it moved to, and how a purchase ended.
       + `ptrial:properties->>trial_eligible,ttrial:properties->>trial,step:properties->>step,`
-      + `outcome:properties->>outcome,plan:properties->>plan`
+      + `outcome:properties->>outcome,plan:properties->>plan,psub:properties->>subscriber`
       + `&created_at=gte.${encodeURIComponent(since)}&user_id=not.is.null&order=created_at.asc`;
     const r = await fetch(url, {
       headers: {
