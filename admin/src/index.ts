@@ -362,7 +362,12 @@ async function ledgerSince(env: Env, since: string, maxRows: number): Promise<un
     const url = `${env.SUPABASE_URL}/rest/v1/client_events`
       + `?select=u:user_id,at:created_at,event,language:properties->>language,`
       + `err:properties->>error,code:properties->>code,auto:properties->>auto,`
-      + `build:properties->>build,version:properties->>version`
+      + `build:properties->>build,version:properties->>version,`
+      // The paywall's own facts: whether it opened on the store's free trial
+      // (`trial_eligible` on paywall_shown, `trial` on a purchase), which
+      // step it moved to, and how a purchase ended.
+      + `ptrial:properties->>trial_eligible,ttrial:properties->>trial,step:properties->>step,`
+      + `outcome:properties->>outcome,plan:properties->>plan`
       + `&created_at=gte.${encodeURIComponent(since)}&user_id=not.is.null&order=created_at.asc`;
     const r = await fetch(url, {
       headers: {

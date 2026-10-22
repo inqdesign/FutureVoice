@@ -4097,6 +4097,17 @@ function sessionsOf(events){
       }
       if(a.k==='trial'){ (cur.trial = cur.trial || new Set()).add(r.action.slice(12));
         if(r.reached) cur.trialReach = `${r.reached}/${r.cards || '?'}`; }
+      // The store's free trial on the paywall: opened on it (pitch/timeline
+      // steps only exist then), tapped, and how the purchase ended.
+      if(a.k==='pay'){
+        const ev = r.action.slice(6), trial = r.ptrial==='1' || r.ttrial==='1'
+          || ((ev==='paywall_step' || ev==='paywall_shown') && (r.step==='pitch' || r.step==='timeline'));
+        if(trial){
+          const p = cur.payTrial = cur.payTrial || {};
+          if(ev==='paywall_purchase_tapped') p.tapped = r.plan || true;
+          if(ev==='paywall_purchase_result') p.outcome = r.outcome;
+        }
+      }
       if(a.k==='voicemail'){ if(r.action==='tts') cur.vm++; continue; }
       if(a.k==='call'){ cur.turns++; continue; }
       // Count voiced lines, not the Gemini call that wrote the pool.
@@ -4297,6 +4308,11 @@ function renderLive(){
                  test_thin:'테스트 못 만듦', report_routine:'루틴 눌러 요금제로',
                  report_closed: e.trialReach ? `카드 ${e.trialReach}까지 보고 닫음` : '닫음'};
       bits.push([...e.trial].map(x => T[x] || x).join(' · '));
+    }
+    if(e.payTrial){
+      const p = e.payTrial, O = {purchased:'체험 시작함', cancelled:'Apple 창에서 취소', failed:'결제 실패'};
+      const plan = typeof p.tapped === 'string' ? ` (${esc(p.tapped)})` : '';
+      bits.push(`<b>🎁 무료 체험 화면 봄</b>${p.tapped ? ` · 체험 버튼 누름${plan}` : ''}${p.outcome ? ` · ${O[p.outcome] || esc(p.outcome)}` : ''}`);
     }
     if(e.kinds && e.kinds.listen) bits.push(e.playing ? `팟캐스트 듣는 중${e.listenSecs ? ` · 들은 시간 ${fmtMin(e.listenSecs)}` : ''}`
       : e.episodes || e.listenSecs ? `팟캐스트 ${e.episodes ? `${e.episodes}편` : ''}${e.listenSecs ? ` ${fmtMin(e.listenSecs)}` : ''}`.trim() : '듣기 플레이어만 열어봄');
