@@ -109,6 +109,9 @@ final class StoreKitService: ObservableObject {
     /// Light row. Keep the formula in step with the migration; a trialer who
     /// learns the size only when it is spent leaves (2026-09-25).
     var trialTalkMinutes: Int? {
+        // The server's setting when there is one (`trial_talk_seconds`), the
+        // same number the meter enforces; otherwise the old 7/30 rule.
+        if let seconds = BillingConfig.trialTalkSeconds { return seconds / 60 }
         let light = options.filter { $0.plan.tier == "light" }.compactMap(\.plan.monthly_seconds)
         guard let seconds = light.min() else { return nil }
         return seconds * 7 / 30 / 60

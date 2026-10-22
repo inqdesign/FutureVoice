@@ -6,6 +6,8 @@
     scripts/billing-switch.py free 0                  # no free minutes: the first paid tap meets the plans
     scripts/billing-switch.py offer-at onboarding     # offer the trial once, right after onboarding
     scripts/billing-switch.py offer-at after_free     # offer the plans when the free minutes run out (default)
+    scripts/billing-switch.py trial-minutes 60        # a trial may talk 60 minutes in all
+    scripts/billing-switch.py trial-minutes default   # back to Light's month x 7/30 (35 min)
     scripts/billing-switch.py trial on 1w             # a free trial on every plan on sale (3d|1w|2w|1m)
     scripts/billing-switch.py trial off               # no trial anywhere
 
@@ -18,6 +20,12 @@ What each switch is:
                     foreground (`BillingConfig`, iOS and Android). A change to
                     `free` never touches existing accounts — topping them up is
                     a separate decision, done the way 20260926100000 did it.
+  trial-minutes     `billing_config.trial_talk_seconds` (20261022120000): what a
+                    trialing account may talk in its WHOLE trial, whatever the
+                    trial's length. The meter, the app's usage figure, the
+                    voiceover's wall and the admin console all read it through
+                    `trial_talk_seconds()`. Builds after 1.2.2 print it on the
+                    paywall; older ones still print 35 there (they understate).
   trial             the STORES' switch, not ours. App Store: an introductory
                     free-trial offer on every subscription on sale, in every
                     territory it is sold in. Google Play: the offer called
@@ -35,7 +43,7 @@ Facts to keep in mind when flipping:
   * A trialing account is metered at Light's month × 7/30 whatever the trial's
     length (`consume_metered_seconds`).
   * Apple takes from minutes to an hour to show a new or removed offer.
-  * Only builds that read `billing_config` (iOS 1.2.1+, Android same version)
+  * Only builds that read `billing_config` (iOS and Android after 1.2.2)
     follow `free` in their ring and `offer-at` at all; older builds keep the
     grant they were shipped with on screen, while the SERVER grant changes for
     everyone at once.
@@ -241,6 +249,12 @@ def show():
         print(f"free minutes for new accounts: {r['free_talk_seconds'] // 60} "
               f"({r['free_talk_seconds']} s)")
         print(f"trial offered: {r['trial_offer_at']}   (set {r['updated_at']})")
+        try:
+            t = sql("select trial_talk_seconds from billing_config")[0]["trial_talk_seconds"]
+            print("trial talk time: " + (f"{t // 60} min ({t} s)" if t is not None
+                                         else "default, Light's month x 7/30 (35 min)"))
+        except RuntimeError:
+            print("trial talk time: default (migration 20261022120000 not applied)")
     else:
         print("billing_config: no row (migration 20261021120000 not applied?)")
 
@@ -295,6 +309,26 @@ def set_offer_at(where: str, send: bool):
     print(("SEND: " if send else "dry run: ") + q)
     if where == "onboarding":
         print("  shown only while a store trial is on (scripts/billing-switch.py trial on 1w)")
+    if send:
+        sql(q)
+        show()
+
+
+def set_trial_minutes(minutes: str, send: bool):
+    if minutes in ("default", "null"):
+        value = "null"
+        said = "back to Light's month x 7/30 (35 min)"
+    else:
+        try:
+            m = int(minutes)
+        except ValueError:
+            sys.exit(f"not a number of minutes: {minutes}")
+        if not 0 <= m <= 600:
+            sys.exit("trial minutes must be 0–600")
+        value, said = str(m * 60), f"{m} min for the whole trial"
+    q = f"update billing_config set trial_talk_seconds = {value}, updated_at = now() where id"
+    print(("SEND: " if send else "dry run: ") + q)
+    print(f"  every trialing account, running trials included: {said}")
     if send:
         sql(q)
         show()
@@ -376,6 +410,8 @@ def main():
         show()
     elif args[0] == "free" and len(args) == 2:
         set_free(args[1], send)
+    elif args[0] == "trial-minutes" and len(args) == 2:
+        set_trial_minutes(args[1], send)
     elif args[0] == "offer-at" and len(args) == 2:
         set_offer_at(args[1], send)
     elif args[0] == "trial" and len(args) >= 2:

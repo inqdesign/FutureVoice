@@ -31,6 +31,15 @@ enum BillingConfig {
         UserDefaults.standard.string(forKey: offerKey).flatMap(TrialOfferAt.init) ?? .afterFree
     }
 
+    private static let trialKey = "futurevoice.billing.trialTalkSeconds"
+
+    /// What a trial may talk in all, when the server sets it
+    /// (20261022120000). Nil = the old rule, Light's month × 7/30, which the
+    /// paywall computes from the catalog itself.
+    static var trialTalkSeconds: Int? {
+        UserDefaults.standard.object(forKey: trialKey) as? Int
+    }
+
     // MARK: - The trial, offered right after onboarding
 
     private static let offeredKey = "futurevoice.billing.onboardingTrialOffered"
@@ -81,6 +90,22 @@ enum BillingConfig {
         // An unknown value from a newer server is dropped, not guessed at.
         if TrialOfferAt(rawValue: row.trial_offer_at) != nil {
             UserDefaults.standard.set(row.trial_offer_at, forKey: offerKey)
+        }
+
+        // Its own query: a column the database hasn't got yet fails the whole
+        // select, and must cost this number, not the two above.
+        struct TrialRow: Decodable { let trial_talk_seconds: Int? }
+        if let trial: [TrialRow] = try? await SupabaseProvider.shared
+            .from("billing_config")
+            .select("trial_talk_seconds")
+            .limit(1)
+            .execute()
+            .value, let first = trial.first {
+            if let seconds = first.trial_talk_seconds, (0...36_000).contains(seconds) {
+                UserDefaults.standard.set(seconds, forKey: trialKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: trialKey)
+            }
         }
     }
 }
