@@ -588,6 +588,36 @@ async function podcastRows(env: Env): Promise<Array<Record<string, any> & { u: s
   }));
 }
 
+/** The live map's PostHog-only activity for the last 24 h, in the ledger's
+ *  row shape (`event:<name>`): the free-minutes report (`trial_*`) and the
+ *  podcast player — neither asks the server for anything, so without these
+ *  both read as "앱 보는 중". Held 60 s per isolate like the presence read. */
+let liveExtraCache: { at: number; rows: unknown[] } | null = null;
+async function liveExtraEvents(env: Env): Promise<unknown[]> {
+  if (liveExtraCache && Date.now() - liveExtraCache.at < 60_000) return liveExtraCache.rows;
+  const rows = await hogql(env, `
+    select lower(distinct_id), timestamp, event, properties.seconds,
+      properties.reached, properties.cards
+    from events
+    where timestamp > now() - interval 24 hour
+      and (startsWith(event, 'trial_') or event in ('podcast_started', 'podcast_listened', 'playlist_started'))
+      and (properties.app = 'nawana' or properties.product = 'nawana')
+    order by timestamp
+    limit 5000`).then((rs) => rs.map((x) => ({
+      u: String(x[0]),
+      at: new Date(String(x[1]).replace(" ", "T") + (/Z|[+-]\d\d:?\d\d$/.test(String(x[1])) ? "" : "Z")).toISOString(),
+      action: `event:${x[2]}`, purpose: null,
+      seconds: x[3] === null || x[3] === undefined || x[3] === "" ? null : Number(x[3]),
+      reached: x[4] == null || x[4] === "" ? null : Number(x[4]),
+      cards: x[5] == null || x[5] === "" ? null : Number(x[5]),
+    }))).catch((e) => {
+      console.log(`liveExtra: ${(e as Error).message}`);
+      return liveExtraCache?.rows ?? [];
+    });
+  liveExtraCache = { at: Date.now(), rows };
+  return rows;
+}
+
 // ---- PostHog: where people are, and whether the app is open --------------
 // The iOS SDK (app = nawana) and Android (product = nawana, plain capture API)
 // both get a GeoIP city on every event (PostHog's default), and iOS also
@@ -840,10 +870,15 @@ export default {
       const live = await r.json() as Record<string, unknown>;
       // The timeline needs every row of the day, not admin_live's last 12 per
       // person — a call alone writes a talk tick every 15 s.
-      const events = await dayLedger(env).catch((e) => {
-        console.log(`dayLedger: ${(e as Error).message}`);
-        return [];
-      });
+      const [ledger, extra] = await Promise.all([
+        dayLedger(env).catch((e) => {
+          console.log(`dayLedger: ${(e as Error).message}`);
+          return [] as unknown[];
+        }),
+        liveExtraEvents(env),
+      ]);
+      const events = [...ledger, ...extra].sort((a, b) =>
+        String((a as { at: string }).at).localeCompare(String((b as { at: string }).at)));
       return new Response(JSON.stringify({ ...live, events, ph: ph.rows, phError: ph.error ?? null }), {
         headers: { "Content-Type": "application/json; charset=utf-8", ...PRIVATE_HEADERS },
       });

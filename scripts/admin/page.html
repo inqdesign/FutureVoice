@@ -3867,6 +3867,11 @@ function activityOf(r){
   // The Speech tab: one coach review per finished take, a written script.
   if(p==='speech-review' || p==='speech-script' || a.startsWith('event:speech')) return {k:'speech', e:'🎤', t:'스피치'};
   if(a==='event:say_again_run' || a==='event:say_again_start') return {k:'sayagain', e:'🔁', t:'다시 말하기'};
+  // PostHog-only (index.ts liveExtraEvents): the free-minutes report and the
+  // podcast player ask the server for nothing, so the ledger never sees them.
+  if(a.startsWith('event:trial_')) return {k:'trial', e:'📋', t:'20분 리포트'};
+  if(a==='event:podcast_started' || a==='event:podcast_listened' || a==='event:playlist_started')
+    return {k:'listen', e:'🎧', t:'팟캐스트'};
   if(p==='drill' || p==='enrichment') return {k:'review', e:'🃏', t:'복습 카드'};
   if(p==='library') return {k:'review', e:'📚', t:'표현 듣기'};
   if(p==='topics') return {k:'browse', e:'📰', t:'주제 고르기'};
@@ -4041,6 +4046,7 @@ function failOf(r){
 }
 /** Activity colours: one per kind, shared by the hour strip and the rows. */
 const CAT_COLOR = {talk:'var(--s1)', try:'var(--seq2)', scene:'var(--s2)', shadow:'var(--s3)', speech:'var(--seq3)', sayagain:'var(--s3)', review:'var(--warn)',
+  trial:'var(--good)', listen:'#2fa7c4',
   voice:'#8a5cd6', browse:'var(--baseline)', prep:'var(--seq1)', pay:'var(--seq3)', app:'var(--baseline)'};
 const CAT_ORDER = ['talk','scene','shadow','speech','sayagain','review','voice','browse','app'];
 
@@ -4056,13 +4062,15 @@ const CAT_ORDER = ['talk','scene','shadow','speech','sayagain','review','voice',
  *      a voice clone they are the onboarding greeting, alone they are a call
  *      that never got going ("통화 시도");
  *    - talk minutes are the metered ticks, the same figure billing uses. */
-const KIND_RANK = ['talk','scene','shadow','speech','sayagain','review','voice','browse','try','prep','pay','app'];
+const KIND_RANK = ['talk','trial','scene','shadow','speech','sayagain','listen','review','voice','browse','try','prep','pay','app'];
 const KIND_META = {
   talk:{e:'📞', t:'통화'}, scene:{e:'🎬', t:'장면'}, shadow:{e:'🎙️', t:'쉐도잉'}, speech:{e:'🎤', t:'스피치'}, sayagain:{e:'🔁', t:'다시 말하기'},
+  trial:{e:'📋', t:'20분 리포트'}, listen:{e:'🎧', t:'팟캐스트'},
   review:{e:'🃏', t:'복습'}, voice:{e:'🧬', t:'목소리 만들기'}, browse:{e:'📰', t:'둘러보기'},
   try:{e:'📞', t:'통화 시도 · 과금 0초'}, prep:{e:'👋', t:'통화 준비만'}, pay:{e:'💳', t:'요금제 화면'},
   app:{e:'📱', t:'앱 열어봄'},
 };
+const LISTEN_HOLD = 15*60e3;
 function sessionsOf(events){
   const byUser = new Map();
   for(const r of events){ if(!byUser.has(r.u)) byUser.set(r.u, []); byUser.get(r.u).push(r); }
@@ -4082,6 +4090,13 @@ function sessionsOf(events){
       const fail = failOf(r); if(fail){ cur.fails.push(fail); if(a.k==='app') continue; }
       if(r.language && !cur.lang) cur.lang = r.language;
       if(a.k==='wrap'){ cur.wrapped = true; continue; }
+      if(a.k==='listen'){
+        if(r.action==='event:podcast_listened'){ cur.listenSecs = (cur.listenSecs||0) + (+r.seconds||0); cur.playingAt = null; }
+        else cur.playingAt = t;
+        if(r.action==='event:podcast_started') cur.episodes = (cur.episodes||0) + 1;
+      }
+      if(a.k==='trial'){ (cur.trial = cur.trial || new Set()).add(r.action.slice(12));
+        if(r.reached) cur.trialReach = `${r.reached}/${r.cards || '?'}`; }
       if(a.k==='voicemail'){ if(r.action==='tts') cur.vm++; continue; }
       if(a.k==='call'){ cur.turns++; continue; }
       // Count voiced lines, not the Gemini call that wrote the pool.
@@ -4090,6 +4105,10 @@ function sessionsOf(events){
     }
   }
   for(const x of out){
+    // The player sends nothing while an episode plays — only when it leaves
+    // it (podcast_listened). An episode begun and not yet left is still being
+    // heard, for up to LISTEN_HOLD after its start.
+    if(x.playingAt){ x.end = Math.max(x.end, Math.min(Date.now(), x.playingAt + LISTEN_HOLD)); x.playing = Date.now() - x.playingAt < LISTEN_HOLD; }
     if(!x.kinds.talk && x.turns && !x.kinds.voice && !x.kinds.speech) x.kinds.try = x.turns;
     if(!x.kinds.talk && !x.kinds.try && !x.kinds.voice && x.prep) x.kinds.prep = x.prep;
     x.fails = [...new Set(x.fails)];
@@ -4251,6 +4270,8 @@ function renderLive(){
       const lang = LANG_KO[e.lang] || LANG_KO[person(e.u).target] || '';
       return `${lang ? lang+'로 ' : ''}${isNow(e)?'대화 중':'대화'}`;
     }
+    if(e.k==='trial') return `20분 리포트${isNow(e) ? ' 보는 중' : ''}`;
+    if(e.k==='listen') return e.playing ? '팟캐스트 듣는 중' : '팟캐스트';
     return KIND_META[e.k].t + (isNow(e) && !['voice','try','prep','pay','app'].includes(e.k) ? ' 중' : '');
   };
   const emojiOf = e => KIND_META[e.k].e;
@@ -4271,6 +4292,14 @@ function renderLive(){
     // Outside a call, a wrap-up row is the app re-writing tomorrow's call on
     // launch — it only says the app was opened, which the label already does.
     if(e.wrapped && e.k==='talk') bits.push('정리까지');
+    if(e.trial){
+      const T = {report_opened:'리포트 열어봄', report_link:'알림 눌러서 들어옴', test_skipped:'테스트 건너뜀',
+                 test_thin:'테스트 못 만듦', report_routine:'루틴 눌러 요금제로',
+                 report_closed: e.trialReach ? `카드 ${e.trialReach}까지 보고 닫음` : '닫음'};
+      bits.push([...e.trial].map(x => T[x] || x).join(' · '));
+    }
+    if(e.kinds && e.kinds.listen) bits.push(e.playing ? `팟캐스트 듣는 중${e.listenSecs ? ` · 들은 시간 ${fmtMin(e.listenSecs)}` : ''}`
+      : e.episodes || e.listenSecs ? `팟캐스트 ${e.episodes ? `${e.episodes}편` : ''}${e.listenSecs ? ` ${fmtMin(e.listenSecs)}` : ''}`.trim() : '듣기 플레이어만 열어봄');
     return bits.join(' · ');
   };
   const chips = e => (e.others||[]).map(k=>`<span class="kchip" style="--cat:${CAT_COLOR[k]||'var(--baseline)'}">${KIND_META[k].e} ${KIND_META[k].t}</span>`).join('');
