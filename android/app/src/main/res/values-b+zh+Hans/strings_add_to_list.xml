@@ -7,9 +7,18 @@
     <string name="add_own_word_placeholder">单词</string>
     <string name="add_own_expression_placeholder">用语</string>
     <string name="add_own_sentence_placeholder">句子</string>
-    <string name="add_own_term_footer">用哪种语言写都可以。意思会像列表里的其他条目一样自动附上。</string>
     <string name="add_own_sentence_footer">用哪种语言写都可以。会附上翻译，并放进你的复习卡片。</string>
     <string name="add_own_lookup_failed">连不上词典，请再试一次。</string>
     <string name="add_own_reads_like_rule">这看起来像规则，不像会说出口的话。请写下句子本身。</string>
     <string name="add_own_already_there">已经有了</string>
+    <string name="all_expressions">所有用语</string>
+    <string name="add_own_did_you_mean">你是不是要找</string>
+    <string name="add_own_term_footer_library">用哪种语言写都可以。词库里还没有的，会先确认、标上级别，再加入所有学这门语言的人的词库。</string>
+    <string name="add_own_no_names">人名、地名和品牌名称不能加入列表。</string>
+    <string name="add_own_not_target">这看起来不是你在学的语言。</string>
+    <string name="add_own_more_than_one_word">这不止一个词。请加到用语里。</string>
+    <string name="add_own_single_word">这是一个单词。请加到单词里。</string>
+    <string name="add_own_cannot_go">这个不能加入列表。</string>
+    <string name="add_own_word_not_found">找不到这个单词，请检查拼写。</string>
+    <string name="add_own_expression_not_found">找不到这个用语。请检查拼写，或按大家常说的方式写。</string>
 </resources>

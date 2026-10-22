@@ -18,6 +18,7 @@ class FutureVoiceApplication : Application() {
         InstallSalt.init(this)
         com.roro.futurevoice.data.DebugBilling.init(this)
         CoreVocabulary.init(this)
+        com.roro.futurevoice.data.SharedLibrary.init(this)
         com.roro.futurevoice.data.WordClass.init(this)
         com.roro.futurevoice.data.SpanishMorph.init(this)
         // A Japanese learner's dictionary: loaded if the pack is installed,

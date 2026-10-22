@@ -7,9 +7,18 @@
     <string name="add_own_word_placeholder">Ein Wort</string>
     <string name="add_own_expression_placeholder">Eine Wendung</string>
     <string name="add_own_sentence_placeholder">Ein Satz</string>
-    <string name="add_own_term_footer">Schreib es in einer der beiden Sprachen. Die Bedeutung kommt von selbst dazu, wie bei allem anderen auf der Liste.</string>
     <string name="add_own_sentence_footer">Schreib ihn in einer der beiden Sprachen. Er kommt mit Übersetzung und landet in deinem Wiederholungsstapel.</string>
     <string name="add_own_lookup_failed">Das Wörterbuch ist gerade nicht erreichbar. Versuch es noch mal.</string>
     <string name="add_own_reads_like_rule">Das klingt nach einer Regel, nicht nach etwas, das man sagt. Schreib den Satz selbst.</string>
     <string name="add_own_already_there">Schon da</string>
+    <string name="all_expressions">Alle Wendungen</string>
+    <string name="add_own_did_you_mean">Meintest du</string>
+    <string name="add_own_term_footer_library">Schreib es in einer der beiden Sprachen. Was der Bibliothek noch fehlt, wird geprüft, bekommt ein Niveau und kommt für alle dazu, die diese Sprache lernen.</string>
+    <string name="add_own_no_names">Namen von Personen, Orten und Marken kommen nicht auf die Liste.</string>
+    <string name="add_own_not_target">Das sieht nicht nach der Sprache aus, die du lernst.</string>
+    <string name="add_own_more_than_one_word">Das sind mehrere Wörter. Füg es unter Wendungen hinzu.</string>
+    <string name="add_own_single_word">Das ist ein einzelnes Wort. Füg es unter Wörter hinzu.</string>
+    <string name="add_own_cannot_go">Das kann nicht auf die Liste.</string>
+    <string name="add_own_word_not_found">Dieses Wort haben wir nicht gefunden. Prüf die Schreibweise.</string>
+    <string name="add_own_expression_not_found">Diese Wendung haben wir nicht gefunden. Prüf die Schreibweise oder schreib sie so, wie man sie meistens sagt.</string>
 </resources>

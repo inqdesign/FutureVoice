@@ -286,6 +286,12 @@ fun RootScreen() {
     LaunchedEffect(state.signedIn, state.isAnonymous, state.persona, state.targetLanguage) {
         if (state.signedIn && !state.isAnonymous) app.syncPublicPersona(withPhoto = true)
     }
+    // The shared library: words and expressions other learners of this
+    // language added since the last pull (iOS RootTabView, SharedLibrary).
+    LaunchedEffect(state.signedIn, state.targetLanguage) {
+        if (state.signedIn) com.roro.futurevoice.data.SharedLibrary.refreshIfStale(
+            com.roro.futurevoice.data.AuthRepository(), state.targetLanguage)
+    }
     val localActivity = androidx.compose.ui.platform.LocalContext.current as? android.app.Activity
     var showPeople by remember { mutableStateOf(false) }
     /** The finished-books page (iOS "Finished"), opened from Practice's header seal. */

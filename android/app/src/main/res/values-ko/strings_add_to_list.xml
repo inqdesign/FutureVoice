@@ -7,9 +7,18 @@
     <string name="add_own_word_placeholder">단어</string>
     <string name="add_own_expression_placeholder">표현</string>
     <string name="add_own_sentence_placeholder">문장</string>
-    <string name="add_own_term_footer">어느 언어로 써도 돼요. 뜻은 목록의 다른 것들처럼 알아서 붙어요.</string>
     <string name="add_own_sentence_footer">어느 언어로 써도 돼요. 번역이 함께 붙고, 복습 카드에 들어가요.</string>
     <string name="add_own_lookup_failed">사전을 불러오지 못했어요. 다시 해 보세요.</string>
     <string name="add_own_reads_like_rule">말하는 문장이 아니라 규칙처럼 보여요. 실제로 할 말을 써 주세요.</string>
     <string name="add_own_already_there">이미 있어요</string>
+    <string name="all_expressions">모든 표현</string>
+    <string name="add_own_did_you_mean">혹시 이건가요?</string>
+    <string name="add_own_term_footer_library">어느 언어로 써도 돼요. 라이브러리에 아직 없는 건 확인을 거쳐 레벨이 매겨지고, 이 언어를 배우는 모두의 라이브러리에 들어가요.</string>
+    <string name="add_own_no_names">사람, 장소, 브랜드 이름은 목록에 넣을 수 없어요.</string>
+    <string name="add_own_not_target">배우고 있는 언어가 아닌 것 같아요.</string>
+    <string name="add_own_more_than_one_word">한 단어가 아니에요. 표현에 추가해 주세요.</string>
+    <string name="add_own_single_word">한 단어예요. 단어에 추가해 주세요.</string>
+    <string name="add_own_cannot_go">이건 목록에 넣을 수 없어요.</string>
+    <string name="add_own_word_not_found">그런 단어를 찾지 못했어요. 철자를 확인해 주세요.</string>
+    <string name="add_own_expression_not_found">그런 표현을 찾지 못했어요. 철자를 확인하거나, 사람들이 흔히 쓰는 형태로 써 주세요.</string>
 </resources>

@@ -83,8 +83,21 @@ object CoreVocabulary {
                     }
                 }
             }
+            // The words learners added to the shared library that the list
+            // doesn't carry — one pool, every word with its level. A listed
+            // word keeps the list's level (iOS, 2026-10-22).
+            for (t in SharedLibrary.words(language)) {
+                val level = t.cefr ?: continue
+                if (map.putIfAbsent(t.key, level) == null) spelled.putIfAbsent(t.key, t.term)
+            }
             Pool(map, readings, spelled)
         }
+    }
+
+    /** Rebuild a language's pool on next use — the shared library grew. */
+    fun invalidate(language: String) {
+        synchronized(pools) { pools.remove(language) }
+        VocabLemmas.clearMemos()
     }
 
     /** Every headword graded [level], spelled as the list spells it, sorted

@@ -358,9 +358,8 @@ private fun LibraryPage(kind: LibraryKind, language: String,
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                val lenses = if (kind == LibraryKind.WORDS) Lens.entries
-                else listOf(Lens.TO_STUDY, Lens.KNOWN)
-                com.roro.futurevoice.ui.brand.IosSegmented(lenses.map { lensLabel(it) }, lenses.indexOf(lens),
+                val lenses = Lens.entries
+                com.roro.futurevoice.ui.brand.IosSegmented(lenses.map { lensLabel(it, kind) }, lenses.indexOf(lens),
                     { lens = lenses[it] }, Modifier.weight(1f))
                 if (searchable) {
                     Box {
@@ -462,6 +461,7 @@ private fun LibraryPage(kind: LibraryKind, language: String,
                         status = when {
                             row.key in toStudy -> if (row.kept) R.string.studying else R.string.to_study
                             row.known || row.used -> R.string.known
+                            row.from == From.Pool -> null
                             kind == LibraryKind.EXPRESSIONS -> R.string.to_study
                             else -> null
                         },
@@ -609,17 +609,23 @@ private suspend fun loadExpressions(context: Context, language: String): Materia
             level = null,
         )
     }
-    return Material(toStudy = rows.filter { !it.known }, known = rows.filter { it.known })
+    // The rest of the language's shared library (iOS `SharedLibrary`): the
+    // All lens and whole-list search, as the core word list is for words.
+    val mine = rows.map { it.key }.toSet()
+    val pool = com.roro.futurevoice.data.SharedLibrary.expressions(language)
+        .filter { it.key !in mine }
+        .map { LibraryRowData(it.term, it.key, kept = false, known = false, from = From.Pool, level = it.cefr) }
+    return Material(toStudy = rows.filter { !it.known }, known = rows.filter { it.known }, pool = pool)
 }
 
 // ── Pieces ──
 
 @Composable
-private fun lensLabel(lens: Lens): String = stringResource(
+private fun lensLabel(lens: Lens, kind: LibraryKind): String = stringResource(
     when (lens) {
         Lens.TO_STUDY -> R.string.to_study
         Lens.KNOWN -> R.string.known
-        Lens.ALL -> R.string.all_words
+        Lens.ALL -> if (kind == LibraryKind.WORDS) R.string.all_words else R.string.all_expressions
     }
 )
 

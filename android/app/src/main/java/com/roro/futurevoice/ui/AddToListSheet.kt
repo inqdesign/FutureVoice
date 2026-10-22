@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import com.roro.futurevoice.R
 import com.roro.futurevoice.core.Analytics
 import com.roro.futurevoice.data.DrillStore
+import com.roro.futurevoice.data.SharedLibrary
 import com.roro.futurevoice.data.TextScript
 import com.roro.futurevoice.data.VocabLemmas
 import com.roro.futurevoice.data.VocabStore
@@ -84,6 +85,10 @@ fun AddToListSheet(
     var working by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
     var refused by remember { mutableStateOf(false) }
+    /** The library's "did you mean": what was typed is misspelt. */
+    var suggestion by remember { mutableStateOf<String?>(null) }
+    /** Why the library refused what was typed (`library-add`'s reason). */
+    var rejection by remember { mutableStateOf<String?>(null) }
     val focus = remember { FocusRequester() }
     val lore = remember { com.roro.futurevoice.net.WordLore(com.roro.futurevoice.data.AuthRepository()) }
     val meanings = remember { androidx.compose.runtime.mutableStateMapOf<String, String>() }
@@ -106,8 +111,9 @@ fun AddToListSheet(
 
     fun openExisting(match: AddToListCandidate) {
         scope.launch {
-            if (kind == AddToListKind.WORD && match.status == null) {
-                VocabStore.shared(context).addStudying(match.key, language)
+            if (match.status == null) {
+                if (kind == AddToListKind.WORD) VocabStore.shared(context).addStudying(match.key, language)
+                if (kind == AddToListKind.EXPRESSION) VocabStore.shared(context).addExpression(match.text, language)
             }
             Analytics.capture("own_item_matched", mapOf("kind" to kind.raw, "added" to (match.status == null)))
             onDismiss()
@@ -121,6 +127,36 @@ fun AddToListSheet(
         onAdded(entry)
     }
 
+    /**
+     * Something the library doesn't carry: `library-add` reads it once (a
+     * typo, a made-up word or a name never goes in) and, if it passes, it
+     * joins the shared library with a level and lands on this list.
+     */
+    suspend fun checkWithLibrary(entry: String) {
+        val vocab = VocabStore.shared(context)
+        when (val r = SharedLibrary.add(com.roro.futurevoice.data.AuthRepository(), entry,
+            kind.raw, language, nativeLanguage)) {
+            is SharedLibrary.AddResult.Added -> {
+                working = false
+                if (kind == AddToListKind.WORD) {
+                    vocab.addStudying(r.term.key, language)
+                } else {
+                    vocab.addExpression(r.term.term, language)
+                }
+                finish(r.term.key)
+            }
+            is SharedLibrary.AddResult.Typo -> {
+                working = false; suggestion = r.suggestion
+                Analytics.capture("own_item_refused", mapOf("kind" to kind.raw, "reason" to "typo"))
+            }
+            is SharedLibrary.AddResult.Rejected -> {
+                working = false; rejection = r.reason
+                Analytics.capture("own_item_refused", mapOf("kind" to kind.raw, "reason" to r.reason))
+            }
+            SharedLibrary.AddResult.Failed -> { working = false; failed = true }
+        }
+    }
+
     fun commit(entry: String) {
         working = true
         scope.launch {
@@ -128,16 +164,22 @@ fun AddToListSheet(
             when (kind) {
                 AddToListKind.WORD -> {
                     val key = VocabLemmas.lemma(bareEntry(entry), language)
-                    working = false
-                    if (key.isEmpty()) return@launch
-                    vocab.addStudying(key, language)
-                    finish(key)
+                    if (key.isEmpty()) { working = false; return@launch }
+                    // Already in the library (bundled or shared): nothing to check.
+                    if (key in com.roro.futurevoice.data.CoreVocabulary.set(language)) {
+                        vocab.addStudying(key, language)
+                        working = false
+                        finish(key)
+                    } else checkWithLibrary(bareEntry(entry))
                 }
                 AddToListKind.EXPRESSION -> {
                     val phrase = bareEntry(entry)
-                    vocab.addExpression(phrase, language)
-                    working = false
-                    finish(phrase)
+                    val listed = candidates.any { it.key == phrase && it.status != null }
+                    if (listed || SharedLibrary.expressionLevel(phrase, language) != null) {
+                        vocab.addExpression(phrase, language)
+                        working = false
+                        finish(phrase)
+                    } else checkWithLibrary(phrase)
                 }
                 AddToListKind.SENTENCE -> {
                     // The translation is the card's gloss, the line a sentence
@@ -196,7 +238,10 @@ fun AddToListSheet(
 
             OutlinedTextField(
                 value = text,
-                onValueChange = { text = it; converted = null; failed = false; refused = false },
+                onValueChange = {
+                    text = it; converted = null; failed = false; refused = false
+                    suggestion = null; rejection = null
+                },
                 placeholder = {
                     Text(stringResource(when (kind) {
                         AddToListKind.WORD -> R.string.add_own_word_placeholder
@@ -213,7 +258,7 @@ fun AddToListSheet(
             )
             Text(
                 stringResource(if (kind == AddToListKind.SENTENCE) R.string.add_own_sentence_footer
-                else R.string.add_own_term_footer),
+                else R.string.add_own_term_footer_library),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -274,6 +319,26 @@ fun AddToListSheet(
 
             converted?.let {
                 Text(it, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            }
+            suggestion?.let { s ->
+                Text(stringResource(R.string.add_own_did_you_mean),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                TextButton(onClick = { text = s; suggestion = null; add() }) {
+                    Text(s.replaceFirstChar { it.uppercase() },
+                        style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                }
+            }
+            rejection?.let { reason ->
+                Text(stringResource(when (reason) {
+                    "proper_name" -> R.string.add_own_no_names
+                    "not_target" -> R.string.add_own_not_target
+                    "wrong_kind" -> if (kind == AddToListKind.WORD) R.string.add_own_more_than_one_word
+                        else R.string.add_own_single_word
+                    "offensive" -> R.string.add_own_cannot_go
+                    else -> if (kind == AddToListKind.WORD) R.string.add_own_word_not_found
+                        else R.string.add_own_expression_not_found
+                }), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (failed) {
                 Text(stringResource(R.string.add_own_lookup_failed),

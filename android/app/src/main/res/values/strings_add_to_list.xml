@@ -7,9 +7,18 @@
     <string name="add_own_word_placeholder">A word</string>
     <string name="add_own_expression_placeholder">An expression</string>
     <string name="add_own_sentence_placeholder">A sentence</string>
-    <string name="add_own_term_footer">Write it in either language. Its meanings come with it, like everything else on the list.</string>
     <string name="add_own_sentence_footer">Write it in either language. It comes with a translation and goes into your review deck.</string>
     <string name="add_own_lookup_failed">Couldn\'t reach the dictionary. Try again.</string>
     <string name="add_own_reads_like_rule">That reads like a rule, not something you\'d say. Write the sentence itself.</string>
     <string name="add_own_already_there">Already there</string>
+    <string name="all_expressions">All expressions</string>
+    <string name="add_own_did_you_mean">Did you mean</string>
+    <string name="add_own_term_footer_library">Write it in either language. One the library doesn\'t have yet is checked, given a level and added for everyone learning this language.</string>
+    <string name="add_own_no_names">Names of people, places and brands don\'t go on the list.</string>
+    <string name="add_own_not_target">That doesn\'t look like the language you\'re learning.</string>
+    <string name="add_own_more_than_one_word">That\'s more than one word. Add it under Expressions.</string>
+    <string name="add_own_single_word">That\'s a single word. Add it under Words.</string>
+    <string name="add_own_cannot_go">That can\'t go on the list.</string>
+    <string name="add_own_word_not_found">We couldn\'t find that word. Check the spelling.</string>
+    <string name="add_own_expression_not_found">We couldn\'t find that expression. Check the spelling, or write it the way people usually say it.</string>
 </resources>

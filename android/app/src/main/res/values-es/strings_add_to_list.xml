@@ -7,9 +7,18 @@
     <string name="add_own_word_placeholder">Una palabra</string>
     <string name="add_own_expression_placeholder">Una expresión</string>
     <string name="add_own_sentence_placeholder">Una frase</string>
-    <string name="add_own_term_footer">Escríbelo en cualquiera de los dos idiomas. Su significado aparece solo, como todo lo demás de la lista.</string>
     <string name="add_own_sentence_footer">Escríbela en cualquiera de los dos idiomas. Viene con su traducción y entra en tu mazo de repaso.</string>
     <string name="add_own_lookup_failed">No se pudo conectar con el diccionario. Inténtalo de nuevo.</string>
     <string name="add_own_reads_like_rule">Eso parece una regla, no algo que dirías. Escribe la frase tal cual.</string>
     <string name="add_own_already_there">Ya está</string>
+    <string name="all_expressions">Todas</string>
+    <string name="add_own_did_you_mean">¿Quisiste decir?</string>
+    <string name="add_own_term_footer_library">Escríbelo en cualquiera de los dos idiomas. Si la biblioteca aún no lo tiene, se revisa, recibe un nivel y se suma para todos los que aprenden este idioma.</string>
+    <string name="add_own_no_names">Los nombres de personas, lugares y marcas no van en la lista.</string>
+    <string name="add_own_not_target">Eso no parece el idioma que estás aprendiendo.</string>
+    <string name="add_own_more_than_one_word">Son varias palabras. Añádelo en Expresiones.</string>
+    <string name="add_own_single_word">Es una sola palabra. Añádela en Palabras.</string>
+    <string name="add_own_cannot_go">Eso no puede ir en la lista.</string>
+    <string name="add_own_word_not_found">No encontramos esa palabra. Revisa cómo se escribe.</string>
+    <string name="add_own_expression_not_found">No encontramos esa expresión. Revisa cómo se escribe o ponla como la dice la gente.</string>
 </resources>

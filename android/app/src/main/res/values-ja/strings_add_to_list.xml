@@ -7,9 +7,18 @@
     <string name="add_own_word_placeholder">単語</string>
     <string name="add_own_expression_placeholder">表現</string>
     <string name="add_own_sentence_placeholder">文</string>
-    <string name="add_own_term_footer">どちらの言語で書いても大丈夫です。意味はリストのほかの項目と同じように付きます。</string>
     <string name="add_own_sentence_footer">どちらの言語で書いても大丈夫です。訳が付いて、復習カードに入ります。</string>
     <string name="add_own_lookup_failed">辞書につながりませんでした。もう一度お試しください。</string>
     <string name="add_own_reads_like_rule">話す文ではなく、ルールのように見えます。実際に言う文を書いてください。</string>
     <string name="add_own_already_there">すでにあります</string>
+    <string name="all_expressions">すべての表現</string>
+    <string name="add_own_did_you_mean">もしかして</string>
+    <string name="add_own_term_footer_library">どちらの言語で書いても大丈夫です。ライブラリにまだないものは、確認してレベルを付け、この言語を学ぶみんなのライブラリに加わります。</string>
+    <string name="add_own_no_names">人や場所、ブランドの名前はリストに入れられません。</string>
+    <string name="add_own_not_target">学んでいる言語ではないようです。</string>
+    <string name="add_own_more_than_one_word">1語ではありません。表現に追加してください。</string>
+    <string name="add_own_single_word">1語です。単語に追加してください。</string>
+    <string name="add_own_cannot_go">これはリストに入れられません。</string>
+    <string name="add_own_word_not_found">その単語が見つかりませんでした。つづりを確認してください。</string>
+    <string name="add_own_expression_not_found">その表現が見つかりませんでした。つづりを確認するか、よく使われる形で書いてください。</string>
 </resources>
