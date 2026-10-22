@@ -11,4 +11,5 @@
     <string name="add_own_sentence_footer">Schreib ihn in einer der beiden Sprachen. Er kommt mit Übersetzung und landet in deinem Wiederholungsstapel.</string>
     <string name="add_own_lookup_failed">Das Wörterbuch ist gerade nicht erreichbar. Versuch es noch mal.</string>
     <string name="add_own_reads_like_rule">Das klingt nach einer Regel, nicht nach etwas, das man sagt. Schreib den Satz selbst.</string>
+    <string name="add_own_already_there">Schon da</string>
 </resources>

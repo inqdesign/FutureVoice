@@ -11,4 +11,5 @@
     <string name="add_own_sentence_footer">어느 언어로 써도 돼요. 번역이 함께 붙고, 복습 카드에 들어가요.</string>
     <string name="add_own_lookup_failed">사전을 불러오지 못했어요. 다시 해 보세요.</string>
     <string name="add_own_reads_like_rule">말하는 문장이 아니라 규칙처럼 보여요. 실제로 할 말을 써 주세요.</string>
+    <string name="add_own_already_there">이미 있어요</string>
 </resources>

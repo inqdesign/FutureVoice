@@ -11,4 +11,5 @@
     <string name="add_own_sentence_footer">用哪種語言寫都可以。會附上翻譯，並放進你的複習卡片。</string>
     <string name="add_own_lookup_failed">連不上字典，請再試一次。</string>
     <string name="add_own_reads_like_rule">這看起來像規則，不像會說出口的話。請寫下句子本身。</string>
+    <string name="add_own_already_there">已經有了</string>
 </resources>

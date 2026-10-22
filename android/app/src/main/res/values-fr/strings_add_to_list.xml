@@ -11,4 +11,5 @@
     <string name="add_own_sentence_footer">Écris-la dans l’une ou l’autre langue. Elle arrive avec sa traduction et rejoint ton paquet de révision.</string>
     <string name="add_own_lookup_failed">Impossible de joindre le dictionnaire. Réessaie.</string>
     <string name="add_own_reads_like_rule">On dirait une règle, pas quelque chose qu’on dit. Écris la phrase elle-même.</string>
+    <string name="add_own_already_there">Déjà là</string>
 </resources>

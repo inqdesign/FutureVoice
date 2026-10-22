@@ -455,6 +455,19 @@ private fun LibraryPage(kind: LibraryKind, language: String,
         AddToListSheet(
             kind = if (kind == LibraryKind.WORDS) AddToListKind.WORD else AddToListKind.EXPRESSION,
             language = language,
+            candidates = remember(material) {
+                val toStudy = material.toStudy.map { it.key }.toSet()
+                material.union().map { row ->
+                    AddToListCandidate(row.text, row.key,
+                        status = when {
+                            row.key in toStudy -> if (row.kept) R.string.studying else R.string.to_study
+                            row.known || row.used -> R.string.known
+                            kind == LibraryKind.EXPRESSIONS -> R.string.to_study
+                            else -> null
+                        },
+                        level = row.level?.name)
+                }
+            },
             onAdded = { entry ->
                 // Where the new entry is: the study pile, unfiltered, its card open.
                 query = ""; lens = Lens.TO_STUDY; source = SourceFilter.ALL; level = null

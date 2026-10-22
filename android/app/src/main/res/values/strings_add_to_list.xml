@@ -11,4 +11,5 @@
     <string name="add_own_sentence_footer">Write it in either language. It comes with a translation and goes into your review deck.</string>
     <string name="add_own_lookup_failed">Couldn\'t reach the dictionary. Try again.</string>
     <string name="add_own_reads_like_rule">That reads like a rule, not something you\'d say. Write the sentence itself.</string>
+    <string name="add_own_already_there">Already there</string>
 </resources>

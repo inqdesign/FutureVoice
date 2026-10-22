@@ -11,4 +11,5 @@
     <string name="add_own_sentence_footer">どちらの言語で書いても大丈夫です。訳が付いて、復習カードに入ります。</string>
     <string name="add_own_lookup_failed">辞書につながりませんでした。もう一度お試しください。</string>
     <string name="add_own_reads_like_rule">話す文ではなく、ルールのように見えます。実際に言う文を書いてください。</string>
+    <string name="add_own_already_there">すでにあります</string>
 </resources>

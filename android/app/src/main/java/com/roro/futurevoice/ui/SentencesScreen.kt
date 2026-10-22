@@ -140,6 +140,11 @@ fun SentencesScreen(
         AddToListSheet(
             kind = AddToListKind.SENTENCE,
             language = language,
+            candidates = remember(cards) {
+                cards.sortedByDescending { it.createdAt }.map {
+                    AddToListCandidate(it.targetPhrase, it.targetPhrase.trim().lowercase(), R.string.saved)
+                }.distinctBy { it.key }
+            },
             onAdded = {
                 known = false
                 scope.launch { cards = DrillStore.shared(context).load(language) }

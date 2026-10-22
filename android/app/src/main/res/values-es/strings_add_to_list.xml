@@ -11,4 +11,5 @@
     <string name="add_own_sentence_footer">Escríbela en cualquiera de los dos idiomas. Viene con su traducción y entra en tu mazo de repaso.</string>
     <string name="add_own_lookup_failed">No se pudo conectar con el diccionario. Inténtalo de nuevo.</string>
     <string name="add_own_reads_like_rule">Eso parece una regla, no algo que dirías. Escribe la frase tal cual.</string>
+    <string name="add_own_already_there">Ya está</string>
 </resources>

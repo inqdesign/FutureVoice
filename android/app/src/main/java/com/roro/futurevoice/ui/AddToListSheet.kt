@@ -1,5 +1,9 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,11 +57,17 @@ import kotlinx.coroutines.launch
  */
 enum class AddToListKind(val raw: String) { WORD("word"), EXPRESSION("expression"), SENTENCE("sentence") }
 
+/** What the list already holds (plus, for words, the graded pool), searched as
+ *  the learner types. [status] is a string resource for where it already
+ *  sits, or null for a pool word on no list; [level] tags the latter. */
+data class AddToListCandidate(val text: String, val key: String, val status: Int?, val level: String? = null)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddToListSheet(
     kind: AddToListKind,
     language: String,
+    candidates: List<AddToListCandidate> = emptyList(),
     /** What went on the list (the word's key, the phrase, the sentence). */
     onAdded: (String) -> Unit,
     onDismiss: () -> Unit,
@@ -75,11 +85,35 @@ fun AddToListSheet(
     var failed by remember { mutableStateOf(false) }
     var refused by remember { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
+    val lore = remember { com.roro.futurevoice.net.WordLore(com.roro.futurevoice.data.AuthRepository()) }
+    val meanings = remember { androidx.compose.runtime.mutableStateMapOf<String, String>() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
 
     val trimmed = text.trim()
     val needsConverting = language != nativeLanguage &&
         !TextScript.isInTargetScript(trimmed, language)
+
+    // Prefix matches first ("par" → parse before spare), then anything that
+    // contains it; a handful, since this is a check, not a browser.
+    val q = trimmed.lowercase()
+    val matches = if (q.length < (if (kind == AddToListKind.SENTENCE) 3 else 1) || converted != null) emptyList()
+    else {
+        val prefix = candidates.filter { it.key.startsWith(q) }.sortedBy { it.key.length }
+        val rest = if (kind == AddToListKind.WORD) emptyList()
+        else candidates.filter { !it.key.startsWith(q) && it.key.contains(q) }
+        (prefix + rest).take(6)
+    }
+
+    fun openExisting(match: AddToListCandidate) {
+        scope.launch {
+            if (kind == AddToListKind.WORD && match.status == null) {
+                VocabStore.shared(context).addStudying(match.key, language)
+            }
+            Analytics.capture("own_item_matched", mapOf("kind" to kind.raw, "added" to (match.status == null)))
+            onDismiss()
+            onAdded(if (kind == AddToListKind.WORD) match.key else match.text)
+        }
+    }
 
     fun finish(entry: String) {
         Analytics.capture("own_item_added", mapOf("kind" to kind.raw, "converted" to (converted != null)))
@@ -183,6 +217,60 @@ fun AddToListSheet(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+
+            // What's already there, as they type: tapping one opens it (or,
+            // for a pool word, keeps it) instead of making a copy.
+            if (matches.isNotEmpty()) {
+                Text(stringResource(R.string.add_own_already_there),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Column(Modifier.fillMaxWidth()) {
+                    matches.forEach { match ->
+                        Row(
+                            Modifier.fillMaxWidth()
+                                .then(if (kind == AddToListKind.SENTENCE) Modifier
+                                else Modifier.clickable { openExisting(match) })
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(if (kind == AddToListKind.SENTENCE) match.text
+                                    else match.text.replaceFirstChar { it.uppercase() },
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = if (kind == AddToListKind.SENTENCE) null else FontWeight.SemiBold,
+                                    maxLines = 2)
+                                meanings[match.key]?.takeIf { it.isNotEmpty() }?.let {
+                                    Text(it, style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                                }
+                            }
+                            val tag = match.status?.let { stringResource(it) } ?: match.level
+                            if (tag != null) Text(tag, style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (kind != AddToListKind.SENTENCE) androidx.compose.material3.Icon(
+                                if (match.status == null) Icons.Filled.AddCircleOutline
+                                else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = null,
+                                tint = if (match.status == null) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp))
+                        }
+                        if (kind != AddToListKind.SENTENCE) LaunchedEffect(match.key) {
+                            if (meanings.containsKey(match.key)) return@LaunchedEffect
+                            // Let a fast typist get past a match before it is looked up.
+                            kotlinx.coroutines.delay(300)
+                            meanings[match.key] = ""
+                            val entry = runCatching {
+                                lore.entry(match.text, nativeLanguage, language,
+                                    if (kind == AddToListKind.WORD) com.roro.futurevoice.net.WordLore.Kind.WORD
+                                    else com.roro.futurevoice.net.WordLore.Kind.EXPRESSION)
+                            }.getOrNull()
+                            meanings[match.key] = entry?.senses?.firstOrNull()?.meaning?.trim().orEmpty()
+                        }
+                    }
+                }
+            }
 
             converted?.let {
                 Text(it, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
