@@ -23,6 +23,10 @@ struct WordsView: View {
     @State private var searchText = ""
     @State private var source: SourceFilter = .all
     @State private var level: VocabularyView.LevelFilter = .all
+    @State private var showingAdd = false
+    /// What the add sheet put on the list, opened as its card once the sheet
+    /// is gone (two sheets can't be up at once).
+    @State private var justAdded: String?
 
     /// Where the word entered the list — the to-study pile mixes kept talk
     /// words with scene words, and "which homework is this" is the first cut
@@ -221,6 +225,10 @@ struct WordsView: View {
                 }
                 .accessibilityLabel(Text("Browse all vocabulary"))
             }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { showingAdd = true } label: { Image(systemName: "plus") }
+                    .accessibilityLabel(Text("Add a word"))
+            }
         }
         .searchable(text: $searchText,
                     placement: .navigationBarDrawer(displayMode: .always),
@@ -234,6 +242,21 @@ struct WordsView: View {
         .sheet(item: $selected) { ref in
             WordSheet(initialWord: ref.value, words: items.map(\.text))
                 .environmentObject(appState)
+        }
+        .sheet(isPresented: $showingAdd, onDismiss: {
+            guard let word = justAdded else { return }
+            justAdded = nil
+            selected = WordRef(value: word)
+        }) {
+            AddToListSheet(kind: .word) { word in
+                // Where the new word is: the study pile, unfiltered.
+                searchText = ""
+                filter = .toStudy
+                source = .all
+                level = .all
+                justAdded = word
+            }
+            .environmentObject(appState)
         }
     }
 

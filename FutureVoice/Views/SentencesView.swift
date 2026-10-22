@@ -6,8 +6,10 @@ import SwiftUI
 /// titles; the sentence itself is the row now, with the card's own coaching
 /// note as its gloss. Tapping a row drills exactly that card.
 struct SentencesView: View {
+    @EnvironmentObject private var appState: AppState
     @State private var allCards: [DrillCard] = []
     @State private var filter: Filter = .toStudy
+    @State private var showingAdd = false
 
     /// Same two lenses the word and expression lists use, for the same
     /// reason: a flat "520 cards" hides the only thing worth knowing — how
@@ -66,6 +68,16 @@ struct SentencesView: View {
             }
         }
         .onAppear { reload() }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { showingAdd = true } label: { Image(systemName: "plus") }
+                    .accessibilityLabel(Text("Add a sentence"))
+            }
+        }
+        .sheet(isPresented: $showingAdd, onDismiss: reload) {
+            AddToListSheet(kind: .sentence) { _ in filter = .toStudy }
+                .environmentObject(appState)
+        }
     }
 
     private func row(_ card: DrillCard) -> some View {

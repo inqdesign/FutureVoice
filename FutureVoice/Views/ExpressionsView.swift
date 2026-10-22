@@ -17,6 +17,8 @@ struct ExpressionsView: View {
     /// page's pattern. "" = looked up, nothing to show; the row falls back to
     /// its origin line and the session won't retry.
     @State private var meanings: [String: String] = [:]
+    @State private var showingAdd = false
+    @State private var justAdded: String?
 
     private struct PhraseRef: Identifiable {
         let value: String
@@ -117,6 +119,12 @@ struct ExpressionsView: View {
         .navigationTitle("Expressions")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { showingAdd = true } label: { Image(systemName: "plus") }
+                    .accessibilityLabel(Text("Add an expression"))
+            }
+        }
         .searchable(text: $searchText,
                     placement: .navigationBarDrawer(displayMode: .always),
                     prompt: Text("Search expressions"))
@@ -136,6 +144,18 @@ struct ExpressionsView: View {
         .sheet(item: $selected) { ref in
             ExpressionSheet(initialPhrase: ref.value, phrases: entries.map(\.text))
                 .environmentObject(appState)
+        }
+        .sheet(isPresented: $showingAdd, onDismiss: {
+            guard let phrase = justAdded else { return }
+            justAdded = nil
+            selected = PhraseRef(value: phrase)
+        }) {
+            AddToListSheet(kind: .expression) { phrase in
+                searchText = ""
+                filter = .toStudy
+                justAdded = phrase
+            }
+            .environmentObject(appState)
         }
     }
 
