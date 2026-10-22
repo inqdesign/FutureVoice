@@ -1,6 +1,9 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.MicOff
+import androidx.compose.ui.draw.clip
 import com.roro.futurevoice.ui.brand.ContinuousShape
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material.icons.filled.Close
@@ -232,6 +235,25 @@ fun DrillDeckScreen(
         resolved += 1
     }
 
+    /** The recognizer wrote down something the learner never said (iOS
+     *  `DrillView.markMisheard`): the turn leaves scoring, its slips go and
+     *  the grammar score is rescaled, its cards leave the deck and this run.
+     *  No rep — nothing was reviewed. */
+    fun markMisheard(card: DrillCard) {
+        val sid = card.sourceSessionId ?: return
+        val tid = card.sourceTurnId ?: return
+        val doomed = deck.filter { it.sourceTurnId == tid }
+        deck = deck.filterNot { it.sourceTurnId == tid }
+        scope.launch {
+            val updated = com.roro.futurevoice.data.MisheardExclusion.excludeTurn(context, sid, tid, language)
+            // Already excluded, or the talk isn't on file: the cards still go.
+            if (updated == null) store.deleteForTurn(tid, language)
+            doomed.forEach { com.roro.futurevoice.data.ReviewQueue.cancelSentence(context, it.id) }
+            refreshFolders()
+            StoreEvents.bump()
+        }
+    }
+
     /** Fly into the folder, shrink out of existence, THEN write. */
     fun file(card: DrillCard, bin: DrillBin) {
         val target = binBounds[bin]?.center?.minus(deckCentre) ?: Offset.Zero
@@ -342,6 +364,9 @@ fun DrillDeckScreen(
                     DrillCardFace(
                         card = top,
                         revealed = revealed,
+                        onMisheard = if (top.sourceTurnId != null && top.sourceSessionId != null) {
+                            { markMisheard(top) }
+                        } else null,
                         actions = {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 CardPill(
@@ -587,6 +612,9 @@ private fun DrillCardFace(
     /** Hear it · Shadow · Examples — on the card, as on iOS, so a dragged
      *  card carries them instead of sliding under them. */
     actions: (@Composable () -> Unit)? = null,
+    /** "Misheard — exclude from scoring", beside "You said" (iOS: the
+     *  ⋯ menu next to the recording). Null = the card has no source turn. */
+    onMisheard: (() -> Unit)? = null,
 ) {
     val onCard = Color.White
     val onCardSecondary = Color.White.copy(alpha = 0.72f)
@@ -605,8 +633,29 @@ private fun DrillCardFace(
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 // The LABEL "You said" — `you_said` is the quoting sentence
                 // with a %s, which printed its placeholder here.
-                Text(stringResource(R.string.you_said_f105ab), style = MaterialTheme.typography.bodyMedium,
-                    color = onCardSecondary)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.you_said_f105ab), style = MaterialTheme.typography.bodyMedium,
+                        color = onCardSecondary, modifier = Modifier.weight(1f))
+                    if (onMisheard != null) {
+                        var menu by remember { mutableStateOf(false) }
+                        Box {
+                            Icon(Icons.Filled.MoreHoriz,
+                                contentDescription = stringResource(R.string.misheard_exclude_from_scoring),
+                                tint = onCardSecondary,
+                                modifier = Modifier.size(28.dp).clip(CircleShape)
+                                    .clickable { menu = true }.padding(2.dp))
+                            com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = menu,
+                                onDismissRequest = { menu = false }) {
+                                com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
+                                    text = { Text(stringResource(R.string.misheard_exclude_from_scoring),
+                                        color = MaterialTheme.colorScheme.error) },
+                                    leadingIcon = { Icon(Icons.Filled.MicOff, contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error) },
+                                    onClick = { menu = false; onMisheard() })
+                            }
+                        }
+                    }
+                }
                 // Cards minted before the fragment trim carry the WHOLE turn,
                 // so trim at render too — a minute-long transcript struck
                 // through reads as "everything you said was wrong".
