@@ -854,6 +854,8 @@ private extension DrillView {
                 cardContent(card, revealed: revealed, compact: false)
                 cardContent(card, revealed: revealed, compact: true)
             }
+            // Room for the corner menu, so a long line never runs under it.
+            .padding(.trailing, isTop && card.sourceTurnId != nil && card.sourceSessionId != nil ? 20 : 0)
 
             Spacer(minLength: 12)
 
@@ -891,6 +893,38 @@ private extension DrillView {
         // reveal", pill labels) along with it.
         .tint(Self.onCard)
         .shadow(color: Color.accentColor.opacity(0.28), radius: 8, y: 4)
+        // Pinned to the card's corner, not beside the recording button: it
+        // stays in one place whatever the sentence's length (2026-10-22).
+        // Outside the card's white tint, so the menu's own items keep the
+        // system colours.
+        .overlay(alignment: .topTrailing) {
+            if isTop { misheardMenu(card) }
+        }
+    }
+
+    /// The same verdict the book's Grammar page takes on a swipe: the turn
+    /// leaves scoring, its cards leave the deck.
+    @ViewBuilder
+    func misheardMenu(_ card: DrillCard) -> some View {
+        if let turnId = card.sourceTurnId, let sessionId = card.sourceSessionId {
+            Menu {
+                // Plain, not destructive: red text on the menu read poorly
+                // (2026-10-22, founder).
+                Button {
+                    markMisheard(sessionId: sessionId, turnId: turnId)
+                } label: {
+                    Label("Misheard — exclude from scoring", systemImage: "mic.slash")
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .font(.title3)
+                    .foregroundStyle(Self.onCardSecondary)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel(Text("Misheard — exclude from scoring"))
+            .padding(6)
+        }
     }
 
     func cardContent(_ card: DrillCard, revealed: Bool, compact: Bool) -> some View {
@@ -946,25 +980,6 @@ private extension DrillView {
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel(playingThis ? "Stop your recording" : "Play your recording")
-                        }
-                        // The same verdict the book's Grammar page takes on
-                        // a swipe, here where the recording is heard: the
-                        // turn leaves scoring, its cards leave the deck.
-                        if let turnId = card.sourceTurnId, let sessionId = card.sourceSessionId {
-                            Menu {
-                                Button(role: .destructive) {
-                                    markMisheard(sessionId: sessionId, turnId: turnId)
-                                } label: {
-                                    Label("Misheard — exclude from scoring", systemImage: "mic.slash")
-                                }
-                            } label: {
-                                Image(systemName: "ellipsis.circle")
-                                    .font(.title3)
-                                    .foregroundStyle(Self.onCardSecondary)
-                                    .frame(width: 28, height: 28)
-                                    .contentShape(Rectangle())
-                            }
-                            .accessibilityLabel(Text("Misheard — exclude from scoring"))
                         }
                     }
                 }
