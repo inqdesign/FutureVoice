@@ -2048,9 +2048,11 @@ routine to keep going." `TrialReport.swift`, and `WeekRecapSheet(trial:)`.
   pruned), the coach saved into `Documents/trial_report.json`, never into
   `WeekRecapStore` (it would collide with a week's end). Then three cards of
   its own: the TEST, the LEVEL, the ROUTINE.
-- **The test is required** (founder's pick). The level and routine cards are
-  not dealt until the trial paper is finished, or could not be built
-  (`testThin` — the minutes are over, another talk can't fill it). The paper
+- **The test is OFFERED, never required** (2026-10-22, founder; it was
+  required from 2026-10-19). The level and routine cards are always dealt;
+  the test card's Skip goes straight on (`trial_test_skipped`). The first
+  1.2.1 learner to spend the minutes read all eight cards, stopped at the
+  required test and closed the deck, so the plans were never shown. The paper
   is `WeeklyTestEngine.build(scope:)`: the trial window, a floor of 3, the
   trial's own coach; its id lives on the report and `WeeklyTestView(trialScope:)`
   resumes it from there, not from the schedule. It is saved as an ordinary

@@ -9,9 +9,9 @@ import SwiftUI
 /// week is a short deck, never a row of zeros.
 ///
 /// The same deck is the TRIAL REPORT (`init(trial:)`, see `TrialReport`):
-/// the free minutes instead of a week, then the test (required — the level
-/// and routine cards are dealt only once it is done), the level, and the
-/// routine, whose button opens the plans.
+/// the free minutes instead of a week, then the test (offered, never
+/// required — Skip goes straight on), the level, and the routine, whose
+/// button opens the plans.
 struct WeekRecapSheet: View {
     enum Action { case test, talk }
 
@@ -98,8 +98,7 @@ struct WeekRecapSheet: View {
         if recap.hasActivity { list += [.grammar, .words] }
         list.append(.coach)
         if isTrial {
-            list.append(.trialTest)
-            if trialTestCleared { list += [.level, .routine] }
+            list += [.trialTest, .level, .routine]
         } else {
             list.append(.test)
         }
@@ -227,10 +226,24 @@ struct WeekRecapSheet: View {
                 primary(Text("Keep going with this routine")) { keepRoutine() }
             } else if trialTestCleared {
                 primary(Text("See your level")) { advance() }
-            } else if let t = trialTest, !t.answers.isEmpty {
-                primary(Text("Continue the test")) { showingTrialTest = true }
             } else {
-                primary(Text("Take the test")) { showingTrialTest = true }
+                // Offered, never required (2026-10-22, founder): a learner
+                // who closed the deck at a required test never reached the
+                // plans.
+                VStack(spacing: 4) {
+                    if let t = trialTest, !t.answers.isEmpty {
+                        primary(Text("Continue the test")) { showingTrialTest = true }
+                    } else {
+                        primary(Text("Take the test")) { showingTrialTest = true }
+                    }
+                    Button {
+                        Analytics.capture("trial_test_skipped", [:])
+                        advance()
+                    } label: {
+                        Text("Skip").frame(maxWidth: .infinity)
+                    }
+                    .controlSize(.large)
+                }
             }
         } else if cards[safe: page] == .test {
             switch testState {
@@ -916,7 +929,7 @@ struct WeekRecapSheet: View {
         }
     }
 
-    // The test — required: the level and the routine come after it.
+    // The test — offered; the level and the routine follow either way.
     private var trialTestCard: some View {
         VStack(alignment: .leading, spacing: 18) {
             kicker(Text("Your first test"), "checklist")
@@ -944,9 +957,6 @@ struct WeekRecapSheet: View {
                 Text("A few minutes, made from what you said: the words, the phrases, the corrections.")
                     .font(.title3)
                     .fixedSize(horizontal: false, vertical: true)
-                Text("Take it, then see your level.")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
             }
         }
     }

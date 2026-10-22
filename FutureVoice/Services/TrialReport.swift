@@ -7,7 +7,9 @@ import Foundation
 ///
 /// It is the weekly deck (`WeekRecapSheet`, `.trial` mode) over the window
 /// from the first talk to now, then three cards the week doesn't have: a test
-/// the learner must take (built from the same window, `WeeklyTestEngine.Scope`),
+/// the learner may take or skip (built from the same window,
+/// `WeeklyTestEngine.Scope`; required until 2026-10-22, when a learner closed
+/// the deck at it and never reached the plans),
 /// the level — the FIRST formal assessment, run early (`assessTrialLevel`)
 /// because twenty minutes of call time is rarely fifteen of the learner's own
 /// speech, which is the normal gate — and the routine, whose button is the
@@ -37,7 +39,7 @@ struct TrialReport: Codable {
 enum TrialReportStore {
     static let maxOffers = 2
     /// Fewer than the weekly paper's five: twenty minutes is a small window,
-    /// and a required test of two questions is still a test of the learner's
+    /// and a test of two questions is still a test of the learner's
     /// own lines. Below this the test card says so and lets them past.
     static let minTestItems = 3
     /// The deck is on screen, from whichever presenter raised it (the call
