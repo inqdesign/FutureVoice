@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
@@ -45,6 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.roro.futurevoice.R
+import kotlinx.coroutines.launch
 import com.roro.futurevoice.data.DrillIngest
 import com.roro.futurevoice.data.DrillStore
 import com.roro.futurevoice.data.LibraryBadge
@@ -76,7 +78,9 @@ fun SentencesScreen(
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
     var cards by remember(language) { mutableStateOf<List<DrillCard>>(emptyList()) }
+    var showingAdd by remember { mutableStateOf(false) }
     var known by remember { mutableStateOf(com.roro.futurevoice.capture.flags.PracticeCaptureFlags.sentencesKnown) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     LaunchedEffect(language, revision) { cards = DrillStore.shared(context).load(language) }
     // Newest first — the sentence minted this morning is the one you came for.
     val visible = cards.filter { (it.box >= DrillIngest.MAX_BOX) == known }
@@ -91,6 +95,12 @@ fun SentencesScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showingAdd = true }) {
+                        Icon(Icons.Filled.Add,
+                            contentDescription = stringResource(R.string.add_own_sentence_title))
                     }
                 },
             )
@@ -125,6 +135,17 @@ fun SentencesScreen(
                 item { GroupedSectionSpacer() }
             }
         }
+    }
+    if (showingAdd) {
+        AddToListSheet(
+            kind = AddToListKind.SENTENCE,
+            language = language,
+            onAdded = {
+                known = false
+                scope.launch { cards = DrillStore.shared(context).load(language) }
+            },
+            onDismiss = { showingAdd = false },
+        )
     }
 }
 

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Add your own word, expression or sentence to a list (iOS AddToListSheet). -->
+<resources>
+    <string name="add_own_word_title">Wort hinzufügen</string>
+    <string name="add_own_expression_title">Wendung hinzufügen</string>
+    <string name="add_own_sentence_title">Satz hinzufügen</string>
+    <string name="add_own_word_placeholder">Ein Wort</string>
+    <string name="add_own_expression_placeholder">Eine Wendung</string>
+    <string name="add_own_sentence_placeholder">Ein Satz</string>
+    <string name="add_own_term_footer">Schreib es in einer der beiden Sprachen. Die Bedeutung kommt von selbst dazu, wie bei allem anderen auf der Liste.</string>
+    <string name="add_own_sentence_footer">Schreib ihn in einer der beiden Sprachen. Er kommt mit Übersetzung und landet in deinem Wiederholungsstapel.</string>
+    <string name="add_own_lookup_failed">Das Wörterbuch ist gerade nicht erreichbar. Versuch es noch mal.</string>
+    <string name="add_own_reads_like_rule">Das klingt nach einer Regel, nicht nach etwas, das man sagt. Schreib den Satz selbst.</string>
+</resources>

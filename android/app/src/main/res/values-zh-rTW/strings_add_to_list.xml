@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Add your own word, expression or sentence to a list (iOS AddToListSheet). -->
+<resources>
+    <string name="add_own_word_title">加入單字</string>
+    <string name="add_own_expression_title">加入用語</string>
+    <string name="add_own_sentence_title">加入句子</string>
+    <string name="add_own_word_placeholder">單字</string>
+    <string name="add_own_expression_placeholder">用語</string>
+    <string name="add_own_sentence_placeholder">句子</string>
+    <string name="add_own_term_footer">用哪種語言寫都可以。意思會像清單上的其他項目一樣自動附上。</string>
+    <string name="add_own_sentence_footer">用哪種語言寫都可以。會附上翻譯，並放進你的複習卡片。</string>
+    <string name="add_own_lookup_failed">連不上字典，請再試一次。</string>
+    <string name="add_own_reads_like_rule">這看起來像規則，不像會說出口的話。請寫下句子本身。</string>
+</resources>

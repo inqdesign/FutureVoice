@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Add your own word, expression or sentence to a list (iOS AddToListSheet). -->
+<resources>
+    <string name="add_own_word_title">Add a word</string>
+    <string name="add_own_expression_title">Add an expression</string>
+    <string name="add_own_sentence_title">Add a sentence</string>
+    <string name="add_own_word_placeholder">A word</string>
+    <string name="add_own_expression_placeholder">An expression</string>
+    <string name="add_own_sentence_placeholder">A sentence</string>
+    <string name="add_own_term_footer">Write it in either language. Its meanings come with it, like everything else on the list.</string>
+    <string name="add_own_sentence_footer">Write it in either language. It comes with a translation and goes into your review deck.</string>
+    <string name="add_own_lookup_failed">Couldn\'t reach the dictionary. Try again.</string>
+    <string name="add_own_reads_like_rule">That reads like a rule, not something you\'d say. Write the sentence itself.</string>
+</resources>

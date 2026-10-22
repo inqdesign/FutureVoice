@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Add your own word, expression or sentence to a list (iOS AddToListSheet). -->
+<resources>
+    <string name="add_own_word_title">단어 추가</string>
+    <string name="add_own_expression_title">표현 추가</string>
+    <string name="add_own_sentence_title">문장 추가</string>
+    <string name="add_own_word_placeholder">단어</string>
+    <string name="add_own_expression_placeholder">표현</string>
+    <string name="add_own_sentence_placeholder">문장</string>
+    <string name="add_own_term_footer">어느 언어로 써도 돼요. 뜻은 목록의 다른 것들처럼 알아서 붙어요.</string>
+    <string name="add_own_sentence_footer">어느 언어로 써도 돼요. 번역이 함께 붙고, 복습 카드에 들어가요.</string>
+    <string name="add_own_lookup_failed">사전을 불러오지 못했어요. 다시 해 보세요.</string>
+    <string name="add_own_reads_like_rule">말하는 문장이 아니라 규칙처럼 보여요. 실제로 할 말을 써 주세요.</string>
+</resources>

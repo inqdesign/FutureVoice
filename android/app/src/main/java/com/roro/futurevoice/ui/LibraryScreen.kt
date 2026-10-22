@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BlurOn
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.ChatBubbleOutline
@@ -265,6 +266,7 @@ private fun LibraryPage(kind: LibraryKind, language: String,
      *  slide the next/previous terms out from under the thumb. */
     var openTerm by remember { mutableStateOf<String?>(null) }
     var openList by remember { mutableStateOf<List<String>>(emptyList()) }
+    var showingAdd by remember { mutableStateOf(false) }
     /** The explorable cloud over the whole graded pool — words only. */
 
     LaunchedEffect(kind, language, revision) {
@@ -310,6 +312,14 @@ private fun LibraryPage(kind: LibraryKind, language: String,
                                     stringResource(R.string.browse_all_vocabulary),
                             )
                         }
+                    }
+                    IconButton(onClick = { showingAdd = true }) {
+                        Icon(
+                            Icons.Filled.Add,
+                            contentDescription = stringResource(
+                                if (kind == LibraryKind.WORDS) R.string.add_own_word_title
+                                else R.string.add_own_expression_title),
+                        )
                     }
                 },
             )
@@ -440,6 +450,20 @@ private fun LibraryPage(kind: LibraryKind, language: String,
         }
     }
 
+
+    if (showingAdd) {
+        AddToListSheet(
+            kind = if (kind == LibraryKind.WORDS) AddToListKind.WORD else AddToListKind.EXPRESSION,
+            language = language,
+            onAdded = { entry ->
+                // Where the new entry is: the study pile, unfiltered, its card open.
+                query = ""; lens = Lens.TO_STUDY; source = SourceFilter.ALL; level = null
+                openList = listOf(entry) + rows.map { it.text }.filter { it.lowercase() != entry }
+                openTerm = entry
+            },
+            onDismiss = { showingAdd = false },
+        )
+    }
 
     openTerm?.let { term ->
         WordCardSheet(

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Add your own word, expression or sentence to a list (iOS AddToListSheet). -->
+<resources>
+    <string name="add_own_word_title">単語を追加</string>
+    <string name="add_own_expression_title">表現を追加</string>
+    <string name="add_own_sentence_title">文を追加</string>
+    <string name="add_own_word_placeholder">単語</string>
+    <string name="add_own_expression_placeholder">表現</string>
+    <string name="add_own_sentence_placeholder">文</string>
+    <string name="add_own_term_footer">どちらの言語で書いても大丈夫です。意味はリストのほかの項目と同じように付きます。</string>
+    <string name="add_own_sentence_footer">どちらの言語で書いても大丈夫です。訳が付いて、復習カードに入ります。</string>
+    <string name="add_own_lookup_failed">辞書につながりませんでした。もう一度お試しください。</string>
+    <string name="add_own_reads_like_rule">話す文ではなく、ルールのように見えます。実際に言う文を書いてください。</string>
+</resources>
