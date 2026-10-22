@@ -947,6 +947,25 @@ private extension DrillView {
                             .buttonStyle(.plain)
                             .accessibilityLabel(playingThis ? "Stop your recording" : "Play your recording")
                         }
+                        // The same verdict the book's Grammar page takes on
+                        // a swipe, here where the recording is heard: the
+                        // turn leaves scoring, its cards leave the deck.
+                        if let turnId = card.sourceTurnId, let sessionId = card.sourceSessionId {
+                            Menu {
+                                Button(role: .destructive) {
+                                    markMisheard(sessionId: sessionId, turnId: turnId)
+                                } label: {
+                                    Label("Misheard — exclude from scoring", systemImage: "mic.slash")
+                                }
+                            } label: {
+                                Image(systemName: "ellipsis.circle")
+                                    .font(.title3)
+                                    .foregroundStyle(Self.onCardSecondary)
+                                    .frame(width: 28, height: 28)
+                                    .contentShape(Rectangle())
+                            }
+                            .accessibilityLabel(Text("Misheard — exclude from scoring"))
+                        }
                     }
                 }
             }
@@ -1168,6 +1187,32 @@ private extension DrillView {
             ItemReminder.cancel(.sentence(card.id))
         }
         withAnimation(.snappy) { refreshFolders() }
+    }
+
+    /// The speech recognizer wrote down something the learner never said:
+    /// exclude the turn (its slips go, the grammar score is rescaled, its
+    /// cards are deleted) and take every card from it out of this run.
+    /// No rep is logged — nothing was reviewed.
+    private func markMisheard(sessionId: UUID, turnId: UUID) {
+        if let updated = SessionStore.shared.excludeTurnFromScoring(sessionId: sessionId,
+                                                                    turnId: turnId) {
+            appState.reassessAfterEvidenceChange(in: updated)
+        } else {
+            // Already excluded, or the talk isn't on file: the cards still go.
+            DrillStore.shared.deleteForTurn(turnId)
+        }
+        let doomed = queue.filter { $0.sourceTurnId == turnId }
+        for card in doomed { ItemReminder.cancel(.sentence(card.id)) }
+        HapticEngine.drillCorrect()
+        withAnimation(.snappy) {
+            queue.removeAll { $0.sourceTurnId == turnId }
+            topCardRevealed = false
+            refreshFolders()
+        }
+        player.stop()
+        playingTurnId = nil
+        cancelAlignment()
+        if queue.isEmpty { onDeckCompleted?() }
     }
 
     private func advance() {
