@@ -64,13 +64,42 @@ final class PlaylistPlayer: ObservableObject {
     }
     /// Playback speed. Time-stretched (`AVAudioPlayer.rate`), so the voice
     /// keeps its pitch and the caption follows the audio as it plays.
+    /// Saved only when the learner picks one; until then it follows their
+    /// level (`levelSpeed`), re-read every time a list starts.
     @Published var speed: Float {
         didSet {
-            UserDefaults.standard.set(speed, forKey: Self.speedKey)
             audio.setRate(speed)
+            guard !applyingLevelSpeed else { return }
+            UserDefaults.standard.set(speed, forKey: Self.speedKey)
         }
     }
     static let speeds: [Float] = [0.75, 0.9, 1.0]
+    private var applyingLevelSpeed = false
+
+    /// The speed for a learner who never picked one (2026-10-22, founder:
+    /// the podcast at 1× was too fast for most learners). 0.9 is the
+    /// default, a beginner hears it slower, C1+ at the speed it was made.
+    static func levelSpeed(_ level: CEFRLevel) -> Float {
+        switch level {
+        case .a1: return 0.75
+        case .a2, .b1, .b2: return 0.9
+        case .c1, .c2: return 1.0
+        }
+    }
+
+    private static var currentLevelSpeed: Float {
+        let raw = UserDefaults.standard.string(forKey: AppState.proficiencyKey) ?? ""
+        return levelSpeed(CEFRLevel(rawValue: raw) ?? .b1)
+    }
+
+    private func followLevelIfUnpicked() {
+        guard !Self.speeds.contains(UserDefaults.standard.float(forKey: Self.speedKey)) else { return }
+        let s = Self.currentLevelSpeed
+        guard s != speed else { return }
+        applyingLevelSpeed = true
+        speed = s
+        applyingLevelSpeed = false
+    }
 
     private static let repeatKey = "futurevoice.playlist.repeat"
     private static let shuffleKey = "futurevoice.playlist.shuffle"
@@ -91,7 +120,7 @@ final class PlaylistPlayer: ObservableObject {
         shuffle = d.bool(forKey: Self.shuffleKey)
         gap = Gap(rawValue: d.string(forKey: Self.gapKey) ?? "") ?? .none
         let saved = d.float(forKey: Self.speedKey)
-        speed = Self.speeds.contains(saved) ? saved : 1.0
+        speed = Self.speeds.contains(saved) ? saved : Self.currentLevelSpeed
         audio.setRate(speed)
         interruptionObserver = NotificationCenter.default.addObserver(
             forName: AVAudioSession.interruptionNotification, object: nil, queue: .main
@@ -146,6 +175,7 @@ final class PlaylistPlayer: ObservableObject {
         let start = lines.indices.contains(startAt)
             ? playable.firstIndex { $0.id == lines[startAt].id } ?? 0
             : 0
+        followLevelIfUnpicked()
         flushListening(finished: false)
         startedEpisodes = []
         recordedPieces = []
