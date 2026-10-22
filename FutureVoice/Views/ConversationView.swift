@@ -1928,6 +1928,24 @@ struct ConversationView: View {
         return "\(place). \(side)"
     }
 
+    /// What the "try saying" coach may fill a bracket with: the learner's own
+    /// facts. On a call with a stranger or a public figure, only what the
+    /// learner lets strangers hear — the suggestion is said TO them.
+    private var coachAboutLearner: [String] {
+        guard let p = appState.persona else { return [] }
+        var lines: [String] = []
+        if !p.displayName.isEmpty { lines.append("Name: \(p.displayName)") }
+        let place = [p.city, p.country].filter { !$0.isEmpty }.joined(separator: ", ")
+        if !place.isEmpty { lines.append("Lives in: \(place)") }
+        if !p.occupation.isEmpty { lines.append("Does: \(p.occupation)") }
+        if !p.interests.isEmpty { lines.append("Into: \(p.interests.joined(separator: ", "))") }
+        if let cast = counterpart?.cast, cast != .ownPerson {
+            return lines + p.strangerLines.suffix(CoachSuggester.maxFacts)
+        }
+        if !p.household.isEmpty { lines.append("Household: \(p.household)") }
+        return lines + p.currentNotes().suffix(CoachSuggester.maxFacts).map(\.text)
+    }
+
     /// How the learner speaks on this call, for the "try saying" coach — the
     /// same level the call prompt gives the other side. With the fluent self
     /// it is 반말 / du / tu (they are talking to themselves); with a person,
@@ -3846,13 +3864,13 @@ struct ConversationView: View {
             coach.replyFinished()
             if mayHint, CoachPlan.endsInQuestion(text) { candidates = coachCandidates() }
         }
-        let learnerSaid = turns.last(where: { $0.role == .user })?.transcript
-        let earlier = turns.filter { $0.role == .fluentSelf && $0.id != turnId }.last?.transcript
+        let before = turns.prefix { $0.id != turnId }.suffix(CoachSuggester.recentLines)
+        let recent = before.map { CoachSuggester.Line(isLearner: $0.role == .user, text: $0.transcript) }
         let previousSay = coachReply?.say
+        let about = coachAboutLearner
         Task { @MainActor in
             let result = await CoachSuggester.suggest(
-                    line: text, learnerSaid: learnerSaid,
-                    earlier: learnerSaid == nil ? nil : earlier,
+                    line: text, recent: recent, aboutLearner: about,
                     situation: coachSituation,
                     register: coachRegister,
                     previousSay: previousSay,

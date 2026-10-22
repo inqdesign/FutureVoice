@@ -258,9 +258,24 @@ enum CoachSuggester {
         let word: String?
     }
 
+    /// One line of the call before the one being answered.
+    struct Line {
+        let isLearner: Bool
+        let text: String
+    }
+
+    /// How many earlier lines ride along. The suggestion only knew the line
+    /// before and the learner's last turn, so it answered each question as if
+    /// the call had just started and invented the learner's facts (2026-10-22,
+    /// founder: "아무 말이나 적어두지 말고").
+    static let recentLines = 8
+    /// The newest notebook lines handed over, so a bracket holds the
+    /// learner's own fact rather than a guess.
+    static let maxFacts = 12
+
     static func suggest(line: String,
-                        learnerSaid: String?,
-                        earlier: String?,
+                        recent: [Line],
+                        aboutLearner: [String] = [],
                         situation: String? = nil,
                         register: SpeechRegister? = nil,
                         previousSay: String? = nil,
@@ -271,8 +286,15 @@ enum CoachSuggester {
                         turnId: UUID) async -> (reply: CoachReply, item: TalkGoalItem?)? {
         var content = ""
         if let situation, !situation.isEmpty { content += "Situation: \(situation)\n" }
-        if let earlier, !earlier.isEmpty { content += "Earlier they said: \"\(earlier)\"\n" }
-        if let learnerSaid, !learnerSaid.isEmpty { content += "The learner said: \"\(learnerSaid)\"\n" }
+        if !aboutLearner.isEmpty {
+            content += "About the learner:\n" + aboutLearner.map { "- \($0)" }.joined(separator: "\n") + "\n"
+        }
+        let said = recent.suffix(recentLines).filter { !$0.text.isEmpty }
+        if !said.isEmpty {
+            content += "The call so far:\n" + said.map {
+                "\($0.isLearner ? "Learner" : "Other"): \"\($0.text)\""
+            }.joined(separator: "\n") + "\n"
+        }
         // The level was read off this one line, so a line with no clear
         // ending re-decided it and the suggestions flipped between 반말 and
         // 존댓말 inside one call (2026-10-09). The last suggestion anchors it
@@ -365,8 +387,17 @@ enum CoachSuggester {
           which the learner swaps for their own. It is shown faded as a \
           placeholder, so it is never a claim about them. One or two \
           brackets, a word or two inside each, nothing else in brackets.
+        - It is the SAME person who said the learner's earlier lines in the \
+          call: carry on from what they already said, never contradict it, \
+          never give again a fact they already gave, and stay on the thread \
+          the two are on. Answer what THIS line asks, not an earlier one.
+        - When the answer is about the learner and "About the learner" \
+          covers it, the bracketed example IS that fact, said in \
+          \(targetName) ("I'm a [designer]" for someone who designs), not a \
+          guess. Bring up only what this line asks about; never pull in a \
+          fact it didn't ask for.
         - If the line asks nothing, "say" is a natural reaction or a short \
-          follow-up question back.
+          follow-up question back, about what was just said.
         - Asking the same question straight back ("And you?", "Und du?", \
           "너는?") is something people do now and then, not on every answer: \
           by default "say" just answers. Never ask back what the line already \
