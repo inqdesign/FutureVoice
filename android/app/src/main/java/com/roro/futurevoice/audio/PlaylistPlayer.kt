@@ -127,8 +127,26 @@ object PlaylistPlayer {
         repeatMode = RepeatMode.entries.firstOrNull { it.raw == p.getString(REPEAT_KEY, null) } ?: RepeatMode.ALL
         shuffle = p.getBoolean(SHUFFLE_KEY, false)
         gap = Gap.entries.firstOrNull { it.raw == p.getString(GAP_KEY, null) } ?: Gap.NONE
-        val saved = p.getFloat(SPEED_KEY, 1.0f)
-        speed = if (saved in speeds) saved else 1.0f
+        followLevelIfUnpicked(c)
+    }
+
+    /** The speed for a learner who never picked one (iOS 2026-10-22: 1x was
+     *  too fast for most learners). 0.9 is the default, a beginner hears it
+     *  slower, C1+ at the speed it was made. Saved only by [chooseSpeed]. */
+    fun levelSpeed(level: com.roro.futurevoice.data.CefrLevel): Float = when (level) {
+        com.roro.futurevoice.data.CefrLevel.A1 -> 0.75f
+        com.roro.futurevoice.data.CefrLevel.C1, com.roro.futurevoice.data.CefrLevel.C2 -> 1.0f
+        else -> 0.9f
+    }
+
+    private fun followLevelIfUnpicked(c: Context) {
+        val p = c.getSharedPreferences(PREFS, 0)
+        val saved = p.getFloat(SPEED_KEY, 0f)
+        if (saved in speeds) { speed = saved; return }
+        val level = com.roro.futurevoice.data.CefrLevel.from(
+            p.getString("futurevoice.level." + (p.getString("futurevoice.targetLanguage", null) ?: "en"), null)
+                ?: p.getString("futurevoice.proficiency", null))
+        speed = levelSpeed(level)
     }
 
     // ── State ──
@@ -160,6 +178,7 @@ object PlaylistPlayer {
         attach(context)
         val playable = newLines.filter { it.hasAudio }
         if (playable.isEmpty()) return
+        followLevelIfUnpicked(context.applicationContext)
         val start = newLines.getOrNull(startAt)?.let { s -> playable.indexOfFirst { it.id == s.id }.takeIf { it >= 0 } } ?: 0
         flushListening(finished = false)
         startedEpisodes.clear()
