@@ -61,7 +61,8 @@ struct QuickQuizItem: Identifiable, Equatable {
 /// misheard app name ("나와나는" → "나와 나는") had been "corrected" into a
 /// different sentence, which the quiz then marked as the right answer.
 ///
-/// A quiz is built when it opens and gone when it closes. The only network
+/// A quiz is built when it opens; one closed before the end is parked and
+/// resumed on the next open (`park`). The only network
 /// is the free, cached dictionary lookup for word meanings (capped by
 /// `glossBudget`) and, when the written stock runs low, one batch.
 ///
@@ -186,6 +187,39 @@ enum QuickQuizEngine {
                                      isOwn: ownSet.contains(word.lowercased())))
         }
         return out
+    }
+
+    // MARK: - An unfinished quiz
+
+    /// A quiz closed before its last question is picked up where it stopped
+    /// the next time the quiz opens (2026-10-22, founder: closing mid-quiz
+    /// built a new one on every open, and each build spent written questions
+    /// from the stock that nobody had seen). In memory only, so a relaunch
+    /// starts fresh, and kept `resumeWindow` at most.
+    struct Unfinished {
+        let items: [QuickQuizItem]
+        let index: Int
+        let missed: [QuickQuizItem]
+        let language: String
+        let savedAt: Date
+    }
+
+    static let resumeWindow: TimeInterval = 12 * 3600
+    private static var unfinished: Unfinished?
+
+    /// `index` is the next question still to be answered.
+    static func park(items: [QuickQuizItem], index: Int, missed: [QuickQuizItem], language: String) {
+        guard index < items.count else { unfinished = nil; return }
+        unfinished = Unfinished(items: items, index: index, missed: missed,
+                                language: language, savedAt: Date())
+    }
+
+    /// The parked quiz, once: taking it clears it.
+    static func takeUnfinished(language: String) -> Unfinished? {
+        defer { unfinished = nil }
+        guard let u = unfinished, u.language == language,
+              Date().timeIntervalSince(u.savedAt) < resumeWindow else { return nil }
+        return u
     }
 
     // MARK: - Writing back

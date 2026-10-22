@@ -48,7 +48,8 @@ private struct GlassCircleButton: ViewModifier {
 }
 
 /// Ten one-tap questions on what is being studied now (`QuickQuizEngine`),
-/// then the score and what was missed. Nothing is saved.
+/// then the score and what was missed. Nothing is saved to disk; a quiz
+/// closed midway waits in memory for the next open.
 struct QuickQuizView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
@@ -92,7 +93,15 @@ struct QuickQuizView: View {
             }
         }
         .task { await start() }
-        .onDisappear { advance?.cancel() }
+        .onDisappear {
+            advance?.cancel()
+            // Closed mid-quiz: kept for the next open. An answered question
+            // counts as done, since its auto-advance was just cancelled.
+            if stage == .asking {
+                QuickQuizEngine.park(items: items, index: chosen == nil ? index : index + 1,
+                                     missed: missed, language: appState.targetLanguage)
+            }
+        }
     }
 
     // MARK: - Stages
@@ -259,7 +268,22 @@ struct QuickQuizView: View {
     // MARK: - Flow
 
     private func start() async {
+        if let paused = QuickQuizEngine.takeUnfinished(language: appState.targetLanguage) {
+            items = paused.items
+            index = paused.index
+            missed = paused.missed
+            setMood(.waiting)
+            stage = .asking
+            Analytics.capture("quick_quiz_resumed", ["items": items.count, "at": index])
+            return
+        }
         let built = await QuickQuizEngine.build(appState: appState)
+        // Closed while it was being written: keep it for the next open
+        // rather than throwing away questions already marked asked.
+        if Task.isCancelled {
+            QuickQuizEngine.park(items: built, index: 0, missed: [], language: appState.targetLanguage)
+            return
+        }
         items = built
         setMood(.waiting)
         stage = built.isEmpty ? .empty : .asking
