@@ -115,7 +115,8 @@ private val QUIZ_GRAY = Color(0xFF8E8E93)
 
 /**
  * Ten one-tap questions on what is being studied now ([QuickQuizEngine]),
- * then the score and what was missed (iOS `QuickQuizView`). Nothing is saved.
+ * then the score and what was missed (iOS `QuickQuizView`). Nothing is saved to disk;
+ * a quiz closed midway waits in memory for the next open.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -135,9 +136,25 @@ fun QuickQuizScreen(language: String, native: String, level: CefrLevel, onClose:
 
     DisposableEffect(Unit) {
         SoundEffects.prepare(context)
-        onDispose { advance?.cancel() }
+        onDispose {
+            advance?.cancel()
+            // Closed mid-quiz: kept for the next open. An answered question
+            // counts as done, since its auto-advance was just cancelled.
+            if (stage == QuizStage.ASKING) {
+                QuickQuizEngine.park(items, if (chosen == null) index else index + 1, missed, language)
+            }
+        }
     }
     LaunchedEffect(Unit) {
+        QuickQuizEngine.takeUnfinished(language)?.let { paused ->
+            items.clear(); items.addAll(paused.items)
+            index = paused.index
+            missed.clear(); missed.addAll(paused.missed)
+            setMood(WeeklyTestHost.Mood.WAITING)
+            stage = QuizStage.ASKING
+            Analytics.capture("quick_quiz_resumed", mapOf("items" to items.size, "at" to index))
+            return@LaunchedEffect
+        }
         val built = QuickQuizEngine.build(context.applicationContext, language, native, level)
         items.clear(); items.addAll(built)
         setMood(WeeklyTestHost.Mood.WAITING)

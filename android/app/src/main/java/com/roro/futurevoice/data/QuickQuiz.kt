@@ -79,6 +79,31 @@ object QuickQuizEngine {
      *  learner's band, not already known, used or in the notebook. */
     const val LEVEL_WORD_POOL = 12
 
+    /**
+     * A quiz closed before its last question is picked up where it stopped
+     * the next time the quiz opens (iOS `QuickQuizEngine.park`): closing
+     * mid-quiz built a new one on every open and spent written questions
+     * nobody saw. In memory only, kept [RESUME_WINDOW_MS] at most.
+     */
+    class Unfinished(val items: List<QuickQuizItem>, val index: Int, val missed: List<QuickQuizItem>,
+                     val language: String, val savedAt: Long)
+
+    const val RESUME_WINDOW_MS = 12L * 3600 * 1000
+    private var unfinished: Unfinished? = null
+
+    /** [index] is the next question still to be answered. */
+    fun park(items: List<QuickQuizItem>, index: Int, missed: List<QuickQuizItem>, language: String) {
+        unfinished = if (index < items.size)
+            Unfinished(items.toList(), index, missed.toList(), language, System.currentTimeMillis()) else null
+    }
+
+    /** The parked quiz, once: taking it clears it. */
+    fun takeUnfinished(language: String): Unfinished? {
+        val u = unfinished
+        unfinished = null
+        return u?.takeIf { it.language == language && System.currentTimeMillis() - it.savedAt < RESUME_WINDOW_MS }
+    }
+
     suspend fun build(context: Context, language: String, native: String, level: CefrLevel): List<QuickQuizItem> =
         coroutineScope {
             val rng = WeeklyTestRandom(UUID.randomUUID().toString())
