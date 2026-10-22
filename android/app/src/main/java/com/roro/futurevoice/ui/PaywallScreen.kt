@@ -190,8 +190,11 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
     // The trial's SIZE (iOS `StoreKitService.trialTalkMinutes`): a trial is
     // metered at Light's monthly pool pro-rated 7/30, whatever plan it
     // trials — keep the formula in step with `consume_metered_seconds`.
-    val trialTalkMinutes = offers.filter { it.plan.tier == "light" }
-        .mapNotNull { it.plan.monthly_seconds }.minOrNull()?.let { (it * 7 / 30 / 60).toInt() }
+    // The server's setting when there is one (`trial_talk_seconds`), the same
+    // number the meter enforces; otherwise the old 7/30 rule.
+    val trialTalkMinutes = com.roro.futurevoice.data.BillingConfig.trialTalkSeconds(LocalContext.current)?.let { it / 60 }
+        ?: offers.filter { it.plan.tier == "light" }
+            .mapNotNull { it.plan.monthly_seconds }.minOrNull()?.let { (it * 7 / 30 / 60).toInt() }
     val isSubscriber = account?.isEntitled == true
     // A subscriber opened this to CHANGE plans: the trial funnel would be wrong.
     val showsTrial = !isSubscriber && offers.any { trialDaysOf(it.details) > 0 }

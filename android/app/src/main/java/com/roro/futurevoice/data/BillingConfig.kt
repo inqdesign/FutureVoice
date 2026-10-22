@@ -26,6 +26,7 @@ object BillingConfig {
     private const val FREE_KEY = "futurevoice.billing.freeTalkSeconds"
     private const val OFFER_KEY = "futurevoice.billing.trialOfferAt"
     private const val OFFERED_KEY = "futurevoice.billing.onboardingTrialOffered"
+    private const val TRIAL_KEY = "futurevoice.billing.trialTalkSeconds"
 
     /** What a new account starts with: the ring's "full" for a free account
      *  and the trial report's "your first N minutes". */
@@ -37,6 +38,14 @@ object BillingConfig {
      *  (the trial once, right after onboarding). */
     fun trialOfferAt(context: Context): String =
         context.getSharedPreferences(PREFS, 0).getString(OFFER_KEY, null) ?: "after_free"
+
+    /** What a trial may talk in all, when the server sets it (20261022120000;
+     *  iOS `trialTalkSeconds`). Null = the old rule, Light's month × 7/30. */
+    fun trialTalkSeconds(context: Context): Int? =
+        context.getSharedPreferences(PREFS, 0).let { if (it.contains(TRIAL_KEY)) it.getInt(TRIAL_KEY, 0) else null }
+
+    @Serializable
+    private data class TrialRow(val trial_talk_seconds: Int? = null)
 
     @Serializable
     private data class Row(val free_talk_seconds: Int = 1200, val trial_offer_at: String = "after_free")
@@ -59,6 +68,24 @@ object BillingConfig {
         // An unknown value from a newer server is dropped, not guessed at.
         if (row.trial_offer_at in setOf("after_free", "onboarding")) edit.putString(OFFER_KEY, row.trial_offer_at)
         edit.apply()
+
+        // Its own query: a column the database hasn't got yet fails the whole
+        // select, and must cost this number, not the two above.
+        val trial = runCatching {
+            val req = Request.Builder()
+                .url(Config.supabaseUrl.trimEnd('/') +
+                    "/rest/v1/billing_config?select=trial_talk_seconds&limit=1")
+                .header("Authorization", "Bearer ${Config.supabaseAnonKey}")
+                .header("apikey", Config.supabaseAnonKey).build()
+            Edge.client.newCall(req).execute().use { r ->
+                if (r.code !in 200..299) return@use null
+                Edge.json.decodeFromString(ListSerializer(TrialRow.serializer()), r.body.string()).firstOrNull()
+            }
+        }.getOrNull() ?: return@withContext
+        val prefs = context.getSharedPreferences(PREFS, 0).edit()
+        val seconds = trial.trial_talk_seconds
+        if (seconds != null && seconds in 0..36_000) prefs.putInt(TRIAL_KEY, seconds) else prefs.remove(TRIAL_KEY)
+        prefs.apply()
     }
 
     /**
