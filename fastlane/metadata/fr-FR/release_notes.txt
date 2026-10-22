@@ -11,3 +11,4 @@ Corrigé
 • Ouvrir Le Noyau sur un petit iPhone ne ferme plus l’app.
 • Sur les petits écrans, les phrases et les boutons des cartes ne sont plus coupés.
 • Dans l’écoute, une courte pause précède l’épisode suivant.
+• En mode coach, « Essaie de dire » suit maintenant tout l’appel et ton profil, sans contredire ce que tu as déjà dit.

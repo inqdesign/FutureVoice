@@ -11,3 +11,4 @@ Corregido
 • Abrir El Núcleo en un iPhone pequeño ya no cierra la app.
 • En pantallas pequeñas, las frases y los botones de las tarjetas ya no se cortan.
 • En Escuchar, hay una pausa corta antes del siguiente episodio.
+• En el modo coach, «Prueba a decir» ahora sigue toda la llamada y tu perfil, sin contradecir lo que ya dijiste.

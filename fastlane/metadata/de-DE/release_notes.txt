@@ -11,3 +11,4 @@ Behoben
 • Auf kleineren iPhones schließt sich die App nicht mehr, wenn du The Core öffnest.
 • Sätze und Buttons auf den Karten werden auf kleinen Bildschirmen nicht mehr abgeschnitten.
 • Beim Hören gibt es eine kurze Pause, bevor die nächste Folge beginnt.
+• Im Coach-Modus richtet sich „Sag zum Beispiel“ jetzt nach dem ganzen Gespräch und deinem Profil und widerspricht nicht mehr dem, was du schon gesagt hast.

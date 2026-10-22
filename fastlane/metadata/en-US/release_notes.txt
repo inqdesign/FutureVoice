@@ -11,3 +11,4 @@ Fixed
 • Opening The Core on a smaller iPhone no longer closes the app.
 • Card sentences and buttons no longer get cut off on small screens.
 • In Listen, there's a short pause before the next episode starts.
+• In coach mode, "try saying" now follows the whole call and your profile, so it never contradicts what you already said.
