@@ -3,6 +3,9 @@ Neu
 • Unter Ich → Schreib uns erreichst du uns jetzt auch per E-Mail und über Threads.
 • Leg dir das Widget Meine Routine auf den Home-Bildschirm. Es zeigt, was heute ansteht und was gerade dran ist, und ein Tippen startet es.
 • Ist Wiederholen noch leer, siehst du jetzt, wo dein erstes Buch erscheint, und kannst direkt einen Anruf starten.
+• Trag eigene Wörter, Wendungen und Sätze in deine Listen ein. Schon Vorhandenes wird dir beim Tippen gezeigt.
+• Markier eine Wiederholungskarte als falsch verstanden: Der Satz zählt nicht mehr für deine Bewertung, und die Karten daraus verschwinden.
+• Wisch auf dem Sprechen-Tab seitwärts durch die Themen.
 
 Behoben
 • Dein nächster täglicher Anruf kommt jetzt pünktlich, auch wenn du den letzten abgelehnt oder angenommen und die App danach nicht geöffnet hast.
@@ -12,3 +15,4 @@ Behoben
 • Sätze und Buttons auf den Karten werden auf kleinen Bildschirmen nicht mehr abgeschnitten.
 • Beim Hören gibt es eine kurze Pause, bevor die nächste Folge beginnt.
 • Im Coach-Modus richtet sich „Sag zum Beispiel“ jetzt nach dem ganzen Gespräch und deinem Profil und widerspricht nicht mehr dem, was du schon gesagt hast.
+• Ein Schnellquiz, das du mittendrin geschlossen hast, geht da weiter, wo du aufgehört hast.

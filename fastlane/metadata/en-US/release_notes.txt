@@ -3,6 +3,9 @@ New
 • Me → Say hello now has Email and Threads too.
 • Add the My routine widget to your Home Screen. It shows what's on today and what's up now, and a tap starts it.
 • An empty Review page now shows where your first book will appear, with a button to start a call.
+• Add your own words, expressions and sentences to your lists. As you type, anything already there shows up.
+• Mark a review card as misheard: that line leaves your score, and the cards made from it are cleared.
+• Swipe sideways through the topic chips on the Talk tab.
 
 Fixed
 • Your next daily call now rings on time even if you declined or answered the last one and didn't open the app.
@@ -12,3 +15,4 @@ Fixed
 • Card sentences and buttons no longer get cut off on small screens.
 • In Listen, there's a short pause before the next episode starts.
 • In coach mode, "try saying" now follows the whole call and your profile, so it never contradicts what you already said.
+• A quick quiz you closed halfway picks up where you left off.

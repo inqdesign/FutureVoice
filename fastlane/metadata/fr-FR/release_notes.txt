@@ -3,6 +3,9 @@ Nouveautés
 • Dans Mon profil → Dis bonjour, tu peux maintenant nous écrire aussi par e-mail et sur Threads.
 • Ajoute le widget Ma routine à ton écran d’accueil. Il montre ce qui est prévu aujourd’hui et ce qui t’attend maintenant, et un toucher le lance.
 • Quand Révision est encore vide, tu vois où apparaîtra ton premier carnet, avec un bouton pour lancer un appel.
+• Ajoute tes propres mots, expressions et phrases à tes listes. Pendant que tu tapes, ce qui y est déjà s’affiche.
+• Marque une carte de révision comme mal entendue : la phrase ne compte plus dans ton score, et les cartes qui en viennent sont retirées.
+• Fais glisser les thèmes de côté dans l’onglet Parler.
 
 Corrigé
 • Ton prochain appel quotidien sonne maintenant à l’heure, même si tu as refusé ou décroché le précédent sans rouvrir l’app.
@@ -12,3 +15,4 @@ Corrigé
 • Sur les petits écrans, les phrases et les boutons des cartes ne sont plus coupés.
 • Dans l’écoute, une courte pause précède l’épisode suivant.
 • En mode coach, « Essaie de dire » suit maintenant tout l’appel et ton profil, sans contredire ce que tu as déjà dit.
+• Un quiz rapide fermé en cours reprend là où tu t’étais arrêté.

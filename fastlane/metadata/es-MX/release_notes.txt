@@ -3,6 +3,9 @@ Novedades
 • En Mi perfil → Saluda ahora también puedes escribirnos por correo y por Threads.
 • Pon el widget Mi rutina en tu pantalla de inicio. Muestra lo que toca hoy y lo que toca ahora, y con un toque empiezas.
 • Si Repaso todavía está vacío, ahora ves dónde aparecerá tu primer cuaderno y un botón para empezar una llamada.
+• Añade tus propias palabras, expresiones y frases a tus listas. Mientras escribes, te muestra lo que ya está.
+• Marca una tarjeta de repaso como mal oída: esa frase deja de contar en tu nota y se quitan las tarjetas que salieron de ella.
+• Desliza de lado por los temas en la pestaña Hablar.
 
 Corregido
 • Tu siguiente llamada diaria ahora llega a su hora aunque hayas rechazado o contestado la anterior y no hayas abierto la app.
@@ -12,3 +15,4 @@ Corregido
 • En pantallas pequeñas, las frases y los botones de las tarjetas ya no se cortan.
 • En Escuchar, hay una pausa corta antes del siguiente episodio.
 • En el modo coach, «Prueba a decir» ahora sigue toda la llamada y tu perfil, sin contradecir lo que ya dijiste.
+• Si cierras un quiz rápido a medias, sigue donde lo dejaste.
