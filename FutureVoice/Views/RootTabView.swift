@@ -749,6 +749,11 @@ struct RootTabView: View {
         case "weeklytest":
             selection = .practice
             appState.pendingPracticeRoute = .weeklyTest
+        case "speech":
+            // A new challenge's push (`scripts/push-challenge.sh`).
+            selection = .speech
+            appState.pendingSpeechChallenge = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?.first(where: { $0.name == "id" })?.value.flatMap(UUID.init(uuidString:))
         case "trialreport":
             // The push to learners who left at the end of their free minutes.
             openTrialReportFromLink()

@@ -17,6 +17,8 @@ struct SpeechTab: View {
     /// cover raised while a sheet is still dismissing never appears).
     @State private var openAfterSheet: SpeechScript?
     @State private var editing: SpeechScript?
+    /// A challenge opened from its push, pushed onto the stack like a tap.
+    @State private var linkedChallenge: SpeechScript?
     @State private var composing = false
     @State private var addingOwn = false
     @State private var showingUpsell = false
@@ -103,6 +105,19 @@ struct SpeechTab: View {
         .padding(.top, 4)
         // A header greys its content; the cards are not header text.
         .foregroundStyle(Color.primary)
+    }
+
+    /// The push's challenge, once the list holds it. A list loaded for this
+    /// language without it (a challenge in the learner's other language)
+    /// leaves them on the tab.
+    private func openLinkedChallenge() {
+        guard let id = appState.pendingSpeechChallenge else { return }
+        if let script = challenges.script(id: id) {
+            appState.pendingSpeechChallenge = nil
+            linkedChallenge = script
+        } else if challenges.loadedLanguage == appState.targetLanguage, !challenges.scripts.isEmpty {
+            appState.pendingSpeechChallenge = nil
+        }
     }
 
     var body: some View {
@@ -196,6 +211,10 @@ struct SpeechTab: View {
             }
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { listWidth = $0 }
             .navigationTitle("Speech")
+            .navigationDestination(item: $linkedChallenge) { script in
+                SpeechChallengeView(script: script)
+                    .environmentObject(appState)
+            }
             // Same header as Watch and Progress: the title inline-large on
             // the toolbar row, the tab's one action at its trailing edge.
             .toolbarTitleDisplayMode(.inlineLarge)
@@ -235,6 +254,8 @@ struct SpeechTab: View {
         .task(id: appState.targetLanguage) {
             await challenges.refresh(language: appState.targetLanguage)
         }
+        .onChange(of: appState.pendingSpeechChallenge, initial: true) { _, _ in openLinkedChallenge() }
+        .onChange(of: challenges.scripts) { _, _ in openLinkedChallenge() }
         .onChange(of: appState.targetLanguage) { _, _ in
             store.reload()
         }

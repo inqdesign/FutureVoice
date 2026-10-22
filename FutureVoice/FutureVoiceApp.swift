@@ -251,6 +251,10 @@ final class AppState: ObservableObject {
     }
     @Published var pendingPracticeRoute: PracticeRoute?
 
+    /// A new-challenge push (`futurevoice://speech?id=…`): the Speech tab
+    /// opens this challenge once it is in its list, then clears it.
+    @Published var pendingSpeechChallenge: UUID?
+
     /// The routine widget: open My routine (Talk → Activity), and, when set,
     /// the block of this kind in it — for the kinds whose door is that page.
     @Published var openRoutinePage = false
