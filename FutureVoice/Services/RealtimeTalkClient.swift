@@ -2132,6 +2132,10 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             "merges": String(json["merges"] as? Int ?? 0),
             "merge_gap_p50_ms": gapP50.map(String.init) ?? "",
             "merge_gap_max_ms": gaps.last.map(String.init) ?? "",
+            // Send-to-answer: whether the call ended in that mode and how
+            // many times Send was pressed. Absent from an older gateway.
+            "manual_turns": (json["manualTurns"] as? Bool).map { $0 ? "1" : "0" } ?? "",
+            "sends": (json["sends"] as? Int).map(String.init) ?? "",
         ])
     }
 
