@@ -23,6 +23,7 @@ import { rereadUtterance } from "./reread"
 import { nativeTurnText } from "./native-turn"
 import { ReplyEngine } from "./reply"
 import { CartesiaTTS, withGermanDefault, type TTSCallbacks } from "./cartesia-tts"
+import { foreignVoice } from "./voice-copies"
 import { presetVoice } from "./presets"
 import { send, type ClientMessage, type ServerMessage } from "./protocol"
 import { verifyUser, ownsVoice, recordGeminiUsage, type Env } from "./supabase"
@@ -783,7 +784,10 @@ export class CallSession implements DurableObject {
         ownsVoice(this.env, userId, msg.voiceId)
           .then((r) => { console.log(`start: ownsVoice ${Date.now() - gateAt}ms`); return r }),
         preflight,
-        withGermanDefault(this.env.CARTESIA_API_KEY, msg.voiceId, msg.language || "en"),
+        // A library voice outside its own language speaks as its owned copy
+        // (voice-copies.ts); ownership is still checked on the id sent.
+        withGermanDefault(this.env.CARTESIA_API_KEY,
+          foreignVoice(msg.voiceId, msg.language || "en") ?? msg.voiceId, msg.language || "en"),
       ])
       this.upstreamVoiceId = speakAs
       if (owns === "forbidden") {

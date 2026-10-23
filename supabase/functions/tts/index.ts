@@ -17,6 +17,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
 import { restoreCharacters } from "../_shared/calm-exclamations.ts"
 import { isPresetSlot, presetVoice } from "../_shared/preset-voices.ts"
+import { foreignVoice } from "../_shared/voice-copies.ts"
 import * as cartesia from "../_shared/cartesia.ts"
 import { chargePooledTTS, chargeFreePooledTTS, chargeTurnTTSFloored, refund,
          beginScenePlay, enforceRequestRate, insufficientCreditsResponse,
@@ -375,8 +376,9 @@ Deno.serve(async (req) => {
 
   const streaming = body.stream === true && !timestamped
   const language = body.language_code ?? cartesia.lineLanguage(body.text, await targetLanguageOf(user.id))
-  // A preset slot speaks the language's own Cartesia voice (_shared/preset-voices.ts).
-  const voiceId = presetVoice(body.voice_id, language) ?? body.voice_id
+  // A preset slot speaks the language's own Cartesia voice (_shared/preset-voices.ts);
+  // a library voice outside its own language, its owned copy (_shared/voice-copies.ts).
+  const voiceId = presetVoice(body.voice_id, language) ?? foreignVoice(body.voice_id, language) ?? body.voice_id
   return await noteVoiceoverSeconds(isVoiceover, user.id, body.voiceover_key, await speakOnCartesia({
     // Cartesia gets the line as written: its "!" is +0.6–1.7 dB, not a
     // shout (measured 2026-10-12, en/de/ko/ja).
