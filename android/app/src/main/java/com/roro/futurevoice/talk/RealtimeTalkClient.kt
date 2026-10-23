@@ -915,7 +915,7 @@ class RealtimeTalkClient(private val context: Context) {
         // Which mic, when earphones are on: the worn one by default, because
         // it is at the mouth wherever the phone ends up. Output is untouched.
         com.roro.futurevoice.data.MicPreference.applyInputRoute(context)
-        com.roro.futurevoice.audio.CallAudioMode.routeToSpeakerIfNothingWorn(context)
+        com.roro.futurevoice.audio.CallAudioMode.routeOutput(context)
         val minBuf = AudioRecord.getMinBufferSize(MIC_RATE,
             AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
         // VOICE_COMMUNICATION puts the platform echo canceller and noise
