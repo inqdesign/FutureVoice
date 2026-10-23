@@ -475,10 +475,17 @@ struct SayItAgainView: View {
     private var readingPanel: some View {
         VStack(spacing: 14) {
             HStack(spacing: 6) {
+                // The dot is the mic: dim while the room is quiet, lit and
+                // swelling with the learner's voice, so they can see the
+                // line is hearing them (founder, 2026-10-23 — it used to
+                // pulse on a timer and said nothing).
+                let heard = CGFloat(min(1, max(0, (live.level - 0.05) / 0.35)))
                 Image(systemName: "circle.fill")
                     .font(.system(size: 8))
                     .foregroundStyle(.red)
-                    .symbolEffect(.pulse, isActive: true)
+                    .opacity(0.3 + 0.7 * heard)
+                    .scaleEffect(1 + 0.6 * heard)
+                    .animation(.easeOut(duration: 0.12), value: heard)
                 Group {
                     if promptStep?.isOtherSide == true {
                         Text("Say \(source.otherName)'s line")
