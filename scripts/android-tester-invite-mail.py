@@ -11,6 +11,10 @@ links.
 English (2026-10-20), one tester at a time:
   python3 scripts/android-tester-invite-mail.py --en EMAIL CODE          # dry run
   python3 scripts/android-tester-invite-mail.py --en EMAIL CODE --send
+
+Korean, one tester at a time (2026-10-23):
+  python3 scripts/android-tester-invite-mail.py --ko EMAIL CODE          # dry run
+  python3 scripts/android-tester-invite-mail.py --ko EMAIL CODE --send
 """
 
 import argparse
@@ -82,6 +86,16 @@ BLOCKS = [
     ("p", "훗날 nawana를 안드로이드에서 처음 써 본 사람이라고 자랑하실 수 있을 만큼 "
           "잘해 보고 싶습니다."),
     ("p", "이응규 드림"),
+]
+
+
+# One tester joining later (--ko): no "sorry for the wait" and no Threads line,
+# which were true of the first group only.
+LATE = "계획했던 것보다 조금 늦어졌는데, 기다려 주셔서 고맙습니다. "
+THREADS = "이미 스레드로 모두 닿아 있으니, 정말 편하게"
+BLOCKS_KO_ONE = [
+    (b[0], b[1].replace(LATE, "").replace(THREADS, "정말 편하게")) if len(b) > 1 and isinstance(b[1], str) else b
+    for b in BLOCKS
 ]
 
 
@@ -168,10 +182,10 @@ def html_body(code: str, blocks=BLOCKS, label="코드") -> str:
     return f'<div style="font-family:-apple-system,sans-serif;max-width:560px;">{"".join(parts)}</div>'
 
 
-def send(key: str, to: str, code: str, en: bool = False) -> str:
+def send(key: str, to: str, code: str, en: bool = False, blocks=None) -> str:
     campaign = CAMPAIGN_EN if en else CAMPAIGN
     idem = f"{campaign}:{to}"
-    blocks, label, subject = (BLOCKS_EN, "Code", SUBJECT_EN) if en else (BLOCKS, "코드", SUBJECT)
+    blocks, label, subject = (BLOCKS_EN, "Code", SUBJECT_EN) if en else (blocks or BLOCKS, "코드", SUBJECT)
     payload = {
         "from": L.FROM, "to": [to], "reply_to": L.REPLY_TO,
         "subject": subject, "text": text_body(code, blocks, label),
@@ -196,7 +210,18 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--send", action="store_true")
     ap.add_argument("--en", nargs=2, metavar=("EMAIL", "CODE"))
+    ap.add_argument("--ko", nargs=2, metavar=("EMAIL", "CODE"))
     args = ap.parse_args()
+    if args.ko:
+        to, code = args.ko
+        body = text_body(code, BLOCKS_KO_ONE)
+        assert "—" not in body, "em dash in copy"
+        print(f"from     {L.FROM}\nreply_to {L.REPLY_TO}\nsubject  {SUBJECT}\nto       {to}\n\n{body}")
+        if not args.send:
+            print("\nDRY RUN")
+            return
+        print(f"sent {to} {code} {send(L.resend_key(), to, code, blocks=BLOCKS_KO_ONE)}")
+        return
     if args.en:
         to, code = args.en
         body = text_body(code, BLOCKS_EN, "Code")
