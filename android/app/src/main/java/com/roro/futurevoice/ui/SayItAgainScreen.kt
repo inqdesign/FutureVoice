@@ -16,6 +16,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -292,6 +295,8 @@ fun SayItAgainScreen(
     /** What the prompter shows — separate from `index` so a one-off retry
      *  from the finished screen doesn't wind the history back. */
     var promptStep by remember { mutableStateOf<SayItAgainScript.Step?>(null) }
+    // The mic level the reading panel's dot follows (iOS `live.level`).
+    var micLevel by remember { mutableFloatStateOf(0f) }
     var oneOffRetry by remember { mutableStateOf(false) }
     var skipRequested by remember { mutableStateOf(false) }
     var micError by remember { mutableStateOf<String?>(null) }
@@ -436,7 +441,7 @@ fun SayItAgainScreen(
         // play the next answer, so a learner who looked away came back to a
         // conversation that had gone on without them. Only Skip (or Close)
         // moves past a line nobody has started to say.
-        while (!skipRequested && recorder.level < VOICED_LEVEL) delay(100)
+        while (!skipRequested && recorder.level < VOICED_LEVEL) { micLevel = recorder.level; delay(100) }
         if (skipRequested) return false
 
         val lineMs = maxOf(1_200, WordSplitter.count(text, language) * READ_MS_PER_WORD)
@@ -449,6 +454,7 @@ fun SayItAgainScreen(
         var lastVoiced = began
         while (!skipRequested && System.currentTimeMillis() < hardStop) {
             val now = System.currentTimeMillis()
+            micLevel = recorder.level
             if (recorder.level >= VOICED_LEVEL) lastVoiced = now
             if (now >= earliest && now - lastVoiced >= STILL_SPEAKING_MS) break
             delay(100)
@@ -783,7 +789,7 @@ fun SayItAgainScreen(
                         SayPhase.INTRO -> IntroPanel(spokenCount) { withMic { start(0) } }
                         SayPhase.LISTENING -> ListeningPanel(source.otherName) { skipRequested = true }
                         SayPhase.PREPARING -> PreparingPanel()
-                        SayPhase.READING -> ReadingPanel(promptStep, source.otherName,
+                        SayPhase.READING -> ReadingPanel(promptStep, source.otherName, micLevel,
                             onSkip = { skipRequested = true })
                         SayPhase.FINISHED -> FinishedPanel(
                             readCount = readCount, spokenCount = spokenCount, average = averageScore,
@@ -993,7 +999,7 @@ private fun ListeningPanel(otherName: String, onSkip: () -> Unit) {
  * mic already knows. Skip stays, small, for a line they don't want to say.
  */
 @Composable
-private fun ReadingPanel(step: SayItAgainScript.Step?, otherName: String, onSkip: () -> Unit) {
+private fun ReadingPanel(step: SayItAgainScript.Step?, otherName: String, micLevel: Float, onSkip: () -> Unit) {
     val context = LocalContext.current
     val theme = com.roro.futurevoice.ui.brand.FutureselfTheme.live.value
         ?: com.roro.futurevoice.ui.brand.FutureselfTheme.stored(context)
@@ -1019,7 +1025,14 @@ private fun ReadingPanel(step: SayItAgainScript.Step?, otherName: String, onSkip
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Box(Modifier.size(8.dp).clip(CircleShape).background(Color(0xFFFF3B30)))
+            // The dot is the mic: dim while quiet, lit and swelling with the
+            // learner's voice (iOS 2026-10-23).
+            val heard by animateFloatAsState(((micLevel - 0.05f) / 0.35f).coerceIn(0f, 1f),
+                tween(120), label = "micDot")
+            Box(Modifier.size(8.dp).graphicsLayer {
+                    alpha = 0.3f + 0.7f * heard
+                    scaleX = 1f + 0.6f * heard; scaleY = scaleX
+                }.clip(CircleShape).background(Color(0xFFFF3B30)))
             Text(when {
                 step?.isOtherSide == true -> stringResource(R.string.say_s_line, otherName)
                 step?.isCorrected == true -> stringResource(R.string.say_it_the_fixed_way)
