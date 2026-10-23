@@ -514,9 +514,11 @@ fun SayItAgainScreen(
             delay(300)
             completed = true
         } finally {
+            // A cancelled read leaves the recorder alone: whoever cancelled
+            // it stopped it already and may have started the NEXT read on
+            // it by now, which this stop would kill (iOS 2026-10-23).
             withContext(NonCancellable + Dispatchers.IO) {
-                runCatching { recorder.stop() }
-                if (!completed) file.delete()
+                if (completed) runCatching { recorder.stop() } else file.delete()
             }
         }
         if (!spoke) {
@@ -580,8 +582,16 @@ fun SayItAgainScreen(
             ))
         }
         flushLog()
-        runJob?.cancel()
+        stopRun()
         runJob = scope.launch { run(from) }
+    }
+
+    /** Cancel the run and stop the mic here, before anything new starts —
+     *  a cancelled read no longer stops it on its own. */
+    fun stopRun() {
+        runJob?.cancel()
+        player.stop()
+        runCatching { recorder.stop() }
     }
 
     /** Re-read one line. Mid-run it rejoins the script there — the answer
@@ -592,8 +602,7 @@ fun SayItAgainScreen(
         if (i < 0) return
         val wasFinished = phase == SayPhase.FINISHED
         flushLog()
-        runJob?.cancel()
-        player.stop()
+        stopRun()
         takes.remove(step.id)
         runJob = scope.launch {
             if (wasFinished) {
