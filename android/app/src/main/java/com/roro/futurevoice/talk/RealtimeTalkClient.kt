@@ -903,7 +903,12 @@ class RealtimeTalkClient(private val context: Context) {
             "cutoffs" to num("cutoffs").toString(),
             "merges" to num("merges").toString(),
             "merge_gap_p50_ms" to (gaps.getOrNull(gaps.size / 2)?.toString() ?: ""),
-            "merge_gap_max_ms" to (gaps.lastOrNull()?.toString() ?: "")))
+            "merge_gap_max_ms" to (gaps.lastOrNull()?.toString() ?: ""),
+            // Send-to-answer: whether the call ended in that mode and how many
+            // times Send was pressed. Absent from an older gateway.
+            "manual_turns" to (msg["manualTurns"]?.jsonPrimitive?.content?.toBooleanStrictOrNull()
+                ?.let { if (it) "1" else "0" } ?: ""),
+            "sends" to (msg["sends"]?.jsonPrimitive?.content ?: "")))
     }
 
     // ------------------------------------------------------------------
