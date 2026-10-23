@@ -637,10 +637,15 @@ struct SayItAgainView: View {
 
     /// Cancel the run and stop the mic HERE, synchronously, before anything
     /// new starts — a cancelled read no longer stops it on its own.
+    ///
+    /// The engine is torn down OFF the main thread
+    /// (`stopAndFinalizeInBackground`): a full `stop()` spends ~200 ms
+    /// winding down voice processing, and on "Read both sides" that landed
+    /// while the menu was closing — the toggle stuttered (2026-10-23).
     private func stopRun() {
         runTask?.cancel()
         player.stop()
-        _ = live.stop()
+        _ = live.stopAndFinalizeInBackground(timeout: 0.1) { _ in }
         _ = recorder.stop()
     }
 
@@ -881,12 +886,9 @@ struct SayItAgainView: View {
             return SayItAgainScript.Step(id: step.id, isSpoken: false, text: step.text,
                                          said: "", note: "", attemptId: nil)
         }
-        runTask?.cancel()
+        stopRun()
         for task in scoreTasks.values { task.cancel() }
         scoreTasks.removeAll()
-        player.stop()
-        _ = live.stop()
-        _ = recorder.stop()
         takes.removeAll()
         steps = Self.arranged(base, kind: source.kind, bothSides: on)
         if phase != .intro { start(from: 0) }
