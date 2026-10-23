@@ -230,21 +230,25 @@ struct SayItAgainView: View {
                 .defaultScrollAnchor(.bottom)
                 .onChange(of: index) { _, _ in scrollToEnd(proxy) }
                 .onChange(of: phase) { _, _ in scrollToEnd(proxy) }
+                // Which lines are the learner's, always in sight and one tap
+                // to change (2026-10-23, founder: the person icon behind a
+                // menu was unclear and took two taps).
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    Picker("Read both sides",
+                           selection: Binding(get: { bothSides },
+                                              set: { setBothSides($0) })) {
+                        Text("My lines").tag(false)
+                        Text("Both sides").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 8)
+                    .background(.bar)
+                }
             }
             .navigationTitle("Say it again")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Menu {
-                        Toggle(isOn: Binding(get: { bothSides },
-                                             set: { setBothSides($0) })) {
-                            Label("Read both sides", systemImage: "person.2")
-                        }
-                    } label: {
-                        Image(systemName: bothSides ? "person.2.fill" : "person.2")
-                    }
-                    .accessibilityLabel(Text("Read both sides"))
-                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Close") { finishAndDismiss() }
                 }
