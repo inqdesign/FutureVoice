@@ -48,7 +48,11 @@ object CallAudioMode {
      * The "phone mic" choice keeps the old behaviour.
      */
     fun routeOutput(c: Context) {
+        // Bluetooth first, and never by way of a cleared choice: the mic route
+        // clears it, and clearing then naming the car again within a moment
+        // drops the call link and rebuilds it under the opener.
         if (!com.roro.futurevoice.data.MicPreference.forcesBuiltInMic(c) && routeToBluetooth(c)) return
+        com.roro.futurevoice.data.MicPreference.applyInputRoute(c)
         routeToSpeakerIfNothingWorn(c)
     }
 
@@ -76,7 +80,7 @@ object CallAudioMode {
             .any { it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO }
         if (!sco) return false
         @Suppress("DEPRECATION")
-        runCatching { am.startBluetoothSco(); am.isBluetoothScoOn = true }
+        if (!am.isBluetoothScoOn) runCatching { am.startBluetoothSco(); am.isBluetoothScoOn = true }
         return true
     }
 
