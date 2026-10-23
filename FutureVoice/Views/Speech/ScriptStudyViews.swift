@@ -216,7 +216,8 @@ struct ScriptVoiceoverSection: View {
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var center = ScriptVoiceoverCenter.shared
     @ObservedObject private var gate = BillingGate.shared
-    @StateObject private var player = AudioPlayer()
+    /// Owned by the sheet, so scrolling this row away doesn't stop it.
+    @ObservedObject var player: AudioPlayer
     @State private var wall: TalkWall?
     @State private var error: String?
     @State private var shadowing: ScriptVoiceoverStore.Stored?
@@ -248,7 +249,6 @@ struct ScriptVoiceoverSection: View {
                                     presetTimings: item.stored.meta.timings)
                         .environmentObject(appState)
                 }
-                .onDisappear { player.stop() }
                 .onAppear { gate.warm() }
             } header: {
                 Text("Hear it in my voice")

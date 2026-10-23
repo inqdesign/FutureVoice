@@ -430,6 +430,10 @@ struct SpeechScriptSheet: View {
     @State private var studyFailed = false
     @State private var studyLoading = false
     @State private var card: ScriptStudy.Highlight?
+    /// The voiceover's player lives on the sheet, not in its List row: a row
+    /// scrolled off screen disappears (and may be rebuilt), which stopped
+    /// the playback the moment the learner scrolled the script to follow it.
+    @StateObject private var voiceoverPlayer = AudioPlayer()
     /// A script that arrives with its study already made (a nawana Podcast
     /// episode): nothing is edited, voiced or studied on this phone — the
     /// study was written once for everybody when the episode was published.
@@ -509,7 +513,7 @@ struct SpeechScriptSheet: View {
                 }
 
                 if !shipped {
-                    ScriptVoiceoverSection(script: script)
+                    ScriptVoiceoverSection(script: script, player: voiceoverPlayer)
                 }
 
                 if !script.keyTerms.isEmpty {
@@ -566,6 +570,7 @@ struct SpeechScriptSheet: View {
                 }
             }
             .task(id: studyTaskId) { await loadStudy() }
+            .onDisappear { voiceoverPlayer.stop() }
         }
     }
 
