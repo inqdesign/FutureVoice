@@ -1453,8 +1453,7 @@ struct SkyPersonCard: View {
     }()
 
     private var about: String {
-        if person.personaKind == "user" { return "" }
-        return person.intro.isEmpty ? person.background : person.intro
+        person.intro.isEmpty ? person.background : person.intro
     }
 
     private var voiceName: String {

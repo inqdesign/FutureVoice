@@ -179,11 +179,8 @@ enum PublicPersonaService {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !q.isEmpty else { return [] }
         return pool.filter {
-            // A real learner's intro is not shown on their card, so it must
-            // not be searchable either — otherwise the field is queryable
-            // even though it's unreadable, which is a worse kind of exposed.
-            let searchable = [$0.display_name, $0.interests, $0.occupation, $0.location]
-                + ($0.group == .character ? [$0.intro] : [])
+            let searchable = [$0.display_name, $0.interests, $0.occupation,
+                              $0.location, $0.intro]
             return searchable.contains { $0.lowercased().contains(q) }
         }
     }

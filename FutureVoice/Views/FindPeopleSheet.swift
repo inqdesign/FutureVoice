@@ -365,14 +365,10 @@ struct FindPeopleSheet: View {
                 }
                 Text(facetLine(occupation: p.occupation, location: p.location))
                     .font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                // A real learner's intro is whatever they typed into
-                // onboarding, for onboarding's purposes — it is not a
-                // profile, and putting it on a browsable card exposed
-                // things like who lives in their house. Their row shows
-                // the three facets a stranger has any business seeing;
-                // the rest still reaches the model, so the conversation
-                // loses nothing. Characters we wrote ARE their intro.
-                if p.group == .character {
+                // A published intro is the paragraph its author saw and
+                // chose to publish (`PublicIntroPreviewSheet` /
+                // `PublicIntroView`), so it is shown like a character's.
+                if !p.intro.isEmpty {
                     Text(p.intro)
                         .font(.caption).foregroundStyle(.secondary).lineLimit(2)
                 } else if !p.interests.isEmpty {
@@ -536,13 +532,9 @@ struct FindPersonCard: View {
                 .padding(.vertical, 4)
                 .listRowSeparator(.hidden)
 
-                // Written characters ARE their intro — that paragraph is the
-                // reason to talk to them. A real learner's "intro" is their
-                // onboarding profile, written for a different purpose and
-                // never meant to be browsed, so their card stays at who and
-                // where and what they're into. Everything else still goes to
-                // the model, so the conversation is no thinner for it.
-                if person.personaKind != "user" {
+                // The intro is the reason to talk to them — a character's as
+                // written, a learner's as they saw it and published it.
+                if !(person.intro.isEmpty && person.background.isEmpty) {
                     Text(person.intro.isEmpty ? person.background : person.intro)
                         .font(.body)
                         .padding(.vertical, 2)
