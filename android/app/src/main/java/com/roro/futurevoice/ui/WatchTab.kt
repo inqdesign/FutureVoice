@@ -686,7 +686,7 @@ internal fun SkyPersonCard(
     val pull = remember { androidx.compose.animation.core.Animatable(0f) }
     val scope = rememberCoroutineScope()
     var expanded by remember(person.id) { mutableStateOf(false) }
-    val about = if (person.personaKind == "user") "" else person.intro.ifEmpty { person.background }
+    val about = person.intro.ifEmpty { person.background }
     val voiceName = VoicePreset.known(person.voicePresetId)?.let { VoicePreset.name(it.voiceId, it.name, language) }
         ?: stringResource(R.string.their_own)
     var talks by remember(person.id) { mutableStateOf<List<com.roro.futurevoice.talk.Session>>(emptyList()) }

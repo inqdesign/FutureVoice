@@ -481,8 +481,7 @@ class PublicPersonaClient(private val auth: AuthRepository) {
         val q = query.trim().lowercase()
         if (q.isEmpty()) return emptyList()
         return pool.filter { p ->
-            val searchable = listOf(p.display_name, p.interests, p.occupation, p.location) +
-                if (!p.isRealUser) listOf(p.intro) else emptyList()
+            val searchable = listOf(p.display_name, p.interests, p.occupation, p.location, p.intro)
             searchable.any { it.lowercase().contains(q) }
         }
     }

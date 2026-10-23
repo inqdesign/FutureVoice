@@ -681,13 +681,9 @@ internal fun FindPersonCard(
                         }
                     }
                 }
-                // Written characters ARE their intro — that paragraph is the
-                // reason to talk to them. A real learner's "intro" is their
-                // onboarding profile, written for a different purpose and
-                // never meant to be browsed, so their card stays at who and
-                // where and what they're into. Everything else still goes to
-                // the model, so the conversation is no thinner for it.
-                if (!person.isRealUser && person.intro.isNotBlank()) {
+                // The intro is the reason to talk to them — a character's as
+                // written, a learner's as they saw it and published it.
+                if (person.intro.isNotBlank()) {
                     GroupedRowDivider(inset = false)
                     Text(person.intro, style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(16.dp))
@@ -780,10 +776,10 @@ private fun PoolRow(
         isMine = isMine,
         photoId = p.id,
         caption = listOf(p.occupation, p.location).filter { it.isNotBlank() }.joinToString(" · "),
-        // Characters we wrote ARE their intro; a real learner's row shows the
-        // three facets a stranger has any business seeing.
-        caption2 = if (p.isRealUser) p.interests else p.intro,
-        caption2Lines = if (p.isRealUser) 1 else 2,
+        // A published intro is the paragraph its author saw and chose to
+        // publish, so it is shown like a character's.
+        caption2 = p.intro.ifBlank { p.interests },
+        caption2Lines = if (p.intro.isNotBlank()) 2 else 1,
         // The seal is a statement about TODAY, so a row the server no longer
         // describes must draw nothing.
         seated = badges[p.owner_user_id?.lowercase()]?.seated == true,
