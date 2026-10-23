@@ -35,12 +35,30 @@ things in three places. All five files are deleted; they are in git history.
 
 The window starts on **launch day, 2026-09-12** (`admin_raw`'s `w.start`).
 Before that the console was windowed from 2026-08-10 and the owner's own beta
-practice carried more than half of every total. Four tabs, one question each:
+practice carried more than half of every total.
 
-- **오늘** — today's numbers against yesterday, a list of what needs a person,
-  and one chronological feed of the whole launch (filterable: 가입 · 통화 ·
-  구독 · 문제).
-- **퍼널** — 가입 → 클론 → 첫 통화 → 다시 통화 → 5분+, over launch signups
+**Pages in a sidebar** (2026-10-21). Six tabs across the top were replaced by
+a left sidebar listing the pages (대시보드 · 전환 · 사용 패턴 · 사람 · 돈 ·
+마케팅). Only the open page is shown, and under it in the sidebar its
+sections are anchor links, lit as you scroll. A single page holding all 40
+sections was tried the same day and was harder to get around than the tabs;
+don't go back to it. Pages are `.grp`, sections `section[data-nav]` (a new
+section only needs a `data-nav` to appear in the sidebar), and a hash names
+either, so `…/admin#heatmapSec` opens that page at that section. On a phone
+the sidebar folds into a top bar with a 목차 drawer.
+
+- **대시보드** (first screen) — the LIVE MAP first (the part looked at
+  most; not sticky any more, and its 24 h list scrolls inside its card), then
+  today's tiles, the money tiles, 지금 봐야 할 것
+  beside 일어난 일, both funnels, and the heatmap. The heatmap fits every
+  day by shrinking its cells (to 9 px) and no longer has an ID column — the
+  ids are on the person card. One line per row on a wide screen (language, voice, build and invite are on the person card). A group over 30 rows shows the 25 most recent
+  and a "N명 더 보기".
+- **마케팅** is a section like the rest, re-read only while it is in view.
+
+The groups, in order:
+
+- **퍼널** (now split between the dashboard and 전환·리텐션) — 가입 → 클론 → 첫 통화 → 다시 통화 → 5분+, over launch signups
   only. Subscription is a SECOND funnel, deliberately: a trial starts within
   minutes of signing up, not after a call, so stacking it under the activity
   bars would state a sequence that never happens.
@@ -69,7 +87,7 @@ Two defaults worth knowing:
   Through 2026-09-13 the owner alone carried 57% of every turn ever logged.
   The owner's own subscription is also excluded from revenue — counting it
   printed "결제 구독 0 · 월 $19.99" on one tile, which is what gave it away.
-- **The 돈 tab ignores the toggle.** Cost and revenue are account facts, not
+- **The 돈 group ignores the toggle.** Cost and revenue are account facts, not
   launch-window ones.
 
 **Turning auto-renew off is not churn until someone has used the app.** All
@@ -101,8 +119,8 @@ readable size, and puts 남은 통화 (the pool left plus packs/invites, or a fr
 account's balance) under each name; on a wide screen that is its own column.
 
 Charts measure the card they sit in (`innerW`) and are redrawn by
-`redrawCharts()` on a tab switch — a hidden section measures 0, so that is the
-first moment its real width is knowable — and on resize. Wide tables fold
+`redrawCharts()` on resize (the map waits until it scrolls into view, since an
+off-screen map fits its bounds to nothing). Wide tables fold
 under 700 px to the columns that answer the question, and the rest is one tap
 away in the expandable row. The mobile block is the LAST thing in the
 stylesheet on purpose. Grid overrides use `minmax(0,1fr)`, never a bare `1fr`,
@@ -118,4 +136,4 @@ whose automatic minimum is min-content.
 
 Real names, real addresses, self-intros. It is `noindex` and `no-store`, and
 the password is the only door. Don't put it behind a link anyone can follow,
-and don't paste a screenshot of the 사람 tab anywhere.
+and don't paste a screenshot of the 사람 group anywhere.

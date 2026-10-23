@@ -200,6 +200,17 @@ async function fetchData(env: Env) {
       console.log(`podcast: ${(e as Error).message}`);
       return null;
     });
+    // Which features each person uses, and the quizzes (2026-10-23): every
+    // feature event is PostHog-only, so one per-person × event aggregate is
+    // read and the page decides which events make which feature.
+    (data as any).featureUse = await featureUseRows(env).then(keyed).catch((e) => {
+      console.log(`featureUse: ${(e as Error).message}`);
+      return null;
+    });
+    (data as any).quiz = await quizRows(env).then(keyed).catch((e) => {
+      console.log(`quiz: ${(e as Error).message}`);
+      return null;
+    });
   }
   // Joined through a friend's invite (2026-10-08): the invitee's
   // `referral_invitee` grant names who invited them. A strong subscribe
@@ -592,6 +603,56 @@ async function podcastRows(env: Env): Promise<Array<Record<string, any> & { u: s
     completed: x[6] === true || x[6] === 1 || String(x[6]).toLowerCase() === "true",
   }));
 }
+
+/** Every non-$ event per person, aggregated: how many, how many in the last
+ *  7 days, on how many days, first and last. The 기능별 section maps events
+ *  to features in the page, so a new event needs no Worker change. */
+async function featureUseRows(env: Env): Promise<Array<Record<string, any> & { u: string }>> {
+  const rows = await hogql(env, `
+    select lower(distinct_id), event, count(),
+      countIf(timestamp > now() - interval 7 day),
+      uniq(toDate(timestamp)), min(timestamp), max(timestamp)
+    from events
+    where timestamp > now() - interval 180 day
+      and not startsWith(event, '$')
+      and event not in ('Application Opened', 'Application Backgrounded', 'Application Updated',
+                        'Application Installed', 'screen_viewed', 'audio_played')
+      -- sync fires in the background; only turning it on is the learner's act
+      and (not startsWith(event, 'sync_') or event = 'sync_enabled')
+      and (properties.app = 'nawana' or properties.product = 'nawana')
+    group by distinct_id, event
+    limit 50000`);
+  return rows.map((x) => ({
+    u: String(x[0]), event: String(x[1]), n: Number(x[2]), n7: Number(x[3]), days: Number(x[4]),
+    first: phTime(x[5]), last: phTime(x[6]),
+  }));
+}
+
+/** The quick quiz and the weekly test, one row per event with its numbers:
+ *  quick_quiz_* carry `items` (+ `missed` on finish), weekly_test_started
+ *  `items` (+ `trial`), weekly_test_finished `score` / `total`. */
+async function quizRows(env: Env): Promise<Array<Record<string, any> & { u: string }>> {
+  const rows = await hogql(env, `
+    select lower(distinct_id), timestamp, event,
+      properties.items, properties.missed, properties.score, properties.total, properties.trial
+    from events
+    where event in ('quick_quiz_started', 'quick_quiz_resumed', 'quick_quiz_finished',
+                    'weekly_test_started', 'weekly_test_finished')
+      and timestamp > now() - interval 180 day
+      and (properties.app = 'nawana' or properties.product = 'nawana')
+    order by timestamp
+    limit 50000`);
+  const n = (v: unknown) => (v === null || v === "" || v === undefined ? null : Number(v));
+  return rows.map((x) => ({
+    u: String(x[0]), at: phTime(x[1]), event: String(x[2]),
+    items: n(x[3]), missed: n(x[4]), score: n(x[5]), total: n(x[6]),
+    trial: x[7] === true || x[7] === 1 || String(x[7]).toLowerCase() === "true",
+  }));
+}
+
+/** PostHog's timestamps come back without a zone; they are UTC. */
+const phTime = (v: unknown) =>
+  new Date(String(v).replace(" ", "T") + (/Z|[+-]\d\d:?\d\d$/.test(String(v)) ? "" : "Z")).toISOString();
 
 /** The live map's PostHog-only activity for the last 24 h, in the ledger's
  *  row shape (`event:<name>`): the free-minutes report (`trial_*`) and the
