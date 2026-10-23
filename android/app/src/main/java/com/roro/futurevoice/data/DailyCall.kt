@@ -476,7 +476,11 @@ object DailyCallScheduler {
         fun build(channel: String): Notification = NotificationCompat.Builder(context, channel)
             .setSmallIcon(android.R.drawable.sym_call_incoming)
             .setContentTitle(com.roro.futurevoice.core.UILanguage.localized(context).getString(R.string.your_future_self))
-            .setCategory(NotificationCompat.CATEGORY_CALL)
+            // ALARM, not CALL: Do Not Disturb filters a CALL like a phone call
+            // from someone not starred and the ring never showed (tester,
+            // 2026-10-23), while alarms pass by default. iOS's AlarmKit rings
+            // through Focus the same way.
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             // A dark or locked screen gets the RING (Answer / Decline), never
             // the answer itself — the system fires this intent unasked, and
