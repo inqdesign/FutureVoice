@@ -1953,6 +1953,8 @@
     <string name="read">"%s に読了"</string>
     <string name="read_again">"もう一度読む"</string>
     <string name="read_both_sides">"両方のセリフを読む"</string>
+    <string name="my_lines">"自分のセリフ"</string>
+    <string name="both_sides">"両方のセリフ"</string>
     <!-- 'Read from the structures you actually build and from verified grammar slips per 100 spoken words — the lower of the two.' -->
     <string name="read_from_the_structures_you_actually_build_and_from_verifie_7599b1">"実際に組み立てている文の構造と、話した100語あたりの確認済み文法ミスから読みます。低いほうを取ります。"</string>
     <!-- 'Read from your real talks — vocabulary, grammar, fluency and expression together.' -->

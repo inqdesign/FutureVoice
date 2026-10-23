@@ -1953,6 +1953,8 @@
     <string name="read">"%s 已讀"</string>
     <string name="read_again">"重新讀取"</string>
     <string name="read_both_sides">"兩邊的台詞都念"</string>
+    <string name="my_lines">"我的台詞"</string>
+    <string name="both_sides">"兩邊的台詞"</string>
     <!-- 'Read from the structures you actually build and from verified grammar slips per 100 spoken words — the lower of the two.' -->
     <string name="read_from_the_structures_you_actually_build_and_from_verifie_7599b1">"以你實際組成的句子結構，和每說 100 個字中確認到的文法錯誤來讀，取兩者較低的一個。"</string>
     <!-- 'Read from your real talks — vocabulary, grammar, fluency and expression together.' -->

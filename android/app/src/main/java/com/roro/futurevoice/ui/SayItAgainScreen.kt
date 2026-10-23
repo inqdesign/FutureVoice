@@ -707,31 +707,21 @@ fun SayItAgainScreen(
                 colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
                     containerColor = page, scrolledContainerColor = page),
                 title = { com.roro.futurevoice.ui.brand.IosNavTitle(stringResource(R.string.say_it_again)) },
-                navigationIcon = {
-                    var menu by remember { mutableStateOf(false) }
-                    Box {
-                        IconButton(onClick = { menu = true }) {
-                            Icon(if (bothSides) Icons.Filled.People else Icons.Outlined.People,
-                                contentDescription = stringResource(R.string.read_both_sides))
-                        }
-                        com.roro.futurevoice.ui.brand.IosMenu(menu, { menu = false }) {
-                            // iOS: a Toggle in a Menu — the tick says it is on.
-                            com.roro.futurevoice.ui.brand.IosMenuItem(
-                                text = stringResource(R.string.read_both_sides),
-                                onClick = { menu = false; setBothSides(!bothSides) },
-                                checked = bothSides,
-                                icon = Icons.Outlined.People,
-                            )
-                        }
-                    }
-                },
                 actions = {
                     TextButton(onClick = { close() }) { Text(stringResource(R.string.close)) }
                 },
             )
         },
     ) { padding ->
-      Box(Modifier.padding(top = padding.calculateTopPadding()).fillMaxSize()) {
+      Column(Modifier.padding(top = padding.calculateTopPadding()).fillMaxSize()) {
+      // Which lines are the learner's, always in sight and one tap to
+      // change (iOS 2026-10-23: the person icon behind a menu was unclear).
+      com.roro.futurevoice.ui.brand.IosSegmented(
+          listOf(stringResource(R.string.my_lines), stringResource(R.string.both_sides)),
+          selected = if (bothSides) 1 else 0,
+          onSelect = { setBothSides(it == 1) },
+          modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp))
+      Box(Modifier.weight(1f).fillMaxWidth()) {
         if (phase == SayPhase.INTRO) {
             // The cover sits at the bottom too, right over Start (iOS: the
             // same bottom-anchored scroll view holds it).
@@ -807,6 +797,7 @@ fun SayItAgainScreen(
                     }
                 }
         }
+      }
       }
     }
 

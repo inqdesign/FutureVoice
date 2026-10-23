@@ -1955,6 +1955,8 @@
     <string name="read">"Read %s"</string>
     <string name="read_again">"Read again"</string>
     <string name="read_both_sides">"Read both sides"</string>
+    <string name="my_lines">"My lines"</string>
+    <string name="both_sides">"Both sides"</string>
     <!-- 'Read from the structures you actually build and from verified grammar slips per 100 spoken words — the lower of the two.' -->
     <string name="read_from_the_structures_you_actually_build_and_from_verifie_7599b1">"Read from the structures you actually build and from verified grammar slips per 100 spoken words — the lower of the two."</string>
     <!-- 'Read from your real talks — vocabulary, grammar, fluency and expression together.' -->

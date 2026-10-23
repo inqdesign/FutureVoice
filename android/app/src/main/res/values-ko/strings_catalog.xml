@@ -1953,6 +1953,8 @@
     <string name="read">"%s에 읽음"</string>
     <string name="read_again">"다시 읽기"</string>
     <string name="read_both_sides">"양쪽 대사 모두 읽기"</string>
+    <string name="my_lines">"내 대사"</string>
+    <string name="both_sides">"양쪽 대사"</string>
     <!-- 'Read from the structures you actually build and from verified grammar slips per 100 spoken words — the lower of the two.' -->
     <string name="read_from_the_structures_you_actually_build_and_from_verifie_7599b1">"실제로 만드는 문장 구조와 말한 100단어당 확인된 문법 실수로 읽어요 — 둘 중 낮은 쪽이에요."</string>
     <!-- 'Read from your real talks — vocabulary, grammar, fluency and expression together.' -->

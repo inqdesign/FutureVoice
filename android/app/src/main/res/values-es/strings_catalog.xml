@@ -1950,6 +1950,8 @@
     <string name="read">"Leído el %s"</string>
     <string name="read_again">"Leer de nuevo"</string>
     <string name="read_both_sides">"Leer las dos partes"</string>
+    <string name="my_lines">"Mis frases"</string>
+    <string name="both_sides">"Las dos partes"</string>
     <!-- 'Read from the structures you actually build and from verified grammar slips per 100 spoken words — the lower of the two.' -->
     <string name="read_from_the_structures_you_actually_build_and_from_verifie_7599b1">"Se lee de las estructuras que construyes de verdad y de los fallos de gramática confirmados por cada 100 palabras: el menor de los dos."</string>
     <!-- 'Read from your real talks — vocabulary, grammar, fluency and expression together.' -->
