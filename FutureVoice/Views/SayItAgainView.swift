@@ -624,8 +624,17 @@ struct SayItAgainView: View {
                 "both": bothSides ? "1" : "0",
             ])
         }
-        runTask?.cancel()
+        stopRun()
         runTask = Task { @MainActor in await run(from: i) }
+    }
+
+    /// Cancel the run and stop the mic HERE, synchronously, before anything
+    /// new starts — a cancelled read no longer stops it on its own.
+    private func stopRun() {
+        runTask?.cancel()
+        player.stop()
+        _ = live.stop()
+        _ = recorder.stop()
     }
 
     /// Walk the script. Every step awaits its own end, so the loop IS the
@@ -738,6 +747,17 @@ struct SayItAgainView: View {
         justRecorded = true
 
         let spoke = await waitForReadToEnd(text: step.text)
+
+        // A cancelled read leaves the mic alone. Whoever cancelled it
+        // (a restart, a retry, "Read both sides", Close) has already
+        // stopped it and may have started the NEXT read on the same
+        // recognizer by the time this task wakes — stopping here killed
+        // that read's mic, and with nothing ever heard the line waited
+        // forever ("말을 해도 넘어가질 않네", 2026-10-23).
+        guard !Task.isCancelled else {
+            if let url { try? FileManager.default.removeItem(at: url) }
+            return
+        }
 
         // Tail grace — a clipped tail reads as a deletion in the diff.
         try? await Task.sleep(nanoseconds: 300_000_000)
@@ -871,8 +891,7 @@ struct SayItAgainView: View {
     private func retry(_ step: SayItAgainScript.Step) {
         guard let i = steps.firstIndex(where: { $0.id == step.id }) else { return }
         let wasFinished = phase == .finished
-        runTask?.cancel()
-        player.stop()
+        stopRun()
         takes[step.id] = nil
         runTask = Task { @MainActor in
             if wasFinished {
