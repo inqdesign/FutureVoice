@@ -1,0 +1,9 @@
+Novedades
+• Añade tus propias palabras, expresiones y frases a tus listas. Mientras escribes, te muestra lo que ya está.
+• Marca una tarjeta de repaso como mal oída: esa frase deja de contar y se quitan sus tarjetas.
+
+Correcciones
+• Con el coche o tus auriculares conectados por Bluetooth, la llamada suena por ahí.
+• Tu llamada diaria suena también en No molestar.
+• Si cierras un quiz rápido a medias, sigue donde lo dejaste.
+• Escuchar empieza a una velocidad para tu nivel.

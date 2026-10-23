@@ -1,0 +1,9 @@
+Nouveautés
+• Ajoute tes propres mots, expressions et phrases à tes listes. Pendant que tu tapes, ce qui y est déjà s’affiche.
+• Marque une carte de révision comme mal entendue : la phrase ne compte plus et ses cartes sont retirées.
+
+Corrections
+• Voiture ou écouteurs connectés en Bluetooth : l’appel passe par eux.
+• Ton appel quotidien sonne même en mode Ne pas déranger.
+• Un quiz rapide fermé en cours reprend là où tu t’étais arrêté.
+• L’écoute démarre à une vitesse adaptée à ton niveau.

@@ -1,0 +1,9 @@
+New
+• Add your own words, expressions and sentences to your lists. As you type, anything already there shows up.
+• Mark a review card as misheard: that line leaves your score, and the cards made from it are cleared.
+
+Fixed
+• Calls now play through your car or wireless earphones when they're connected over Bluetooth.
+• Your daily call rings even in Do Not Disturb.
+• A quick quiz you closed halfway picks up where you left off.
+• Listen starts at a speed that suits your level.
