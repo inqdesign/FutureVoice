@@ -1,18 +1,10 @@
 New
-• Your daily call doesn't keep coming back to the same subject. It takes turns: picking up your last talk, light chat about films or music, a story from today's news, and a question that asks your opinion (from B1).
-• Me → Say hello now has Email and Threads too.
-• Add the My routine widget to your Home Screen. It shows what's on today and what's up now, and a tap starts it.
-• An empty Review page now shows where your first book will appear, with a button to start a call.
-• Add your own words, expressions and sentences to your lists. As you type, anything already there shows up.
-• Mark a review card as misheard: that line leaves your score, and the cards made from it are cleared.
-• Swipe sideways through the topic chips on the Talk tab.
+• Pick My lines or Both sides at the top of Say it again, in one tap. You can always see which part you're reading.
+• In Say it again, the red dot next to "Say your line" moves with your voice, so you know the mic is hearing you.
+• Find people, a person's page and the map card now show the intro that person published.
 
 Fixed
-• Your next daily call now rings on time even if you declined or answered the last one and didn't open the app.
-• When your free minutes run out, a report on what those talks showed opens. It no longer goes missing if you close the call screen right after the talk ends.
-• Quick quizzes now use expressions at your level you haven't used yet, and the weekly test uses the words, expressions and sentences you put off in your deck. No more questions where several choices fit.
-• Opening The Core on a smaller iPhone no longer closes the app.
-• Card sentences and buttons no longer get cut off on small screens.
-• In Listen, there's a short pause before the next episode starts.
-• In coach mode, "try saying" now follows the whole call and your profile, so it never contradicts what you already said.
-• A quick quiz you closed halfway picks up where you left off.
+• In Say it again, starting over or re-reading a line no longer leaves the next line stuck when you speak.
+• Switching Say it again to Both sides no longer stutters.
+• In Speech, "Hear it in my voice" keeps playing while you scroll the script.
+• If you already subscribe, the plans screen no longer offers a free trial.

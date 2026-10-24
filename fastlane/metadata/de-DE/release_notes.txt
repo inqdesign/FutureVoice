@@ -1,18 +1,10 @@
 Neu
-• Dein täglicher Anruf kommt nicht mehr immer aufs selbe Thema zurück. Er wechselt ab: dein letztes Gespräch weiterführen, lockerer Smalltalk über Filme oder Musik, eine Meldung aus den Nachrichten des Tages und eine Frage nach deiner Meinung (ab B1).
-• Unter Ich → Schreib uns erreichst du uns jetzt auch per E-Mail und über Threads.
-• Leg dir das Widget Meine Routine auf den Home-Bildschirm. Es zeigt, was heute ansteht und was gerade dran ist, und ein Tippen startet es.
-• Ist Wiederholen noch leer, siehst du jetzt, wo dein erstes Buch erscheint, und kannst direkt einen Anruf starten.
-• Trag eigene Wörter, Wendungen und Sätze in deine Listen ein. Schon Vorhandenes wird dir beim Tippen gezeigt.
-• Markier eine Wiederholungskarte als falsch verstanden: Der Satz zählt nicht mehr für deine Bewertung, und die Karten daraus verschwinden.
-• Wisch auf dem Sprechen-Tab seitwärts durch die Themen.
+• Oben in „Nochmal sagen“ wählst du mit einem Tipp „Meine Sätze“ oder „Beide Seiten“. Du siehst immer, welchen Part du gerade liest.
+• In „Nochmal sagen“ bewegt sich der rote Punkt neben „Sag deinen Satz“ mit deiner Stimme. So weißt du sofort, dass das Mikro dich hört.
+• Bei „Leute finden“, auf der Seite einer Person und auf der Kartenkarte steht jetzt die Vorstellung, die diese Person veröffentlicht hat.
 
 Behoben
-• Dein nächster täglicher Anruf kommt jetzt pünktlich, auch wenn du den letzten abgelehnt oder angenommen und die App danach nicht geöffnet hast.
-• Wenn deine kostenlosen Minuten aufgebraucht sind, öffnet sich ein Bericht über deine bisherigen Gespräche. Er geht jetzt nicht mehr verloren, wenn du den Anruf direkt nach dem Gespräch schließt.
-• Schnelle Quizze nehmen jetzt Wendungen auf deinem Niveau, die du noch nicht benutzt hast, und der Wochentest die Wörter, Wendungen und Sätze, die du im Stapel verschoben hast. Fragen, bei denen mehrere Antworten passen, gibt es nicht mehr.
-• Auf kleineren iPhones schließt sich die App nicht mehr, wenn du The Core öffnest.
-• Sätze und Buttons auf den Karten werden auf kleinen Bildschirmen nicht mehr abgeschnitten.
-• Beim Hören gibt es eine kurze Pause, bevor die nächste Folge beginnt.
-• Im Coach-Modus richtet sich „Sag zum Beispiel“ jetzt nach dem ganzen Gespräch und deinem Profil und widerspricht nicht mehr dem, was du schon gesagt hast.
-• Ein Schnellquiz, das du mittendrin geschlossen hast, geht da weiter, wo du aufgehört hast.
+• Wenn du in „Nochmal sagen“ neu anfängst oder einen Satz nochmal liest, geht es beim Sprechen jetzt wieder zum nächsten Satz weiter.
+• Der Wechsel zu „Beide Seiten“ ruckelt nicht mehr.
+• In „Rede“ läuft „In meiner Stimme hören“ weiter, während du durch den Text scrollst.
+• Wer schon ein Abo hat, sieht auf der Tarifseite kein Gratis-Probeangebot mehr.

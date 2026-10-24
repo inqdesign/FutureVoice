@@ -1,18 +1,10 @@
 Novedades
-• Tu llamada diaria ya no vuelve siempre al mismo tema. Se va turnando: retomar tu última conversación, charla ligera sobre películas o música, una noticia del día y una pregunta que pide tu opinión (desde B1).
-• En Mi perfil → Saluda ahora también puedes escribirnos por correo y por Threads.
-• Pon el widget Mi rutina en tu pantalla de inicio. Muestra lo que toca hoy y lo que toca ahora, y con un toque empiezas.
-• Si Repaso todavía está vacío, ahora ves dónde aparecerá tu primer cuaderno y un botón para empezar una llamada.
-• Añade tus propias palabras, expresiones y frases a tus listas. Mientras escribes, te muestra lo que ya está.
-• Marca una tarjeta de repaso como mal oída: esa frase deja de contar en tu nota y se quitan las tarjetas que salieron de ella.
-• Desliza de lado por los temas en la pestaña Hablar.
+• Arriba en «Volver a decirlo» eliges «Mis frases» o «Las dos partes» con un solo toque. Siempre ves qué parte estás leyendo.
+• En «Volver a decirlo», el punto rojo junto a «Di tu frase» se mueve con tu voz, así sabes que el micrófono te está oyendo.
+• «Buscar personas», la página de cada persona y su tarjeta en el mapa muestran ahora la presentación que esa persona publicó.
 
-Corregido
-• Tu siguiente llamada diaria ahora llega a su hora aunque hayas rechazado o contestado la anterior y no hayas abierto la app.
-• Cuando se acaban tus minutos gratis, se abre un informe sobre lo que mostraron tus conversaciones. Ya no se pierde si cierras la llamada justo al terminar.
-• Los quiz rápidos usan expresiones de tu nivel que aún no has usado, y el test semanal, las palabras, expresiones y frases que pospusiste en tu mazo. Ya no salen preguntas en las que varias opciones sirven.
-• Abrir El Núcleo en un iPhone pequeño ya no cierra la app.
-• En pantallas pequeñas, las frases y los botones de las tarjetas ya no se cortan.
-• En Escuchar, hay una pausa corta antes del siguiente episodio.
-• En el modo coach, «Prueba a decir» ahora sigue toda la llamada y tu perfil, sin contradecir lo que ya dijiste.
-• Si cierras un quiz rápido a medias, sigue donde lo dejaste.
+Correcciones
+• En «Volver a decirlo», después de empezar de nuevo o releer una frase, al hablar ya pasa a la siguiente.
+• Cambiar a «Las dos partes» ya no se traba.
+• En «Discurso», «Escúchalo con mi voz» sigue sonando mientras te desplazas por el texto.
+• Si ya tienes una suscripción, la pantalla de planes ya no te ofrece la prueba gratis.
