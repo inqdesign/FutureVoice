@@ -1342,14 +1342,16 @@ struct ShadowDrillView: View {
         guard phase == .countdown else { return }
         countdownValue = 0
         // Capture starts HERE — on "0", the beat the learner is cued by, not
-        // back at setup. The 350 ms below is deliberate lead-in: "0" appears
+        // back at setup. The 800 ms below is deliberate lead-in: "0" appears
         // before the karaoke does, so anyone who starts speaking the instant
-        // they see it is inside the file. Everything earlier — the 3-2-1, a
+        // they see it is inside the file, and the rest get a breath between
+        // the count and the line (350 ms read as no gap at all — founder,
+        // 2026-10-24). Everything earlier — the 3-2-1, a
         // throat-clear, a rehearsal — never reaches the scored audio or the
         // take they play back, because it was never recorded.
         try? recorder.beginPrepared()
         HapticEngine.countdownGo()
-        try? await Task.sleep(nanoseconds: 350_000_000)
+        try? await Task.sleep(nanoseconds: 800_000_000)
 
         phase = .syncing
         // Countdown just ended → start the clock and karaoke immediately.
