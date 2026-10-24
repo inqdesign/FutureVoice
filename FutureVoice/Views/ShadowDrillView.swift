@@ -954,11 +954,14 @@ struct ShadowDrillView: View {
         if phase == .countdown {
             ZStack {
                 Color.black.opacity(0.5).ignoresSafeArea()
-                Text("\(countdownValue)")
-                    .font(.system(size: 120, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.white)
-                    .transition(.scale.combined(with: .opacity))
-                    .id(countdownValue)
+                // -1 = the mic is still being set up: scrim only.
+                if countdownValue >= 0 {
+                    Text("\(countdownValue)")
+                        .font(.system(size: 120, weight: .heavy, design: .rounded))
+                        .foregroundStyle(.white)
+                        .transition(.scale.combined(with: .opacity))
+                        .id(countdownValue)
+                }
             }
         }
     }
@@ -1248,17 +1251,17 @@ struct ShadowDrillView: View {
         resetResult()
         prevTranscript = ""
 
-        // "3" goes up FIRST, and the mic is set up while it shows. The setup
-        // below (recognizer + voice processing + recorder session) holds the
-        // main thread for a noticeable beat, and it used to run before the
-        // count began — a blank pause after the tap before anything moved.
-        // The pause before "2" shrinks by whatever the setup took, so the
-        // count is as long as ever.
-        let countStartedAt = Date()
+        // The scrim goes up FIRST, with no number, and the mic is set up
+        // behind it. The setup below (recognizer + voice processing +
+        // recorder session) holds the main thread for a noticeable beat:
+        // run before anything showed, the tap seemed ignored; run behind a
+        // "3", that "3" sat on screen far longer than "2" and "1" whenever
+        // the setup outran its 0.7 s (founder, 2026-10-24 — Android, which
+        // doesn't block, counted evenly). So the count starts only once the
+        // mic is ready, and every beat is the same length.
         phase = .countdown
-        countdownValue = 3
-        HapticEngine.countdownTick()
-        try? await Task.sleep(for: .milliseconds(30))   // let "3" draw first
+        countdownValue = -1
+        try? await Task.sleep(for: .milliseconds(30))   // let the scrim draw first
 
         // Start mic recognition BEFORE the countdown — no playback. Playing
         // the target audio through the speaker bleeds into the mic, which
@@ -1330,9 +1333,7 @@ struct ShadowDrillView: View {
         // "1" (which made the exact start moment hard to catch). The mic is
         // already hot, so speaking right on (or slightly before) the beat is
         // fully captured.
-        let setupTook = Date().timeIntervalSince(countStartedAt)
-        try? await Task.sleep(for: .seconds(max(0, 0.7 - setupTook)))
-        for n in [2, 1] {
+        for n in [3, 2, 1] {
             guard phase == .countdown else { return }
             countdownValue = n
             HapticEngine.countdownTick()
