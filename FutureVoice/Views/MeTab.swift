@@ -79,6 +79,20 @@ struct MeTab: View {
     @AppStorage(PeopleSky.defaultsKey) private var peopleSkyOn = true
     #endif
     var body: some View {
+        #if DEBUG
+        // `-capture me -meVoicePage 1`: the Voice page itself, for a capture
+        // run that can't tap through to it.
+        if UserDefaults.standard.bool(forKey: "meVoicePage") {
+            NavigationStack { voicePage }
+        } else {
+            settingsBody
+        }
+        #else
+        settingsBody
+        #endif
+    }
+
+    private var settingsBody: some View {
         NavigationStack {
             List {
                 // Profile at the very top — avatar + name, with the signed-in
