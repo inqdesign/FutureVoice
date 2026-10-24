@@ -527,4 +527,7 @@
     <string name="grammar_trend_caption_ceiling">每 100 词经确认的错误，每次对话一个点——这是你的准确度。上方的等级取决于你造出的句子结构，所以单靠这条曲线无法让它变化。</string>
     <string name="cm_focus_in_talks">在 %1$d 次通话中出现</string>
     <string name="cm_focus_talks_footer">最近有 %1$d 次通话出现这个错误，所以这次通话会特别留意。</string>
+    <string name="fs_voice_mine">我的声音</string>
+    <string name="fs_voice_similar">%1$s · 相近的声音</string>
+    <string name="fs_voice_title">流利的自己的声音</string>
 </resources>

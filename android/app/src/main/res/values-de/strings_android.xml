@@ -519,4 +519,7 @@
     <string name="grammar_trend_caption_ceiling">Bestätigte Fehler pro 100 Wörter, ein Punkt pro Gespräch – deine Genauigkeit. Das Niveau oben kommt von den Strukturen, die du baust, deshalb kann diese Kurve allein es nicht bewegen.</string>
     <string name="cm_focus_in_talks">In %1$d deiner Gespräche</string>
     <string name="cm_focus_talks_footer">Dieser Fehler kam in %1$d deiner letzten Gespräche vor, darum achtet dieses Gespräch darauf.</string>
+    <string name="fs_voice_mine">Meine Stimme</string>
+    <string name="fs_voice_similar">%1$s · ähnliche Stimme</string>
+    <string name="fs_voice_title">Stimme deines fließenden Ichs</string>
 </resources>

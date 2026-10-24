@@ -234,7 +234,12 @@ fun ShadowScreen(
     presetTimings: List<WordTiming>? = null,
 ) {
     androidx.compose.runtime.key(turnId, line) {
-        ShadowLineScreen(line = line, voiceId = voiceId, targetLanguage = targetLanguage, onBack = onBack, turnId = turnId, position = position, onNext = onNext, seed = seed, presetAudio = presetAudio, presetTimings = presetTimings)
+        // The fluent self's voice, not necessarily the clone (iOS
+        // `ShadowDrillView` reads `speakingVoiceId`, 2026-10-24).
+        val context = LocalContext.current
+        val speaking = remember(voiceId) {
+            com.roro.futurevoice.data.FluentSelfVoice.speaking(context, voiceId) ?: voiceId }
+        ShadowLineScreen(line = line, voiceId = speaking, targetLanguage = targetLanguage, onBack = onBack, turnId = turnId, position = position, onNext = onNext, seed = seed, presetAudio = presetAudio, presetTimings = presetTimings)
     }
 }
 

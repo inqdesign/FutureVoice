@@ -141,6 +141,9 @@ fun MeScreen(
     voiceIsStandIn: Boolean = false,
     voiceQueuedUntil: Long? = null,
     onChooseStandIn: (String) -> Unit = {},
+    /** iOS `fluentSelfPresetId` / `chooseFluentSelfVoice(source: "settings")`. */
+    fluentSelfPresetId: String? = null,
+    onChooseFluentSelfVoice: (String?) -> Unit = {},
     /** A re-record from the Voice page made a new voice (the recording
      *  screen runs on its own over Me — iOS `fromSettings`). */
     onVoiceRecorded: (String) -> Unit = {},
@@ -285,6 +288,8 @@ fun MeScreen(
             voiceIsStandIn = voiceIsStandIn,
             voiceQueuedUntil = voiceQueuedUntil,
             onPickStandIn = { page = MePage.STAND_IN_VOICE },
+            fluentSelfPresetId = fluentSelfPresetId,
+            onChooseFluentSelfVoice = onChooseFluentSelfVoice,
             onBack = { page = null },
         )
         // The voice that speaks while theirs is queued (iOS pushes

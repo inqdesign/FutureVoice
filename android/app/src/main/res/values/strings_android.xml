@@ -549,4 +549,7 @@
     <string name="grammar_trend_caption_ceiling">Verified slips per 100 words, one point per talk — your accuracy. The band above comes from the structures you build, so this curve alone can’t move it.</string>
     <string name="cm_focus_in_talks">In %1$d of your talks</string>
     <string name="cm_focus_talks_footer">You made this mistake in %1$d of your recent talks, so this call keeps an eye on it.</string>
+    <string name="fs_voice_mine">My voice</string>
+    <string name="fs_voice_similar">%1$s · similar voice</string>
+    <string name="fs_voice_title">Fluent self’s voice</string>
 </resources>

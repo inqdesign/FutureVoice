@@ -527,4 +527,7 @@
     <string name="grammar_trend_caption_ceiling">대화 한 번이 점 하나, 100단어당 확인된 실수예요. 정확도를 보여 줘요. 위의 밴드는 만든 문장 구조로 정해져서, 이 곡선만으로는 움직이지 않아요.</string>
     <string name="cm_focus_in_talks">통화 %1$d번에서 나왔어요</string>
     <string name="cm_focus_talks_footer">최근 통화 %1$d번에서 이 실수가 나와서, 이번 통화에서 지켜봐요.</string>
+    <string name="fs_voice_mine">내 목소리</string>
+    <string name="fs_voice_similar">%1$s · 비슷한 목소리</string>
+    <string name="fs_voice_title">유창해진 나의 목소리</string>
 </resources>

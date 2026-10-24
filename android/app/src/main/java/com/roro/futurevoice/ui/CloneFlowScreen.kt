@@ -73,6 +73,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.layout.size
 import com.roro.futurevoice.audio.WavRecorder
 import com.roro.futurevoice.data.AuthRepository
@@ -203,6 +204,14 @@ fun CloneFlowScreen(
      *  replaces it ([onCloned]) and closes. */
     fromSettings: Boolean = false,
     onClose: () -> Unit = {},
+    /** The preset chosen for the fluent self over the clone (iOS
+     *  `fluentSelfPresetId`, 2026-10-24), and the segment's silent pick. */
+    fluentSelfPresetId: String? = null,
+    onPickFluentSelfPreset: (String?) -> Unit = {},
+    /** "Start talking" reports the meet act's voice choice (iOS
+     *  `chooseFluentSelfVoice(source: "meet")`). */
+    onFluentSelfVoiceChosen: (presetId: String?, recommended: String?, ownPitchHz: Double?,
+                              switches: Int) -> Unit = { _, _, _, _ -> },
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -292,6 +301,21 @@ fun CloneFlowScreen(
      *  used to be synthesized afresh. */
     val sounds = remember { MeetSounds() }
     var clonedVoiceId by remember { mutableStateOf<String?>(null) }
+    /** The preset offered beside the clone (iOS 2026-10-24): same gender as
+     *  the recording, nearest in pitch (`VoicePitch`). Null until measured,
+     *  and the segment waits for it rather than offering a guess first. */
+    var offeredPreset by remember { mutableStateOf<com.roro.futurevoice.talk.StockPerson?>(null) }
+    var ownPitchHz by remember { mutableStateOf<Double?>(null) }
+    /** How many times the learner flipped between the two — "compared"
+     *  versus "took the first thing they heard". */
+    var voiceSwitches by remember { mutableIntStateOf(0) }
+    var measuringPitch by remember { mutableStateOf(false) }
+    val currentPreset by androidx.compose.runtime.rememberUpdatedState(fluentSelfPresetId)
+    val usingPreset = fluentSelfPresetId != null
+    /** The voice the meet act speaks in (iOS `meetVoiceKey` =
+     *  `speakingVoiceId`): the chosen preset, else the clone. Read at call
+     *  time — a take that lands late checks it against the voice NOW. */
+    fun meetVoiceId(): String? = clonedVoiceId?.let { currentPreset ?: it }
     var accentId by remember { mutableStateOf<String?>(null) }
     var accentToPick by remember { mutableStateOf<com.roro.futurevoice.data.VoiceAccent?>(null) }
     var removingAccent by remember { mutableStateOf(false) }
@@ -362,7 +386,7 @@ fun CloneFlowScreen(
     }
 
     fun playGreeting() {
-        val g = clonedVoiceId?.let { sounds.greetings[it] } ?: return
+        val g = meetVoiceId()?.let { sounds.greetings[it] } ?: return
         mp3.stop()
         scope.launch { mp3.play(g) }
     }
@@ -371,7 +395,7 @@ fun CloneFlowScreen(
      *  takes over the orb. Said ONCE on arrival. */
     fun openMeet() {
         meetBurst = true
-        val ask = MeetSounds.greetingKey(clonedVoiceId ?: "")
+        val ask = MeetSounds.greetingKey(meetVoiceId() ?: "")
         sounds.ask = ask
         scope.launch {
             delay(700)
@@ -399,7 +423,7 @@ fun CloneFlowScreen(
             sounds.inFlight.remove(key)
             if (data == null) return@launch
             sounds.greetings[voiceId] = data
-            if (sounds.ask == key && clonedVoiceId == voiceId) playGreeting()
+            if (sounds.ask == key && meetVoiceId() == voiceId) playGreeting()
         }
     }
 
@@ -408,10 +432,47 @@ fun CloneFlowScreen(
      *  voice was heard before, synthesized once otherwise. Played here: the
      *  voice itself changed, so this is a first hearing. */
     fun refreshGreetingForNewVoice() {
-        val voiceId = clonedVoiceId ?: return
+        val voiceId = meetVoiceId() ?: return
         sounds.ask = MeetSounds.greetingKey(voiceId)
         if (sounds.greetings[voiceId] != null) { playGreeting(); return }
         fetchGreeting(voiceId)
+    }
+
+    /** Measure the recording once and pick the preset to offer. Off the main
+     *  thread: it reads up to 12 s of audio plus two bundled previews. */
+    fun measureOfferedPreset(sample: File? = sampleFile) {
+        if (offeredPreset != null || measuringPitch) return
+        measuringPitch = true
+        val language = targetLanguage
+        scope.launch {
+            val (preset, own) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                val own = sample?.takeIf { it.exists() }?.let { com.roro.futurevoice.audio.VoicePitch.medianF0(it) }
+                val p = own?.let { com.roro.futurevoice.audio.VoicePitch.closestPreset(context, it, language) }
+                // No recording to measure (a debug preview, a lost file):
+                // offer the first preset rather than no choice at all.
+                (p ?: com.roro.futurevoice.talk.StockPerson.catalog[0]) to own
+            }
+            measuringPitch = false
+            ownPitchHz = own
+            offeredPreset = preset
+            // A preset kept from an earlier pass that isn't the one offered
+            // now would have no segment to show it: back to the clone.
+            val kept = currentPreset
+            if (kept != null && kept != preset.voiceId) onPickFluentSelfPreset(null)
+        }
+    }
+
+    fun selectVoice(presetId: String?) {
+        if (presetId == currentPreset) return
+        HapticEngine.light(context)
+        voiceSwitches += 1
+        onPickFluentSelfPreset(presetId)
+        mp3.stop()
+        // The voice the meet act speaks in, after the pick lands.
+        val voiceId = clonedVoiceId?.let { presetId ?: it } ?: return
+        sounds.ask = MeetSounds.greetingKey(voiceId)
+        val g = sounds.greetings[voiceId]
+        if (g != null) scope.launch { mp3.play(g) } else fetchGreeting(voiceId)
     }
 
     fun stopAndReview() {
@@ -590,6 +651,9 @@ fun CloneFlowScreen(
                 // A sign-up that adopted an existing account rebuilds from the
                 // recording already kept; everything else from the fresh take.
                 val source = if (takeFile.exists()) takeFile else sampleFile
+                // Measured while the clone is made, so the meet act's voice
+                // choice is ready when it opens.
+                if (!fromSettings) measureOfferedPreset(source)
                 // Levelled and cleaned on the phone inside cloneVoice
                 // (`VoiceDenoiser`, iOS `regenerateVoiceClone`).
                 val auth = AuthRepository()
@@ -728,6 +792,7 @@ fun CloneFlowScreen(
 
     fun finishMeet() {
         mp3.stop()
+        onFluentSelfVoiceChosen(currentPreset, offeredPreset?.voiceId, ownPitchHz, voiceSwitches)
         // The accent goes with the voice (same key as iOS); the app reads it
         // when the voice lands.
         prefs.edit().apply {
@@ -786,13 +851,20 @@ fun CloneFlowScreen(
         }
     }
 
+    // On the meet act, also when it opens without the clone flow behind it
+    // (a relaunch, a debug stage).
+    LaunchedEffect(act) { if (act == CloneAct.MEET) measureOfferedPreset() }
+
     val orbSize = when {
         act == CloneAct.SCRIPT -> if (shortScreen) 56.dp else 72.dp
+        // The voice choice sits above the orb on the meet act; the orb gives
+        // it the room so speed and accent still fit on the first screen.
+        act == CloneAct.MEET -> if (shortScreen) 96.dp else 136.dp
         else -> if (shortScreen) 112.dp else 168.dp
     }
     /** The orb can speak with a take on hand or on its way: a tap while it
      *  is being made is remembered and plays the moment it lands. */
-    val canReplayGreeting = act == CloneAct.MEET && clonedVoiceId?.let {
+    val canReplayGreeting = act == CloneAct.MEET && meetVoiceId()?.let {
         sounds.greetings[it] != null || MeetSounds.greetingKey(it) in sounds.inFlight
     } == true
     val stageTitle = stringResource(when (act) {
@@ -849,6 +921,29 @@ fun CloneFlowScreen(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp))
             }
+            // Which voice the fluent self speaks in — the clone, or the
+            // preset nearest it — as the FIRST choice on the act (iOS
+            // 2026-10-24, founder: the speed and accent below depend on it,
+            // so it goes on top). The clone is selected on arrival.
+            if (act == CloneAct.MEET) {
+                val preset = offeredPreset
+                if (preset != null) {
+                    val locked = applyingAccentId != null || removingAccent
+                    com.roro.futurevoice.ui.brand.IosSegmented(
+                        options = listOf(stringResource(R.string.fs_voice_mine),
+                            stringResource(R.string.fs_voice_similar, com.roro.futurevoice.talk.VoicePreset.name(
+                                preset.voiceId, preset.name, targetLanguage))),
+                        selected = if (fluentSelfPresetId == null) 0 else 1,
+                        onSelect = { i -> if (!locked) selectVoice(if (i == 0) null else preset.voiceId) },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)
+                            .alpha(if (locked) 0.5f else 1f),
+                    )
+                } else {
+                    // Holds the row while the pitch is measured, so the orb
+                    // doesn't jump down when the segment arrives.
+                    Spacer(Modifier.height(32.dp))
+                }
+            }
             Box(Modifier.size(orbSize + 14.dp), contentAlignment = Alignment.Center) {
                 if (act == CloneAct.RECORDING) {
                     val track = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
@@ -891,7 +986,7 @@ fun CloneFlowScreen(
                         // tapping it is how the greeting is heard again.
                         .then(if (canReplayGreeting) Modifier.clickable {
                             HapticEngine.light(context)
-                            sounds.ask = MeetSounds.greetingKey(clonedVoiceId ?: "")
+                            sounds.ask = MeetSounds.greetingKey(meetVoiceId() ?: "")
                             playGreeting()
                         } else Modifier),
                 )
@@ -1158,9 +1253,9 @@ fun CloneFlowScreen(
                         // and speaks it. Keyed on the voice: an accent applied
                         // below is a new voice.
                         Box(Modifier.padding(horizontal = 24.dp)) {
-                            androidx.compose.runtime.key(clonedVoiceId) {
+                            androidx.compose.runtime.key(meetVoiceId()) {
                                 SpeedAudition(
-                                    voiceId = clonedVoiceId,
+                                    voiceId = meetVoiceId(),
                                     line = VoiceCloneScript.paceSample(targetLanguage),
                                     player = mp3,
                                     sounds = sounds,
@@ -1175,7 +1270,10 @@ fun CloneFlowScreen(
                         val accentOptions = remember(targetLanguage) {
                             com.roro.futurevoice.data.VoiceAccentCatalog.options(targetLanguage)
                         }
-                        if (accentOptions.isNotEmpty()) {
+                        // The accent and the likeness check are about the
+                        // CLONE; a preset already speaks the language natively
+                        // and is nobody's likeness.
+                        if (accentOptions.isNotEmpty() && !usingPreset) {
                             Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1223,7 +1321,7 @@ fun CloneFlowScreen(
 
                         // The verdict on the CLONE, not the take: opens the
                         // A/B, where the re-record decision lives.
-                        Row(Modifier.clip(RoundedCornerShape(8.dp)).clickable {
+                        if (!usingPreset) Row(Modifier.clip(RoundedCornerShape(8.dp)).clickable {
                             mp3.stop(); comparing = true
                         }.padding(6.dp), verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)) {

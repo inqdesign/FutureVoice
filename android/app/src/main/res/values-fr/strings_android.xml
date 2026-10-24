@@ -533,4 +533,7 @@
     <string name="grammar_trend_caption_ceiling">Fautes vérifiées pour 100 mots, un point par conversation – ta précision. Le niveau ci-dessus vient des structures que tu construis, donc cette courbe seule ne peut pas le faire bouger.</string>
     <string name="cm_focus_in_talks">Dans %1$d de tes appels</string>
     <string name="cm_focus_talks_footer">Cette erreur est revenue dans %1$d de tes appels récents, alors cet appel la surveille.</string>
+    <string name="fs_voice_mine">Ma voix</string>
+    <string name="fs_voice_similar">%1$s · voix proche</string>
+    <string name="fs_voice_title">Voix de ton moi fluide</string>
 </resources>

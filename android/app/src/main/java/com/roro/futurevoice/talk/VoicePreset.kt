@@ -150,6 +150,10 @@ object VoicePreset {
     /** The preset person this id names, or null for anything else (a library
      *  voice) — iOS `VoicePreset.known(id:)`. */
     fun known(id: String?): StockPerson? = StockPerson.catalog.firstOrNull { it.voiceId == id }
+    /** The slot's gender is the same in every language (iOS
+     *  `VoicePreset.gender`): Mark and James are the male slots. */
+    fun isMale(id: String?): Boolean = id == MARK || id == JAMES
+
     /** One of the four preset SLOTS (iOS `VoicePreset.catalog`). Shared by
      *  every learner, so never deleted, never anyone's own voice. */
     fun isPreset(id: String?): Boolean = id != null && StockPerson.catalog.any { it.voiceId == id }

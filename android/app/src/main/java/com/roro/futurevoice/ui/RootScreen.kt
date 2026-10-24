@@ -890,6 +890,12 @@ fun RootScreen() {
             onQueued = app::adoptStandInVoice,
             standInVoiceId = if (state.voiceIsStandIn) state.voiceId else null,
             onChooseStandIn = app::chooseStandInVoice,
+            fluentSelfPresetId = state.fluentSelfPresetId,
+            onPickFluentSelfPreset = app::setFluentSelfPreset,
+            onFluentSelfVoiceChosen = { preset, recommended, pitch, switches ->
+                app.chooseFluentSelfVoice(preset, source = "meet", recommended = recommended,
+                    ownPitchHz = pitch, extra = mapOf("switches" to switches))
+            },
         )
         // Where everything they are about to say will live, said before the
         // first call, ahead of the routine builder (iOS
@@ -1137,7 +1143,7 @@ fun RootScreen() {
             // iOS `SceneHandoff`: from the Watch tab the book is pushed over
             // the scene; opened FROM the book, it pops back to it.
             onStudy = { id -> if (bookScenarioId == id) watchScenarioId = null else bookOverWatchId = id },
-            voiceId = state.voiceId ?: "",
+            voiceId = state.speakingVoiceId ?: "",
             persona = state.persona,
             targetLanguage = state.targetLanguage,
             proficiency = state.level.code,
@@ -1151,7 +1157,7 @@ fun RootScreen() {
             language = state.targetLanguage,
             persona = state.persona,
             nativeLanguage = state.nativeLanguage,
-            voiceId = state.voiceId ?: "",
+            voiceId = state.speakingVoiceId ?: "",
             onShadow = { showDeck = false; focusCardId = null; deckSessionId = null; shadowLine = it },
             focusCardId = focusCardId,
             sessionId = deckSessionId,
@@ -1447,6 +1453,8 @@ fun RootScreen() {
             voiceIsStandIn = state.voiceIsStandIn,
             voiceQueuedUntil = state.voiceQueuedUntil,
             onChooseStandIn = app::chooseStandInVoice,
+            fluentSelfPresetId = state.fluentSelfPresetId,
+            onChooseFluentSelfVoice = { app.chooseFluentSelfVoice(it, source = "settings") },
             onOpenProfile = { showMyProfile = true },
             onOpenPaywall = { BillingGate.showPaywall.value = true },
             onSignOut = { showMe = false; app.signOut() },
@@ -1459,7 +1467,7 @@ fun RootScreen() {
           Box(Modifier.fillMaxSize().graphicsLayer {
               alpha = if (TalkMorph.active) TalkMorph.callAlpha.value else 1f }) {
             TalkScreen(
-                voiceId = state.voiceId ?: "",
+                voiceId = state.speakingVoiceId ?: "",
                 targetLanguage = state.targetLanguage,
                 nativeLanguage = state.nativeLanguage,
                 level = state.level,
@@ -1893,9 +1901,9 @@ internal fun HomeScreen(
     // openers here costs one round trip per NEW line, once, and takes the
     // gateway's own synthesis round trip out of the front of every call
     // (iOS `26a246c`). A line already cached costs nothing.
-    LaunchedEffect(state.voiceId, state.targetLanguage, tab) {
+    LaunchedEffect(state.speakingVoiceId, state.targetLanguage, tab) {
         if (tab != HomeTab.TALK) return@LaunchedEffect
-        val voice = state.voiceId ?: return@LaunchedEffect
+        val voice = state.speakingVoiceId ?: return@LaunchedEffect
         runCatching {
             com.roro.futurevoice.talk.FreeTalkOpeners(context).warmFirstCall(
                 state.targetLanguage, state.persona?.displayName, state.level, voice,

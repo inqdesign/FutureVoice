@@ -179,7 +179,7 @@ fun StudyDeckScreen(
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { mp3.stop() } }
     var hearing by remember { mutableStateOf(false) }
     fun hear(text: String) {
-        val id = voiceId ?: return
+        val id = com.roro.futurevoice.data.FluentSelfVoice.speaking(context, voiceId) ?: return
         if (hearing) return
         hearing = true
         scope.launch {

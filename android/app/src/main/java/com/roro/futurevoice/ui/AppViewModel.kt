@@ -83,7 +83,18 @@ data class AppState(
     val nativeLanguage: String = "ko",
     val level: CefrLevel = CefrLevel.B1,
     val error: String? = null,
-)
+    /**
+     * A preset the learner CHOSE for their fluent self over their own clone
+     * (iOS `fluentSelfPresetId`, 2026-10-24; see `FluentSelfVoice`). The
+     * clone stays in [voiceId] for everything that manages it.
+     */
+    val fluentSelfPresetId: String? = null,
+) {
+    /** The voice the fluent self speaks in: the chosen preset, else the
+     *  clone (or the stand-in while the clone is queued). Null only with no
+     *  voice (iOS `speakingVoiceId`). */
+    val speakingVoiceId: String? get() = voiceId?.let { fluentSelfPresetId ?: it }
+}
 
 class AppViewModel(private val appContext: android.content.Context) : ViewModel() {
 
@@ -109,6 +120,7 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
         voiceAccentId = prefs.getString(ACCENT_KEY, null),
         voiceIsStandIn = prefs.getBoolean(STAND_IN_KEY, false),
         voiceQueuedUntil = prefs.getLong(QUEUED_UNTIL_KEY, 0L).takeIf { it > 0 },
+        fluentSelfPresetId = com.roro.futurevoice.data.FluentSelfVoice.presetId(appContext),
     ))
     val state: StateFlow<AppState> = _state.asStateFlow()
 
@@ -807,7 +819,7 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
     fun warmFreeTalkOpeners() {
         val st = _state.value
         if (st.holdVoiceOnboarding) return
-        val voice = st.voiceId ?: return
+        val voice = st.speakingVoiceId ?: return
         viewModelScope.launch {
             runCatching {
                 com.roro.futurevoice.talk.FreeTalkOpeners(appContext).warmFirstCall(
@@ -815,6 +827,52 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
                     firstMeeting = st.persona?.metAt == null)
             }
         }
+    }
+
+    /** The meet act's segment moves the voice as it is tapped, with no event
+     *  (iOS sets `fluentSelfPresetId` directly); "Start talking" reports the
+     *  choice through [chooseFluentSelfVoice]. */
+    fun setFluentSelfPreset(presetId: String?) {
+        val id = presetId?.takeIf { com.roro.futurevoice.talk.VoicePreset.isPreset(it) }
+        com.roro.futurevoice.data.FluentSelfVoice.set(appContext, id)
+        _state.update { it.copy(fluentSelfPresetId = id) }
+    }
+
+    /**
+     * Pick the fluent self's voice: a preset, or null for the learner's own
+     * (iOS `chooseFluentSelfVoice`). [source] (meet · settings) and
+     * [recommended] (the preset the meet act offered) ride on the event, so
+     * "did they take what we offered" and "where did they switch" are both
+     * answerable.
+     */
+    fun chooseFluentSelfVoice(presetId: String?, source: String, recommended: String? = null,
+                              ownPitchHz: Double? = null, extra: Map<String, Any?> = emptyMap()) {
+        val id = presetId?.takeIf { com.roro.futurevoice.talk.VoicePreset.isPreset(it) }
+        val changed = id != _state.value.fluentSelfPresetId
+        com.roro.futurevoice.data.FluentSelfVoice.set(appContext, id)
+        _state.update { it.copy(fluentSelfPresetId = id) }
+        val st = _state.value
+        val props = mutableMapOf<String, Any?>(
+            "choice" to if (id == null) "own" else "preset",
+            "source" to source,
+            "changed" to changed,
+            "language" to st.targetLanguage,
+        )
+        if (id != null) props["preset"] = com.roro.futurevoice.talk.StockPerson.by(id).name
+        if (recommended != null) {
+            props["recommended"] = com.roro.futurevoice.talk.StockPerson.by(recommended).name
+            props["took_recommended"] = id == recommended
+        }
+        if (ownPitchHz != null) props["own_pitch_hz"] = ownPitchHz.toInt()
+        extra.forEach { (k, v) -> if (k !in props) props[k] = v }
+        com.roro.futurevoice.core.Analytics.capture("fluent_self_voice_chosen", props)
+        com.roro.futurevoice.core.Analytics.setPerson(mapOf("fluent_self_voice" to
+            com.roro.futurevoice.data.FluentSelfVoice.telemetryValue(appContext)))
+        // Openers are keyed to the voice: re-made in the one picked. The meet
+        // act warms its own openers on the way out. (iOS also rewrites the
+        // next voicemail; Android's is a script the call speaks, keyed to
+        // no voice.)
+        if (changed && source != "meet") warmFreeTalkOpeners()
     }
 
     /** Last time the server was asked whether this phone's voice is parked. */

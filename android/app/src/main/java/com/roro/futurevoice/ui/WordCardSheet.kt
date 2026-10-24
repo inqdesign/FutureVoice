@@ -214,7 +214,7 @@ fun WordCardSheet(
     }
 
     fun speak() {
-        val id = voiceId ?: return
+        val id = com.roro.futurevoice.data.FluentSelfVoice.speaking(context, voiceId) ?: return
         speaking = true
         scope.launch {
             runCatching {
@@ -857,7 +857,7 @@ internal fun WordPronounceButton(term: String) {
         voiceId = runCatching { VoiceCloneRepository().activeVoiceId(uid) }
             .getOrNull()?.also { cachedVoiceId = it }
     }
-    val id = voiceId ?: return
+    val id = com.roro.futurevoice.data.FluentSelfVoice.speaking(context, voiceId) ?: return
     PronounceCircle(speaking) {
         speaking = true
         scope.launch {

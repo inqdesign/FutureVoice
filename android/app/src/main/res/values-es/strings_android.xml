@@ -546,4 +546,7 @@
     <string name="grammar_trend_caption_ceiling">Errores verificados por cada 100 palabras, un punto por conversación: tu precisión. El nivel de arriba sale de las estructuras que construyes, así que esta curva sola no puede moverlo.</string>
     <string name="cm_focus_in_talks">En %1$d de tus llamadas</string>
     <string name="cm_focus_talks_footer">Este error salió en %1$d de tus llamadas recientes, así que esta llamada lo vigila.</string>
+    <string name="fs_voice_mine">Mi voz</string>
+    <string name="fs_voice_similar">%1$s · voz parecida</string>
+    <string name="fs_voice_title">Voz de tu yo fluido</string>
 </resources>

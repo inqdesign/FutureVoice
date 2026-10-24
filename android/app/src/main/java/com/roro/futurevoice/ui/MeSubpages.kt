@@ -225,6 +225,10 @@ fun VoicePage(
     voiceIsStandIn: Boolean = false,
     voiceQueuedUntil: Long? = null,
     onPickStandIn: () -> Unit = {},
+    /** The preset the learner chose for their fluent self over the clone
+     *  (iOS `fluentSelfPresetId`, 2026-10-24), and the pick (null = theirs). */
+    fluentSelfPresetId: String? = null,
+    onChooseFluentSelfVoice: (String?) -> Unit = {},
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -276,8 +280,26 @@ fun VoicePage(
                     stringResource(R.string.pick_who_you_practice_with),
                     onClick = onPickStandIn)
             }
+            // The clone or a preset, chosen first on the meet act (iOS
+            // 2026-10-24). Switching keeps the clone; the accent row below is
+            // the clone's.
+            if (hasVoice && !voiceIsStandIn) {
+                GroupedRowDivider()
+                val own = stringResource(R.string.fs_voice_mine)
+                val options = listOf("" to own) + com.roro.futurevoice.talk.StockPerson.catalog.map {
+                    it.voiceId to com.roro.futurevoice.talk.VoicePreset.name(it.voiceId, it.name, targetLanguage)
+                }
+                val selected = fluentSelfPresetId ?: ""
+                MePickerRow(
+                    icon = Icons.Filled.RecordVoiceOver,
+                    title = stringResource(R.string.fs_voice_title),
+                    value = options.firstOrNull { it.first == selected }?.second ?: own,
+                    options = options,
+                    selected = selected,
+                    onPick = { onChooseFluentSelfVoice(it.ifEmpty { null }) })
+            }
             val accents = VoiceAccentCatalog.options(targetLanguage)
-            if (hasVoice && !voiceIsStandIn && accents.isNotEmpty()) {
+            if (hasVoice && !voiceIsStandIn && fluentSelfPresetId == null && accents.isNotEmpty()) {
                 GroupedRowDivider()
                 val applied = accents.firstOrNull { it.id == voiceAccentId }
                 MeRow(Icons.Outlined.Language,

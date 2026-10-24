@@ -62,6 +62,11 @@ object Telemetry {
         "speed_rung" to com.roro.futurevoice.data.SpeechSpeed.current(context).raw,
         "speed_picked" to if (com.roro.futurevoice.data.SpeechSpeed.picked(context)) "1" else "0",
         "coach" to if (com.roro.futurevoice.talk.CoachMode.isOn(context)) "on" else "off",
+        // Which voice the fluent self speaks in (iOS 2026-10-24): the
+        // learner's clone, a preset they chose over it, or the stand-in
+        // while their clone is queued. On every event, so talk time, scenes
+        // and retention split by voice without a join.
+        "voice" to com.roro.futurevoice.data.FluentSelfVoice.telemetryValue(context),
     )
 
     fun log(event: String, properties: Map<String, String> = emptyMap()) {

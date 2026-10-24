@@ -270,7 +270,7 @@ private fun ScenePlayerSheetContent(
         PlaylistPlayer.attach(context)
         tracks = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             SceneLibrary.tracks(context, ScenarioStore.shared(context).load(state.targetLanguage),
-                state.voiceId, state.targetLanguage)
+                state.speakingVoiceId, state.targetLanguage)
         }
         loaded = true
         shows = NewsShow.episodes(context, state.targetLanguage)

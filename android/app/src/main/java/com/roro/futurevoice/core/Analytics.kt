@@ -64,6 +64,15 @@ object Analytics {
         })
     }
 
+    /** Person properties (iOS `Analytics.notePerson`, the one property
+     *  Android carries so far: `fluent_self_voice`, 2026-10-24). */
+    fun setPerson(props: Map<String, String>) {
+        if (!enabled) return
+        send("\$set", buildJsonObject {
+            put("\$set", buildJsonObject { props.forEach { (k, v) -> put(k, v) } })
+        })
+    }
+
     /** Drop identity so the next person on this phone isn't merged in. */
     fun reset() {
         val fresh = UUID.randomUUID().toString().uppercase()

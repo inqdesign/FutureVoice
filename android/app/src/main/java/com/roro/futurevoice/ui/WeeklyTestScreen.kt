@@ -515,7 +515,7 @@ fun WeeklyTestScreen(
      *  `88ad4c3`) — its audio has the neighbouring sentences in it. */
     fun hearLine(item: WeeklyTestItem) {
         if (playing) { player.stop(); playJob?.cancel(); playing = false; return }
-        val voiceId = PhraseAudioStore.shared(context).ownVoiceLineage.firstOrNull() ?: return
+        val voiceId = com.roro.futurevoice.data.FluentSelfVoice.speaking(context, PhraseAudioStore.shared(context).ownVoiceLineage.firstOrNull()) ?: return
         scope.launch {
             item.turnId?.let { turnAudio(it) }?.let { (text, file) ->
                 if (CarryoverDetector.normalized(text) == CarryoverDetector.normalized(item.answer)) {

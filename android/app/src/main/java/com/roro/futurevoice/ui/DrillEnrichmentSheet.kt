@@ -149,7 +149,7 @@ fun DrillEnrichmentSheet(
     val exampleReason = stringResource(R.string.example_for, card.targetPhrase)
 
     fun playExample(idx: Int, text: String) {
-        val id = voice ?: return
+        val id = com.roro.futurevoice.data.FluentSelfVoice.speaking(context, voice) ?: return
         if (synthesizing) return
         synthesizing = true
         scope.launch {
