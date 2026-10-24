@@ -10532,48 +10532,48 @@
         }
       }
     },
-    "When you make a mistake, your future self says it the right way out loud, then carries on." : {
+    "Pick a topic and your future self teaches it step by step, until you can say it without a mistake." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wenn dir ein Fehler passiert, sagt dir dein fließendes Ich gleich, wie es richtig heißt, und redet dann weiter."
+            "value" : "Wähl ein Thema, und dein fließendes Ich bringt es dir Schritt für Schritt bei, bis du es ohne Fehler sagen kannst."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cuando te equivocas, tu yo fluido te dice en voz alta cómo se dice bien y sigue la conversación."
+            "value" : "Elige un tema y tu yo fluido te lo enseña paso a paso, hasta que puedas decirlo sin errores."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Quand tu fais une erreur, ton moi fluide te dit à voix haute comment le dire, puis la conversation continue."
+            "value" : "Choisis un sujet et ton moi fluide te l’apprend pas à pas, jusqu’à ce que tu le dises sans faute."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "言い間違えると、流暢な自分がすぐ正しい言い方を声で教えて、そのまま話を続けます。"
+            "value" : "テーマを選ぶと、流暢な自分が一つずつ教えてくれます。間違えずに言えるようになるまで。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "틀리게 말하면 유창해진 내가 바로 맞는 말로 다시 들려주고 대화를 이어가요."
+            "value" : "주제를 고르면 유창해진 내가 하나씩 가르쳐 줘요. 틀리지 않고 말할 수 있을 때까지요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "说错的时候，流利的自己会马上念出正确的说法，然后接着聊。"
+            "value" : "选一个话题，流利的自己会一步步教你，直到你能说对为止。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "說錯的時候，流利的自己會馬上唸出正確的說法，然後接著聊。"
+            "value" : "選一個話題，流利的自己會一步步教你，直到你能說對為止。"
           }
         }
       }
