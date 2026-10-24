@@ -224,6 +224,44 @@ enum TutorPlanner {
     }
 }
 
+// MARK: - After a lesson
+
+/// What the learner wants once a lesson is done (2026-10-24, founder:
+/// "don't hang up — ask. Keep going and the session goes on; another topic
+/// and the book is made in the background while it asks what's next").
+enum TutorNext {
+    enum Choice: String, Decodable { case more, new, stop, unclear }
+    struct Answer: Decodable {
+        let choice: Choice
+        /// The next topic, when they named one.
+        var topic: String? = nil
+    }
+
+    static func read(_ line: String, askedWith: String, lesson: String,
+                     targetLanguage: String) async -> Answer? {
+        let system = """
+        A language learner just finished a short speaking lesson ("\(lesson)") \
+        and was asked whether to keep practicing it, move on to another \
+        topic, or stop for today. Read their answer (transcribed from speech, \
+        any language):
+        - "more": keep practicing this same topic.
+        - "new": another topic. If they named a SPECIFIC one ("ordering at \
+          a cafe"), put it in "topic" in their own words; "another topic" / \
+          "something else" is not a topic — leave "topic" out.
+        - "stop": they're done for today.
+        - "unclear": none of these (a question, a greeting, noise).
+        Return STRICT JSON only: {"choice": "more|new|stop|unclear", "topic": "..."}
+        """
+        return try? await GeminiClient.background.sendJSON(
+            system: system,
+            messages: [GeminiClient.Message(role: .user, content:
+                "The tutor asked: \"\(askedWith)\"\nThey answered: \"\(line)\"")],
+            model: .flashLite31, maxTokens: 120, purpose: "tutor",
+            idempotencyKey: "tutor-next:\(UUID().uuidString)", requestTimeout: 10,
+            fastThinking: true)
+    }
+}
+
 // MARK: - Judge
 
 enum TutorJudge {

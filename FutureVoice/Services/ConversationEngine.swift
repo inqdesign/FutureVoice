@@ -568,11 +568,16 @@ enum ConversationEngine {
             checked every challenge off. In your next turn: say warmly, in a \
             sentence or two, that they did it — they can now \
             \(lesson.challenges.last?.task.lowercased() ?? "do it") — then ask \
-            in one short question whether they want another topic or to stop \
-            here for today. If they name a topic, say that's the next lesson \
-            and you're setting it up (the plan appears in this block a moment \
-            later). If they want to stop, say goodbye warmly; the call ends \
-            when they hang up — don't start anything new.
+            in one short question whether they want to keep practicing this a \
+            bit more, or move on to another topic. Never end the call or say \
+            goodbye on your own. Then, by their answer:
+            - More of this → say great, you're setting up a next round, a \
+              step further (the plan appears in this block a moment later).
+            - Another topic → say you're saving today's lesson in their book, \
+              and ask what topic is next (if they already named it, say \
+              you're setting it up instead).
+            - They want to stop for today → say goodbye warmly; the call ends \
+              when they hang up — don't start anything new.
             """
         } else if let lesson, let now = lesson.current {
             let rows = lesson.challenges.enumerated().map { i, c in
@@ -681,7 +686,17 @@ enum ConversationEngine {
     /// challenge — last in the prompt, because placed in the lesson block the
     /// tutor kept asking for "once more" anyway (4/4, Haiku, 2026-10-24).
     private static func tutorNow(lesson: TutorLesson?, justTicked: Bool) -> String {
-        guard justTicked, let lesson, !lesson.isFinished, let now = lesson.current, now > 0 else { return "" }
+        guard justTicked, let lesson else { return "" }
+        if lesson.isFinished {
+            return """
+
+
+            RIGHT NOW — THIS OUTRANKS "ask them to say it once more": the app has \
+            just checked off the LAST challenge. They nailed it; don't ask for \
+            it again. Your next turn is the ALL DONE turn above.
+            """
+        }
+        guard let now = lesson.current, now > 0 else { return "" }
         let next = lesson.challenges[now]
         return """
 

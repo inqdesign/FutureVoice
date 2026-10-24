@@ -2846,8 +2846,12 @@ that back. `TutorLesson.swift`, `TutorLessonViews.swift`,
 - **The checklist is pinned above the transcript** (`TutorLessonStrip`,
   folds on tap; ⋯ → another topic). A finished lesson does NOT end the
   call (it did for a day: three ticks in 80 s and the call cut to the book
-  mid-flow) — the tutor asks "another topic, or stop here?", a named topic
-  starts the next lesson, End stays the learner's. Asking to change topic
+  mid-flow) — the tutor asks "a bit more of this, or another topic?"
+  (`TutorNext`, flash-lite): MORE plans a next round on the same topic in
+  the same session; ANOTHER TOPIC saves the talk so far as its own book
+  (`saveTutorBookAndMoveOn`: draft saved, summarized in the background, the
+  rest of the call is a new session) and asks what's next; STOP is a
+  goodbye only — End stays the learner's. Asking to change topic
   mid-lesson (judge `other_topic`) or the menu drops a lesson for good;
   the book page shows the lines that cleared each challenge
   (`Session.tutorLesson`). Unfinished lessons resume for 21 days

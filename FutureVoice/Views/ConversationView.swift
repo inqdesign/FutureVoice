@@ -4945,8 +4945,12 @@ struct ConversationView: View {
     /// next topic. The planner answers nil when it doesn't ("no, that's it
     /// for today"), and the call simply goes on.
     private func tutorHeard(_ text: String) {
-        guard tutorThisCall, tutorLesson == nil || tutorLesson?.isFinished == true,
-              !tutorPlanning else { return }
+        guard tutorThisCall, !tutorPlanning else { return }
+        if let done = tutorLesson, done.isFinished {
+            tutorAfterLesson(text, lesson: done)
+            return
+        }
+        guard tutorLesson == nil else { return }
         let asked = turns.last(where: { $0.role == .fluentSelf })?.transcript ?? ""
         startTutorLesson(request: text, askedWith: asked, picked: false, fromTopic: false)
     }
@@ -5047,11 +5051,104 @@ struct ConversationView: View {
         }
     }
 
+    /// The lesson is done and the tutor asked "more of this, or another
+    /// topic?". More → a next round on the same topic, same session. Another
+    /// topic → this lesson's talk becomes its own book in the background and
+    /// the call carries on as a new session. Stop → nothing; End is theirs.
+    private func tutorAfterLesson(_ text: String, lesson: TutorLesson) {
+        let asked = turns.last(where: { $0.role == .fluentSelf })?.transcript ?? ""
+        let saidId = turns.last(where: { $0.role == .user })?.id
+        Task { @MainActor in
+            guard let answer = await TutorNext.read(text, askedWith: asked, lesson: lesson.title,
+                                                    targetLanguage: appState.targetLanguage),
+                  !isTornDown, tutorLesson?.id == lesson.id, !tutorPlanning else { return }
+            Telemetry.log("tutor_after_lesson", ["choice": answer.choice.rawValue])
+            switch answer.choice {
+            case .more:
+                let done = lesson.challenges.map(\.task).joined(separator: "; ")
+                startTutorLesson(
+                    request: "More practice on \"\(lesson.title)\" — the next round, one step further. Already done: \(done). New challenges only.",
+                    picked: false, fromTopic: false)
+            case .new:
+                saveTutorBookAndMoveOn(keepingFrom: saidId)
+                if let topic = answer.topic?.trimmingCharacters(in: .whitespacesAndNewlines),
+                   !topic.isEmpty {
+                    startTutorLesson(request: topic, picked: false, fromTopic: false)
+                }
+            case .stop, .unclear:
+                break
+            }
+        }
+    }
+
+    /// The finished lesson's talk becomes its own book now, while the call
+    /// goes on: the turns up to the learner's "another topic" are saved and
+    /// summarized in the background, and the rest of the call is a new
+    /// session (the answer and the reply being written to it stay on screen
+    /// and carry over).
+    private func saveTutorBookAndMoveOn(keepingFrom firstKept: UUID?) {
+        let cut = firstKept.flatMap { id in turns.firstIndex { $0.id == id } } ?? turns.count
+        let bookTurns = Array(turns[..<cut])
+        let lesson = tutorLesson
+        guard bookTurns.contains(where: { $0.role == .user }) else { return }
+        let bookId = sessionId
+        let book = Session(
+            id: bookId,
+            userId: userId,
+            targetLanguage: appState.targetLanguage,
+            mode: .conversation,
+            topic: topic.isEmpty ? nil : topic,
+            startedAt: sessionStartedAt,
+            endedAt: Date(),
+            turns: bookTurns,
+            summary: nil,
+            origin: sessionOrigin,
+            originScenarioId: sessionScenarioId,
+            counterpartId: sessionCounterpartId,
+            coached: true,
+            tutorLesson: lesson?.record
+        )
+        if var l = lesson, !l.sessionIds.contains(bookId) {
+            l.sessionIds.append(bookId)
+            TutorLessonStore.save(l)
+        }
+        SessionStore.shared.save(book)
+        Telemetry.log("tutor_book_saved", ["turns": String(bookTurns.count)])
+        // The rest of the call is a fresh session.
+        withAnimation(.easeInOut(duration: 0.25)) { tutorLesson = nil }
+        tutorLastFixes = []
+        tutorJustTicked = false
+        turns = Array(turns[cut...])
+        sessionId = UUID()
+        sessionStartedAt = Date()
+        didSaveCurrentSession = false
+        meter.stop()
+        meter.start(sessionId: sessionId)
+        sendTutorSystem()
+        Task { @MainActor in
+            do {
+                _ = try await SessionSummarizer.summarize(session: book, appState: appState)
+                refreshDashboard()
+            } catch {
+                // The draft stays on the shelf with "generate the review
+                // material", like any summary that failed.
+                Telemetry.log("tutor_book_summary_failed", ["error": (error as NSError).domain])
+            }
+        }
+    }
+
     /// Leave the lesson: by voice (`said`, judged by `TutorJudge`) or from
     /// the strip's menu. It is never offered again; a topic named in the
     /// same breath ("let's do ordering instead") starts the next one.
     private func dropTutorLesson(said: String?) {
         guard var lesson = tutorLesson else { return }
+        if lesson.isFinished, said == nil {
+            // A finished lesson isn't dropped: it becomes its book, and the
+            // tutor asks what's next.
+            saveTutorBookAndMoveOn(keepingFrom: nil)
+            realtime.nudge("The learner tapped to choose another topic. The app is saving the finished lesson in their book. Say so in a few words and ask what they want to practice next — they can also pick a topic from the button on their screen.")
+            return
+        }
         if !lesson.isFinished { lesson.droppedAt = Date() }
         TutorLessonStore.save(lesson)
         Telemetry.log("tutor_lesson_dropped", ["by": said == nil ? "menu" : "voice",
