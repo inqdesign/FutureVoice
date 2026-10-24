@@ -33,7 +33,7 @@ struct TutorLessonStrip: View {
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.tertiary)
                             .rotationEffect(.degrees(expanded ? 0 : -90))
-                        if !lesson.isFinished {
+                        Group {
                             Menu {
                                 Button(action: onChangeTopic) {
                                     Label(explain("Choose another topic"), systemImage: "arrow.triangle.2.circlepath")

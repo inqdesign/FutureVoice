@@ -699,8 +699,6 @@ struct ConversationView: View {
     /// What the correction found on the learner's last try, for the block.
     @State private var tutorLastFixes: [String] = []
     /// The lesson finished; the call ends after the tutor's goodbye.
-    @State private var tutorWrapArmed = false
-    @State private var tutorWrapStarted = false
     @State private var tutorStripExpanded = true
     @State private var showingTutorTopics = false
     /// Coach mode's grammar focus for this call (`GrammarFocus`): picked from
@@ -3037,7 +3035,6 @@ struct ConversationView: View {
             }
             didSaveCurrentSession = false
             advanceCoach(afterReply: text, turnId: id)
-            if tutorWrapArmed { wrapTutorLesson(context: context) }
         }
         await realtime.connect(
             voiceId: voiceId,
@@ -4943,14 +4940,13 @@ struct ConversationView: View {
         await startRealtimeCall(opener: FreeTalkOpeners.tutorOpener(language: appState.targetLanguage))
     }
 
-    /// The learner said something while there is no lesson: it may name the
-    /// topic. The planner answers nil when it doesn't, and the tutor (whose
-    /// block says "no topic yet") asks again.
+    /// The learner said something while there is no lesson — or the last
+    /// one is finished and the tutor asked "another topic?": it may name the
+    /// next topic. The planner answers nil when it doesn't ("no, that's it
+    /// for today"), and the call simply goes on.
     private func tutorHeard(_ text: String) {
-        guard tutorThisCall, tutorLesson == nil, !tutorPlanning else {
-            if tutorLesson?.isFinished == true, tutorWrapStarted == false { tutorWrapArmed = true }
-            return
-        }
+        guard tutorThisCall, tutorLesson == nil || tutorLesson?.isFinished == true,
+              !tutorPlanning else { return }
         let asked = turns.last(where: { $0.role == .fluentSelf })?.transcript ?? ""
         startTutorLesson(request: text, askedWith: asked, picked: false, fromTopic: false)
     }
@@ -5034,7 +5030,13 @@ struct ConversationView: View {
             }
             now.challenges[i].doneAt = Date()
             now.challenges[i].line = said
-            if now.current == nil { now.finishedAt = Date() }
+            // A finished lesson does NOT end the call (device, 2026-10-24:
+            // three ticks in 80 s and the call cut to the book mid-flow).
+            // The tutor offers another topic; End is the learner's.
+            if now.current == nil {
+                now.finishedAt = Date()
+                Telemetry.log("tutor_lesson_finished", ["of": String(now.challenges.count)])
+            }
             TutorLessonStore.save(now)
             withAnimation(.easeInOut(duration: 0.3)) { tutorLesson = now }
             tutorJustTicked = true
@@ -5050,7 +5052,7 @@ struct ConversationView: View {
     /// same breath ("let's do ordering instead") starts the next one.
     private func dropTutorLesson(said: String?) {
         guard var lesson = tutorLesson else { return }
-        lesson.droppedAt = Date()
+        if !lesson.isFinished { lesson.droppedAt = Date() }
         TutorLessonStore.save(lesson)
         Telemetry.log("tutor_lesson_dropped", ["by": said == nil ? "menu" : "voice",
                                                "done": String(lesson.doneCount)])
@@ -5071,25 +5073,6 @@ struct ConversationView: View {
     private func sendTutorSystem() {
         guard RealtimeMode.isEnabled, phoneCallActive else { return }
         realtime.setSystem(systemPrompt() + Self.realtimeStyleRules)
-    }
-
-    /// The lesson is done and the tutor has just said goodbye: end the call
-    /// once that line has played out, into the usual wrap-up.
-    private func wrapTutorLesson(context: String) {
-        guard !tutorWrapStarted else { return }
-        tutorWrapStarted = true
-        tutorWrapArmed = false
-        Telemetry.log("tutor_lesson_finished", [:])
-        Task { @MainActor in
-            var waited = 0
-            while realtime.isRevealing(context), waited < 30 {
-                try? await Task.sleep(nanoseconds: 500_000_000)
-                waited += 1
-            }
-            try? await Task.sleep(nanoseconds: 800_000_000)
-            guard !isTornDown, phoneCallActive else { return }
-            await endSession()
-        }
     }
 
     private func systemPrompt() -> String {

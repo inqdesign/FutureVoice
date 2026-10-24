@@ -567,8 +567,12 @@ enum ConversationEngine {
             TODAY'S LESSON: "\(lesson.titleTarget)" — ALL DONE. The app has \
             checked every challenge off. In your next turn: say warmly, in a \
             sentence or two, that they did it — they can now \
-            \(lesson.challenges.last?.task.lowercased() ?? "do it") — and say \
-            goodbye for today. No new question, nothing more to practice.
+            \(lesson.challenges.last?.task.lowercased() ?? "do it") — then ask \
+            in one short question whether they want another topic or to stop \
+            here for today. If they name a topic, say that's the next lesson \
+            and you're setting it up (the plan appears in this block a moment \
+            later). If they want to stop, say goodbye warmly; the call ends \
+            when they hang up — don't start anything new.
             """
         } else if let lesson, let now = lesson.current {
             let rows = lesson.challenges.enumerated().map { i, c in

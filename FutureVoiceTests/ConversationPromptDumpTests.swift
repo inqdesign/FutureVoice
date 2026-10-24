@@ -65,7 +65,12 @@ final class ConversationPromptDumpTests: XCTestCase {
                 var afterTick = lesson
                 afterTick.challenges[1].doneAt = Date()
                 afterTick.challenges[1].line = "I work as an engineer at a car company."
-                for (name, l, ticked) in [("lesson", lesson, false), ("ticked", afterTick, true)] as [(String, TutorLesson, Bool)] {
+                var finished = afterTick
+                finished.challenges[2].doneAt = Date()
+                finished.challenges[2].line = "Hi, I'm Minji. I'm from Busan, and I work as a nurse."
+                finished.finishedAt = Date()
+                for (name, l, ticked) in [("lesson", lesson, false), ("ticked", afterTick, true),
+                                          ("done", finished, true)] as [(String, TutorLesson, Bool)] {
                     let p = ConversationEngine.conversationSystemPrompt(
                         targetLanguage: lang, nativeLanguage: lang == "ko" ? "en" : "ko",
                         level: level, topPatterns: [], weakVocabAreas: [], topic: "",

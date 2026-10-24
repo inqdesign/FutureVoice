@@ -2844,7 +2844,11 @@ that back. `TutorLesson.swift`, `TutorLessonViews.swift`,
   finish last time's") answered as soon as no line is playing, 8 per call.
   An older gateway ignores it, and then the tutor waits for the learner.
 - **The checklist is pinned above the transcript** (`TutorLessonStrip`,
-  folds on tap). A finished lesson ends the call after the goodbye line;
+  folds on tap; ⋯ → another topic). A finished lesson does NOT end the
+  call (it did for a day: three ticks in 80 s and the call cut to the book
+  mid-flow) — the tutor asks "another topic, or stop here?", a named topic
+  starts the next lesson, End stays the learner's. Asking to change topic
+  mid-lesson (judge `other_topic`) or the menu drops a lesson for good;
   the book page shows the lines that cleared each challenge
   (`Session.tutorLesson`). Unfinished lessons resume for 21 days
   (`Documents/lang/<code>/tutor_lessons.json`, device-local).
