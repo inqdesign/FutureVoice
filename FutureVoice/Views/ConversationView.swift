@@ -689,6 +689,20 @@ struct ConversationView: View {
     @State private var tutorWasOn = TutorMode.isOn
     /// Watched only to tell a live call when the sheet flips tutor mode.
     @AppStorage(TutorMode.key) private var tutorModeChoice = false
+    /// Tutor mode's lesson (`TutorLesson`): nil until a topic is set.
+    @State private var tutorLesson: TutorLesson?
+    /// A curriculum is being written.
+    @State private var tutorPlanning = false
+    /// A challenge was ticked since the prompt was last sent — the block
+    /// tells the tutor to move on.
+    @State private var tutorJustTicked = false
+    /// What the correction found on the learner's last try, for the block.
+    @State private var tutorLastFixes: [String] = []
+    /// The lesson finished; the call ends after the tutor's goodbye.
+    @State private var tutorWrapArmed = false
+    @State private var tutorWrapStarted = false
+    @State private var tutorStripExpanded = true
+    @State private var showingTutorTopics = false
     /// Coach mode's grammar focus for this call (`GrammarFocus`): picked from
     /// the learner's recurring mistakes on appear, named in their language,
     /// and watched on every correction. nil = none this call.
@@ -897,7 +911,13 @@ struct ConversationView: View {
                 // anything inside the transcript is gone after two turns.
                 // The grammar focus sits above the chips: it is the one thing
                 // this call is about, and the chips are the things to spend.
-                if coachMode, let focus = grammarFocus {
+                if tutorThisCall, tutorLesson != nil || tutorPlanning {
+                    TutorLessonStrip(lesson: tutorLesson, planning: tutorPlanning,
+                                     expanded: $tutorStripExpanded)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                    Divider().opacity(0.15)
+                }
+                if coachMode, !tutorThisCall, let focus = grammarFocus {
                     GrammarFocusStrip(label: focus.label,
                                       mistake: focus.pattern.mistake,
                                       correction: focus.pattern.correction,
@@ -1059,7 +1079,14 @@ struct ConversationView: View {
                 if on { tutorWasOn = true }
                 // The classic path reads `tutorThisCall` at its next turn.
                 guard RealtimeMode.isEnabled, phoneCallActive else { return }
-                realtime.setSystem(systemPrompt())
+                realtime.setSystem(systemPrompt() + Self.realtimeStyleRules)
+                if on, tutorLesson == nil {
+                    realtime.nudge("Tutor mode was just turned on. Ask them, in one short question, what they want to be able to say today — they can also pick a topic from the button on their screen.")
+                }
+            }
+            .sheet(isPresented: $showingTutorTopics) {
+                TutorTopicSheet { picked in startTutorLesson(request: picked, picked: true) }
+                    .environmentObject(appState)
             }
             .sheet(item: $goalDetail) { item in
                 TalkGoalSheet(item: item, used: usedGoalKeys.contains(item.key))
@@ -1797,7 +1824,9 @@ struct ConversationView: View {
                 // Send-to-answer's reset, mirroring the settings button.
                 // Held in place (hidden, not removed) for the whole call so
                 // nothing shifts when the turn changes hands.
-                if sendToAnswer && RealtimeMode.isEnabled && phoneCallActive {
+                if tutorThisCall && RealtimeMode.isEnabled && phoneCallActive && !sendModeActive {
+                    tutorTopicButton
+                } else if sendToAnswer && RealtimeMode.isEnabled && phoneCallActive {
                     clearTurnButton
                         .opacity(sendModeActive ? 1 : 0)
                         .allowsHitTesting(sendModeActive)
@@ -1846,6 +1875,24 @@ struct ConversationView: View {
 
     private var hasHeldWords: Bool {
         !realtime.partial.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// Tutor mode: topics to practice, for a learner with no idea. Same
+    /// shape as the settings button on the other side of the pill.
+    private var tutorTopicButton: some View {
+        Button {
+            showingTutorTopics = true
+        } label: {
+            Image(systemName: "lightbulb")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 44, height: 44)
+                .background(Color(.secondarySystemBackground), in: Circle())
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .disabled(tutorPlanning)
+        .accessibilityLabel(Text(explain("What to practice")))
     }
 
     /// Throw this turn away and say it again. Same shape as the settings
@@ -2699,6 +2746,12 @@ struct ConversationView: View {
                 // piece. Anything generated here would talk over a question
                 // the learner is mid-way through answering.
                 opener = initialOpener
+            } else if tutorThisCall {
+                // A lesson, not a chat: the tutor opens on the topic, the
+                // lesson left halfway, or the question of what to practice.
+                await audioSessionReady.value
+                await beginTutorCall()
+                return
             } else if topicIsNews, let fromPool = openNewsConversation() {
                 opener = fromPool
             } else if learnerPicksTopic {
@@ -2920,6 +2973,7 @@ struct ConversationView: View {
             // way to say it; a correction of it would be built on words in
             // the wrong language.
             if !flags.native { requestRealtimeSuggestion(for: turn.id, said: text) }
+            tutorHeard(text)
         }
         // The bubble appears WITH the voice and fills as the line is written —
         // the same "you read what you are hearing" the HTTP path gets from
@@ -2981,6 +3035,7 @@ struct ConversationView: View {
             }
             didSaveCurrentSession = false
             advanceCoach(afterReply: text, turnId: id)
+            if tutorWrapArmed { wrapTutorLesson(context: context) }
         }
         await realtime.connect(
             voiceId: voiceId,
@@ -3057,7 +3112,12 @@ struct ConversationView: View {
         // Words, not spaces: a Japanese line is one space-free run, and
         // counting on " " gave every Japanese turn a length of one — no
         // correction was ever requested on this path.
-        guard WordSplitter.count(said) >= 3 else { return }
+        guard WordSplitter.count(said) >= 3 else {
+            // Too short to correct; a lesson still judges it (a name alone
+            // can be a challenge done).
+            tutorCheck(turnId: turnId, said: said, fixes: [])
+            return
+        }
         let target = appState.targetLanguage
         let native = appState.nativeLanguage
         // The line said TO them, so the rewrite can be natural IN THIS
@@ -3094,6 +3154,12 @@ struct ConversationView: View {
                     "words": String(WordSplitter.count(said)),
                 ])
                 payload = nil
+            }
+            // A lesson's tick needs the correction's answer, clean or not;
+            // a failed correction judges nothing.
+            if let payload {
+                tutorCheck(turnId: turnId, said: said,
+                           fixes: payload.turnSuggestion(for: said)?.fixes ?? [])
             }
             // `transcript == said`: a turn that has since been joined with its
             // continuation is corrected as the whole line, not as its first half.
@@ -4558,8 +4624,14 @@ struct ConversationView: View {
                 ? grammarFocus?.record(repeats: focusRepeatTurns.count) : nil,
             // Tutor mode makes the whole call practice; coach mode is judged
             // per line (`Turn.readFromCoach`). A resumed practice call stays one.
-            coached: (tutorWasOn || tutorThisCall || prior?.isPractice == true) ? true : nil
+            coached: (tutorWasOn || tutorThisCall || prior?.isPractice == true) ? true : nil,
+            tutorLesson: learnerSpokeThisCall ? (tutorLesson?.record ?? prior?.tutorLesson) : prior?.tutorLesson
         )
+        if learnerSpokeThisCall, var lesson = tutorLesson, !lesson.sessionIds.contains(sessionId) {
+            lesson.sessionIds.append(sessionId)
+            TutorLessonStore.save(lesson)
+            tutorLesson = lesson
+        }
         SessionStore.shared.save(draft)
         didSaveCurrentSession = true
         var toAnalyze = draft
@@ -4825,6 +4897,7 @@ struct ConversationView: View {
     /// abandoned call that said nothing is not counted as having met anyone.
     private var isFirstMeeting: Bool {
         appState.persona?.metAt == nil && topic.isEmpty && counterpart == nil && !learnerPicksTopic
+            && !tutorThisCall
     }
 
     /// Read the clock for a call that is starting. A resumed talk's saved
@@ -4842,6 +4915,142 @@ struct ConversationView: View {
         personHistory = sessionCounterpartId.flatMap {
             PersonHistory.build(personId: $0, sessions: SessionStore.shared.load(),
                                 excluding: sessionId, pickUp: pickUpLastTalk)
+        }
+    }
+
+    // MARK: - Tutor lesson (`TutorLesson`)
+
+    /// How a tutor call opens: on the call's own topic, on the lesson left
+    /// halfway, or on the question of what to practice.
+    private func beginTutorCall() async {
+        let composed = topicBlurb.isEmpty ? topic : "\(topic). \(topicBlurb)"
+        if !topic.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            // The tutor speaks once the plan is ready ("Preparing your
+            // lesson…" on the strip meanwhile). Planned after the call is up,
+            // so the ready note can't go out before there is a socket.
+            await startRealtimeCall(opener: nil)
+            startTutorLesson(request: composed, picked: false, fromTopic: true)
+            return
+        }
+        if let saved = TutorLessonStore.resumable(language: appState.targetLanguage) {
+            tutorLesson = saved
+            await startRealtimeCall(opener: nil)
+            realtime.nudge("The learner is back to finish last time's lesson (see TUTOR MODE). Greet them in a few words, say you're picking it up where you left off and which challenge is next, give its example line, and ask them to say it.")
+            return
+        }
+        await startRealtimeCall(opener: FreeTalkOpeners.tutorOpener(language: appState.targetLanguage))
+    }
+
+    /// The learner said something while there is no lesson: it may name the
+    /// topic. The planner answers nil when it doesn't, and the tutor (whose
+    /// block says "no topic yet") asks again.
+    private func tutorHeard(_ text: String) {
+        guard tutorThisCall, tutorLesson == nil, !tutorPlanning else {
+            if tutorLesson?.isFinished == true, tutorWrapStarted == false { tutorWrapArmed = true }
+            return
+        }
+        startTutorLesson(request: text, picked: false, fromTopic: false)
+    }
+
+    /// Write the curriculum for `request` and start it. `picked`: chosen on
+    /// screen, so the tutor says so right away (nobody spoke). A new pick
+    /// replaces the lesson in progress, which stays saved, unfinished.
+    private func startTutorLesson(request: String, picked: Bool, fromTopic: Bool = false) {
+        guard tutorThisCall, !tutorPlanning else { return }
+        withAnimation(.easeInOut(duration: 0.25)) { tutorPlanning = true }
+        if picked {
+            realtime.nudge("The learner picked a topic on their screen: \"\(request)\". Say in a few words that this is today's lesson and that you're setting it up — nothing else yet.")
+        }
+        Task { @MainActor in
+            let planned = await TutorPlanner.plan(
+                request: request, targetLanguage: appState.targetLanguage,
+                nativeLanguage: appState.nativeLanguage, level: appState.proficiency,
+                persona: appState.persona)
+            guard !isTornDown else { return }
+            withAnimation(.easeInOut(duration: 0.25)) { tutorPlanning = false }
+            guard var lesson = planned else {
+                Telemetry.log("tutor_plan_failed", ["picked": picked ? "1" : "0"])
+                if picked || fromTopic {
+                    realtime.nudge("Setting up the lesson didn't work. Ask them, in one short question, what exactly they want to be able to say about: \"\(request)\".")
+                }
+                return
+            }
+            lesson.sessionIds = [sessionId]
+            TutorLessonStore.save(lesson)
+            withAnimation(.easeInOut(duration: 0.3)) {
+                tutorLesson = lesson
+                tutorStripExpanded = true
+            }
+            tutorJustTicked = false
+            tutorLastFixes = []
+            Telemetry.log("tutor_lesson_started", ["challenges": String(lesson.challenges.count),
+                                                   "picked": picked ? "1" : "0"])
+            sendTutorSystem()
+            realtime.nudge("Today's lesson is ready (see TUTOR MODE). In a few words say what it is and that you'll go one step at a time, then start challenge 1: say what it is, give its example line, and ask them to say it about themselves.")
+        }
+    }
+
+    /// One learner try on the current challenge. A tick needs BOTH: the
+    /// correction found no fixes, and the judge says the line did it.
+    private func tutorCheck(turnId: UUID, said: String, fixes: [TurnFix]) {
+        guard tutorThisCall, !tutorPlanning, let lesson = tutorLesson,
+              let i = lesson.current else { return }
+        if !fixes.isEmpty {
+            tutorLastFixes = fixes.map { "\"\($0.was)\" → \"\($0.now)\"" }
+            tutorJustTicked = false
+            sendTutorSystem()
+            return
+        }
+        let asked = turns.last(where: { $0.role == .fluentSelf && $0.timestamp < Date() })?
+            .transcript ?? ""
+        let challenge = lesson.challenges[i]
+        Task { @MainActor in
+            let did = await TutorJudge.didIt(said, challenge: challenge,
+                                             targetLanguage: appState.targetLanguage,
+                                             askedWith: asked)
+            guard !isTornDown, var now = tutorLesson, now.id == lesson.id,
+                  now.current == i else { return }
+            let hadFixes = !tutorLastFixes.isEmpty
+            tutorLastFixes = []
+            guard did else {
+                tutorJustTicked = false
+                if hadFixes { sendTutorSystem() }
+                return
+            }
+            now.challenges[i].doneAt = Date()
+            now.challenges[i].line = said
+            if now.current == nil { now.finishedAt = Date() }
+            TutorLessonStore.save(now)
+            withAnimation(.easeInOut(duration: 0.3)) { tutorLesson = now }
+            tutorJustTicked = true
+            HapticEngine.success()
+            Telemetry.log("tutor_challenge_done", ["index": String(i + 1),
+                                                   "of": String(now.challenges.count)])
+            sendTutorSystem()
+        }
+    }
+
+    private func sendTutorSystem() {
+        guard RealtimeMode.isEnabled, phoneCallActive else { return }
+        realtime.setSystem(systemPrompt() + Self.realtimeStyleRules)
+    }
+
+    /// The lesson is done and the tutor has just said goodbye: end the call
+    /// once that line has played out, into the usual wrap-up.
+    private func wrapTutorLesson(context: String) {
+        guard !tutorWrapStarted else { return }
+        tutorWrapStarted = true
+        tutorWrapArmed = false
+        Telemetry.log("tutor_lesson_finished", [:])
+        Task { @MainActor in
+            var waited = 0
+            while realtime.isRevealing(context), waited < 30 {
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                waited += 1
+            }
+            try? await Task.sleep(nanoseconds: 800_000_000)
+            guard !isTornDown, phoneCallActive else { return }
+            await endSession()
         }
     }
 
@@ -4868,7 +5077,10 @@ struct ConversationView: View {
             clock: promptClock,
             tutor: tutorThisCall,
             freeTalkCue: freeTalkCue,
-            learnerPicksTopic: learnerPicksTopic
+            learnerPicksTopic: learnerPicksTopic,
+            tutorLesson: tutorLesson,
+            tutorJustTicked: tutorJustTicked,
+            tutorLastFixes: tutorLastFixes
         )
     }
 }

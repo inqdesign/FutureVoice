@@ -2816,6 +2816,46 @@ PLUS talk-kept notebook words (`coachExtras`) — the first device test had
   then a one-time offer of coach mode on the wrap-up for low levels or
   repeated mistakes — offered, never switched on silently.
 
+## Tutor mode — one goal, said until it's nailed (2026-10-24)
+
+Founder: "not friendly talk — the goal of the call is that they can SAY it,
+properly, and they keep at it until they nail it." Call settings → Tutor
+mode (`TutorMode`, off by default). Replaces the 2026-10-13 tutor (several
+themes, "no repeat-after-me"), which was hidden on 2026-10-16. Don't bring
+that back. `TutorLesson.swift`, `TutorLessonViews.swift`,
+`ConversationEngine.tutorBlock`.
+
+- **A topic becomes a curriculum.** The call's own topic, one picked from
+  the 💡 button RIGHT of the pill (`TutorTopicSheet`: the Talk tab's starters
+  by purpose + the learner's own situations), or one said after the opener
+  ("what do you want to be able to say today?", `FreeTalkOpeners.tutorOpener`).
+  `TutorPlanner` (default model, `purpose: "tutor"`) writes 3–4 challenges,
+  the last one putting it all together, or `topic: false` for "I don't
+  know". Examples are read aloud, so no brackets (the spoken gate cuts a
+  reply at `[`).
+- **The TICK is the app's, never the tutor's.** Clean = the per-turn
+  correction call returned no fixes AND `TutorJudge` (flash-lite) says the
+  line did the challenge. The block is resent on every tick (`set.system`);
+  the tutor asks for "once more" on a right line and moves on only when the
+  block's RIGHT NOW line says the app checked it off. Put in the lesson
+  block, the move-on note was ignored; it is last in the prompt for that.
+- **The tutor speaks first through `nudge`** (gateway, 2026-10-24): a
+  bracketed note from the app ("topic picked", "lesson ready", "back to
+  finish last time's") answered as soon as no line is playing, 8 per call.
+  An older gateway ignores it, and then the tutor waits for the learner.
+- **The checklist is pinned above the transcript** (`TutorLessonStrip`,
+  folds on tap). A finished lesson ends the call after the goodbye line;
+  the book page shows the lines that cleared each challenge
+  (`Session.tutorLesson`). Unfinished lessons resume for 21 days
+  (`Documents/lang/<code>/tutor_lessons.json`, device-local).
+- **The tutor's own words stay 반말**; only the practiced line has its own
+  register (Haiku drifted to 해요체/여러분 to match a polite example).
+- The Claude reply ceiling went 1024 → 2048: a tick turn thinks 800–1,460
+  tokens and came back EMPTY 4/5 at 1024. Measured with
+  `scripts/tutor-lesson-probe.py` (planner, judge 4/4, every tutor reply
+  printed): after the fix, move-on 3/3 ko, 2–3/3 en; the flash-lite hedge
+  moves on 4/4. Not yet tried in a real call.
+
 ## Android moves WITH iOS (2026-10-07)
 
 Android (`/Users/eunggyuelee/FutureVoice-android`, branch `feat/android`) has

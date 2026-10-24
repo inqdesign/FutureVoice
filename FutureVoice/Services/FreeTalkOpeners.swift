@@ -111,6 +111,26 @@ final class FreeTalkOpeners {
         "zh": "好，今天想聊什么？",
     ]
 
+    /// Tutor mode's first line with no lesson to pick up (`TutorLesson`):
+    /// the call exists to practice ONE thing, so it opens by asking which,
+    /// and says the topic button is there for someone with no idea.
+    static func tutorOpener(language: String) -> String {
+        let code = LanguageCatalog.language(language)?.code ?? "en"
+        return tutorOpeners[code] ?? tutorOpeners["en"]!
+    }
+
+    private static let tutorOpeners: [String: String] = [
+        "en": "Okay, lesson time. What do you want to be able to say today? Tell me, or pick a topic from the button.",
+        "de": "Okay, Zeit für eine Übung. Was willst du heute sagen können? Sag es mir, oder such dir unten ein Thema aus.",
+        "ko": "좋아, 오늘은 수업이야. 오늘은 어떤 말을 할 수 있게 되고 싶어? 말해 줘도 되고, 버튼에서 주제를 골라도 돼.",
+        "ja": "よし、今日はレッスンだよ。今日は何が言えるようになりたい？教えてくれてもいいし、ボタンからテーマを選んでもいいよ。",
+        "es": "Bueno, hora de practicar. ¿Qué quieres poder decir hoy? Dímelo, o elige un tema con el botón.",
+        "fr": "Bon, on s'entraîne. Qu'est-ce que tu veux savoir dire aujourd'hui ? Dis-le-moi, ou choisis un sujet avec le bouton.",
+        "it": "Allora, si fa lezione. Cosa vuoi saper dire oggi? Dimmelo, o scegli un argomento dal pulsante.",
+        "pt": "Então, hora da aula. O que você quer conseguir dizer hoje? Me conta, ou escolhe um tema no botão.",
+        "zh": "好，今天上课。你今天想学会说什么？告诉我，或者从按钮里选一个话题。",
+    ]
+
     private static let introOpeners: [String: String] = [
         "en": "Hi. I'm the future you — the one who speaks English fluently. I can't wait for all the talks ahead of us. Don't give up, and let's get you here, together. So — what are you up to these days?",
         "de": "Hallo. Ich bin das zukünftige Du — das, das fließend Deutsch spricht. Ich freue mich auf all die Gespräche, die vor uns liegen. Gib nicht auf, und lass uns zusammen dafür sorgen, dass du hierher kommst. Also — was machst du gerade so?",

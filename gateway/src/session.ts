@@ -198,6 +198,11 @@ export class CallSession implements DurableObject {
   /** A `say` that arrived before the session finished starting — see the
    *  handler. Spoken the moment `ready` goes out. */
   private pendingSay: { text: string; alreadySpoken: boolean } | null = null
+  /** App notes waiting for the line in progress to end (see NudgeMessage). */
+  private pendingNudges: string[] = []
+  private nudgesUsed = 0
+  static readonly maxNudges = 8
+  static readonly maxNudgeChars = 600
   /** Coach mode's steer, kept so one that arrives before `start` has built
    *  the reply engine still applies. */
   private pendingSteer = ""
@@ -676,6 +681,14 @@ export class CallSession implements DurableObject {
       this.applySay({ text, alreadySpoken: msg.alreadySpoken === true })
       return
     }
+    if (msg.type === "nudge") {
+      const text = (msg.text ?? "").trim().slice(0, CallSession.maxNudgeChars)
+      if (this.ended || text.length === 0 || this.nudgesUsed >= CallSession.maxNudges) return
+      this.nudgesUsed += 1
+      this.pendingNudges.push(text)
+      this.flushNudge()
+      return
+    }
     if (msg.type === "set") {
       // Mid-call settings. Nothing here may end a call: a setting the gateway
       // cannot honour is dropped, never raised.
@@ -1015,6 +1028,9 @@ export class CallSession implements DurableObject {
       this.pendingSay = null
       this.applySay(held)
     }
+    // A note that arrived while starting (tutor mode, no opener): answered
+    // now, or after the opener if one is playing.
+    this.flushNudge()
     // Mic audio arriving before this resolves is BUFFERED by the transcriber
     // (`pendingAudio`, 50 chunks ≈ 5 s) and flushed when its setup lands, so
     // nothing the learner says over the greeting is lost.
@@ -1712,6 +1728,23 @@ export class CallSession implements DurableObject {
     this.emit({ type: "audio_end", context })
     this.activeContext = null
     if (this.pendingWall !== null) this.settleWall(this.pendingWall)
+    this.flushNudge()
+  }
+
+  /** Answer the app's queued notes with one line, once nothing is playing
+   *  (see NudgeMessage). Called on every line end and when the session
+   *  is up; a no-op while a line is still going. */
+  private flushNudge(): void {
+    if (this.ended || !this.started || this.pendingNudges.length === 0) return
+    if (this.activeContext !== null || this.pendingWall !== null) return
+    const note = this.pendingNudges.splice(0).map((n) =>
+      `[Note from the app — the learner did not say this: ${n}]`).join("\n")
+    const last = this.history[this.history.length - 1]
+    if (last && last.role === "user") last.text = `${last.text}\n${note}`
+    else this.history.push({ role: "user", text: note })
+    console.log(`nudge: "${note.slice(0, 80)}"`)
+    this.turnCount += 1
+    this.generateReply(`t${this.turnCount}`)
   }
 
   /** `audio_end` used to ride on the provider's own "done" alone, and on

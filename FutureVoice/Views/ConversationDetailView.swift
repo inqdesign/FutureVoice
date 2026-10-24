@@ -196,6 +196,29 @@ struct ConversationDetailView: View {
             Divider().padding(.leading, 20)
             scoreBlock(sc)
         }
+        // Tutor mode's lesson: the lines that cleared each challenge — the
+        // finished version, to say again.
+        if let lesson = session.tutorLesson, !lesson.done.isEmpty {
+            Divider().padding(.leading, 20).padding(.top, 8)
+            groupLabel(lesson.finished ? "Lesson complete" : "Lesson so far", icon: "graduationcap")
+            VStack(alignment: .leading, spacing: 10) {
+                Text(verbatim: "\(lesson.title) · \(lesson.done.count)/\(lesson.total)")
+                    .font(.subheadline.weight(.semibold))
+                ForEach(Array(lesson.done.enumerated()), id: \.offset) { _, d in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Label(d.goal, systemImage: "checkmark.circle.fill")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                        Text(d.line)
+                            .font(.body)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.leading, 26)
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 8)
+        }
         // Coach mode's grammar focus and how this call went on it.
         if let focus = session.grammarFocus {
             Divider().padding(.leading, 20).padding(.top, 8)

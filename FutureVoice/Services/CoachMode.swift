@@ -55,31 +55,33 @@ enum CoachMode {
     static let maxCandidates = 8
 }
 
-/// Tutor mode (2026-10-13, founder: "a tutor, not a conversation partner").
+/// Tutor mode (2026-10-13; rebuilt 2026-10-24, founder: "the goal of the
+/// call is that they can say it properly — keep repeating until they nail
+/// it").
 ///
-/// The call becomes a LESSON: the fluent self leads one practical theme at a
-/// time and every turn teaches — their sentence said right if it was wrong
-/// ("We'd say: 'My name is Eunggyu.'"), the more natural way if it was stiff,
-/// one step up if it was fine — then a practice question built to use it.
-/// No repeat-after-me: the lesson moves on. (A first cut that only
-/// corrected mistakes inside a free chat read as no mode at all.)
+/// The call is a LESSON with one goal: a topic (the call's own, one picked
+/// from the button right of the pill, or one said when asked) becomes a
+/// curriculum of 3–4 challenges (`TutorLesson`), shown as a checklist above
+/// the transcript. The tutor stays on a challenge until the app ticks it —
+/// no fixes from the correction call AND the judge says the line did it —
+/// then moves on; a finished lesson ends the call into the usual wrap-up,
+/// and one left halfway is picked up by the next tutor call.
 ///
 /// It lives in the conversation's SYSTEM prompt
-/// (`ConversationEngine.tutorBlock`). Flipped mid-call, the app sends the
-/// gateway the rebuilt prompt (`set.system`, 2026-10-14) and the gateway
-/// remakes its reply cache, so the next reply is already under the new rules
-/// — it used to apply only from the next call. Off by default for everyone;
-/// with it off the prompt is byte-identical to before (`TutorModeTests`).
+/// (`ConversationEngine.tutorBlock`), resent on every tick (`set.system`);
+/// the tutor's own lines for a topic picked or a lesson ready go out as
+/// gateway `nudge` notes. Off by default; with it off the prompt is
+/// byte-identical to before (`TutorModeTests`).
 ///
 /// A tutored call is a PRACTICE call, like a coached one (`Session.coached`):
 /// a line said right after being corrected is a repeat, not evidence.
 enum TutorMode {
     static let key = "futurevoice.call.tutorMode"
 
-    /// Hidden for now (2026-10-16, founder): no toggle in Call settings, and
-    /// a learner who had it on gets ordinary calls. Their choice stays on
-    /// disk, so flipping this back restores it.
-    static let isAvailable = false
+    /// Hidden 2026-10-16 while the concept was rethought; back 2026-10-24
+    /// as the goal-and-curriculum lesson. A learner who had it on before
+    /// still has it on.
+    static let isAvailable = true
 
     static var isOn: Bool { isAvailable && UserDefaults.standard.bool(forKey: key) }
 }

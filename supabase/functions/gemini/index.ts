@@ -59,6 +59,7 @@ const DAILY_CAPS: Record<string, number> = {
   "coach": 800,                // one per fluent-self line; a heavy day reached 239
   "clone-script": 20,
   "script-study": 60,          // a Speech script's study notes, cached per script
+  "tutor": 400,                // tutor mode: a lesson plan per topic + a judge per learner turn
 }
 const DEFAULT_DAILY_CAP = 300
 

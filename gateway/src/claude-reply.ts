@@ -240,7 +240,11 @@ export async function streamClaude(opts: {
     },
     body: JSON.stringify({
       model: opts.model,
-      max_tokens: 1024,
+      // Thinking spends from the same ceiling. At 1024 a tutor-mode turn
+      // (a long prompt, a "move on now" note) thought ~990 tokens and came
+      // back EMPTY 4 of 5 times (2026-10-24, scripts/tutor-lesson-probe.py).
+      // Unused headroom costs nothing.
+      max_tokens: 2048,
       stream: true,
       system: [{ type: "text", text: opts.system + CLAUDE_ADDENDUM, cache_control: { type: "ephemeral" } }],
       messages: opts.messages,

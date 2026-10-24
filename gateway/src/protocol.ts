@@ -124,7 +124,19 @@ export interface SetMessage {
 }
 
 export type ClientMessage = StartMessage | SayMessage | EndMessage | SetMessage
-  | SendMessage | DiscardMessage | BargeMessage
+  | SendMessage | DiscardMessage | BargeMessage | NudgeMessage
+
+/** A note from the APP that the fluent self answers out loud (2026-10-24,
+ *  tutor mode): "the learner picked this topic on screen — start", "the
+ *  lesson is ready", "every challenge is done — wrap up". It goes into the
+ *  model's history as a bracketed note (never as something the learner
+ *  said) and a line is written for it as soon as no line is playing. Capped
+ *  per call, and like the opener it is voiced before anything is billed,
+ *  so the cap is what bounds it. An older gateway ignores it. */
+export interface NudgeMessage {
+  type: "nudge"
+  text: string
+}
 
 /** The PHONE heard the learner start talking over the line (2026-10-20).
  *  In earphones its mic hears only them, so it can tell in a quarter second

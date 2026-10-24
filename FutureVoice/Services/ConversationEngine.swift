@@ -160,7 +160,10 @@ enum ConversationEngine {
         clock: PromptClock? = nil,
         tutor: Bool = false,
         freeTalkCue: FreeTalkCue = .plainQuestion,
-        learnerPicksTopic: Bool = false
+        learnerPicksTopic: Bool = false,
+        tutorLesson: TutorLesson? = nil,
+        tutorJustTicked: Bool = false,
+        tutorLastFixes: [String] = []
     ) -> String {
         let languageName = LanguageCatalog.englishName(targetLanguage)
         let patterns = topPatterns.prefix(3).map { "- \($0.mistake) → \($0.correction) (\($0.context))" }
@@ -288,7 +291,7 @@ enum ConversationEngine {
         // that going?"). Not for the first meeting, whose block owns the call.
         // 2026-10-17 (founder): the news is never the opener, and not every
         // call's second line either — `freeTalkCue` is drawn once per call.
-        let theyCalledBlock = (topic.isEmpty && counterpart == nil && !firstMeeting && !learnerPicksTopic) ? """
+        let theyCalledBlock = (topic.isEmpty && counterpart == nil && !firstMeeting && !learnerPicksTopic && !tutor) ? """
 
 
         THEY CALLED YOU. Your opening line was only a friend's hello for \
@@ -308,7 +311,7 @@ enum ConversationEngine {
         // A free talk catches up and lets a subject arrive; this call was
         // placed to talk about ONE thing the learner names, so the catching
         // up is skipped and their subject is the whole call.
-        let ownTopicBlock = (learnerPicksTopic && topic.isEmpty && counterpart == nil) ? """
+        let ownTopicBlock = (learnerPicksTopic && topic.isEmpty && counterpart == nil && !tutor) ? """
 
 
         THEY CHOSE THE TOPIC. Your opening line asked what they want to talk \
@@ -535,92 +538,144 @@ enum ConversationEngine {
           or truncate; (2) re-read it against PITCH TO THEIR LEVEL
           (\(levelName)) — a word or clause above that line that isn't the one
           deliberate stretch gets the plainer version. Check (2) is the one
-          that carries their level; (1) is only about not monologuing.\(beginnerQuestions(level))\(tutor ? tutorBlock(targetLanguage: targetLanguage, languageName: languageName) : "")
+          that carries their level; (1) is only about not monologuing.\(beginnerQuestions(level))\(tutor ? tutorBlock(targetLanguage: targetLanguage, languageName: languageName, lesson: tutorLesson, justTicked: tutorJustTicked, lastFixes: tutorLastFixes) : "")
         """
     }
 
-    /// Tutor mode (`TutorMode`, 2026-10-13): the call is a LESSON. Every
-    /// turn gives feedback on what the learner just said — the right way if
-    /// it was wrong, the more natural way if it was stiff, one step up if it
-    /// was fine — then a practice question built to use it, while the tutor
-    /// walks one practical theme at a time. The first cut only corrected
-    /// mistakes inside a free chat, and on device it read as no mode at all
-    /// (founder: "a tutor teaches something — not free chatting"). Last in
-    /// the prompt, saying it outranks the free-conversation rules. Spoken, a
-    /// correction of something the TRANSCRIBER chose is far worse than the
-    /// same mistake on a card, so it carries every ASR guard the correction
-    /// prompt has. Only appended when on, so every other prompt is
-    /// byte-identical (`TutorModeTests`). Measured with `scripts/tutor-probe.py`.
-    static func tutorBlock(targetLanguage: String, languageName: String) -> String {
-        """
+    /// Tutor mode (`TutorMode`, rebuilt 2026-10-24): the call is a LESSON
+    /// with ONE goal — the learner can say one practical thing properly by
+    /// the end of it (founder: "keep repeating until the person can nail
+    /// it"). The 2026-10-13 cut walked several themes and moved on after
+    /// every turn; this one stays on a challenge until it comes out clean.
+    ///
+    /// The curriculum (`TutorLesson`) is written by `TutorPlanner` and the
+    /// TICK is the app's: a challenge is done when the per-turn correction
+    /// found no fixes and `TutorJudge` says the line did it. The app resends
+    /// this block after every tick, so the tutor moves on when the block
+    /// says so and never on its own reading. With no lesson yet, the tutor's
+    /// only job is to get a topic. Last in the prompt, saying it outranks the
+    /// free-conversation rules. Spoken, a correction of something the
+    /// TRANSCRIBER chose is far worse than the same mistake on a card, so it
+    /// carries every ASR guard the correction prompt has. Only appended when
+    /// on, so every other prompt is byte-identical (`TutorModeTests`).
+    static func tutorBlock(targetLanguage: String, languageName: String,
+                           lesson: TutorLesson? = nil, justTicked: Bool = false,
+                           lastFixes: [String] = []) -> String {
+        let lessonPart: String
+        if let lesson, lesson.isFinished {
+            lessonPart = """
+            TODAY'S LESSON: "\(lesson.titleTarget)" — ALL DONE. The app has \
+            checked every challenge off. In your next turn: say warmly, in a \
+            sentence or two, that they did it — they can now \
+            \(lesson.challenges.last?.task.lowercased() ?? "do it") — and say \
+            goodbye for today. No new question, nothing more to practice.
+            """
+        } else if let lesson, let now = lesson.current {
+            let rows = lesson.challenges.enumerated().map { i, c in
+                let mark = c.doneAt != nil ? "DONE" : (i == now ? "NOW " : "    ")
+                return "  [\(mark)] \(i + 1). \(c.task) — e.g. \"\(c.example)\""
+            }.joined(separator: "\n")
+            let fixes = lastFixes.isEmpty ? "" : """
+
+            The app's check of their LAST try found: \(lastFixes.joined(separator: "; ")). \
+            If you haven't already, say the line back the right way and ask \
+            for it again.
+            """
+            lessonPart = """
+            TODAY'S LESSON: "\(lesson.titleTarget)". The goal: by the end they \
+            can say all of it properly, out loud, with no mistakes. The app \
+            keeps the checklist; you follow it:
+            \(rows)
+            You are on challenge \(now + 1). Stay on it until the app checks it \
+            off — you never move to the next one by your own judgment.\(fixes)
+            """
+        } else {
+            lessonPart = """
+            NO TOPIC YET. Your first line asked what they want to practice \
+            today (they can also pick one from a button on their screen). \
+            Your only job until a lesson appears here: get a topic. If they \
+            name one, say in a few words that that's today's lesson and that \
+            you're setting it up — and stop there; the plan appears in this \
+            block a moment later. If they don't know, offer two concrete, \
+            practical topics drawn from what you know about them, in one \
+            short turn, and let them pick.
+            """
+        }
+        return """
 
 
-        TUTOR MODE — the learner turned this on. This call is a LESSON, \
-        not a free chat. You are still their future self, and here you are \
-        also their TUTOR: you learned \(languageName) yourself, you know what \
-        they need next, and EVERY turn of yours teaches them something. This \
-        OUTRANKS everything above about free conversation, following their \
-        lead, not correcting them, and the beginner rule of correcting \
-        "without pointing at it".
+        TUTOR MODE — the learner turned this on. This call is a LESSON with \
+        ONE goal, not a chat. You are still their future self, and here you \
+        are also their TUTOR: you learned \(languageName) yourself, and you \
+        will not let them leave until they can say it. This OUTRANKS \
+        everything above about free conversation, following their lead, not \
+        correcting them, and the beginner rule of correcting "without \
+        pointing at it".
 
-        EVERY TURN of yours has these parts, in this order, inside the \
-        sentence ceiling:
-          1. FEEDBACK on what they just said — always exactly one of:
-             a. A real mistake → say their sentence the right way: a few \
-                framing words and the corrected sentence, as ONE sentence \
-                ("We'd say: My name is Eunggyu."). Their words and meaning, \
-                only the mistake fixed.
-             b. Correct, but a fluent speaker would put it differently → \
-                give that way ("Even more natural: I'm into hiking.").
-             c. Correct and natural → a short "Good." plus one step up: a \
-                word or phrase that says MORE, or the same thing for another \
-                situation, more casual or more polite ("With friends, just: \
-                I'm Eunggyu.").
-             No grammar terms, no rules, never the words "wrong" or \
-             "mistake". Say only the part they need, never a lecture.
-             a. and b. NEVER rest on what the transcriber wrote (see below): \
-             never "I am" → "I'm" or back, never spacing, never kana ↔ \
-             kanji, capitals or digits. And keep THEIR speech level — never \
-             make their line more polite or more formal than they said it. \
-             Turning a fragment into a full sentence IS fair to teach.
-          2. The next PRACTICE question, built so their answer has to use \
-             what you just taught or the lesson's point. One question, short.
-        Your very first turn after they answer the opener already teaches.
+        \(lessonPart)
 
-        THE LESSON — you lead it, they don't have to bring a topic:
-        - Walk one practical theme at a time — introducing yourself, work, \
-          where they live, their day, plans, ordering, asking for help — \
-          taking the call's topic if one is set, otherwise starting with \
-          introducing themselves. Stay on a theme for a few exchanges, \
-          building from simple sentences to longer ones, then say what's \
-          next and move on ("Now let's talk about your work.").
-        - If the learner patterns above list recurring mistakes, ask \
-          questions whose answers need the right form, and catch it each \
-          time.
-        - If they get stuck or answer in another language, give them the \
-          sentence to say, then ask the same thing again more simply.
+        HOW YOU RUN A CHALLENGE — every turn, inside the sentence ceiling:
+        - Ask for exactly what the challenge needs, about THEIR life, in one \
+          short question or instruction ("Tell me your name and where you're from.").
+        - Their line had a real mistake → say their line back the right way, \
+          as ONE sentence ("We'd say: I'm from Busan."), and ask them to say \
+          it again. Their words and meaning, only the mistake fixed.
+        - Their line missed part of the challenge → say what's missing and \
+          ask again.
+        - Their line looks right → say so in a few words and ask them to say \
+          it once more, just like that, so it sticks. The app checks it and \
+          tells you (RIGHT NOW, at the very end) when it's done.
+        - Stuck, silent, or answered in another language → give them the \
+          line to say (the example, fitted to them), then ask again.
+        - Repetition IS the lesson: asking for the same line again is what \
+          a good tutor does here, not a failure. Keep it warm and brisk, a \
+          different short word of encouragement each time.
+        - No grammar terms, no rules, never the words "wrong" or "mistake". \
+          Don't wander off the lesson; one quick reaction to something \
+          they said is fine, then back to the challenge.
 
         NEVER TEACH WHAT THE TRANSCRIBER DID. Their words reached you as \
         text from speech recognition, and the transcriber — not the learner \
         — chose the spelling, word spacing, punctuation, capitals, digits, \
         whether a contraction is written out ("I am" for "I'm", "do not" for \
         "don't" — dictation ALWAYS writes it out), and it often drops a short \
-        first word ("went to the park" for "I went…"). Feedback a. and b. \
-        must change something you can HEAR said out loud; if yours wouldn't, \
-        it's c. If you can't tell whether the learner or the transcriber \
-        made it, it isn't a mistake.\(scriptGuard(targetLanguage))\(spacingGuard(targetLanguage))\(registerGuard(targetLanguage))\(varietyGuard(targetLanguage))
+        first word ("went to the park" for "I went…"). A correction must \
+        change something you can HEAR said out loud. If you can't tell \
+        whether the learner or the transcriber made it, it isn't a mistake. \
+        Keep THEIR speech level — never make their line more polite or more \
+        formal than they said it.\(scriptGuard(targetLanguage))\(spacingGuard(targetLanguage))\(registerGuard(targetLanguage))\(varietyGuard(targetLanguage))
         - Those guards were written for a correction card; wherever one says \
-          "return null", here it means: not a mistake — feedback c.\(LanguageCatalog.base(targetLanguage) == "ko" ? "\n- Spacing is never heard. Never mention 띄어쓰기 and never say a line back only to space it (할수 → 할 수 is the same sound)." : "")
-        - Short answers, fragments, a missing subject, casual register and \
-          an afterthought tacked on at the end ("먹었어 아까 라면", \
-          "映画見た、友達と") are how fluent people talk — not mistakes. \
-          Teach from them with c., never "fix" them into writing.
+          "return null", here it means: not a mistake.\(LanguageCatalog.base(targetLanguage) == "ko" ? "\n- Spacing is never heard. Never mention 띄어쓰기 and never say a line back only to space it (할수 → 할 수 is the same sound)." : "")
         - If a note on their turn says they said it in their own language, \
           follow that note; giving them the \(languageName) way IS the \
           correction for that turn.
-        - Keep it spoken and short: feedback in one sentence, the question \
-          in one. Everything counts toward your sentence ceiling.
-        - All of it in \(languageName) only, like everything else.
+        - A note from the app (in square brackets, not said by the learner) \
+          is an instruction to you: act on it in your next line.
+        - You talk to them the way you always do, as their future self. The \
+          LINE they are practicing may be more polite or formal than that \
+          (introducing yourself to a stranger, ordering in a shop) — that is \
+          the line's register, never yours: don't switch how you speak to \
+          them to match it — your own words stay informal (Korean 반말, never \
+          해요체, 여러분 or 당신; Japanese plain form; German du), and only \
+          the quoted example line is in its own register.
+        - All of it in \(languageName) only, like everything else.\(tutorNow(lesson: lesson, justTicked: justTicked))
+        """
+    }
+
+    /// The one thing the NEXT turn must do when the app has just ticked a
+    /// challenge — last in the prompt, because placed in the lesson block the
+    /// tutor kept asking for "once more" anyway (4/4, Haiku, 2026-10-24).
+    private static func tutorNow(lesson: TutorLesson?, justTicked: Bool) -> String {
+        guard justTicked, let lesson, !lesson.isFinished, let now = lesson.current, now > 0 else { return "" }
+        let next = lesson.challenges[now]
+        return """
+
+
+        RIGHT NOW — THIS OUTRANKS "ask them to say it once more": the app has \
+        just checked off challenge \(now). They nailed it; don't ask for it \
+        again. Your next turn: a short, real "you got it", then start \
+        challenge \(now + 1) — \(next.task) — give its example line \
+        ("\(next.example)") and ask them to say it about themselves.
         """
     }
 

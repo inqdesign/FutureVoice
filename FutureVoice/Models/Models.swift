@@ -371,6 +371,9 @@ struct Session: Codable, Identifiable {
     /// (`Turn.readFromCoach`); calls saved before that with coach mode on
     /// keep the flag.
     var coached: Bool? = nil
+    /// Tutor mode's lesson as this talk left it (`TutorLesson`): the lines
+    /// that cleared each challenge. Optional, so old rows decode.
+    var tutorLesson: TutorLessonRecord? = nil
 
     /// See `coached`.
     var isPractice: Bool { coached == true }

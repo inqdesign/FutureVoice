@@ -889,6 +889,14 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         sendControl(["type": "set", "system": system])
     }
 
+    /// A note the fluent self answers out loud (tutor mode: a topic picked
+    /// on screen, a lesson ready, a lesson finished). The gateway writes the
+    /// line once nothing is playing; one older than the message ignores it.
+    func nudge(_ text: String) {
+        guard !isTornDown else { return }
+        sendControl(["type": "nudge", "text": text])
+    }
+
     /// Send-to-answer (`SendToAnswer`): what has been said is the turn —
     /// answer it. The gateway commits it, waiting at most a beat for the
     /// last words to be finalized.

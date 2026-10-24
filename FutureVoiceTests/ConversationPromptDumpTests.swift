@@ -48,6 +48,31 @@ final class ConversationPromptDumpTests: XCTestCase {
                     tutor: true)
                 try tutor.write(to: url.appendingPathComponent("\(lang)-\(level.rawValue)-tutor.txt"),
                                 atomically: true, encoding: .utf8)
+                // Tutor mode with a lesson on challenge 2, for the lesson probe
+                // (2026-10-24): one plain, one just ticked, one finished.
+                let lesson = TutorLesson(
+                    id: UUID(), title: "Self-intro", titleTarget: "Introducing yourself",
+                    language: lang,
+                    challenges: [
+                        .init(id: UUID(), goal: "name", task: "Say your name and where you're from",
+                              example: "I'm Minji, and I'm from Busan.", doneAt: Date(), line: "I'm Minji, from Busan."),
+                        .init(id: UUID(), goal: "work", task: "Say what you do for work or study",
+                              example: "I work as a nurse at a hospital."),
+                        .init(id: UUID(), goal: "whole", task: "Introduce yourself in one go: name, where you're from, what you do",
+                              example: "Hi, I'm Minji. I'm from Busan, and I work as a nurse."),
+                    ],
+                    createdAt: Date())
+                var afterTick = lesson
+                afterTick.challenges[1].doneAt = Date()
+                afterTick.challenges[1].line = "I work as an engineer at a car company."
+                for (name, l, ticked) in [("lesson", lesson, false), ("ticked", afterTick, true)] as [(String, TutorLesson, Bool)] {
+                    let p = ConversationEngine.conversationSystemPrompt(
+                        targetLanguage: lang, nativeLanguage: lang == "ko" ? "en" : "ko",
+                        level: level, topPatterns: [], weakVocabAreas: [], topic: "",
+                        tutor: true, tutorLesson: l, tutorJustTicked: ticked)
+                    try p.write(to: url.appendingPathComponent("\(lang)-\(level.rawValue)-tutor-\(name).txt"),
+                                atomically: true, encoding: .utf8)
+                }
             }
         }
     }
