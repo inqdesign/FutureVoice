@@ -315,7 +315,7 @@ private fun SetupFlowBody(
                                 exam, { exam = it }, target)
                         }
                     }
-                    item { GroupedFooter(stringResource(R.string.pick_up_to_three_the_first_one_is_where_talk_opens)) }
+                    item { GroupedFooter(stringResource(R.string.pick_as_many_as_you_like_the_first_one_is_where_talk_opens)) }
                     item { Spacer(Modifier.padding(vertical = 12.dp)) }
                 }
             }

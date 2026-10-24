@@ -141,7 +141,7 @@ object LearningPurposeStore {
 
     /** In the order picked. Empty = never asked (every install before this). */
     fun purposes(c: Context): List<LearningPurpose> =
-        (p(c).getString(KEY, null) ?: "").split(',').mapNotNull { LearningPurpose.from(it) }.take(3)
+        (p(c).getString(KEY, null) ?: "").split(',').mapNotNull { LearningPurpose.from(it) }
 
     fun setPurposes(c: Context, value: List<LearningPurpose>) {
         p(c).edit().putString(KEY, value.joinToString(",") { it.raw }).apply()

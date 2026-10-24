@@ -35,7 +35,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalConfiguration
@@ -83,13 +82,9 @@ fun PurposePickerRows(
     LearningPurpose.entries.forEachIndexed { i, p ->
         if (i > 0) FormDivider(inset = 58.dp)
         val n = purposes.indexOf(p).takeIf { it >= 0 }
-        // At most three: each purpose adds a chip to Talk, and past three
-        // the row stops being a choice and becomes a list.
-        val full = n == null && purposes.size >= MAX_PICKED
         Row(
             Modifier.fillMaxWidth()
-                .alpha(if (full) 0.4f else 1f)
-                .clickable(enabled = !full) {
+                .clickable {
                     onPurposes(if (n != null) purposes - p else purposes + p)
                 }
                 .padding(horizontal = 16.dp, vertical = 10.dp),
@@ -117,9 +112,6 @@ fun PurposePickerRows(
         if (n != null) PurposeDetail(p, details, onDetails, exam, onExam, language)
     }
 }
-
-/** iOS `PurposePickerRows.maxPicked`. */
-private const val MAX_PICKED = 3
 
 @Composable
 private fun PurposeDetail(
@@ -254,7 +246,7 @@ fun DiscoverSettingsSheet(
             .padding(horizontal = 16.dp).padding(bottom = 28.dp)) {
             FormSection(
                 header = stringResource(R.string.why_are_you_learning),
-                footer = stringResource(R.string.up_to_three_the_chips_under_talk_follow_them_in_the_order_yo_4b1735),
+                footer = stringResource(R.string.the_chips_under_talk_follow_this_in_the_order_you_picked_wha_eac8ab),
             ) {
                 PurposePickerRows(purposes, { purposes = it }, details, { details = it }, exam, { exam = it },
                     language)
