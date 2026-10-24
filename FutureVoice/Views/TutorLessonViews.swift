@@ -10,6 +10,8 @@ struct TutorLessonStrip: View {
     let lesson: TutorLesson?
     let planning: Bool
     @Binding var expanded: Bool
+    /// Drop this lesson and pick another topic.
+    var onChangeTopic: () -> Void = {}
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -31,6 +33,20 @@ struct TutorLessonStrip: View {
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.tertiary)
                             .rotationEffect(.degrees(expanded ? 0 : -90))
+                        if !lesson.isFinished {
+                            Menu {
+                                Button(action: onChangeTopic) {
+                                    Label(explain("Choose another topic"), systemImage: "arrow.triangle.2.circlepath")
+                                }
+                            } label: {
+                                Image(systemName: "ellipsis.circle")
+                                    .font(.body)
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 32, height: 28)
+                                    .contentShape(Rectangle())
+                            }
+                            .accessibilityLabel(Text(explain("Choose another topic")))
+                        }
                     } else {
                         Text(explain("Preparing your lesson…"))
                             .font(.subheadline.weight(.semibold))

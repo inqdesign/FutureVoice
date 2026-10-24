@@ -913,7 +913,9 @@ struct ConversationView: View {
                 // this call is about, and the chips are the things to spend.
                 if tutorThisCall, tutorLesson != nil || tutorPlanning {
                     TutorLessonStrip(lesson: tutorLesson, planning: tutorPlanning,
-                                     expanded: $tutorStripExpanded)
+                                     expanded: $tutorStripExpanded) {
+                        dropTutorLesson(said: nil)
+                    }
                         .transition(.opacity.combined(with: .move(edge: .top)))
                     Divider().opacity(0.15)
                 }
@@ -4959,6 +4961,10 @@ struct ConversationView: View {
     private func startTutorLesson(request: String, askedWith: String? = nil,
                                   picked: Bool, fromTopic: Bool = false) {
         guard tutorThisCall, !tutorPlanning else { return }
+        if picked, var old = tutorLesson, !old.isFinished {
+            old.droppedAt = Date()
+            TutorLessonStore.save(old)
+        }
         withAnimation(.easeInOut(duration: 0.25)) { tutorPlanning = true }
         if picked {
             realtime.nudge("The learner picked a topic on their screen: \"\(request)\". Say in a few words that this is today's lesson and that you're setting it up — nothing else yet.")
@@ -4997,21 +5003,28 @@ struct ConversationView: View {
     private func tutorCheck(turnId: UUID, said: String, fixes: [TurnFix]) {
         guard tutorThisCall, !tutorPlanning, let lesson = tutorLesson,
               let i = lesson.current else { return }
-        if !fixes.isEmpty {
-            tutorLastFixes = fixes.map { "\"\($0.was)\" → \"\($0.now)\"" }
-            tutorJustTicked = false
-            sendTutorSystem()
-            return
-        }
         let asked = turns.last(where: { $0.role == .fluentSelf && $0.timestamp < Date() })?
             .transcript ?? ""
         let challenge = lesson.challenges[i]
         Task { @MainActor in
-            let did = await TutorJudge.didIt(said, challenge: challenge,
-                                             targetLanguage: appState.targetLanguage,
-                                             askedWith: asked)
+            // Asked on every try, fixes or not: a request to change the
+            // topic can come with a mistake in it.
+            let verdict = await TutorJudge.read(said, challenge: challenge,
+                                                targetLanguage: appState.targetLanguage,
+                                                askedWith: asked)
             guard !isTornDown, var now = tutorLesson, now.id == lesson.id,
                   now.current == i else { return }
+            if verdict?.wantsOtherTopic == true {
+                dropTutorLesson(said: said)
+                return
+            }
+            if !fixes.isEmpty {
+                tutorLastFixes = fixes.map { "\"\($0.was)\" → \"\($0.now)\"" }
+                tutorJustTicked = false
+                sendTutorSystem()
+                return
+            }
+            let did = verdict?.done == true
             let hadFixes = !tutorLastFixes.isEmpty
             tutorLastFixes = []
             guard did else {
@@ -5029,6 +5042,29 @@ struct ConversationView: View {
             Telemetry.log("tutor_challenge_done", ["index": String(i + 1),
                                                    "of": String(now.challenges.count)])
             sendTutorSystem()
+        }
+    }
+
+    /// Leave the lesson: by voice (`said`, judged by `TutorJudge`) or from
+    /// the strip's menu. It is never offered again; a topic named in the
+    /// same breath ("let's do ordering instead") starts the next one.
+    private func dropTutorLesson(said: String?) {
+        guard var lesson = tutorLesson else { return }
+        lesson.droppedAt = Date()
+        TutorLessonStore.save(lesson)
+        Telemetry.log("tutor_lesson_dropped", ["by": said == nil ? "menu" : "voice",
+                                               "done": String(lesson.doneCount)])
+        withAnimation(.easeInOut(duration: 0.25)) { tutorLesson = nil }
+        tutorLastFixes = []
+        tutorJustTicked = false
+        sendTutorSystem()
+        if let said {
+            // The tutor already agreed in its reply (the block's rule); the
+            // words may also name the next topic.
+            let asked = turns.last(where: { $0.role == .fluentSelf })?.transcript ?? ""
+            startTutorLesson(request: said, askedWith: asked, picked: false, fromTopic: false)
+        } else {
+            realtime.nudge("The learner tapped to choose another topic, and the app dropped today's lesson. Say sure in a few words and ask what they want to practice instead — they can also pick a topic from the button on their screen.")
         }
     }
 

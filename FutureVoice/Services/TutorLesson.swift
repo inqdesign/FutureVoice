@@ -35,6 +35,9 @@ struct TutorLesson: Codable, Identifiable, Equatable {
     var challenges: [Challenge]
     var createdAt: Date
     var finishedAt: Date?
+    /// The learner asked for another topic (by voice or the strip's menu):
+    /// never offered again as "pick up where we left off".
+    var droppedAt: Date? = nil
     /// Every talk the lesson ran in.
     var sessionIds: [UUID] = []
 
@@ -113,7 +116,9 @@ enum TutorLessonStore {
     /// The newest unfinished lesson, if it is recent enough to pick up.
     static func resumable(language: String, now: Date = Date()) -> TutorLesson? {
         let since = now.addingTimeInterval(-Double(resumeDays) * 86_400)
-        return all(language: language).first { !$0.isFinished && $0.createdAt >= since }
+        return all(language: language).first {
+            !$0.isFinished && $0.droppedAt == nil && $0.createdAt >= since
+        }
     }
 }
 
@@ -222,12 +227,20 @@ enum TutorPlanner {
 // MARK: - Judge
 
 enum TutorJudge {
-    private struct Verdict: Decodable { let done: Bool }
+    struct Verdict: Decodable {
+        let done: Bool
+        /// They asked to change the topic or stop this lesson (device,
+        /// 2026-10-24: "can I change the topic?" was answered "let's finish
+        /// this one first", with no way out).
+        var other_topic: Bool? = nil
+        var wantsOtherTopic: Bool { other_topic == true }
+    }
 
     /// Did `line` do `challenge`? Content only — whether it was said
     /// without mistakes is the correction call's answer, not this one's.
-    static func didIt(_ line: String, challenge: TutorLesson.Challenge,
-                      targetLanguage: String, askedWith: String) async -> Bool {
+    /// Also asked on every try: do they want out of this lesson?
+    static func read(_ line: String, challenge: TutorLesson.Challenge,
+                     targetLanguage: String, askedWith: String) async -> Verdict? {
         let target = LanguageCatalog.englishName(targetLanguage)
         let system = """
         A \(target) learner is working on one speaking challenge. Decide \
@@ -237,7 +250,11 @@ enum TutorJudge {
         fine; it doesn't have to match the example. Ignore grammar and \
         spelling (someone else checks those) and ignore anything extra they \
         added. It was transcribed from speech.
-        Return STRICT JSON only: {"done": true} or {"done": false}
+        Also decide "other_topic": true ONLY when they ask to change the \
+        topic, stop or skip this lesson, or practice something else instead \
+        (in any language) — not for a mistake, a question about the \
+        challenge, or "I don't know".
+        Return STRICT JSON only: {"done": true|false, "other_topic": true|false}
         """
         let content = """
         Challenge: \(challenge.task)
@@ -251,6 +268,6 @@ enum TutorJudge {
             model: .flashLite31, maxTokens: 120, purpose: "tutor",
             idempotencyKey: "tutor-judge:\(UUID().uuidString)", requestTimeout: 10,
             fastThinking: true)
-        return verdict?.done ?? false
+        return verdict
     }
 }
