@@ -3270,6 +3270,10 @@ struct ConversationView: View {
     }
 
     private func resumeAfterFirstCallSetup() {
+        // Tutor mode decides the opener, read right after this resumes; take
+        // the sheet's answer here rather than trust `onChange` to have run.
+        tutorThisCall = TutorMode.isOn
+        if tutorThisCall { tutorWasOn = true }
         firstCallSetupContinuation?.resume()
         firstCallSetupContinuation = nil
     }

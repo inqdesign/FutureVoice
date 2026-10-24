@@ -9,7 +9,8 @@ import SwiftUI
 ///
 /// Raised ONCE, from `ConversationView.openConversation` — the one door every
 /// fresh call goes through — and only on an install with no spoken talk on
-/// file. The call waits on it like it waits on the mic sheet; Start, Skip and
+/// file. Tutor mode too, since it decides how the call OPENS (a lesson
+/// instead of a hello). The call waits on it like it waits on the mic sheet; Start, Skip and
 /// every other dismissal resume it. Everything is written on Start; Skip
 /// keeps what was there. Capture: `-capture first-call-setup`.
 struct FirstCallSetupSheet: View {
@@ -18,6 +19,11 @@ struct FirstCallSetupSheet: View {
     /// No talk the learner spoke in yet, and never asked before. An install
     /// with a history has already found these settings by living with them.
     static func shouldShow() -> Bool {
+        #if DEBUG
+        // `-firstCallSetupForce 1`: on the real call screen, on a simulator
+        // that already has talks.
+        if UserDefaults.standard.bool(forKey: "firstCallSetupForce") { return true }
+        #endif
         guard !UserDefaults.standard.bool(forKey: shownKey) else { return false }
         return !SessionStore.shared.loadAcrossLanguages().contains {
             $0.turns.contains { $0.role == .user }
@@ -33,6 +39,7 @@ struct FirstCallSetupSheet: View {
     @State private var speed: SpeechSpeed = .default
     @State private var coach = false
     @State private var sendToAnswer = false
+    @State private var tutor = false
     @State private var loaded = false
     @State private var started = false
 
@@ -106,6 +113,17 @@ struct FirstCallSetupSheet: View {
                 } footer: {
                     Text(explain("Take your time. Your future self waits until you press Send."))
                 }
+
+                // Same switch and words as the call's own settings.
+                if TutorMode.isAvailable {
+                    Section {
+                        Toggle(isOn: $tutor) {
+                            Label("Tutor mode", systemImage: "graduationcap")
+                        }
+                    } footer: {
+                        Text(explain("When you make a mistake, your future self says it the right way out loud, then carries on."))
+                    }
+                }
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -147,6 +165,7 @@ struct FirstCallSetupSheet: View {
         speed = SpeechSpeed(rawValue: UserDefaults.standard.string(forKey: SpeechSpeed.key) ?? "") ?? .default
         coach = CoachMode.isOn
         sendToAnswer = SendToAnswer.isOn
+        tutor = TutorMode.isOn
     }
 
     private func start() {
@@ -156,10 +175,12 @@ struct FirstCallSetupSheet: View {
         // and an unset choice would follow a later level change instead.
         UserDefaults.standard.set(coach, forKey: CoachMode.key)
         UserDefaults.standard.set(sendToAnswer, forKey: SendToAnswer.key)
+        if TutorMode.isAvailable { UserDefaults.standard.set(tutor, forKey: TutorMode.key) }
         started = true
         report("first_call_setup", [
             "level": level.rawValue, "speed": speed.rawValue,
             "coach": coach ? "on" : "off", "send": sendToAnswer ? "on" : "off",
+            "tutor": tutor ? "on" : "off",
         ])
         dismiss()
     }
