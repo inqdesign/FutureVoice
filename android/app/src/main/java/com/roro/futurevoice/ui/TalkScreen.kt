@@ -922,9 +922,12 @@ fun TalkScreen(
                         // replaces the thinking line, which leaves at once, so a
                         // 250 ms fade from clear left an empty beat between the two
                         // — a blink every reply (founder, 2026-10-15). Its words
-                        // already fade in one by one.
+                        // already fade in one by one. The learner's line is the
+                        // same case: it replaces the live bubble showing those
+                        // words, so a fade-in made the sentence vanish and come
+                        // back every turn (iOS 2026-10-24).
                         Box(Modifier.animateItem(
-                            fadeInSpec = if (turn.role == TurnRole.FLUENT_SELF) null else tween(250),
+                            fadeInSpec = null,
                             placementSpec = tween(250), fadeOutSpec = tween(250))
                             // Both sides grow smoothly: the fluent self's bubble used to
                             // jump a whole line at a time as its reveal wrapped (founder,
