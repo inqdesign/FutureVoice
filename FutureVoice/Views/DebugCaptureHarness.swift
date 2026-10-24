@@ -1325,6 +1325,10 @@ enum DebugCapture {
                 .sheet(isPresented: .constant(true)) {
                     ScenePlayerSheet().environmentObject(appState)
                 })
+        case "practice-listen", "listen-book", "listen-book-shadow", "listen-book-play", "listen-book-drill":
+            // Today's newest episode, fetched from R2 for real and copied
+            // into the learner's books the way the player's book button does.
+            return AnyView(ListenBookCapture(page: name).environmentObject(appState))
         case "show-script":
             // An episode's script on the Speech script page, Study on, with
             // the study made when it was published.
@@ -3407,6 +3411,63 @@ private struct ShowScriptCapture: View {
                                   shipped: true)
                     .environmentObject(appState)
             }
+    }
+}
+#endif
+
+
+#if DEBUG
+/// The podcast "make it my book" path end to end, for captures: the feed,
+/// the copy, then the Listen shelf or the book itself.
+private struct ListenBookCapture: View {
+    let page: String
+    @EnvironmentObject private var appState: AppState
+    @State private var bookId: UUID?
+
+    var body: some View {
+        Group {
+            if let bookId {
+                if page == "practice-listen" {
+                    PracticeTab(initialShelf: .listen)
+                } else if page == "listen-book-play" {
+                    // The book's Listen button: its own copies in the player.
+                    Color(.systemGroupedBackground).ignoresSafeArea()
+                        .sheet(isPresented: .constant(true)) {
+                            ScenePlayerSheet().environmentObject(appState)
+                        }
+                } else if page == "listen-book-drill",
+                          let line = appState.scenarios.first(where: { $0.id == bookId })?
+                              .curriculum?.shadowLines.first {
+                    // A Shadowing line: the host's recording, by the line's id.
+                    ShadowDrillView(turn: Turn(id: line.id, role: .fluentSelf, audioURL: nil,
+                                               transcript: line.text, durationMs: 0,
+                                               timestamp: Date(), suggestion: nil),
+                                    targetLanguage: appState.targetLanguage)
+                } else {
+                    NavigationStack {
+                        ScenarioDetailView(scenarioId: bookId,
+                                           initialChapter: page == "listen-book-shadow" ? .shadow : nil)
+                    }
+                }
+            } else {
+                ProgressView()
+            }
+        }
+        .task {
+            let episodes = await NewsShow.episodes(language: appState.targetLanguage)
+            guard let newest = episodes.first else { return }
+            if !appState.scenarios.contains(where: { $0.id == newest.id }),
+               let book = await NewsShow.makeBook(newest, native: appState.nativeLanguage) {
+                appState.saveScenario(book)
+            }
+            if page == "listen-book-play", let book = appState.scenarios.first(where: { $0.id == newest.id }) {
+                PlaylistPlayer.shared.play(NewsShow.playlist(for: book), title: explain("nawana Podcast"))
+            }
+            if page == "listen-book-drill", appState.voiceCloneId == nil {
+                appState.voiceCloneId = "capture-voice"
+            }
+            bookId = newest.id
+        }
     }
 }
 #endif

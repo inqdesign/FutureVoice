@@ -38,6 +38,8 @@ struct ScenarioDetailView: View {
     @State private var rereadingBrief = false
     @State private var briefProgress = ScenarioBriefEngine.Progress()
     @State private var briefError: String?
+    /// A podcast book's episode, playing in the app's one player.
+    @State private var playerPresented = false
 
     private struct WordRef: Identifiable {
         let value: String
@@ -155,6 +157,10 @@ struct ScenarioDetailView: View {
                             context: expressionContext)
                 .environmentObject(appState)
         }
+        .sheet(isPresented: $playerPresented) {
+            ScenePlayerSheet()
+                .environmentObject(appState)
+        }
         .task { await ensureCurriculum() }
         .onAppear { refreshMastery() }
         .confirmationDialog("Delete this scenario?", isPresented: $confirmDelete, titleVisibility: .visible) {
@@ -215,7 +221,8 @@ struct ScenarioDetailView: View {
                          icon: StudyIcon.words, items: c.words),
             ChapterEntry(chapter: .expressions, title: chrome("Expressions"),
                          icon: StudyIcon.expressions, items: c.expressions),
-            ChapterEntry(chapter: .shadow, title: chrome("Your lines"),
+            ChapterEntry(chapter: .shadow,
+                         title: scenario?.isPodcastBook == true ? chrome("Shadowing") : chrome("Your lines"),
                          icon: StudyIcon.shadowing, items: c.shadowLines),
         ].filter { !$0.items.isEmpty }
     }
@@ -256,9 +263,15 @@ struct ScenarioDetailView: View {
             }
         case .shadow:
             if let c = s.curriculum {
-                pageTitle(chrome("Your lines"))
-                shadowRows(c)
-                pageFooter(explain("Tap a line to shadow it in your own voice. Score \(ScenarioCurriculum.shadowMasteryScore)+ and it's mastered."))
+                if s.isPodcastBook {
+                    pageTitle(chrome("Shadowing"))
+                    shadowRows(c)
+                    pageFooter(explain("Tap a line to shadow it after the host. Score \(ScenarioCurriculum.shadowMasteryScore)+ and it's mastered."))
+                } else {
+                    pageTitle(chrome("Your lines"))
+                    shadowRows(c)
+                    pageFooter(explain("Tap a line to shadow it in your own voice. Score \(ScenarioCurriculum.shadowMasteryScore)+ and it's mastered."))
+                }
             }
         }
     }
@@ -310,6 +323,9 @@ struct ScenarioDetailView: View {
                             Text(Books.initials(name))
                                 .font(.headline.weight(.bold)).foregroundStyle(.tint)
                         }
+                    } else if s.isPodcastBook {
+                        Image(systemName: NewsShow.icon(for: s.category))
+                            .font(.title2).foregroundStyle(.tint)
                     } else {
                         Image(systemName: Books.roleIcon(for: s.role))
                             .font(.title2).foregroundStyle(.tint)
@@ -322,6 +338,10 @@ struct ScenarioDetailView: View {
                     if let partner = linkedPersonaName(s)
                         ?? (s.role.trimmingCharacters(in: .whitespaces).isEmpty ? nil : s.role) {
                         Text("with \(partner)")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                    }
+                    if let p = s.podcast {
+                        Text("\(explain("nawana Podcast")) · EP \(p.number)")
                             .font(.subheadline).foregroundStyle(.secondary)
                     }
                     if s.isArchived {
@@ -343,46 +363,62 @@ struct ScenarioDetailView: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
-            HStack(spacing: 10) {
+            if s.isPodcastBook {
+                // The episode as it was made, from the book's own copies:
+                // nothing to write, nothing metered.
                 Button {
-                    BillingGate.start(orShow: $showingPaywall) {
-                        appState.markScenarioUsed(id: s.id)
-                        talkPresented = true
-                    }
+                    PlaylistPlayer.shared.play(NewsShow.playlist(for: s),
+                                               title: explain("nawana Podcast"))
+                    playerPresented = true
                 } label: {
-                    Label("Talk", systemImage: "mic.fill")
-                        // The prominent fill would swallow a tinted icon —
-                        // force the content white.
+                    Label("Listen", systemImage: "headphones")
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
-                // Watch replays the book's ONE scene — the dialogue the
-                // chapters were extracted from. Hidden until it generated.
-                if !(s.curriculum?.dialogue ?? []).isEmpty {
+                .controlSize(.large)
+            } else {
+                HStack(spacing: 10) {
                     Button {
-                        watchPresented = true
+                        BillingGate.start(orShow: $showingPaywall) {
+                            appState.markScenarioUsed(id: s.id)
+                            talkPresented = true
+                        }
                     } label: {
-                        Label("Watch", systemImage: "play.fill")
+                        Label("Talk", systemImage: "mic.fill")
+                            // The prominent fill would swallow a tinted icon —
+                            // force the content white.
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    // Watch replays the book's ONE scene — the dialogue the
+                    // chapters were extracted from. Hidden until it generated.
+                    if !(s.curriculum?.dialogue ?? []).isEmpty {
+                        Button {
+                            watchPresented = true
+                        } label: {
+                            Label("Watch", systemImage: "play.fill")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+                .controlSize(.large)
+                // The talk book's third door, on its own row for the same reason
+                // there. It needs the scene AND a line of the learner's in it,
+                // and no gate: the counterpart's lines play from the cache the
+                // scene's first watch filled, and nothing is synthesized.
+                if s.curriculum?.dialogue?.contains(where: { $0.speaker == "user" }) == true {
+                    Button {
+                        sayItAgainPresented = true
+                    } label: {
+                        Label("Say it again", systemImage: "text.viewfinder")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
+                    .controlSize(.large)
                 }
-            }
-            .controlSize(.large)
-            // The talk book's third door, on its own row for the same reason
-            // there. It needs the scene AND a line of the learner's in it,
-            // and no gate: the counterpart's lines play from the cache the
-            // scene's first watch filled, and nothing is synthesized.
-            if s.curriculum?.dialogue?.contains(where: { $0.speaker == "user" }) == true {
-                Button {
-                    sayItAgainPresented = true
-                } label: {
-                    Label("Say it again", systemImage: "text.viewfinder")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
             }
         }
         .padding(20)
@@ -692,7 +728,8 @@ struct ScenarioDetailView: View {
     private func ensureCurriculum(force: Bool = false) async {
         // Regenerate when the scene is missing too — curricula from the
         // pre-scene schema have items but no dialogue to watch or shadow from.
-        guard var s = scenario, (s.curriculum?.dialogue ?? []).isEmpty,
+        // A podcast book has no scene to write: it is the episode.
+        guard var s = scenario, !s.isPodcastBook, (s.curriculum?.dialogue ?? []).isEmpty,
               force || !generating else { return }
         guard !generating else { return }
         generating = true

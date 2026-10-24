@@ -182,6 +182,78 @@ enum NewsShow {
         }
     }
 
+    // MARK: - My book (2026-10-24)
+
+    /// The learner's copy of `episode` as a Practice book — "make it my
+    /// book". Nothing is generated: the chapters are the highlights the
+    /// publisher made once for everyone (words; expressions and grammar
+    /// patterns), the Shadowing chapter is the lines those highlights sit in,
+    /// and every line's recording is copied out of the feed's cache into
+    /// `TurnAudioStore` under the line's own id, so the book outlives the
+    /// feed and shadowing plays the host instead of synthesizing the clone.
+    /// The book's id IS the episode's, so it can only be copied once.
+    /// Nil when the audio could not be fetched.
+    static func makeBook(_ episode: NewsShowEpisode, native: String) async -> Scenario? {
+        await prepare(episode)
+        guard episode.isReady else { return nil }
+        let ids = episode.lines.indices.map { stableId("\(episode.id.uuidString)#line\($0)") }
+        for (line, id) in zip(episode.lines, ids) {
+            guard let file = line.localFile, let data = try? Data(contentsOf: file) else { return nil }
+            _ = TurnAudioStore.shared.save(data, turnId: id, fileExtension: file.pathExtension)
+        }
+
+        let same = LanguageCatalog.sameLanguage(native, episode.language)
+        var words: [ScenarioCurriculum.Item] = []
+        var expressions: [ScenarioCurriculum.Item] = []
+        var seen = Set<String>()
+        for h in episode.shippedStudy?.highlights ?? [] {
+            let text = (h.kind == "word" ? h.lemma ?? h.text : h.text)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty, seen.insert(text.lowercased()).inserted else { continue }
+            let item = ScenarioCurriculum.Item(text: text, note: same ? "" : h.notes?[native] ?? "",
+                                               example: h.example)
+            if h.kind == "word" { words.append(item) } else { expressions.append(item) }
+        }
+        // The lines a highlight was taken from, in the episode's order:
+        // shadowing them is practising the book's material in context.
+        let marked = (episode.shippedStudy?.highlights ?? []).map { $0.text.lowercased() }
+        let shadow = zip(episode.lines, ids)
+            .filter { line, _ in marked.contains { line.text.lowercased().contains($0) } }
+            .prefix(maxShadowLines)
+            .map { line, id in ScenarioCurriculum.Item(id: id, text: line.text, note: line.speaker) }
+
+        var curriculum = ScenarioCurriculum(words: words, expressions: expressions,
+                                            shadowLines: Array(shadow))
+        curriculum.dialogueTitle = episode.title
+        return Scenario(
+            id: episode.id, environment: episode.title, role: "", notes: "",
+            curriculum: curriculum,
+            category: episode.category, categoryIcon: icon(for: episode.category),
+            podcast: PodcastBookSource(
+                number: episode.number, date: episode.date, category: episode.category,
+                language: episode.language,
+                lines: zip(episode.lines, ids).map { line, id in
+                    .init(id: id, speaker: line.speaker, text: line.text,
+                          translations: line.translations)
+                }))
+    }
+
+    /// Enough to practise an episode's material in its own lines without
+    /// turning the whole episode into a chapter.
+    static let maxShadowLines = 6
+
+    /// A podcast book's lines for the player, from the book's own copies.
+    static func playlist(for book: Scenario) -> [PlaylistLine] {
+        guard let p = book.podcast else { return [] }
+        return p.lines.map { line in
+            PlaylistLine(bookId: book.id, text: line.text, voiceId: "", speaker: line.speaker,
+                         isOther: true, bookTitle: book.environment,
+                         localFile: TurnAudioStore.shared.url(for: line.id),
+                         translations: line.translations,
+                         episodeNumber: p.number, episodeCategory: p.category)
+        }
+    }
+
     /// The glyph for an episode's category — the one the Talk tab's news
     /// cards wear.
     static func icon(for category: String?) -> String {

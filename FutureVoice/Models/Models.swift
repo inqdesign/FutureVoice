@@ -1764,6 +1764,18 @@ struct Scenario: Codable, Identifiable, Hashable {
     /// (`StarterSituation.id`), so the next tap on that row reuses it and the
     /// "Your scenarios" lists leave it out. Optional so old rows decode.
     var starterId: String? = nil
+    /// Set on a book the learner copied from a nawana Podcast episode
+    /// (2026-10-24, founder: "we made it, they take a copy"). The episode
+    /// and its study were made once on the platform side; nothing about the
+    /// book is generated on the phone, and it has no scene to write: its
+    /// chapters come from the episode's shipped highlights, its lines play
+    /// the hosts' own recordings (`TurnAudioStore`, keyed by line id).
+    /// Optional so old rows decode unchanged.
+    var podcast: PodcastBookSource? = nil
+
+    var isPodcastBook: Bool { podcast != nil }
+    /// A situation the learner built or met — what "Your scenarios" lists.
+    var isOwnSituation: Bool { isTopic != true && !isMeetingScene && !isPodcastBook }
 
     /// Rows minted before the flag existed carry only the category, so read
     /// both — otherwise the meetings already on disk stay in the list this
@@ -1867,6 +1879,25 @@ struct ScenarioBrief: Codable, Hashable {
         !counterpartFacts.isEmpty || !likelyQuestions.isEmpty
             || !learnerFacts.isEmpty || !keyExpressions.isEmpty
     }
+}
+
+/// The episode a podcast book was copied from: enough to replay it and to
+/// say which episode it was, with no dependence on the feed (an episode
+/// leaves the feed, the book stays).
+struct PodcastBookSource: Codable, Hashable {
+    struct Line: Codable, Hashable, Identifiable {
+        /// Stable per episode + position, so the same episode copied on two
+        /// devices names the same `TurnAudioStore` file.
+        var id: UUID
+        var speaker: String
+        var text: String
+        var translations: [String: String]? = nil
+    }
+    var number: Int
+    var date: Date
+    var category: String?
+    var language: String
+    var lines: [Line]
 }
 
 // MARK: - Scenario Curriculum (the scenario's "book" content)

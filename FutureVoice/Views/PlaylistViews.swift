@@ -252,6 +252,11 @@ private struct PlayerLibrary: View {
     /// What is being fetched right now: an episode, or `allId` for Play all.
     @State private var fetching: UUID?
     @State private var reading: NewsShowEpisode?
+    /// The episode being copied into the learner's books, and the book to
+    /// open once it is (or that already was).
+    @State private var copying: UUID?
+    @State private var openBook: BookRef?
+    private struct BookRef: Identifiable { let id: UUID }
     private static let allId = UUID()
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
@@ -288,6 +293,12 @@ private struct PlayerLibrary: View {
                               study: episode.study(native: appState.nativeLanguage),
                               shipped: true)
                 .environmentObject(appState)
+        }
+        .sheet(item: $openBook) { ref in
+            NavigationStack {
+                ScenarioDetailView(scenarioId: ref.id, onDone: { openBook = nil })
+            }
+            .environmentObject(appState)
         }
     }
 
@@ -330,10 +341,49 @@ private struct PlayerLibrary: View {
                         }
                         .buttonStyle(.borderless)
                         .accessibilityLabel(Text("Script"))
+                        bookButton(episode)
                     }
                 }
             }
         }
+    }
+
+    /// "Make it my book": the episode, as the publisher already made it,
+    /// copied into Practice. Filled once it is there, and then it opens it.
+    private func bookButton(_ episode: NewsShowEpisode) -> some View {
+        let owned = appState.scenarios.contains { $0.id == episode.id }
+        return Button {
+            if owned {
+                openBook = BookRef(id: episode.id)
+                return
+            }
+            guard copying == nil else { return }
+            copying = episode.id
+            Task {
+                if let book = await NewsShow.makeBook(episode, native: appState.nativeLanguage) {
+                    appState.saveScenario(book)
+                    Analytics.capture("podcast_book_made",
+                                      ["episode": episode.number,
+                                       "category": episode.category ?? "",
+                                       "items": book.curriculum?.totalCount ?? 0])
+                    openBook = BookRef(id: book.id)
+                }
+                copying = nil
+            }
+        } label: {
+            Group {
+                if copying == episode.id {
+                    ProgressView()
+                } else {
+                    Image(systemName: owned ? "book.closed.fill" : "book.closed")
+                }
+            }
+            .font(.body)
+            .frame(width: 36, height: 36)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.borderless)
+        .accessibilityLabel(owned ? Text("Open my book") : Text("Make it my book"))
     }
 
     /// Fetch, play, then back to the player. One fetch at a time.

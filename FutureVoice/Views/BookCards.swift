@@ -10,11 +10,14 @@ enum Books {
     static let talksColor: Color = .blue
     static let topicsColor: Color = .orange
     static let scenariosColor: Color = .purple
-    /// Practice's two activity chips.
+    /// Listening's colour in the routine too, the one no other kind uses.
+    static let podcastsColor: Color = .cyan
+    /// Practice's activity chips.
     static let talkChipColor: Color = .blue
     static let watchChipColor: Color = .indigo
     static func color(for scenario: Scenario) -> Color {
-        scenario.isTopic == true ? topicsColor : scenariosColor
+        if scenario.isPodcastBook { return podcastsColor }
+        return scenario.isTopic == true ? topicsColor : scenariosColor
     }
 
     static func initials(_ name: String) -> String {
@@ -97,9 +100,14 @@ struct OriginTag: View {
         text = source
     }
 
-    /// Watch book — a scenario is a news-born topic or a built situation.
+    /// Watch book — a scenario is a news-born topic or a built situation;
+    /// a Listen book is the podcast episode it was copied from.
     init(scenario: Scenario) {
-        text = scenario.isTopic == true ? explain("News") : explain("Scenario")
+        if let p = scenario.podcast {
+            text = "\(explain("nawana Podcast")) · EP \(p.number)"
+        } else {
+            text = scenario.isTopic == true ? explain("News") : explain("Scenario")
+        }
     }
 }
 
@@ -187,6 +195,10 @@ struct ScenarioBookCard: View {
         if let name = personaName {
             BookIconDisc(photoId: scenario.counterpartId) {
                 Text(Books.initials(name)).font(.headline.weight(.bold)).foregroundStyle(.tint)
+            }
+        } else if scenario.isPodcastBook {
+            BookIconDisc {
+                Image(systemName: NewsShow.icon(for: scenario.category)).font(.title3).foregroundStyle(.tint)
             }
         } else if scenario.isTopic == true {
             BookIconDisc { Image(systemName: "newspaper.fill").font(.title3).foregroundStyle(.tint) }

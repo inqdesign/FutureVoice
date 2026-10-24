@@ -1315,6 +1315,10 @@ final class AppState: ObservableObject {
     }
 
     func deleteScenario(id: UUID) {
+        // A podcast book owns the copies of its episode's recordings.
+        for line in scenarios.first(where: { $0.id == id })?.podcast?.lines ?? [] {
+            TurnAudioStore.shared.delete(turnId: line.id)
+        }
         ScenarioStore.shared.delete(id: id)
         scenarios = ScenarioStore.shared.load()
     }

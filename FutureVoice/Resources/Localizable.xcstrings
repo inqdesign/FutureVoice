@@ -5212,6 +5212,52 @@
         }
       }
     },
+    "Make it my book" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zu meinen Büchern"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añadir a mis cuadernos"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter à mes carnets"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分の教材にする"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 교재로 만들기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入我的教材"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入我的教材"
+          }
+        }
+      }
+    },
     "Make my routine" : {
       "localizations" : {
         "de" : {
@@ -13293,6 +13339,9 @@
           }
         }
       }
+    },
+    "%@ · EP %lld" : {
+      "shouldTranslate" : false
     },
     "%@ · see where it went" : {
       "extractionState" : "stale",
@@ -67421,6 +67470,52 @@
         }
       }
     },
+    "In the player, tap the book beside a podcast episode and it becomes a book here: its words, expressions and lines to shadow." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tippe im Player auf das Buch neben einer Podcast-Folge – daraus wird hier ein Buch: Wörter, Wendungen und Sätze zum Nachsprechen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En el reproductor, toca el libro junto a un episodio del podcast y se convierte aquí en un cuaderno: palabras, expresiones y frases para repetir."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dans le lecteur, touche le livre à côté d’un épisode du podcast : il devient un carnet ici, avec des mots, des expressions et des phrases à répéter."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プレーヤーでエピソードの横にある本をタップすると、ここで教材になります。単語や表現、真似する文が入っています。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "플레이어에서 팟캐스트 에피소드 옆의 책을 누르면 여기 교재가 돼요. 단어와 표현, 따라 말할 문장이 담겨요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在播放器里点单集旁边的书本，它就会在这里变成教材：单词、表达，还有可以跟读的句子。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在播放器裡點單集旁邊的書本，它就會在這裡變成教材：單字、表達，還有可以跟讀的句子。"
+          }
+        }
+      }
+    },
     "In this book" : {
       "localizations" : {
         "de" : {
@@ -89275,6 +89370,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "開啟"
+          }
+        }
+      }
+    },
+    "Open my book" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mein Buch öffnen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir mi cuaderno"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrir mon carnet"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "教材を開く"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 교재 열기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开教材"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打開教材"
           }
         }
       }
@@ -118427,6 +118568,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "點語言就能練那個語言。對話難度會依那個語言的程度調整。每日目標決定首頁的圓環，說明則用 App 語言顯示。"
+          }
+        }
+      }
+    },
+    "Tap a line to shadow it after the host. Score %lld+ and it's mastered." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tippe einen Satz an und sprich ihn wie im Podcast nach. Ab %lld Punkten sitzt er."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toca una frase para repetirla como en el podcast. Si pasas de %lld puntos, ya está."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touche une phrase pour la répéter comme dans le podcast. Au-delà de %lld points, c’est acquis."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "文をタップして、ホストの声を真似してみましょう。%lld点を超えたら完了です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문장을 눌러 진행자를 따라 말해 보세요. %lld점을 넘기면 끝이에요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "点句子，跟着主持人读。超过%lld分就算完成。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "點句子，跟著主持人讀。超過%lld分就算完成。"
           }
         }
       }

@@ -71,7 +71,7 @@ struct ConversationHome: View {
     /// News-born topic books live in `appState.scenarios` too — they belong
     /// to the news section's taxonomy, not the scenario list.
     private var scenarios: [Scenario] {
-        appState.scenarios.filter { $0.isTopic != true && !$0.isMeetingScene }
+        appState.scenarios.filter { $0.isOwnSituation }
     }
 
     var body: some View {
@@ -1187,7 +1187,7 @@ struct TalkScenariosListView: View {
     @State private var showingBuilder = false
 
     private var scenarios: [Scenario] {
-        appState.scenarios.filter { $0.isTopic != true && !$0.isMeetingScene && $0.starterId == nil }
+        appState.scenarios.filter { $0.isOwnSituation && $0.starterId == nil }
             .sorted { ($0.lastUsedAt ?? $0.createdAt) > ($1.lastUsedAt ?? $1.createdAt) }
     }
 

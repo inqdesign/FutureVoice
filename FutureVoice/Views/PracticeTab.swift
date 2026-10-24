@@ -142,7 +142,7 @@ struct PracticeTab: View {
         // Split by ACTIVITY, not source: Talk = the calls you had, Watch = the
         // scenes you watched. Each card carries an origin tag (Free talk /
         // News / Scenario) for the orthogonal source.
-        case studying, talk, watch, finished
+        case studying, talk, watch, listen, finished
         var title: String {
             switch self {
             // A `String`, so it must go through explain() or it stays English
@@ -150,6 +150,7 @@ struct PracticeTab: View {
             case .studying:  return explain("Studying")
             case .talk:      return explain("Talk")
             case .watch:     return explain("Watch")
+            case .listen:    return explain("Listen")
             case .finished:  return explain("Finished")
             }
         }
@@ -160,6 +161,7 @@ struct PracticeTab: View {
             case .studying:  return nil
             case .talk:      return Books.talkChipColor
             case .watch:     return Books.watchChipColor
+            case .listen:    return Books.podcastsColor
             case .finished:  return .green
             }
         }
@@ -462,6 +464,11 @@ struct PracticeTab: View {
                 scenarioShelf(watchBooks, archived: archivedWatchBooks,
                               emptyText: explain("Watch a situation or a news story on Home — it becomes a book here: a scene to watch, words and lines to master."))
             }
+        case .listen:
+            shelfPage {
+                scenarioShelf(listenBooks, archived: archivedListenBooks,
+                              emptyText: explain("In the player, tap the book beside a podcast episode and it becomes a book here: its words, expressions and lines to shadow."))
+            }
         case .finished:
             shelfPage { finishedShelf }
         }
@@ -504,6 +511,9 @@ struct PracticeTab: View {
             return talks.isEmpty ? nil : talks.count
         case .watch:
             let n = watchBooks.count
+            return n > 0 ? n : nil
+        case .listen:
+            let n = listenBooks.count
             return n > 0 ? n : nil
         case .finished:
             let n = finishedBooks.count
@@ -1005,11 +1015,20 @@ struct PracticeTab: View {
     /// it. Recency-of-use is what the Studying page sorts by; a shelf is a
     /// shelf, and new things go on the front of it.
     private var watchBooks: [Scenario] {
-        appState.scenarios.filter { !$0.isArchived }
+        appState.scenarios.filter { !$0.isArchived && !$0.isPodcastBook }
             .sorted { $0.createdAt > $1.createdAt }
     }
     private var archivedWatchBooks: [Scenario] {
-        appState.scenarios.filter { $0.isArchived }
+        appState.scenarios.filter { $0.isArchived && !$0.isPodcastBook }
+            .sorted { $0.createdAt > $1.createdAt }
+    }
+    /// Podcast episodes the learner copied into their books.
+    private var listenBooks: [Scenario] {
+        appState.scenarios.filter { !$0.isArchived && $0.isPodcastBook }
+            .sorted { $0.createdAt > $1.createdAt }
+    }
+    private var archivedListenBooks: [Scenario] {
+        appState.scenarios.filter { $0.isArchived && $0.isPodcastBook }
             .sorted { $0.createdAt > $1.createdAt }
     }
 
