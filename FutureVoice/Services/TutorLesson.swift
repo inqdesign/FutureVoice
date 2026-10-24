@@ -135,7 +135,14 @@ enum TutorPlanner {
     /// A curriculum for `request` — a topic the learner picked, or what they
     /// said when asked what to practice. Nil when it names no topic ("I
     /// don't know") or the call failed; the tutor then asks again.
-    static func plan(request: String, targetLanguage: String, nativeLanguage: String,
+    /// `askedWith`: the tutor's line the words answered, when they were
+    /// SAID — without it a "yes" to a proposed topic names nothing, and a
+    /// sentence gets read for its content instead of as an answer (device,
+    /// 2026-10-24: "I'd like to practice introducing myself", misheard as
+    /// "I don't like to practice on introducing myself", became a lesson on
+    /// "saying what you don't like").
+    static func plan(request: String, askedWith: String? = nil,
+                     targetLanguage: String, nativeLanguage: String,
                      level: CEFRLevel, persona: UserPersona?) async -> TutorLesson? {
         let target = LanguageCatalog.englishName(targetLanguage)
         let native = LanguageCatalog.englishName(nativeLanguage)
@@ -147,9 +154,20 @@ enum TutorPlanner {
         \(level.rawValue.uppercased()). The goal of the lesson: by its end \
         they can SAY one practical thing properly, out loud, with no mistakes.
 
-        You get what they want to practice — a topic they picked, or the \
-        words they said when asked. If it names no topic at all ("I don't \
-        know", "anything", a greeting), return {"topic": false}.
+        You get what they want to practice — a topic they picked on \
+        screen, or what they SAID when the tutor asked (with the tutor's \
+        line). Read their words as an ANSWER: which situation or thing do \
+        they want to be able to say? The lesson is about THAT — never about \
+        the grammar or the content of their sentence ("I'd like to practice \
+        introducing myself" is a lesson on introducing yourself, not on \
+        saying what you'd like). If they agree to a topic the tutor \
+        proposed ("yes", "sure", "the second one"), it's that topic.
+        Return {"topic": false} when it names no topic ("I don't know", \
+        "anything", a greeting), when they turn something down, and when \
+        it reads like a refusal of the very thing it names ("I don't like \
+        to practice introducing myself") — it was transcribed from speech, \
+        and "I'd like" is often misheard as "I don't like"; the tutor will \
+        check with them.
 
         Otherwise write 3 or 4 CHALLENGES that build to the goal in order, \
         each ONE thing they must be able to say, small enough to nail in a \
@@ -176,7 +194,9 @@ enum TutorPlanner {
         """
         guard let plan: Plan = try? await GeminiClient.shared.sendJSON(
             system: system,
-            messages: [GeminiClient.Message(role: .user, content: "They want to practice: \"\(request)\"")],
+            messages: [GeminiClient.Message(role: .user, content: askedWith.map {
+                "The tutor asked: \"\($0)\"\nThey answered: \"\(request)\""
+            } ?? "They picked on screen: \"\(request)\"")],
             maxTokens: 1500, purpose: "tutor",
             idempotencyKey: "tutor-plan:\(UUID().uuidString)", requestTimeout: 20),
               plan.topic,

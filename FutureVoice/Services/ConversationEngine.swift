@@ -598,7 +598,12 @@ enum ConversationEngine {
             you're setting it up — and stop there; the plan appears in this \
             block a moment later. If they don't know, offer two concrete, \
             practical topics drawn from what you know about them, in one \
-            short turn, and let them pick.
+            short turn, and let them pick. Their words come from speech \
+            recognition, which often hears "I'd like" as "I don't like": if \
+            an answer names a topic but reads like turning it down ("I don't \
+            like to practice introducing myself"), don't take it as a no — \
+            check in one short question ("Introducing yourself — want to \
+            practice that?").
             """
         }
         return """

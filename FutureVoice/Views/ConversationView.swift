@@ -4949,13 +4949,15 @@ struct ConversationView: View {
             if tutorLesson?.isFinished == true, tutorWrapStarted == false { tutorWrapArmed = true }
             return
         }
-        startTutorLesson(request: text, picked: false, fromTopic: false)
+        let asked = turns.last(where: { $0.role == .fluentSelf })?.transcript ?? ""
+        startTutorLesson(request: text, askedWith: asked, picked: false, fromTopic: false)
     }
 
     /// Write the curriculum for `request` and start it. `picked`: chosen on
     /// screen, so the tutor says so right away (nobody spoke). A new pick
     /// replaces the lesson in progress, which stays saved, unfinished.
-    private func startTutorLesson(request: String, picked: Bool, fromTopic: Bool = false) {
+    private func startTutorLesson(request: String, askedWith: String? = nil,
+                                  picked: Bool, fromTopic: Bool = false) {
         guard tutorThisCall, !tutorPlanning else { return }
         withAnimation(.easeInOut(duration: 0.25)) { tutorPlanning = true }
         if picked {
@@ -4963,7 +4965,7 @@ struct ConversationView: View {
         }
         Task { @MainActor in
             let planned = await TutorPlanner.plan(
-                request: request, targetLanguage: appState.targetLanguage,
+                request: request, askedWith: askedWith, targetLanguage: appState.targetLanguage,
                 nativeLanguage: appState.nativeLanguage, level: appState.proficiency,
                 persona: appState.persona)
             guard !isTornDown else { return }

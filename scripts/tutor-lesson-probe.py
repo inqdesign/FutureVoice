@@ -69,25 +69,41 @@ def haiku(system, history):
         "messages": msgs}, {"anthropic-version": "2023-06-01", "x-api-key": ANTHROPIC})
     return "".join(b.get("text", "") for b in j["content"] if b.get("type") == "text").strip()
 
-# ---- 1. planner
+# ---- 1. planner — (tutor's line or None for an on-screen pick, learner's words, want a lesson?)
+ASK_EN = "Oh, nice, let's do some English practice! What do you want to work on today?"
 REQ = {
-    "en": ["I want to practice introducing myself when I meet new people", "ordering at a cafe",
-           "I don't know", "um hello"],
-    "ko": ["처음 만난 사람한테 자기소개하는 거 연습하고 싶어", "카페에서 주문하기", "몰라 아무거나", "안녕"],
+    "en": [(ASK_EN, "I'd like to practice introducing myself.", True),
+           # the device case, 2026-10-24: "I'd like" misheard
+           (ASK_EN, "I don't like to practice on introducing myself.", False),
+           ("Introducing yourself — want to practice that?", "Yes.", True),
+           ("Would you like to practice talking about travel, or ordering food at a café?", "The second one.", True),
+           (None, "Meeting someone new", True),
+           (ASK_EN, "I don't know.", False),
+           (ASK_EN, "um hello", False)],
+    "ko": [("좋아, 오늘은 수업이야. 오늘은 어떤 말을 할 수 있게 되고 싶어?", "처음 만난 사람한테 자기소개하는 거 연습하고 싶어.", True),
+           ("좋아, 오늘은 수업이야. 오늘은 어떤 말을 할 수 있게 되고 싶어?", "몰라 아무거나.", False),
+           (None, "카페에서 주문하기", True)],
 }
 for lang in LANGS:
     native = "Korean" if lang != "ko" else "English"
     sysp = (PLAN.replace("\\(target)", NAMES[lang]).replace("\\(native)", native)
             .replace("\\(level.rawValue.uppercased())", LEVEL.upper())
             .replace('\\(about.isEmpty ? "" : "\\nWhat is known about them: \\(about). Context only.")', ""))
-    for r in REQ.get(lang, REQ["en"]):
-        print(f"\n### PLAN {lang} · {r}\n" + gemini("gemini-3.6-flash", sysp, f'They want to practice: "{r}"'))
+    for asked, said, want in REQ.get(lang, []):
+        msg = f'The tutor asked: "{asked}"\nThey answered: "{said}"' if asked else f'They picked on screen: "{said}"'
+        out = gemini("gemini-3.6-flash", sysp, msg)
+        try:
+            j = json.loads(out); got = j.get("topic"); title = j.get("title", "")
+        except Exception:
+            got, title = "?", out[:80]
+        flag = "OK " if got == want else "BAD"
+        print(f"### PLAN {flag} {lang} want={want} got={got} · {said} → {title} | {[c.get('goal') for c in j.get('challenges', [])] if isinstance(got, bool) and got else ''}")
 
 # ---- 2. judge
 CH = ("Say your name and where you're from", "I'm Minji, and I'm from Busan.")
 LINES = [("My name is Tom and I'm from Leeds.", True), ("I'm Tom.", False),
          ("I like coffee.", False), ("Hi, I am Tom, I come from Leeds in England.", True)]
-for line, want in LINES:
+for line, want in ([] if os.environ.get("PLAN_ONLY") else LINES):
     sysp = JUDGE.replace("\\(target)", "English")
     out = gemini("gemini-3.1-flash-lite", sysp,
                  f"Challenge: {CH[0]}\nExample of a line that does it: {CH[1]}\n"
@@ -129,7 +145,7 @@ CASES = {
 }
 RUNS = int(os.environ.get("RUNS", "2"))
 for lang in LANGS:
-    for name, (kind, hist) in CASES.get(lang, {}).items():
+    for name, (kind, hist) in ([] if os.environ.get("PLAN_ONLY") else CASES.get(lang, {}).items()):
         suffix = "" if kind == "tutor" else f"-{kind}"
         system = open(f"{DUMP}/{lang}-{LEVEL}-tutor{suffix}.txt").read()
         for i in range(RUNS):
