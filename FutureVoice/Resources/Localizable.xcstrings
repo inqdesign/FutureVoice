@@ -160277,48 +160277,48 @@
         }
       }
     },
-    "Pick up to three. The first one is where Talk opens." : {
+    "Pick as many as you like. The chips under Talk follow them in the order you picked, and what you write under one shapes its topics." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wähl bis zu drei. Mit dem ersten öffnet sich Sprechen."
+            "value" : "Wähl so viele du willst. Die Chips unter Sprechen folgen ihnen in deiner Reihenfolge, und was du darunter schreibst, prägt ihre Themen."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Elige hasta tres. Hablar se abre en el primero."
+            "value" : "Elige todos los que quieras. Los chips de Hablar los siguen en el orden que elegiste, y lo que escribas debajo de cada uno da forma a sus temas."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Choisis-en jusqu’à trois. Parler s’ouvre sur le premier."
+            "value" : "Choisis-en autant que tu veux. Les puces de Parler les suivent dans l’ordre choisi, et ce que tu écris sous chacune façonne ses sujets."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "3つまで選べます。最初に選んだものがトークの先頭に来ます。"
+            "value" : "いくつ選んでも大丈夫です。トークのチップが選んだ順番で並び、下に書いた内容からそのチップの話題を作ります。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "最多选三个。第一个选的会排在对话的最前面。"
+            "value" : "可以多选。对话页面的标签会按你选的顺序排列，下面填写的内容会用来生成该标签的话题。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "最多可選三個。第一個選的會排在對話的最前面。"
+            "value" : "可以選好幾個。對話分頁的標籤會照你選的順序排列，下面填寫的內容會用來產生那個標籤的話題。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "세 개까지 고를 수 있어요. 처음 고른 게 대화 탭의 첫 칸이 돼요."
+            "value" : "여러 개 골라도 돼요. 대화 탭의 칩이 고른 순서대로 놓이고, 아래에 적은 내용으로 그 칩의 주제를 만들어요."
           }
         }
       }
@@ -161469,52 +161469,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "한 주제로 2분, 멈추지 않고"
-          }
-        }
-      }
-    },
-    "Up to three. The chips under Talk follow them in the order you picked, and what you write under one shapes its topics." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bis zu drei. Die Chips unter Sprechen folgen ihnen in deiner Reihenfolge, und was du darunter schreibst, prägt ihre Themen."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hasta tres. Los chips de Hablar los siguen en el orden que elegiste, y lo que escribas debajo de cada uno da forma a sus temas."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jusqu’à trois. Les puces de Parler les suivent dans l’ordre choisi, et ce que tu écris sous chacune façonne ses sujets."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "3つまで選べます。トークのチップが選んだ順番で並び、下に書いた内容からそのチップの話題を作ります。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最多三个。对话页面的标签会按你选的顺序排列，下面填写的内容会用来生成该标签的话题。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最多三個。對話分頁的標籤會照你選的順序排列，下面填寫的內容會用來產生那個標籤的話題。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "세 개까지 골라요. 대화 탭의 칩이 고른 순서대로 놓이고, 아래에 적은 내용으로 그 칩의 주제를 만들어요."
           }
         }
       }

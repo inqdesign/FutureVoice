@@ -243,7 +243,7 @@ struct SetupFlowView: View {
         } header: {
             Text(explain("What do you want it for?"))
         } footer: {
-            Text(explain("Pick up to three. The first one is where Talk opens."))
+            Text(explain("Pick as many as you like. The first one is where Talk opens."))
         }
     }
 

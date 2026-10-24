@@ -43,7 +43,7 @@ struct DiscoverSettingsSheet: View {
                 } header: {
                     Text(explain("Why are you learning?"))
                 } footer: {
-                    Text(explain("Up to three. The chips under Talk follow them in the order you picked, and what you write under one shapes its topics."))
+                    Text(explain("Pick as many as you like. The chips under Talk follow them in the order you picked, and what you write under one shapes its topics."))
                 }
 
                 Section {
@@ -169,10 +169,6 @@ struct DiscoverSettingsSheet: View {
 /// in it, the school and the subject. All optional; what is written is what
 /// that chip's topics are made from (`PurposeTopicEngine`).
 struct PurposePickerRows: View {
-    /// At most three (founder, 2026-10-11): each purpose adds a chip to Talk,
-    /// and past three the row stops being a choice and becomes a list.
-    static let maxPicked = 3
-
     @Binding var purposes: [LearningPurpose]
     @Binding var details: PurposeDetails
     @Binding var exam: ExamKind
@@ -181,10 +177,9 @@ struct PurposePickerRows: View {
     var body: some View {
         ForEach(LearningPurpose.allCases) { p in
             let n = purposes.firstIndex(of: p)
-            let full = n == nil && purposes.count >= Self.maxPicked
             Button {
                 withAnimation(.easeOut(duration: 0.2)) {
-                    if let n { purposes.remove(at: n) } else if !full { purposes.append(p) }
+                    if let n { purposes.remove(at: n) } else { purposes.append(p) }
                 }
             } label: {
                 HStack(spacing: 12) {
@@ -214,8 +209,6 @@ struct PurposePickerRows: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .disabled(full)
-            .opacity(full ? 0.4 : 1)
             .accessibilityValue(n.map { Text(verbatim: "\($0 + 1)") } ?? Text(""))
             if n != nil { detail(for: p) }
         }

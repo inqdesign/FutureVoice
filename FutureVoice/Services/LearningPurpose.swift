@@ -144,8 +144,8 @@ enum LearningPurposeStore {
     /// In the order picked. Empty = never asked (every install before this).
     static var purposes: [LearningPurpose] {
         get {
-            Array((UserDefaults.standard.stringArray(forKey: key) ?? [])
-                .compactMap(LearningPurpose.init(rawValue:)).prefix(3))
+            (UserDefaults.standard.stringArray(forKey: key) ?? [])
+                .compactMap(LearningPurpose.init(rawValue:))
         }
         set { UserDefaults.standard.set(newValue.map(\.rawValue), forKey: key) }
     }
