@@ -783,7 +783,22 @@ data class Scenario(
      *  that row reuses it and the "Your scenarios" lists leave it out (iOS
      *  `Scenario.starterId`, `5b0587a`). Optional so old rows decode. */
     val starterId: String? = null,
+    /** Set on a book the learner copied from a nawana Podcast episode (iOS
+     *  `Scenario.podcast`, 2026-10-24, founder: "we made it, they take a
+     *  copy"). The episode and its study were made once on the platform
+     *  side; nothing about the book is generated on the phone, and it has no
+     *  scene to write: its chapters come from the episode's shipped
+     *  highlights, its lines play the hosts' own recordings (`turn-audio/`,
+     *  keyed by line id). Optional so old rows decode unchanged. */
+    val podcast: PodcastBookSource? = null,
 ) {
+    val isPodcastBook: Boolean get() = podcast != null
+    /** A meeting with someone from Find people (rows minted before the flag
+     *  carry only the category). */
+    val isMeetingScene: Boolean get() = isMeeting == true || category == "Meeting"
+    /** A situation the learner built or met — what "Your scenarios" lists. */
+    val isOwnSituation: Boolean get() = isTopic != true && !isMeetingScene && !isPodcastBook
+
     val cardTitle: String
         get() = summary?.trim()?.takeIf { it.isNotEmpty() } ?: environment
 
@@ -794,6 +809,31 @@ data class Scenario(
             role.trim().takeIf { it.isNotEmpty() }?.let { add("role=$it") }
             notes.trim().takeIf { it.isNotEmpty() }?.let { add("notes=$it") }
         }.joinToString(" | ")
+}
+
+/**
+ * The episode a podcast book was copied from (iOS `PodcastBookSource`):
+ * enough to replay it and to say which episode it was, with no dependence on
+ * the feed (an episode leaves the feed, the book stays).
+ */
+@Serializable
+data class PodcastBookSource(
+    val number: Int,
+    @Serializable(with = IsoDateMillisSerializer::class)
+    val date: Long,
+    val category: String? = null,
+    val language: String,
+    val lines: List<Line> = emptyList(),
+) {
+    @Serializable
+    data class Line(
+        /** Stable per episode + position, so the same episode copied on two
+         *  devices names the same turn-audio file. */
+        val id: String,
+        val speaker: String,
+        val text: String,
+        val translations: Map<String, String>? = null,
+    )
 }
 
 @Serializable

@@ -536,4 +536,8 @@
     <string name="fs_voice_mine">Ma voix</string>
     <string name="fs_voice_similar">%1$s · voix proche</string>
     <string name="fs_voice_title">Voix de ton moi fluide</string>
+    <string name="podcast_make_my_book">"Ajouter à mes carnets"</string>
+    <string name="podcast_open_my_book">"Ouvrir mon carnet"</string>
+    <string name="podcast_listen_shelf_empty">"Dans le lecteur, touche le livre à côté d’un épisode du podcast : il devient un carnet ici, avec des mots, des expressions et des phrases à répéter."</string>
+    <string name="podcast_shadow_footer">"Touche une phrase pour la répéter comme dans le podcast. Au-delà de %1$d points, c’est acquis."</string>
 </resources>

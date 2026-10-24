@@ -43,6 +43,9 @@ import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.outlined.Book
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.async
@@ -233,6 +236,9 @@ fun ScenePlayerSheet(
     /** Opened from the routine's listening block: start playing at once,
      *  unless something is already playing (iOS `autoplay`). */
     autoplay: Boolean = false,
+    /** A podcast episode's book, made or already there: the host opens it
+     *  (iOS presents `ScenarioDetailView` over the player). */
+    onOpenBook: (String) -> Unit = {},
     onDismiss: () -> Unit,
 ) {
     // Rises from the bottom edge and settles, and goes back down the same
@@ -243,7 +249,7 @@ fun ScenePlayerSheet(
         enter = slideInVertically(spring(dampingRatio = 1f, stiffness = 380f)) { it },
         exit = slideOutVertically(spring(dampingRatio = 1f, stiffness = 520f)) { it },
     ) {
-        ScenePlayerSheetContent(state, topInset, autoplay, onDismiss)
+        ScenePlayerSheetContent(state, topInset, autoplay, onOpenBook, onDismiss)
     }
 }
 
@@ -252,6 +258,7 @@ private fun ScenePlayerSheetContent(
     state: AppState,
     topInset: Dp,
     autoplay: Boolean,
+    onOpenBook: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -385,7 +392,8 @@ private fun ScenePlayerSheetContent(
             if (showingList) {
                 PlayerLibrary(tracks, shows, state, onBack = { showingList = false },
                     onPick = { play(it); showingList = false },
-                    onPickShow = { playShow(it) }, onPlayAllShows = { playAllShows() })
+                    onPickShow = { playShow(it) }, onPlayAllShows = { playAllShows() },
+                    onOpenBook = onOpenBook)
             } else {
                 SheetHeader(stringResource(R.string.player),
                     leading = {
@@ -429,6 +437,7 @@ private fun PlayerLibrary(
     onPick: (SceneTrack) -> Unit,
     onPickShow: suspend (NewsShowEpisode) -> Unit,
     onPlayAllShows: suspend () -> Unit,
+    onOpenBook: (String) -> Unit,
 ) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("futurevoice", 0) }
@@ -437,6 +446,36 @@ private fun PlayerLibrary(
     var fetching by remember { mutableStateOf<String?>(null) }
     var reading by remember { mutableStateOf<NewsShowEpisode?>(null) }
     val scope = rememberCoroutineScope()
+    /** The episode being copied into the learner's books. */
+    var copying by remember { mutableStateOf<String?>(null) }
+    /** Which episodes are already in the learner's books (a book's id IS
+     *  its episode's). */
+    val revision by com.roro.futurevoice.data.StoreEvents.revision.collectAsStateWithLifecycle()
+    var owned by remember { mutableStateOf<Set<String>>(emptySet()) }
+    LaunchedEffect(revision, state.targetLanguage) {
+        owned = ScenarioStore.shared(context).load(state.targetLanguage).map { it.id }.toSet()
+    }
+
+    /** "Make it my book": the episode, as the publisher already made it,
+     *  copied into Practice. Filled once it is there, and then it opens it. */
+    fun makeBook(episode: NewsShowEpisode) {
+        if (episode.id in owned) { onOpenBook(episode.id); return }
+        if (copying != null) return
+        copying = episode.id
+        scope.launch {
+            val book = NewsShow.makeBook(context, episode, state.nativeLanguage)
+            if (book != null) {
+                ScenarioStore.shared(context).save(book, state.targetLanguage)
+                owned = owned + book.id
+                com.roro.futurevoice.data.StoreEvents.bump()
+                com.roro.futurevoice.core.Analytics.capture("podcast_book_made",
+                    mapOf("episode" to episode.number, "category" to (episode.category ?: ""),
+                        "items" to (book.curriculum?.totalCount ?: 0)))
+                onOpenBook(book.id)
+            }
+            copying = null
+        }
+    }
 
     /** Fetch, play, then back to the player. One fetch at a time. */
     fun fetch(id: String, action: suspend () -> Unit) {
@@ -500,6 +539,21 @@ private fun PlayerLibrary(
                                 contentAlignment = Alignment.Center) {
                                 Icon(Icons.Outlined.Description, contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                            }
+                            val mine = episode.id in owned
+                            val bookLabel = stringResource(
+                                if (mine) R.string.podcast_open_my_book else R.string.podcast_make_my_book)
+                            Box(Modifier.size(36.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                                .clickable { makeBook(episode) }
+                                .semantics { contentDescription = bookLabel },
+                                contentAlignment = Alignment.Center) {
+                                if (copying == episode.id) {
+                                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                                } else {
+                                    Icon(if (mine) Icons.Filled.Book else Icons.Outlined.Book,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                                }
                             }
                         }
                     }

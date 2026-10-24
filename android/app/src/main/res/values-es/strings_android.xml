@@ -549,4 +549,8 @@
     <string name="fs_voice_mine">Mi voz</string>
     <string name="fs_voice_similar">%1$s · voz parecida</string>
     <string name="fs_voice_title">Voz de tu yo fluido</string>
+    <string name="podcast_make_my_book">"Añadir a mis cuadernos"</string>
+    <string name="podcast_open_my_book">"Abrir mi cuaderno"</string>
+    <string name="podcast_listen_shelf_empty">"En el reproductor, toca el libro junto a un episodio del podcast y se convierte aquí en un cuaderno: palabras, expresiones y frases para repetir."</string>
+    <string name="podcast_shadow_footer">"Toca una frase para repetirla como en el podcast. Si pasas de %1$d puntos, ya está."</string>
 </resources>

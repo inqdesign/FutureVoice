@@ -63,6 +63,8 @@ enum class Shelf(val labelRes: Int) {
     STUDYING(R.string.studying),
     TALK(R.string.talk),
     WATCH(R.string.watch),
+    /** Podcast episodes the learner copied into their books (iOS 2026-10-24). */
+    LISTEN(R.string.listen),
     /** Books taken all the way to mastered — a chip of its own since iOS
      *  `790099d` (it was the header's seal and a page behind it). */
     FINISHED(R.string.finished),

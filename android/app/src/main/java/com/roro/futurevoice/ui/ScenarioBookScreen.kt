@@ -40,6 +40,8 @@ import androidx.compose.material.icons.filled.Abc
 import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Headphones
+import com.roro.futurevoice.audio.PlaylistPlayer
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.ui.brand.BookmarkTab
 import com.roro.futurevoice.ui.brand.BookmarkedPage
@@ -97,6 +99,13 @@ fun ScenarioBookScreen(
     onBack: () -> Unit,
     /** Open one of the talks run on this book (the cover's study record). */
     onOpenTalk: ((String) -> Unit)? = null,
+    /** The app state, for a podcast book's player (iOS `ScenePlayerSheet`). */
+    state: AppState? = null,
+    /** A podcast book's Shadowing row: the line by its id, so the shadow
+     *  screen plays the host's own recording kept under that id. */
+    onShadowLine: ((id: String, text: String) -> Unit)? = null,
+    /** The player's book button, for another episode's book. */
+    onOpenBook: ((String) -> Unit)? = null,
 ) {
     NavPageBackHandler(onBack = onBack)
     val context = LocalContext.current
@@ -237,7 +246,11 @@ fun ScenarioBookScreen(
         }
     }
     val archived = sc.archivedAt != null
+    // A podcast book's episode, playing in the app's one player.
+    var playerPresented by remember { mutableStateOf(false) }
+    var topPad by remember { mutableStateOf(0.dp) }
 
+    Box(Modifier.fillMaxSize()) {
     Scaffold(
         topBar = {
             // The situation itself is the title, as on iOS — the page is
@@ -273,6 +286,7 @@ fun ScenarioBookScreen(
             )
         }
     ) { padding ->
+        topPad = padding.calculateTopPadding()
         // Ribbon bookmarks, not a table of contents: the cover first, then
         // the chapters named by what you DO in them (iOS `allTabs`). The
         // scene itself is behind the cover's Watch button, never a chapter.
@@ -286,7 +300,7 @@ fun ScenarioBookScreen(
                     stringResource(R.string.expressions),
                     done = exprMastered.size, total = cur.expressions.size))
                 if (cur.shadowLines.isNotEmpty()) add(BookmarkTab(Chapter.SHADOW, StudyIcon.shadowing,
-                    stringResource(R.string.your_lines),
+                    stringResource(if (sc.isPodcastBook) R.string.shadowing else R.string.your_lines),
                     done = shadowMastered.size, total = cur.shadowLines.size))
             }
         }
@@ -308,7 +322,15 @@ fun ScenarioBookScreen(
                             progress = if (total > 0) done.toFloat() / total else null,
                             progressLabel = stringResource(R.string.lld_of_lld_mastered, done, total),
                             mastered = total > 0 && done == total,
-                            onTalk = onTalk?.let { talk -> { talk(sc) } },
+                            onTalk = onTalk?.takeIf { !sc.isPodcastBook }?.let { talk -> { talk(sc) } },
+                            // The episode as it was made, from the book's own
+                            // copies: nothing to write, nothing metered.
+                            onListen = if (sc.isPodcastBook && state != null) ({
+                                PlaylistPlayer.play(context,
+                                    com.roro.futurevoice.data.NewsShow.playlist(context, sc),
+                                    context.getString(R.string.nawana_podcast))
+                                playerPresented = true
+                            }) else null,
                             // Watch is hidden until the scene exists.
                             onWatch = if (cur?.dialogue.isNullOrEmpty()) null else ({ onWatch(sc.id) }),
                             onSayItAgain = if (cur?.dialogue.orEmpty().any { it.speaker == "user" } && sayItAgain != null)
@@ -380,11 +402,17 @@ fun ScenarioBookScreen(
                         }
                     }
                     Chapter.SHADOW -> cur?.let { c ->
-                        ChapterTitle(stringResource(R.string.your_lines))
+                        val podcast = sc.isPodcastBook
+                        ChapterTitle(stringResource(if (podcast) R.string.shadowing else R.string.your_lines))
                         c.shadowLines.forEach { line ->
-                            ItemRow(line, line.id in shadowMastered, onClick = { onShadow(line.text) })
+                            ItemRow(line, line.id in shadowMastered, onClick = {
+                                if (podcast && onShadowLine != null) onShadowLine(line.id, line.text)
+                                else onShadow(line.text)
+                            })
                         }
-                        Text(stringResource(R.string.tap_a_line_to_shadow_it_in_your_own_voice_score_lld_and_it_s_a7e9bd,
+                        Text(stringResource(
+                            if (podcast) R.string.podcast_shadow_footer
+                            else R.string.tap_a_line_to_shadow_it_in_your_own_voice_score_lld_and_it_s_a7e9bd,
                             com.roro.futurevoice.data.TalkCurriculum.SHADOW_MASTERY_SCORE),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -393,6 +421,12 @@ fun ScenarioBookScreen(
                 }
             }
         }
+    }
+    if (state != null && sc.isPodcastBook) {
+        ScenePlayerSheet(visible = playerPresented, state = state, topInset = topPad,
+            onOpenBook = { id -> playerPresented = false; if (id != sc.id) onOpenBook?.invoke(id) },
+            onDismiss = { playerPresented = false })
+    }
     }
 }
 
@@ -412,6 +446,8 @@ private fun ScenarioCover(
     onTalk: (() -> Unit)?,
     onWatch: (() -> Unit)?,
     onSayItAgain: (() -> Unit)?,
+    /** A podcast book's one door: its episode, in the player. */
+    onListen: (() -> Unit)? = null,
 ) {
     val tonal = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
         containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
@@ -427,6 +463,9 @@ private fun ScenarioCover(
                 if (personName != null) {
                     Text(initials(personName), style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                } else if (scenario.isPodcastBook) {
+                    Icon(categoryIcon(scenario.category), contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(26.dp))
                 } else {
                     Icon(roleIcon(scenario.role), contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(26.dp))
@@ -438,6 +477,11 @@ private fun ScenarioCover(
                 val partner = personName ?: scenario.role.trim().takeIf { it.isNotEmpty() }
                 if (partner != null) {
                     Text(stringResource(R.string.with, partner), style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                scenario.podcast?.let { p ->
+                    Text("${stringResource(R.string.nawana_podcast)} · EP ${p.number}",
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 if (archived) {
@@ -463,7 +507,14 @@ private fun ScenarioCover(
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        if (onTalk != null || onWatch != null) {
+        if (onListen != null) {
+            androidx.compose.material3.Button(onClick = onListen, modifier = Modifier.fillMaxWidth(),
+                contentPadding = pad) {
+                Icon(Icons.Filled.Headphones, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                com.roro.futurevoice.ui.brand.FitButtonLabel(stringResource(R.string.listen))
+            }
+        } else if (onTalk != null || onWatch != null) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (onTalk != null) {
                     androidx.compose.material3.Button(onClick = onTalk, modifier = Modifier.weight(1f),
@@ -484,7 +535,7 @@ private fun ScenarioCover(
             }
         }
         // The third door, on its own row as on iOS.
-        if (onSayItAgain != null) SayItAgainButton(onSayItAgain)
+        if (onSayItAgain != null && onListen == null) SayItAgainButton(onSayItAgain)
     }
 }
 

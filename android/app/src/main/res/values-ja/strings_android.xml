@@ -530,4 +530,8 @@
     <string name="fs_voice_mine">自分の声</string>
     <string name="fs_voice_similar">%1$s · 似ている声</string>
     <string name="fs_voice_title">流暢な自分の声</string>
+    <string name="podcast_make_my_book">"自分の教材にする"</string>
+    <string name="podcast_open_my_book">"教材を開く"</string>
+    <string name="podcast_listen_shelf_empty">"プレーヤーでエピソードの横にある本をタップすると、ここで教材になります。単語や表現、真似する文が入っています。"</string>
+    <string name="podcast_shadow_footer">"文をタップして、ホストの声を真似してみましょう。%1$d点を超えたら完了です。"</string>
 </resources>

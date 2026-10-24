@@ -77,7 +77,13 @@ class ScenarioStore private constructor(context: Context) {
     }
 
     suspend fun delete(id: String, language: String = LanguageScope.active(appContext)) = mutex.withLock {
-        write(language, loadLocked(language).filterNot { it.id == id })
+        val all = loadLocked(language)
+        // A podcast book owns the copies of its episode's recordings (iOS
+        // `AppState.deleteScenario`).
+        all.firstOrNull { it.id == id }?.let { book ->
+            withContext(Dispatchers.IO) { NewsShow.deleteBookAudio(appContext, book) }
+        }
+        write(language, all.filterNot { it.id == id })
     }
 
     private suspend fun loadLocked(language: String): List<Scenario> = withContext(Dispatchers.IO) {

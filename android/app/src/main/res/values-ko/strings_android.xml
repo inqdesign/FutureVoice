@@ -530,4 +530,8 @@
     <string name="fs_voice_mine">내 목소리</string>
     <string name="fs_voice_similar">%1$s · 비슷한 목소리</string>
     <string name="fs_voice_title">유창해진 나의 목소리</string>
+    <string name="podcast_make_my_book">"내 교재로 만들기"</string>
+    <string name="podcast_open_my_book">"내 교재 열기"</string>
+    <string name="podcast_listen_shelf_empty">"플레이어에서 팟캐스트 에피소드 옆의 책을 누르면 여기 교재가 돼요. 단어와 표현, 따라 말할 문장이 담겨요."</string>
+    <string name="podcast_shadow_footer">"문장을 눌러 진행자를 따라 말해 보세요. %1$d점을 넘기면 끝이에요."</string>
 </resources>

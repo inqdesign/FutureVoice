@@ -1094,6 +1094,16 @@ fun RootScreen() {
                     inCall = true
                 } },
                 onShadow = { shadowLine = it },
+                state = state,
+                // A podcast book's line, by its id: the shadow screen plays
+                // the host's recording kept under it (iOS: the item id is the
+                // line's `TurnAudioStore` key).
+                onShadowLine = { id, text ->
+                    shadowHand = listOf(com.roro.futurevoice.data.ShadowPicks.Pick(
+                        com.roro.futurevoice.talk.Turn(id = id, role = com.roro.futurevoice.talk.TurnRole.FLUENT_SELF, transcript = text), ""))
+                    shadowAt = 0
+                },
+                onOpenBook = { id -> if (overWatch) bookOverWatchId = id else bookScenarioId = id },
                 onBack = { if (overWatch) { bookOverWatchId = null; watchScenarioId = null } else bookScenarioId = null },
                 // The talk page sits above the book, so back returns here.
                 onOpenTalk = { id ->
@@ -1122,6 +1132,10 @@ fun RootScreen() {
         RootRoute.ShadowHand -> ShadowScreen(
             line = shadowHand[shadowAt].turn.transcript,
             turnId = shadowHand[shadowAt].turn.id,
+            // A podcast book's line plays the host's own recording, copied
+            // into the book under the line's id — never a clone synthesis.
+            presetAudio = LocalContext.current.let { ctx -> remember(shadowHand[shadowAt].turn.id) {
+                com.roro.futurevoice.data.NewsShow.lineAudio(ctx, shadowHand[shadowAt].turn.id) } },
             voiceId = state.voiceId ?: "",
             targetLanguage = state.targetLanguage,
             position = (shadowAt + 1) to shadowHand.size,
@@ -2252,6 +2266,7 @@ internal fun HomeScreen(
         // The player floats over the page, the bar included (iOS sheet).
         ScenePlayerSheet(visible = showPlayer, state = state,
             topInset = padding.calculateTopPadding(), autoplay = playerAutoplay,
+            onOpenBook = { id -> showPlayer = false; playerAutoplay = false; onOpenBook(id) },
             onDismiss = { showPlayer = false; playerAutoplay = false })
       }
     }
@@ -2843,7 +2858,7 @@ internal fun DiscoverSection(
             }
             DiscoverChip.SCENARIOS -> {
                 // The learner's own situations — ready-made ones live on their chips.
-                val live = scenarios.filter { it.archivedAt == null && it.isMeeting != true && it.starterId == null }
+                val live = scenarios.filter { it.archivedAt == null && it.isOwnSituation && it.starterId == null }
                 live.take(5).forEach { sc ->
                     // WHO the scene is with, not what shelf it sits on — a
                     // category told the learner nothing they didn't already see.

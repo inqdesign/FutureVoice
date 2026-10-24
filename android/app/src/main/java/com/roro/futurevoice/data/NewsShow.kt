@@ -6,6 +6,9 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
+import com.roro.futurevoice.talk.PodcastBookSource
+import com.roro.futurevoice.talk.Scenario
+import com.roro.futurevoice.talk.ScenarioCurriculum
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
@@ -213,6 +216,116 @@ object NewsShow {
                     }
                 }
             }.awaitAll()
+        }
+    }
+
+    // ── My book (iOS `NewsShow.makeBook`, 2026-10-24) ──
+
+    /**
+     * The learner's copy of [episode] as a Practice book — "make it my book".
+     * Nothing is generated: the chapters are the highlights the publisher
+     * made once for everyone (words; expressions and grammar patterns), the
+     * Shadowing chapter is the lines those highlights sit in, and every
+     * line's recording is copied out of the feed's cache into `turn-audio/`
+     * under the line's own id, so the book outlives the feed and shadowing
+     * plays the host instead of synthesizing the clone. The book's id IS the
+     * episode's, so it can only be copied once. Null when the audio could not
+     * be fetched.
+     */
+    suspend fun makeBook(context: Context, episode: NewsShowEpisode, native: String): Scenario? {
+        prepare(context, episode)
+        if (!episode.isReady) return null
+        val ids = episode.lines.indices.map { stableId("${episode.id}#line$it") }
+        val copied = withContext(Dispatchers.IO) {
+            episode.lines.zip(ids).all { (line, id) ->
+                val file = line.localFile ?: return@all false
+                runCatching {
+                    val dir = File(context.filesDir, "turn-audio").apply { mkdirs() }
+                    file.copyTo(File(dir, "$id.mp3"), overwrite = true)
+                }.isSuccess
+            }
+        }
+        if (!copied) return null
+
+        val same = LanguageCatalog.sameLanguage(native, episode.language)
+        val words = mutableListOf<ScenarioCurriculum.Item>()
+        val expressions = mutableListOf<ScenarioCurriculum.Item>()
+        val seen = mutableSetOf<String>()
+        val highlights = episode.shippedStudy?.highlights.orEmpty()
+        for (h in highlights) {
+            val text = (if (h.kind == "word") h.lemma ?: h.text else h.text).trim()
+            if (text.isEmpty() || !seen.add(text.lowercase())) continue
+            val item = ScenarioCurriculum.Item(text = text,
+                note = if (same) "" else h.notes?.get(native) ?: "", example = h.example)
+            if (h.kind == "word") words += item else expressions += item
+        }
+        // The lines a highlight was taken from, in the episode's order:
+        // shadowing them is practising the book's material in context.
+        val marked = highlights.map { it.text.lowercase() }
+        val shadow = episode.lines.zip(ids)
+            .filter { (line, _) -> marked.any { line.text.lowercase().contains(it) } }
+            .take(MAX_SHADOW_LINES)
+            .map { (line, id) -> ScenarioCurriculum.Item(id = id, text = line.text, note = line.speaker) }
+
+        val curriculum = ScenarioCurriculum(words = words, expressions = expressions,
+            shadowLines = shadow, dialogueTitle = episode.title)
+        return Scenario(
+            id = episode.id, environment = episode.title, role = "", notes = "",
+            curriculum = curriculum,
+            category = episode.category, categoryIcon = symbol(episode.category),
+            podcast = PodcastBookSource(
+                number = episode.number, date = episode.date, category = episode.category,
+                language = episode.language,
+                lines = episode.lines.zip(ids).map { (line, id) ->
+                    PodcastBookSource.Line(id = id, speaker = line.speaker, text = line.text,
+                        translations = line.translations)
+                }))
+    }
+
+    /** Enough to practise an episode's material in its own lines without
+     *  turning the whole episode into a chapter. */
+    const val MAX_SHADOW_LINES = 6
+
+    /** A podcast book line's own copy of the host's recording, if it is on
+     *  the phone (`turn-audio/<line id>.mp3`). */
+    fun lineAudio(context: Context, lineId: String): File? =
+        File(File(context.filesDir, "turn-audio"), "$lineId.mp3").takeIf { it.isFile && it.length() > 0 }
+
+    /** A podcast book's lines for the player, from the book's own copies. */
+    fun playlist(context: Context, book: Scenario): List<PlaylistLine> {
+        val p = book.podcast ?: return emptyList()
+        return p.lines.map { line ->
+            PlaylistLine(bookId = book.id, text = line.text, voiceId = "", speaker = line.speaker,
+                isOther = true, bookTitle = book.environment,
+                localFile = File(File(context.filesDir, "turn-audio"), "${line.id}.mp3"),
+                translations = line.translations,
+                episodeNumber = p.number, episodeCategory = p.category)
+        }
+    }
+
+    /** A podcast book owns the copies of its episode's recordings. */
+    fun deleteBookAudio(context: Context, book: Scenario) {
+        val dir = File(context.filesDir, "turn-audio")
+        book.podcast?.lines?.forEach { line -> File(dir, "${line.id}.mp3").delete() }
+    }
+
+    /** The glyph name for an episode's category (iOS `NewsShow.icon(for:)` —
+     *  the Talk tab's news cards), stored on the book like any scenario's. */
+    fun symbol(category: String?): String {
+        val c = category?.lowercase() ?: return "newspaper.fill"
+        return when {
+            c.contains("ai") || c.contains("tech") -> "cpu"
+            c.contains("cook") || c.contains("food") -> "fork.knife"
+            c.contains("sport") || c.contains("fitness") -> "figure.run"
+            c.contains("music") -> "music.note"
+            c.contains("travel") -> "airplane"
+            c.contains("science") -> "atom"
+            c.contains("business") || c.contains("finance") -> "chart.line.uptrend.xyaxis"
+            c.contains("film") || c.contains("movie") || c.contains("tv") -> "film"
+            c.contains("game") -> "gamecontroller"
+            c.contains("health") -> "heart"
+            c.contains("fashion") -> "tshirt"
+            else -> "newspaper.fill"
         }
     }
 

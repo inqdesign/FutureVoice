@@ -135,6 +135,10 @@ fun PracticeBody(
     /** Finished books. They keep their progress and can come back. */
     var archivedTalks by remember { mutableStateOf<List<Session>>(emptyList()) }
     var archivedScenarios by remember { mutableStateOf<List<Scenario>>(emptyList()) }
+    /** Podcast episodes the learner copied into their books — the Listen
+     *  shelf, kept off the Watch one. */
+    var listenBooks by remember { mutableStateOf<List<Scenario>>(emptyList()) }
+    var archivedListenBooks by remember { mutableStateOf<List<Scenario>>(emptyList()) }
     /** The feed, the finished shelf, each talk's strip and the library counts —
      *  one curriculum pass, off the main thread. */
     var data by remember { mutableStateOf<ReviewShelfData?>(null) }
@@ -149,8 +153,11 @@ fun PracticeBody(
             runCatching { loadReviewShelves(context, language, level) }.getOrNull()
         }
         val allScenarios = ScenarioStore.shared(context).load(language).filter { it.isMeeting != true }
-        scenarios = allScenarios.filter { it.archivedAt == null }.sortedByDescending { it.createdAt }
-        archivedScenarios = allScenarios.filter { it.archivedAt != null }
+        scenarios = allScenarios.filter { it.archivedAt == null && !it.isPodcastBook }.sortedByDescending { it.createdAt }
+        archivedScenarios = allScenarios.filter { it.archivedAt != null && !it.isPodcastBook }
+        listenBooks = allScenarios.filter { it.archivedAt == null && it.isPodcastBook }.sortedByDescending { it.createdAt }
+        archivedListenBooks = allScenarios.filter { it.archivedAt != null && it.isPodcastBook }
+            .sortedByDescending { it.createdAt }
         val allTalks = SessionStore.shared(context).load(language).filter { it.summary != null }
             .sortedByDescending { it.startedAt }
         talks = allTalks.filter { it.archivedAt == null }
@@ -198,6 +205,7 @@ fun PracticeBody(
         Shelf.STUDYING -> data?.feed?.size?.takeIf { it > 0 }
         Shelf.TALK -> talks.size.takeIf { it > 0 }
         Shelf.WATCH -> scenarios.size.takeIf { it > 0 }
+        Shelf.LISTEN -> listenBooks.size.takeIf { it > 0 }
         Shelf.FINISHED -> data?.finished?.size?.takeIf { it > 0 }
     }
     // The shelves are PAGES (iOS: a paging ScrollView under the chip bar):
@@ -279,6 +287,29 @@ fun PracticeBody(
                     archivedScenarios.forEach {
                         ScenarioCard(it, onOpenScenarioBook, onTalk = onTalkScenario,
                             personaName = it.counterpartId?.let(counterparts::get),
+                            onArchive = { id, on -> scope.launch {
+                                ScenarioStore.shared(context).setArchived(id, on, language); StoreEvents.bump() } },
+                            onDelete = { id -> scope.launch {
+                                ScenarioStore.shared(context).delete(id, language); StoreEvents.bump() } })
+                    }
+                }
+            }
+            Shelf.LISTEN -> {
+                if (listenBooks.isEmpty() && archivedListenBooks.isEmpty()) {
+                    Text(stringResource(R.string.podcast_listen_shelf_empty),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                BookGrid(listenBooks) { sc, m ->
+                    ScenarioCard(sc, onOpenScenarioBook, modifier = m,
+                        onArchive = { id, on -> scope.launch {
+                            ScenarioStore.shared(context).setArchived(id, on, language); StoreEvents.bump() } },
+                        onDelete = { id -> scope.launch {
+                            ScenarioStore.shared(context).delete(id, language); StoreEvents.bump() } })
+                }
+                ArchiveSection(archivedListenBooks.isNotEmpty()) {
+                    archivedListenBooks.forEach {
+                        ScenarioCard(it, onOpenScenarioBook,
                             onArchive = { id, on -> scope.launch {
                                 ScenarioStore.shared(context).setArchived(id, on, language); StoreEvents.bump() } },
                             onDelete = { id -> scope.launch {
@@ -430,14 +461,16 @@ private fun ScenarioCard(sc: Scenario, onOpen: (String) -> Unit,
     val photo = if (personaName != null) rememberPersonPhoto(sc.counterpartId) else null
     BookCard(
         title = sc.cardTitle,
-        icon = Symbols.icon(sc.categoryIcon),
+        icon = if (sc.isPodcastBook) categoryIcon(sc.category) else Symbols.icon(sc.categoryIcon),
         photo = photo,
         initials = personaName?.takeIf { photo == null }?.let(::initials),
         tall = tall,
         // The source, then WHO the scene is with, on one line — "Scenario ·
         // Sarah" (iOS `OriginTag(scenario:).with(partnerLabel)`, 2026-10-16).
-        origin = stringResource(if (sc.isTopic == true) R.string.news else R.string.scenario),
-        accent = Books.scenarios,
+        // A Listen book is the podcast episode it was copied from.
+        origin = sc.podcast?.let { "${stringResource(R.string.nawana_podcast)} · EP ${it.number}" }
+            ?: stringResource(if (sc.isTopic == true) R.string.news else R.string.scenario),
+        accent = if (sc.isPodcastBook) Books.podcasts else Books.scenarios,
         detail = personaName ?: sc.role.trim().takeIf { it.isNotEmpty() },
         progressLabel = if (!tall) null
         else if (cur == null) stringResource(R.string.watch_the_scene_first)

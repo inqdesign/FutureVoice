@@ -41,6 +41,9 @@ object Books {
     val talks = Color(0xFF2F6FED)
     val topics = Color(0xFFE8833A)
     val scenarios = Color(0xFF8A5CD1)
+    /** A podcast book: listening's colour in the routine too, the one no
+     *  other kind uses (iOS `Books.podcastsColor`, system cyan). */
+    val podcasts = Color(0xFF32ADE6)
     val mastery = Color(0xFF2E9E5B)
 }
 

@@ -250,7 +250,7 @@ internal fun WatchTabBody(
         skyReady = true
     }
     val live = scenarios
-        .filter { it.archivedAt == null && it.isMeeting != true && it.isTopic != true }
+        .filter { it.archivedAt == null && it.isOwnSituation }
         .sortedByDescending { it.lastUsedAt ?: it.createdAt }
 
     val metLabel = stringResource(R.string.met_on_nawana)

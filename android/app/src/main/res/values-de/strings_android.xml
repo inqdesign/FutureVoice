@@ -522,4 +522,8 @@
     <string name="fs_voice_mine">Meine Stimme</string>
     <string name="fs_voice_similar">%1$s · ähnliche Stimme</string>
     <string name="fs_voice_title">Stimme deines fließenden Ichs</string>
+    <string name="podcast_make_my_book">"Zu meinen Büchern"</string>
+    <string name="podcast_open_my_book">"Mein Buch öffnen"</string>
+    <string name="podcast_listen_shelf_empty">"Tippe im Player auf das Buch neben einer Podcast-Folge – daraus wird hier ein Buch: Wörter, Wendungen und Sätze zum Nachsprechen."</string>
+    <string name="podcast_shadow_footer">"Tippe einen Satz an und sprich ihn wie im Podcast nach. Ab %1$d Punkten sitzt er."</string>
 </resources>

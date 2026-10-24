@@ -530,4 +530,8 @@
     <string name="fs_voice_mine">我的聲音</string>
     <string name="fs_voice_similar">%1$s · 相近的聲音</string>
     <string name="fs_voice_title">流利的自己的聲音</string>
+    <string name="podcast_make_my_book">"加入我的教材"</string>
+    <string name="podcast_open_my_book">"打開教材"</string>
+    <string name="podcast_listen_shelf_empty">"在播放器裡點單集旁邊的書本，它就會在這裡變成教材：單字、表達，還有可以跟讀的句子。"</string>
+    <string name="podcast_shadow_footer">"點句子，跟著主持人讀。超過%1$d分就算完成。"</string>
 </resources>

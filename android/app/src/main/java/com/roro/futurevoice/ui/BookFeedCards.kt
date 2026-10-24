@@ -169,7 +169,8 @@ suspend fun loadReviewShelves(context: Context, language: String, level: CefrLev
                 BookPreview.Chapter(BookPreview.Kind.SHADOW, it.shadowLines),
             )
         }.orEmpty()
-        return BookPreview(sc.id, null, sc, sc.createdAt, Books.scenarios, chapters)
+        return BookPreview(sc.id, null, sc, sc.createdAt,
+            if (sc.isPodcastBook) Books.podcasts else Books.scenarios, chapters)
     }
 
     // Every unfinished, unarchived book, newest first by when it was MADE —
