@@ -212,6 +212,8 @@ struct ConversationView: View {
     /// modal in the middle of a conversation.
     @State private var askingMicChoice = false
     @State private var micChoiceContinuation: CheckedContinuation<Void, Never>?
+    @State private var askingFirstCallSetup = false
+    @State private var firstCallSetupContinuation: CheckedContinuation<Void, Never>?
     /// Flipped by tearDown() when the screen closes. Every async continuation
     /// (Gemini reply, TTS synthesis, stream chunks, auto-restart) checks it
     /// and bails — otherwise a reply in flight at close time keeps talking
@@ -1235,6 +1237,9 @@ struct ConversationView: View {
             .sheet(isPresented: $askingMicChoice, onDismiss: resumeAfterMicChoice) {
                 MicChoiceSheet { _ in }
             }
+            .sheet(isPresented: $askingFirstCallSetup, onDismiss: resumeAfterFirstCallSetup) {
+                FirstCallSetupSheet().environmentObject(appState)
+            }
             // Hitting the credit wall now routes to the paywall's preference
             // survey (see the "See plans" alert button) — no separate feedback
             // sheet at depletion.
@@ -1504,9 +1509,12 @@ struct ConversationView: View {
                                 // a fade from clear left an empty beat between
                                 // the two — a blink every reply (2026-10-15).
                                 // Its words already fade in one by one.
-                                .transition(turn.role == .fluentSelf
-                                    ? AnyTransition.identity
-                                    : AnyTransition.opacity.combined(with: .move(edge: .bottom)))
+                                // The learner's line is the same case: it
+                                // replaces the live bubble that was showing
+                                // those words, which leaves at once, so a
+                                // fade + slide in made the sentence vanish
+                                // and come back on every turn (2026-10-24).
+                                .transition(.identity)
                         }
                     }
                     if RealtimeMode.isEnabled {
@@ -2664,6 +2672,10 @@ struct ConversationView: View {
         // a conversation. No-op after the first answer, and whenever no
         // Bluetooth device is connected.
         await askMicChoiceIfNeeded()
+        // Once per install, before the very first call: level, speed, coach
+        // mode, Send (`FirstCallSetupSheet`). Before the opener is written,
+        // so the level and coach mode it sets shape this call's prompt.
+        await askFirstCallSetupIfNeeded()
         sessionPauseFloor = max(sessionPauseFloor, Self.rememberedPauseFloor())
         phase = .thinking
         // The opener plays before any mic session exists — arm the call's
@@ -3179,6 +3191,22 @@ struct ConversationView: View {
     private func resumeAfterMicChoice() {
         micChoiceContinuation?.resume()
         micChoiceContinuation = nil
+    }
+
+    /// Same shape as the mic sheet: suspends until the sheet goes, and
+    /// `onDismiss` resumes whichever way it went.
+    private func askFirstCallSetupIfNeeded() async {
+        guard FirstCallSetupSheet.shouldShow() else { return }
+        FirstCallSetupSheet.markShown()
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+            firstCallSetupContinuation = cont
+            askingFirstCallSetup = true
+        }
+    }
+
+    private func resumeAfterFirstCallSetup() {
+        firstCallSetupContinuation?.resume()
+        firstCallSetupContinuation = nil
     }
 
     private func startRecording() async {
