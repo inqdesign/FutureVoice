@@ -174,6 +174,8 @@ enum TutorPlanner {
         and "I'd like" is often misheard as "I don't like"; the tutor will \
         check with them.
 
+        \(levelLadder(level))
+
         Otherwise write 3 or 4 CHALLENGES that build to the goal in order, \
         each ONE thing they must be able to say, small enough to nail in a \
         few tries at their level. The last challenge puts it together (the \
@@ -191,20 +193,29 @@ enum TutorPlanner {
         - "example": ONE natural line in \(target) that does it, at their \
           level, as they would say it about THEMSELVES — what is known \
           about them, otherwise a simple made-up fact. It is read aloud, so \
-          no brackets, no blanks, no placeholders.
+          no brackets, no blanks, no placeholders. Spoken, so ALWAYS \
+          contracted the way people talk ("I'm", "it's", "I'll", "that's", \
+          "don't") — "I will" or "it is" where a speaker would contract is \
+          written English, and they'd be practicing it wrong.
         \(about.isEmpty ? "" : "\nWhat is known about them: \(about). Context only.")
         Return STRICT JSON only:
         {"topic": true, "title": "...", "title_target": "...", \
         "challenges": [{"goal": "...", "task": "...", "example": "..."}]}
         """
-        guard let plan: Plan = try? await GeminiClient.shared.sendJSON(
-            system: system,
-            messages: [GeminiClient.Message(role: .user, content: askedWith.map {
-                "The tutor asked: \"\($0)\"\nThey answered: \"\(request)\""
-            } ?? "They picked on screen: \"\(request)\"")],
-            maxTokens: 1500, purpose: "tutor",
-            idempotencyKey: "tutor-plan:\(UUID().uuidString)", requestTimeout: 20),
-              plan.topic,
+        let content = askedWith.map {
+            "The tutor asked: \"\($0)\"\nThey answered: \"\(request)\""
+        } ?? "They picked on screen: \"\(request)\""
+        // One retry: now and then the reply is the challenge list alone
+        // instead of the object, which decodes to nothing.
+        var plan: Plan?
+        for _ in 0..<2 where plan == nil {
+            plan = try? await GeminiClient.shared.sendJSON(
+                system: system,
+                messages: [GeminiClient.Message(role: .user, content: content)],
+                maxTokens: 2000, purpose: "tutor",
+                idempotencyKey: "tutor-plan:\(UUID().uuidString)", requestTimeout: 20)
+        }
+        guard let plan, plan.topic,
               let title = plan.title?.trimmingCharacters(in: .whitespacesAndNewlines), !title.isEmpty,
               let items = plan.challenges, !items.isEmpty
         else { return nil }
@@ -259,6 +270,71 @@ enum TutorNext {
             model: .flashLite31, maxTokens: 120, purpose: "tutor",
             idempotencyKey: "tutor-next:\(UUID().uuidString)", requestTimeout: 10,
             fastThinking: true)
+    }
+}
+
+extension TutorPlanner {
+    /// What a lesson asks for at each band (2026-10-24, founder, of a
+    /// B1 and a C1 plan for "meeting someone new": "these are all A1–A2").
+    /// Told only the band's letter, the planner wrote the same lesson for
+    /// everyone — name, job, nice to meet you — a little longer at the top.
+    /// The level has to change WHAT is practiced, not the sentence length:
+    /// at B a situation means reasons and a follow-up, at C it means
+    /// managing the conversation itself.
+    static func levelLadder(_ level: CEFRLevel) -> String {
+        let band: String
+        switch level {
+        case .a1:
+            band = """
+            A1 — single facts in short set sentences. Each challenge is one \
+            thing (name, where from, one like), one sentence. Everyday words only.
+            """
+        case .a2:
+            band = """
+            A2 — simple sentences joined with and / but / because, about \
+            routine and plain needs. A challenge may be two facts in one turn, \
+            or one fact with a short reason.
+            """
+        case .b1:
+            band = """
+            B1 — connected speech, not facts. Challenges are: give a reason \
+            or a short story (how you ended up doing what you do), describe \
+            an experience or a plan, and handle what the other person asks \
+            next (answer a follow-up, ask one back that fits). Never a \
+            challenge that is just a name, a job title or "nice to meet you" \
+            — they can already say those.
+            """
+        case .b2:
+            band = """
+            B2 — real conversation work. Challenges are: explain or defend a \
+            view with reasons, compare options, talk about what you'd do if \
+            things were different, disagree politely, adjust how casual or \
+            formal you sound to the person, keep a conversation going when \
+            it stalls. Basics (name, job, greetings) are assumed, never a \
+            challenge.
+            """
+        case .c1, .c2:
+            band = """
+            \(level.rawValue.uppercased()) — managing the conversation itself, \
+            the way a socially skilled native speaker does. Challenges are: \
+            tell something about yourself as a story with a hook rather than \
+            a list, ask a follow-up that shows you listened, steer the \
+            conversation, soften or hedge (tact, diplomacy), use humor or an \
+            idiom naturally, change register mid-way, leave or redirect a \
+            conversation gracefully. Examples sound like a fluent native \
+            speaker, idiomatic. Basics are assumed and never a challenge.
+            """
+        }
+        let beyond = [.a1, .a2].contains(level) ? "" : """
+
+        An everyday transaction (ordering, buying, booking, asking the way) \
+        done plainly is A-level, whatever details are added. At this level \
+        the lesson is what goes beyond it or goes wrong: the order comes out \
+        wrong and has to be fixed politely, something is sold out and you \
+        choose instead, a special need explained (an allergy, a change), a \
+        complaint, a bit of real small talk with the person serving you.
+        """
+        return "WHAT THIS LEVEL PRACTICES — the challenges must fit this, not a level below:\n" + band + beyond
     }
 }
 

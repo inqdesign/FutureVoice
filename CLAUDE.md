@@ -2832,7 +2832,15 @@ that back. `TutorLesson.swift`, `TutorLessonViews.swift`,
   `TutorPlanner` (default model, `purpose: "tutor"`) writes 3–4 challenges,
   the last one putting it all together, or `topic: false` for "I don't
   know". Examples are read aloud, so no brackets (the spoken gate cuts a
-  reply at `[`).
+  reply at `[`), and always contracted ("I'm", "I'll").
+- **The level changes WHAT is practiced** (`TutorPlanner.levelLadder`).
+  Told only the band's letter, the planner wrote the same A2 lesson at B1
+  and C1 (name, job, nice to meet you — founder: "these are all A1–A2").
+  Now: A1 one fact per sentence · A2 two facts / a reason · B1 reasons,
+  stories, a follow-up · B2 views, comparing, keeping it going · C1/C2
+  managing the conversation (a hook, listening follow-ups, tact, humor).
+  From B1 up a plain transaction is A-level, so the lesson is what goes
+  wrong or beyond it (wrong order, sold out, no receipt, small talk).
 - **The TICK is the app's, never the tutor's.** Clean = the per-turn
   correction call returned no fixes AND `TutorJudge` (flash-lite) says the
   line did the challenge. The block is resent on every tick (`set.system`);
