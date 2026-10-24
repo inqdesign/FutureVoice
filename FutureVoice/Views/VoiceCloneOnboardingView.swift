@@ -458,6 +458,21 @@ struct VoiceCloneOnboardingView: View {
                     .frame(width: orbSize, height: orbSize)
                     .clipShape(Circle())
                     .overlay(Circle().strokeBorder(Color(.separator).opacity(0.5), lineWidth: 0.5))
+                    // Says the orb is the replay (founder, 2026-10-24); gone
+                    // while it speaks, when the orb itself is moving.
+                    .overlay {
+                        // On the meet act whatever the greeting's state: the
+                        // take lands within seconds, and an icon that pops
+                        // in when it does reads as the screen changing.
+                        if status == .meet && !player.isPlaying {
+                            Image(systemName: "play.fill")
+                                .font(.system(size: orbSize * 0.24))
+                                .foregroundStyle(.tint)
+                                .allowsHitTesting(false)
+                                .transition(.opacity)
+                        }
+                    }
+                    .animation(.easeInOut(duration: 0.2), value: player.isPlaying)
                     // On the meet act the orb IS the fluent self, so tapping
                     // it is how the greeting is heard again — the one replay
                     // there is, now that the arrival line plays once and
@@ -472,11 +487,33 @@ struct VoiceCloneOnboardingView: View {
             }
             .frame(width: orbSize + 14, height: orbSize + 14)
 
-            Text(timerLine)
-                .geistPixel(16)
-                .foregroundStyle(timerColor)
-                .opacity(timerLine.isEmpty ? 0 : 1)
+            if status == .meet, !usingPreset {
+                // Right under the orb it judges (founder, 2026-10-24): down
+                // in the content it sat below speed and accent, a screen's
+                // worth from the voice it is about, over an empty gap here.
+                // Opens the A/B, not the re-record dialog. Asking "record
+                // again?" here made the learner rule on a likeness they had
+                // heard once, against a memory of their own voice — the one
+                // recording everyone finds strange. The comparison answers it
+                // in ten seconds, and the re-record decision lives inside it.
+                Button {
+                    player.stop()
+                    // How many doubt the clone at all — the rerecord that may
+                    // follow is `voice_compare_rerecord`.
+                    Analytics.capture("voice_mismatch_tapped", ["from": "meet"])
+                    comparingVoice = true
+                } label: {
+                    Label("Doesn't sound like you?", systemImage: "waveform")
+                        .font(.footnote)
+                }
                 .frame(height: 20)
+            } else {
+                Text(timerLine)
+                    .geistPixel(16)
+                    .foregroundStyle(timerColor)
+                    .opacity(timerLine.isEmpty ? 0 : 1)
+                    .frame(height: 20)
+            }
         }
     }
 
@@ -1070,7 +1107,10 @@ struct VoiceCloneOnboardingView: View {
             stepHeader(explain("It's you — fluent."),
                        explain("Pick how your fluent self looks and sounds."))
 
-            HStack(spacing: 14) {
+            // Fixed-width cells, centred: stretched to the screen's edges
+            // the row read as six loose dots with no margin (founder,
+            // 2026-10-24) — it now sits inside the same inset as the pills.
+            HStack(spacing: 6) {
                 ForEach(FutureselfTheme.allCases) { theme in
                     let selected = storedTheme == theme.rawValue
                     Button { pick(theme) } label: {
@@ -1091,7 +1131,7 @@ struct VoiceCloneOnboardingView: View {
                         // the swatch doesn't hit-test (`Futureself`), so with
                         // the shape outside only the name and the rim took a
                         // tap, and a tap on the colour itself was lost.
-                        .frame(maxWidth: .infinity, minHeight: 70)
+                        .frame(width: 52, height: 70)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -1102,31 +1142,10 @@ struct VoiceCloneOnboardingView: View {
 
             speedSection
 
-            // The accent and the likeness check are about the CLONE; a preset
-            // already speaks the language natively and is nobody's likeness.
-            if !usingPreset {
-            accentSection
-
-            VStack(spacing: 14) {
-                // The verdict belongs here, not one screen earlier: at review
-                // they judged their own raw take, here they judge the CLONE.
-                // "It doesn't sound like me" with no way back is the one exit
-                // this act can't afford.
-                // Opens the A/B, not the re-record dialog. Asking "record
-                // again?" here made the learner rule on a likeness they had
-                // heard once, against a memory of their own voice — the one
-                // recording everyone finds strange. The comparison answers it
-                // in ten seconds, and the re-record decision lives inside it.
-                Button {
-                    player.stop()
-                    comparingVoice = true
-                } label: {
-                    Label("Doesn't sound like you?", systemImage: "waveform")
-                        .font(.footnote)
-                }
-
-            }
-            }
+            // The accent and the likeness check (under the orb) are about
+            // the CLONE; a preset already speaks the language natively and is
+            // nobody's likeness.
+            if !usingPreset { accentSection }
 
             // The code they typed on the Welcome screen actually landed. Said
             // once, here, on the last screen before the first call: the grant
@@ -1177,20 +1196,6 @@ struct VoiceCloneOnboardingView: View {
                     speedPill(speed)
                 }
             }
-            // What they are about to hear. Material, so the target language.
-            Text(paceLine)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-            // Neither pick on this screen is final, and saying so is what
-            // keeps the act a moment rather than a decision: the colour lives
-            // in Me → Appearance and the speed in Me → Voice, so the line
-            // names "settings" and not a path that would be wrong for one of
-            // them.
-            Text("You can change both later in settings.")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
-                .multilineTextAlignment(.center)
         }
         // The pills are full-width buttons, so the row needs the act's own
         // gutter or they run to the screen edges.
@@ -1525,6 +1530,16 @@ struct VoiceCloneOnboardingView: View {
                 }
 
             case .meet:
+                // Neither pick on this screen is final, and saying so is what
+                // keeps the act a moment rather than a decision: the colour
+                // lives in Me → Appearance and the speed in Me → Voice, so the
+                // line names "settings" and not a path that would be wrong
+                // for one of them. Over the button that settles the screen
+                // (founder, 2026-10-24), not under the speed pills.
+                Text("You can change both later in settings.")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
                 // Two exits, one button. With an account behind the session
                 // this is onboarding's last tap, straight into the first call;
                 // on the anonymous session it hands over to the sign-up, which
@@ -1840,7 +1855,9 @@ struct VoiceCloneOnboardingView: View {
                 get: { appState.fluentSelfPresetId == nil ? "" : preset.id },
                 set: { selectVoice($0.isEmpty ? nil : $0) })) {
                 Text("My voice").tag("")
-                Text(explain("\(preset.displayName) · similar voice")).tag(preset.id)
+                // No name: it doesn't fit beside "My voice" in every
+                // language (founder, 2026-10-24).
+                Text("Similar voice").tag(preset.id)
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, 24)

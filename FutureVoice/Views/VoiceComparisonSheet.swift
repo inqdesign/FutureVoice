@@ -137,21 +137,19 @@ struct VoiceComparisonSheet: View {
 
     private var verdictSection: some View {
         Section {
-            Button {
-                stopAll()
-                dismiss()
-            } label: {
-                Label("It's me — keep it", systemImage: "checkmark")
-            }
+            // One exit only (founder, 2026-10-24): keeping the voice is
+            // what Done already does, so a "keep it" row was the same answer
+            // twice.
             Button(role: .destructive) {
                 stopAll()
+                Analytics.capture("voice_compare_rerecord")
                 // Dismiss first: the caller walks this screen back to the
                 // script step, and a sheet still up over that transition
                 // leaves the learner tapping through a stale comparison.
                 dismiss()
                 onRerecord()
             } label: {
-                Label("Not me — record again", systemImage: "mic.fill")
+                Label("Record again", systemImage: "mic.fill")
             }
             // A re-record is the learner's one change for 30 days; with none
             // left the button would lead to a minute of reading and a refusal.

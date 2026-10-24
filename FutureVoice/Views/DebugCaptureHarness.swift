@@ -1073,6 +1073,12 @@ enum DebugCapture {
                     }
                 }
             })
+        case "first-call-setup":
+            // The before-first-call sheet (`FirstCallSetupSheet`), on A2.
+            once("first-call-setup") { appState.proficiency = .a2 }
+            return AnyView(Color(.systemGroupedBackground).sheet(isPresented: .constant(true)) {
+                FirstCallSetupSheet().environmentObject(appState)
+            })
         case "first-call-check", "first-call-check-hard":
             // The after-first-call sheet (`FirstCallCheckSheet`), on A2.
             once("first-call-check") { appState.proficiency = .a2 }
