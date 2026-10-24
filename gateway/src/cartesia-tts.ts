@@ -17,6 +17,8 @@
 // it are done, so the line always plays in order.
 
 /** What a call hears back from its voice. */
+import { speakableSymbols } from "./spoken-symbols"
+
 export interface TTSCallbacks {
   /** PCM audio for a context. */
   onAudio(contextId: string, pcm: Uint8Array): void
@@ -286,7 +288,7 @@ export class CartesiaTTS {
       this.sentenceLine.set(id, contextId)
       // As written: Cartesia's "!" is only +0.6–1.7 dB (measured
       // 2026-10-12, en/de/ko/ja), so nothing is calmed here.
-      this.ws?.send(JSON.stringify(this.request(id, text.trim())))
+      this.ws?.send(JSON.stringify(this.request(id, speakableSymbols(text.trim()))))
     })
   }
 

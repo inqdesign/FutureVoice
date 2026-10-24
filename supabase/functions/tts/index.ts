@@ -16,6 +16,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
 import { restoreCharacters } from "../_shared/calm-exclamations.ts"
+import { speakableSymbols } from "../_shared/spoken-symbols.ts"
 import { isPresetSlot, presetVoice } from "../_shared/preset-voices.ts"
 import { foreignVoice } from "../_shared/voice-copies.ts"
 import * as cartesia from "../_shared/cartesia.ts"
@@ -381,8 +382,9 @@ Deno.serve(async (req) => {
   const voiceId = presetVoice(body.voice_id, language) ?? foreignVoice(body.voice_id, language) ?? body.voice_id
   return await noteVoiceoverSeconds(isVoiceover, user.id, body.voiceover_key, await speakOnCartesia({
     // Cartesia gets the line as written: its "!" is +0.6–1.7 dB, not a
-    // shout (measured 2026-10-12, en/de/ko/ja).
-    voiceId, text: body.text, originalText: body.text, language,
+    // shout (measured 2026-10-12, en/de/ko/ja). A slash between words is
+    // the one thing changed — it is read out as "slash" (spoken-symbols.ts).
+    voiceId, text: speakableSymbols(body.text), originalText: body.text, language,
     speed: body.speed, timestamped, streaming, streamFormats: body.stream_formats,
     onFail: async (status: number) => {
       if (ch.ok && ch.charged > 0) {
