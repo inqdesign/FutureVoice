@@ -495,7 +495,7 @@ struct ConversationHome: View {
             language: appState.targetLanguage,
             personaName: appState.persona?.displayName,
             proficiency: appState.proficiency,
-            voiceId: appState.voiceCloneId,
+            voiceId: appState.speakingVoiceId,
             firstMeeting: appState.persona?.metAt == nil)
     }
 

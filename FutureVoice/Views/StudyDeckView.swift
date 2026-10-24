@@ -620,7 +620,7 @@ struct StudyDeckView: View {
 
             if showHint {
                 if revealed {
-                    if appState.voiceCloneId != nil {
+                    if appState.speakingVoiceId != nil {
                         HStack(spacing: 8) {
                             pillButton(systemImage: loadingAudio ? nil : "speaker.wave.2.fill",
                                        text: loadingAudio ? "Loading…" : "Hear it",
@@ -740,7 +740,7 @@ struct StudyDeckView: View {
     /// same word never bills TTS twice (same rule as the word/expression
     /// cards' pronounce buttons).
     private func speak(_ text: String) async {
-        guard let voiceId = appState.voiceCloneId else { return }
+        guard let voiceId = appState.speakingVoiceId else { return }
         if let data = PhraseAudioStore.shared.data(text: text, voiceId: voiceId) {
             try? player.play(data, forceSessionReset: true)
             return

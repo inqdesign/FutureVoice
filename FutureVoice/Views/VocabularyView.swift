@@ -511,7 +511,7 @@ struct WordCard: View {
                         .lineLimit(1)
                 }
                 Spacer(minLength: 0)
-                if appState.voiceCloneId != nil { pronounceButton }
+                if appState.speakingVoiceId != nil { pronounceButton }
             }
             peekMeaning
             Spacer(minLength: 0)
@@ -569,7 +569,7 @@ struct WordCard: View {
                             .font(.subheadline).foregroundStyle(.secondary)
                     }
                     Spacer(minLength: 0)
-                    if appState.voiceCloneId != nil { pronounceButton }
+                    if appState.speakingVoiceId != nil { pronounceButton }
                 }
 
                 section("Meaning") {
@@ -698,7 +698,7 @@ struct WordCard: View {
     }
 
     private func speakWord() async {
-        guard let voiceId = appState.voiceCloneId else { return }
+        guard let voiceId = appState.speakingVoiceId else { return }
         // Reuse cached audio so we never re-bill TTS for the same word.
         if let data = PhraseAudioStore.shared.data(text: word, voiceId: voiceId) {
             try? player.play(data, forceSessionReset: true)

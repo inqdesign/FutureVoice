@@ -725,7 +725,7 @@ struct ConversationView: View {
     /// voice — the partner is the stranger, not the fluent self. Everything
     /// else keeps the user's clone.
     private var activeVoiceId: String? {
-        counterpart?.voicePresetId ?? appState.voiceCloneId
+        counterpart?.voicePresetId ?? appState.speakingVoiceId
     }
 
     private let userId = ProfileStore.localUserId

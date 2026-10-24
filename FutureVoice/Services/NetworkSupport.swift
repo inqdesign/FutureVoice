@@ -67,6 +67,12 @@ enum Telemetry {
             "speed_rung": SpeechSpeed.current.rawValue,
             "speed_picked": defaults.string(forKey: SpeechSpeed.key) == nil ? "0" : "1",
             "coach": CoachMode.isOn ? "on" : "off",
+            // Which voice the fluent self speaks in (2026-10-24): the
+            // learner's clone, a preset they chose over it, or the stand-in
+            // while their clone is queued. On every event, so talk time,
+            // scenes and retention split by voice without a join.
+            "voice": defaults.string(forKey: "futurevoice.fluentSelfPreset") != nil ? "preset"
+                : defaults.bool(forKey: "futurevoice.voiceIsStandIn") ? "standin" : "own",
         ]
     }
 

@@ -187,7 +187,7 @@ struct ScenePlayerSheet: View {
         // the page never appears, and nothing would load.
         .task {
             tracks = SceneLibrary.tracks(scenarios: ScenarioStore.shared.load(),
-                                         cloneId: appState.voiceCloneId)
+                                         cloneId: appState.speakingVoiceId)
             loaded = true
             shows = await NewsShow.episodes(language: appState.targetLanguage)
             // A list left paused carries on where it stopped.

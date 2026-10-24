@@ -398,7 +398,7 @@ struct ExpressionCard: View {
                         }
                     }
                     Spacer(minLength: 0)
-                    if appState.voiceCloneId != nil { pronounceButton }
+                    if appState.speakingVoiceId != nil { pronounceButton }
                 }
 
                 if let c = context, !c.note.isEmpty || !(c.example ?? "").isEmpty {
@@ -708,7 +708,7 @@ struct ExpressionCard: View {
     }
 
     private func speakPhrase() async {
-        guard let voiceId = appState.voiceCloneId else { return }
+        guard let voiceId = appState.speakingVoiceId else { return }
         if let data = PhraseAudioStore.shared.data(text: phrase, voiceId: voiceId) {
             try? player.play(data, forceSessionReset: true)
             return

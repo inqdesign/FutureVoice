@@ -40,7 +40,13 @@ skips every step it has a flag for.
 1. Welcome → setup (`SetupFlowView`: languages, level, why you're learning)
 2. Persona cards (`PersonaIntakeView`)
 3. The voice (`VoiceCloneOnboardingView`: record, hear it, pick the pace;
-   the account is made here)
+   the account is made here). The meet act opens on a choice: **My voice |
+   <preset> · similar voice** (2026-10-24, founder) — the preset is the one
+   nearest the recording's pitch, same gender (`VoicePitch`, on the phone).
+   A pick is `AppState.fluentSelfPresetId`; the clone stays in
+   `voiceCloneId` and everything the fluent self says reads
+   `speakingVoiceId`. Me → Voice switches it later. Tracked as
+   `fluent_self_voice_chosen` and the `voice` field on every event.
 4. "Your practice stays on your phone" (`LocalDataOnboardingView`) — all of
    it is on this device only, nothing on our servers, it goes with the app;
    a copy can live in the learner's own iCloud (Android: Google Drive)

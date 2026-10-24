@@ -857,7 +857,21 @@ struct MeTab: View {
                         subtitle: explain("Pick who you practice with"))
                 }
             }
-            if appState.voiceCloneId != nil, !appState.voiceIsStandIn,
+            // The clone or a preset, chosen first on the meet act (2026-10-24).
+            // Switching keeps the clone; the accent row below is the clone's.
+            if appState.voiceCloneId != nil, !appState.voiceIsStandIn {
+                Picker(selection: Binding(
+                    get: { appState.fluentSelfPresetId ?? "" },
+                    set: { appState.chooseFluentSelfVoice($0.isEmpty ? nil : $0, source: "settings") })) {
+                    Text("My voice").tag("")
+                    ForEach(VoicePreset.catalog) { preset in
+                        Text(preset.displayName).tag(preset.id)
+                    }
+                } label: {
+                    Label("Fluent self's voice", systemImage: "person.wave.2.fill")
+                }
+            }
+            if appState.voiceCloneId != nil, !appState.voiceIsStandIn, appState.fluentSelfPresetId == nil,
                !VoiceAccentCatalog.options(for: appState.targetLanguage).isEmpty {
                 let applied = VoiceAccentCatalog.options(for: appState.targetLanguage)
                     .first { $0.id == appState.voiceAccentId }

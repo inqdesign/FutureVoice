@@ -928,7 +928,7 @@ struct RootTabView: View {
             await FreeTalkOpeners.shared.warmAudio(
                 language: appState.targetLanguage,
                 personaName: appState.persona?.displayName,
-                voiceId: appState.voiceCloneId)
+                voiceId: appState.speakingVoiceId)
         }
     }
 }

@@ -335,7 +335,7 @@ struct WeeklyTestView: View {
                 Text(item.answer)
                     .font(.title3.weight(.medium))
                     .fixedSize(horizontal: false, vertical: true)
-                if outcome == nil, appState.voiceCloneId != nil {
+                if outcome == nil, appState.speakingVoiceId != nil {
                     Button {
                         Task { await hearLine(item) }
                     } label: {
@@ -1298,7 +1298,7 @@ struct WeeklyTestView: View {
     /// its audio has the neighbouring sentences in it.
     private func hearLine(_ item: WeeklyTestItem) async {
         if player.isPlaying { player.stop(); return }
-        guard let voiceId = appState.voiceCloneId else { return }
+        guard let voiceId = appState.speakingVoiceId else { return }
         // The saved file is only the line when the turn IS the line. Items
         // minted before sentence ids existed carry the whole turn's id, and
         // its file has the neighbouring sentences in it — so the text is

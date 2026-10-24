@@ -121,7 +121,8 @@ extension Analytics {
             "target_language": state.targetLanguage,
             "native_language": state.nativeLanguage,
             "level": state.proficiency.rawValue,
-            "app_language": LanguageCatalog.currentNative
+            "app_language": LanguageCatalog.currentNative,
+            "fluent_self_voice": Telemetry.callSettings()["voice"] ?? "own"
         ]
         let signature = props.keys.sorted().map { "\($0)=\(props[$0] ?? "")" }.joined(separator: "|")
         guard signature != UserDefaults.standard.string(forKey: personSignatureKey) else { return }

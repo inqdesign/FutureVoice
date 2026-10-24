@@ -267,7 +267,7 @@ struct DrillEnrichmentSheet: View {
     }
 
     private func playExample(idx: Int, text: String) async {
-        guard let voiceId = appState.voiceCloneId else { return }
+        guard let voiceId = appState.speakingVoiceId else { return }
         if let cached = PhraseAudioStore.shared.data(text: text, voiceId: voiceId) {
             playingExample = idx
             do {

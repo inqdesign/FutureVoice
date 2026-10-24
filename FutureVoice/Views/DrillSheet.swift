@@ -1331,7 +1331,7 @@ private extension DrillView {
     }
 
     private func playTarget(_ card: DrillCard) async {
-        guard let voiceId = appState.voiceCloneId else { return }
+        guard let voiceId = appState.speakingVoiceId else { return }
         // Force-reset keeps playback loud even if another surface left the
         // audio session in .measurement mode (same fix as ShadowDrillView).
         playingTurnId = nil

@@ -140,7 +140,18 @@ struct VoiceCloneOnboardingView: View {
         }
     }
 
-    private var meetVoiceKey: String { appState.voiceCloneId ?? "" }
+    private var meetVoiceKey: String { appState.speakingVoiceId ?? "" }
+
+    /// The preset offered beside the clone (2026-10-24): same gender as the
+    /// recording, nearest in pitch (`VoicePitch`). Nil until measured, and
+    /// the segment waits for it rather than offering a guess first.
+    @State private var offeredPreset: VoicePreset?
+    @State private var ownPitchHz: Double?
+    /// How many times the learner flipped between the two — "compared"
+    /// versus "took the first thing they heard".
+    @State private var voiceSwitches = 0
+    @State private var measuringPitch = false
+    private var usingPreset: Bool { appState.fluentSelfPresetId != nil }
     private var greetingData: Data? { greetingTakes[meetVoiceKey] }
     private var paceTakes: [SpeechSpeed: Data] { paceTakesByVoice[meetVoiceKey] ?? [:] }
     /// The rung being waited on, so the pill can say so rather than looking
@@ -429,6 +440,8 @@ struct VoiceCloneOnboardingView: View {
                 .id(stageTitle)
                 .transition(.opacity)
 
+            if status == .meet { voiceSegment }
+
             ZStack {
                 // Recording ring — present only while it means something.
                 Circle()
@@ -471,6 +484,9 @@ struct VoiceCloneOnboardingView: View {
     /// the being steps aside while you rehearse.
     private var orbSize: CGFloat {
         if status == .script { return isShortScreen ? 56 : 72 }
+        // The voice choice sits above the orb on the meet act; the orb gives
+        // it the room so speed and accent still fit on the first screen.
+        if status == .meet { return isShortScreen ? 96 : 136 }
         return isShortScreen ? 112 : 168
     }
 
@@ -1086,6 +1102,9 @@ struct VoiceCloneOnboardingView: View {
 
             speedSection
 
+            // The accent and the likeness check are about the CLONE; a preset
+            // already speaks the language natively and is nobody's likeness.
+            if !usingPreset {
             accentSection
 
             VStack(spacing: 14) {
@@ -1106,6 +1125,7 @@ struct VoiceCloneOnboardingView: View {
                         .font(.footnote)
                 }
 
+            }
             }
 
             // The code they typed on the Welcome screen actually landed. Said
@@ -1752,6 +1772,9 @@ struct VoiceCloneOnboardingView: View {
         // Keep the original so the clone can be regenerated later without
         // recording again (Settings → Voice).
         VoiceSampleStore.shared.save(from: url)
+        // Measured while the clone is made, so the meet act's voice choice
+        // is ready when it opens.
+        if !fromSettings { measureOfferedPreset() }
         Task {
             do {
                 try await appState.regenerateVoiceClone(fromSampleAt: url,
@@ -1806,10 +1829,70 @@ struct VoiceCloneOnboardingView: View {
         }
     }
 
+    /// Which voice the fluent self speaks in — the clone, or the preset
+    /// nearest it — as the FIRST choice on the act (2026-10-24, founder: the
+    /// speed and accent below depend on it, so it goes on top). Both sides
+    /// speak the greeting when picked; the clone is selected on arrival.
+    @ViewBuilder
+    private var voiceSegment: some View {
+        if let preset = offeredPreset {
+            Picker("Voice", selection: Binding(
+                get: { appState.fluentSelfPresetId == nil ? "" : preset.id },
+                set: { selectVoice($0.isEmpty ? nil : $0) })) {
+                Text("My voice").tag("")
+                Text(explain("\(preset.displayName) · similar voice")).tag(preset.id)
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 24)
+            .disabled(applyingAccentId != nil || removingAccent)
+            .transition(.opacity)
+        } else {
+            // Holds the row while the pitch is measured, so the orb doesn't
+            // jump down when the segment arrives.
+            Color.clear.frame(height: 32)
+        }
+    }
+
+    private func selectVoice(_ presetId: String?) {
+        guard presetId != appState.fluentSelfPresetId else { return }
+        HapticEngine.light()
+        voiceSwitches += 1
+        appState.fluentSelfPresetId = presetId
+        player.stop()
+        refreshGreetingForNewVoice()
+    }
+
+    /// Measure the recording once and pick the preset to offer. Off the main
+    /// thread: it reads up to 12 s of audio plus two bundled previews.
+    private func measureOfferedPreset() {
+        guard offeredPreset == nil, !measuringPitch else { return }
+        measuringPitch = true
+        let language = appState.targetLanguage
+        let sample = VoiceSampleStore.shared.url
+        Task {
+            let result: (VoicePreset, Double?) = await Task.detached(priority: .userInitiated) {
+                let own = sample.flatMap { VoicePitch.medianF0(url: $0) }
+                let preset = own.flatMap { VoicePitch.closestPreset(toPitch: $0, language: language) }
+                // No recording to measure (a debug preview, a lost file):
+                // offer the first preset rather than no choice at all.
+                return (preset ?? VoicePreset.catalog[0], own)
+            }.value
+            measuringPitch = false
+            ownPitchHz = result.1
+            withAnimation(.easeInOut(duration: 0.2)) { offeredPreset = result.0 }
+            // A preset kept from an earlier pass that isn't the one offered
+            // now would have no segment to show it: back to the clone.
+            if let kept = appState.fluentSelfPresetId, kept != result.0.id {
+                appState.fluentSelfPresetId = nil
+            }
+        }
+    }
+
     /// Entry bloom for the meet act: a full-level burst (the smoother's slow
     /// release handles the exhale), then the greeting takes over the orb.
     private func openMeet() {
         meetBurst = true
+        measureOfferedPreset()
         let ask = MeetSound.greeting(voice: meetVoiceKey)
         meetAsk = ask
         Task { @MainActor in
@@ -1851,7 +1934,7 @@ struct VoiceCloneOnboardingView: View {
     /// that voice was heard before, synthesized once otherwise. Played here,
     /// and only here: the voice itself changed, so this is a first hearing.
     private func refreshGreetingForNewVoice() {
-        guard let voiceId = appState.voiceCloneId else { return }
+        guard let voiceId = appState.speakingVoiceId else { return }
         meetAsk = .greeting(voice: voiceId)
         if greetingTakes[voiceId] != nil {
             playGreeting()
@@ -1871,7 +1954,7 @@ struct VoiceCloneOnboardingView: View {
             meetInFlight.remove(sound.key)
             guard let data else { return }
             greetingTakes[voiceId] = data
-            guard meetAsk == sound, appState.voiceCloneId == voiceId else { return }
+            guard meetAsk == sound, appState.speakingVoiceId == voiceId else { return }
             playGreeting()
         }
     }
@@ -1907,12 +1990,12 @@ struct VoiceCloneOnboardingView: View {
             try? player.play(data, forceSessionReset: true)
             // Tapping one rung is the signal that the other two are about to
             // be asked for.
-            if let voiceId = appState.voiceCloneId {
+            if let voiceId = appState.speakingVoiceId {
                 warmOtherRungs(besides: speed, voiceId: voiceId)
             }
             return
         }
-        guard let voiceId = appState.voiceCloneId else { return }
+        guard let voiceId = appState.speakingVoiceId else { return }
         // Whatever was playing is not what they asked for any more.
         player.stop()
         fetchPace(speed, voiceId: voiceId)
@@ -1935,7 +2018,7 @@ struct VoiceCloneOnboardingView: View {
             meetInFlight.remove(sound.key)
             guard let data else { return }
             paceTakesByVoice[voiceId, default: [:]][speed] = data
-            guard meetAsk == sound, appState.voiceCloneId == voiceId else { return }
+            guard meetAsk == sound, appState.speakingVoiceId == voiceId else { return }
             player.stop()
             try? player.play(data, forceSessionReset: true)
         }
@@ -1960,6 +2043,10 @@ struct VoiceCloneOnboardingView: View {
 
     private func finishMeet() {
         player.stop()
+        appState.chooseFluentSelfVoice(appState.fluentSelfPresetId, source: "meet",
+                                       recommended: offeredPreset?.id,
+                                       ownPitchHz: ownPitchHz,
+                                       extra: ["switches": voiceSwitches])
         appState.holdVoiceOnboarding = false   // RootView moves on to the tabs
         // Now that the rung is settled, bake the first call's opener at it —
         // once, instead of once at the default and again after the pick.
@@ -2123,6 +2210,7 @@ struct VoiceCloneOnboardingView: View {
         case "meet":
             status = .meet
             loadDebugMeetAudio()
+            measureOfferedPreset()
         default:          status = .intro
         }
         #endif

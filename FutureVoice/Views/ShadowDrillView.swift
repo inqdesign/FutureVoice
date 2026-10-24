@@ -1474,7 +1474,7 @@ struct ShadowDrillView: View {
               !timings.contains(where: \.isMeasured),
               let url = cachedAudioURL,
               FileManager.default.fileExists(atPath: url.path),
-              let voiceId = appState.voiceCloneId else { return }
+              let voiceId = appState.speakingVoiceId else { return }
         recoveryRearmed = true
         recoverTask = Task {
             // A beat before the recognizer opens: a retry tapped straight
@@ -1714,7 +1714,7 @@ struct ShadowDrillView: View {
             return
         }
         #endif
-        guard let voiceId = appState.voiceCloneId else {
+        guard let voiceId = appState.speakingVoiceId else {
             self.error = explain("No voice clone yet — record yours under Me → Re-record voice.")
             return
         }

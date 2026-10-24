@@ -377,7 +377,7 @@ struct WatchView: View {
         return SpeechRequest(
             text: turn.text,
             voiceId: turn.speaker == .user
-                ? (appState.voiceCloneId ?? "")
+                ? (appState.speakingVoiceId ?? "")
                 : counterpart.voicePresetId
         )
     }
@@ -720,7 +720,7 @@ struct WatchView: View {
     /// prepareAudio will lazily fetch from PhraseAudioStore using that voice.
     private func asTurn(_ d: DialogueEngine.Turn) -> Turn {
         let voiceId = d.speaker == .user
-            ? (appState.voiceCloneId ?? "")
+            ? (appState.speakingVoiceId ?? "")
             : counterpart.voicePresetId
         // We piggy-back on PhraseAudioStore content-hash caching by writing
         // a placeholder turn with audioURL nil. ShadowDrillView will resolve.

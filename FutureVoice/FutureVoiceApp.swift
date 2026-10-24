@@ -338,6 +338,55 @@ final class AppState: ObservableObject {
             }
         }
     }
+    /// A preset the learner CHOSE for their fluent self over their own clone
+    /// (2026-10-24, founder: some people don't want to hear their own voice).
+    /// The clone stays in `voiceCloneId` — made, owned and kept — so going
+    /// back is one tap, and nothing that manages the clone (restore, accent,
+    /// parking, re-record) has to know about this. Everything that SPEAKS as
+    /// the fluent self reads `speakingVoiceId`. Not the stand-in: that is the
+    /// app's preset while no clone can be made, this is the learner's pick.
+    @Published var fluentSelfPresetId: String? {
+        didSet { UserDefaults.standard.set(fluentSelfPresetId, forKey: Self.fluentSelfPresetKey) }
+    }
+    private static let fluentSelfPresetKey = "futurevoice.fluentSelfPreset"
+
+    /// Pick the fluent self's voice: a preset, or nil for the learner's own.
+    /// `source` (meet · settings) and `recommended` (the preset the meet act
+    /// offered) ride on the event, so "did they take what we offered" and
+    /// "where did they switch" are both answerable.
+    func chooseFluentSelfVoice(_ presetId: String?, source: String,
+                               recommended: String? = nil, ownPitchHz: Double? = nil,
+                               extra: [String: Any] = [:]) {
+        let id = presetId.flatMap { VoicePreset.known(id: $0)?.id }
+        let changed = id != fluentSelfPresetId
+        fluentSelfPresetId = id
+        var props: [String: Any] = ["choice": id == nil ? "own" : "preset",
+                                    "source": source,
+                                    "changed": changed,
+                                    "language": targetLanguage]
+        if let id { props["preset"] = VoicePreset.by(id: id).englishName }
+        if let recommended {
+            props["recommended"] = VoicePreset.by(id: recommended).englishName
+            props["took_recommended"] = id == recommended
+        }
+        if let ownPitchHz { props["own_pitch_hz"] = Int(ownPitchHz) }
+        Analytics.capture("fluent_self_voice_chosen", props.merging(extra) { a, _ in a })
+        Analytics.notePerson(self)
+        // Openers and the next voicemail are keyed to the voice: re-made in
+        // the one picked. The meet act warms its own openers on the way out.
+        if changed, source != "meet" {
+            warmFreeTalkOpeners()
+            refreshDailyCall(force: true)
+        }
+    }
+
+    /// The voice the fluent self speaks in: the chosen preset, else the clone
+    /// (or the stand-in while the clone is queued). Nil only with no voice.
+    var speakingVoiceId: String? {
+        guard voiceCloneId != nil else { return nil }
+        return fluentSelfPresetId ?? voiceCloneId
+    }
+
     /// When the anonymous user holding the current voice was created — nil once
     /// a real account owns it. `cleanup-anonymous-voices` deletes an unclaimed
     /// anonymous user AND its clone `reclaimGraceMinutes` after creation, so a
@@ -641,6 +690,8 @@ final class AppState: ObservableObject {
         voiceIsStandIn = UserDefaults.standard.bool(forKey: Self.voiceIsStandInKey)
         voiceQueuedUntil = UserDefaults.standard.object(forKey: Self.voiceQueuedUntilKey) as? Date
         voiceCloneId = UserDefaults.standard.string(forKey: Self.voiceCloneIdKey)
+        fluentSelfPresetId = UserDefaults.standard.string(forKey: Self.fluentSelfPresetKey)
+            .flatMap { VoicePreset.known(id: $0)?.id }
         voiceName = UserDefaults.standard.string(forKey: Self.voiceNameKey) ?? ""
         voiceAccentId = UserDefaults.standard.string(forKey: Self.voiceAccentIdKey)
         cloneScriptLanguage = UserDefaults.standard.string(forKey: Self.cloneScriptLanguageKey)
@@ -913,7 +964,7 @@ final class AppState: ObservableObject {
     func refreshDailyCall(force: Bool = false) {
         guard DailyCallStore.shared.isEnabled else { return }
         let context = voicemailContext()
-        let voiceId = voiceCloneId
+        let voiceId = speakingVoiceId
         let caller = voiceDisplayName
         Task {
             await DailyCallScheduler.refresh(context: context, voiceId: voiceId,
@@ -1709,7 +1760,7 @@ final class AppState: ObservableObject {
         let language = targetLanguage
         let personaName = persona?.displayName
         let level = proficiency
-        let voice = voiceCloneId
+        let voice = speakingVoiceId
         let unmet = persona?.metAt == nil
         Task.detached(priority: .utility) {
             await FreeTalkOpeners.shared.warmFirstCall(
