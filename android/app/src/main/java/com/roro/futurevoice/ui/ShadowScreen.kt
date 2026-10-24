@@ -594,7 +594,7 @@ private fun ShadowLineScreen(
             countdown = 0
             val goSeconds = recorder.elapsedSeconds
             HapticEngine.countdownGo(context)
-            delay(350)
+            delay(800) // a breath between the count and the line (iOS: 350 ms read as no gap)
 
             syncStartedAt = System.currentTimeMillis()
             phase = ShadowPhase.RECORDING
