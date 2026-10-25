@@ -6,8 +6,14 @@ Nouveautés
 • Quand tu crées ta voix pour la première fois, tu peux choisir une voix proche de la tienne au lieu de la tienne.
 • À « Pourquoi tu apprends ? », tu peux choisir autant de réponses que tu veux.
 • La page Voix des réglages est plus simple.
+• L’onglet Discours affiche maintenant jusqu’à 10 défis.
 
 Corrections
 • Plus de bruit avant la première réplique d’une scène.
 • Ta bulle ne disparaît plus pour réapparaître quand tu finis de parler pendant un appel.
 • Le compte à rebours du shadowing ne reste plus bloqué sur « 3 ».
+• Le minuteur de l’appel et l’anneau de l’accueil affichent maintenant le même temps de conversation.
+• Dans le test hebdo, corriger seulement la partie soulignée compte maintenant comme une bonne réponse, et dans les questions de traduction, la phrase et la réponse veulent enfin dire la même chose.
+• Les langues sans épisodes de podcast n’affichent plus d’onglet Podcast vide.
+• L’aperçu de ta présentation publique ne s’ouvre plus à chaque fois que tu vas dans Scènes.
+• Quand tu retires ton profil, il est maintenant retiré dans toutes les langues où tu l’as publié.

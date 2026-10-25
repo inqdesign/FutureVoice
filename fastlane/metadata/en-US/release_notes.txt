@@ -6,8 +6,14 @@ New
 • When you first make your voice, you can pick a voice that sounds like yours instead of your own.
 • Pick as many answers to "Why are you learning?" as you like.
 • The Voice page in Settings is simpler and easier to scan.
+• The Speech tab now shows up to 10 challenges.
 
 Fixed
 • Noise no longer plays before the first line of a Watch scene.
 • Your bubble no longer disappears and comes back after you finish speaking in a call.
 • The Shadowing countdown no longer hangs on "3".
+• The timer in a call and the ring on Home now show the same talk time.
+• In the weekly test, fixing just the underlined part now counts as a right answer, and translation questions now mean the same thing as their answers.
+• Languages without Podcast episodes no longer show an empty Podcast tab.
+• Your public intro preview no longer opens every time you go to Watch.
+• Taking your profile down now takes it down in every language you published it in.

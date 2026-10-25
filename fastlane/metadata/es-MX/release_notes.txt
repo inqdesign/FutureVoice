@@ -6,8 +6,14 @@ Novedades
 • Al crear tu voz por primera vez, puedes elegir una voz parecida a la tuya en lugar de la tuya.
 • En «¿Por qué aprendes?» puedes elegir todas las respuestas que quieras.
 • La página Voz de los ajustes es más sencilla.
+• La pestaña Discurso ahora muestra hasta 10 retos.
 
 Correcciones
 • Ya no suena ruido antes de la primera frase de una escena.
 • Tu burbuja ya no desaparece y vuelve a aparecer al terminar de hablar en una llamada.
 • La cuenta atrás del shadowing ya no se queda en «3».
+• El reloj de la llamada y el anillo de la pantalla principal ahora muestran el mismo tiempo de conversación.
+• En el test semanal, corregir solo la parte subrayada ya cuenta como respuesta correcta, y en las preguntas de traducción la frase y la respuesta ahora dicen lo mismo.
+• Los idiomas sin episodios de pódcast ya no muestran una pestaña de pódcast vacía.
+• La vista previa de tu presentación pública ya no aparece cada vez que entras en Escenas.
+• Al retirar tu perfil, ahora se retira en todos los idiomas en los que lo publicaste.
