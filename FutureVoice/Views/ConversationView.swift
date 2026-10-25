@@ -3003,6 +3003,7 @@ struct ConversationView: View {
             }
             didSaveCurrentSession = false
         }
+        realtime.onMeter = { seconds in meter.adoptServerCount(seconds) }
         realtime.onReplyWithdrawn = { context in
             guard let id = realtimeReplyTurns.removeValue(forKey: context) else { return }
             turns.removeAll { $0.id == id }

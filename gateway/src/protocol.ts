@@ -180,6 +180,11 @@ export type ServerMessage =
        *  `continues`. The app removes the line instead of marking it talked
        *  over. 2026-10-08; an older app ignores it. */
       reopened?: boolean }
+  /** The seconds this connection has counted toward the bill so far
+   *  (billing.ts), sent as they move. The app's call clock and its ring
+   *  show THIS number, so the clock and the receipt cannot disagree.
+   *  2026-10-25; an older app ignores it. */
+  | { type: "meter"; seconds: number }
   /** Periodic session stats (Phase 1: logged, not billed). */
   | { type: "stats"; speechSeconds: number; turns: number }
   /** The upstream session is being rotated (Gemini Live ~15 min cap);

@@ -19,6 +19,10 @@ export type WallCode = "insufficient_credits" | "daily_cap_reached"
 
 export class TalkBilling {
   private billable = 0
+  /** Every second this call has counted, sent or not — what the app's
+   *  call clock and its ring show, so the clock says what the call costs
+   *  (2026-10-25: the app counted on its own rule and the two disagreed). */
+  private counted = 0
   /** Learner speech already reported, against the session's running total —
    *  each tick carries the difference. A record beside the bill, never part
    *  of it: `seconds` is what is charged. */
@@ -46,7 +50,9 @@ export class TalkBilling {
               private isBillable: () => boolean,
               private onWall: (code: WallCode) => void,
               /** The session's running learner-speech seconds (`speechSeconds`). */
-              private speech: () => number = () => 0) {}
+              private speech: () => number = () => 0,
+              /** Called when `counted` moves (≤ once a second). */
+              private onCount: (seconds: number) => void = () => {}) {}
 
   /** Charge 1 s before the opener speaks — same trick as the classic path's
    *  preflight tick, so an empty allowance surfaces BEFORE the greeting
@@ -59,7 +65,11 @@ export class TalkBilling {
     if (this.timer !== null) return
     let sinceFlush = 0
     this.timer = setInterval(() => {
-      if (this.isBillable()) this.billable += 1
+      if (this.isBillable()) {
+        this.billable += 1
+        this.counted += 1
+        this.onCount(this.counted)
+      }
       sinceFlush += 1000
       if (sinceFlush >= TalkBilling.flushEveryMs) {
         sinceFlush = 0
@@ -71,7 +81,10 @@ export class TalkBilling {
   /** Seconds the per-second poll could not see — the learner's first
    *  answer, which runs before the gate lifts. Rides on the next flush. */
   credit(seconds: number): void {
-    if (seconds > 0) this.billable += seconds
+    if (seconds <= 0) return
+    this.billable += seconds
+    this.counted += seconds
+    this.onCount(Math.floor(this.counted))
   }
 
   /** Final flush; safe to call more than once. */

@@ -94,6 +94,21 @@ final class TalkMeter: ObservableObject {
     private var task: Task<Void, Never>?
     private var sessionKey = ""
 
+    /// The gateway's own count, once it sends one (`meter`, 2026-10-25).
+    /// The app used to count the call clock on its own rule while the ring
+    /// was rebuilt from what the gateway billed, so the clock in the call
+    /// and the ring after it disagreed. With a report the clock IS the
+    /// gateway's number and the ring is written from it; with none (an older
+    /// gateway) the local poll keeps both, as before.
+    private var serverReported = false
+    /// Gateway seconds not yet written to `TalkTimeLog` (negative while the
+    /// gateway is still catching up with what the local poll wrote).
+    private var unlogged = 0
+    /// Seconds the local poll wrote to `TalkTimeLog` this call.
+    private var localLogged = 0
+    /// Billable seconds the local poll counted but hasn't ticked yet.
+    private var live = 0.0
+
     /// Is a call being metered right now? Read by `TalkTimeLog.syncFromServer`
     /// — while this is true the ledger is still filling, so today's figure may
     /// only be raised; with no meter running the ledger is the whole day and
@@ -105,10 +120,13 @@ final class TalkMeter: ObservableObject {
         Self.isRunning = true
         sessionKey = sessionId.uuidString
         clock.reset()
+        serverReported = false
+        unlogged = 0
+        localLogged = 0
+        live = 0
         task = Task { [weak self] in
             // Preflight before the first sleep — see type comment.
             await self?.tick(seconds: 1, label: "pre")
-            var live = 0.0            // billable seconds not yet sent
             var i = 0
             var lastPoll = Date()
             while !Task.isCancelled {
@@ -117,11 +135,13 @@ final class TalkMeter: ObservableObject {
                 let now = Date()
                 let elapsed = min(now.timeIntervalSince(lastPoll), Self.maxSecondsPerPoll)
                 lastPoll = now
+                // The gateway's count has taken over — see `serverReported`.
+                guard !self.serverReported else { continue }
                 guard self.isBillable?() ?? true else { continue }
                 self.clock.add(elapsed)
-                live += elapsed
-                guard live >= Double(Self.tickSeconds) else { continue }
-                live -= Double(Self.tickSeconds)
+                self.live += elapsed
+                guard self.live >= Double(Self.tickSeconds) else { continue }
+                self.live -= Double(Self.tickSeconds)
                 await self.tick(seconds: Self.tickSeconds, label: String(i))
                 i += 1
             }
@@ -133,10 +153,49 @@ final class TalkMeter: ObservableObject {
     func stop() {
         task?.cancel()
         task = nil
+        // The last part-tick of the call. It went unwritten, so the ring
+        // read up to 29 s less than the clock. Only on the server-metered
+        // path: the gateway bills its own tail, while on the classic path
+        // these seconds were never billed and the ledger won't have them.
+        if Self.isRunning, serverMetered {
+            if serverReported {
+                logServerSeconds(flushAll: true)
+            } else if live >= 1 {
+                TalkTimeLog.add(seconds: Int(live), language: Self.spokenLanguage())
+            }
+            live = 0
+        }
         Self.isRunning = false
         // A talk block is done by these minutes; the routine widget hears
         // of them once, when the call ends, never per tick.
         StudyWidgetRefresher.schedule()
+    }
+
+    /// Seconds the gateway just counted (`RealtimeTalkClient.onMeter`).
+    /// The clock adds them, and the ring is written from them every
+    /// `tickSeconds`, plus the rest at `stop`.
+    func adoptServerCount(_ step: Int) {
+        guard serverMetered, task != nil, step > 0 else { return }
+        if !serverReported {
+            // From here the gateway's count is the call's. The local poll's
+            // figure is dropped: the clock restarts from what the gateway
+            // counted (its first report is usually the first answer,
+            // credited at its commit), and a 30 s tick the poll already
+            // wrote to the ring is taken out of what the gateway adds.
+            serverReported = true
+            clock.reset()
+            unlogged = -localLogged
+            live = 0
+        }
+        clock.add(Double(step))
+        unlogged += step
+        logServerSeconds(flushAll: false)
+    }
+
+    private func logServerSeconds(flushAll: Bool) {
+        guard unlogged > 0, flushAll || unlogged >= Self.tickSeconds else { return }
+        TalkTimeLog.add(seconds: unlogged, language: Self.spokenLanguage())
+        unlogged = 0
     }
 
     private struct TickBody: Encodable {
@@ -165,8 +224,9 @@ final class TalkMeter: ObservableObject {
         if serverMetered {
             // The gateway already charged these seconds; record them locally
             // so the ring and the day card read the same day the receipt does.
-            if countsAsTalk {
+            if countsAsTalk, !serverReported {
                 TalkTimeLog.add(seconds: seconds, language: Self.spokenLanguage())
+                localLogged += seconds
             }
             return
         }

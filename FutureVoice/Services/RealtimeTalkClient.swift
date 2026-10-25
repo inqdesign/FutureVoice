@@ -127,6 +127,12 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// gateway took their turn back and will answer it whole (2026-10-08).
     /// Its bubble goes; nothing of it is kept.
     var onReplyWithdrawn: ((String) -> Void)?
+    /// Seconds the gateway just counted toward the bill (`meter`, sent as a
+    /// running total per connection and handed on here as the step) — what
+    /// the call clock adds, so it matches the ring and the receipt.
+    var onMeter: ((Int) -> Void)?
+    /// The last `meter` total of THIS connection; a reconnect starts at 0.
+    private var meterTotal = 0
 
     /// Mic PCM since the last committed turn, at the MIC'S OWN rate — the
     /// 16 kHz uplink is transport quality, and saving it was why a learner's
@@ -506,6 +512,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         heldWallTask = nil
         lastFailureCode = nil
         warningsThisCall = 0
+        meterTotal = 0
         state = .connecting
         linesStarted = 0
         localOpener = nil
@@ -2289,6 +2296,12 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             applyInterrupted(reopened: json["reopened"] as? Bool == true)
         case "stats":
             speechSeconds = json["speechSeconds"] as? Int ?? speechSeconds
+        case "meter":
+            if let total = json["seconds"] as? Int, total > meterTotal {
+                let step = total - meterTotal
+                meterTotal = total
+                onMeter?(step)
+            }
         case "rotating":
             break   // the gateway reconnects upstream on its own
         case "warning":

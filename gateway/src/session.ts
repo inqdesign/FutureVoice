@@ -773,6 +773,7 @@ export class CallSession implements DurableObject {
         // Rides on each tick as `learner_seconds` so the ledger can say how
         // much of a billed minute was the learner's own voice.
         () => this.speechSeconds,
+        (seconds) => this.emit({ type: "meter", seconds }),
       )
       // Preflight — an empty allowance must surface BEFORE the greeting
       // speaks, not a free minute later (same rule as the classic path). It
