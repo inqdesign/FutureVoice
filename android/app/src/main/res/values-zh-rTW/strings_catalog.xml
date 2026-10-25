@@ -1743,8 +1743,9 @@
     <string name="online">"網路上"</string>
     <string name="online_shopping">"網路購物"</string>
     <string name="only_on">"只改%s"</string>
-    <!-- 'Only takes with the camera on go on the board, and your best one stands. The board shows your name and score — your video and voice stay on your phone.' -->
-    <string name="only_takes_with_the_camera_on_go_on_the_board_and_your_best_d8b2bb">"只有開著相機錄的才會上榜，留下的是你的最高分。榜上只顯示名字和分數，影片和聲音都只留在你的手機裡。"</string>
+    <!-- 'Camera-on takes that score %lld or more go on the board, and your best one stands. The board shows your name and score — your video and voice stay on your phone.' -->
+    <string name="camera_on_takes_that_score_lld_or_more_go_on_the_board">"開著相機錄、拿到%d分以上的才會上榜，留下的是你的最高分。榜上只顯示名字和分數，影片和聲音都只留在你的手機裡。"</string>
+    <string name="takes_that_score_lld_or_more_go_on_the_board">"%d分以上才會上榜。"</string>
     <!-- 'Only the call clock spends your talk minutes. Watching a scene never takes a second off them.' -->
     <string name="only_the_call_clock_spends_your_talk_minutes_watching_a_scen_d6c32d">"通話時間只有在通話時才會減少。看情境練習不會扣。"</string>
     <string name="open">"開啟"</string>

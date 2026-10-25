@@ -119,6 +119,8 @@ class SpeechChallenges private constructor(private val context: Context) {
                            val best: Int, val improved: Boolean) : Entry
         /** The camera was off — the board only takes camera takes. */
         data object CameraOff : Entry
+        /** Under [BOARD_BAR]: kept on the phone, never on the board. */
+        data object BelowBar : Entry
         data object Failed : Entry
     }
 
@@ -252,7 +254,7 @@ class SpeechChallenges private constructor(private val context: Context) {
                     val overall = com.roro.futurevoice.talk.SpeechAnalyzer.overall(m.accuracy, m.paceScore,
                         m.pauseScore, m.fillerScore, m.steadiness,
                         com.roro.futurevoice.talk.SpeechAnalyzer.coverage(diff.steps))
-                    if (overall > onBoard && overall > (best?.second ?: -1)) best = take to overall
+                    if (overall >= BOARD_BAR && overall > onBoard && overall > (best?.second ?: -1)) best = take to overall
                 }
                 best?.let { (take, overall) ->
                     submit(take, challengeId, name, overall)
@@ -277,6 +279,7 @@ class SpeechChallenges private constructor(private val context: Context) {
     fun enter(take: SpeechTake, script: SpeechScript, recordedOnCamera: Boolean) {
         val challengeId = script.challengeId ?: return
         if (!recordedOnCamera) { setEntry(take.id, Entry.CameraOff); return }
+        if (take.metrics.overall < BOARD_BAR) { setEntry(take.id, Entry.BelowBar); return }
         val name = displayName(context) ?: run { setEntry(take.id, Entry.Failed); return }
         setEntry(take.id, Entry.Submitting)
         scope.launch { submit(take, challengeId, name) }
@@ -404,6 +407,8 @@ class SpeechChallenges private constructor(private val context: Context) {
         private const val PREFS = "speech_challenge"
         private const val NAME_KEY = "speech.challenge.displayName"
         const val MAX_NAME_LENGTH = 24
+        /** The lowest score that goes on a board — iOS `boardBar`. */
+        const val BOARD_BAR = 80
 
         /** The one name a learner goes by on every board. Null until they
          *  have seen and confirmed it — nothing goes on a public board unasked. */

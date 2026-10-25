@@ -1740,8 +1740,9 @@
     <string name="online">"Por internet"</string>
     <string name="online_shopping">"Compras online"</string>
     <string name="only_on">"Solo los %s"</string>
-    <!-- 'Only takes with the camera on go on the board, and your best one stands. The board shows your name and score — your video and voice stay on your phone.' -->
-    <string name="only_takes_with_the_camera_on_go_on_the_board_and_your_best_d8b2bb">"Solo cuentan los intentos con la cámara encendida, y se queda tu mejor puntuación. En la clasificación solo se ven tu nombre y tu puntuación; la grabación no sale de tu teléfono."</string>
+    <!-- 'Camera-on takes that score %lld or more go on the board, and your best one stands. The board shows your name and score — your video and voice stay on your phone.' -->
+    <string name="camera_on_takes_that_score_lld_or_more_go_on_the_board">"Los intentos con la cámara encendida desde %d puntos entran en la clasificación, y se queda tu mejor puntuación. En la clasificación solo se ven tu nombre y tu puntuación; la grabación no sale de tu teléfono."</string>
+    <string name="takes_that_score_lld_or_more_go_on_the_board">"Desde %d puntos entras en la clasificación."</string>
     <!-- 'Only the call clock spends your talk minutes. Watching a scene never takes a second off them.' -->
     <string name="only_the_call_clock_spends_your_talk_minutes_watching_a_scen_d6c32d">"El tiempo de conversación solo baja cuando hablas. Ver una escena no le quita ni un segundo."</string>
     <string name="open">"Abrir"</string>

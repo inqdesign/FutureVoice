@@ -311,7 +311,7 @@ internal fun SpeechChallengeScreen(
                 FormSection(
                     stringResource(R.string.leaderboard),
                     footer = if (isPast) stringResource(R.string.this_challenge_has_ended_these_are_the_final_standings)
-                        else stringResource(R.string.only_takes_with_the_camera_on_go_on_the_board_and_your_best_d8b2bb),
+                        else stringResource(R.string.camera_on_takes_that_score_lld_or_more_go_on_the_board, SpeechChallenges.BOARD_BAR),
                 ) {
                     val rows = board
                     when {
@@ -713,6 +713,8 @@ internal fun SpeechChallengeEntrySection(entry: SpeechChallenges.Entry?, standin
                 }
                 SpeechChallenges.Entry.CameraOff -> EntryLine(Icons.Filled.VideocamOff,
                     stringResource(R.string.the_camera_was_off_so_this_take_isn_t_on_the_board), secondary, bold = false)
+                SpeechChallenges.Entry.BelowBar -> EntryLine(Icons.Outlined.EmojiEvents,
+                    stringResource(R.string.takes_that_score_lld_or_more_go_on_the_board, SpeechChallenges.BOARD_BAR), secondary, bold = false)
                 SpeechChallenges.Entry.Failed -> EntryLine(Icons.Filled.Warning,
                     stringResource(R.string.this_take_couldn_t_reach_the_board), secondary, bold = false)
                 null -> {
