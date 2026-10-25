@@ -305,6 +305,7 @@
     <string name="books_finished">"Bücher fertig"</string>
     <string name="both_at_once">"Beides gleichzeitig anhören"</string>
     <string name="both_refill_every_billing_period">"Beides füllt sich jeden Abrechnungszeitraum neu auf."</string>
+    <string name="both_sides">"Beide Seiten"</string>
     <string name="breaths_at_sentence_ends">"Pausen an Satzenden"</string>
     <string name="breaths_at_sentence_ends_long_stops_lld">"Pausen an Satzenden · %d lange Stopps"</string>
     <string name="brief">"Briefing"</string>
@@ -569,6 +570,7 @@
     <string name="deletes_cached_voice_audio_only_your_talks_drills_words_and_d9f035">"Löscht nur zwischengespeicherte Sprachaudios. Deine Gespräche, Drills, Wörter und Bücher bleiben unberührt. Jeder Satz wird beim nächsten Abspielen neu synthetisiert."</string>
     <!-- 'Deleting your account permanently removes your voice clone, talk time, and account data. Practice data on this device is erased too.' -->
     <string name="deleting_your_account_permanently_removes_your_voice_clone_t_43bafb">"Wenn du dein Konto löschst, werden Stimmklon, Sprechzeit und Kontodaten dauerhaft entfernt. Die Übungsdaten auf diesem Gerät werden ebenfalls gelöscht."</string>
+    <string name="describe_a_situation_and_practice_it_in_a_call">"Beschreib eine Situation und übe sie im Gespräch"</string>
     <string name="describe_the_scenario_or_tap_the_mic_and_say_it">"Beschreib die Situation – oder tippe aufs Mikrofon und sag sie"</string>
     <!-- "Describe what's coming and watch your fluent self handle it first — its expressions stay yours to study." -->
     <string name="describe_what_s_coming_and_watch_your_fluent_self_handle_it_48f4b8">"Beschreibe, was ansteht, und sieh zu, wie dein fließendes Ich es zuerst meistert. Seine Wendungen bleiben dir zum Lernen."</string>
@@ -713,6 +715,7 @@
     <string name="every_take_of_a_script_is_kept_so_you_can_watch_yourself_get_36082d">"Pro Skript sammeln sich deine Aufnahmen, so siehst du, wie viel besser du geworden bist."</string>
     <!-- "Every talk and scene you finish becomes one. It's done when you've learned everything inside." -->
     <string name="every_talk_and_scene_you_finish_becomes_one_it_s_done_when_y_9fe6fb">"Jedes Gespräch und jede Szene, die du beendest, wird zu einem. Es ist fertig, wenn du alles darin gelernt hast."</string>
+    <string name="every_talk_becomes_a_book_of_its_own">"Aus jedem Gespräch wird ein eigenes Buch."</string>
     <!-- "Every talk in your routine with a set time is a call. Your phone rings then, even on silent. Can't talk? Just decline — nothing counts against you." -->
     <string name="every_talk_in_your_routine_with_a_set_time_is_a_call_your_ph_174441">"Jedes Gespräch mit fester Uhrzeit in deiner Routine ist ein Anruf. Dein Telefon klingelt dann, auch lautlos. Keine Zeit? Einfach ablehnen – das zählt nicht gegen dich."</string>
     <!-- 'Every word, expression and card you studied, shadow take, run and scene — one block each.' -->
@@ -825,8 +828,8 @@
     <!-- 'Finished books. They keep their progress — unarchive anytime.' -->
     <string name="finished_books_they_keep_their_progress_unarchive_anytime">"Abgeschlossene Bücher. Ihr Fortschritt bleibt — jederzeit wieder hervorholbar."</string>
     <string name="finishing_puts_you_in_line_it_doesn_t_seat_you">"Wer es schafft, kommt auf die Warteliste. Einen Platz gibt es damit noch nicht."</string>
-    <string name="first_test_done">"Erster Test geschafft"</string>
     <string name="first_charge">"Erste Abbuchung %s"</string>
+    <string name="first_test_done">"Erster Test geschafft"</string>
     <string name="fix_the_sentence">"Satz korrigieren"</string>
     <string name="fluency">"Flüssigkeit"</string>
     <string name="fluency_pace">"Flüssigkeit &amp; Tempo"</string>
@@ -1510,6 +1513,7 @@
     <string name="my_direct_manager">"Meine direkte Führungskraft"</string>
     <string name="my_expressions_lld">"Meine Wendungen · %d"</string>
     <string name="my_kid_s_teacher">"Lehrkraft meines Kindes"</string>
+    <string name="my_lines">"Meine Sätze"</string>
     <string name="my_own_topic">"Mein eigenes Thema"</string>
     <string name="my_recording">"Meine Aufnahme"</string>
     <string name="my_routine">"Meine Routine"</string>
@@ -1950,8 +1954,6 @@
     <string name="read">"Gelesen am %s"</string>
     <string name="read_again">"Nochmal lesen"</string>
     <string name="read_both_sides">"Beide Seiten lesen"</string>
-    <string name="my_lines">"Meine Sätze"</string>
-    <string name="both_sides">"Beide Seiten"</string>
     <!-- 'Read from the structures you actually build and from verified grammar slips per 100 spoken words — the lower of the two.' -->
     <string name="read_from_the_structures_you_actually_build_and_from_verifie_7599b1">"Ermittelt aus den Satzstrukturen, die du wirklich baust, und aus bestätigten Grammatikfehlern pro 100 gesprochenen Wörtern. Der niedrigere Wert zählt."</string>
     <!-- 'Read from your real talks — vocabulary, grammar, fluency and expression together.' -->
@@ -3406,6 +3408,7 @@
     <!-- 'Your files stay on your phone. Only what was read is kept here.' -->
     <string name="your_files_stay_on_your_phone_only_what_was_read_is_kept_her_ec86b8">"Deine Dateien bleiben auf deinem Telefon. Hier wird nur gespeichert, was daraus gelesen wurde."</string>
     <string name="your_first_assessment_unlocks_after_lld_minutes_of_talk">"Deine erste Einstufung wird nach %d Minuten Gespräch freigeschaltet."</string>
+    <string name="your_first_book_goes_here">"Hier entsteht dein erstes Buch"</string>
     <string name="your_first_level_appears">"Dein erstes Niveau erscheint"</string>
     <string name="your_first_lld_minutes">"Deine ersten %d Minuten"</string>
     <string name="your_first_report_unlocks_after_lld_minutes_of_practice">"Dein erster Bericht wird nach %d Minuten Übung freigeschaltet."</string>

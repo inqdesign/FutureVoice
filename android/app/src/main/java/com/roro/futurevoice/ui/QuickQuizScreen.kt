@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,6 +24,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -277,53 +280,72 @@ private fun QuizFace(mood: WeeklyTestHost.Mood, since: Long, tile: Color) {
     WeeklyTestCharacter(mood, since, Modifier.size(56.dp), tile = tile)
 }
 
+/**
+ * The question sits in the middle of the space above, the choices at the
+ * bottom where the thumb is, and Next keeps one slot under them (iOS
+ * b43a5282, 2026-10-22, founder: the first layout stacked everything at the
+ * top and left the lower half empty).
+ */
 @Composable
 private fun Question(item: QuickQuizItem, index: Int, total: Int, chosen: String?,
                      mood: WeeklyTestHost.Mood, moodSince: Long,
                      onPick: (String) -> Unit, onNext: () -> Unit) {
+    val waiting = chosen != null && item.note != null
     Column(Modifier.fillMaxSize()) {
         LinearProgressIndicator(
             progress = { index.toFloat() / maxOf(total, 1) },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 4.dp),
+            color = MaterialTheme.colorScheme.primary,
             drawStopIndicator = {},
         )
-        Column(
-            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp).padding(bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Box(Modifier.padding(top = 16.dp)) { QuizFace(mood, moodSince, AppSurfaces.ground) }
-            Text(heading(item), style = PT.subheadline, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (item.prompt.isNotEmpty()) {
-                Text(item.prompt,
-                    style = if (item.kind == QuickQuizItem.Kind.WORD)
-                        androidx.compose.ui.text.TextStyle(fontSize = 22.sp, lineHeight = 28.sp,
-                            fontWeight = FontWeight.SemiBold)
-                    else PT.title3,
-                    textAlign = TextAlign.Center)
-            }
-            Column(Modifier.fillMaxWidth().padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                item.options.forEach { option -> OptionButton(option, item, chosen) { onPick(option) } }
-            }
-            // A note (why, or what it means) waits to be read.
-            if (chosen != null && item.note != null) {
-                Text(item.note, style = PT.subheadline, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center)
+        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+            val minH = maxHeight
+            Column(
+                Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).heightIn(min = minH),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Spacer(Modifier.heightIn(min = 16.dp).weight(1f))
+                Column(
+                    Modifier.fillMaxWidth().padding(horizontal = 28.dp)
+                        .animateContentSize(androidx.compose.animation.core.tween(200)),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    QuizFace(mood, moodSince, AppSurfaces.ground)
+                    Text(heading(item), style = PT.subheadline.copy(fontWeight = FontWeight.Medium),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (item.prompt.isNotEmpty()) {
+                        Text(item.prompt,
+                            style = if (item.kind == QuickQuizItem.Kind.WORD)
+                                androidx.compose.ui.text.TextStyle(fontSize = 28.sp, lineHeight = 34.sp,
+                                    fontWeight = FontWeight.SemiBold)
+                            else androidx.compose.ui.text.TextStyle(fontSize = 22.sp, lineHeight = 28.sp,
+                                fontWeight = FontWeight.SemiBold),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(top = 4.dp))
+                    }
+                    // A note (why, or what it means) waits to be read.
+                    if (chosen != null && item.note != null) {
+                        Text(item.note, style = PT.callout, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center, modifier = Modifier.padding(top = 6.dp))
+                    }
+                }
+                Spacer(Modifier.heightIn(min = 24.dp).weight(1f))
+                Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    item.options.forEach { option -> OptionButton(option, item, chosen) { onPick(option) } }
+                }
             }
         }
-        // Next sits in ONE place at the bottom, whatever the question's
-        // length (founder, 2026-10-19: under the note it moved with the
-        // content). Its room is kept even while it is hidden, so the
-        // question never shifts when it appears.
-        val waiting = chosen != null && item.note != null
-        Box(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 20.dp), contentAlignment = Alignment.Center) {
-            Button(onClick = onNext, enabled = waiting,
-                modifier = Modifier.heightIn(min = 50.dp).alpha(if (waiting) 1f else 0f),
-                shape = androidx.compose.foundation.shape.CircleShape,
-                contentPadding = PaddingValues(horizontal = 24.dp)) {
-                Text(stringResource(R.string.next), style = PT.headline)
-            }
+        // Next keeps its room while hidden, so nothing shifts when it
+        // appears (founder, 2026-10-19).
+        Button(onClick = onNext, enabled = waiting,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
+                .padding(top = 12.dp, bottom = 12.dp)
+                .heightIn(min = 50.dp).alpha(if (waiting) 1f else 0f),
+            shape = androidx.compose.foundation.shape.CircleShape,
+            contentPadding = PaddingValues(horizontal = 24.dp)) {
+            Text(stringResource(R.string.next), style = PT.headline)
         }
     }
 }
@@ -335,25 +357,39 @@ private fun heading(item: QuickQuizItem): String = when (item.kind) {
     QuickQuizItem.Kind.GRAMMAR -> item.heading ?: stringResource(R.string.grammar)
 }
 
-/** iOS `.bordered` + `.roundedRectangle(radius: 14)` + `.controlSize(.large)`:
- *  a tinted fill, accent until answered, then green / red / grey. */
+/** iOS `.bordered` + `.roundedRectangle(radius: 14)` + `.controlSize(.large)`.
+ *  Neutral until answered; then the answer turns green, a wrong pick red,
+ *  and the rest step back (iOS b43a5282). */
 @Composable
 private fun OptionButton(option: String, item: QuickQuizItem, chosen: String?, onClick: () -> Unit) {
+    val isAnswer = option == item.answer
+    val isPicked = option == chosen
     val tint = when {
-        chosen == null -> MaterialTheme.colorScheme.primary
-        option == item.answer -> QUIZ_GREEN
-        option == chosen -> QUIZ_RED
+        chosen == null -> QUIZ_GRAY
+        isAnswer -> QUIZ_GREEN
+        isPicked -> QUIZ_RED
         else -> QUIZ_GRAY
     }
+    val lit = chosen == null || isAnswer || isPicked
     Button(
         onClick = { if (chosen == null) onClick() },
-        modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).alpha(if (lit) 1f else 0.55f),
         shape = RoundedCornerShape(14.dp),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+        contentPadding = PaddingValues(horizontal = 22.dp, vertical = 10.dp),
         colors = ButtonDefaults.buttonColors(containerColor = tint.copy(alpha = 0.15f), contentColor = tint),
         elevation = null,
     ) {
-        Text(option, style = PT.body, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(option, style = PT.body.copy(fontWeight = FontWeight.Medium), textAlign = TextAlign.Start,
+                color = if (lit) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f))
+            if (chosen != null && (isAnswer || isPicked)) {
+                Icon(if (isAnswer) androidx.compose.material.icons.Icons.Filled.CheckCircle
+                    else androidx.compose.material.icons.Icons.Filled.Cancel,
+                    contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+            }
+        }
     }
 }
 

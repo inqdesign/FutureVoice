@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -19,6 +21,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.IconButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -43,9 +51,9 @@ import com.roro.futurevoice.ui.brand.ContinuousShape
  * deed6cf4, 2026-10-18). The home used to carry the whole discover block —
  * a chip row per purpose over a list of cards — under the ring, which made
  * the launcher a feed. Now the home has one button and this page is where
- * topics live: a call on a topic of your own at the top (it opens by asking
- * what to talk about), then the ideas by category (the same
- * [DiscoverSection] the home drew). Every pick still starts the call through
+ * topics live: the ideas by category (the same [DiscoverSection] the home
+ * drew), with a call on a topic of your own floating at the bottom (it opens
+ * by asking what to talk about; iOS b43a5282). Every pick still starts the call through
  * the root's own launch, so nothing about a launch changed.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -66,6 +74,10 @@ internal fun TalkTopicsPage(
                blurb: String = "", entry: String) =
         launchCall(PendingLaunch(topic, facts, scenarioId, mint, blurb, entry))
 
+    /** The ideas' settings (chips, exam, interests), from the page header
+     *  (iOS b43a5282). */
+    var showingSettings by remember { mutableStateOf(false) }
+
     Scaffold(
         containerColor = AppSurfaces.ground,
         topBar = {
@@ -73,65 +85,64 @@ internal fun TalkTopicsPage(
                 colors = AppSurfaces.topBarColors(),
                 title = { com.roro.futurevoice.ui.brand.IosNavTitle(stringResource(R.string.topics)) },
                 navigationIcon = { com.roro.futurevoice.ui.brand.IosBackButton(onBack) },
+                actions = {
+                    IconButton(onClick = { showingSettings = true }) {
+                        Icon(Icons.Filled.Tune, contentDescription = stringResource(R.string.talk_settings),
+                            tint = MaterialTheme.colorScheme.primary)
+                    }
+                },
             )
         },
     ) { padding ->
-        Column(
-            Modifier.padding(padding).fillMaxSize().background(AppSurfaces.ground)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp).padding(top = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
-        ) {
-            DoorButton(
-                title = stringResource(R.string.my_own_topic),
-                subtitle = stringResource(R.string.say_what_you_want_to_talk_about_and_the_call_starts_there),
-                onClick = {
-                    launchCall(PendingLaunch("", emptyList(), null, entry = TalkEntry.TALK_OWN_TOPIC,
-                        ownTopic = true))
-                },
-            )
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(stringResource(R.string.ideas), style = PT.title3.copy(fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                DiscoverSection(
-                    state = state,
-                    enabled = state.voiceId != null,
-                    onSavePersona = onSavePersona,
-                    onPickNews = { topic -> launch(topic.title, topic.facts.orEmpty(), entry = TalkEntry.TALK_NEWS) },
-                    onPickScenario = { sc -> launch(sc.promptBlurb, emptyList(), sc.id, entry = TalkEntry.TALK_SCENARIO) },
-                    onPickStarter = { sc -> launch(sc.promptBlurb, emptyList(), sc.id, mint = sc, entry = TalkEntry.TALK_SCENARIO) },
-                    // An ordinary topic call: the blurb tells it which exam and
-                    // which part (iOS `runExam`).
-                    onPickExam = { t, exam -> launch(t.title, emptyList(), blurb = t.callBlurb(exam), entry = TalkEntry.TALK_EXAM) },
-                    onPickTopic = { t -> launch(t.title, emptyList(), blurb = t.blurb, entry = TalkEntry.TALK_FIELD) },
-                    onAllScenarios = onAllScenarios,
-                )
+        Box(Modifier.padding(padding).fillMaxSize()) {
+            Column(
+                Modifier.fillMaxSize().background(AppSurfaces.ground)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp).padding(top = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp),
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(stringResource(R.string.ideas), style = PT.title3.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    DiscoverSection(
+                        state = state,
+                        enabled = state.voiceId != null,
+                        onSavePersona = onSavePersona,
+                        onPickNews = { topic -> launch(topic.title, topic.facts.orEmpty(), entry = TalkEntry.TALK_NEWS) },
+                        onPickScenario = { sc -> launch(sc.promptBlurb, emptyList(), sc.id, entry = TalkEntry.TALK_SCENARIO) },
+                        onPickStarter = { sc -> launch(sc.promptBlurb, emptyList(), sc.id, mint = sc, entry = TalkEntry.TALK_SCENARIO) },
+                        // An ordinary topic call: the blurb tells it which exam and
+                        // which part (iOS `runExam`).
+                        onPickExam = { t, exam -> launch(t.title, emptyList(), blurb = t.callBlurb(exam), entry = TalkEntry.TALK_EXAM) },
+                        onPickTopic = { t -> launch(t.title, emptyList(), blurb = t.blurb, entry = TalkEntry.TALK_FIELD) },
+                        onAllScenarios = onAllScenarios,
+                        showingSettings = showingSettings,
+                        onShowingSettings = { showingSettings = it },
+                    )
+                }
+                // Room for the floating button over the list's end.
+                Spacer(Modifier.height(96.dp).windowInsetsPadding(WindowInsets.navigationBars))
             }
-            Spacer(Modifier.height(24.dp).windowInsetsPadding(WindowInsets.navigationBars))
-        }
-    }
-}
-
-/** The page's "my own topic" tile (iOS `DoorButton`, prominent). */
-@Composable
-private fun DoorButton(title: String, subtitle: String, onClick: () -> Unit) {
-    // TOP-aligned, not centred (iOS): a centred row floats its icon and
-    // title down the card when the subtitle wraps.
-    Row(
-        Modifier.fillMaxWidth().heightIn(min = 72.dp)
-            .clip(ContinuousShape(18.dp))
-            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-            .clickable(onClick = onClick)
-            .padding(14.dp),
-        verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Icon(Icons.Filled.Mic, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(22.dp))
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title, style = PT.subheadline.copy(fontWeight = FontWeight.SemiBold),
-                color = MaterialTheme.colorScheme.onSurface)
-            Text(subtitle, style = PT.caption, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // "My own topic" floats at the bottom, drawn like the home's "Find
+            // a topic", and the list dissolves under it (iOS `fadingBottomBar`).
+            Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
+                ScrollEdgeFeather(color = AppSurfaces.ground, ramp = 40.dp, solid = 36.dp)
+                com.roro.futurevoice.ui.brand.IosGlassButton(
+                    onClick = {
+                        launchCall(PendingLaunch("", emptyList(), null, entry = TalkEntry.TALK_OWN_TOPIC,
+                            ownTopic = true))
+                    },
+                    modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
+                        .padding(16.dp).height(50.dp),
+                ) {
+                    Icon(Icons.Filled.Mic, contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.my_own_topic), style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1)
+                }
+            }
         }
     }
 }

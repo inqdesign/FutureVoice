@@ -305,6 +305,7 @@
     <string name="books_finished">"讀完的複習本"</string>
     <string name="both_at_once">"疊在一起聽"</string>
     <string name="both_refill_every_billing_period">"兩者每個帳單週期都會重新補滿。"</string>
+    <string name="both_sides">"兩邊的台詞"</string>
     <string name="breaths_at_sentence_ends">"在句尾停頓的次數"</string>
     <string name="breaths_at_sentence_ends_long_stops_lld">"句尾停頓，以及 %d 次卡住太久"</string>
     <string name="brief">"摘要"</string>
@@ -572,6 +573,7 @@
     <string name="deletes_cached_voice_audio_only_your_talks_drills_words_and_d9f035">"只刪除儲存的語音。通話、訓練、單字和複習本都不受影響。每句話下次播放時會重新合成。"</string>
     <!-- 'Deleting your account permanently removes your voice clone, talk time, and account data. Practice data on this device is erased too.' -->
     <string name="deleting_your_account_permanently_removes_your_voice_clone_t_43bafb">"刪除帳號會永久移除你的聲音、通話時間和帳號資料。這台裝置上的練習紀錄也會一併清除。"</string>
+    <string name="describe_a_situation_and_practice_it_in_a_call">"寫下一個情境，在通話裡練習"</string>
     <string name="describe_the_scenario_or_tap_the_mic_and_say_it">"寫下情境 — 或點一下麥克風說出來"</string>
     <!-- "Describe what's coming and watch your fluent self handle it first — its expressions stay yours to study." -->
     <string name="describe_what_s_coming_and_watch_your_fluent_self_handle_it_48f4b8">"寫下即將發生的事，先看流利的自己怎麼應對。裡面用到的用語都會留給你學。"</string>
@@ -716,6 +718,7 @@
     <string name="every_take_of_a_script_is_kept_so_you_can_watch_yourself_get_36082d">"每份講稿的錄製都會留下來，看得出自己進步了多少。"</string>
     <!-- "Every talk and scene you finish becomes one. It's done when you've learned everything inside." -->
     <string name="every_talk_and_scene_you_finish_becomes_one_it_s_done_when_y_9fe6fb">"每完成一段對話或情境，就會多一本教材。裡面的內容全部學會就完成了。"</string>
+    <string name="every_talk_becomes_a_book_of_its_own">"每段對話都會變成一本書。"</string>
     <!-- "Every talk in your routine with a set time is a call. Your phone rings then, even on silent. Can't talk? Just decline — nothing counts against you." -->
     <string name="every_talk_in_your_routine_with_a_set_time_is_a_call_your_ph_174441">"例行計畫裡有設定時間的對話就是一通電話。到時候即使靜音也會響。不方便接就拒接，不會有任何影響。"</string>
     <!-- 'Every word, expression and card you studied, shadow take, run and scene — one block each.' -->
@@ -828,8 +831,8 @@
     <!-- 'Finished books. They keep their progress — unarchive anytime.' -->
     <string name="finished_books_they_keep_their_progress_unarchive_anytime">"讀完的複習本。進度都會保留，隨時可以取消封存。"</string>
     <string name="finishing_puts_you_in_line_it_doesn_t_seat_you">"達成後會排進隊伍，不是馬上有席位。"</string>
-    <string name="first_test_done">"完成第一次測驗"</string>
     <string name="first_charge">"首次扣款 %s"</string>
+    <string name="first_test_done">"完成第一次測驗"</string>
     <string name="fix_the_sentence">"改正句子"</string>
     <string name="fluency">"流利度"</string>
     <string name="fluency_pace">"流暢度與節奏"</string>
@@ -1513,6 +1516,7 @@
     <string name="my_direct_manager">"我的直屬主管"</string>
     <string name="my_expressions_lld">"我的用語 · %d"</string>
     <string name="my_kid_s_teacher">"孩子的老師"</string>
+    <string name="my_lines">"我的台詞"</string>
     <string name="my_own_topic">"聊我自己的話題"</string>
     <string name="my_recording">"我錄的聲音"</string>
     <string name="my_routine">"我的作息"</string>
@@ -1953,8 +1957,6 @@
     <string name="read">"%s 已讀"</string>
     <string name="read_again">"重新讀取"</string>
     <string name="read_both_sides">"兩邊的台詞都念"</string>
-    <string name="my_lines">"我的台詞"</string>
-    <string name="both_sides">"兩邊的台詞"</string>
     <!-- 'Read from the structures you actually build and from verified grammar slips per 100 spoken words — the lower of the two.' -->
     <string name="read_from_the_structures_you_actually_build_and_from_verifie_7599b1">"以你實際組成的句子結構，和每說 100 個字中確認到的文法錯誤來讀，取兩者較低的一個。"</string>
     <!-- 'Read from your real talks — vocabulary, grammar, fluency and expression together.' -->
@@ -3409,6 +3411,7 @@
     <!-- 'Your files stay on your phone. Only what was read is kept here.' -->
     <string name="your_files_stay_on_your_phone_only_what_was_read_is_kept_her_ec86b8">"檔案留在你的手機裡。這裡只保留讀到的內容。"</string>
     <string name="your_first_assessment_unlocks_after_lld_minutes_of_talk">"累積%d分鐘通話後，就會開放第一次評估。"</string>
+    <string name="your_first_book_goes_here">"你的第一本書會放在這裡"</string>
     <string name="your_first_level_appears">"第一個程度出現了"</string>
     <string name="your_first_lld_minutes">"最初的 %d 分鐘"</string>
     <string name="your_first_report_unlocks_after_lld_minutes_of_practice">"累積%d分鐘練習後，就會開放第一份報告。"</string>

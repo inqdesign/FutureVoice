@@ -1900,6 +1900,8 @@ object TalkEntry {
     const val ROUTINE = "routine"
     const val SCENARIO_BOOK = "scenario_book"
     const val PRACTICE_BOOK = "practice_book"
+    /** The empty Review page's "Start a talk". */
+    const val PRACTICE_EMPTY = "practice_empty"
     const val WATCH_PERSON = "watch_person"
     const val RESUME = "resume"
     const val OTHER = "other"

@@ -305,6 +305,7 @@
     <string name="books_finished">"끝낸 책"</string>
     <string name="both_at_once">"겹쳐 듣기"</string>
     <string name="both_refill_every_billing_period">"둘 다 결제 주기마다 새로 채워져요."</string>
+    <string name="both_sides">"양쪽 대사"</string>
     <string name="breaths_at_sentence_ends">"문장 끝에서 쉰 횟수"</string>
     <string name="breaths_at_sentence_ends_long_stops_lld">"문장 끝에서 쉰 횟수 · 오래 멈춤 %d번"</string>
     <string name="brief">"브리프"</string>
@@ -572,6 +573,7 @@
     <string name="deletes_cached_voice_audio_only_your_talks_drills_words_and_d9f035">"저장해 둔 음성만 지워요. 대화, 드릴, 단어, 책은 그대로예요. 문장마다 다음에 들을 때 다시 만들어져요."</string>
     <!-- 'Deleting your account permanently removes your voice clone, talk time, and account data. Practice data on this device is erased too.' -->
     <string name="deleting_your_account_permanently_removes_your_voice_clone_t_43bafb">"계정을 지우면 내 목소리, 통화 시간, 계정 정보가 영영 사라져요. 이 기기에 있는 연습 기록도 함께 지워지고요."</string>
+    <string name="describe_a_situation_and_practice_it_in_a_call">"상황을 적고 통화로 연습해요"</string>
     <string name="describe_the_scenario_or_tap_the_mic_and_say_it">"상황을 적어 보세요 — 마이크를 눌러 말해도 돼요"</string>
     <!-- "Describe what's coming and watch your fluent self handle it first — its expressions stay yours to study." -->
     <string name="describe_what_s_coming_and_watch_your_fluent_self_handle_it_48f4b8">"곧 겪을 일을 적어두면 유창해진 내가 먼저 겪는 걸 봐요. 거기서 쓴 표현은 전부 내 것으로 남아요."</string>
@@ -716,6 +718,7 @@
     <string name="every_take_of_a_script_is_kept_so_you_can_watch_yourself_get_36082d">"녹화는 원고마다 쌓여서, 얼마나 나아졌는지 한눈에 보여요."</string>
     <!-- "Every talk and scene you finish becomes one. It's done when you've learned everything inside." -->
     <string name="every_talk_and_scene_you_finish_becomes_one_it_s_done_when_y_9fe6fb">"끝낸 대화와 장면이 한 권씩 쌓여요. 안에 든 걸 다 익히면 완료돼요."</string>
+    <string name="every_talk_becomes_a_book_of_its_own">"대화 하나가 책 한 권이 돼요."</string>
     <!-- "Every talk in your routine with a set time is a call. Your phone rings then, even on silent. Can't talk? Just decline — nothing counts against you." -->
     <string name="every_talk_in_your_routine_with_a_set_time_is_a_call_your_ph_174441">"루틴에서 시간이 정해진 대화가 곧 전화예요. 그 시간에 무음이어도 전화가 울려요. 받기 어려우면 거절하면 돼요. 불이익은 없어요."</string>
     <!-- 'Every word, expression and card you studied, shadow take, run and scene — one block each.' -->
@@ -828,8 +831,8 @@
     <!-- 'Finished books. They keep their progress — unarchive anytime.' -->
     <string name="finished_books_they_keep_their_progress_unarchive_anytime">"끝낸 책이에요. 진행 상황은 그대로 남고, 언제든 다시 꺼낼 수 있어요."</string>
     <string name="finishing_puts_you_in_line_it_doesn_t_seat_you">"다 채우면 대기 줄에 서요. 바로 앉는 건 아니에요."</string>
-    <string name="first_test_done">"첫 테스트를 마쳤어요"</string>
     <string name="first_charge">"첫 결제 %s"</string>
+    <string name="first_test_done">"첫 테스트를 마쳤어요"</string>
     <string name="fix_the_sentence">"문장 고치기"</string>
     <string name="fluency">"유창성"</string>
     <string name="fluency_pace">"유창성과 속도"</string>
@@ -1513,6 +1516,7 @@
     <string name="my_direct_manager">"직속 상사"</string>
     <string name="my_expressions_lld">"내 표현 · %d"</string>
     <string name="my_kid_s_teacher">"아이 선생님"</string>
+    <string name="my_lines">"내 대사"</string>
     <string name="my_own_topic">"내가 정한 주제로"</string>
     <string name="my_recording">"내가 녹음한 목소리"</string>
     <string name="my_routine">"나의 루틴"</string>
@@ -1953,8 +1957,6 @@
     <string name="read">"%s에 읽음"</string>
     <string name="read_again">"다시 읽기"</string>
     <string name="read_both_sides">"양쪽 대사 모두 읽기"</string>
-    <string name="my_lines">"내 대사"</string>
-    <string name="both_sides">"양쪽 대사"</string>
     <!-- 'Read from the structures you actually build and from verified grammar slips per 100 spoken words — the lower of the two.' -->
     <string name="read_from_the_structures_you_actually_build_and_from_verifie_7599b1">"실제로 만드는 문장 구조와 말한 100단어당 확인된 문법 실수로 읽어요 — 둘 중 낮은 쪽이에요."</string>
     <!-- 'Read from your real talks — vocabulary, grammar, fluency and expression together.' -->
@@ -3409,6 +3411,7 @@
     <!-- 'Your files stay on your phone. Only what was read is kept here.' -->
     <string name="your_files_stay_on_your_phone_only_what_was_read_is_kept_her_ec86b8">"파일은 폰에 그대로 있어요. 앱에는 읽은 내용만 남아요."</string>
     <string name="your_first_assessment_unlocks_after_lld_minutes_of_talk">"대화 %d분을 채우면 첫 평가가 열려요."</string>
+    <string name="your_first_book_goes_here">"첫 책이 여기 생겨요"</string>
     <string name="your_first_level_appears">"첫 레벨이 나와요"</string>
     <string name="your_first_lld_minutes">"처음 %d분"</string>
     <string name="your_first_report_unlocks_after_lld_minutes_of_practice">"연습 %d분을 채우면 첫 리포트가 열려요."</string>
