@@ -365,7 +365,7 @@ internal fun SpeechTabBody(language: String, native: String, level: CefrLevel,
     }
 }
 
-internal const val CHALLENGES_ON_TAB = 3
+internal const val CHALLENGES_ON_TAB = 10
 
 /** The empty state's buttons, on the header's rule: a yes from cache, a no
  *  only after a fresh fetch, the Plus sheet otherwise. */
