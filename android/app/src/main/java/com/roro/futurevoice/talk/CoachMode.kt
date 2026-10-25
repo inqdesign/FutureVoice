@@ -280,13 +280,32 @@ object CoachSuggester {
     @Serializable
     internal data class Payload(val say: String? = null, val meaning: String? = null, val word: String? = null)
 
+    /** One line of the call before the one being answered (iOS `CoachSuggester.Line`). */
+    data class Line(val isLearner: Boolean, val text: String)
+
+    /** How many earlier lines ride along (iOS `recentLines`, 6d8b4f56): the
+     *  suggestion only knew the line before and the learner's last turn, so
+     *  it answered each question as if the call had just started and
+     *  invented the learner's facts. */
+    const val RECENT_LINES = 8
+    /** The newest notebook lines handed over, so a bracket holds the
+     *  learner's own fact rather than a guess (iOS `maxFacts`). */
+    const val MAX_FACTS = 12
+
     /** iOS builds the user message the same way, line by line. */
-    internal fun content(line: String, learnerSaid: String?, earlier: String?, situation: String?,
-                         candidates: List<TalkGoalItem>, previousSay: String? = null): String {
+    internal fun content(line: String, recent: List<Line>, aboutLearner: List<String> = emptyList(),
+                         situation: String?, candidates: List<TalkGoalItem>, previousSay: String? = null): String {
         var content = ""
         if (!situation.isNullOrEmpty()) content += "Situation: $situation\n"
-        if (!earlier.isNullOrEmpty()) content += "Earlier they said: \"$earlier\"\n"
-        if (!learnerSaid.isNullOrEmpty()) content += "The learner said: \"$learnerSaid\"\n"
+        if (aboutLearner.isNotEmpty()) {
+            content += "About the learner:\n" + aboutLearner.joinToString("\n") { "- $it" } + "\n"
+        }
+        val said = recent.takeLast(RECENT_LINES).filter { it.text.isNotEmpty() }
+        if (said.isNotEmpty()) {
+            content += "The call so far:\n" + said.joinToString("\n") {
+                "${if (it.isLearner) "Learner" else "Other"}: \"${it.text}\""
+            } + "\n"
+        }
         // The level was read off this one line, so a line with no clear
         // ending re-decided it and the suggestions flipped between 반말 and
         // 존댓말 inside one call. The last suggestion anchors it where the
@@ -321,8 +340,8 @@ object CoachSuggester {
 
     suspend fun suggest(
         line: String,
-        learnerSaid: String?,
-        earlier: String?,
+        recent: List<Line>,
+        aboutLearner: List<String> = emptyList(),
         situation: String? = null,
         register: SpeechRegister? = null,
         previousSay: String? = null,
@@ -337,7 +356,7 @@ object CoachSuggester {
                 GeminiClient(AuthRepository()).sendJson(
                     system = system(target, native, level, register),
                     messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER,
-                        content(line, learnerSaid, earlier, situation, candidates, previousSay))),
+                        content(line, recent, aboutLearner, situation, candidates, previousSay))),
                     serializer = Payload.serializer(),
                     model = GeminiClient.Model.FLASH_36,
                     // Its thinking needs room, or the JSON comes back cut.

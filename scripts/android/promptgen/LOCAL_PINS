@@ -12,4 +12,5 @@ gen-free-talk-openers.py deed6cf4
 gen-quiz-prompts.py 6912c9db
 # The accent's language variety (varietyGuard, iOS 3709fd0e).
 gen-correction-prompt.py 3709fd0e
-gen-coach-prompts.py 3709fd0e
+# + the call so far and the learner's facts (iOS 6d8b4f56).
+gen-coach-prompts.py 456c94e9

@@ -1682,13 +1682,13 @@ class TalkViewModel(context: Context) : ViewModel() {
             if (mayHint && CoachPlan.endsInQuestion(text)) candidates = coachCandidates()
         }
         val turns = _state.value.turns
-        val learnerSaid = turns.lastOrNull { it.role == TurnRole.USER }?.transcript
-        val earlier = turns.lastOrNull { it.role == TurnRole.FLUENT_SELF && it.id != turnId }?.transcript
+        val recent = turns.takeWhile { it.id != turnId }.takeLast(CoachSuggester.RECENT_LINES)
+            .map { CoachSuggester.Line(isLearner = it.role == TurnRole.USER, text = it.transcript) }
         val previousSay = _state.value.coachReply?.say
+        val about = coachAboutLearner(cfg)
         viewModelScope.launch {
             val result = CoachSuggester.suggest(
-                line = text, learnerSaid = learnerSaid,
-                earlier = if (learnerSaid == null) null else earlier,
+                line = text, recent = recent, aboutLearner = about,
                 situation = coachSituation,
                 register = coachRegister,
                 previousSay = previousSay,
@@ -1716,6 +1716,28 @@ class TalkViewModel(context: Context) : ViewModel() {
             if (item != null) syncCoachSteer()
         }
         if (learnerSpokeThisCall) syncCoachSteer()
+    }
+
+    /**
+     * What the "try saying" coach may fill a bracket with: the learner's own
+     * facts (iOS `coachAboutLearner`, 6d8b4f56). On a call with a stranger
+     * or a public figure, only what the learner lets strangers hear — the
+     * suggestion is said TO them.
+     */
+    private fun coachAboutLearner(cfg: TalkConfig): List<String> {
+        val p = cfg.persona ?: return emptyList()
+        val lines = mutableListOf<String>()
+        if (p.displayName.isNotEmpty()) lines += "Name: ${p.displayName}"
+        val place = listOf(p.city, p.country).filter { it.isNotEmpty() }.joinToString(", ")
+        if (place.isNotEmpty()) lines += "Lives in: $place"
+        if (p.occupation.isNotEmpty()) lines += "Does: ${p.occupation}"
+        if (p.interests.isNotEmpty()) lines += "Into: ${p.interests.joinToString(", ")}"
+        val cast = cfg.cast?.kind
+        if (cast != null && cast != com.roro.futurevoice.data.CounterpartCast.OWN_PERSON) {
+            return lines + p.strangerLines.takeLast(CoachSuggester.MAX_FACTS)
+        }
+        if (p.household.isNotEmpty()) lines += "Household: ${p.household}"
+        return lines + p.currentNotes().takeLast(CoachSuggester.MAX_FACTS).map { it.text }
     }
 
     /** Pick this call's grammar focus and name it. Coach mode only. */

@@ -52,7 +52,7 @@ class CoachSuggesterTest {
     }
 
     @Test fun contentCarriesTheSituationAndItems() {
-        val c = CoachSuggester.content("What can I get you?", null, null, "a café — talking with a barista",
+        val c = CoachSuggester.content("What can I get you?", emptyList(), emptyList(), "a café — talking with a barista",
             listOf(item("latte")))
         assertTrue(c.startsWith("Situation: a café — talking with a barista\n"))
         assertTrue(c.contains("Now the other speaker says: \"What can I get you?\""))
@@ -61,8 +61,21 @@ class CoachSuggesterTest {
 
     /** iOS c3d309ab / 2026-10-09: the last suggestion anchors the speech level. */
     @Test fun contentCarriesThePreviousSuggestion() {
-        val c = CoachSuggester.content("Und du?", "Ich heiße Mina.", null, null, emptyList(), previousSay = "Ich heiße [Mina].")
-        assertTrue(c.contains("The learner said: \"Ich heiße Mina.\"\nYour previous suggestion was: \"Ich heiße [Mina].\"\nNow the other speaker"))
+        val c = CoachSuggester.content("Und du?", listOf(CoachSuggester.Line(true, "Ich heiße Mina.")), emptyList(),
+            null, emptyList(), previousSay = "Ich heiße [Mina].")
+        assertTrue(c.contains("Learner: \"Ich heiße Mina.\"\nYour previous suggestion was: \"Ich heiße [Mina].\"\nNow the other speaker"))
+    }
+
+    /** iOS 6d8b4f56: the last 8 lines of the call and the learner's facts ride along. */
+    @Test fun contentCarriesTheCallSoFarAndTheLearner() {
+        val recent = (1..10).map { CoachSuggester.Line(it % 2 == 0, "line $it") } + CoachSuggester.Line(false, "")
+        val c = CoachSuggester.content("Where do you work?", recent, listOf("Name: Mina", "Does: designer"),
+            "a party", emptyList())
+        assertTrue(c.startsWith("Situation: a party\nAbout the learner:\n- Name: Mina\n- Does: designer\nThe call so far:\n"))
+        // The last eight, the empty one dropped after the cut (iOS `suffix` then `filter`).
+        assertFalse(c.contains("\"line 3\""))
+        assertTrue(c.contains("Other: \"line 4\"") || c.contains("Learner: \"line 4\""))
+        assertTrue(c.contains("Learner: \"line 10\"\nNow the other speaker says: \"Where do you work?\""))
     }
 
     /** iOS `CoachSuggester.system`'s address line: a set level names it; none = follow the line. */
