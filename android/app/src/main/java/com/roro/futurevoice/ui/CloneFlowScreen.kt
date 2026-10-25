@@ -1267,12 +1267,14 @@ fun CloneFlowScreen(
                         // recolours live and that is the feedback. Silent.
                         // Fixed-width cells, centred (iOS 2026-10-24,
                         // founder): stretched to the screen's edges the row
-                        // read as six loose dots with no margin.
+                        // read as six loose dots with no margin. A cell gives
+                        // up width only when 52dp no longer fits (large
+                        // display size ran the row off both edges).
                         Row(Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
                             FutureselfTheme.entries.forEach { t ->
                                 val selected = t == theme
-                                Column(Modifier.width(52.dp).height(70.dp).clickable {
+                                Column(Modifier.weight(1f, fill = false).widthIn(max = 52.dp).fillMaxWidth().height(70.dp).clickable {
                                     theme = t
                                     FutureselfTheme.pick(context, t)
                                     HapticEngine.light(context)
