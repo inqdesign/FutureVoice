@@ -2943,6 +2943,44 @@ its trailer was invisible to git whenever it sat in its own paragraph.
 - **The update sheet has two audiences** (2026-09-11, `20260911140000_app_release_testflight`). `beta.sh` moves `app_release.latest_testflight_build` on upload; `latest_build` — what an App Store install compares against — moves only with `./scripts/beta.sh released`, which first checks the store's own lookup shows the version. Before the split every App Store user was told about a build the store didn't have yet. **Release notes are part of the build**: `beta.sh` prints `fastlane/metadata/*/release_notes.txt`, refuses the generic placeholder and refuses notes unchanged since the last published row (`FORCE_SAME_NOTES=1` to override), because those files are what the sheet shows AND what App Store Connect gets.
 - **Secrets** → `Secrets.swift` only, injected via `Config/FutureVoice.xcconfig` (gitignored).
 
+## The Mac app — Mac Catalyst, Mac idiom (2026-10-25, branch `feat/mac-catalyst`)
+
+Founder: the "Designed for iPad" app on a Mac read too small and wasn't
+fitted to a wide screen. The same target now builds for Mac Catalyst with the
+MAC idiom (`TARGETED_DEVICE_FAMILY` 1,2,6 — 6 is "Optimize Interface for
+Mac"), same bundle id (`DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER: NO`),
+so one App Store record: subscriptions, Sign in with Apple and the iCloud
+sync container carry over. `./scripts/mac-run.sh` builds and opens it.
+
+- **The Mac idiom ignores Dynamic Type** (measured: body 13 pt, captions
+  10 pt, whatever `dynamicTypeSize`, content size category or trait override
+  says). So the WINDOW is zoomed (`window.transform`, `MacWindow.configure`),
+  1.3× by default (body back at the phone's 17 pt), ⌘+ / ⌘− / ⌘0 in the View
+  menu. Measured: text is drawn at the zoomed size (sharp), clicks land, a
+  resize reflows, and every sheet, alert and cover is zoomed with no change
+  to any of them. A SwiftUI `scaleEffect` at the root is just as sharp but
+  misses everything UIKit presents (171 sheets) — don't move it back there.
+- **Pages sit in a centred column** (`.macPage()` at the app root; View →
+  Page Width: Narrow · Medium · Wide · Full width). The tabs are the title
+  bar's segmented control on their own; there is no sidebar.
+- **`UIScreen.main` is the whole DISPLAY on a Mac.** Anything laid out against
+  the screen must read `MacLayout.screenHeight` (the window, zoomed points)
+  and listen for `MacLayout.windowDidResize` — the Talk ring sat below the
+  window until it did.
+- **Not on the Mac**: widgets and the Live Activity (`platformFilter: iOS`,
+  ActivityKit guarded), AlarmKit (the daily call falls back to a
+  notification), the camera's iPad multitasking flag. The denoiser has a
+  `maccatalyst` slice (`native/denoise/build-ios.sh`).
+- **It must be SIGNED to launch**: CloudKit traps in an app without its
+  entitlements. The Mac uses `FutureVoice-mac.entitlements` (App Sandbox,
+  network, mic, camera, user-picked files; no App Group — nothing on the Mac
+  reads the widget container). Launch it with `open`, not the binary from a
+  shell (that hangs in the window-server handshake).
+- **Not done**: shipping. App Store Connect has to offer the app on macOS
+  (the Catalyst build replaces the iPad-on-Mac listing), and `beta.sh` /
+  `asc-submit.py` archive iOS only. Never tested on a Mac: a real call
+  (mic, echo cancellation, earphones), purchase, sign-in.
+
 ## Build / run
 
 Project is **xcodegen-driven** — `.xcodeproj` is generated, don't hand-edit it.
@@ -3004,7 +3042,7 @@ Nothing here names a language. Adding German is a `de` column in the catalogs pl
 ## Hard rules
 
 - **No secrets in committed code.** `Config/FutureVoice.xcconfig` is gitignored; never put real values in `FutureVoice.xcconfig.example`.
-- **iOS-first.** macOS support is out of scope.
+- **iOS-first.** The Mac app is the iPhone app under Mac Catalyst (see "The Mac app"); never fork a screen for it — Mac differences live in `MacLayout.swift` and `#if targetEnvironment(macCatalyst)`.
 - **Don't write to disk outside `documentDirectory`** unless using `cacheDirectory` with a clear cleanup policy.
 - **Deterministic scores stay deterministic.** Shadow match scores and scorecard metrics are computed in code; the LLM only writes qualitative notes anchored to those numbers. Don't let an LLM invent a number the code can compute.
 - **Drill cards must be speakable utterances**, never meta-rules ("use articles correctly"). `DrillStore.looksLikeMetaRule` is the safety net; keep prompts emitting concrete sentences.

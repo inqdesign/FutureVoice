@@ -110,11 +110,15 @@ final class SpeechCamera: NSObject, ObservableObject {
         session.automaticallyConfiguresApplicationAudioSession = false
         // iPad Split View / Stage Manager: without this the camera is
         // interrupted the moment another app shares the screen.
+        #if !targetEnvironment(macCatalyst)
         if session.isMultitaskingCameraAccessSupported {
             session.isMultitaskingCameraAccessEnabled = true
         }
+        #endif
         session.sessionPreset = .hd1280x720
-        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front),
+        // A Mac's camera has no "front"; take whichever camera it has.
+        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front)
+                ?? AVCaptureDevice.default(for: .video),
               let input = try? AVCaptureDeviceInput(device: device),
               session.canAddInput(input), session.canAddOutput(output) else { return false }
         session.addInput(input)

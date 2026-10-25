@@ -121,7 +121,13 @@ struct FutureVoiceApp: App {
                 // it changes when onboarding ends (UILanguage.isOnboarding),
                 // and RootView's body is the one that already reads every
                 // flag that gate turns on.
+                // The Mac's centred column and text size (no-op elsewhere).
+                .macPage()
+                .onAppear { MacWindow.configure() }
         }
+        #if targetEnvironment(macCatalyst)
+        .commands { MacViewCommands() }
+        #endif
         .onChange(of: scenePhase) { _, phase in
             // Study time for the day card: the edges of a foreground stint.
             if phase == .active { AppUsageLog.becameActive() } else { AppUsageLog.resigned() }

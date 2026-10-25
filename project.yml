@@ -52,7 +52,10 @@ targets:
         product: Supabase
       - package: PostHog
         product: PostHog
+      # Widgets and the Live Activity are iPhone/iPad only; the Mac build
+      # (Catalyst) ships without the extension.
       - target: FutureVoiceWidget
+        platformFilter: iOS
     entitlements:
       path: FutureVoice/Resources/FutureVoice.entitlements
       properties:
@@ -86,7 +89,16 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         PRODUCT_NAME: FutureVoice
         INFOPLIST_FILE: FutureVoice/Resources/Info.plist
-        TARGETED_DEVICE_FAMILY: "1,2"
+        # 6 = Mac Catalyst with the MAC idiom ("Optimize Interface for Mac"):
+        # native Mac metrics at 100%, not an iPad scaled down to 77%, which is
+        # why the "Designed for iPad" build read as tiny on a Mac.
+        TARGETED_DEVICE_FAMILY: "1,2,6"
+        SUPPORTS_MACCATALYST: YES
+        # Same bundle id on the Mac: one App Store record, so a subscription,
+        # Sign in with Apple and the iCloud sync container all carry over.
+        DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER: NO
+        # The Mac needs the App Sandbox and its own key names (see the file).
+        "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": FutureVoice/Resources/FutureVoice-mac.entitlements
         # The one ObjC file in the app: FVExceptionCatcher, which turns AVFAudio's
         # raised NSExceptions (uncatchable from Swift, twice a crash on
         # 2026-09-01) into NSErrors the realtime audio stack can retry on.

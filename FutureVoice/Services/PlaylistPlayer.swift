@@ -1,4 +1,6 @@
+#if !targetEnvironment(macCatalyst)
 import ActivityKit
+#endif
 import AVFoundation
 import Foundation
 import MediaPlayer
@@ -144,9 +146,11 @@ final class PlaylistPlayer: ObservableObject {
         }
         // An island left by a run the system ended (the app was killed)
         // describes nothing that is playing.
+        #if !targetEnvironment(macCatalyst)
         for stale in Activity<SceneListeningAttributes>.activities {
             Task { await stale.end(nil, dismissalPolicy: .immediate) }
         }
+        #endif
     }
 
     // MARK: - State
@@ -552,12 +556,15 @@ final class PlaylistPlayer: ObservableObject {
 
     // MARK: - Live Activity
 
+    #if !targetEnvironment(macCatalyst)
     private var activity: Activity<SceneListeningAttributes>?
+    #endif
 
     /// The line being said, in the Dynamic Island and on the lock screen.
     /// Started from the foreground (the tap that starts a list), updated from
     /// wherever the list is when a line changes, ended on Stop.
     private func publishLiveActivity() {
+        #if !targetEnvironment(macCatalyst)
         guard let line = current else { return }
         let state = SceneListeningAttributes.ContentState(
             speaker: line.speaker,
@@ -574,12 +581,15 @@ final class PlaylistPlayer: ObservableObject {
             activity = try? Activity.request(
                 attributes: SceneListeningAttributes(title: title), content: content)
         }
+        #endif
     }
 
     private func endLiveActivity() {
+        #if !targetEnvironment(macCatalyst)
         guard let ending = activity else { return }
         activity = nil
         Task { await ending.end(nil, dismissalPolicy: .immediate) }
+        #endif
     }
 
     private func publishNowPlaying() {

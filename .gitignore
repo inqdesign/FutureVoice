@@ -90,3 +90,7 @@ build-capture/
 
 # App Store review dumps (scripts/admin) — data pulls, not source
 reviews_full.json
+
+# Mac (Catalyst) builds — scripts/mac-run.sh
+build-mac/
+build-mac-ios/

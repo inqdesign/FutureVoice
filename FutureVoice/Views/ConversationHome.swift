@@ -902,6 +902,9 @@ private struct TalkHeroSection: View {
         // hero's measured global top (status bar + nav bar + padding), not
         // guessed from the scroll viewport.
         .frame(height: heroHeight)
+        .onReceive(NotificationCenter.default.publisher(for: MacLayout.windowDidResize)) { _ in
+            screenHeight = MacLayout.screenHeight
+        }
         .background(GeometryReader { g in
             Color.clear.preference(key: HeroTopYKey.self,
                                    value: g.frame(in: .global).minY)
@@ -973,6 +976,9 @@ private struct TalkHeroSection: View {
     /// Seeded with a close guess so the first frame is near-correct; the
     /// settle-sample above then replaces it with the measured value.
     @State private var heroTopY: CGFloat = TalkHeroSection.restTopGuess
+    /// The screen the ring centres on — the window, on the Mac, which the
+    /// learner resizes (`MacLayout.windowDidResize`).
+    @State private var screenHeight: CGFloat = MacLayout.screenHeight
     @State private var latestHeroTopReport: CGFloat = TalkHeroSection.restTopGuess
 
     /// The first frame's guess, from the window itself: status bar + the
@@ -995,7 +1001,7 @@ private struct TalkHeroSection: View {
     /// above the hero's bottom (140 half-ring + 20 tail), so:
     /// heroTop + heroHeight − 160 = screenHeight/2.
     private var heroHeight: CGFloat {
-        max(380, UIScreen.main.bounds.height / 2 + 160 - heroTopY)
+        max(380, screenHeight / 2 + 160 - heroTopY)
     }
 
 

@@ -2,7 +2,7 @@ import AppIntents
 import Foundation
 import SwiftUI
 
-#if canImport(AlarmKit)
+#if canImport(AlarmKit) && !targetEnvironment(macCatalyst)
 import AlarmKit
 #endif
 
@@ -38,13 +38,13 @@ enum DailyCallAlarm {
     /// predecessor demands a `stopButton` the system no longer draws. Gating on
     /// 26.1 keeps one code path instead of two that render differently.
     static var isSupported: Bool {
-        #if canImport(AlarmKit)
+        #if canImport(AlarmKit) && !targetEnvironment(macCatalyst)
         if #available(iOS 26.1, *) { return true }
         #endif
         return false
     }
 
-    #if canImport(AlarmKit)
+    #if canImport(AlarmKit) && !targetEnvironment(macCatalyst)
 
     /// Ferried alongside the alarm so the alert can name who's calling.
     /// Deliberately tiny — metadata is serialized into the Live Activity, so
@@ -168,7 +168,7 @@ enum DailyCallAlarm {
     @discardableResult
     static func scheduleIfSupported(_ plan: DailyCallPlan, at dates: [Date],
                                     callerName: String) async -> Bool {
-        #if canImport(AlarmKit)
+        #if canImport(AlarmKit) && !targetEnvironment(macCatalyst)
         if #available(iOS 26.1, *) {
             return await schedule(plan, at: dates, callerName: callerName)
         }
@@ -177,13 +177,13 @@ enum DailyCallAlarm {
     }
 
     static func cancelIfSupported() {
-        #if canImport(AlarmKit)
+        #if canImport(AlarmKit) && !targetEnvironment(macCatalyst)
         if #available(iOS 26.1, *) { cancelAll() }
         #endif
     }
 
     static func requestAuthorizationIfSupported() async -> Bool {
-        #if canImport(AlarmKit)
+        #if canImport(AlarmKit) && !targetEnvironment(macCatalyst)
         if #available(iOS 26.1, *) { return await isAuthorized() }
         #endif
         return false

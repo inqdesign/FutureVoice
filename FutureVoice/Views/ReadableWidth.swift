@@ -17,7 +17,9 @@ private struct IPadContentPadding: ViewModifier {
     let pad: CGFloat
 
     func body(content: Content) -> some View {
-        content.padding(.horizontal, sizeClass == .regular ? pad : 0)
+        // The Mac draws every page in a centred column already (`macPage`),
+        // so padding it again would leave a phone page half its width.
+        content.padding(.horizontal, sizeClass == .regular && !MacLayout.isMac ? pad : 0)
     }
 }
 

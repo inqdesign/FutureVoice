@@ -1,4 +1,6 @@
+#if !targetEnvironment(macCatalyst)
 import ActivityKit
+#endif
 import AppIntents
 import Foundation
 
@@ -9,6 +11,7 @@ import Foundation
 /// Models.swift and the stores. Everything in `ContentState` is resolved
 /// app-side (names in the app language, the line as written), because the
 /// extension can only draw.
+#if !targetEnvironment(macCatalyst)  // no Live Activities on the Mac
 struct SceneListeningAttributes: ActivityAttributes {
     struct ContentState: Codable, Hashable {
         /// Who says the current line.
@@ -27,6 +30,7 @@ struct SceneListeningAttributes: ActivityAttributes {
     /// The list being played ("My situations").
     var title: String
 }
+#endif
 
 /// The two buttons on the Live Activity. A `LiveActivityIntent` runs in the
 /// APP's process, so `perform` only has to tell the player, which is listening
