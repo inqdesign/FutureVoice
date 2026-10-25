@@ -216,7 +216,7 @@ struct SpeechChallengeView: View {
                 if isPast {
                     Text("This challenge has ended. These are the final standings.")
                 } else {
-                    Text("Only takes with the camera on go on the board, and your best one stands. The board shows your name and score — your video and voice stay on your phone.")
+                    Text("Camera-on takes that score \(SpeechChallenges.boardBar) or more go on the board, and your best one stands. The board shows your name and score — your video and voice stay on your phone.")
                 }
             }
 
@@ -656,6 +656,9 @@ struct SpeechChallengeEntrySection: View {
                 }
             case .cameraOff:
                 Label("The camera was off, so this take isn't on the board.", systemImage: "video.slash")
+                    .foregroundStyle(.secondary)
+            case .belowBar:
+                Label("Takes that score \(SpeechChallenges.boardBar) or more go on the board.", systemImage: "trophy")
                     .foregroundStyle(.secondary)
             case .failed:
                 Label("This take couldn't reach the board.", systemImage: "exclamationmark.triangle")

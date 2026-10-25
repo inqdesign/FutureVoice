@@ -89340,48 +89340,94 @@
         }
       }
     },
-    "Only takes with the camera on go on the board, and your best one stands. The board shows your name and score — your video and voice stay on your phone." : {
+    "Camera-on takes that score %lld or more go on the board, and your best one stands. The board shows your name and score — your video and voice stay on your phone." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nur Versuche mit eingeschalteter Kamera zählen, und dein bester bleibt stehen. In der Rangliste stehen nur Name und Punktzahl – Video und Stimme bleiben auf deinem Handy."
+            "value" : "Versuche mit eingeschalteter Kamera ab %lld Punkten kommen in die Rangliste, und dein bester bleibt stehen. In der Rangliste stehen nur Name und Punktzahl – Video und Stimme bleiben auf deinem Handy."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Solo cuentan los intentos con la cámara encendida, y se queda tu mejor puntuación. En la clasificación solo se ven tu nombre y tu puntuación; la grabación no sale de tu teléfono."
+            "value" : "Los intentos con la cámara encendida desde %lld puntos entran en la clasificación, y se queda tu mejor puntuación. En la clasificación solo se ven tu nombre y tu puntuación; la grabación no sale de tu teléfono."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Seules les prises faites caméra allumée comptent, et ton meilleur score reste. Le classement n’affiche que ton nom et ton score : ta vidéo et ta voix restent sur ton téléphone."
+            "value" : "Les prises faites caméra allumée à partir de %lld points entrent au classement, et ton meilleur score reste. Le classement n’affiche que ton nom et ton score : ta vidéo et ta voix restent sur ton téléphone."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "カメラをオンにした挑戦だけがランキングに載り、いちばん高い点数が残ります。表示されるのは名前と点数だけで、動画と声はこのスマホから出ません。"
+            "value" : "カメラをオンにして%lld点以上取った挑戦がランキングに載り、いちばん高い点数が残ります。表示されるのは名前と点数だけで、動画と声はこのスマホから出ません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "카메라를 켜고 한 도전만 순위에 올라가고, 가장 높은 점수가 남아요. 순위에는 이름과 점수만 보이고, 영상과 목소리는 내 폰에만 있어요."
+            "value" : "카메라를 켜고 %lld점 이상 받은 도전이 순위에 올라가고, 가장 높은 점수가 남아요. 순위에는 이름과 점수만 보이고, 영상과 목소리는 내 폰에만 있어요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "只有开着摄像头录的才会上榜，留下的是你的最高分。榜上只显示名字和分数，视频和声音都只留在你的手机里。"
+            "value" : "开着摄像头录、拿到%lld分以上的才会上榜，留下的是你的最高分。榜上只显示名字和分数，视频和声音都只留在你的手机里。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "只有開著相機錄的才會上榜，留下的是你的最高分。榜上只顯示名字和分數，影片和聲音都只留在你的手機裡。"
+            "value" : "開著相機錄、拿到%lld分以上的才會上榜，留下的是你的最高分。榜上只顯示名字和分數，影片和聲音都只留在你的手機裡。"
+          }
+        }
+      }
+    },
+    "Takes that score %lld or more go on the board." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ab %lld Punkten kommst du in die Rangliste."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desde %lld puntos entras en la clasificación."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "À partir de %lld points, tu entres au classement."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld点以上でランキングに載ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld점 이상이면 순위에 올라가요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld分以上才会上榜。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld分以上才會上榜。"
           }
         }
       }
