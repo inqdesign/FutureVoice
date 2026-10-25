@@ -527,39 +527,49 @@ private fun StudyCard(
         if (item.isSentence) {
             // The sentence deck's own anatomy (`DrillView.cardSurface`): what
             // you said, then the fluent version, hidden until the tap.
-            if (item.cardSaid.isNotBlank()) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(stringResource(R.string.you_said_f105ab),
-                        style = MaterialTheme.typography.labelMedium, color = onCardSecondary)
-                    Text(item.cardSaid, style = MaterialTheme.typography.bodyMedium,
-                        color = onCardSecondary,
-                        textDecoration = if (revealed) androidx.compose.ui.text.style.TextDecoration.LineThrough
-                            else null)
+            // Same as the drill card: if the sentence card doesn't fit its
+            // height, the second layout sets the sentences a step smaller so
+            // the button stays on the card. Only the TEXT is measured.
+            val content: @Composable (Boolean) -> Unit = { compact ->
+                Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                    if (item.cardSaid.isNotBlank()) {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(stringResource(R.string.you_said_f105ab),
+                                style = MaterialTheme.typography.labelMedium, color = onCardSecondary)
+                            Text(item.cardSaid, style = if (compact) PT.subheadline else MaterialTheme.typography.bodyMedium,
+                                color = onCardSecondary,
+                                textDecoration = if (revealed) androidx.compose.ui.text.style.TextDecoration.LineThrough
+                                    else null)
+                        }
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(stringResource(if (revealed) R.string.try_saying
+                            else R.string.how_would_a_fluent_speaker_say_it),
+                            style = MaterialTheme.typography.labelMedium, color = onCardSecondary)
+                        if (revealed) {
+                            Text(text,
+                                style = if (compact) compactTargetStyle(text) else MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.SemiBold, color = onCard)
+                        } else {
+                            // Redacted, as iOS's `.placeholder`: the line's shape, not its words.
+                            Box(Modifier.fillMaxWidth().height(28.dp)
+                                .background(Color.White.copy(alpha = 0.22f), ContinuousShape(6.dp)))
+                        }
+                    }
+                    if (revealed && item.cardReason.isNotBlank()) {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(stringResource(R.string.why_label),
+                                style = MaterialTheme.typography.labelMedium, color = onCardSecondary)
+                            Text(item.cardReason, style = MaterialTheme.typography.bodyMedium,
+                                color = onCardSecondary)
+                        }
+                    }
                 }
             }
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(stringResource(if (revealed) R.string.try_saying
-                    else R.string.how_would_a_fluent_speaker_say_it),
-                    style = MaterialTheme.typography.labelMedium, color = onCardSecondary)
-                if (revealed) {
-                    Text(text, style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.SemiBold, color = onCard)
-                } else {
-                    // Redacted, as iOS's `.placeholder`: the line's shape, not its words.
-                    Box(Modifier.fillMaxWidth().height(28.dp)
-                        .background(Color.White.copy(alpha = 0.22f), ContinuousShape(6.dp)))
-                }
-            }
-            if (revealed && item.cardReason.isNotBlank()) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(stringResource(R.string.why_label),
-                        style = MaterialTheme.typography.labelMedium, color = onCardSecondary)
-                    Text(item.cardReason, style = MaterialTheme.typography.bodyMedium,
-                        color = onCardSecondary)
-                }
-            }
+            ViewThatFits(vertical = true, modifier = Modifier.weight(1f).fillMaxWidth(),
+                candidates = listOf({ content(false) }, { content(true) }))
             if (!revealed) {
-                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.height(12.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.Visibility, contentDescription = null,
@@ -569,7 +579,7 @@ private fun StudyCard(
                         style = MaterialTheme.typography.bodyLarge, color = onCardSecondary)
                 }
             } else if (onHear != null) {
-                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.height(12.dp))
                 HearItPill(hearing, onHear)
             }
             return@Column

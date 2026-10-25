@@ -81,6 +81,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.roro.futurevoice.R
 import com.roro.futurevoice.data.DrillStore
 import com.roro.futurevoice.data.StoreEvents
@@ -279,6 +280,14 @@ fun DrillDeckScreen(
         }
     }
 
+    // The rest of the due pile didn't vanish, it just isn't in this hand.
+    val counterText: String? = if (top != null && (deck.isNotEmpty() || resolved > 0)) {
+        stringResource(R.string.lld_of_lld,
+            (resolved + 1).coerceAtMost(resolved + deck.size),
+            resolved + deck.size) +
+            if (remainingDue > 0) stringResource(R.string.lld_waiting, remainingDue) else ""
+    } else null
+
     Scaffold(
         topBar = {
             // A sheet, as on iOS: the deck's name centred, Done on the right,
@@ -286,8 +295,18 @@ fun DrillDeckScreen(
             androidx.compose.material3.CenterAlignedTopAppBar(
                 colors = AppSurfaces.topBarColors(),
                 title = {
-                    if (!pushed) Text(title ?: stringResource(R.string.review),
-                        style = MaterialTheme.typography.titleMedium)
+                    // "1 of 20 · 6 waiting" rides under the title instead of a
+                    // row of its own above the card: on a small phone that row
+                    // and its gaps were the header eating space the card
+                    // needed (iOS `CounterSubtitle`, 2026-10-21).
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        if (!pushed) Text(title ?: stringResource(R.string.review),
+                            style = MaterialTheme.typography.titleMedium)
+                        counterText?.let {
+                            Text(it, style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
                 },
                 navigationIcon = {
                     if (pushed) IconButton(onClick = onBack) {
@@ -309,19 +328,6 @@ fun DrillDeckScreen(
             // No progress bar: iOS draws none — the deck is a pile, not a
             // quiz with a finish line (gallery 4.2).
 
-            // "1 of 20 · 6 waiting" (iOS `counterRow`): the rest of the due
-            // pile didn't vanish, it just isn't in this hand.
-            if (top != null && (deck.isNotEmpty() || resolved > 0)) {
-                Text(
-                    stringResource(R.string.lld_of_lld,
-                        (resolved + 1).coerceAtMost(resolved + deck.size),
-                        resolved + deck.size) +
-                        if (remainingDue > 0) stringResource(R.string.lld_waiting, remainingDue) else "",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp))
-            }
             if (top == null) {
                 if (dealt) {
                     DeckDone(
@@ -368,38 +374,45 @@ fun DrillDeckScreen(
                             { markMisheard(top) }
                         } else null,
                         actions = {
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                CardPill(
-                                    icon = if (hearing) null else Icons.AutoMirrored.Filled.VolumeUp,
-                                    label = stringResource(if (hearing) R.string.loading else R.string.hear_it),
-                                    enabled = voiceId.isNotBlank() && !hearing,
-                                ) {
-                                    hearing = true
-                                    scope.launch {
-                                        runCatching {
-                                            val audio = com.roro.futurevoice.data.cachedSynthesis(
-                                                context, voiceId, top.targetPhrase, purpose = "drill")
-                                            player.play(audio)
-                                        }.onFailure { e ->
-                                            // Grading stays free on-device; HEARING a
-                                            // never-synthesized line is what the plans
-                                            // are for (iOS `parkedPaywall`).
-                                            if (e === com.roro.futurevoice.net.EdgeError.InsufficientCredits)
-                                                com.roro.futurevoice.data.BillingGate.showPaywall.value = true
+                            // All three keep their labels or all three drop
+                            // them: a narrow phone cut them to "Exampl…" one
+                            // at a time (iOS `pillRow`, 2026-10-21).
+                            val pills: @Composable (Boolean) -> Unit = { iconOnly ->
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    CardPill(iconOnly = iconOnly,
+                                        icon = if (hearing) null else Icons.AutoMirrored.Filled.VolumeUp,
+                                        label = stringResource(if (hearing) R.string.loading else R.string.hear_it),
+                                        enabled = voiceId.isNotBlank() && !hearing,
+                                    ) {
+                                        hearing = true
+                                        scope.launch {
+                                            runCatching {
+                                                val audio = com.roro.futurevoice.data.cachedSynthesis(
+                                                    context, voiceId, top.targetPhrase, purpose = "drill")
+                                                player.play(audio)
+                                            }.onFailure { e ->
+                                                // Grading stays free on-device; HEARING a
+                                                // never-synthesized line is what the plans
+                                                // are for (iOS `parkedPaywall`).
+                                                if (e === com.roro.futurevoice.net.EdgeError.InsufficientCredits)
+                                                    com.roro.futurevoice.data.BillingGate.showPaywall.value = true
+                                            }
+                                            hearing = false
                                         }
-                                        hearing = false
+                                    }
+                                    CardPill(iconOnly = iconOnly, icon = Icons.Filled.GraphicEq, label = stringResource(R.string.shadow)) {
+                                        onShadow(top.targetPhrase)
+                                    }
+                                    // iOS `books.vertical` → `.fill` once the card
+                                    // carries its examples.
+                                    CardPill(iconOnly = iconOnly, icon = if (top.enrichment != null) Icons.Filled.MenuBook
+                                        else Icons.Outlined.MenuBook, label = stringResource(R.string.examples)) {
+                                        enrichFor = top
                                     }
                                 }
-                                CardPill(Icons.Filled.GraphicEq, stringResource(R.string.shadow)) {
-                                    onShadow(top.targetPhrase)
-                                }
-                                // iOS `books.vertical` → `.fill` once the card
-                                // carries its examples.
-                                CardPill(if (top.enrichment != null) Icons.Filled.MenuBook
-                                    else Icons.Outlined.MenuBook, stringResource(R.string.examples)) {
-                                    enrichFor = top
-                                }
                             }
+                            ViewThatFits(vertical = false,
+                                candidates = listOf({ pills(false) }, { pills(true) }))
                         },
                         modifier = Modifier
                             .fillMaxSize()
@@ -633,53 +646,66 @@ private fun DrillCardFace(
                 end = if (onMisheard != null) 44.dp else 24.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
-        if (card.sourcePhrase.isNotBlank()) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                // The LABEL "You said" — `you_said` is the quoting sentence
-                // with a %s, which printed its placeholder here.
-                Text(stringResource(R.string.you_said_f105ab), style = MaterialTheme.typography.bodyMedium,
-                    color = onCardSecondary)
-                // Cards minted before the fragment trim carry the WHOLE turn,
-                // so trim at render too — a minute-long transcript struck
-                // through reads as "everything you said was wrong".
-                Text(DrillIngest.relevantFragment(card.sourcePhrase, card.targetPhrase),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (revealed) onCardSecondary else onCard,
-                    textDecoration = if (revealed) TextDecoration.LineThrough else null)
-            }
-        }
+        // A small phone can't hold a long sentence at full size with its
+        // buttons: the second layout sets the sentences a step smaller, so
+        // the buttons stay on the card instead of spilling under it (iOS
+        // `cardSurface`'s ViewThatFits). Only the TEXT is measured, never the
+        // gap or the buttons below it.
+        val content: @Composable (Boolean) -> Unit = { compact ->
+            Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                if (card.sourcePhrase.isNotBlank()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        // The LABEL "You said" — `you_said` is the quoting sentence
+                        // with a %s, which printed its placeholder here.
+                        Text(stringResource(R.string.you_said_f105ab), style = MaterialTheme.typography.bodyMedium,
+                            color = onCardSecondary)
+                        // Cards minted before the fragment trim carry the WHOLE turn,
+                        // so trim at render too — a minute-long transcript struck
+                        // through reads as "everything you said was wrong".
+                        Text(DrillIngest.relevantFragment(card.sourcePhrase, card.targetPhrase),
+                            style = if (compact) PT.subheadline else MaterialTheme.typography.titleMedium,
+                            color = if (revealed) onCardSecondary else onCard,
+                            textDecoration = if (revealed) TextDecoration.LineThrough else null)
+                    }
+                }
 
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                stringResource(
-                    if (revealed) R.string.try_saying
-                    else R.string.how_would_a_fluent_speaker_say_it),
-                style = MaterialTheme.typography.bodyMedium, color = onCardSecondary)
-            if (revealed) {
-                Text(card.targetPhrase, style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold, color = onCard)
-            } else {
-                // The ANSWER's shape, greyed: a blank space reads as a card
-                // that failed to load, and the line lengths tell the learner
-                // how much they are being asked to produce.
-                listOf(1f, 1f, 0.55f).forEach { fraction ->
-                    Box(
-                        Modifier.fillMaxWidth(fraction).height(22.dp)
-                            .background(Color.White.copy(alpha = 0.22f), ContinuousShape(6.dp)))
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        stringResource(
+                            if (revealed) R.string.try_saying
+                            else R.string.how_would_a_fluent_speaker_say_it),
+                        style = MaterialTheme.typography.bodyMedium, color = onCardSecondary)
+                    if (revealed) {
+                        Text(card.targetPhrase,
+                            style = if (compact) compactTargetStyle(card.targetPhrase)
+                                else MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.SemiBold, color = onCard)
+                    } else {
+                        // The ANSWER's shape, greyed: a blank space reads as a card
+                        // that failed to load, and the line lengths tell the learner
+                        // how much they are being asked to produce.
+                        listOf(1f, 1f, 0.55f).forEach { fraction ->
+                            Box(
+                                Modifier.fillMaxWidth(fraction).height(22.dp)
+                                    .background(Color.White.copy(alpha = 0.22f), ContinuousShape(6.dp)))
+                        }
+                    }
+                }
+
+                if (revealed && card.reason.isNotBlank()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(stringResource(R.string.why_label), style = MaterialTheme.typography.bodyMedium,
+                            color = onCardSecondary)
+                        Text(card.reason, style = MaterialTheme.typography.bodyMedium,
+                            color = onCardSecondary)
+                    }
                 }
             }
         }
+        ViewThatFits(vertical = true, modifier = Modifier.weight(1f).fillMaxWidth(),
+            candidates = listOf({ content(false) }, { content(true) }))
 
-        if (revealed && card.reason.isNotBlank()) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(stringResource(R.string.why_label), style = MaterialTheme.typography.bodyMedium,
-                    color = onCardSecondary)
-                Text(card.reason, style = MaterialTheme.typography.bodyMedium,
-                    color = onCardSecondary)
-            }
-        }
-
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(12.dp))
 
         if (revealed) {
             actions?.invoke()
@@ -853,6 +879,15 @@ private fun DeckDone(
     }
 }
 
+/** One step under the card's sentence size, for a card that doesn't fit
+ *  otherwise (iOS `DrillView.compactTargetFont`: title2 · title3 · headline
+ *  by length). Shared with the put-off deck's sentence cards. */
+internal fun compactTargetStyle(text: String): androidx.compose.ui.text.TextStyle = when {
+    text.length < 60 -> androidx.compose.ui.text.TextStyle(fontSize = 22.sp, lineHeight = 28.sp)
+    text.length < 120 -> PT.title3
+    else -> PT.headline
+}
+
 /** One sitting's worth. A 399-card queue dealt in full is not a review, it
  *  is a wall (iOS `DrillSheet.sessionCap`). */
 private const val SESSION_CAP = 20
@@ -864,6 +899,9 @@ private fun CardPill(
     icon: androidx.compose.ui.graphics.vector.ImageVector?,
     label: String,
     enabled: Boolean = true,
+    /** The glyph alone, the label kept for TalkBack, when the row of three
+     *  can't hold every label at full width. */
+    iconOnly: Boolean = false,
     onClick: () -> Unit,
 ) {
     val tint = Color.White.copy(alpha = if (enabled) 1f else 0.5f)
@@ -875,7 +913,11 @@ private fun CardPill(
         horizontalArrangement = Arrangement.spacedBy(5.dp),
     ) {
         if (icon == null) CircularProgressIndicator(Modifier.size(13.dp), strokeWidth = 2.dp, color = tint)
-        else Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(15.dp))
-        Text(label, style = MaterialTheme.typography.labelMedium, color = tint)
+        else Icon(icon, contentDescription = if (iconOnly) label else null, tint = tint,
+            modifier = Modifier.size(15.dp))
+        // Its full width, never shrunk or cut: when the row can't hold it,
+        // the icon-only row is used instead.
+        if (!iconOnly) Text(label, style = MaterialTheme.typography.labelMedium, color = tint,
+            maxLines = 1, softWrap = false)
     }
 }
