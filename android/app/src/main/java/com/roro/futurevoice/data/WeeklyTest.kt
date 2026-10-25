@@ -1312,8 +1312,8 @@ object WeeklyTestEngine {
      * A rewrite item: what the learner said or typed. Right when it is the
      * answer sentence, or when it carries the fix (every word the fix added,
      * none it removed — [CarryoverDetector.showsTheFix], the rule that credits
-     * a correction in a talk) inside most of the sentence, so a reply of the
-     * fixed word alone is not a rewrite. Nothing else counts against it: how
+     * a correction in a talk) inside most of the sentence, or as the whole
+     * fixed clause on its own; a reply of the fixed word alone is not a rewrite. Nothing else counts against it: how
      * the rest is worded is the learner's. (iOS `isCorrect(_:rewritten:)` —
      * renamed here because Kotlin can't overload on the label.)
      *
@@ -1336,8 +1336,13 @@ object WeeklyTestEngine {
         // A pure reorder adds and drops nothing; only the fix itself shows it.
         val fixKey = CarryoverDetector.normalized(now)
         if (!CarryoverDetector.fixChangesWords(was, now)) return fixKey.isNotEmpty() && given.contains(fixKey)
-        return CarryoverDetector.showsTheFixInText(was, now, rewritten) &&
-            CarryoverDetector.sharedWordRatio(expand(item.answer), rewritten) >= 0.6
+        if (!CarryoverDetector.showsTheFixInText(was, now, rewritten)) return false
+        // The screen underlines only the part that was wrong, so the fixed
+        // clause on its own is an answer (2026-10-25, "whoever limits AI's"
+        // for a 22-word line). A lone word is still not: the clause has to
+        // be the fix whole, at least two words of it.
+        if (WordSplitter.count(now, language) >= 2 && given.contains(fixKey)) return true
+        return CarryoverDetector.sharedWordRatio(expand(item.answer), rewritten) >= 0.6
     }
 
     /** The words the fix put in — the hint a rewrite item offers. */

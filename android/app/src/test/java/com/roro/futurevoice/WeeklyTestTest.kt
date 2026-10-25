@@ -85,6 +85,21 @@ class WeeklyTestTest {
         assertFalse(WeeklyTestEngine.isCorrectRewrite(it, "went", "en"))
         assertFalse(WeeklyTestEngine.isCorrectRewrite(it, "", "en"))
         assertEquals("went", WeeklyTestEngine.hintWords(it))
+        // The fixed clause alone is the underlined part, fixed.
+        assertTrue(WeeklyTestEngine.isCorrectRewrite(it, "I went to the park", "en"))
+    }
+
+    /** Reported 2026-10-25 (iOS 3be00694): a 22-word line with "who limit
+     *  the AI" underlined, answered with the fix alone (curly apostrophe). */
+    @Test fun rewriteAcceptsTheFixedClauseAlone() {
+        val it = WeeklyTestItem(kind = WeeklyTestItem.Kind.REWRITE,
+            prompt = "now the agenda goes to who will set the rule because who limit the AI power might be the new king of AI.",
+            answer = "now the agenda goes to who will set the rule because whoever limits AI's power might be the new king of AI.",
+            focus = "who limit the AI", example = "whoever limits AI's")
+        assertTrue(WeeklyTestEngine.isCorrectRewrite(it, "whoever limits AI\u2019s", "en"))
+        assertTrue(WeeklyTestEngine.isCorrectRewrite(it, "whoever limits AI's power", "en"))
+        assertFalse(WeeklyTestEngine.isCorrectRewrite(it, "who limit the AI", "en"))
+        assertFalse(WeeklyTestEngine.isCorrectRewrite(it, "whoever", "en"))
     }
 
     /** Real spoken turns (iOS `scripts/correction-cases-en.json`) run 29–34
