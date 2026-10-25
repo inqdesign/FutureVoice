@@ -148,26 +148,21 @@ enum MacWindow {
     @MainActor
     static func configure() {
         #if targetEnvironment(macCatalyst)
-        let zoom = MacLayout.zoom
         for case let scene as UIWindowScene in UIApplication.shared.connectedScenes {
             scene.sizeRestrictions?.minimumSize = minimumSize
             // The tabs sit in the title bar; the app's name beside them is noise.
             scene.titlebar?.titleVisibility = .hidden
             if observed[ObjectIdentifier(scene)] == nil {
-                observed[ObjectIdentifier(scene)] = scene.observe(\.effectiveGeometry) { _, _ in
-                    Task { @MainActor in
+                // A live resize hands the window its new on-screen size as if
+                // there were no zoom; put the zoom back on every step of it.
+                observed[ObjectIdentifier(scene)] = scene.observe(\.effectiveGeometry) { scene, _ in
+                    MainActor.assumeIsolated {
+                        applyZoom(to: scene)
                         NotificationCenter.default.post(name: MacLayout.windowDidResize, object: nil)
                     }
                 }
             }
-            for window in scene.windows {
-                // `frame` is the window's size on screen whatever the current
-                // transform is; the bounds are what the app lays out in.
-                let onScreen = window.frame.size
-                window.transform = CGAffineTransform(scaleX: zoom, y: zoom)
-                window.bounds = CGRect(origin: .zero,
-                                       size: CGSize(width: onScreen.width / zoom, height: onScreen.height / zoom))
-            }
+            applyZoom(to: scene)
             if !UserDefaults.standard.bool(forKey: sizedKey) {
                 UserDefaults.standard.set(true, forKey: sizedKey)
                 let screen = scene.screen.bounds
@@ -178,6 +173,25 @@ enum MacWindow {
             }
         }
         NotificationCenter.default.post(name: MacLayout.windowDidResize, object: nil)
+        #endif
+    }
+
+    /// The scene's size is the window's size on screen, whatever UIKit last
+    /// did to the window; the window lays out in that size divided by the zoom.
+    @MainActor
+    private static func applyZoom(to scene: UIWindowScene) {
+        #if targetEnvironment(macCatalyst)
+        let zoom = MacLayout.zoom
+        let onScreen = scene.coordinateSpace.bounds.size
+        guard onScreen.width > 0, onScreen.height > 0 else { return }
+        let transform = CGAffineTransform(scaleX: zoom, y: zoom)
+        let bounds = CGRect(origin: .zero, size: CGSize(width: onScreen.width / zoom, height: onScreen.height / zoom))
+        let center = CGPoint(x: onScreen.width / 2, y: onScreen.height / 2)
+        for window in scene.windows {
+            if window.transform != transform { window.transform = transform }
+            if window.bounds != bounds { window.bounds = bounds }
+            if window.center != center { window.center = center }
+        }
         #endif
     }
 }
