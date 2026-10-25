@@ -2109,10 +2109,7 @@ struct ProgressTab: View {
 
         // Accumulated speaking time across every analyzed session — gates the
         // overall level so it's grounded in ~10 min of talk, not one session.
-        let totalSpeakSecs = scoredSessions.reduce(0.0) { acc, sess in
-            acc + sess.turns.filter { $0.role == .user }
-                .reduce(0.0) { $0 + Double($1.durationMs) / 1000.0 }
-        }
+        let totalSpeakSecs = WeeklyReportEngine.totalUserSpeakingSeconds(scoredSessions)
         out.totalSpeakingMinutes = Int(totalSpeakSecs / 60.0)
 
         let recent = Array(scoredSessions.prefix(5))

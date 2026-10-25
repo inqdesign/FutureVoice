@@ -30,10 +30,12 @@ enum WeeklyReportEngine {
 
     /// Sum of user-turn durations across a list of sessions. Drives every
     /// unlock decision and the progress bar in the UI, so they stay in sync.
+    /// Evidence turns only: a line read off coach mode's suggestion is out of
+    /// the assessment, so it can't be what opens it either.
     static func totalUserSpeakingSeconds(_ sessions: [Session]) -> Double {
         var total: Double = 0
         for session in sessions {
-            for turn in session.turns where turn.role == .user {
+            for turn in session.turns where turn.isEvidence {
                 total += Double(turn.durationMs) / 1000.0
             }
         }
