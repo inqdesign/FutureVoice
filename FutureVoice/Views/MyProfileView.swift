@@ -194,7 +194,7 @@ struct MyProfileView: View {
         isWorking = true
         errorText = nil
         do {
-            try await PublicPersonaService.withdrawMine(language: appState.targetLanguage)
+            try await PublicPersonaService.withdrawMine()
             // Same as the editor's Take down: a deliberate choice the
             // launch-time mirror must not quietly undo.
             UserDefaults.standard.set(true, forKey: PublicPersonaService.manualIntroKey)

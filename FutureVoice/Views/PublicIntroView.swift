@@ -251,7 +251,7 @@ struct PublicIntroView: View {
         isSaving = true
         errorText = nil
         do {
-            try await PublicPersonaService.withdrawMine(language: appState.targetLanguage)
+            try await PublicPersonaService.withdrawMine()
             // Taking it down is as deliberate as publishing — stop the
             // auto-sync from quietly putting the row back next launch.
             UserDefaults.standard.set(true, forKey: PublicPersonaService.manualIntroKey)

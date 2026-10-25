@@ -125,7 +125,7 @@ struct PublicIntroPreviewSheet: View {
         UserDefaults.standard.set(true, forKey: PublicPersonaService.manualIntroKey)
         Analytics.capture("public_intro_preview_declined")
         let language = appState.targetLanguage
-        Task { try? await PublicPersonaService.withdrawMine(language: language) }
+        Task { try? await PublicPersonaService.withdrawMine() }
         dismiss()
     }
 }

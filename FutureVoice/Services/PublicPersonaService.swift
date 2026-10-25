@@ -284,18 +284,21 @@ enum PublicPersonaService {
 
     // MARK: - My own public intro (one row per owner + language)
 
-    /// The signed-in user's own published intro for one target language, if any.
+    /// The signed-in user's own published intro: the row in `language` if
+    /// there is one, else their row in any other language. Since the pool
+    /// became every language (2026-10-18) a row in another language IS the
+    /// learner on strangers' maps, so "not public" may only be said when
+    /// they own no row at all — reading one language left Me saying private
+    /// while Watch showed them.
     static func fetchMine(language: String) async throws -> PublicPersona? {
         guard let uid = await myUserId() else { return nil }
         let rows: [PublicPersona] = try await SupabaseProvider.shared
             .from("public_personas")
             .select(columns)
             .eq("owner_user_id", value: uid)
-            .eq("language", value: language)
-            .limit(1)
             .execute()
             .value
-        return rows.first
+        return rows.first { $0.language == language } ?? rows.first
     }
 
     /// Publish (or update) the user's self-introduction into the pool. The
@@ -351,14 +354,15 @@ enum PublicPersonaService {
         await pushMyPhoto()
     }
 
-    /// Take the user's intro out of the pool entirely.
-    static func withdrawMine(language: String) async throws {
+    /// Take the user's intro out of the pool entirely — every language's
+    /// row, since the pool shows every language and a row left in the other
+    /// one kept them on strangers' maps after "Take down".
+    static func withdrawMine() async throws {
         guard let uid = await myUserId() else { return }
         try await SupabaseProvider.shared
             .from("public_personas")
             .delete()
             .eq("owner_user_id", value: uid)
-            .eq("language", value: language)
             .execute()
     }
 
@@ -472,7 +476,7 @@ enum PublicPersonaService {
                 .eq("id", value: existing.id)
                 .execute()
         } else {
-            try? await withdrawMine(language: language)
+            try? await withdrawMine()
         }
     }
 
