@@ -1,0 +1,10 @@
+Novedades
+• Modo tutor: elige un tema y practica cada frase de una lección corta hasta decirla bien.
+• Antes de tu primera charla, elige nivel, velocidad y modo coach en una pantalla.
+• Elige la voz de tu yo fluido: la tuya o una parecida.
+• Widget de rutina: el plan de hoy y lo que toca ahora.
+• Convierte un episodio del pódcast en tu cuaderno.
+
+Correcciones
+• «Prueba a decir» sigue la conversación y lo que has contado.
+• El reloj de la llamada y el anillo de inicio coinciden.

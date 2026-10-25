@@ -1,0 +1,10 @@
+Nouveautés
+• Mode tuteur : choisis un sujet et répète chaque phrase d’une courte leçon jusqu’à la dire juste.
+• Avant ta première conversation, règle niveau, vitesse et mode coach sur un écran.
+• Choisis la voix de ton moi fluide : la tienne ou une voix proche.
+• Widget routine : le programme du jour et ce qui t’attend.
+• Fais d’un épisode du podcast un carnet.
+
+Corrections
+• « Essaie de dire » suit la conversation et ce que tu as raconté.
+• Le chrono d’appel et l’anneau d’accueil concordent.
