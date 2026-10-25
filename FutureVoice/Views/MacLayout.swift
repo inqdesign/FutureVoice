@@ -228,17 +228,73 @@ enum MacSheets {
         method_exchangeImplementations(original, replacement)
     }
 
-    @MainActor
-    static func mark(_ presented: UIViewController, from presenter: UIViewController) {
+    /// Marks a sheet for its phone size; true when it is one.
+    @MainActor @discardableResult
+    static func mark(_ presented: UIViewController, from presenter: UIViewController) -> Bool {
         switch presented.modalPresentationStyle {
         case .formSheet, .pageSheet, .automatic: break
-        default: return
+        default: return false
         }
         let window = presenter.viewIfLoaded?.window ?? presenter.view.window
         let height = min(maxHeight, max(480, (window?.bounds.height ?? maxHeight) - 48))
         presented.modalPresentationStyle = .formSheet
         objc_setAssociatedObject(presented, &sizeKey, NSValue(cgSize: CGSize(width: width, height: height)),
                                  .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        return true
+    }
+
+    /// On the phone a sheet is closed by swiping it down, so many have no
+    /// close button — and a Mac can't swipe, so the player and others were a
+    /// trap. Esc and a click outside the sheet close it instead, under the
+    /// swipe's own rule: never a sheet that is modal (`interactiveDismissDisabled`
+    /// sets that, e.g. while recording) or whose delegate says no.
+    @MainActor
+    static func makeClosable(_ presented: UIViewController) {
+        presented.addKeyCommand(UIKeyCommand(input: UIKeyCommand.inputEscape, modifierFlags: [],
+                                             action: #selector(UIViewController.fv_macCloseSheet)))
+        guard let container = presented.presentationController?.containerView else { return }
+        let tap = OutsideTap(sheet: presented)
+        container.addGestureRecognizer(tap)
+    }
+
+    @MainActor
+    static func close(_ sheet: UIViewController) {
+        // Esc reaches the sheet's own controller or anything presented above
+        // it; close the topmost one.
+        var top = sheet
+        while let next = top.presentedViewController { top = next }
+        guard !top.isBeingDismissed, !top.isModalInPresentation,
+              let controller = top.presentationController else { return }
+        if let delegate = controller.delegate,
+           delegate.presentationControllerShouldDismiss?(controller) == false { return }
+        // The same calls a swipe makes, so SwiftUI's `isPresented` follows.
+        controller.delegate?.presentationControllerWillDismiss?(controller)
+        top.dismiss(animated: true) {
+            controller.delegate?.presentationControllerDidDismiss?(controller)
+        }
+    }
+
+    /// A click on the dimmed area around a sheet, never inside it.
+    private final class OutsideTap: UITapGestureRecognizer, UIGestureRecognizerDelegate {
+        weak var sheet: UIViewController?
+
+        init(sheet: UIViewController) {
+            self.sheet = sheet
+            super.init(target: nil, action: nil)
+            addTarget(self, action: #selector(fire))
+            delegate = self
+            cancelsTouchesInView = false
+        }
+
+        func gestureRecognizer(_ g: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+            guard let sheet, let view = sheet.viewIfLoaded, view.window != nil else { return false }
+            return !view.bounds.contains(touch.location(in: view))
+        }
+
+        @objc private func fire() {
+            guard let sheet, sheet.presentedViewController == nil else { return }
+            MainActor.assumeIsolated { MacSheets.close(sheet) }
+        }
     }
 }
 
@@ -247,8 +303,16 @@ extension UIViewController {
     // calls inside them reach the originals.
     @objc fileprivate func fv_macPresent(_ presented: UIViewController, animated: Bool,
                                          completion: (() -> Void)?) {
-        MacSheets.mark(presented, from: self)
-        fv_macPresent(presented, animated: animated, completion: completion)
+        let isSheet = MacSheets.mark(presented, from: self)
+        fv_macPresent(presented, animated: animated) {
+            if isSheet { MacSheets.makeClosable(presented) }
+            completion?()
+        }
+    }
+
+    /// Esc on a sheet.
+    @objc fileprivate func fv_macCloseSheet() {
+        MacSheets.close(self)
     }
 
     @objc fileprivate var fv_macPreferredContentSize: CGSize {
