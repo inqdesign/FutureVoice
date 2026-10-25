@@ -1177,8 +1177,9 @@ enum WeeklyTestEngine {
     /// A rewrite item: what the learner said or typed. Right when it is the
     /// answer sentence, or when it carries the fix (every word the fix added,
     /// none it removed — `CarryoverDetector.showsTheFix`, the rule that
-    /// credits a correction in a talk) inside most of the sentence, so a
-    /// reply of the fixed word alone is not a rewrite. Nothing else counts
+    /// credits a correction in a talk) inside most of the sentence, or as
+    /// the whole fixed clause on its own; a reply of the fixed word alone is
+    /// not a rewrite. Nothing else counts
     /// against it: how the rest is worded is the learner's.
     ///
     /// Everything is compared through `ShadowEngine.expandForDiff` first:
@@ -1206,8 +1207,13 @@ enum WeeklyTestEngine {
         guard CarryoverDetector.fixChangesWords(from: was, to: now) else {
             return !fixKey.isEmpty && given.contains(fixKey)
         }
-        return CarryoverDetector.showsTheFix(from: was, to: now, inText: rewritten)
-            && CarryoverDetector.sharedWordRatio(of: expand(item.answer), in: rewritten) >= 0.6
+        guard CarryoverDetector.showsTheFix(from: was, to: now, inText: rewritten) else { return false }
+        // The screen underlines only the part that was wrong, so the fixed
+        // clause on its own is an answer (2026-10-25, "whoever limits AI's"
+        // for a 22-word line). A lone word is still not: the clause has to
+        // be the fix whole, at least two words of it.
+        if WordSplitter.count(now) >= 2, given.contains(fixKey) { return true }
+        return CarryoverDetector.sharedWordRatio(of: expand(item.answer), in: rewritten) >= 0.6
     }
 
     /// The words the fix put in — the hint a rewrite item offers.

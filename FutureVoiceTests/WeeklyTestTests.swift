@@ -49,6 +49,22 @@ final class WeeklyTestTests: XCTestCase {
         XCTAssertFalse(WeeklyTestEngine.isCorrect(it, rewritten: "went"))
         XCTAssertFalse(WeeklyTestEngine.isCorrect(it, rewritten: ""))
         XCTAssertEqual(WeeklyTestEngine.hintWords(it), "went")
+        // The fixed clause alone is the underlined part, fixed.
+        XCTAssertTrue(WeeklyTestEngine.isCorrect(it, rewritten: "I went to the park"))
+    }
+
+    /// Reported 2026-10-25: a 22-word line with "who limit the AI"
+    /// underlined, answered with the fix alone (iOS's curly apostrophe).
+    func testRewriteAcceptsTheFixedClauseAlone() {
+        let it = WeeklyTestItem(id: UUID(), kind: .rewrite,
+                                prompt: "now the agenda goes to who will set the rule because who limit the AI power might be the new king of AI.",
+                                answer: "now the agenda goes to who will set the rule because whoever limits AI's power might be the new king of AI.",
+                                options: [],
+                                focus: "who limit the AI", example: "whoever limits AI's")
+        XCTAssertTrue(WeeklyTestEngine.isCorrect(it, rewritten: "whoever limits AI\u{2019}s", language: "en"))
+        XCTAssertTrue(WeeklyTestEngine.isCorrect(it, rewritten: "whoever limits AI's power", language: "en"))
+        XCTAssertFalse(WeeklyTestEngine.isCorrect(it, rewritten: "who limit the AI", language: "en"))
+        XCTAssertFalse(WeeklyTestEngine.isCorrect(it, rewritten: "whoever", language: "en"))
     }
 
     /// Real spoken turns (`scripts/correction-cases-en.json`) run 29–34
