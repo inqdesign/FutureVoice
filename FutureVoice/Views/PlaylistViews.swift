@@ -266,9 +266,15 @@ private struct PlayerLibrary: View {
 
     enum Tab: String { case podcast, situations }
 
+    /// A language the show isn't made in has no Podcast tab at all
+    /// (2026-10-25, founder): the page under it could only ever be empty.
+    /// The feed answers 404 for such a language, so no episodes = no show.
+    private var hasPodcast: Bool { !shows.isEmpty }
+    private var shownTab: Tab { hasPodcast ? tab : .situations }
+
     var body: some View {
         List {
-            switch tab {
+            switch shownTab {
             case .podcast: podcast
             case .situations: situations
             }
@@ -277,14 +283,16 @@ private struct PlayerLibrary: View {
         // segmented row (founder: squeezed into the bar beside Back, the
         // glass capsule looked off).
         .safeAreaInset(edge: .top, spacing: 0) {
-            Picker(selection: $tab) {
-                Text("Podcast").tag(Tab.podcast)
-                Text("My situations").tag(Tab.situations)
-            } label: { EmptyView() }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(Color(.systemGroupedBackground))
+            if hasPodcast {
+                Picker(selection: $tab) {
+                    Text("Podcast").tag(Tab.podcast)
+                    Text("My situations").tag(Tab.situations)
+                } label: { EmptyView() }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color(.systemGroupedBackground))
+            }
         }
         .navigationTitle(Text("Listen"))
         .navigationBarTitleDisplayMode(.inline)
