@@ -25,6 +25,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Translate
+import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.AlertDialog
@@ -396,6 +397,8 @@ fun TalkScreen(
     var showsCorrections by remember { mutableStateOf(CallSettings.flag(context, CallSettings.SHOWS_CORRECTIONS)) }
     var showsGoalChips by remember { mutableStateOf(CallSettings.flag(context, CallSettings.SHOWS_GOAL_CHIPS)) }
     var showingCallSettings by remember { mutableStateOf(false) }
+    var showingTutorTopics by remember { mutableStateOf(false) }
+    var tutorStripExpanded by remember { mutableStateOf(true) }
     // Coach mode: the learner's flip, else on for A1/A2 (`CoachMode.resolve`).
     var coachMode by remember {
         mutableStateOf(com.roro.futurevoice.talk.CoachMode.resolve(
@@ -821,8 +824,20 @@ fun TalkScreen(
             val ended = state.phase == TalkPhase.ENDED && state.endedSessionId != null
             // The grammar focus sits above the chips: it is the one thing
             // this call is about, and the chips are the things to spend.
+            // Tutor mode's checklist (iOS `TutorLessonStrip`), above
+            // everything: the lesson is what this call is for.
+            if (state.tutorOn && (state.tutorLesson != null || state.tutorPlanning) && !ended) {
+                TutorLessonStrip(state.tutorLesson, state.tutorPlanning, tutorStripExpanded,
+                    onToggle = { tutorStripExpanded = !tutorStripExpanded },
+                    onChangeTopic = { vm.chooseAnotherTutorTopic() })
+                androidx.compose.material3.HorizontalDivider(Modifier.alpha(0.15f))
+            }
+            if (showingTutorTopics) {
+                TutorTopicSheet(targetLanguage, level, onPick = { vm.pickTutorTopic(it) },
+                    onDismiss = { showingTutorTopics = false })
+            }
             val focus = state.grammarFocus
-            if (coachMode && focus != null && !ended) {
+            if (coachMode && !state.tutorOn && focus != null && !ended) {
                 GrammarFocusStrip(focus.label, focus.pattern.mistake, focus.pattern.correction,
                     repeats = state.focusRepeatTurns.size, talks = focus.talks, onTap = { showingFocus = true })
                 androidx.compose.material3.HorizontalDivider(Modifier.alpha(0.15f))
@@ -1134,7 +1149,16 @@ fun TalkScreen(
                             // button. Held in place (hidden, not removed) for
                             // the whole call so nothing shifts when the turn
                             // changes hands.
-                            if (sendToAnswer && onCall) {
+                            // Tutor mode: topics to practice, for a learner
+                            // with no idea (iOS `tutorTopicButton`). Same
+                            // shape as the settings button across the pill.
+                            if (state.tutorOn && onCall && !sendMode) {
+                                IconButton(onClick = { showingTutorTopics = true }, enabled = !state.tutorPlanning,
+                                    modifier = Modifier.align(Alignment.CenterEnd).padding(end = 16.dp)) {
+                                    Icon(Icons.Outlined.Lightbulb, contentDescription = stringResource(R.string.what_to_practice),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            } else if (sendToAnswer && onCall) {
                                 val canClear = sendMode && hasHeldWords && !state.sendPending
                                 IconButton(onClick = { vm.discardTurn() }, enabled = canClear,
                                     modifier = Modifier.align(Alignment.CenterEnd).padding(end = 16.dp)

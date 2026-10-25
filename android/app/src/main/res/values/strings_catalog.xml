@@ -173,6 +173,7 @@
     <string name="all_activity">"All activity"</string>
     <string name="all_caught_up">"All caught up"</string>
     <string name="all_challenges">"All challenges"</string>
+    <string name="all_done_you_can_say_it_now">"All done. You can say it now."</string>
     <string name="all_levels">"All levels"</string>
     <string name="all_lld_minutes_of_talk_are_used_up">"All %d minutes of talk are used up."</string>
     <string name="all_lld_minutes_of_trial_talk_are_used_up">"All %d minutes of trial talk are used up."</string>
@@ -396,6 +397,7 @@
     <string name="choose_a_photo">"Choose a photo"</string>
     <!-- 'Choose a topic and AI writes it for your level, or paste a text of your own.' -->
     <string name="choose_a_topic_and_ai_writes_it_for_your_level_or_paste_a_te_d4a75b">"Choose a topic and AI writes it for your level, or paste a text of your own."</string>
+    <string name="choose_another_topic">"Choose another topic"</string>
     <string name="choose_exam">"Choose exam"</string>
     <string name="choose_my_goal">"Choose my goal"</string>
     <string name="city">"City"</string>
@@ -1204,6 +1206,8 @@
     <string name="left">"left"</string>
     <string name="left_to_spend">"Left to spend"</string>
     <string name="length">"Length"</string>
+    <string name="lesson_complete">"Lesson complete"</string>
+    <string name="lesson_so_far">"Lesson so far"</string>
     <string name="let_s_go">"Let's go"</string>
     <string name="let_s_make_your_routine">"Let's make your routine"</string>
     <string name="let_s_make_your_voice_again">"Let's make your voice again"</string>
@@ -1834,6 +1838,8 @@
     <!-- 'Pick a time and the phone rings. Miss it, and a voicemail with a question waits for you.' -->
     <string name="pick_a_time_and_the_phone_rings_miss_it_and_a_voicemail_with_b83e21">"Pick a time and the phone rings. Miss it, and a voicemail with a question waits for you."</string>
     <string name="pick_a_time_you_usually_have_ten_quiet_minutes">"Pick a time you usually have ten quiet minutes."</string>
+    <!-- 'Pick a topic and your future self teaches it step by step, until you can say it without a mistake.' -->
+    <string name="pick_a_topic_and_your_future_self_teaches_it_step_by_step_un_ad6699">"Pick a topic and your future self teaches it step by step, until you can say it without a mistake."</string>
     <!-- 'Pick a type, like an explainer, a person or the news, then a topic and a length. The facts are checked and the words fit your level. Plus and Max.' -->
     <string name="pick_a_type_like_an_explainer_a_person_or_the_news_then_a_to_08bd90">"Pick a type, like an explainer, a person or the news, then a topic and a length. The facts are checked and the words fit your level. Plus and Max."</string>
     <string name="pick_an_area_to_go_one_step_deeper">"Pick an area to go one step deeper."</string>
@@ -1897,6 +1903,7 @@
     <string name="preparing">"Preparing"</string>
     <string name="preparing_study_notes">"Preparing study notes…"</string>
     <string name="preparing_the_file">"Preparing the file…"</string>
+    <string name="preparing_your_lesson">"Preparing your lesson…"</string>
     <string name="preparing_your_video">"Preparing your video…"</string>
     <string name="present_a_real_product_or_invention">"Present a real product or invention"</string>
     <!-- 'Press play to hear every situation, or pick one from the list.' -->
@@ -3132,8 +3139,6 @@
     <string name="when_something_goes_wrong">"When something goes wrong"</string>
     <!-- 'When you hang up, the words you used and the sentences you fixed become your own study book in Review.' -->
     <string name="when_you_hang_up_the_words_you_used_and_the_sentences_you_fi_494463">"When you hang up, the words you used and the sentences you fixed become your own study book in Review."</string>
-    <!-- 'When you make a mistake, your future self says it the right way out loud, then carries on.' -->
-    <string name="when_you_make_a_mistake_your_future_self_says_it_the_right_w_c45516">"When you make a mistake, your future self says it the right way out loud, then carries on."</string>
     <!-- 'When you send a card to 10 minutes, tomorrow or 3 days, this is what brings it back. One reminder at a time, at the earliest thing waiting.' -->
     <string name="when_you_send_a_card_to_10_minutes_tomorrow_or_3_days_this_i_dc4513">"When you send a card to 10 minutes, tomorrow or 3 days, this is what brings it back. One reminder at a time, at the earliest thing waiting."</string>
     <!-- 'When you stop speaking, your fluent self answers. Take your time to think.' -->

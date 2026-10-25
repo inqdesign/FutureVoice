@@ -44,6 +44,12 @@ class FreeTalkOpeners(private val context: Context) {
         fun topicOpener(language: String): String =
             FreeTalkOpenerContent.topic[language.take(2)] ?: FreeTalkOpenerContent.topic.getValue("en")
 
+        /** Tutor mode's first line with no lesson to pick up (iOS
+         *  `tutorOpener`): the call exists to practice ONE thing, so it opens
+         *  by asking which, and says the topic button is there. */
+        fun tutorOpener(language: String): String =
+            FreeTalkOpenerContent.tutor[language.take(2)] ?: FreeTalkOpenerContent.tutor.getValue("en")
+
         /** The hello a free talk placed at [at] opens on (iOS `pickUpLine`):
          *  the part of the day is `PromptClock.partOfDay`, the same split the
          *  call's own prompt is told. */

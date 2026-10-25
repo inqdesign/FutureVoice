@@ -173,6 +173,7 @@
     <string name="all_activity">"所有活動"</string>
     <string name="all_caught_up">"都完成了"</string>
     <string name="all_challenges">"所有挑戰"</string>
+    <string name="all_done_you_can_say_it_now">"全部完成，現在你會說了。"</string>
     <string name="all_levels">"所有程度"</string>
     <string name="all_lld_minutes_of_talk_are_used_up">"%d分鐘的通話已經全部用完。"</string>
     <string name="all_lld_minutes_of_trial_talk_are_used_up">"試用的%d分鐘通話已經全部用完。"</string>
@@ -395,6 +396,7 @@
     <string name="choose_a_photo">"選照片"</string>
     <!-- 'Choose a topic and AI writes it for your level, or paste a text of your own.' -->
     <string name="choose_a_topic_and_ai_writes_it_for_your_level_or_paste_a_te_d4a75b">"選個主題，AI 會照你的程度寫好；也可以貼上你自己的文字。"</string>
+    <string name="choose_another_topic">"換個話題"</string>
     <string name="choose_exam">"選擇考試"</string>
     <string name="choose_my_goal">"選擇目的"</string>
     <string name="city">"城市"</string>
@@ -1202,6 +1204,8 @@
     <string name="left">"剩餘"</string>
     <string name="left_to_spend">"剩餘時間"</string>
     <string name="length">"時長"</string>
+    <string name="lesson_complete">"課程完成"</string>
+    <string name="lesson_so_far">"目前的課程進度"</string>
     <string name="let_s_go">"開始吧"</string>
     <string name="let_s_make_your_routine">"來安排你的作息吧"</string>
     <string name="let_s_make_your_voice_again">"重新錄一次你的聲音吧"</string>
@@ -1832,6 +1836,8 @@
     <!-- 'Pick a time and the phone rings. Miss it, and a voicemail with a question waits for you.' -->
     <string name="pick_a_time_and_the_phone_rings_miss_it_and_a_voicemail_with_b83e21">"到了設定的時間，流利的自己會打電話來。沒接到的話，會有一則帶著問題的語音留言等你。"</string>
     <string name="pick_a_time_you_usually_have_ten_quiet_minutes">"選一個你通常能安靜個十分鐘的時間。"</string>
+    <!-- 'Pick a topic and your future self teaches it step by step, until you can say it without a mistake.' -->
+    <string name="pick_a_topic_and_your_future_self_teaches_it_step_by_step_un_ad6699">"選一個話題，流利的自己會一步步教你，直到你能說對為止。"</string>
     <!-- 'Pick a type, like an explainer, a person or the news, then a topic and a length. The facts are checked and the words fit your level. Plus and Max.' -->
     <string name="pick_a_type_like_an_explainer_a_person_or_the_news_then_a_to_08bd90">"選好類型（解說、介紹人物、新聞等）、主題和長度，就會寫出符合你程度的講稿，內容也會先查證過。"</string>
     <string name="pick_an_area_to_go_one_step_deeper">"選一個領域，再往下一層。"</string>
@@ -1895,6 +1901,7 @@
     <string name="preparing">"準備中"</string>
     <string name="preparing_study_notes">"正在準備學習筆記…"</string>
     <string name="preparing_the_file">"正在準備檔案…"</string>
+    <string name="preparing_your_lesson">"正在準備課程…"</string>
     <string name="preparing_your_video">"正在準備影片…"</string>
     <string name="present_a_real_product_or_invention">"介紹真實的產品或發明"</string>
     <!-- 'Press play to hear every situation, or pick one from the list.' -->
@@ -3129,8 +3136,6 @@
     <string name="when_something_goes_wrong">"遇到問題時"</string>
     <!-- 'When you hang up, the words you used and the sentences you fixed become your own study book in Review.' -->
     <string name="when_you_hang_up_the_words_you_used_and_the_sentences_you_fi_494463">"掛斷後，你用到的單字和修正過的句子會變成你專屬的教材，放進複習分頁。"</string>
-    <!-- 'When you make a mistake, your future self says it the right way out loud, then carries on.' -->
-    <string name="when_you_make_a_mistake_your_future_self_says_it_the_right_w_c45516">"說錯的時候，流利的自己會馬上唸出正確的說法，然後接著聊。"</string>
     <!-- 'When you send a card to 10 minutes, tomorrow or 3 days, this is what brings it back. One reminder at a time, at the earliest thing waiting.' -->
     <string name="when_you_send_a_card_to_10_minutes_tomorrow_or_3_days_this_i_dc4513">"把卡片送到10分鐘後、明天或3天後，到時候把它叫回來的就是這個通知。一次只響一次，對準最早等著的那一張。"</string>
     <!-- 'When you stop speaking, your fluent self answers. Take your time to think.' -->

@@ -173,6 +173,7 @@
     <string name="all_activity">"Toute l’activité"</string>
     <string name="all_caught_up">"Tout est à jour"</string>
     <string name="all_challenges">"Tous les défis"</string>
+    <string name="all_done_you_can_say_it_now">"C’est fait. Tu sais le dire maintenant."</string>
     <string name="all_levels">"Tous les niveaux"</string>
     <string name="all_lld_minutes_of_talk_are_used_up">"Les %d minutes de conversation sont épuisées."</string>
     <string name="all_lld_minutes_of_trial_talk_are_used_up">"Les %d minutes de conversation de l’essai sont épuisées."</string>
@@ -392,6 +393,7 @@
     <string name="choose_a_photo">"Choisir une photo"</string>
     <!-- 'Choose a topic and AI writes it for your level, or paste a text of your own.' -->
     <string name="choose_a_topic_and_ai_writes_it_for_your_level_or_paste_a_te_d4a75b">"Choisis un sujet et l’IA l’écrit à ton niveau, ou colle ton propre texte."</string>
+    <string name="choose_another_topic">"Choisir un autre sujet"</string>
     <string name="choose_exam">"Choisir l’examen"</string>
     <string name="choose_my_goal">"Choisir mon objectif"</string>
     <string name="city">"Ville"</string>
@@ -1199,6 +1201,8 @@
     <string name="left">"restant"</string>
     <string name="left_to_spend">"Temps restant"</string>
     <string name="length">"Durée"</string>
+    <string name="lesson_complete">"Leçon terminée"</string>
+    <string name="lesson_so_far">"La leçon jusqu’ici"</string>
     <string name="let_s_go">"C’est parti !"</string>
     <string name="let_s_make_your_routine">"Créons ta routine"</string>
     <string name="let_s_make_your_voice_again">"Recréons ta voix"</string>
@@ -1829,6 +1833,8 @@
     <!-- 'Pick a time and the phone rings. Miss it, and a voicemail with a question waits for you.' -->
     <string name="pick_a_time_and_the_phone_rings_miss_it_and_a_voicemail_with_b83e21">"À l’heure que tu choisis, le téléphone sonne. Si tu ne réponds pas, un message vocal avec une question t’attend."</string>
     <string name="pick_a_time_you_usually_have_ten_quiet_minutes">"Choisis un moment où tu as souvent dix minutes au calme."</string>
+    <!-- 'Pick a topic and your future self teaches it step by step, until you can say it without a mistake.' -->
+    <string name="pick_a_topic_and_your_future_self_teaches_it_step_by_step_un_ad6699">"Choisis un sujet et ton moi fluide te l’apprend pas à pas, jusqu’à ce que tu le dises sans faute."</string>
     <!-- 'Pick a type, like an explainer, a person or the news, then a topic and a length. The facts are checked and the words fit your level. Plus and Max.' -->
     <string name="pick_a_type_like_an_explainer_a_person_or_the_news_then_a_to_08bd90">"Choisis le genre (expliquer quelque chose, présenter quelqu’un, actualité…), le sujet et la longueur : l’IA écrit un texte à ton niveau, faits vérifiés."</string>
     <string name="pick_an_area_to_go_one_step_deeper">"Choisis un domaine pour descendre d’un cran."</string>
@@ -1892,6 +1898,7 @@
     <string name="preparing">"En préparation"</string>
     <string name="preparing_study_notes">"Préparation des notes d’étude…"</string>
     <string name="preparing_the_file">"Préparation du fichier…"</string>
+    <string name="preparing_your_lesson">"Je prépare ta leçon…"</string>
     <string name="preparing_your_video">"Préparation de ta vidéo…"</string>
     <string name="present_a_real_product_or_invention">"Présente un vrai produit ou une invention"</string>
     <!-- 'Press play to hear every situation, or pick one from the list.' -->
@@ -3126,8 +3133,6 @@
     <string name="when_something_goes_wrong">"Quand quelque chose tourne mal"</string>
     <!-- 'When you hang up, the words you used and the sentences you fixed become your own study book in Review.' -->
     <string name="when_you_hang_up_the_words_you_used_and_the_sentences_you_fi_494463">"Quand tu raccroches, les mots que tu as employés et les phrases que tu as corrigées deviennent ton propre carnet d’étude dans Révision."</string>
-    <!-- 'When you make a mistake, your future self says it the right way out loud, then carries on.' -->
-    <string name="when_you_make_a_mistake_your_future_self_says_it_the_right_w_c45516">"Quand tu fais une erreur, ton moi fluide te dit à voix haute comment le dire, puis la conversation continue."</string>
     <!-- 'When you send a card to 10 minutes, tomorrow or 3 days, this is what brings it back. One reminder at a time, at the earliest thing waiting.' -->
     <string name="when_you_send_a_card_to_10_minutes_tomorrow_or_3_days_this_i_dc4513">"Quand tu envoies une carte à 10 minutes, à demain ou à 3 jours, c’est cette notification qui la ramène. Un seul rappel à la fois, réglé sur l’échéance la plus proche."</string>
     <!-- 'When you stop speaking, your fluent self answers. Take your time to think.' -->

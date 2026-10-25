@@ -173,6 +173,7 @@
     <string name="all_activity">"すべての活動"</string>
     <string name="all_caught_up">"全部できました"</string>
     <string name="all_challenges">"すべてのチャレンジ"</string>
+    <string name="all_done_you_can_say_it_now">"全部できました。もう言えますね。"</string>
     <string name="all_levels">"すべてのレベル"</string>
     <string name="all_lld_minutes_of_talk_are_used_up">"通話%d分をすべて使い切りました。"</string>
     <string name="all_lld_minutes_of_trial_talk_are_used_up">"トライアルの通話%d分をすべて使い切りました。"</string>
@@ -395,6 +396,7 @@
     <string name="choose_a_photo">"写真を選ぶ"</string>
     <!-- 'Choose a topic and AI writes it for your level, or paste a text of your own.' -->
     <string name="choose_a_topic_and_ai_writes_it_for_your_level_or_paste_a_te_d4a75b">"テーマを選ぶと、AIがレベルに合わせて書きます。手元の文章を貼り付けてもかまいません。"</string>
+    <string name="choose_another_topic">"ほかのテーマにする"</string>
     <string name="choose_exam">"試験を選ぶ"</string>
     <string name="choose_my_goal">"目的を選ぶ"</string>
     <string name="city">"都市"</string>
@@ -1202,6 +1204,8 @@
     <string name="left">"残り"</string>
     <string name="left_to_spend">"残り時間"</string>
     <string name="length">"長さ"</string>
+    <string name="lesson_complete">"レッスン完了"</string>
+    <string name="lesson_so_far">"ここまでのレッスン"</string>
     <string name="let_s_go">"はじめる"</string>
     <string name="let_s_make_your_routine">"ルーティンを作りましょう"</string>
     <string name="let_s_make_your_voice_again">"もう一度、声をつくりましょう"</string>
@@ -1832,6 +1836,8 @@
     <!-- 'Pick a time and the phone rings. Miss it, and a voicemail with a question waits for you.' -->
     <string name="pick_a_time_and_the_phone_rings_miss_it_and_a_voicemail_with_b83e21">"決めた時間に、流暢な自分から電話がかかってきます。出られなかったら、質問入りの留守番メッセージが待っています。"</string>
     <string name="pick_a_time_you_usually_have_ten_quiet_minutes">"いつも10分くらい落ち着ける時間を選んでね。"</string>
+    <!-- 'Pick a topic and your future self teaches it step by step, until you can say it without a mistake.' -->
+    <string name="pick_a_topic_and_your_future_self_teaches_it_step_by_step_un_ad6699">"テーマを選ぶと、流暢な自分が一つずつ教えてくれます。間違えずに言えるようになるまで。"</string>
     <!-- 'Pick a type, like an explainer, a person or the news, then a topic and a length. The facts are checked and the words fit your level. Plus and Max.' -->
     <string name="pick_a_type_like_an_explainer_a_person_or_the_news_then_a_to_08bd90">"解説、人物紹介、ニュースなどの種類とテーマ、長さを選ぶと、今のレベルに合った原稿を書きます。事実確認も済んでいます。"</string>
     <string name="pick_an_area_to_go_one_step_deeper">"もう一段くわしくする領域を選んでください。"</string>
@@ -1895,6 +1901,7 @@
     <string name="preparing">"準備中"</string>
     <string name="preparing_study_notes">"学習メモを用意しています…"</string>
     <string name="preparing_the_file">"ファイルを準備しています…"</string>
+    <string name="preparing_your_lesson">"レッスンを準備中…"</string>
     <string name="preparing_your_video">"動画を準備しています…"</string>
     <string name="present_a_real_product_or_invention">"実在の製品や発明を紹介"</string>
     <!-- 'Press play to hear every situation, or pick one from the list.' -->
@@ -3129,8 +3136,6 @@
     <string name="when_something_goes_wrong">"トラブルが起きたとき"</string>
     <!-- 'When you hang up, the words you used and the sentences you fixed become your own study book in Review.' -->
     <string name="when_you_hang_up_the_words_you_used_and_the_sentences_you_fi_494463">"通話を切ると、使った単語と直した文から自分だけの教材が作られ、復習タブに入ります。"</string>
-    <!-- 'When you make a mistake, your future self says it the right way out loud, then carries on.' -->
-    <string name="when_you_make_a_mistake_your_future_self_says_it_the_right_w_c45516">"言い間違えると、流暢な自分がすぐ正しい言い方を声で教えて、そのまま話を続けます。"</string>
     <!-- 'When you send a card to 10 minutes, tomorrow or 3 days, this is what brings it back. One reminder at a time, at the earliest thing waiting.' -->
     <string name="when_you_send_a_card_to_10_minutes_tomorrow_or_3_days_this_i_dc4513">"カードを10分後・明日・3日後に送ると、そのときに戻してくれるのがこの通知です。いちばん早く待っている1件に合わせて、1回だけ鳴ります。"</string>
     <!-- 'When you stop speaking, your fluent self answers. Take your time to think.' -->

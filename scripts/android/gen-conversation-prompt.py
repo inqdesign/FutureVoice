@@ -83,11 +83,11 @@ news = kotlin_conv(literal_at(engine, 'let newsBlock = newsFacts.isEmpty ? "" : 
 first = kotlin_conv(literal_at(engine, "let firstMeetingBlock = (firstMeeting && counterpart == nil) ?", csp),
                {"languageName": "languageName"})
 they_called = kotlin_conv(literal_at(
-    engine, "let theyCalledBlock = (topic.isEmpty && counterpart == nil && !firstMeeting && !learnerPicksTopic) ?", csp),
+    engine, "let theyCalledBlock = (topic.isEmpty && counterpart == nil && !firstMeeting && !learnerPicksTopic && !tutor) ?", csp),
     {"freeTalkCue.instruction": "freeTalkCue.instruction"})
 # "My own topic" (topics page, iOS deed6cf4).
 own_topic = kotlin_conv(literal_at(
-    engine, "let ownTopicBlock = (learnerPicksTopic && topic.isEmpty && counterpart == nil) ?", csp), {})
+    engine, "let ownTopicBlock = (learnerPicksTopic && topic.isEmpty && counterpart == nil && !tutor) ?", csp), {})
 cue_at = engine.index("enum FreeTalkCue: String, CaseIterable {")
 cue = {case: kotlin_conv(literal_at(engine, 'return """', engine.index(f"case .{case}:", cue_at)), {},
                          indent="                ")
@@ -116,8 +116,10 @@ system = kotlin_conv(literal_at(engine, 'return """', main_anchor), {
     "CoachingLanguage.selfWarmth": "CoachingLanguage.selfWarmth",
     "tutor": "tutor",
     "beginnerQuestions(level)": "beginnerQuestions(level)",
-    'tutor ? tutorBlock(targetLanguage: targetLanguage, languageName: languageName) : ""':
-        '(if (tutor) tutorBlock(targetLanguage, languageName) else "")',
+    # The lesson-dependent block is assembled in ConversationEngine.kt
+    # (`TutorPrompt`), from the pieces lifted below.
+    'tutor ? tutorBlock(targetLanguage: targetLanguage, languageName: languageName, lesson: tutorLesson, justTicked: tutorJustTicked, lastFixes: tutorLastFixes) : ""':
+        '(if (tutor) tutorBlock else "")',
 })
 beginner = kotlin_conv(literal_at(engine, "static func beginnerQuestions(_ level: CEFRLevel)"),
                   {"level.rawValue.uppercased()": "level.code.uppercase()"})
@@ -127,8 +129,31 @@ guards = {
     "registerGuard(targetLanguage)": "CorrectionOnlyPrompt.registerGuard(targetLanguage)",
     "varietyGuard(targetLanguage)": "LanguageVariety.guard(targetLanguage)",
 }
-tutor = kotlin_conv(literal_at(engine, "static func tutorBlock(targetLanguage: String, languageName: String)"),
-               {"languageName": "languageName", **guards})
+# Tutor mode's lesson block (iOS af3c7ffe…bd242766): the text of each branch;
+# which branch, and the checklist rows, are TutorPrompt's (hand-ported).
+tb = engine.index("static func tutorBlock(targetLanguage: String, languageName: String,")
+tb_done_at = engine.index('lessonPart = """', tb)
+tutor_done = kotlin_conv(literal_at(engine, 'lessonPart = """', tb), {
+    "lesson.titleTarget": "titleTarget",
+    'lesson.challenges.last?.task.lowercased() ?? "do it"': "lastTask",
+})
+tb_fix_at = engine.index('let fixes = lastFixes.isEmpty ? "" : """', tb)
+tutor_fixes = kotlin_conv(literal_at(engine, 'let fixes = lastFixes.isEmpty ? "" : """', tb), {
+    'lastFixes.joined(separator: "; ")': 'lastFixes.joinToString("; ")',
+})
+tb_now_at = engine.index('lessonPart = """', tb_fix_at)
+tutor_now_part = kotlin_conv(literal_at(engine, 'lessonPart = """', tb_fix_at), {
+    "lesson.titleTarget": "titleTarget", "rows": "rows", "now + 1": "(now + 1)", "fixes": "fixes",
+})
+tutor_none = kotlin_conv(literal_at(engine, 'lessonPart = """', tb_now_at + 10), {})
+tutor = kotlin_conv(literal_at(engine, 'return """', tb),
+               {"languageName": "languageName", "lessonPart": "lessonPart", **guards,
+                "tutorNow(lesson: lesson, justTicked: justTicked)": "tutorNow"})
+tn = engine.index("private static func tutorNow(lesson: TutorLesson?, justTicked: Bool)")
+tutor_now_done = kotlin_conv(literal_at(engine, 'return """', tn), {})
+tutor_now_next = kotlin_conv(literal_at(engine, 'return """', engine.index('return """', tn) + 10), {
+    "now": "now", "now + 1": "(now + 1)", "next.task": "nextTask", "next.example": "nextExample",
+})
 output = kotlin_conv(literal_at(engine, "static func turnOutputInstruction("), {
     "LanguageCatalog.englishName(targetLanguage)": "targetName",
     "nativeName": "nativeName",
@@ -264,9 +289,35 @@ object ConversationPrompt {{
         return {beginner}
     }}
 
-    /** iOS `tutorBlock` (TutorMode): appended last when the call has it on. */
-    fun tutorBlock(targetLanguage: String, languageName: String): String =
+    /** iOS `tutorBlock` (TutorMode): appended last when the call has it on.
+     *  [lessonPart] and [tutorNow] are chosen by [TutorPrompt]. */
+    fun tutorBlock(targetLanguage: String, languageName: String, lessonPart: String, tutorNow: String): String =
         {tutor}
+
+    /** iOS `tutorBlock`'s lesson part when every challenge is ticked. */
+    fun tutorLessonDone(titleTarget: String, lastTask: String): String =
+        {tutor_done}
+
+    /** iOS `tutorBlock`'s note on the last try's fixes — "" when none. */
+    fun tutorLastFixes(lastFixes: List<String>): String =
+        if (lastFixes.isEmpty()) "" else
+            {tutor_fixes}
+
+    /** iOS `tutorBlock`'s lesson part while a challenge is on. */
+    fun tutorLessonOn(titleTarget: String, rows: String, now: Int, fixes: String): String =
+        {tutor_now_part}
+
+    /** iOS `tutorBlock`'s lesson part with no lesson yet. */
+    const val TUTOR_NO_TOPIC =
+        {tutor_none}
+
+    /** iOS `tutorNow` when the LAST challenge was just ticked. */
+    const val TUTOR_NOW_FINISHED =
+        {tutor_now_done}
+
+    /** iOS `tutorNow` when challenge [now] (1-based) was just ticked. */
+    fun tutorNowNext(now: Int, nextTask: String, nextExample: String): String =
+        {tutor_now_next}
 
     /** iOS `conversationSystemPrompt`'s body, every computed piece passed in. */
     fun systemPrompt(
@@ -274,7 +325,7 @@ object ConversationPrompt {{
         personaBlock: String, counterpartBlock: String, firstMeetingBlock: String,
         theyCalledBlock: String, ownTopicBlock: String, clockBlock: String,
         patterns: String, weak: String, topic: String, newsBlock: String, briefBlock: String,
-        targetLanguage: String, tutor: Boolean,
+        targetLanguage: String, tutor: Boolean, tutorBlock: String = "",
     ): String =
         {system}
 

@@ -102,18 +102,20 @@ object SendToAnswer {
 }
 
 /**
- * Tutor mode (iOS `TutorMode`, b3a6d30f + 234e77cf): the call becomes a
- * LESSON. The fluent self leads one practical theme at a time and every turn
- * teaches — their sentence said right if it was wrong, the more natural way if
- * it was stiff, one step up if it was fine — then a practice question built to
- * use it ([TutorPrompt]).
+ * Tutor mode (iOS `TutorMode`; rebuilt af3c7ffe, founder: "the goal of the
+ * call is that they can say it properly — keep repeating until they nail it").
  *
- * It lives in the conversation's SYSTEM prompt. Flipped mid-call, the app
- * sends the gateway the rebuilt prompt (`set.system`, iOS 88cc3b33) and the
- * gateway remakes its reply cache, so the next reply is already under the
- * new rules — it used to apply only from the next call. Off by default for
- * everyone. A tutored call is a PRACTICE call, like a coached one
- * (`Session.coached`).
+ * The call is a LESSON with one goal: a topic (the call's own, one picked from
+ * the button right of the pill, or one said when asked) becomes a curriculum of
+ * 3–4 challenges ([TutorLesson]), shown as a checklist above the transcript.
+ * The tutor stays on a challenge until the app ticks it — no fixes from the
+ * correction call AND the judge says the line did it — then moves on; a lesson
+ * left halfway is picked up by the next tutor call.
+ *
+ * It lives in the conversation's SYSTEM prompt ([TutorPrompt]), resent on
+ * every tick (`set.system`); the tutor's own lines for a topic picked or a
+ * lesson ready go out as gateway `nudge` notes. Off by default. A tutored call
+ * is a PRACTICE call, like a coached one (`Session.coached`).
  */
 object TutorMode {
     /** Same name as iOS's defaults key. */
@@ -122,10 +124,10 @@ object TutorMode {
     private fun prefs(context: Context) =
         context.applicationContext.getSharedPreferences("futurevoice", Context.MODE_PRIVATE)
 
-    /** Hidden for now (iOS `TutorMode.isAvailable`, 2026-10-16): no toggle,
-     *  and a learner who had it on gets ordinary calls. Their choice stays
-     *  stored, so flipping this back restores it. */
-    const val IS_AVAILABLE = false
+    /** Hidden 2026-10-16 while the concept was rethought; back 2026-10-24
+     *  as the goal-and-curriculum lesson (iOS `TutorMode.isAvailable`). A
+     *  learner who had it on before still has it on. */
+    const val IS_AVAILABLE = true
 
     fun isOn(context: Context): Boolean = IS_AVAILABLE && prefs(context).getBoolean(KEY, false)
 

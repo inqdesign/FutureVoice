@@ -167,6 +167,9 @@ data class Session(
      * the flag.
      */
     val coached: Boolean? = null,
+    /** Tutor mode's lesson as this talk left it (iOS `Session.tutorLesson`):
+     *  the lines that cleared each challenge. Null on old rows. */
+    val tutorLesson: TutorLessonRecord? = null,
 ) {
     /** See [coached]. */
     val isPractice: Boolean get() = coached == true

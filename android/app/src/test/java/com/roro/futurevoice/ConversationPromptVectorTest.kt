@@ -52,7 +52,8 @@ class ConversationPromptVectorTest {
                 targetLanguage = f.target, nativeLanguage = f.native, level = f.level,
                 topPatterns = f.patterns, weakVocabAreas = f.weak, topic = f.topic,
                 persona = f.persona, counterpart = f.counterpart, newsFacts = f.news, brief = f.brief,
-                firstMeeting = f.firstMeeting, clock = f.clock, tutor = f.tutor, now = F.now))
+                firstMeeting = f.firstMeeting, clock = f.clock, tutor = f.tutor,
+                tutorLesson = f.lesson, tutorJustTicked = f.ticked, tutorLastFixes = f.fixes, now = F.now))
         }
         assertEquals(F.fixtures.size, ios.keys.count { it.startsWith("system/") })
     }

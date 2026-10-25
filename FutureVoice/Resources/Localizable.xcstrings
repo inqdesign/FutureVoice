@@ -1643,6 +1643,52 @@
         }
       }
     },
+    "All done. You can say it now." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geschafft. Jetzt kannst du es sagen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¡Listo! Ya puedes decirlo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "C’est fait. Tu sais le dire maintenant."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全部できました。もう言えますね。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全部完成，现在你会说了。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全部完成，現在你會說了。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다 했어요. 이제 말할 수 있어요."
+          }
+        }
+      }
+    },
     "Amount" : {
       "localizations" : {
         "de" : {
@@ -2197,6 +2243,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "西班牙式"
+          }
+        }
+      }
+    },
+    "Choose another topic" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anderes Thema wählen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elegir otro tema"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisir un autre sujet"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ほかのテーマにする"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "换个话题"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "換個話題"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다른 주제 고르기"
           }
         }
       }
@@ -3924,6 +4016,98 @@
         }
       }
     },
+    "Lesson complete" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lektion geschafft"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lección completada"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leçon terminée"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "レッスン完了"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "课程完成"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "課程完成"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "수업 완료"
+          }
+        }
+      }
+    },
+    "Lesson so far" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lektion bisher"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La lección hasta ahora"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La leçon jusqu’ici"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ここまでのレッスン"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目前的课程进度"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目前的課程進度"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지금까지 한 수업"
+          }
+        }
+      }
+    },
     "Keep in Google Drive" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4519,6 +4703,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "我的情境"
+          }
+        }
+      }
+    },
+    "Preparing your lesson…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Lektion wird vorbereitet …"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparando tu lección…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Je prépare ta leçon…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "レッスンを準備中…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在准备课程…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在準備課程…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "수업 준비하는 중…"
           }
         }
       }
@@ -8922,48 +9152,48 @@
         }
       }
     },
-    "When you make a mistake, your future self says it the right way out loud, then carries on." : {
+    "Pick a topic and your future self teaches it step by step, until you can say it without a mistake." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wenn dir ein Fehler passiert, sagt dir dein fließendes Ich gleich, wie es richtig heißt, und redet dann weiter."
+            "value" : "Wähl ein Thema, und dein fließendes Ich bringt es dir Schritt für Schritt bei, bis du es ohne Fehler sagen kannst."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cuando te equivocas, tu yo fluido te dice en voz alta cómo se dice bien y sigue la conversación."
+            "value" : "Elige un tema y tu yo fluido te lo enseña paso a paso, hasta que puedas decirlo sin errores."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Quand tu fais une erreur, ton moi fluide te dit à voix haute comment le dire, puis la conversation continue."
+            "value" : "Choisis un sujet et ton moi fluide te l’apprend pas à pas, jusqu’à ce que tu le dises sans faute."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "言い間違えると、流暢な自分がすぐ正しい言い方を声で教えて、そのまま話を続けます。"
+            "value" : "テーマを選ぶと、流暢な自分が一つずつ教えてくれます。間違えずに言えるようになるまで。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "틀리게 말하면 유창해진 내가 바로 맞는 말로 다시 들려주고 대화를 이어가요."
+            "value" : "주제를 고르면 유창해진 내가 하나씩 가르쳐 줘요. 틀리지 않고 말할 수 있을 때까지요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "说错的时候，流利的自己会马上念出正确的说法，然后接着聊。"
+            "value" : "选一个话题，流利的自己会一步步教你，直到你能说对为止。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "說錯的時候，流利的自己會馬上唸出正確的說法，然後接著聊。"
+            "value" : "選一個話題，流利的自己會一步步教你，直到你能說對為止。"
           }
         }
       }
