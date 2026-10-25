@@ -448,6 +448,7 @@ class RealtimeTalkClient(private val context: Context) {
         manualTurns: Boolean = false,
     ) {
         if (state != State.IDLE && state != State.FAILED) return
+        synchronized(nudgeLock) { startSent = false; heldNudges.clear() }
         // The whole call on the call path, so the echo canceller has the
         // reply to subtract (iOS: the voice-processing unit).
         com.roro.futurevoice.audio.CallAudioMode.enter(context)
@@ -489,6 +490,13 @@ class RealtimeTalkClient(private val context: Context) {
         socket = http.newWebSocket(req, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 webSocket.send(start.toString())
+                // Notes written while the socket was opening go up after
+                // `start`, never ahead of it.
+                synchronized(nudgeLock) {
+                    startSent = true
+                    heldNudges.forEach { webSocket.send(it) }
+                    heldNudges.clear()
+                }
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
@@ -579,6 +587,25 @@ class RealtimeTalkClient(private val context: Context) {
         }
         runCatching { socket?.send(body.toString()) }
     }
+
+    /** A note the fluent self answers out loud (iOS `nudge`, af3c7ffe —
+     *  tutor mode: a topic picked on screen, a lesson ready, a lesson
+     *  finished). The gateway writes the line once nothing is playing; one
+     *  older than the message ignores it. */
+    fun nudge(text: String) {
+        if (tornDown) return
+        val body = kotlinx.serialization.json.buildJsonObject {
+            put("type", kotlinx.serialization.json.JsonPrimitive("nudge"))
+            put("text", kotlinx.serialization.json.JsonPrimitive(text))
+        }.toString()
+        synchronized(nudgeLock) {
+            if (!startSent) { heldNudges += body; return }
+        }
+        runCatching { socket?.send(body) }
+    }
+    private val nudgeLock = Any()
+    private var startSent = false
+    private val heldNudges = mutableListOf<String>()
 
     /** Send-to-answer: what has been said is the turn — answer it. The
      *  gateway waits at most a beat for the last words to be finalized. */

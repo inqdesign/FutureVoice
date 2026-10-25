@@ -7,6 +7,7 @@ import com.roro.futurevoice.talk.LearnerPattern
 import com.roro.futurevoice.talk.PersonaNote
 import com.roro.futurevoice.talk.PromptClock
 import com.roro.futurevoice.talk.ScenarioBrief
+import com.roro.futurevoice.talk.TutorLesson
 import com.roro.futurevoice.talk.UserPersona
 import java.time.ZoneId
 
@@ -85,7 +86,19 @@ object ConversationPromptFixtures {
         val topic: String = "", val persona: UserPersona? = null, val counterpart: Counterpart? = null,
         val news: List<String> = emptyList(), val brief: ScenarioBrief? = null,
         val firstMeeting: Boolean = false, val clock: PromptClock? = null, val tutor: Boolean = false,
+        val lesson: TutorLesson? = null, val ticked: Boolean = false, val fixes: List<String> = emptyList(),
     )
+
+    /** main.swift's `lesson(done:of:)`: [done] of [total] challenges ticked. */
+    fun lesson(done: Int, total: Int = 3) = TutorLesson(
+        id = "00000000-0000-0000-0000-0000000000A0", title = "자기소개", titleTarget = "Introducing yourself",
+        language = "en",
+        challenges = (0 until total).map { i ->
+            TutorLesson.Challenge(id = "00000000-0000-0000-0000-00000000000$i", goal = "goal $i",
+                task = "Say task $i about yourself", example = "Example line $i.",
+                doneAt = if (i < done) CALL_START else null, line = if (i < done) "line $i" else null)
+        },
+        createdAt = CALL_START)
 
     val fixtures = listOf(
         Fixture("free_en_b1_bare", "en", "ko", CefrLevel.B1),
@@ -105,6 +118,14 @@ object ConversationPromptFixtures {
             clock = clock(0, null, daysBeforeCall(1)), tutor = true),
         Fixture("cast_stranger_fr_noground", "fr", "en", CefrLevel.C2, counterpart = strangerNoGround),
         Fixture("cast_public_figure_ko", "ko", "en", CefrLevel.A2, persona = thinPersona, counterpart = publicFigure),
+        Fixture("tutor_en_b1_lesson_ticked", "en", "ko", CefrLevel.B1, persona = fullPersona,
+            tutor = true, lesson = lesson(1), ticked = true, fixes = listOf("\"I am live\" → \"I live\"")),
+        Fixture("tutor_ko_a2_lesson_fixes", "ko", "en", CefrLevel.A2,
+            tutor = true, lesson = lesson(0), fixes = listOf("\"학교에 갔어요\" → \"학교에 갔어\"")),
+        Fixture("tutor_en_b1_lesson_done", "en", "ko", CefrLevel.B1,
+            tutor = true, lesson = lesson(3), ticked = true),
+        Fixture("tutor_de_b2_lesson_quiet", "de", "en", CefrLevel.B2,
+            topic = "Ordering at a cafe", tutor = true, lesson = lesson(2)),
         Fixture("first_counterpart_ignored_es", "es", "en", CefrLevel.B2, persona = null, counterpart = manager,
             firstMeeting = true),
     )

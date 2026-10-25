@@ -71,6 +71,12 @@ object ConversationEngine {
         freeTalkCue: ConversationPrompt.FreeTalkCue = ConversationPrompt.FreeTalkCue.PLAIN_QUESTION,
         /** A "my own topic" call (iOS `learnerPicksTopic:`, topics page). */
         learnerPicksTopic: Boolean = false,
+        /** Tutor mode's lesson (iOS `tutorLesson:`): null until a topic is set. */
+        tutorLesson: TutorLesson? = null,
+        /** A challenge was ticked since the prompt was last sent (iOS `tutorJustTicked:`). */
+        tutorJustTicked: Boolean = false,
+        /** What the correction found on the learner's last try (iOS `tutorLastFixes:`). */
+        tutorLastFixes: List<String> = emptyList(),
         now: Long = System.currentTimeMillis(),
     ): String {
         val languageName = LanguageCatalog.englishName(targetLanguage)
@@ -117,13 +123,13 @@ object ConversationEngine {
 
         // A plain free talk the learner placed: their subject first, and on
         // "nothing much" the fluent self brings what `freeTalkCue` says (iOS `bbfa2902`).
-        val theyCalledBlock = if (topic.isEmpty() && counterpart == null && !firstMeeting && !learnerPicksTopic)
+        val theyCalledBlock = if (topic.isEmpty() && counterpart == null && !firstMeeting && !learnerPicksTopic && !tutor)
             ConversationPrompt.theyCalledBlock(freeTalkCue) else ""
 
         // "My own topic" (topics page, iOS deed6cf4): not a free talk. This
         // call was placed to talk about ONE thing the learner names, so the
         // catching up is skipped and their subject is the whole call.
-        val ownTopicBlock = if (learnerPicksTopic && topic.isEmpty() && counterpart == null)
+        val ownTopicBlock = if (learnerPicksTopic && topic.isEmpty() && counterpart == null && !tutor)
             ConversationPrompt.ownTopicBlock else ""
 
         // History is left out for a cast stranger (no shared past) and the
@@ -143,6 +149,8 @@ object ConversationEngine {
             patterns = patterns, weak = weak, topic = topic,
             newsBlock = newsBlock, briefBlock = briefBlock,
             targetLanguage = targetLanguage, tutor = tutor,
+            tutorBlock = if (tutor) TutorPrompt.block(targetLanguage, languageName, tutorLesson,
+                tutorJustTicked, tutorLastFixes) else "",
         )
     }
 

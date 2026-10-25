@@ -20,7 +20,7 @@ from iosref import ROOT, REF, show, emit, literal_at, kotlin  # noqa: E402
 OUT = ROOT / "android/app/src/main/java/com/roro/futurevoice/talk/CoachPrompts.kt"
 coach = show("FutureVoice/Services/CoachMode.swift")
 
-fn = coach.index("private static func system(target: String, native: String, level: CEFRLevel,")
+fn = coach.index("static func system(target: String, native: String, level: CEFRLevel,")
 addr_set = kotlin(literal_at(coach, 'address = """', fn),
                   {"register.promptDescription(in: target)": "registerDescription"}, "            ")
 addr_any = kotlin(literal_at(coach, 'address = """', coach.index('address = """', fn) + 12), {}, "            ")

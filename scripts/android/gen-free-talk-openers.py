@@ -42,6 +42,8 @@ def part_table(name):
 intro = table("introOpeners")
 pick_up = part_table("pickUpLines")
 topic = table("topicOpeners")
+# Tutor mode's first line with no lesson to pick up (iOS af3c7ffe).
+tutor = table("tutorOpeners")
 
 
 def swift_unescape(v):
@@ -85,6 +87,12 @@ object FreeTalkOpenerContent {{
      *  page): it hands the learner the topic instead of a hello. */
     val topic: Map<String, String> = mapOf(
 {kmap(topic)}
+    )
+
+    /** Tutor mode's first line with no lesson to pick up (iOS `tutorOpeners`):
+     *  it asks what to practice, and says the topic button is there. */
+    val tutor: Map<String, String> = mapOf(
+{kmap(tutor)}
     )
 }}
 ''')

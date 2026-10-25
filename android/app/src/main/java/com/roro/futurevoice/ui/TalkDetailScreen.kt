@@ -1,5 +1,6 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.material.icons.filled.School
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
@@ -482,6 +483,33 @@ private fun TalkDetailPage(
                                     level.code.uppercase()),
                                 grammarIssueCount = grammar.size,
                                 onGrammarReview = { showingGrammarReview = true })
+                        }
+                        // Tutor mode's lesson (iOS `session.tutorLesson`): the
+                        // lines that cleared each challenge — the finished
+                        // version, to say again.
+                        s.tutorLesson?.takeIf { it.done.isNotEmpty() }?.let { lesson ->
+                            HorizontalDivider(Modifier.padding(start = 20.dp, top = 8.dp))
+                            GroupLabel(Icons.Filled.School, stringResource(
+                                if (lesson.finished) R.string.lesson_complete else R.string.lesson_so_far))
+                            Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 8.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Text("${lesson.title} · ${lesson.done.size}/${lesson.total}",
+                                    style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                lesson.done.forEach { d ->
+                                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Icon(Icons.Filled.CheckCircle, contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(18.dp))
+                                            Text(d.goal, style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                        Text(d.line, style = MaterialTheme.typography.bodyLarge,
+                                            modifier = Modifier.padding(start = 26.dp))
+                                    }
+                                }
+                            }
                         }
                         // Coach mode's grammar focus and how this call went on it.
                         s.grammarFocus?.let { focus ->

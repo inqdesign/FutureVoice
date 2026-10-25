@@ -102,18 +102,20 @@ object SendToAnswer {
 }
 
 /**
- * Tutor mode (iOS `TutorMode`, b3a6d30f + 234e77cf): the call becomes a
- * LESSON. The fluent self leads one practical theme at a time and every turn
- * teaches — their sentence said right if it was wrong, the more natural way if
- * it was stiff, one step up if it was fine — then a practice question built to
- * use it ([TutorPrompt]).
+ * Tutor mode (iOS `TutorMode`; rebuilt af3c7ffe, founder: "the goal of the
+ * call is that they can say it properly — keep repeating until they nail it").
  *
- * It lives in the conversation's SYSTEM prompt. Flipped mid-call, the app
- * sends the gateway the rebuilt prompt (`set.system`, iOS 88cc3b33) and the
- * gateway remakes its reply cache, so the next reply is already under the
- * new rules — it used to apply only from the next call. Off by default for
- * everyone. A tutored call is a PRACTICE call, like a coached one
- * (`Session.coached`).
+ * The call is a LESSON with one goal: a topic (the call's own, one picked from
+ * the button right of the pill, or one said when asked) becomes a curriculum of
+ * 3–4 challenges ([TutorLesson]), shown as a checklist above the transcript.
+ * The tutor stays on a challenge until the app ticks it — no fixes from the
+ * correction call AND the judge says the line did it — then moves on; a lesson
+ * left halfway is picked up by the next tutor call.
+ *
+ * It lives in the conversation's SYSTEM prompt ([TutorPrompt]), resent on
+ * every tick (`set.system`); the tutor's own lines for a topic picked or a
+ * lesson ready go out as gateway `nudge` notes. Off by default. A tutored call
+ * is a PRACTICE call, like a coached one (`Session.coached`).
  */
 object TutorMode {
     /** Same name as iOS's defaults key. */
@@ -122,10 +124,10 @@ object TutorMode {
     private fun prefs(context: Context) =
         context.applicationContext.getSharedPreferences("futurevoice", Context.MODE_PRIVATE)
 
-    /** Hidden for now (iOS `TutorMode.isAvailable`, 2026-10-16): no toggle,
-     *  and a learner who had it on gets ordinary calls. Their choice stays
-     *  stored, so flipping this back restores it. */
-    const val IS_AVAILABLE = false
+    /** Hidden 2026-10-16 while the concept was rethought; back 2026-10-24
+     *  as the goal-and-curriculum lesson (iOS `TutorMode.isAvailable`). A
+     *  learner who had it on before still has it on. */
+    const val IS_AVAILABLE = true
 
     fun isOn(context: Context): Boolean = IS_AVAILABLE && prefs(context).getBoolean(KEY, false)
 
@@ -280,13 +282,32 @@ object CoachSuggester {
     @Serializable
     internal data class Payload(val say: String? = null, val meaning: String? = null, val word: String? = null)
 
+    /** One line of the call before the one being answered (iOS `CoachSuggester.Line`). */
+    data class Line(val isLearner: Boolean, val text: String)
+
+    /** How many earlier lines ride along (iOS `recentLines`, 6d8b4f56): the
+     *  suggestion only knew the line before and the learner's last turn, so
+     *  it answered each question as if the call had just started and
+     *  invented the learner's facts. */
+    const val RECENT_LINES = 8
+    /** The newest notebook lines handed over, so a bracket holds the
+     *  learner's own fact rather than a guess (iOS `maxFacts`). */
+    const val MAX_FACTS = 12
+
     /** iOS builds the user message the same way, line by line. */
-    internal fun content(line: String, learnerSaid: String?, earlier: String?, situation: String?,
-                         candidates: List<TalkGoalItem>, previousSay: String? = null): String {
+    internal fun content(line: String, recent: List<Line>, aboutLearner: List<String> = emptyList(),
+                         situation: String?, candidates: List<TalkGoalItem>, previousSay: String? = null): String {
         var content = ""
         if (!situation.isNullOrEmpty()) content += "Situation: $situation\n"
-        if (!earlier.isNullOrEmpty()) content += "Earlier they said: \"$earlier\"\n"
-        if (!learnerSaid.isNullOrEmpty()) content += "The learner said: \"$learnerSaid\"\n"
+        if (aboutLearner.isNotEmpty()) {
+            content += "About the learner:\n" + aboutLearner.joinToString("\n") { "- $it" } + "\n"
+        }
+        val said = recent.takeLast(RECENT_LINES).filter { it.text.isNotEmpty() }
+        if (said.isNotEmpty()) {
+            content += "The call so far:\n" + said.joinToString("\n") {
+                "${if (it.isLearner) "Learner" else "Other"}: \"${it.text}\""
+            } + "\n"
+        }
         // The level was read off this one line, so a line with no clear
         // ending re-decided it and the suggestions flipped between 반말 and
         // 존댓말 inside one call. The last suggestion anchors it where the
@@ -321,8 +342,8 @@ object CoachSuggester {
 
     suspend fun suggest(
         line: String,
-        learnerSaid: String?,
-        earlier: String?,
+        recent: List<Line>,
+        aboutLearner: List<String> = emptyList(),
         situation: String? = null,
         register: SpeechRegister? = null,
         previousSay: String? = null,
@@ -337,7 +358,7 @@ object CoachSuggester {
                 GeminiClient(AuthRepository()).sendJson(
                     system = system(target, native, level, register),
                     messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER,
-                        content(line, learnerSaid, earlier, situation, candidates, previousSay))),
+                        content(line, recent, aboutLearner, situation, candidates, previousSay))),
                     serializer = Payload.serializer(),
                     model = GeminiClient.Model.FLASH_36,
                     // Its thinking needs room, or the JSON comes back cut.

@@ -117,6 +117,22 @@ struct Fixture {
     var firstMeeting = false
     var clock: PromptClock? = nil
     var tutor = false
+    var lesson: TutorLesson? = nil
+    var ticked = false
+    var fixes: [String] = []
+}
+
+/// Tutor mode's lesson (iOS af3c7ffe): `done` of `total` challenges ticked.
+func lesson(done: Int, of total: Int = 3) -> TutorLesson {
+    TutorLesson(id: UUID(uuidString: "00000000-0000-0000-0000-0000000000A0")!,
+                title: "자기소개", titleTarget: "Introducing yourself", language: "en",
+                challenges: (0..<total).map { i in
+                    .init(id: UUID(uuidString: "00000000-0000-0000-0000-00000000000\(i)")!,
+                          goal: "goal \(i)", task: "Say task \(i) about yourself",
+                          example: "Example line \(i).", doneAt: i < done ? callStart : nil,
+                          line: i < done ? "line \(i)" : nil)
+                },
+                createdAt: callStart)
 }
 
 let fixtures: [Fixture] = [
@@ -141,6 +157,14 @@ let fixtures: [Fixture] = [
     Fixture(name: "cast_stranger_fr_noground", target: "fr", native: "en", level: .c2, counterpart: strangerNoGround),
     Fixture(name: "cast_public_figure_ko", target: "ko", native: "en", level: .a2, persona: thinPersona,
             counterpart: publicFigure),
+    Fixture(name: "tutor_en_b1_lesson_ticked", target: "en", native: "ko", level: .b1, persona: fullPersona,
+            tutor: true, lesson: lesson(done: 1), ticked: true, fixes: ["\"I am live\" → \"I live\""]),
+    Fixture(name: "tutor_ko_a2_lesson_fixes", target: "ko", native: "en", level: .a2,
+            tutor: true, lesson: lesson(done: 0), fixes: ["\"학교에 갔어요\" → \"학교에 갔어\""]),
+    Fixture(name: "tutor_en_b1_lesson_done", target: "en", native: "ko", level: .b1,
+            tutor: true, lesson: lesson(done: 3), ticked: true),
+    Fixture(name: "tutor_de_b2_lesson_quiet", target: "de", native: "en", level: .b2,
+            topic: "Ordering at a cafe", tutor: true, lesson: lesson(done: 2)),
     Fixture(name: "first_counterpart_ignored_es", target: "es", native: "en", level: .b2, persona: nil,
             counterpart: manager, firstMeeting: true),
 ]
@@ -152,7 +176,8 @@ for f in fixtures {
         targetLanguage: f.target, nativeLanguage: f.native, level: f.level,
         topPatterns: f.patterns, weakVocabAreas: f.weak, topic: f.topic,
         persona: f.persona, counterpart: f.counterpart, newsFacts: f.news, brief: f.brief,
-        firstMeeting: f.firstMeeting, clock: f.clock, tutor: f.tutor)
+        firstMeeting: f.firstMeeting, clock: f.clock, tutor: f.tutor,
+        tutorLesson: f.lesson, tutorJustTicked: f.ticked, tutorLastFixes: f.fixes)
 }
 
 let outputs: [(String, String, String, Counterpart?, Bool)] = [

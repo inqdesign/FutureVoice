@@ -14,9 +14,15 @@ OUT=docs/contracts/vectors/conversation-prompts.json
 SRC=$(mktemp -d)
 for f in Models/Models.swift Models/SpeechRegister.swift Services/ConversationEngine.swift \
          "Services/ConversationEngine+Character.swift" Services/PromptClock.swift \
-         Services/CoachingLanguage.swift Services/LanguageCatalog.swift Services/CommonGround.swift; do
+         Services/CoachingLanguage.swift Services/LanguageCatalog.swift Services/CommonGround.swift \
+         Services/PersonHistory.swift; do
   git show "$REF:FutureVoice/$f" > "$SRC/$(basename "$f")"
 done
+# Tutor mode's lesson types (iOS af3c7ffe) — the model only; the store and
+# the model calls below it need the app.
+if git cat-file -e "$REF:FutureVoice/Services/TutorLesson.swift" 2>/dev/null; then
+  git show "$REF:FutureVoice/Services/TutorLesson.swift" | sed '/^\/\/ MARK: - Store/,$d' > "$SRC/TutorLesson.swift"
+fi
 BIN=$SRC/promptgen
 swiftc -O -o "$BIN" scripts/android/promptgen/stubs.swift scripts/android/promptgen/main.swift "$SRC"/*.swift
 TZ=UTC "$BIN" "$OUT" "$(git rev-parse --short "$REF")"

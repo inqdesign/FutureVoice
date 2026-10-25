@@ -6,7 +6,17 @@ enum ShadowEngine {
 }
 enum JapaneseMorph { static func reading(of s: String) -> String { s } }
 enum CarryoverDetector { static func normalized(_ s: String) -> String { s } }
-enum DrillStore { static func looksLikeMetaRule(_ s: String) -> Bool { false } }
+enum DrillStore {
+    static func looksLikeMetaRule(_ s: String) -> Bool { false }
+    static func wholeWordRange(of quote: String, in sentence: String,
+                               language: String = LanguageScope.active) -> Range<String.Index>? { nil }
+}
+/// `ConversationEngine.varietyGuard` reads the voice's accent; no fixture has one.
+enum VoiceAccentCatalog {
+    static let storedAccentKey = "promptgen.accent"
+    struct Variety { let name: String; let examples: String; let others: String }
+    static func writingVariety(for language: String, accentId: String?) -> Variety? { nil }
+}
 enum ClaudeClient { struct Message { enum Role { case user, assistant }; let role: Role; let content: String } }
 enum GeminiClient { struct Message {
     enum Role { case user, model }

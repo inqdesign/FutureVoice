@@ -146,7 +146,7 @@ fun CallSettingsSheet(
                         onTutorMode(it)
                     }
                 }
-                GroupedFooter(stringResource(R.string.when_you_make_a_mistake_your_future_self_says_it_the_right_w_c45516))
+                GroupedFooter(stringResource(R.string.pick_a_topic_and_your_future_self_teaches_it_step_by_step_un_ad6699))
             }
 
             GroupedSectionHeader(stringResource(R.string.screen))
