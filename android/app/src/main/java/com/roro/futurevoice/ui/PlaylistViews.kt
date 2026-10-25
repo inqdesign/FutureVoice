@@ -491,9 +491,12 @@ private fun PlayerLibrary(
     SheetHeader(stringResource(R.string.listen),
         leading = { com.roro.futurevoice.ui.brand.IosBackButton(onBack, Modifier) },
         modifier = Modifier.padding(end = 16.dp).padding(top = 4.dp, bottom = 4.dp))
+    // A language the show isn't made in has no Podcast tab at all (iOS
+    // PlayerLibrary.hasPodcast): the feed answers 404, so no episodes = no show.
+    val hasPodcast = shows.isNotEmpty()
     // The two tabs sit under the bar at full width, the system's own segmented
     // row (founder: squeezed into the bar beside Back, it looked off).
-    com.roro.futurevoice.ui.brand.IosSegmented(
+    if (hasPodcast) com.roro.futurevoice.ui.brand.IosSegmented(
         listOf(stringResource(R.string.podcast), stringResource(R.string.my_situations)),
         selected = if (podcastTab) 0 else 1,
         onSelect = { i ->
@@ -502,7 +505,7 @@ private fun PlayerLibrary(
         },
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp))
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp)) {
-        if (podcastTab) {
+        if (podcastTab && hasPodcast) {
             if (shows.isEmpty()) {
                 LibraryEmpty(Icons.Filled.Newspaper, stringResource(R.string.nawana_podcast),
                     stringResource(R.string.a_new_episode_every_day_in_english_for_now))
