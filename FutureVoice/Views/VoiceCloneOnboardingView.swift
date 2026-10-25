@@ -247,6 +247,13 @@ struct VoiceCloneOnboardingView: View {
         VoiceCloneScript.greeting(for: appState.targetLanguage)
     }
 
+    /// What a voice says on arrival. The greeting tells the learner it IS
+    /// them ("It's you, already fluent"), which a chosen preset is not; it
+    /// speaks the pace line instead, which claims to be nobody (2026-10-24).
+    private func arrivalLine(for voiceId: String) -> String {
+        voiceId == appState.fluentSelfPresetId ? paceLine : greetingLine
+    }
+
     /// The sentence every speed pill speaks — the same one at all three rungs.
     private var paceLine: String {
         VoiceCloneScript.paceSample(for: appState.targetLanguage)
@@ -540,7 +547,8 @@ struct VoiceCloneOnboardingView: View {
         case .reviewing: return chrome("How you sound")
         case .account:   return chrome("Make it yours")
         case .uploading: return chrome("Becoming you")
-        case .meet:      return chrome("Meet your fluent self")
+        case .meet:      return usingPreset ? chrome("Meet your role model")
+                                        : chrome("Meet your fluent self")
         case .queued:    return chrome("Voice saved")
         }
     }
@@ -1104,8 +1112,15 @@ struct VoiceCloneOnboardingView: View {
     // Meet: greeting + theme pick.
     private var meetContent: some View {
         VStack(spacing: 22) {
-            stepHeader(explain("It's you — fluent."),
-                       explain("Pick how your fluent self looks and sounds."))
+            // A preset is not the learner: it is the fluent speaker they are
+            // learning to sound like — a role model (founder, 2026-10-24).
+            if usingPreset {
+                stepHeader(explain("Your role model."),
+                           explain("Pick how your role model looks and how fast it talks."))
+            } else {
+                stepHeader(explain("It's you — fluent."),
+                           explain("Pick how your fluent self looks and sounds."))
+            }
 
             // Fixed-width cells, centred: stretched to the screen's edges
             // the row read as six loose dots with no margin (founder,
@@ -1964,7 +1979,7 @@ struct VoiceCloneOnboardingView: View {
         let sound = MeetSound.greeting(voice: voiceId)
         guard greetingTakes[voiceId] == nil, !meetInFlight.contains(sound.key) else { return }
         meetInFlight.insert(sound.key)
-        let line = greetingLine
+        let line = arrivalLine(for: voiceId)
         Task {
             let data = try? await VoiceClient.shared.synthesize(
                 voiceId: voiceId, text: line, purpose: "greeting")

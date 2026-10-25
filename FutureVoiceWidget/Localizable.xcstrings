@@ -720,6 +720,9 @@
     "Next / previous word" : {
       "shouldTranslate" : false
     },
+    "Next line" : {
+
+    },
     "Nothing in progress" : {
       "localizations" : {
         "de" : {
@@ -949,6 +952,9 @@
           }
         }
       }
+    },
+    "Play or pause" : {
+
     },
     "Progress" : {
       "localizations" : {

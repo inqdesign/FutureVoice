@@ -5534,6 +5534,7 @@
         }
       }
     },
+    "My people" : {},
     "My situations" : {
       "localizations" : {
         "ko" : {
@@ -6638,6 +6639,7 @@
         }
       }
     },
+    "nawana users" : {},
     "Needed to keep your plan going" : {
       "localizations" : {
         "de" : {
@@ -31219,6 +31221,7 @@
         }
       }
     },
+    "Back to me" : {},
     "Back to the voice your recording makes on its own." : {
       "localizations" : {
         "de" : {
@@ -37226,6 +37229,7 @@
         }
       }
     },
+    "Clear, friendly" : {},
     "Clears setup, voice clone and persona, then restarts the first-run flow. You stay signed in." : {
       "localizations" : {
         "de" : {
@@ -37594,6 +37598,7 @@
         }
       }
     },
+    "Close to me" : {},
     "Close without saving" : {
       "localizations" : {
         "de" : {
@@ -42212,6 +42217,7 @@
         }
       }
     },
+    "Custom situation" : {},
     "Customer service" : {
       "localizations" : {
         "de" : {
@@ -44452,6 +44458,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "刪除帳號會永久移除你的聲音、通話時間和帳號資料。這台裝置上的練習紀錄也會一併清除。"
+          }
+        }
+      }
+    },
+    "Describe a situation and practice it in a call" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beschreib eine Situation und übe sie im Gespräch"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Describe una situación y practícala en una llamada"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Décris une situation et entraîne-toi en appel"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "場面を書いて、通話で練習できます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "상황을 적고 통화로 연습해요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "写下一个情境，在通话里练习"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "寫下一個情境，在通話裡練習"
           }
         }
       }
@@ -49309,6 +49361,7 @@
         }
       }
     },
+    "Engaging, natural" : {},
     "Enough to keep the habit going" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -54812,6 +54865,7 @@
         }
       }
     },
+    "Female" : {},
     "Figures" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -75653,6 +75707,7 @@
         }
       }
     },
+    "Male" : {},
     "Manage in the App Store" : {
       "localizations" : {
         "de" : {
@@ -76797,6 +76852,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "見見流利的自己"
+          }
+        }
+      }
+    },
+    "Meet your role model" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Triff dein Vorbild"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conoce a tu modelo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rencontre ton modèle"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目指す話し手に会う"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "롤모델과 만나기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "认识你的学习榜样"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "認識你的學習榜樣"
           }
         }
       }
@@ -80532,6 +80633,7 @@
         }
       }
     },
+    "Natural, conversational" : {},
     "Neighbor" : {
       "localizations" : {
         "de" : {
@@ -82582,6 +82684,7 @@
         }
       }
     },
+    "Next line" : {},
     "Next one %@" : {
       "localizations" : {
         "de" : {
@@ -87712,6 +87815,7 @@
         }
       }
     },
+    "Off brings back the previous Watch page" : {},
     "Offline — will sync when you're back" : {
       "localizations" : {
         "de" : {
@@ -91869,6 +91973,7 @@
         }
       }
     },
+    "People around me" : {},
     "People today" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -93525,6 +93630,52 @@
         }
       }
     },
+    "Pick how your role model looks and how fast it talks." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle, wie dein Vorbild aussieht und wie schnell es spricht."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elige su aspecto y a qué ritmo habla."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisis son apparence et son rythme."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "見た目と話す速さを選びます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "롤모델의 모습과 말하는 속도를 골라요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择榜样的外观和说话速度。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選擇榜樣的外觀和說話速度。"
+          }
+        }
+      }
+    },
     "Pick up where you left off" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -94286,6 +94437,7 @@
         }
       }
     },
+    "Play or pause" : {},
     "Play the line" : {
       "localizations" : {
         "de" : {
@@ -134998,6 +135150,7 @@
         }
       }
     },
+    "Warm, easygoing" : {},
     "Watch" : {
       "localizations" : {
         "de" : {
@@ -135182,6 +135335,7 @@
         }
       }
     },
+    "Watch as a people map" : {},
     "Watch book" : {
       "localizations" : {
         "de" : {
@@ -140267,6 +140421,7 @@
         }
       }
     },
+    "When you make a mistake, your future self says it the right way out loud, then carries on." : {},
     "When you run low" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -154021,6 +154176,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "這份講稿的錄製會放在這裡。"
+          }
+        }
+      }
+    },
+    "Your role model." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Vorbild."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu modelo a seguir."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ton modèle."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目指す話し手です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "나의 롤모델이에요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的学习榜样。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的學習榜樣。"
           }
         }
       }
