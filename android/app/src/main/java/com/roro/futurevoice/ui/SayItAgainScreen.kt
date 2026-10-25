@@ -557,6 +557,14 @@ fun SayItAgainScreen(
         }
     }
 
+    /** Cancel the run and stop the mic here, before anything new starts —
+     *  a cancelled read no longer stops it on its own. */
+    fun stopRun() {
+        runJob?.cancel()
+        player.stop()
+        runCatching { recorder.stop() }
+    }
+
     /** Walk the script. Every step awaits its own end, so the loop IS the
      *  pacing — there is no timer anywhere on this screen. */
     suspend fun run(from: Int) {
@@ -590,14 +598,6 @@ fun SayItAgainScreen(
         flushLog()
         stopRun()
         runJob = scope.launch { run(from) }
-    }
-
-    /** Cancel the run and stop the mic here, before anything new starts —
-     *  a cancelled read no longer stops it on its own. */
-    fun stopRun() {
-        runJob?.cancel()
-        player.stop()
-        runCatching { recorder.stop() }
     }
 
     /** Re-read one line. Mid-run it rejoins the script there — the answer
