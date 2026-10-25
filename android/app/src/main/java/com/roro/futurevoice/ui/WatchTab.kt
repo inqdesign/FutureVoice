@@ -79,6 +79,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.roro.futurevoice.R
 import com.roro.futurevoice.data.Counterpart
+import com.roro.futurevoice.net.PublicPersonaClient
 import com.roro.futurevoice.data.CounterpartStore
 import com.roro.futurevoice.data.ScenarioStore
 import com.roro.futurevoice.data.StoreEvents
@@ -418,7 +419,7 @@ internal fun WatchTabBody(
     fun pickDockCategory(title: String) {
         val jobs = poolRows.associate { it.id to it.occupation }
         val candidates = people.filter { it.remoteId == null } +
-            people.filter { it.remoteId != null } + skyPool
+            people.filter { it.remoteId != null && !PublicPersonaClient.isWithdrawnLearner(it) } + skyPool
         val match = candidates.firstOrNull { watchFits(it, title, it.remoteId?.let { r -> jobs[r] }) } ?: return
         dockPerson = match
     }
@@ -968,7 +969,7 @@ private fun skyNodes(
         if (!meeting && s.isTopic != true) kept += id
     }
     val jobs = pool.associate { it.id to it.occupation }
-    val nodes = people.map { c ->
+    val nodes = people.filterNot { PublicPersonaClient.isWithdrawnLearner(it) }.map { c ->
         val job = c.remoteId?.let { jobs[it] }
         PeopleSky.Node(
             id = c.id, name = c.name, person = c, pooled = false,

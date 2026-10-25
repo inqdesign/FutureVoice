@@ -285,7 +285,7 @@ fun FindPeopleScreen(
     val groupPool = pool.filter { PoolGroup.of(it) == group }
     val metIds = met.mapNotNull { it.remoteId }.toSet()
     // Each tab stays a complete little world instead of repeating names.
-    val metHere = met.filter { PoolGroup.of(it) == group }
+    val metHere = met.filter { PoolGroup.of(it) == group && !PublicPersonaClient.isWithdrawnLearner(it) }
     val bookmarkedNewFaces = groupPool.filter { bookmarks.contains(it.id) && it.id !in metIds }
     // Everyone in the pool not met and not bookmarked — the WHOLE list, in
     // the pool's own order.

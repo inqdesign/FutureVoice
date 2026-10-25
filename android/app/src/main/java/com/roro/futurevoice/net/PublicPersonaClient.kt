@@ -56,6 +56,28 @@ class PublicPersonaClient(private val auth: AuthRepository) {
     // MARK: - My own row
 
     companion object {
+        /** Every active row id from the last successful pool fetch, before
+         *  [onePerPerson] drops a learner's other-language rows (iOS
+         *  `activeRowIds`). Null until a fetch has succeeded. */
+        @Volatile var activeRowIds: Set<String>? = null
+
+        /**
+         * A met LEARNER whose row is no longer in the pool (iOS
+         * `isWithdrawnLearner`): taken down, or removed by "Not now". Their
+         * copy here keeps the intro as it was when met — before the consent
+         * screen that intro went out unasked — so the map and Find people
+         * kept showing a profile its author had withdrawn. Hidden, never
+         * deleted (the talks stay); characters are left alone; nothing is
+         * hidden until a fetch has said what is active.
+         */
+        fun isWithdrawnLearner(c: com.roro.futurevoice.data.Counterpart): Boolean {
+            val active = activeRowIds ?: return false
+            val rid = c.remoteId ?: return false
+            if (rid == "self" || rid.startsWith("builtin:")) return false
+            if ((c.personaKind ?: "user") != "user") return false
+            return rid !in active
+        }
+
         /** Set once the learner has taken control of their public intro by
          *  hand — published, edited or taken it down, or said "not now" to the
          *  preview. After that auto-sync never touches the row again. */
@@ -361,7 +383,9 @@ class PublicPersonaClient(private val auth: AuthRepository) {
      * filtered out: you don't meet yourself.
      */
     suspend fun fetchPool(language: String): List<PublicPersona> {
-        val rows = onePerPerson(fetchPoolRows(), language)
+        val all = fetchPoolRows()
+        activeRowIds = all.map { it.id }.toSet()
+        val rows = onePerPerson(all, language)
         adoptPhotos(rows)
         return rows
     }
