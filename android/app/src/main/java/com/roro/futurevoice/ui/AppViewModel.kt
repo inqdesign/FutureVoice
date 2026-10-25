@@ -493,6 +493,19 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
     }
 
     /**
+     * The Watch tab raises the preview by itself ONCE (iOS
+     * `RootTabView.introPreviewOfferedKey`, 2026-10-25): a dismissal left
+     * the decision open, so every visit to Watch raised it again. Undecided
+     * still publishes nothing.
+     */
+    fun takeIntroPreviewOffer(): Boolean {
+        val prefs = com.roro.futurevoice.net.PublicPersonaClient.prefs(appContext)
+        if (prefs.getBoolean(INTRO_PREVIEW_OFFERED, false) || !needsIntroDecision()) return false
+        prefs.edit().putBoolean(INTRO_PREVIEW_OFFERED, true).apply()
+        return true
+    }
+
+    /**
      * The preview's Publish: the mirror goes up, and from here on follows
      * profile edits — that is what was approved. Runs on the view model's
      * scope so dismissing the sheet can't cancel a write half-done.
@@ -1117,6 +1130,8 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
 
     private companion object {
         const val SETUP_COMPLETE_KEY = "futurevoice.setupComplete"
+        /** Same key name as iOS's defaults key. */
+        const val INTRO_PREVIEW_OFFERED = "futurevoice.publicIntroPreviewOffered"
         /** Same key name as iOS's defaults key. */
         const val ONBOARDING_STARTED_KEY = "futurevoice.onboardingStarted"
         const val NATIVE_KEY = "futurevoice.nativeLanguage"

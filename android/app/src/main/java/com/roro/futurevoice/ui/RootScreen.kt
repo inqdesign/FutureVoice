@@ -1604,7 +1604,7 @@ fun RootScreen() {
                 com.roro.futurevoice.core.Analytics.capture("screen_viewed", mapOf("screen" to it.name.lowercase()))
                 // Nothing about this learner reaches the pool until they have
                 // seen the paragraph a stranger's phone would speak as "them".
-                if (it == HomeTab.WATCH && app.needsIntroDecision()) showIntroPreview = true
+                if (it == HomeTab.WATCH && app.takeIntroPreviewOffer()) showIntroPreview = true
             },
             onOpenDeck = { showDeck = true },
             onOpenWords = { studyDeckKind = StudyScheduleStore.Kind.WORD },
