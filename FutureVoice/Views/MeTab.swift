@@ -835,44 +835,30 @@ struct MeTab: View {
         explain("Your current voice is replaced by the new one and deleted, so you can't go back to it. Audio already made keeps playing.")
     }
 
-    /// Name, accent and the stand-in / restore rows of the Voice section.
+    /// The fluent self's own voice: which voice, its name, accent, speed —
+    /// and the stand-in rows while a clone is queued.
+    ///
+    /// Settings-app colours (2026-10-25, founder: too much accent): a black
+    /// title, a grey value, a chevron. No icons, and no blue or red text —
+    /// every row on this page was tinted, and the page read as a row of links.
     private var voiceRowsTop: AnyView {
         AnyView(Group {
-            Button {
-                voiceNameDraft = appState.voiceDisplayName
-                renamingVoice = true
-            } label: {
-                row(icon: "textformat",
-                    title: explain("Voice name: \(appState.voiceDisplayName)"),
-                    subtitle: explain("What your voice is called in the app"))
-            }
-            NavigationLink {
-                VoicePresetPickerView(selection: $defaultSceneVoiceId)
-                    .environmentObject(appState)
-            } label: {
-                row(icon: "person.wave.2",
-                    title: explain("Scene partner voice: \(VoicePreset.by(id: defaultSceneVoiceId).displayName)"),
-                    subtitle: explain("For Watch scenes without a saved person"))
-            }
-            // The month's voices were spent when they signed up: say when
-            // theirs arrives, and hide what would act on a stand-in preset.
             if appState.voiceIsStandIn {
-                row(icon: "hourglass",
-                    title: VoiceQuota.readyLine(appState.voiceQueuedUntil),
-                    subtitle: explain("Made from the recording on this phone. A stand-in voice speaks until then."))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(VoiceQuota.readyLine(appState.voiceQueuedUntil))
+                    Text(explain("Made from the recording on this phone. A stand-in voice speaks until then."))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 NavigationLink {
                     VoicePresetPickerView(selection: Binding(
                         get: { appState.voiceCloneId ?? "" },
                         set: { appState.chooseStandInVoice($0) }))
                         .environmentObject(appState)
                 } label: {
-                    row(icon: "person.wave.2",
-                        title: explain("Voice until then: \(VoicePreset.by(id: appState.voiceCloneId ?? "").displayName)"),
-                        subtitle: explain("Pick who you practice with"))
+                    LabeledContent(explain("Voice"),
+                                   value: VoicePreset.by(id: appState.voiceCloneId ?? "").displayName)
                 }
             }
-            // The clone or a preset, chosen first on the meet act (2026-10-24).
-            // Switching keeps the clone; the accent row below is the clone's.
             if appState.voiceCloneId != nil, !appState.voiceIsStandIn {
                 Picker(selection: Binding(
                     get: { appState.fluentSelfPresetId ?? "" },
@@ -882,9 +868,17 @@ struct MeTab: View {
                         Text(preset.displayName).tag(preset.id)
                     }
                 } label: {
-                    Label("Fluent self's voice", systemImage: "person.wave.2.fill")
+                    Text("Voice")
                 }
+                .tint(.secondary)
             }
+            Button {
+                voiceNameDraft = appState.voiceDisplayName
+                renamingVoice = true
+            } label: {
+                valueRow(explain("Name"), value: appState.voiceDisplayName)
+            }
+            .tint(.primary)
             if appState.voiceCloneId != nil, !appState.voiceIsStandIn, appState.fluentSelfPresetId == nil,
                !VoiceAccentCatalog.options(for: appState.targetLanguage).isEmpty {
                 let applied = VoiceAccentCatalog.options(for: appState.targetLanguage)
@@ -892,91 +886,105 @@ struct MeTab: View {
                 Button {
                     pickingAccent = true
                 } label: {
-                    row(icon: "globe",
-                        title: applied.map { explain("Accent: \($0.label)") } ?? explain("Accent"),
-                        subtitle: explain("Same voice, the accent you choose"))
+                    valueRow(explain("Accent"),
+                             value: applied.map { chrome(String.LocalizationValue($0.label)) } ?? explain("None"))
                 }
+                .tint(.primary)
             }
-        })
-    }
-
-    /// Speed, rebuild and re-record rows of the Voice section.
-    private var voiceRowsBottom: AnyView {
-        AnyView(Group {
-            // Under Accent because it is the same kind of question — the voice
-            // stays the learner's, only how it speaks changes. It is a
-            // SYNTHESIS setting, not playback: the words are spoken slowly
-            // rather than a recording played slow, so the pitch is untouched
-            // and it still sounds like them. Takes effect on the next line
-            // synthesized; a call already running keeps the speed it dialled.
             Picker(selection: $speechSpeed) {
                 ForEach(SpeechSpeed.allCases, id: \.rawValue) { speed in
                     Text(speed.label).tag(speed.rawValue)
                 }
             } label: {
-                Label("Speaking speed", systemImage: "speedometer")
+                Text("Speaking speed")
             }
-            // Above the re-record, because it is the question people arrive
-            // with. "It doesn't sound like me" used to have exactly one answer
-            // here — record the whole thing again — and no way to check the
-            // claim first. Most of the time the clone is fine and what sounds
-            // foreign is the LANGUAGE; hearing both voices say the same
-            // sentence is what separates those two.
+            .tint(.secondary)
+        })
+    }
+
+    /// Re-recording and rebuilding the clone, apart from the settings above:
+    /// they replace the voice rather than adjust it.
+    private var voiceRowsBottom: AnyView {
+        AnyView(Group {
             if appState.voiceCloneId != nil, !appState.voiceIsStandIn, VoiceSampleStore.shared.exists {
                 Button {
                     comparingVoice = true
                 } label: {
-                    row(icon: "waveform",
-                        title: explain("Doesn't sound like you?"),
-                        subtitle: explain("Hear your recording and your clone side by side"))
+                    valueRow(explain("Doesn't sound like you?"), value: nil)
                 }
+                .tint(.primary)
             }
-            // Both make a new voice — the learner's one change per 30 days
-            // (2026-10-09). With none left they say when, instead of leading
-            // to a minute of reading and a refusal.
-            Button(role: .destructive) {
-                // Straight to the recording screen: its Cancel keeps the voice
-                // they have, so there is nothing to confirm (2026-10-13).
+            Button {
                 voiceBeforeRerecord = appState.voiceCloneId
                 rerecording = true
             } label: {
-                row(icon: "mic.badge.plus",
-                    title: explain("Re-record voice"),
-                    subtitle: appState.canChangeVoice
-                        ? explain("Replace your current clone with a new one")
-                        : VoiceChangeStatus.againLine(appState.voiceChangeStatus?.nextAt))
+                Text("Re-record voice")
             }
+            .tint(.primary)
             .disabled(!appState.canChangeVoice || appState.voiceIsStandIn)
             if VoiceSampleStore.shared.exists, !appState.voiceIsStandIn {
                 Button {
                     confirmingVoiceRegenerate = true
                 } label: {
                     HStack {
-                        row(icon: "arrow.triangle.2.circlepath",
-                            title: explain("Regenerate from saved recording"),
-                            subtitle: appState.canChangeVoice
-                                ? explain("Rebuild the clone from your last recording")
-                                : VoiceChangeStatus.againLine(appState.voiceChangeStatus?.nextAt))
+                        Text("Regenerate from saved recording")
                         if regeneratingVoice {
                             Spacer()
                             ProgressView()
                         }
                     }
                 }
+                .tint(.primary)
                 .disabled(regeneratingVoice || !appState.canChangeVoice)
             }
         })
     }
 
+    /// Title on the left, the current value in grey and a chevron on the
+    /// right — the Settings app's row, for rows that open something.
+    private func valueRow(_ title: String, value: String?) -> some View {
+        HStack {
+            Text(title).foregroundStyle(.primary)
+            Spacer(minLength: 8)
+            if let value {
+                Text(value).foregroundStyle(.secondary).lineLimit(1)
+            }
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.tertiary)
+        }
+    }
+
     private var voiceSection: some View {
-        Section("Voice") {
+        // Three groups (2026-10-25): the fluent self's voice, the scene
+        // partner's, and the actions that replace the clone.
+        Group {
             // Two type-erased halves (2026-10-12): the section as one
             // SwiftUI type grew deep enough that a Debug build overflowed the
             // main thread's stack instantiating its metadata — tapping Me
             // crashed (SIGSEGV in swift_getTypeByMangledName under
             // MeTab.voiceSection).
-            voiceRowsTop
-            voiceRowsBottom
+            Section(explain("Your fluent self")) { voiceRowsTop }
+            Section {
+                NavigationLink {
+                    VoicePresetPickerView(selection: $defaultSceneVoiceId)
+                        .environmentObject(appState)
+                } label: {
+                    LabeledContent(explain("Partner voice"),
+                                   value: VoicePreset.by(id: defaultSceneVoiceId).displayName)
+                }
+            } header: {
+                Text("Watch")
+            } footer: {
+                Text(explain("For Watch scenes without a saved person"))
+            }
+            Section {
+                voiceRowsBottom
+            } footer: {
+                Text(appState.canChangeVoice
+                     ? explain("Replace your current clone with a new one")
+                     : VoiceChangeStatus.againLine(appState.voiceChangeStatus?.nextAt))
+            }
         }
         .task { await appState.refreshVoiceChangeStatus() }
         .alert("Rebuild your voice?", isPresented: $confirmingVoiceRegenerate) {
