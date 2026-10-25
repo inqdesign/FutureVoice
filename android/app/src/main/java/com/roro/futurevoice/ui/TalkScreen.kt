@@ -1183,7 +1183,10 @@ fun TalkScreen(
                             // Tutor mode: topics to practice, for a learner
                             // with no idea (iOS `tutorTopicButton`). Same
                             // shape as the settings button across the pill.
-                            if (state.tutorOn && onCall && !sendMode) {
+                            // Tutor mode has nothing to do with Send: the
+                            // topic button holds this spot and gives way only
+                            // while words wait to be sent (iOS ConversationView).
+                            if (state.tutorOn && onCall && !(sendMode && hasHeldWords)) {
                                 IconButton(onClick = { showingTutorTopics = true }, enabled = !state.tutorPlanning,
                                     modifier = Modifier.align(Alignment.CenterEnd).padding(end = 16.dp)) {
                                     Icon(Icons.Outlined.Lightbulb, contentDescription = stringResource(R.string.what_to_practice),

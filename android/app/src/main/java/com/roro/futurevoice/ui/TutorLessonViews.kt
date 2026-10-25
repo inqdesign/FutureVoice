@@ -198,7 +198,9 @@ fun TutorTopicSheet(language: String, level: CefrLevel, onPick: (String) -> Unit
     }
     ModalBottomSheet(onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)) {
-        Column(Modifier.sheetBody()) {
+        // Not sheetBody(): its verticalScroll hands the LazyColumn below an
+        // unbounded height, which crashes the moment the sheet opens.
+        Column(Modifier.fillMaxWidth().bottomBarInsets()) {
             Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
                 TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.CenterStart)) {
                     Text(stringResource(R.string.close))
