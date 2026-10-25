@@ -1,0 +1,11 @@
+New
+• Tutor mode: pick a topic, get a short lesson, and practice each line until you say it right.
+• Set your level, speed and coach mode on one screen before your first talk.
+• Pick your fluent self's voice: yours or a similar one.
+• Routine widget: today's plan and what's up now.
+• Turn a podcast episode into your own book.
+
+Fixed
+• "Try saying" follows the conversation and what you've shared.
+• Swipe sideways between talk topics.
+• The call clock and the home ring show the same time.
