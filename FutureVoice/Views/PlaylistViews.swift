@@ -20,7 +20,9 @@ struct PlaylistButton: View {
         .modifier(PlaylistGlassCircle())
         .accessibilityLabel(Text("My situations"))
         .sheet(isPresented: $showing) {
-            ScenePlayerSheet().environmentObject(appState)
+            // Nothing queued: the player page would be an empty caption,
+            // so open on what there is to hear.
+            ScenePlayerSheet(startOnList: !player.hasQueue).environmentObject(appState)
         }
     }
 }
