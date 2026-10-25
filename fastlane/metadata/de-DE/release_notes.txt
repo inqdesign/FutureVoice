@@ -1,10 +1,12 @@
 Neu
-• Oben in „Nochmal sagen“ wählst du mit einem Tipp „Meine Sätze“ oder „Beide Seiten“. Du siehst immer, welchen Part du gerade liest.
-• In „Nochmal sagen“ bewegt sich der rote Punkt neben „Sag deinen Satz“ mit deiner Stimme. So weißt du sofort, dass das Mikro dich hört.
-• Bei „Leute finden“, auf der Seite einer Person und auf der Kartenkarte steht jetzt die Vorstellung, die diese Person veröffentlicht hat.
+• Der Tutor-Modus ist neu. Wähl ein Thema, und dein fließendes Ich bringt es dir in 3 bis 4 Schritten bei. Jeden Schritt übt ihr zusammen, bis du ihn ohne Fehler sagst. Eine Checkliste über dem Gespräch zeigt, wo du stehst, und eine unterbrochene Lektion geht im nächsten Gespräch weiter.
+• Nach einer Lektion entscheidest du, ob du beim Thema bleibst oder zu einem anderen wechselst.
+• Tipp auf das Buch neben einer Podcast-Folge, und sie wird zu deinem eigenen Buch zum Wiederholen.
+• Vor deinem ersten Gespräch kannst du Niveau, Tempo, Coach-Modus, „Mit Senden antworten“ und Tutor-Modus einstellen.
+• Wenn du deine Stimme zum ersten Mal erstellst, kannst du statt deiner eigenen eine ähnlich klingende Stimme wählen.
+• Bei „Warum lernst du?“ kannst du so viele Antworten wählen, wie du willst.
 
 Behoben
-• Wenn du in „Nochmal sagen“ neu anfängst oder einen Satz nochmal liest, geht es beim Sprechen jetzt wieder zum nächsten Satz weiter.
-• Der Wechsel zu „Beide Seiten“ ruckelt nicht mehr.
-• In „Rede“ läuft „In meiner Stimme hören“ weiter, während du durch den Text scrollst.
-• Wer schon ein Abo hat, sieht auf der Tarifseite kein Gratis-Probeangebot mehr.
+• Vor dem ersten Satz einer Szene unter „Ansehen“ ist kein Rauschen mehr zu hören.
+• Deine Sprechblase verschwindet nach dem Sprechen nicht mehr kurz und taucht wieder auf.
+• Der Countdown beim Nachsprechen bleibt nicht mehr bei „3“ hängen.

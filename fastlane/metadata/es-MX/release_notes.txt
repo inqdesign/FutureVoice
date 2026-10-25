@@ -1,10 +1,12 @@
 Novedades
-• Arriba en «Volver a decirlo» eliges «Mis frases» o «Las dos partes» con un solo toque. Siempre ves qué parte estás leyendo.
-• En «Volver a decirlo», el punto rojo junto a «Di tu frase» se mueve con tu voz, así sabes que el micrófono te está oyendo.
-• «Buscar personas», la página de cada persona y su tarjeta en el mapa muestran ahora la presentación que esa persona publicó.
+• El modo tutor es nuevo. Elige un tema y tu yo fluido te lo enseña en 3 o 4 pasos, practicando cada uno contigo hasta que lo digas sin errores. Una lista sobre la llamada muestra por dónde vas, y una lección que dejas a medias sigue en tu próxima llamada.
+• Al terminar una lección, eliges seguir con el mismo tema o pasar a otro.
+• Toca el libro junto a un episodio del pódcast y se convierte en tu propio cuaderno de repaso.
+• Antes de tu primera llamada puedes elegir tu nivel, la velocidad, el modo coach, «Responder con Enviar» y el modo tutor.
+• Al crear tu voz por primera vez, puedes elegir una voz parecida a la tuya en lugar de la tuya.
+• En «¿Por qué aprendes?» puedes elegir todas las respuestas que quieras.
 
 Correcciones
-• En «Volver a decirlo», después de empezar de nuevo o releer una frase, al hablar ya pasa a la siguiente.
-• Cambiar a «Las dos partes» ya no se traba.
-• En «Discurso», «Escúchalo con mi voz» sigue sonando mientras te desplazas por el texto.
-• Si ya tienes una suscripción, la pantalla de planes ya no te ofrece la prueba gratis.
+• Ya no suena ruido antes de la primera frase de una escena.
+• Tu burbuja ya no desaparece y vuelve a aparecer al terminar de hablar en una llamada.
+• La cuenta atrás del shadowing ya no se queda en «3».

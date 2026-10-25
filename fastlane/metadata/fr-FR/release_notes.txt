@@ -1,10 +1,12 @@
 Nouveautés
-• En haut de « Redire », choisis « Mes répliques » ou « Les deux rôles » d’un seul geste. Tu vois toujours quelle partie tu lis.
-• Dans « Redire », le point rouge à côté de « Dis ta phrase » bouge avec ta voix : tu sais tout de suite que le micro t’entend.
-• « Trouver des gens », la page d’une personne et sa carte sur le plan affichent maintenant la présentation qu’elle a publiée.
+• Le mode tuteur est tout nouveau. Choisis un sujet et ton moi fluide te l’enseigne en 3 ou 4 étapes, en pratiquant chacune avec toi jusqu’à ce que tu la dises sans faute. Une liste au-dessus de l’appel montre où tu en es, et une leçon interrompue reprend à ton prochain appel.
+• À la fin d’une leçon, tu choisis de continuer sur le même sujet ou d’en changer.
+• Touche le livre à côté d’un épisode du podcast pour en faire ton propre carnet de révision.
+• Avant ton premier appel, tu peux régler ton niveau, la vitesse, le mode coach, « Répondre avec Envoyer » et le mode tuteur.
+• Quand tu crées ta voix pour la première fois, tu peux choisir une voix proche de la tienne au lieu de la tienne.
+• À « Pourquoi tu apprends ? », tu peux choisir autant de réponses que tu veux.
 
 Corrections
-• Dans « Redire », après avoir recommencé ou relu une phrase, parler fait de nouveau passer à la phrase suivante.
-• Passer à « Les deux rôles » ne saccade plus.
-• Dans « Discours », « L’écouter avec ma voix » continue quand tu fais défiler le texte.
-• Si tu es déjà abonné, l’écran des formules ne propose plus d’essai gratuit.
+• Plus de bruit avant la première réplique d’une scène.
+• Ta bulle ne disparaît plus pour réapparaître quand tu finis de parler pendant un appel.
+• Le compte à rebours du shadowing ne reste plus bloqué sur « 3 ».
