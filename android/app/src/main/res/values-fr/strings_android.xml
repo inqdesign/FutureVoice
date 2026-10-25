@@ -540,4 +540,7 @@
     <string name="podcast_open_my_book">"Ouvrir mon carnet"</string>
     <string name="podcast_listen_shelf_empty">"Dans le lecteur, touche le livre à côté d’un épisode du podcast : il devient un carnet ici, avec des mots, des expressions et des phrases à répéter."</string>
     <string name="podcast_shadow_footer">"Touche une phrase pour la répéter comme dans le podcast. Au-delà de %1$d points, c’est acquis."</string>
+    <string name="fs_meet_role_model">Rencontre ton modèle</string>
+    <string name="fs_role_model_title">Ton modèle.</string>
+    <string name="fs_role_model_sub">Choisis son apparence et son rythme.</string>
 </resources>

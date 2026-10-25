@@ -556,4 +556,7 @@
     <string name="podcast_open_my_book">"Open my book"</string>
     <string name="podcast_listen_shelf_empty">"In the player, tap the book beside a podcast episode and it becomes a book here: its words, expressions and lines to shadow."</string>
     <string name="podcast_shadow_footer">"Tap a line to shadow it after the host. Score %1$d+ and it's mastered."</string>
+    <string name="fs_meet_role_model">Meet your role model</string>
+    <string name="fs_role_model_title">Your role model.</string>
+    <string name="fs_role_model_sub">Pick how your role model looks and how fast it talks.</string>
 </resources>

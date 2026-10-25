@@ -534,4 +534,7 @@
     <string name="podcast_open_my_book">"내 교재 열기"</string>
     <string name="podcast_listen_shelf_empty">"플레이어에서 팟캐스트 에피소드 옆의 책을 누르면 여기 교재가 돼요. 단어와 표현, 따라 말할 문장이 담겨요."</string>
     <string name="podcast_shadow_footer">"문장을 눌러 진행자를 따라 말해 보세요. %1$d점을 넘기면 끝이에요."</string>
+    <string name="fs_meet_role_model">롤모델과 만나기</string>
+    <string name="fs_role_model_title">나의 롤모델이에요.</string>
+    <string name="fs_role_model_sub">롤모델의 모습과 말하는 속도를 골라요.</string>
 </resources>

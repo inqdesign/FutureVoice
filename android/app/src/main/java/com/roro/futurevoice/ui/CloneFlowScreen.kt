@@ -416,7 +416,13 @@ fun CloneFlowScreen(
             val data = runCatching {
                 VoiceClient(AuthRepository()).synthesize(
                     voiceId = voiceId,
-                    text = VoiceCloneScript.greeting(targetLanguage),
+                    // What a voice says on arrival (iOS `arrivalLine`,
+                    // 2026-10-24): the greeting tells the learner it IS them
+                    // ("It's you, already fluent"), which a chosen preset is
+                    // not; it speaks the pace line, which claims to be nobody.
+                    text = if (com.roro.futurevoice.talk.VoicePreset.isPreset(voiceId))
+                        VoiceCloneScript.paceSample(targetLanguage)
+                        else VoiceCloneScript.greeting(targetLanguage),
                     purpose = "greeting",
                 )
             }.getOrNull()
@@ -876,7 +882,7 @@ fun CloneFlowScreen(
         CloneAct.RECORDING -> R.string.it_s_listening
         CloneAct.REVIEW -> R.string.how_you_sound
         CloneAct.UPLOADING -> R.string.becoming_you
-        CloneAct.MEET -> R.string.meet_your_fluent_self
+        CloneAct.MEET -> if (usingPreset) R.string.fs_meet_role_model else R.string.meet_your_fluent_self
         CloneAct.ACCOUNT -> R.string.make_it_yours
         CloneAct.QUEUED -> R.string.voice_saved
     })
@@ -1216,7 +1222,12 @@ fun CloneFlowScreen(
 
                     CloneAct.MEET -> Column(horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(22.dp)) {
-                        StepHeader(stringResource(R.string.it_s_you_fluent),
+                        // A preset is not the learner: it is the fluent
+                        // speaker they are learning to sound like — a role
+                        // model (iOS 2026-10-24).
+                        if (usingPreset) StepHeader(stringResource(R.string.fs_role_model_title),
+                            stringResource(R.string.fs_role_model_sub))
+                        else StepHeader(stringResource(R.string.it_s_you_fluent),
                             stringResource(R.string.pick_how_your_fluent_self_looks_and_sounds))
                         // The palette — a decision made by eye: the big orb
                         // recolours live and that is the feedback. Silent.

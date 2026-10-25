@@ -534,4 +534,7 @@
     <string name="podcast_open_my_book">"教材を開く"</string>
     <string name="podcast_listen_shelf_empty">"プレーヤーでエピソードの横にある本をタップすると、ここで教材になります。単語や表現、真似する文が入っています。"</string>
     <string name="podcast_shadow_footer">"文をタップして、ホストの声を真似してみましょう。%1$d点を超えたら完了です。"</string>
+    <string name="fs_meet_role_model">目指す話し手に会う</string>
+    <string name="fs_role_model_title">目指す話し手です。</string>
+    <string name="fs_role_model_sub">見た目と話す速さを選びます。</string>
 </resources>
