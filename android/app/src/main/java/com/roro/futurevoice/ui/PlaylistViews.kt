@@ -236,6 +236,9 @@ fun ScenePlayerSheet(
     /** Opened from the routine's listening block: start playing at once,
      *  unless something is already playing (iOS `autoplay`). */
     autoplay: Boolean = false,
+    /** Open on the library (iOS `startOnList`): the Talk button, when
+     *  nothing is queued. */
+    startOnList: Boolean = false,
     /** A podcast episode's book, made or already there: the host opens it
      *  (iOS presents `ScenarioDetailView` over the player). */
     onOpenBook: (String) -> Unit = {},
@@ -249,7 +252,7 @@ fun ScenePlayerSheet(
         enter = slideInVertically(spring(dampingRatio = 1f, stiffness = 380f)) { it },
         exit = slideOutVertically(spring(dampingRatio = 1f, stiffness = 520f)) { it },
     ) {
-        ScenePlayerSheetContent(state, topInset, autoplay, onOpenBook, onDismiss)
+        ScenePlayerSheetContent(state, topInset, autoplay, startOnList, onOpenBook, onDismiss)
     }
 }
 
@@ -258,6 +261,7 @@ private fun ScenePlayerSheetContent(
     state: AppState,
     topInset: Dp,
     autoplay: Boolean,
+    startOnList: Boolean,
     onOpenBook: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -266,7 +270,7 @@ private fun ScenePlayerSheetContent(
     var tracks by remember { mutableStateOf<List<SceneTrack>>(emptyList()) }
     var shows by remember { mutableStateOf<List<NewsShowEpisode>>(emptyList()) }
     var loaded by remember { mutableStateOf(false) }
-    var showingList by remember { mutableStateOf(false) }
+    var showingList by remember { mutableStateOf(startOnList) }
     var large by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val listTitle = stringResource(R.string.my_situations)

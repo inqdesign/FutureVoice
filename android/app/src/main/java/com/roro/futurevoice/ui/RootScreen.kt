@@ -1947,6 +1947,7 @@ internal fun HomeScreen(
     var showPlayer by remember { mutableStateOf(false) }
     /** Opened from the routine's listening block: it starts playing. */
     var playerAutoplay by remember { mutableStateOf(false) }
+    var playerOnList by remember { mutableStateOf(false) }
     val listenPending by com.roro.futurevoice.data.PlanReminder.pendingListen.collectAsStateWithLifecycle()
     LaunchedEffect(listenPending) {
         if (!listenPending) return@LaunchedEffect
@@ -2274,7 +2275,10 @@ internal fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                    PlaylistButton(onClick = { playerAutoplay = false; showPlayer = true })
+                    PlaylistButton(onClick = {
+                        // Nothing queued: open on what there is to hear.
+                        playerAutoplay = false; playerOnList = !com.roro.futurevoice.audio.PlaylistPlayer.hasQueue; showPlayer = true
+                    })
                 }
                 // Drawn exactly like Watch's "New situation": glass capsule,
                 // accent label.
@@ -2312,9 +2316,9 @@ internal fun HomeScreen(
         }
         // The player floats over the page, the bar included (iOS sheet).
         ScenePlayerSheet(visible = showPlayer, state = state,
-            topInset = padding.calculateTopPadding(), autoplay = playerAutoplay,
+            topInset = padding.calculateTopPadding(), autoplay = playerAutoplay, startOnList = playerOnList,
             onOpenBook = { id -> showPlayer = false; playerAutoplay = false; onOpenBook(id) },
-            onDismiss = { showPlayer = false; playerAutoplay = false })
+            onDismiss = { showPlayer = false; playerAutoplay = false; playerOnList = false })
       }
     }
 }
