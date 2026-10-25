@@ -1,19 +1,10 @@
 Neu
 • Der Tutor-Modus ist neu. Wähl ein Thema, und dein fließendes Ich bringt es dir in 3 bis 4 Schritten bei. Jeden Schritt übt ihr zusammen, bis du ihn ohne Fehler sagst. Eine Checkliste über dem Gespräch zeigt, wo du stehst, und eine unterbrochene Lektion geht im nächsten Gespräch weiter.
-• Nach einer Lektion entscheidest du, ob du beim Thema bleibst oder zu einem anderen wechselst.
 • Tipp auf das Buch neben einer Podcast-Folge, und sie wird zu deinem eigenen Buch zum Wiederholen.
 • Vor deinem ersten Gespräch kannst du Niveau, Tempo, Coach-Modus, „Mit Senden antworten“ und Tutor-Modus einstellen.
-• Wenn du deine Stimme zum ersten Mal erstellst, kannst du statt deiner eigenen eine ähnlich klingende Stimme wählen.
-• Bei „Warum lernst du?“ kannst du so viele Antworten wählen, wie du willst.
-• Die Seite „Stimme“ in den Einstellungen ist übersichtlicher.
-• Im Tab „Rede“ siehst du jetzt bis zu 10 Challenges.
+• Wenn du deine Stimme zum ersten Mal erstellst, kannst du statt deiner eigenen die Stimme des KI-Tutors wählen.
 
 Behoben
 • Vor dem ersten Satz einer Szene unter „Ansehen“ ist kein Rauschen mehr zu hören.
 • Deine Sprechblase verschwindet nach dem Sprechen nicht mehr kurz und taucht wieder auf.
-• Der Countdown beim Nachsprechen bleibt nicht mehr bei „3“ hängen.
 • Die Uhr im Gespräch und der Ring auf dem Startbildschirm zeigen jetzt dieselbe Sprechzeit.
-• Im Wochentest zählt eine Antwort jetzt als richtig, wenn du nur den unterstrichenen Teil korrigierst. Bei Übersetzungsfragen passen Satz und Lösung jetzt zusammen.
-• Sprachen ohne Podcast-Folgen zeigen keinen leeren Podcast-Tab mehr.
-• Die Vorschau deiner öffentlichen Vorstellung erscheint nicht mehr jedes Mal, wenn du „Ansehen“ öffnest.
-• Wenn du dein Profil zurückziehst, verschwindet es jetzt in allen Sprachen, in denen du es veröffentlicht hast.

@@ -1,19 +1,10 @@
 Nouveautés
 • Le mode tuteur est tout nouveau. Choisis un sujet et ton moi fluide te l’enseigne en 3 ou 4 étapes, en pratiquant chacune avec toi jusqu’à ce que tu la dises sans faute. Une liste au-dessus de l’appel montre où tu en es, et une leçon interrompue reprend à ton prochain appel.
-• À la fin d’une leçon, tu choisis de continuer sur le même sujet ou d’en changer.
 • Touche le livre à côté d’un épisode du podcast pour en faire ton propre carnet de révision.
-• Avant ton premier appel, tu peux régler ton niveau, la vitesse, le mode coach, « Répondre avec Envoyer » et le mode tuteur.
-• Quand tu crées ta voix pour la première fois, tu peux choisir une voix proche de la tienne au lieu de la tienne.
-• À « Pourquoi tu apprends ? », tu peux choisir autant de réponses que tu veux.
-• La page Voix des réglages est plus simple.
-• L’onglet Discours affiche maintenant jusqu’à 10 défis.
+• Avant ton premier appel, tu peux régler ton niveau, la vitesse, le mode coach, « Répondre avec Envoyer » et le mode tuteur.
+• Quand tu crées ta voix pour la première fois, tu peux choisir la voix du tuteur IA au lieu de la tienne.
 
 Corrections
 • Plus de bruit avant la première réplique d’une scène.
 • Ta bulle ne disparaît plus pour réapparaître quand tu finis de parler pendant un appel.
-• Le compte à rebours du shadowing ne reste plus bloqué sur « 3 ».
 • Le minuteur de l’appel et l’anneau de l’accueil affichent maintenant le même temps de conversation.
-• Dans le test hebdo, corriger seulement la partie soulignée compte maintenant comme une bonne réponse, et dans les questions de traduction, la phrase et la réponse veulent enfin dire la même chose.
-• Les langues sans épisodes de podcast n’affichent plus d’onglet Podcast vide.
-• L’aperçu de ta présentation publique ne s’ouvre plus à chaque fois que tu vas dans Scènes.
-• Quand tu retires ton profil, il est maintenant retiré dans toutes les langues où tu l’as publié.
