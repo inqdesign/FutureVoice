@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -937,8 +939,9 @@ fun CloneFlowScreen(
                     val locked = applyingAccentId != null || removingAccent
                     com.roro.futurevoice.ui.brand.IosSegmented(
                         options = listOf(stringResource(R.string.fs_voice_mine),
-                            stringResource(R.string.fs_voice_similar, com.roro.futurevoice.talk.VoicePreset.name(
-                                preset.voiceId, preset.name, targetLanguage))),
+                            // No name: it doesn't fit beside "My voice" in
+                            // every language (iOS 2026-10-24, founder).
+                            stringResource(R.string.similar_voice)),
                         selected = if (fluentSelfPresetId == null) 0 else 1,
                         onSelect = { i -> if (!locked) selectVoice(if (i == 0) null else preset.voiceId) },
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)
@@ -996,12 +999,43 @@ fun CloneFlowScreen(
                             playGreeting()
                         } else Modifier),
                 )
+                // Says the orb is the replay (iOS 2026-10-24, founder); gone
+                // while it speaks, when the orb itself is moving. On the meet
+                // act whatever the greeting's state: an icon that pops in
+                // when the take lands reads as the screen changing.
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = act == CloneAct.MEET && !speaking,
+                    enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(200)),
+                    exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(200)),
+                ) {
+                    Icon(Icons.Filled.PlayArrow, null, Modifier.size(orbSize * 0.24f),
+                        tint = MaterialTheme.colorScheme.primary)
+                }
             }
-            Text(timerLine,
-                style = DisplayFace.style(timerLine, TextStyle(fontSize = 16.sp)),
-                color = if (act == CloneAct.RECORDING && elapsed >= MIN_SECONDS) green
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1, modifier = Modifier.height(20.dp))
+            if (act == CloneAct.MEET && !usingPreset) {
+                // Right under the orb it judges (iOS 2026-10-24, founder).
+                // Opens the A/B, where the re-record decision lives.
+                Row(Modifier.height(20.dp).clip(RoundedCornerShape(8.dp)).clickable {
+                    mp3.stop()
+                    // How many doubt the clone at all — the rerecord that may
+                    // follow is `voice_compare_rerecord`.
+                    com.roro.futurevoice.core.Analytics.capture("voice_mismatch_tapped", mapOf("from" to "meet"))
+                    comparing = true
+                }.padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(Icons.Filled.GraphicEq, null, Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(R.string.doesn_t_sound_like_you),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary)
+                }
+            } else {
+                Text(timerLine,
+                    style = DisplayFace.style(timerLine, TextStyle(fontSize = 16.sp)),
+                    color = if (act == CloneAct.RECORDING && elapsed >= MIN_SECONDS) green
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1, modifier = Modifier.height(20.dp))
+            }
         }
 
         // The teleprompter acts scroll their own script; every other act
@@ -1231,14 +1265,14 @@ fun CloneFlowScreen(
                             stringResource(R.string.pick_how_your_fluent_self_looks_and_sounds))
                         // The palette — a decision made by eye: the big orb
                         // recolours live and that is the feedback. Silent.
-                        // Six equal slots across the width: a fixed 14 dp gap
-                        // ran the row off both edges once the phone's display
-                        // size was turned up (tester's screenshot).
-                        Row(Modifier.fillMaxWidth().widthIn(max = 380.dp),
-                            horizontalArrangement = Arrangement.SpaceEvenly) {
+                        // Fixed-width cells, centred (iOS 2026-10-24,
+                        // founder): stretched to the screen's edges the row
+                        // read as six loose dots with no margin.
+                        Row(Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
                             FutureselfTheme.entries.forEach { t ->
                                 val selected = t == theme
-                                Column(Modifier.weight(1f).heightIn(min = 70.dp).clickable {
+                                Column(Modifier.width(52.dp).height(70.dp).clickable {
                                     theme = t
                                     FutureselfTheme.pick(context, t)
                                     HapticEngine.light(context)
@@ -1269,6 +1303,10 @@ fun CloneFlowScreen(
                                     voiceId = meetVoiceId(),
                                     line = VoiceCloneScript.paceSample(targetLanguage),
                                     player = mp3,
+                                    // Both moved off the pills (iOS 2026-10-24): the
+                                    // line is gone, the footnote sits over the button.
+                                    showLine = false,
+                                    showLaterHint = false,
                                     sounds = sounds,
                                 )
                             }
@@ -1328,19 +1366,6 @@ fun CloneFlowScreen(
                                 }
                                 LaunchedEffect(Unit) { com.roro.futurevoice.data.VoiceChanges.refresh() }
                             }
-                        }
-
-                        // The verdict on the CLONE, not the take: opens the
-                        // A/B, where the re-record decision lives.
-                        if (!usingPreset) Row(Modifier.clip(RoundedCornerShape(8.dp)).clickable {
-                            mp3.stop(); comparing = true
-                        }.padding(6.dp), verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Icon(Icons.Filled.GraphicEq, null, Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.primary)
-                            Text(stringResource(R.string.doesn_t_sound_like_you),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary)
                         }
 
                         // The code typed on Welcome actually landed — said
@@ -1523,10 +1548,21 @@ fun CloneFlowScreen(
                 // Two exits, one button: with an account this is onboarding's
                 // last tap; on the anonymous session it hands over to the
                 // sign-up, which asks about a voice they've HEARD.
-                CloneAct.MEET -> Button(onClick = {
-                    if (signedIn) finishMeet() else { mp3.stop(); act = CloneAct.ACCOUNT }
-                }, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(if (signedIn) R.string.start_talking else R.string.save_this_voice))
+                CloneAct.MEET -> Column(Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Neither pick on this screen is final; said over the
+                    // button that settles it (iOS 2026-10-24), not under the
+                    // speed pills.
+                    Text(stringResource(R.string.you_can_change_both_later_in_settings),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    Button(onClick = {
+                        if (signedIn) finishMeet() else { mp3.stop(); act = CloneAct.ACCOUNT }
+                    }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(if (signedIn) R.string.start_talking else R.string.save_this_voice))
+                    }
                 }
                 CloneAct.QUEUED -> Button(onClick = {
                     if (signedIn) finishMeet() else act = CloneAct.ACCOUNT
@@ -1744,6 +1780,8 @@ internal fun SpeedAudition(
     player: com.roro.futurevoice.audio.Mp3Player,
     /** The "change both later in settings" footnote — onboarding's alone. */
     showLaterHint: Boolean = true,
+    /** The sample line under the pills — the revival screen's alone now. */
+    showLine: Boolean = true,
     sounds: MeetSounds = remember { MeetSounds() },
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -1807,7 +1845,7 @@ internal fun SpeedAudition(
                 else OutlinedButton(onClick = onClick, modifier = Modifier.weight(1f), contentPadding = pad) { label() }
             }
         }
-        Text(line, style = MaterialTheme.typography.labelSmall,
+        if (showLine) Text(line, style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         if (showLaterHint) Text(stringResource(R.string.you_can_change_both_later_in_settings),

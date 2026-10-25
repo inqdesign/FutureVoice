@@ -6,6 +6,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material.icons.filled.UnfoldMore
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -198,11 +200,11 @@ fun DailyCallPage(
 // ── Voice ──────────────────────────────────────────────────────────────────
 
 /**
- * iOS `voiceSection`, row for row: the clone's name, who plays a scene with
- * no saved person, accent, speaking speed, "Doesn't sound like you?", then
- * the two ways to a NEW clone — re-record, or rebuild from the recording
- * kept on the phone — each behind the same warning (it costs talk time and
- * the old voice is gone for good).
+ * iOS `voiceSection`, row for row: the fluent self's voice, name, accent and
+ * speaking speed; who plays a scene with no saved person; then "Doesn't sound
+ * like you?" and the two ways to a NEW clone — re-record, or rebuild from the
+ * recording kept on the phone — the rebuild behind a warning (the old voice
+ * is gone for good).
  */
 @Composable
 fun VoicePage(
@@ -248,74 +250,62 @@ fun VoicePage(
     val canChange = changeStatus?.canChange ?: true
     val againLine = com.roro.futurevoice.data.VoiceChangeStatus.againLine(context, changeStatus?.nextAt)
     androidx.compose.runtime.LaunchedEffect(Unit) { com.roro.futurevoice.data.VoiceChanges.refresh() }
+    // Three groups, Settings-app colours (iOS dd82cdbf, 2026-10-25, founder:
+    // too much accent): the fluent self's own voice, the scene partner's,
+    // and the actions that replace the clone. A black title, a grey value, a
+    // chevron — no icons, no blue or red text.
     MeSubpage(stringResource(R.string.voice), onBack) {
-        GroupedSectionHeader(stringResource(R.string.voice))
+        GroupedSectionHeader(stringResource(R.string.your_fluent_self))
         GroupedCard {
-            MeRow(Icons.Filled.TextFields, stringResource(R.string.voice_name_f1c3a3, displayName),
-                stringResource(R.string.what_your_voice_is_called_in_the_app),
-                kind = MeRowKind.ACTION, onClick = { renaming = true })
-            GroupedRowDivider()
-            val sceneId = com.roro.futurevoice.talk.VoicePreset.sceneDefaultId()
-            MeRow(Icons.Filled.RecordVoiceOver,
-                stringResource(R.string.scene_partner_voice,
-                    com.roro.futurevoice.talk.StockPerson.by(sceneId).let {
-                        com.roro.futurevoice.talk.VoicePreset.name(it.voiceId, it.name, targetLanguage)
-                    }),
-                stringResource(R.string.for_watch_scenes_without_a_saved_person),
-                onClick = onPickSceneVoice)
+            var first = true
+            @Composable fun divider() { if (!first) GroupedRowDivider(inset = false); first = false }
             // The month's voices were spent when they signed up: say when
             // theirs arrives, and hide what would act on a stand-in preset.
             if (voiceIsStandIn) {
-                GroupedRowDivider()
-                MeRow(Icons.Filled.HourglassTop,
-                    com.roro.futurevoice.data.VoiceQuota.readyLine(context, voiceQueuedUntil),
-                    stringResource(R.string.made_from_the_recording_on_this_phone_a_stand_in_voice_speak_f60768),
-                    kind = MeRowKind.PLAIN)
-                GroupedRowDivider()
-                MeRow(Icons.Filled.RecordVoiceOver,
-                    stringResource(R.string.voice_until_then,
-                        com.roro.futurevoice.talk.StockPerson.by(voiceId).let {
-                            com.roro.futurevoice.talk.VoicePreset.name(it.voiceId, it.name, targetLanguage)
-                        }),
-                    stringResource(R.string.pick_who_you_practice_with),
-                    onClick = onPickStandIn)
+                divider()
+                Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 11.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(com.roro.futurevoice.data.VoiceQuota.readyLine(context, voiceQueuedUntil),
+                        style = MaterialTheme.typography.bodyLarge)
+                    Text(stringResource(R.string.made_from_the_recording_on_this_phone_a_stand_in_voice_speak_f60768),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                divider()
+                VoiceValueRow(stringResource(R.string.voice),
+                    com.roro.futurevoice.talk.StockPerson.by(voiceId).let {
+                        com.roro.futurevoice.talk.VoicePreset.name(it.voiceId, it.name, targetLanguage)
+                    }, onClick = onPickStandIn)
             }
             // The clone or a preset, chosen first on the meet act (iOS
             // 2026-10-24). Switching keeps the clone; the accent row below is
             // the clone's.
             if (hasVoice && !voiceIsStandIn) {
-                GroupedRowDivider()
+                divider()
                 val own = stringResource(R.string.fs_voice_mine)
                 val options = listOf("" to own) + com.roro.futurevoice.talk.StockPerson.catalog.map {
                     it.voiceId to com.roro.futurevoice.talk.VoicePreset.name(it.voiceId, it.name, targetLanguage)
                 }
                 val selected = fluentSelfPresetId ?: ""
-                MePickerRow(
-                    icon = Icons.Filled.RecordVoiceOver,
-                    title = stringResource(R.string.fs_voice_title),
+                VoicePickerRow(stringResource(R.string.voice),
                     value = options.firstOrNull { it.first == selected }?.second ?: own,
-                    options = options,
-                    selected = selected,
+                    options = options, selected = selected,
                     onPick = { onChooseFluentSelfVoice(it.ifEmpty { null }) })
             }
+            divider()
+            VoiceValueRow(stringResource(R.string.name), displayName, onClick = { renaming = true })
             val accents = VoiceAccentCatalog.options(targetLanguage)
             if (hasVoice && !voiceIsStandIn && fluentSelfPresetId == null && accents.isNotEmpty()) {
-                GroupedRowDivider()
+                divider()
                 val applied = accents.firstOrNull { it.id == voiceAccentId }
-                MeRow(Icons.Outlined.Language,
-                    applied?.let { stringResource(R.string.accent_746770, accentLabel(it)) }
-                        ?: stringResource(R.string.accent_233064),
-                    stringResource(R.string.same_voice_the_accent_you_choose),
-                    kind = MeRowKind.ACTION, onClick = onPickAccent)
+                VoiceValueRow(stringResource(R.string.accent_233064),
+                    applied?.let { accentLabel(it) } ?: stringResource(R.string.none),
+                    onClick = onPickAccent)
             }
-            // Under Accent because it is the same kind of question: the voice
-            // stays theirs, only how it speaks changes. SYNTHESIS, not
-            // playback — the pitch is untouched.
-            GroupedRowDivider()
+            // SYNTHESIS, not playback — the pitch is untouched.
+            divider()
             var speed by remember { mutableStateOf(SpeechSpeed.current(context)) }
-            MePickerRow(
-                icon = Icons.Filled.Speed,
-                title = stringResource(R.string.speaking_speed),
+            VoicePickerRow(stringResource(R.string.speaking_speed),
                 value = stringResource(speed.label),
                 options = SpeechSpeed.entries.map { it to stringResource(it.label) },
                 selected = speed,
@@ -325,28 +315,33 @@ fun VoicePage(
                     com.roro.futurevoice.core.Analytics.capture("speech_speed_changed",
                         mapOf("speed" to s.raw, "where" to "me"))
                 })
-            // Above the re-record: it is the question people arrive with, and
-            // most of the time what sounds foreign is the language.
+        }
+
+        GroupedSectionHeader(stringResource(R.string.watch))
+        GroupedCard {
+            val sceneId = com.roro.futurevoice.talk.VoicePreset.sceneDefaultId()
+            VoiceValueRow(stringResource(R.string.partner_voice),
+                com.roro.futurevoice.talk.StockPerson.by(sceneId).let {
+                    com.roro.futurevoice.talk.VoicePreset.name(it.voiceId, it.name, targetLanguage)
+                }, onClick = onPickSceneVoice)
+        }
+        GroupedFooter(stringResource(R.string.for_watch_scenes_without_a_saved_person))
+
+        // Re-recording and rebuilding the clone, apart from the settings
+        // above: they replace the voice rather than adjust it — the
+        // learner's one change per 30 days (iOS 2026-10-09).
+        GroupedSectionSpacer()
+        GroupedCard {
             if (hasVoice && voiceId != null && !voiceIsStandIn && hasSample) {
-                GroupedRowDivider()
-                MeRow(Icons.Filled.GraphicEq, stringResource(R.string.doesn_t_sound_like_you),
-                    stringResource(R.string.hear_your_recording_and_your_clone_side_by_side),
-                    kind = MeRowKind.ACTION, onClick = onCompare)
+                VoiceValueRow(stringResource(R.string.doesn_t_sound_like_you), null, onClick = onCompare)
+                GroupedRowDivider(inset = false)
             }
-            // Both make a new voice — the learner's one change per 30 days
-            // (iOS 2026-10-09). With none left they say when, instead of
-            // leading to a minute of reading and a refusal.
-            GroupedRowDivider()
-            MeRow(Icons.Filled.Mic, stringResource(R.string.re_record_voice),
-                if (canChange) stringResource(R.string.replace_your_current_clone_with_a_new_one)
-                else againLine,
-                kind = MeRowKind.DESTRUCTIVE, enabled = canChange && !voiceIsStandIn, onClick = onRerecord)
+            VoiceValueRow(stringResource(R.string.re_record_voice), null, chevron = false,
+                enabled = canChange && !voiceIsStandIn, onClick = onRerecord)
             if (hasSample && !voiceIsStandIn) {
-                GroupedRowDivider()
-                MeRow(Icons.Filled.Sync, stringResource(R.string.regenerate_from_saved_recording),
-                    if (canChange) stringResource(R.string.rebuild_the_clone_from_your_last_recording)
-                    else againLine,
-                    kind = MeRowKind.ACTION, enabled = !rebuilding && canChange,
+                GroupedRowDivider(inset = false)
+                VoiceValueRow(stringResource(R.string.regenerate_from_saved_recording), null, chevron = false,
+                    enabled = !rebuilding && canChange,
                     trailing = if (rebuilding) ({
                         androidx.compose.material3.CircularProgressIndicator(
                             Modifier.size(18.dp), strokeWidth = 2.dp)
@@ -354,6 +349,8 @@ fun VoicePage(
                     onClick = { confirmingRebuild = true })
             }
         }
+        GroupedFooter(if (canChange) stringResource(R.string.replace_your_current_clone_with_a_new_one)
+            else againLine)
     }
 
     if (renaming) {
@@ -687,5 +684,70 @@ fun AppLanguagePage(current: String, onPick: (String) -> Unit, onBack: () -> Uni
         section(groups.coachingOnly)
         GroupedFooter(stringResource(
             R.string.your_corrections_notes_and_word_meanings_come_back_in_this_l_95bb21))
+    }
+}
+
+
+/** The Voice page's row (iOS `MeTab.valueRow`): title on the left, the
+ *  current value in grey and a chevron on the right — the Settings app's
+ *  row, with no icon and no tint. */
+@Composable
+private fun VoiceValueRow(
+    title: String,
+    value: String?,
+    chevron: Boolean = true,
+    enabled: Boolean = true,
+    trailing: (@Composable () -> Unit)? = null,
+    onClick: () -> Unit,
+) {
+    val alpha = if (enabled) 1f else 0.4f
+    Row(Modifier.fillMaxWidth()
+        .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier)
+        .heightIn(min = 52.dp).padding(horizontal = 16.dp, vertical = 13.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Text(title, style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
+            modifier = Modifier.weight(1f))
+        value?.let {
+            Spacer(Modifier.width(8.dp))
+            Text(it, style = MaterialTheme.typography.bodyLarge, maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha))
+        }
+        trailing?.let { Spacer(Modifier.width(8.dp)); it() }
+        if (chevron) {
+            Spacer(Modifier.width(6.dp))
+            MeChevron()
+        }
+    }
+}
+
+/** A menu `Picker` tinted `.secondary` (iOS): grey value with the up-down
+ *  chevron, the menu anchored to the value. */
+@Composable
+private fun <T> VoicePickerRow(
+    title: String,
+    value: String,
+    options: List<Pair<T, String>>,
+    selected: T?,
+    onPick: (T) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val grey = MaterialTheme.colorScheme.onSurfaceVariant
+    Row(Modifier.fillMaxWidth().clickable { expanded = true }
+        .heightIn(min = 52.dp).padding(horizontal = 16.dp, vertical = 13.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Text(title, style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+        Spacer(Modifier.width(8.dp))
+        Box {
+            Row(verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(value, style = MaterialTheme.typography.bodyLarge, color = grey, maxLines = 1)
+                Icon(Icons.Filled.UnfoldMore, contentDescription = null,
+                    modifier = Modifier.size(15.dp), tint = grey)
+            }
+            com.roro.futurevoice.ui.brand.IosPickerMenu(expanded, { expanded = false }, options, selected, onPick)
+        }
     }
 }

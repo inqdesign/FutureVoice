@@ -80,6 +80,7 @@ object CaptureRouter {
         "first-call",
         "first-call-check",
         "first-call-check-hard",
+        "first-call-setup",
         "focus-result",
         "free-minutes-welcome",
         "glow",

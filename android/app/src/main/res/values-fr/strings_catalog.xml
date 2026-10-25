@@ -281,6 +281,7 @@
     <string name="basic_simple_everyday_exchanges">"Bases — de courtes conversations du quotidien"</string>
     <string name="be_the_first">"Ouvre le bal"</string>
     <string name="becoming_you">"J’apprends à être toi"</string>
+    <string name="before_your_first_call">"Avant ta première conversation"</string>
     <!-- "Before your free trial turns into your plan, Apple asks you to confirm it once more. Without it, the plan doesn't start." -->
     <string name="before_your_free_trial_turns_into_your_plan_apple_asks_you_t_c4e22b">"Avant que ton essai gratuit devienne ton forfait, Apple te demande de le confirmer une fois de plus. Sans ça, le forfait ne démarre pas."</string>
     <!-- 'Before your next renewal, Apple asks you to confirm it once more. Without it, the plan ends at the end of this period.' -->
@@ -305,6 +306,7 @@
     <string name="books_finished">"carnets terminés"</string>
     <string name="both_at_once">"Écouter en même temps"</string>
     <string name="both_refill_every_billing_period">"Les deux se rechargent à chaque période de facturation."</string>
+    <string name="both_sides">"Les deux rôles"</string>
     <string name="breaths_at_sentence_ends">"Pauses en fin de phrase"</string>
     <string name="breaths_at_sentence_ends_long_stops_lld">"Pauses en fin de phrase · %d arrêts longs"</string>
     <string name="brief">"Dossier"</string>
@@ -825,8 +827,8 @@
     <!-- 'Finished books. They keep their progress — unarchive anytime.' -->
     <string name="finished_books_they_keep_their_progress_unarchive_anytime">"Carnets terminés. Ils gardent ta progression — à ressortir quand tu veux."</string>
     <string name="finishing_puts_you_in_line_it_doesn_t_seat_you">"Aller au bout te met dans la file — ça ne te donne pas la place."</string>
-    <string name="first_test_done">"Premier test terminé"</string>
     <string name="first_charge">"Premier paiement %s"</string>
+    <string name="first_test_done">"Premier test terminé"</string>
     <string name="fix_the_sentence">"Corrige la phrase"</string>
     <string name="fluency">"Aisance"</string>
     <string name="fluency_pace">"Aisance et rythme"</string>
@@ -1510,6 +1512,7 @@
     <string name="my_direct_manager">"Mon manager direct"</string>
     <string name="my_expressions_lld">"Mes expressions · %d"</string>
     <string name="my_kid_s_teacher">"Prof de mon enfant"</string>
+    <string name="my_lines">"Mes répliques"</string>
     <string name="my_own_topic">"Mon propre sujet"</string>
     <string name="my_recording">"Mon enregistrement"</string>
     <string name="my_routine">"Ma routine"</string>
@@ -1779,6 +1782,7 @@
     <string name="parenting">"parentalité"</string>
     <string name="parenting_tips">"Astuces de parents"</string>
     <string name="partner">"Partenaire"</string>
+    <string name="partner_voice">"Voix de l’autre personne"</string>
     <string name="past_attempts">"Essais précédents"</string>
     <string name="past_challenges">"Défis terminés"</string>
     <string name="past_dialogues">"Dialogues précédents"</string>
@@ -1829,6 +1833,8 @@
     <!-- 'Pick a time and the phone rings. Miss it, and a voicemail with a question waits for you.' -->
     <string name="pick_a_time_and_the_phone_rings_miss_it_and_a_voicemail_with_b83e21">"À l’heure que tu choisis, le téléphone sonne. Si tu ne réponds pas, un message vocal avec une question t’attend."</string>
     <string name="pick_a_time_you_usually_have_ten_quiet_minutes">"Choisis un moment où tu as souvent dix minutes au calme."</string>
+    <!-- 'Pick a topic and your future self teaches it step by step, until you can say it without a mistake.' -->
+    <string name="pick_a_topic_and_your_future_self_teaches_it_step_by_step_un_ad6699">"Choisis un sujet et ton moi fluide te l’apprend pas à pas, jusqu’à ce que tu le dises sans faute."</string>
     <!-- 'Pick a type, like an explainer, a person or the news, then a topic and a length. The facts are checked and the words fit your level. Plus and Max.' -->
     <string name="pick_a_type_like_an_explainer_a_person_or_the_news_then_a_to_08bd90">"Choisis le genre (expliquer quelque chose, présenter quelqu’un, actualité…), le sujet et la longueur : l’IA écrit un texte à ton niveau, faits vérifiés."</string>
     <string name="pick_an_area_to_go_one_step_deeper">"Choisis un domaine pour descendre d’un cran."</string>
@@ -1950,8 +1956,6 @@
     <string name="read">"Lu le %s"</string>
     <string name="read_again">"Relire"</string>
     <string name="read_both_sides">"Lire les deux rôles"</string>
-    <string name="my_lines">"Mes répliques"</string>
-    <string name="both_sides">"Les deux rôles"</string>
     <!-- 'Read from the structures you actually build and from verified grammar slips per 100 spoken words — the lower of the two.' -->
     <string name="read_from_the_structures_you_actually_build_and_from_verifie_7599b1">"Calculé sur les structures que tu construis vraiment et sur les fautes de grammaire confirmées pour 100 mots parlés : le plus bas des deux."</string>
     <!-- 'Read from your real talks — vocabulary, grammar, fluency and expression together.' -->
@@ -2307,6 +2311,7 @@
     <string name="sign_out_dc1649">"Se déconnecter"</string>
     <string name="sign_out_go_back">"Se déconnecter et revenir"</string>
     <string name="silent">"(silence)"</string>
+    <string name="similar_voice">"Voix proche"</string>
     <string name="simple_words_and_phrases_about_immediate_familiar_things">"Des mots et des expressions simples sur des choses proches et familières."</string>
     <string name="since">"Depuis %s"</string>
     <string name="situation">"Situation"</string>
@@ -3287,6 +3292,7 @@
     <string name="you_can_change_both_later_in_settings">"Tu peux changer les deux plus tard dans les réglages."</string>
     <!-- 'You can change or take this down any time in Me → Find people.' -->
     <string name="you_can_change_or_take_this_down_any_time_in_me_find_people">"Tu peux le modifier ou le retirer à tout moment dans Mon profil → Trouver des gens."</string>
+    <string name="you_can_change_these_any_time_during_a_call">"Tu peux les changer à tout moment pendant la conversation."</string>
     <string name="you_can_change_your_voice_again_from">"Tu pourras de nouveau changer ta voix à partir du %s."</string>
     <!-- 'You can change your voice once every 30 days, and this uses it.' -->
     <string name="you_can_change_your_voice_once_every_30_days_and_this_uses_i_cf4963">"Tu peux changer ta voix une fois tous les 30 jours, et ce changement compte."</string>

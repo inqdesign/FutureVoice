@@ -460,14 +460,45 @@ fun TalkScreen(
             askingMic = false
         })
     }
-    LaunchedEffect(voiceId, askingMic) {
-        if (askingMic || preview != null) return@LaunchedEffect
+    // Once per install, before the very first call: level, speed, coach
+    // mode, Send, tutor mode (iOS `FirstCallSetupSheet`). Before the call
+    // starts, so what it sets shapes this call's prompt and opener. null =
+    // not decided yet; the call waits on it like on the mic question.
+    var firstCallSetupPending by remember { mutableStateOf<Boolean?>(if (preview != null) false else null) }
+    /** The level the sheet just set — the parent's copy may lag a frame. */
+    var setupLevel by remember { mutableStateOf<com.roro.futurevoice.data.CefrLevel?>(null) }
+    LaunchedEffect(askingMic) {
+        if (askingMic || firstCallSetupPending != null) return@LaunchedEffect
+        val show = FirstCallSetup.shouldShow(appContext)
+        if (show) FirstCallSetup.markShown(appContext)
+        firstCallSetupPending = show
+    }
+    if (firstCallSetupPending == true) {
+        FirstCallSetupSheet(targetLanguage = targetLanguage, currentLevel = level, onDismiss = { started ->
+            if (started) {
+                val lvl = com.roro.futurevoice.data.CefrLevel.from(
+                    com.roro.futurevoice.data.LanguageScope.level(appContext, targetLanguage, level.code))
+                setupLevel = lvl
+                // The call's own switches read what the sheet wrote.
+                coachMode = com.roro.futurevoice.talk.CoachMode.resolve(
+                    com.roro.futurevoice.talk.CoachMode.choice(context), lvl.code)
+                sendToAnswer = com.roro.futurevoice.talk.SendToAnswer.resolve(
+                    com.roro.futurevoice.talk.SendToAnswer.choice(context), lvl.code)
+                // Tutor mode decides the opener (iOS f39a7f4b): `vm.start`
+                // reads it right after this.
+                tutorMode = com.roro.futurevoice.talk.TutorMode.isOn(context)
+            }
+            firstCallSetupPending = false
+        })
+    }
+    LaunchedEffect(voiceId, askingMic, firstCallSetupPending) {
+        if (askingMic || firstCallSetupPending != false || preview != null) return@LaunchedEffect
         vm.start(
             TalkConfig(
                 voiceId = voiceId,
                 targetLanguage = targetLanguage,
                 nativeLanguage = nativeLanguage,
-                level = level,
+                level = setupLevel ?: level,
                 persona = persona,
                 topic = topic,
                 topicBlurb = topicBlurb,
