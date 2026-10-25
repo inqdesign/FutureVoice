@@ -139,6 +139,10 @@ fun ActivityScreen(
     /** Capture: open on this view, or straight in the editor. */
     initialMode: String? = null,
     startEditing: Boolean = false,
+    /** The routine widget: open this block's door as the page appears (iOS
+     *  `routinePageOpens`, a0836bbe). */
+    openKind: StudyPlan.Kind? = null,
+    onOpenedKind: () -> Unit = {},
 ) {
     NavPageBackHandler(onBack = onBack)
     val context = LocalContext.current
@@ -194,7 +198,9 @@ fun ActivityScreen(
         return
     }
     // First visit: what a green day means (iOS `ActivityView.offerIntro`).
-    RoutineGuideHost(blocked = showCard)
+    // Not when the widget opened a block here: the page is a way through.
+    val openedForBlock = remember { openKind != null }
+    RoutineGuideHost(blocked = showCard || openedForBlock)
 
     fun standing(day: Long) = PromiseStreak.standing(context, day) { dayKey(it) in activeKeys }
     val isPromise = plan.streakSince != null
@@ -212,6 +218,11 @@ fun ActivityScreen(
             StudyPlan.Kind.REVIEW -> onOpenRoutineReview()
             else -> onOpenReview()
         }
+    }
+    LaunchedEffect(openKind) {
+        val kind = openKind ?: return@LaunchedEffect
+        onOpenedKind()
+        open(kind)
     }
 
     Scaffold(

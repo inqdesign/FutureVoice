@@ -574,6 +574,7 @@
     <string name="deletes_cached_voice_audio_only_your_talks_drills_words_and_d9f035">"保存した音声だけを消します。通話、ドリル、単語、ブックはそのままです。各文は次に聞くときにもう一度作られます。"</string>
     <!-- 'Deleting your account permanently removes your voice clone, talk time, and account data. Practice data on this device is erased too.' -->
     <string name="deleting_your_account_permanently_removes_your_voice_clone_t_43bafb">"アカウントを削除すると、自分の声、通話時間、アカウント情報が完全に消えます。この端末の練習記録も一緒に消えます。"</string>
+    <string name="describe_a_situation_and_practice_it_in_a_call">"場面を書いて、通話で練習できます"</string>
     <string name="describe_the_scenario_or_tap_the_mic_and_say_it">"状況を書いてください。マイクを押して話してもいいです"</string>
     <!-- "Describe what's coming and watch your fluent self handle it first — its expressions stay yours to study." -->
     <string name="describe_what_s_coming_and_watch_your_fluent_self_handle_it_48f4b8">"これから起きることを書いておくと、流暢な自分が先に体験するのを見られます。そこで使われた表現は全部自分のものになります。"</string>
@@ -718,6 +719,7 @@
     <string name="every_take_of_a_script_is_kept_so_you_can_watch_yourself_get_36082d">"テイクは原稿ごとにたまっていくので、どれだけ上達したかがひと目でわかります。"</string>
     <!-- "Every talk and scene you finish becomes one. It's done when you've learned everything inside." -->
     <string name="every_talk_and_scene_you_finish_becomes_one_it_s_done_when_y_9fe6fb">"終えたトークやシーンが1冊ずつたまっていきます。中身を全部覚えたら完了です。"</string>
+    <string name="every_talk_becomes_a_book_of_its_own">"トークをひとつするたびに、本が一冊できます。"</string>
     <!-- "Every talk in your routine with a set time is a call. Your phone rings then, even on silent. Can't talk? Just decline — nothing counts against you." -->
     <string name="every_talk_in_your_routine_with_a_set_time_is_a_call_your_ph_174441">"ルーティンの時間が決まったトークが、そのまま電話になります。マナーモードでも鳴ります。出られないときは拒否するだけ。何もマイナスになりません。"</string>
     <!-- 'Every word, expression and card you studied, shadow take, run and scene — one block each.' -->
@@ -1690,6 +1692,7 @@
     <string name="notifications_are_off_so_i_can_t_call_you_yet_turn_them_on_i_52c0b7">"通知がオフなので、まだ電話をかけられません。設定で通知をオンにしてください。ルーティンはトーク画面のアクティビティにあります。"</string>
     <!-- "Notifications are off, so your routine can't remind you. Turn them on in Settings" -->
     <string name="notifications_are_off_so_your_routine_can_t_remind_you_turn_298720">"通知がオフなので、ルーティンのリマインダーが届きません。設定でオンにしてください"</string>
+    <string name="now">"現在"</string>
     <!-- "Now and then it asks something you can answer with a word you're studying, and shows you the word. Use it and it gets a check." -->
     <string name="now_and_then_it_asks_something_you_can_answer_with_a_word_yo_33236e">"ときどき、復習中の単語で答えられる質問をして、その単語を表示します。使えばチェックがつきます。"</string>
     <string name="nutrition">"栄養"</string>
@@ -2810,6 +2813,7 @@
     <string name="through_friends">"友だちの紹介で"</string>
     <string name="time">"時間"</string>
     <string name="time_for_shadowing">"シャドーイングの時間です"</string>
+    <string name="time_for_the_weekly_test">"週テストの時間です"</string>
     <string name="time_for_your_expressions">"表現の時間です"</string>
     <string name="time_for_your_speech">"スピーチの時間です"</string>
     <string name="time_for_your_words">"単語の時間です"</string>
@@ -2821,6 +2825,7 @@
     <string name="time_to_practice">"練習の時間です"</string>
     <string name="time_to_say_it_again">"もう一度話す時間です"</string>
     <string name="time_to_say_it_back">"言い返せるくらい"</string>
+    <string name="time_to_talk">"トークの時間です"</string>
     <string name="tip">"ヒント"</string>
     <string name="title_optional">"タイトル（任意）"</string>
     <string name="to_reach">"%sに届くには"</string>
@@ -2895,6 +2900,7 @@
     <string name="until_the_day_you_become_me_let_s_do_this_together">"君が私になるその日まで、\n一緒にやっていこう。"</string>
     <string name="until_then_the_regular_price">"%sまで、その後は通常価格"</string>
     <string name="up_and_down_changes_the_time_sideways_changes_the_day">"上下にドラッグすると時間が、横にドラッグすると曜日が変わります。"</string>
+    <string name="up_next">"次"</string>
     <string name="up_to_date">"最新 · %s"</string>
     <string name="up_to_lld_of_lld">"%2$d人中 %1$d位に上がりました"</string>
     <!-- 'Up to three. The chips under Talk follow them in the order you picked, and what you write under one shapes its topics.' -->
@@ -3119,6 +3125,7 @@
     <string name="what_you_usually_talk_about">"よく話すこと"</string>
     <string name="what_your_fluent_self_knows_about_you">"流暢な自分が知っていること"</string>
     <string name="what_your_plan_holds">"プランに含まれるもの"</string>
+    <string name="what_your_routine_has_for_today_and_what_s_up_now">"今日のルーティンと、いまやることがわかります。"</string>
     <string name="what_your_voice_is_called_in_the_app">"アプリでの声の名前"</string>
     <string name="when_">"いつにしますか？"</string>
     <!-- "When a friend joins with your code, you both get %lld minutes — and invite minutes are spent before the month's pool." -->
@@ -3415,6 +3422,7 @@
     <!-- 'Your files stay on your phone. Only what was read is kept here.' -->
     <string name="your_files_stay_on_your_phone_only_what_was_read_is_kept_her_ec86b8">"ファイルはスマホに残ったままです。アプリには読み取った内容だけが残ります。"</string>
     <string name="your_first_assessment_unlocks_after_lld_minutes_of_talk">"通話%d分に達すると、最初の評価が開きます。"</string>
+    <string name="your_first_book_goes_here">"最初の本はここに並びます"</string>
     <string name="your_first_level_appears">"最初のレベルが出ます"</string>
     <string name="your_first_lld_minutes">"最初の%d分"</string>
     <string name="your_first_report_unlocks_after_lld_minutes_of_practice">"練習%d分に達すると、最初のレポートが開きます。"</string>

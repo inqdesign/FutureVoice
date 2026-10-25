@@ -71,6 +71,8 @@ object ActivityEventLog {
             tmp.writeText(StoreJson.json.encodeToString(serializer, next))
             if (!tmp.renameTo(target)) { target.delete(); tmp.renameTo(target) }
         }
+        // Every rep passes here: the routine widget's ticks follow (iOS a0836bbe).
+        com.roro.futurevoice.widget.StudyWidgetRefresher.schedule(c)
     }
 
     /** Events within `[start, end)`, oldest first. */

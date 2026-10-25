@@ -71,6 +71,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.layout.layout
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.animation.togetherWith
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -315,6 +324,9 @@ fun RootScreen() {
     var deckSessionId by remember { mutableStateOf<String?>(null) }
     var focusStudyItem by remember { mutableStateOf<StudyDeckItem?>(null) }
     var showActivity by remember { mutableStateOf(false) }
+    /** The routine widget's block whose door is My routine's own list (iOS
+     *  `routinePageOpens`): opened once the page is up. */
+    var routineOpens by remember { mutableStateOf<com.roro.futurevoice.data.StudyPlan.Kind?>(null) }
     /** Talk's topics page, behind "Find a topic" (iOS `TalkTopicsPage`). */
     var showTopics by remember { mutableStateOf(false) }
     val routineEditorOpen by RoutineNav.editorOpen.collectAsStateWithLifecycle()
@@ -431,6 +443,39 @@ fun RootScreen() {
                 tab = HomeTab.PRACTICE
                 showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false; watchScenarioId = null
                 if (route.kind == "watch") bookScenarioId = route.id else detailSessionId = route.id
+            }
+            // The routine widget: a block's door, the same one its reminder
+            // opens. With no kind, or one whose door is Activity's own list,
+            // My routine opens (iOS `openRoutineBlock`, a0836bbe).
+            is DeepLinkInbox.WidgetRoute.Routine -> when (route.kind) {
+                com.roro.futurevoice.data.StudyPlan.Kind.TALK ->
+                    DeepLinkInbox.requestFreeTalk(com.roro.futurevoice.talk.TalkEntry.WIDGET)
+                com.roro.futurevoice.data.StudyPlan.Kind.REVIEW, com.roro.futurevoice.data.StudyPlan.Kind.WORDS,
+                com.roro.futurevoice.data.StudyPlan.Kind.EXPRESSIONS -> {
+                    showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false
+                    showActivity = false; detailSessionId = null; bookScenarioId = null; watchScenarioId = null
+                    tab = HomeTab.PRACTICE
+                    showDueReview = true
+                }
+                com.roro.futurevoice.data.StudyPlan.Kind.TEST -> {
+                    showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false
+                    showActivity = false; detailSessionId = null; bookScenarioId = null; watchScenarioId = null
+                    com.roro.futurevoice.data.WeeklyTestInbox.pending.value = true
+                    tab = HomeTab.PRACTICE
+                }
+                com.roro.futurevoice.data.StudyPlan.Kind.SAY_IT_AGAIN ->
+                    com.roro.futurevoice.data.PlanReminder.pendingSayItAgain.value = true
+                com.roro.futurevoice.data.StudyPlan.Kind.LISTEN ->
+                    com.roro.futurevoice.data.PlanReminder.pendingListen.value = true
+                com.roro.futurevoice.data.StudyPlan.Kind.SPEECH ->
+                    com.roro.futurevoice.data.PlanReminder.pendingSpeech.value = true
+                com.roro.futurevoice.data.StudyPlan.Kind.SHADOW, null -> {
+                    showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false
+                    detailSessionId = null; bookScenarioId = null; watchScenarioId = null
+                    tab = HomeTab.TALK
+                    routineOpens = route.kind
+                    showActivity = true
+                }
             }
             DeepLinkInbox.WidgetRoute.FreeTalk -> {
                 tab = HomeTab.TALK
@@ -1235,6 +1280,8 @@ fun RootScreen() {
 
         RootRoute.Activity -> ActivityScreen(
             language = state.targetLanguage,
+            openKind = routineOpens,
+            onOpenedKind = { routineOpens = null },
             onOpenTalk = { detailSessionId = it },
             onBack = { showActivity = false },
             // Every routine line is a door to that kind of practice.
@@ -2455,9 +2502,12 @@ internal fun DiscoverSection(
     onSavePersona: (com.roro.futurevoice.talk.UserPersona) -> Unit = {},
     /** The full collection — the Watch tab, which is where they all live. */
     onAllScenarios: () -> Unit = {},
+    /** The settings page, opened from the HOST's header (the page's top
+     *  bar), not from the chip row: the row is for switching ideas (iOS
+     *  b43a5282). */
+    showingSettings: Boolean = false,
+    onShowingSettings: (Boolean) -> Unit = {},
 ) {
-    /** The one settings page for the whole row (`DiscoverSettingsSheet`). */
-    var showingSettings by remember { mutableStateOf(false) }
     /** Bumped when settings close, so the row re-reads its chips. */
     var settingsVersion by remember { mutableIntStateOf(0) }
     var newsFailed by remember { mutableStateOf(false) }
@@ -2543,7 +2593,7 @@ internal fun DiscoverSection(
             persona = state.persona,
             language = language,
             onSavePersona = onSavePersona,
-            onDismiss = { showingSettings = false; settingsClosed() },
+            onDismiss = { onShowingSettings(false); settingsClosed() },
             onSaved = { settingsClosed() },
         )
     }
@@ -2639,6 +2689,30 @@ internal fun DiscoverSection(
         }
     }
 
+    /** Which way the last switch went, so a swipe slides the new list in
+     *  from the side it came from (iOS b43a5282). */
+    var forward by remember { mutableStateOf(true) }
+    val chipScroll = rememberScrollState()
+    /** Each chip's place in the scrolling row: a swipe can land on a chip
+     *  that is off the row's edge, and the row follows it. */
+    val chipBounds = remember { androidx.compose.runtime.mutableStateMapOf<DiscoverChip, Pair<Int, Int>>() }
+    var chipViewport by remember { mutableIntStateOf(0) }
+    fun select(t: DiscoverChip) {
+        if (t == discoverTab) return
+        forward = chips.indexOf(t) > chips.indexOf(discoverTab)
+        discoverTab = t
+    }
+    /** One chip over, by swipe. No wrap-around at either end. */
+    fun step(delta: Int) {
+        val i = chips.indexOf(discoverTab).takeIf { it >= 0 } ?: return
+        chips.getOrNull(i + delta)?.let { select(it) }
+    }
+    LaunchedEffect(discoverTab) {
+        val (x, w) = chipBounds[discoverTab] ?: return@LaunchedEffect
+        chipScroll.animateScrollTo((x + w / 2 - chipViewport / 2).coerceIn(0, chipScroll.maxValue),
+            androidx.compose.animation.core.tween(220))
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -2647,8 +2721,18 @@ internal fun DiscoverSection(
                 // language; past three the chips scroll sideways, clipped
                 // BEFORE the buttons and faded at that edge so the cut reads
                 // as "slide for more" rather than a chip broken in half.
+                // The row runs to the screen's LEFT edge, with the 20 dp
+                // inset as a content margin: padded from outside, a scrolled
+                // chip was cut off hard 20 dp into the screen (iOS b43a5282).
                 Row(
                     Modifier.weight(1f)
+                        .layout { m, c ->
+                            val extra = 20.dp.roundToPx()
+                            val p = m.measure(c.copy(minWidth = c.minWidth + extra,
+                                maxWidth = if (c.hasBoundedWidth) c.maxWidth + extra else c.maxWidth))
+                            layout(p.width - extra, p.height) { p.place(-extra, 0) }
+                        }
+                        .onGloballyPositioned { chipViewport = it.size.width }
                         .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
                         .drawWithContent {
                             drawContent()
@@ -2662,14 +2746,19 @@ internal fun DiscoverSection(
                                 size = androidx.compose.ui.geometry.Size(fade, size.height),
                                 blendMode = androidx.compose.ui.graphics.BlendMode.DstIn)
                         }
-                        .horizontalScroll(rememberScrollState()),
+                        .horizontalScroll(chipScroll),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    chips.forEach { c -> SegmentChip(stringResource(c.label), discoverTab == c) { discoverTab = c } }
+                    Spacer(Modifier.width(12.dp))
+                    chips.forEach { c ->
+                        Box(Modifier.onGloballyPositioned {
+                            chipBounds[c] = it.positionInParent().x.toInt() to it.size.width
+                        }) { SegmentChip(stringResource(c.label), discoverTab == c) { select(c) } }
+                    }
                     Spacer(Modifier.width(16.dp))
                 }
             } else {
-                chips.forEach { c -> SegmentChip(stringResource(c.label), discoverTab == c) { discoverTab = c } }
+                chips.forEach { c -> SegmentChip(stringResource(c.label), discoverTab == c) { select(c) } }
                 Spacer(Modifier.weight(1f))
             }
             // The row's own buttons as one group, spaced for a thumb — at the
@@ -2722,201 +2811,229 @@ internal fun DiscoverSection(
                                 tint = MaterialTheme.colorScheme.primary)
                         }
                     }
-                } else if (discoverTab == DiscoverChip.SCENARIOS) {
-                    DiscoverHeaderButton(onClick = { composing = true }) {
-                        Icon(Icons.Filled.Add,
-                            contentDescription = stringResource(R.string.build_a_scenario),
-                            tint = MaterialTheme.colorScheme.primary)
-                    }
-                }
-                // One settings button whatever chip is showing — the chips,
-                // the exam and the interests are one page.
-                DiscoverHeaderButton(onClick = { showingSettings = true }) {
-                    Icon(Icons.Filled.Tune, contentDescription = stringResource(R.string.talk_settings),
-                        tint = MaterialTheme.colorScheme.primary)
                 }
             }
         }
 
-        when (discoverTab) {
-            DiscoverChip.NEWS -> {
-                if (interests.isEmpty()) {
-                    // Nothing to build stories from yet — the fix is one tap, so
-                    // offer it instead of an empty section.
-                    DiscoverRow(
-                        title = stringResource(R.string.add_interests),
-                        icon = Icons.Filled.Add,
-                        onClick = { showingSettings = true },
-                    )
-                } else if (topics.isEmpty()) {
-                    if (loading) {
-                        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                            Text(stringResource(R.string.finding_stories),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        // Sideways = the next or previous chip (iOS b43a5282). The page
+        // still scrolls and the cards still tap; only a clearly horizontal
+        // drag switches, and once it is one the cards under the finger no
+        // longer take it as a tap. Tall even when the chip has one row, so
+        // the drag below a short list still lands here.
+        androidx.compose.animation.AnimatedContent(
+            targetState = discoverTab,
+            transitionSpec = {
+                (androidx.compose.animation.slideInHorizontally(androidx.compose.animation.core.tween(220)) {
+                    if (forward) it else -it
+                } + androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220)))
+                    .togetherWith(androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(220)))
+            },
+            modifier = Modifier.fillMaxWidth().heightIn(min = 440.dp).clipToBounds()
+                .pointerInput(chips) {
+                    val slop = 12.dp.toPx(); val commit = 60.dp.toPx()
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                        var dx = 0f; var dy = 0f; var swiping = false
+                        while (true) {
+                            val ev = awaitPointerEvent(PointerEventPass.Initial)
+                            val ch = ev.changes.firstOrNull { it.id == down.id } ?: break
+                            dx += ch.positionChange().x; dy += ch.positionChange().y
+                            if (!swiping && kotlin.math.abs(dx) > slop && kotlin.math.abs(dx) > kotlin.math.abs(dy)) swiping = true
+                            if (swiping) ch.consume()
+                            if (!ch.pressed) {
+                                if (kotlin.math.abs(dx) > commit && kotlin.math.abs(dx) > kotlin.math.abs(dy) * 1.5f)
+                                    step(if (dx < 0) 1 else -1)
+                                break
+                            }
                         }
-                    } else {
-                        // Auto-load happens on open; this is the retry path when that
-                        // failed or came back empty.
-                        DiscoverRow(
-                            title = stringResource(R.string.load_stories),
-                            icon = Icons.Filled.Newspaper,
-                            onClick = { scope.launch { fetchNews(true) } },
-                        )
                     }
-                }
-                topics.forEach { topic ->
-                    DiscoverRow(
-                        title = topic.title,
-                        // Capitalized, like iOS: the pool writes categories in
-                        // lower case ("ai / tech") and a caption is a label.
-                        caption = topic.category
-                            ?.replaceFirstChar { it.titlecase(java.util.Locale.getDefault()) },
-                        icon = categoryIcon(topic.category),
-                        onClick = if (enabled) ({ onPickNews(topic) }) else null,
-                    )
-                }
-                if (newsFailed) {
-                    Text(stringResource(
-                        if (topics.isEmpty()) R.string.couldn_t_load_stories
-                        else R.string.showing_earlier_stories),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-            DiscoverChip.EXAM -> {
-                // Common questions of the picked exam, five at a time; refresh
-                // shows the next five. Same card as a news story.
-                val all = com.roro.futurevoice.data.ExamTopics.topics(exam, language)
-                val start = if (all.isEmpty()) 0 else examShift % all.size
-                (0 until minOf(EXAM_SHOWN, all.size)).map { all[(start + it) % all.size] }.forEach { topic ->
-                    DiscoverRow(
-                        title = topic.title,
-                        caption = "${exam.examName} · ${topic.part}",
-                        icon = Symbols.icon("graduationcap.fill"),
-                        onClick = if (enabled) ({ onPickExam(topic, exam) }) else null,
-                    )
-                }
-            }
-            DiscoverChip.STUDY, DiscoverChip.WORK, DiscoverChip.INTERVIEW -> {
-                // Topics from what the learner wrote about their field, then —
-                // for work and interviews — the ready-made situations under
-                // them. Nothing written yet: one row that says what writing it
-                // buys, opening the settings.
-                val chip = discoverTab
-                val field = fieldContext(chip)
-                LaunchedEffect(chip, field, language) { loadFieldTopics(chip, fresh = false) }
-                val pool = fieldTopics[chip]
-                if (field == null) {
-                    DiscoverRow(
-                        title = stringResource(when (chip) {
-                            DiscoverChip.STUDY -> R.string.add_your_school_and_subject_for_topics_from_your_field
-                            DiscoverChip.INTERVIEW -> R.string.add_the_role_you_re_applying_for_i_ll_ask_its_questions
-                            else -> R.string.add_your_job_and_role_for_topics_from_your_work
-                        }),
-                        icon = Symbols.icon("square.and.pencil"),
-                        onClick = { showingSettings = true },
-                    )
-                } else if (!pool.isNullOrEmpty()) {
-                    val begin = (fieldShift[chip] ?: 0) % pool.size
-                    (0 until minOf(PurposeTopicClient.SHOWN, pool.size)).map { pool[(begin + it) % pool.size] }
-                        .forEach { t ->
-                            DiscoverRow(
-                                title = t.title,
-                                icon = Symbols.icon(when (chip) {
-                                    DiscoverChip.STUDY -> "book.fill"
-                                    DiscoverChip.INTERVIEW -> "person.crop.square"
-                                    else -> "briefcase.fill"
-                                }),
-                                onClick = if (enabled) ({
-                                    onPickTopic(SuggestedTopic(title = t.title,
-                                        blurb = PurposeTopicClient.launchBlurb(t, chip, details)))
-                                }) else null,
+                },
+            label = "discover",
+        ) { tab ->
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                when (tab) {
+                    DiscoverChip.NEWS -> {
+                        if (interests.isEmpty()) {
+                            // Nothing to build stories from yet — the fix is one tap, so
+                            // offer it instead of an empty section.
+                            DiscoverRow(large = true, 
+                                title = stringResource(R.string.add_interests),
+                                icon = Icons.Filled.Add,
+                                onClick = { onShowingSettings(true) },
+                            )
+                        } else if (topics.isEmpty()) {
+                            if (loading) {
+                                Row(Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                                    Text(stringResource(R.string.finding_stories),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            } else {
+                                // Auto-load happens on open; this is the retry path when that
+                                // failed or came back empty.
+                                DiscoverRow(large = true, 
+                                    title = stringResource(R.string.load_stories),
+                                    icon = Icons.Filled.Newspaper,
+                                    onClick = { scope.launch { fetchNews(true) } },
+                                )
+                            }
+                        }
+                        topics.forEach { topic ->
+                            DiscoverRow(large = true, 
+                                title = topic.title,
+                                // Capitalized, like iOS: the pool writes categories in
+                                // lower case ("ai / tech") and a caption is a label.
+                                caption = topic.category
+                                    ?.replaceFirstChar { it.titlecase(java.util.Locale.getDefault()) },
+                                icon = categoryIcon(topic.category),
+                                onClick = if (enabled) ({ onPickNews(topic) }) else null,
                             )
                         }
-                } else if (chip in failedTopics) {
-                    TextButton(onClick = { scope.launch { loadFieldTopics(chip, fresh = true) } }) {
-                        Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.couldn_t_write_topics_try_again),
-                            style = MaterialTheme.typography.bodyMedium)
-                    }
-                } else {
-                    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                        Text(stringResource(R.string.writing_topics_for_your_field),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-                chip.starters?.let { StarterRows(it) }
-            }
-            DiscoverChip.SCENARIOS -> {
-                // The learner's own situations — ready-made ones live on their chips.
-                val live = scenarios.filter { it.archivedAt == null && it.isOwnSituation && it.starterId == null }
-                live.take(5).forEach { sc ->
-                    // WHO the scene is with, not what shelf it sits on — a
-                    // category told the learner nothing they didn't already see.
-                    val personName = sc.counterpartId?.let { id -> people.firstOrNull { it.id == id }?.name }
-                    var rowMenu by remember(sc.id) { mutableStateOf(false) }
-                    Box {
-                        DiscoverRow(
-                            title = sc.cardTitle,
-                            caption = (personName ?: sc.role?.takeIf { it.isNotBlank() })
-                                ?.let { stringResource(R.string.with, it) } ?: sc.category,
-                            // The icon the categorizer picked for this scenario —
-                            // a fixed pin made every scenario look like a place.
-                            icon = Symbols.icon(sc.categoryIcon),
-                            onClick = null,
-                            modifier = Modifier.combinedClickable(
-                                onClick = {
-                                    if (enabled) {
-                                        scope.launch { scenarioStore.touch(sc.id, language); StoreEvents.bump() }
-                                        onPickScenario(sc)
-                                    }
-                                },
-                                onLongClick = { rowMenu = true }),
-                        )
-                        com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = rowMenu, onDismissRequest = { rowMenu = false }) {
-                            com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
-                                text = { Text(stringResource(R.string.delete),
-                                    color = MaterialTheme.colorScheme.error) },
-                                leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.error) },
-                                onClick = {
-                                    rowMenu = false
-                                    scope.launch { scenarioStore.delete(sc.id, language); StoreEvents.bump() }
-                                })
+                        if (newsFailed) {
+                            Text(stringResource(
+                                if (topics.isEmpty()) R.string.couldn_t_load_stories
+                                else R.string.showing_earlier_stories),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
-                }
-                // The door to the rest of them, rather than a list that grows
-                // until the home screen is a filing cabinet — always the list's
-                // tail, as on iOS.
-                if (live.isNotEmpty()) {
-                    DiscoverRow(
-                        title = stringResource(R.string.all_scenarios),
-                        caption = "${live.size}",
-                        icon = Icons.Filled.Layers,
-                        onClick = onAllScenarios,
-                    )
-                }
-                if (live.isEmpty()) {
-                    // iOS `scenariosContent`: a plain tinted "+" label, not a card.
-                    TextButton(onClick = { composing = true }) {
-                        Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.build_your_first_scenario),
-                            style = MaterialTheme.typography.bodyMedium)
+                    DiscoverChip.EXAM -> {
+                        // Common questions of the picked exam, five at a time; refresh
+                        // shows the next five. Same card as a news story.
+                        val all = com.roro.futurevoice.data.ExamTopics.topics(exam, language)
+                        val start = if (all.isEmpty()) 0 else examShift % all.size
+                        (0 until minOf(EXAM_SHOWN, all.size)).map { all[(start + it) % all.size] }.forEach { topic ->
+                            DiscoverRow(large = true, 
+                                title = topic.title,
+                                caption = "${exam.examName} · ${topic.part}",
+                                icon = Symbols.icon("graduationcap.fill"),
+                                onClick = if (enabled) ({ onPickExam(topic, exam) }) else null,
+                            )
+                        }
                     }
+                    DiscoverChip.STUDY, DiscoverChip.WORK, DiscoverChip.INTERVIEW -> {
+                        // Topics from what the learner wrote about their field, then —
+                        // for work and interviews — the ready-made situations under
+                        // them. Nothing written yet: one row that says what writing it
+                        // buys, opening the settings.
+                        val chip = tab
+                        val field = fieldContext(chip)
+                        LaunchedEffect(chip, field, language) { loadFieldTopics(chip, fresh = false) }
+                        val pool = fieldTopics[chip]
+                        if (field == null) {
+                            DiscoverRow(large = true, 
+                                title = stringResource(when (chip) {
+                                    DiscoverChip.STUDY -> R.string.add_your_school_and_subject_for_topics_from_your_field
+                                    DiscoverChip.INTERVIEW -> R.string.add_the_role_you_re_applying_for_i_ll_ask_its_questions
+                                    else -> R.string.add_your_job_and_role_for_topics_from_your_work
+                                }),
+                                icon = Symbols.icon("square.and.pencil"),
+                                onClick = { onShowingSettings(true) },
+                            )
+                        } else if (!pool.isNullOrEmpty()) {
+                            val begin = (fieldShift[chip] ?: 0) % pool.size
+                            (0 until minOf(PurposeTopicClient.SHOWN, pool.size)).map { pool[(begin + it) % pool.size] }
+                                .forEach { t ->
+                                    DiscoverRow(large = true, 
+                                        title = t.title,
+                                        icon = Symbols.icon(when (chip) {
+                                            DiscoverChip.STUDY -> "book.fill"
+                                            DiscoverChip.INTERVIEW -> "person.crop.square"
+                                            else -> "briefcase.fill"
+                                        }),
+                                        onClick = if (enabled) ({
+                                            onPickTopic(SuggestedTopic(title = t.title,
+                                                blurb = PurposeTopicClient.launchBlurb(t, chip, details)))
+                                        }) else null,
+                                    )
+                                }
+                        } else if (chip in failedTopics) {
+                            TextButton(onClick = { scope.launch { loadFieldTopics(chip, fresh = true) } }) {
+                                Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text(stringResource(R.string.couldn_t_write_topics_try_again),
+                                    style = MaterialTheme.typography.bodyLarge)
+                            }
+                        } else {
+                            Row(Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                                Text(stringResource(R.string.writing_topics_for_your_field),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        chip.starters?.let { StarterRows(it) }
+                    }
+                    DiscoverChip.SCENARIOS -> {
+                        // The learner's own situations — ready-made ones live on their chips.
+                        val live = scenarios.filter { it.archivedAt == null && it.isOwnSituation && it.starterId == null }
+                        // Making one leads the list, as the same card as the empty
+                        // state's — it was a bare "+" at the end of the chip row
+                        // (iOS b43a5282).
+                        DiscoverRow(large = true, 
+                            title = stringResource(if (live.isEmpty()) R.string.build_your_first_scenario
+                                else R.string.new_scenario),
+                            caption = stringResource(R.string.describe_a_situation_and_practice_it_in_a_call),
+                            icon = Icons.Filled.Add,
+                            onClick = { composing = true },
+                        )
+                        live.take(5).forEach { sc ->
+                            // WHO the scene is with, not what shelf it sits on — a
+                            // category told the learner nothing they didn't already see.
+                            val personName = sc.counterpartId?.let { id -> people.firstOrNull { it.id == id }?.name }
+                            var rowMenu by remember(sc.id) { mutableStateOf(false) }
+                            Box {
+                                DiscoverRow(large = true, 
+                                    title = sc.cardTitle,
+                                    caption = (personName ?: sc.role?.takeIf { it.isNotBlank() })
+                                        ?.let { stringResource(R.string.with, it) } ?: sc.category,
+                                    // The icon the categorizer picked for this scenario —
+                                    // a fixed pin made every scenario look like a place.
+                                    icon = Symbols.icon(sc.categoryIcon),
+                                    onClick = null,
+                                    modifier = Modifier.combinedClickable(
+                                        onClick = {
+                                            if (enabled) {
+                                                scope.launch { scenarioStore.touch(sc.id, language); StoreEvents.bump() }
+                                                onPickScenario(sc)
+                                            }
+                                        },
+                                        onLongClick = { rowMenu = true }),
+                                )
+                                com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = rowMenu, onDismissRequest = { rowMenu = false }) {
+                                    com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
+                                        text = { Text(stringResource(R.string.delete),
+                                            color = MaterialTheme.colorScheme.error) },
+                                        leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.error) },
+                                        onClick = {
+                                            rowMenu = false
+                                            scope.launch { scenarioStore.delete(sc.id, language); StoreEvents.bump() }
+                                        })
+                                }
+                            }
+                        }
+                        // The door to the rest of them, rather than a list that grows
+                        // until the home screen is a filing cabinet — always the list's
+                        // tail, as on iOS.
+                        if (live.isNotEmpty()) {
+                            DiscoverRow(large = true, 
+                                title = stringResource(R.string.all_scenarios),
+                                caption = "${live.size}",
+                                icon = Icons.Filled.Layers,
+                                onClick = onAllScenarios,
+                            )
+                        }
+                    }
+                    else -> StarterRows(tab.starters ?: StarterSituation.all)
                 }
+
             }
-            else -> StarterRows(discoverTab.starters ?: StarterSituation.all)
         }
     }
 

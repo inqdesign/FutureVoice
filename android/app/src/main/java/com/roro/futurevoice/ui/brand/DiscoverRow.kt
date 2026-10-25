@@ -44,6 +44,9 @@ fun DiscoverRow(
     accent: Color = MaterialTheme.colorScheme.primary,
     onClick: (() -> Unit)? = null,
     trailing: @Composable (() -> Unit)? = null,
+    /** The topics page's cards (iOS b43a5282): a bigger circle, body-size
+     *  title and caption, more room. */
+    large: Boolean = false,
 ) {
     Row(
         modifier
@@ -51,19 +54,20 @@ fun DiscoverRow(
             .clip(ContinuousShape(18.dp))
             .background(AppSurfaces.card)
             .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
-            .padding(14.dp),
+            .padding(if (large) 16.dp else 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Box(Modifier.size(36.dp).clip(CircleShape).background(accent.copy(alpha = 0.15f)),
+        Box(Modifier.size(if (large) 42.dp else 36.dp).clip(CircleShape).background(accent.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center) {
-            Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(19.dp))
+            Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(if (large) 22.dp else 19.dp))
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title, style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(title, style = if (large) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodyMedium,
+                fontWeight = if (large) FontWeight.SemiBold else FontWeight.Medium,
+                maxLines = if (large) 3 else 2, overflow = TextOverflow.Ellipsis)
             caption?.takeIf { it.isNotBlank() }?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall,
+                Text(it, style = if (large) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
             }

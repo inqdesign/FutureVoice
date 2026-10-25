@@ -14,6 +14,7 @@ import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.data.TalkCurriculum
 import com.roro.futurevoice.data.TalkTimeLog
 import com.roro.futurevoice.data.VocabStore
+import com.roro.futurevoice.data.nowLine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -96,6 +97,7 @@ object StudyWidgetRefresher {
 
         runCatching { refreshProgress(context, language, words.size, phrases.size) }
         runCatching { refreshBook(context, language) }
+        runCatching { refreshRoutine(context) }
 
         runCatching {
             StudyWidget(StudyWidgetSection.WORDS).updateAll(context)
@@ -103,6 +105,7 @@ object StudyWidgetRefresher {
             ProgressWidget().updateAll(context)
             StreakWidget().updateAll(context)
             BookWidget().updateAll(context)
+            RoutineWidget().updateAll(context)
             // No data of its own, but it wears the theme — a palette pick
             // repaints it like the others.
             FreeTalkWidget().updateAll(context)
@@ -190,5 +193,55 @@ object StudyWidgetRefresher {
 
         StudyWidgetSnapshotStore.saveBook(context,
             candidates.maxByOrNull { it.date }?.snapshot ?: StudyBookSnapshot(updatedAt = now))
+    }
+
+    /**
+     * Today's and tomorrow's planned blocks, each already judged done or not
+     * by the same rule Activity's day list uses ([PlannerSnapshot]) — iOS
+     * `refreshRoutine` (a0836bbe). The widget changes face at each block's
+     * start and end ([RoutineWidgetTicker]); a write here is only needed when
+     * something gets DONE.
+     */
+    private suspend fun refreshRoutine(context: Context) {
+        val today = com.roro.futurevoice.data.StudyPlan.startOfDay(System.currentTimeMillis())
+        val plan = com.roro.futurevoice.data.StudyPlanStore.current(context)
+        val snap = com.roro.futurevoice.ui.PlannerSnapshot.make(context, today, plan)
+        // The APP language, not the phone's.
+        val res = com.roro.futurevoice.core.UILanguage.localized(context).resources
+        fun blocks(day: Long): List<RoutineWidgetBlock> {
+            val done = snap.done[day].orEmpty()
+            val progress = snap.progress[day].orEmpty()
+            return snap.planned[day].orEmpty().map { occ ->
+                RoutineWidgetBlock(
+                    id = occ.id, kind = occ.kind.raw, start = occ.start, end = occ.end,
+                    anytime = occ.anytime,
+                    // Review is named without its count.
+                    title = if (occ.kind == com.roro.futurevoice.data.StudyPlan.Kind.REVIEW)
+                        com.roro.futurevoice.data.RoutineText.label(res, occ.kind)
+                    else com.roro.futurevoice.data.RoutineText.titled(res, occ.kind, occ.amount),
+                    nowLine = com.roro.futurevoice.data.PlanReminder.nowLine(res, occ.kind),
+                    done = occ.id in done,
+                    progress = progress[occ.id] ?: 0.0,
+                )
+            }
+        }
+        val tomorrow = com.roro.futurevoice.data.StudyPlan.addDays(today, 1)
+        val routine = RoutineWidgetSnapshot(
+            updatedAt = System.currentTimeMillis(), day = today,
+            today = blocks(today), tomorrow = blocks(tomorrow),
+            labels = mapOf(
+                "title" to res.getString(R.string.my_routine),
+                "now" to res.getString(R.string.now),
+                "next" to res.getString(R.string.up_next),
+                "today" to res.getString(R.string.today),
+                "tomorrow" to res.getString(R.string.tomorrow),
+                "anytime" to res.getString(R.string.anytime),
+                "allDone" to res.getString(R.string.done_for_today),
+                // A plan with blocks on other days rests today.
+                "empty" to res.getString(if (plan.blocks.isEmpty()) R.string.nothing_planned_this_day
+                    else R.string.rest_day),
+            ))
+        RoutineWidgetStore.save(context, routine)
+        RoutineWidgetTicker.arm(context, routine)
     }
 }

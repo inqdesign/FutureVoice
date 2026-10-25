@@ -144,5 +144,7 @@ object StudyPlanStore {
             tmp.writeText(StoreJson.json.encodeToString(StudyPlan.serializer(), plan))
             if (!tmp.renameTo(target)) { target.delete(); tmp.renameTo(target) }
         }
+        // The routine widget draws this plan (iOS a0836bbe).
+        com.roro.futurevoice.widget.StudyWidgetRefresher.schedule(c)
     }
 }

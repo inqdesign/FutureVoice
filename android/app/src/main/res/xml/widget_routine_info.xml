@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The routine widget (iOS RoutineWidget, a0836bbe): small and medium. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:maxResizeHeight="180dp"
+    android:description="@string/what_your_routine_has_for_today_and_what_s_up_now"
+    android:updatePeriodMillis="1800000"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen" />

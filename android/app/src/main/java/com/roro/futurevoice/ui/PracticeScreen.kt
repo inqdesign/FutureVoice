@@ -6,6 +6,10 @@ import com.roro.futurevoice.data.StudyCollections
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.alpha
 import com.roro.futurevoice.ui.brand.Symbols
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.WorkspacePremium
@@ -228,13 +232,19 @@ fun PracticeBody(
         when (Shelf.entries[page]) {
             Shelf.STUDYING -> {
                 val d = data
-                LibraryTiles(
-                    stats = d?.stats ?: LibraryStats(),
-                    onWords = onOpenWordsAll,
-                    onExpressions = onOpenExpressionsAll,
-                    onSentences = onOpenSentencesAll,
-                    onShadowing = onShadowAll,
-                )
+                val st = d?.stats ?: LibraryStats()
+                // Dimmed only while there is nothing anywhere (iOS cd867a2b).
+                val bare = d != null && d.feed.isEmpty() &&
+                    st.words + st.expressions + st.sentences + st.shadow == 0
+                Box(Modifier.alpha(if (bare) 0.45f else 1f)) {
+                    LibraryTiles(
+                        stats = st,
+                        onWords = onOpenWordsAll,
+                        onExpressions = onOpenExpressionsAll,
+                        onSentences = onOpenSentencesAll,
+                        onShadowing = onShadowAll,
+                    )
+                }
                 // No weekly test banner here (iOS 4f706d92, 2026-10-19): the
                 // test lives inside the week's report — its deck ends on the
                 // test card — and the quick quiz on Talk checks what is being
@@ -248,9 +258,9 @@ fun PracticeBody(
                     }
                 }
                 if (d != null && d.feed.isEmpty()) {
-                    Text(stringResource(R.string.nothing_here_yet_have_a_talk_or_watch_a_scene),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    FirstBookPlaceholder {
+                        DeepLinkInbox.requestFreeTalk(com.roro.futurevoice.talk.TalkEntry.PRACTICE_EMPTY)
+                    }
                 }
             }
 
@@ -513,3 +523,65 @@ private fun ArchiveSection(hasAny: Boolean, content: @Composable () -> Unit) {
 internal fun shelfDate(at: Long): String =
     java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM)
         .format(java.util.Date(at))
+
+/**
+ * Where the first book will sit (iOS `firstBookPlaceholder`, cd867a2b): the
+ * card's own shape, dashed, with its four chapters dimmed so the learner sees
+ * what a talk turns into before having one.
+ */
+@Composable
+private fun FirstBookPlaceholder(onStartTalk: () -> Unit) {
+    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    // iOS `separator` / `quaternarySystemFill`.
+    val separator = if (dark) Color(0xFF545458).copy(alpha = 0.6f) else Color(0xFF3C3C43).copy(alpha = 0.29f)
+    val fill = if (dark) Color(0xFF767680).copy(alpha = 0.18f) else Color(0xFF747480).copy(alpha = 0.08f)
+    Column(
+        Modifier.fillMaxWidth()
+            .drawBehind {
+                val w = 1.5.dp.toPx()
+                drawRoundRect(separator,
+                    topLeft = androidx.compose.ui.geometry.Offset(w / 2, w / 2),
+                    size = androidx.compose.ui.geometry.Size(size.width - w, size.height - w),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(18.dp.toPx() - w / 2),
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(w,
+                        pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(
+                            floatArrayOf(6.dp.toPx(), 5.dp.toPx()))))
+            }
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(R.string.your_first_book_goes_here),
+                style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.every_talk_becomes_a_book_of_its_own),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Row(Modifier.fillMaxWidth().alpha(0.6f).clearAndSetSemantics {},
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(StudyIcon.words to R.string.words, StudyIcon.expressions to R.string.expressions,
+                StudyIcon.shadowing to R.string.shadowing, StudyIcon.grammar to R.string.grammar,
+            ).forEach { (icon, title) ->
+                Column(
+                    Modifier.weight(1f).clip(ContinuousShape(12.dp)).background(fill)
+                        .padding(horizontal = 6.dp, vertical = 10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Icon(icon, contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(24.dp))
+                    Text(stringResource(title), maxLines = 1,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+        Button(onClick = onStartTalk, modifier = Modifier.fillMaxWidth()) {
+            Icon(androidx.compose.material.icons.Icons.Filled.Mic, contentDescription = null,
+                modifier = Modifier.size(18.dp))
+            androidx.compose.foundation.layout.Spacer(Modifier.size(8.dp))
+            Text(stringResource(R.string.start_a_talk))
+        }
+    }
+}

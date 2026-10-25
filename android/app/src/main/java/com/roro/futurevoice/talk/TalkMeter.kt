@@ -156,6 +156,9 @@ class TalkMeter(
             live = 0.0
         }
         isRunning = false
+        // A talk block is done by these minutes; the routine widget hears of
+        // them once, when the call ends, never per tick (iOS a0836bbe).
+        appContext?.let { com.roro.futurevoice.widget.StudyWidgetRefresher.schedule(it) }
     }
 
     /** Seconds the gateway just counted ([RealtimeTalkClient.onMeter]). The

@@ -574,6 +574,7 @@
     <string name="deletes_cached_voice_audio_only_your_talks_drills_words_and_d9f035">"저장해 둔 음성만 지워요. 대화, 드릴, 단어, 책은 그대로예요. 문장마다 다음에 들을 때 다시 만들어져요."</string>
     <!-- 'Deleting your account permanently removes your voice clone, talk time, and account data. Practice data on this device is erased too.' -->
     <string name="deleting_your_account_permanently_removes_your_voice_clone_t_43bafb">"계정을 지우면 내 목소리, 통화 시간, 계정 정보가 영영 사라져요. 이 기기에 있는 연습 기록도 함께 지워지고요."</string>
+    <string name="describe_a_situation_and_practice_it_in_a_call">"상황을 적고 통화로 연습해요"</string>
     <string name="describe_the_scenario_or_tap_the_mic_and_say_it">"상황을 적어 보세요 — 마이크를 눌러 말해도 돼요"</string>
     <!-- "Describe what's coming and watch your fluent self handle it first — its expressions stay yours to study." -->
     <string name="describe_what_s_coming_and_watch_your_fluent_self_handle_it_48f4b8">"곧 겪을 일을 적어두면 유창해진 내가 먼저 겪는 걸 봐요. 거기서 쓴 표현은 전부 내 것으로 남아요."</string>
@@ -718,6 +719,7 @@
     <string name="every_take_of_a_script_is_kept_so_you_can_watch_yourself_get_36082d">"녹화는 원고마다 쌓여서, 얼마나 나아졌는지 한눈에 보여요."</string>
     <!-- "Every talk and scene you finish becomes one. It's done when you've learned everything inside." -->
     <string name="every_talk_and_scene_you_finish_becomes_one_it_s_done_when_y_9fe6fb">"끝낸 대화와 장면이 한 권씩 쌓여요. 안에 든 걸 다 익히면 완료돼요."</string>
+    <string name="every_talk_becomes_a_book_of_its_own">"대화 하나가 책 한 권이 돼요."</string>
     <!-- "Every talk in your routine with a set time is a call. Your phone rings then, even on silent. Can't talk? Just decline — nothing counts against you." -->
     <string name="every_talk_in_your_routine_with_a_set_time_is_a_call_your_ph_174441">"루틴에서 시간이 정해진 대화가 곧 전화예요. 그 시간에 무음이어도 전화가 울려요. 받기 어려우면 거절하면 돼요. 불이익은 없어요."</string>
     <!-- 'Every word, expression and card you studied, shadow take, run and scene — one block each.' -->
@@ -1690,6 +1692,7 @@
     <string name="notifications_are_off_so_i_can_t_call_you_yet_turn_them_on_i_52c0b7">"알림이 꺼져 있어서 아직 전화를 걸 수 없어요. 설정에서 알림을 켜 주세요. 루틴은 대화 화면의 활동에 있어요."</string>
     <!-- "Notifications are off, so your routine can't remind you. Turn them on in Settings" -->
     <string name="notifications_are_off_so_your_routine_can_t_remind_you_turn_298720">"알림이 꺼져 있어서 루틴 알림이 울리지 않아요. 설정에서 켜 주세요"</string>
+    <string name="now">"지금"</string>
     <!-- "Now and then it asks something you can answer with a word you're studying, and shows you the word. Use it and it gets a check." -->
     <string name="now_and_then_it_asks_something_you_can_answer_with_a_word_yo_33236e">"가끔은 복습 중인 단어로 답할 수 있는 질문을 하고, 그 단어를 보여줘요. 써 보면 체크돼요."</string>
     <string name="nutrition">"영양"</string>
@@ -2810,6 +2813,7 @@
     <string name="through_friends">"친구 소개로"</string>
     <string name="time">"시간"</string>
     <string name="time_for_shadowing">"섀도잉할 시간이에요"</string>
+    <string name="time_for_the_weekly_test">"주간 테스트 볼 시간이에요"</string>
     <string name="time_for_your_expressions">"표현 연습할 시간이에요"</string>
     <string name="time_for_your_speech">"스피치할 시간이에요"</string>
     <string name="time_for_your_words">"단어 연습할 시간이에요"</string>
@@ -2821,6 +2825,7 @@
     <string name="time_to_practice">"연습할 시간이에요"</string>
     <string name="time_to_say_it_again">"다시 말하기 할 시간이에요"</string>
     <string name="time_to_say_it_back">"따라 말할 만큼"</string>
+    <string name="time_to_talk">"대화할 시간이에요"</string>
     <string name="tip">"팁"</string>
     <string name="title_optional">"제목 (선택)"</string>
     <string name="to_reach">"%s까지 가려면"</string>
@@ -2895,6 +2900,7 @@
     <string name="until_the_day_you_become_me_let_s_do_this_together">"네가 내가 되는 날까지,\n우리 같이 해보자."</string>
     <string name="until_then_the_regular_price">"%s까지, 그 뒤는 정가"</string>
     <string name="up_and_down_changes_the_time_sideways_changes_the_day">"위아래로 끌면 시간이, 옆으로 끌면 요일이 바뀌어요."</string>
+    <string name="up_next">"다음 차례"</string>
     <string name="up_to_date">"최신 상태 · %s"</string>
     <string name="up_to_lld_of_lld">"%2$d명 중 %1$d위로 올라갔어요"</string>
     <!-- 'Up to three. The chips under Talk follow them in the order you picked, and what you write under one shapes its topics.' -->
@@ -3119,6 +3125,7 @@
     <string name="what_you_usually_talk_about">"주로 나누는 이야기"</string>
     <string name="what_your_fluent_self_knows_about_you">"유창해진 내가 아는 내 이야기"</string>
     <string name="what_your_plan_holds">"요금제에 들어 있는 것"</string>
+    <string name="what_your_routine_has_for_today_and_what_s_up_now">"오늘 루틴과 지금 할 차례를 보여줘요."</string>
     <string name="what_your_voice_is_called_in_the_app">"앱에서 내 목소리를 부르는 이름"</string>
     <string name="when_">"언제 할까요?"</string>
     <!-- "When a friend joins with your code, you both get %lld minutes — and invite minutes are spent before the month's pool." -->
@@ -3415,6 +3422,7 @@
     <!-- 'Your files stay on your phone. Only what was read is kept here.' -->
     <string name="your_files_stay_on_your_phone_only_what_was_read_is_kept_her_ec86b8">"파일은 폰에 그대로 있어요. 앱에는 읽은 내용만 남아요."</string>
     <string name="your_first_assessment_unlocks_after_lld_minutes_of_talk">"대화 %d분을 채우면 첫 평가가 열려요."</string>
+    <string name="your_first_book_goes_here">"첫 책이 여기 생겨요"</string>
     <string name="your_first_level_appears">"첫 레벨이 나와요"</string>
     <string name="your_first_lld_minutes">"처음 %d분"</string>
     <string name="your_first_report_unlocks_after_lld_minutes_of_practice">"연습 %d분을 채우면 첫 리포트가 열려요."</string>

@@ -82,15 +82,7 @@ object PlanReminder {
         else intent.putExtra(ReviewQueue.OPEN_REVIEW_EXTRA, true)
         val open = PendingIntent.getActivity(c, NOTIFICATION_ID, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val title = res.getString(when (kind) {
-            StudyPlan.Kind.WORDS -> R.string.routine_time_for_your_words
-            StudyPlan.Kind.EXPRESSIONS -> R.string.routine_time_for_your_expressions
-            StudyPlan.Kind.SHADOW -> R.string.routine_time_for_shadowing
-            StudyPlan.Kind.SAY_IT_AGAIN -> R.string.routine_time_to_say_it_again
-            StudyPlan.Kind.SPEECH -> R.string.time_for_your_speech
-            StudyPlan.Kind.LISTEN -> R.string.routine_time_to_listen
-            else -> R.string.routine_time_to_practice
-        })
+        val title = title(res.resources, kind)
         val body = if (sayAgain) res.getString(R.string.routine_pick_a_recent_talk_and_say_it_again)
         else if (speech) res.getString(R.string.pick_a_script_and_read_it_out_loud)
         else if (listen) res.getString(R.string.routine_listen_body)
@@ -102,6 +94,30 @@ object PlanReminder {
         (c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
             .notify(NOTIFICATION_ID, n)
     }
+}
+
+/** The reminder's title for a kind (iOS `PlanReminder.title(for:)`). */
+private fun PlanReminder.title(res: android.content.res.Resources, kind: StudyPlan.Kind): String =
+    res.getString(when (kind) {
+        StudyPlan.Kind.WORDS -> R.string.routine_time_for_your_words
+        StudyPlan.Kind.EXPRESSIONS -> R.string.routine_time_for_your_expressions
+        StudyPlan.Kind.SHADOW -> R.string.routine_time_for_shadowing
+        StudyPlan.Kind.SAY_IT_AGAIN -> R.string.routine_time_to_say_it_again
+        StudyPlan.Kind.SPEECH -> R.string.time_for_your_speech
+        StudyPlan.Kind.LISTEN -> R.string.routine_time_to_listen
+        else -> R.string.routine_time_to_practice
+    })
+
+/**
+ * What the routine widget says while a block's time is on — the reminder's
+ * own title, so the notice and the widget say one thing (iOS
+ * `PlanReminder.nowLine`, a0836bbe).
+ */
+fun PlanReminder.nowLine(res: android.content.res.Resources, kind: StudyPlan.Kind): String = when (kind) {
+    StudyPlan.Kind.TALK -> res.getString(R.string.time_to_talk)
+    StudyPlan.Kind.REVIEW -> res.getString(R.string.ready_to_review)
+    StudyPlan.Kind.TEST -> res.getString(R.string.time_for_the_weekly_test)
+    else -> title(res, kind)
 }
 
 class PlanReminderReceiver : BroadcastReceiver() {

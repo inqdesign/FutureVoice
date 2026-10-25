@@ -571,6 +571,7 @@
     <string name="deletes_cached_voice_audio_only_your_talks_drills_words_and_d9f035">"Löscht nur zwischengespeicherte Sprachaudios. Deine Gespräche, Drills, Wörter und Bücher bleiben unberührt. Jeder Satz wird beim nächsten Abspielen neu synthetisiert."</string>
     <!-- 'Deleting your account permanently removes your voice clone, talk time, and account data. Practice data on this device is erased too.' -->
     <string name="deleting_your_account_permanently_removes_your_voice_clone_t_43bafb">"Wenn du dein Konto löschst, werden Stimmklon, Sprechzeit und Kontodaten dauerhaft entfernt. Die Übungsdaten auf diesem Gerät werden ebenfalls gelöscht."</string>
+    <string name="describe_a_situation_and_practice_it_in_a_call">"Beschreib eine Situation und übe sie im Gespräch"</string>
     <string name="describe_the_scenario_or_tap_the_mic_and_say_it">"Beschreib die Situation – oder tippe aufs Mikrofon und sag sie"</string>
     <!-- "Describe what's coming and watch your fluent self handle it first — its expressions stay yours to study." -->
     <string name="describe_what_s_coming_and_watch_your_fluent_self_handle_it_48f4b8">"Beschreibe, was ansteht, und sieh zu, wie dein fließendes Ich es zuerst meistert. Seine Wendungen bleiben dir zum Lernen."</string>
@@ -715,6 +716,7 @@
     <string name="every_take_of_a_script_is_kept_so_you_can_watch_yourself_get_36082d">"Pro Skript sammeln sich deine Aufnahmen, so siehst du, wie viel besser du geworden bist."</string>
     <!-- "Every talk and scene you finish becomes one. It's done when you've learned everything inside." -->
     <string name="every_talk_and_scene_you_finish_becomes_one_it_s_done_when_y_9fe6fb">"Jedes Gespräch und jede Szene, die du beendest, wird zu einem. Es ist fertig, wenn du alles darin gelernt hast."</string>
+    <string name="every_talk_becomes_a_book_of_its_own">"Aus jedem Gespräch wird ein eigenes Buch."</string>
     <!-- "Every talk in your routine with a set time is a call. Your phone rings then, even on silent. Can't talk? Just decline — nothing counts against you." -->
     <string name="every_talk_in_your_routine_with_a_set_time_is_a_call_your_ph_174441">"Jedes Gespräch mit fester Uhrzeit in deiner Routine ist ein Anruf. Dein Telefon klingelt dann, auch lautlos. Keine Zeit? Einfach ablehnen – das zählt nicht gegen dich."</string>
     <!-- 'Every word, expression and card you studied, shadow take, run and scene — one block each.' -->
@@ -1687,6 +1689,7 @@
     <string name="notifications_are_off_so_i_can_t_call_you_yet_turn_them_on_i_52c0b7">"Mitteilungen sind aus, deshalb kann ich dich noch nicht anrufen. Schalte sie in den Einstellungen ein. Deine Routine findest du unter Aktivität auf dem Sprechen-Bildschirm."</string>
     <!-- "Notifications are off, so your routine can't remind you. Turn them on in Settings" -->
     <string name="notifications_are_off_so_your_routine_can_t_remind_you_turn_298720">"Mitteilungen sind aus, deshalb kann dich deine Routine nicht erinnern. Schalte sie in den Einstellungen ein"</string>
+    <string name="now">"Jetzt"</string>
     <!-- "Now and then it asks something you can answer with a word you're studying, and shows you the word. Use it and it gets a check." -->
     <string name="now_and_then_it_asks_something_you_can_answer_with_a_word_yo_33236e">"Ab und zu fragt es etwas, das du mit einem Wort beantworten kannst, das du gerade lernst, und zeigt dir das Wort. Benutzt du es, bekommt es einen Haken."</string>
     <string name="nutrition">"Ernährung"</string>
@@ -2807,6 +2810,7 @@
     <string name="through_friends">"Über Freunde"</string>
     <string name="time">"Uhrzeit"</string>
     <string name="time_for_shadowing">"Zeit zum Nachsprechen"</string>
+    <string name="time_for_the_weekly_test">"Zeit für den Wochentest"</string>
     <string name="time_for_your_expressions">"Zeit für deine Wendungen"</string>
     <string name="time_for_your_speech">"Zeit für deine Rede"</string>
     <string name="time_for_your_words">"Zeit für deine Wörter"</string>
@@ -2818,6 +2822,7 @@
     <string name="time_to_practice">"Zeit zum Üben"</string>
     <string name="time_to_say_it_again">"Zeit, es nochmal zu sagen"</string>
     <string name="time_to_say_it_back">"Zeit zum Nachsprechen"</string>
+    <string name="time_to_talk">"Zeit zum Sprechen"</string>
     <string name="tip">"Tipp"</string>
     <string name="title_optional">"Titel (optional)"</string>
     <string name="to_reach">"Bis %s"</string>
@@ -2892,6 +2897,7 @@
     <string name="until_the_day_you_become_me_let_s_do_this_together">"Bis zu dem Tag, an dem du ich bist,\nmachen wir das zusammen."</string>
     <string name="until_then_the_regular_price">"Bis %s, danach der reguläre Preis"</string>
     <string name="up_and_down_changes_the_time_sideways_changes_the_day">"Hoch und runter ändert die Uhrzeit, zur Seite den Tag."</string>
+    <string name="up_next">"Als Nächstes"</string>
     <string name="up_to_date">"Aktuell · %s"</string>
     <string name="up_to_lld_of_lld">"Hoch auf Platz %1$d von %2$d"</string>
     <!-- 'Up to three. The chips under Talk follow them in the order you picked, and what you write under one shapes its topics.' -->
@@ -3116,6 +3122,7 @@
     <string name="what_you_usually_talk_about">"Worüber ihr meistens redet"</string>
     <string name="what_your_fluent_self_knows_about_you">"Was dein fließendes Ich über dich weiß"</string>
     <string name="what_your_plan_holds">"Was dein Tarif enthält"</string>
+    <string name="what_your_routine_has_for_today_and_what_s_up_now">"Deine Routine für heute und was jetzt dran ist."</string>
     <string name="what_your_voice_is_called_in_the_app">"So heißt deine Stimme in der App"</string>
     <string name="when_">"Wann?"</string>
     <!-- "When a friend joins with your code, you both get %lld minutes — and invite minutes are spent before the month's pool." -->
@@ -3412,6 +3419,7 @@
     <!-- 'Your files stay on your phone. Only what was read is kept here.' -->
     <string name="your_files_stay_on_your_phone_only_what_was_read_is_kept_her_ec86b8">"Deine Dateien bleiben auf deinem Telefon. Hier wird nur gespeichert, was daraus gelesen wurde."</string>
     <string name="your_first_assessment_unlocks_after_lld_minutes_of_talk">"Deine erste Einstufung wird nach %d Minuten Gespräch freigeschaltet."</string>
+    <string name="your_first_book_goes_here">"Hier entsteht dein erstes Buch"</string>
     <string name="your_first_level_appears">"Dein erstes Niveau erscheint"</string>
     <string name="your_first_lld_minutes">"Deine ersten %d Minuten"</string>
     <string name="your_first_report_unlocks_after_lld_minutes_of_practice">"Dein erster Bericht wird nach %d Minuten Übung freigeschaltet."</string>
