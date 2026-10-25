@@ -291,13 +291,22 @@ enum AudioLoudness {
         /// ~0.15 s of voice at any rate we stream, before the estimate is
         /// worth acting on.
         private static let minVoicedSamples = 3_000
+        /// -20 dBFS. TTS speech peaks well above it; a breath or the hiss
+        /// before the first word stays under it.
+        private static let minSpeechPeak: Float = 0.1
 
         init() {}
 
         mutating func accumulate(_ samples: UnsafePointer<Float>, count: Int) {
             guard count > 0 else { return }
             for i in 0..<count { peak = max(peak, abs(samples[i])) }
-            guard peak > 1e-6 else { return }
+            // Nothing is measured until something as loud as speech has
+            // arrived. The gate is relative to the peak, so a line that opens
+            // on a breath measured the BREATH as the voice: +19 dB of fast
+            // attack turned it into a hiss, and the first syllable then played
+            // at that gain into the clamp (a scene's first, streamed line,
+            // 2026-10-25). Before the floor the stream keeps its seed gain.
+            guard peak >= Self.minSpeechPeak else { return }
             if peak > gateBasis * 2 {
                 voicedSumSquares = 0
                 voicedSamples = 0
