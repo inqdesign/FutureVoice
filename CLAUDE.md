@@ -2974,7 +2974,9 @@ sync container carry over. `./scripts/mac-run.sh` builds and opens it.
   delegate calls a swipe makes, so SwiftUI's `isPresented` follows.
 - **The review decks file by keyboard** (`macDeckKeys`): Space flips, 1–4
   drop into 10 min · Tomorrow · 3 days · Got it. Lists scroll by wheel or
-  trackpad, like any Mac app; a mouse drag never scrolls.
+  trackpad, like any Mac app; a mouse drag never scrolls — except where
+  dragging IS the control: the Watch people map takes a click-drag
+  (`macDragToPan`, which also arms the map the way a finger does).
 - **`UIScreen.main` is the whole DISPLAY on a Mac.** Anything laid out against
   the screen must read `MacLayout.screenHeight` (the window, zoomed points)
   and listen for `MacLayout.windowDidResize` — the Talk ring sat below the

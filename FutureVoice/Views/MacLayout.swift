@@ -358,3 +358,91 @@ extension View {
         modifier(MacDeckKeys(reveal: reveal, file: file))
     }
 }
+
+/// A scroll view a mouse can DRAG. On the Mac a scroll view moves only by
+/// wheel or trackpad, which is right for a list and wrong for a map: the
+/// Watch tab's people map (`PeopleSkyView`) is a 2-D scroll you grab and pull
+/// on the phone, and a click-drag did nothing. Put this on the scroll view's
+/// CONTENT; it finds the scroll view around it and moves it by the drag.
+/// Clicks still reach what was clicked, and the wheel and trackpad scroll as
+/// before. Nothing on the iPhone or iPad.
+private struct MacDragToPan: UIViewRepresentable {
+    /// Called when a drag starts — what a finger on the phone tells the
+    /// scroll view's own phase (`.interacting`).
+    var onBegin: () -> Void
+
+    func makeUIView(context: Context) -> UIView {
+        #if targetEnvironment(macCatalyst)
+        let finder = Finder()
+        finder.onBegin = onBegin
+        return finder
+        #else
+        return UIView()
+        #endif
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        #if targetEnvironment(macCatalyst)
+        (uiView as? Finder)?.onBegin = onBegin
+        #endif
+    }
+
+    #if targetEnvironment(macCatalyst)
+    final class Finder: UIView {
+        var onBegin: () -> Void = {}
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            guard window != nil else { return }
+            var view = superview
+            while let v = view, !(v is UIScrollView) { view = v.superview }
+            guard let scroll = view as? UIScrollView,
+                  !(scroll.gestureRecognizers ?? []).contains(where: { $0 is Pan }) else { return }
+            scroll.addGestureRecognizer(Pan(scroll: scroll) { [weak self] in self?.onBegin() })
+        }
+    }
+
+    final class Pan: UIPanGestureRecognizer {
+        private weak var scroll: UIScrollView?
+        private var start: CGPoint = .zero
+        private let onBegin: () -> Void
+
+        init(scroll: UIScrollView, onBegin: @escaping () -> Void) {
+            self.scroll = scroll
+            self.onBegin = onBegin
+            super.init(target: nil, action: nil)
+            addTarget(self, action: #selector(moved))
+            cancelsTouchesInView = true
+        }
+
+        @objc private func moved() {
+            guard let scroll else { return }
+            switch state {
+            case .began:
+                start = scroll.contentOffset
+                onBegin()
+            case .changed:
+                let t = translation(in: scroll)
+                let inset = scroll.adjustedContentInset
+                let maxX = max(-inset.left, scroll.contentSize.width + inset.right - scroll.bounds.width)
+                let maxY = max(-inset.top, scroll.contentSize.height + inset.bottom - scroll.bounds.height)
+                scroll.contentOffset = CGPoint(x: min(max(start.x - t.x, -inset.left), maxX),
+                                               y: min(max(start.y - t.y, -inset.top), maxY))
+            default:
+                break
+            }
+        }
+    }
+    #endif
+}
+
+extension View {
+    /// Click-drag moves the enclosing scroll view on the Mac; nothing elsewhere.
+    func macDragToPan(onBegin: @escaping () -> Void = {}) -> some View {
+        #if targetEnvironment(macCatalyst)
+        background(MacDragToPan(onBegin: onBegin).allowsHitTesting(false))
+        #else
+        self
+        #endif
+    }
+}

@@ -499,6 +499,8 @@ struct PeopleSkyMap: View {
                     me(size: g.me).position(x: c, y: c + 8)
                 }
                 .frame(width: side, height: side)
+                // A mouse grabs the map like a finger does (Mac only).
+                .macDragToPan { movedByHand = true }
             }
             .defaultScrollAnchor(.center)
             // The map's bottom runs under the tab bar and the floating
