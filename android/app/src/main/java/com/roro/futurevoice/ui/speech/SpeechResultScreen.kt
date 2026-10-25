@@ -55,6 +55,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import com.roro.futurevoice.data.LanguageCatalog
+import com.roro.futurevoice.talk.ShadowScore
+import com.roro.futurevoice.talk.SpeechAnalyzer
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.style.BaselineShift
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -195,27 +205,46 @@ internal fun SpeechResultScreen(takeId: String, live: SpeechTake?, onBack: () ->
                     stringResource(R.string.holding_your_volume_to_the_end_of_each_sentence), m.steadiness)
             }
 
-            if (m.missed.isNotEmpty()) {
+            // The mistakes are marked where they are in the script, like a
+            // teacher's red pen — iOS SpeechMarkedScript (2026-10-25).
+            var marks by remember(take.id) { mutableStateOf<Pair<Boolean, List<List<SpeechAnalyzer.ScriptMark>>?>>(false to null) }
+            LaunchedEffect(take.id) {
+                val made = withContext(Dispatchers.Default) {
+                    SpeechAnalyzer.marks(script.body, take.transcript, script.language)
+                }
+                marks = true to made
+            }
+            val (marksReady, paragraphs) = marks
+            if (paragraphs != null) {
+                FormSection(stringResource(R.string.script),
+                    footer = if (m.missed.isNotEmpty()) stringResource(R.string.red_skipped_or_read_differently_the_small_red_words) else null) {
+                    MarkedScript(paragraphs, script.language)
+                }
+            } else if (marksReady && m.missed.isNotEmpty()) {
                 FormSection(stringResource(R.string.skipped_or_changed)) {
                     Text(m.missed.joinToString("  ·  "), color = Color(0xFFFF3B30),
                         style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(16.dp))
                 }
             }
 
-            var heard by remember { mutableStateOf(false) }
-            FormSection(null) {
-                Row(Modifier.fillMaxWidth().clickable { heard = !heard }.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(R.string.what_the_mic_heard), modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodyLarge)
-                    Icon(if (heard) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null,
-                        tint = MaterialTheme.colorScheme.primary)
-                }
-                if (heard) {
-                    SelectionContainer {
-                        Text(take.transcript, style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp))
+            // The marked script IS what the mic heard; the raw transcript is
+            // shown only when the marks couldn't be laid on the script.
+            if (marksReady && paragraphs == null) {
+                var heard by remember { mutableStateOf(false) }
+                FormSection(null) {
+                    Row(Modifier.fillMaxWidth().clickable { heard = !heard }.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.what_the_mic_heard), modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyLarge)
+                        Icon(if (heard) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null,
+                            tint = MaterialTheme.colorScheme.primary)
+                    }
+                    if (heard) {
+                        SelectionContainer {
+                            Text(take.transcript, style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp))
+                        }
                     }
                 }
             }
@@ -432,3 +461,36 @@ private suspend fun saveVideoToGallery(context: Context, file: File): Boolean = 
         true
     }.getOrDefault(false)
 }
+
+/** The script as flowing text, each misread word in red: underlined with
+ *  what the mic heard written small beside it, or struck through when it
+ *  was skipped — iOS `SpeechMarkedScript`. */
+@Composable
+private fun MarkedScript(paragraphs: List<List<SpeechAnalyzer.ScriptMark>>, language: String) {
+    val red = Color(0xFFFF3B30)
+    val gap = if (LanguageCatalog.writesSpaces(language)) " " else ""
+    SelectionContainer {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            paragraphs.filter { it.isNotEmpty() }.forEach { line ->
+                Text(buildAnnotatedString {
+                    line.forEachIndexed { i, mark ->
+                        if (i > 0) append(gap)
+                        when (mark.op) {
+                            ShadowScore.DiffOp.DEL -> withStyle(SpanStyle(color = red,
+                                textDecoration = TextDecoration.LineThrough)) { append(mark.word) }
+                            ShadowScore.DiffOp.SUB -> withStyle(SpanStyle(color = red,
+                                textDecoration = TextDecoration.Underline)) { append(mark.word) }
+                            else -> append(mark.word)
+                        }
+                        val heard = mark.heard
+                        if (mark.op == ShadowScore.DiffOp.SUB && !heard.isNullOrEmpty()) {
+                            withStyle(SpanStyle(color = red, fontSize = 11.sp, fontStyle = FontStyle.Italic,
+                                baselineShift = BaselineShift(0.5f))) { append(" " + heard) }
+                        }
+                    }
+                }, style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 30.sp))
+            }
+        }
+    }
+}
+

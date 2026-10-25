@@ -5,6 +5,7 @@ import com.roro.futurevoice.audio.WavPcm
 import com.roro.futurevoice.data.LanguageCatalog
 import com.roro.futurevoice.data.SpeechLibrary
 import com.roro.futurevoice.data.SpeechMetrics
+import com.roro.futurevoice.data.WordSplitter
 import java.io.File
 import kotlin.math.log10
 import kotlin.math.roundToInt
@@ -227,6 +228,54 @@ object SpeechAnalyzer {
     private fun isSymbol(ch: Char): Boolean = when (Character.getType(ch).toByte()) {
         Character.MATH_SYMBOL, Character.CURRENCY_SYMBOL, Character.MODIFIER_SYMBOL, Character.OTHER_SYMBOL -> true
         else -> false
+    }
+
+    /** One script word as the take read it — iOS `ScriptMark`. [heard] is
+     *  what the mic wrote for a word read differently, null otherwise. */
+    data class ScriptMark(val word: String, val op: ShadowScore.DiffOp, val heard: String?)
+
+    /**
+     * The script, paragraph by paragraph, every word marked against the take
+     * — iOS `SpeechAnalyzer.marks`. Null when the diff's tokens can't be laid
+     * back onto the script's words; the page shows the old list then.
+     */
+    fun marks(script: String, transcript: String, language: String): List<List<ScriptMark>>? {
+        val spoken = removingFillers(transcript, language, script)
+        val steps = ShadowScore.analyze(script, spoken, language).steps
+        val paragraphs = script.split('\n').map { WordSplitter.timingWords(it, language) }
+        val words = paragraphs.flatten()
+        val spans = ShadowScore.tokenSpans(words, language)
+        val ops = ShadowScore.targetOps(steps)
+        if (words.isEmpty() || (spans.lastOrNull()?.let { it.last + 1 } ?: 0) != ops.size) return null
+
+        val wordOfSlot = ArrayList<Int>()
+        spans.forEachIndexed { i, span -> repeat(span.count()) { wordOfSlot.add(i) } }
+        val heard = List(words.size) { mutableListOf<String>() }
+        var next = 0
+        for (step in steps) {
+            if (step.op == ShadowScore.DiffOp.INS) {
+                if (next > 0 && next < wordOfSlot.size && wordOfSlot[next - 1] == wordOfSlot[next]) {
+                    step.learner?.let { heard[wordOfSlot[next]].add(it) }
+                }
+                continue
+            }
+            if (step.op != ShadowScore.DiffOp.DEL) step.learner?.let { heard[wordOfSlot[next]].add(it) }
+            next++
+        }
+        val joiner = if (LanguageCatalog.tokenStyle(language) == LanguageCatalog.TokenStyle.WORD) " " else ""
+        var w = 0
+        return paragraphs.map { paragraph ->
+            paragraph.map { word ->
+                val slice = spans[w].map { ops[it] }
+                val op = when {
+                    slice.all { it == ShadowScore.DiffOp.MATCH } -> ShadowScore.DiffOp.MATCH
+                    slice.all { it == ShadowScore.DiffOp.DEL } -> ShadowScore.DiffOp.DEL
+                    else -> ShadowScore.DiffOp.SUB
+                }
+                ScriptMark(word, op, if (op == ShadowScore.DiffOp.SUB) heard[w].joinToString(joiner) else null)
+                    .also { w++ }
+            }
+        }
     }
 
     /** Runs of script tokens skipped or changed, in script order, at most 12. */
