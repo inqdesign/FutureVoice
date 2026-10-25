@@ -288,6 +288,10 @@ struct DrillView: View {
                     }
                     .accessibilityElement(children: .contain)
                     .accessibilityActions { binAccessibilityActions }
+                    .macDeckKeys(reveal: {
+                        guard !isTopRevealed else { return }
+                        withAnimation(.easeOut(duration: 0.2)) { topCardRevealed = true }
+                    }, file: { apply($0) })
             }
             .padding(.horizontal, 16)
             .background {

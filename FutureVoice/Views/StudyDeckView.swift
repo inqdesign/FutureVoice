@@ -557,6 +557,10 @@ struct StudyDeckView: View {
                 // inside it has spilled past the slab onto the folder chips.
                 .accessibilityIdentifier("studyDeck.card")
                 .accessibilityActions { binAccessibilityActions }
+                .macDeckKeys(reveal: {
+                    guard !revealed else { return }
+                    withAnimation(.easeOut(duration: 0.2)) { revealed = true }
+                }, file: { apply($0) })
                 .task(id: queue.first) {
                     revealed = false
                     await reloadEntry()

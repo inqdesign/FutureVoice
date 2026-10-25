@@ -148,6 +148,7 @@ enum MacWindow {
     @MainActor
     static func configure() {
         #if targetEnvironment(macCatalyst)
+        MacSheets.install()
         for case let scene as UIWindowScene in UIApplication.shared.connectedScenes {
             scene.sizeRestrictions?.minimumSize = minimumSize
             // The tabs sit in the title bar; the app's name beside them is noise.
@@ -193,5 +194,103 @@ enum MacWindow {
             if window.center != center { window.center = center }
         }
         #endif
+    }
+}
+
+#if targetEnvironment(macCatalyst)
+/// Sheets at a phone's size. The Mac idiom's form sheet is small to begin
+/// with, and the window zoom makes it smaller still (~360 × 310 pt at 1.3×),
+/// so a deck or a word card built for a phone was squeezed into a stamp.
+/// Every presentation goes through `present(_:animated:completion:)`, SwiftUI's
+/// `.sheet` included, so one hook marks every sheet; SwiftUI then keeps
+/// writing its own `preferredContentSize`, so the size is answered where it
+/// is READ. Alerts, menus and popovers keep their own styles.
+enum MacSheets {
+    static let width: CGFloat = 480
+    static let maxHeight: CGFloat = 860
+
+    private static var installed = false
+    fileprivate static var sizeKey: UInt8 = 0
+
+    @MainActor
+    static func install() {
+        guard !installed else { return }
+        installed = true
+        swap(#selector(UIViewController.present(_:animated:completion:)),
+             #selector(UIViewController.fv_macPresent(_:animated:completion:)))
+        swap(#selector(getter: UIViewController.preferredContentSize),
+             #selector(getter: UIViewController.fv_macPreferredContentSize))
+    }
+
+    private static func swap(_ a: Selector, _ b: Selector) {
+        guard let original = class_getInstanceMethod(UIViewController.self, a),
+              let replacement = class_getInstanceMethod(UIViewController.self, b) else { return }
+        method_exchangeImplementations(original, replacement)
+    }
+
+    @MainActor
+    static func mark(_ presented: UIViewController, from presenter: UIViewController) {
+        switch presented.modalPresentationStyle {
+        case .formSheet, .pageSheet, .automatic: break
+        default: return
+        }
+        let window = presenter.viewIfLoaded?.window ?? presenter.view.window
+        let height = min(maxHeight, max(480, (window?.bounds.height ?? maxHeight) - 48))
+        presented.modalPresentationStyle = .formSheet
+        objc_setAssociatedObject(presented, &sizeKey, NSValue(cgSize: CGSize(width: width, height: height)),
+                                 .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+    }
+}
+
+extension UIViewController {
+    // Both are swapped with the originals by `MacSheets.install`, so the
+    // calls inside them reach the originals.
+    @objc fileprivate func fv_macPresent(_ presented: UIViewController, animated: Bool,
+                                         completion: (() -> Void)?) {
+        MacSheets.mark(presented, from: self)
+        fv_macPresent(presented, animated: animated, completion: completion)
+    }
+
+    @objc fileprivate var fv_macPreferredContentSize: CGSize {
+        if let size = objc_getAssociatedObject(self, &MacSheets.sizeKey) as? NSValue {
+            return size.cgSizeValue
+        }
+        return self.fv_macPreferredContentSize
+    }
+}
+#endif
+
+/// The review decks' cards are filed by DRAGGING them into a folder, which a
+/// mouse does badly. On the Mac the keyboard does it: Space shows the back of
+/// the card, 1–4 drop it into 10 min · Tomorrow · 3 days · Got it (the
+/// folders' own order). Nothing on the iPhone or iPad.
+private struct MacDeckKeys: ViewModifier {
+    let reveal: () -> Void
+    let file: (DrillBin) -> Void
+
+    func body(content: Content) -> some View {
+        #if targetEnvironment(macCatalyst)
+        content.background {
+            ZStack {
+                Button("") { reveal() }
+                    .keyboardShortcut(.space, modifiers: [])
+                ForEach(Array(DrillBin.allCases.enumerated()), id: \.element) { index, bin in
+                    Button("") { file(bin) }
+                        .keyboardShortcut(KeyEquivalent(Character(String(index + 1))), modifiers: [])
+                }
+            }
+            .opacity(0)
+            .frame(width: 0, height: 0)
+            .accessibilityHidden(true)
+        }
+        #else
+        content
+        #endif
+    }
+}
+
+extension View {
+    func macDeckKeys(reveal: @escaping () -> Void, file: @escaping (DrillBin) -> Void) -> some View {
+        modifier(MacDeckKeys(reveal: reveal, file: file))
     }
 }
