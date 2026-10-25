@@ -6,6 +6,9 @@ import SwiftUI
 /// Practice (the review home: books + dictionaries), and Progress (measured
 /// CEFR + skills + activity).
 struct RootTabView: View {
+    /// Set the first time the public-intro preview opened by itself on Watch.
+    static let introPreviewOfferedKey = "futurevoice.publicIntroPreviewOffered"
+
     /// The onboarding routine builder is over the tabs: the first-run sheets
     /// (age check, Talk's guide, the free minutes) wait until it has gone
     /// into the Activity chip and that chip's hint is closed.
@@ -297,7 +300,13 @@ struct RootTabView: View {
             Analytics.capture("screen_viewed", ["screen": Self.screenName(tab)])
             // Nothing about this learner reaches the pool until they have
             // seen the paragraph a stranger's phone would speak as "them".
-            if tab == .watch, PublicPersonaService.needsIntroDecision(appState.persona, language: appState.targetLanguage) {
+            // Raised by itself ONCE (2026-10-25, founder): a swipe-down left
+            // the decision open, so every visit to Watch raised it again.
+            // Undecided still publishes nothing, and the profile page keeps
+            // Publish for later.
+            if tab == .watch, !UserDefaults.standard.bool(forKey: Self.introPreviewOfferedKey),
+               PublicPersonaService.needsIntroDecision(appState.persona, language: appState.targetLanguage) {
+                UserDefaults.standard.set(true, forKey: Self.introPreviewOfferedKey)
                 showingIntroPreview = true
             }
             offerPageIntro()
