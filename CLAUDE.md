@@ -2963,15 +2963,17 @@ sync container carry over. `./scripts/mac-run.sh` builds and opens it.
 - **Pages sit in a centred column** (`.macPage()` at the app root; View →
   Page Width: Narrow · Medium · Wide · Full width). The tabs are the title
   bar's segmented control on their own; there is no sidebar.
-- **Sheets are sized and closed by one hook** (`MacSheets`, a swizzle of
-  `present` plus the `preferredContentSize` getter — SwiftUI rewrites the
-  size after presenting, so it is answered where it is read): 480 wide, the
-  window's height up to 860, instead of the Mac idiom's ~360 × 310 after the
-  zoom. A phone sheet closes by a swipe and many have no close button (the
-  player had none, so it could not be closed), so on the Mac Esc and a click
-  outside close a sheet under the swipe's own rule — never one that is modal
-  (`interactiveDismissDisabled`) or whose delegate refuses — through the same
-  delegate calls a swipe makes, so SwiftUI's `isPresented` follows.
+- **A sheet on the Mac is its OWN window** (a macOS sheet attached to the
+  app's window), so it does NOT inherit the window's zoom, and macOS
+  swallows every click behind it — a click outside can never close it.
+  `MacSheets` (a swizzle of `present` plus the `preferredContentSize`
+  getter, because SwiftUI rewrites the size after presenting) gives every
+  sheet a phone's size (480 wide, the window's height up to 860, in zoomed
+  points), zooms the sheet's window, and closes it on Esc under the
+  swipe's own rule: never one that is modal (`interactiveDismissDisabled`)
+  or whose delegate refuses, through the delegate calls a swipe makes so
+  SwiftUI's `isPresented` follows. A sheet that is closed by a swipe alone
+  on the phone needs its own Mac button (the player has a Mac-only Done).
 - **The review decks file by keyboard** (`macDeckKeys`): Space flips, 1–4
   drop into 10 min · Tomorrow · 3 days · Got it. Lists scroll by wheel or
   trackpad, like any Mac app; a mouse drag never scrolls — except where

@@ -132,6 +132,7 @@ struct PlayingBars: View {
 /// default, so the page stays visible behind it.
 struct ScenePlayerSheet: View {
     @EnvironmentObject private var appState: AppState
+    @Environment(\.dismiss) private var dismissSheet
     @ObservedObject private var player = PlaylistPlayer.shared
     @State private var tracks: [SceneTrack] = []
     @State private var shows: [NewsShowEpisode] = []
@@ -173,6 +174,14 @@ struct ScenePlayerSheet: View {
                         .disabled(tracks.isEmpty && shows.isEmpty)
                 }
                 ToolbarItem(placement: .topBarTrailing) { PlayerOptionsMenu() }
+                #if targetEnvironment(macCatalyst)
+                // On the phone the player is a half sheet you swipe away, so
+                // it has no close button; a Mac can't swipe. Closing it never
+                // stops what is playing.
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismissSheet() }
+                }
+                #endif
             }
             .navigationDestination(isPresented: $showingList) {
                 // Bindings, not values: a destination already on screen is not

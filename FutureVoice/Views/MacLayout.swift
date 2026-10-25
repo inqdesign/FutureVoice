@@ -238,23 +238,34 @@ enum MacSheets {
         let window = presenter.viewIfLoaded?.window ?? presenter.view.window
         let height = min(maxHeight, max(480, (window?.bounds.height ?? maxHeight) - 48))
         presented.modalPresentationStyle = .formSheet
-        objc_setAssociatedObject(presented, &sizeKey, NSValue(cgSize: CGSize(width: width, height: height)),
+        // The sheet's window is sized in screen points; the page inside it
+        // is laid out after the zoom, so ask for the zoomed size.
+        let zoom = MacLayout.zoom
+        objc_setAssociatedObject(presented, &sizeKey,
+                                 NSValue(cgSize: CGSize(width: width * zoom, height: height * zoom)),
                                  .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         return true
     }
 
-    /// On the phone a sheet is closed by swiping it down, so many have no
-    /// close button — and a Mac can't swipe, so the player and others were a
-    /// trap. Esc and a click outside the sheet close it instead, under the
-    /// swipe's own rule: never a sheet that is modal (`interactiveDismissDisabled`
-    /// sets that, e.g. while recording) or whose delegate says no.
+    /// A sheet on the Mac is its OWN window (a macOS sheet attached to the
+    /// app's window, measured 2026-10-25), so it gets the window's zoom here
+    /// — it doesn't inherit it, and its text came out at the Mac's 13 pt.
+    /// And since macOS swallows clicks behind a sheet, a click outside can't
+    /// close it: Esc does, under the swipe's own rule — never a sheet that is
+    /// modal (`interactiveDismissDisabled` sets that, e.g. while recording) or
+    /// whose delegate says no. On the phone many sheets are closed by a swipe
+    /// alone; a sheet that needs a visible button on the Mac gets one itself
+    /// (the player).
     @MainActor
     static func makeClosable(_ presented: UIViewController) {
         presented.addKeyCommand(UIKeyCommand(input: UIKeyCommand.inputEscape, modifierFlags: [],
                                              action: #selector(UIViewController.fv_macCloseSheet)))
-        guard let container = presented.presentationController?.containerView else { return }
-        let tap = OutsideTap(sheet: presented)
-        container.addGestureRecognizer(tap)
+        guard let window = presented.viewIfLoaded?.window, window.transform == .identity else { return }
+        let zoom = MacLayout.zoom
+        let size = window.frame.size
+        window.transform = CGAffineTransform(scaleX: zoom, y: zoom)
+        window.bounds = CGRect(origin: .zero, size: CGSize(width: size.width / zoom, height: size.height / zoom))
+        window.center = CGPoint(x: size.width / 2, y: size.height / 2)
     }
 
     @MainActor
@@ -271,29 +282,6 @@ enum MacSheets {
         controller.delegate?.presentationControllerWillDismiss?(controller)
         top.dismiss(animated: true) {
             controller.delegate?.presentationControllerDidDismiss?(controller)
-        }
-    }
-
-    /// A click on the dimmed area around a sheet, never inside it.
-    private final class OutsideTap: UITapGestureRecognizer, UIGestureRecognizerDelegate {
-        weak var sheet: UIViewController?
-
-        init(sheet: UIViewController) {
-            self.sheet = sheet
-            super.init(target: nil, action: nil)
-            addTarget(self, action: #selector(fire))
-            delegate = self
-            cancelsTouchesInView = false
-        }
-
-        func gestureRecognizer(_ g: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
-            guard let sheet, let view = sheet.viewIfLoaded, view.window != nil else { return false }
-            return !view.bounds.contains(touch.location(in: view))
-        }
-
-        @objc private func fire() {
-            guard let sheet, sheet.presentedViewController == nil else { return }
-            MainActor.assumeIsolated { MacSheets.close(sheet) }
         }
     }
 }
