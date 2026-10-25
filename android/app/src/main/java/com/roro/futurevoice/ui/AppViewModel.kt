@@ -533,7 +533,7 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
             .putBoolean(com.roro.futurevoice.net.PublicPersonaClient.MANUAL_INTRO_KEY, true).apply()
         val language = _state.value.targetLanguage
         viewModelScope.launch {
-            runCatching { com.roro.futurevoice.net.PublicPersonaClient(auth).withdrawMine(language) }
+            runCatching { com.roro.futurevoice.net.PublicPersonaClient(auth).withdrawMine() }
         }
     }
 

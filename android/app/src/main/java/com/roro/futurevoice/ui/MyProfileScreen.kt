@@ -118,7 +118,7 @@ fun MyProfileScreen(
         isWorking = true
         errorText = null
         scope.launch {
-            runCatching { client.withdrawMine(targetLanguage) }
+            runCatching { client.withdrawMine() }
                 .onSuccess {
                     // Same as the editor's Take down: a deliberate choice the
                     // launch-time mirror must not quietly undo.

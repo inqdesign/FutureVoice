@@ -235,7 +235,7 @@ class PublicPersonaClient(private val auth: AuthRepository) {
         if (intro.length >= MIN_INTRO) {
             runCatching { patchIntro(existing.id, intro) }
         } else {
-            runCatching { withdrawMine(language) }
+            runCatching { withdrawMine() }
         }
     }
 
@@ -305,16 +305,18 @@ class PublicPersonaClient(private val auth: AuthRepository) {
     }
 
     /**
-     * Take the learner's row out of the pool for this language.
+     * Take the learner out of the pool entirely: every language's row (iOS
+     * `withdrawMine`). The pool shows every language, so a row left in the
+     * other one kept them on strangers' maps after "Take down".
      *
      * Learners who already met the persona keep their own past talks — those
      * are ordinary sessions on their own device, and nothing here reaches
      * them.
      */
-    suspend fun withdrawMine(language: String) = withContext(Dispatchers.IO) {
+    suspend fun withdrawMine() = withContext(Dispatchers.IO) {
         val uid = auth.userId ?: return@withContext
         val url = "${Config.supabaseUrl.trimEnd('/')}/rest/v1/public_personas" +
-            "?owner_user_id=eq.$uid&language=eq.$language"
+            "?owner_user_id=eq.$uid"
         val req = Request.Builder().url(url)
             .header("Authorization", "Bearer ${auth.accessToken()}")
             .header("apikey", Config.supabaseAnonKey)
@@ -326,11 +328,16 @@ class PublicPersonaClient(private val auth: AuthRepository) {
         }
     }
 
-    /** The learner's own row for one language, if they have one. */
+    /**
+     * The learner's own row: the one in [language], else their row in any
+     * other language (iOS `fetchMine`). The pool is every language, so a row
+     * in another one IS them on strangers' maps; "not public" only when they
+     * own none.
+     */
     suspend fun fetchMine(language: String): PublicPersona? = withContext(Dispatchers.IO) {
         val uid = auth.userId ?: return@withContext null
         val url = "${Config.supabaseUrl.trimEnd('/')}/rest/v1/public_personas" +
-            "?select=$columns&language=eq.$language&owner_user_id=eq.$uid"
+            "?select=$columns&owner_user_id=eq.$uid"
         val req = Request.Builder().url(url)
             .header("Authorization", "Bearer ${auth.accessToken()}")
             .header("apikey", Config.supabaseAnonKey)
@@ -338,7 +345,8 @@ class PublicPersonaClient(private val auth: AuthRepository) {
         Edge.client.newCall(req).execute().use { resp ->
             val raw = resp.body.string()
             if (resp.code !in 200..299) return@use null
-            Edge.json.decodeFromString(ListSerializer(PublicPersona.serializer()), raw).firstOrNull()
+            val rows = Edge.json.decodeFromString(ListSerializer(PublicPersona.serializer()), raw)
+            rows.firstOrNull { it.language == language } ?: rows.firstOrNull()
         }
     }
 

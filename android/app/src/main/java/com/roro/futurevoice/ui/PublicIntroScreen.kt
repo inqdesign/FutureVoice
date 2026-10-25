@@ -334,7 +334,7 @@ fun PublicIntroScreen(
                 TextButton(onClick = {
                     confirmingWithdraw = false; saving = true
                     scope.launch {
-                        runCatching { client.withdrawMine(targetLanguage) }
+                        runCatching { client.withdrawMine() }
                             .onSuccess {
                                 // Taking it down is as deliberate as
                                 // publishing — stop the auto-sync from
