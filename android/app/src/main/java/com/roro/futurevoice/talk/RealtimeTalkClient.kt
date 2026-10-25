@@ -25,6 +25,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import okhttp3.OkHttpClient
@@ -218,6 +219,12 @@ class RealtimeTalkClient(private val context: Context) {
      *  `onReplyWithdrawn`). Its bubble goes; nothing of it is kept. Fired
      *  INSTEAD of [onReplyCutIn] / [onInterrupted]. */
     @Volatile var onReplyWithdrawn: ((context: String) -> Unit)? = null
+    /** Seconds the gateway just counted toward the bill (`meter`, a running
+     *  total per connection handed on as the step) — what the call clock
+     *  adds, so it matches the ring and the receipt (iOS `onMeter`). */
+    @Volatile var onMeter: ((seconds: Int) -> Unit)? = null
+    /** The last `meter` total of THIS connection; a reconnect starts at 0. */
+    @Volatile private var meterTotal = 0
     /** The gateway ended the call on a wall — "insufficient_credits",
      *  "daily_cap_reached" or "fair_use_limit". */
     @Volatile var onWall: ((code: String) -> Unit)? = null
@@ -449,6 +456,7 @@ class RealtimeTalkClient(private val context: Context) {
         lastErrorCode = null
         replyPCM.reset(); userPCM.reset(); lastTurnPCM = ByteArray(0)
         micBytesSent = 0; warningsThisCall = 0; turnsThisCall = 0
+        meterTotal = 0
         linesStarted = 0; setEchoGate(false)
         manualTurnsOn = manualTurns
         droppingCutLine = false; bargeVoiced = 0.0; bargeQuiet = 0.0
@@ -777,6 +785,14 @@ class RealtimeTalkClient(private val context: Context) {
             }
             "interrupted" -> applyInterrupted(
                 reopened = msg["reopened"]?.jsonPrimitive?.booleanOrNull == true)
+            "meter" -> {
+                val total = msg["seconds"]?.jsonPrimitive?.intOrNull
+                if (total != null && total > meterTotal) {
+                    val step = total - meterTotal
+                    meterTotal = total
+                    onMeter?.invoke(step)
+                }
+            }
             "stats", "rotating" -> Unit   // the gateway reconnects upstream itself
             "warning" -> {
                 // The call SURVIVED something — a retried reply, a dropped

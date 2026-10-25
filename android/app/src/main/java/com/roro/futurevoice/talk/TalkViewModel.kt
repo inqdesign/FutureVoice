@@ -907,6 +907,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             }
         }
         realtime.onInterrupted = { _ -> lastActivityAt = System.currentTimeMillis() }
+        realtime.onMeter = { step -> meter.adoptServerCount(step) }
         realtime.onReplyWithdrawn = { ctx ->
             lastActivityAt = System.currentTimeMillis()
             realtimeReplyTurns.remove(ctx)?.let { id ->

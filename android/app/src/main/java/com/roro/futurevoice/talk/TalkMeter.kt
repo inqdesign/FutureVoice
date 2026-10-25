@@ -91,16 +91,34 @@ class TalkMeter(
     private var sessionKey = ""
     private var language = "en"
 
+    /**
+     * The gateway's own count, once it sends one (`meter`, iOS 2026-10-25).
+     * The clock was counted here on the app's rule while the ring was
+     * rebuilt from what the gateway billed, so the call's clock and the ring
+     * after it disagreed. With a report the clock IS the gateway's number
+     * and the ring is written from it; with none (an older gateway) the
+     * local poll keeps both, as before.
+     */
+    @Volatile private var serverReported = false
+    /** Gateway seconds not yet written to [TalkTimeLog] (negative while the
+     *  gateway catches up with what the local poll wrote). */
+    private var unlogged = 0
+    /** Seconds the local poll wrote to [TalkTimeLog] this call. */
+    private var localLogged = 0
+    /** Billable seconds the local poll counted but hasn't ticked yet. */
+    private var live = 0.0
+    private val lock = Any()
+
     fun start(sessionId: String, language: String) {
         stop()
         isRunning = true
         billedSeconds = 0L
         sessionKey = sessionId
         this.language = language.lowercase()
+        synchronized(lock) { serverReported = false; unlogged = 0; localLogged = 0; live = 0.0 }
         job = scope.launch {
             // Preflight before the first sleep — see class comment.
             tick(seconds = 1, label = "pre")
-            var live = 0.0            // billable seconds not yet sent
             var i = 0
             var lastPoll = System.currentTimeMillis()
             while (isActive) {
@@ -109,11 +127,16 @@ class TalkMeter(
                 val now = System.currentTimeMillis()
                 val elapsed = minOf((now - lastPoll) / 1000.0, MAX_SECONDS_PER_POLL)
                 lastPoll = now
+                // The gateway's count has taken over — see [serverReported].
+                if (serverReported) continue
                 if (!(isBillable?.invoke() ?: true)) continue
-                live += elapsed
-                billedSeconds += elapsed.toLong()
-                if (live < TICK_SECONDS) continue
-                live -= TICK_SECONDS
+                val due = synchronized(lock) {
+                    if (serverReported) return@synchronized false
+                    live += elapsed
+                    billedSeconds += elapsed.toLong()
+                    if (live < TICK_SECONDS) false else { live -= TICK_SECONDS; true }
+                }
+                if (!due) continue
                 tick(seconds = TICK_SECONDS, label = i.toString())
                 i += 1
             }
@@ -123,7 +146,42 @@ class TalkMeter(
     fun stop() {
         job?.cancel()
         job = null
+        // The last part-tick of the call. It went unwritten, so the ring read
+        // up to 29 s less than the clock. Only on the server-metered path:
+        // the gateway bills its own tail, while on the classic path these
+        // seconds were never billed and the ledger won't have them.
+        if (isRunning && serverMetered) synchronized(lock) {
+            if (serverReported) logServerSeconds(flushAll = true)
+            else if (live >= 1) appContext?.let { TalkTimeLog.add(it, live.toInt(), language) }
+            live = 0.0
+        }
         isRunning = false
+    }
+
+    /** Seconds the gateway just counted ([RealtimeTalkClient.onMeter]). The
+     *  clock adds them, and the ring is written from them every
+     *  [TICK_SECONDS], plus the rest at [stop]. */
+    fun adoptServerCount(step: Int) = synchronized(lock) {
+        if (!serverMetered || job == null || step <= 0) return@synchronized
+        if (!serverReported) {
+            // From here the gateway's count is the call's. The clock restarts
+            // from what the gateway counted (its first report is usually the
+            // first answer, credited at its commit), and a 30 s tick the poll
+            // already wrote to the ring is taken out of what the gateway adds.
+            serverReported = true
+            billedSeconds = 0L
+            unlogged = -localLogged
+            live = 0.0
+        }
+        billedSeconds += step
+        unlogged += step
+        logServerSeconds(flushAll = false)
+    }
+
+    private fun logServerSeconds(flushAll: Boolean) {
+        if (unlogged <= 0 || (!flushAll && unlogged < TICK_SECONDS)) return
+        appContext?.let { TalkTimeLog.add(it, unlogged, language) }
+        unlogged = 0
     }
 
     @Serializable
@@ -155,7 +213,12 @@ class TalkMeter(
         if (serverMetered) {
             // Already charged upstream — record them locally and stop there,
             // or the learner pays twice for one second of talking.
-            if (countsAsTalk) appContext?.let { TalkTimeLog.add(it, seconds, language) }
+            synchronized(lock) {
+                if (countsAsTalk && !serverReported) {
+                    appContext?.let { TalkTimeLog.add(it, seconds, language) }
+                    localLogged += seconds
+                }
+            }
             return
         }
         val request = try {
