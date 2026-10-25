@@ -807,7 +807,10 @@ struct ConversationView: View {
            realtime.state == .hearing, !realtime.partial.isEmpty {
             learnerStartedThisCall = true
         }
-        guard learnerSpokeThisCall || (RealtimeMode.isEnabled && learnerStartedThisCall)
+        // Tutor mode counts from the start (founder, 2026-10-25): the tutor
+        // talks first and sets up the lesson, and that is the lesson.
+        guard tutorThisCall || learnerSpokeThisCall
+                || (RealtimeMode.isEnabled && learnerStartedThisCall)
         else { return false }
         return somethingIsHappening()
     }
@@ -1079,6 +1082,7 @@ struct ConversationView: View {
                 if on { tutorWasOn = true }
                 // The classic path reads `tutorThisCall` at its next turn.
                 guard RealtimeMode.isEnabled, phoneCallActive else { return }
+                realtime.setMeterFromStart(on)
                 realtime.setSystem(systemPrompt() + Self.realtimeStyleRules)
                 if on, tutorLesson == nil {
                     realtime.nudge("Tutor mode was just turned on. Ask them, in one short question, what they want to be able to say today — they can also pick a topic from the button on their screen.")
@@ -1402,7 +1406,7 @@ struct ConversationView: View {
                              // the learner's first line (a call opened and left
                              // without a word has no clock, asked 2026-09-02)
                              // and gone once the talk is wrapped up.
-                             callClock: (learnerSpokeThisCall || learnerStartedThisCall)
+                             callClock: (tutorThisCall || learnerSpokeThisCall || learnerStartedThisCall)
                                  && (phoneCallActive || !didSaveCurrentSession)
                                  ? meter.clock : nil)
                 .environmentObject(appState)

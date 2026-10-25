@@ -68,7 +68,10 @@ export class TalkBilling {
       if (this.isBillable()) {
         this.billable += 1
         this.counted += 1
-        this.onCount(this.counted)
+        // Whole seconds: the first answer's credit is fractional, and the
+        // app read a fractional total as no report at all — the clock froze
+        // at the credit (0:05) for the rest of the call (2026-10-25).
+        this.onCount(Math.floor(this.counted))
       }
       sinceFlush += 1000
       if (sinceFlush >= TalkBilling.flushEveryMs) {

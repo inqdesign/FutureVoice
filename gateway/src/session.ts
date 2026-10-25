@@ -355,6 +355,8 @@ export class CallSession implements DurableObject {
    *  (the hold, the merge, speculation, the re-read) runs as usual; only the
    *  hold's clock is never armed. */
   private manualTurns = false
+  /** Tutor mode: counted from the start (`StartMessage.meterFromStart`). */
+  private meterFromStart = false
   /** A `send` is waiting for the transcriber to finalize the last words. */
   private sendRequested = false
   private sendTimer: number | null = null
@@ -702,6 +704,7 @@ export class CallSession implements DurableObject {
         if (this.replyEngine) this.replyEngine.setSystem(msg.system)
         else this.pendingSystem = msg.system
       }
+      if (typeof msg.meterFromStart === "boolean") this.meterFromStart = msg.meterFromStart
       if (typeof msg.manualTurns === "boolean" && msg.manualTurns !== this.manualTurns) {
         this.manualTurns = msg.manualTurns
         if (this.manualTurns) {
@@ -764,7 +767,9 @@ export class CallSession implements DurableObject {
         // and the ring showed that wait back as talk time (2026-09-07). A
         // committed turn is the witness, never an interim: a room's noise
         // makes interims all day.
-        () => this.learnerSpoke
+        // Tutor mode is the exception: the tutor speaks first and that is
+        // the lesson, so it counts from the start (founder, 2026-10-25).
+        () => (this.learnerSpoke || this.meterFromStart)
           && this.clientPresent(CallSession.billableClientGapMs)
           && (this.activeContext !== null
             || Date.now() - this.lastSpokeAt < 2000
@@ -825,6 +830,7 @@ export class CallSession implements DurableObject {
     this.history = msg.history ? [...msg.history] : []
     this.language = msg.language || "en"
     this.manualTurns = msg.manualTurns === true
+    this.meterFromStart = msg.meterFromStart === true
     const base = (code: string) => code.toLowerCase().split("-")[0]
     this.native = msg.native && base(msg.native) !== base(this.language) ? msg.native : null
     this.replyEngine = new ReplyEngine({
