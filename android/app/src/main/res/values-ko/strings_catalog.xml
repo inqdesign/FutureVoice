@@ -281,6 +281,7 @@
     <string name="basic_simple_everyday_exchanges">"기초 — 짧은 일상 대화 정도"</string>
     <string name="be_the_first">"첫 도전자 되기"</string>
     <string name="becoming_you">"나를 익히는 중"</string>
+    <string name="before_your_first_call">"첫 대화 전에"</string>
     <!-- "Before your free trial turns into your plan, Apple asks you to confirm it once more. Without it, the plan doesn't start." -->
     <string name="before_your_free_trial_turns_into_your_plan_apple_asks_you_t_c4e22b">"체험이 끝나기 전에 Apple이 결제 동의를 한 번 더 받아요. 이 확인이 없으면 요금제가 시작되지 않고 그대로 끝나요."</string>
     <!-- 'Before your next renewal, Apple asks you to confirm it once more. Without it, the plan ends at the end of this period.' -->
@@ -305,6 +306,7 @@
     <string name="books_finished">"끝낸 책"</string>
     <string name="both_at_once">"겹쳐 듣기"</string>
     <string name="both_refill_every_billing_period">"둘 다 결제 주기마다 새로 채워져요."</string>
+    <string name="both_sides">"양쪽 대사"</string>
     <string name="breaths_at_sentence_ends">"문장 끝에서 쉰 횟수"</string>
     <string name="breaths_at_sentence_ends_long_stops_lld">"문장 끝에서 쉰 횟수 · 오래 멈춤 %d번"</string>
     <string name="brief">"브리프"</string>
@@ -828,8 +830,8 @@
     <!-- 'Finished books. They keep their progress — unarchive anytime.' -->
     <string name="finished_books_they_keep_their_progress_unarchive_anytime">"끝낸 책이에요. 진행 상황은 그대로 남고, 언제든 다시 꺼낼 수 있어요."</string>
     <string name="finishing_puts_you_in_line_it_doesn_t_seat_you">"다 채우면 대기 줄에 서요. 바로 앉는 건 아니에요."</string>
-    <string name="first_test_done">"첫 테스트를 마쳤어요"</string>
     <string name="first_charge">"첫 결제 %s"</string>
+    <string name="first_test_done">"첫 테스트를 마쳤어요"</string>
     <string name="fix_the_sentence">"문장 고치기"</string>
     <string name="fluency">"유창성"</string>
     <string name="fluency_pace">"유창성과 속도"</string>
@@ -1513,6 +1515,7 @@
     <string name="my_direct_manager">"직속 상사"</string>
     <string name="my_expressions_lld">"내 표현 · %d"</string>
     <string name="my_kid_s_teacher">"아이 선생님"</string>
+    <string name="my_lines">"내 대사"</string>
     <string name="my_own_topic">"내가 정한 주제로"</string>
     <string name="my_recording">"내가 녹음한 목소리"</string>
     <string name="my_routine">"나의 루틴"</string>
@@ -1782,6 +1785,7 @@
     <string name="parenting">"육아"</string>
     <string name="parenting_tips">"육아 팁"</string>
     <string name="partner">"연인"</string>
+    <string name="partner_voice">"상대 목소리"</string>
     <string name="past_attempts">"지난 시도"</string>
     <string name="past_challenges">"지난 챌린지"</string>
     <string name="past_dialogues">"지난 대화"</string>
@@ -1832,6 +1836,8 @@
     <!-- 'Pick a time and the phone rings. Miss it, and a voicemail with a question waits for you.' -->
     <string name="pick_a_time_and_the_phone_rings_miss_it_and_a_voicemail_with_b83e21">"정해둔 시간에 유창해진 내가 전화를 걸어요. 못 받으면 질문이 담긴 음성 메시지가 기다려요."</string>
     <string name="pick_a_time_you_usually_have_ten_quiet_minutes">"보통 10분쯤 조용히 낼 수 있는 때로 골라 줘."</string>
+    <!-- 'Pick a topic and your future self teaches it step by step, until you can say it without a mistake.' -->
+    <string name="pick_a_topic_and_your_future_self_teaches_it_step_by_step_un_ad6699">"주제를 고르면 유창해진 내가 하나씩 가르쳐 줘요. 틀리지 않고 말할 수 있을 때까지요."</string>
     <!-- 'Pick a type, like an explainer, a person or the news, then a topic and a length. The facts are checked and the words fit your level. Plus and Max.' -->
     <string name="pick_a_type_like_an_explainer_a_person_or_the_news_then_a_to_08bd90">"설명, 인물, 뉴스 같은 종류와 주제, 길이만 고르면 내 수준에 맞춰 원고를 써 줘요. 사실관계도 확인해요."</string>
     <string name="pick_an_area_to_go_one_step_deeper">"한 단계 더 들어갈 영역을 고르세요."</string>
@@ -1953,8 +1959,6 @@
     <string name="read">"%s에 읽음"</string>
     <string name="read_again">"다시 읽기"</string>
     <string name="read_both_sides">"양쪽 대사 모두 읽기"</string>
-    <string name="my_lines">"내 대사"</string>
-    <string name="both_sides">"양쪽 대사"</string>
     <!-- 'Read from the structures you actually build and from verified grammar slips per 100 spoken words — the lower of the two.' -->
     <string name="read_from_the_structures_you_actually_build_and_from_verifie_7599b1">"실제로 만드는 문장 구조와 말한 100단어당 확인된 문법 실수로 읽어요 — 둘 중 낮은 쪽이에요."</string>
     <!-- 'Read from your real talks — vocabulary, grammar, fluency and expression together.' -->
@@ -2310,6 +2314,7 @@
     <string name="sign_out_dc1649">"로그아웃"</string>
     <string name="sign_out_go_back">"로그아웃하고 돌아가기"</string>
     <string name="silent">"(무음)"</string>
+    <string name="similar_voice">"비슷한 목소리"</string>
     <string name="simple_words_and_phrases_about_immediate_familiar_things">"가까이 있는 익숙한 것들에 대해 간단한 단어와 표현으로."</string>
     <string name="since">"%s부터"</string>
     <string name="situation">"상황"</string>
@@ -3290,6 +3295,7 @@
     <string name="you_can_change_both_later_in_settings">"둘 다 나중에 설정에서 바꿀 수 있어요."</string>
     <!-- 'You can change or take this down any time in Me → Find people.' -->
     <string name="you_can_change_or_take_this_down_any_time_in_me_find_people">"언제든 나 → 사람 찾기에서 고치거나 내릴 수 있어요."</string>
+    <string name="you_can_change_these_any_time_during_a_call">"대화 중에도 언제든 바꿀 수 있어요."</string>
     <string name="you_can_change_your_voice_again_from">"%s부터 다시 목소리를 바꿀 수 있어요."</string>
     <!-- 'You can change your voice once every 30 days, and this uses it.' -->
     <string name="you_can_change_your_voice_once_every_30_days_and_this_uses_i_cf4963">"목소리는 30일에 한 번 바꿀 수 있어요. 지금 바꾸면 그 한 번을 써요."</string>

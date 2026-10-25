@@ -221,17 +221,20 @@ fun VoiceComparisonSheet(
             FormSection(header = null, footer = if (canChange)
                 stringResource(R.string.the_voice_you_have_now_is_only_replaced_if_you_keep_the_new_2247d6)
                 else com.roro.futurevoice.data.VoiceChangeStatus.againLine(context, changeStatus?.nextAt)) {
-                MeRow(Icons.Filled.Check, stringResource(R.string.it_s_me_keep_it), kind = MeRowKind.ACTION,
-                    onClick = { stopAll(); onDismiss() })
-                GroupedRowDivider()
+                // One exit only (iOS 2026-10-24, founder): keeping the voice
+                // is what Done already does.
                 // Dismiss first: the caller walks to the record step, and a
                 // sheet still up over that transition is a stale comparison.
                 // A re-record is the learner's one change for 30 days; with
                 // none left the button would lead to a minute of reading and
                 // a refusal (iOS 2026-10-09).
-                MeRow(Icons.Filled.Mic, stringResource(R.string.not_me_record_again),
+                MeRow(Icons.Filled.Mic, stringResource(R.string.record_again),
                     kind = MeRowKind.DESTRUCTIVE_LABEL, enabled = canChange,
-                    onClick = { stopAll(); onDismiss(); onRerecord() })
+                    onClick = {
+                        stopAll()
+                        com.roro.futurevoice.core.Analytics.capture("voice_compare_rerecord")
+                        onDismiss(); onRerecord()
+                    })
             }
         }
     }

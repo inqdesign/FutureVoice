@@ -281,6 +281,7 @@
     <string name="basic_simple_everyday_exchanges">"Basic — simple, everyday exchanges"</string>
     <string name="be_the_first">"Be the first"</string>
     <string name="becoming_you">"Becoming you"</string>
+    <string name="before_your_first_call">"Before your first call"</string>
     <!-- "Before your free trial turns into your plan, Apple asks you to confirm it once more. Without it, the plan doesn't start." -->
     <string name="before_your_free_trial_turns_into_your_plan_apple_asks_you_t_c4e22b">"Before your free trial turns into your plan, Apple asks you to confirm it once more. Without it, the plan doesn't start."</string>
     <!-- 'Before your next renewal, Apple asks you to confirm it once more. Without it, the plan ends at the end of this period.' -->
@@ -305,6 +306,7 @@
     <string name="books_finished">"books finished"</string>
     <string name="both_at_once">"Both at once"</string>
     <string name="both_refill_every_billing_period">"Both refill every billing period."</string>
+    <string name="both_sides">"Both sides"</string>
     <string name="breaths_at_sentence_ends">"Breaths at sentence ends"</string>
     <string name="breaths_at_sentence_ends_long_stops_lld">"Breaths at sentence ends · long stops: %d"</string>
     <string name="brief">"Brief"</string>
@@ -829,8 +831,8 @@
     <!-- 'Finished books. They keep their progress — unarchive anytime.' -->
     <string name="finished_books_they_keep_their_progress_unarchive_anytime">"Finished books. They keep their progress — unarchive anytime."</string>
     <string name="finishing_puts_you_in_line_it_doesn_t_seat_you">"Finishing puts you in line — it doesn't seat you."</string>
-    <string name="first_test_done">"First test done"</string>
     <string name="first_charge">"First charge %s"</string>
+    <string name="first_test_done">"First test done"</string>
     <string name="fix_the_sentence">"Fix the sentence"</string>
     <string name="fluency">"Fluency"</string>
     <string name="fluency_pace">"Fluency &amp; pace"</string>
@@ -1515,6 +1517,7 @@
     <string name="my_direct_manager">"My direct manager"</string>
     <string name="my_expressions_lld">"My expressions · %d"</string>
     <string name="my_kid_s_teacher">"My kid's teacher"</string>
+    <string name="my_lines">"My lines"</string>
     <string name="my_own_topic">"My own topic"</string>
     <string name="my_recording">"My recording"</string>
     <string name="my_routine">"My routine"</string>
@@ -1784,6 +1787,7 @@
     <string name="parenting">"parenting"</string>
     <string name="parenting_tips">"Parenting tips"</string>
     <string name="partner">"Partner"</string>
+    <string name="partner_voice">"Partner voice"</string>
     <string name="past_attempts">"Past attempts"</string>
     <string name="past_challenges">"Past challenges"</string>
     <string name="past_dialogues">"Past dialogues"</string>
@@ -1834,6 +1838,8 @@
     <!-- 'Pick a time and the phone rings. Miss it, and a voicemail with a question waits for you.' -->
     <string name="pick_a_time_and_the_phone_rings_miss_it_and_a_voicemail_with_b83e21">"Pick a time and the phone rings. Miss it, and a voicemail with a question waits for you."</string>
     <string name="pick_a_time_you_usually_have_ten_quiet_minutes">"Pick a time you usually have ten quiet minutes."</string>
+    <!-- 'Pick a topic and your future self teaches it step by step, until you can say it without a mistake.' -->
+    <string name="pick_a_topic_and_your_future_self_teaches_it_step_by_step_un_ad6699">"Pick a topic and your future self teaches it step by step, until you can say it without a mistake."</string>
     <!-- 'Pick a type, like an explainer, a person or the news, then a topic and a length. The facts are checked and the words fit your level. Plus and Max.' -->
     <string name="pick_a_type_like_an_explainer_a_person_or_the_news_then_a_to_08bd90">"Pick a type, like an explainer, a person or the news, then a topic and a length. The facts are checked and the words fit your level. Plus and Max."</string>
     <string name="pick_an_area_to_go_one_step_deeper">"Pick an area to go one step deeper."</string>
@@ -1955,8 +1961,6 @@
     <string name="read">"Read %s"</string>
     <string name="read_again">"Read again"</string>
     <string name="read_both_sides">"Read both sides"</string>
-    <string name="my_lines">"My lines"</string>
-    <string name="both_sides">"Both sides"</string>
     <!-- 'Read from the structures you actually build and from verified grammar slips per 100 spoken words — the lower of the two.' -->
     <string name="read_from_the_structures_you_actually_build_and_from_verifie_7599b1">"Read from the structures you actually build and from verified grammar slips per 100 spoken words — the lower of the two."</string>
     <!-- 'Read from your real talks — vocabulary, grammar, fluency and expression together.' -->
@@ -2313,6 +2317,7 @@
     <string name="sign_out_dc1649">"Sign out"</string>
     <string name="sign_out_go_back">"Sign out &amp; go back"</string>
     <string name="silent">"(silent)"</string>
+    <string name="similar_voice">"Similar voice"</string>
     <string name="simple_words_and_phrases_about_immediate_familiar_things">"Simple words and phrases about immediate, familiar things."</string>
     <string name="since">"Since %s"</string>
     <string name="situation">"Situation"</string>
@@ -3293,6 +3298,7 @@
     <string name="you_can_change_both_later_in_settings">"You can change both later in settings."</string>
     <!-- 'You can change or take this down any time in Me → Find people.' -->
     <string name="you_can_change_or_take_this_down_any_time_in_me_find_people">"You can change or take this down any time in Me → Find people."</string>
+    <string name="you_can_change_these_any_time_during_a_call">"You can change these any time during a call."</string>
     <string name="you_can_change_your_voice_again_from">"You can change your voice again from %s."</string>
     <!-- 'You can change your voice once every 30 days, and this uses it.' -->
     <string name="you_can_change_your_voice_once_every_30_days_and_this_uses_i_cf4963">"You can change your voice once every 30 days, and this uses it."</string>

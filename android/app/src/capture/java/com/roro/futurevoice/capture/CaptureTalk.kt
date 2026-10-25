@@ -134,6 +134,7 @@ object CaptureTalk {
         "call-coach" to { ctx -> CallCoach(ctx) },
         "first-call-check" to { ctx -> FirstCallCheckShot(ctx, hard = false) },
         "first-call-check-hard" to { ctx -> FirstCallCheckShot(ctx, hard = true) },
+        "first-call-setup" to { ctx -> FirstCallSetupShot(ctx) },
         "call-feed-fade" to { ctx -> CallFeedFade(ctx) },
         "call-goal-sheet" to { ctx -> CallGoalSheet(ctx) },
         "call-focus" to { ctx -> CallFocus(ctx, sheet = false) },
@@ -407,6 +408,20 @@ object CaptureTalk {
             goalsUsed = setOf("next"),
             titleRes = R.string.lets_talk,
         ), seed = { com.roro.futurevoice.talk.CoachMode.setChoice(context, true) })
+    }
+
+    /** iOS `first-call-setup`: the before-first-call sheet, on A2. */
+    @Composable
+    private fun FirstCallSetupShot(context: Context) {
+        var state by remember { mutableStateOf<AppState?>(null) }
+        Seeded(work = { state = appState(context) }) {
+            state?.let { s ->
+                com.roro.futurevoice.ui.FirstCallSetupSheet(
+                    targetLanguage = s.targetLanguage,
+                    currentLevel = com.roro.futurevoice.data.CefrLevel.A2,
+                    onDismiss = {})
+            }
+        }
     }
 
     /** iOS `first-call-check[-hard]`: the after-first-call sheet, on A2. */

@@ -281,6 +281,7 @@
     <string name="basic_simple_everyday_exchanges">"基礎 · 簡短的日常對話"</string>
     <string name="be_the_first">"搶先挑戰"</string>
     <string name="becoming_you">"正在變成你"</string>
+    <string name="before_your_first_call">"第一次對話之前"</string>
     <!-- "Before your free trial turns into your plan, Apple asks you to confirm it once more. Without it, the plan doesn't start." -->
     <string name="before_your_free_trial_turns_into_your_plan_apple_asks_you_t_c4e22b">"免費試用轉為方案之前，Apple 會再請你確認一次。沒有確認的話，方案不會開始。"</string>
     <!-- 'Before your next renewal, Apple asks you to confirm it once more. Without it, the plan ends at the end of this period.' -->
@@ -305,6 +306,7 @@
     <string name="books_finished">"讀完的複習本"</string>
     <string name="both_at_once">"疊在一起聽"</string>
     <string name="both_refill_every_billing_period">"兩者每個帳單週期都會重新補滿。"</string>
+    <string name="both_sides">"兩邊的台詞"</string>
     <string name="breaths_at_sentence_ends">"在句尾停頓的次數"</string>
     <string name="breaths_at_sentence_ends_long_stops_lld">"句尾停頓，以及 %d 次卡住太久"</string>
     <string name="brief">"摘要"</string>
@@ -828,8 +830,8 @@
     <!-- 'Finished books. They keep their progress — unarchive anytime.' -->
     <string name="finished_books_they_keep_their_progress_unarchive_anytime">"讀完的複習本。進度都會保留，隨時可以取消封存。"</string>
     <string name="finishing_puts_you_in_line_it_doesn_t_seat_you">"達成後會排進隊伍，不是馬上有席位。"</string>
-    <string name="first_test_done">"完成第一次測驗"</string>
     <string name="first_charge">"首次扣款 %s"</string>
+    <string name="first_test_done">"完成第一次測驗"</string>
     <string name="fix_the_sentence">"改正句子"</string>
     <string name="fluency">"流利度"</string>
     <string name="fluency_pace">"流暢度與節奏"</string>
@@ -1513,6 +1515,7 @@
     <string name="my_direct_manager">"我的直屬主管"</string>
     <string name="my_expressions_lld">"我的用語 · %d"</string>
     <string name="my_kid_s_teacher">"孩子的老師"</string>
+    <string name="my_lines">"我的台詞"</string>
     <string name="my_own_topic">"聊我自己的話題"</string>
     <string name="my_recording">"我錄的聲音"</string>
     <string name="my_routine">"我的作息"</string>
@@ -1782,6 +1785,7 @@
     <string name="parenting">"育兒"</string>
     <string name="parenting_tips">"育兒心得"</string>
     <string name="partner">"伴侶"</string>
+    <string name="partner_voice">"對方的聲音"</string>
     <string name="past_attempts">"過去的嘗試"</string>
     <string name="past_challenges">"已結束的挑戰"</string>
     <string name="past_dialogues">"過去的對話"</string>
@@ -1832,6 +1836,8 @@
     <!-- 'Pick a time and the phone rings. Miss it, and a voicemail with a question waits for you.' -->
     <string name="pick_a_time_and_the_phone_rings_miss_it_and_a_voicemail_with_b83e21">"到了設定的時間，流利的自己會打電話來。沒接到的話，會有一則帶著問題的語音留言等你。"</string>
     <string name="pick_a_time_you_usually_have_ten_quiet_minutes">"選一個你通常能安靜個十分鐘的時間。"</string>
+    <!-- 'Pick a topic and your future self teaches it step by step, until you can say it without a mistake.' -->
+    <string name="pick_a_topic_and_your_future_self_teaches_it_step_by_step_un_ad6699">"選一個話題，流利的自己會一步步教你，直到你能說對為止。"</string>
     <!-- 'Pick a type, like an explainer, a person or the news, then a topic and a length. The facts are checked and the words fit your level. Plus and Max.' -->
     <string name="pick_a_type_like_an_explainer_a_person_or_the_news_then_a_to_08bd90">"選好類型（解說、介紹人物、新聞等）、主題和長度，就會寫出符合你程度的講稿，內容也會先查證過。"</string>
     <string name="pick_an_area_to_go_one_step_deeper">"選一個領域，再往下一層。"</string>
@@ -1953,8 +1959,6 @@
     <string name="read">"%s 已讀"</string>
     <string name="read_again">"重新讀取"</string>
     <string name="read_both_sides">"兩邊的台詞都念"</string>
-    <string name="my_lines">"我的台詞"</string>
-    <string name="both_sides">"兩邊的台詞"</string>
     <!-- 'Read from the structures you actually build and from verified grammar slips per 100 spoken words — the lower of the two.' -->
     <string name="read_from_the_structures_you_actually_build_and_from_verifie_7599b1">"以你實際組成的句子結構，和每說 100 個字中確認到的文法錯誤來讀，取兩者較低的一個。"</string>
     <!-- 'Read from your real talks — vocabulary, grammar, fluency and expression together.' -->
@@ -2310,6 +2314,7 @@
     <string name="sign_out_dc1649">"登出"</string>
     <string name="sign_out_go_back">"登出並返回"</string>
     <string name="silent">"（無聲）"</string>
+    <string name="similar_voice">"相近的聲音"</string>
     <string name="simple_words_and_phrases_about_immediate_familiar_things">"用簡單的單字和用語，談身邊熟悉的事。"</string>
     <string name="since">"%s起"</string>
     <string name="situation">"情境"</string>
@@ -3290,6 +3295,7 @@
     <string name="you_can_change_both_later_in_settings">"兩個之後都可以在設定裡改。"</string>
     <!-- 'You can change or take this down any time in Me → Find people.' -->
     <string name="you_can_change_or_take_this_down_any_time_in_me_find_people">"隨時可以在「我的 → 找人」修改或下架。"</string>
+    <string name="you_can_change_these_any_time_during_a_call">"對話中也能隨時更改。"</string>
     <string name="you_can_change_your_voice_again_from">"%s 起可以再換聲音。"</string>
     <!-- 'You can change your voice once every 30 days, and this uses it.' -->
     <string name="you_can_change_your_voice_once_every_30_days_and_this_uses_i_cf4963">"聲音每 30 天可以換一次，現在換就會用掉這一次。"</string>

@@ -281,6 +281,7 @@
     <string name="basic_simple_everyday_exchanges">"基礎 · 短い日常会話くらい"</string>
     <string name="be_the_first">"一番乗りしよう"</string>
     <string name="becoming_you">"声を覚えている途中"</string>
+    <string name="before_your_first_call">"初めての会話の前に"</string>
     <!-- "Before your free trial turns into your plan, Apple asks you to confirm it once more. Without it, the plan doesn't start." -->
     <string name="before_your_free_trial_turns_into_your_plan_apple_asks_you_t_c4e22b">"無料体験がプランに切り替わる前に、Apple がもう一度だけ確認を求めます。確認しないとプランは始まりません。"</string>
     <!-- 'Before your next renewal, Apple asks you to confirm it once more. Without it, the plan ends at the end of this period.' -->
@@ -305,6 +306,7 @@
     <string name="books_finished">"終えたブック"</string>
     <string name="both_at_once">"重ねて聞く"</string>
     <string name="both_refill_every_billing_period">"どちらも請求期間ごとに補充されます。"</string>
+    <string name="both_sides">"両方のセリフ"</string>
     <string name="breaths_at_sentence_ends">"文末で間を取れた数"</string>
     <string name="breaths_at_sentence_ends_long_stops_lld">"文末の間 · 長い沈黙 %d回"</string>
     <string name="brief">"ブリーフ"</string>
@@ -828,8 +830,8 @@
     <!-- 'Finished books. They keep their progress — unarchive anytime.' -->
     <string name="finished_books_they_keep_their_progress_unarchive_anytime">"終えたブックです。進み具合はそのまま残り、いつでも戻せます。"</string>
     <string name="finishing_puts_you_in_line_it_doesn_t_seat_you">"埋めきると待機列に並びます。すぐに席に着くわけではありません。"</string>
-    <string name="first_test_done">"はじめてのテスト、完了です"</string>
     <string name="first_charge">"初回の決済 %s"</string>
+    <string name="first_test_done">"はじめてのテスト、完了です"</string>
     <string name="fix_the_sentence">"文を直す"</string>
     <string name="fluency">"流暢さ"</string>
     <string name="fluency_pace">"流暢さとテンポ"</string>
@@ -1513,6 +1515,7 @@
     <string name="my_direct_manager">"直属の上司"</string>
     <string name="my_expressions_lld">"自分の表現 · %d"</string>
     <string name="my_kid_s_teacher">"子どもの先生"</string>
+    <string name="my_lines">"自分のセリフ"</string>
     <string name="my_own_topic">"自分で決めた話題で"</string>
     <string name="my_recording">"録音した自分の声"</string>
     <string name="my_routine">"マイルーティン"</string>
@@ -1782,6 +1785,7 @@
     <string name="parenting">"育児"</string>
     <string name="parenting_tips">"子育てのコツ"</string>
     <string name="partner">"パートナー"</string>
+    <string name="partner_voice">"相手の声"</string>
     <string name="past_attempts">"過去の挑戦"</string>
     <string name="past_challenges">"終わったチャレンジ"</string>
     <string name="past_dialogues">"過去の会話"</string>
@@ -1832,6 +1836,8 @@
     <!-- 'Pick a time and the phone rings. Miss it, and a voicemail with a question waits for you.' -->
     <string name="pick_a_time_and_the_phone_rings_miss_it_and_a_voicemail_with_b83e21">"決めた時間に、流暢な自分から電話がかかってきます。出られなかったら、質問入りの留守番メッセージが待っています。"</string>
     <string name="pick_a_time_you_usually_have_ten_quiet_minutes">"いつも10分くらい落ち着ける時間を選んでね。"</string>
+    <!-- 'Pick a topic and your future self teaches it step by step, until you can say it without a mistake.' -->
+    <string name="pick_a_topic_and_your_future_self_teaches_it_step_by_step_un_ad6699">"テーマを選ぶと、流暢な自分が一つずつ教えてくれます。間違えずに言えるようになるまで。"</string>
     <!-- 'Pick a type, like an explainer, a person or the news, then a topic and a length. The facts are checked and the words fit your level. Plus and Max.' -->
     <string name="pick_a_type_like_an_explainer_a_person_or_the_news_then_a_to_08bd90">"解説、人物紹介、ニュースなどの種類とテーマ、長さを選ぶと、今のレベルに合った原稿を書きます。事実確認も済んでいます。"</string>
     <string name="pick_an_area_to_go_one_step_deeper">"もう一段くわしくする領域を選んでください。"</string>
@@ -1953,8 +1959,6 @@
     <string name="read">"%s に読了"</string>
     <string name="read_again">"もう一度読む"</string>
     <string name="read_both_sides">"両方のセリフを読む"</string>
-    <string name="my_lines">"自分のセリフ"</string>
-    <string name="both_sides">"両方のセリフ"</string>
     <!-- 'Read from the structures you actually build and from verified grammar slips per 100 spoken words — the lower of the two.' -->
     <string name="read_from_the_structures_you_actually_build_and_from_verifie_7599b1">"実際に組み立てている文の構造と、話した100語あたりの確認済み文法ミスから読みます。低いほうを取ります。"</string>
     <!-- 'Read from your real talks — vocabulary, grammar, fluency and expression together.' -->
@@ -2310,6 +2314,7 @@
     <string name="sign_out_dc1649">"ログアウト"</string>
     <string name="sign_out_go_back">"ログアウトして戻る"</string>
     <string name="silent">"（無音）"</string>
+    <string name="similar_voice">"似ている声"</string>
     <string name="simple_words_and_phrases_about_immediate_familiar_things">"身近で慣れたことについて、簡単な単語と表現で。"</string>
     <string name="since">"%sから"</string>
     <string name="situation">"シチュエーション"</string>
@@ -3290,6 +3295,7 @@
     <string name="you_can_change_both_later_in_settings">"どちらもあとで設定で変えられます。"</string>
     <!-- 'You can change or take this down any time in Me → Find people.' -->
     <string name="you_can_change_or_take_this_down_any_time_in_me_find_people">"いつでも マイページ → 人を探す で変更や取り下げができます。"</string>
+    <string name="you_can_change_these_any_time_during_a_call">"会話中でもいつでも変えられます。"</string>
     <string name="you_can_change_your_voice_again_from">"%sから、また声を変えられます。"</string>
     <!-- 'You can change your voice once every 30 days, and this uses it.' -->
     <string name="you_can_change_your_voice_once_every_30_days_and_this_uses_i_cf4963">"声は30日に1回変えられます。今変えると、その1回を使います。"</string>
