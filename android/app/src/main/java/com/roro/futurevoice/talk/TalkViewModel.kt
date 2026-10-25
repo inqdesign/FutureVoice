@@ -833,6 +833,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             history = history,
             native = cfg.nativeLanguage,
             manualTurns = sendToAnswerOn,
+            meterFromStart = tutorThisCall,
         )
         syncCoachSteer()
     }
@@ -1663,6 +1664,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             realtimeSystem = build(on)
             val phase = _state.value.phase
             if (phase != TalkPhase.IDLE && phase != TalkPhase.ENDED) {
+                realtime.setMeterFromStart(on)
                 realtime.setSystem(realtimeSystem)
                 if (on && _state.value.tutorLesson == null) realtime.nudge(TutorNudges.TURNED_ON)
             }
@@ -2132,7 +2134,9 @@ class TalkViewModel(context: Context) : ViewModel() {
     }
 
     private fun isBillableMoment(): Boolean =
-        TalkMeter.isBillable(moment(learnerSpoke = learnerSpokeThisCall))
+        // Tutor mode counts from the start (iOS, 2026-10-25): the tutor
+        // talks first and sets up the lesson, and that is the lesson.
+        TalkMeter.isBillable(moment(learnerSpoke = learnerSpokeThisCall || tutorThisCall))
 
     /** Someone is speaking, being answered or being heard — billing's
      *  predicate without its "not before the first turn" gate. */

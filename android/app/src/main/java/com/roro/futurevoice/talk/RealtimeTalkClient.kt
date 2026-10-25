@@ -25,6 +25,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
@@ -446,6 +447,8 @@ class RealtimeTalkClient(private val context: Context) {
         native: String? = null,
         /** Send-to-answer (`SendToAnswer`): a pause never ends the turn. */
         manualTurns: Boolean = false,
+        /** Tutor mode: counted from the start (iOS `meterFromStart`). */
+        meterFromStart: Boolean = false,
     ) {
         if (state != State.IDLE && state != State.FAILED) return
         synchronized(nudgeLock) { startSent = false; heldNudges.clear() }
@@ -476,6 +479,9 @@ class RealtimeTalkClient(private val context: Context) {
             native?.takeIf { it.isNotBlank() }?.let { put("native", it) }
             // Send-to-answer: an older gateway ignores it and ends turns by pauses.
             if (manualTurns) put("manualTurns", true)
+            // Tutor mode is counted from the start. An older gateway counts
+            // from the first turn, as before.
+            if (meterFromStart) put("meterFromStart", true)
             opener?.takeIf { it.isNotBlank() }?.let { put("opener", it) }
             if (history.isNotEmpty()) {
                 put("history", buildJsonArray {
@@ -629,6 +635,12 @@ class RealtimeTalkClient(private val context: Context) {
         if (tornDown) return
         manualTurnsOn = on
         runCatching { socket?.send("""{"type":"set","manualTurns":$on}""") }
+    }
+
+    /** Tutor mode switched mid-call (iOS `setMeterFromStart`). */
+    fun setMeterFromStart(on: Boolean) {
+        if (tornDown) return
+        runCatching { socket?.send("""{"type":"set","meterFromStart":$on}""") }
     }
 
     fun hangUp() {
@@ -813,7 +825,10 @@ class RealtimeTalkClient(private val context: Context) {
             "interrupted" -> applyInterrupted(
                 reopened = msg["reopened"]?.jsonPrimitive?.booleanOrNull == true)
             "meter" -> {
-                val total = msg["seconds"]?.jsonPrimitive?.intOrNull
+                // As a number, floored: a fractional total (the first
+                // answer's credit) read as no report under intOrNull, and the
+                // call clock froze there (iOS, 2026-10-25).
+                val total = msg["seconds"]?.jsonPrimitive?.doubleOrNull?.toInt()
                 if (total != null && total > meterTotal) {
                     val step = total - meterTotal
                     meterTotal = total
