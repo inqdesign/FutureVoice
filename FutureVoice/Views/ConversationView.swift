@@ -1828,7 +1828,11 @@ struct ConversationView: View {
                 // Send-to-answer's reset, mirroring the settings button.
                 // Held in place (hidden, not removed) for the whole call so
                 // nothing shifts when the turn changes hands.
-                if tutorThisCall && RealtimeMode.isEnabled && phoneCallActive && !sendModeActive {
+                // Tutor mode has nothing to do with Send: the topic button
+                // holds this spot and gives way only while words are waiting
+                // to be sent, the one moment clearing them is what's wanted.
+                if tutorThisCall && RealtimeMode.isEnabled && phoneCallActive
+                    && !(sendModeActive && hasHeldWords) {
                     tutorTopicButton
                 } else if sendToAnswer && RealtimeMode.isEnabled && phoneCallActive {
                     clearTurnButton
