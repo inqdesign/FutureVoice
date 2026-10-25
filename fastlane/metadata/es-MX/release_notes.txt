@@ -5,6 +5,7 @@ Novedades
 • Antes de tu primera llamada puedes elegir tu nivel, la velocidad, el modo coach, «Responder con Enviar» y el modo tutor.
 • Al crear tu voz por primera vez, puedes elegir una voz parecida a la tuya en lugar de la tuya.
 • En «¿Por qué aprendes?» puedes elegir todas las respuestas que quieras.
+• La página Voz de los ajustes es más sencilla.
 
 Correcciones
 • Ya no suena ruido antes de la primera frase de una escena.

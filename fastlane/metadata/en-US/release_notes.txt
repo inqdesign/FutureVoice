@@ -5,6 +5,7 @@ New
 • Before your first call, you can set your level, speed, Coach mode, Answer with Send and Tutor mode.
 • When you first make your voice, you can pick a voice that sounds like yours instead of your own.
 • Pick as many answers to "Why are you learning?" as you like.
+• The Voice page in Settings is simpler and easier to scan.
 
 Fixed
 • Noise no longer plays before the first line of a Watch scene.

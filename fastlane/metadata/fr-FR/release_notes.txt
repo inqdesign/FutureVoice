@@ -5,6 +5,7 @@ Nouveautés
 • Avant ton premier appel, tu peux régler ton niveau, la vitesse, le mode coach, « Répondre avec Envoyer » et le mode tuteur.
 • Quand tu crées ta voix pour la première fois, tu peux choisir une voix proche de la tienne au lieu de la tienne.
 • À « Pourquoi tu apprends ? », tu peux choisir autant de réponses que tu veux.
+• La page Voix des réglages est plus simple.
 
 Corrections
 • Plus de bruit avant la première réplique d’une scène.

@@ -5,6 +5,7 @@ Neu
 • Vor deinem ersten Gespräch kannst du Niveau, Tempo, Coach-Modus, „Mit Senden antworten“ und Tutor-Modus einstellen.
 • Wenn du deine Stimme zum ersten Mal erstellst, kannst du statt deiner eigenen eine ähnlich klingende Stimme wählen.
 • Bei „Warum lernst du?“ kannst du so viele Antworten wählen, wie du willst.
+• Die Seite „Stimme“ in den Einstellungen ist übersichtlicher.
 
 Behoben
 • Vor dem ersten Satz einer Szene unter „Ansehen“ ist kein Rauschen mehr zu hören.
