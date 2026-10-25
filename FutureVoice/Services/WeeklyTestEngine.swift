@@ -823,7 +823,9 @@ enum WeeklyTestEngine {
             - answer: the most natural \(targetName) way to say it, at their level, \
               5–12 words. Its words are the tiles, so there must be ONE wording: no \
               optional words, nothing a learner could naturally say differently \
-              with other words.
+              with other words. It means EXACTLY what native says: every idea in \
+              one is in the other ("finally" is not "only", "my situation" is not \
+              "the situation"). Write native from the answer if that is easier.
             - orders: every OTHER order of exactly the same words that is just as \
               correct. Go through each time, place and duration phrase ("for two \
               years", "yesterday", "at midnight") and each adverb, and list the \
@@ -834,7 +836,11 @@ enum WeeklyTestEngine {
               for "I am working here since 2020") that make the sentence WRONG \
               wherever they go, and are not in answer.
             - point: the grammar point in \(nativeName), 2–5 words. tip: one line in \
-              \(nativeName) on when it applies, at most 14 words.
+              \(nativeName), at most 14 words, that a teacher would sign: TRUE, and \
+              showing the pattern as the answer uses it (e.g. "explain + what + to \
+              + whom"). Never a rule you are unsure of. Write it in the polite \
+              everyday register an app speaks in (Korean 해요체, never 합니다체; \
+              Japanese です・ます).
             JSON only.
             """
         let user = list.enumerated().map { i, s in

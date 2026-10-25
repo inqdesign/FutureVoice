@@ -39,10 +39,10 @@ system = f"""You write a short translation quiz for a {t} learner whose own lang
 Return {{"items":[{{"source":n,"point":"...","native":"...","answer":"...","orders":["..."],"decoys":["..."],"tip":"..."}}]}}
 - source: the number of the mistake it is built on.
 - native: the sentence in {n}, casual and spoken, the way they'd say it to a friend, 6–12 words, about ordinary life (these were their topics: {"; ".join(TOPICS)}). NOT their original sentence.
-- answer: the most natural {t} way to say it, at their level, 5–12 words. Its words are the tiles, so there must be ONE wording: no optional words, nothing a learner could naturally say differently with other words.
+- answer: the most natural {t} way to say it, at their level, 5–12 words. Its words are the tiles, so there must be ONE wording: no optional words, nothing a learner could naturally say differently with other words. It means EXACTLY what native says: every idea in one is in the other ("finally" is not "only", "my situation" is not "the situation"). Write native from the answer if that is easier.
 - orders: every OTHER order of exactly the same words that is just as correct. Go through each time, place and duration phrase ("for two years", "yesterday", "at midnight") and each adverb, and list the sentence with it at the front too wherever that is natural — a learner who lays a right order and is marked wrong stops trusting the test. [] only if the order is truly fixed.
 - decoys: 2–3 single words built from their mistake (e.g. "since", "am" for "I am working here since 2020") that make the sentence WRONG wherever they go, and are not in answer.
-- point: the grammar point in {n}, 2–5 words. tip: one line in {n} on when it applies, at most 14 words.
+- point: the grammar point in {n}, 2–5 words. tip: one line in {n}, at most 14 words, that a teacher would sign: TRUE, and showing the pattern as the answer uses it (e.g. "explain + what + to + whom"). Never a rule you are unsure of. Write it in the polite everyday register an app speaks in (Korean 해요체, never 합니다체; Japanese です・ます).
 JSON only."""
 user = "\n".join(f'{i+1}. said "{w}" → should be "{c}" ({why})' for i, (w, c, why) in enumerate(SLIPS))
 
