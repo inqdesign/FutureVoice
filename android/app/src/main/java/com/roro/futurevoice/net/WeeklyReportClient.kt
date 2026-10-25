@@ -60,11 +60,13 @@ object WeeklyReportEngine {
     /**
      * Sum of user-turn durations. Drives every unlock decision AND the
      * progress bar, so the two stay in sync — a bar that fills at a different
-     * rate than the gate opens is worse than no bar.
+     * rate than the gate opens is worse than no bar. Evidence turns only: a
+     * line read off coach mode's suggestion is out of the assessment, so it
+     * can't be what opens it either.
      */
     fun speakingSeconds(sessions: List<Session>): Double =
         sessions.sumOf { s ->
-            s.turns.filter { it.role == TurnRole.USER }.sumOf { it.durationMs } / 1000.0
+            s.turns.filter { it.isEvidence }.sumOf { it.durationMs } / 1000.0
         }
 
     fun unlockState(ended: List<Session>, last: WeeklyReport?,

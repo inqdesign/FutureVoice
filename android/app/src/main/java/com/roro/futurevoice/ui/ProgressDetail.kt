@@ -239,10 +239,7 @@ object ProgressMath {
         val mets = recent.map { ScorecardMetrics.compute(it.turns) }
         fun mean(xs: List<Double>): Double = if (xs.isEmpty()) 0.0 else xs.sum() / xs.size
 
-        val speakSecs = scored.sumOf { s ->
-            s.turns.filter { it.role == com.roro.futurevoice.talk.TurnRole.USER }
-                .sumOf { it.durationMs / 1000.0 }
-        }
+        val speakSecs = com.roro.futurevoice.net.WeeklyReportEngine.speakingSeconds(scored)
 
         // Slip density over the SAME window the latest assessment judged, so
         // the ≈Grammar band and the verdict's rationale cite one number. A
