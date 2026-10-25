@@ -76,9 +76,33 @@ enum PublicPersonaService {
         if let uid = await myUserId() {
             rows.removeAll { $0.owner_user_id?.lowercased() == uid }
         }
+        let active = Set(rows.map(\.id))
+        await MainActor.run { activeRowIds = active }
         rows = onePerPerson(rows, language: language)
         await adoptPhotos(for: rows)
         return rows
+    }
+
+    /// Every active row id from the last successful pool fetch, BEFORE
+    /// `onePerPerson` drops a learner's other-language rows (a met copy may
+    /// carry one of those ids). Nil until a fetch has succeeded.
+    @MainActor static var activeRowIds: Set<String>?
+
+    /// A met LEARNER whose row is no longer in the pool — taken down, or
+    /// removed when they said "Not now" to the preview. Their copy on this
+    /// phone keeps the intro as it was when met, and before the consent
+    /// screen (2026-09-15) that intro was published without asking, so the
+    /// map and Find people kept showing strangers a profile its author had
+    /// withdrawn (Olivia, 2026-10-25). Hidden, never deleted: the talks
+    /// with them stay in Practice. Characters (ours) are left alone, and
+    /// nothing is hidden until a fetch has said what is active.
+    @MainActor
+    static func isWithdrawnLearner(_ c: Counterpart) -> Bool {
+        guard let active = activeRowIds, let rid = c.remoteId,
+              rid != "self", !rid.hasPrefix("builtin:"),
+              (c.personaKind ?? Group.user.rawValue) == Group.user.rawValue
+        else { return false }
+        return !active.contains(rid)
     }
 
     /// Target-language rows first; a user's rows in other languages dropped

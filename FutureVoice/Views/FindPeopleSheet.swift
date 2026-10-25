@@ -62,6 +62,7 @@ struct FindPeopleSheet: View {
     private var metPeople: [Counterpart] {
         appState.counterparts
             .filter { $0.remoteId != nil && ($0.personaKind ?? "user") == group.rawValue }
+            .filter { !PublicPersonaService.isWithdrawnLearner($0) }
             .sorted { $0.updatedAt > $1.updatedAt }
     }
 

@@ -550,7 +550,7 @@ struct WatchTab: View {
     /// the pool. No match leaves the box's person as it was.
     private func pickDockCategory(_ cat: ScenarioComposerSheet.Category) {
         let candidates = appState.counterparts.filter { $0.remoteId == nil }
-            + appState.counterparts.filter { $0.remoteId != nil }
+            + appState.counterparts.filter { $0.remoteId != nil && !PublicPersonaService.isWithdrawnLearner($0) }
             + skyPool.filter { p in !appState.counterparts.contains { $0.remoteId == p.remoteId } }
         guard let match = candidates.first(where: { Self.fits($0, cat, job: $0.remoteId.flatMap { skyJobs[$0] }) })
         else { return }
@@ -727,7 +727,9 @@ struct WatchTab: View {
             practiced[id, default: 0] += 1
             if !s.isMeetingScene && s.isTopic != true { kept.insert(id) }
         }
-        var nodes: [PeopleSky.Node] = appState.counterparts.map { c in
+        var nodes: [PeopleSky.Node] = appState.counterparts
+            .filter { !PublicPersonaService.isWithdrawnLearner($0) }
+            .map { c in
             PeopleSky.Node(id: c.id.uuidString, name: c.name, kind: .person(c),
                            ring: PeopleSky.ring(for: c), isMine: c.remoteId == nil,
                            practiced: practiced[c.id] ?? 0, hasKept: kept.contains(c.id),
@@ -891,7 +893,7 @@ struct WatchTab: View {
     private var rowPeople: [Counterpart] {
         let own = appState.counterparts.filter { $0.remoteId == nil }
         let kept = appState.counterparts.filter {
-            guard let rid = $0.remoteId else { return false }
+            guard let rid = $0.remoteId, !PublicPersonaService.isWithdrawnLearner($0) else { return false }
             return bookmarkedRemoteIds.contains(rid)
         }
         return own + kept
