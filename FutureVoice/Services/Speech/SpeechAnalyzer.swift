@@ -265,6 +265,66 @@ enum SpeechAnalyzer {
         token.lowercased().trimmingCharacters(in: .punctuationCharacters.union(.symbols))
     }
 
+    /// One word of the script as the take read it, for the red-pen script on
+    /// the result page: `heard` is what the mic wrote for a word read
+    /// differently, nil for a word read right or skipped.
+    struct ScriptMark: Hashable {
+        let word: String
+        let op: ShadowEngine.DiffOp
+        let heard: String?
+    }
+
+    /// The script, paragraph by paragraph, every word marked against the
+    /// take — the same diff `analyze` scored. Nil when the diff's tokens
+    /// can't be laid back onto the script's words; the page shows the old
+    /// list then rather than a mark on the wrong word.
+    static func marks(script: String, transcript: String, language: String) -> [[ScriptMark]]? {
+        let spoken = removingFillers(transcript, language: language, keepingThoseIn: script)
+        let steps = ShadowEngine.analyze(target: script, learner: spoken, language: language).steps
+        let paragraphs = script.components(separatedBy: .newlines)
+            .map { ShadowTranscriber.words(of: $0) }
+        let words = paragraphs.flatMap { $0 }
+        let spans = ShadowEngine.tokenSpans(for: words, language: language)
+        let ops = ShadowEngine.targetOps(steps)
+        guard !words.isEmpty, spans.last?.upperBound ?? 0 == ops.count else { return nil }
+
+        // Which word owns each target slot, and what the mic put there —
+        // a substitution's own token, and anything it added INSIDE a word.
+        var wordOfSlot: [Int] = []
+        for (i, span) in spans.enumerated() { wordOfSlot += Array(repeating: i, count: span.count) }
+        var heard = Array(repeating: [String](), count: words.count)
+        var next = 0
+        for step in steps {
+            if step.op == .ins {
+                if next > 0, next < wordOfSlot.count, wordOfSlot[next - 1] == wordOfSlot[next],
+                   let l = step.learner {
+                    heard[wordOfSlot[next]].append(l)
+                }
+                continue
+            }
+            if let l = step.learner, step.op != .del { heard[wordOfSlot[next]].append(l) }
+            next += 1
+        }
+        let joiner = LanguageCatalog.tokenStyle(language) == .word ? " " : ""
+        var out: [[ScriptMark]] = []
+        var w = 0
+        for paragraph in paragraphs {
+            var line: [ScriptMark] = []
+            for word in paragraph {
+                let slice = ops[spans[w]]
+                let op: ShadowEngine.DiffOp
+                if slice.isEmpty || slice.allSatisfy({ $0 == .match }) { op = .match }
+                else if slice.allSatisfy({ $0 == .del }) { op = .del }
+                else { op = .sub }
+                line.append(ScriptMark(word: word, op: op,
+                                       heard: op == .sub ? heard[w].joined(separator: joiner) : nil))
+                w += 1
+            }
+            out.append(line)
+        }
+        return out
+    }
+
     /// Runs of script tokens the reader skipped or changed, joined back into
     /// readable pieces, in script order, at most 12.
     static func missedRuns(_ steps: [ShadowEngine.DiffStep], script: String, language: String) -> [String] {

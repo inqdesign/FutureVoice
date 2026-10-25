@@ -26,6 +26,8 @@ struct SpeechResultView: View {
     @State private var savedToPhotos = false
     @State private var photoError: String?
     @State private var confirmDeleteVideo = false
+    /// The script with the take's misreadings marked on it, by take id.
+    @State private var scriptMarks: (takeId: UUID, marks: [[SpeechAnalyzer.ScriptMark]]?)?
 
     private var take: SpeechTake? {
         let stored = store.takes.first { $0.id == takeId }
@@ -118,7 +120,21 @@ struct SpeechResultView: View {
                           score: m.steadiness)
             }
 
-            if !m.missed.isEmpty {
+            // The mistakes are marked where they are in the script, like a
+            // teacher's red pen (2026-10-25, founder) — a list of loose
+            // words gave no place to find them.
+            if let marks = scriptMarks?.takeId == take.id ? scriptMarks?.marks : nil {
+                Section {
+                    SpeechMarkedScript(paragraphs: marks, language: script.language)
+                        .padding(.vertical, 4)
+                } header: {
+                    Text("Script")
+                } footer: {
+                    if !m.missed.isEmpty {
+                        Text("Red: skipped or read differently. The small red words are what the mic heard.")
+                    }
+                }
+            } else if !m.missed.isEmpty, scriptMarks?.takeId == take.id {
                 Section {
                     Text(m.missed.joined(separator: "  ·  "))
                         .font(.body)
@@ -128,14 +144,26 @@ struct SpeechResultView: View {
                 }
             }
 
-            Section {
-                DisclosureGroup("What the mic heard") {
-                    Text(take.transcript)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .textSelection(.enabled)
+            // The marked script IS what the mic heard; the raw transcript is
+            // shown only when the marks couldn't be laid on the script.
+            if scriptMarks?.takeId == take.id, scriptMarks?.marks == nil {
+                Section {
+                    DisclosureGroup("What the mic heard") {
+                        Text(take.transcript)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
                 }
             }
+        }
+        .task(id: take.id) {
+            // The diff is O(script × transcript), so it runs off the main thread.
+            let body = script.body, transcript = take.transcript, language = script.language
+            let marks = await Task.detached {
+                SpeechAnalyzer.marks(script: body, transcript: transcript, language: language)
+            }.value
+            scriptMarks = (take.id, marks)
         }
         .navigationTitle(Text(take.createdAt, format: .dateTime.month().day().hour().minute()))
         .navigationBarTitleDisplayMode(.inline)
@@ -378,6 +406,55 @@ struct SpeechResultView: View {
 /// bar to bring up first (founder, 2026-10-05: the system player's first tap
 /// only showed its controls). A play glyph shows while it is stopped; at the
 /// end a tap plays it again from the start.
+/// The script as one flowing text, each misread word in red: underlined
+/// with what the mic heard written small beside it, or struck through when
+/// it was skipped.
+private struct SpeechMarkedScript: View {
+    let paragraphs: [[SpeechAnalyzer.ScriptMark]]
+    let language: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(Array(paragraphs.enumerated()), id: \.offset) { _, line in
+                if !line.isEmpty {
+                    Text(attributed(line))
+                        .font(.body)
+                        .lineSpacing(6)
+                        .textSelection(.enabled)
+                }
+            }
+        }
+    }
+
+    private func attributed(_ line: [SpeechAnalyzer.ScriptMark]) -> AttributedString {
+        let gap = LanguageCatalog.writesSpaces(language) ? " " : ""
+        var out = AttributedString()
+        for (i, mark) in line.enumerated() {
+            if i > 0 { out += AttributedString(gap) }
+            var word = AttributedString(mark.word)
+            switch mark.op {
+            case .match, .ins:
+                break
+            case .del:
+                word.foregroundColor = .red
+                word.strikethroughStyle = .single
+            case .sub:
+                word.foregroundColor = .red
+                word.underlineStyle = .single
+            }
+            out += word
+            if mark.op == .sub, let heard = mark.heard, !heard.isEmpty {
+                var note = AttributedString(" " + heard)
+                note.foregroundColor = .red
+                note.font = .caption2.italic()
+                note.baselineOffset = 6
+                out += note
+            }
+        }
+        return out
+    }
+}
+
 private struct SpeechTakeVideo: View {
     let player: AVPlayer?
     @State private var playing = false

@@ -89386,6 +89386,52 @@
         }
       }
     },
+    "Red: skipped or read differently. The small red words are what the mic heard." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rot: ausgelassen oder anders gelesen. Die kleinen roten Wörter hat das Mikro gehört."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En rojo: lo que te saltaste o leíste distinto. Las palabras rojas pequeñas son lo que oyó el micrófono."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En rouge : ce que tu as sauté ou lu autrement. Les petits mots rouges sont ce que le micro a entendu."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "赤い字は、飛ばしたところか違って読んだところです。横の小さな赤い字は、マイクが聞き取った言葉です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "빨간 글자는 빠뜨렸거나 다르게 읽은 곳이에요. 옆의 작은 빨간 글자는 마이크가 들은 말이에요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "红字是漏读或读错的地方，旁边的小红字是麦克风听到的内容。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "紅字是漏讀或讀錯的地方，旁邊的小紅字是麥克風聽到的內容。"
+          }
+        }
+      }
+    },
     "Takes that score %lld or more go on the board." : {
       "localizations" : {
         "de" : {
