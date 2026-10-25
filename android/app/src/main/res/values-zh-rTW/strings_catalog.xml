@@ -1691,6 +1691,7 @@
     <string name="notifications_are_off_so_i_can_t_call_you_yet_turn_them_on_i_52c0b7">"通知已關閉，所以還不能打電話給你。請到設定開啟通知。作息在對話畫面的「活動」裡。"</string>
     <!-- "Notifications are off, so your routine can't remind you. Turn them on in Settings" -->
     <string name="notifications_are_off_so_your_routine_can_t_remind_you_turn_298720">"通知已關閉，作息無法提醒你。請到設定開啟"</string>
+    <string name="now">"現在"</string>
     <!-- "Now and then it asks something you can answer with a word you're studying, and shows you the word. Use it and it gets a check." -->
     <string name="now_and_then_it_asks_something_you_can_answer_with_a_word_yo_33236e">"有時會問一個能用你正在複習的單字回答的問題，並顯示那個單字。用上了就會打勾。"</string>
     <string name="nutrition">"營養"</string>
@@ -2807,6 +2808,7 @@
     <string name="through_friends">"朋友介紹的"</string>
     <string name="time">"時間"</string>
     <string name="time_for_shadowing">"該跟讀了"</string>
+    <string name="time_for_the_weekly_test">"該做每週測驗了"</string>
     <string name="time_for_your_expressions">"該練習用語了"</string>
     <string name="time_for_your_speech">"該練演講了"</string>
     <string name="time_for_your_words">"該練習單字了"</string>
@@ -2818,6 +2820,7 @@
     <string name="time_to_practice">"該練習了"</string>
     <string name="time_to_say_it_again">"該重說一次了"</string>
     <string name="time_to_say_it_back">"留時間跟著說"</string>
+    <string name="time_to_talk">"該對話了"</string>
     <string name="tip">"小提醒"</string>
     <string name="title_optional">"標題（選填）"</string>
     <string name="to_reach">"想達到%s"</string>
@@ -2892,6 +2895,7 @@
     <string name="until_the_day_you_become_me_let_s_do_this_together">"直到你成為我的那一天，\n我們一起努力吧。"</string>
     <string name="until_then_the_regular_price">"到%s為止，之後恢復原價"</string>
     <string name="up_and_down_changes_the_time_sideways_changes_the_day">"上下拖曳改時間，左右拖曳改星期。"</string>
+    <string name="up_next">"接下來"</string>
     <string name="up_to_date">"已是最新 · %s"</string>
     <string name="up_to_lld_of_lld">"升到 %2$d 人中第 %1$d 名"</string>
     <!-- 'Up to three. The chips under Talk follow them in the order you picked, and what you write under one shapes its topics.' -->
@@ -3116,6 +3120,7 @@
     <string name="what_you_usually_talk_about">"平常聊些什麼"</string>
     <string name="what_your_fluent_self_knows_about_you">"流利的自己對你的了解"</string>
     <string name="what_your_plan_holds">"方案裡有什麼"</string>
+    <string name="what_your_routine_has_for_today_and_what_s_up_now">"今天的作息，和現在該做的事。"</string>
     <string name="what_your_voice_is_called_in_the_app">"你的聲音在 App 裡的名字"</string>
     <string name="when_">"什麼時候？"</string>
     <!-- "When a friend joins with your code, you both get %lld minutes — and invite minutes are spent before the month's pool." -->

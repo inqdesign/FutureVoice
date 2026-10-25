@@ -324,6 +324,9 @@ fun RootScreen() {
     var deckSessionId by remember { mutableStateOf<String?>(null) }
     var focusStudyItem by remember { mutableStateOf<StudyDeckItem?>(null) }
     var showActivity by remember { mutableStateOf(false) }
+    /** The routine widget's block whose door is My routine's own list (iOS
+     *  `routinePageOpens`): opened once the page is up. */
+    var routineOpens by remember { mutableStateOf<com.roro.futurevoice.data.StudyPlan.Kind?>(null) }
     /** Talk's topics page, behind "Find a topic" (iOS `TalkTopicsPage`). */
     var showTopics by remember { mutableStateOf(false) }
     val routineEditorOpen by RoutineNav.editorOpen.collectAsStateWithLifecycle()
@@ -440,6 +443,39 @@ fun RootScreen() {
                 tab = HomeTab.PRACTICE
                 showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false; watchScenarioId = null
                 if (route.kind == "watch") bookScenarioId = route.id else detailSessionId = route.id
+            }
+            // The routine widget: a block's door, the same one its reminder
+            // opens. With no kind, or one whose door is Activity's own list,
+            // My routine opens (iOS `openRoutineBlock`, a0836bbe).
+            is DeepLinkInbox.WidgetRoute.Routine -> when (route.kind) {
+                com.roro.futurevoice.data.StudyPlan.Kind.TALK ->
+                    DeepLinkInbox.requestFreeTalk(com.roro.futurevoice.talk.TalkEntry.WIDGET)
+                com.roro.futurevoice.data.StudyPlan.Kind.REVIEW, com.roro.futurevoice.data.StudyPlan.Kind.WORDS,
+                com.roro.futurevoice.data.StudyPlan.Kind.EXPRESSIONS -> {
+                    showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false
+                    showActivity = false; detailSessionId = null; bookScenarioId = null; watchScenarioId = null
+                    tab = HomeTab.PRACTICE
+                    showDueReview = true
+                }
+                com.roro.futurevoice.data.StudyPlan.Kind.TEST -> {
+                    showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false
+                    showActivity = false; detailSessionId = null; bookScenarioId = null; watchScenarioId = null
+                    com.roro.futurevoice.data.WeeklyTestInbox.pending.value = true
+                    tab = HomeTab.PRACTICE
+                }
+                com.roro.futurevoice.data.StudyPlan.Kind.SAY_IT_AGAIN ->
+                    com.roro.futurevoice.data.PlanReminder.pendingSayItAgain.value = true
+                com.roro.futurevoice.data.StudyPlan.Kind.LISTEN ->
+                    com.roro.futurevoice.data.PlanReminder.pendingListen.value = true
+                com.roro.futurevoice.data.StudyPlan.Kind.SPEECH ->
+                    com.roro.futurevoice.data.PlanReminder.pendingSpeech.value = true
+                com.roro.futurevoice.data.StudyPlan.Kind.SHADOW, null -> {
+                    showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false
+                    detailSessionId = null; bookScenarioId = null; watchScenarioId = null
+                    tab = HomeTab.TALK
+                    routineOpens = route.kind
+                    showActivity = true
+                }
             }
             DeepLinkInbox.WidgetRoute.FreeTalk -> {
                 tab = HomeTab.TALK
@@ -1244,6 +1280,8 @@ fun RootScreen() {
 
         RootRoute.Activity -> ActivityScreen(
             language = state.targetLanguage,
+            openKind = routineOpens,
+            onOpenedKind = { routineOpens = null },
             onOpenTalk = { detailSessionId = it },
             onBack = { showActivity = false },
             // Every routine line is a door to that kind of practice.

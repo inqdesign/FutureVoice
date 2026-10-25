@@ -21,6 +21,9 @@ object DeepLinkInbox {
         data object Talk : WidgetRoute
         data class Book(val kind: String, val id: String) : WidgetRoute
         data object FreeTalk : WidgetRoute
+        /** The routine widget: the block of this kind's door, or My routine
+         *  when there is no kind (iOS `openRoutineBlock`, a0836bbe). */
+        data class Routine(val kind: StudyPlan.Kind?) : WidgetRoute
     }
 
     val widgetRoute = MutableStateFlow<WidgetRoute?>(null)
@@ -62,6 +65,12 @@ object DeepLinkInbox {
             // Streak widget: open Talk so the learner does something today.
             "talk" -> { widgetRoute.value = WidgetRoute.Talk; return }
             "freetalk" -> { widgetRoute.value = WidgetRoute.FreeTalk; return }
+            // The routine widget: a block tapped opens that block.
+            "routine" -> {
+                val raw = uri.getQueryParameter("kind")
+                widgetRoute.value = WidgetRoute.Routine(StudyPlan.Kind.entries.firstOrNull { it.raw == raw })
+                return
+            }
             // A routine's say-it-again reminder: the talk picker.
             "sayitagain" -> { PlanReminder.pendingSayItAgain.value = true; return }
             // A routine's Speech reminder: the Speech tab.

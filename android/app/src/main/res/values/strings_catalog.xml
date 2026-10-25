@@ -1693,6 +1693,7 @@
     <string name="notifications_are_off_so_i_can_t_call_you_yet_turn_them_on_i_52c0b7">"Notifications are off, so I can't call you yet. Turn them on in Settings. Your routine is under Activity on the Talk screen."</string>
     <!-- "Notifications are off, so your routine can't remind you. Turn them on in Settings" -->
     <string name="notifications_are_off_so_your_routine_can_t_remind_you_turn_298720">"Notifications are off, so your routine can't remind you. Turn them on in Settings"</string>
+    <string name="now">"Now"</string>
     <!-- "Now and then it asks something you can answer with a word you're studying, and shows you the word. Use it and it gets a check." -->
     <string name="now_and_then_it_asks_something_you_can_answer_with_a_word_yo_33236e">"Now and then it asks something you can answer with a word you're studying, and shows you the word. Use it and it gets a check."</string>
     <string name="nutrition">"Nutrition"</string>
@@ -2810,6 +2811,7 @@
     <string name="through_friends">"Through friends"</string>
     <string name="time">"Time"</string>
     <string name="time_for_shadowing">"Time for shadowing"</string>
+    <string name="time_for_the_weekly_test">"Time for the weekly test"</string>
     <string name="time_for_your_expressions">"Time for your expressions"</string>
     <string name="time_for_your_speech">"Time for your speech"</string>
     <string name="time_for_your_words">"Time for your words"</string>
@@ -2821,6 +2823,7 @@
     <string name="time_to_practice">"Time to practice"</string>
     <string name="time_to_say_it_again">"Time to say it again"</string>
     <string name="time_to_say_it_back">"Time to say it back"</string>
+    <string name="time_to_talk">"Time to talk"</string>
     <string name="tip">"Tip"</string>
     <string name="title_optional">"Title (optional)"</string>
     <string name="to_reach">"To reach %s"</string>
@@ -2895,6 +2898,7 @@
     <string name="until_the_day_you_become_me_let_s_do_this_together">"Until the day you become me,\nlet's do this together."</string>
     <string name="until_then_the_regular_price">"Until %s, then the regular price"</string>
     <string name="up_and_down_changes_the_time_sideways_changes_the_day">"Up and down changes the time, sideways changes the day."</string>
+    <string name="up_next">"Up next"</string>
     <string name="up_to_date">"Up to date · %s"</string>
     <string name="up_to_lld_of_lld">"Up to #%1$d of %2$d"</string>
     <!-- 'Up to three. The chips under Talk follow them in the order you picked, and what you write under one shapes its topics.' -->
@@ -3119,6 +3123,7 @@
     <string name="what_you_usually_talk_about">"What you usually talk about"</string>
     <string name="what_your_fluent_self_knows_about_you">"What your fluent self knows about you"</string>
     <string name="what_your_plan_holds">"What your plan holds"</string>
+    <string name="what_your_routine_has_for_today_and_what_s_up_now">"What your routine has for today, and what's up now."</string>
     <string name="what_your_voice_is_called_in_the_app">"What your voice is called in the app"</string>
     <string name="when_">"When?"</string>
     <!-- "When a friend joins with your code, you both get %lld minutes — and invite minutes are spent before the month's pool." -->

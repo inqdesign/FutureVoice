@@ -1688,6 +1688,7 @@
     <string name="notifications_are_off_so_i_can_t_call_you_yet_turn_them_on_i_52c0b7">"Les notifications sont désactivées, je ne peux donc pas encore t’appeler. Active-les dans Réglages. Ta routine se trouve dans Activité, sur l’écran Parler."</string>
     <!-- "Notifications are off, so your routine can't remind you. Turn them on in Settings" -->
     <string name="notifications_are_off_so_your_routine_can_t_remind_you_turn_298720">"Les notifications sont désactivées, ta routine ne peut donc pas te le rappeler. Active-les dans Réglages"</string>
+    <string name="now">"Maintenant"</string>
     <!-- "Now and then it asks something you can answer with a word you're studying, and shows you the word. Use it and it gets a check." -->
     <string name="now_and_then_it_asks_something_you_can_answer_with_a_word_yo_33236e">"De temps en temps, il pose une question à laquelle tu peux répondre avec un mot que tu étudies, et te montre le mot. Emploie-le et il est coché."</string>
     <string name="nutrition">"Nutrition"</string>
@@ -2804,6 +2805,7 @@
     <string name="through_friends">"Par des amis"</string>
     <string name="time">"Temps"</string>
     <string name="time_for_shadowing">"C’est l’heure du shadowing"</string>
+    <string name="time_for_the_weekly_test">"C’est l’heure du test hebdo"</string>
     <string name="time_for_your_expressions">"C’est l’heure de tes expressions"</string>
     <string name="time_for_your_speech">"C’est l’heure de ton discours"</string>
     <string name="time_for_your_words">"C’est l’heure de tes mots"</string>
@@ -2815,6 +2817,7 @@
     <string name="time_to_practice">"C’est l’heure de pratiquer"</string>
     <string name="time_to_say_it_again">"C’est l’heure de redire"</string>
     <string name="time_to_say_it_back">"Le temps de répéter"</string>
+    <string name="time_to_talk">"C’est l’heure de parler"</string>
     <string name="tip">"Astuce"</string>
     <string name="title_optional">"Titre (facultatif)"</string>
     <string name="to_reach">"Pour atteindre %s"</string>
@@ -2889,6 +2892,7 @@
     <string name="until_the_day_you_become_me_let_s_do_this_together">"Jusqu’au jour où tu deviendras moi,\nfaisons-le ensemble."</string>
     <string name="until_then_the_regular_price">"Jusqu’au %s, puis le prix normal"</string>
     <string name="up_and_down_changes_the_time_sideways_changes_the_day">"Vers le haut ou le bas, l’heure change ; sur le côté, le jour."</string>
+    <string name="up_next">"À suivre"</string>
     <string name="up_to_date">"À jour · %s"</string>
     <string name="up_to_lld_of_lld">"Tu montes au rang %1$d sur %2$d"</string>
     <!-- 'Up to three. The chips under Talk follow them in the order you picked, and what you write under one shapes its topics.' -->
@@ -3113,6 +3117,7 @@
     <string name="what_you_usually_talk_about">"Ce dont tu parles avec elle d’habitude"</string>
     <string name="what_your_fluent_self_knows_about_you">"Ce que ton moi fluide sait de toi"</string>
     <string name="what_your_plan_holds">"Ce que contient ta formule"</string>
+    <string name="what_your_routine_has_for_today_and_what_s_up_now">"Ta routine du jour, et ce qui t’attend maintenant."</string>
     <string name="what_your_voice_is_called_in_the_app">"Le nom de ta voix dans l’app"</string>
     <string name="when_">"Quand ?"</string>
     <!-- "When a friend joins with your code, you both get %lld minutes — and invite minutes are spent before the month's pool." -->

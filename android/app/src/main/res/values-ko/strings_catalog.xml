@@ -1691,6 +1691,7 @@
     <string name="notifications_are_off_so_i_can_t_call_you_yet_turn_them_on_i_52c0b7">"알림이 꺼져 있어서 아직 전화를 걸 수 없어요. 설정에서 알림을 켜 주세요. 루틴은 대화 화면의 활동에 있어요."</string>
     <!-- "Notifications are off, so your routine can't remind you. Turn them on in Settings" -->
     <string name="notifications_are_off_so_your_routine_can_t_remind_you_turn_298720">"알림이 꺼져 있어서 루틴 알림이 울리지 않아요. 설정에서 켜 주세요"</string>
+    <string name="now">"지금"</string>
     <!-- "Now and then it asks something you can answer with a word you're studying, and shows you the word. Use it and it gets a check." -->
     <string name="now_and_then_it_asks_something_you_can_answer_with_a_word_yo_33236e">"가끔은 복습 중인 단어로 답할 수 있는 질문을 하고, 그 단어를 보여줘요. 써 보면 체크돼요."</string>
     <string name="nutrition">"영양"</string>
@@ -2807,6 +2808,7 @@
     <string name="through_friends">"친구 소개로"</string>
     <string name="time">"시간"</string>
     <string name="time_for_shadowing">"섀도잉할 시간이에요"</string>
+    <string name="time_for_the_weekly_test">"주간 테스트 볼 시간이에요"</string>
     <string name="time_for_your_expressions">"표현 연습할 시간이에요"</string>
     <string name="time_for_your_speech">"스피치할 시간이에요"</string>
     <string name="time_for_your_words">"단어 연습할 시간이에요"</string>
@@ -2818,6 +2820,7 @@
     <string name="time_to_practice">"연습할 시간이에요"</string>
     <string name="time_to_say_it_again">"다시 말하기 할 시간이에요"</string>
     <string name="time_to_say_it_back">"따라 말할 만큼"</string>
+    <string name="time_to_talk">"대화할 시간이에요"</string>
     <string name="tip">"팁"</string>
     <string name="title_optional">"제목 (선택)"</string>
     <string name="to_reach">"%s까지 가려면"</string>
@@ -2892,6 +2895,7 @@
     <string name="until_the_day_you_become_me_let_s_do_this_together">"네가 내가 되는 날까지,\n우리 같이 해보자."</string>
     <string name="until_then_the_regular_price">"%s까지, 그 뒤는 정가"</string>
     <string name="up_and_down_changes_the_time_sideways_changes_the_day">"위아래로 끌면 시간이, 옆으로 끌면 요일이 바뀌어요."</string>
+    <string name="up_next">"다음 차례"</string>
     <string name="up_to_date">"최신 상태 · %s"</string>
     <string name="up_to_lld_of_lld">"%2$d명 중 %1$d위로 올라갔어요"</string>
     <!-- 'Up to three. The chips under Talk follow them in the order you picked, and what you write under one shapes its topics.' -->
@@ -3116,6 +3120,7 @@
     <string name="what_you_usually_talk_about">"주로 나누는 이야기"</string>
     <string name="what_your_fluent_self_knows_about_you">"유창해진 내가 아는 내 이야기"</string>
     <string name="what_your_plan_holds">"요금제에 들어 있는 것"</string>
+    <string name="what_your_routine_has_for_today_and_what_s_up_now">"오늘 루틴과 지금 할 차례를 보여줘요."</string>
     <string name="what_your_voice_is_called_in_the_app">"앱에서 내 목소리를 부르는 이름"</string>
     <string name="when_">"언제 할까요?"</string>
     <!-- "When a friend joins with your code, you both get %lld minutes — and invite minutes are spent before the month's pool." -->

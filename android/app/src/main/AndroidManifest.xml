@@ -223,6 +223,24 @@
                 android:resource="@xml/widget_progress_info" />
         </receiver>
 
+        <!-- The routine widget (iOS RoutineWidget): today's blocks and what's
+             up now; its tick receiver redraws it at each block's start/end. -->
+        <receiver
+            android:name=".widget.RoutineWidgetReceiver"
+            android:label="@string/my_routine"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_routine_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.RoutineWidgetTickReceiver"
+            android:exported="false" />
+
         <receiver
             android:name=".widget.FreeTalkWidgetReceiver"
             android:label="@string/free_talk"
