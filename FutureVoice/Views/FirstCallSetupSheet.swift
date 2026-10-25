@@ -121,7 +121,7 @@ struct FirstCallSetupSheet: View {
                             Label("Tutor mode", systemImage: "graduationcap")
                         }
                     } footer: {
-                        Text(explain("When you make a mistake, your future self says it the right way out loud, then carries on."))
+                        Text(explain("Pick a topic and your future self teaches it step by step, until you can say it without a mistake."))
                     }
                 }
             }
