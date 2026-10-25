@@ -1260,7 +1260,7 @@ has its own board. A learner's own scripts stay private and have no board.
   `speech_challenge_profiles` — never Supabase Storage — sent only when the
   learner left "Show my photo" on in the name sheet, where the photo is shown
   beside the switch; otherwise their initial.
-- **The tab shows the newest three live challenges**, then "All challenges"
+- **The tab shows the newest ten live challenges** (a swipeable row; three until 2026-10-25), then "All challenges"
   (`SpeechChallengeListView`: Live · Past). **A retired challenge is PAST,
   not gone** (`20261011101500`): `retired_at` is set, the list still returns
   it, its board stays readable and frozen with the learner's final place, and

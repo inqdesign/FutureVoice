@@ -27,7 +27,7 @@ struct SpeechTab: View {
     @State private var choosingKind = false
 
     private var canWrite: Bool { gate.account?.canWriteSpeechScripts ?? false }
-    static let challengesOnTab = 3
+    static let challengesOnTab = 10
     /// The inset-grouped list's side margin, where its cards start.
     static let listMargin: CGFloat = 16
     static let challengeSpacing: CGFloat = 10
@@ -126,7 +126,7 @@ struct SpeechTab: View {
                 if !challenges.scripts.isEmpty {
                     Section {
                     } header: {
-                        // The newest three on the tab; everything else, past
+                        // The newest ten on the tab; everything else, past
                         // ones included, one tap away from the title. The
                         // cards live in the HEADER (2026-10-17): a List row
                         // is masked to the section's margins, so a row that
