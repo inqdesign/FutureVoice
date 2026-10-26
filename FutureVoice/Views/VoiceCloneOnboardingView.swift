@@ -1871,8 +1871,10 @@ struct VoiceCloneOnboardingView: View {
                 set: { selectVoice($0.isEmpty ? nil : $0) })) {
                 Text("My voice").tag("")
                 // No name: it doesn't fit beside "My voice" in every
-                // language (founder, 2026-10-24).
-                Text("Similar voice").tag(preset.id)
+                // language (founder, 2026-10-24). Not "similar voice": pitch
+                // alone didn't make it sound like the learner, and a claim
+                // the ear refutes is worse than none (founder, 2026-10-25).
+                Text("AI tutor").tag(preset.id)
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, 24)
