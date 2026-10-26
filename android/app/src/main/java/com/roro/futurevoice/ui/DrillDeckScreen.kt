@@ -629,8 +629,8 @@ private fun DrillCardFace(
      *  ⋯ menu next to the recording). Null = the card has no source turn. */
     onMisheard: (() -> Unit)? = null,
 ) {
-    val onCard = Color.White
-    val onCardSecondary = Color.White.copy(alpha = 0.72f)
+    val onCard = MaterialTheme.colorScheme.onPrimary
+    val onCardSecondary = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.72f)
     Box(modifier) {
     Column(
         Modifier
@@ -687,7 +687,7 @@ private fun DrillCardFace(
                         listOf(1f, 1f, 0.55f).forEach { fraction ->
                             Box(
                                 Modifier.fillMaxWidth(fraction).height(22.dp)
-                                    .background(Color.White.copy(alpha = 0.22f), ContinuousShape(6.dp)))
+                                    .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.22f), ContinuousShape(6.dp)))
                         }
                     }
                 }
@@ -904,9 +904,9 @@ private fun CardPill(
     iconOnly: Boolean = false,
     onClick: () -> Unit,
 ) {
-    val tint = Color.White.copy(alpha = if (enabled) 1f else 0.5f)
+    val tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = if (enabled) 1f else 0.5f)
     Row(
-        Modifier.border(1.dp, Color.White.copy(alpha = 0.35f), ContinuousShape(999.dp))
+        Modifier.border(1.dp, MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.35f), ContinuousShape(999.dp))
             .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,

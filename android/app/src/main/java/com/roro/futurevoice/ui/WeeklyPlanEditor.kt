@@ -376,7 +376,7 @@ fun WeeklyPlanEditor(
                         .background(MaterialTheme.colorScheme.primary).clickable { addMenu = true },
                         contentAlignment = Alignment.Center) {
                         Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.routine_add_block),
-                            tint = Color.White, modifier = Modifier.size(28.dp))
+                            tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(28.dp))
                     }
                     com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = addMenu, onDismissRequest = { addMenu = false }) {
                         StudyPlan.Kind.placeable.forEach { k ->
@@ -810,7 +810,7 @@ private fun WeekdayChips(on: Set<Int>, lit: (Int) -> Boolean, onTap: (Int) -> Un
                 .background(if (isOn) MaterialTheme.colorScheme.primary else com.roro.futurevoice.ui.brand.iosFill())
                 .clickable { onTap(wd) }, contentAlignment = Alignment.Center) {
                 Text(label, fontWeight = if (isOn) FontWeight.SemiBold else FontWeight.Normal,
-                    color = if (isOn) Color.White else MaterialTheme.colorScheme.onSurface)
+                    color = if (isOn) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface)
             }
         }
     }

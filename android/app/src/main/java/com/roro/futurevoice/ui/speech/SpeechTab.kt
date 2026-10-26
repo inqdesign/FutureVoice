@@ -777,7 +777,7 @@ internal fun SpeechOwnScriptSheet(existing: SpeechScript?, language: String, nat
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(Icons.Filled.ContentPaste, contentDescription = null,
-                        tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(18.dp))
+                        tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(18.dp))
                 }
             }
             FormCard {

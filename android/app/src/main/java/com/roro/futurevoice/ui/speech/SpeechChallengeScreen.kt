@@ -460,7 +460,7 @@ private fun ChallengeActionBar(script: SpeechScript, isPast: Boolean, hasBest: B
                 if (takeCount > 0) {
                     // The prompter's own count badge (iOS caption2 in an
                     // accent capsule at the top-right).
-                    Text("$takeCount", color = Color.White, fontSize = 11.sp, lineHeight = 13.sp,
+                    Text("$takeCount", color = MaterialTheme.colorScheme.onPrimary, fontSize = 11.sp, lineHeight = 13.sp,
                         fontWeight = FontWeight.Bold, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                         style = androidx.compose.material3.LocalTextStyle.current.copy(fontFeatureSettings = "tnum"),
                         modifier = Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-4).dp)

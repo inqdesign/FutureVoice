@@ -514,12 +514,12 @@ private fun StudyCard(
     onHear: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    val onCard = Color.White
-    val onCardSecondary = Color.White.copy(alpha = 0.72f)
+    val onCard = MaterialTheme.colorScheme.onPrimary
+    val onCardSecondary = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.72f)
     Column(
         modifier
             .background(MaterialTheme.colorScheme.primary, ContinuousShape(18.dp))
-            .border(1.dp, Color.White.copy(alpha = 0.14f), ContinuousShape(18.dp))
+            .border(1.dp, MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.14f), ContinuousShape(18.dp))
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
@@ -553,7 +553,7 @@ private fun StudyCard(
                         } else {
                             // Redacted, as iOS's `.placeholder`: the line's shape, not its words.
                             Box(Modifier.fillMaxWidth().height(28.dp)
-                                .background(Color.White.copy(alpha = 0.22f), ContinuousShape(6.dp)))
+                                .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.22f), ContinuousShape(6.dp)))
                         }
                     }
                     if (revealed && item.cardReason.isNotBlank()) {
@@ -659,19 +659,19 @@ private fun StudyCard(
 private fun HearItPill(hearing: Boolean, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth()
-            .background(Color.White.copy(alpha = 0.18f), ContinuousShape(999.dp))
+            .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.18f), ContinuousShape(999.dp))
             .clip(ContinuousShape(999.dp))
             .clickable(enabled = !hearing, onClick = onClick)
             .padding(vertical = 10.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (hearing) CircularProgressIndicator(Modifier.size(12.dp), strokeWidth = 1.5.dp, color = Color.White)
+        if (hearing) CircularProgressIndicator(Modifier.size(12.dp), strokeWidth = 1.5.dp, color = MaterialTheme.colorScheme.onPrimary)
         else Icon(androidx.compose.material.icons.Icons.AutoMirrored.Filled.VolumeUp,
-            contentDescription = null, tint = Color.White, modifier = Modifier.size(15.dp))
+            contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(15.dp))
         Spacer(Modifier.size(5.dp))
         Text(stringResource(if (hearing) R.string.loading else R.string.hear_it),
-            fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1)
+            fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onPrimary, maxLines = 1)
     }
 }
 

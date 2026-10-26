@@ -50,6 +50,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -841,7 +842,7 @@ private fun LadderRow(
     val on = selected && !monthlyOnly
     val price = shown?.let { prices[it.id] }
     val fill by androidx.compose.animation.animateColorAsState(
-        if (on) accent.copy(alpha = 0.10f) else Color.Transparent,
+        if (on) accent.copy(alpha = selectionFillAlpha()) else Color.Transparent,
         androidx.compose.animation.core.tween(280), label = "ladderFill")
     val edge by androidx.compose.animation.animateColorAsState(
         if (on) accent else Color.Transparent,
@@ -949,7 +950,7 @@ private fun PackRow(pack: BillingService.Pack, selected: Boolean, onSelect: () -
     val accent = MaterialTheme.colorScheme.primary
     val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
     val fill by androidx.compose.animation.animateColorAsState(
-        if (selected) accent.copy(alpha = 0.10f) else Color.Transparent,
+        if (selected) accent.copy(alpha = selectionFillAlpha()) else Color.Transparent,
         androidx.compose.animation.core.tween(280), label = "packFill")
     val edge by androidx.compose.animation.animateColorAsState(
         if (selected) accent else Color.Transparent,
@@ -1162,3 +1163,9 @@ private fun RedeemCodeDialog(onDismiss: () -> Unit, onComp: () -> Unit) {
         },
     )
 }
+
+/** iOS `selectionHighlight`: 10% of the accent vanished on the dark card
+ *  (2026-10-25), so dark mode gets 24%. */
+@Composable
+private fun selectionFillAlpha(): Float =
+    if (MaterialTheme.colorScheme.background.luminance() < 0.5f) 0.24f else 0.10f

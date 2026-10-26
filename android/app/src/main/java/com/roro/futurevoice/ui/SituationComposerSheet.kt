@@ -749,9 +749,9 @@ internal fun ScenarioComposer(
                             contentAlignment = Alignment.Center,
                         ) {
                             if (committing) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp,
-                                color = Color.White)
+                                color = MaterialTheme.colorScheme.onPrimary)
                             else Icon(if (playsScene) Icons.Filled.PlayArrow else Icons.Filled.Mic,
-                                contentDescription = null, modifier = Modifier.size(20.dp), tint = Color.White)
+                                contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onPrimary)
                         }
                     }
                 }),
@@ -881,13 +881,13 @@ internal fun ScenarioComposer(
                         contentAlignment = Alignment.Center,
                     ) {
                         if (committing) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp,
-                            color = Color.White)
+                            color = MaterialTheme.colorScheme.onPrimary)
                         else Icon(when {
                                 playsScene -> Icons.Filled.PlayArrow
                                 startsCall -> Icons.Filled.Mic
                                 else -> Icons.Filled.Add
                             },
-                            contentDescription = null, modifier = Modifier.size(22.dp), tint = Color.White)
+                            contentDescription = null, modifier = Modifier.size(22.dp), tint = MaterialTheme.colorScheme.onPrimary)
                     }
                 },
                 modifier = Modifier.padding(horizontal = 16.dp).padding(top = 8.dp, bottom = 4.dp),

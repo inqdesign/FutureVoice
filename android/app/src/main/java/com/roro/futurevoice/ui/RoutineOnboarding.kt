@@ -585,7 +585,7 @@ private fun DayChips(days: Set<Int>, onToggle: (Int) -> Unit) {
                 Text(dow.getDisplayName(TextStyle.NARROW_STANDALONE, locale),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal,
-                    color = if (on) Color.White else MaterialTheme.colorScheme.onSurface)
+                    color = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface)
             }
         }
     }

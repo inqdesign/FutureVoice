@@ -816,10 +816,10 @@ internal fun SkyPersonCard(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Filled.EditNote, contentDescription = null, tint = Color.White,
+                Icon(Icons.Filled.EditNote, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(6.dp))
-                Text(stringResource(R.string.make_a_situation), color = Color.White,
+                Text(stringResource(R.string.make_a_situation), color = MaterialTheme.colorScheme.onPrimary,
                     style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
@@ -924,7 +924,7 @@ internal fun WatchHeaderActions(onOpenPeople: () -> Unit) {
                             else Modifier.border(1.5.dp, accent, CircleShape)),
                         contentAlignment = Alignment.Center) {
                         Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null,
-                            tint = if (narrowed) Color.White else accent, modifier = Modifier.size(14.dp))
+                            tint = if (narrowed) MaterialTheme.colorScheme.onPrimary else accent, modifier = Modifier.size(14.dp))
                     }
                 }
                 com.roro.futurevoice.ui.brand.IosPickerMenu(

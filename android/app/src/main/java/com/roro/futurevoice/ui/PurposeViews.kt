@@ -105,7 +105,7 @@ fun PurposePickerRows(
                 .then(if (n != null) Modifier.background(MaterialTheme.colorScheme.primary, CircleShape)
                 else Modifier.border(1.5.dp, MaterialTheme.colorScheme.outline, CircleShape)),
                 contentAlignment = Alignment.Center) {
-                if (n != null) Text("${n + 1}", color = Color.White, fontSize = 13.sp,
+                if (n != null) Text("${n + 1}", color = MaterialTheme.colorScheme.onPrimary, fontSize = 13.sp,
                     fontWeight = FontWeight.Bold)
             }
         }

@@ -152,15 +152,19 @@ fun IosSegmented(
 
 /**
  * iOS's switch: a 51×31 capsule, the accent when on and grey when off, a
- * 27 pt white knob with a soft shadow that slides across.
+ * 27 pt white knob with a soft shadow that slides across. Mono's accent is
+ * light grey in dark mode and a white knob on it read as OFF (2026-10-25,
+ * iOS `ThemedSwitchStyle`), so Mono's switches are the system green.
  */
 @Composable
 fun IosSwitch(checked: Boolean, onCheckedChange: ((Boolean) -> Unit)?, modifier: Modifier = Modifier,
               enabled: Boolean = true) {
     val scheme = MaterialTheme.colorScheme
     val dark = isDark()
+    val mono = FutureselfTheme.stored(androidx.compose.ui.platform.LocalContext.current) == FutureselfTheme.MONO
+    val on = if (mono) (if (dark) Color(0xFF30D158) else Color(0xFF34C759)) else scheme.primary
     val track by animateColorAsState(
-        if (checked) scheme.primary else if (dark) Color(0xFF39393D) else Color(0xFFE9E9EA), label = "track")
+        if (checked) on else if (dark) Color(0xFF39393D) else Color(0xFFE9E9EA), label = "track")
     val x by animateDpAsState(if (checked) 22.dp else 2.dp,
         spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMedium), label = "knob")
     Box(

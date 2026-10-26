@@ -702,8 +702,8 @@ private fun StepsPage(title: Int, subtitle: Int, steps: List<GuideStep>) {
                                 Row(Modifier.background(accent, CircleShape).padding(horizontal = 8.dp, vertical = 3.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                                    Icon(Icons.Filled.Lock, null, Modifier.size(11.dp), tint = Color.White)
-                                    Text(stringResource(b), color = Color.White, fontWeight = FontWeight.SemiBold,
+                                    Icon(Icons.Filled.Lock, null, Modifier.size(11.dp), tint = MaterialTheme.colorScheme.onPrimary)
+                                    Text(stringResource(b), color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.SemiBold,
                                         style = MaterialTheme.typography.labelSmall)
                                 }
                             }

@@ -900,11 +900,11 @@ fun ProgressActionButton(action: ProgressAction) {
         horizontalArrangement = Arrangement.Center,
     ) {
         action.icon?.let {
-            Icon(it, contentDescription = null, tint = Color.White, modifier = Modifier.size(17.dp))
+            Icon(it, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(17.dp))
             Spacer(Modifier.width(6.dp))
         }
         Text(action.title, style = PT.subheadline.copy(fontWeight = FontWeight.SemiBold),
-            color = Color.White)
+            color = MaterialTheme.colorScheme.onPrimary)
     }
 }
 

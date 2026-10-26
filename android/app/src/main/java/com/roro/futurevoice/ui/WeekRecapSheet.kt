@@ -635,7 +635,7 @@ private fun Cover(r: WeekRecap) {
                 verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(Modifier.size(30.dp).background(if (on) MaterialTheme.colorScheme.primary else tertiaryFill(), CircleShape),
                     contentAlignment = Alignment.Center) {
-                    if (on) Icon(Icons.Filled.Check, contentDescription = null, tint = Color.White,
+                    if (on) Icon(Icons.Filled.Check, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.size(16.dp))
                 }
                 Text(weekdayLetter(r.start, i, locale), style = MaterialTheme.typography.labelSmall,

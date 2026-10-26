@@ -55,9 +55,13 @@ fun FutureVoiceTheme(
         outlineVariant = Color(0xFFD1D1D6), surfaceBright = Color.White, surfaceDim = Color(0xFFE5E5EA),
     )
     val accent = FutureselfTheme.stored(context).tint()
-    // White on the deep hues, black on the pale ones — MONO is near-black in
-    // light and near-white in dark, so this cannot be a constant.
-    val onAccent = if (accent.luminance() > 0.5f) Color.Black else Color.White
+    // iOS `FutureselfTheme.onTint`: white wherever it reads (3:1, the
+    // large-text floor), near-black where the accent is too pale for it.
+    // Mono in dark mode is light grey and white on it vanished (2026-10-25);
+    // the same rule flips Emerald, Coral and Aqua in dark mode and Amber and
+    // Aqua in light. Every prominent button and every label drawn on the
+    // accent reads `onPrimary`.
+    val onAccent = onTint(accent)
     val colors = base.copy(
         primary = accent,
         onPrimary = onAccent,
@@ -78,6 +82,11 @@ fun FutureVoiceTheme(
     } else AppSans
     MaterialTheme(colorScheme = colors, typography = iosTypeScale(sans), shapes = IosShapes, content = content)
 }
+
+/** Text on an accent fill — iOS `FutureselfTheme.onTint` (white unless its
+ *  contrast on the accent is under 3:1, then white 0.08). */
+fun onTint(accent: Color): Color =
+    if (1.05f / (accent.luminance() + 0.05f) < 3f) Color(0.08f, 0.08f, 0.08f) else Color.White
 
 /**
  * The iOS text styles, in Material's slots. Material's defaults were in use
