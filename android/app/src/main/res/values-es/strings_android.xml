@@ -553,7 +553,7 @@
     <string name="podcast_open_my_book">"Abrir mi cuaderno"</string>
     <string name="podcast_listen_shelf_empty">"En el reproductor, toca el libro junto a un episodio del podcast y se convierte aquí en un cuaderno: palabras, expresiones y frases para repetir."</string>
     <string name="podcast_shadow_footer">"Toca una frase para repetirla como en el podcast. Si pasas de %1$d puntos, ya está."</string>
-    <string name="fs_meet_role_model">Conoce a tu modelo</string>
-    <string name="fs_role_model_title">Tu modelo a seguir.</string>
-    <string name="fs_role_model_sub">Elige su aspecto y a qué ritmo habla.</string>
+    <string name="fs_meet_role_model">Conoce a tu tutor IA</string>
+    <string name="fs_role_model_title">Tu tutor IA.</string>
+    <string name="fs_role_model_sub">Elige cómo se ve y a qué ritmo habla.</string>
 </resources>

@@ -526,7 +526,7 @@
     <string name="podcast_open_my_book">"Mein Buch öffnen"</string>
     <string name="podcast_listen_shelf_empty">"Tippe im Player auf das Buch neben einer Podcast-Folge – daraus wird hier ein Buch: Wörter, Wendungen und Sätze zum Nachsprechen."</string>
     <string name="podcast_shadow_footer">"Tippe einen Satz an und sprich ihn wie im Podcast nach. Ab %1$d Punkten sitzt er."</string>
-    <string name="fs_meet_role_model">Triff dein Vorbild</string>
-    <string name="fs_role_model_title">Dein Vorbild.</string>
-    <string name="fs_role_model_sub">Wähle, wie dein Vorbild aussieht und wie schnell es spricht.</string>
+    <string name="fs_meet_role_model">Triff deinen KI-Tutor</string>
+    <string name="fs_role_model_title">Dein KI-Tutor.</string>
+    <string name="fs_role_model_sub">Wähle, wie dein KI-Tutor aussieht und wie schnell er spricht.</string>
 </resources>

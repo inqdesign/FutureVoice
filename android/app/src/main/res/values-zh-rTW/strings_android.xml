@@ -534,7 +534,7 @@
     <string name="podcast_open_my_book">"打開教材"</string>
     <string name="podcast_listen_shelf_empty">"在播放器裡點單集旁邊的書本，它就會在這裡變成教材：單字、表達，還有可以跟讀的句子。"</string>
     <string name="podcast_shadow_footer">"點句子，跟著主持人讀。超過%1$d分就算完成。"</string>
-    <string name="fs_meet_role_model">認識你的學習榜樣</string>
-    <string name="fs_role_model_title">你的學習榜樣。</string>
-    <string name="fs_role_model_sub">選擇榜樣的外觀和說話速度。</string>
+    <string name="fs_meet_role_model">認識你的 AI 家教</string>
+    <string name="fs_role_model_title">你的 AI 家教。</string>
+    <string name="fs_role_model_sub">選擇 AI 家教的外觀和說話速度。</string>
 </resources>
