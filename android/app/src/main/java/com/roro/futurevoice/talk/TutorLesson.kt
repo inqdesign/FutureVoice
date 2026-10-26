@@ -156,7 +156,8 @@ object TutorPlanner {
      * the words answered, when they were SAID.
      */
     suspend fun plan(request: String, askedWith: String? = null, targetLanguage: String,
-                     nativeLanguage: String, level: CefrLevel, persona: UserPersona?): TutorLesson? {
+                     nativeLanguage: String, level: CefrLevel, persona: UserPersona?,
+                     miss: ((String) -> Unit)? = null): TutorLesson? {
         val system = TutorPrompts.plannerSystem(
             LanguageCatalog.englishName(targetLanguage), LanguageCatalog.englishName(nativeLanguage),
             level, about(persona))
@@ -178,21 +179,25 @@ object TutorPlanner {
                 }.getOrNull()
             }
         }
-        return lesson(plan, targetLanguage)
+        return lesson(plan, targetLanguage, miss = miss)
     }
 
     /** iOS `plan`'s checks on what came back. */
-    internal fun lesson(plan: Plan?, targetLanguage: String, now: Long = System.currentTimeMillis()): TutorLesson? {
-        if (plan == null || !plan.topic) return null
-        val title = plan.title?.trim()?.takeIf { it.isNotEmpty() } ?: return null
-        val items = plan.challenges?.takeIf { it.isNotEmpty() } ?: return null
+    internal fun lesson(plan: Plan?, targetLanguage: String, now: Long = System.currentTimeMillis(),
+                        miss: ((String) -> Unit)? = null): TutorLesson? {
+        // `miss` says why there is no lesson: "no_topic" is the ordinary
+        // answer to "hi" or "I don't know", the other two are failures.
+        if (plan == null) { miss?.invoke("request_failed"); return null }
+        if (!plan.topic) { miss?.invoke("no_topic"); return null }
+        val title = plan.title?.trim()?.takeIf { it.isNotEmpty() } ?: run { miss?.invoke("too_few"); return null }
+        val items = plan.challenges?.takeIf { it.isNotEmpty() } ?: run { miss?.invoke("too_few"); return null }
         val challenges = items.take(4).mapNotNull { i ->
             val goal = i.goal.trim()
             val task = i.task.trim()
             if (goal.isEmpty() || task.isEmpty()) null
             else TutorLesson.Challenge(goal = goal, task = task, example = i.example.trim())
         }
-        if (challenges.size < 2) return null
+        if (challenges.size < 2) { miss?.invoke("too_few"); return null }
         val titleTarget = plan.titleTarget?.trim().orEmpty()
         return TutorLesson(title = title, titleTarget = titleTarget.ifEmpty { title },
             language = targetLanguage, challenges = challenges, createdAt = now)

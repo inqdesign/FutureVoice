@@ -1751,12 +1751,16 @@ class TalkViewModel(context: Context) : ViewModel() {
         _state.update { it.copy(tutorPlanning = true) }
         if (picked) realtime.nudge(TutorNudges.picked(request))
         viewModelScope.launch {
+            var missReason = "request_failed"
             val planned = TutorPlanner.plan(request, askedWith, cfg.targetLanguage, cfg.nativeLanguage,
-                cfg.level, cfg.persona)
+                cfg.level, cfg.persona, miss = { missReason = it })
             if (!callIsLive) { _state.update { it.copy(tutorPlanning = false) }; return@launch }
             _state.update { it.copy(tutorPlanning = false) }
             if (planned == null) {
-                log("tutor_plan_failed", mapOf("picked" to if (picked) "1" else "0"))
+                // A line that names no topic is the planner working, not
+                // failing, so it gets its own event (the console flags *_failed).
+                log(if (missReason == "no_topic") "tutor_plan_no_topic" else "tutor_plan_failed",
+                    mapOf("picked" to if (picked) "1" else "0", "code" to missReason))
                 if (picked || fromTopic) realtime.nudge(TutorNudges.planFailed(request))
                 return@launch
             }
