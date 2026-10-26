@@ -361,7 +361,7 @@ struct SayItAgainView: View {
     private func scoreColor(_ score: Int) -> Color {
         switch score {
         case ScenarioCurriculum.shadowMasteryScore...: return .green
-        case PracticeStats.retryThreshold..<ScenarioCurriculum.shadowMasteryScore: return .accentColor
+        case PracticeStats.retryThreshold..<ScenarioCurriculum.shadowMasteryScore: return Color.themeAccent
         default: return .orange
         }
     }
@@ -435,10 +435,10 @@ struct SayItAgainView: View {
                     start(from: 0)
                 } label: {
                     Label("Start", systemImage: "text.viewfinder")
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color.onAccent)
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 .controlSize(.large)
             }
         }
@@ -607,7 +607,7 @@ struct SayItAgainView: View {
                 } label: {
                     Text("Done").frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
             }
             .controlSize(.large)
         }

@@ -68,7 +68,7 @@ struct TalkTopUpButton: View {
         let prominent: Bool
         func body(content: Content) -> some View {
             if prominent {
-                content.buttonStyle(.borderedProminent).controlSize(.large)
+                content.accentProminent().controlSize(.large)
             } else {
                 content.buttonStyle(.bordered).controlSize(.regular)
             }

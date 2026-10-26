@@ -108,7 +108,7 @@ struct PersonaDeepenSheet: View {
                             .frame(maxWidth: .infinity)
                     }
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 .controlSize(.large)
                 .disabled(!hasAnything || isSaving)
                 .padding(.horizontal, 16)

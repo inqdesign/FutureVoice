@@ -135,7 +135,7 @@ struct FirstCallSetupSheet: View {
                 Button(action: start) {
                     Text("Start the call").font(.headline).frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 .controlSize(.large)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 8)

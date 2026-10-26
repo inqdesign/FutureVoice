@@ -110,7 +110,7 @@ struct PracticeSessionView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
             }
-            .buttonStyle(.borderedProminent)
+            .accentProminent()
             .labelStyle(.titleAndIcon)
             .controlSize(.large)
             .padding(.horizontal, 16)
@@ -159,7 +159,7 @@ struct PracticeSessionView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
             }
-            .buttonStyle(.borderedProminent)
+            .accentProminent()
             .controlSize(.large)
             .padding(.horizontal, 16)
             .padding(.bottom, 24)

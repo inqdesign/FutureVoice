@@ -678,7 +678,7 @@ struct WatchView: View {
                     Label(handoff.title, systemImage: "books.vertical.fill")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 .labelStyle(.titleAndIcon)
             } else {
                 Button {
@@ -701,7 +701,7 @@ struct WatchView: View {
                           systemImage: isPlaying ? "pause.fill" : "play.fill")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 .disabled(turns.isEmpty || loading)
             }
         }

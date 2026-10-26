@@ -14,6 +14,7 @@ import Supabase
 /// the wrong moment. This screen is the documented exception to the chrome
 /// rule in CLAUDE.md; keep it that way when adding copy here.
 struct PaywallView: View {
+    @Environment(\.colorScheme) private var colorScheme
     /// Set when the paywall is NOT a sheet — onboarding hosts it as the
     /// screen itself, where `dismiss()` has nothing to dismiss and every exit
     /// would dead-end into a wall. Sheet callers leave it nil.
@@ -360,7 +361,7 @@ struct PaywallView: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 28)
             }
-            .buttonStyle(.borderedProminent)
+            .accentProminent()
             .controlSize(.large)
             .disabled(store.purchaseState == .purchasing || packStore.state == .purchasing)
             .opacity(step == .resolving ? 0 : 1)
@@ -726,9 +727,10 @@ struct PaywallView: View {
     private func selectionHighlight(_ on: Bool) -> some View {
         if on {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.accentColor.opacity(0.10))
+                // 10% vanished on the dark card (2026-10-25), so dark gets more.
+                .fill(Color.themeAccent.opacity(colorScheme == .dark ? 0.24 : 0.10))
                 .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.accentColor, lineWidth: 2))
+                    .stroke(Color.themeAccent, lineWidth: 2))
                 .matchedGeometryEffect(id: "selection", in: ladderSelection)
         }
     }

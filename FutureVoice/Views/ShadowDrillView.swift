@@ -303,7 +303,7 @@ struct ShadowDrillView: View {
                         .padding(.vertical, 1)
                         .background(
                             RoundedRectangle(cornerRadius: 4)
-                                .fill(selected ? Color.accentColor.opacity(0.22) : Color.clear)
+                                .fill(selected ? Color.themeAccent.opacity(0.22) : Color.clear)
                         )
                     beatMark(wordBeats[i])
                 }
@@ -464,7 +464,7 @@ struct ShadowDrillView: View {
 
     private func positionalColor(wt: WordTiming, nowMs: Int) -> Color {
         if nowMs >= wt.endMs   { return .primary }      // already passed
-        if nowMs >= wt.startMs { return .accentColor }  // current word
+        if nowMs >= wt.startMs { return Color.themeAccent }  // current word
         return .secondary                                // upcoming
     }
 
@@ -702,7 +702,7 @@ struct ShadowDrillView: View {
                     .font(.title3)
                     .foregroundStyle(a.recordingFilename == nil
                                      ? Color.secondary.opacity(0.4)
-                                     : Color.accentColor)
+                                     : Color.themeAccent)
             }
             .buttonStyle(.plain)
             .disabled(a.recordingFilename == nil)
@@ -866,7 +866,7 @@ struct ShadowDrillView: View {
     private func scoreColor(_ score: Int) -> Color {
         switch score {
         case 80...: return .green
-        case 50..<80: return .accentColor
+        case 50..<80: return Color.themeAccent
         default: return .orange
         }
     }
@@ -944,7 +944,7 @@ struct ShadowDrillView: View {
             .padding(diameter * 0.03)
         }
         .buttonStyle(.plain)
-        .tint(phase == .syncing ? .red : .accentColor)
+        .tint(phase == .syncing ? .red : Color.themeAccent)
         .disabled(!syncEnabled)
         .accessibilityLabel(micHint)
     }

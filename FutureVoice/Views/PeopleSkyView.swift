@@ -605,7 +605,7 @@ struct PeopleSkyMap: View {
                 }
                 .frame(width: size, height: size)
                 .clipShape(Circle())
-                .overlay(Circle().strokeBorder(Color.accentColor, lineWidth: 3))
+                .overlay(Circle().strokeBorder(Color.themeAccent, lineWidth: 3))
                 .shadow(color: .black.opacity(0.12), radius: 8, y: 4)
                 Text("Me")
                     .font(.subheadline.weight(.semibold))
@@ -635,13 +635,13 @@ struct PeopleSkyMap: View {
                         SkyFace(node: n, lit: n.id == bubbleId || n.id == focusedId)
                             .overlay {
                                 if n.id == focusedId {
-                                    Circle().strokeBorder(Color.accentColor, lineWidth: 3)
+                                    Circle().strokeBorder(Color.themeAccent, lineWidth: 3)
                                         .padding(-4)
                                 }
                             }
                     }
                     if n.hasKept {
-                        Circle().fill(Color.accentColor)
+                        Circle().fill(Color.themeAccent)
                             .frame(width: 12, height: 12)
                             .overlay(Circle().stroke(Color(.systemGroupedBackground), lineWidth: 2))
                     }

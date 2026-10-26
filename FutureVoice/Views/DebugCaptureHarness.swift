@@ -1252,7 +1252,7 @@ enum DebugCapture {
                 }
                 .fadingBottomBar {
                     VStack(spacing: 10) {
-                        Capsule().fill(Color.accentColor.opacity(0.3))
+                        Capsule().fill(Color.themeAccent.opacity(0.3))
                             .frame(width: 156, height: 64)
                         Text("Listening").font(.footnote).foregroundStyle(.secondary).frame(height: 16)
                     }

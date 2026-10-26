@@ -31,10 +31,12 @@ struct QuickQuizButton: View {
 }
 
 private struct GlassCircleButton: ViewModifier {
+    @Environment(\.colorScheme) private var colorScheme
+
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
             content
-                .buttonStyle(.glass)
+                .buttonStyle(.glass(homeGlass(colorScheme)))
                 .buttonBorderShape(.circle)
                 .controlSize(.large)
         } else {
@@ -139,7 +141,7 @@ struct QuickQuizView: View {
         let waiting = chosen != nil && item.note != nil
         return VStack(spacing: 0) {
             ProgressView(value: Double(index), total: Double(max(items.count, 1)))
-                .tint(.accentColor)
+                .tint(Color.themeAccent)
                 .padding(.horizontal, 20)
                 .padding(.top, 4)
             GeometryReader { geo in
@@ -189,7 +191,7 @@ struct QuickQuizView: View {
             } label: {
                 Text("Next").frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
+            .accentProminent()
             .controlSize(.large)
             .padding(.horizontal, 20)
             .opacity(waiting ? 1 : 0)

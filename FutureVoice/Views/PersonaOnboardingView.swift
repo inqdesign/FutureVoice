@@ -126,7 +126,7 @@ struct PersonaOnboardingView: View {
                         Image(systemName: "pencil.circle.fill")
                             .font(.title2)
                             .symbolRenderingMode(.palette)
-                            .foregroundStyle(.white, Color.accentColor)
+                            .foregroundStyle(Color.onAccent, Color.themeAccent)
                     }
                 }
                 .buttonStyle(.plain)
@@ -290,7 +290,7 @@ struct PersonaOnboardingView: View {
             } label: {
                 Image(systemName: shareIcon(n.share))
                     .font(.subheadline)
-                    .foregroundStyle(n.share == .all ? Color.secondary : Color.accentColor)
+                    .foregroundStyle(n.share == .all ? Color.secondary : Color.themeAccent)
                     .frame(width: 24)
             }
             .accessibilityLabel(shareLabel(n.share))
@@ -429,7 +429,7 @@ struct PersonaOnboardingView: View {
                         .padding(.vertical, 6)
                         .foregroundStyle(on ? Color(.systemBackground) : Color.primary)
                         .background(
-                            Capsule().fill(on ? Color.accentColor : Color(.tertiarySystemFill))
+                            Capsule().fill(on ? Color.themeAccent : Color(.tertiarySystemFill))
                         )
                 }
                 .buttonStyle(.plain)
@@ -484,7 +484,7 @@ struct PersonaOnboardingView: View {
                 Text(step < 2 ? "Next" : (isEditing ? "Save" : "Start talking"))
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
+            .accentProminent()
             .controlSize(.large)
             .disabled(!canAdvance)
         }

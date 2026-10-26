@@ -20,7 +20,7 @@ struct TutorLessonStrip: View {
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: lesson?.isFinished == true ? "checkmark.seal.fill" : "graduationcap.fill")
-                        .foregroundStyle(lesson?.isFinished == true ? Color.green : Color.accentColor)
+                        .foregroundStyle(lesson?.isFinished == true ? Color.green : Color.themeAccent)
                     if let lesson {
                         Text(lesson.title)
                             .font(.subheadline.weight(.semibold))
@@ -90,7 +90,7 @@ struct TutorLessonStrip: View {
                 if c.doneAt != nil {
                     Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
                 } else if isNow {
-                    Image(systemName: "\(i + 1).circle.fill").foregroundStyle(Color.accentColor)
+                    Image(systemName: "\(i + 1).circle.fill").foregroundStyle(Color.themeAccent)
                 } else {
                     Image(systemName: "\(i + 1).circle").foregroundStyle(.tertiary)
                 }

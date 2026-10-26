@@ -5579,7 +5579,7 @@ private struct LevelMeter: View {
                     let envelope = max(0.15, 1 - distance * distance)  // bell-ish
                     let height = CGFloat(max(0.08, level * envelope)) * geo.size.height
                     Capsule()
-                        .fill(Color.accentColor)
+                        .fill(Color.themeAccent)
                         .frame(width: barWidth, height: height)
                         .opacity(0.5 + Double(level) * 0.5)
                 }
@@ -5739,7 +5739,7 @@ struct RetryReplyRow: View {   // internal: DebugCaptureHarness renders it
                 }
                 HStack(spacing: 8) {
                     Button("See plans", action: onGetCredits)
-                        .buttonStyle(.borderedProminent)
+                        .accentProminent()
                         .controlSize(.small)
                     Button("Retry", action: onRetry)
                         .buttonStyle(.bordered)

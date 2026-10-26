@@ -250,7 +250,7 @@ struct ConversationDetailView: View {
                 // circle drifted to the middle of them.
                 HStack(alignment: .top, spacing: 14) {
                     ZStack {
-                        Circle().fill(Color.accentColor.opacity(0.15))
+                        Circle().fill(Color.themeAccent.opacity(0.15))
                             .frame(width: 56, height: 56)
                         Image(systemName: "bubble.left.and.bubble.right.fill")
                             .font(.title2).foregroundStyle(.tint)
@@ -270,7 +270,7 @@ struct ConversationDetailView: View {
                 if curriculum.totalCount > 0 {
                     VStack(alignment: .leading, spacing: 6) {
                         ProgressView(value: curriculum.progress)
-                            .tint(curriculum.isMastered ? .green : .accentColor)
+                            .tint(curriculum.isMastered ? .green : Color.themeAccent)
                         Text("\(curriculum.masteredCount) of \(curriculum.totalCount) mastered")
                             .font(.caption).foregroundStyle(.secondary)
                     }
@@ -285,12 +285,12 @@ struct ConversationDetailView: View {
                         } label: {
                             Label("Continue", systemImage: "bubble.left.and.bubble.right.fill")
                                 // Row tint would swallow the icon on the prominent
-                                // fill — force the content white (same fix as the
+                                // fill — force the accent label (same fix as the
                                 // scenario book's Talk button).
-                                .foregroundStyle(.white)
+                                .foregroundStyle(Color.onAccent)
                                 .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.borderedProminent)
+                        .accentProminent()
                     }
                     Button {
                         showingTranscript = true
@@ -357,7 +357,7 @@ struct ConversationDetailView: View {
                     }
                     .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 .labelStyle(.titleAndIcon)
                 .controlSize(.large)
                 .disabled(isRegenerating)
@@ -860,10 +860,10 @@ struct ConversationDetailView: View {
                 sessionDeck
             } label: {
                 Label("Review this talk", systemImage: "rectangle.stack.fill")
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.onAccent)
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
+            .accentProminent()
             .controlSize(.large)
             .padding(.horizontal, 20)
             .padding(.top, 16)
@@ -1154,7 +1154,7 @@ struct ConversationDetailView: View {
     private func color(_ score: Int) -> Color {
         switch score {
         case 80...: return .green
-        case 50..<80: return .accentColor
+        case 50..<80: return Color.themeAccent
         default: return .orange
         }
     }
@@ -1305,7 +1305,7 @@ struct TalkTranscriptView: View {
                 Label("Continue", systemImage: "bubble.left.and.bubble.right.fill")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
+            .accentProminent()
         }
         .controlSize(.large)
         .padding(.horizontal, 16)
@@ -1459,7 +1459,7 @@ private struct TranscriptRow: View {
         for (index, token) in pieces.enumerated() {
             var piece = AttributedString(token.text)
             if token.isWord, highlightedIndices.contains(index) {
-                piece.foregroundColor = .accentColor
+                piece.foregroundColor = Color.themeAccent
                 piece.font = .body.weight(.medium)
                 piece.underlineStyle = Text.LineStyle(pattern: .dot)
                 piece.link = URL(string: "futurevoice://word/\(index)")
@@ -1539,7 +1539,7 @@ private struct TranscriptRow: View {
                     .font(.caption.weight(.semibold))
                     .buttonStyle(.bordered)
                     .controlSize(.small)
-                    .tint(.accentColor)
+                    .tint(Color.themeAccent)
                 }
 
                 if turn.role == .fluentSelf, showing, let t = translation {
@@ -1587,7 +1587,7 @@ private struct TranscriptRow: View {
             .font(.caption.weight(.semibold))
             .buttonStyle(.bordered)
             .controlSize(.small)
-            .tint(.accentColor)
+            .tint(Color.themeAccent)
             Button { toggleReason(s) } label: {
                 HStack(spacing: 4) {
                     if reasonLoading { ProgressView().controlSize(.mini) }
@@ -1604,7 +1604,7 @@ private struct TranscriptRow: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color.accentColor.opacity(0.08)))
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.themeAccent.opacity(0.08)))
         .sheet(isPresented: $showingSuggestionShadow) {
             ShadowDrillView(turn: suggestionTurn(s), targetLanguage: targetLanguage)
                 .environmentObject(appState)
@@ -1783,7 +1783,7 @@ func highlightedCorrection(_ alternative: String, original: String, baseFont: Fo
     for (idx, word) in altWords.enumerated() {
         var piece = AttributedString(word.text)
         if tokenChanged[idx], tokenHasWord[idx] {
-            piece.foregroundColor = .accentColor
+            piece.foregroundColor = Color.themeAccent
             piece.font = baseFont.weight(.semibold)
         }
         out += piece
@@ -1822,7 +1822,7 @@ private func highlightedCharacters(_ alternative: String, original: String,
     for (k, ch) in alt.enumerated() {
         var piece = AttributedString(String(ch))
         if changed.contains(k) {
-            piece.foregroundColor = .accentColor
+            piece.foregroundColor = Color.themeAccent
             piece.font = baseFont.weight(.semibold)
         }
         out += piece

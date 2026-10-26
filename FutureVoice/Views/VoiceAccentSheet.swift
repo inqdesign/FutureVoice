@@ -196,7 +196,7 @@ struct VoiceAccentSheet: View {
                     ProgressView()
                 } else if appState.voiceAccentId == nil && accent == nil {
                     Image(systemName: "checkmark")
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(Color.themeAccent)
                 }
             }
         }
@@ -214,7 +214,7 @@ struct VoiceAccentSheet: View {
                     ProgressView()
                 } else if accent == option {
                     Image(systemName: "checkmark")
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(Color.themeAccent)
                 }
             }
         }
@@ -239,13 +239,13 @@ struct VoiceAccentSheet: View {
             HStack(spacing: 12) {
                 Image(systemName: isCurrent ? "pause.circle.fill" : "play.circle")
                     .font(.title3)
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(Color.themeAccent)
                 Text("Take \(index + 1)")
                     .foregroundStyle(.primary)
                 Spacer()
                 if pickedPreviewId == preview.id {
                     Image(systemName: "checkmark")
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(Color.themeAccent)
                 }
             }
         }

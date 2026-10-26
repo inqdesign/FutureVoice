@@ -165,7 +165,7 @@ private extension ShadowBrowserView {
                                         Label(appState.isLineSaved(turn.id) ? "Unsave" : "Save",
                                               systemImage: appState.isLineSaved(turn.id) ? "bookmark.slash" : "bookmark")
                                     }
-                                    .tint(.accentColor)
+                                    .tint(Color.themeAccent)
                                 }
                             }
                         }
@@ -215,7 +215,7 @@ private struct ShadowRow: View {
         HStack(spacing: 12) {
             Image(systemName: hasAudio ? "waveform" : "waveform.slash")
                 .font(.subheadline)
-                .foregroundStyle(hasAudio ? Color.accentColor : .secondary)
+                .foregroundStyle(hasAudio ? Color.themeAccent : .secondary)
                 .frame(width: 22)
             Text(turn.transcript)
                 .font(.body)

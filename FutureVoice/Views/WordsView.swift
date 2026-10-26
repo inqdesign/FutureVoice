@@ -293,7 +293,7 @@ struct WordsView: View {
         } label: {
             Label("Keep", systemImage: studying ? "bookmark.slash" : "bookmark")
         }
-        .tint(studying ? .gray : .accentColor)
+        .tint(studying ? .gray : Color.themeAccent)
     }
 
     private func knownAction(_ item: WordCatalog.Item) -> some View {
@@ -321,7 +321,7 @@ struct WordsView: View {
             if studying || known {
                 Image(systemName: studying ? "bookmark.fill" : (confirmed ? "checkmark.circle.fill" : "checkmark"))
                     .font(.footnote.weight(.semibold))
-                    .foregroundStyle(studying ? Color.accentColor : Color.green)
+                    .foregroundStyle(studying ? Color.themeAccent : Color.green)
                     .frame(width: 16)
                     .accessibilityLabel(studying ? explain("Studying")
                                         : (confirmed ? explain("Used in a talk") : explain("Marked known")))

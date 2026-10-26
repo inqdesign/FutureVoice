@@ -57,7 +57,7 @@ struct LevelUpSheet: View {
                 Text("Continue")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
+            .accentProminent()
             .controlSize(.large)
             .padding(.horizontal, 20)
             .padding(.bottom, 12)

@@ -87,7 +87,7 @@ struct ScenarioBuilderSheet: View {
                                         .font(.subheadline)
                                         .padding(.horizontal, 12).padding(.vertical, 6)
                                         .foregroundStyle(on ? Color(.systemBackground) : Color.primary)
-                                        .background(Capsule().fill(on ? Color.accentColor : Color(.tertiarySystemFill)))
+                                        .background(Capsule().fill(on ? Color.themeAccent : Color(.tertiarySystemFill)))
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -152,7 +152,7 @@ struct ScenarioBuilderSheet: View {
                         .padding(.vertical, 6)
                         .foregroundStyle(on ? Color(.systemBackground) : Color.primary)
                         .background(
-                            Capsule().fill(on ? Color.accentColor : Color(.tertiarySystemFill))
+                            Capsule().fill(on ? Color.themeAccent : Color(.tertiarySystemFill))
                         )
                 }
                 .buttonStyle(.plain)

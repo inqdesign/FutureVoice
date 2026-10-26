@@ -190,7 +190,7 @@ struct ShadowTimelinePlayer<MicControl: View>: View {
 
                 if let sx, let ex {
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.accentColor.opacity(0.18))
+                        .fill(Color.themeAccent.opacity(0.18))
                         .frame(width: max(0, ex - sx), height: TLConst.trackHeight)
                         .offset(x: sx)
                     handle(at: sx)
@@ -213,7 +213,7 @@ struct ShadowTimelinePlayer<MicControl: View>: View {
 
     private func handle(at x: CGFloat) -> some View {
         RoundedRectangle(cornerRadius: 5)
-            .fill(Color.accentColor)
+            .fill(Color.themeAccent)
             .frame(width: TLConst.handleW, height: TLConst.trackHeight)
             .overlay(
                 Capsule()
@@ -304,7 +304,7 @@ struct ShadowTimelinePlayer<MicControl: View>: View {
                 Image(systemName: loop ? "repeat.circle.fill" : "repeat.circle")
                     .font(.system(size: 44))
                     .frame(width: 44, height: 44)
-                    .foregroundStyle(loop ? Color.accentColor : Color.secondary)
+                    .foregroundStyle(loop ? Color.themeAccent : Color.secondary)
             }
             .buttonStyle(.plain)
 
@@ -349,7 +349,7 @@ struct ShadowTimelinePlayer<MicControl: View>: View {
                 // Primary (not secondary) at 1× — on the dark pill the muted
                 // gray was near-invisible, so the label looked blank; accent
                 // still marks a changed speed.
-                .foregroundStyle(playbackRate == 1.0 ? Color.primary : Color.accentColor)
+                .foregroundStyle(playbackRate == 1.0 ? Color.primary : Color.themeAccent)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
                 .background(Capsule().fill(Color(.tertiarySystemFill)))

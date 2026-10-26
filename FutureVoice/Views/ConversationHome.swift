@@ -131,8 +131,15 @@ struct ConversationHome: View {
                 // Language chip on the leading edge — the one-tap switch
                 // between enrolled languages and the discoverable entry point
                 // for adding one (docs/multi-language-plan.md).
-                ToolbarItem(placement: .topBarLeading) {
-                    languageSwitcher
+                if #available(iOS 26, *) {
+                    ToolbarItem(placement: .topBarLeading) {
+                        languageSwitcher
+                    }
+                    .sharedBackgroundVisibility(.hidden)
+                } else {
+                    ToolbarItem(placement: .topBarLeading) {
+                        languageSwitcher
+                    }
                 }
                 // ONE header control: credits + avatar as a single unit —
                 // account things live together up here, out of the Today card.
@@ -591,6 +598,11 @@ struct ConversationHome: View {
                 Text(appState.targetLanguage.uppercased())
                     .font(.footnote.weight(.semibold))
             }
+            // Draws its own glass (the toolbar's is hidden above), so the
+            // three header controls share one surface, dark-mode fill included.
+            .padding(.horizontal, 14)
+            .frame(height: 44)
+            .modifier(HeaderGlass())
         }
         .accessibilityLabel("Practice language: \(LanguageCatalog.englishName(appState.targetLanguage))")
     }
@@ -642,7 +654,7 @@ struct ConversationHome: View {
                         Circle()
                             .inset(by: 1.5)
                             .trim(from: 0, to: account.talkTimeUsedFraction)
-                            .stroke(account.isLowBalance ? Color.orange : Color.accentColor,
+                            .stroke(account.isLowBalance ? Color.orange : Color.themeAccent,
                                     style: StrokeStyle(lineWidth: 3, lineCap: .round))
                             .rotationEffect(.degrees(-90))
                         ProfileAvatar(initials: appState.persona?.displayName ?? "",
@@ -1052,8 +1064,8 @@ private struct TalkHeroSection: View {
                 .stroke(
                     AngularGradient(
                         stops: [
-                            .init(color: Color.accentColor.opacity(fadeEnd > 0 ? 0.4 : 1), location: 0),
-                            .init(color: Color.accentColor, location: fadeEnd),
+                            .init(color: Color.themeAccent.opacity(fadeEnd > 0 ? 0.4 : 1), location: 0),
+                            .init(color: Color.themeAccent, location: fadeEnd),
                         ],
                         center: .center,
                         startAngle: .degrees(-capDegrees),
@@ -1068,7 +1080,7 @@ private struct TalkHeroSection: View {
             // same full accent as the base arc, so no seam shows.
             Circle()
                 .trim(from: max(progress - 0.02, 0), to: progress)
-                .stroke(Color.accentColor,
+                .stroke(Color.themeAccent,
                         style: StrokeStyle(lineWidth: 20, lineCap: .round))
                 .rotationEffect(.degrees(-90))
                 .opacity(progress > 0.97 ? 1 : 0)
@@ -1143,7 +1155,7 @@ struct TalkScenarioRow: View {
     var body: some View {
         HStack(spacing: 12) {
             ZStack {
-                Circle().fill(Color.accentColor.opacity(0.15)).frame(width: 36, height: 36)
+                Circle().fill(Color.themeAccent.opacity(0.15)).frame(width: 36, height: 36)
                 if let name = personaName {
                     Text(Books.initials(name))
                         .font(.caption.weight(.semibold)).foregroundStyle(.tint)
@@ -1243,9 +1255,13 @@ struct TalkScenariosListView: View {
 /// capsule it hides. Earlier systems draw toolbar buttons bare, so nothing is
 /// drawn there — the ring alone is the control, as it always was.
 private struct HeaderGlassCircle: ViewModifier {
+    @Environment(\.colorScheme) private var colorScheme
+
     func body(content: Content) -> some View {
         if #available(iOS 26, *) {
-            content.glassEffect(.regular.interactive(), in: Circle())
+            content
+                .background(Circle().fill(HeaderGlass.darkFill(colorScheme)))
+                .glassEffect(.regular.interactive(), in: Circle())
         } else {
             content
         }
@@ -1256,9 +1272,20 @@ private struct HeaderGlassCircle: ViewModifier {
 /// around the language and profile buttons (the centre slot gets none of
 /// its own). Before 26, a plain fill.
 private struct HeaderGlass: ViewModifier {
+    @Environment(\.colorScheme) private var colorScheme
+
+    /// Glass over the dark page's near-black has nothing to refract and all
+    /// but disappeared (2026-10-25), so in dark mode a faint fill sits under
+    /// it. Light mode is the glass alone, as before.
+    static func darkFill(_ scheme: ColorScheme) -> Color {
+        scheme == .dark ? Color(.tertiarySystemFill) : .clear
+    }
+
     func body(content: Content) -> some View {
         if #available(iOS 26, *) {
-            content.glassEffect(.regular.interactive(), in: .capsule)
+            content
+                .background(Capsule().fill(Self.darkFill(colorScheme)))
+                .glassEffect(.regular.interactive(), in: .capsule)
         } else {
             content.background(Capsule().fill(Color(.secondarySystemFill)))
         }

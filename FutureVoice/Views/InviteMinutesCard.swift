@@ -122,7 +122,7 @@ struct InviteMinutesCard: View {
                           message: Text(ReferralService.shareMessage(code: offer.code))) {
                     Text(explain("Share invite"))
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 .controlSize(.regular)
             }
 

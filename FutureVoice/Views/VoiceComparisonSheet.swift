@@ -129,7 +129,7 @@ struct VoiceComparisonSheet: View {
         }
         .buttonStyle(.bordered)
         .controlSize(.large)
-        .tint(isPlaying ? Color.accentColor : nil)
+        .tint(isPlaying ? Color.themeAccent : nil)
         .disabled(!ready)
     }
 

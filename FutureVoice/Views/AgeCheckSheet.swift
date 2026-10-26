@@ -55,7 +55,7 @@ struct AgeCheckSheet: View {
                     Text("Continue")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 .controlSize(.large)
                 .disabled(!declared)
 

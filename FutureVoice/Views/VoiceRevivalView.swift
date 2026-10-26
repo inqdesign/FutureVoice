@@ -167,7 +167,7 @@ struct VoiceRevivalView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 6)
             }
-            .buttonStyle(.borderedProminent)
+            .accentProminent()
             .controlSize(.large)
         }
         .padding(.horizontal, 24)
@@ -205,7 +205,7 @@ struct VoiceRevivalView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 6)
             }
-            .buttonStyle(.borderedProminent)
+            .accentProminent()
             .controlSize(.large)
             .padding(.horizontal, 24)
             .padding(.bottom, 16)
@@ -234,7 +234,7 @@ struct VoiceRevivalView: View {
                     }
                     .accessibilityAddTraits(selected ? .isSelected : [])
                     if selected {
-                        button.buttonStyle(.borderedProminent)
+                        button.accentProminent()
                     } else {
                         button.buttonStyle(.bordered)
                     }
@@ -304,7 +304,7 @@ struct VoiceRevivalView: View {
         }
         .accessibilityAddTraits(selected ? .isSelected : [])
         if selected {
-            button.buttonStyle(.borderedProminent)
+            button.accentProminent()
         } else {
             button.buttonStyle(.bordered)
         }

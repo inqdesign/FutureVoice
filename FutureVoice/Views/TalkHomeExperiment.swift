@@ -164,7 +164,7 @@ struct TalkHomeExperiment: View {
                 .foregroundStyle(.secondary)
                 Spacer()
                 ZStack {
-                    Circle().fill(Color.accentColor.opacity(0.15))
+                    Circle().fill(Color.themeAccent.opacity(0.15))
                         .frame(width: 30, height: 30)
                     Text("A")
                         .font(.caption.weight(.semibold))
@@ -182,7 +182,7 @@ struct TalkHomeExperiment: View {
                 .stroke(Color(.secondarySystemFill), lineWidth: 10)
             Circle()
                 .trim(from: 0, to: min(goalProgress, 1))
-                .stroke(Color.accentColor,
+                .stroke(Color.themeAccent,
                         style: StrokeStyle(lineWidth: 10, lineCap: .round))
                 .rotationEffect(.degrees(-90))
 
@@ -271,7 +271,7 @@ struct TalkHomeExperiment: View {
     private func card(_ title: String, subtitle: String, icon: String) -> some View {
         HStack(spacing: 12) {
             ZStack {
-                Circle().fill(Color.accentColor.opacity(0.15))
+                Circle().fill(Color.themeAccent.opacity(0.15))
                     .frame(width: 36, height: 36)
                 Image(systemName: icon)
                     .font(.subheadline)

@@ -214,7 +214,7 @@ struct PriceConsentSheet: View {
                         Text("Confirm with Apple")
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .accentProminent()
                     .controlSize(.large)
                     .disabled(working)
                     Button("Later") { dismiss() }

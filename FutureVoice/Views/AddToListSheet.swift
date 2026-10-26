@@ -254,7 +254,7 @@ struct AddToListSheet: View {
                 }
                 Image(systemName: status == nil ? "plus.circle" : "chevron.right")
                     .font(.footnote.weight(.semibold))
-                    .foregroundStyle(status == nil ? Color.accentColor : Color.secondary)
+                    .foregroundStyle(status == nil ? Color.themeAccent : Color.secondary)
             }
             .contentShape(Rectangle())
         }

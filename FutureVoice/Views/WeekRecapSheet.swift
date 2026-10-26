@@ -185,7 +185,7 @@ struct WeekRecapSheet: View {
             HStack(spacing: 4) {
                 ForEach(cards.indices, id: \.self) { i in
                     Capsule()
-                        .fill(i <= page ? Color.accentColor : Color(.tertiarySystemFill))
+                        .fill(i <= page ? Color.themeAccent : Color(.tertiarySystemFill))
                         .frame(height: 3)
                         .onTapGesture { withAnimation { page = i } }
                 }
@@ -272,7 +272,7 @@ struct WeekRecapSheet: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 6)
         }
-        .buttonStyle(.borderedProminent)
+        .accentProminent()
         .controlSize(.large)
     }
 
@@ -315,7 +315,7 @@ struct WeekRecapSheet: View {
                     in: RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
-    private func kicker(_ title: Text, _ symbol: String, _ tint: Color = .accentColor) -> some View {
+    private func kicker(_ title: Text, _ symbol: String, _ tint: Color = Color.themeAccent) -> some View {
         Label { title } icon: { Image(systemName: symbol) }
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(tint)
@@ -357,13 +357,13 @@ struct WeekRecapSheet: View {
                 ForEach(0..<7, id: \.self) { i in
                     VStack(spacing: 8) {
                         Circle()
-                            .fill(recap.activeDays[safe: i] == true ? Color.accentColor : Color(.tertiarySystemFill))
+                            .fill(recap.activeDays[safe: i] == true ? Color.themeAccent : Color(.tertiarySystemFill))
                             .frame(width: 30, height: 30)
                             .overlay {
                                 if recap.activeDays[safe: i] == true {
                                     Image(systemName: "checkmark")
                                         .font(.caption.weight(.bold))
-                                        .foregroundStyle(.white)
+                                        .foregroundStyle(Color.onAccent)
                                 }
                             }
                         Text(weekdayLetter(i))
@@ -839,7 +839,7 @@ struct WeekRecapSheet: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(Color.themeAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     /// Written in code when the coach can't be — from the same evidence.
@@ -937,7 +937,7 @@ struct WeekRecapSheet: View {
                   : trial?.testThin == true ? "calendar.badge.clock" : "checkmark.circle")
                 .font(.system(size: 72, weight: .light))
                 .foregroundStyle(trialTest?.isFinished == true ? Color.green
-                                 : trial?.testThin == true ? Color.secondary : Color.accentColor)
+                                 : trial?.testThin == true ? Color.secondary : Color.themeAccent)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
             if let t = trialTest, t.isFinished {
@@ -1042,7 +1042,7 @@ struct WeekRecapSheet: View {
                             if !line.why.isEmpty {
                                 Text(line.why)
                                     .font(.caption)
-                                    .foregroundStyle(Color.accentColor)
+                                    .foregroundStyle(Color.themeAccent)
                             }
                         }
                     }

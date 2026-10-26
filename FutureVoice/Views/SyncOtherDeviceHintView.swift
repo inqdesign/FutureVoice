@@ -58,7 +58,7 @@ struct SyncOtherDeviceHintView: View {
                         }
                         .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .accentProminent()
                     .controlSize(.large)
                     .disabled(checking)
                     Button {

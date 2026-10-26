@@ -51,6 +51,7 @@ struct RootView: View {
             .fontDesign(.rounded)
             .tint(accent)
             .accentColor(accent)
+            .toggleStyle(ThemedSwitchStyle())
             // The app's ONE UI language — the one the learner picked in setup
             // and can change in Me → App language. Every `Text("literal")` in
             // the app resolves against this locale with no per-call code.

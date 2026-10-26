@@ -219,10 +219,10 @@ struct SpeechPrompterView: View {
                         if count > 0 && !isRecording {
                             Text("\(count)")
                                 .font(.caption2.weight(.bold).monospacedDigit())
-                                .foregroundStyle(.white)
+                                .foregroundStyle(Color.onAccent)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 1)
-                                .background(Color.accentColor, in: Capsule())
+                                .background(Color.themeAccent, in: Capsule())
                                 .offset(x: 4, y: -4)
                         }
                     }
@@ -502,7 +502,7 @@ struct SpeechPrompterView: View {
                     .font(.subheadline)
                     .multilineTextAlignment(.center)
                 Button("Try again") { session.reset() }
-                    .buttonStyle(.borderedProminent)
+                    .accentProminent()
             }
             .padding(24)
             .frame(maxWidth: 320)
@@ -816,7 +816,7 @@ struct SpeechChromeButtonStyle: ButtonStyle {
                             .environment(\.colorScheme, .dark)
                     }
                 } else {
-                    label.background(Color.accentColor.opacity(0.15), in: Circle())
+                    label.background(Color.themeAccent.opacity(0.15), in: Circle())
                 }
             }
             .scaleEffect(configuration.isPressed ? 0.92 : 1)

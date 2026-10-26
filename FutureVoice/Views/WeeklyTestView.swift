@@ -324,7 +324,7 @@ struct WeeklyTestView: View {
                         .frame(width: 76, height: 76)
                         .contentTransition(.symbolEffect(.replace))
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 .clipShape(Circle())
                 .accessibilityLabel(Text("Play the line"))
                 Spacer()
@@ -372,7 +372,7 @@ struct WeeklyTestView: View {
         guard parts.count == 2 else { return Text(item.prompt) }
         let fill: Text
         if let chosen {
-            let color: Color = outcome == nil ? .accentColor : (outcome == true ? .green : .red)
+            let color: Color = outcome == nil ? Color.themeAccent : (outcome == true ? .green : .red)
             fill = Text(chosen).bold().foregroundStyle(color)
         } else {
             fill = Text(WeeklyTestEngine.blankMark).foregroundStyle(.tertiary)
@@ -594,7 +594,7 @@ struct WeeklyTestView: View {
             } label: {
                 ZStack {
                     if speakPhase == .reading {
-                        ProgressView().tint(.white)
+                        ProgressView().tint(Color.onAccent)
                     } else {
                         Image(systemName: speakPhase == .recording ? "stop.fill" : "mic.fill")
                             .font(.title)
@@ -604,7 +604,8 @@ struct WeeklyTestView: View {
                 .frame(width: 76, height: 76)
             }
             .buttonStyle(.borderedProminent)
-            .tint(speakPhase == .recording ? .red : .accentColor)
+            .tint(speakPhase == .recording ? .red : Color.themeAccent)
+            .foregroundStyle(speakPhase == .recording ? Color.white : Color.onAccent)
             .clipShape(Circle())
             .scaleEffect(speakPhase == .recording ? 1 + CGFloat(recorder.levels) * 0.12 : 1)
             .animation(.easeOut(duration: 0.08), value: recorder.levels)
@@ -751,7 +752,7 @@ struct WeeklyTestView: View {
         .controlSize(.large)
         // Not `.disabled` once graded — that greys every row, the green
         // included; `choose` already refuses a second answer.
-        .tint(graded ? (isAnswer ? .green : (isChosen ? .red : .gray)) : .accentColor)
+        .tint(graded ? (isAnswer ? .green : (isChosen ? .red : .gray)) : Color.themeAccent)
         .accessibilityIdentifier("weeklyTest.option.\(index)")
     }
 
@@ -907,10 +908,10 @@ struct WeeklyTestView: View {
                 .padding(.vertical, 8)
         }
         .buttonStyle(.bordered)
-        .tint(filled ? tileTint(verdict) : (outcome == nil ? .accentColor : .gray))
+        .tint(filled ? tileTint(verdict) : (outcome == nil ? Color.themeAccent : .gray))
         // The tile the cursor follows wears a ring; a style can't be
         // switched in a ternary, and a ring reads as "selected" either way.
-        .overlay(Capsule().strokeBorder(Color.accentColor, lineWidth: selected ? 2 : 0))
+        .overlay(Capsule().strokeBorder(Color.themeAccent, lineWidth: selected ? 2 : 0))
     }
 
     /// The insertion point, drawn between placed tiles when it isn't at the end.
@@ -930,7 +931,7 @@ struct WeeklyTestView: View {
 
     private func tileTint(_ verdict: Bool?) -> Color {
         switch outcome {
-        case .none: return .accentColor
+        case .none: return Color.themeAccent
         case .some(true): return .green
         case .some(false): return verdict == true ? .green : .red
         }
@@ -970,7 +971,8 @@ struct WeeklyTestView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-                .tint(outcome ? .green : .accentColor)
+                .tint(outcome ? .green : Color.themeAccent)
+                .foregroundStyle(outcome ? Color.white : Color.onAccent)
                 .accessibilityIdentifier("weeklyTest.continue")
             } else if item.kind == .rewrite {
                 Button {
@@ -978,7 +980,7 @@ struct WeeklyTestView: View {
                 } label: {
                     Text("Check").frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 .controlSize(.large)
                 .disabled(rewriteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .accessibilityIdentifier("weeklyTest.check")
@@ -991,7 +993,7 @@ struct WeeklyTestView: View {
                     }
                     .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 .controlSize(.large)
                 .disabled(laid.isEmpty || checkingOrder)
                 .accessibilityIdentifier("weeklyTest.check")
@@ -1436,7 +1438,7 @@ struct WeeklyTestResultView: View {
                     Text("Try the missed ones again")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 .controlSize(.large)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
@@ -1484,7 +1486,7 @@ private struct BlinkingCaret: View {
     @State private var on = true
     var body: some View {
         RoundedRectangle(cornerRadius: 1)
-            .fill(Color.accentColor)
+            .fill(Color.themeAccent)
             .frame(width: 2, height: 24)
             .opacity(on ? 1 : 0.15)
             .onAppear {

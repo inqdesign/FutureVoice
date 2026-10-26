@@ -344,9 +344,9 @@ struct WatchHero: View {
                 Label("Play", systemImage: "play.fill")
                     .frame(maxWidth: .infinity)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.onAccent)
                     .padding(.vertical, 8)
-                    .background(Capsule().fill(Color.accentColor))
+                    .background(Capsule().fill(Color.themeAccent))
             }
             .padding(.horizontal, 4)
         }
@@ -432,7 +432,7 @@ struct ShadowHero: View {
                         .background(
                             RoundedRectangle(cornerRadius: 4)
                                 .fill(Self.selected.contains(i)
-                                      ? Color.accentColor.opacity(0.22)
+                                      ? Color.themeAccent.opacity(0.22)
                                       : Color.clear)
                         )
                 }
@@ -484,7 +484,7 @@ struct ShadowHero: View {
 
                 // Loop band + START/END handles.
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.accentColor.opacity(0.18))
+                    .fill(Color.themeAccent.opacity(0.18))
                     .frame(width: max(0, ex - sx), height: Self.trackHeight)
                     .offset(x: sx)
                 handle(at: sx)
@@ -504,7 +504,7 @@ struct ShadowHero: View {
 
     private func handle(at x: CGFloat) -> some View {
         RoundedRectangle(cornerRadius: 5)
-            .fill(Color.accentColor)
+            .fill(Color.themeAccent)
             .frame(width: Self.handleW, height: Self.trackHeight)
             .overlay(Capsule().fill(Color.white.opacity(0.9)).frame(width: 2, height: 16))
             .offset(x: x - Self.handleW / 2)
@@ -535,7 +535,7 @@ struct ShadowHero: View {
             Image(systemName: "repeat.circle.fill")
                 .font(.system(size: 44))
                 .frame(width: 44, height: 44)
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(Color.themeAccent)
             Spacer(minLength: 72)
             // `Text(String)`, never a literal — `ShadowTimelinePlayer` builds
             // this label with `speedLabel(_:)`, so the real pill never goes
@@ -563,7 +563,7 @@ struct ShadowHero: View {
                 .font(.system(size: 60 * 0.375, weight: .semibold))
                 .foregroundStyle(Color(.systemBackground))
                 .frame(width: 60, height: 60)
-                .background(Circle().fill(Color.accentColor))
+                .background(Circle().fill(Color.themeAccent))
         }
     }
 
@@ -573,7 +573,7 @@ struct ShadowHero: View {
         // Only the loop phrase animates; the rest rests quiet, like loop mode.
         if !Self.selected.contains(i) { return .secondary }
         if nowMs >= end   { return .primary }
-        if nowMs >= start { return .accentColor }
+        if nowMs >= start { return Color.themeAccent }
         return .secondary
     }
 
@@ -635,7 +635,7 @@ struct VocabHero: View {
                                 if studying || used {
                                     Image(systemName: studying ? "bookmark.fill" : "checkmark")
                                         .font(.system(size: max(8, node.size * 0.42), weight: .semibold))
-                                        .foregroundStyle(studying ? Color.accentColor : Color.green)
+                                        .foregroundStyle(studying ? Color.themeAccent : Color.green)
                                         .offset(x: -4, y: -max(8, node.size * 0.42))
                                 }
                             }
@@ -877,7 +877,7 @@ struct HomeHero: View {
     private func listCard(_ row: Row) -> some View {
         HStack(spacing: 12) {
             ZStack {
-                Circle().fill(Color.accentColor.opacity(0.15)).frame(width: 36, height: 36)
+                Circle().fill(Color.themeAccent.opacity(0.15)).frame(width: 36, height: 36)
                 Image(systemName: row.icon).font(.subheadline).foregroundStyle(.tint)
             }
             VStack(alignment: .leading, spacing: 2) {
@@ -959,8 +959,8 @@ struct BookHero: View {
     private var ripple: some View {
         if let i = tapAt {
             Circle()
-                .fill(Color.accentColor.opacity(0.18))
-                .overlay(Circle().strokeBorder(Color.accentColor.opacity(0.45), lineWidth: 1.5))
+                .fill(Color.themeAccent.opacity(0.18))
+                .overlay(Circle().strokeBorder(Color.themeAccent.opacity(0.45), lineWidth: 1.5))
                 .frame(width: 38, height: 38)
                 .scaleEffect(tapping ? 1.0 : 0.45)
                 .opacity(tapping ? 0 : 0.95)
@@ -1008,7 +1008,7 @@ struct BookHero: View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(spacing: 14) {
                 ZStack {
-                    Circle().fill(Color.accentColor.opacity(0.15)).frame(width: 56, height: 56)
+                    Circle().fill(Color.themeAccent.opacity(0.15)).frame(width: 56, height: 56)
                     Image(systemName: "bubble.left.and.bubble.right.fill")
                         .font(.title2).foregroundStyle(.tint)
                 }
@@ -1034,16 +1034,16 @@ struct BookHero: View {
             HStack(spacing: 10) {
                 Label("Continue", systemImage: "bubble.left.and.bubble.right.fill")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.onAccent)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 11)
-                    .background(Capsule().fill(Color.accentColor))
+                    .background(Capsule().fill(Color.themeAccent))
                 Label("Replay", systemImage: "play.fill")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.tint)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 11)
-                    .background(Capsule().fill(Color.accentColor.opacity(0.15)))
+                    .background(Capsule().fill(Color.themeAccent.opacity(0.15)))
             }
         }
         .padding(20)

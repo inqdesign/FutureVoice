@@ -41,7 +41,7 @@ struct AddLanguageSheet: View {
                                 Spacer()
                                 if code == c {
                                     Image(systemName: "checkmark")
-                                        .foregroundStyle(Color.accentColor)
+                                        .foregroundStyle(Color.themeAccent)
                                         .fontWeight(.semibold)
                                 }
                             }

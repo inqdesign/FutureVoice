@@ -27,10 +27,10 @@ struct SpeechChallengeRow: View {
                             .font(.caption2.weight(.bold))
                             .lineLimit(1)
                             .fixedSize()
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Color.onAccent)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(Capsule().fill(Color.accentColor))
+                            .background(Capsule().fill(Color.themeAccent))
                             .offset(x: 14, y: 4)
                     }
                 }
@@ -348,10 +348,10 @@ struct SpeechChallengeView: View {
                     if count > 0 {
                         Text("\(count)")
                             .font(.caption2.weight(.bold).monospacedDigit())
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Color.onAccent)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 1)
-                            .background(Color.accentColor, in: Capsule())
+                            .background(Color.themeAccent, in: Capsule())
                             .offset(x: 4, y: -4)
                     }
                 }
@@ -378,7 +378,7 @@ struct SpeechChallengeView: View {
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 6)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .accentProminent()
                 }
             }
         }
@@ -776,7 +776,7 @@ struct SpeechChallengeMomentSheet: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 6)
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 Button("Done") { dismiss() }
                     .font(.body)
             }
@@ -809,7 +809,7 @@ struct SpeechChallengeMomentSheet: View {
             default: return .brown
             }
         case .up: return .green
-        case .debut: return .accentColor
+        case .debut: return Color.themeAccent
         }
     }
 
@@ -850,7 +850,7 @@ struct SpeechBoardRowView: View {
         HStack(spacing: 12) {
             Text("\(row.rank)")
                 .font(.body.monospacedDigit().weight(row.rank <= 3 ? .bold : .regular))
-                .foregroundStyle(row.rank <= 3 ? Color.accentColor : .secondary)
+                .foregroundStyle(row.rank <= 3 ? Color.themeAccent : .secondary)
                 .frame(minWidth: 28, alignment: .leading)
             Text(row.display_name)
                 .fontWeight(row.is_me ? .semibold : .regular)

@@ -133,7 +133,7 @@ struct FirstCallCheckSheet: View {
                 Button(action: save) {
                     Text("Save").font(.headline).frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 .controlSize(.large)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 8)
@@ -172,8 +172,8 @@ struct FirstCallCheckSheet: View {
         // The picked one is FILLED — the system's own "selected" — rather
         // than outlined: a drawn ring never matched the button's shape.
         if feeling == f {
-            Button { pick(f) } label: { label.foregroundStyle(.white) }
-                .buttonStyle(.borderedProminent)
+            Button { pick(f) } label: { label.foregroundStyle(Color.onAccent) }
+                .accentProminent()
         } else {
             Button { pick(f) } label: { label }
                 .buttonStyle(.bordered)

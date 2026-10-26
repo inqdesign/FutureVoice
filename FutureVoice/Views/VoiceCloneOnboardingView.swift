@@ -919,7 +919,7 @@ struct VoiceCloneOnboardingView: View {
     /// Gate 2 — how live the room is. Waits for a clap; each clap re-measures.
     private var echoGate: (symbol: String, state: String, tint: Color) {
         guard let tail = recorder.echoTailMs else {
-            return ("hands.clap", explain("clap to check"), Color.accentColor)
+            return ("hands.clap", explain("clap to check"), Color.themeAccent)
         }
         if tail <= Self.dryTailMs { return ("checkmark.circle.fill", explain("dry"), .green) }
         return ("water.waves", explain("echoey"), .orange)
@@ -1317,7 +1317,7 @@ struct VoiceCloneOnboardingView: View {
         }
         .accessibilityAddTraits(selected ? .isSelected : [])
         if selected {
-            button.buttonStyle(.borderedProminent)
+            button.accentProminent()
         } else {
             button.buttonStyle(.bordered)
         }
@@ -1349,7 +1349,7 @@ struct VoiceCloneOnboardingView: View {
         // Two native styles rather than one styled two ways: prominent IS the
         // selected state, so nothing here draws its own selection chrome.
         if speechSpeed == speed.rawValue {
-            speedButton(speed).buttonStyle(.borderedProminent)
+            speedButton(speed).accentProminent()
         } else {
             speedButton(speed).buttonStyle(.bordered)
         }
@@ -1487,7 +1487,7 @@ struct VoiceCloneOnboardingView: View {
                         Label("Use this voice", systemImage: "checkmark")
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .accentProminent()
                     .controlSize(.large)
                 }
 
@@ -1521,7 +1521,7 @@ struct VoiceCloneOnboardingView: View {
                     Label("Cloning your voice…", systemImage: "waveform")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 .controlSize(.large)
                 .disabled(true)
 
@@ -1531,7 +1531,7 @@ struct VoiceCloneOnboardingView: View {
                         Text("Start talking")
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .accentProminent()
                     .controlSize(.large)
                 } else {
                     Button {
@@ -1540,7 +1540,7 @@ struct VoiceCloneOnboardingView: View {
                         Text("Continue")
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .accentProminent()
                     .controlSize(.large)
                 }
 
@@ -1564,7 +1564,7 @@ struct VoiceCloneOnboardingView: View {
                         Text("Start talking")
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .accentProminent()
                     .controlSize(.large)
                 } else {
                     Button {
@@ -1574,7 +1574,7 @@ struct VoiceCloneOnboardingView: View {
                         Text("Save this voice")
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .accentProminent()
                     .controlSize(.large)
                 }
             }
@@ -1614,7 +1614,7 @@ struct VoiceCloneOnboardingView: View {
                         .frame(maxWidth: .infinity)
                 }
             }
-            .buttonStyle(.borderedProminent)
+            .accentProminent()
             .controlSize(.large)
             // Only the primary — Back must stay live, or a step that gates
             // its Next (the consent toggle) becomes a wall.
