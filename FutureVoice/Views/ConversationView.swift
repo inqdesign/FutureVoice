@@ -4993,14 +4993,18 @@ struct ConversationView: View {
             realtime.nudge("The learner picked a topic on their screen: \"\(request)\". Say in a few words that this is today's lesson and that you're setting it up — nothing else yet.")
         }
         Task { @MainActor in
+            var missReason = "request_failed"
             let planned = await TutorPlanner.plan(
                 request: request, askedWith: askedWith, targetLanguage: appState.targetLanguage,
                 nativeLanguage: appState.nativeLanguage, level: appState.proficiency,
-                persona: appState.persona)
+                persona: appState.persona, miss: { missReason = $0 })
             guard !isTornDown else { return }
             withAnimation(.easeInOut(duration: 0.25)) { tutorPlanning = false }
             guard var lesson = planned else {
-                Telemetry.log("tutor_plan_failed", ["picked": picked ? "1" : "0"])
+                // A line that names no topic is the planner working, not
+                // failing, so it gets its own event (the console flags *_failed).
+                Telemetry.log(missReason == "no_topic" ? "tutor_plan_no_topic" : "tutor_plan_failed",
+                              ["picked": picked ? "1" : "0", "code": missReason])
                 if picked || fromTopic {
                     realtime.nudge("Setting up the lesson didn't work. Ask them, in one short question, what exactly they want to be able to say about: \"\(request)\".")
                 }
