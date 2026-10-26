@@ -270,6 +270,9 @@ class TalkViewModel(context: Context) : ViewModel() {
     private var tutorJustTicked = false
     /** What the correction found on the learner's last try, for the block. */
     private var tutorLastFixes: List<String> = emptyList()
+    /** The learner's last try on the current challenge — the line kept on
+     *  the checklist when the tutor moves on by itself (iOS `tutorLastTry`). */
+    private var tutorLastTry = ""
     /** Where a scenario call takes place and who the other side is, for the
      *  "try saying" — "What can I get you?" only has one natural answer once
      *  it knows it is a café (iOS `coachSituation`). Null on every other call. */
@@ -1762,6 +1765,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             _state.update { it.copy(tutorLesson = lesson) }
             tutorJustTicked = false
             tutorLastFixes = emptyList()
+            tutorLastTry = ""
             log("tutor_lesson_started", mapOf("challenges" to lesson.challenges.size.toString(),
                 "picked" to if (picked) "1" else "0"))
             sendTutorSystem()
@@ -1769,9 +1773,13 @@ class TalkViewModel(context: Context) : ViewModel() {
         }
     }
 
-    /** One learner try on the current challenge (iOS `tutorCheck`). A tick
-     *  needs BOTH: the correction found no fixes, and the judge says the
-     *  line did it. */
+    /** One learner try on the current challenge (iOS `tutorCheck`). Moving
+     *  on is the TUTOR's call (right twice → next challenge), so the
+     *  checklist follows two ways: the app ticks when the correction found no
+     *  fixes and the judge says the line did it, and the judge also reports
+     *  when the tutor's last line had already left this challenge — then it
+     *  is ticked with the previous try, and this line is judged against the
+     *  challenge the tutor is on now. */
     private fun tutorCheck(said: String, fixes: List<TurnFix>) {
         val cfg = config ?: return
         if (!tutorThisCall || _state.value.tutorPlanning) return
@@ -1786,6 +1794,31 @@ class TalkViewModel(context: Context) : ViewModel() {
             val now = _state.value.tutorLesson
             if (!callIsLive || now == null || now.id != lesson.id || now.current != i) return@launch
             if (verdict?.wantsOtherTopic == true) { dropTutorLesson(said = said); return@launch }
+            if (verdict?.tutorMovedOn == true) {
+                val stamp = System.currentTimeMillis()
+                val kept = tutorLastTry.ifEmpty { said }
+                var moved = now.copy(challenges = now.challenges.mapIndexed { k, c ->
+                    if (k == i) c.copy(doneAt = stamp, line = kept) else c
+                })
+                tutorLastTry = ""
+                tutorLastFixes = emptyList()
+                tutorJustTicked = false
+                val finished = moved.current == null
+                if (finished) {
+                    moved = moved.copy(finishedAt = stamp)
+                    log("tutor_lesson_finished", mapOf("of" to moved.challenges.size.toString()))
+                }
+                TutorLessonStore.save(appContext, moved)
+                _state.update { it.copy(tutorLesson = moved) }
+                com.roro.futurevoice.ui.HapticEngine.success(appContext)
+                log("tutor_challenge_done", mapOf("index" to (i + 1).toString(),
+                    "of" to moved.challenges.size.toString(), "by" to "tutor"))
+                sendTutorSystem()
+                // This line answered what the tutor asked after moving on.
+                if (finished) tutorAfterLesson(said, moved) else tutorCheck(said, fixes)
+                return@launch
+            }
+            tutorLastTry = said
             if (fixes.isNotEmpty()) {
                 tutorLastFixes = fixes.map { "\"${it.was}\" → \"${it.now}\"" }
                 tutorJustTicked = false
@@ -1800,6 +1833,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                 if (hadFixes) sendTutorSystem()
                 return@launch
             }
+            tutorLastTry = ""
             val stamp = System.currentTimeMillis()
             var next = now.copy(challenges = now.challenges.mapIndexed { k, c ->
                 if (k == i) c.copy(doneAt = stamp, line = said) else c
@@ -1815,7 +1849,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             tutorJustTicked = true
             com.roro.futurevoice.ui.HapticEngine.success(appContext)
             log("tutor_challenge_done", mapOf("index" to (i + 1).toString(),
-                "of" to next.challenges.size.toString()))
+                "of" to next.challenges.size.toString(), "by" to "app"))
             sendTutorSystem()
         }
     }
@@ -1889,6 +1923,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         // The rest of the call is a fresh session.
         tutorLastFixes = emptyList()
         tutorJustTicked = false
+        tutorLastTry = ""
         _state.update { it.copy(tutorLesson = null, turns = it.turns.drop(cut), resumedTurnCount = 0) }
         sessionId = StoreJson.newId()
         startedAt = System.currentTimeMillis()
@@ -1925,6 +1960,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         _state.update { it.copy(tutorLesson = null) }
         tutorLastFixes = emptyList()
         tutorJustTicked = false
+        tutorLastTry = ""
         sendTutorSystem()
         if (said != null) {
             // The tutor already agreed in its reply (the block's rule); the

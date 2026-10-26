@@ -229,8 +229,13 @@ object TutorJudge {
         val done: Boolean = false,
         /** They asked to change the topic or stop this lesson. */
         @SerialName("other_topic") val otherTopic: Boolean? = null,
+        /** The tutor's last line had already left this challenge — it moves
+         *  on by its own judgment, and the checklist follows it (iOS
+         *  `tutor_moved_on`). */
+        @SerialName("tutor_moved_on") val tutorMovedOnRaw: Boolean? = null,
     ) {
         val wantsOtherTopic: Boolean get() = otherTopic == true
+        val tutorMovedOn: Boolean get() = tutorMovedOnRaw == true
     }
 
     /** Did [line] do [challenge]? Content only — the correction call judges

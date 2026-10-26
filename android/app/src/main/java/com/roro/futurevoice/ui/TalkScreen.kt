@@ -1114,6 +1114,11 @@ fun TalkScreen(
                             val sendMode = sendToAnswer && onCall &&
                                 (state.phase == TalkPhase.LISTENING || state.sendPending)
                             val hasHeldWords = state.partial.isNotBlank()
+                            // Send-to-answer once the learner has started: the
+                            // pill is Send and reset sits beside it. Before the
+                            // first word the turn looks like any other — the pill
+                            // stops the call, the topic button stays (iOS `sendReady`).
+                            val sendReady = sendMode && (hasHeldWords || state.sendPending)
                             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                             // Quiet on purpose: the one primary action here is the pill.
                             IconButton(onClick = { showingCallSettings = true },
@@ -1129,8 +1134,8 @@ fun TalkScreen(
                                         TalkMorph.pillRect = it.boundsInWindow(); TalkMorph.pillPresent = true }
                                     .clip(CircleShape)
                                     .clickable {
-                                        if (sendMode) {
-                                            if (hasHeldWords && !state.sendPending) {
+                                        if (sendReady) {
+                                            if (!state.sendPending) {
                                                 HapticEngine.selection(context)
                                                 vm.sendHeldTurn()
                                             }
@@ -1156,7 +1161,7 @@ fun TalkScreen(
                                 // line of its own.
                                 // Only while it matters (iOS: ≤10 min), and orange
                                 // in the last three — the one moment a figure helps.
-                                if (sendMode) {
+                                if (sendReady) {
                                     if (state.sendPending) {
                                         CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.5.dp,
                                             color = MaterialTheme.colorScheme.onSurface)
@@ -1164,7 +1169,7 @@ fun TalkScreen(
                                         Icon(Icons.AutoMirrored.Filled.Send,
                                             contentDescription = stringResource(R.string.send),
                                             tint = MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.size(24.dp).alpha(if (hasHeldWords) 1f else 0.3f))
+                                            modifier = Modifier.size(24.dp))
                                     }
                                 } else
                                 state.minutesRemaining?.takeIf { it <= 10 }?.let { minutes ->
@@ -1177,26 +1182,32 @@ fun TalkScreen(
                                 }
                             }
                             // Send-to-answer's reset, mirroring the settings
-                            // button. Held in place (hidden, not removed) for
-                            // the whole call so nothing shifts when the turn
-                            // changes hands.
+                            // button, and only once there are words to send (on
+                            // an empty turn it covered the topic button). Held in
+                            // place (hidden, not removed) for the whole call so
+                            // nothing shifts.
                             // Tutor mode: topics to practice, for a learner
                             // with no idea (iOS `tutorTopicButton`). Same
-                            // shape as the settings button across the pill.
-                            // Tutor mode has nothing to do with Send: the
-                            // topic button holds this spot and gives way only
-                            // while words wait to be sent (iOS ConversationView).
-                            if (state.tutorOn && onCall && !(sendMode && hasHeldWords)) {
+                            // shape as the settings button across the pill; it
+                            // holds this spot the rest of the time.
+                            if (sendReady) {
+                                val canClear = hasHeldWords && !state.sendPending
+                                IconButton(onClick = { vm.discardTurn() }, enabled = canClear,
+                                    modifier = Modifier.align(Alignment.CenterEnd).padding(end = 16.dp)
+                                        .alpha(if (canClear) 1f else 0.4f)) {
+                                    Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.clear),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            } else if (state.tutorOn && onCall) {
                                 IconButton(onClick = { showingTutorTopics = true }, enabled = !state.tutorPlanning,
                                     modifier = Modifier.align(Alignment.CenterEnd).padding(end = 16.dp)) {
                                     Icon(Icons.Outlined.Lightbulb, contentDescription = stringResource(R.string.what_to_practice),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             } else if (sendToAnswer && onCall) {
-                                val canClear = sendMode && hasHeldWords && !state.sendPending
-                                IconButton(onClick = { vm.discardTurn() }, enabled = canClear,
+                                IconButton(onClick = {}, enabled = false,
                                     modifier = Modifier.align(Alignment.CenterEnd).padding(end = 16.dp)
-                                        .alpha(if (!sendMode) 0f else if (canClear) 1f else 0.4f)) {
+                                        .alpha(0f)) {
                                     Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.clear),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
