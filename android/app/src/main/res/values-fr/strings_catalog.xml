@@ -2321,7 +2321,7 @@
     <string name="sign_out_dc1649">"Se déconnecter"</string>
     <string name="sign_out_go_back">"Se déconnecter et revenir"</string>
     <string name="silent">"(silence)"</string>
-    <string name="similar_voice">"Voix proche"</string>
+    <string name="similar_voice">"Tuteur IA"</string>
     <string name="simple_words_and_phrases_about_immediate_familiar_things">"Des mots et des expressions simples sur des choses proches et familières."</string>
     <string name="since">"Depuis %s"</string>
     <string name="situation">"Situation"</string>
