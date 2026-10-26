@@ -1,10 +1,10 @@
 Novedades
-• El modo tutor es nuevo. Elige un tema y tu yo fluido te lo enseña en 3 o 4 pasos, practicando cada uno contigo hasta que lo digas sin errores. Una lista sobre la llamada muestra por dónde vas, y una lección que dejas a medias sigue en tu próxima llamada.
-• Toca el libro junto a un episodio del pódcast y se convierte en tu propio cuaderno de repaso.
-• Antes de tu primera llamada puedes elegir tu nivel, la velocidad, el modo coach, «Responder con Enviar» y el modo tutor.
-• Al crear tu voz por primera vez, puedes elegir la voz del tutor IA en lugar de la tuya.
+• La página de resultados de un discurso marca tus errores sobre el texto, como con boli rojo.
+• En la clasificación de un reto de discurso aparecen los intentos de 80 puntos o más.
+• En Escuchar, el botón del reproductor abre la lista al instante cuando no suena nada.
 
 Correcciones
-• Ya no suena ruido antes de la primera frase de una escena.
-• Tu burbuja ya no desaparece y vuelve a aparecer al terminar de hablar en una llamada.
-• El reloj de la llamada y el anillo de la pantalla principal ahora muestran el mismo tiempo de conversación.
+• En el modo tutor, si lo dices bien dos veces, el tutor pasa solo al siguiente paso.
+• Con Responder con Enviar, el botón Enviar aparece cuando empiezas a hablar, y el botón de tema ya no desaparece.
+• El reloj de la llamada ya no se detiene en 0:05.
+• Los colores del tema ahora se ven dentro de las hojas y en modo oscuro.
