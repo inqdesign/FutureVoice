@@ -547,7 +547,7 @@ struct VoiceCloneOnboardingView: View {
         case .reviewing: return chrome("How you sound")
         case .account:   return chrome("Make it yours")
         case .uploading: return chrome("Becoming you")
-        case .meet:      return usingPreset ? chrome("Meet your role model")
+        case .meet:      return usingPreset ? chrome("Meet your AI tutor")
                                         : chrome("Meet your fluent self")
         case .queued:    return chrome("Voice saved")
         }
@@ -1113,10 +1113,11 @@ struct VoiceCloneOnboardingView: View {
     private var meetContent: some View {
         VStack(spacing: 22) {
             // A preset is not the learner: it is the fluent speaker they are
-            // learning to sound like — a role model (founder, 2026-10-24).
+            // learning with — the AI tutor (founder, 2026-10-26; "role
+            // model" since 2026-10-24).
             if usingPreset {
-                stepHeader(explain("Your role model."),
-                           explain("Pick how your role model looks and how fast it talks."))
+                stepHeader(explain("Your AI tutor."),
+                           explain("Pick how your AI tutor looks and how fast it talks."))
             } else {
                 stepHeader(explain("It's you — fluent."),
                            explain("Pick how your fluent self looks and sounds."))
