@@ -37,7 +37,7 @@ def swift_string(src, after):
 
 tl = open(f"{ROOT}/FutureVoice/Services/TutorLesson.swift").read()
 PLAN = swift_string(tl, "static func plan(")
-JUDGE = swift_string(tl, "static func didIt(")
+JUDGE = swift_string(tl[tl.index("enum TutorJudge"):], "static func read(")
 
 def post(url, body, headers):
     req = urllib.request.Request(url, json.dumps(body).encode(), {"content-type": "application/json", **headers})
@@ -103,13 +103,17 @@ for lang in LANGS:
 CH = ("Say your name and where you're from", "I'm Minji, and I'm from Busan.")
 LINES = [("My name is Tom and I'm from Leeds.", True), ("I'm Tom.", False),
          ("I like coffee.", False), ("Hi, I am Tom, I come from Leeds in England.", True)]
+ASKED = [("Tell me your name and where you're from.", False),
+         ("Nice and clear. Say it once more, just like that.", False),
+         ("You got it! Next: what do you do? Say: I work as a nurse — about you.", True)]
 for line, want in ([] if os.environ.get("PLAN_ONLY") else LINES):
     sysp = JUDGE.replace("\\(target)", "English")
-    out = gemini("gemini-3.1-flash-lite", sysp,
-                 f"Challenge: {CH[0]}\nExample of a line that does it: {CH[1]}\n"
-                 f"The tutor had just said: Tell me your name and where you're from.\nThe learner said: {line}",
-                 thinking="minimal")
-    print(f"### JUDGE want={want} · {line} → {out.strip()}")
+    for asked, moved in (ASKED if want else ASKED[:1]):
+        out = gemini("gemini-3.1-flash-lite", sysp,
+                     f"Challenge: {CH[0]}\nExample of a line that does it: {CH[1]}\n"
+                     f"The tutor had just said: {asked}\nThe learner said: {line}",
+                     thinking="minimal")
+        print(f"### JUDGE want done={want} moved={moved} · {asked[:30]} · {line} → {out.strip()}")
 
 # ---- 3. tutor replies
 NOTE = "[Note from the app — the learner did not say this: %s]"
@@ -127,6 +131,11 @@ CASES = {
                               ("u", "I work as an engineer at a car company."),
                               ("m", "Nice, that sounded right. Say it once more, just like that."),
                               ("u", "I work as an engineer at a car company.")]),
+        # No app tick: the tutor itself must move on (2026-10-25).
+        "again": ("lesson", [("m", "Now, what do you do? Say: I work as a nurse at a hospital — but about you."),
+                             ("u", "I work as an engineer at a car company."),
+                             ("m", "Nice and clear. Say it once more, just like that."),
+                             ("u", "I work as an engineer at a car company.")]),
     },
     "ko": {
         "notopic": ("tutor", [("m", "좋아, 오늘은 수업이야. 오늘은 어떤 말을 할 수 있게 되고 싶어? 말해 줘도 되고, 버튼에서 주제를 골라도 돼."),
@@ -141,6 +150,10 @@ CASES = {
                               ("u", "저는 자동차 회사에서 엔지니어로 일해요."),
                               ("m", "좋아, 맞게 했어. 한 번만 더 똑같이 말해 봐."),
                               ("u", "저는 자동차 회사에서 엔지니어로 일해요.")]),
+        "again": ("lesson", [("m", "이제 무슨 일 하는지 말해 볼까? 예를 들면, 저는 병원에서 간호사로 일해요. 네 얘기로 해 봐."),
+                             ("u", "저는 자동차 회사에서 엔지니어로 일해요."),
+                             ("m", "좋아, 깔끔해. 한 번만 더 똑같이 말해 봐."),
+                             ("u", "저는 자동차 회사에서 엔지니어로 일해요.")]),
     },
 }
 RUNS = int(os.environ.get("RUNS", "2"))
