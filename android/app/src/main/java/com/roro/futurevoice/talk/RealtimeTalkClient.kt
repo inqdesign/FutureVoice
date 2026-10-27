@@ -44,6 +44,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 /**
  * Client for the realtime Talk gateway (`gateway/` in this repo — a
@@ -333,6 +334,11 @@ class RealtimeTalkClient(private val context: Context) {
     private var gateLearned = 0
     @Volatile private var echoHoldUntil = 0L
     private var linesStarted = 0
+    /** Where each fluent-self line played ("Speaker" / "Headphones" → lines)
+     *  and how much mic audio went up as echo-gate zeros, for
+     *  `talk_rt_session` (iOS 2026-10-27). */
+    private val linesByRoute = mutableMapOf<String, Int>()
+    @Volatile private var zeroSeconds = 0.0
     private var bargeVoiced = 0.0
     private var bargeQuiet = 0.0
     /** Set when the phone cut a line itself: audio of that line still in
@@ -462,6 +468,7 @@ class RealtimeTalkClient(private val context: Context) {
         micBytesSent = 0; warningsThisCall = 0; turnsThisCall = 0
         meterTotal = 0
         linesStarted = 0; setEchoGate(false)
+        linesByRoute.clear(); zeroSeconds = 0.0
         manualTurnsOn = manualTurns
         droppingCutLine = false; bargeVoiced = 0.0; bargeQuiet = 0.0
         state = State.CONNECTING
@@ -751,6 +758,7 @@ class RealtimeTalkClient(private val context: Context) {
                 // no echo to learn, and the learn window took the learner's own
                 // voice as the floor, muting every barge-in (iOS 2026-10-16).
                 val speaker = outputIsSpeaker()
+                linesByRoute.merge(if (speaker) "Speaker" else "Headphones", 1, Int::plus)
                 setEchoGate(speaker, halfDuplex = linesStarted == 1 && speaker)
                 val rate = replyRate
                 scope.launch(audioThread) {
@@ -966,7 +974,12 @@ class RealtimeTalkClient(private val context: Context) {
             // times Send was pressed. Absent from an older gateway.
             "manual_turns" to (msg["manualTurns"]?.jsonPrimitive?.content?.toBooleanStrictOrNull()
                 ?.let { if (it) "1" else "0" } ?: ""),
-            "sends" to (msg["sends"]?.jsonPrimitive?.content ?: "")))
+            "sends" to (msg["sends"]?.jsonPrimitive?.content ?: ""),
+            // Audio route: the output at the end, every line's output
+            // ("Headphones:3,Speaker:5"), and seconds sent as echo-gate zeros.
+            "route_out" to if (outputIsSpeaker()) "Speaker" else "Headphones",
+            "line_routes" to linesByRoute.toSortedMap().entries.joinToString(",") { "${it.key}:${it.value}" },
+            "zero_s" to zeroSeconds.roundToInt().toString()))
     }
 
     // ------------------------------------------------------------------
@@ -1026,6 +1039,7 @@ class RealtimeTalkClient(private val context: Context) {
                     level = 0f
                     socket?.send(ByteArray(frame.size).toByteString())
                     micBytesSent += frame.size
+                    zeroSeconds += n.toDouble() / MIC_RATE
                     continue
                 }
                 socket?.send(frame.toByteString())
