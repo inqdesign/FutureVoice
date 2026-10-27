@@ -148,6 +148,24 @@ struct AccountStatus {
     var renewalPriceMilliunits: Int?
     var renewalCurrency: String?
 
+    /// A plan change Apple has scheduled for the next renewal — a downgrade
+    /// (Plus → Light, whatever the period) waits for the period to end, and
+    /// until it does Apple's own screen is the only place it shows. Computed
+    /// by the server (`subscription_summary`, 2026-10-27) so what it means
+    /// can change without a build; nil when nothing changes.
+    struct PendingPlan: Equatable {
+        let planId: String
+        let startsAt: Date
+        let monthlySeconds: Int?
+        let monthlyScenes: Int?
+        let talkUnlimited: Bool
+    }
+    var pendingPlan: PendingPlan?
+    /// Lines written by hand about subscriptions (`subscription_notes`), in
+    /// the app language — the way to tell subscribers something without a
+    /// release.
+    var subscriptionNotes: [String] = []
+
     /// How long the launch offer codes discount (docs/launch-billing.md §7:
     /// pay-as-you-go 12 months on both `Beta50 … v2` offers). Apple's
     /// transaction says WHICH offer priced a period, not how many periods the
@@ -364,10 +382,15 @@ struct AccountStatus {
             // "no plan yet" — the pool is a balance, not a tier.
             return hasLegacyPool ? explain("Free minutes") : explain("No plan")
         }
-        let name = Self.tierName(planId)
         // The trial is metered as Light whatever plan is being trialed, so
         // naming the trialed plan's tier here would promise the wrong size.
-        if isTrialing { return explain("\(name) trial") }
+        if isTrialing { return explain("\(Self.tierName(planId)) trial") }
+        return Self.planName(planId)
+    }
+
+    /// "Light · Annual" for any plan id — the held plan or a pending one.
+    static func planName(_ planId: String) -> String {
+        let name = tierName(planId)
         switch planId.split(separator: "_").dropFirst().first {
         case "annual":  return "\(name) · " + explain("Annual")
         case "monthly": return "\(name) · " + explain("Monthly")
@@ -635,6 +658,38 @@ struct AccountStatus {
             out.renewalOfferType = row.renewal_offer_type
             out.renewalPriceMilliunits = row.renewal_price_milliunits
             out.renewalCurrency = row.renewal_currency
+        }
+
+        // The pending plan change and the hand-written notes, one RPC
+        // (20261027150000). Missing on an older database = nothing extra said.
+        struct SummaryRow: Decodable {
+            struct Pending: Decodable {
+                let plan_id: String
+                let starts_at: String
+                let monthly_seconds: Int?
+                let monthly_scenes: Int?
+                let talk_unlimited: Bool?
+            }
+            let pending: Pending?
+            let notes: [[String: String]]?
+        }
+        if out.isEntitled,
+           let summary: SummaryRow = try? await SupabaseProvider.shared
+            .rpc("subscription_summary")
+            .execute()
+            .value {
+            if let p = summary.pending, let starts = Self.timestamp(from: p.starts_at) {
+                out.pendingPlan = PendingPlan(planId: p.plan_id, startsAt: starts,
+                                              monthlySeconds: p.monthly_seconds,
+                                              monthlyScenes: p.monthly_scenes,
+                                              talkUnlimited: p.talk_unlimited ?? false)
+            }
+            let lang = LanguageCatalog.currentNative
+            out.subscriptionNotes = (summary.notes ?? []).compactMap { texts in
+                texts[lang]
+                    ?? texts.first { LanguageCatalog.sameLanguage($0.key, lang) }?.value
+                    ?? texts["en"] ?? texts.values.first
+            }
         }
 
         if out.isEntitled {

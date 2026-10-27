@@ -88,7 +88,7 @@ struct PlanPageView: View {
                         title: refillTitle,
                         subtitle: account.isTrialing && !account.cancelAtPeriodEnd
                             ? explain("Cancel any time before then in the App Store")
-                            : nil)
+                            : pendingSizeLine)
                 }
             } header: {
                 Text(account.isEntitled ? explain("This month") : explain("Left to spend"))
@@ -108,6 +108,11 @@ struct PlanPageView: View {
             // could only disagree with Apple's.
             if account.isEntitled, let source = account.source {
                 Section {
+                    // Written by hand on the server (`subscription_notes`) —
+                    // the one thing on this page that changes without a build.
+                    ForEach(account.subscriptionNotes, id: \.self) { note in
+                        row(icon: "info.circle", title: note)
+                    }
                     if let since = account.startedAt {
                         row(icon: "calendar",
                             title: explain("Since \(AccountStatus.dayLabel(since))"))
@@ -265,6 +270,7 @@ struct PlanPageView: View {
 
     private var refillIcon: String {
         if account.cancelAtPeriodEnd { return "calendar.badge.minus" }
+        if account.pendingPlan != nil { return "arrow.triangle.swap" }
         return account.isTrialing ? "calendar.badge.exclamationmark" : "arrow.clockwise"
     }
 
@@ -289,7 +295,21 @@ struct PlanPageView: View {
         if account.isTrialing {
             return explain("Your trial becomes paid on \(account.renewalLabel)")
         }
+        // A downgrade Apple holds for the renewal (2026-10-27): the date does
+        // not refill this plan, it starts the other one — and the plans page
+        // still badges this one "Current plan" until then.
+        if let next = account.pendingPlan {
+            return explain("Changes to \(AccountStatus.planName(next.planId)) on \(account.renewalLabel)")
+        }
         return explain("Refills on \(account.renewalLabel)")
+    }
+
+    /// What the pending plan will hold — the catalog's size, from the server.
+    private var pendingSizeLine: String? {
+        guard let next = account.pendingPlan else { return nil }
+        if next.talkUnlimited { return explain("No limit on talk") }
+        guard let seconds = next.monthlySeconds, seconds > 0 else { return nil }
+        return explain("\(seconds / 60) min of talk a month from then")
     }
 
     /// Scenes are capped on EVERY tier — a scene plays itself, so a count is
