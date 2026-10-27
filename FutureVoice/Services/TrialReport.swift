@@ -33,6 +33,9 @@ struct TrialReport: Codable {
     var level: String?
     var levelRationale: String?
     var builtAt: Date
+    /// The fluent self's narration of the deck (`ReportNarration`), written
+    /// once and replayed from here.
+    var narration: ReportNarration? = nil
 }
 
 @MainActor

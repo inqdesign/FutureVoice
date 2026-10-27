@@ -60,6 +60,7 @@ const DAILY_CAPS: Record<string, number> = {
   "clone-script": 20,
   "script-study": 60,          // a Speech script's study notes, cached per script
   "tutor": 400,                // tutor mode: a lesson plan per topic + a judge per learner turn
+  "report-narration": 30,      // the report's spoken script, 2–4 calls per report
 }
 const DEFAULT_DAILY_CAP = 300
 

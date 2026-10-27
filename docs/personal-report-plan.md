@@ -150,7 +150,7 @@ the deck advances when a line ends, a tap pauses. 60–90 seconds.
 | Step | State |
 |---|---|
 | 1. English map + probe | done 2026-10-27 — see below |
-| 2. Narrated trial report | not started |
+| 2. Narrated trial report | built 2026-10-27, server allowlists NOT deployed — see below |
 | 3–7 | not started |
 
 ### Step 1 result (2026-10-27)
@@ -174,3 +174,27 @@ by hand. The quote check drops fillers and stutters before matching
 the app's verifier must do the same. The prompt lives in the probe for now;
 it moves into Swift (`LevelTagger`) in step 3 and the probe will read it
 from there, like `correction-probe.py`.
+
+### Step 2 result (2026-10-27)
+
+`ReportNarration.swift` (script writer, per-card facts, player) wired into
+`WeekRecapSheet` for the trial report only (`narrates`). Two to four script
+calls per report (`purpose: "report-narration"`, default model): the counts
+cards when the deck opens, the coach cards and the level as they land. Each
+line is synthesized in `speakingVoiceId`, kept in `PhraseAudioStore`, and the
+deck advances 0.9 s after a line ends, never past the test or the routine.
+Captions (native) under the card; a speaker button mutes; tap the caption to
+replay. Run live on a simulator with `-capture tabs -triallive 1 -devEmail …
+-devPassword …` (dev bundle `com.roro.futurevoice.dev`): spoke and advanced
+through the deck in the dev account's voice.
+
+`scripts/report-narration-probe.py en ko a2` prints the script from the
+live prompt. What it taught: the voice read the learner's MISTAKE aloud
+("You said I am working here since three years") — the prompt now says the
+right way only, and no grammar terms out loud; captions follow the facts'
+language unless pinned to the native one. ~55–60 s of speech per report.
+
+**Before shipping:** deploy `tts` (adds `report-narration` to
+FREE_PURPOSES — without it the voice is charged to a learner whose minutes
+are spent, i.e. refused) and `gemini` (its daily cap). Not deployed.
+Not yet: the weekly deck (`narrates` is trial-only), Android.

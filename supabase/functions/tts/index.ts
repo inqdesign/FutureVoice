@@ -45,6 +45,8 @@ const FREE_PURPOSES = new Set([
   "shadow",         // first synthesis of a shadow line (with timestamps)
   "voice_preview",  // counterpart preset voice preview
   "daily-call",     // voicemail — the retention hook is on us, not the user
+  "report-narration", // the fluent self reading the learner's report (ReportNarration);
+                      // shown to learners whose free minutes are spent, ~1k chars, cached
 ])
 
 // TALK surfaces meter by wall-clock call time (talk-tick), so their TTS is

@@ -49,6 +49,14 @@ struct WeekRecapSheet: View {
     /// learner) and cancel the level read mid-call.
     @State private var trialStarted = false
 
+    // The narration (`ReportNarration`): the fluent self reads each card.
+    @StateObject private var narrator = ReportNarrationPlayer()
+    @State private var narration = ReportNarration()
+    /// Cards a script has been asked for, so a half is written once.
+    @State private var narrationAsked: Set<String> = []
+    /// Whether the deck reads itself: the trial report, for now.
+    private var narrates: Bool { isTrial }
+
     init(recap: WeekRecap, action: Binding<Action?>, startPage: Int = 0) {
         _recap = State(initialValue: recap)
         _action = action
@@ -122,6 +130,7 @@ struct WeekRecapSheet: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
+            if narrates { captionBox }
             bottomButton
                 .padding(.horizontal, 20)
                 .padding(.bottom, 12)
@@ -131,13 +140,21 @@ struct WeekRecapSheet: View {
         .presentationCornerRadius(28)
         .onChange(of: page) { _, new in
             withAnimation(.easeOut(duration: 0.4)) { _ = revealed.insert(new) }
+            speakCurrentCard()
         }
+        .onChange(of: recap.coach) { _, _ in Task { await writeNarration() } }
+        .onChange(of: levelSettled) { _, _ in Task { await writeNarration() } }
+        .onChange(of: trialTest?.isFinished) { _, _ in Task { await writeNarration() } }
+        .onChange(of: narrator.isOn) { _, on in on ? speakCurrentCard() : narrator.stop() }
+        .onChange(of: showingTrialTest) { _, up in if up { narrator.stop() } }
+        .onChange(of: showingPaywall) { _, up in if up { narrator.stop() } }
         // One row per viewing, never one per swipe: how far the deck was
         // read is the question, and it is answered once.
         .onAppear { if isTrial { TrialReportStore.isShowing = true } }
         .onDisappear {
             // Covered by the test or the plans is not closed.
             guard !showingTrialTest, !showingPaywall else { return }
+            narrator.stop()
             if isTrial { TrialReportStore.isShowing = false }
             Analytics.capture(isTrial ? "trial_report_closed" : "week_recap_closed",
                               ["reached": (revealed.max() ?? 0) + 1, "cards": cards.count])
@@ -203,6 +220,16 @@ struct WeekRecapSheet: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
+                if narrates {
+                    Button { narrator.isOn.toggle() } label: {
+                        Image(systemName: narrator.isOn ? "speaker.wave.2.fill" : "speaker.slash.fill")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(narrator.isOn ? Color.themeAccent : .secondary)
+                            .frame(width: 32, height: 32)
+                            .background(Color(.tertiarySystemFill), in: Circle())
+                    }
+                    .accessibilityLabel(narrator.isOn ? Text("Mute narration") : Text("Play narration"))
+                }
                 Button { dismiss() } label: {
                     Image(systemName: "xmark")
                         .font(.body.weight(.semibold))
@@ -1080,6 +1107,9 @@ struct WeekRecapSheet: View {
         #if DEBUG
         if UserDefaults.standard.bool(forKey: "trialtest") { showingTrialTest = true }
         #endif
+        narrator.configure(voiceId: appState.speakingVoiceId)
+        if let kept = trial?.narration { narration = kept }
+        Task { await writeNarration() }
         async let level: Void = loadTrialLevel()
         await writeCoachIfNeeded()
         await level
@@ -1131,6 +1161,109 @@ struct WeekRecapSheet: View {
             change(&copy)
             TrialReportStore.save(copy)
             trial = copy
+        }
+    }
+
+    // MARK: - Narration
+
+    /// The script's key for a card. The trial test's line changes once the
+    /// test is done, so the done state is a key of its own.
+    private func narrationKey(_ card: Card) -> String {
+        if card == .trialTest, trialTest?.isFinished == true { return "trialTestDone" }
+        return String(describing: card)
+    }
+
+    private var narrationContext: ReportNarrator.Context {
+        ReportNarrator.Context(
+            recap: recap, isTrial: isTrial,
+            level: trialLevel, levelRationale: trialRationale,
+            testScore: trialTest?.isFinished == true ? trialTest?.score : nil,
+            testTotal: trialTest?.isFinished == true ? trialTest?.total : nil,
+            testThin: trial?.testThin == true,
+            routineHeadline: RoutineRecipe.headline(for: LearningPurposeStore.purposes),
+            routine: routine.map { "\($0.block.kind.titled($0.block.minutes)), \(SetupFlowView.weekdaySummary($0.block.weekdays))" })
+    }
+
+    /// Asks for the lines of every card whose content is known and that has
+    /// none yet — the counts cards at once, the coach and the level as they
+    /// land. Each card is asked for once per opening.
+    private func writeNarration() async {
+        guard narrates else { return }
+        let context = narrationContext
+        let wanted = cards.compactMap { card -> ReportNarrator.CardFacts? in
+            let key = narrationKey(card)
+            guard narration.line(for: key) == nil, !narrationAsked.contains(key) else { return nil }
+            if card == .level, !levelSettled { return nil }
+            guard var facts = ReportNarrator.facts(card: String(describing: card), context) else { return nil }
+            facts.card = key
+            return facts
+        }
+        guard !wanted.isEmpty else { return }
+        wanted.forEach { narrationAsked.insert($0.card) }
+        do {
+            let lines = try await ReportNarrator.write(
+                cards: wanted, firstTalks: isTrial, targetLanguage: appState.targetLanguage,
+                level: trialLevel ?? appState.proficiency, learnerName: appState.persona?.displayName)
+            narration.merge(lines)
+            if isTrial { updateTrial { $0.narration = narration } }
+            narrator.prefetch(cards.compactMap { narration.line(for: narrationKey($0)) })
+            speakCurrentCard(onlyIfIdle: true)
+        } catch {
+            wanted.forEach { narrationAsked.remove($0.card) }
+            Analytics.capture("report_narration_failed", ["error": "\(error)".prefix(160).description])
+        }
+    }
+
+    /// Speaks the card on screen. `onlyIfIdle`: a script that just arrived
+    /// starts its card's line, but never cuts one already playing.
+    private func speakCurrentCard(onlyIfIdle: Bool = false) {
+        guard narrates, let card = cards[safe: page] else { return }
+        if onlyIfIdle, narrator.speakingCard != nil || narrator.loadingCard != nil { return }
+        guard let line = narration.line(for: narrationKey(card)) else { narrator.stop(); return }
+        let at = page
+        narrator.speak(line) {
+            // The deck moves on by itself, except past a card that asks
+            // the learner something (the test, the routine).
+            guard ![.trialTest, .routine, .test].contains(card), at == page,
+                  at < cards.count - 1 else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+                guard at == page, !showingTrialTest, !showingPaywall else { return }
+                advance()
+            }
+        }
+    }
+
+    /// The line being spoken, in the target language, with its native
+    /// caption — under the card, above the button.
+    @ViewBuilder
+    private var captionBox: some View {
+        if let card = cards[safe: page], let line = narration.line(for: narrationKey(card)) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Image(systemName: narrator.speakingCard == line.card ? "waveform" : "text.bubble")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Color.themeAccent)
+                        .symbolEffect(.variableColor.iterative, isActive: narrator.speakingCard == line.card)
+                    Text(verbatim: line.text)
+                        .font(.subheadline.weight(.medium))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if !line.caption.isEmpty, !LanguageCatalog.sameLanguage(appState.targetLanguage, appState.nativeLanguage) {
+                    Text(verbatim: line.caption)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .padding(.leading, 22)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .padding(.horizontal, 20)
+            .padding(.bottom, 8)
+            .onTapGesture { speakCurrentCard() }
+            .transition(.opacity)
+            .animation(.easeOut(duration: 0.25), value: line)
         }
     }
 
