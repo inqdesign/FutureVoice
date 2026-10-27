@@ -106,8 +106,11 @@ export class CallSession implements DurableObject {
    *  delays exactly that one — reply text went from ready-at-commit to
    *  0.7–1.2 s after it. The cached system prompt (reply.ts) is what made
    *  them cheap instead; this only stops a turn that never ends from
-   *  generating forever. */
-  private static readonly specMaxFires = 12
+   *  generating forever. 12 until 2026-10-27: a long turn with many pauses
+   *  spent all twelve before it ended, so the last fire never came and the
+   *  reply was written from scratch after the commit (the founder's 7-turn
+   *  call fired 52 times). One fire is ~$0.00008 on the cached prompt. */
+  private static readonly specMaxFires = 40
   private specFiresThisTurn = 0
   private specFires = 0
   private specAdopted = 0
