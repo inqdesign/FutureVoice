@@ -236,8 +236,12 @@ private data class SayTake(val score: Int? = null, val outcome: Outcome, val hea
 /** Earliest a read can end, per word — measured from the FIRST WORD. */
 private const val READ_MS_PER_WORD = 380
 /** The only thing that ends a take on a learner still talking: a room that
- *  never falls quiet. Far past any line a turn can be (iOS 0952451). */
+ *  never falls quiet. At least this, and never less than
+ *  `MAX_READ_LINE_FACTOR` times the line's own estimate: a whole-screen turn
+ *  of 150+ words is ~57 s by that estimate alone, so a flat 60 s cut a
+ *  learner off mid-sentence on exactly those lines. */
 private const val MAX_READ_MS = 60_000L
+private const val MAX_READ_LINE_FACTOR = 2.5
 /** Pause for an other-side line whose recording didn't survive. */
 private const val SILENT_READ_MS_PER_WORD = 380
 
@@ -450,7 +454,7 @@ fun SayItAgainScreen(
         // Only silence ends a take. The line's length used to be a hard stop
         // too (~1.5x the estimate), and a whole turn read for the first time
         // runs past 380 ms a word easily, so the take was cut mid-sentence.
-        val hardStop = began + MAX_READ_MS
+        val hardStop = began + maxOf(MAX_READ_MS, (lineMs * MAX_READ_LINE_FACTOR).toLong())
         var lastVoiced = began
         while (!skipRequested && System.currentTimeMillis() < hardStop) {
             val now = System.currentTimeMillis()
