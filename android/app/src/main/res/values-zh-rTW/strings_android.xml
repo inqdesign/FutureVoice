@@ -537,4 +537,8 @@
     <string name="fs_meet_role_model">認識你的 AI 家教</string>
     <string name="fs_role_model_title">你的 AI 家教。</string>
     <string name="fs_role_model_sub">選擇 AI 家教的外觀和說話速度。</string>
+    <!-- Speech challenge card: every take on the board (iOS "%lld tries"). -->
+    <plurals name="speech_challenge_tries">
+        <item quantity="other">%d 次挑戰</item>
+    </plurals>
 </resources>

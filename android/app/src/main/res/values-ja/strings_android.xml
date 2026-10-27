@@ -537,4 +537,8 @@
     <string name="fs_meet_role_model">AIチューターに会う</string>
     <string name="fs_role_model_title">あなたのAIチューターです。</string>
     <string name="fs_role_model_sub">見た目と話す速さを選びます。</string>
+    <!-- Speech challenge card: every take on the board (iOS "%lld tries"). -->
+    <plurals name="speech_challenge_tries">
+        <item quantity="other">挑戦%d回</item>
+    </plurals>
 </resources>

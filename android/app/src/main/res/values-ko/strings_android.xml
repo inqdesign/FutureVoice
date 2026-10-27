@@ -537,4 +537,8 @@
     <string name="fs_meet_role_model">AI 튜터와 만나기</string>
     <string name="fs_role_model_title">나의 AI 튜터예요.</string>
     <string name="fs_role_model_sub">AI 튜터의 모습과 말하는 속도를 골라요.</string>
+    <!-- Speech challenge card: every take on the board (iOS "%lld tries"). -->
+    <plurals name="speech_challenge_tries">
+        <item quantity="other">%d번 도전</item>
+    </plurals>
 </resources>

@@ -556,4 +556,9 @@
     <string name="fs_meet_role_model">Conoce a tu tutor IA</string>
     <string name="fs_role_model_title">Tu tutor IA.</string>
     <string name="fs_role_model_sub">Elige cómo se ve y a qué ritmo habla.</string>
+    <!-- Speech challenge card: every take on the board (iOS "%lld tries"). -->
+    <plurals name="speech_challenge_tries">
+        <item quantity="one">%d intento</item>
+        <item quantity="other">%d intentos</item>
+    </plurals>
 </resources>

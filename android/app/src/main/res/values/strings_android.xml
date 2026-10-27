@@ -559,4 +559,9 @@
     <string name="fs_meet_role_model">Meet your AI tutor</string>
     <string name="fs_role_model_title">Your AI tutor.</string>
     <string name="fs_role_model_sub">Pick how your AI tutor looks and how fast it talks.</string>
+    <!-- Speech challenge card: every take on the board (iOS "%lld tries"). -->
+    <plurals name="speech_challenge_tries">
+        <item quantity="one">%d try</item>
+        <item quantity="other">%d tries</item>
+    </plurals>
 </resources>

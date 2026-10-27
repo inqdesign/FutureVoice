@@ -58,6 +58,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -163,9 +164,15 @@ internal fun SpeechChallengeRow(script: SpeechScript, standing: SpeechChallenges
         Spacer(Modifier.height(16.dp))
         Spacer(Modifier.weight(1f))
         val entrants = standing?.entrants ?: 0
+        val tries = standing?.attempts
         val length = lengthLabel(SpeechLibrary.estimatedSeconds(script.body, script.language))
-        // "0 taking part" says the same thing as the foot, only sadder.
-        val meta = if (entrants > 0) stringResource(R.string.lld_taking_part, entrants) + " · " + length else length
+        // Tries, not people (iOS metaLine); a server without the count still
+        // has the people. "0 tries" says the same thing as the foot, only sadder.
+        val meta = when {
+            tries != null -> if (tries > 0) pluralStringResource(R.plurals.speech_challenge_tries, tries, tries) + " · " + length else length
+            entrants > 0 -> stringResource(R.string.lld_taking_part, entrants) + " · " + length
+            else -> length
+        }
         Text(meta, style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(bottom = 8.dp))

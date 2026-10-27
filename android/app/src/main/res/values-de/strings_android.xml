@@ -529,4 +529,9 @@
     <string name="fs_meet_role_model">Triff deinen KI-Tutor</string>
     <string name="fs_role_model_title">Dein KI-Tutor.</string>
     <string name="fs_role_model_sub">Wähle, wie dein KI-Tutor aussieht und wie schnell er spricht.</string>
+    <!-- Speech challenge card: every take on the board (iOS "%lld tries"). -->
+    <plurals name="speech_challenge_tries">
+        <item quantity="one">%d Versuch</item>
+        <item quantity="other">%d Versuche</item>
+    </plurals>
 </resources>
