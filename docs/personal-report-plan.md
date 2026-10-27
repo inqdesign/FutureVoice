@@ -151,6 +151,7 @@ the deck advances when a line ends, a tap pauses. 60–90 seconds.
 |---|---|
 | 1. English map + probe | done 2026-10-27 — see below |
 | 2. Narrated trial report | built 2026-10-27, server allowlists NOT deployed — see below |
+| 2b. Routine from how they use the app | built 2026-10-27 — see below |
 | 3–7 | not started |
 
 ### Step 1 result (2026-10-27)
@@ -198,3 +199,38 @@ language unless pinned to the native one. ~55–60 s of speech per report.
 FREE_PURPOSES — without it the voice is charged to a learner whose minutes
 are spent, i.e. refused) and `gemini` (its daily cap). Not deployed.
 Not yet: the weekly deck (`narrates` is trial-only), Android.
+
+### Step 2b: the routine comes from how they use the app (2026-10-27)
+
+Founder: "where does this plan come from? … it's all about how the user
+actually uses the app; a coach gives harsh advice too, with a good reason,
+then constructive feedback." Until now the trial's routine was
+`RoutineRecipe` — a template chosen by the onboarding purposes alone, blind
+to what the learner did.
+
+`StudyHabits` counts, from the logs: days active and the longest gap, when
+sittings start (the habit hour), how the effort spread over the days, talk
+minutes, reviews, shadowing, say it again, listening, the corrections the
+talks gave, fixes that came back, and — for every block of their own
+routine — on how many planned days it happened. `HabitAdvisor` turns that
+into at most four findings by fixed rules (`StudyHabitsTests`), each with
+its numbers and a tone: **firm** (everything on one day; talking with
+corrections never reviewed; a long gap), **nudge** (a planned block that
+never happened → moved to their habit hour or made smaller; corrected often
+but never re-said; only reviewing), **good** (came back every day; reviewed
+what was corrected; regular; a fixed time). Never only criticism: the last
+finding is the good one when there is one. The routine is their own (or
+just the talk their purposes start with) plus what each finding changes,
+and every changed block says which finding changed it. `HabitAdvice.phrase`
+only words the findings in the native language (firm = straight, no
+softening, never shaming; the reason makes it fair, the change makes it
+constructive). The narration's routine card is written from the same
+findings.
+
+Seen live on the simulator (trial demo, Korean UI): "교정된 문장 직접
+말해보기 — 대화에서 7개의 교정을 받았지만 아직 다시 말하기를 사용하지
+않았어요…" + "3일 연속 학습 달성", routine = daily talk + say it again.
+
+Open: the card's two new headers and the narration button labels are not in
+the string catalogs yet (English in every UI language); the weekly deck
+doesn't have the card yet.

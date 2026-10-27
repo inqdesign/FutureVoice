@@ -42,6 +42,12 @@ struct WeekRecapSheet: View {
     @State private var levelSettled = false
     @State private var routine: [RoutineRecipe.Line] = []
     @State private var routineIsOwn = false
+    /// How they used the app (`StudyHabits`): what the rules found, the
+    /// wording once it lands, and which routine block each finding touched.
+    @State private var habitFindings: [HabitFinding] = []
+    @State private var habitAdvice: HabitAdvice?
+    @State private var habitAdviceFailed = false
+    @State private var routineRules: [UUID: String] = [:]
     @State private var showingPaywall = false
     /// The deck's start-up runs once per opening: the test's full-screen
     /// cover makes the deck disappear and reappear, which would re-run
@@ -1044,12 +1050,9 @@ struct WeekRecapSheet: View {
     private var routineCard: some View {
         VStack(alignment: .leading, spacing: 18) {
             kicker(Text("Keep it going"), "calendar")
-            Text(RoutineRecipe.headline(for: LearningPurposeStore.purposes))
-                .font(.title2.weight(.bold))
-                .fixedSize(horizontal: false, vertical: true)
-            Text(explain("About \(StudyPlanStore.goalMinutes) minutes of talk a day, and what it corrected comes back the same evening."))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+            habitSection
+            (routineRules.isEmpty && routineIsOwn ? Text("Your routine, as you set it") : Text("Your routine, from what we saw"))
+                .font(.title3.weight(.bold))
                 .fixedSize(horizontal: false, vertical: true)
             RoutineWeekPicture(blocks: routine.map(\.block))
             VStack(alignment: .leading, spacing: 12) {
@@ -1066,10 +1069,11 @@ struct WeekRecapSheet: View {
                             Text(SetupFlowView.weekdaySummary(line.block.weekdays))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
-                            if !line.why.isEmpty {
-                                Text(line.why)
+                            if let why = routineWhy(line.block) {
+                                Text(verbatim: why)
                                     .font(.caption)
                                     .foregroundStyle(Color.themeAccent)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
                         }
                     }
@@ -1078,6 +1082,92 @@ struct WeekRecapSheet: View {
             Text(explain("You can change all of it later in My routine."))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    /// What the rules found about how they practise, worded — firm first,
+    /// the good news last. The numbers are the evidence for the routine
+    /// under it.
+    @ViewBuilder
+    private var habitSection: some View {
+        if habitFindings.isEmpty {
+            EmptyView()
+        } else if let advice = habitAdvice {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("How you've been practising")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                ForEach(advice.lines, id: \.self) { line in
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: habitSymbol(line.tone))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(habitColor(line.tone))
+                            .frame(width: 22)
+                            .padding(.top, 2)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(verbatim: line.title)
+                                .font(.subheadline.weight(.semibold))
+                            Text(verbatim: line.body)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        } else if habitAdviceFailed {
+            Button {
+                habitAdviceFailed = false
+                Task { await phraseHabits() }
+            } label: {
+                Label { Text("Try again") } icon: { Image(systemName: "arrow.clockwise") }
+            }
+            .buttonStyle(.bordered)
+        } else {
+            HStack(spacing: 10) {
+                ProgressView()
+                Text("Reading how you practise…")
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 12)
+        }
+    }
+
+    private func habitSymbol(_ tone: HabitFinding.Tone) -> String {
+        switch tone {
+        case .firm: return "exclamationmark.circle.fill"
+        case .nudge: return "arrow.forward.circle.fill"
+        case .good: return "checkmark.circle.fill"
+        }
+    }
+
+    private func habitColor(_ tone: HabitFinding.Tone) -> Color {
+        switch tone {
+        case .firm: return .orange
+        case .nudge: return .accentColor
+        case .good: return .green
+        }
+    }
+
+    /// A block a finding changed says which finding — its "change" line.
+    private func routineWhy(_ block: StudyPlan.Block) -> String? {
+        guard let rule = routineRules[block.id],
+              let line = habitAdvice?.lines.first(where: { $0.rule == rule }) else { return nil }
+        return line.change ?? line.title
+    }
+
+    private func phraseHabits() async {
+        do {
+            let advice = try await HabitAdvice.phrase(habitFindings, firstTalks: isTrial)
+            withAnimation(.easeOut(duration: 0.3)) { habitAdvice = advice }
+            updateTrial { $0.habitAdvice = advice }
+            await writeNarration()
+        } catch {
+            habitAdviceFailed = true
+            Analytics.capture("habit_advice_failed", ["error": "\(error)".prefix(160).description])
         }
     }
 
@@ -1097,12 +1187,30 @@ struct WeekRecapSheet: View {
         // built is never replaced from here.
         let builtOwn = UserDefaults.standard.bool(forKey: LearningPurposeStore.routineAppliedKey)
             || UserDefaults.standard.bool(forKey: "futurevoice.dailyCall.onboarded")
+        // Since 2026-10-27 the routine is built from HOW they used the app
+        // (`StudyHabits` → `HabitAdvisor`), never from a template their
+        // minutes had no say in: their own routine, or just the talk their
+        // purposes start with, plus what each finding changes.
+        let base: [StudyPlan.Block]
         if builtOwn, !StudyPlanStore.shared.plan.blocks.isEmpty {
-            routine = StudyPlanStore.shared.plan.blocks.map { RoutineRecipe.Line(block: $0, why: "") }
+            base = StudyPlanStore.shared.plan.blocks
             routineIsOwn = true
         } else {
-            routine = RoutineRecipe.lines(for: LearningPurposeStore.purposes,
-                                          goalMinutes: StudyPlanStore.goalMinutes)
+            base = RoutineRecipe.lines(for: LearningPurposeStore.purposes,
+                                       goalMinutes: StudyPlanStore.goalMinutes)
+                .map(\.block).filter { $0.kind == .talk }.prefix(1).map { $0 }
+        }
+        let habits = StudyHabits.read(start: recap.start, end: recap.end, recap: recap)
+        habitFindings = HabitAdvisor.findings(habits)
+        let built = HabitAdvisor.routine(base: base, habits: habits, findings: habitFindings,
+                                         goalMinutes: StudyPlanStore.goalMinutes)
+        routine = built.map { RoutineRecipe.Line(block: $0.block, why: "") }
+        routineRules = Dictionary(built.compactMap { line in line.rule.map { (line.block.id, $0) } },
+                                  uniquingKeysWith: { a, _ in a })
+        if let kept = trial?.habitAdvice {
+            habitAdvice = kept
+        } else {
+            Task { await phraseHabits() }
         }
         #if DEBUG
         if UserDefaults.standard.bool(forKey: "trialtest") { showingTrialTest = true }
@@ -1147,8 +1255,16 @@ struct WeekRecapSheet: View {
         if !routineIsOwn, !routine.isEmpty {
             StudyPlanStore.shared.update(RoutineRecipe.plan(from: routine))
             UserDefaults.standard.set(true, forKey: LearningPurposeStore.routineAppliedKey)
+        } else if routineIsOwn, !routineRules.isEmpty {
+            // Their own routine keeps everything they set; only the blocks
+            // a finding changed or added are written.
+            var plan = StudyPlanStore.shared.plan
+            plan.blocks = routine.map(\.block)
+            StudyPlanStore.shared.update(plan)
         }
-        Analytics.capture("trial_report_routine", ["own": routineIsOwn])
+        Analytics.capture("trial_report_routine", ["own": routineIsOwn,
+                                                   "changed": routineRules.count,
+                                                   "rules": habitFindings.map(\.rule).joined(separator: ",")])
         showingPaywall = true
     }
 
@@ -1181,7 +1297,8 @@ struct WeekRecapSheet: View {
             testTotal: trialTest?.isFinished == true ? trialTest?.total : nil,
             testThin: trial?.testThin == true,
             routineHeadline: RoutineRecipe.headline(for: LearningPurposeStore.purposes),
-            routine: routine.map { "\($0.block.kind.titled($0.block.minutes)), \(SetupFlowView.weekdaySummary($0.block.weekdays))" })
+            routine: routine.map { "\($0.block.kind.titled($0.block.minutes)), \(SetupFlowView.weekdaySummary($0.block.weekdays))" },
+            habits: habitFindings)
     }
 
     /// Asks for the lines of every card whose content is known and that has

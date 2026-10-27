@@ -36,6 +36,9 @@ struct TrialReport: Codable {
     /// The fluent self's narration of the deck (`ReportNarration`), written
     /// once and replayed from here.
     var narration: ReportNarration? = nil
+    /// How the learner used the app, worded (`HabitAdvice`) — the routine
+    /// card's evidence.
+    var habitAdvice: HabitAdvice? = nil
 }
 
 @MainActor

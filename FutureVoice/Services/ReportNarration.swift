@@ -165,6 +165,8 @@ extension ReportNarrator {
         var testThin = false
         var routineHeadline: String?
         var routine: [String] = []
+        /// How they used the app (`HabitAdvisor`), the routine's evidence.
+        var habits: [HabitFinding] = []
     }
 
     /// The cards whose content is known the moment the deck opens.
@@ -253,7 +255,11 @@ extension ReportNarrator {
             if let why = c.levelRationale, !why.isEmpty { f.append("Why: \(why)") }
             f.append("It moves as they talk.")
         case "routine":
-            if let h = c.routineHeadline { f.append("A routine to keep going: \(h)") }
+            for finding in c.habits.prefix(3) {
+                f.append("What we saw (\(finding.tone.rawValue)): " + finding.facts.filter { !$0.hasPrefix("Why") }.joined(separator: " "))
+                if let change = finding.change { f.append("So the routine: \(change)") }
+            }
+            if c.habits.isEmpty, let h = c.routineHeadline { f.append("A routine to keep going: \(h)") }
             for line in c.routine.prefix(4) { f.append("Routine: \(line)") }
             f.append("Last card. The button under it keeps this routine going. Hand over to it; don't mention prices or plans.")
         case "test":
