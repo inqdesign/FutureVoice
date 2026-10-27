@@ -2174,9 +2174,9 @@ class TalkViewModel(context: Context) : ViewModel() {
     }
 
     private fun isBillableMoment(): Boolean =
-        // Tutor mode counts from the start (iOS, 2026-10-25): the tutor
-        // talks first and sets up the lesson, and that is the lesson.
-        TalkMeter.isBillable(moment(learnerSpoke = learnerSpokeThisCall || tutorThisCall))
+        // Every call counts from the start, opener included (iOS,
+        // 2026-10-27); silence is still free.
+        TalkMeter.isBillable(moment(learnerSpoke = true))
 
     /** Someone is speaking, being answered or being heard — billing's
      *  predicate without its "not before the first turn" gate. */
