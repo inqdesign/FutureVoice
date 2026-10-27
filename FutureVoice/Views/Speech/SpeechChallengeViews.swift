@@ -88,7 +88,13 @@ struct SpeechChallengeRow: View {
 
     private var metaLine: String {
         let length = SpeechFormat.length(SpeechLibrary.estimatedSeconds(script.body, language: script.language))
-        // "0 taking part" says the same thing as the foot, only sadder.
+        // Tries, not people: how often it has been read is the livelier
+        // number. A server that doesn't send it yet still has the people.
+        // "0 tries" says the same thing as the foot, only sadder.
+        if let tries = standing?.attempts {
+            guard tries > 0 else { return length }
+            return [explain("\(tries) tries"), length].joined(separator: " · ")
+        }
         let entrants = standing?.entrants ?? 0
         guard entrants > 0 else { return length }
         return [explain("\(entrants) taking part"), length].joined(separator: " · ")
