@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -668,6 +669,22 @@ private fun TalkDetailPage(
 
                     TalkChapter.CARDS -> {
                         PageTitle(stringResource(R.string.drill))
+                        // The run leads the page (iOS): on a long talk the
+                        // list ran to fifty pairs and the button sat under all.
+                        if (sessionCardCount > 0 && onReviewTalk != null) {
+                            Button(onClick = { onReviewTalk(sessionId) },
+                                modifier = Modifier.fillMaxWidth()
+                                    .padding(start = 20.dp, end = 20.dp, top = 8.dp).heightIn(min = 50.dp)) {
+                                Icon(Icons.Filled.Style, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.review_this_talk), maxLines = 1)
+                            }
+                            PageFooter(stringResource(
+                                R.string.a_quick_run_through_this_talk_s_key_phrases_anything_left_co_e8cef5))
+                            if (curriculum.corrections.isNotEmpty()) {
+                                HorizontalDivider(Modifier.padding(start = 20.dp, top = 8.dp, bottom = 8.dp))
+                            }
+                        }
                         // iOS drill page: "Say it better", each pair as what
                         // you said (struck through) over its corrected form
                         // with ONLY the changed words lit, the reason, and a
@@ -716,18 +733,6 @@ private fun TalkDetailPage(
                         if (curriculum.corrections.isNotEmpty()) {
                             PageFooter(stringResource(
                                 R.string.each_pair_is_what_you_said_and_its_corrected_form_tap_one_to_242e42))
-                        }
-                        if (sessionCardCount > 0 && onReviewTalk != null) {
-                            HorizontalDivider(Modifier.padding(start = 20.dp, top = 12.dp))
-                            Button(onClick = { onReviewTalk(sessionId) },
-                                modifier = Modifier.fillMaxWidth()
-                                    .padding(start = 20.dp, end = 20.dp, top = 16.dp).height(50.dp)) {
-                                Icon(Icons.Filled.Style, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text(stringResource(R.string.review_this_talk), maxLines = 1)
-                            }
-                            PageFooter(stringResource(
-                                R.string.a_quick_run_through_this_talk_s_key_phrases_anything_left_co_e8cef5))
                         }
                     }
                 }

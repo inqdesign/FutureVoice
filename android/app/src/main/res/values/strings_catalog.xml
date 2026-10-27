@@ -654,8 +654,8 @@
     <string name="each_filled_cell_is_a_member_in_the_colour_they_chose">"Each filled cell is a member, in the colour they chose."</string>
     <!-- 'Each guide explains what the tab is for, then walks through its screen.' -->
     <string name="each_guide_explains_what_the_tab_is_for_then_walks_through_i_94c72f">"Each guide explains what the tab is for, then walks through its screen."</string>
-    <!-- 'Each pair is what you said and its corrected form. Tap one to study it as a card — examples, variants, a memory hook. The run below then asks you to produce the fix from memory.' -->
-    <string name="each_pair_is_what_you_said_and_its_corrected_form_tap_one_to_242e42">"Each pair is what you said and its corrected form. Tap one to study it as a card — examples, variants, a memory hook. The run below then asks you to produce the fix from memory."</string>
+    <!-- 'Each pair is what you said and its corrected form. Tap one to study it as a card — examples, variants, a memory hook. The run above then asks you to produce the fix from memory.' -->
+    <string name="each_pair_is_what_you_said_and_its_corrected_form_tap_one_to_242e42">"Each pair is what you said and its corrected form. Tap one to study it as a card — examples, variants, a memory hook. The run above then asks you to produce the fix from memory."</string>
     <string name="each_skill_gets_its_own_level">"Each skill gets its own level."</string>
     <string name="each_talk_fills_these_bars_a1_to_c2">"Each talk fills these bars, A1 to C2."</string>
     <!-- 'Each time your fluent self speaks, a short answer you could give appears above the button, at your level, with its meaning in your language. A blank (___) is where only you know the answer.' -->

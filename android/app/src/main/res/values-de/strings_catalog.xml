@@ -650,8 +650,8 @@
     <string name="each_filled_cell_is_a_member_in_the_colour_they_chose">"Jede gefüllte Zelle ist ein Mitglied, in der Farbe, die es gewählt hat."</string>
     <!-- 'Each guide explains what the tab is for, then walks through its screen.' -->
     <string name="each_guide_explains_what_the_tab_is_for_then_walks_through_i_94c72f">"Jede Anleitung erklärt zuerst, wofür der Tab da ist, und geht dann seinen Bildschirm durch."</string>
-    <!-- 'Each pair is what you said and its corrected form. Tap one to study it as a card — examples, variants, a memory hook. The run below then asks you to produce the fix from memory.' -->
-    <string name="each_pair_is_what_you_said_and_its_corrected_form_tap_one_to_242e42">"Jedes Paar zeigt, was du gesagt hast, und die korrigierte Form. Tipp eines an, um es als Karte zu lernen — Beispiele, Varianten, eine Eselsbrücke. Der Durchlauf unten fragt die Korrektur dann aus dem Gedächtnis ab."</string>
+    <!-- 'Each pair is what you said and its corrected form. Tap one to study it as a card — examples, variants, a memory hook. The run above then asks you to produce the fix from memory.' -->
+    <string name="each_pair_is_what_you_said_and_its_corrected_form_tap_one_to_242e42">"Jedes Paar zeigt, was du gesagt hast, und die korrigierte Form. Tipp eines an, um es als Karte zu lernen — Beispiele, Varianten, eine Eselsbrücke. Der Durchlauf oben fragt die Korrektur dann aus dem Gedächtnis ab."</string>
     <string name="each_skill_gets_its_own_level">"Jeder Bereich bekommt sein eigenes Niveau."</string>
     <string name="each_talk_fills_these_bars_a1_to_c2">"Jedes Gespräch füllt diese Balken, von A1 bis C2."</string>
     <!-- 'Each time your fluent self speaks, a short answer you could give appears above the button, at your level, with its meaning in your language. A blank (___) is where only you know the answer.' -->

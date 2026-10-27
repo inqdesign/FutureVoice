@@ -653,8 +653,8 @@
     <string name="each_filled_cell_is_a_member_in_the_colour_they_chose">"每個亮起的格子是一位成員，顏色是他們自己選的。"</string>
     <!-- 'Each guide explains what the tab is for, then walks through its screen.' -->
     <string name="each_guide_explains_what_the_tab_is_for_then_walks_through_i_94c72f">"每份導覽都會先說明這個分頁的用途，再一步步介紹畫面。"</string>
-    <!-- 'Each pair is what you said and its corrected form. Tap one to study it as a card — examples, variants, a memory hook. The run below then asks you to produce the fix from memory.' -->
-    <string name="each_pair_is_what_you_said_and_its_corrected_form_tap_one_to_242e42">"每一組是你說的句子和修正後的句子。點一下就能當成卡片學：例句、替換說法、記憶訣竅。接著下面的複習會要你憑記憶說出修正後的句子。"</string>
+    <!-- 'Each pair is what you said and its corrected form. Tap one to study it as a card — examples, variants, a memory hook. The run above then asks you to produce the fix from memory.' -->
+    <string name="each_pair_is_what_you_said_and_its_corrected_form_tap_one_to_242e42">"每一組是你說的句子和修正後的句子。點一下就能當成卡片學：例句、替換說法、記憶訣竅。然後上面的複習會要你憑記憶說出修正後的句子。"</string>
     <string name="each_skill_gets_its_own_level">"每項能力各有自己的程度。"</string>
     <string name="each_talk_fills_these_bars_a1_to_c2">"每次通話都會把A1到C2的長條填滿一點。"</string>
     <!-- 'Each time your fluent self speaks, a short answer you could give appears above the button, at your level, with its meaning in your language. A blank (___) is where only you know the answer.' -->
