@@ -38,6 +38,21 @@ enum MacLayout {
 
     static func clampedZoomIndex(_ i: Int) -> Int { min(max(i, 0), zoomSteps.count - 1) }
 
+    /// Review splits into shelves | open book from this page width on (zoomed
+    /// points); the shelves keep the phone's width on the left.
+    static let reviewSplitMinWidth: CGFloat = 860
+    static let reviewShelfWidth: CGFloat = 400
+    /// The column a split page may grow to, whatever Page Width says — two
+    /// panes in a phone's width would be two cramped phones.
+    static let splitColumnWidth: CGFloat = 1240
+
+    /// Set while a page that splits (Review) is on screen.
+    @MainActor
+    final class Wide: ObservableObject {
+        static let shared = Wide()
+        @Published var active = false
+    }
+
     /// Posted when a Mac window is resized or re-zoomed.
     static let windowDidResize = Notification.Name("futurevoice.macWindowDidResize")
 
@@ -87,11 +102,17 @@ enum MacLayout {
 
 private struct MacPageModifier: ViewModifier {
     @AppStorage(MacLayout.columnKey) private var column = MacLayout.Column.regular.rawValue
+    @ObservedObject private var wide = MacLayout.Wide.shared
+
+    private var width: CGFloat {
+        let picked = (MacLayout.Column(rawValue: column) ?? .regular).width ?? .infinity
+        return wide.active ? max(picked, MacLayout.splitColumnWidth) : picked
+    }
 
     func body(content: Content) -> some View {
         #if targetEnvironment(macCatalyst)
         content
-            .frame(maxWidth: (MacLayout.Column(rawValue: column) ?? .regular).width ?? .infinity)
+            .frame(maxWidth: width)
             .frame(maxWidth: .infinity)
             // The pages' own ground, so the column reads as the page, not a panel.
             .background(Color(.systemGroupedBackground).ignoresSafeArea())

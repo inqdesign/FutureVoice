@@ -2979,6 +2979,16 @@ sync container carry over. `./scripts/mac-run.sh` builds and opens it.
   trackpad, like any Mac app; a mouse drag never scrolls — except where
   dragging IS the control: the Watch people map takes a click-drag
   (`macDragToPan`, which also arms the map the way a finger does).
+- **Review splits on a wide window** (2026-10-27, founder's pick of three:
+  Review list + book, over a live call panel or two app windows). From
+  `reviewSplitMinWidth` (860 zoomed pt) the shelves keep 400 pt on the left
+  and the open book is drawn on the right in a stack of its own
+  (`PracticeTab.macBookPane`); the picked card is outlined. It reuses
+  `openScenario` / `openTalkSession`, so every door that opens a book (a
+  card, a deep link, the Continue widget's route) lands on the right, and
+  the push destinations stand down while split. While Review is on screen
+  the root column grows to `splitColumnWidth` whatever Page Width says
+  (`MacLayout.Wide`). Narrower than that, Review is the phone's page.
 - **`UIScreen.main` is the whole DISPLAY on a Mac.** Anything laid out against
   the screen must read `MacLayout.screenHeight` (the window, zoomed points)
   and listen for `MacLayout.windowDidResize` — the Talk ring sat below the

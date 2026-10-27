@@ -170,6 +170,83 @@ struct PracticeTab: View {
     private let columns = [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)]
 
     var body: some View {
+        #if targetEnvironment(macCatalyst)
+        // The Mac: on a wide window the shelves keep the left and the open
+        // book takes the right, so books are read side by side instead of
+        // pushed and popped (founder, 2026-10-27). A narrow window is the
+        // phone's page.
+        GeometryReader { geo in
+            let split = geo.size.width >= MacLayout.reviewSplitMinWidth
+            Group {
+                if split {
+                    HStack(spacing: 0) {
+                        shelves
+                            .frame(width: MacLayout.reviewShelfWidth)
+                        Divider().ignoresSafeArea()
+                        macBookPane
+                    }
+                } else {
+                    shelves
+                }
+            }
+            .onAppear { macSplit = split }
+            .onChange(of: split) { _, now in macSplit = now }
+        }
+        .onAppear { MacLayout.Wide.shared.active = true }
+        .onDisappear { MacLayout.Wide.shared.active = false }
+        #else
+        shelves
+        #endif
+    }
+
+    #if targetEnvironment(macCatalyst)
+    /// The right half on the Mac: the book picked on the left, in a stack of
+    /// its own so its pages push there and the shelves stay put.
+    private var macBookPane: some View {
+        NavigationStack {
+            if let s = openScenario {
+                ScenarioDetailView(scenarioId: s.id)
+            } else if let t = openTalkSession {
+                ConversationDetailView(session: t.session)
+            } else {
+                ContentUnavailableView {
+                    Label("Pick a book", systemImage: "book")
+                } description: {
+                    Text("Its words, expressions and lines open here.")
+                }
+            }
+        }
+        .id(openScenario?.id ?? openTalkSession?.id)
+        .environmentObject(appState)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        // What the book changed (a chapter done, a book archived) shows on
+        // the shelves beside it.
+        .onChange(of: openScenario?.id) { _, _ in reload() }
+        .onChange(of: openTalkSession?.id) { _, _ in reload() }
+    }
+    #endif
+
+    /// True while the Mac draws the open book beside the shelves rather than
+    /// pushing it; false everywhere else.
+    @State private var macSplit = false
+
+    private func openBook(_ s: Scenario) {
+        openTalkSession = nil
+        openScenario = s
+    }
+
+    private func openBook(_ session: Session) {
+        openScenario = nil
+        openTalkSession = OpenTalk(session: session)
+    }
+
+    /// The picked book's card, outlined while it is open beside the shelves.
+    private func isOpenBook(_ id: UUID) -> Bool {
+        macSplit && (openScenario?.id == id || openTalkSession?.id == id)
+    }
+
+    private var shelves: some View {
         NavigationStack {
             // Same pager as Progress: a native horizontal-paging ScrollView
             // whose pages are real vertical scroll views, so content slides
@@ -246,11 +323,13 @@ struct PracticeTab: View {
                     .navigationTitle("Shadowing")
                     .navigationBarTitleDisplayMode(.inline)
             }
-            .navigationDestination(item: $openScenario) { s in
+            .navigationDestination(item: Binding(get: { macSplit ? nil : openScenario },
+                                                 set: { openScenario = $0 })) { s in
                 ScenarioDetailView(scenarioId: s.id)
                     .environmentObject(appState)
             }
-            .navigationDestination(item: $openTalkSession) { talk in
+            .navigationDestination(item: Binding(get: { macSplit ? nil : openTalkSession },
+                                                 set: { openTalkSession = $0 })) { talk in
                 ConversationDetailView(session: talk.session)
                     .environmentObject(appState)
             }
@@ -1036,14 +1115,24 @@ struct PracticeTab: View {
     /// the Talks shelf and the Studying grid.
     private func talkCard(_ session: Session,
                           showsProgress: Bool = true) -> some View {
-        NavigationLink {
-            ConversationDetailView(session: session)
-                .environmentObject(appState)
-        } label: {
-            TalkBookCard(session: session, snapshot: talkSnapshots[session.id],
-                         showsProgress: showsProgress)
+        Group {
+            if macSplit {
+                Button { openBook(session) } label: {
+                    TalkBookCard(session: session, snapshot: talkSnapshots[session.id],
+                                 showsProgress: showsProgress)
+                }
+            } else {
+                NavigationLink {
+                    ConversationDetailView(session: session)
+                        .environmentObject(appState)
+                } label: {
+                    TalkBookCard(session: session, snapshot: talkSnapshots[session.id],
+                                 showsProgress: showsProgress)
+                }
+            }
         }
         .buttonStyle(.plain)
+        .overlay { openOutline(session.id) }
         .contextMenu {
             Button { setTalkArchived(session, true) } label: {
                 Label("Archive", systemImage: "archivebox")
@@ -1063,9 +1152,10 @@ struct PracticeTab: View {
                               showsProgress: Bool = true) -> some View {
         ScenarioBookCard(scenario: s, personaName: linkedPersonaName(s),
                          showsProgress: showsProgress)
-            .onTapGesture { openScenario = s }
+            .onTapGesture { openBook(s) }
+            .overlay { openOutline(s.id) }
             .contextMenu {
-                Button { openScenario = s } label: { Label("Open", systemImage: "book") }
+                Button { openBook(s) } label: { Label("Open", systemImage: "book") }
                 Button {
                     BillingGate.start(orShow: $showingPaywall) { talkLaunch = s }
                 } label: { Label("Talk now", systemImage: "mic.fill") }
@@ -1197,7 +1287,7 @@ struct PracticeTab: View {
                     ConversationDetailView(session: session).environmentObject(appState)
                 } label: { label }
             case .scenario(let scenario):
-                Button { openScenario = scenario } label: { label }
+                Button { openBook(scenario) } label: { label }
             }
         }
         .buttonStyle(.plain)
@@ -1222,6 +1312,15 @@ struct PracticeTab: View {
         // which may re-run the latest assessment.
         appState.setSessionArchived(id: session.id, flag)
         reload()
+    }
+
+    @ViewBuilder
+    private func openOutline(_ id: UUID) -> some View {
+        if isOpenBook(id) {
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(Color.accentColor, lineWidth: 2)
+                .allowsHitTesting(false)
+        }
     }
 
     private func reload() {
