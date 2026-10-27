@@ -176,9 +176,9 @@ struct RootTabView: View {
                     .tabItem { Label("Progress", systemImage: "chart.bar.fill") }
                     .tag(Tab.progress)
             }
-            // The Mac widens its column while Review, the page that splits,
-            // is on screen (no-op elsewhere).
-            .macWideColumn(selection == .practice)
+            // The Mac's column per tab: Review splits wide, Speech reads
+            // narrow (no-op elsewhere).
+            .macColumnMode(selection == .practice ? .split : selection == .speech ? .narrow : .normal)
             // Answered the daily call. The voicemail's own line opens the
             // conversation — its audio is already in the phrase cache, so the
             // voice the learner heard on the lock screen keeps talking with

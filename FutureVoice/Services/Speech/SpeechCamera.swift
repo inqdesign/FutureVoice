@@ -116,13 +116,12 @@ final class SpeechCamera: NSObject, ObservableObject {
         }
         #endif
         session.sessionPreset = .hd1280x720
-        // A Mac's camera has no "front"; take whichever camera it has.
-        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front)
-                ?? AVCaptureDevice.default(for: .video),
+        guard let device = Self.pickCamera(),
               let input = try? AVCaptureDeviceInput(device: device),
               session.canAddInput(input), session.canAddOutput(output) else { return false }
         session.addInput(input)
         self.device = device
+        Self.log.notice("camera: \(device.localizedName, privacy: .public) type=\(device.deviceType.rawValue, privacy: .public)")
         observeSession()
         output.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
         output.alwaysDiscardsLateVideoFrames = true
@@ -135,6 +134,54 @@ final class SpeechCamera: NSObject, ObservableObject {
             }
         }
         return true
+    }
+
+    /// The phone's front camera. A Mac has no "front" and often several
+    /// cameras — measured on the founder's: the MacBook's, a Studio Display's,
+    /// an iPhone's (Continuity) and two VIRTUAL ones (OBS, Elgato) — and
+    /// "the default video device" could be any of them: a virtual camera
+    /// draws nothing or a stale frame, and an iPhone takes seconds to wake and
+    /// drops out, which read as a camera that is slow and doesn't work. So
+    /// on the Mac: the camera the learner last picked in another app, if it is
+    /// a real one; else the built-in; else a real external one (a display's);
+    /// an iPhone only when nothing else is there; a virtual one never first.
+    /// Every camera the Mac can see, for View → Camera.
+    static var macCameras: [AVCaptureDevice] {
+        #if targetEnvironment(macCatalyst)
+        AVCaptureDevice.DiscoverySession(
+            deviceTypes: [.builtInWideAngleCamera, .external, .continuityCamera],
+            mediaType: .video, position: .unspecified).devices
+        #else
+        []
+        #endif
+    }
+
+    private static func pickCamera() -> AVCaptureDevice? {
+        #if targetEnvironment(macCatalyst)
+        let found = AVCaptureDevice.DiscoverySession(
+            deviceTypes: [.builtInWideAngleCamera, .external, .continuityCamera],
+            mediaType: .video, position: .unspecified).devices
+        func isVirtual(_ d: AVCaptureDevice) -> Bool {
+            d.localizedName.localizedCaseInsensitiveContains("virtual")
+                || d.manufacturer.localizedCaseInsensitiveContains("obs")
+        }
+        let real = found.filter { !isVirtual($0) }
+        // Picked by hand in View → Camera wins over every guess below.
+        if let id = UserDefaults.standard.string(forKey: MacLayout.cameraKey),
+           let chosen = found.first(where: { $0.uniqueID == id }) {
+            return chosen
+        }
+        if let picked = AVCaptureDevice.userPreferredCamera,
+           real.contains(picked), picked.deviceType != .continuityCamera {
+            return picked
+        }
+        return real.first { $0.deviceType == .builtInWideAngleCamera }
+            ?? real.first { $0.deviceType == .external }
+            ?? real.first
+            ?? found.first
+        #else
+        return AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front)
+        #endif
     }
 
     /// The preview hands its layer over so the picture can follow the SCREEN.

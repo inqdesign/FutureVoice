@@ -31,6 +31,8 @@ enum MacLayout {
     }
 
     static let zoomKey = "mac.zoom"
+    /// The camera picked in View → Camera (its `uniqueID`); empty = automatic.
+    static let cameraKey = "mac.camera"
     static let columnKey = "mac.columnWidth"
 
     static let zoomSteps: [CGFloat] = [1.0, 1.1, 1.2, 1.3, 1.45, 1.6, 1.8]
@@ -46,11 +48,15 @@ enum MacLayout {
     /// panes in a phone's width would be two cramped phones.
     static let splitColumnWidth: CGFloat = 1240
 
-    /// Set while a page that splits (Review) is on screen.
+    /// How the tab on screen wants the column: Review splits and needs room,
+    /// Speech reads like a page and is held narrow (founder, 2026-10-27), the
+    /// rest take what View → Page Width says.
+    enum ColumnMode { case normal, split, narrow }
+
     @MainActor
     final class Wide: ObservableObject {
         static let shared = Wide()
-        @Published var active = false
+        @Published var mode: ColumnMode = .normal
     }
 
     /// Posted when a Mac window is resized or re-zoomed.
@@ -106,7 +112,11 @@ private struct MacPageModifier: ViewModifier {
 
     private var width: CGFloat {
         let picked = (MacLayout.Column(rawValue: column) ?? .regular).width ?? .infinity
-        return wide.active ? max(picked, MacLayout.splitColumnWidth) : picked
+        switch wide.mode {
+        case .normal: return picked
+        case .split: return max(picked, MacLayout.splitColumnWidth)
+        case .narrow: return min(picked, MacLayout.Column.narrow.width ?? picked)
+        }
     }
 
     func body(content: Content) -> some View {
@@ -123,13 +133,13 @@ private struct MacPageModifier: ViewModifier {
 }
 
 extension View {
-    /// Widens the Mac's column while `on` holds. Fed from the selected TAB,
-    /// never a tab's own appear/disappear: a Mac tab switch never told Review
-    /// it had gone, and Speech stayed at the split width.
-    func macWideColumn(_ on: Bool) -> some View {
+    /// The column the tab on screen wants on the Mac. Fed from the selected
+    /// TAB, never a tab's own appear/disappear: a Mac tab switch never told
+    /// Review it had gone, and Speech stayed at the split width.
+    func macColumnMode(_ mode: MacLayout.ColumnMode) -> some View {
         #if targetEnvironment(macCatalyst)
-        onAppear { MacLayout.Wide.shared.active = on }
-            .onChange(of: on) { _, now in MacLayout.Wide.shared.active = now }
+        onAppear { MacLayout.Wide.shared.mode = mode }
+            .onChange(of: mode) { _, now in MacLayout.Wide.shared.mode = now }
         #else
         self
         #endif
@@ -143,6 +153,7 @@ extension View {
 
 /// View → zoom and page width, with the shortcuts every Mac reader knows.
 struct MacViewCommands: Commands {
+    @AppStorage(MacLayout.cameraKey) private var cameraId = ""
     @AppStorage(MacLayout.zoomKey) private var zoomIndex = MacLayout.defaultZoom
     @AppStorage(MacLayout.columnKey) private var column = MacLayout.Column.regular.rawValue
 
@@ -159,6 +170,15 @@ struct MacViewCommands: Commands {
             Divider()
             Picker("Page Width", selection: $column) {
                 ForEach(MacLayout.Column.allCases) { Text($0.title).tag($0.rawValue) }
+            }
+            // Which camera a speech take films with — a Mac often has several
+            // (built-in, a display's, an iPhone, virtual ones). Takes effect
+            // the next time the camera opens.
+            Picker("Camera", selection: $cameraId) {
+                Text("Automatic").tag("")
+                ForEach(SpeechCamera.macCameras, id: \.uniqueID) { device in
+                    Text(verbatim: device.localizedName).tag(device.uniqueID)
+                }
             }
             Divider()
         }

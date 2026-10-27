@@ -2989,7 +2989,16 @@ sync container carry over. `./scripts/mac-run.sh` builds and opens it.
   the push destinations stand down while split. While Review is on screen
   the root column grows to `splitColumnWidth` whatever Page Width says
   (`MacLayout.Wide`, set from `RootTabView`'s selection — a Mac tab switch
-  never fires the old tab's `onDisappear`, so Speech kept the split width). Narrower than that, Review is the phone's page.
+  never fires the old tab's `onDisappear`, so Speech kept the split width).
+  Speech is held NARROW the same way (`ColumnMode.narrow`, founder: it read
+  too wide).
+- **A Mac has many cameras, and the default one is often wrong** (the
+  founder's: MacBook, Studio Display, an iPhone via Continuity, OBS and
+  Elgato VIRTUAL cameras). "Slow and doesn't work" was the default video
+  device being an iPhone (seconds to wake, drops out) or a virtual camera.
+  `SpeechCamera.pickCamera` on the Mac: View → Camera if picked, else the
+  user's preferred real camera, the built-in, a real external one, an
+  iPhone last, a virtual one never first. Narrower than that, Review is the phone's page.
 - **The `.glass` button style FILLS the button with the tint on the Mac**
   (a solid blue disc where the phone draws clear glass with a blue label).
   Every `.glass` site uses `MacGlassButtonStyle` under `#if macCatalyst`
