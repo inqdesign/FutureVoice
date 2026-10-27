@@ -4333,6 +4333,9 @@ function failOf(r){
   // by itself, comes through the same door as a drop and is none (see
   // isDroppedCall).
   if(m[1]==='talk_rt_failed' && (r.recovered || RT_OK.has(r.code) || RT_WALL.has(r.code))) return null;
+  // Builds before 2026-10-26 log a line that named no topic ("hi") under
+  // this name too, with no code; only a real planner failure is a problem.
+  if(m[1]==='tutor_plan_failed' && !r.code) return null;
   const err = String(r.err||'');
   const why = /timed out/i.test(err) ? '시간 초과' : /offline|not connected/i.test(err) ? '오프라인'
     : (/Code=(-?\d+)/.exec(err)||[])[1] ? `코드 ${/Code=(-?\d+)/.exec(err)[1]}` : (r.code || '');

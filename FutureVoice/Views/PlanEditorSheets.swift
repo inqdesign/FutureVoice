@@ -190,8 +190,8 @@ struct PlanBlockEditor: View {
                     Text(symbols[wd - 1])
                         .font(.subheadline.weight(on ? .semibold : .regular))
                         .frame(maxWidth: .infinity, minHeight: 34)
-                        .background(Circle().fill(on ? Color.accentColor : Color(.tertiarySystemFill)))
-                        .foregroundStyle(on ? Color.white : Color.primary)
+                        .background(Circle().fill(on ? Color.themeAccent : Color(.tertiarySystemFill)))
+                        .foregroundStyle(on ? Color.onAccent : Color.primary)
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(on ? .isSelected : [])
@@ -560,9 +560,9 @@ struct WeeklyPlanEditor: View {
         } label: {
             Image(systemName: "plus")
                 .font(.title2.weight(.semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.onAccent)
                 .frame(width: 56, height: 56)
-                .background(Circle().fill(Color.accentColor))
+                .background(Circle().fill(Color.themeAccent))
                 .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
         }
         .accessibilityLabel(Text(explain("Add a block")))
@@ -644,8 +644,8 @@ struct WeeklyPlanEditor: View {
                             Text(symbols[wd - 1])
                                 .font(.subheadline.weight(off ? .regular : .semibold))
                                 .frame(maxWidth: .infinity, minHeight: 32)
-                                .background(Capsule().fill(off ? Color(.tertiarySystemFill) : Color.accentColor))
-                                .foregroundStyle(off ? Color.primary : Color.white)
+                                .background(Capsule().fill(off ? Color(.tertiarySystemFill) : Color.themeAccent))
+                                .foregroundStyle(off ? Color.primary : Color.onAccent)
                         }
                         .buttonStyle(.plain)
                     }
@@ -730,7 +730,7 @@ struct WeeklyPlanEditor: View {
             Button {
                 Task { notifications = await ReviewNotifications.request() }
             } label: {
-                bannerLabel(icon: "bell", tint: .accentColor,
+                bannerLabel(icon: "bell", tint: Color.themeAccent,
                             text: explain("Allow notifications so your routine can remind you"))
             }
             .buttonStyle(.plain)

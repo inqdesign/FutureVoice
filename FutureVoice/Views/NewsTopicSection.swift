@@ -267,7 +267,7 @@ struct DiscoverSection: View {
                           @ViewBuilder icon: () -> some View) -> some View {
         HStack(spacing: 12) {
             ZStack {
-                Circle().fill(Color.accentColor.opacity(0.15))
+                Circle().fill(Color.themeAccent.opacity(0.15))
                     .frame(width: 42, height: 42)
                 icon()
                     .foregroundStyle(.tint)

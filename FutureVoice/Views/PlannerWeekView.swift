@@ -383,9 +383,9 @@ struct PlannerWeekCard: View {
                         Text("\(cal.component(.day, from: day))")
                             .font(.caption.weight(isToday ? .bold : .regular))
                             .monospacedDigit()
-                            .foregroundStyle(isToday ? Color.white : Color.primary)
+                            .foregroundStyle(isToday ? Color.onAccent : Color.primary)
                             .frame(width: 22, height: 22)
-                            .background(Circle().fill(isToday ? Color.accentColor : Color.clear))
+                            .background(Circle().fill(isToday ? Color.themeAccent : Color.clear))
                             .overlay(Circle().strokeBorder(isSelected && !isToday ? Color.primary.opacity(0.4) : .clear))
                         // Same height on every day, so the dates line up.
                         resultMark(day)
@@ -457,7 +457,7 @@ struct PlannerWeekCard: View {
         let tops = stackedTops(plans: shownPlans, actuals: shownActuals)
         return ZStack(alignment: .topLeading) {
             RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(isToday ? Color.accentColor.opacity(0.08)
+                .fill(isToday ? Color.themeAccent.opacity(0.08)
                       : kept ? Color.green.opacity(0.10)
                       : Color(.tertiarySystemFill).opacity(past ? 0.3 : 0.5))
             if isMaster {

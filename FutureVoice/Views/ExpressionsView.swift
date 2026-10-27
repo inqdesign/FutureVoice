@@ -196,7 +196,7 @@ struct ExpressionsView: View {
         } label: {
             Label("Keep", systemImage: studying ? "bookmark.slash" : "bookmark")
         }
-        .tint(studying ? .gray : .accentColor)
+        .tint(studying ? .gray : Color.themeAccent)
     }
 
     private func knownAction(_ entry: ExpressionCatalog.Item) -> some View {
@@ -219,7 +219,7 @@ struct ExpressionsView: View {
             if studying || known {
                 Image(systemName: studying ? "bookmark.fill" : (confirmed ? "checkmark.circle.fill" : "checkmark"))
                     .font(.footnote.weight(.semibold))
-                    .foregroundStyle(studying ? Color.accentColor : Color.green)
+                    .foregroundStyle(studying ? Color.themeAccent : Color.green)
                     .frame(width: 16)
                     .accessibilityLabel(studying ? explain("Studying")
                                         : (confirmed ? explain("Used in a talk") : explain("Marked known")))
@@ -490,7 +490,7 @@ struct ExpressionCard: View {
             Task { await speakPhrase() }
         } label: {
             ZStack {
-                Circle().fill(Color.accentColor.opacity(0.12)).frame(width: 46, height: 46)
+                Circle().fill(Color.themeAccent.opacity(0.12)).frame(width: 46, height: 46)
                 if speaking {
                     ProgressView()
                 } else {
@@ -511,7 +511,7 @@ struct ExpressionCard: View {
                 .font(.caption.weight(.bold)).monospacedDigit()
                 .foregroundStyle(.tint)
                 .frame(width: 22, height: 22)
-                .background(Circle().fill(Color.accentColor.opacity(0.12)))
+                .background(Circle().fill(Color.themeAccent.opacity(0.12)))
             VStack(alignment: .leading, spacing: 4) {
                 if !s.pos.isEmpty {
                     Text(s.pos)
@@ -552,7 +552,7 @@ struct ExpressionCard: View {
     private func exampleRow(_ e: WordEntry.Example) -> some View {
         HStack(alignment: .top, spacing: 12) {
             RoundedRectangle(cornerRadius: 2)
-                .fill(Color.accentColor.opacity(0.35))
+                .fill(Color.themeAccent.opacity(0.35))
                 .frame(width: 3)
             VStack(alignment: .leading, spacing: 4) {
                 Text(e.text)
@@ -632,7 +632,7 @@ struct ExpressionCard: View {
         HStack(spacing: 8) {
             CardActionButton(title: "Keep",
                              icon: isStudying ? "bookmark.fill" : "bookmark",
-                             tint: isStudying ? .accentColor : .primary) {
+                             tint: isStudying ? Color.themeAccent : .primary) {
                 // Bookmark to keep studying — mirrors adding a word to the
                 // notebook; the phrase then shows on the Expressions widget.
                 store.setStudyingExpression(phrase, !isStudying)

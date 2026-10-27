@@ -42,4 +42,20 @@ final class CoachReadTests: XCTestCase {
         XCTAssertEqual(back.coachLine, line)
         XCTAssertFalse(back.isEvidence)
     }
+
+    /// The assessment's speaking-time gate counts only evidence: a read line
+    /// is out of the level, so it can't be what unlocks it either.
+    func testReadLinesDontCountTowardTheAssessmentGate() {
+        var read = Turn(id: UUID(), role: .user, audioURL: nil,
+                        transcript: "I usually get up at 7 on weekdays.",
+                        durationMs: 60_000, timestamp: Date(), suggestion: nil)
+        read.coachLine = line
+        let own = Turn(id: UUID(), role: .user, audioURL: nil,
+                       transcript: "Honestly I sleep in, my job starts at noon.",
+                       durationMs: 30_000, timestamp: Date(), suggestion: nil)
+        let session = Session(id: UUID(), userId: UUID(), targetLanguage: "en", mode: .conversation,
+                              topic: nil, startedAt: Date(), endedAt: Date(), turns: [read, own],
+                              summary: nil)
+        XCTAssertEqual(WeeklyReportEngine.totalUserSpeakingSeconds([session]), 30)
+    }
 }

@@ -65,7 +65,7 @@ struct SayItAgainPicker: View {
         return HStack(spacing: 12) {
             Image(systemName: picked == talk.id ? "checkmark.circle.fill" : "circle")
                 .font(.title3)
-                .foregroundStyle(picked == talk.id ? Color.accentColor : Color.secondary)
+                .foregroundStyle(picked == talk.id ? Color.themeAccent : Color.secondary)
             VStack(alignment: .leading, spacing: 2) {
                 Text(talk.displayTitle)
                     .font(.body)

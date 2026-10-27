@@ -126,7 +126,7 @@ struct ScorecardView: View {
     private func color(for score: Int) -> Color {
         switch score {
         case 80...: return .green
-        case 50..<80: return .accentColor
+        case 50..<80: return Color.themeAccent
         default: return .orange
         }
     }

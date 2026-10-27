@@ -54,6 +54,10 @@ export interface StartMessage {
    *  stop to find a word and were answered mid-sentence. Absent = the usual
    *  pause-ends-the-turn call. */
   manualTurns?: boolean
+  /** Ignored since 2026-10-27: every call is counted from the start. Was
+   *  tutor mode's switch to count from the start (2026-10-25); older builds
+   *  still send it. */
+  meterFromStart?: boolean
 }
 
 /** Send-to-answer mode: what the learner has said so far is their turn —
@@ -121,6 +125,8 @@ export interface SetMessage {
    *  `StartMessage.manualTurns`). Switched off with words held, those words
    *  are committed by the usual pause rule. */
   manualTurns?: boolean
+  /** Ignored (see `StartMessage.meterFromStart`). */
+  meterFromStart?: boolean
 }
 
 export type ClientMessage = StartMessage | SayMessage | EndMessage | SetMessage

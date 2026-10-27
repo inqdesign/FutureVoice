@@ -548,11 +548,13 @@ enum ConversationEngine {
     /// it"). The 2026-10-13 cut walked several themes and moved on after
     /// every turn; this one stays on a challenge until it comes out clean.
     ///
-    /// The curriculum (`TutorLesson`) is written by `TutorPlanner` and the
-    /// TICK is the app's: a challenge is done when the per-turn correction
-    /// found no fixes and `TutorJudge` says the line did it. The app resends
-    /// this block after every tick, so the tutor moves on when the block
-    /// says so and never on its own reading. With no lesson yet, the tutor's
+    /// The curriculum (`TutorLesson`) is written by `TutorPlanner`. Moving
+    /// on is the TUTOR's call since 2026-10-25 (founder: it said "nice and
+    /// clear, once more" five or six times, waiting for an app tick that
+    /// lagged or never came): right twice → next challenge, and asking
+    /// again always names what to change. The app ticks too (no fixes +
+    /// `TutorJudge` done, then RIGHT NOW below) and follows the tutor when
+    /// the judge sees it has moved on. With no lesson yet, the tutor's
     /// only job is to get a topic. Last in the prompt, saying it outranks the
     /// free-conversation rules. Spoken, a correction of something the
     /// TRANSCRIBER chose is far worse than the same mistake on a card, so it
@@ -595,8 +597,8 @@ enum ConversationEngine {
             can say all of it properly, out loud, with no mistakes. The app \
             keeps the checklist; you follow it:
             \(rows)
-            You are on challenge \(now + 1). Stay on it until the app checks it \
-            off — you never move to the next one by your own judgment.\(fixes)
+            You are on challenge \(now + 1). You decide when it's done (see \
+            below); the app follows you and ticks the list.\(fixes)
             """
         } else {
             lessonPart = """
@@ -636,14 +638,29 @@ enum ConversationEngine {
           it again. Their words and meaning, only the mistake fixed.
         - Their line missed part of the challenge → say what's missing and \
           ask again.
-        - Their line looks right → say so in a few words and ask them to say \
-          it once more, just like that, so it sticks. The app checks it and \
-          tells you (RIGHT NOW, at the very end) when it's done.
+        - Their line is right — no mistake you can hear, and it does the \
+          challenge:
+          · the FIRST right try (their line before it had a mistake or \
+            missed part, or this is their first try) → say so in a few words \
+            and ask for it once more, so it sticks.
+          · it was ALREADY right last time too → it's done: a short "you \
+            got it", then start the next challenge in the same turn (say \
+            what it is, give its example line, ask them to say it about \
+            themselves). On the last challenge, that is the lesson done: \
+            tell them so and ask whether they want more of this or another \
+            topic.
+          · nailed on the very first try with nothing to fix → you may move \
+            on straight away.
+        - NEVER praise a line and ask for it again a second time. Every time \
+          you ask for the same line again, you either name exactly what to \
+          change (say the part back the right way) or, if nothing needs \
+          changing, you move on. "Nice, once more" with nothing to fix, \
+          over and over, is the one thing never to do.
         - Stuck, silent, or answered in another language → give them the \
           line to say (the example, fitted to them), then ask again.
-        - Repetition IS the lesson: asking for the same line again is what \
-          a good tutor does here, not a failure. Keep it warm and brisk, a \
-          different short word of encouragement each time.
+        - Repetition is for getting it RIGHT: asking again after a mistake \
+          is what a good tutor does. Once it's right, once more at most. \
+          Keep it warm and brisk, a different short word each time.
         - They ask to change the topic, stop this lesson, or practice \
           something else → agree right away, never "let's finish this one \
           first": the lesson is theirs to leave. Ask what they'd like to \

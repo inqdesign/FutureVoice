@@ -943,6 +943,13 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         sendControl(["type": "set", "manualTurns": on])
     }
 
+    /// Tutor mode switched mid-call: counted from now on, or from the
+    /// learner's first turn again.
+    func setMeterFromStart(_ on: Bool) {
+        guard !isTornDown else { return }
+        sendControl(["type": "set", "meterFromStart": on])
+    }
+
     /// Hang up: tells the gateway, then tears the local side down.
     func hangUp() {
         guard !isTornDown else { return }
@@ -2068,6 +2075,10 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         // Send-to-answer (`SendToAnswer`): a pause never ends the turn. A
         // gateway before this ignores it and the call ends turns by pauses.
         payload["manualTurns"] = SendToAnswer.isOn
+        // Tutor mode is counted from the start (2026-10-25): the tutor talks
+        // first and that is the lesson. A gateway before this counts from
+        // the first turn, as before.
+        payload["meterFromStart"] = TutorMode.isOn
         if let opener, !opener.isEmpty { payload["opener"] = opener }
         if !history.isEmpty {
             payload["history"] = history.map { ["role": $0.role, "text": $0.text] }
@@ -2297,7 +2308,11 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         case "stats":
             speechSeconds = json["speechSeconds"] as? Int ?? speechSeconds
         case "meter":
-            if let total = json["seconds"] as? Int, total > meterTotal {
+            // As a number, floored: a gateway that sent a fractional total
+            // (the first answer's credit) read as no report at all under
+            // `as? Int`, and the call clock froze there (2026-10-25).
+            if let raw = (json["seconds"] as? NSNumber)?.doubleValue,
+               case let total = Int(raw), total > meterTotal {
                 let step = total - meterTotal
                 meterTotal = total
                 onMeter?(step)

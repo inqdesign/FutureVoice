@@ -183,7 +183,7 @@ struct DailyAllowanceSheet: View {
                         _ perform: @escaping () -> Void) -> some View {
         if prominent {
             Button(action: perform) { Text(title).frame(maxWidth: .infinity) }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 .controlSize(.large)
         } else {
             Button(action: perform) { Text(title).frame(maxWidth: .infinity) }

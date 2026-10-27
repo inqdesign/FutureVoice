@@ -64,9 +64,98 @@ enum FutureselfTheme: Int, CaseIterable, Identifiable {
         })
     }
 
+    /// The label for text drawn ON `tint` — a prominent button, a filled
+    /// accent capsule. White wherever it reads (3:1, the large-text floor),
+    /// near-black where the accent is too pale for it: Mono in dark mode is
+    /// light grey, and white on it vanished (2026-10-25). The same rule flips
+    /// Emerald, Coral and Aqua in dark mode and Amber and Aqua in light.
+    var onTint: Color {
+        let base = UIColor(tint)
+        return Color(UIColor { traits in
+            Self.wantsDarkLabel(on: base.resolvedColor(with: traits))
+                ? UIColor(white: 0.08, alpha: 1) : .white
+        })
+    }
+
+    /// The theme the learner picked, read where no view can hold an
+    /// `@AppStorage` (a dynamic colour resolves outside any view).
+    static var current: FutureselfTheme {
+        FutureselfTheme(rawValue: UserDefaults.standard.integer(forKey: "futureselfTheme")) ?? .blue
+    }
+
+    private static func wantsDarkLabel(on color: UIColor) -> Bool {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        color.getRed(&r, green: &g, blue: &b, alpha: &a)
+        func linear(_ c: CGFloat) -> CGFloat {
+            c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
+        }
+        let luminance = 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b)
+        return 1.05 / (luminance + 0.05) < 3
+    }
+
     private static func adaptive(light: UIColor, dark: UIColor) -> Color {
         Color(UIColor { $0.userInterfaceStyle == .dark ? dark : light })
     }
+}
+
+extension Color {
+    /// The picked theme's accent, resolved from the theme itself. Use this,
+    /// never `Color.accentColor`: the root's `.accentColor(_:)` does not reach
+    /// into sheets, and there the system blue came back (an orange learner's
+    /// plan cards were outlined blue, 2026-10-25). `.tint` does reach them.
+    static var themeAccent: Color { FutureselfTheme.current.tint }
+
+    /// Text on the app's accent, following the picked theme — use it
+    /// wherever a label sits on `Color.accentColor` / `.tint`, never `.white`.
+    static let onAccent = Color(UIColor { traits in
+        UIColor(FutureselfTheme.current.onTint).resolvedColor(with: traits)
+    })
+}
+
+/// `.borderedProminent` with the label from `Color.onAccent`. The system
+/// style always draws white, which is invisible on Mono's light grey in
+/// dark mode. Only for buttons on the ACCENT: one tinted green or red keeps
+/// `.borderedProminent`, whose white reads on those. A modifier, not a
+/// `PrimitiveButtonStyle`: a style that rebuilds `Button(configuration)`
+/// recursed until the stack ran out (2026-10-25).
+private struct AccentProminent: ViewModifier {
+    @Environment(\.isEnabled) private var isEnabled
+    @AppStorage("futureselfTheme") private var storedTheme = FutureselfTheme.blue.rawValue
+
+    func body(content: Content) -> some View {
+        // Disabled keeps the system's dimmed label; the theme read keeps
+        // this view redrawing when the palette changes.
+        content
+            .buttonStyle(.borderedProminent)
+            .foregroundStyle(isEnabled
+                ? AnyShapeStyle((FutureselfTheme(rawValue: storedTheme) ?? .blue).onTint)
+                : AnyShapeStyle(.secondary))
+    }
+}
+
+/// Every switch in the app: Mono's accent is light grey in dark mode, and a
+/// white knob on it read as OFF (2026-10-25), so Mono's switches are the
+/// system green. Every other palette keeps its accent.
+struct ThemedSwitchStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Themed(configuration: configuration)
+    }
+
+    private struct Themed: View {
+        let configuration: ToggleStyleConfiguration
+        @AppStorage("futureselfTheme") private var storedTheme = FutureselfTheme.blue.rawValue
+
+        var body: some View {
+            let theme = FutureselfTheme(rawValue: storedTheme) ?? .blue
+            Toggle(configuration)
+                .toggleStyle(.switch)
+                .tint(theme == .mono ? Color.green : theme.tint)
+        }
+    }
+}
+
+extension View {
+    func accentProminent() -> some View { modifier(AccentProminent()) }
 }
 
 /// Futureself — the call button's living surface (Shaders/Futureself.metal):
@@ -160,11 +249,11 @@ struct FutureselfThemePicker: View {
                             .frame(height: 44)
                             .clipShape(Capsule())
                             .overlay(Capsule().strokeBorder(
-                                selected ? Color.accentColor : Color(.separator).opacity(0.5),
+                                selected ? Color.themeAccent : Color(.separator).opacity(0.5),
                                 lineWidth: selected ? 2 : 0.5))
                         Text(theme.label)
                             .font(.caption2)
-                            .foregroundStyle(selected ? Color.accentColor : Color.secondary)
+                            .foregroundStyle(selected ? Color.themeAccent : Color.secondary)
                     }
                     // The swatch is a shader with `.allowsHitTesting(false)`,
                     // so without this the tappable area shrinks to the thin

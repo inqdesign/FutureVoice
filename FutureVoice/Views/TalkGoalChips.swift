@@ -497,7 +497,7 @@ struct CoachHintLabel: View {
             }
         } icon: {
             Image(systemName: used ? "checkmark.circle.fill" : "lightbulb")
-                .foregroundStyle(used ? Color.green : Color.accentColor)
+                .foregroundStyle(used ? Color.green : Color.themeAccent)
         }
         .font(.subheadline)
     }

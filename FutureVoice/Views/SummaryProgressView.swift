@@ -87,7 +87,7 @@ struct SummaryProgressView: View {
                 Text("Building your review material")
                     .font(.headline)
                 ProgressView(value: Double(shown), total: Double(steps.count))
-                    .tint(.accentColor)
+                    .tint(Color.themeAccent)
             }
             VStack(alignment: .leading, spacing: 12) {
                 ForEach(steps) { step in

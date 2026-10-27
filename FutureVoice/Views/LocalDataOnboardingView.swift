@@ -52,7 +52,7 @@ struct LocalDataOnboardingView: View {
                 Text("Continue")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
+            .accentProminent()
             .controlSize(.large)
             .padding(.horizontal, 28)
             .padding(.bottom, 24)

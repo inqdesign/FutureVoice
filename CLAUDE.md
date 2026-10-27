@@ -41,8 +41,9 @@ skips every step it has a flag for.
 2. Persona cards (`PersonaIntakeView`)
 3. The voice (`VoiceCloneOnboardingView`: record, hear it, pick the pace;
    the account is made here). The meet act opens on a choice: **My voice |
-   <preset> · similar voice** (2026-10-24, founder) — the preset is the one
-   nearest the recording's pitch, same gender (`VoicePitch`, on the phone).
+   AI tutor** (2026-10-24, founder; "similar voice" until 2026-10-25 — pitch
+   alone didn't sound like him, so the label claims nothing) — the preset is
+   the one nearest the recording's pitch, same gender (`VoicePitch`, on the phone).
    A pick is `AppState.fluentSelfPresetId`; the clone stays in
    `voiceCloneId` and everything the fluent self says reads
    `speakingVoiceId`. Me → Voice switches it later. Tracked as

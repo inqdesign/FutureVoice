@@ -885,18 +885,18 @@ private extension DrillView {
         .frame(maxWidth: .infinity, minHeight: 240, alignment: .topLeading)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.accentColor)
+                .fill(Color.themeAccent)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                .stroke(Color.onAccent.opacity(0.14), lineWidth: 1)
         )
         // The accent IS the card now, so every foreground on it reads against
         // the accent, not the system background. Setting the tint once here
         // carries `.foregroundStyle(.tint)` descendants (play glyph, "Tap to
         // reveal", pill labels) along with it.
         .tint(Self.onCard)
-        .shadow(color: Color.accentColor.opacity(0.28), radius: 8, y: 4)
+        .shadow(color: Color.themeAccent.opacity(0.28), radius: 8, y: 4)
         // Pinned to the card's corner, not beside the recording button: it
         // stays in one place whatever the sentence's length (2026-10-22).
         // Outside the card's white tint, so the menu's own items keep the
@@ -1011,9 +1011,9 @@ private extension DrillView {
     }
 
     /// Content color on the accent card.
-    static var onCard: Color { .white }
+    static var onCard: Color { .onAccent }
     /// Supporting text — the card's own "secondary".
-    static var onCardSecondary: Color { .white.opacity(0.72) }
+    static var onCardSecondary: Color { Color.onAccent.opacity(0.72) }
 
     @ViewBuilder
     func pillRow(_ card: DrillCard, iconOnly: Bool) -> some View {
@@ -1061,7 +1061,7 @@ private extension DrillView {
             .padding(.horizontal, 12)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 10)
-            .background(Capsule().fill(Color.white.opacity(0.18)))
+            .background(Capsule().fill(Color.onAccent.opacity(0.18)))
             .foregroundStyle(Self.onCard)
         }
         .buttonStyle(.plain)
@@ -1101,7 +1101,7 @@ private extension DrillView {
                     } label: {
                         Text("Next \(min(remainingDue, Self.sessionCap))")
                     }
-                    .buttonStyle(.borderedProminent)
+                    .accentProminent()
                 }
             }
             // Folders stay reachable with nothing due — that's when "what's

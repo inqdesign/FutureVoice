@@ -1,13 +1,10 @@
 New
-• Tutor mode is new. Pick a topic and your future self teaches it in 3 to 4 steps, practicing each one with you until you say it without a mistake. A checklist above the call shows where you are, and a lesson you stop picks up on your next call.
-• When a lesson is done, choose to keep going on the same topic or move to another.
-• Tap the book next to a Podcast episode to turn it into your own review book.
-• Before your first call, you can set your level, speed, Coach mode, Answer with Send and Tutor mode.
-• When you first make your voice, you can pick a voice that sounds like yours instead of your own.
-• Pick as many answers to "Why are you learning?" as you like.
-• The Voice page in Settings is simpler and easier to scan.
+• The Speech result page now marks your mistakes right on the script, like a red pen.
+• Speech challenge leaderboards now show takes that scored 80 or more.
+• In Listen, the player button opens the list right away when nothing is playing.
 
 Fixed
-• Noise no longer plays before the first line of a Watch scene.
-• Your bubble no longer disappears and comes back after you finish speaking in a call.
-• The Shadowing countdown no longer hangs on "3".
+• In Tutor mode, say it right twice and the tutor moves on to the next step by itself.
+• With Answer with Send, the Send button now appears once you start speaking, and the topic button stays put.
+• The call timer no longer stops at 0:05.
+• Theme colors now show inside sheets and in dark mode.

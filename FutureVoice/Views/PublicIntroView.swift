@@ -130,7 +130,7 @@ struct PublicIntroView: View {
                             .frame(maxWidth: .infinity)
                     }
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 .disabled(!canPublish)
                 .listRowSeparator(.hidden)
 

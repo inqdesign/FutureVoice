@@ -27,10 +27,10 @@ struct SpeechChallengeRow: View {
                             .font(.caption2.weight(.bold))
                             .lineLimit(1)
                             .fixedSize()
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Color.onAccent)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(Capsule().fill(Color.accentColor))
+                            .background(Capsule().fill(Color.themeAccent))
                             .offset(x: 14, y: 4)
                     }
                 }
@@ -216,7 +216,7 @@ struct SpeechChallengeView: View {
                 if isPast {
                     Text("This challenge has ended. These are the final standings.")
                 } else {
-                    Text("Only takes with the camera on go on the board, and your best one stands. The board shows your name and score — your video and voice stay on your phone.")
+                    Text("Camera-on takes that score \(SpeechChallenges.boardBar) or more go on the board, and your best one stands. The board shows your name and score — your video and voice stay on your phone.")
                 }
             }
 
@@ -348,10 +348,10 @@ struct SpeechChallengeView: View {
                     if count > 0 {
                         Text("\(count)")
                             .font(.caption2.weight(.bold).monospacedDigit())
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Color.onAccent)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 1)
-                            .background(Color.accentColor, in: Capsule())
+                            .background(Color.themeAccent, in: Capsule())
                             .offset(x: 4, y: -4)
                     }
                 }
@@ -378,7 +378,7 @@ struct SpeechChallengeView: View {
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 6)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .accentProminent()
                 }
             }
         }
@@ -657,6 +657,9 @@ struct SpeechChallengeEntrySection: View {
             case .cameraOff:
                 Label("The camera was off, so this take isn't on the board.", systemImage: "video.slash")
                     .foregroundStyle(.secondary)
+            case .belowBar:
+                Label("Takes that score \(SpeechChallenges.boardBar) or more go on the board.", systemImage: "trophy")
+                    .foregroundStyle(.secondary)
             case .failed:
                 Label("This take couldn't reach the board.", systemImage: "exclamationmark.triangle")
                     .foregroundStyle(.secondary)
@@ -773,7 +776,7 @@ struct SpeechChallengeMomentSheet: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 6)
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 Button("Done") { dismiss() }
                     .font(.body)
             }
@@ -806,7 +809,7 @@ struct SpeechChallengeMomentSheet: View {
             default: return .brown
             }
         case .up: return .green
-        case .debut: return .accentColor
+        case .debut: return Color.themeAccent
         }
     }
 
@@ -847,7 +850,7 @@ struct SpeechBoardRowView: View {
         HStack(spacing: 12) {
             Text("\(row.rank)")
                 .font(.body.monospacedDigit().weight(row.rank <= 3 ? .bold : .regular))
-                .foregroundStyle(row.rank <= 3 ? Color.accentColor : .secondary)
+                .foregroundStyle(row.rank <= 3 ? Color.themeAccent : .secondary)
                 .frame(minWidth: 28, alignment: .leading)
             Text(row.display_name)
                 .fontWeight(row.is_me ? .semibold : .regular)

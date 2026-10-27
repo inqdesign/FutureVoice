@@ -137,7 +137,7 @@ struct SceneWatchView: View {
                 generationError = nil
                 Task { await ensureCurriculum(force: true) }
             }
-            .buttonStyle(.borderedProminent)
+            .accentProminent()
         }
     }
 

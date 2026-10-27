@@ -78,7 +78,7 @@ struct UpdateAvailableSheet: View {
                     }
                     .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 .controlSize(.large)
 
                 // A required update has no way past. Everything else does.

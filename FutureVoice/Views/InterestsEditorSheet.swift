@@ -65,7 +65,7 @@ struct InterestsEditorSheet: View {
                         .padding(.vertical, 6)
                         .foregroundStyle(on ? Color(.systemBackground) : Color.primary)
                         .background(
-                            Capsule().fill(on ? Color.accentColor : Color(.tertiarySystemFill))
+                            Capsule().fill(on ? Color.themeAccent : Color(.tertiarySystemFill))
                         )
                 }
                 .buttonStyle(.plain)

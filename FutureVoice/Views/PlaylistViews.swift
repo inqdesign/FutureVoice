@@ -20,7 +20,9 @@ struct PlaylistButton: View {
         .modifier(PlaylistGlassCircle())
         .accessibilityLabel(Text("My situations"))
         .sheet(isPresented: $showing) {
-            ScenePlayerSheet().environmentObject(appState)
+            // Nothing queued: the player page would be an empty caption,
+            // so open on what there is to hear.
+            ScenePlayerSheet(startOnList: !player.hasQueue).environmentObject(appState)
         }
     }
 }
@@ -34,31 +36,33 @@ private struct PlaylistButtonFace: View {
             if player.hasQueue {
                 Circle()
                     .trim(from: 0, to: player.progress)
-                    .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                    .stroke(Color.themeAccent, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                     .padding(-4)
             }
             if player.isPlaying {
                 PlayingBars(isAnimating: true)
                     .frame(width: 18, height: 16)
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(Color.themeAccent)
             } else {
                 Image(systemName: "headphones")
                     .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(player.hasQueue ? Color.accentColor : .primary)
+                    .foregroundStyle(player.hasQueue ? Color.themeAccent : .primary)
             }
         }
     }
 }
 
 private struct PlaylistGlassCircle: ViewModifier {
+    @Environment(\.colorScheme) private var colorScheme
+
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
             content
                 #if targetEnvironment(macCatalyst)
                 .buttonStyle(MacGlassButtonStyle(circle: true))
                 #else
-                .buttonStyle(.glass)
+                .buttonStyle(.glass(homeGlass(colorScheme)))
                 #endif
                 .buttonBorderShape(.circle)
                 .controlSize(.large)
@@ -452,7 +456,7 @@ private struct PlayerLibrary: View {
             .frame(width: 24)
             VStack(alignment: .leading, spacing: 2) {
                 Text(track.title)
-                    .foregroundStyle(playing ? Color.accentColor : .primary)
+                    .foregroundStyle(playing ? Color.themeAccent : .primary)
                     .lineLimit(2)
                 Text(track.otherName).font(.caption).foregroundStyle(.secondary)
             }
@@ -483,7 +487,7 @@ private struct PlayerLibrary: View {
             .frame(width: 24)
             VStack(alignment: .leading, spacing: 2) {
                 Text(episode.title)
-                    .foregroundStyle(playing ? Color.accentColor : .primary)
+                    .foregroundStyle(playing ? Color.themeAccent : .primary)
                     .lineLimit(2)
                 // The hosts are the same on every episode; how long it is helps
                 // choose. "%@ · %lld min" is already in every language.
@@ -520,7 +524,7 @@ private struct NowPlayingCaption: View {
                     HStack(alignment: .firstTextBaseline) {
                         Text(line.speaker)
                             .font(.footnote.weight(.semibold))
-                            .foregroundStyle(line.isFluentSelf ? Color.accentColor : .secondary)
+                            .foregroundStyle(line.isFluentSelf ? Color.themeAccent : .secondary)
                             .lineLimit(1)
                         Spacer()
                         Text("\(player.position + 1) / \(player.order.count)")
@@ -608,7 +612,7 @@ private struct NowPlayingCaption: View {
             if finished || nowMs >= t.endMs {
                 word.foregroundColor = .primary
             } else if nowMs >= t.startMs {
-                word.foregroundColor = .accentColor
+                word.foregroundColor = Color.themeAccent
             } else {
                 word.foregroundColor = .secondary
             }
@@ -630,7 +634,7 @@ private struct PlayerControls: View {
         HStack {
             Button { player.setShuffle(!player.shuffle) } label: {
                 Image(systemName: "shuffle")
-                    .foregroundStyle(player.shuffle ? Color.accentColor : .secondary)
+                    .foregroundStyle(player.shuffle ? Color.themeAccent : .secondary)
             }
             .accessibilityLabel(Text("Shuffle"))
             Spacer()
@@ -653,7 +657,7 @@ private struct PlayerControls: View {
             Spacer()
             Button { player.cycleRepeat() } label: {
                 Image(systemName: player.repeatMode == .one ? "repeat.1" : "repeat")
-                    .foregroundStyle(player.repeatMode == .off ? .secondary : Color.accentColor)
+                    .foregroundStyle(player.repeatMode == .off ? .secondary : Color.themeAccent)
             }
             .accessibilityLabel(Text("Repeat"))
         }
@@ -671,8 +675,8 @@ private struct PlayerOptionsMenu: View {
 
     var body: some View {
         Menu {
-            Toggle(isOn: $showCaptions) { Label("Captions", systemImage: "captions.bubble") }
-            Toggle(isOn: $showTranslation) { Label("Translation", systemImage: "character.bubble") }
+            Toggle(isOn: $showCaptions) { Label("Captions", systemImage: "captions.bubble") }.toggleStyle(.automatic)
+            Toggle(isOn: $showTranslation) { Label("Translation", systemImage: "character.bubble") }.toggleStyle(.automatic)
             Picker(selection: $player.gap) {
                 Text("No pause").tag(PlaylistPlayer.Gap.none)
                 Text("1 second").tag(PlaylistPlayer.Gap.short)

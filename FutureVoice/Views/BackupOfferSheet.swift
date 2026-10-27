@@ -56,7 +56,7 @@ struct BackupOfferSheet: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 6)
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 .controlSize(.large)
                 .disabled(turningOn)
                 Button("Not now") {

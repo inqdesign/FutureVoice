@@ -1234,7 +1234,7 @@ struct WatchTab: View {
             .padding(.vertical, 14)
             .frame(maxWidth: .infinity, minHeight: 72, alignment: .topLeading)
             .background(RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(prominent ? Color.accentColor.opacity(0.12)
+                .fill(prominent ? Color.themeAccent.opacity(0.12)
                                 : Color(.secondarySystemGroupedBackground)))
             .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
@@ -1357,11 +1357,11 @@ struct PersonBubble: View {
                     .scaledToFill()
                     .frame(width: size, height: size)
                     .clipShape(Circle())
-                    .overlay(Circle().strokeBorder(Color.accentColor.opacity(0.35), lineWidth: 1.5))
+                    .overlay(Circle().strokeBorder(Color.themeAccent.opacity(0.35), lineWidth: 1.5))
             } else {
-                Circle().fill(Color.accentColor.opacity(0.15))
+                Circle().fill(Color.themeAccent.opacity(0.15))
                     .frame(width: size, height: size)
-                    .overlay(Circle().strokeBorder(Color.accentColor.opacity(0.35), lineWidth: 1.5))
+                    .overlay(Circle().strokeBorder(Color.themeAccent.opacity(0.35), lineWidth: 1.5))
                 if let symbol = fallbackSymbol {
                     Image(systemName: symbol)
                         .font(.system(size: size * 0.42, weight: .semibold))
@@ -1406,21 +1406,31 @@ struct PickUpTalkButton: View {
     }
 }
 
+/// Glass over a near-black page has nothing to refract and nearly vanished
+/// in dark mode (2026-10-25), so there the glass carries a faint grey tint.
+/// Light mode is the plain glass.
+@available(iOS 26.0, *)
+func homeGlass(_ scheme: ColorScheme) -> Glass {
+    scheme == .dark ? .regular.tint(Color(.tertiarySystemFill)) : .regular
+}
+
 /// The floating "Your own situation" button wears the same glass as the tab
 /// bar and the header buttons around it — a solid blue pill with a shadow sat
 /// on the map like a sticker. Before iOS 26 it falls back to a material pill.
 struct GlassFloatingButton: ViewModifier {
+    @Environment(\.colorScheme) private var colorScheme
+
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
             content
                 #if targetEnvironment(macCatalyst)
                 .buttonStyle(MacGlassButtonStyle())
                 #else
-                .buttonStyle(.glass)
+                .buttonStyle(.glass(homeGlass(colorScheme)))
                 #endif
                 .buttonBorderShape(.capsule)
                 .controlSize(.large)
-                .tint(.accentColor)
+                .tint(Color.themeAccent)
         } else {
             content
                 .buttonStyle(.bordered)
@@ -1508,7 +1518,7 @@ struct SkyPersonCard: View {
                         .minimumScaleFactor(0.75)
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 .labelStyle(.titleAndIcon)
                 Button(action: onWatch) {
                     Image(systemName: "play.fill")

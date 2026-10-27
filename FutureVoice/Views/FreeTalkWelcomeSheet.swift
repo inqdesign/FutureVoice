@@ -55,7 +55,7 @@ struct FreeTalkWelcomeSheet: View {
                     Text("Start talking")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 .controlSize(.large)
 
                 Button("Later") { dismiss() }

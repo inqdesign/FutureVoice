@@ -547,7 +547,7 @@ struct VoiceCloneOnboardingView: View {
         case .reviewing: return chrome("How you sound")
         case .account:   return chrome("Make it yours")
         case .uploading: return chrome("Becoming you")
-        case .meet:      return usingPreset ? chrome("Meet your role model")
+        case .meet:      return usingPreset ? chrome("Meet your AI tutor")
                                         : chrome("Meet your fluent self")
         case .queued:    return chrome("Voice saved")
         }
@@ -919,7 +919,7 @@ struct VoiceCloneOnboardingView: View {
     /// Gate 2 — how live the room is. Waits for a clap; each clap re-measures.
     private var echoGate: (symbol: String, state: String, tint: Color) {
         guard let tail = recorder.echoTailMs else {
-            return ("hands.clap", explain("clap to check"), Color.accentColor)
+            return ("hands.clap", explain("clap to check"), Color.themeAccent)
         }
         if tail <= Self.dryTailMs { return ("checkmark.circle.fill", explain("dry"), .green) }
         return ("water.waves", explain("echoey"), .orange)
@@ -1113,10 +1113,11 @@ struct VoiceCloneOnboardingView: View {
     private var meetContent: some View {
         VStack(spacing: 22) {
             // A preset is not the learner: it is the fluent speaker they are
-            // learning to sound like — a role model (founder, 2026-10-24).
+            // learning with — the AI tutor (founder, 2026-10-26; "role
+            // model" since 2026-10-24).
             if usingPreset {
-                stepHeader(explain("Your role model."),
-                           explain("Pick how your role model looks and how fast it talks."))
+                stepHeader(explain("Your AI tutor."),
+                           explain("Pick how your AI tutor looks and how fast it talks."))
             } else {
                 stepHeader(explain("It's you — fluent."),
                            explain("Pick how your fluent self looks and sounds."))
@@ -1317,7 +1318,7 @@ struct VoiceCloneOnboardingView: View {
         }
         .accessibilityAddTraits(selected ? .isSelected : [])
         if selected {
-            button.buttonStyle(.borderedProminent)
+            button.accentProminent()
         } else {
             button.buttonStyle(.bordered)
         }
@@ -1349,7 +1350,7 @@ struct VoiceCloneOnboardingView: View {
         // Two native styles rather than one styled two ways: prominent IS the
         // selected state, so nothing here draws its own selection chrome.
         if speechSpeed == speed.rawValue {
-            speedButton(speed).buttonStyle(.borderedProminent)
+            speedButton(speed).accentProminent()
         } else {
             speedButton(speed).buttonStyle(.bordered)
         }
@@ -1487,7 +1488,7 @@ struct VoiceCloneOnboardingView: View {
                         Label("Use this voice", systemImage: "checkmark")
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .accentProminent()
                     .controlSize(.large)
                 }
 
@@ -1521,7 +1522,7 @@ struct VoiceCloneOnboardingView: View {
                     Label("Cloning your voice…", systemImage: "waveform")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 .controlSize(.large)
                 .disabled(true)
 
@@ -1531,7 +1532,7 @@ struct VoiceCloneOnboardingView: View {
                         Text("Start talking")
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .accentProminent()
                     .controlSize(.large)
                 } else {
                     Button {
@@ -1540,7 +1541,7 @@ struct VoiceCloneOnboardingView: View {
                         Text("Continue")
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .accentProminent()
                     .controlSize(.large)
                 }
 
@@ -1564,7 +1565,7 @@ struct VoiceCloneOnboardingView: View {
                         Text("Start talking")
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .accentProminent()
                     .controlSize(.large)
                 } else {
                     Button {
@@ -1574,7 +1575,7 @@ struct VoiceCloneOnboardingView: View {
                         Text("Save this voice")
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .accentProminent()
                     .controlSize(.large)
                 }
             }
@@ -1614,7 +1615,7 @@ struct VoiceCloneOnboardingView: View {
                         .frame(maxWidth: .infinity)
                 }
             }
-            .buttonStyle(.borderedProminent)
+            .accentProminent()
             .controlSize(.large)
             // Only the primary — Back must stay live, or a step that gates
             // its Next (the consent toggle) becomes a wall.
@@ -1871,8 +1872,10 @@ struct VoiceCloneOnboardingView: View {
                 set: { selectVoice($0.isEmpty ? nil : $0) })) {
                 Text("My voice").tag("")
                 // No name: it doesn't fit beside "My voice" in every
-                // language (founder, 2026-10-24).
-                Text("Similar voice").tag(preset.id)
+                // language (founder, 2026-10-24). Not "similar voice": pitch
+                // alone didn't make it sound like the learner, and a claim
+                // the ear refutes is worse than none (founder, 2026-10-25).
+                Text("AI tutor").tag(preset.id)
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, 24)

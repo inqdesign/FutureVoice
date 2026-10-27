@@ -698,6 +698,9 @@ struct ConversationView: View {
     @State private var tutorJustTicked = false
     /// What the correction found on the learner's last try, for the block.
     @State private var tutorLastFixes: [String] = []
+    /// The learner's last try on the current challenge — the line kept on
+    /// the checklist when the tutor moves on by itself.
+    @State private var tutorLastTry = ""
     /// The lesson finished; the call ends after the tutor's goodbye.
     @State private var tutorStripExpanded = true
     @State private var showingTutorTopics = false
@@ -766,16 +769,10 @@ struct ConversationView: View {
     ///
     /// The learner half of that is `someoneIsTalkingHere`, which is where the
     /// café problem lives — see below.
-    /// Has the learner spoken since this call started? Gates the meter —
-    /// see `isBillableMoment`. Set where a user turn is made (both paths),
-    /// cleared with the session.
+    /// Has the learner spoken since this call started? Set where a user turn
+    /// is made (both paths), cleared with the session. No longer a billing
+    /// gate (see `isBillableMoment`).
     @State private var learnerSpokeThisCall = false
-    /// The learner has started their first answer — the gateway is already
-    /// making words of it — even if no turn is committed yet. Lifts the gate
-    /// for the CLOCK on the realtime path, where the local meter only keeps
-    /// the clock and the ring (the gateway bills on its own rule), so the
-    /// first answer is counted while it is being said instead of after it.
-    @State private var learnerStartedThisCall = false
     /// The live call died under the learner — socket gone, reply failed
     /// past its retry, mic lost after a route change. Set from the realtime
     /// state observer; presented as the one alert that offers a way BACK.
@@ -796,32 +793,13 @@ struct ConversationView: View {
     @State private var lastAutoReconnectAt: Date?
     private static let autoReconnectSpacing: TimeInterval = 60
 
+    /// The call is billed from the moment it starts (founder, 2026-10-27):
+    /// the opener and the fluent self's first lines count like every other
+    /// line. Until then nothing counted before the learner's first turn
+    /// (2026-09-07), with tutor mode the one exception (2026-10-25). Silence
+    /// is still free: only seconds where something is happening count.
     private func isBillableMoment() -> Bool {
-        // Nothing counts until the learner has said something IN THIS CALL.
-        // The opener speaks whether or not it is answered, and a call that
-        // was opened, listened to and left behind is not a minute of theirs
-        // — the ring showed the wait as talk time (reported 2026-09-07).
-        // Per call, not per transcript: Continue reopens a book with its old
-        // turns in hand, and those were spoken on another day.
-        if RealtimeMode.isEnabled, !learnerStartedThisCall,
-           realtime.state == .hearing, !realtime.partial.isEmpty {
-            learnerStartedThisCall = true
-        }
-        guard learnerSpokeThisCall || (RealtimeMode.isEnabled && learnerStartedThisCall)
-        else { return false }
-        return somethingIsHappening()
-    }
-
-    /// The clock counts nothing until the first turn is COMMITTED (the gate
-    /// above), so the first answer itself — often the longest thing the
-    /// learner says — never reached it: a 40-second first answer read 0:00
-    /// (founder, 2026-09-27). The realtime path counts it live
-    /// (`learnerStartedThisCall`); the classic path has no such witness, so
-    /// at that commit the answer's own length is added once. The classic
-    /// meter bills too, and the learner is never billed for this — clock only.
-    private func creditFirstAnswerToClock(ms: Int) {
-        guard !learnerSpokeThisCall, ms > 0 else { return }
-        meter.clock.add(Double(ms) / 1000)
+        somethingIsHappening()
     }
 
     /// Is anyone in this call right now — the fluent self speaking, a reply
@@ -1079,6 +1057,7 @@ struct ConversationView: View {
                 if on { tutorWasOn = true }
                 // The classic path reads `tutorThisCall` at its next turn.
                 guard RealtimeMode.isEnabled, phoneCallActive else { return }
+                realtime.setMeterFromStart(on)
                 realtime.setSystem(systemPrompt() + Self.realtimeStyleRules)
                 if on, tutorLesson == nil {
                     realtime.nudge("Tutor mode was just turned on. Ask them, in one short question, what they want to be able to say today — they can also pick a topic from the button on their screen.")
@@ -1399,11 +1378,9 @@ struct ConversationView: View {
                              minutesLeft: meter.minutesRemaining.flatMap { $0 <= 10 ? $0 : nil },
                              // Talk time, phone-style — every tier. The meter's
                              // own count, so silence doesn't move it; shown from
-                             // the learner's first line (a call opened and left
-                             // without a word has no clock, asked 2026-09-02)
-                             // and gone once the talk is wrapped up.
-                             callClock: (learnerSpokeThisCall || learnerStartedThisCall)
-                                 && (phoneCallActive || !didSaveCurrentSession)
+                             // the start, since the call is billed from the start
+                             // (2026-10-27), and gone once the talk is wrapped up.
+                             callClock: (phoneCallActive || !didSaveCurrentSession)
                                  ? meter.clock : nil)
                 .environmentObject(appState)
         }
@@ -1772,8 +1749,8 @@ struct ConversationView: View {
             Button {
                 // Send-to-answer: while it is the learner's turn the pill IS
                 // Send. Outside the turn it is the pill it always was.
-                if sendModeActive {
-                    guard hasHeldWords, !realtime.sendPending else { return }
+                if sendReady {
+                    guard !realtime.sendPending else { return }
                     HapticEngine.selection()
                     realtime.sendTurn()
                     return
@@ -1782,7 +1759,7 @@ struct ConversationView: View {
             } label: {
                 ZStack {
                     Futureself(mode: glowMode, level: voiceLevel)
-                    if sendModeActive {
+                    if sendReady {
                         Group {
                             if realtime.sendPending {
                                 ProgressView()
@@ -1790,7 +1767,6 @@ struct ConversationView: View {
                                 Image(systemName: "paperplane.fill")
                                     .font(.system(size: 22, weight: .semibold))
                                     .foregroundStyle(.primary)
-                                    .opacity(hasHeldWords ? 1 : 0.3)
                             }
                         }
                         .transition(.opacity)
@@ -1821,15 +1797,20 @@ struct ConversationView: View {
             HStack {
                 callSettingsButton
                 Spacer(minLength: 0)
-                // Send-to-answer's reset, mirroring the settings button.
-                // Held in place (hidden, not removed) for the whole call so
-                // nothing shifts when the turn changes hands.
-                if tutorThisCall && RealtimeMode.isEnabled && phoneCallActive && !sendModeActive {
+                // Send-to-answer's reset, mirroring the settings button, and
+                // only once there are words to send (founder, 2026-10-26: on
+                // an empty turn it covered the topic button). Held in place
+                // (hidden, not removed) for the whole call so nothing shifts.
+                // Tutor mode's topic button holds this spot the rest of the
+                // time.
+                if sendReady {
+                    clearTurnButton
+                } else if tutorThisCall && RealtimeMode.isEnabled && phoneCallActive {
                     tutorTopicButton
                 } else if sendToAnswer && RealtimeMode.isEnabled && phoneCallActive {
                     clearTurnButton
-                        .opacity(sendModeActive ? 1 : 0)
-                        .allowsHitTesting(sendModeActive)
+                        .opacity(0)
+                        .allowsHitTesting(false)
                 }
             }
             .padding(.horizontal, 24)
@@ -1871,6 +1852,13 @@ struct ConversationView: View {
         case .listening, .hearing: return true
         default:                   return realtime.sendPending
         }
+    }
+
+    /// Send-to-answer once the learner has started: the pill is Send and
+    /// reset sits beside it. Before the first word the turn looks like any
+    /// other — the pill stops the call, the topic button stays.
+    private var sendReady: Bool {
+        sendModeActive && (hasHeldWords || realtime.sendPending)
     }
 
     private var hasHeldWords: Bool {
@@ -1958,7 +1946,7 @@ struct ConversationView: View {
     }
 
     private var micA11yLabel: String {
-        if sendModeActive { return explain("Send") }
+        if sendReady { return explain("Send") }
         if phoneCallActive {
             switch phase {
             case .listening: return explain("Listening — tap to hang up")
@@ -3429,7 +3417,6 @@ struct ConversationView: View {
         // in flight" so late arrivals resolve in the right order.
         userTurn.transcriptPending = userTurn.audioURL != nil
         turns.append(userTurn)
-        creditFirstAnswerToClock(ms: userTurn.durationMs)
         learnerSpokeThisCall = true
         didSaveCurrentSession = false
         creditGoalChips(turnId: userTurn.id)
@@ -4786,7 +4773,6 @@ struct ConversationView: View {
         tutorThisCall = TutorMode.isOn
         tutorWasOn = tutorThisCall
         learnerSpokeThisCall = false
-        learnerStartedThisCall = false
         didSaveCurrentSession = false
         phase = .idle
         if !topic.isEmpty {
@@ -4975,14 +4961,18 @@ struct ConversationView: View {
             realtime.nudge("The learner picked a topic on their screen: \"\(request)\". Say in a few words that this is today's lesson and that you're setting it up — nothing else yet.")
         }
         Task { @MainActor in
+            var missReason = "request_failed"
             let planned = await TutorPlanner.plan(
                 request: request, askedWith: askedWith, targetLanguage: appState.targetLanguage,
                 nativeLanguage: appState.nativeLanguage, level: appState.proficiency,
-                persona: appState.persona)
+                persona: appState.persona, miss: { missReason = $0 })
             guard !isTornDown else { return }
             withAnimation(.easeInOut(duration: 0.25)) { tutorPlanning = false }
             guard var lesson = planned else {
-                Telemetry.log("tutor_plan_failed", ["picked": picked ? "1" : "0"])
+                // A line that names no topic is the planner working, not
+                // failing, so it gets its own event (the console flags *_failed).
+                Telemetry.log(missReason == "no_topic" ? "tutor_plan_no_topic" : "tutor_plan_failed",
+                              ["picked": picked ? "1" : "0", "code": missReason])
                 if picked || fromTopic {
                     realtime.nudge("Setting up the lesson didn't work. Ask them, in one short question, what exactly they want to be able to say about: \"\(request)\".")
                 }
@@ -4996,6 +4986,7 @@ struct ConversationView: View {
             }
             tutorJustTicked = false
             tutorLastFixes = []
+            tutorLastTry = ""
             Telemetry.log("tutor_lesson_started", ["challenges": String(lesson.challenges.count),
                                                    "picked": picked ? "1" : "0"])
             sendTutorSystem()
@@ -5003,8 +4994,13 @@ struct ConversationView: View {
         }
     }
 
-    /// One learner try on the current challenge. A tick needs BOTH: the
-    /// correction found no fixes, and the judge says the line did it.
+    /// One learner try on the current challenge. Moving on is the TUTOR's
+    /// call (founder, 2026-10-25: a clean second try moves on, the tutor
+    /// judges it), so the checklist follows two ways: the app ticks when the
+    /// correction found no fixes and the judge says the line did it, and the
+    /// judge also reports when the tutor's last line had already left this
+    /// challenge — then it is ticked with the previous try, and this line is
+    /// judged against the challenge the tutor is on now.
     private func tutorCheck(turnId: UUID, said: String, fixes: [TurnFix]) {
         guard tutorThisCall, !tutorPlanning, let lesson = tutorLesson,
               let i = lesson.current else { return }
@@ -5023,6 +5019,33 @@ struct ConversationView: View {
                 dropTutorLesson(said: said)
                 return
             }
+            if verdict?.tutorMovedOn == true {
+                now.challenges[i].doneAt = Date()
+                now.challenges[i].line = tutorLastTry.isEmpty ? said : tutorLastTry
+                tutorLastTry = ""
+                tutorLastFixes = []
+                tutorJustTicked = false
+                let finished = now.current == nil
+                if finished {
+                    now.finishedAt = Date()
+                    Telemetry.log("tutor_lesson_finished", ["of": String(now.challenges.count)])
+                }
+                TutorLessonStore.save(now)
+                withAnimation(.easeInOut(duration: 0.3)) { tutorLesson = now }
+                HapticEngine.success()
+                Telemetry.log("tutor_challenge_done", ["index": String(i + 1),
+                                                       "of": String(now.challenges.count),
+                                                       "by": "tutor"])
+                sendTutorSystem()
+                // This line answered what the tutor asked after moving on.
+                if finished {
+                    tutorAfterLesson(said, lesson: now)
+                } else {
+                    tutorCheck(turnId: turnId, said: said, fixes: fixes)
+                }
+                return
+            }
+            tutorLastTry = said
             if !fixes.isEmpty {
                 tutorLastFixes = fixes.map { "\"\($0.was)\" → \"\($0.now)\"" }
                 tutorJustTicked = false
@@ -5037,6 +5060,7 @@ struct ConversationView: View {
                 if hadFixes { sendTutorSystem() }
                 return
             }
+            tutorLastTry = ""
             now.challenges[i].doneAt = Date()
             now.challenges[i].line = said
             // A finished lesson does NOT end the call (device, 2026-10-24:
@@ -5051,7 +5075,8 @@ struct ConversationView: View {
             tutorJustTicked = true
             HapticEngine.success()
             Telemetry.log("tutor_challenge_done", ["index": String(i + 1),
-                                                   "of": String(now.challenges.count)])
+                                                   "of": String(now.challenges.count),
+                                                   "by": "app"])
             sendTutorSystem()
         }
     }
@@ -5123,6 +5148,7 @@ struct ConversationView: View {
         withAnimation(.easeInOut(duration: 0.25)) { tutorLesson = nil }
         tutorLastFixes = []
         tutorJustTicked = false
+        tutorLastTry = ""
         turns = Array(turns[cut...])
         sessionId = UUID()
         sessionStartedAt = Date()
@@ -5161,6 +5187,7 @@ struct ConversationView: View {
         withAnimation(.easeInOut(duration: 0.25)) { tutorLesson = nil }
         tutorLastFixes = []
         tutorJustTicked = false
+        tutorLastTry = ""
         sendTutorSystem()
         if let said {
             // The tutor already agreed in its reply (the block's rule); the
@@ -5524,7 +5551,7 @@ private struct LevelMeter: View {
                     let envelope = max(0.15, 1 - distance * distance)  // bell-ish
                     let height = CGFloat(max(0.08, level * envelope)) * geo.size.height
                     Capsule()
-                        .fill(Color.accentColor)
+                        .fill(Color.themeAccent)
                         .frame(width: barWidth, height: height)
                         .opacity(0.5 + Double(level) * 0.5)
                 }
@@ -5684,7 +5711,7 @@ struct RetryReplyRow: View {   // internal: DebugCaptureHarness renders it
                 }
                 HStack(spacing: 8) {
                     Button("See plans", action: onGetCredits)
-                        .buttonStyle(.borderedProminent)
+                        .accentProminent()
                         .controlSize(.small)
                     Button("Retry", action: onRetry)
                         .buttonStyle(.bordered)

@@ -221,7 +221,12 @@ enum DebugCapture {
         let take = SpeechTake(
             id: UUID(), scriptId: builtIn.id, createdAt: Date(), durationSeconds: 62,
             audioFilename: "missing.wav", videoFilename: nil,
-            transcript: "Good evening. Tonight, a question most of us never um stop to ask: how do noise-cancelling headphones actually work?",
+            // The script as read, with a few slips for the red pen to mark.
+            transcript: builtIn.body
+                .replacingOccurrences(of: "perfect sentence", with: "prefect sentence")
+                .replacingOccurrences(of: "not just knowledge", with: "not um college")
+                .replacingOccurrences(of: "actually built", with: "built")
+                .replacingOccurrences(of: "fades at the end", with: "fade at the end"),
             metrics: metrics,
             coaching: SpeechCoaching(
                 headline: "Clear and confident opening — the middle ran a little fast.",
@@ -1247,7 +1252,7 @@ enum DebugCapture {
                 }
                 .fadingBottomBar {
                     VStack(spacing: 10) {
-                        Capsule().fill(Color.accentColor.opacity(0.3))
+                        Capsule().fill(Color.themeAccent.opacity(0.3))
                             .frame(width: 156, height: 64)
                         Text("Listening").font(.footnote).foregroundStyle(.secondary).frame(height: 16)
                     }

@@ -61,7 +61,7 @@ struct DialogueLine<Content: View, Accessory: View>: View {
 
     private var bubbleFill: Color {
         if isMonoUser { return Color(.label) }
-        return speaker.isUser ? Color.accentColor.opacity(0.18)
+        return speaker.isUser ? Color.themeAccent.opacity(0.18)
                               : Color(.secondarySystemBackground)
     }
 
@@ -74,7 +74,7 @@ struct DialogueLine<Content: View, Accessory: View>: View {
     /// The playback ring is accent-coloured — invisible against a solid ink
     /// bubble, so mono draws it in the bubble's own text colour instead.
     private var ringColor: Color {
-        isMonoUser ? Color(.systemBackground) : Color.accentColor
+        isMonoUser ? Color(.systemBackground) : Color.themeAccent
     }
 
     init(speaker: DialogueSpeaker,

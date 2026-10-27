@@ -69,7 +69,7 @@ struct PublicIntroPreviewSheet: View {
                             Text("Publish").frame(maxWidth: .infinity)
                         }
                     }
-                    .buttonStyle(.borderedProminent)
+                    .accentProminent()
                     .disabled(isPublishing || intro == nil || voiceId == nil)
                     .listRowSeparator(.hidden)
 

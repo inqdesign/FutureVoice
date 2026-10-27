@@ -88,7 +88,7 @@ struct VocabularyView: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    Toggle("Hide words I know", isOn: $hideKnown)
+                    Toggle("Hide words I know", isOn: $hideKnown).toggleStyle(.automatic)
                     Picker("Level", selection: $level) {
                         ForEach(LevelFilter.allCases) { Text($0.label).tag($0) }
                     }
@@ -163,7 +163,7 @@ struct VocabularyView: View {
                             if studying || used {
                                 Image(systemName: studying ? "bookmark.fill" : "checkmark")
                                     .font(.system(size: max(8, node.size * 0.42), weight: .semibold))
-                                    .foregroundStyle(studying ? Color.accentColor : Color.green)
+                                    .foregroundStyle(studying ? Color.themeAccent : Color.green)
                                     .offset(x: -4, y: -max(8, node.size * 0.42))
                             }
                         }
@@ -639,7 +639,7 @@ struct WordCard: View {
                     } label: {
                         Image(systemName: store.isStudying(word) ? "bookmark.fill" : "bookmark")
                     }
-                    .tint(store.isStudying(word) ? .accentColor : .secondary)
+                    .tint(store.isStudying(word) ? Color.themeAccent : .secondary)
 
                     Button {
                         isKnown ? store.unmark(word) : store.markKnown(word)
@@ -667,7 +667,7 @@ struct WordCard: View {
             Task { await speakWord() }
         } label: {
             ZStack {
-                Circle().fill(Color.accentColor.opacity(0.12)).frame(width: 46, height: 46)
+                Circle().fill(Color.themeAccent.opacity(0.12)).frame(width: 46, height: 46)
                 if speaking {
                     ProgressView()
                 } else {
@@ -722,7 +722,7 @@ struct WordCard: View {
                 .font(.caption.weight(.bold)).monospacedDigit()
                 .foregroundStyle(.tint)
                 .frame(width: 22, height: 22)
-                .background(Circle().fill(Color.accentColor.opacity(0.12)))
+                .background(Circle().fill(Color.themeAccent.opacity(0.12)))
             VStack(alignment: .leading, spacing: 4) {
                 Text(s.pos)
                     .font(.caption2.weight(.semibold))
@@ -743,7 +743,7 @@ struct WordCard: View {
     private func exampleRow(_ e: WordEntry.Example) -> some View {
         HStack(alignment: .top, spacing: 12) {
             RoundedRectangle(cornerRadius: 2)
-                .fill(Color.accentColor.opacity(0.35))
+                .fill(Color.themeAccent.opacity(0.35))
                 .frame(width: 3)
             VStack(alignment: .leading, spacing: 4) {
                 Text(e.text)
@@ -849,7 +849,7 @@ struct WordCard: View {
             let studying = store.isStudying(word)
             CardActionButton(title: "Keep",
                              icon: studying ? "bookmark.fill" : "bookmark",
-                             tint: studying ? .accentColor : .primary) {
+                             tint: studying ? Color.themeAccent : .primary) {
                 studying ? store.removeStudying(word) : store.addStudying(word)
             }
             .accessibilityLabel(studying ? "Studying this word" : "Keep studying this word")

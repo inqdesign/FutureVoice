@@ -696,7 +696,7 @@ struct ProgressTab: View {
                 .font(.subheadline).foregroundStyle(.secondary)
             HStack(spacing: 10) {
                 ProgressView(value: min(acc, req), total: req)
-                    .tint(.accentColor)
+                    .tint(Color.themeAccent)
                 Text("\(Int(acc / 60))/\(Int(req / 60)) min")
                     .font(.caption).foregroundStyle(.secondary).monospacedDigit()
             }
@@ -870,7 +870,7 @@ struct ProgressTab: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 ProgressView(value: Double(material.mastered), total: Double(material.total))
-                    .tint(material.mastered == material.total ? .green : .accentColor)
+                    .tint(material.mastered == material.total ? .green : Color.themeAccent)
             }
             // Identifier, not the title: the chrome follows the TARGET
             // language, so a test matching "Your material" passes only until
@@ -1113,7 +1113,7 @@ struct ProgressTab: View {
                     .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 10) {
                     ProgressView(value: min(acc, req), total: req)
-                        .tint(.accentColor)
+                        .tint(Color.themeAccent)
                     Text("\(Int(acc / 60))/\(Int(req / 60)) min")
                         .font(.caption).foregroundStyle(.secondary).monospacedDigit()
                 }
@@ -1172,7 +1172,7 @@ struct ProgressTab: View {
                 let done = max(0, min(required, required - secondsRemaining))
                 HStack(spacing: 10) {
                     ProgressView(value: done, total: required)
-                        .tint(.accentColor)
+                        .tint(Color.themeAccent)
                     Text("\(Int(done / 60))/\(Int(required / 60)) min new talk")
                         .font(.caption).foregroundStyle(.secondary).monospacedDigit()
                         .layoutPriority(1)
@@ -1373,7 +1373,7 @@ struct ProgressTab: View {
                     Chart(vocabTrend) { p in
                         AreaMark(x: .value("Day", p.date), y: .value("Words", p.value))
                             .interpolationMethod(.monotone)
-                            .foregroundStyle(Color.accentColor.opacity(0.15))
+                            .foregroundStyle(Color.themeAccent.opacity(0.15))
                         LineMark(x: .value("Day", p.date), y: .value("Words", p.value))
                             .interpolationMethod(.monotone)
                             .foregroundStyle(.tint)
@@ -1426,10 +1426,10 @@ struct ProgressTab: View {
             Text(lv.rawValue.uppercased())
                 .geistPixel(15)
                 .frame(width: 30, alignment: .leading)
-                .foregroundStyle(lv == vocabLevel ? Color.accentColor : .secondary)
+                .foregroundStyle(lv == vocabLevel ? Color.themeAccent : .secondary)
             GeometryReader { g in
                 Capsule()
-                    .fill(lv == vocabLevel ? Color.accentColor : Color(.tertiarySystemFill))
+                    .fill(lv == vocabLevel ? Color.themeAccent : Color(.tertiarySystemFill))
                     .frame(width: max(count == 0 ? 0 : 6, g.size.width * CGFloat(count) / CGFloat(maxC)))
             }
             .frame(height: 12)
@@ -1551,7 +1551,7 @@ struct ProgressTab: View {
     private func trendChart(_ trend: [TrendPoint], unit: String,
                             target: Double? = nil,
                             bands: [BandSpec] = [],
-                            line: Color = .accentColor) -> some View {
+                            line: Color = Color.themeAccent) -> some View {
         // Y-domain from the data (plus the goal line), padded — bands are
         // then CLIPPED to it, so the zones label the visible range instead
         // of squashing the curve to fit every band.
@@ -1729,7 +1729,7 @@ struct ProgressTab: View {
                 .font(.subheadline.weight(.semibold))
                 .frame(maxWidth: .infinity).padding(.vertical, 4)
         }
-        .buttonStyle(.borderedProminent).labelStyle(.titleAndIcon).controlSize(.large).padding(.top, 2)
+        .accentProminent().labelStyle(.titleAndIcon).controlSize(.large).padding(.top, 2)
     }
 
     /// The band just above the measured vocabulary level — where the words
@@ -2109,10 +2109,7 @@ struct ProgressTab: View {
 
         // Accumulated speaking time across every analyzed session — gates the
         // overall level so it's grounded in ~10 min of talk, not one session.
-        let totalSpeakSecs = scoredSessions.reduce(0.0) { acc, sess in
-            acc + sess.turns.filter { $0.role == .user }
-                .reduce(0.0) { $0 + Double($1.durationMs) / 1000.0 }
-        }
+        let totalSpeakSecs = WeeklyReportEngine.totalUserSpeakingSeconds(scoredSessions)
         out.totalSpeakingMinutes = Int(totalSpeakSecs / 60.0)
 
         let recent = Array(scoredSessions.prefix(5))

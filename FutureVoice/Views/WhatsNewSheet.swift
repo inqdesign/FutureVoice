@@ -62,7 +62,7 @@ struct WhatsNewSheet: View {
                 } label: {
                     Text("Continue").fontWeight(.semibold).frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 .controlSize(.large)
                 .padding(.horizontal, 20)
                 .padding(.bottom, 8)

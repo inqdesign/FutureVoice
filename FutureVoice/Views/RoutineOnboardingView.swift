@@ -269,7 +269,7 @@ struct RoutineOnboardingView: View {
                 } label: {
                     Text(explain("Keep it like this")).frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 .controlSize(.large)
             }
             .disabled(working)
@@ -312,7 +312,7 @@ struct RoutineOnboardingView: View {
             Button(action: action) {
                 Text(button).frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
+            .accentProminent()
             .controlSize(.large)
         }
         .padding(.horizontal, 24)
@@ -419,7 +419,7 @@ struct RoutineOnboardingView: View {
                 }
                 .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
+            .accentProminent()
             .controlSize(.large)
             .disabled(working)
             .padding(.horizontal, 20)
@@ -456,7 +456,7 @@ struct RoutineOnboardingView: View {
                 Spacer(minLength: 8)
                 Image(systemName: on ? "checkmark.circle.fill" : "circle")
                     .font(.title2)
-                    .foregroundStyle(on ? Color.accentColor : Color(.tertiaryLabel))
+                    .foregroundStyle(on ? Color.themeAccent : Color(.tertiaryLabel))
             }
             .padding(.vertical, 4)
             .contentShape(Rectangle())
@@ -487,8 +487,8 @@ struct RoutineOnboardingView: View {
                     Text(symbols[wd - 1])
                         .font(.subheadline.weight(on ? .semibold : .regular))
                         .frame(maxWidth: .infinity, minHeight: 32)
-                        .background(Capsule().fill(on ? Color.accentColor : Color(.tertiarySystemFill)))
-                        .foregroundStyle(on ? Color.white : Color.primary)
+                        .background(Capsule().fill(on ? Color.themeAccent : Color(.tertiarySystemFill)))
+                        .foregroundStyle(on ? Color.onAccent : Color.primary)
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(on ? .isSelected : [])

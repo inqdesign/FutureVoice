@@ -116,8 +116,8 @@ struct DiscoverSettingsSheet: View {
                     }
                     .font(.subheadline)
                     .padding(.horizontal, 12).padding(.vertical, 7)
-                    .foregroundStyle(Color(.systemBackground))
-                    .background(Capsule().fill(Color.accentColor))
+                    .foregroundStyle(Color.onAccent)
+                    .background(Capsule().fill(Color.themeAccent))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text(explain("Remove \(PersonaOnboardingView.presetLabel(tag))")))
@@ -196,10 +196,10 @@ struct PurposePickerRows: View {
                     Spacer()
                     ZStack {
                         if let n {
-                            Circle().fill(Color.accentColor)
+                            Circle().fill(Color.themeAccent)
                             Text(verbatim: "\(n + 1)")
                                 .font(.footnote.weight(.bold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(Color.onAccent)
                         } else {
                             Circle().strokeBorder(Color(.tertiaryLabel), lineWidth: 1.5)
                         }

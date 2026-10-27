@@ -24,7 +24,7 @@ struct GrammarFocusStrip: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.tint)
                     .frame(width: 30, height: 30)
-                    .background(Circle().fill(Color.accentColor.opacity(0.12)))
+                    .background(Circle().fill(Color.themeAccent.opacity(0.12)))
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
                         Text(label)
@@ -219,7 +219,7 @@ struct GrammarFocusResultRow: View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: record.repeats == 0 ? "checkmark.seal.fill" : "scope")
                 .font(.title3)
-                .foregroundStyle(record.repeats == 0 ? Color.green : Color.accentColor)
+                .foregroundStyle(record.repeats == 0 ? Color.green : Color.themeAccent)
             VStack(alignment: .leading, spacing: 3) {
                 Text(record.label)
                     .font(.subheadline.weight(.semibold))

@@ -282,7 +282,7 @@ struct ScriptVoiceoverSection: View {
                           systemImage: player.isPlaying ? "pause.fill" : "play.fill")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 // A list row's own label style tints the icon with the
                 // accent — the same colour as the fill, so it vanished.
                 .labelStyle(.titleAndIcon)
@@ -312,7 +312,7 @@ struct ScriptVoiceoverSection: View {
                 Label("Make it in my voice", systemImage: "person.wave.2")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
+            .accentProminent()
             .labelStyle(.titleAndIcon)
             .controlSize(.large)
             .disabled(quote > ScriptVoiceover.maxMinutes)

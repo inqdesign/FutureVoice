@@ -806,7 +806,7 @@ struct PracticeTab: View {
                     weekRecapAction = nil
                     showingWeekArchive = true
                 } label: {
-                    headerIcon("calendar", dot: hasUnseenWeek ? .accentColor : nil)
+                    headerIcon("calendar", dot: hasUnseenWeek ? Color.themeAccent : nil)
                 }
                 .accessibilityLabel(Text("Your week"))
                 .accessibilityIdentifier("practice.weekRecap")
@@ -916,7 +916,7 @@ struct PracticeTab: View {
                 Label("Start a talk", systemImage: "mic.fill")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
+            .accentProminent()
             .controlSize(.large)
         }
         .padding(16)

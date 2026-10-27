@@ -187,7 +187,7 @@ struct SpeechTab: View {
                                 Button { editing = script } label: {
                                     Label("Edit", systemImage: "pencil")
                                 }
-                                .tint(.accentColor)
+                                .tint(Color.themeAccent)
                             }
                         }
                         .swipeActions(edge: .leading) {
@@ -348,7 +348,7 @@ struct SpeechScriptsEmptyState: View {
                         Label("Write with AI", systemImage: "sparkles")
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .accentProminent()
                     Button(action: onOwn) {
                         Label("Add my own script", systemImage: "pencil.line")
                             .frame(maxWidth: .infinity)
@@ -1081,7 +1081,7 @@ struct SpeechPlusSheet: View {
                             .font(.headline)
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .accentProminent()
                     .controlSize(.large)
 
                     Button("Not now") { dismiss() }

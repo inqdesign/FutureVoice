@@ -13,6 +13,7 @@ struct CardActionButton: View {
     let icon: String
     let tint: Color
     let action: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         let button = Button(action: action) {
@@ -32,7 +33,7 @@ struct CardActionButton: View {
             #if targetEnvironment(macCatalyst)
             button.buttonStyle(MacGlassButtonStyle())
             #else
-            button.buttonStyle(.glass)
+            button.buttonStyle(.glass(homeGlass(colorScheme)))
             #endif
         } else {
             // .bordered alone is a translucent tint with NO blur, so over the
@@ -49,6 +50,7 @@ struct CardStepButton: View {
     let icon: String
     let label: LocalizedStringKey
     let action: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         let button = Button(action: action) {
@@ -66,7 +68,7 @@ struct CardStepButton: View {
             #if targetEnvironment(macCatalyst)
             button.buttonStyle(MacGlassButtonStyle())
             #else
-            button.buttonStyle(.glass)
+            button.buttonStyle(.glass(homeGlass(colorScheme)))
             #endif
         } else {
             button.buttonStyle(.bordered)

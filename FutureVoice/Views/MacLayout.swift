@@ -522,9 +522,11 @@ struct MacGlassButtonStyle: ButtonStyle {
 
     private struct Glass: ViewModifier {
         let shape: AnyShape
+        @Environment(\.colorScheme) private var colorScheme
         func body(content: Content) -> some View {
             if #available(iOS 26.0, *) {
-                content.glassEffect(.regular.interactive(), in: shape)
+                // The same glass the phone's home buttons wear (`homeGlass`).
+                content.glassEffect(homeGlass(colorScheme).interactive(), in: shape)
             } else {
                 content.background(.regularMaterial, in: shape)
             }

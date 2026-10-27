@@ -94,7 +94,7 @@ struct PersonPhotoCircle: View {
                         .font(.system(size: size * 0.36, weight: .semibold, design: .rounded))
                         .foregroundStyle(.tint)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Color.accentColor.opacity(0.15))
+                        .background(Color.themeAccent.opacity(0.15))
                 } else {
                     Image(systemName: "person.crop.circle.fill")
                         .resizable()
@@ -107,7 +107,7 @@ struct PersonPhotoCircle: View {
             Image(systemName: "camera.circle.fill")
                 .font(.system(size: size * 0.3))
                 .symbolRenderingMode(.palette)
-                .foregroundStyle(.white, Color.accentColor)
+                .foregroundStyle(Color.onAccent, Color.themeAccent)
                 .offset(x: 2, y: 2)
         }
     }

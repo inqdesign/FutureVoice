@@ -45,7 +45,7 @@ struct MicChoiceSheet: View {
                     Label("Earphone mic", systemImage: "earbuds")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 .labelStyle(.titleAndIcon)
                 .controlSize(.large)
 

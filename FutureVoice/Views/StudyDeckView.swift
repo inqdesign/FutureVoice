@@ -153,7 +153,7 @@ struct StudyDeckView: View {
 
     /// Content color on the accent slab — same values as the drill card's
     /// (fileprivate there, so restated rather than exposed).
-    private static let onCard: Color = .white
+    private static let onCard: Color = .onAccent
 
     private static let commitThreshold: CGFloat = 64
     private static let binDeadZone: CGFloat = 28
@@ -597,7 +597,7 @@ struct StudyDeckView: View {
     }
 
     /// Supporting text on the slab — the card's own "secondary".
-    private static let onCardSecondary: Color = Color.white.opacity(0.72)
+    private static let onCardSecondary: Color = Color.onAccent.opacity(0.72)
 
     /// Same slab as a drill card — same anatomy too: a caption-labeled
     /// section for the item, the flipped content below it, pill buttons on
@@ -647,14 +647,14 @@ struct StudyDeckView: View {
                alignment: .topLeading)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.accentColor)
+                .fill(Color.themeAccent)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                .stroke(Color.onAccent.opacity(0.14), lineWidth: 1)
         )
         .tint(Self.onCard)
-        .shadow(color: Color.accentColor.opacity(0.28), radius: 8, y: 4)
+        .shadow(color: Color.themeAccent.opacity(0.28), radius: 8, y: 4)
     }
 
     private func cardContent(_ item: StudyDeckItem, revealed: Bool,
@@ -734,7 +734,7 @@ struct StudyDeckView: View {
             .font(.footnote.weight(.semibold))
             .frame(maxWidth: .infinity)
             .padding(.vertical, 10)
-            .background(Capsule().fill(Color.white.opacity(0.18)))
+            .background(Capsule().fill(Color.onAccent.opacity(0.18)))
             .foregroundStyle(Self.onCard)
         }
         .buttonStyle(.plain)
@@ -842,7 +842,7 @@ struct StudyDeckView: View {
                 .font(.caption.weight(.bold)).monospacedDigit()
                 .foregroundStyle(Self.onCard)
                 .frame(width: 22, height: 22)
-                .background(Circle().fill(Color.white.opacity(0.20)))
+                .background(Circle().fill(Color.onAccent.opacity(0.20)))
             VStack(alignment: .leading, spacing: 3) {
                 if !s.pos.isEmpty {
                     Text(s.pos)
@@ -865,7 +865,7 @@ struct StudyDeckView: View {
     private func exampleRow(_ ex: WordEntry.Example) -> some View {
         HStack(alignment: .top, spacing: 12) {
             RoundedRectangle(cornerRadius: 2)
-                .fill(Color.white.opacity(0.35))
+                .fill(Color.onAccent.opacity(0.35))
                 .frame(width: 3)
             VStack(alignment: .leading, spacing: 3) {
                 Text(ex.text)
@@ -903,7 +903,7 @@ struct StudyDeckView: View {
                     Label(nextStep.title, systemImage: nextStep.systemImage)
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 .labelStyle(.titleAndIcon)
                 .controlSize(.large)
                 .padding(.top, 4)

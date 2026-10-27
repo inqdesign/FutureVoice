@@ -54,6 +54,8 @@ final class SpeechChallenges: ObservableObject {
         case entered(rank: Int, previousRank: Int?, entrants: Int, best: Int, improved: Bool)
         /// The camera was off — the board only takes camera takes.
         case cameraOff
+        /// Under `boardBar`: kept on the phone, never on the board.
+        case belowBar
         case failed
     }
 
@@ -183,6 +185,10 @@ final class SpeechChallenges: ObservableObject {
             entries[take.id] = .cameraOff
             return
         }
+        guard take.metrics.overall >= Self.boardBar else {
+            entries[take.id] = .belowBar
+            return
+        }
         guard let name = Self.displayName else {
             entries[take.id] = .failed
             return
@@ -190,6 +196,12 @@ final class SpeechChallenges: ObservableObject {
         entries[take.id] = .submitting
         Task { await submit(take: take, challengeId: challengeId, name: name) }
     }
+
+    /// The lowest score that goes on a board (2026-10-25, founder: a take
+    /// made by accident went straight up). High enough that nobody's name
+    /// stands beside a score they'd be embarrassed by, low enough that the
+    /// board still fills.
+    static let boardBar = 80
 
     private struct SubmitParams: Encodable {
         let p_challenge: UUID
@@ -262,6 +274,7 @@ final class SpeechChallenges: ObservableObject {
     /// confirmed their name (that IS the consent to be on a board), their
     /// best earlier CAMERA take of each challenge goes up if it beats what
     /// the board has. A camera take is one whose video is still kept.
+    /// Only at `boardBar` or above, like a new take.
     /// A take of an older text under the same id is never entered: its
     /// transcript is re-scored against today's script and must agree with
     /// the accuracy it was given.
@@ -294,7 +307,7 @@ final class SpeechChallenges: ObservableObject {
                 let overall = SpeechAnalyzer.overall(accuracy: m.accuracy, pace: m.paceScore, pause: m.pauseScore,
                                                      filler: m.fillerScore, steadiness: m.steadiness,
                                                      coverage: SpeechAnalyzer.coverage(diff.steps))
-                if overall > onBoard, overall > (best?.overall ?? -1) { best = (take, overall) }
+                if overall >= Self.boardBar, overall > onBoard, overall > (best?.overall ?? -1) { best = (take, overall) }
             }
             if let best {
                 await submit(take: best.take, overall: best.overall, challengeId: challengeId,

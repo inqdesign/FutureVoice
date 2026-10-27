@@ -148,7 +148,8 @@ enum TutorPlanner {
     /// "saying what you don't like").
     static func plan(request: String, askedWith: String? = nil,
                      targetLanguage: String, nativeLanguage: String,
-                     level: CEFRLevel, persona: UserPersona?) async -> TutorLesson? {
+                     level: CEFRLevel, persona: UserPersona?,
+                     miss: ((String) -> Void)? = nil) async -> TutorLesson? {
         let target = LanguageCatalog.englishName(targetLanguage)
         let native = LanguageCatalog.englishName(nativeLanguage)
         let about = [persona?.occupation, persona?.city]
@@ -215,10 +216,13 @@ enum TutorPlanner {
                 maxTokens: 2000, purpose: "tutor",
                 idempotencyKey: "tutor-plan:\(UUID().uuidString)", requestTimeout: 20)
         }
-        guard let plan, plan.topic,
-              let title = plan.title?.trimmingCharacters(in: .whitespacesAndNewlines), !title.isEmpty,
+        // `miss` says why there is no lesson: "no_topic" is the ordinary
+        // answer to "hi" or "I don't know", the other two are failures.
+        guard let plan else { miss?("request_failed"); return nil }
+        guard plan.topic else { miss?("no_topic"); return nil }
+        guard let title = plan.title?.trimmingCharacters(in: .whitespacesAndNewlines), !title.isEmpty,
               let items = plan.challenges, !items.isEmpty
-        else { return nil }
+        else { miss?("too_few"); return nil }
         let challenges = items.prefix(4).compactMap { i -> TutorLesson.Challenge? in
             let goal = i.goal.trimmingCharacters(in: .whitespacesAndNewlines)
             let task = i.task.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -226,7 +230,7 @@ enum TutorPlanner {
             return .init(id: UUID(), goal: goal, task: task,
                          example: i.example.trimmingCharacters(in: .whitespacesAndNewlines))
         }
-        guard challenges.count >= 2 else { return nil }
+        guard challenges.count >= 2 else { miss?("too_few"); return nil }
         let titleTarget = plan.title_target?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return TutorLesson(id: UUID(), title: title,
                            titleTarget: titleTarget.isEmpty ? title : titleTarget,
@@ -348,6 +352,11 @@ enum TutorJudge {
         /// this one first", with no way out).
         var other_topic: Bool? = nil
         var wantsOtherTopic: Bool { other_topic == true }
+        /// The tutor's last line had already left this challenge — it moves
+        /// on by its own judgment (founder, 2026-10-25), and the checklist
+        /// follows it.
+        var tutor_moved_on: Bool? = nil
+        var tutorMovedOn: Bool { tutor_moved_on == true }
     }
 
     /// Did `line` do `challenge`? Content only — whether it was said
@@ -368,7 +377,12 @@ enum TutorJudge {
         topic, stop or skip this lesson, or practice something else instead \
         (in any language) — not for a mistake, a question about the \
         challenge, or "I don't know".
-        Return STRICT JSON only: {"done": true|false, "other_topic": true|false}
+        Also decide "tutor_moved_on": true ONLY when the tutor's line had \
+        already finished this challenge — said they got it and started the \
+        next step (asked for something different from this challenge), or \
+        said the whole lesson is done. False while the tutor is still on \
+        this challenge (asking for it, or for it again).
+        Return STRICT JSON only: {"done": true|false, "other_topic": true|false, "tutor_moved_on": true|false}
         """
         let content = """
         Challenge: \(challenge.task)

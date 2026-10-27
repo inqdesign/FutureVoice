@@ -229,7 +229,7 @@ struct ScenarioComposerSheet: View {
                         Button { commit() } label: {
                             Label(ctaTitle, systemImage: ctaIcon).labelStyle(.titleAndIcon)
                         }
-                        .buttonStyle(.borderedProminent)
+                        .accentProminent()
                         .disabled(situation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
                     // The box (custom door) closes the keyboard with a tap on the
@@ -590,8 +590,8 @@ struct ScenarioComposerSheet: View {
                 Image(systemName: ctaIcon)
                     .font(.body.weight(.semibold))
                     .frame(width: 40, height: 40)
-                    .background(Circle().fill(Color.accentColor))
-                    .foregroundStyle(.white)
+                    .background(Circle().fill(Color.themeAccent))
+                    .foregroundStyle(Color.onAccent)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(Text(ctaTitle))
@@ -1019,7 +1019,7 @@ struct ScenarioComposerSheet: View {
                         }
                         .padding(.horizontal, 11).padding(.vertical, 6)
                         .background(Capsule().fill(i == path.count - 1
-                                                   ? Color.accentColor.opacity(0.15)
+                                                   ? Color.themeAccent.opacity(0.15)
                                                    : Color(.tertiarySystemFill)))
                         .foregroundStyle(i == path.count - 1 ? AnyShapeStyle(.tint) : AnyShapeStyle(.primary))
                     }
@@ -1203,7 +1203,7 @@ struct ScenarioComposerSheet: View {
                                                      ? Color(.systemBackground) : Color.primary)
                                     .frame(width: 36, height: 36)
                                     .background(Circle().fill(customEmoji.isEmpty && customIcon == icon
-                                                              ? Color.accentColor : Color(.tertiarySystemFill)))
+                                                              ? Color.themeAccent : Color(.tertiarySystemFill)))
                             }
                             .buttonStyle(.plain)
                         }
@@ -1214,7 +1214,7 @@ struct ScenarioComposerSheet: View {
             Button { addCustomCategory() } label: {
                 Text("Add category").font(.subheadline.weight(.medium))
             }
-            .buttonStyle(.borderedProminent)
+            .accentProminent()
             .controlSize(.small)
             .disabled(customTitle.trimmingCharacters(in: .whitespaces).isEmpty)
         }
@@ -1288,7 +1288,7 @@ struct ScenarioComposerSheet: View {
 
     @ViewBuilder private func partnerAvatar(size: CGFloat = 40) -> some View {
         ZStack {
-            Circle().fill(Color.accentColor.opacity(0.15)).frame(width: size, height: size)
+            Circle().fill(Color.themeAccent.opacity(0.15)).frame(width: size, height: size)
             if let p = partner, CounterpartPhotoStore.shared.hasPhoto(p.id) {
                 PersonBubble(name: p.name, photoId: p.id, size: size)
             } else if let p = partner {
@@ -1650,7 +1650,7 @@ struct PartnerPickerSheet: View {
         Section {
             HStack(spacing: 12) {
                 ZStack {
-                    Circle().fill(Color.accentColor.opacity(0.15)).frame(width: 36, height: 36)
+                    Circle().fill(Color.themeAccent.opacity(0.15)).frame(width: 36, height: 36)
                     Image(systemName: host == .watch ? "person.fill.questionmark" : "waveform")
                         .font(.subheadline.weight(.semibold)).foregroundStyle(.tint)
                 }
@@ -1841,7 +1841,7 @@ struct SoftChipStyle: ButtonStyle {
             .foregroundStyle(selected ? AnyShapeStyle(.tint) : AnyShapeStyle(.primary))
             .padding(.horizontal, 16)
             .padding(.vertical, 11)
-            .background(Capsule().fill(selected ? Color.accentColor.opacity(0.14)
+            .background(Capsule().fill(selected ? Color.themeAccent.opacity(0.14)
                                                 : Color(.secondarySystemGroupedBackground)))
             .opacity(configuration.isPressed ? 0.6 : 1)
             .contentShape(Capsule())

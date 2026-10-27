@@ -100,7 +100,7 @@ struct PersonaIntakeView: View {
                         Image(systemName: "pencil.circle.fill")
                             .font(.title2)
                             .symbolRenderingMode(.palette)
-                            .foregroundStyle(.white, Color.accentColor)
+                            .foregroundStyle(Color.onAccent, Color.themeAccent)
                     }
                 }
                 .buttonStyle(.plain)

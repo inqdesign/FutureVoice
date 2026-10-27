@@ -21,7 +21,7 @@ struct LookupFailure: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(explain("Couldn't load this one."))
                 .font(.subheadline)
-                .foregroundStyle(onCard ? AnyShapeStyle(Color.white.opacity(0.72))
+                .foregroundStyle(onCard ? AnyShapeStyle(Color.onAccent.opacity(0.72))
                                         : AnyShapeStyle(.secondary))
                 .fixedSize(horizontal: false, vertical: true)
             Button(action: retry) {
@@ -30,7 +30,7 @@ struct LookupFailure: View {
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
-            .tint(onCard ? .white : .accentColor)
+            .tint(onCard ? Color.onAccent : Color.themeAccent)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -47,7 +47,7 @@ struct LookupProgress: View {
                 .tint(onCard ? .white : nil)
             Text("Looking it up…")
                 .font(.subheadline)
-                .foregroundStyle(onCard ? AnyShapeStyle(Color.white.opacity(0.72))
+                .foregroundStyle(onCard ? AnyShapeStyle(Color.onAccent.opacity(0.72))
                                         : AnyShapeStyle(.secondary))
         }
     }

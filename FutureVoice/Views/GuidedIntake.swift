@@ -77,7 +77,7 @@ struct IntakeChipLabel: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
             .foregroundStyle(isOn ? Color(.systemBackground) : Color.primary)
-            .background(Capsule().fill(isOn ? Color.accentColor : Color(.tertiarySystemFill)))
+            .background(Capsule().fill(isOn ? Color.themeAccent : Color(.tertiarySystemFill)))
     }
 }
 
@@ -325,7 +325,7 @@ struct SpeakOrTypeField: View {
 
     private var micFill: Color {
         if isRecording { return .red }
-        return micStyle == .prominent ? Color.accentColor : Color(.tertiarySystemFill)
+        return micStyle == .prominent ? Color.themeAccent : Color(.tertiarySystemFill)
     }
 
     private var micGlyph: Color {
@@ -454,7 +454,7 @@ struct IntakeBottomBar: View {
                         .frame(maxWidth: .infinity)
                 }
             }
-            .buttonStyle(.borderedProminent)
+            .accentProminent()
             .controlSize(.large)
             .disabled(!nextEnabled || isWorking)
         }

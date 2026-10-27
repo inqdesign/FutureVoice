@@ -365,7 +365,7 @@ struct ActivityView: View {
         let value: String
         let label: String
         let icon: String
-        var tint: Color = .accentColor
+        var tint: Color = Color.themeAccent
         var id: String { label }
     }
 
@@ -572,7 +572,7 @@ struct ActivityView: View {
             let isSelected = selectedDay == day
             let photo = cellPhotos[day]
             RoundedRectangle(cornerRadius: 9)
-                .fill(active ? AnyShapeStyle(Color.accentColor.opacity(heatOpacity(mins)))
+                .fill(active ? AnyShapeStyle(Color.themeAccent.opacity(heatOpacity(mins)))
                              : AnyShapeStyle(Color(.systemFill).opacity(future ? 0.3 : 0.55)))
                 .aspectRatio(1, contentMode: .fit)
                 .overlay {
@@ -592,8 +592,8 @@ struct ActivityView: View {
                 }
                 .overlay(
                     RoundedRectangle(cornerRadius: 9)
-                        .strokeBorder(isSelected ? Color.accentColor
-                                      : (isToday ? Color.accentColor.opacity(0.45) : .clear),
+                        .strokeBorder(isSelected ? Color.themeAccent
+                                      : (isToday ? Color.themeAccent.opacity(0.45) : .clear),
                                       lineWidth: isSelected ? 2.5 : 1.5)
                 )
                 .contentShape(Rectangle())
@@ -614,12 +614,12 @@ struct ActivityView: View {
             RoundedRectangle(cornerRadius: 2)
                 // Future days are drawn faint so the grid still reads as a full
                 // year, but they're inert.
-                .fill(active ? Color.accentColor.opacity(heatOpacity(mins))
+                .fill(active ? Color.themeAccent.opacity(heatOpacity(mins))
                       : Color(.tertiarySystemFill).opacity(future ? 0.4 : 1))
                 .aspectRatio(1, contentMode: .fit)
                 .overlay(
                     RoundedRectangle(cornerRadius: 2)
-                        .strokeBorder(Color.accentColor,
+                        .strokeBorder(Color.themeAccent,
                                       lineWidth: isSelected ? 1.5 : (cal.isDateInToday(date) ? 1 : 0))
                 )
                 .contentShape(Rectangle())

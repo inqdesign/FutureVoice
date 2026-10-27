@@ -121,7 +121,7 @@ struct AppGuideView: View {
                     } label: {
                         HStack(spacing: 14) {
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(Color.accentColor.opacity(0.14))
+                                .fill(Color.themeAccent.opacity(0.14))
                                 .frame(width: 44, height: 44)
                                 .overlay {
                                     Image(systemName: PageIntro.symbol(page))
@@ -228,7 +228,7 @@ struct PageIntroSheet: View {
             HStack(spacing: 7) {
                 ForEach(0..<stepCount, id: \.self) { i in
                     Capsule()
-                        .fill(i == step ? Color.accentColor : Color(.tertiaryLabel))
+                        .fill(i == step ? Color.themeAccent : Color(.tertiaryLabel))
                         .frame(width: i == step ? 18 : 7, height: 7)
                 }
             }
@@ -259,7 +259,7 @@ struct PageIntroSheet: View {
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 .controlSize(.large)
             }
             Text("You can see these again anytime in Me → App guide.")
@@ -635,7 +635,7 @@ private struct IntroWhyPage: View {
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.accentColor.opacity(0.08),
+            .background(Color.themeAccent.opacity(0.08),
                         in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
     }
@@ -650,7 +650,7 @@ private struct IntroWhyPage: View {
                 .accessibilityHidden(true)
         case .symbol(let name):
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(Color.accentColor.opacity(0.14))
+                .fill(Color.themeAccent.opacity(0.14))
                 .frame(width: 88, height: 88)
                 .overlay {
                     Image(systemName: name)
@@ -767,7 +767,7 @@ private struct IntroScreenPage<Mock: View>: View {
                         // The row of the lit spot is lit too, so the eye
                         // goes from the picture straight to its words.
                         .background(RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(Color.accentColor.opacity(focus == n ? 0.10 : 0)))
+                            .fill(Color.themeAccent.opacity(focus == n ? 0.10 : 0)))
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -798,9 +798,9 @@ private struct CalloutBadge: View {
         Text(verbatim: "\(number)")
             .font(.caption.weight(.bold))
             .monospacedDigit()
-            .foregroundStyle(.white)
+            .foregroundStyle(Color.onAccent)
             .frame(width: 22, height: 22)
-            .background(Circle().fill(Color.accentColor))
+            .background(Circle().fill(Color.themeAccent))
             .opacity(lit ? 1 : 0.5)
             .scaleEffect(lit ? 1.08 : 1)
             .accessibilityHidden(true)
@@ -830,7 +830,7 @@ private struct CalloutMark: ViewModifier {
         let lit = focus == number
         content
             .background(RoundedRectangle(cornerRadius: corner + inset, style: .continuous)
-                .fill(Color.accentColor.opacity(lit ? 0.12 : 0))
+                .fill(Color.themeAccent.opacity(lit ? 0.12 : 0))
                 .padding(-inset))
             .overlay(alignment: trailing ? .topTrailing : .topLeading) {
                 CalloutBadge(number: number, lit: lit)
@@ -889,10 +889,10 @@ private struct IntroStepsPage: View {
                                 .font(.body.weight(.semibold))
                                 .foregroundStyle(.tint)
                                 .frame(width: 44, height: 44)
-                                .background(Circle().fill(Color.accentColor.opacity(0.14)))
+                                .background(Circle().fill(Color.themeAccent.opacity(0.14)))
                             if index < steps.count - 1 {
                                 Rectangle()
-                                    .fill(Color.accentColor.opacity(0.3))
+                                    .fill(Color.themeAccent.opacity(0.3))
                                     .frame(width: 2)
                                     .frame(minHeight: 28, maxHeight: .infinity)
                             }
@@ -905,10 +905,10 @@ private struct IntroStepsPage: View {
                                     Label(badge, systemImage: "lock.fill")
                                         .font(.caption.weight(.semibold))
                                         .labelStyle(.titleAndIcon)
-                                        .foregroundStyle(.white)
+                                        .foregroundStyle(Color.onAccent)
                                         .padding(.horizontal, 8)
                                         .padding(.vertical, 3)
-                                        .background(Capsule().fill(Color.accentColor))
+                                        .background(Capsule().fill(Color.themeAccent))
                                 }
                             }
                             Text(step.detail)
@@ -937,7 +937,7 @@ private struct TextBar: View {
 
     var body: some View {
         Capsule()
-            .fill(accent ? Color.accentColor.opacity(0.45) : Color(.tertiaryLabel).opacity(0.45))
+            .fill(accent ? Color.themeAccent.opacity(0.45) : Color(.tertiaryLabel).opacity(0.45))
             .frame(width: width, height: height)
     }
 }
@@ -956,7 +956,7 @@ private struct TalkRingMock: View {
                     .stroke(Color.primary.opacity(0.08), lineWidth: 10)
                 Circle()
                     .trim(from: 0, to: 0.62)
-                    .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 10, lineCap: .round))
+                    .stroke(Color.themeAccent, style: StrokeStyle(lineWidth: 10, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                 Futureself(mode: .idle, level: 0, virtualHeight: 64)
                     .frame(width: 98, height: 98)
@@ -1013,11 +1013,11 @@ private struct TalkHeaderMock: View {
                     Circle().fill(mockCard)
                     Circle()
                         .trim(from: 0, to: 0.35)
-                        .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                        .stroke(Color.themeAccent, style: StrokeStyle(lineWidth: 3, lineCap: .round))
                         .rotationEffect(.degrees(-90))
                         .padding(3)
                     Circle()
-                        .fill(Color.accentColor.opacity(0.25))
+                        .fill(Color.themeAccent.opacity(0.25))
                         .padding(8)
                         .overlay(Image(systemName: "person.fill")
                             .font(.caption)
@@ -1033,7 +1033,7 @@ private struct TalkHeaderMock: View {
             Circle()
                 .stroke(Color.primary.opacity(0.08), lineWidth: 8)
                 .frame(width: 84, height: 84)
-                .overlay(Circle().fill(Color.accentColor.opacity(0.12)).padding(10))
+                .overlay(Circle().fill(Color.themeAccent.opacity(0.12)).padding(10))
                 .opacity(0.6)
         }
         .padding(.top, 6)
@@ -1066,7 +1066,7 @@ private struct TalkCallMock: View {
                         TextBar(width: 80, accent: true)
                     }
                     .padding(9)
-                    .background(Color.accentColor.opacity(0.08),
+                    .background(Color.themeAccent.opacity(0.08),
                                 in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                     .callout(2, corner: 10)
                 }
@@ -1103,7 +1103,7 @@ private struct TalkCallMock: View {
             }
         }
         .padding(11)
-        .background(mine ? Color.accentColor.opacity(0.16) : mockCard,
+        .background(mine ? Color.themeAccent.opacity(0.16) : mockCard,
                     in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
@@ -1118,7 +1118,7 @@ private struct WatchHomeMock: View {
                 person("J")
                 person("S")
                 Circle()
-                    .strokeBorder(Color.accentColor.opacity(0.5), style: StrokeStyle(lineWidth: 1.5, dash: [3]))
+                    .strokeBorder(Color.themeAccent.opacity(0.5), style: StrokeStyle(lineWidth: 1.5, dash: [3]))
                     .frame(width: 36, height: 36)
                     .overlay(Image(systemName: "plus").font(.caption.weight(.bold)).foregroundStyle(.tint))
             }
@@ -1144,7 +1144,7 @@ private struct WatchHomeMock: View {
 
     private func person(_ initial: String) -> some View {
         Circle()
-            .fill(Color.accentColor.opacity(0.15))
+            .fill(Color.themeAccent.opacity(0.15))
             .frame(width: 36, height: 36)
             .overlay(Text(verbatim: initial).font(.caption.weight(.bold)).foregroundStyle(.tint))
     }
@@ -1183,13 +1183,13 @@ private struct WatchSceneMock: View {
                     .foregroundStyle(.tint)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 9)
-                    .background(Capsule().fill(Color.accentColor.opacity(0.15)))
+                    .background(Capsule().fill(Color.themeAccent.opacity(0.15)))
                 Label("Study this", systemImage: "books.vertical.fill")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.onAccent)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 9)
-                    .background(Capsule().fill(Color.accentColor))
+                    .background(Capsule().fill(Color.themeAccent))
             }
             .padding(.top, 4)
             .callout(3, corner: 17)
@@ -1211,7 +1211,7 @@ private struct WatchSceneMock: View {
             .overlay {
                 if playing {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .strokeBorder(Color.accentColor, lineWidth: 1.5)
+                        .strokeBorder(Color.themeAccent, lineWidth: 1.5)
                 }
             }
             if let n = bubbleCallout {
@@ -1270,7 +1270,7 @@ private struct ReviewHomeMock: View {
 
             VStack(alignment: .leading, spacing: 9) {
                 Circle()
-                    .fill(Color.accentColor.opacity(0.15))
+                    .fill(Color.themeAccent.opacity(0.15))
                     .frame(width: 28, height: 28)
                     .overlay(Image(systemName: "bubble.left.and.bubble.right.fill")
                         .font(.system(size: 11)).foregroundStyle(.tint))
@@ -1315,7 +1315,7 @@ private struct ReviewHomeMock: View {
                 .frame(height: 3)
                 .overlay(alignment: .leading) {
                     GeometryReader { g in
-                        Capsule().fill(Color.accentColor).frame(width: g.size.width * progress)
+                        Capsule().fill(Color.themeAccent).frame(width: g.size.width * progress)
                     }
                 }
         }
@@ -1341,7 +1341,7 @@ private struct ReviewHeaderMock: View {
             Spacer()
             HStack(spacing: 4) {
                 icon("rectangle.stack", dot: .orange, mark: putOffMark)
-                icon("calendar", dot: .accentColor, mark: weekMark)
+                icon("calendar", dot: Color.themeAccent, mark: weekMark)
             }
             .padding(.horizontal, 4)
             .background(Capsule().fill(mockCard))
@@ -1371,7 +1371,7 @@ private struct ReviewHeaderMock: View {
             .padding(4)
             .background(Circle().fill(mockCard))
             .overlay(alignment: .topTrailing) {
-                Circle().fill(Color.accentColor).frame(width: 7, height: 7).offset(x: -2, y: 3)
+                Circle().fill(Color.themeAccent).frame(width: 7, height: 7).offset(x: -2, y: 3)
             }
         if let testMark { view.callout(testMark, corner: 16, trailing: true) } else { view }
     }
@@ -1392,7 +1392,7 @@ private struct ReviewWeekMock: View {
                     HStack(spacing: 3) {
                         ForEach(0..<7, id: \.self) { i in
                             Circle()
-                                .fill([2, 5].contains(i) ? Color(.tertiarySystemFill) : Color.accentColor)
+                                .fill([2, 5].contains(i) ? Color(.tertiarySystemFill) : Color.themeAccent)
                                 .frame(width: 11, height: 11)
                         }
                     }
@@ -1418,7 +1418,7 @@ private struct ReviewWeekMock: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 6)
-                            .background(Capsule().fill(Color.accentColor.opacity(0.12)))
+                            .background(Capsule().fill(Color.themeAccent.opacity(0.12)))
                     }
                 }
                 .padding(10)
@@ -1436,24 +1436,24 @@ private struct ReviewCardMock: View {
     var body: some View {
         VStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 10) {
-                Capsule().fill(Color.white.opacity(0.55)).frame(width: 120, height: 6)
-                Capsule().fill(Color.white).frame(width: 110, height: 13)
+                Capsule().fill(Color.onAccent.opacity(0.55)).frame(width: 120, height: 6)
+                Capsule().fill(Color.onAccent).frame(width: 110, height: 13)
                 Spacer(minLength: 0)
                 HStack(spacing: 6) {
                     Image(systemName: "eye")
                         .font(.caption2.weight(.semibold))
                     Capsule().frame(width: 60, height: 6)
                 }
-                .foregroundStyle(Color.white.opacity(0.85))
+                .foregroundStyle(Color.onAccent.opacity(0.85))
                 .frame(maxWidth: .infinity)
             }
             .padding(14)
             .frame(height: 150)
-            .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .background(Color.themeAccent, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             .overlay(alignment: .bottomTrailing) {
                 Image(systemName: "hand.point.up.left.fill")
                     .font(.title3)
-                    .foregroundStyle(.white, Color.accentColor)
+                    .foregroundStyle(Color.onAccent, Color.themeAccent)
                     .shadow(color: .black.opacity(0.2), radius: 3, y: 1)
                     .offset(x: -16, y: 14)
             }
@@ -1613,10 +1613,10 @@ private struct ProgressHomeMock: View {
                             .font(.system(size: 9, weight: .bold))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 4)
-                            .foregroundStyle(i == 2 ? Color.white : Color.secondary)
+                            .foregroundStyle(i == 2 ? Color.onAccent : Color.secondary)
                             .background(RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                .fill(i == 2 ? Color.accentColor
-                                      : i < 2 ? Color.accentColor.opacity(0.3)
+                                .fill(i == 2 ? Color.themeAccent
+                                      : i < 2 ? Color.themeAccent.opacity(0.3)
                                       : Color(.tertiarySystemFill)))
                     }
                 }
@@ -1636,7 +1636,7 @@ private struct ProgressHomeMock: View {
                 ForEach(Array([0.3, 0.5, 0.2, 0.0, 0.6, 0.8, 0.4, 0.7, 0.5, 0.0, 0.9, 0.6, 0.75, 1.0].enumerated()),
                         id: \.offset) { _, h in
                     RoundedRectangle(cornerRadius: 2, style: .continuous)
-                        .fill(Color.accentColor.opacity(h == 0 ? 0.15 : 0.7))
+                        .fill(Color.themeAccent.opacity(h == 0 ? 0.15 : 0.7))
                         .frame(height: max(4, 44 * h))
                         .frame(maxWidth: .infinity)
                 }
@@ -1710,8 +1710,8 @@ private struct CallSettingsMock: View {
             .minimumScaleFactor(0.7)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 7)
-            .foregroundStyle(on ? Color.white : Color.primary)
-            .background(Capsule().fill(on ? Color.accentColor : Color(.tertiarySystemFill)))
+            .foregroundStyle(on ? Color.onAccent : Color.primary)
+            .background(Capsule().fill(on ? Color.themeAccent : Color(.tertiarySystemFill)))
     }
 
     private func toggleRow(_ symbol: String, _ label: LocalizedStringKey, on: Bool) -> some View {
@@ -1761,7 +1761,7 @@ private struct CoachMock: View {
                 HStack(spacing: 5) {
                     TextBar(width: 64, height: 8)
                     RoundedRectangle(cornerRadius: 3)
-                        .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 1.2, dash: [3]))
+                        .strokeBorder(Color.themeAccent, style: StrokeStyle(lineWidth: 1.2, dash: [3]))
                         .frame(width: 40, height: 14)
                     TextBar(width: 40, height: 8)
                 }
@@ -1860,7 +1860,7 @@ private struct CastMock: View {
         HStack(spacing: 16) {
             VStack(spacing: 8) {
                 Circle()
-                    .fill(Color.accentColor.opacity(0.15))
+                    .fill(Color.themeAccent.opacity(0.15))
                     .frame(width: 64, height: 64)
                     .overlay(Text(verbatim: "M").font(.title2.weight(.bold)).foregroundStyle(.tint))
                 TextBar(width: 56, height: 8)
@@ -1949,7 +1949,7 @@ private struct RoutineTimelineMock: View {
             }
             if day == 3 {
                 RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 1.5, dash: [3, 2]))
+                    .strokeBorder(Color.themeAccent, style: StrokeStyle(lineWidth: 1.5, dash: [3, 2]))
                     .frame(height: 18)
                     .overlay(Image(systemName: "plus").font(.caption2.weight(.bold)).foregroundStyle(.tint))
                     .padding(.horizontal, 2)

@@ -354,7 +354,7 @@ struct SetupFlowView: View {
                 Spacer()
                 if selected {
                     Image(systemName: "checkmark")
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(Color.themeAccent)
                         .fontWeight(.semibold)
                 }
             }
@@ -413,7 +413,7 @@ struct SetupFlowView: View {
                 Text(step < steps.count - 1 ? explain("Next") : explain("Continue"))
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
+            .accentProminent()
             .controlSize(.large)
         }
         .padding(.horizontal, 16)

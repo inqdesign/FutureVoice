@@ -314,7 +314,7 @@ struct ScenarioDetailView: View {
             // circle drifted to the middle of them.
             HStack(alignment: .top, spacing: 14) {
                 ZStack {
-                    Circle().fill(Color.accentColor.opacity(0.15))
+                    Circle().fill(Color.themeAccent.opacity(0.15))
                         .frame(width: 56, height: 56)
                     if let name = linkedPersonaName(s) {
                         if let pid = s.counterpartId, CounterpartPhotoStore.shared.hasPhoto(pid) {
@@ -358,7 +358,7 @@ struct ScenarioDetailView: View {
             if let c = s.curriculum, c.totalCount > 0 {
                 VStack(alignment: .leading, spacing: 6) {
                     ProgressView(value: c.progress)
-                        .tint(s.isMastered ? .green : .accentColor)
+                        .tint(s.isMastered ? .green : Color.themeAccent)
                     Text("\(c.masteredCount) of \(c.totalCount) mastered")
                         .font(.caption).foregroundStyle(.secondary)
                 }
@@ -372,10 +372,10 @@ struct ScenarioDetailView: View {
                     playerPresented = true
                 } label: {
                     Label("Listen", systemImage: "headphones")
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color.onAccent)
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .accentProminent()
                 .controlSize(.large)
             } else {
                 HStack(spacing: 10) {
@@ -387,11 +387,11 @@ struct ScenarioDetailView: View {
                     } label: {
                         Label("Talk", systemImage: "mic.fill")
                             // The prominent fill would swallow a tinted icon —
-                            // force the content white.
-                            .foregroundStyle(.white)
+                            // force the accent's label colour.
+                            .foregroundStyle(Color.onAccent)
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .accentProminent()
                     // Watch replays the book's ONE scene — the dialogue the
                     // chapters were extracted from. Hidden until it generated.
                     if !(s.curriculum?.dialogue ?? []).isEmpty {
