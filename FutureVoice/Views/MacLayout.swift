@@ -123,6 +123,18 @@ private struct MacPageModifier: ViewModifier {
 }
 
 extension View {
+    /// Widens the Mac's column while `on` holds. Fed from the selected TAB,
+    /// never a tab's own appear/disappear: a Mac tab switch never told Review
+    /// it had gone, and Speech stayed at the split width.
+    func macWideColumn(_ on: Bool) -> some View {
+        #if targetEnvironment(macCatalyst)
+        onAppear { MacLayout.Wide.shared.active = on }
+            .onChange(of: on) { _, now in MacLayout.Wide.shared.active = now }
+        #else
+        self
+        #endif
+    }
+
     /// The Mac's centred column; nothing on the iPhone or iPad.
     func macPage() -> some View {
         modifier(MacPageModifier())
@@ -455,3 +467,48 @@ extension View {
         #endif
     }
 }
+
+#if targetEnvironment(macCatalyst)
+/// The phone's glass buttons, as the phone draws them. On the Mac the system
+/// `.glass` button style fills the whole button with the tint, so the Talk
+/// tab's player, "Find a topic", the quiz face and the card bars came out as
+/// solid blue discs (founder, 2026-10-27). This keeps the glass clear — the
+/// same `glassEffect` the style uses — and colours only the label, the way
+/// the phone does. Used in place of `.glass` under `#if macCatalyst` only.
+struct MacGlassButtonStyle: ButtonStyle {
+    var circle = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        Face(configuration: configuration, circle: circle)
+    }
+
+    private struct Face: View {
+        let configuration: ButtonStyleConfiguration
+        let circle: Bool
+        @Environment(\.isEnabled) private var isEnabled
+
+        var body: some View {
+            let shape = circle ? AnyShape(Circle()) : AnyShape(Capsule())
+            configuration.label
+                .foregroundStyle(.tint)
+                .padding(.horizontal, circle ? 10 : 14)
+                .padding(.vertical, 10)
+                .frame(minWidth: circle ? 50 : nil, minHeight: 44)
+                .contentShape(shape)
+                .modifier(Glass(shape: shape))
+                .opacity(isEnabled ? (configuration.isPressed ? 0.65 : 1) : 0.4)
+        }
+    }
+
+    private struct Glass: ViewModifier {
+        let shape: AnyShape
+        func body(content: Content) -> some View {
+            if #available(iOS 26.0, *) {
+                content.glassEffect(.regular.interactive(), in: shape)
+            } else {
+                content.background(.regularMaterial, in: shape)
+            }
+        }
+    }
+}
+#endif

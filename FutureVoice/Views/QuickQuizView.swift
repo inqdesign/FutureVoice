@@ -34,7 +34,11 @@ private struct GlassCircleButton: ViewModifier {
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
             content
+                #if targetEnvironment(macCatalyst)
+                .buttonStyle(MacGlassButtonStyle(circle: true))
+                #else
                 .buttonStyle(.glass)
+                #endif
                 .buttonBorderShape(.circle)
                 .controlSize(.large)
         } else {

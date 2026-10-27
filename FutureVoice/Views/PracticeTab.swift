@@ -192,8 +192,6 @@ struct PracticeTab: View {
             .onAppear { macSplit = split }
             .onChange(of: split) { _, now in macSplit = now }
         }
-        .onAppear { MacLayout.Wide.shared.active = true }
-        .onDisappear { MacLayout.Wide.shared.active = false }
         #else
         shelves
         #endif

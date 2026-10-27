@@ -2988,7 +2988,13 @@ sync container carry over. `./scripts/mac-run.sh` builds and opens it.
   card, a deep link, the Continue widget's route) lands on the right, and
   the push destinations stand down while split. While Review is on screen
   the root column grows to `splitColumnWidth` whatever Page Width says
-  (`MacLayout.Wide`). Narrower than that, Review is the phone's page.
+  (`MacLayout.Wide`, set from `RootTabView`'s selection — a Mac tab switch
+  never fires the old tab's `onDisappear`, so Speech kept the split width). Narrower than that, Review is the phone's page.
+- **The `.glass` button style FILLS the button with the tint on the Mac**
+  (a solid blue disc where the phone draws clear glass with a blue label).
+  Every `.glass` site uses `MacGlassButtonStyle` under `#if macCatalyst`
+  (`glassEffect` behind the label, the label in the tint); a new glass
+  button needs the same.
 - **`UIScreen.main` is the whole DISPLAY on a Mac.** Anything laid out against
   the screen must read `MacLayout.screenHeight` (the window, zoomed points)
   and listen for `MacLayout.windowDidResize` — the Talk ring sat below the

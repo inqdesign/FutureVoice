@@ -29,7 +29,11 @@ struct CardActionButton: View {
         .buttonBorderShape(.capsule)
         .tint(tint)
         if #available(iOS 26.0, *) {
+            #if targetEnvironment(macCatalyst)
+            button.buttonStyle(MacGlassButtonStyle())
+            #else
             button.buttonStyle(.glass)
+            #endif
         } else {
             // .bordered alone is a translucent tint with NO blur, so over the
             // scrolling sheet content the label fought whatever sat beneath
@@ -59,7 +63,11 @@ struct CardStepButton: View {
         .tint(.primary)
         .accessibilityLabel(label)
         if #available(iOS 26.0, *) {
+            #if targetEnvironment(macCatalyst)
+            button.buttonStyle(MacGlassButtonStyle())
+            #else
             button.buttonStyle(.glass)
+            #endif
         } else {
             button.buttonStyle(.bordered)
                 .background(.regularMaterial, in: Capsule())
