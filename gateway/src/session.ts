@@ -833,7 +833,12 @@ export class CallSession implements DurableObject {
       system: this.pendingSystem ?? msg.system,
       language: this.language,
       claudeThinking: this.env.CLAUDE_REPLY_THINKING,
-      claudeEffort: this.env.CLAUDE_REPLY_EFFORT,
+      // Low by default (2026-10-27): the model default (medium) put the
+      // slowest tenth of turns at 2.6 s to the first sentence, and the
+      // learner felt the wait (field p90 1.1 s → 2.3 s from 10-21). Low:
+      // p50 1.16 → 1.01 s, p90 2.59 → 1.53 s, over 2 s 38 → 9 of 152
+      // (scratch probe, ko/en a2/b1); notes written 3/379 at both.
+      claudeEffort: this.env.CLAUDE_REPLY_EFFORT || "low",
     })
     this.replyEngine.steer = this.pendingSteer
     // Once per call, not per turn: during an outage every turn falls back,

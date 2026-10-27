@@ -60,7 +60,7 @@ export function spokenLeak(sentence: string, language: string): string | null {
   if (/[\[\]{}<>]/.test(sentence)) return "bracket"
   // Talking ABOUT the reply instead of giving it. English in every target
   // language, because the model plans in English whatever it speaks.
-  if (/\b(the user|the learner|the caller|the reply|my reply|this reply|the prompt|system prompt|the notes|per the notes|my notes say|word count|let's answer|reply must|the rules?:|i broke a rule|let me (redo|rewrite|fix|recheck|check)|(re)?write:|fix(ing)?:|correction:|redo it|one question only|that's two questions|two questions here|i must (not )?(use|reply|answer|write)|i need to check)\b/i.test(sentence)) return "meta"
+  if (/\b(the user|the learner|the caller|the reply|my reply|this reply|the prompt|system prompt|the notes|per the notes|my notes say|word count|let's answer|reply must|the rules?:|i broke a rule|let me (redo|rewrite|fix|recheck|check)|(re)?write:|fix(ing)?:|correction:|redo it|one question only|that's two questions|(one|a) short (reaction|question|reply|sentence)s?|keep it (simple|short):|two questions here|i must (not )?(use|reply|answer|write)|i need to check)\b/i.test(sentence)) return "meta"
   if (/≤|\b[AB][12] (words|level)\b/.test(sentence)) return "meta"
   if (lang === "en") return null
   if (lang === "ko" || lang === "ja" || lang === "zh") {
