@@ -1,0 +1,580 @@
+[
+ {
+  "name": "a1-intro",
+  "turns": [
+   [
+    "AI",
+    "Hey! I'm you, a few years on. Tell me, what do you do?"
+   ],
+   [
+    "USER",
+    "I am Minji. I am from Korea. I work in hospital. I am nurse."
+   ],
+   [
+    "AI",
+    "A nurse! That's a tough job. Do you like it?"
+   ],
+   [
+    "USER",
+    "Yes I like it. But it is very busy. I don't have time."
+   ],
+   [
+    "AI",
+    "I bet. What do you do on your days off?"
+   ],
+   [
+    "USER",
+    "I sleep. And I watch movie. My husband cook for me."
+   ]
+  ],
+  "expect": {
+   "be": "ok",
+   "present_simple": "mixed",
+   "negation": "ok",
+   "articles": "wrong",
+   "plurals_possessives": "ok"
+  },
+  "functions": [
+   "introduce",
+   "likes",
+   "routine"
+  ],
+  "not": [
+   "past_simple",
+   "present_perfect_experience",
+   "present_continuous"
+  ]
+ },
+ {
+  "name": "a2-weekend-past",
+  "turns": [
+   [
+    "AI",
+    "How was your weekend? Did you go anywhere?"
+   ],
+   [
+    "USER",
+    "Yes, on Saturday I go to Busan with my friends. We eat a lot of seafood."
+   ],
+   [
+    "AI",
+    "Nice! Did you see the beach?"
+   ],
+   [
+    "USER",
+    "Yes we went to Haeundae. It was very crowded. I didn't swim because water was cold."
+   ],
+   [
+    "AI",
+    "Ha, it's October. What's next for you this week?"
+   ],
+   [
+    "USER",
+    "I'm going to start a new project at work. I think it will be hard."
+   ]
+  ],
+  "expect": {
+   "past_simple": "mixed",
+   "past_questions_negatives": "ok",
+   "going_to": "ok",
+   "will": "ok",
+   "connectors_basic": "ok",
+   "prepositions_time_place": "ok",
+   "quantifiers": "ok",
+   "articles": "mixed"
+  },
+  "functions": [
+   "past_event",
+   "plans",
+   "simple_opinion"
+  ],
+  "not": [
+   "present_perfect_experience",
+   "past_continuous",
+   "first_conditional"
+  ]
+ },
+ {
+  "name": "a2-trap-have-got",
+  "turns": [
+   [
+    "AI",
+    "Have you ever been to Japan?"
+   ],
+   [
+    "USER",
+    "No. I have a Japanese friend. She has two cats."
+   ],
+   [
+    "AI",
+    "Two cats! Do you like cats?"
+   ],
+   [
+    "USER",
+    "I love cats but my apartment is too small. I want get a cat someday."
+   ]
+  ],
+  "expect": {
+   "present_simple": "ok",
+   "articles": "ok",
+   "connectors_basic": "ok",
+   "want_like_patterns": "wrong"
+  },
+  "functions": [
+   "likes"
+  ],
+  "not": [
+   "present_perfect_experience",
+   "present_perfect_since_for",
+   "will",
+   "going_to"
+  ]
+ },
+ {
+  "name": "b1-story",
+  "turns": [
+   [
+    "AI",
+    "Anything funny happen this week?"
+   ],
+   [
+    "USER",
+    "Oh yeah. So I was walking to the station when suddenly my phone rang, and it was my boss. He told me that the meeting was cancelled."
+   ],
+   [
+    "AI",
+    "Oh, nice, a free morning!"
+   ],
+   [
+    "USER",
+    "Exactly. So first I went to a cafe, then I called my mom. I haven't called her since two weeks, so she was happy."
+   ],
+   [
+    "AI",
+    "Since two weeks, huh. Lucky mom."
+   ],
+   [
+    "USER",
+    "If I have time tomorrow, I will visit her too."
+   ]
+  ],
+  "expect": {
+   "past_continuous": "ok",
+   "past_simple": "ok",
+   "reported_speech": "ok",
+   "present_perfect_since_for": "wrong",
+   "first_conditional": "ok",
+   "passive_basic": "ok",
+   "clauses_time_contrast": "ok"
+  },
+  "functions": [
+   "narrate",
+   "past_event",
+   "plans"
+  ],
+  "not": [
+   "second_conditional",
+   "past_perfect",
+   "used_to"
+  ]
+ },
+ {
+  "name": "b1-experience-errors",
+  "turns": [
+   [
+    "AI",
+    "Have you ever tried scuba diving?"
+   ],
+   [
+    "USER",
+    "Yes, I tried it two times. The first time was in Thailand in 2019."
+   ],
+   [
+    "AI",
+    "Did you like it?"
+   ],
+   [
+    "USER",
+    "I did. Did you ever see a turtle underwater? I never saw one before that trip, it was amazing."
+   ],
+   [
+    "AI",
+    "Ha, I'm you, so no. Would you go again?"
+   ],
+   [
+    "USER",
+    "If I would have money, I would go every year."
+   ]
+  ],
+  "expect": {
+   "past_simple": "ok",
+   "present_perfect_experience": "wrong",
+   "second_conditional": "wrong"
+  },
+  "functions": [
+   "past_event"
+  ],
+  "not": [
+   "past_perfect",
+   "third_conditional"
+  ]
+ },
+ {
+  "name": "b1-used-to-relative",
+  "turns": [
+   [
+    "AI",
+    "What were you like as a kid?"
+   ],
+   [
+    "USER",
+    "I used to be really shy. I used to hiding in my room when guests came."
+   ],
+   [
+    "AI",
+    "Really? You don't seem shy now."
+   ],
+   [
+    "USER",
+    "Yeah, that changed because of a teacher who believed in me. She's the person that made me speak in front of the class."
+   ],
+   [
+    "AI",
+    "That's a good teacher."
+   ],
+   [
+    "USER",
+    "Do you remember her name? I forgot it. It might be Ms. Park."
+   ]
+  ],
+  "expect": {
+   "used_to": "mixed",
+   "relative_defining": "ok",
+   "past_simple": "ok",
+   "modals_possibility": "ok",
+   "questions_basic": "ok"
+  },
+  "functions": [
+   "narrate",
+   "follow_up"
+  ],
+  "not": [
+   "present_perfect_experience",
+   "passive_basic"
+  ]
+ },
+ {
+  "name": "b2-regret",
+  "turns": [
+   [
+    "AI",
+    "You sound a bit down. What happened?"
+   ],
+   [
+    "USER",
+    "I missed the deadline for the scholarship. I should have checked the date, honestly. If I had known it was on Friday, I would have finished the essay earlier."
+   ],
+   [
+    "AI",
+    "Ouch. Is there another round?"
+   ],
+   [
+    "USER",
+    "There is one in spring, but by then I'll have graduated, so it doesn't apply to me. I wish I was more organized."
+   ],
+   [
+    "AI",
+    "You could still ask them."
+   ],
+   [
+    "USER",
+    "Maybe. I've been thinking about emailing them, although they probably get a lot of these."
+   ]
+  ],
+  "expect": {
+   "modals_past": "ok",
+   "third_conditional": "ok",
+   "future_continuous_perfect": "ok",
+   "wish": "ok",
+   "present_perfect_continuous": "ok",
+   "clauses_time_contrast": "ok",
+   "there_is": "ok"
+  },
+  "functions": [
+   "hypothesize",
+   "explain_reasons"
+  ],
+  "not": [
+   "second_conditional",
+   "reported_questions"
+  ]
+ },
+ {
+  "name": "b2-argue",
+  "turns": [
+   [
+    "AI",
+    "Do you think remote work is better?"
+   ],
+   [
+    "USER",
+    "Personally, I think a mix is best. Despite I save time on commuting at home, I miss my colleagues, who are honestly the reason I enjoy my job."
+   ],
+   [
+    "AI",
+    "Fair. What about productivity?"
+   ],
+   [
+    "USER",
+    "It depends. Whereas some people focus better alone, others need structure. Unless the company trusts people, remote work won't work."
+   ],
+   [
+    "AI",
+    "So it's about trust."
+   ],
+   [
+    "USER",
+    "Exactly, and also it should be decided by teams, not by managers alone. Does that make sense?"
+   ]
+  ],
+  "expect": {
+   "linking_advanced": "mixed",
+   "relative_non_defining": "ok",
+   "passive_advanced": "ok",
+   "will": "ok"
+  },
+  "functions": [
+   "argue",
+   "compare_options",
+   "manage_conversation",
+   "agree_disagree"
+  ],
+  "not": [
+   "third_conditional",
+   "past_perfect"
+  ]
+ },
+ {
+  "name": "a2-shopping-problem",
+  "turns": [
+   [
+    "AI",
+    "Okay, I'm the shop assistant. How can I help?"
+   ],
+   [
+    "USER",
+    "Hello. I buy this jacket yesterday but it is too small. Can I change it?"
+   ],
+   [
+    "AI",
+    "Sure, do you have the receipt?"
+   ],
+   [
+    "USER",
+    "Sorry, I lost it. Can you check with my card? I paid with card."
+   ],
+   [
+    "AI",
+    "Let me see. Yes, I found it."
+   ],
+   [
+    "USER",
+    "Thank you! Do you have a bigger one? This one is more small than I thought."
+   ]
+  ],
+  "expect": {
+   "past_simple": "mixed",
+   "can": "ok",
+   "comparatives": "mixed",
+   "questions_basic": "ok",
+   "be": "ok",
+   "articles": "wrong"
+  },
+  "functions": [
+   "handle_problem",
+   "ask_offer"
+  ],
+  "not": [
+   "present_perfect_experience",
+   "passive_basic"
+  ]
+ },
+ {
+  "name": "a1-only-ai-structures",
+  "turns": [
+   [
+    "AI",
+    "If you had a free day tomorrow, what would you do? I've been wondering."
+   ],
+   [
+    "USER",
+    "Uh, I sleep. Sleep is good."
+   ],
+   [
+    "AI",
+    "Ha! Would you go out at all?"
+   ],
+   [
+    "USER",
+    "No. I stay home. I like home."
+   ]
+  ],
+  "expect": {
+   "present_simple": "ok",
+   "be": "ok"
+  },
+  "functions": [
+   "likes"
+  ],
+  "not": [
+   "second_conditional",
+   "present_perfect_continuous",
+   "will"
+  ]
+ },
+ {
+  "name": "b1-fillers-asr",
+  "turns": [
+   [
+    "AI",
+    "What are you up to these days?"
+   ],
+   [
+    "USER",
+    "um so I am uh I am working on uh a new app and uh it is it is going quite well actually"
+   ],
+   [
+    "AI",
+    "Nice. What kind of app?"
+   ],
+   [
+    "USER",
+    "it is for uh for learning languages I have been building it for about six months I think"
+   ],
+   [
+    "AI",
+    "Six months! Is it out yet?"
+   ],
+   [
+    "USER",
+    "not yet we are going to launch it next month if everything goes well"
+   ]
+  ],
+  "expect": {
+   "present_continuous": "ok",
+   "present_perfect_continuous": "ok",
+   "going_to": "ok",
+   "first_conditional": "ok",
+   "be": "ok"
+  },
+  "functions": [
+   "plans"
+  ],
+  "not": [
+   "past_simple"
+  ]
+ },
+ {
+  "name": "b1-advice-modals",
+  "turns": [
+   [
+    "AI",
+    "My friend wants to move to Germany. Any advice for him?"
+   ],
+   [
+    "USER",
+    "He should learn some German first. He must to register at the city office in the first two weeks."
+   ],
+   [
+    "AI",
+    "Oh, I didn't know that."
+   ],
+   [
+    "USER",
+    "Yes, and he has to open a bank account. It might take a long time, so he should start early."
+   ]
+  ],
+  "expect": {
+   "modals_obligation_advice": "mixed",
+   "modals_possibility": "ok",
+   "connectors_basic": "ok",
+   "quantifiers": "ok"
+  },
+  "functions": [
+   "explain_reasons"
+  ],
+  "not": [
+   "second_conditional",
+   "present_perfect_experience"
+  ]
+ },
+ {
+  "name": "b2-reported-questions",
+  "turns": [
+   [
+    "AI",
+    "How was the interview?"
+   ],
+   [
+    "USER",
+    "Pretty intense. They asked me where do I see myself in five years, and then they asked whether I had managed a team before."
+   ],
+   [
+    "AI",
+    "What did you say?"
+   ],
+   [
+    "USER",
+    "I said I had led a small team at my last job. By the time they asked about salary, I had already relaxed."
+   ]
+  ],
+  "expect": {
+   "reported_questions": "mixed",
+   "reported_speech": "ok",
+   "past_perfect": "ok",
+   "past_simple": "ok"
+  },
+  "functions": [
+   "narrate",
+   "past_event"
+  ],
+  "not": [
+   "third_conditional",
+   "wish"
+  ]
+ },
+ {
+  "name": "a2-routine-frequency",
+  "turns": [
+   [
+    "AI",
+    "What's a normal day like for you?"
+   ],
+   [
+    "USER",
+    "I usually wake up at six. I go always to the gym before work."
+   ],
+   [
+    "AI",
+    "Wow, early. Every day?"
+   ],
+   [
+    "USER",
+    "Not on weekends. On Sunday I never go out. I watch dramas all day and I eat many snacks."
+   ]
+  ],
+  "expect": {
+   "frequency_adverbs": "mixed",
+   "present_simple": "ok",
+   "prepositions_time_place": "ok",
+   "quantifiers": "ok"
+  },
+  "functions": [
+   "routine"
+  ],
+  "not": [
+   "past_simple",
+   "going_to"
+  ]
+ }
+]
