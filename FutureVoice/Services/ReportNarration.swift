@@ -96,6 +96,11 @@ enum ReportNarrator {
         say the words themselves. A word to reach for next goes inside a \
         short sentence of the kind they could use.
 
+        SAY IT THE WAY IT IS SPOKEN: a level is written in "text" as the \
+        words a person says (English "A two", German "A zwei", Spanish "A \
+        dos", Korean "에이 투", Japanese "エーツー"), never "A2" — the \
+        synthesizer misreads the code. The caption keeps "A2".
+
         RULES: use only the facts given for each card — never invent a \
         number, a word they said, a level or a plan. A quote may appear only \
         if it is in the facts, copied exactly. No exclamation marks, no \
