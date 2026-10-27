@@ -17,7 +17,7 @@
 // keep working.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
-import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
+import { requireUser, handlePreflight, errorResponse, upstreamErrorResponse, cors } from "../_shared/auth.ts"
 import { recordFreeUsage, enforceRequestRate, rateLimitedResponse,
          recordProviderUsage, background, geminiUsageFields,
          billingClient, type ChargeableAction } from "../_shared/credits.ts"
@@ -244,7 +244,7 @@ Deno.serve(async (req) => {
     // Nothing was charged, so there is nothing to refund. The 0-delta ledger
     // row stays — a failed upstream call is still a call worth counting.
     const detail = await upstream.text()
-    return errorResponse(upstream.status, "gemini upstream error", detail.slice(0, 500))
+    return upstreamErrorResponse(upstream.status, "gemini upstream error", detail.slice(0, 500))
   }
 
   // `X-Gemini-Stream` is the protocol handshake: a client that asked for SSE

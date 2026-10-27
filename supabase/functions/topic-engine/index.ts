@@ -14,7 +14,7 @@
 // Utility tier (flash-lite), purpose "topics", free under the daily cap.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
-import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
+import { requireUser, handlePreflight, errorResponse, upstreamErrorResponse, cors } from "../_shared/auth.ts"
 import { recordFreeUsage, enforceRequestRate, rateLimitedResponse,
          recordProviderUsage, background, geminiUsageFields } from "../_shared/credits.ts"
 
@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
   )
   if (!upstream.ok) {
     const detail = await upstream.text()
-    return errorResponse(upstream.status, "gemini upstream error", detail.slice(0, 500))
+    return upstreamErrorResponse(upstream.status, "gemini upstream error", detail.slice(0, 500))
   }
   const responseText = await upstream.text()
   try {
