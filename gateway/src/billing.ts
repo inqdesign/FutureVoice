@@ -68,9 +68,8 @@ export class TalkBilling {
       if (this.isBillable()) {
         this.billable += 1
         this.counted += 1
-        // Whole seconds: the first answer's credit is fractional, and the
-        // app read a fractional total as no report at all — the clock froze
-        // at the credit (0:05) for the rest of the call (2026-10-25).
+        // Whole seconds: the app reads a fractional total as no report at
+        // all (the clock froze at 0:05, 2026-10-25).
         this.onCount(Math.floor(this.counted))
       }
       sinceFlush += 1000
@@ -79,15 +78,6 @@ export class TalkBilling {
         void this.flush()
       }
     }, 1000) as unknown as number
-  }
-
-  /** Seconds the per-second poll could not see — the learner's first
-   *  answer, which runs before the gate lifts. Rides on the next flush. */
-  credit(seconds: number): void {
-    if (seconds <= 0) return
-    this.billable += seconds
-    this.counted += seconds
-    this.onCount(Math.floor(this.counted))
   }
 
   /** Final flush; safe to call more than once. */

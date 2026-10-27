@@ -140,15 +140,6 @@ export class CallSession implements DurableObject {
   /// echo-muted buffers are sent as SILENCE, never as a gap — so frames stop
   /// only when nobody is there. A route rebuild costs a second or two of
   /// them, hence the generous windows.
-  /** Has the learner said anything yet in this call? The meter waits for
-   *  it — see the billing predicate. */
-  private learnerSpoke = false
-  /** When the transcriber first made words of the learner's FIRST answer.
-   *  The meter's gate lifts only at the first commit, so the answer itself
-   *  was never billed — while the phone's clock (2026-09-27) counts it from
-   *  its first words. At that commit the span is billed once, so the clock
-   *  and the bill agree. 0 = not started. */
-  private firstInterimAt = 0
   private language = "en"
   private lastClientFrameAt = Date.now()
   /** Nothing from the phone for this long → the socket is dead; hang up. */
@@ -355,8 +346,6 @@ export class CallSession implements DurableObject {
    *  (the hold, the merge, speculation, the re-read) runs as usual; only the
    *  hold's clock is never armed. */
   private manualTurns = false
-  /** Tutor mode: counted from the start (`StartMessage.meterFromStart`). */
-  private meterFromStart = false
   /** A `send` is waiting for the transcriber to finalize the last words. */
   private sendRequested = false
   private sendTimer: number | null = null
@@ -704,7 +693,6 @@ export class CallSession implements DurableObject {
         if (this.replyEngine) this.replyEngine.setSystem(msg.system)
         else this.pendingSystem = msg.system
       }
-      if (typeof msg.meterFromStart === "boolean") this.meterFromStart = msg.meterFromStart
       if (typeof msg.manualTurns === "boolean" && msg.manualTurns !== this.manualTurns) {
         this.manualTurns = msg.manualTurns
         if (this.manualTurns) {
@@ -761,16 +749,11 @@ export class CallSession implements DurableObject {
         msg.token,
         crypto.randomUUID(),
         msg.language || null,
-        // Nothing is charged until the learner has actually SAID something.
-        // The opener speaks whether or not it is answered, so a call opened
-        // and abandoned billed its own greeting and the silence after it —
-        // and the ring showed that wait back as talk time (2026-09-07). A
-        // committed turn is the witness, never an interim: a room's noise
-        // makes interims all day.
-        // Tutor mode is the exception: the tutor speaks first and that is
-        // the lesson, so it counts from the start (founder, 2026-10-25).
-        () => (this.learnerSpoke || this.meterFromStart)
-          && this.clientPresent(CallSession.billableClientGapMs)
+        // Counted from the moment the call starts, opener included
+        // (founder, 2026-10-27). Until then nothing counted before the
+        // learner's first committed turn (2026-09-07), with tutor mode the
+        // one exception (2026-10-25). Silence is still free.
+        () => this.clientPresent(CallSession.billableClientGapMs)
           && (this.activeContext !== null
             || Date.now() - this.lastSpokeAt < 2000
             || Date.now() - this.lastInterimAt < TalkBilling.graceMs),
@@ -830,7 +813,6 @@ export class CallSession implements DurableObject {
     this.history = msg.history ? [...msg.history] : []
     this.language = msg.language || "en"
     this.manualTurns = msg.manualTurns === true
-    this.meterFromStart = msg.meterFromStart === true
     const base = (code: string) => code.toLowerCase().split("-")[0]
     this.native = msg.native && base(msg.native) !== base(this.language) ? msg.native : null
     this.replyEngine = new ReplyEngine({
@@ -920,9 +902,6 @@ export class CallSession implements DurableObject {
         onInterim: (text) => {
           this.lastInterimAt = Date.now()
           this.lastInterimText = text
-          if (!this.learnerSpoke && this.firstInterimAt === 0 && text.trim().length > 0) {
-            this.firstInterimAt = Date.now()
-          }
           this.armIdleHangUp()
           if (this.pendingUtterance !== null) {
             // First interim after the final: the pause this learner actually
@@ -1466,15 +1445,6 @@ export class CallSession implements DurableObject {
   /** A turn is settled. Commit it and speak the reply. */
   private commitTurn(text: string, native = false, reopened: string | null = null): void {
     console.log(`commit: "${text.slice(0, 80)}"${native ? " (native)" : ""}${reopened !== null ? " (continues)" : ""}`)
-    if (!this.learnerSpoke && this.firstInterimAt > 0) {
-      // Capped at the longest a listening turn is held open on the phone
-      // (`maxListenSecondsHard`), so a stray interim long before the answer
-      // can't bill the wait in front of it.
-      const firstAnswer = Math.min((Date.now() - this.firstInterimAt) / 1000, 120)
-      this.billing?.credit(firstAnswer)
-      console.log(`billing: first answer ${firstAnswer.toFixed(1)}s`)
-    }
-    this.learnerSpoke = true
     this.lastCommitAt = Date.now()
     this.specFiresThisTurn = 0
     // A re-opened turn sends only what the app doesn't have yet. When the

@@ -769,16 +769,10 @@ struct ConversationView: View {
     ///
     /// The learner half of that is `someoneIsTalkingHere`, which is where the
     /// café problem lives — see below.
-    /// Has the learner spoken since this call started? Gates the meter —
-    /// see `isBillableMoment`. Set where a user turn is made (both paths),
-    /// cleared with the session.
+    /// Has the learner spoken since this call started? Set where a user turn
+    /// is made (both paths), cleared with the session. No longer a billing
+    /// gate (see `isBillableMoment`).
     @State private var learnerSpokeThisCall = false
-    /// The learner has started their first answer — the gateway is already
-    /// making words of it — even if no turn is committed yet. Lifts the gate
-    /// for the CLOCK on the realtime path, where the local meter only keeps
-    /// the clock and the ring (the gateway bills on its own rule), so the
-    /// first answer is counted while it is being said instead of after it.
-    @State private var learnerStartedThisCall = false
     /// The live call died under the learner — socket gone, reply failed
     /// past its retry, mic lost after a route change. Set from the realtime
     /// state observer; presented as the one alert that offers a way BACK.
@@ -799,35 +793,13 @@ struct ConversationView: View {
     @State private var lastAutoReconnectAt: Date?
     private static let autoReconnectSpacing: TimeInterval = 60
 
+    /// The call is billed from the moment it starts (founder, 2026-10-27):
+    /// the opener and the fluent self's first lines count like every other
+    /// line. Until then nothing counted before the learner's first turn
+    /// (2026-09-07), with tutor mode the one exception (2026-10-25). Silence
+    /// is still free: only seconds where something is happening count.
     private func isBillableMoment() -> Bool {
-        // Nothing counts until the learner has said something IN THIS CALL.
-        // The opener speaks whether or not it is answered, and a call that
-        // was opened, listened to and left behind is not a minute of theirs
-        // — the ring showed the wait as talk time (reported 2026-09-07).
-        // Per call, not per transcript: Continue reopens a book with its old
-        // turns in hand, and those were spoken on another day.
-        if RealtimeMode.isEnabled, !learnerStartedThisCall,
-           realtime.state == .hearing, !realtime.partial.isEmpty {
-            learnerStartedThisCall = true
-        }
-        // Tutor mode counts from the start (founder, 2026-10-25): the tutor
-        // talks first and sets up the lesson, and that is the lesson.
-        guard tutorThisCall || learnerSpokeThisCall
-                || (RealtimeMode.isEnabled && learnerStartedThisCall)
-        else { return false }
-        return somethingIsHappening()
-    }
-
-    /// The clock counts nothing until the first turn is COMMITTED (the gate
-    /// above), so the first answer itself — often the longest thing the
-    /// learner says — never reached it: a 40-second first answer read 0:00
-    /// (founder, 2026-09-27). The realtime path counts it live
-    /// (`learnerStartedThisCall`); the classic path has no such witness, so
-    /// at that commit the answer's own length is added once. The classic
-    /// meter bills too, and the learner is never billed for this — clock only.
-    private func creditFirstAnswerToClock(ms: Int) {
-        guard !learnerSpokeThisCall, ms > 0 else { return }
-        meter.clock.add(Double(ms) / 1000)
+        somethingIsHappening()
     }
 
     /// Is anyone in this call right now — the fluent self speaking, a reply
@@ -1406,11 +1378,9 @@ struct ConversationView: View {
                              minutesLeft: meter.minutesRemaining.flatMap { $0 <= 10 ? $0 : nil },
                              // Talk time, phone-style — every tier. The meter's
                              // own count, so silence doesn't move it; shown from
-                             // the learner's first line (a call opened and left
-                             // without a word has no clock, asked 2026-09-02)
-                             // and gone once the talk is wrapped up.
-                             callClock: (tutorThisCall || learnerSpokeThisCall || learnerStartedThisCall)
-                                 && (phoneCallActive || !didSaveCurrentSession)
+                             // the start, since the call is billed from the start
+                             // (2026-10-27), and gone once the talk is wrapped up.
+                             callClock: (phoneCallActive || !didSaveCurrentSession)
                                  ? meter.clock : nil)
                 .environmentObject(appState)
         }
@@ -3447,7 +3417,6 @@ struct ConversationView: View {
         // in flight" so late arrivals resolve in the right order.
         userTurn.transcriptPending = userTurn.audioURL != nil
         turns.append(userTurn)
-        creditFirstAnswerToClock(ms: userTurn.durationMs)
         learnerSpokeThisCall = true
         didSaveCurrentSession = false
         creditGoalChips(turnId: userTurn.id)
@@ -4804,7 +4773,6 @@ struct ConversationView: View {
         tutorThisCall = TutorMode.isOn
         tutorWasOn = tutorThisCall
         learnerSpokeThisCall = false
-        learnerStartedThisCall = false
         didSaveCurrentSession = false
         phase = .idle
         if !topic.isEmpty {
