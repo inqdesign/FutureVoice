@@ -771,8 +771,47 @@ struct AccountStatus {
                 out.monthlyScenesCap = scenes.cap
             }
         }
+        #if DEBUG
+        debugPendingPlanOverride(&out)
+        #endif
         return out
     }
+
+    #if DEBUG
+    /// `-debugPendingPlan light_annual` (once; it sticks until
+    /// `-debugPendingPlan off`): shows a scheduled downgrade on a real
+    /// device whose account has none. An account with no plan is dressed as
+    /// a Plus monthly subscriber first, the case that prompted the feature.
+    private static func debugPendingPlanOverride(_ out: inout AccountStatus) {
+        let key = "futurevoice.debug.pendingPlan"
+        let defaults = UserDefaults.standard
+        if let arg = defaults.volatileDomain(forName: UserDefaults.argumentDomain)["debugPendingPlan"] as? String {
+            defaults.set(arg == "off" ? nil : arg, forKey: key)
+        }
+        guard let planId = defaults.string(forKey: key) else { return }
+        if !out.isEntitled || out.periodEnd == nil {
+            out.planId = "plus_monthly"
+            out.subscriptionStatus = "active"
+            out.monthlyCapSeconds = 27000
+            out.secondsUsedPeriod = 7200
+            out.periodStart = Calendar.current.date(byAdding: .day, value: -24, to: Date())
+            out.periodEnd = Calendar.current.date(byAdding: .day, value: 6, to: Date())
+            out.source = "apple"
+            out.startedAt = out.periodStart
+            out.lastChargeMilliunits = 29_000_000
+            out.lastChargeCurrency = "KRW"
+            out.lastChargeDate = out.periodStart
+        }
+        out.renewalPriceMilliunits = planId.hasSuffix("annual") ? 149_000_000 : 15_000_000
+        out.renewalCurrency = "KRW"
+        out.pendingPlan = PendingPlan(planId: planId, startsAt: out.periodEnd ?? Date(),
+                                      monthlySeconds: planId.hasPrefix("light") ? 9000 : 27000,
+                                      monthlyScenes: 10, talkUnlimited: false)
+        if out.subscriptionNotes.isEmpty {
+            out.subscriptionNotes = ["(Dev) 서버에서 손으로 쓴 구독 안내는 여기에 나와요."]
+        }
+    }
+    #endif
 
     /// A `timestamptz` column, which PostgREST writes as ISO 8601 with a
     /// fractional second and an offset ("2026-09-11T16:31:31.123+00:00") —

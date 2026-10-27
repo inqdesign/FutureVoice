@@ -617,7 +617,20 @@ struct PaywallView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(isSubscriber ? explain("Your plan") : explain("Keep talking"))
                     .font(.largeTitle.weight(.bold))
-                if isSubscriber {
+                if isSubscriber, !account.isTrialing, let next = account.pendingPlan {
+                    // A scheduled change has to be read, not a grey footnote
+                    // (2026-10-27): the subscriber who bought a downgrade
+                    // opened this page seven times looking for it.
+                    Label(explain("You're on the \(currentPlanLabel) until \(account.renewalLabel), then \(AccountStatus.planName(next.planId))."),
+                          systemImage: "arrow.triangle.swap")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .padding(.horizontal, 14).padding(.vertical, 12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.accentColor.opacity(0.12),
+                                    in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .padding(.top, 4)
+                } else if isSubscriber {
                     Label(account.isTrialing
                           ? (account.cancelAtPeriodEnd
                              ? explain("You're on the \(currentPlanLabel) — it ends on \(account.renewalLabel).")

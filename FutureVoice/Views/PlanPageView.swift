@@ -39,6 +39,21 @@ struct PlanPageView: View {
 
     var body: some View {
         List {
+            // What is about to change, and anything written by hand on the
+            // server: on top and tinted, not a grey line among the figures.
+            // A downgrade nobody noticed is what prompted it (2026-10-27).
+            if account.isEntitled, account.pendingPlan != nil || !account.subscriptionNotes.isEmpty {
+                Section {
+                    if account.pendingPlan != nil {
+                        callout(icon: "arrow.triangle.swap", title: refillTitle,
+                                subtitle: pendingSizeLine)
+                    }
+                    ForEach(account.subscriptionNotes, id: \.self) { note in
+                        callout(icon: "info.circle.fill", title: note, subtitle: nil)
+                    }
+                }
+                .listRowBackground(Color.accentColor.opacity(0.12))
+            }
             Section {
                 row(icon: "bolt.fill",
                     title: account.isTrialing ? explain("Trial talk time") : explain("Talk time"),
@@ -79,7 +94,7 @@ struct PlanPageView: View {
                         subtitle: explain("Taken from the talk time above"),
                         value: explain("\(account.sceneTalkMinutes) min each"))
                 }
-                if account.isEntitled, !account.renewalLabel.isEmpty {
+                if account.isEntitled, !account.renewalLabel.isEmpty, account.pendingPlan == nil {
                     // A trial's date is not a refill — it is the day it starts
                     // costing money. And a plan told to stop does not refill on
                     // that date either; it ends on it. Same date, three
@@ -108,11 +123,6 @@ struct PlanPageView: View {
             // could only disagree with Apple's.
             if account.isEntitled, let source = account.source {
                 Section {
-                    // Written by hand on the server (`subscription_notes`) —
-                    // the one thing on this page that changes without a build.
-                    ForEach(account.subscriptionNotes, id: \.self) { note in
-                        row(icon: "info.circle", title: note)
-                    }
                     if let since = account.startedAt {
                         row(icon: "calendar",
                             title: explain("Since \(AccountStatus.dayLabel(since))"))
@@ -318,6 +328,24 @@ struct PlanPageView: View {
     private var sceneAllowanceValue: String {
         guard let cap = account.monthlyScenesCap else { return "" }
         return "\(account.scenesUsedPeriod) / \(cap)"
+    }
+
+    /// A row that has to be read: tinted icon, a semibold title in the
+    /// primary colour, the detail in primary too rather than grey.
+    private func callout(icon: String, title: String, subtitle: String?) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Image(systemName: icon)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(.tint)
+                .frame(width: 22)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title).font(.body.weight(.semibold))
+                if let subtitle {
+                    Text(subtitle).font(.subheadline)
+                }
+            }
+        }
+        .padding(.vertical, 4)
     }
 
     /// The same shape as `MeTab`'s settings row, so a pushed page can't drift

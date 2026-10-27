@@ -1354,10 +1354,9 @@ struct MeTab: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
+            // No chevron of its own: the NavigationLink draws one, and
+            // both together put two on the row.
             Spacer(minLength: 8)
-            Image(systemName: "chevron.right")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.tertiary)
         }
         .padding(.vertical, 6)
     }
