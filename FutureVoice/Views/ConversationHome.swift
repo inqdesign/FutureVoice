@@ -273,7 +273,7 @@ struct ConversationHome: View {
                     onBuildScenario: { showingBuilder = true },
                     onOwnTopic: { runOwnTopic() })
                     .environmentObject(appState)
-                    .toolbar(.hidden, for: .tabBar)
+                    .toolbar(MacLayout.tabBarOnPhoneOnly, for: .tabBar)
             }
             .navigationDestination(isPresented: $showingAllScenarios) {
                 TalkScenariosListView(onPick: runScenario)
@@ -1233,7 +1233,7 @@ struct TalkScenariosListView: View {
         }
         .navigationTitle("Scenarios")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar(.hidden, for: .tabBar)
+        .toolbar(MacLayout.tabBarOnPhoneOnly, for: .tabBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button { showingBuilder = true } label: {

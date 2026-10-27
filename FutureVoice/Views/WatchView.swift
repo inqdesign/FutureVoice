@@ -441,7 +441,7 @@ struct WatchView: View {
                     .environmentObject(appState)
             }
         }
-        .toolbar(.hidden, for: .tabBar)   // immersive watching — hide the tab bar
+        .toolbar(MacLayout.tabBarOnPhoneOnly, for: .tabBar)   // immersive watching — hide the tab bar
         .safeAreaInset(edge: .bottom) { controls }
         .alert("Something went wrong", isPresented: errorBinding) {
             if outOfCredits {

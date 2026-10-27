@@ -132,7 +132,7 @@ struct ExpressionsView: View {
         }
         .navigationTitle("Expressions")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar(.hidden, for: .tabBar)
+        .toolbar(MacLayout.tabBarOnPhoneOnly, for: .tabBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button { showingAdd = true } label: { Image(systemName: "plus") }

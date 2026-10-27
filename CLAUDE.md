@@ -3014,6 +3014,11 @@ sync container carry over. `./scripts/mac-run.sh` builds and opens it.
   Every `.glass` site uses `MacGlassButtonStyle` under `#if macCatalyst`
   (`glassEffect` behind the label, the label in the tint); a new glass
   button needs the same.
+- **The tab bar never hides on the Mac** (`MacLayout.tabBarOnPhoneOnly`).
+  On the phone a book, a list, a scene hide the bottom tab bar for room; on
+  the Mac those tabs are the window's own navigation in the title bar, and a
+  book that hid them left no way to another tab. Every
+  `.toolbar(.hidden, for: .tabBar)` goes through it.
 - **`UIScreen.main` is the whole DISPLAY on a Mac.** Anything laid out against
   the screen must read `MacLayout.screenHeight` (the window, zoomed points)
   and listen for `MacLayout.windowDidResize` — the Talk ring sat below the

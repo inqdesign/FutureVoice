@@ -164,7 +164,7 @@ struct RootTabView: View {
                     // visible here outranks the `.hidden` of a scene pushed
                     // inside the tab, and a new situation played with the
                     // tab bar over it once the box closed.
-                    .toolbar(watchCreation.creating ? .hidden : .automatic, for: .tabBar)
+                    .toolbar(watchCreation.creating ? MacLayout.tabBarOnPhoneOnly : .automatic, for: .tabBar)
                     .tabItem { Label("Watch", systemImage: "play.circle.fill") }
                     .tag(Tab.watch)
 

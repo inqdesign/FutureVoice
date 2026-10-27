@@ -95,7 +95,7 @@ struct SceneWatchView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Color(.systemBackground))
                     .navigationBarTitleDisplayMode(.inline)
-                    .toolbar(.hidden, for: .tabBar)
+                    .toolbar(MacLayout.tabBarOnPhoneOnly, for: .tabBar)
             } else {
                 loadingState
             }
@@ -124,7 +124,7 @@ struct SceneWatchView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemBackground))
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar(.hidden, for: .tabBar)
+        .toolbar(MacLayout.tabBarOnPhoneOnly, for: .tabBar)
     }
 
     private func errorState(_ message: String) -> some View {

@@ -30,6 +30,12 @@ enum MacLayout {
         #endif
     }
 
+    /// Where a page hides the tab bar on the phone (a book, a list, a scene),
+    /// the Mac keeps it: there the tabs are the window's own navigation in
+    /// the title bar, and a book that hid them left no way to another tab
+    /// (founder, 2026-10-27).
+    static var tabBarOnPhoneOnly: Visibility { isMac ? .automatic : .hidden }
+
     static let zoomKey = "mac.zoom"
     /// The camera picked in View → Camera (its `uniqueID`); empty = automatic.
     static let cameraKey = "mac.camera"
