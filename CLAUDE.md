@@ -2955,21 +2955,30 @@ sync container carry over. `./scripts/mac-run.sh` builds and opens it.
 
 - **The Mac idiom ignores Dynamic Type** (measured: body 13 pt, captions
   10 pt, whatever `dynamicTypeSize`, content size category or trait override
-  says). So the WINDOW is zoomed (`window.transform`, `MacWindow.configure`),
-  1.3× by default (body back at the phone's 17 pt), ⌘+ / ⌘− / ⌘0 in the View
-  menu. Measured: text is drawn at the zoomed size (sharp), clicks land, a
-  resize reflows, and every sheet, alert and cover is zoomed with no change
-  to any of them. A SwiftUI `scaleEffect` at the root is just as sharp but
-  misses everything UIKit presents (171 sheets) — don't move it back there.
+  says). So the PAGE is zoomed, 1.3× by default (body back at the phone's
+  17 pt), ⌘+ / ⌘− / ⌘0 in the View menu. What is scaled matters, and two
+  tries were wrong (2026-10-27): scaling the UIWindow drew and clicked fine
+  but AppKit could no longer place a MENU over it — every dropdown in the
+  app opened nothing (same click: menu at 1.0×, nothing at 1.3×). Now
+  `MacWindow.zoomContent` scales only the main window's ROOT VIEW, placed
+  below the 52 pt title bar (a scaled root gets no safe area, and neither
+  `additionalSafeAreaInsets` nor a SwiftUI inset reached the UIKit nav
+  bars), and a sheet — a window of its own on the Mac — gets its PAGE
+  scaled (`MacSheets.zoomSheet`), never its window's root, which is the
+  system's sheet container (scaling it killed the menus inside). Text is
+  drawn at the zoomed size (sharp) and clicks land. A SwiftUI `scaleEffect`
+  at the root misses everything UIKit presents.
 - **Pages sit in a centred column** (`.macPage()` at the app root; View →
   Page Width: Narrow · Medium · Wide · Full width). The tabs are the title
   bar's segmented control on their own; there is no sidebar.
 - **A sheet on the Mac is its OWN window** (a macOS sheet attached to the
-  app's window), so it does NOT inherit the window's zoom, and macOS
+  app's window), so it does NOT inherit the page's zoom, and macOS
   swallows every click behind it — a click outside can never close it.
   `MacSheets` (a swizzle of `present` plus the `preferredContentSize`
-  getter, because SwiftUI rewrites the size after presenting) gives every
-  sheet a phone's size (480 wide, the window's height up to 860, in zoomed
+  getter, because SwiftUI rewrites the size after presenting) touches
+  SwiftUI's sheets ONLY (`PresentationHostingController`) — menus and
+  pickers go through `present` too, and forcing them into a form sheet was
+  the other half of every dropdown dying — and gives each a phone's size (480 wide, the window's height up to 860, in zoomed
   points), zooms the sheet's window, and closes it on Esc under the
   swipe's own rule: never one that is modal (`interactiveDismissDisabled`)
   or whose delegate refuses, through the delegate calls a swipe makes so

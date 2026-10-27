@@ -8,8 +8,8 @@ import UIKit
 /// - **Size.** The Mac idiom draws with the Mac's own text sizes (body 13 pt,
 ///   captions 10 pt — measured 2026-10-25) and IGNORES Dynamic Type: no
 ///   content size category, SwiftUI `dynamicTypeSize` or trait override moves
-///   them. So the whole window is ZOOMED instead (`window.transform`), the
-///   way a browser zooms a page: 1.3× by default puts body text back at the
+///   them. So the whole page is ZOOMED instead (the window's root view, see
+///   `MacWindow.zoomContent`), the way a browser zooms a page: 1.3× by default puts body text back at the
 ///   phone's 17 pt, and ⌘+ / ⌘− / ⌘0 in the View menu change it. Measured
 ///   the same day: text stays sharp (it is drawn at the zoomed size, not
 ///   stretched), clicks land where they look, resizing the window reflows,
@@ -71,13 +71,16 @@ enum MacLayout {
         let window = UIApplication.shared.connectedScenes
             .compactMap { ($0 as? UIWindowScene)?.keyWindow ?? ($0 as? UIWindowScene)?.windows.first }
             .first
-        if let height = window?.bounds.height, height > 0 { return height }
+        // The window is in screen points; pages lay out after the zoom.
+        if let height = window?.bounds.height, height > 0 { return height / zoom }
         #endif
         return UIScreen.main.bounds.height
     }
 
     static var zoom: CGFloat {
-        let stored = UserDefaults.standard.object(forKey: zoomKey) as? Int ?? defaultZoom
+        // An Int as saved by the menu, or a launch argument's string (`-mac.zoom 0`).
+        let raw = UserDefaults.standard.object(forKey: zoomKey)
+        let stored = raw as? Int ?? (raw as? String).flatMap(Int.init) ?? defaultZoom
         return zoomSteps[clampedZoomIndex(stored)]
     }
 
@@ -235,17 +238,44 @@ enum MacWindow {
     @MainActor
     private static func applyZoom(to scene: UIWindowScene) {
         #if targetEnvironment(macCatalyst)
+        for window in scene.windows { zoomContent(of: window) }
+        #endif
+    }
+
+    /// Zooms what is INSIDE a window — its root view — never the window.
+    /// A transformed UIWindow drew and hit-tested fine but AppKit could no
+    /// longer place a menu over it: every dropdown in the app opened nothing
+    /// (measured 2026-10-27: the same click opened the menu at 1.0× and did
+    /// nothing at 1.3×). The window stays the size macOS gave it; its root
+    /// view lays out in that size divided by the zoom and is scaled back up.
+    @MainActor
+    static func zoomContent(of window: UIWindow) {
+        #if targetEnvironment(macCatalyst)
+        if window.transform != .identity { window.transform = .identity }
+        // The app's own window only — its SwiftUI root. Never the system's
+        // text-input window, and never a sheet's window: on the Mac a sheet is
+        // a window of its own whose root is the system's sheet container, and
+        // scaling that stops every menu inside it (`MacSheets.zoomSheet`
+        // zooms the sheet's page instead).
+        guard let controller = window.rootViewController,
+              String(describing: type(of: controller)).hasPrefix("UIHostingController"),
+              let root = controller.viewIfLoaded else { return }
         let zoom = MacLayout.zoom
-        let onScreen = scene.coordinateSpace.bounds.size
-        guard onScreen.width > 0, onScreen.height > 0 else { return }
+        let size = window.bounds.size
+        guard size.width > 0, size.height > 0 else { return }
+        // A scaled root view gets NO safe area from the window (measured: the
+        // window's top is the 52 pt title bar, the root's 0, and neither
+        // `additionalSafeAreaInsets` nor a SwiftUI inset reached the UIKit
+        // navigation bars), so the page slid up under the title bar. The root
+        // is placed BELOW the title bar instead, so there is nothing to avoid.
+        let top = window.safeAreaInsets.top
+        let below = CGSize(width: size.width, height: max(1, size.height - top))
         let transform = CGAffineTransform(scaleX: zoom, y: zoom)
-        let bounds = CGRect(origin: .zero, size: CGSize(width: onScreen.width / zoom, height: onScreen.height / zoom))
-        let center = CGPoint(x: onScreen.width / 2, y: onScreen.height / 2)
-        for window in scene.windows {
-            if window.transform != transform { window.transform = transform }
-            if window.bounds != bounds { window.bounds = bounds }
-            if window.center != center { window.center = center }
-        }
+        let bounds = CGRect(origin: .zero, size: CGSize(width: below.width / zoom, height: below.height / zoom))
+        let center = CGPoint(x: below.width / 2, y: top + below.height / 2)
+        if root.transform != transform { root.transform = transform }
+        if root.bounds != bounds { root.bounds = bounds }
+        if root.center != center { root.center = center }
         #endif
     }
 }
@@ -284,16 +314,25 @@ enum MacSheets {
     /// Marks a sheet for its phone size; true when it is one.
     @MainActor @discardableResult
     static func mark(_ presented: UIViewController, from presenter: UIViewController) -> Bool {
+        // SwiftUI's own sheets only. Everything else UIKit presents — menus,
+        // pickers, share sheets — goes through `present` too, and forcing one
+        // of those into a form sheet broke every dropdown in the app
+        // (2026-10-27).
+        guard String(describing: type(of: presented)).hasPrefix("PresentationHostingController") else {
+            return false
+        }
         switch presented.modalPresentationStyle {
-        case .formSheet, .pageSheet, .automatic: break
+        case .formSheet, .pageSheet: break
         default: return false
         }
         let window = presenter.viewIfLoaded?.window ?? presenter.view.window
-        let height = min(maxHeight, max(480, (window?.bounds.height ?? maxHeight) - 48))
-        presented.modalPresentationStyle = .formSheet
-        // The sheet's window is sized in screen points; the page inside it
-        // is laid out after the zoom, so ask for the zoomed size.
         let zoom = MacLayout.zoom
+        // The window is in screen points and the sheet hangs below its title
+        // bar; the page inside lays out after the zoom.
+        let room = window.map { ($0.bounds.height - $0.safeAreaInsets.top) / zoom - 24 } ?? maxHeight
+        let height = min(maxHeight, max(420, room))
+        presented.modalPresentationStyle = .formSheet
+        // The sheet's window is sized in screen points, so ask for the zoomed size.
         objc_setAssociatedObject(presented, &sizeKey,
                                  NSValue(cgSize: CGSize(width: width * zoom, height: height * zoom)),
                                  .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
@@ -313,12 +352,24 @@ enum MacSheets {
     static func makeClosable(_ presented: UIViewController) {
         presented.addKeyCommand(UIKeyCommand(input: UIKeyCommand.inputEscape, modifierFlags: [],
                                              action: #selector(UIViewController.fv_macCloseSheet)))
-        guard let window = presented.viewIfLoaded?.window, window.transform == .identity else { return }
+        zoomSheet(presented)
+    }
+
+    /// The sheet's own page is zoomed, never its window's root: that root is
+    /// the system's sheet container, and scaling it stopped every menu inside
+    /// the sheet from opening (measured 2026-10-27, the player's ⋯).
+    @MainActor
+    static func zoomSheet(_ presented: UIViewController) {
+        guard let view = presented.viewIfLoaded, let host = view.superview else { return }
         let zoom = MacLayout.zoom
-        let size = window.frame.size
-        window.transform = CGAffineTransform(scaleX: zoom, y: zoom)
-        window.bounds = CGRect(origin: .zero, size: CGSize(width: size.width / zoom, height: size.height / zoom))
-        window.center = CGPoint(x: size.width / 2, y: size.height / 2)
+        let size = host.bounds.size
+        guard size.width > 0, size.height > 0 else { return }
+        let transform = CGAffineTransform(scaleX: zoom, y: zoom)
+        let bounds = CGRect(origin: .zero, size: CGSize(width: size.width / zoom, height: size.height / zoom))
+        let center = CGPoint(x: size.width / 2, y: size.height / 2)
+        if view.transform != transform { view.transform = transform }
+        if view.bounds != bounds { view.bounds = bounds }
+        if view.center != center { view.center = center }
     }
 
     @MainActor
