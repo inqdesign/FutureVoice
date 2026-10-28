@@ -50,6 +50,9 @@ fun IosSwipeActions(
     background: Color,
     modifier: Modifier = Modifier,
     allowsFullSwipe: Boolean = true,
+    /** Icon over its label, as iOS draws a `Label` action on a row tall
+     *  enough for both (a grammar slip); icon only otherwise. */
+    showsLabels: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     if (trailing.isEmpty()) { Box(modifier) { content() }; return }
@@ -79,8 +82,21 @@ fun IosSwipeActions(
                             .clickable { close(); action.onClick() },
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(action.icon, contentDescription = action.label, tint = Color.White,
-                            modifier = Modifier.size(22.dp))
+                        if (showsLabels) {
+                            androidx.compose.foundation.layout.Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp),
+                            ) {
+                                Icon(action.icon, contentDescription = null, tint = Color.White,
+                                    modifier = Modifier.size(20.dp))
+                                androidx.compose.material3.Text(action.label, color = Color.White,
+                                    style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
+                                    maxLines = 1, softWrap = false)
+                            }
+                        } else {
+                            Icon(action.icon, contentDescription = action.label, tint = Color.White,
+                                modifier = Modifier.size(22.dp))
+                        }
                     }
                 }
             }

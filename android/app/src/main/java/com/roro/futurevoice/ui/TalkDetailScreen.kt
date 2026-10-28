@@ -67,6 +67,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material.icons.filled.StopCircle
+import androidx.compose.material.icons.filled.PlayCircleOutline
+import com.roro.futurevoice.talk.Turn
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -341,6 +346,7 @@ private fun TalkDetailPage(
         GrammarReviewSheet(
             axis = sm?.scorecard?.grammar,
             issues = grammar,
+            userTurns = s.turns,
             onDismiss = { showingGrammarReview = false },
             // A capture's fixture talk isn't on disk — nothing to write to.
             onMisheard = if (com.roro.futurevoice.capture.flags.PracticeCaptureFlags.talkDetailSession != null) null
@@ -1133,122 +1139,139 @@ private fun Carryover.Source.icon(): ImageVector = when (this) {
  * literally said, the grammar-only fix, and the point involved. Quotes are
  * hallucination-guarded upstream — all of it appeared in their own turns.
  *
- * A slip can be swiped left and marked Misheard (iOS `ScorecardView`'s
- * swipe action): the turn it was quoted from is excluded from scoring, its
- * slips go, and the grammar score is rescaled ([MisheardExclusion]).
+ * iOS `GrammarReviewView`: a large sheet with an inline title and Done, an
+ * inset-grouped list — the score card, then one card of slips with a
+ * hairline between them, each with a play button for the recording it was
+ * quoted from. A slip swiped left REVEALS Misheard (`allowsFullSwipe:
+ * false`), and a tap on it marks the turn misheard: it is excluded from
+ * scoring, its slips go, and the grammar score is rescaled
+ * ([MisheardExclusion]). A full-swipe-to-dismiss used to stand in for it,
+ * which needed a long fast fling and, starting near the screen edge, was
+ * taken by the system back gesture instead.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GrammarReviewSheet(
     axis: AxisScore?,
     issues: List<GrammarIssue>,
+    userTurns: List<Turn>,
     onDismiss: () -> Unit,
     /** Null where there is no stored talk to write to. */
     onMisheard: ((GrammarIssue) -> Unit)? = null,
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val player = remember { com.roro.futurevoice.audio.Mp3Player(context.cacheDir, source = "grammar_review") }
+    var playingId by remember { mutableStateOf<String?>(null) }
+    var playJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    DisposableEffect(Unit) { onDispose { player.stop() } }
+    /** Same normalization as the upstream guard, so a quote that passed
+     *  verification always finds the turn it came from. */
+    fun norm(s: String) = s.lowercase().split(Regex("[^\\p{L}\\p{N}']+")).filter { it.isNotEmpty() }.joinToString(" ")
+    fun audioFor(issue: GrammarIssue): java.io.File? {
+        val needle = norm(issue.quote).takeIf { it.isNotEmpty() } ?: return null
+        val turn = userTurns.firstOrNull { it.role == TurnRole.USER && norm(it.transcript).contains(needle) }
+            ?: return null
+        return com.roro.futurevoice.data.WeeklyTestEngine.turnAudio(context, turn)
+    }
+    fun togglePlay(issue: GrammarIssue, file: java.io.File) {
+        playJob?.cancel(); player.stop()
+        if (playingId == issue.id) { playingId = null; return }
+        playingId = issue.id
+        playJob = scope.launch {
+            try { player.play(file) } finally { if (playingId == issue.id) playingId = null }
+        }
+    }
+
     ModalBottomSheet(
-        sheetState = com.roro.futurevoice.ui.rememberModalBottomSheetState(skipPartiallyExpanded = true),onDismissRequest = onDismiss) {
-        Column(
-            Modifier.sheetBody()
-                .padding(horizontal = 20.dp).padding(bottom = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(Icons.Filled.Verified, contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary)
-                Text(stringResource(R.string.grammar_review),
-                    style = MaterialTheme.typography.titleLarge)
-                Spacer(Modifier.weight(1f))
-                axis?.let {
-                    Text("${it.score}", style = MaterialTheme.typography.titleLarge,
-                        color = scoreColor(it.score))
-                }
-            }
-            axis?.note?.takeIf { it.isNotBlank() }?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Text(
-                stringResource(R.string.lld_this_session, issues.size,
-                    stringResource(if (issues.size == 1) R.string.slip else R.string.slips)),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            issues.forEach { issue ->
-                val diff = remember(issue.id) { GrammarDiff(issue.quote, issue.correction) }
-                MisheardSwipe(issue, onMisheard) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Icon(Icons.Filled.Close, contentDescription = null,
-                            modifier = Modifier.size(16.dp), tint = Color(0xFFFF3B30))
-                        Text(diff.quote, style = MaterialTheme.typography.bodyMedium,
+        sheetState = com.roro.futurevoice.ui.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        onDismissRequest = onDismiss,
+        containerColor = AppSurfaces.ground,
+        dragHandle = null,
+    ) {
+        PageSheetHeader(stringResource(R.string.grammar_review), onDone = onDismiss)
+        Column(Modifier.sheetBody().padding(horizontal = 16.dp).padding(bottom = 28.dp)) {
+            FormSection(header = null,
+                footer = stringResource(
+                    R.string.every_slip_below_is_quoted_from_what_you_actually_said_this_8d3781)) {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 11.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Filled.Verified, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                        Text(stringResource(R.string.grammar), style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold)
+                        Spacer(Modifier.weight(1f))
+                        axis?.let {
+                            Text("${it.score}", style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                    axis?.note?.takeIf { it.isNotBlank() }?.let {
+                        Text(it, style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Icon(Icons.Filled.Check, contentDescription = null,
-                            modifier = Modifier.size(16.dp), tint = Books.mastery)
-                        Text(diff.correction, style = MaterialTheme.typography.bodyLarge)
-                    }
-                    if (issue.note.isNotBlank()) {
-                        Text(issue.note, style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(start = 24.dp))
-                    }
-                }
                 }
             }
-            if (onMisheard != null && issues.isNotEmpty()) {
-                Text(stringResource(
-                    R.string.not_what_you_said_swipe_a_slip_left_and_mark_it_misheard_the_c3f9cf),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (issues.isNotEmpty()) FormSection(
+                header = stringResource(R.string.lld_this_session, issues.size,
+                    stringResource(if (issues.size == 1) R.string.slip else R.string.slips)),
+                footer = if (onMisheard != null) stringResource(
+                    R.string.not_what_you_said_swipe_a_slip_left_and_mark_it_misheard_the_c3f9cf) else null,
+            ) {
+                issues.forEachIndexed { i, issue ->
+                    if (i > 0) FormDivider()
+                    val diff = remember(issue.id) { GrammarDiff(issue.quote, issue.correction) }
+                    val audio = remember(issue.id, userTurns) { audioFor(issue) }
+                    val actions = if (onMisheard == null) emptyList() else listOf(
+                        IosSwipeAction(Icons.Filled.MicOff, stringResource(R.string.misheard),
+                            Color(0xFFFF3B30)) { onMisheard(issue) })
+                    androidx.compose.runtime.key(issue.id) {
+                        IosSwipeActions(actions, background = AppSurfaces.card,
+                            allowsFullSwipe = false, showsLabels = true) {
+                            GrammarSlipRow(issue, diff, playing = playingId == issue.id,
+                                onPlay = audio?.let { f -> { togglePlay(issue, f) } })
+                        }
+                    }
+                }
             }
-            Text(stringResource(
-                R.string.every_slip_below_is_quoted_from_what_you_actually_said_this_8d3781),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
-/** iOS `.swipeActions(edge: .trailing)` on a slip: swiped left past the
- *  threshold it is marked Misheard; the row is then gone from the store's
- *  copy, so nothing here snaps it back. */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MisheardSwipe(
+private fun GrammarSlipRow(
     issue: GrammarIssue,
-    onMisheard: ((GrammarIssue) -> Unit)?,
-    content: @Composable () -> Unit,
+    diff: GrammarDiff,
+    playing: Boolean,
+    onPlay: (() -> Unit)?,
 ) {
-    if (onMisheard == null) { content(); return }
-    val state = androidx.compose.material3.rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            if (value == androidx.compose.material3.SwipeToDismissBoxValue.EndToStart) onMisheard(issue)
-            false   // the store's reload removes the row; a failed write leaves it
-        },
-    )
-    androidx.compose.material3.SwipeToDismissBox(
-        state = state,
-        enableDismissFromStartToEnd = false,
-        backgroundContent = {
-            if (state.dismissDirection != androidx.compose.material3.SwipeToDismissBoxValue.EndToStart)
-                return@SwipeToDismissBox
-            Row(
-                Modifier.fillMaxSize().background(Color(0xFFFF3B30), RoundedCornerShape(8.dp))
-                    .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
-            ) {
-                Icon(Icons.Filled.MicOff, contentDescription = null, tint = Color.White,
-                    modifier = Modifier.size(18.dp))
-                Text(stringResource(R.string.misheard), color = Color.White,
-                    style = MaterialTheme.typography.labelLarge)
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(Icons.Filled.Close, contentDescription = null,
+                modifier = Modifier.padding(top = 3.dp).size(14.dp), tint = Color(0xFFFF3B30))
+            Text(diff.quote, style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+            onPlay?.let { play ->
+                Icon(if (playing) Icons.Filled.StopCircle else Icons.Filled.PlayCircleOutline,
+                    contentDescription = stringResource(
+                        if (playing) R.string.stop_playback else R.string.play_what_you_said),
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(26.dp).clip(CircleShape).clickable(onClick = play))
             }
-        },
-    ) {
-        Box(Modifier.fillMaxWidth()
-            .background(androidx.compose.material3.BottomSheetDefaults.ContainerColor)) { content() }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(Icons.Filled.Check, contentDescription = null,
+                modifier = Modifier.padding(top = 3.dp).size(14.dp), tint = Books.mastery)
+            Text(diff.correction, style = MaterialTheme.typography.bodyLarge)
+        }
+        if (issue.note.isNotBlank()) {
+            Text(issue.note, style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 22.dp))
+        }
     }
 }
 
