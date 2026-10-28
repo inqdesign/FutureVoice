@@ -73,6 +73,10 @@ enum TrialReportDemo {
         var report = TrialReport(recap: recap, targetLanguage: "en", builtAt: now)
         report.testId = test.id
         report.level = CEFRLevel.b1.rawValue
+        // Seven minutes of their own voice; `-trialtwo 1` adds a second
+        // language, to see the level card name it.
+        report.spoken = [.init(language: "en", seconds: 7 * 60)]
+            + (UserDefaults.standard.bool(forKey: "trialtwo") ? [.init(language: "es", seconds: 4 * 60)] : [])
         report.levelRationale = "말하는 속도가 분당 98단어로 B1 범위이고, 100단어당 실수가 4개 정도로 안정적이에요. 다만 문장 대부분이 한 절이라 복잡한 구조는 아직 드물어요. 업무 이야기를 끝까지 설명할 수 있어서 B1으로 봤어요."
         TrialReportStore.save(report)
 

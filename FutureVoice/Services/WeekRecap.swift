@@ -184,7 +184,12 @@ enum WeekRecapBuilder {
     /// `wholeWindow`: count every day from `start` to `end` instead of the
     /// week's seven — the trial report's window (`TrialReport`) can run
     /// longer than a week, and its counts must cover all of it.
+    ///
+    /// `language`: only that language's talks and metered minutes — the trial
+    /// report of a learner who spoke two languages reads one of them, and its
+    /// minutes must be the minutes its level and coach are read from.
     static func build(start: Date, end: Date, wholeWindow: Bool = false,
+                      language: String? = nil,
                       calendar: Calendar = .current) -> WeekRecap {
         var dayCount = 7
         if wholeWindow {
@@ -204,7 +209,8 @@ enum WeekRecapBuilder {
             var seconds = 0
             var day = calendar.startOfDay(for: a)
             while day < b {
-                seconds += TalkTimeLog.seconds(on: day)
+                seconds += language.map { TalkTimeLog.seconds(on: day, language: $0) }
+                    ?? TalkTimeLog.seconds(on: day)
                 guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { break }
                 day = next
             }
@@ -214,6 +220,7 @@ enum WeekRecapBuilder {
         // Talks the learner actually spoke in, dated by their last line.
         let sessions = SessionStore.shared.loadAcrossLanguages()
             .filter { inWeek($0.turns.last(where: { $0.role == .user })?.timestamp) }
+            .filter { session in language.map { LanguageCatalog.sameLanguage(session.targetLanguage, $0) } ?? true }
             .sorted { ($0.turns.first?.timestamp ?? .distantPast) < ($1.turns.first?.timestamp ?? .distantPast) }
         let talkLines = sessions.map(talkLine)
 

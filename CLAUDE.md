@@ -2081,6 +2081,16 @@ routine to keep going." `TrialReport.swift`, and `WeekRecapSheet(trial:)`.
   going with this routine" applies the purposes' routine (unless setup
   already did) and opens `PaywallView(source: "trial_report")`; closing it
   marks the report finished.
+- **It says what the level was read from, and reads ONE language**
+  (2026-10-28). Twenty minutes of call is a few minutes of the learner's own
+  voice, and 22 of 116 talkers (09-26 to 10-28) split it across languages.
+  `TrialReport.spoken` holds their own speaking time per language (evidence
+  turns' `durationMs`); the level card says "from N min of you speaking", a
+  "first read" under `thinSpeechSeconds` (5 min), and names every other
+  language spoken. With more than one language the recap is built with
+  `language:` (talks and metered minutes of the report's language only), so
+  the cover's minutes are the minutes the level and coach read. Capture:
+  `-trialdemo 1 -trialtwo 1 -trialpage 10`.
 - **Who**: `subscriptionStatus == "inactive"` (never subscribed — a lapsed
   subscriber's empty pool is not a trial ending), not `unlimited`,
   `needsSubscription`, a spoken talk on file. Raised by `ConversationView.endAndClose`

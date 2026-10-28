@@ -9255,6 +9255,52 @@
         }
       }
     },
+    "Read from %lld min of you speaking. It moves as you talk, and Progress keeps track." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eingeschätzt aus %lld Min., in denen du gesprochen hast. Es ändert sich, während du sprichst. Unter Fortschritt siehst du es."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leído a partir de %lld min hablando tú. Cambia a medida que hablas y lo verás en Progreso."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estimé sur %lld min où tu as parlé. Il évolue à mesure que tu parles, tu le suis dans Progression."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "あなたが話した%lld分から判定しました。話すほど変わり、成長タブで見られます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "직접 말한 %lld분으로 봤어요. 말할수록 달라지고, 성장 탭에서 계속 볼 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "根据你亲口说的 %lld 分钟判断。说得越多，它就会跟着变，可以在「成长」里查看。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "根據你親口說的 %lld 分鐘判斷。說得越多，它就會跟著變，可以在「成長」裡查看。"
+          }
+        }
+      }
+    },
     "Reading your level…" : {
       "localizations" : {
         "de" : {
@@ -23913,6 +23959,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "下週四的最後一輪面試，用英文，對方是寫那份徵才公告的用人主管。"
+          }
+        }
+      }
+    },
+    "A first read, from %lld min of you speaking. It gets sharper as you talk." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine erste Einschätzung aus %lld Min., in denen du gesprochen hast. Sie wird genauer, je mehr du sprichst."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Una primera lectura, a partir de %lld min hablando tú. Se afina a medida que hablas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une première estimation, sur %lld min où tu as parlé. Elle s’affine à mesure que tu parles."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "あなたが話した%lld分から出した、最初の判定です。話すほど正確になります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "직접 말한 %lld분으로 본 첫 판정이에요. 말할수록 더 정확해져요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这是根据你亲口说的 %lld 分钟做的初步判断，说得越多就越准。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這是根據你親口說的 %lld 分鐘做的初步判斷，說得越多就越準。"
           }
         }
       }
@@ -148803,6 +148895,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "我 · %lld"
+          }
+        }
+      }
+    },
+    "You also spoke %@ (%lld min). This report reads one language at a time." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du hast auch %1$@ gesprochen (%2$lld Min.). Dieser Bericht liest immer nur eine Sprache."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You also spoke %1$@ (%2$lld min). This report reads one language at a time."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "También hablaste %1$@ (%2$lld min). Este informe lee un idioma a la vez."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu as aussi parlé %1$@ (%2$lld min). Ce bilan lit une langue à la fois."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@も%2$lld分話しました。このレポートは一度にひとつの言語だけを見ます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@도 %2$lld분 말했어요. 이 리포트는 한 번에 한 언어만 봐요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你也说了 %2$lld 分钟的%1$@。这份报告一次只看一种语言。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你也說了 %2$lld 分鐘的%1$@。這份報告一次只看一種語言。"
           }
         }
       }

@@ -1016,9 +1016,7 @@ struct WeekRecapSheet: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
-                Text("It moves as you talk. Progress keeps track.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                speechBasis
             } else if levelSettled {
                 Text("A few more talks and your level is ready.")
                     .font(.title3)
@@ -1032,6 +1030,32 @@ struct WeekRecapSheet: View {
                 .padding(.vertical, 20)
             }
         }
+    }
+
+    /// What the level was read from, said plainly: twenty minutes of call
+    /// is a few minutes of the learner's own voice, and a confident letter
+    /// from four of them is the letter Progress contradicts later. A second
+    /// language spoken in the window is named, so its minutes aren't silently
+    /// missing from a report about the other one.
+    @ViewBuilder private var speechBasis: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let seconds = trial?.ownSpeechSeconds, seconds > 0 {
+                let minutes = max(1, seconds / 60)
+                if seconds < TrialReport.thinSpeechSeconds {
+                    Text("A first read, from \(minutes) min of you speaking. It gets sharper as you talk.")
+                } else {
+                    Text("Read from \(minutes) min of you speaking. It moves as you talk, and Progress keeps track.")
+                }
+            } else {
+                Text("It moves as you talk. Progress keeps track.")
+            }
+            ForEach(trial?.otherLanguages ?? [], id: \.language) { other in
+                Text("You also spoke \(LanguageCatalog.name(other.language, in: appState.nativeLanguage)) (\(max(1, other.seconds / 60)) min). This report reads one language at a time.")
+            }
+        }
+        .font(.footnote)
+        .foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     /// Same lines as Progress's level page.
