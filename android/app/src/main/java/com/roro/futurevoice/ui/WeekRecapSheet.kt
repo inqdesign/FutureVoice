@@ -1821,7 +1821,14 @@ fun TrialReportHost(ready: Boolean, inCall: Boolean, blocked: Boolean, level: Ce
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val pending by com.roro.futurevoice.data.TrialReportInbox.pending.collectAsStateWithLifecycle()
+    val preview by com.roro.futurevoice.data.TrialReportInbox.preview.collectAsStateWithLifecycle()
     var showing by remember { mutableStateOf<TrialReport?>(null) }
+    // Me → Developer's preview: past every gate, over whatever is up.
+    LaunchedEffect(preview) {
+        val report = preview ?: return@LaunchedEffect
+        com.roro.futurevoice.data.TrialReportInbox.preview.value = null
+        showing = report
+    }
     var resumes by remember { mutableStateOf(0) }
     val stillBlocked by androidx.compose.runtime.rememberUpdatedState(blocked)
     /** Nothing else is up — another sheet, a live call (a daily call or one

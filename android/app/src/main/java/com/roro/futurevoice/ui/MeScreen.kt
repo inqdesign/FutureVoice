@@ -619,6 +619,20 @@ fun MeScreen(
                                 }
                             })
                         GroupedRowDivider()
+                        // The free-minutes report is raised once, when a free
+                        // account's twenty minutes run out — never on this
+                        // account. This builds it from the last 7 days here.
+                        MeRow(Icons.Filled.NotificationsActive, "Preview free-minutes report",
+                            subtitle = "Your last 7 days, as a learner whose free time ran out",
+                            kind = MeRowKind.ACTION,
+                            onClick = {
+                                scope.launch {
+                                    com.roro.futurevoice.data.TrialReportInbox.preview.value =
+                                        com.roro.futurevoice.data.TrialReportStore.preview(context,
+                                            com.roro.futurevoice.data.LanguageScope.active(context))
+                                }
+                            })
+                        GroupedRowDivider()
                         MeRow(Icons.Filled.NotificationsActive, "Slide up Your week again",
                             subtitle = "Next time the app opens, as if the week just turned",
                             kind = MeRowKind.ACTION,

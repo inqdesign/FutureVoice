@@ -137,6 +137,26 @@ object TrialReportStore {
         load(c, targetLanguage)?.let { return it }
         val sessions = spokenSessions(c)
         val first = sessions.map { s -> s.turns.firstOrNull()?.timestamp ?: s.startedAt }.minOrNull() ?: now
+        return build(c, first, sessions, targetLanguage, now)
+    }
+
+    /** Me → Developer (debug builds): the report over the last [days] of this
+     *  phone's own talks, built fresh every time, past every gate — so it can
+     *  be LOOKED at before it reaches a learner (iOS `preview`). The
+     *  end-of-report feedback ask is made showable again. */
+    suspend fun preview(c: Context, targetLanguage: String, days: Int = 7,
+                        now: Long = System.currentTimeMillis()): TrialReport {
+        withContext(Dispatchers.IO) { file(c, targetLanguage).delete() }
+        com.roro.futurevoice.ui.FeedbackPrompt.reset(c, com.roro.futurevoice.ui.FeedbackContext.TRIAL_REPORT)
+        val start = now - days * 86_400_000L
+        val sessions = spokenSessions(c).filter { s ->
+            (s.turns.lastOrNull { it.role == TurnRole.USER }?.timestamp ?: s.startedAt) >= start
+        }
+        return build(c, start, sessions, targetLanguage, now)
+    }
+
+    private suspend fun build(c: Context, first: Long, sessions: List<Session>,
+                              targetLanguage: String, now: Long): TrialReport {
         val zone = ZoneId.systemDefault()
         val start = Instant.ofEpochMilli(first).atZone(zone).toLocalDate().atStartOfDay(zone).toInstant().toEpochMilli()
         val spoken = speech(sessions)
@@ -192,6 +212,8 @@ object TrialReportStore {
  *  it does for the plans). */
 object TrialReportInbox {
     val pending = MutableStateFlow(false)
+    /** Me → Developer's preview ([TrialReportStore.preview]). */
+    val preview = MutableStateFlow<TrialReport?>(null)
 }
 
 /**

@@ -113,6 +113,10 @@ object FeedbackPrompt {
     fun markShown(context: Context, c: FeedbackContext) =
         context.getSharedPreferences("futurevoice", 0).edit().putBoolean(key(c), true).apply()
 
+    /** Developer previews only: ask again as if never asked. */
+    fun reset(context: Context, c: FeedbackContext) =
+        context.getSharedPreferences("futurevoice", 0).edit().remove(key(c)).apply()
+
     /**
      * The one moment worth asking a learner what they think: they had a call,
      * they came BACK, and they have just finished another real one.
