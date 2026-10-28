@@ -74,6 +74,23 @@ struct TutorLessonStrip: View {
                 Text(explain("Say it all in your own words, in one go."))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+                // What it should cover, as the parts' short names only —
+                // never their example lines (founder, 2026-10-28: three or
+                // four parts are hard to hold in your head with nothing on
+                // screen).
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(Array(lesson.challenges.enumerated()), id: \.element.id) { i, c in
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Image(systemName: "\(i + 1).circle")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                            Text(c.goal)
+                                .font(.footnote)
+                            Spacer(minLength: 0)
+                        }
+                        .accessibilityElement(children: .combine)
+                    }
+                }
             } else if let lesson, expanded {
                 if lesson.isFinished {
                     Text(explain("Passed. You can say it now."))

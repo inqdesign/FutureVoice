@@ -607,8 +607,8 @@ enum ConversationEngine {
                 .map { "  \($0.offset + 1). \($0.element.task)" }.joined(separator: "\n")
             lessonPart = """
             TODAY'S LESSON: "\(lesson.titleTarget)" — every challenge is \
-            checked off. Now the FINAL CHECK. The app has cleared their \
-            screen: no checklist, no hints. What they practiced (for you only \
+            checked off. Now the FINAL CHECK. Their screen shows only the \
+            parts' short names (no example lines, no hints). What they practiced (for you only \
             — never read it out, never list it):
             \(parts)
             - If you haven't asked yet: in one short line, ask them to say it \
