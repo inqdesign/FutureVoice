@@ -80,6 +80,14 @@ final class TutorBot: ObservableObject {
     @Published private(set) var bubbleSince = Date.distantPast
     @Published var chatOpen = false
     @Published var quizOpen = false
+    /// Today's picks beyond the routine (`TutorPicks`), and what they need.
+    @Published private(set) var picks: [TutorPick] = []
+    @Published private(set) var balance = TutorBalance()
+    @Published private(set) var episodes: [NewsShowEpisode] = []
+    /// A reading opened from a pick, shown by whichever tutor surface is up.
+    @Published var reading: TutorReading?
+    private var picksLoadedAt: Date?
+    private var picksLoading = false
 
     static let maxBubbles = 3
     /// Quiet after the note closes — the note just said everything.
@@ -190,6 +198,7 @@ final class TutorBot: ObservableObject {
     /// Re-reads the day and decides whether there is anything to say.
     /// `visible` is the Talk home on screen with nothing over it.
     func refresh(appState: AppState, visible: Bool, now: Date = Date()) {
+        loadPicks(appState: appState, now: now)
         let fresh = Self.makeToday(appState: appState, now: now)
         let dayKey = StudyPlan.dayKey(now)
         if defaults.string(forKey: Key.saidDay) != dayKey {
@@ -250,6 +259,56 @@ final class TutorBot: ObservableObject {
         defaults.set(said, forKey: Key.said)
         Analytics.capture("tutor_bot_bubble", ["kind": b.id.components(separatedBy: "-").first ?? b.id])
         withAnimation(.easeOut(duration: 0.35)) { bubble = b }
+    }
+
+    // MARK: - Picks
+
+    /// Re-reads the picks at most every 10 minutes, behind the plan.
+    func loadPicks(appState: AppState, now: Date = Date(), force: Bool = false) {
+        guard !picksLoading else { return }
+        if !force, let at = picksLoadedAt, now.timeIntervalSince(at) < 600 { return }
+        picksLoading = true
+        Task {
+            let loaded = await TutorPicks.load(appState: appState, now: now)
+            picks = loaded.picks
+            episodes = loaded.episodes
+            balance = loaded.balance
+            picksLoadedAt = Date()
+            picksLoading = false
+        }
+    }
+
+    /// A pick's button.
+    func start(_ pick: TutorPick, appState: AppState) {
+        Analytics.capture("tutor_bot_pick", ["kind": pick.kind.rawValue])
+        switch pick.action {
+        case .listen(let id):
+            guard let ep = episodes.first(where: { $0.id == id }) else { return }
+            dismissBubble()
+            if noteShown { closeNote() }
+            chatOpen = false
+            Task {
+                await NewsShow.prepare(ep)
+                PlaylistPlayer.shared.play(ep.lines, title: explain("nawana Podcast"))
+                DailyCallInbox.shared.pendingListen = true
+            }
+            picks.removeAll { $0.id == pick.id }
+        case .readScript(let id):
+            guard let ep = episodes.first(where: { $0.id == id }) else { return }
+            ActivityEventLog.shared.record(.read)
+            reading = TutorReading(script: ep.script, study: ep.study(native: appState.nativeLanguage))
+        case .readNews(let story):
+            reading = TutorReading(story: story)
+        case .challenge(let id):
+            if let rank = SpeechChallenges.shared.standings[id]?.myRank {
+                TutorPicks.markRankSeen(id, rank: rank)
+            }
+            dismissBubble()
+            if noteShown { closeNote() }
+            chatOpen = false
+            picks.removeAll { $0.id == pick.id }
+            DailyCallInbox.shared.pendingURL = URL(string: "futurevoice://speech?id=\(id.uuidString)")
+        }
     }
 
     // MARK: - Actions
@@ -471,4 +530,13 @@ final class TutorChat: ObservableObject {
         }
         return lines.joined(separator: "\n")
     }
+}
+
+/// A reading opened from a pick: an episode's script (ready), or a news
+/// story whose article is written when it is opened.
+struct TutorReading: Identifiable {
+    let id = UUID()
+    var script: SpeechScript?
+    var study: ScriptStudy?
+    var story: SuggestedTopic?
 }

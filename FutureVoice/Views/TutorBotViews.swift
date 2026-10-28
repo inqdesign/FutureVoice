@@ -66,6 +66,11 @@ struct TutorBotLayer: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+        // The chat shows its own; this one is for a reading opened from the note.
+        .sheet(item: Binding(get: { bot.chatOpen ? nil : bot.reading },
+                             set: { bot.reading = $0 })) { r in
+            TutorReadingSheet(reading: r).environmentObject(appState)
+        }
     }
 }
 
@@ -131,13 +136,16 @@ private struct TutorNoteCard: View {
                 face
                 VStack(alignment: .leading, spacing: 4) {
                     Text(TutorCopy.greeting()).font(.headline)
-                    Text(TutorCopy.summary(t)).font(.subheadline)
+                    Text(TutorCopy.headline(bot) ?? TutorCopy.summary(t)).font(.subheadline)
                         .fixedSize(horizontal: false, vertical: true)
                     if let why = TutorCopy.why(t) {
                         Text(why).font(.footnote).foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
+            }
+            if !bot.picks.isEmpty {
+                TutorPickRows(picks: Array(bot.picks.prefix(3)), balance: bot.balance)
             }
             if !t.items.isEmpty {
                 TutorPlanRows(today: t)
@@ -273,11 +281,18 @@ struct TutorChatView: View {
                     VStack(alignment: .leading, spacing: 14) {
                         DialogueLine(speaker: .other, name: tutorName) {
                             VStack(alignment: .leading, spacing: 6) {
-                                Text(TutorCopy.summary(bot.today))
+                                Text(TutorCopy.headline(bot) ?? TutorCopy.summary(bot.today))
                                 if let why = TutorCopy.why(bot.today) {
                                     Text(why).font(.subheadline).foregroundStyle(.secondary)
                                 }
+                                if !bot.picks.isEmpty {
+                                    TutorPickRows(picks: bot.picks, balance: bot.balance).padding(.top, 4)
+                                }
                                 if !bot.today.items.isEmpty {
+                                    if !bot.picks.isEmpty {
+                                        Text(TutorCopy.summary(bot.today))
+                                            .font(.footnote).foregroundStyle(.secondary).padding(.top, 6)
+                                    }
                                     TutorPlanRows(today: bot.today).padding(.top, 4)
                                 }
                             }
@@ -318,6 +333,9 @@ struct TutorChatView: View {
                 }
             }
             .safeAreaInset(edge: .bottom) { composer }
+        }
+        .sheet(item: $bot.reading) { r in
+            TutorReadingSheet(reading: r).environmentObject(appState)
         }
         .presentationDragIndicator(.visible)
         .onAppear {
@@ -428,6 +446,13 @@ enum TutorCopy {
         }
     }
 
+    /// The first pick's line, when there is one.
+    @MainActor
+    static func headline(_ bot: TutorBot) -> String? {
+        let day = Calendar.current.ordinality(of: .day, in: .era, for: Date()) ?? 0
+        return TutorPicks.headline(bot.picks.first, balance: bot.balance, day: day)
+    }
+
     static func summary(_ t: TutorBot.Today) -> String {
         if t.restDay {
             return t.dueCards > 0
@@ -472,6 +497,109 @@ enum TutorCopy {
         case .listen: return explain("Listen")
         case .speech: return explain("Open Speech")
         case .test: return explain("Take the test")
+        }
+    }
+}
+
+// MARK: - Picks
+
+/// Today's picks beyond the routine, each with why it is here now, under
+/// the week's speaking / listening / reading days.
+struct TutorPickRows: View {
+    @EnvironmentObject private var appState: AppState
+    let picks: [TutorPick]
+    let balance: TutorBalance
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(explain("This week · speaking \(balance.speaking) d · listening \(balance.listening) d · reading \(balance.reading) d"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.bottom, 4)
+            ForEach(Array(picks.enumerated()), id: \.element.id) { i, pick in
+                if i > 0 { Divider().padding(.leading, 40) }
+                HStack(alignment: .center, spacing: 12) {
+                    Image(systemName: pick.symbol)
+                        .font(.footnote)
+                        .foregroundStyle(color(pick.kind))
+                        .frame(width: 28)
+                    VStack(alignment: .leading, spacing: 2) {
+                        if let tag = pick.tag {
+                            Text(tag).font(.caption2.weight(.semibold)).foregroundStyle(color(pick.kind))
+                        }
+                        Text(pick.title).font(.subheadline).lineLimit(2)
+                        Text(pick.why).font(.caption).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 8)
+                    Button(pick.buttonTitle) { TutorBot.shared.start(pick, appState: appState) }
+                        .buttonStyle(SoftChipStyle(selected: true))
+                }
+                .padding(.vertical, 8)
+            }
+        }
+    }
+
+    private func color(_ kind: TutorPick.Kind) -> Color {
+        switch kind {
+        case .rankDrop: return .red
+        case .newEpisode, .listen: return .cyan
+        case .firstSpeech: return .purple
+        case .readScript, .readNews: return .brown
+        }
+    }
+}
+
+/// A reading opened from a pick: the episode's script at once, or the news
+/// article, written the first time anyone opens it.
+struct TutorReadingSheet: View {
+    @EnvironmentObject private var appState: AppState
+    @Environment(\.dismiss) private var dismiss
+    let reading: TutorReading
+    @State private var script: SpeechScript?
+    @State private var failed = false
+
+    var body: some View {
+        Group {
+            if let s = script ?? reading.script {
+                SpeechScriptSheet(script: s, study: reading.study, shipped: true)
+            } else {
+                NavigationStack {
+                    Group {
+                        if failed {
+                            ContentUnavailableView {
+                                Label("Couldn't open the article", systemImage: "newspaper")
+                            } description: {
+                                Text("Check your connection and try again.")
+                            } actions: {
+                                Button("Try again") { failed = false; Task { await load() } }
+                            }
+                        } else {
+                            ProgressView { Text("Writing the article for your level…") }
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button { dismiss() } label: { Image(systemName: "xmark") }
+                                .accessibilityLabel(Text("Close"))
+                        }
+                    }
+                }
+            }
+        }
+        .task { await load() }
+    }
+
+    private func load() async {
+        guard script == nil, reading.script == nil, let story = reading.story else { return }
+        do {
+            script = try await NewsArticle.load(story, language: appState.targetLanguage,
+                                                level: appState.proficiency)
+            ActivityEventLog.shared.record(.read)
+            Analytics.capture("news_article_opened", ["category": story.category ?? ""])
+        } catch {
+            failed = true
         }
     }
 }

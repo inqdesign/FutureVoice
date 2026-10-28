@@ -18,6 +18,9 @@ final class ActivityEventLog: @unchecked Sendable {
         /// A podcast episode or a watched situation heard in the player —
         /// one per piece per sitting (`PlaylistPlayer`).
         case listen
+        /// An episode's script or a news article opened to read
+        /// (`TutorPicks`, the podcast's Read). One per opening.
+        case read
     }
 
     struct Event: Codable, Equatable {

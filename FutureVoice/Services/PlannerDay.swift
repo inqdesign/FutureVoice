@@ -65,7 +65,7 @@ enum PlannerDay {
             Actual(kind: .talk, start: $0.start, end: max($0.end, $0.start.addingTimeInterval(minimumSpan)),
                    title: $0.title, sessionId: $0.id, count: 1)
         }
-        func group(_ kind: ActivityEventLog.Kind) -> Actual.Kind {
+        func group(_ kind: ActivityEventLog.Kind) -> Actual.Kind? {
             switch kind {
             // Every kind of review is one sitting of review (2026-10-03);
             // shadowing is its own again since it has its own block
@@ -76,10 +76,12 @@ enum PlannerDay {
             case .sayItAgain: return .sayItAgain
             case .speech: return .speech
             case .listen: return .listen
+            // Reading has no routine block yet.
+            case .read: return nil
             }
         }
         var byGroup: [Actual.Kind: [Date]] = [:]
-        for e in events { byGroup[group(e.kind), default: []].append(e.at) }
+        for e in events { if let g = group(e.kind) { byGroup[g, default: []].append(e.at) } }
         for (kind, dates) in byGroup {
             var current: (start: Date, last: Date, count: Int)?
             for d in dates.sorted() {

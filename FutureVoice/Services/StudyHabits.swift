@@ -188,13 +188,15 @@ extension StudyHabits {
             }
         }
         for e in ActivityEventLog.shared.events(from: start, to: end) {
-            let activity: Activity = switch e.kind {
-            case .drill, .word, .expression: .review
-            case .shadow: .shadow
-            case .sayItAgain: .sayItAgain
-            case .listen: .listen
-            case .speech: .speech
-            case .scene: .scene
+            let activity: Activity
+            switch e.kind {
+            case .drill, .word, .expression: activity = .review
+            case .shadow: activity = .shadow
+            case .sayItAgain: activity = .sayItAgain
+            case .listen: activity = .listen
+            case .speech: activity = .speech
+            case .scene: activity = .scene
+            case .read: continue    // not a habit the report reads yet
             }
             sittings.append(Sitting(activity: activity, at: e.at))
         }

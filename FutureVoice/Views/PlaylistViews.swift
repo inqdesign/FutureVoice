@@ -305,6 +305,7 @@ private struct PlayerLibrary: View {
                               study: episode.study(native: appState.nativeLanguage),
                               shipped: true)
                 .environmentObject(appState)
+                .onAppear { ActivityEventLog.shared.record(.read) }
         }
         .sheet(item: $openBook) { ref in
             NavigationStack {

@@ -1376,6 +1376,16 @@
         }
       }
     },
+    "A new episode is out. Start with listening today." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "새 에피소드가 나왔어요. 오늘은 듣기부터 해요."
+          }
+        }
+      }
+    },
     "A new scene is paid for out of the same minutes. Watching it again is free." : {
       "localizations" : {
         "de" : {
@@ -4074,6 +4084,16 @@
         }
       }
     },
+    "First time" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "처음"
+          }
+        }
+      }
+    },
     "Fluent self's voice" : {
       "localizations" : {
         "de" : {
@@ -4300,6 +4320,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在準備小測驗…"
+          }
+        }
+      }
+    },
+    "Give your ears a turn today · %lld min" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘은 귀도 써 봐요 · %lld분"
           }
         }
       }
@@ -26174,6 +26204,16 @@
         }
       }
     },
+    "A short article, made for your level." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 레벨에 맞춘 짧은 기사예요."
+          }
+        }
+      }
+    },
     "A short call now and then" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -38893,6 +38933,16 @@
         }
       }
     },
+    "Check your connection and try again." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "연결을 확인하고 다시 해 보세요."
+          }
+        }
+      }
+    },
     "Checking in at a hotel" : {
       "localizations" : {
         "ko" : {
@@ -42764,6 +42814,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "無法開啟這個檔案。"
+          }
+        }
+      }
+    },
+    "Couldn't open the article" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "기사를 열지 못했어요"
           }
         }
       }
@@ -56062,6 +56122,16 @@
         }
       }
     },
+    "From the news." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 뉴스에서 골랐어요."
+          }
+        }
+      }
+    },
     "From your talks" : {
       "localizations" : {
         "de" : {
@@ -59542,6 +59612,16 @@
         }
       }
     },
+    "Fresh episode, still unheard · %lld min" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "갓 나온 에피소드, 아직 안 들었어요 · %lld분"
+          }
+        }
+      }
+    },
     "Friend" : {
       "localizations" : {
         "de" : {
@@ -60044,6 +60124,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "流利的自己說過的話"
+          }
+        }
+      }
+    },
+    "From your interest \"%@\"." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "관심 분야 ‘%@’에서 골랐어요."
           }
         }
       }
@@ -84589,6 +84679,16 @@
         }
       }
     },
+    "New episode" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "새 에피소드"
+          }
+        }
+      }
+    },
     "New expressions from the call" : {
       "localizations" : {
         "de" : {
@@ -84953,6 +85053,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "新專案剛開始"
+          }
+        }
+      }
+    },
+    "New records pushed you from #%lld to #%lld." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "New records pushed you from #%1$lld to #%2$lld."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "새 기록이 나와서 %1$lld위에서 %2$lld위로 밀렸어요."
           }
         }
       }
@@ -87195,6 +87311,16 @@
         }
       }
     },
+    "No reading yet this week. Pick one to read." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이번 주엔 아직 읽은 게 없어요. 하나 골라 읽어 봐요."
+          }
+        }
+      }
+    },
     "No saved lines" : {
       "localizations" : {
         "de" : {
@@ -88528,6 +88654,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "不是我，重新錄音"
+          }
+        }
+      }
+    },
+    "Not much listening this week. One episode today." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이번 주엔 들은 게 별로 없어요. 오늘 한 편 들어 봐요."
           }
         }
       }
@@ -93964,6 +94100,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "我們的寵物"
+          }
+        }
+      }
+    },
+    "Out today and not heard yet · %lld min" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 나왔고 아직 안 들었어요 · %lld분"
           }
         }
       }
@@ -101039,6 +101185,16 @@
         }
       }
     },
+    "Rank" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "순위"
+          }
+        }
+      }
+    },
     "Rather just fill in a form?" : {
       "localizations" : {
         "de" : {
@@ -101501,6 +101657,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "뉴스에 반응하기"
+          }
+        }
+      }
+    },
+    "Read" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "읽기"
           }
         }
       }
@@ -102149,6 +102315,16 @@
         }
       }
     },
+    "Read the script of the latest episode." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "최신 에피소드 대본을 읽어 봐요."
+          }
+        }
+      }
+    },
     "Read the script out loud, like a presenter." : {
       "localizations" : {
         "de" : {
@@ -102329,6 +102505,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "選順口的那一段唸就好。我們要的是你的聲音，不是朗讀能力。"
+          }
+        }
+      }
+    },
+    "Reading" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "읽기"
           }
         }
       }
@@ -115323,6 +115509,16 @@
         }
       }
     },
+    "Someone beat your score. Want your place back?" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "누가 내 점수를 넘었어요. 자리 되찾으러 갈까요?"
+          }
+        }
+      }
+    },
     "Someone joined the Core — %lld seats taken." : {
       "localizations" : {
         "de" : {
@@ -115477,6 +115673,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "메뉴가 다 떨어졌을 때"
+          }
+        }
+      }
+    },
+    "Something new today: a speech, out loud." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘은 새로운 걸 해 봐요. 스피치 하나, 소리 내서."
+          }
+        }
+      }
+    },
+    "Something new: one script, out loud. A minute is enough to start." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대본 하나를 소리 내서 읽어 봐요. 1분이면 시작할 수 있어요."
           }
         }
       }
@@ -126679,6 +126895,16 @@
         }
       }
     },
+    "The episode's script, to read at your own pace." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "에피소드 대본을 내 속도로 읽어 봐요."
+          }
+        }
+      }
+    },
     "The estimated level" : {
       "localizations" : {
         "de" : {
@@ -132831,6 +133057,22 @@
         }
       }
     },
+    "This week · speaking %lld d · listening %lld d · reading %lld d" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This week · speaking %1$lld d · listening %2$lld d · reading %3$lld d"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이번 주 · 말하기 %1$lld일 · 듣기 %2$lld일 · 읽기 %3$lld일"
+          }
+        }
+      }
+    },
     "This week in progress · ready %@" : {
       "localizations" : {
         "de" : {
@@ -132873,6 +133115,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "本週進行中 · %@ 整理好"
+          }
+        }
+      }
+    },
+    "This week was all speaking. Let's read something today." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이번 주는 말하기만 했어요. 오늘은 뭔가 읽어 봐요."
           }
         }
       }
@@ -133957,6 +134209,16 @@
         }
       }
     },
+    "Today, try one speech." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘은 스피치 하나 해 봐요."
+          }
+        }
+      }
+    },
     "Today: %lld things, about %lld minutes." : {
       "localizations" : {
         "ko" : {
@@ -134180,6 +134442,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "今天這樣就夠了。要再來一次嗎？"
+          }
+        }
+      }
+    },
+    "Today's episode is here. Listen first." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 에피소드가 나왔어요. 먼저 들어 봐요."
+          }
+        }
+      }
+    },
+    "Today's episode is waiting · %lld min" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 에피소드가 기다려요 · %lld분"
           }
         }
       }
@@ -149311,6 +149593,16 @@
         }
       }
     },
+    "Writing the article for your level…" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 레벨에 맞춰 기사를 쓰고 있어요…"
+          }
+        }
+      }
+    },
     "Writing the backup file. This is the slow part — keep the app open." : {
       "localizations" : {
         "de" : {
@@ -149676,6 +149968,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在寫…"
+          }
+        }
+      }
+    },
+    "Written at your level when you open it." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "열면 내 레벨에 맞춰 써 드려요."
           }
         }
       }
@@ -150818,6 +151120,16 @@
         }
       }
     },
+    "You haven't tried a speech yet. Read it out loud once." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아직 스피치를 안 해 봤어요. 한 번 소리 내서 읽어 봐요."
+          }
+        }
+      }
+    },
     "You haven't used any talk time today." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -151832,6 +152144,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "所有句子都跳過了。想說的時候，它們都還在。"
+          }
+        }
+      }
+    },
+    "You slipped from #%lld to #%lld on the board." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "You slipped from #%1$lld to #%2$lld on the board."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "순위표에서 %1$lld위에서 %2$lld위로 내려갔어요."
           }
         }
       }
@@ -153732,6 +154060,16 @@
         }
       }
     },
+    "You've hardly listened this week · %lld min" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이번 주엔 거의 안 들었어요 · %lld분"
+          }
+        }
+      }
+    },
     "You've passed the fair-use line for this period — %lld minutes." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -154140,6 +154478,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "常去的咖啡店店員、主管、家庭醫生。看流利的自己和他們對話，然後照著練。"
+          }
+        }
+      }
+    },
+    "Your best %lld, the top %lld." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your best %1$lld, the top %2$lld."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 최고 %1$lld점, 1위 %2$lld점."
           }
         }
       }
@@ -154845,6 +155199,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "每天的目標？"
+          }
+        }
+      }
+    },
+    "Your ears need a turn. Listen to one episode today." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "귀도 연습이 필요해요. 오늘 한 편 들어 봐요."
           }
         }
       }
@@ -157801,6 +158165,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "每天一次，靜音也會響。不方便接？一小時後會再打來；一直沒接的話，留言會留著等你，不會扣分。"
+          }
+        }
+      }
+    },
+    "Your place on a challenge moved. One more take?" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "챌린지 순위가 바뀌었어요. 한 번 더 찍어 볼까요?"
           }
         }
       }
@@ -165571,6 +165945,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "다른 주제"
+          }
+        }
+      }
+    },
+    "Others passed you: #%lld → #%lld." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Others passed you: #%1$lld → #%2$lld."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다른 사람들이 앞질렀어요. %1$lld위 → %2$lld위"
           }
         }
       }
