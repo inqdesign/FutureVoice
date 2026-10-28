@@ -8,11 +8,13 @@ import com.roro.futurevoice.talk.Session
 import com.roro.futurevoice.talk.SessionSummarizer
 import com.roro.futurevoice.talk.Turn
 import com.roro.futurevoice.talk.TurnRole
+import com.roro.futurevoice.talk.TutorCurriculum
 import com.roro.futurevoice.talk.TutorFinalCheck
 import com.roro.futurevoice.talk.TutorLesson
 import com.roro.futurevoice.talk.TutorLessonStore
 import com.roro.futurevoice.talk.TutorPlanner
 import com.roro.futurevoice.talk.TutorPrompts
+import com.roro.futurevoice.talk.TutorTopicProgress
 import com.roro.futurevoice.talk.TutorTurnRole
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -137,6 +139,22 @@ class TutorModeTest {
         startedAt = 0L, endedAt = 1L, turns = turns, coached = coached)
 
     /** iOS `testOnlyTheFinalCheckIsEvidence` (6cc2ab2a). */
+    /** iOS `testCurriculumNextPrefersAnOpenCheckThenLitTopics` (23ce515f). */
+    @Test fun curriculumNextPrefersAnOpenCheckThenLitTopics() {
+        assertEquals(10, TutorCurriculum.chapters.size)
+        assertEquals(100, TutorCurriculum.chapters.flatMap { c -> c.topics.map { it.id } }.toSet().size)
+        assertEquals("meet.intro", TutorCurriculum.next(emptyMap(), CefrLevel.A1)?.topic?.id)
+        val now = System.currentTimeMillis()
+        val p = mutableMapOf("meet.intro" to TutorTopicProgress(passedAt = now, rounds = 1, touchedAt = now))
+        assertEquals("meet.work", TutorCurriculum.next(p, CefrLevel.A1)?.topic?.id)
+        p["cafe.order"] = TutorTopicProgress(startedAt = now, lessonDoneAt = now, touchedAt = now)
+        assertEquals("cafe.order", TutorCurriculum.next(p, CefrLevel.A1)?.topic?.id)
+        val stepUp = TutorCurriculum.topic("cafe.wrong")!!.topic
+        assertTrue(TutorCurriculum.isStepUp(stepUp, CefrLevel.A2))
+        assertFalse(TutorCurriculum.isStepUp(stepUp, CefrLevel.B1))
+        assertEquals("Café & food: Your order came out wrong", TutorCurriculum.request("cafe.wrong"))
+    }
+
     @Test fun onlyTheFinalCheckIsEvidence() {
         assertFalse(line("My name is Min.", TutorTurnRole.DRILL).isEvidence)
         assertTrue(line("Hi, I'm Min, from Seoul, I work in design.", TutorTurnRole.CHECK).isEvidence)

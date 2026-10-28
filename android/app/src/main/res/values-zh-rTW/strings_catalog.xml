@@ -12,6 +12,7 @@
     <!-- 'A book lands here once every word and line in it is mastered. Nothing you file away counts — only what you finished.' -->
     <string name="a_book_lands_here_once_every_word_and_line_in_it_is_mastered_d3fa9a">"複習本裡的單字和句子全部掌握後，就會來到這裡。先放著的不算，只算完成的。"</string>
     <string name="a_call_with_a_client">"和客戶通電話"</string>
+    <string name="a_check_up">"健康檢查"</string>
     <string name="a_clerk">"櫃檯人員"</string>
     <string name="a_client">"客戶"</string>
     <string name="a_clinic_receptionist">"診所櫃台人員"</string>
@@ -22,9 +23,14 @@
     <string name="a_company_a_team_a_person_anything">"公司、團隊、人物⋯ 什麼都可以寫"</string>
     <!-- 'A confident talk — you kept the story going and only the tenses tripped you.' -->
     <string name="a_confident_talk_you_kept_the_story_going_and_only_the_tense_44673a">"說得很有自信。故事一路講到底，只有時態卡了一下。"</string>
+    <string name="a_conflict_you_handled">"你化解過的衝突"</string>
     <string name="a_coworker">"同事"</string>
     <!-- 'A day counts once every goal here is met — and only FINISHED work counts: “Got it” on a sentence, “I know” on a word or phrase, a recorded shadow take. Sending something to 10 minutes or tomorrow is progress, but it isn’t done. Set a goal to 0 to leave it out.' -->
     <string name="a_day_counts_once_every_goal_here_is_met_and_only_finished_w_970192">"這裡的目標全部達成，那天才算完成，而且**只算完成的**：句子是「記住了」，單字和用語是「我會了」，跟讀是錄好的版本。延到10分鐘後或明天也算進展，但還沒完成。目標設為0就不計入。"</string>
+    <string name="a_decision_you_made">"你做過的決定"</string>
+    <string name="a_delayed_or_cancelled_train">"火車誤點或停駛"</string>
+    <string name="a_delivery_that_didn_t_arrive">"包裹沒送到"</string>
+    <string name="a_family_visit">"家人來訪"</string>
     <string name="a_few_days_in_the_rhythm_is_starting">"練了幾天，節奏正在成形。"</string>
     <string name="a_few_minutes_made_from_this_week_s_talks">"用這週的對話做成的測驗，只要幾分鐘。"</string>
     <!-- 'A few minutes, made from what you said: the words, the phrases, the corrections.' -->
@@ -43,6 +49,7 @@
     <string name="a_friend_joined_with_your_code_b4caa9">"有朋友用你的邀請碼加入了。"</string>
     <string name="a_friend_joined_with_your_code_lld_minutes_are_yours">"有朋友用你的邀請碼加入了，%d分鐘已經入帳。"</string>
     <string name="a_front_desk_clerk">"櫃台人員"</string>
+    <string name="a_funny_story">"好笑的故事"</string>
     <string name="a_good_start">"不錯的開始"</string>
     <string name="a_good_week">"不錯的一週"</string>
     <!-- "A job interview, a call to your landlord, dinner with your partner's parents. You know enough of the language. What you don't know is what to say first, what to ask, and how to get through the awkward moment." -->
@@ -61,7 +68,10 @@
     <string name="a_new_scene_is_paid_for_out_of_the_same_minutes_watching_it_238960">"每看一個新的情境練習，都會從通話時間裡扣。重看免費。"</string>
     <string name="a_new_watch">"全新的情境練習"</string>
     <string name="a_new_week_starts_now_start_small">"新的一週開始了，輕鬆開始就好。"</string>
+    <string name="a_noise_complaint">"反映噪音問題"</string>
+    <string name="a_parent_teacher_meeting">"家長會"</string>
     <string name="a_passerby">"路人"</string>
+    <string name="a_performance_review">"績效面談"</string>
     <!-- 'A person you describe once: someone real in your life, someone famous, or someone you invent. Save who they are, how the two of you know each other and how you talk, and they become a character you can bring back.' -->
     <string name="a_person_you_describe_once_someone_real_in_your_life_someone_0e58df">"建立一次就能一直用的對話對象。可以是身邊真實的人、名人，或是虛構的人。存下對方是誰、你們是什麼關係、彼此怎麼說話，就成了隨時能叫出來的角色。"</string>
     <string name="a_photo_is_optional_without_one_their_initials_stand_in">"照片可以不放。沒有的話會顯示名字的首字。"</string>
@@ -73,6 +83,7 @@
     <string name="a_presentation_a_pitch_a_speech_you_have_to_give">"把接下來要上場的簡報、提案或演講拿來練。"</string>
     <!-- 'A presentation at work, a pitch, introducing yourself at a meeting. Saying prepared words clearly, at a steady pace, with pauses in the right places, is its own skill, and most people only find that out on the day.' -->
     <string name="a_presentation_at_work_a_pitch_introducing_yourself_at_a_mee_fb70e2">"工作上做簡報、向人提案、在會議上自我介紹。要把準備好的內容講清楚，速度剛好，該停的地方停下來，其實需要另外練習，很多人到了當天才發現。"</string>
+    <string name="a_problem_with_the_room">"房間有問題"</string>
     <string name="a_project_you_re_proud_of">"想分享的得意專案"</string>
     <!-- "A public figure's profile comes from public coverage. Their voice is a preset, never their real one." -->
     <string name="a_public_figure_s_profile_comes_from_public_coverage_their_v_f715e8">"名人的資料來自公開報導。聲音是預設音色，絕不會是本人的聲音。"</string>
@@ -84,6 +95,7 @@
     <!-- 'A reminder that your trial is about to convert — we ask to send notifications when the trial starts.' -->
     <string name="a_reminder_that_your_trial_is_about_to_convert_we_ask_to_sen_cd5350">"提醒你試用期快要轉為付費。試用開始時會詢問通知權限。"</string>
     <string name="a_scene_needs_lld_min_of_talk_time">"情境練習需要 %d 分鐘通話時間"</string>
+    <string name="a_school_event">"學校活動"</string>
     <!-- 'A sentence lands here once it reaches the top of the review ladder.' -->
     <string name="a_sentence_lands_here_once_it_reaches_the_top_of_the_review_e78fa1">"句子爬到複習階梯的頂端，就會來到這裡。"</string>
     <string name="a_separate_pool">"另外計算"</string>
@@ -166,6 +178,7 @@
     <string name="after_work_drinks">"下班小酌"</string>
     <string name="again">"再一次"</string>
     <string name="age_confirmed">"已確認年齡"</string>
+    <string name="agreeing_and_disagreeing">"表達同意與反對"</string>
     <string name="ahead_of_2_by_lld">"領先第 2 名 %d 分"</string>
     <string name="ai_read_tap_to_apply">"AI判讀：%s · 點一下套用"</string>
     <string name="ai_tech">"AI · 科技"</string>
@@ -184,6 +197,7 @@
     <string name="all_scenarios">"所有情境"</string>
     <string name="all_sources">"所有來源"</string>
     <string name="all_words">"全部單字"</string>
+    <string name="allergies_and_special_requests">"過敏與特殊需求"</string>
     <string name="allow_access_to_photos">"請允許取用照片"</string>
     <string name="allow_google_drive_access_to_keep_syncing">"要繼續同步，請允許存取 Google 雲端硬碟"</string>
     <string name="allow_notifications_so_your_routine_can_remind_you">"允許通知，作息才能提醒你"</string>
@@ -196,9 +210,11 @@
     <string name="amber">"琥珀"</string>
     <string name="amount">"數量"</string>
     <string name="an_airline_agent">"航空公司人員"</string>
+    <string name="an_emergency_call">"打緊急電話"</string>
     <string name="an_empty_day_is_a_rest_day_so_it_doesn_t_break_your_streak">"沒排計畫的日子是休息日，連續紀錄不會中斷。"</string>
     <string name="an_idea_is_only_yours_once_you_ve_said_it">"點子要自己說出口，才會變成自己的。"</string>
     <string name="an_interviewer">"面試官"</string>
+    <string name="an_online_order_went_wrong">"網購出了問題"</string>
     <string name="analyzing_your_week">"正在分析你的這一週…"</string>
     <string name="and_lld_more">"還有%d次"</string>
     <string name="and_what_s_always_free">"還有永遠免費的部分"</string>
@@ -235,12 +251,18 @@
     <string name="aqua">"水藍"</string>
     <string name="archive">"封存"</string>
     <string name="archived">"已封存"</string>
+    <string name="arranging_a_playdate">"約小朋友一起玩"</string>
     <string name="art">"藝術"</string>
     <string name="as_a_name">"當作名字時"</string>
     <string name="as_much_as_you_want_whenever_you_want">"想用多少就用多少，不設限"</string>
     <string name="as_planned">"依計畫：%s。"</string>
     <!-- 'Asking my manager for a raise in our next one-on-one, with the numbers ready.' -->
     <string name="asking_my_manager_for_a_raise_in_our_next_one_on_one_with_th_36621c">"在下次一對一時向主管提加薪，把數字都準備好。"</string>
+    <string name="asking_someone_about_themselves">"問問對方的事"</string>
+    <string name="asking_the_pharmacist">"問藥師"</string>
+    <string name="asking_the_price_and_paying">"問價錢和結帳"</string>
+    <string name="asking_the_way">"問路"</string>
+    <string name="asking_what_s_good">"問有什麼推薦"</string>
     <!-- 'Assessed %@ — a while back. Your next talks feed a fresh assessment.' -->
     <string name="assessed_a_while_back_your_next_talks_feed_a_fresh_assessmen_2febb6">"在%s評估過，已經有一陣子了。接下來的通話會用來重新評估。"</string>
     <!-- 'Assessed from %lld min of conversation — vocabulary, grammar, fluency and expression together.' -->
@@ -257,7 +279,11 @@
     <string name="at_least_lld">"%d歲以上"</string>
     <!-- 'At talk times your fluent self calls you. You can change all of it later in My routine.' -->
     <string name="at_talk_times_your_fluent_self_calls_you_you_can_change_all_3984de">"到了對話時間，流利的自己會打電話給你。之後都可以在「我的作息」裡修改。"</string>
+    <string name="at_the_airport_check_in">"在機場報到"</string>
     <string name="at_the_check_in_desk">"在報到櫃檯"</string>
+    <string name="at_the_dentist">"看牙醫"</string>
+    <string name="at_the_kindergarten_pick_up">"去幼兒園接小孩"</string>
+    <string name="at_the_supermarket">"在超市"</string>
     <string name="at_the_town_hall">"在區公所"</string>
     <string name="at_the_train_station">"在火車站"</string>
     <string name="at_your_routine_s_talk_times">"在作息裡排好的時間打給你：%s"</string>
@@ -293,6 +319,7 @@
     <string name="big_picture_person">"看大方向的人"</string>
     <string name="billing_period">"帳單週期"</string>
     <string name="birthday_parties">"生日派對"</string>
+    <string name="birthdays_and_invitations">"生日與邀約"</string>
     <string name="blank_page">"空白頁"</string>
     <string name="block">"時段"</string>
     <string name="blue">"藍"</string>
@@ -300,6 +327,8 @@
     <string name="blunt">"說話很衝"</string>
     <string name="book_finished">"讀完的複習本"</string>
     <string name="book_mastered">"複習本完成"</string>
+    <string name="booking_a_doctor_s_appointment">"預約看醫生"</string>
+    <string name="booking_a_table">"訂位"</string>
     <string name="bookmark">"書籤"</string>
     <!-- "Bookmark a line from shadow practice and it'll live here for repeat reps." -->
     <string name="bookmark_a_line_from_shadow_practice_and_it_ll_live_here_for_496994">"跟讀時把喜歡的句子加入書籤，就會留在這裡反覆練習。"</string>
@@ -332,7 +361,11 @@
     <string name="busy_today">"今天忙嗎？"</string>
     <string name="busy_with_work">"工作很忙"</string>
     <string name="buy_lld_minutes">"購買 %d 分鐘"</string>
+    <string name="buying_a_gift">"挑禮物"</string>
+    <string name="buying_a_phone_plan">"辦手機方案"</string>
+    <string name="buying_a_ticket">"買票"</string>
     <string name="by_level">"依等級"</string>
+    <string name="caf_food">"咖啡廳與美食"</string>
     <string name="cafe">"咖啡廳"</string>
     <string name="calendar_and_routine">"月曆與作息"</string>
     <string name="call">"電話"</string>
@@ -341,6 +374,9 @@
     <string name="call_settings">"通話設定"</string>
     <string name="call_voice_volume">"通話音量"</string>
     <string name="calling_a_clinic">"打電話到診所"</string>
+    <string name="calling_in_sick">"打電話請病假"</string>
+    <string name="calling_the_landlord">"打給房東"</string>
+    <string name="calling_the_school_about_an_absence">"打給學校請假"</string>
     <string name="calling_your_landlord">"打電話給房東"</string>
     <string name="calls_and_scenes_speak_this_way">"通話和情境會用這種語氣。"</string>
     <!-- "Calls and scenes speak this way. Someone who knows your life knows what you've told your future self, the way a close friend would." -->
@@ -394,6 +430,7 @@
     <string name="check_again">"再確認一次"</string>
     <string name="check_it_at_the_back">"對照書末答案"</string>
     <string name="check_the_answers_at_the_back">"對照書末的答案"</string>
+    <string name="checking_in_at_a_hotel">"飯店入住"</string>
     <string name="childhood_friends">"從小一起長大"</string>
     <string name="choose">"自選"</string>
     <string name="choose_a_photo">"選照片"</string>
@@ -437,6 +474,9 @@
     <string name="common_topics">"常聊的話題"</string>
     <string name="company_changes_going_on">"公司正在變動"</string>
     <string name="comparing">"比較中…"</string>
+    <string name="comparing_life_in_two_countries">"比較兩個國家的生活"</string>
+    <string name="comparing_two_options">"比較兩個選擇"</string>
+    <string name="complimenting_the_food">"稱讚食物"</string>
     <string name="composer_customsituation">"自己寫的情境"</string>
     <string name="confirm_with_apple">"前往 Apple 確認"</string>
     <string name="congratulations">"恭喜！"</string>
@@ -525,6 +565,7 @@
     <string name="cross_team">"跨團隊"</string>
     <string name="current_plan">"使用中"</string>
     <string name="current_streak">"連續說話天數"</string>
+    <string name="curriculum">"課程"</string>
     <string name="custom">"自訂"</string>
     <string name="customer_service">"客服"</string>
     <string name="daily_call">"每日來電"</string>
@@ -583,6 +624,8 @@
     <string name="describe_what_s_coming_and_watch_your_fluent_self_handle_it_48f4b8">"寫下即將發生的事，先看流利的自己怎麼應對。裡面用到的用語都會留給你學。"</string>
     <!-- "Describe what's coming up in as much detail as you can. Attach a job posting or your CV and it reads them first." -->
     <string name="describe_what_s_coming_up_in_as_much_detail_as_you_can_attac_511e58">"盡量詳細寫下即將面對的事。附上職缺說明或履歷，會先讀過再寫出情境。"</string>
+    <string name="describing_a_film_or_book">"介紹一部電影或一本書"</string>
+    <string name="describing_symptoms">"描述症狀"</string>
     <string name="desk_neighbors">"坐隔壁"</string>
     <string name="detail_oriented">"注重細節"</string>
     <string name="details">"詳細"</string>
@@ -601,6 +644,7 @@
     <string name="didn_t_use_a_code_when_you_signed_up">"註冊時沒輸入邀請碼嗎？"</string>
     <string name="direct">"直接"</string>
     <string name="direct_style">"直來直往"</string>
+    <string name="disagreeing_politely">"有禮貌地表達反對"</string>
     <!-- "Discover and use words you don't reach for yet — the ones at and above your level." -->
     <string name="discover_and_use_words_you_don_t_reach_for_yet_the_ones_at_a_d0a120">"找出還不太會用的單字來用用看，也就是你的程度和更高等級的單字。"</string>
     <!-- "Distinct graded words you've used, accumulating from the day each was first said." -->
@@ -774,8 +818,12 @@
     <string name="explainer">"解說"</string>
     <!-- 'Explainers, products, people, briefings and news — true, and at your level.' -->
     <string name="explainers_products_people_briefings_and_news_true_and_at_yo_43f83e">"解說、產品或人物介紹、簡報、新聞都能寫，內容經過查證，難度配合你的程度。"</string>
+    <string name="explaining_a_delay">"說明延誤的原因"</string>
+    <string name="explaining_a_gap">"說明職涯空窗期"</string>
     <!-- "Explaining a symptom I've had for a week to a doctor, and asking what the options are." -->
     <string name="explaining_a_symptom_i_ve_had_for_a_week_to_a_doctor_and_ask_7b3337">"向醫生說明持續一週的症狀，並且問清楚有哪些選擇。"</string>
+    <string name="explaining_an_allergy">"說明自己的過敏"</string>
+    <string name="explaining_something_you_know_well">"說明你很熟悉的事"</string>
     <string name="explains_what_this_level_changes">"說明這個程度會改變什麼"</string>
     <string name="exploring">"隨便看看"</string>
     <string name="export_or_import_this_device_s_practice">"匯出或匯入這台裝置的練習"</string>
@@ -809,6 +857,7 @@
     <string name="familiar_topics_fluently_enough_to_get_by_and_tell_a_simple_fa6cea">"熟悉的話題能流暢地應付，也能說個簡單的故事。"</string>
     <string name="family">"家人"</string>
     <string name="family_news">"家裡的事"</string>
+    <string name="family_school">"家庭與學校"</string>
     <string name="fashion">"時尚"</string>
     <string name="fast_talker">"講話很快"</string>
     <string name="faster">"快一點"</string>
@@ -820,6 +869,7 @@
     <string name="fillers">"贅詞"</string>
     <string name="filter">"篩選"</string>
     <string name="final_check">"最終測驗"</string>
+    <string name="final_check_left">"只剩最終測驗了"</string>
     <string name="finance">"理財"</string>
     <string name="find_a_quiet_spot">"找個安靜的地方"</string>
     <string name="find_a_topic">"找話題"</string>
@@ -847,6 +897,7 @@
     <string name="fold_the_word_column_under">"把單字欄往後折"</string>
     <string name="follow_my_voice">"跟著我的聲音"</string>
     <string name="follow_the_highlight_tap_to_cancel">"跟著標示唸 · 點一下取消"</string>
+    <string name="following_up_after">"面試後的聯繫"</string>
     <string name="follows_your_voice">"文字跟著聲音走"</string>
     <string name="food_and_cooking">"吃的和做菜"</string>
     <string name="food_and_recipes">"美食和食譜"</string>
@@ -910,10 +961,13 @@
     <string name="get_started">"開始使用"</string>
     <string name="get_the_idea">"獲得點子"</string>
     <string name="get_under_1f_and_this_reads">"。降到%1$.1f以下就會讀作≈%2$s"</string>
+    <string name="getting_around">"交通與旅行"</string>
     <string name="getting_what_your_other_devices_did">"正在取得其他裝置的進度…"</string>
     <string name="getting_your_line_ready">"正在整理你的句子…"</string>
     <string name="getting_your_quiz_ready">"正在準備小測驗…"</string>
     <string name="given">"同意日期：%s"</string>
+    <string name="giving_directions_to_someone">"幫別人指路"</string>
+    <string name="giving_your_opinion">"說出你的意見"</string>
     <string name="giving_your_view_in_a_meeting">"在會議上發表意見"</string>
     <string name="glossary">"詞彙解說"</string>
     <string name="go_again">"再挑戰一次"</string>
@@ -973,6 +1027,7 @@
     <string name="hear_yourself">"聽自己的聲音"</string>
     <string name="heard">"聽到的是"</string>
     <string name="heard_in_a_call">"通話裡聽到的"</string>
+    <string name="helping_someone_who_is_unwell">"幫助身體不舒服的人"</string>
     <string name="here_s_how_this_page_helps">"這一頁能幫你什麼"</string>
     <string name="here_s_how_this_tab_helps">"這個分頁能幫你什麼"</string>
     <!-- "Here you call yourself: the version of you who already speaks fluently, in a voice cloned from yours. There's no one to be embarrassed in front of, and you can call any time." -->
@@ -988,8 +1043,10 @@
     <string name="highlighted_words_are_worth_picking_up_tap_one_to_check_it_o_7964d7">"標示的單字值得學起來。點一下看看。"</string>
     <string name="hint">"提示"</string>
     <string name="history">"紀錄"</string>
+    <string name="hobbies">"聊興趣"</string>
     <string name="hold_and_drag_to_move">"長按拖曳即可移動"</string>
     <string name="holding_your_volume_to_the_end_of_each_sentence">"句尾聲音有沒有撐住"</string>
+    <string name="home_neighbors">"居家與鄰居"</string>
     <string name="home_projects">"居家修繕"</string>
     <string name="honestly_it_went_really_well_i_felt_prepared">"老實說，真的很順利。我覺得準備得很充分。"</string>
     <string name="how_a_card_works">"卡片怎麼用"</string>
@@ -1102,6 +1159,7 @@
     <string name="interview_chip_about_yourself_why_this_job">"面試標籤・自我介紹、應徵動機"</string>
     <string name="interviews_the_field_i_m_applying_to">"面試、想進的產業"</string>
     <string name="introduce_someone_worth_knowing">"介紹一位值得認識的人"</string>
+    <string name="introducing_yourself">"自我介紹"</string>
     <string name="introduction">"介紹"</string>
     <string name="invite_a_friend_lld_min_each">"邀請朋友，各得 %d 分鐘"</string>
     <string name="invite_applied_lld_min_of_talk_time">"已套用邀請碼 · 通話時間%d分鐘"</string>
@@ -1140,6 +1198,7 @@
     <string name="it_scrolls_as_you_read_and_slows_down_when_you_pause_the_lin_627d8c">"你唸到哪，文字就捲到哪；你停下來，它也會等你。正在唸的那一行就在前鏡頭正下方，所以影片裡看起來像在看著觀眾。"</string>
     <!-- 'Its book in Review goes with it — study items and mastery included.' -->
     <string name="its_book_in_review_goes_with_it_study_items_and_mastery_incl_ad0876">"複習分頁裡的複習本也會一起刪除，包括學習項目和熟練度。"</string>
+    <string name="job_interview">"面試"</string>
     <string name="joined_the_core_lld_seats_taken">"%1$s加入了核心，目前已有%2$d席。"</string>
     <string name="joined_with_a_code">"註冊時用的邀請碼"</string>
     <string name="joined_with_your_code">"%s用你的邀請碼加入了"</string>
@@ -1169,6 +1228,7 @@
     <string name="keep_what_you_d_use">"收藏用得上的"</string>
     <string name="keep_your_practice_in_google_drive">"要把練習存在 Google 雲端硬碟嗎？"</string>
     <string name="keep_your_practice_in_icloud">"要把練習紀錄保存在 iCloud 嗎？"</string>
+    <string name="keeping_a_first_conversation_going">"讓第一次的對話聊下去"</string>
     <string name="kept_for_lld_days">"已連續守住 %d 天"</string>
     <string name="kept_from_a_talk">"通話裡收下的單字"</string>
     <!-- 'Kept in your own Google Drive, it waits on any phone or tablet you sign into, your voice recording too, so your voice comes back without recording again.' -->
@@ -1208,6 +1268,7 @@
     <string name="learning_your_vowels">"正在學你的母音…"</string>
     <string name="leave_it_empty_and_we_ll_pick_something_worth_knowing">"主題留空的話，會幫你挑一個值得知道的主題。"</string>
     <string name="leave_it_undecided">"先不決定"</string>
+    <string name="leaving_a_voicemail">"留語音訊息"</string>
     <string name="left">"剩餘"</string>
     <string name="left_to_spend">"剩餘時間"</string>
     <string name="length">"時長"</string>
@@ -1343,8 +1404,10 @@
     <string name="lld_of_lld_min_today">"今天%1$d / %2$d分鐘"</string>
     <string name="lld_of_lld_scenes_left">"情境練習剩餘 %1$d 次(共 %2$d 次)"</string>
     <string name="lld_of_lld_seats_taken">"%2$d席中已坐了%1$d席。"</string>
+    <string name="lld_of_lld_topics_passed">"%2$d 個主題中通過了 %1$d 個"</string>
     <string name="lld_of_your_turns_lld_min">"我的發言%1$d輪 · %2$d分鐘"</string>
     <string name="lld_out_of_5">"5 分中 %d 分"</string>
+    <string name="lld_rounds">"通過 %d 次"</string>
     <string name="lld_runs">"%d 次"</string>
     <string name="lld_scene_inflect_true_watched">"看了%d個情境"</string>
     <string name="lld_scenes">"%d場"</string>
@@ -1407,6 +1470,7 @@
     <string name="looking_through_your_practice">"正在檢視練習記錄…"</string>
     <string name="looking_through_your_practice_data">"正在查看你的練習資料…"</string>
     <string name="loop">"循環 %1$s–%2$s"</string>
+    <string name="lost_luggage">"行李遺失"</string>
     <string name="lots_of_inside_jokes">"很多只有我們懂的梗"</string>
     <string name="lunch_together">"一起吃午餐"</string>
     <!-- 'Made from the recording on this phone. A stand-in voice speaks until then.' -->
@@ -1420,6 +1484,7 @@
     <string name="making_a_few_takes_about_half_a_minute_keep_this_open">"正在唸幾個版本，大約需要30秒。請不要關閉這個畫面。"</string>
     <string name="making_it_in_your_voice">"正在用你的聲音生成…"</string>
     <string name="making_it_yours">"變成自己的"</string>
+    <string name="making_plans_to_meet_again">"約好下次見面"</string>
     <string name="making_standard_copies_lld_left">"正在製作標準畫質副本…還剩 %d 部"</string>
     <!-- 'Making voices is briefly unavailable right now. Your recording is saved, so open the app after then and your fluent self speaks in your voice. Until then, pick one of the voices below to practice with.' -->
     <string name="making_voices_is_briefly_unavailable_right_now_your_recordin_f306d0">"目前建立聲音暫時出了點問題。錄音已經存好了，那之後打開 App，流利的自己就會用你的聲音說話。在那之前，請從下面選一個聲音來練習。"</string>
@@ -1454,6 +1519,7 @@
     <string name="meet_your_fluent_self">"見見流利的自己"</string>
     <!-- "Meeting my partner's parents for the first time over dinner at their place." -->
     <string name="meeting_my_partner_s_parents_for_the_first_time_over_dinner_7291f9">"第一次見伴侶的父母，在他們家吃晚餐。"</string>
+    <string name="meeting_people">"認識新朋友"</string>
     <string name="meeting_someone_new">"和剛認識的人"</string>
     <string name="meetings_presentations_client_calls">"會議、簡報、客戶電話"</string>
     <string name="met_on_nawana">"在nawana認識的"</string>
@@ -1516,6 +1582,7 @@
     <string name="move_the_other_days_too">"其他日子也一起移動嗎？"</string>
     <string name="move_to">"換成%s"</string>
     <string name="moves_on_when_you_finish">"說完就會自動繼續"</string>
+    <string name="moving_in">"搬進新家"</string>
     <!-- 'Multi-word phrases you actually said, collected automatically.' -->
     <string name="multi_word_phrases_you_actually_said_collected_automatically">"實際說過的用語會自動收集在這裡。"</string>
     <!-- 'Multi-word phrases you actually said in your talks, collected automatically.' -->
@@ -1762,12 +1829,14 @@
     <string name="open_the_app_store">"開啟App Store"</string>
     <string name="open_to_review">"打開來複習"</string>
     <string name="open_to_start">"打開來開始"</string>
+    <string name="opening_a_bank_account">"開銀行帳戶"</string>
     <string name="opening_the_app_store">"正在打開App Store…"</string>
     <string name="opens_activity_calendar">"開啟活動日曆。"</string>
     <string name="opens_at">"開放時間"</string>
     <!-- "Opens Me: your profile, voice, daily goal, plan and this guide. The ring around your picture shows how much of this month's talk time you've used." -->
     <string name="opens_me_your_profile_voice_daily_goal_plan_and_this_guide_t_15a2d0">"點一下會打開「我的」：個人檔案、聲音、每日目標、方案和這份導覽都在這裡。大頭照外圍的圓環顯示本月通話時間用了多少。"</string>
     <string name="opens_the_full_card">"開啟完整卡片"</string>
+    <string name="opinions_stories">"意見與故事"</string>
     <string name="optional_what_s_the_situation_about">"可選 · 是什麼樣的情境？"</string>
     <string name="options">"選項"</string>
     <string name="or_a_generic_role">"或是一般角色："</string>
@@ -1775,6 +1844,8 @@
     <string name="or_describe_where_custom">"或自己描述地點…"</string>
     <string name="or_describe_who_custom">"或自己描述對方…"</string>
     <string name="or_write_your_own">"自己寫"</string>
+    <string name="ordering_at_a_caf">"在咖啡廳點餐"</string>
+    <string name="ordering_at_a_restaurant">"在餐廳點餐"</string>
     <string name="original">"原始"</string>
     <string name="other">"其他"</string>
     <string name="other_free_activity">"其他免費活動"</string>
@@ -1818,6 +1889,7 @@
     <string name="paused_tap_to_pick_it_back_up">"暫停中 · 點一下繼續"</string>
     <string name="pauses">"停頓"</string>
     <string name="pauses_min_lldm_per_talk_lld_words_turn">"每分鐘停頓 %1$s 次 · 每次 %2$d 分鐘 · 每輪 %3$d 字"</string>
+    <string name="paying_and_splitting_the_bill">"結帳與分攤"</string>
     <!-- 'Payment is charged to your Apple Account at purchase. The subscription renews automatically unless you cancel at least 24 hours before the period ends. Manage or cancel it in Settings › Apple Account › Subscriptions.' -->
     <string name="payment_is_charged_to_your_apple_account_at_purchase_the_sub_6660ae">"購買時會向你的Apple帳號收費。除非在週期結束前至少24小時取消，否則訂閱會自動續訂。可到「設定 › Apple帳號 › 訂閱」管理或取消。"</string>
     <string name="pdf">"PDF"</string>
@@ -1878,6 +1950,7 @@
     <!-- 'Plan your week once here. Each day then shows whether you did it.' -->
     <string name="plan_your_week_once_here_each_day_then_shows_whether_you_did_83c5d3">"在這裡規劃一次一週的安排，每天都會顯示有沒有做到。"</string>
     <string name="planned">"計畫"</string>
+    <string name="plans_and_dreams">"計畫與夢想"</string>
     <string name="play">"播放"</string>
     <string name="play_all">"全部播放"</string>
     <string name="play_in_my_voice">"用我的聲音播放"</string>
@@ -1956,6 +2029,7 @@
     <string name="purchase_failed">"購買失敗"</string>
     <string name="purchase_is_pending_approval">"購買正在等待核准。"</string>
     <string name="putting_it_on_the_board">"正在登上排行榜…"</string>
+    <string name="questions_for_them">"向面試官提問"</string>
     <string name="quiet">"很安靜"</string>
     <!-- 'Quiet' -->
     <string name="quiet_fe73d7">"安靜"</string>
@@ -1973,6 +2047,7 @@
     <string name="re_record_voice">"重新錄製聲音"</string>
     <string name="re_record_your_voice">"要重新錄製聲音嗎？"</string>
     <string name="re_synthesize_every_line_learning_data_untouched">"重新合成每一句，學習紀錄不受影響"</string>
+    <string name="reacting_to_news">"對新聞做出反應"</string>
     <string name="read">"%s 已讀"</string>
     <string name="read_again">"重新讀取"</string>
     <string name="read_both_sides">"兩邊的台詞都念"</string>
@@ -2041,6 +2116,7 @@
     <string name="recording_starts_after_3_2_1_while_you_record_throws_the_tak_5d0549">"點一下，倒數 3、2、1 就開始錄製。錄到一半點 ✕ 會捨棄這次錄製，點 ↺ 則從頭再來。"</string>
     <string name="recreating_your_voice">"正在重新製作你的聲音"</string>
     <string name="recurring_topics">"常聊的話題"</string>
+    <string name="recycling_and_house_rules">"垃圾分類與住戶規定"</string>
     <string name="redeem">"兌換"</string>
     <string name="redeemed_is_on_your_account">"兌換成功。帳號已換成%s。"</string>
     <string name="redeemed_lld_minutes_added">"兌換成功。多了%d分鐘。"</string>
@@ -2056,6 +2132,7 @@
     <string name="relationship_e_g_best_friend_kita_parent_manager">"關係（例如：死黨、幼兒園家長、主管）"</string>
     <string name="relaxed">"從容"</string>
     <string name="remember_this_when">"這種時候想起來"</string>
+    <string name="remembering_and_using_names">"記住並叫出對方的名字"</string>
     <string name="remind_me">"提醒我"</string>
     <string name="reminders_on">"通知已開啟"</string>
     <string name="remove">"移除"</string>
@@ -2067,6 +2144,7 @@
     <string name="remove_the_accent">"要移除口音嗎？"</string>
     <string name="renamed_on_this_device_only">"只在這台裝置上改名"</string>
     <string name="renews">"下次續訂"</string>
+    <string name="renting_a_car">"租車"</string>
     <string name="repeat">"重複"</string>
     <string name="repeat_your_fluent_self_s_lines_from_this_talk">"跟著唸這通電話裡流利的自己說過的話。"</string>
     <string name="replace_your_current_clone_with_a_new_one">"用新錄的聲音取代現在的聲音"</string>
@@ -2100,6 +2178,7 @@
     <string name="retire_this_challenge_it_leaves_everyone_s_speech_tab">"要下架這個挑戰嗎？它會從所有人的演講分頁消失。"</string>
     <string name="retired">"退休了"</string>
     <string name="retry">"重試"</string>
+    <string name="returning_something">"退貨"</string>
     <!-- "Returning something expensive without the receipt, to a clerk who doesn't want to take it." -->
     <string name="returning_something_expensive_without_the_receipt_to_a_clerk_fccd8a">"沒有收據要退一件很貴的東西，店員擺明不想收。"</string>
     <string name="review">"複習"</string>
@@ -2213,6 +2292,8 @@
     <string name="say_the_word_out_loud_first_then_tap_the_card_to_see_its_mea_72e3b6">"先把單字唸出來，再點一下卡片看意思和例句。"</string>
     <string name="say_what_you_want_to_talk_about_and_the_call_starts_there">"通話開始後說出想聊的話題，就從那裡聊起"</string>
     <string name="say_your_line">"唸出這一句"</string>
+    <string name="saying_goodbye_naturally">"自然地道別"</string>
+    <string name="saying_no_to_extra_work">"拒絕額外的工作"</string>
     <string name="scenario">"情境"</string>
     <string name="scenarios">"情境"</string>
     <string name="scene">"情境練習"</string>
@@ -2277,6 +2358,7 @@
     <string name="sets_how_your_future_self_speaks_and_how_scenes_are_written_042a3e">"決定流利的自己怎麼說話、情境練習怎麼寫。成長頁的測量程度在下次評估前不受影響，評估時會以實際通話的表現覆蓋這裡的設定。"</string>
     <string name="setting_the_scene">"正在準備情境練習…"</string>
     <string name="setting_up_a_scene">"建立情境"</string>
+    <string name="setting_up_internet">"申辦網路"</string>
     <string name="settings">"設定"</string>
     <!-- 'Setup is free, including re-records in the first day. Later re-records cost a little.' -->
     <string name="setup_is_free_including_re_records_in_the_first_day_later_re_d175df">"第一次建立免費，第一天內重錄也免費。之後再重新建立會花一點。"</string>
@@ -2358,6 +2440,8 @@
     <!-- 'Someone you actually talk to — dialogues get simulated with them, in their manner.' -->
     <string name="someone_you_actually_talk_to_dialogues_get_simulated_with_th_d15b87">"你真的會聊天的人。對話會照他的說話方式模擬。"</string>
     <string name="someone_you_just_met">"剛認識的人"</string>
+    <string name="something_is_broken">"東西壞了"</string>
+    <string name="something_is_sold_out">"東西賣完了"</string>
     <!-- "Something specific coming up with them — a talk you're dreading, news you have to break." -->
     <string name="something_specific_coming_up_with_them_a_talk_you_re_dreadin_18800f">"和對方即將發生的具體事情：不知道怎麼開口的話、必須告知的消息。"</string>
     <string name="something_went_wrong">"出了點問題"</string>
@@ -2427,6 +2511,7 @@
     <string name="steady_pace_and_you_recovered_from_pauses_without_stopping">"節奏穩定，停頓之後也能接著說下去。"</string>
     <string name="steady_speed">"文字等速捲動"</string>
     <string name="steady_voice">"聲音穩定度"</string>
+    <string name="step_up">"進階一級"</string>
     <string name="still_getting_to_know_each_other">"還在互相認識"</string>
     <string name="still_missed">"還是答錯的"</string>
     <string name="still_up">"還沒睡？"</string>
@@ -2498,6 +2583,7 @@
     <string name="taken_from_the_talk_time_above">"從上面的通話時間裡扣"</string>
     <string name="takes">"版本"</string>
     <string name="takes_this_week">"本週次數"</string>
+    <string name="taking_a_taxi">"搭計程車"</string>
     <string name="talk">"對話"</string>
     <string name="talk_about_what_i_like">"盡情聊喜歡的事"</string>
     <string name="talk_as_much_as_you_want">"通話時間不設限"</string>
@@ -2524,8 +2610,13 @@
     <string name="talkative">"話多"</string>
     <string name="talked_this_month">"本月已通話%s"</string>
     <string name="talking">"通話"</string>
+    <string name="talking_about_food_you_like">"聊你喜歡的食物"</string>
+    <string name="talking_about_how_you_feel">"說說你現在的狀況"</string>
     <string name="talking_about_salary">"談薪水"</string>
+    <string name="talking_about_your_kids">"聊聊你的孩子"</string>
     <string name="talking_needs_a_plan">"通話需要方案"</string>
+    <string name="talking_to_a_neighbor">"跟鄰居聊天"</string>
+    <string name="talking_to_your_child_s_teacher">"跟孩子的老師談話"</string>
     <string name="talking_to_your_future_self">"和未來的自己通話"</string>
     <string name="talks">"通話"</string>
     <!-- 'talks' -->
@@ -2738,6 +2829,7 @@
     <string name="the_top_score_of_lld_people">"%d 人中的最高分"</string>
     <string name="the_trial_s_scenes_are_used_up">"試用的情境練習都看完了。"</string>
     <string name="the_trial_s_talk_time_is_used_up">"試用的通話時間用完了。"</string>
+    <string name="the_tutor_will_keep_it_at_your_level">"家教會配合你的程度進行。"</string>
     <string name="the_video_is_on_the_device_you_recorded_it_on">"影片在你錄製時用的裝置上。"</string>
     <!-- 'The voice you have now is only replaced if you keep the new one.' -->
     <string name="the_voice_you_have_now_is_only_replaced_if_you_keep_the_new_2247d6">"只有在你選用新聲音時，現在的聲音才會被換掉。"</string>
@@ -2809,6 +2901,7 @@
     <string name="this_month">"這個月"</string>
     <string name="this_month_s_scenes_are_used_up">"這個月的情境練習都看完了。"</string>
     <string name="this_month_s_talk_time_is_used_up">"這個月的通話時間用完了。"</string>
+    <string name="this_one_is_a_step_up_try_it">"這個主題高一級，要試試看嗎？"</string>
     <string name="this_pack_isn_t_available_on_the_app_store_yet">"這個加購方案目前還無法在 App Store 購買。"</string>
     <!-- 'This permanently deletes your voice clone, talk time, and account. It cannot be undone. An active App Store subscription must be canceled separately in Settings → Apple ID → Subscriptions.' -->
     <string name="this_permanently_deletes_your_voice_clone_talk_time_and_acco_9e99be">"你的聲音、通話時間和帳號會被永久刪除，無法復原。如果App Store訂閱還在，請另外到「設定 → Apple ID → 訂閱」取消。"</string>
@@ -2879,6 +2972,7 @@
     <string name="try_again">"再試一次"</string>
     <string name="try_for_free">"免費開始"</string>
     <string name="try_in_your_next_talk">"下次聊天時，用用看「%s」。"</string>
+    <string name="try_it">"試試看"</string>
     <string name="try_it_just_as_it_is_for_a_week_you_can_change_it_any_time">"先照這樣試一週，隨時都能改。"</string>
     <!-- "Try it like this for a week. It's under Activity on the Talk screen whenever you want to change it." -->
     <string name="try_it_like_this_for_a_week_it_s_under_activity_on_the_talk_f71c6f">"就照這樣過一週吧。想改的時候，到對話畫面的「活動」就行。"</string>
@@ -2888,6 +2982,7 @@
     <string name="try_the_missed_ones_again">"再試一次答錯的"</string>
     <string name="try_this">"試試這樣"</string>
     <string name="try_using">"試著用"</string>
+    <string name="trying_things_on">"試穿"</string>
     <string name="turn_camera_off">"關閉相機"</string>
     <string name="turn_camera_on">"開啟相機"</string>
     <string name="turn_it_on_any_time_in_settings_devices">"隨時都能在「設定 → 裝置」開啟。"</string>
@@ -3080,6 +3175,7 @@
     <string name="what_each_tab_is_for_and_how_to_use_it">"每個分頁的用途和用法"</string>
     <string name="what_else_should_i_know_about_them">"還有什麼我該知道的嗎？"</string>
     <string name="what_fills_your_conversations_these_days">"你們最近都聊些什麼？"</string>
+    <string name="what_happened_this_weekend">"這個週末發生的事"</string>
     <string name="what_i_heard">"聽到的內容"</string>
     <string name="what_i_know_about_you">"我知道的事"</string>
     <string name="what_i_noticed_lately">"最近注意到的"</string>
@@ -3169,6 +3265,8 @@
     <string name="where_you_are_between_a1_and_c2_the_means_it_s_an_estimate_a_cb500a">"顯示你在 A1 到 C2 之間的位置。≈ 表示是估計值，說得越多越準。"</string>
     <string name="where_you_got_stuck">"卡住的地方"</string>
     <string name="where_you_live">"住哪裡"</string>
+    <string name="where_you_re_from_and_why_you_re_here">"你從哪裡來、為什麼來這裡"</string>
+    <string name="where_you_see_yourself">"你對未來的規劃"</string>
     <string name="where_you_stand">"你的位置"</string>
     <!-- 'Where you studied that day — the photo is the place. Nothing else about the location is saved.' -->
     <string name="where_you_studied_that_day_the_photo_is_the_place_nothing_el_642592">"那天讀書的地方。照片就是地點，不會另外儲存位置資訊。"</string>
@@ -3201,6 +3299,7 @@
     <string name="why_is_it_so_hard_just_to_start_talking">"可是一開口\n怎麼就這麼難呢……"</string>
     <string name="why_it_matters">"為什麼需要"</string>
     <string name="why_it_was_corrected">"這句為什麼要改"</string>
+    <string name="why_this_job">"為什麼想做這份工作"</string>
     <string name="why_this_level">"為什麼是這個程度"</string>
     <string name="why_words_show_up_at_the_top">"為什麼上方會出現單字"</string>
     <string name="with">"對方：%s"</string>
@@ -3431,6 +3530,7 @@
     <string name="your_daily_call_rings_at_this_time">"每日來電會在這個時間打來。"</string>
     <string name="your_daily_goal">"每天的目標？"</string>
     <string name="your_effort">"我的努力"</string>
+    <string name="your_family">"聊聊你的家人"</string>
     <string name="your_feedback_goes_straight_to_the_person_building_this">"你的意見會直接送到做這個 App 的人手上。"</string>
     <!-- 'Your files stay on your phone. Only what was read is kept here.' -->
     <string name="your_files_stay_on_your_phone_only_what_was_read_is_kept_her_ec86b8">"檔案留在你的手機裡。這裡只保留讀到的內容。"</string>
@@ -3502,6 +3602,7 @@
     <string name="your_name_on_the_board">"排行榜上的名字"</string>
     <string name="your_native_language">"平常用的語言？"</string>
     <string name="your_new_voice_is_ready">"新的聲音準備好了"</string>
+    <string name="your_order_came_out_wrong">"餐點送錯了"</string>
     <!-- "Your original recording isn't kept for this voice. Record for about a minute and your voice moves to the new engine." -->
     <string name="your_original_recording_isn_t_kept_for_this_voice_record_for_8f818c">"這個聲音沒有留下原始錄音。重新錄大約一分鐘，就會搬到新引擎。"</string>
     <string name="your_overall_level">"整體程度"</string>
@@ -3624,6 +3725,10 @@
     <!-- 'Ask me anything about your practice. I answer from your own talks, cards and routine.' -->
     <string name="ask_me_anything_about_your_practice_i_answer_from_your_own_t_674d72">"練習的事都可以問我。我會根據你的對話、卡片和作息來回答。"</string>
     <string name="ask_what_to_do_next">"問問下一步做什麼"</string>
+    <string name="asking_another_parent_for_help">"請其他家長幫忙"</string>
+    <string name="asking_for_a_discount">"請對方算便宜一點"</string>
+    <string name="asking_for_a_size_or_color">"問尺寸或顏色"</string>
+    <string name="asking_for_help">"請人幫忙"</string>
     <string name="everything_for_today_is_done_see_you_tomorrow">"今天的事都做完了，明天見。"</string>
     <string name="good_evening">"晚安。"</string>
     <string name="good_morning">"早安。"</string>

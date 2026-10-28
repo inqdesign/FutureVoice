@@ -1725,6 +1725,16 @@ class TalkViewModel(context: Context) : ViewModel() {
     private val callIsLive: Boolean
         get() = _state.value.phase.let { it != TalkPhase.IDLE && it != TalkPhase.ENDED }
 
+    /** The call screen is gone (iOS `isTornDown`). A PAUSED call is not: a
+     *  plan or a verdict that lands while it is down still counts, and its
+     *  note waits for the pick-up ([tutorNudge], iOS 74d3ccf3). */
+    private val tutorCallOver: Boolean
+        get() = _state.value.phase == TalkPhase.ENDED
+
+    /** The final check is on: nothing on screen to lean on (iOS `tutorInFinalCheck`). */
+    private val tutorInFinalCheck: Boolean
+        get() = tutorThisCall && _state.value.tutorLesson?.inFinalCheck == true
+
     /**
      * How a tutor call opens (iOS `beginTutorCall`): on the call's own topic,
      * or on the lesson left halfway. False when neither — the caller then
@@ -1776,8 +1786,10 @@ class TalkViewModel(context: Context) : ViewModel() {
         }
     }
 
-    /** A topic picked from the sheet next to the pill (iOS `TutorTopicSheet`'s `onPick`). */
-    fun pickTutorTopic(title: String) = startTutorLesson(title, picked = true)
+    /** A topic picked from the sheet next to the pill (iOS `TutorTopicSheet`'s
+     *  `onPick`); [topicId] is the curriculum's, null for the learner's own scenarios. */
+    fun pickTutorTopic(title: String, topicId: String? = null) =
+        startTutorLesson(title, picked = true, topicId = topicId)
 
     /** The topic sheet opened or closed — choosing is someone being here. */
     fun setTutorTopicsShowing(on: Boolean) {
@@ -1807,13 +1819,37 @@ class TalkViewModel(context: Context) : ViewModel() {
      * Write the curriculum for [request] and start it (iOS `startTutorLesson`).
      * [picked]: chosen on screen, so the tutor says so right away (nobody
      * spoke). A new pick replaces the lesson in progress, which stays saved,
-     * unfinished.
+     * unfinished. [topicId]: the curriculum topic it is for (iOS 23ce515f).
      */
     private fun startTutorLesson(request: String, askedWith: String? = null,
                                  picked: Boolean, fromTopic: Boolean = false,
-                                 nextRoundOf: TutorLesson? = null) {
+                                 nextRoundOf: TutorLesson? = null, topicId: String? = null) {
         val cfg = config ?: return
         if (!tutorThisCall || _state.value.tutorPlanning) return
+        val topic = topicId ?: nextRoundOf?.topicId
+        // A topic from the map with its lesson still open (often just its
+        // final check) picks that lesson up instead of writing a new one.
+        if (topic != null && nextRoundOf == null) {
+            val open = TutorLessonStore.all(appContext, cfg.targetLanguage)
+                .firstOrNull { it.topicId == topic && !it.isFinished && it.droppedAt == null }
+            if (open != null && open.id != _state.value.tutorLesson?.id) {
+                val current = _state.value.tutorLesson
+                if (current != null && !current.isFinished) {
+                    TutorLessonStore.save(appContext, current.copy(droppedAt = System.currentTimeMillis()))
+                }
+                val lesson = if (sessionId in open.sessionIds) open else open.copy(sessionIds = open.sessionIds + sessionId)
+                TutorLessonStore.save(appContext, lesson)
+                _state.update { it.copy(tutorLesson = lesson) }
+                tutorJustTicked = false
+                tutorLastFixes = emptyList()
+                resetTutorTries()
+                sendTutorSystem()
+                realtime.nudge(if (lesson.inFinalCheck) TutorNudges.PICKED_FINAL_CHECK else TutorNudges.PICKED_STARTED)
+                return
+            }
+        }
+        val plannerRequest = topic?.let { TutorCurriculum.request(it) }
+            ?.let { if (nextRoundOf == null) it else request } ?: request
         val old = _state.value.tutorLesson
         if (picked && old != null && !old.isFinished) {
             TutorLessonStore.save(appContext, old.copy(droppedAt = System.currentTimeMillis()))
@@ -1827,9 +1863,9 @@ class TalkViewModel(context: Context) : ViewModel() {
         if (picked) realtime.nudge(TutorNudges.picked(request))
         viewModelScope.launch {
             var missReason = "request_failed"
-            val planned = TutorPlanner.plan(request, askedWith, cfg.targetLanguage, cfg.nativeLanguage,
+            val planned = TutorPlanner.plan(plannerRequest, askedWith, cfg.targetLanguage, cfg.nativeLanguage,
                 cfg.level, cfg.persona, miss = { missReason = it })
-            if (!callIsLive) { _state.update { it.copy(tutorPlanning = false) }; return@launch }
+            if (tutorCallOver) { _state.update { it.copy(tutorPlanning = false) }; return@launch }
             _state.update { it.copy(tutorPlanning = false) }
             if (planned == null) {
                 // A line that names no topic is the planner working, not
@@ -1843,8 +1879,15 @@ class TalkViewModel(context: Context) : ViewModel() {
                 else if (picked || fromTopic) tutorNudge(TutorNudges.planFailed(request))
                 return@launch
             }
-            val lesson = planned.copy(sessionIds = listOf(sessionId), topicId = nextRoundOf?.topicId)
+            val lesson = planned.copy(sessionIds = listOf(sessionId), topicId = topic)
             TutorLessonStore.save(appContext, lesson)
+            if (topic != null) {
+                TutorProgressStore.update(appContext, cfg.targetLanguage, topic) {
+                    if (it.startedAt == null) it.copy(startedAt = System.currentTimeMillis()) else it
+                }
+                log("tutor_topic_started", mapOf("topic" to topic,
+                    "source" to if (picked) "map" else if (nextRoundOf != null) "round" else "voice"))
+            }
             _state.update { it.copy(tutorLesson = lesson) }
             tutorJustTicked = false
             tutorLastFixes = emptyList()
@@ -1879,7 +1922,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             val fixes = correction.await().orEmpty()
             val verdict = judged.await()
             val now = _state.value.tutorLesson
-            if (!callIsLive || !tutorStillSaid(turnId, said) || now == null ||
+            if (tutorCallOver || !tutorStillSaid(turnId, said) || now == null ||
                 now.id != lesson.id || now.current != i) return@launch
             if (verdict?.wantsOtherTopic == true) {
                 // The held turn's one line, before the lesson changes.
@@ -1918,7 +1961,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             // The last tick opens the final check; passing it finishes the
             // lesson, and even then the call goes on.
             val last = next.current == null
-            if (last) next = beginFinalCheck(next)
+            if (last) next = beginFinalCheck(next, cfg.targetLanguage)
             TutorLessonStore.save(appContext, next)
             _state.update { it.copy(tutorLesson = next) }
             tutorJustTicked = true
@@ -1948,13 +1991,15 @@ class TalkViewModel(context: Context) : ViewModel() {
         val cfg = config ?: return
         val asked = tutorLine(answeredBy = turnId)
         val repeating = tutorRepeatAsked
+        val next = TutorCurriculum.next(TutorProgressStore.all(appContext, cfg.targetLanguage), cfg.level,
+            excluding = lesson.topicId)
         viewModelScope.launch {
             if (repeating) {
                 tutorRepeatAsked = false
                 val judged = async { TutorFinalCheck.read(said, lesson, asked, cfg.targetLanguage) }
                 val fixes = correction.await().orEmpty()
                 val verdict = judged.await()
-                if (!callIsLive || !tutorStillSaid(turnId, said) ||
+                if (tutorCallOver || !tutorStillSaid(turnId, said) ||
                     _state.value.tutorLesson?.id != lesson.id) return@launch
                 if (verdict?.attempt == true) {
                     val slips = fixes.map { "\"${it.was}\" → \"${it.now}\"" }
@@ -1967,8 +2012,8 @@ class TalkViewModel(context: Context) : ViewModel() {
                 }
                 // Not an attempt: read it as an answer to the question instead.
             }
-            val answer = TutorNext.read(said, asked, lesson.title)
-            if (!callIsLive || !tutorStillSaid(turnId, said) ||
+            val answer = TutorNext.read(said, asked, lesson.title, suggested = next?.topic?.english)
+            if (tutorCallOver || !tutorStillSaid(turnId, said) ||
                 _state.value.tutorLesson?.id != lesson.id || _state.value.tutorPlanning) return@launch
             val choice = answer?.choice ?: TutorNext.Choice.UNCLEAR
             log("tutor_after_lesson", mapOf("choice" to choice.name.lowercase()))
@@ -1983,7 +2028,11 @@ class TalkViewModel(context: Context) : ViewModel() {
                     val topic = answer?.topic?.trim().orEmpty()
                     tutorNudge(if (topic.isEmpty()) TutorNudges.WANTS_NEW else TutorNudges.choseTopic(topic))
                     saveTutorBookAndMoveOn(keepingFrom = turnId)
-                    if (topic.isNotEmpty()) startTutorLesson(topic, picked = false, fromTopic = false)
+                    if (topic.isNotEmpty()) {
+                        val isNext = next?.let { topic.equals(it.topic.english, ignoreCase = true) } ?: false
+                        startTutorLesson(topic, picked = false, fromTopic = false,
+                            topicId = if (isNext) next?.topic?.id else null)
+                    }
                 }
                 TutorNext.Choice.AGAIN -> {
                     tutorRepeatAsked = true
@@ -2082,9 +2131,14 @@ class TalkViewModel(context: Context) : ViewModel() {
     }
 
     /** Every challenge is ticked: the final check opens (iOS `beginFinalCheck`). */
-    private fun beginFinalCheck(lesson: TutorLesson): TutorLesson {
+    private fun beginFinalCheck(lesson: TutorLesson, language: String): TutorLesson {
         if (lesson.check != null && lesson.check.passedAt == null) return lesson
         log("tutor_challenges_done", mapOf("of" to lesson.challenges.size.toString()))
+        lesson.topicId?.let { id ->
+            TutorProgressStore.update(appContext, language, id) {
+                if (it.lessonDoneAt == null) it.copy(lessonDoneAt = System.currentTimeMillis()) else it
+            }
+        }
         return lesson.copy(check = TutorLesson.FinalCheck(startedAt = System.currentTimeMillis()))
     }
 
@@ -2122,7 +2176,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             val slips = fixes.map { "\"${it.was}\" → \"${it.now}\"" }
             val verdict = judged.await()
             var now = _state.value.tutorLesson
-            if (!callIsLive || !tutorStillSaid(turnId, said) || now == null ||
+            if (tutorCallOver || !tutorStillSaid(turnId, said) || now == null ||
                 now.id != lesson.id || !now.inFinalCheck) return@launch
             var check = now.check ?: return@launch
             if (verdict == null) { tutorNudge(TutorNudges.ANSWER_UNCHECKED); return@launch }
@@ -2168,9 +2222,16 @@ class TalkViewModel(context: Context) : ViewModel() {
                     com.roro.futurevoice.ui.HapticEngine.success(appContext)
                     log("tutor_lesson_finished", mapOf("of" to now.challenges.size.toString(),
                         "tries" to check.tries.toString()))
-                    // The curriculum's next topic is suggested here on iOS; the
-                    // map isn't ported yet, so there is none to suggest.
-                    val nextLine = ""
+                    var nextLine = ""
+                    now.topicId?.let { id ->
+                        TutorProgressStore.update(appContext, cfg.targetLanguage, id) {
+                            it.copy(passedAt = it.passedAt ?: stamp, lessonDoneAt = it.lessonDoneAt ?: stamp,
+                                rounds = it.rounds + 1)
+                        }
+                        log("tutor_topic_passed", mapOf("topic" to id))
+                        TutorCurriculum.next(TutorProgressStore.all(appContext, cfg.targetLanguage), cfg.level,
+                            excluding = id)?.let { nextLine = TutorNudges.nextOnCurriculum(it.topic.english) }
+                    }
                     tutorJustTicked = false
                     sendTutorSystem()
                     tutorNudge(if (slips.isEmpty()) TutorNudges.passedClean(nextLine)
@@ -2273,7 +2334,7 @@ class TalkViewModel(context: Context) : ViewModel() {
      */
     private fun advanceCoach(text: String, turnId: String) {
         val cfg = config ?: return
-        if (!coachOn || text.isBlank()) return
+        if (!coachOn || text.isBlank() || tutorInFinalCheck) return
         var candidates = emptyList<com.roro.futurevoice.ui.TalkGoalItem>()
         if (learnerSpokeThisCall) {
             val mayHint = coachPlan.mayHint
