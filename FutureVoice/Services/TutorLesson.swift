@@ -393,11 +393,8 @@ enum TutorJudge {
         /// this one first", with no way out).
         var other_topic: Bool? = nil
         var wantsOtherTopic: Bool { other_topic == true }
-        /// The tutor's last line had already left this challenge — it moves
-        /// on by its own judgment (founder, 2026-10-25), and the checklist
-        /// follows it.
-        var tutor_moved_on: Bool? = nil
-        var tutorMovedOn: Bool { tutor_moved_on == true }
+        /// What the line still lacks, in a few English words, for the tutor.
+        var missing_note: String? = nil
     }
 
     /// Did `line` do `challenge`? Content only — whether it was said
@@ -418,15 +415,9 @@ enum TutorJudge {
         topic, stop or skip this lesson, or practice something else instead \
         (in any language) — not for a mistake, a question about the \
         challenge, or "I don't know".
-        Also decide "tutor_moved_on": true ONLY when the tutor's line had \
-        already finished this challenge — said they got it AND asked for \
-        something different from this challenge: the next step, or every \
-        part of the lesson together in one go when THIS challenge is only \
-        one of those parts. False while the tutor is still on this \
-        challenge: asking for it, for it again, or to say it again with \
-        more in it ("say that whole thing once more, including …" while the \
-        challenge is itself a summary is still this challenge).
-        Return STRICT JSON only: {"done": true|false, "other_topic": true|false, "tutor_moved_on": true|false}
+        Also "missing_note": when "done" is false, what the line still \
+        lacks, in a few English words ("didn't say which size"); else "".
+        Return STRICT JSON only: {"done": true|false, "other_topic": true|false, "missing_note": "..."}
         """
         let content = """
         Challenge: \(challenge.task)

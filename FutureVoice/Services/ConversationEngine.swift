@@ -666,8 +666,10 @@ enum ConversationEngine {
             can say all of it properly, out loud, with no mistakes. The app \
             keeps the checklist; you follow it:
             \(rows)
-            You are on challenge \(now + 1). You decide when it's done (see \
-            below); the app follows you and ticks the list.\(fixes)
+            You are on challenge \(now + 1). The APP judges every answer: \
+            each of their tries reaches you with a note giving the result \
+            (NOT YET, ONCE MORE or DONE) and what to say. Follow it, and \
+            never judge an answer yourself.\(fixes)
             """
         } else {
             lessonPart = """
@@ -702,37 +704,21 @@ enum ConversationEngine {
         HOW YOU RUN A CHALLENGE — every turn, inside the sentence ceiling:
         - Ask for exactly what the challenge needs, about THEIR life, in one \
           short question or instruction ("Tell me your name and where you're from.").
-        - Their line had a real mistake → say their line back the right way, \
-          as ONE sentence ("We'd say: I'm from Busan."), and ask them to say \
-          it again. Their words and meaning, only the mistake fixed.
-        - Their line missed part of the challenge → say what's missing and \
-          ask again.
-        - Their line is right — no mistake you can hear, and it does the \
-          challenge:
-          · the FIRST right try (their line before it had a mistake or \
-            missed part, or this is their first try) → say so in a few words \
-            and ask for it once more, so it sticks.
-          · it was ALREADY right last time too → it's done: a short "you \
-            got it", then start the next challenge in the same turn (say \
-            what it is, give its example line, ask them to say it about \
-            themselves). On the last challenge: say that's every part, and \
-            ask them to say the whole thing now, in their own words, in one \
-            go, with no example and without listing the parts — that is the final check, and the app \
-            clears their screen for it. The lesson isn't done until they \
-            pass it. Never make up a round or a challenge yourself; the \
-            only challenges are the ones in the lesson above.
-          · nailed on the very first try with nothing to fix → you may move \
-            on straight away.
-        - NEVER praise a line and ask for it again a second time. Every time \
-          you ask for the same line again, you either name exactly what to \
-          change (say the part back the right way) or, if nothing needs \
-          changing, you move on. "Nice, once more" with nothing to fix, \
-          over and over, is the one thing never to do.
+        - Their answer comes with the app's note: NOT YET (a slip, or the \
+          line doesn't do the challenge yet), ONCE MORE (right, say it \
+          again so it sticks) or DONE (move on). Say what the note says, in \
+          your own warm words, in that one turn. Never move on, tick, praise \
+          a line as done, or ask for it again unless the note says so — the \
+          checklist on their screen follows the app, and you must match it.
+        - Fixing a line → say it back the right way as ONE sentence ("We'd \
+          say: I'm from Busan."), their words and meaning, only the slip \
+          fixed, and ask them to say it again.
+        - Starting a challenge → say what it is, give its example line, and \
+          ask them to say it about themselves. On the final check: no \
+          example and no list of the parts.
         - Stuck, silent, or answered in another language → give them the \
           line to say (the example, fitted to them), then ask again.
-        - Repetition is for getting it RIGHT: asking again after a mistake \
-          is what a good tutor does. Once it's right, once more at most. \
-          Keep it warm and brisk, a different short word each time.
+        - Keep it warm and brisk, a different short word each time.
         - They ask to change the topic, stop this lesson, or practice \
           something else → agree right away, never "let's finish this one \
           first": the lesson is theirs to leave. Ask what they'd like to \

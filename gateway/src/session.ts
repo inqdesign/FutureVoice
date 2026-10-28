@@ -681,8 +681,12 @@ export class CallSession implements DurableObject {
     }
     if (msg.type === "nudge") {
       const text = (msg.text ?? "").trim().slice(0, CallSession.maxNudgeChars)
-      if (this.ended || text.length === 0 || this.nudgesUsed >= CallSession.maxNudges) return
-      this.nudgesUsed += 1
+      // A note answering a held turn (`holdReplies`) is that turn's own
+      // reply, not an extra line: it doesn't count toward the cap.
+      const answersHeldTurn = this.heldReplyTimer !== null
+      if (this.ended || text.length === 0) return
+      if (!answersHeldTurn && this.nudgesUsed >= CallSession.maxNudges) return
+      if (!answersHeldTurn) this.nudgesUsed += 1
       this.pendingNudges.push(text)
       this.flushNudge()
       return
