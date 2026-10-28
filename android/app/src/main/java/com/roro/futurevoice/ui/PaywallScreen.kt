@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material.icons.outlined.Circle
@@ -77,6 +78,7 @@ import com.roro.futurevoice.data.BillingGate
 import com.roro.futurevoice.data.BillingService
 import com.roro.futurevoice.data.PlanChange
 import com.roro.futurevoice.data.renewalLabel
+import com.roro.futurevoice.data.planName
 import com.roro.futurevoice.data.ConsentStore
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import java.text.NumberFormat
@@ -251,8 +253,13 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
     }
     val packPicked = tier == PACK
     val currentPlanId = if (isSubscriber) account?.planId else null
-    val selectionIsCurrent = currentPlanId == "${tier}_$period"
-    val route = PlanChange.route(isSubscriber, subscriptionSource, currentPlanId, tier, period)
+    // The plan the store will switch this subscription to at the renewal — a
+    // downgrade waits for the period to end (iOS 2026-10-27). Buying it again
+    // changes nothing, so it is handled like the plan already held.
+    val selectionIsPending = isSubscriber && account?.pendingPlan?.planId == "${tier}_$period"
+    val selectionIsCurrent = currentPlanId == "${tier}_$period" || selectionIsPending
+    val route = if (selectionIsPending) PlanChange.Route.ManageCurrent
+        else PlanChange.route(isSubscriber, subscriptionSource, currentPlanId, tier, period)
     val elsewhere = route as? PlanChange.Route.ManageElsewhere
     // Buying needs a PRICED plan; the rows can render without one.
     val chosen = offers.firstOrNull { it.plan.tier == tier && it.plan.period == period }
@@ -713,7 +720,32 @@ private fun PlansStep(
             Text(stringResource(if (currentPlanId != null) R.string.your_plan else R.string.paywall_keep_talking),
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold)
-            if (currentPlanId != null && account != null) {
+            val next = account?.pendingPlan
+            if (currentPlanId != null && account != null && !account.isTrialing && next != null) {
+                // A scheduled change has to be read, not a grey footnote (iOS
+                // 2026-10-27): the subscriber who bought a downgrade opened
+                // this page seven times looking for it.
+                val context = androidx.compose.ui.platform.LocalContext.current
+                val label = stringResource(AccountStatus.tierNameRes(currentPlanId)) + " · " +
+                    stringResource(if (currentPlanId.endsWith("annual")) R.string.annual else R.string.monthly)
+                Row(
+                    Modifier.padding(top = 4.dp).fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                            ContinuousShape(12.dp))
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Filled.SwapHoriz, contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(18.dp))
+                    Text(stringResource(R.string.you_re_on_the_until_then, label,
+                            account.renewalLabel(locale), AccountStatus.planName(context, next.planId)),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface)
+                }
+            } else if (currentPlanId != null && account != null) {
                 val name = stringResource(AccountStatus.tierNameRes(currentPlanId))
                 val label = when {
                     // A trial names the plan it will BECOME, not what it allows.
@@ -764,6 +796,9 @@ private fun PlansStep(
                     period = period,
                     selected = tier == t,
                     isCurrent = currentPlanId == "${t}_$period",
+                    pendingFrom = account?.pendingPlan
+                        ?.takeIf { currentPlanId != null && it.planId == "${t}_$period" }
+                        ?.let { account.renewalLabel(locale) },
                     scenesCostTalk = account?.scenesCostTalk == true,
                     onSelect = { onTier(t) },
                 )
@@ -825,6 +860,9 @@ private fun LadderRow(
     period: String,
     selected: Boolean,
     isCurrent: Boolean,
+    /** The renewal date when this row is the plan the store switches to
+     *  then — badged "From <date>" in place of a pitch. */
+    pendingFrom: String? = null,
     /** Scenes are paid for out of the minutes (since 2026-10-19), so the row
      *  says nothing about them; only a viewer still on the count sees one. */
     scenesCostTalk: Boolean = false,
@@ -869,6 +907,9 @@ private fun LadderRow(
             // "Am häufigsten gewählt" pushed "Plus 600 Min." onto two lines.
             when {
                 isCurrent -> Text(stringResource(R.string.current_plan),
+                    style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold,
+                    color = accent)
+                pendingFrom != null -> Text(stringResource(R.string.from, pendingFrom),
                     style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold,
                     color = accent)
                 tier == MOST_CHOSEN_TIER -> Text(stringResource(R.string.paywall_most_chosen),

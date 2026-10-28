@@ -386,6 +386,7 @@
     <!-- "Change the language you're practicing, or add another one. Your fluent self speaks it in the same voice." -->
     <string name="change_the_language_you_re_practicing_or_add_another_one_you_6ea4b8">"연습할 언어를 바꾸거나 새 언어를 추가해요. 어느 언어든 같은 내 목소리로 말해요."</string>
     <string name="change_to">"%s로 바꾸기"</string>
+    <string name="changes_to_on">"%2$s부터 %1$s 플랜이 시작돼요"</string>
     <string name="chapters">"챕터"</string>
     <string name="characters">"가상 인물"</string>
     <string name="chatting_is_one_thing_presenting_is_another">"말은 되는데, 발표는 또 다르죠"</string>
@@ -868,6 +869,7 @@
     <string name="free_up_space_in_settings_your_name_icloud_and_syncing_picks_29796d">"설정 → 내 이름 → iCloud에서 공간을 비우면 멈춘 곳부터 다시 올라가요."</string>
     <string name="friend">"친구"</string>
     <string name="friends_joined">"가입한 친구"</string>
+    <string name="from">"%s부터"</string>
     <string name="from_a1_to_c2_measured_from_what_you_said">"A1부터 C2까지, 내가 한 말로 재요."</string>
     <string name="from_a_hobby">"취미로"</string>
     <string name="from_now_on_your_fluent_self_speaks_in_your_own_voice">"이제부터 유창해진 내가 내 목소리로 말해요."</string>
@@ -1303,6 +1305,7 @@
     <string name="lld_min_each">"1개에 %d분"</string>
     <string name="lld_min_left">"%d분 남음"</string>
     <string name="lld_min_more_than_the_week_before">"지난주보다 %d분 더 했어요"</string>
+    <string name="lld_min_of_talk_a_month_from_then">"그때부터 매달 대화 %d분"</string>
     <string name="lld_min_of_talk_left">"통화 시간 %d분 남음"</string>
     <string name="lld_min_of_talk_lld_talk_inflect_true">"%1$d분 대화 · %2$d번"</string>
     <!-- '%lld min of talk over %lld days. See how it went, then take the test.' -->
@@ -1601,6 +1604,7 @@
     <string name="no_limit">"제한 없음"</string>
     <!-- 'No limit and no rationing. Talking takes real effort, so there is nothing here to ration.' -->
     <string name="no_limit_and_no_rationing_talking_takes_real_effort_so_there_9058ba">"제한도, 아껴 쓸 일도 없어요. 말하는 데는 실제로 힘이 들어가니까요."</string>
+    <string name="no_limit_on_talk">"대화 시간 제한 없음"</string>
     <string name="no_matching_words">"조건에 맞는 단어가 없어요"</string>
     <string name="no_need_to_be_loud_just_be_clear">"크게 말할 필요 없어요. 또렷하게만 읽으면 돼요."</string>
     <string name="no_one_here_yet_for_this_language_check_back_soon">"이 언어로는 아직 아무도 없어요 — 조금 뒤에 다시 확인해 보세요."</string>
@@ -3356,6 +3360,7 @@
     <string name="you_re_on_the_board">"순위에 올랐어요"</string>
     <string name="you_re_on_the_it_converts_unless_you_cancel">"%s 중이에요. 해지하지 않으면 그대로 결제로 이어져요."</string>
     <string name="you_re_on_the_it_ends_on">"%1$s 중이에요. %2$s에 끝나고 결제되지 않아요."</string>
+    <string name="you_re_on_the_until_then">"%1$s 이용 중이에요. %2$s부터는 %3$s 플랜이 시작돼요."</string>
     <string name="you_re_out_of_credits_check_your_plan_under_me_account">"크레딧이 떨어졌어요. 나 → 계정에서 요금제를 확인해 주세요."</string>
     <string name="you_re_out_of_credits_fresh_scenarios_need_a_top_up">"크레딧이 떨어졌어요. 새 상황을 만들려면 충전해야 해요."</string>
     <!-- "You're out of credits — generating this dialogue needs a top-up." -->

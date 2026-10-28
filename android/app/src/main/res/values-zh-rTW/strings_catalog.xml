@@ -386,6 +386,7 @@
     <!-- "Change the language you're practicing, or add another one. Your fluent self speaks it in the same voice." -->
     <string name="change_the_language_you_re_practicing_or_add_another_one_you_6ea4b8">"切換要練習的語言，或新增一種語言。不論哪種語言，都是用同一個你的聲音說。"</string>
     <string name="change_to">"換成%s"</string>
+    <string name="changes_to_on">"%2$s起改為%1$s"</string>
     <string name="chapters">"章節"</string>
     <string name="characters">"虛擬人物"</string>
     <string name="chatting_is_one_thing_presenting_is_another">"聊天沒問題，\n上台講話卻是另一回事"</string>
@@ -868,6 +869,7 @@
     <string name="free_up_space_in_settings_your_name_icloud_and_syncing_picks_29796d">"到「設定」→ 你的名字 → iCloud 釋出空間，同步就會從中斷的地方繼續。"</string>
     <string name="friend">"朋友"</string>
     <string name="friends_joined">"加入的朋友"</string>
+    <string name="from">"%s起"</string>
     <string name="from_a1_to_c2_measured_from_what_you_said">"從 A1 到 C2，根據你說過的話來評估。"</string>
     <string name="from_a_hobby">"因為嗜好"</string>
     <string name="from_now_on_your_fluent_self_speaks_in_your_own_voice">"從現在起，流利的自己會用你自己的聲音說話。"</string>
@@ -1303,6 +1305,7 @@
     <string name="lld_min_each">"每次 %d 分鐘"</string>
     <string name="lld_min_left">"剩%d分鐘"</string>
     <string name="lld_min_more_than_the_week_before">"比前一週多聊%d分鐘"</string>
+    <string name="lld_min_of_talk_a_month_from_then">"從那天起每月對話%d分鐘"</string>
     <string name="lld_min_of_talk_left">"通話時間剩%d分鐘"</string>
     <string name="lld_min_of_talk_lld_talk_inflect_true">"聊了%1$d分鐘 · %2$d次"</string>
     <!-- '%lld min of talk over %lld days. See how it went, then take the test.' -->
@@ -1601,6 +1604,7 @@
     <string name="no_limit">"無上限"</string>
     <!-- 'No limit and no rationing. Talking takes real effort, so there is nothing here to ration.' -->
     <string name="no_limit_and_no_rationing_talking_takes_real_effort_so_there_9058ba">"沒有上限，也不用省著用。說話本來就要花力氣。"</string>
+    <string name="no_limit_on_talk">"對話不限時"</string>
     <string name="no_matching_words">"沒有符合的單字"</string>
     <string name="no_need_to_be_loud_just_be_clear">"不用大聲，唸清楚就好。"</string>
     <string name="no_one_here_yet_for_this_language_check_back_soon">"這個語言還沒有人。過一會兒再來看看。"</string>
@@ -3356,6 +3360,7 @@
     <string name="you_re_on_the_board">"你上榜了"</string>
     <string name="you_re_on_the_it_converts_unless_you_cancel">"目前在%s。不取消的話，會直接轉成付費。"</string>
     <string name="you_re_on_the_it_ends_on">"目前在%1$s。%2$s結束，不會扣款。"</string>
+    <string name="you_re_on_the_until_then">"%2$s前使用%1$s，之後改為%3$s。"</string>
     <string name="you_re_out_of_credits_check_your_plan_under_me_account">"點數用完了。請到「我的 → 帳號」看看你的方案。"</string>
     <string name="you_re_out_of_credits_fresh_scenarios_need_a_top_up">"點數用完了，要產生新的情境得先加值。"</string>
     <!-- "You're out of credits — generating this dialogue needs a top-up." -->

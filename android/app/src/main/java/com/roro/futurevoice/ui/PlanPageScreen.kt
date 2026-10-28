@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -25,9 +26,11 @@ import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Redeem
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,19 +46,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.roro.futurevoice.R
 import com.roro.futurevoice.data.AccountStatus
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.SubscriptionReceipt
 import com.roro.futurevoice.data.dayLabel
+import com.roro.futurevoice.data.planName
 import com.roro.futurevoice.data.renewalLabel
 import com.roro.futurevoice.net.ReferralClient
 import com.roro.futurevoice.ui.brand.AppSurfaces
+import com.roro.futurevoice.ui.brand.ContinuousShape
 
 /**
  * Me → Usage. "Usage", not "Talk time": the page reports Watch scenes and the
@@ -127,6 +134,33 @@ fun PlanPageScreen(
         ) {
             val a = account
             val uncapped = a != null && a.isUncappedTalk
+            val renews = a?.renewalLabel(locale).orEmpty()
+
+            // What is about to change, and anything written by hand on the
+            // server: on top and tinted, not a grey line among the figures.
+            // A downgrade nobody noticed is what prompted it (iOS 2026-10-27).
+            val pending = a?.pendingPlan
+            val notes = a?.subscriptionNotes(
+                com.roro.futurevoice.core.UILanguage.current(context) ?: locale.language).orEmpty()
+            if (a?.isEntitled == true && (pending != null || notes.isNotEmpty())) {
+                Spacer(Modifier.height(16.dp))
+                Column(
+                    Modifier.fillMaxWidth()
+                        .clip(ContinuousShape(com.roro.futurevoice.ui.brand.IosRadius.groupedCard))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                ) {
+                    if (pending != null) {
+                        Callout(Icons.Filled.SwapHoriz,
+                            stringResource(R.string.changes_to_on,
+                                AccountStatus.planName(context, pending.planId), renews),
+                            pendingSizeLine(pending))
+                    }
+                    notes.forEachIndexed { i, note ->
+                        if (pending != null || i > 0) GroupedRowDivider()
+                        Callout(Icons.Filled.Info, note, null)
+                    }
+                }
+            }
 
             GroupedSectionHeader(stringResource(
                 if (a?.isEntitled == true) R.string.this_month else R.string.left_to_spend))
@@ -188,8 +222,10 @@ fun PlanPageScreen(
                         stringResource(R.string.lld_min_each, a.sceneTalkMinutes),
                         subtitle = stringResource(R.string.taken_from_the_talk_time_above))
                 }
-                val renews = a?.renewalLabel(locale).orEmpty()
-                if (a?.isEntitled == true && renews.isNotEmpty()) {
+                // A scheduled change replaces this row: the date does not
+                // refill this plan, it starts the other one — said in the
+                // tinted box above.
+                if (a?.isEntitled == true && renews.isNotEmpty() && a.pendingPlan == null) {
                     GroupedRowDivider()
                     // The same date, three different promises. A trial's date
                     // is not a refill — it is the day it starts costing money;
@@ -379,6 +415,38 @@ private fun talkValue(a: AccountStatus?): String = when {
     a.unlimited || a.secondsBalance > 0 ->
         stringResource(R.string.lld_min_b61908, a.secondsBalance / 60)
     else -> stringResource(R.string.none)
+}
+
+/** What the pending plan will hold — the catalog's size, from the server. */
+@Composable
+private fun pendingSizeLine(next: AccountStatus.PendingPlan): String? {
+    if (next.talkUnlimited) return stringResource(R.string.no_limit_on_talk)
+    val seconds = next.monthlySeconds?.takeIf { it > 0 } ?: return null
+    return stringResource(R.string.lld_min_of_talk_a_month_from_then, seconds / 60)
+}
+
+/**
+ * A row that has to be read: tinted icon, a semibold title in the primary
+ * colour, the detail in primary too rather than grey (iOS `callout`).
+ */
+@Composable
+private fun Callout(icon: ImageVector, title: String, subtitle: String?) {
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(22.dp),
+            tint = MaterialTheme.colorScheme.primary)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(title, fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface)
+            subtitle?.let {
+                Text(it, style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface)
+            }
+        }
+    }
 }
 
 /** Where a live subscription is actually managed. Null for a source with no
