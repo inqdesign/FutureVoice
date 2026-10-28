@@ -386,6 +386,7 @@
     <!-- "Change the language you're practicing, or add another one. Your fluent self speaks it in the same voice." -->
     <string name="change_the_language_you_re_practicing_or_add_another_one_you_6ea4b8">"練習する言語を変えたり、新しい言語を追加したりできます。どの言語でも同じ自分の声で話します。"</string>
     <string name="change_to">"%sに変更"</string>
+    <string name="changes_to_on">"%2$sから%1$sに変わります"</string>
     <string name="chapters">"チャプター"</string>
     <string name="characters">"架空の人物"</string>
     <string name="chatting_is_one_thing_presenting_is_another">"会話はできても、\n人前で話すのはまた別です"</string>
@@ -868,6 +869,7 @@
     <string name="free_up_space_in_settings_your_name_icloud_and_syncing_picks_29796d">"設定 → 自分の名前 → iCloud で空き容量を作ると、止まったところから再開します。"</string>
     <string name="friend">"友だち"</string>
     <string name="friends_joined">"参加した友だち"</string>
+    <string name="from">"%sから"</string>
     <string name="from_a1_to_c2_measured_from_what_you_said">"A1からC2まで、自分が話した内容から測ります。"</string>
     <string name="from_a_hobby">"趣味で"</string>
     <string name="from_now_on_your_fluent_self_speaks_in_your_own_voice">"これからは流暢な自分が自分の声で話します。"</string>
@@ -1303,6 +1305,7 @@
     <string name="lld_min_each">"1回%d分"</string>
     <string name="lld_min_left">"残り%d分"</string>
     <string name="lld_min_more_than_the_week_before">"前の週より%d分多く話しました"</string>
+    <string name="lld_min_of_talk_a_month_from_then">"その日から毎月%d分の会話"</string>
     <string name="lld_min_of_talk_left">"通話時間 残り%d分"</string>
     <string name="lld_min_of_talk_lld_talk_inflect_true">"トーク%1$d分 · %2$d回"</string>
     <!-- '%lld min of talk over %lld days. See how it went, then take the test.' -->
@@ -1601,6 +1604,7 @@
     <string name="no_limit">"上限なし"</string>
     <!-- 'No limit and no rationing. Talking takes real effort, so there is nothing here to ration.' -->
     <string name="no_limit_and_no_rationing_talking_takes_real_effort_so_there_9058ba">"上限も、節約する必要もありません。話すのには本当に力がいるからです。"</string>
+    <string name="no_limit_on_talk">"会話は無制限"</string>
     <string name="no_matching_words">"条件に合う単語がありません"</string>
     <string name="no_need_to_be_loud_just_be_clear">"大きな声はいりません。はっきり読むだけで大丈夫です。"</string>
     <string name="no_one_here_yet_for_this_language_check_back_soon">"この言語ではまだ誰もいません。しばらくしてからまた見てみてください。"</string>
@@ -3356,6 +3360,7 @@
     <string name="you_re_on_the_board">"ランクインしました"</string>
     <string name="you_re_on_the_it_converts_unless_you_cancel">"%s中です。解約しなければ、そのまま有料に移行します。"</string>
     <string name="you_re_on_the_it_ends_on">"%1$s中です。%2$sに終了し、請求はありません。"</string>
+    <string name="you_re_on_the_until_then">"%2$sまで%1$s、その後は%3$sです。"</string>
     <string name="you_re_out_of_credits_check_your_plan_under_me_account">"クレジットが切れました。マイページ → アカウントでプランを確認してください。"</string>
     <string name="you_re_out_of_credits_fresh_scenarios_need_a_top_up">"クレジットが切れました。新しいシチュエーションを作るにはチャージが必要です。"</string>
     <!-- "You're out of credits — generating this dialogue needs a top-up." -->

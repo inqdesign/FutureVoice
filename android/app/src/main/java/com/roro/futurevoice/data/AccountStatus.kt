@@ -83,7 +83,39 @@ data class AccountStatus(
      *  learner they have never paid ([TrialReportStore.shouldOffer]) must ask
      *  this first. */
     val ownershipKnown: Boolean = false,
+    /**
+     * A plan change the store has scheduled for the next renewal — a
+     * downgrade (Plus → Light, whatever the period) waits for the period to
+     * end, and until it does the store's own screen is the only place it
+     * shows. Computed by the server (`subscription_summary`, iOS 2026-10-27)
+     * so what it means can change without a build; null when nothing changes.
+     */
+    val pendingPlan: PendingPlan? = null,
+    /**
+     * Lines written by hand about subscriptions (`subscription_notes`), one
+     * map per note, language code → text — the way to tell subscribers
+     * something without a release. Read through [subscriptionNotes], which
+     * picks the app language.
+     */
+    val subscriptionNoteTexts: List<Map<String, String>> = emptyList(),
 ) {
+    data class PendingPlan(
+        val planId: String,
+        /** When it starts — the current period's end (`timestamptz`). */
+        val startsAt: String,
+        val monthlySeconds: Int?,
+        val monthlyScenes: Int?,
+        val talkUnlimited: Boolean,
+    )
+
+    /** The notes in [lang] — else the same language in another script or
+     *  region, else English, else whatever the note has (iOS). */
+    fun subscriptionNotes(lang: String): List<String> = subscriptionNoteTexts.mapNotNull { texts ->
+        texts[lang]
+            ?: texts.entries.firstOrNull { LanguageCatalog.sameLanguage(it.key, lang) }?.value
+            ?: texts["en"] ?: texts.values.firstOrNull()
+    }
+
     val isEntitled: Boolean
         get() = subscriptionStatus in setOf("trialing", "active", "grace")
 
@@ -211,6 +243,21 @@ data class AccountStatus(
         )
 
         @Serializable
+        private data class PendingRow(
+            val plan_id: String,
+            val starts_at: String,
+            val monthly_seconds: Int? = null,
+            val monthly_scenes: Int? = null,
+            val talk_unlimited: Boolean? = null,
+        )
+
+        @Serializable
+        private data class SummaryRow(
+            val pending: PendingRow? = null,
+            val notes: List<Map<String, String>>? = null,
+        )
+
+        @Serializable
         private data class CreditRow(val balance: Int = 0, val unlimited: Boolean = false)
 
         @Serializable
@@ -282,8 +329,37 @@ data class AccountStatus(
                 out = out.copy(planMonthlySeconds = it)
             }
             tiersOnSale(auth)?.let { out = out.copy(tiersOnSale = it) }
+            // The pending plan change and the hand-written notes, one RPC
+            // (20261027150000). Missing on an older database = nothing extra said.
+            if (out.isEntitled) summary(auth)?.let { s ->
+                out = out.copy(
+                    pendingPlan = s.pending?.let {
+                        PendingPlan(planId = it.plan_id, startsAt = it.starts_at,
+                            monthlySeconds = it.monthly_seconds,
+                            monthlyScenes = it.monthly_scenes,
+                            talkUnlimited = it.talk_unlimited ?: false)
+                    },
+                    subscriptionNoteTexts = s.notes.orEmpty(),
+                )
+            }
             out
         }
+
+        /** `subscription_summary()` — a single jsonb object. */
+        private suspend fun summary(auth: AuthRepository): SummaryRow? = runCatching {
+            val request = Request.Builder()
+                .url("${Config.supabaseUrl.trimEnd('/')}/rest/v1/rpc/subscription_summary")
+                .header("Authorization", "Bearer ${auth.accessToken()}")
+                .header("apikey", Config.supabaseAnonKey)
+                .post("{}".toRequestBody("application/json".toMediaType()))
+                .build()
+            Edge.client.newCall(request).execute().use { resp ->
+                if (resp.code !in 200..299) return@use null
+                val raw = resp.body.string()
+                if (raw.isBlank() || raw.trim() == "null") return@use null
+                Edge.json.decodeFromString(SummaryRow.serializer(), raw)
+            }
+        }.getOrNull()
 
         /** `subscription_plans.monthly_seconds` for [planId], null when the
          *  plan is uncapped or the row can't be read (iOS `PlanRow`). */
@@ -355,6 +431,20 @@ data class AccountStatus(
         @PublishedApi
         internal inline fun <reified T> serializer() =
             kotlinx.serialization.serializer<T>()
+    }
+}
+
+/**
+ * "Light · Annual" for any plan id — the held plan or a pending one (iOS
+ * `AccountStatus.planName`). Resolved through [context] so it reads in the
+ * language the app is drawing in.
+ */
+fun AccountStatus.Companion.planName(context: android.content.Context, planId: String): String {
+    val name = context.getString(AccountStatus.tierNameRes(planId))
+    return when (planId.split('_').drop(1).firstOrNull()) {
+        "annual" -> "$name · " + context.getString(com.roro.futurevoice.R.string.annual)
+        "monthly" -> "$name · " + context.getString(com.roro.futurevoice.R.string.monthly)
+        else -> name
     }
 }
 
