@@ -2915,8 +2915,15 @@ that back. `TutorLesson.swift`, `TutorLessonViews.swift`,
   summary sees as `USER_DRILL` (`drillLineNote`). A tutor call with no check
   try is still a practice call (`Session.isPractice`); one with a try reads
   "Tutor" on its card. A verdict that lands after the last save leaves its
-  line a drill. Calls saved before this keep `coached: true`. Android has no
-  final check yet, so its tutor calls stay whole-call practice.
+  line a drill. Calls saved before this keep `coached: true`. Android has
+  all of this since 2026-10-29 (feat/android 1304726d) except the curriculum
+  map, so an Android lesson never suggests a next topic.
+- **`session-summary` is Android's, and it lives in this tree too**
+  (2026-10-29). iOS never calls it; Android's summary does. On 10-27 a
+  deploy from this tree's stale copy silently dropped remembered notes, talk
+  dates and the read/drill-line notes from every Android summary. The two
+  copies are now the same file — keep them so, and deploy it from here
+  (this tree has the newest `_shared`).
 - **The tutor's own words stay 반말**; only the practiced line has its own
   register (Haiku drifted to 해요체/여러분 to match a polite example).
 - The Claude reply ceiling went 1024 → 2048: a tick turn thinks 800–1,460
