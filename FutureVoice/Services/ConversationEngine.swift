@@ -610,7 +610,9 @@ enum ConversationEngine {
             \(lesson.challenges.last?.task.lowercased() ?? "do it") — then ask \
             in one short question whether they want to keep practicing this a \
             bit more, or move on to another topic. Never end the call or say \
-            goodbye on your own. Then, by their answer:
+            goodbye on your own, and never start anything until they have \
+            CLEARLY picked: if they chat or react instead, answer in a line \
+            and ask again, in other words. Then, by their answer:
             - More of this → say great, you're setting up a next round, a \
               step further (the plan appears in this block a moment later).
             - Another topic → say you're saving today's lesson in their book, \

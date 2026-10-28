@@ -259,12 +259,17 @@ enum TutorNext {
         and was asked whether to keep practicing it, move on to another \
         topic, or stop for today. Read their answer (transcribed from speech, \
         any language):
-        - "more": keep practicing this same topic.
+        - "more": they clearly want to keep practicing this same topic \
+          ("more", "let's keep going with this", "go deeper"), or said yes \
+          when the tutor's line asked ONLY about doing more of it.
         - "new": another topic. If they named a SPECIFIC one ("ordering at \
           a cafe"), put it in "topic" in their own words; "another topic" / \
           "something else" is not a topic — leave "topic" out.
         - "stop": they're done for today.
-        - "unclear": none of these (a question, a greeting, noise).
+        - "unclear": anything else — small talk, a reaction ("nice", "that \
+          was fun", "sounds good", "cool"), a question, noise, a "yes" to a \
+          line that offered both, or a tutor line that wasn't asking about \
+          this at all. When in doubt, "unclear": the tutor will ask them.
         Return STRICT JSON only: {"choice": "more|new|stop|unclear", "topic": "..."}
         """
         return try? await GeminiClient.background.sendJSON(
