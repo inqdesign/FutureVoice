@@ -50,6 +50,10 @@ struct WeekRecapSheet: View {
     @State private var routineRules: [UUID: String] = [:]
     @State private var showingPaywall = false
     @State private var showingFeedback = false
+    /// The trial's second card: every feature, and how much of each was used.
+    @State private var featureUses: [FeatureUse] = []
+    /// Foreground time in the app over the trial window.
+    @State private var appSeconds = 0
     /// The deck's start-up runs once per opening: the test's full-screen
     /// cover makes the deck disappear and reappear, which would re-run
     /// `.task` (a second offer counted, the thin flag reset under the
@@ -335,7 +339,7 @@ struct WeekRecapSheet: View {
             VStack(alignment: .leading, spacing: 18) {
                 switch card {
                 case .cover:    cover
-                case .talk:     talk
+                case .talk:     if isTrial { trialUsage } else { talk }
                 case .used:     used
                 case .review:   review
                 case .fresh:    fresh
@@ -1034,6 +1038,170 @@ struct WeekRecapSheet: View {
         .frame(maxWidth: .infinity)
     }
 
+    // 2 — how they used the app (2026-10-28, founder): the time it took,
+    // said as time that didn't go to scrolling, then EVERY practice feature
+    // with how much of it was used, so the ones they never opened are on
+    // the page too, and one line on what to add.
+    private var trialUsage: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            kicker(Text("How you used it"), "square.grid.2x2.fill")
+            bigNumber(max(1, appSeconds / 60), unit: Text("min in the app"))
+            Text("Time that didn't go to scrolling. Well spent.")
+                .font(.title3)
+                .fixedSize(horizontal: false, vertical: true)
+            if !featureUses.isEmpty {
+                Text("You tried \(featureUses.filter(\.used).count) of \(featureUses.count).")
+                    .font(.headline)
+                    .padding(.top, 4)
+                usageAdvice(FeatureUse.advice(featureUses))
+                VStack(spacing: 0) {
+                    ForEach(Array(featureUses.enumerated()), id: \.element.id) { index, use in
+                        if index > 0 { Divider().padding(.leading, 46) }
+                        featureRow(use)
+                    }
+                }
+            }
+        }
+    }
+
+    private func featureRow(_ use: FeatureUse) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: featureSymbol(use.feature))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(use.used ? Color.white : Color.secondary)
+                .frame(width: 34, height: 34)
+                .background(use.used ? featureColor(use.feature) : Color(.tertiarySystemFill), in: Circle())
+            VStack(alignment: .leading, spacing: 2) {
+                Text(featureName(use.feature))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(use.used ? Color.primary : Color.secondary)
+                Text(featureBlurb(use.feature))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 8)
+            Group {
+                if !use.used {
+                    Text("Not yet").foregroundStyle(.tertiary)
+                } else if use.feature == .talk {
+                    Text("\(max(1, use.minutes)) min")
+                } else {
+                    Text("×\(use.count)")
+                }
+            }
+            .font(.subheadline.weight(.semibold))
+            .monospacedDigit()
+        }
+        .padding(.vertical, 9)
+    }
+
+    @ViewBuilder private func usageAdvice(_ advice: FeatureUse.Advice) -> some View {
+        let text: Text = switch advice {
+        case .onlyTalk:
+            Text("You only talked. Talking makes you quicker, but a correction only sticks once you say it right yourself. After a call, run Say it again, and clear a few review cards a day.")
+        case .noTalk:
+            Text("Talking is the heart of it. Everything else is built from your calls.")
+        case .wideMix:
+            Text("You tried most of it. That mix is what makes it stick.")
+        case .next(.sayItAgain):
+            Text("Add Say it again next. It runs your last talk again with your lines corrected, and that's where the fixes stick.")
+        case .next(.review):
+            Text("Add a few review cards a day. The words and corrections from your talks come back until they're yours.")
+        case .next(.shadow):
+            Text("Add shadowing next. Saying the fluent lines in your own voice trains the rhythm talking alone doesn't.")
+        case .next(.scene):
+            Text("Try a scene next. Watch a situation you're about to face played out, then talk it through.")
+        case .next(.listen):
+            Text("Try listening next. A few minutes on the go keeps your ear in the language between calls.")
+        case .next(.speech):
+            Text("Try a speech next. One recorded take shows how you sound when you have to keep going on your own.")
+        case .next(.talk):
+            Text("Talking is the heart of it. Everything else is built from your calls.")
+        }
+        let tint: Color = switch advice {
+        case .onlyTalk: .orange
+        case .wideMix: .green
+        default: Color.themeAccent
+        }
+        Label { text.fixedSize(horizontal: false, vertical: true) }
+            icon: { Image(systemName: advice == .wideMix ? "hand.thumbsup.fill" : "lightbulb.fill").foregroundStyle(tint) }
+            .font(.subheadline)
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private func featureName(_ f: FeatureUse.Feature) -> String {
+        f == .scene ? explain("Scenes") : planKind(f).label
+    }
+
+    private func featureSymbol(_ f: FeatureUse.Feature) -> String {
+        f == .scene ? "play.rectangle.fill" : planKind(f).symbol
+    }
+
+    /// Mint for scenes: the one system colour no routine kind uses
+    /// (indigo is the Core's).
+    private func featureColor(_ f: FeatureUse.Feature) -> Color {
+        f == .scene ? .mint : planKind(f).color
+    }
+
+    private func planKind(_ f: FeatureUse.Feature) -> StudyPlan.Kind {
+        switch f {
+        case .talk: .talk
+        case .sayItAgain: .sayItAgain
+        case .review: .review
+        case .shadow: .shadow
+        case .listen: .listen
+        case .speech: .speech
+        case .scene: .talk
+        }
+    }
+
+    private func featureBlurb(_ f: FeatureUse.Feature) -> String {
+        switch f {
+        case .talk: explain("Call your fluent self")
+        case .sayItAgain: explain("Redo a talk with your lines corrected")
+        case .review: explain("Words, phrases and sentence cards")
+        case .shadow: explain("Say the fluent lines in your own voice")
+        case .scene: explain("Watch your situation played out")
+        case .listen: explain("Listen on the go")
+        case .speech: explain("Record a speech and get a score")
+        }
+    }
+
+    /// Foreground time over the window, never less than the metered talk
+    /// (a call in a pocket is metered but not foregrounded), like the day card.
+    private func trialAppSeconds() -> Int {
+        let calendar = Calendar.current
+        var seconds = 0
+        var day = calendar.startOfDay(for: recap.start)
+        while day < recap.end, let next = calendar.date(byAdding: .day, value: 1, to: day) {
+            seconds += AppUsageLog.seconds(on: day)
+            day = next
+        }
+        return max(seconds, recap.talkSeconds)
+    }
+
+    /// The usage card's facts for the narration, in place of the talk card's.
+    private var usageFacts: [String] {
+        guard isTrial, !featureUses.isEmpty else { return [] }
+        var f = ["How they used the app: \(appSeconds / 60) min in the app in total (time not spent scrolling)."]
+        for use in featureUses {
+            let name = use.feature.rawValue
+            f.append(use.used
+                     ? (use.feature == .talk ? "\(name): \(use.minutes) min, \(use.count) talk(s)" : "\(name): \(use.count)")
+                     : "\(name): never used")
+        }
+        switch FeatureUse.advice(featureUses) {
+        case .onlyTalk: f.append("They only talked; suggest Say it again after a call and a few review cards a day.")
+        case .next(let feature): f.append("Suggest adding \(feature.rawValue) next.")
+        case .wideMix: f.append("They tried most features; praise the mix.")
+        case .noTalk: f.append("They never talked; talking is the heart of it.")
+        }
+        return f
+    }
+
     // The test — offered; the level and the routine follow either way.
     private var trialTestCard: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -1297,6 +1465,24 @@ struct WeekRecapSheet: View {
                 .map(\.block).filter { $0.kind == .talk }.prefix(1).map { $0 }
         }
         let habits = StudyHabits.read(start: recap.start, end: recap.end, recap: recap)
+        featureUses = FeatureUse.list(habits)
+        appSeconds = trialAppSeconds()
+        #if DEBUG
+        // `-trialdemo 1`: the demo learner talked, reviewed a little and
+        // tried one scene; `-trialonlytalk 1` shows the talk-only advice.
+        if UserDefaults.standard.bool(forKey: "trialdemo") {
+            let onlyTalk = UserDefaults.standard.bool(forKey: "trialonlytalk")
+            featureUses = FeatureUse.Feature.allCases.map { f in
+                switch f {
+                case .talk: FeatureUse(feature: .talk, count: 3, minutes: 20)
+                case .review: FeatureUse(feature: .review, count: onlyTalk ? 0 : 12)
+                case .scene: FeatureUse(feature: .scene, count: onlyTalk ? 0 : 1)
+                default: FeatureUse(feature: f, count: 0)
+                }
+            }
+            appSeconds = 34 * 60
+        }
+        #endif
         habitFindings = HabitAdvisor.findings(habits)
         let built = HabitAdvisor.routine(base: base, habits: habits, findings: habitFindings,
                                          goalMinutes: StudyPlanStore.goalMinutes)
@@ -1407,7 +1593,8 @@ struct WeekRecapSheet: View {
             testThin: trial?.testThin == true,
             routineHeadline: RoutineRecipe.headline(for: LearningPurposeStore.purposes),
             routine: routine.map { "\($0.block.kind.titled($0.block.minutes)), \(SetupFlowView.weekdaySummary($0.block.weekdays))" },
-            habits: habitFindings)
+            habits: habitFindings,
+            usage: usageFacts)
     }
 
     /// Asks for the lines of every card whose content is known and that has

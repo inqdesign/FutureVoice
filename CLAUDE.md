@@ -2091,6 +2091,17 @@ routine to keep going." `TrialReport.swift`, and `WeekRecapSheet(trial:)`.
   `language:` (talks and metered minutes of the report's language only), so
   the cover's minutes are the minutes the level and coach read. Capture:
   `-trialdemo 1 -trialtwo 1 -trialpage 10`.
+- **Card 2 is how they USED the app, not the talk list** (2026-10-28,
+  founder). Minutes in the app (`AppUsageLog` over the window, never below
+  the metered talk), said as time not spent scrolling; then all seven
+  practice features (`FeatureUse.list` from `StudyHabits`) with how much of
+  each, unused ones greyed "Not yet"; and one line picked by rule
+  (`FeatureUse.advice`: talk only → Say it again + review; else the first
+  missing in `suggestionOrder`; five or more → keep the mix). The cover is
+  the learner's (photo, name, three numbers, "every week as a report"), and
+  the end of the deck asks `FeedbackSheet(.trialReport)` once, then the App
+  Store prompt whatever it said. Capture: `-trialdemo 1 [-trialonlytalk 1]
+  -trialpage 1`.
 - **Who**: `subscriptionStatus == "inactive"` (never subscribed — a lapsed
   subscriber's empty pool is not a trial ending), not `unlimited`,
   `needsSubscription`, a spoken talk on file. Raised by `ConversationView.endAndClose`

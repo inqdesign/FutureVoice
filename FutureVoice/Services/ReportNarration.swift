@@ -167,6 +167,9 @@ extension ReportNarrator {
         var routine: [String] = []
         /// How they used the app (`HabitAdvisor`), the routine's evidence.
         var habits: [HabitFinding] = []
+        /// The trial's usage card (every feature, how much), which takes the
+        /// talk card's place in the trial deck.
+        var usage: [String] = []
     }
 
     /// The cards whose content is known the moment the deck opens.
@@ -185,6 +188,8 @@ extension ReportNarrator {
             } else {
                 f.append("Opening card: a quiet week, nothing practised. One talk is enough to start again.")
             }
+        case "talk" where c.isTrial && !c.usage.isEmpty:
+            f = c.usage
         case "talk":
             f.append("They talked \(r.talkMinutes) min in \(r.talks.count) talk(s).")
             let titles = r.talks.prefix(4).map(\.title)

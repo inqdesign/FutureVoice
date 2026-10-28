@@ -49,6 +49,8 @@ struct StudyHabits: Equatable {
     var shadowTakes: Int
     var sayItAgainRuns: Int
     var listens: Int
+    var scenes: Int = 0
+    var speeches: Int = 0
     /// Share of all effort that fell on the busiest day (0…1).
     var busiestDayShare: Double
     var busiestDay: Date?
@@ -155,6 +157,8 @@ extension StudyHabits {
             shadowTakes: count(.shadow),
             sayItAgainRuns: count(.sayItAgain),
             listens: count(.listen),
+            scenes: count(.scene),
+            speeches: count(.speech),
             busiestDayShare: total > 0 ? (busiest?.value ?? 0) / total : 0,
             busiestDay: busiest?.key,
             habitHour: habitHour,
@@ -197,6 +201,59 @@ extension StudyHabits {
         return compute(start: start, end: end, sittings: sittings,
                        correctionsMade: max(corrections, recap.newCards), repeatedFixes: recap.stumbles,
                        planBlocks: StudyPlanStore.shared.plan.blocks)
+    }
+}
+
+// MARK: - Which parts of the app were used
+
+/// Every practice feature, and how much of it the learner used (2026-10-28,
+/// founder: the trial report shows ALL the features, which ones were used
+/// and how much, and says plainly when only one part was). Counted in code
+/// from `StudyHabits`; the advice is picked by rule, never written by a model.
+struct FeatureUse: Equatable, Identifiable {
+    enum Feature: String, CaseIterable {
+        case talk, sayItAgain, review, shadow, scene, listen, speech
+    }
+    var feature: Feature
+    /// Talks, runs, reps, takes, scenes, pieces heard.
+    var count: Int
+    /// A talk's minutes; zero for everything else.
+    var minutes: Int = 0
+    var id: Feature { feature }
+    var used: Bool { count > 0 || minutes > 0 }
+
+    /// What the card says under the list.
+    enum Advice: Equatable {
+        /// Nothing but talking.
+        case onlyTalk
+        /// Talked and more; the one thing to add next.
+        case next(Feature)
+        /// Most of it — keep the mix.
+        case wideMix
+        /// Never talked: the rest is built from talks.
+        case noTalk
+    }
+
+    static func list(_ h: StudyHabits) -> [FeatureUse] {
+        [FeatureUse(feature: .talk, count: h.talks, minutes: h.talkMinutes),
+         FeatureUse(feature: .sayItAgain, count: h.sayItAgainRuns),
+         FeatureUse(feature: .review, count: h.reviewReps),
+         FeatureUse(feature: .shadow, count: h.shadowTakes),
+         FeatureUse(feature: .scene, count: h.scenes),
+         FeatureUse(feature: .listen, count: h.listens),
+         FeatureUse(feature: .speech, count: h.speeches)]
+    }
+
+    /// The order a missing feature is suggested in: what makes a talk's
+    /// corrections stick first, then what trains the ear and the rhythm.
+    static let suggestionOrder: [Feature] = [.sayItAgain, .review, .shadow, .scene, .listen, .speech]
+
+    static func advice(_ uses: [FeatureUse]) -> Advice {
+        let used = Set(uses.filter(\.used).map(\.feature))
+        guard used.contains(.talk) else { return .noTalk }
+        if used == [.talk] { return .onlyTalk }
+        if used.count >= 5 { return .wideMix }
+        return suggestionOrder.first { !used.contains($0) }.map(Advice.next) ?? .wideMix
     }
 }
 

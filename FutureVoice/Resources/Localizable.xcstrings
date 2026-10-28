@@ -11410,6 +11410,52 @@
         }
       }
     },
+    "Try listening next. A few minutes on the go keeps your ear in the language between calls." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Probier als Nächstes Hören. Ein paar Minuten unterwegs halten dein Ohr zwischen den Gesprächen in der Sprache."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prueba escuchar. Unos minutos en camino mantienen tu oído en el idioma entre llamadas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Essaie l’écoute. Quelques minutes en déplacement gardent ton oreille dans la langue entre deux appels."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次はリスニングを試してみて。移動中の数分で、通話の合間も耳がその言語に慣れたままになります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다음엔 듣기를 해 보세요. 이동하면서 몇 분만 들어도 통화 사이에 귀가 그 언어에 머물러요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下一步试试听力。通勤时听几分钟，通话之间耳朵也一直泡在这个语言里。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下一步試試聽力。通勤時聽幾分鐘，通話之間耳朵也一直泡在這個語言裡。"
+          }
+        }
+      }
+    },
     "Try it just as it is for a week. You can change it any time." : {
       "localizations" : {
         "de" : {
@@ -27650,6 +27696,52 @@
         }
       }
     },
+    "Add a few review cards a day. The words and corrections from your talks come back until they're yours." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nimm jeden Tag ein paar Wiederholkarten dazu. Die Wörter und Korrekturen aus deinen Gesprächen kommen wieder, bis sie sitzen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añade unas cuantas tarjetas de repaso al día. Las palabras y correcciones de tus charlas vuelven hasta que son tuyas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajoute quelques cartes de révision par jour. Les mots et les corrections de tes conversations reviennent jusqu’à ce qu’ils soient à toi."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "復習カードを1日数枚足してみて。トークで出た単語や直しが、身につくまで戻ってきます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "복습 카드를 하루에 몇 장씩 더해 보세요. 대화에서 나온 단어와 교정이 내 것이 될 때까지 다시 나와요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每天加几张复习卡。对话里出现的单词和纠正会一直回来，直到变成你的。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每天加幾張複習卡。對話裡出現的單字和糾正會一直回來，直到變成你的。"
+          }
+        }
+      }
+    },
     "Add a language" : {
       "localizations" : {
         "de" : {
@@ -28015,6 +28107,98 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "加入我的講稿"
+          }
+        }
+      }
+    },
+    "Add Say it again next. It runs your last talk again with your lines corrected, and that's where the fixes stick." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nimm als Nächstes Nochmal sagen dazu. Dein letztes Gespräch läuft noch einmal mit deinen korrigierten Sätzen, und genau dort bleiben die Korrekturen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añade Volver a decirlo. Repite tu última charla con tus frases corregidas, y ahí es donde se quedan las correcciones."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajoute Redire. Tu refais ta dernière conversation avec tes phrases corrigées, et c’est là que les corrections restent."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次はもう一度話すを足してみて。直った自分のセリフで最後のトークをやり直すので、直した表現がここで定着します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다음엔 다시 말하기를 더해 보세요. 방금 한 대화를 교정된 내 문장으로 다시 해 보는 거라, 고친 게 여기서 남아요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下一步加上重说一次。用纠正后的句子把上一次对话再说一遍，改过的地方就在这里记住。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下一步加上重說一次。用糾正後的句子把上一次對話再說一遍，改過的地方就在這裡記住。"
+          }
+        }
+      }
+    },
+    "Add shadowing next. Saying the fluent lines in your own voice trains the rhythm talking alone doesn't." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nimm als Nächstes Nachsprechen dazu. Die flüssigen Sätze mit deiner eigenen Stimme zu sprechen, trainiert den Rhythmus, den Reden allein nicht bringt."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añade shadowing. Decir las frases fluidas con tu propia voz entrena el ritmo que hablar por sí solo no da."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajoute le shadowing. Dire les phrases fluides avec ta propre voix travaille le rythme que la conversation seule ne donne pas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次はシャドーイングを足してみて。流暢なセリフを自分の声でなぞると、トークだけでは身につかないリズムが鍛えられます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다음엔 섀도잉을 더해 보세요. 자연스러운 문장을 내 목소리로 따라 하면, 대화만으로는 안 생기는 리듬이 잡혀요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下一步加上跟读。用自己的声音跟着说流利的句子，能练出光靠对话练不到的节奏。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下一步加上跟讀。用自己的聲音跟著說流利的句子，能練出光靠對話練不到的節奏。"
           }
         }
       }
@@ -36169,6 +36353,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "通話音量"
+          }
+        }
+      }
+    },
+    "Call your fluent self" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ruf dein fließendes Ich an"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Llama a tu yo fluido"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appelle ton moi fluide"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流暢な自分と通話"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "유창한 나와 통화"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "和流利的自己通话"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "和流利的自己通話"
           }
         }
       }
@@ -66254,6 +66484,52 @@
         }
       }
     },
+    "How you used it" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "So hast du sie genutzt"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cómo lo usaste"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comment tu l’as utilisée"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "こんなふうに使いました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이렇게 썼어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你是这样用的"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你是這樣用的"
+          }
+        }
+      }
+    },
     "How you've been practising" : {
       "localizations" : {
         "de" : {
@@ -68678,6 +68954,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "試著在一句話裡多說一點：原因、條件、之前發生的事。能讓這個等級往上的是更長的句子。"
+          }
+        }
+      }
+    },
+    "Say the fluent lines in your own voice" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flüssige Sätze mit deiner eigenen Stimme"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Di las frases fluidas con tu propia voz"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dis les phrases fluides avec ta propre voix"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流暢なセリフを自分の声で"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자연스러운 문장을 내 목소리로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用自己的声音说流利的句子"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用自己的聲音說流利的句子"
           }
         }
       }
@@ -76346,6 +76668,52 @@
         }
       }
     },
+    "Listen on the go" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hören unterwegs"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escucha donde estés"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Écoute en déplacement"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移動中に聞く"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이동하면서 듣기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "随时随地听"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隨時隨地聽"
+          }
+        }
+      }
+    },
     "Listen to each take and keep the one that sounds most like you." : {
       "localizations" : {
         "de" : {
@@ -80192,6 +80560,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "分鐘"
+          }
+        }
+      }
+    },
+    "min in the app" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Min. in der App"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "min en la app"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "min dans l’app"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分 アプリで"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "분 동안 앱에서"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分钟在 App 里"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分鐘在 App 裡"
           }
         }
       }
@@ -103223,6 +103637,52 @@
         }
       }
     },
+    "Record a speech and get a score" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nimm eine Rede auf und bekomm eine Bewertung"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Graba un discurso y recibe una nota"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistre un discours et reçois un score"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スピーチを録音して採点"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "스피치를 녹음하고 점수 받기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "录一段演讲并拿到分数"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "錄一段演講並拿到分數"
+          }
+        }
+      }
+    },
     "Record again" : {
       "localizations" : {
         "de" : {
@@ -103876,6 +104336,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "兌換成功。多了%lld分鐘。"
+          }
+        }
+      }
+    },
+    "Redo a talk with your lines corrected" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Gespräch mit korrigierten Sätzen nochmal"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repite una charla con tus frases corregidas"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refais une conversation avec tes phrases corrigées"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "直ったセリフでトークをやり直す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "교정된 내 문장으로 대화를 다시"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用纠正后的句子重来一次"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用糾正後的句子重來一次"
           }
         }
       }
@@ -121333,6 +121839,52 @@
         }
       }
     },
+    "Talking is the heart of it. Everything else is built from your calls." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sprechen ist das Herzstück. Alles andere entsteht aus deinen Gesprächen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hablar es lo central. Todo lo demás sale de tus llamadas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Parler, c’est le cœur. Tout le reste est construit à partir de tes appels."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "中心はトークです。ほかの練習はすべて通話から作られます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "핵심은 대화예요. 나머지는 모두 통화에서 만들어져요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "核心是对话，其他练习都是从你的通话里来的。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "核心是對話，其他練習都是從你的通話裡來的。"
+          }
+        }
+      }
+    },
     "Talking needs a plan" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -132826,6 +133378,52 @@
         }
       }
     },
+    "Time that didn't go to scrolling. Well spent." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zeit, die nicht ins Scrollen ging. Gut investiert."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tiempo que no se fue en scroll. Bien invertido."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du temps qui n’est pas parti dans le scroll. Bien investi."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ショート動画じゃなく、自分のために使った時間。よくやりました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "숏폼 대신 나한테 쓴 시간이에요. 잘했어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这段时间没拿去刷短视频，而是花在自己身上。做得好。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這段時間沒拿去滑短影音，而是花在自己身上。做得好。"
+          }
+        }
+      }
+    },
     "Time to listen" : {
       "localizations" : {
         "de" : {
@@ -134694,6 +135292,98 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "下次聊天時，用用看「%@」。"
+          }
+        }
+      }
+    },
+    "Try a scene next. Watch a situation you're about to face played out, then talk it through." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Probier als Nächstes eine Szene. Sieh dir eine Situation an, die dir bevorsteht, und sprich sie dann selbst durch."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prueba una escena. Mira cómo se desarrolla una situación que tienes por delante y luego háblala tú."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Essaie une scène. Regarde se jouer une situation qui t’attend, puis parle-la toi-même."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次はシーンを試してみて。これから迎える場面が演じられるのを見て、そのまま話してみられます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다음엔 장면을 하나 해 보세요. 곧 겪을 상황이 펼쳐지는 걸 보고, 그대로 이야기해 볼 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下一步试试情境。先看你即将遇到的场景怎么展开，再自己说一遍。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下一步試試情境。先看你即將遇到的場景怎麼展開，再自己說一遍。"
+          }
+        }
+      }
+    },
+    "Try a speech next. One recorded take shows how you sound when you have to keep going on your own." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Probier als Nächstes eine Rede. Eine Aufnahme zeigt dir, wie du klingst, wenn du allein weitersprechen musst."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prueba un discurso. Una grabación te muestra cómo suenas cuando tienes que seguir tú solo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Essaie un discours. Une prise enregistrée te montre comment tu sonnes quand tu dois continuer seul."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次はスピーチを試してみて。一度録音すれば、ひとりで話し続けるときの自分の声がわかります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다음엔 스피치를 해 보세요. 한 번 녹음해 보면 혼자 계속 말해야 할 때 내가 어떻게 들리는지 알 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下一步试试演讲。录一次，就知道自己一个人一直说下去时听起来怎么样。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下一步試試演講。錄一次，就知道自己一個人一直說下去時聽起來怎麼樣。"
           }
         }
       }
@@ -139357,6 +140047,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "會照你寫的內容做成情境練習，可以隨意修改。"
+          }
+        }
+      }
+    },
+    "Watch your situation played out" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sieh deine Situation durchgespielt"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mira tu situación en acción"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Regarde ta situation se jouer"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分の場面が演じられるのを見る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 상황이 펼쳐지는 걸 보기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "看你的情境怎么展开"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "看你的情境怎麼展開"
           }
         }
       }
@@ -147317,6 +148053,52 @@
         }
       }
     },
+    "Words, phrases and sentence cards" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wörter, Wendungen und Satzkarten"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Palabras, expresiones y tarjetas de frases"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mots, expressions et cartes de phrases"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "単語・表現・文のカード"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "단어·표현·문장 카드"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "单词、短语和句子卡"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "單字、片語和句子卡"
+          }
+        }
+      }
+    },
     "Work meetings" : {
       "localizations" : {
         "de" : {
@@ -150507,6 +151289,52 @@
         }
       }
     },
+    "You only talked. Talking makes you quicker, but a correction only sticks once you say it right yourself. After a call, run Say it again, and clear a few review cards a day." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du hast nur gesprochen. Sprechen macht dich schneller, aber eine Korrektur bleibt erst, wenn du sie selbst richtig sagst. Mach nach einem Gespräch Nochmal sagen und jeden Tag ein paar Wiederholkarten."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solo hablaste. Hablar te da soltura, pero una corrección solo se queda cuando la dices bien tú. Después de una llamada, usa Volver a decirlo y repasa unas cuantas tarjetas al día."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu as seulement parlé. Parler te rend plus rapide, mais une correction ne reste que quand tu la dis juste toi-même. Après un appel, lance Redire, et fais quelques cartes de révision par jour."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "トークだけでした。話すほど口は速くなりますが、直された表現は自分で正しく言ってみて初めて残ります。通話のあとはもう一度話すを、復習カードも1日に数枚どうぞ。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대화만 했어요. 대화는 말을 빠르게 해 주지만, 교정은 내가 직접 맞게 말해 봐야 남아요. 통화가 끝나면 다시 말하기를 하고, 복습 카드도 하루에 몇 장씩 넘겨 보세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你只用了对话。多说能让你说得更快，但被纠正的地方要自己说对一次才记得住。通话后试试重说一次，每天也翻几张复习卡。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你只用了對話。多說能讓你說得更快，但被糾正的地方要自己說對一次才記得住。通話後試試重說一次，每天也翻幾張複習卡。"
+          }
+        }
+      }
+    },
     "You picked %@." : {
       "localizations" : {
         "de" : {
@@ -151096,6 +151924,98 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "我的語氣"
+          }
+        }
+      }
+    },
+    "You tried %lld of %lld." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du hast %1$lld von %2$lld ausprobiert."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Probaste %1$lld de %2$lld."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu en as essayé %1$lld sur %2$lld."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$lldつのうち%1$lldつを試しました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$lld가지 중 %1$lld가지를 써 봤어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$lld 项里你试了 %1$lld 项。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$lld 項裡你試了 %1$lld 項。"
+          }
+        }
+      }
+    },
+    "You tried most of it. That mix is what makes it stick." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du hast fast alles ausprobiert. Genau diese Mischung sorgt dafür, dass es hängen bleibt."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Probaste casi todo. Esa mezcla es lo que hace que se quede."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu as presque tout essayé. C’est ce mélange qui fait que ça reste."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ほとんど試しました。この組み合わせが定着のカギです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "거의 다 써 봤어요. 이렇게 섞어서 해야 오래 남아요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你几乎都试过了。这样搭配着练，才记得牢。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你幾乎都試過了。這樣搭配著練，才記得牢。"
           }
         }
       }
