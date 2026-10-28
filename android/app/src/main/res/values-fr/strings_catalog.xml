@@ -3612,4 +3612,49 @@
     <string name="your_weekly_test_is_ready">"Ton test hebdo est prêt"</string>
     <string name="your_world">"Ta vie en %s"</string>
     <string name="yours_to_replay_and_shadow_free">"Réécouter et faire du shadowing, c’est gratuit."</string>
+    <string name="am_i_getting_better">"Est-ce que je progresse ?"</string>
+    <string name="ask_me">"Me demander"</string>
+    <string name="ask_me_anything">"Demande-moi ce que tu veux…"</string>
+    <!-- 'Ask me anything about your practice. I answer from your own talks, cards and routine.' -->
+    <string name="ask_me_anything_about_your_practice_i_answer_from_your_own_t_674d72">"Demande-moi tout ce que tu veux sur ta pratique. Je réponds à partir de tes conversations, de tes cartes et de ta routine."</string>
+    <string name="ask_what_to_do_next">"Demander quoi faire ensuite"</string>
+    <string name="everything_for_today_is_done_see_you_tomorrow">"Tout est fait pour aujourd’hui. À demain."</string>
+    <string name="good_evening">"Bonsoir."</string>
+    <string name="good_morning">"Bonjour."</string>
+    <string name="hi_i_m_your_tutor">"Salut, je suis ton tuteur."</string>
+    <string name="hi_there">"Salut."</string>
+    <string name="how_do_i_reach_the_next_level">"Comment passer au niveau suivant ?"</string>
+    <string name="i_couldn_t_answer_that_just_now_try_again_in_a_moment">"Je n’ai pas pu répondre tout de suite. Réessaie dans un instant."</string>
+    <!-- 'I know your routine, your talks, your mistakes and your cards. My job is that you always know what to do next, and why.' -->
+    <string name="i_know_your_routine_your_talks_your_mistakes_and_your_cards_651e4d">"Je connais ta routine, tes conversations, tes erreurs et tes cartes. Mon rôle : que tu saches toujours quoi faire ensuite, et pourquoi."</string>
+    <string name="i_only_have_5_minutes">"Je n’ai que 5 minutes"</string>
+    <string name="lld_cards_from_your_own_talks_are_waiting">"%d cartes tirées de tes conversations t’attendent."</string>
+    <string name="lld_days_in_a_row_keep_it_going">"%d jours d’affilée. Continue sur ta lancée."</string>
+    <string name="lld_done_lld_to_go_about_lld_minutes">"%1$d fait, %2$d à faire, environ %3$d minutes."</string>
+    <string name="make_a_routine">"Créer une routine"</string>
+    <string name="nice_done_next_up">"Bravo, %1$s fait. Ensuite : %2$s."</string>
+    <string name="nothing_planned_today">"Rien de prévu aujourd’hui."</string>
+    <string name="once_a_day_i_leave_you_a_short_note_with_today_s_plan">"Une fois par jour, je te laisse un petit mot avec le programme du jour."</string>
+    <string name="open_speech">"Ouvrir Discours"</string>
+    <string name="personal_tutor">"Tuteur perso"</string>
+    <string name="quick_quiz">"Quiz express"</string>
+    <string name="show_me_today">"Voir ma journée"</string>
+    <string name="start_review">"Lancer la révision"</string>
+    <string name="start_shadowing">"Lancer le shadowing"</string>
+    <!-- "Tap me any time to ask: what to do, why a mistake keeps coming back, how you're doing." -->
+    <string name="tap_me_any_time_to_ask_what_to_do_why_a_mistake_keeps_coming_17424f">"Touche-moi quand tu veux pour demander quoi faire, pourquoi une erreur revient, ou comment tu t’en sors."</string>
+    <string name="that_s_everything_for_today_nicely_done">"C’est tout pour aujourd’hui. Bien joué."</string>
+    <!-- 'Today is a rest day in your routine. If you feel like it, %lld cards are waiting.' -->
+    <string name="today_is_a_rest_day_in_your_routine_if_you_feel_like_it_lld_47e805">"Aujourd’hui, c’est jour de repos dans ta routine. Si tu en as envie, %d cartes t’attendent."</string>
+    <string name="today_is_a_rest_day_in_your_routine_nothing_you_have_to_do">"Aujourd’hui, c’est jour de repos dans ta routine. Rien d’obligatoire."</string>
+    <string name="today_lld_things_about_lld_minutes">"Aujourd’hui : %1$d choses, environ %2$d minutes."</string>
+    <string name="today_s_plan">"Programme du jour"</string>
+    <string name="tutor">"Tuteur"</string>
+    <string name="we_re_working_on_it_came_up_in_lld_of_your_talks">"On travaille sur %1$s. C’est revenu dans %2$d de tes conversations."</string>
+    <string name="what_should_i_do_now">"Je fais quoi maintenant ?"</string>
+    <string name="what_the_tutor_does">"Ce que fait le tuteur"</string>
+    <!-- "When something is ready, I'll say so here. Otherwise I stay quiet." -->
+    <string name="when_something_is_ready_i_ll_say_so_here_otherwise_i_stay_qu_1457bc">"Quand quelque chose est prêt, je te le dis ici. Sinon, je ne dis rien."</string>
+    <string name="why_do_i_keep_making_the_same_mistake">"Pourquoi je refais toujours la même erreur ?"</string>
+    <string name="you_don_t_have_a_routine_yet_so_here_s_what_i_d_do_today">"Tu n’as pas encore de routine, alors voici ce que je ferais aujourd’hui."</string>
 </resources>

@@ -3615,4 +3615,49 @@
     <string name="your_weekly_test_is_ready">"每週測驗準備好了"</string>
     <string name="your_world">"我的%s生活"</string>
     <string name="yours_to_replay_and_shadow_free">"之後重聽和跟讀都免費。"</string>
+    <string name="am_i_getting_better">"我有進步嗎？"</string>
+    <string name="ask_me">"問我"</string>
+    <string name="ask_me_anything">"問什麼都可以…"</string>
+    <!-- 'Ask me anything about your practice. I answer from your own talks, cards and routine.' -->
+    <string name="ask_me_anything_about_your_practice_i_answer_from_your_own_t_674d72">"練習的事都可以問我。我會根據你的對話、卡片和作息來回答。"</string>
+    <string name="ask_what_to_do_next">"問問下一步做什麼"</string>
+    <string name="everything_for_today_is_done_see_you_tomorrow">"今天的事都做完了，明天見。"</string>
+    <string name="good_evening">"晚安。"</string>
+    <string name="good_morning">"早安。"</string>
+    <string name="hi_i_m_your_tutor">"嗨，我是你的家教。"</string>
+    <string name="hi_there">"嗨。"</string>
+    <string name="how_do_i_reach_the_next_level">"要怎麼升到下一個程度？"</string>
+    <string name="i_couldn_t_answer_that_just_now_try_again_in_a_moment">"我剛剛沒辦法回答，稍等一下再問一次。"</string>
+    <!-- 'I know your routine, your talks, your mistakes and your cards. My job is that you always know what to do next, and why.' -->
+    <string name="i_know_your_routine_your_talks_your_mistakes_and_your_cards_651e4d">"你的作息、對話、常犯的錯和複習卡片，我都知道。我的工作是讓你隨時知道下一步要做什麼，還有為什麼。"</string>
+    <string name="i_only_have_5_minutes">"我只有 5 分鐘"</string>
+    <string name="lld_cards_from_your_own_talks_are_waiting">"你自己的對話裡有 %d 張卡片在等你。"</string>
+    <string name="lld_days_in_a_row_keep_it_going">"已經連續 %d 天了，繼續保持。"</string>
+    <string name="lld_done_lld_to_go_about_lld_minutes">"已完成 %1$d 項，還剩 %2$d 項，大約 %3$d 分鐘。"</string>
+    <string name="make_a_routine">"建立作息"</string>
+    <string name="nice_done_next_up">"很好，%1$s 完成了。接下來：%2$s。"</string>
+    <string name="nothing_planned_today">"今天沒有安排。"</string>
+    <string name="once_a_day_i_leave_you_a_short_note_with_today_s_plan">"每天一次，我會留一則簡短的筆記給你，寫上今天的安排。"</string>
+    <string name="open_speech">"打開演講"</string>
+    <string name="personal_tutor">"個人家教"</string>
+    <string name="quick_quiz">"小測驗"</string>
+    <string name="show_me_today">"看今天要做什麼"</string>
+    <string name="start_review">"開始複習"</string>
+    <string name="start_shadowing">"開始跟讀"</string>
+    <!-- "Tap me any time to ask: what to do, why a mistake keeps coming back, how you're doing." -->
+    <string name="tap_me_any_time_to_ask_what_to_do_why_a_mistake_keeps_coming_17424f">"有問題隨時點我：該做什麼、為什麼同樣的錯一直出現、你練得怎麼樣。"</string>
+    <string name="that_s_everything_for_today_nicely_done">"今天的事都完成了，做得很好。"</string>
+    <!-- 'Today is a rest day in your routine. If you feel like it, %lld cards are waiting.' -->
+    <string name="today_is_a_rest_day_in_your_routine_if_you_feel_like_it_lld_47e805">"今天是你作息裡的休息日。想練的話，有 %d 張卡片在等你。"</string>
+    <string name="today_is_a_rest_day_in_your_routine_nothing_you_have_to_do">"今天是你作息裡的休息日，沒有一定要做的事。"</string>
+    <string name="today_lld_things_about_lld_minutes">"今天：%1$d 件事，大約 %2$d 分鐘。"</string>
+    <string name="today_s_plan">"今天的安排"</string>
+    <string name="tutor">"家教"</string>
+    <string name="we_re_working_on_it_came_up_in_lld_of_your_talks">"我們正在練習%1$s。它出現在你的 %2$d 次對話裡。"</string>
+    <string name="what_should_i_do_now">"我現在該做什麼？"</string>
+    <string name="what_the_tutor_does">"家教會做什麼"</string>
+    <!-- "When something is ready, I'll say so here. Otherwise I stay quiet." -->
+    <string name="when_something_is_ready_i_ll_say_so_here_otherwise_i_stay_qu_1457bc">"有事要做的時候，我會在這裡告訴你。其他時候我就不吵你。"</string>
+    <string name="why_do_i_keep_making_the_same_mistake">"為什麼我一直犯同樣的錯？"</string>
+    <string name="you_don_t_have_a_routine_yet_so_here_s_what_i_d_do_today">"你還沒有作息，所以今天我會這樣安排。"</string>
 </resources>

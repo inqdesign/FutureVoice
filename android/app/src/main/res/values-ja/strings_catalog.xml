@@ -3615,4 +3615,49 @@
     <string name="your_weekly_test_is_ready">"週テストの準備ができました"</string>
     <string name="your_world">"自分の%s生活"</string>
     <string name="yours_to_replay_and_shadow_free">"何度聞いても、シャドーイングしても無料です。"</string>
+    <string name="am_i_getting_better">"上達していますか？"</string>
+    <string name="ask_me">"聞いてみる"</string>
+    <string name="ask_me_anything">"何でも聞いてください…"</string>
+    <!-- 'Ask me anything about your practice. I answer from your own talks, cards and routine.' -->
+    <string name="ask_me_anything_about_your_practice_i_answer_from_your_own_t_674d72">"練習のことなら何でも聞いてください。これまでのトーク、カード、ルーティンを見て答えます。"</string>
+    <string name="ask_what_to_do_next">"次に何をするか聞く"</string>
+    <string name="everything_for_today_is_done_see_you_tomorrow">"今日やることは全部終わりました。また明日。"</string>
+    <string name="good_evening">"こんばんは。"</string>
+    <string name="good_morning">"おはようございます。"</string>
+    <string name="hi_i_m_your_tutor">"こんにちは、チューターです。"</string>
+    <string name="hi_there">"こんにちは。"</string>
+    <string name="how_do_i_reach_the_next_level">"次のレベルに行くには？"</string>
+    <string name="i_couldn_t_answer_that_just_now_try_again_in_a_moment">"今は答えられませんでした。少ししてからもう一度聞いてください。"</string>
+    <!-- 'I know your routine, your talks, your mistakes and your cards. My job is that you always know what to do next, and why.' -->
+    <string name="i_know_your_routine_your_talks_your_mistakes_and_your_cards_651e4d">"ルーティン、これまでのトーク、よくある間違い、復習カードまで全部知っています。次に何をすればいいか、なぜそれをやるのか、いつもわかるようにするのが私の役目です。"</string>
+    <string name="i_only_have_5_minutes">"5分しかありません"</string>
+    <string name="lld_cards_from_your_own_talks_are_waiting">"自分のトークから生まれたカード%d枚が待っています。"</string>
+    <string name="lld_days_in_a_row_keep_it_going">"%d日続いています。今日も続けましょう。"</string>
+    <string name="lld_done_lld_to_go_about_lld_minutes">"%1$d個できて、残り%2$d個。あと%3$d分くらいです。"</string>
+    <string name="make_a_routine">"ルーティンを作る"</string>
+    <string name="nice_done_next_up">"%1$s、おつかれさまでした。次は%2$sです。"</string>
+    <string name="nothing_planned_today">"今日の予定はありません。"</string>
+    <string name="once_a_day_i_leave_you_a_short_note_with_today_s_plan">"1日に1回、今日やることを短くお伝えします。"</string>
+    <string name="open_speech">"スピーチを開く"</string>
+    <string name="personal_tutor">"パーソナルチューター"</string>
+    <string name="quick_quiz">"クイッククイズ"</string>
+    <string name="show_me_today">"今日やることを見る"</string>
+    <string name="start_review">"復習を始める"</string>
+    <string name="start_shadowing">"シャドーイングを始める"</string>
+    <!-- "Tap me any time to ask: what to do, why a mistake keeps coming back, how you're doing." -->
+    <string name="tap_me_any_time_to_ask_what_to_do_why_a_mistake_keeps_coming_17424f">"いつでも私をタップして聞いてください。何をすればいいか、同じ間違いがなぜ続くのか、うまくいっているか。"</string>
+    <string name="that_s_everything_for_today_nicely_done">"今日やることは全部終わりました。よくがんばりました。"</string>
+    <!-- 'Today is a rest day in your routine. If you feel like it, %lld cards are waiting.' -->
+    <string name="today_is_a_rest_day_in_your_routine_if_you_feel_like_it_lld_47e805">"今日はルーティンのお休みの日です。やる気があれば、カード%d枚が待っています。"</string>
+    <string name="today_is_a_rest_day_in_your_routine_nothing_you_have_to_do">"今日はルーティンのお休みの日です。やらなきゃいけないことはありません。"</string>
+    <string name="today_lld_things_about_lld_minutes">"今日は%1$d個、%2$d分くらいです。"</string>
+    <string name="today_s_plan">"今日やること"</string>
+    <string name="tutor">"チューター"</string>
+    <string name="we_re_working_on_it_came_up_in_lld_of_your_talks">"今は%1$sを練習中です。%2$d回のトークで出てきました。"</string>
+    <string name="what_should_i_do_now">"今、何をすればいい？"</string>
+    <string name="what_the_tutor_does">"チューターがすること"</string>
+    <!-- "When something is ready, I'll say so here. Otherwise I stay quiet." -->
+    <string name="when_something_is_ready_i_ll_say_so_here_otherwise_i_stay_qu_1457bc">"やることができたら、ここでお知らせします。それ以外は静かにしています。"</string>
+    <string name="why_do_i_keep_making_the_same_mistake">"どうして同じ間違いをくり返すの？"</string>
+    <string name="you_don_t_have_a_routine_yet_so_here_s_what_i_d_do_today">"まだルーティンがないので、今日はこんなふうにやってみましょう。"</string>
 </resources>
