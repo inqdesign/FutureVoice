@@ -18,14 +18,9 @@ struct TutorBotButton: View {
                 .frame(width: 30, height: 30)
         }
         .modifier(GlassCircleButton())
-        // The note above is this face talking: a ring says where it came from.
-        .overlay {
-            if bot.noteShown {
-                Circle().strokeBorder(Color.accentColor, lineWidth: 2)
-                    .allowsHitTesting(false)
-                    .transition(.opacity)
-            }
-        }
+        // No ring around the face while the note is up (founder,
+        // 2026-10-29: the highlight outline read as odd); the note's tail
+        // already says where it came from.
         .accessibilityLabel(Text("Tutor"))
         .accessibilityHint(Text("Ask what to do next"))
         .contextMenu {
