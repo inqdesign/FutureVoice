@@ -2151,6 +2151,8 @@ struct ConversationView: View {
     /// difference it makes is the hint under the pill, so a learner coming
     /// back to a quiet screen reads "paused" instead of wondering what broke.
     @State private var isPausedForIdle = false
+    /// A tutor note written while the call was paused (`tutorNudge`).
+    @State private var pendingTutorNudge: String?
     @State private var idleWatchTask: Task<Void, Never>?
     /// The last moment anything real happened. Deliberately OUTSIDE the watch
     /// task: the task is re-armed every time the mic opens, and a noisy room
@@ -2170,7 +2172,13 @@ struct ConversationView: View {
                 // The meter's predicate without its first-turn gate: silence
                 // it bills nothing for, but a first answer still in progress
                 // is someone being here.
-                if somethingIsHappening() { lastActivityAt = Date(); continue }
+                // Picking a topic or waiting for its plan is someone being
+                // here (device, 2026-10-28: the call put itself down while
+                // the learner chose in the topic sheet, and the lesson's
+                // "ready" note went into a hung-up call).
+                if somethingIsHappening() || showingTutorTopics || tutorPlanning {
+                    lastActivityAt = Date(); continue
+                }
                 // Send-to-answer with words held: they are composing, not
                 // gone — a longer wait before the call puts itself down.
                 let bar = sendToAnswer && !realtime.partial.isEmpty
@@ -3072,6 +3080,23 @@ struct ConversationView: View {
         isPausedForIdle = false
         startIdleWatch()
         syncCoachSteer()
+        // A picked-up call is a new gateway session: the final check's hold
+        // has to be set on it again.
+        if tutorInFinalCheck { realtime.setHoldReplies(true) }
+        if let note = pendingTutorNudge {
+            pendingTutorNudge = nil
+            realtime.nudge(note)
+        }
+    }
+
+    /// A tutor note for a call that may be paused: a paused call has hung up,
+    /// so the note waits and goes out when the call is picked back up.
+    private func tutorNudge(_ note: String) {
+        if RealtimeMode.isEnabled, !phoneCallActive {
+            pendingTutorNudge = note
+        } else {
+            realtime.nudge(note)
+        }
     }
 
     /// The gateway speaks prose, not the `{reply, suggestion}` JSON the HTTP
@@ -5031,9 +5056,9 @@ struct ConversationView: View {
                 // that never comes.
                 sendTutorSystem()
                 if let round = nextRoundOf {
-                    realtime.nudge("Setting up the next round of \"\(round.titleTarget)\" didn't work. Say so in a few words and ask whether they'd like another topic instead.")
+                    tutorNudge("Setting up the next round of \"\(round.titleTarget)\" didn't work. Say so in a few words and ask whether they'd like another topic instead.")
                 } else if picked || fromTopic {
-                    realtime.nudge("Setting up the lesson didn't work. Ask them, in one short question, what exactly they want to be able to say about: \"\(request)\".")
+                    tutorNudge("Setting up the lesson didn't work. Ask them, in one short question, what exactly they want to be able to say about: \"\(request)\".")
                 }
                 return
             }
@@ -5058,9 +5083,9 @@ struct ConversationView: View {
                                                    "picked": picked ? "1" : "0"])
             sendTutorSystem()
             if nextRoundOf != nil {
-                realtime.nudge("The next round is ready (see TUTOR MODE): new challenges, a step further than the last round. Say so in a few words — don't go over the last round again — then start challenge 1: say what it is, give its example line, and ask them to say it about themselves.")
+                tutorNudge("The next round is ready (see TUTOR MODE): new challenges, a step further than the last round. Say so in a few words — don't go over the last round again — then start challenge 1: say what it is, give its example line, and ask them to say it about themselves.")
             } else {
-                realtime.nudge("Today's lesson is ready (see TUTOR MODE). In a few words say what it is and that you'll go one step at a time, then start challenge 1: say what it is, give its example line, and ask them to say it about themselves.")
+                tutorNudge("Today's lesson is ready (see TUTOR MODE). In a few words say what it is and that you'll go one step at a time, then start challenge 1: say what it is, give its example line, and ask them to say it about themselves.")
             }
         }
     }
