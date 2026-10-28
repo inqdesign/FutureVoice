@@ -123,6 +123,27 @@ import com.roro.futurevoice.data.RoutineRecipe
 import com.roro.futurevoice.data.RoutineText
 import com.roro.futurevoice.data.StudyPlanStore
 import com.roro.futurevoice.net.WeekRecapCoach
+import com.roro.futurevoice.net.ReportNarration
+import com.roro.futurevoice.net.ReportNarrationPlayer
+import com.roro.futurevoice.net.ReportNarrator
+import com.roro.futurevoice.data.HabitAdvice
+import com.roro.futurevoice.data.HabitAdvisor
+import com.roro.futurevoice.data.HabitFinding
+import com.roro.futurevoice.data.PersonaStore
+import com.roro.futurevoice.data.StudyHabits
+import com.roro.futurevoice.data.StudyPlan
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.automirrored.outlined.Chat
+import androidx.compose.material.icons.filled.ArrowCircleRight
+import androidx.compose.material.icons.filled.Error
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.CheckCircle
@@ -154,9 +175,14 @@ import java.util.Locale
  */
 enum class WeekRecapAction { TEST, TALK }
 
-private enum class RecapCard {
-    COVER, TALK, USED, REVIEW, FRESH, STUMBLES, GRAMMAR, WORDS, COACH, TEST,
-    TRIAL_TEST, LEVEL, ROUTINE,
+private enum class RecapCard(
+    /** iOS `WeekRecapSheet.Card`'s case name — the narration's card key,
+     *  which its prompt carries. */
+    val iosName: String,
+) {
+    COVER("cover"), TALK("talk"), USED("used"), REVIEW("review"), FRESH("fresh"), STUMBLES("stumbles"),
+    GRAMMAR("grammar"), WORDS("words"), COACH("coach"), TEST("test"),
+    TRIAL_TEST("trialTest"), LEVEL("level"), ROUTINE("routine"),
 }
 
 private val Green = Color(0xFF34C759)
@@ -201,14 +227,14 @@ fun WeekRecapSheet(recap: WeekRecap, level: CefrLevel, onDismiss: (WeekRecapActi
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrialReportSheet(report: TrialReport, level: CefrLevel, onMeasuredLevel: (String) -> Unit,
-                     onDismiss: () -> Unit) {
+                     voiceId: String? = null, onDismiss: () -> Unit) {
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet,
         containerColor = AppSurfaces.ground) {
         Box(Modifier.fillMaxHeight(0.94f)) {
             WeekRecapDeck(recap = report.recap, level = level, trial = report,
-                onMeasuredLevel = onMeasuredLevel) {
+                onMeasuredLevel = onMeasuredLevel, voiceId = voiceId) {
                 scope.launch { sheet.hide() }.invokeOnCompletion { onDismiss() }
             }
         }
@@ -225,6 +251,8 @@ fun WeekRecapDeck(
     /** Set: the deck is the trial report ([TrialReport]). */
     trial: TrialReport? = null,
     onMeasuredLevel: (String) -> Unit = {},
+    /** The fluent self's voice (iOS `speakingVoiceId`), for the narration. */
+    voiceId: String? = null,
     onClose: (WeekRecapAction?) -> Unit,
 ) {
     val context = LocalContext.current
@@ -245,6 +273,13 @@ fun WeekRecapDeck(
     var levelSettled by remember { mutableStateOf(trial?.level != null) }
     var routine by remember { mutableStateOf<List<RoutineRecipe.Line>>(emptyList()) }
     var routineIsOwn by remember { mutableStateOf(false) }
+    /** How they used the app ([StudyHabits]): what the rules found, the
+     *  wording once it lands, and which routine block each finding touched
+     *  (block id → rule). */
+    var habitFindings by remember { mutableStateOf<List<HabitFinding>>(emptyList()) }
+    var habitAdvice by remember { mutableStateOf<HabitAdvice?>(null) }
+    var habitAdviceFailed by remember { mutableStateOf(false) }
+    var routineRules by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var showingPaywall by remember { mutableStateOf(false) }
     var jumpToLevel by remember { mutableStateOf(false) }
     /** The deck's start-up runs once per opening (iOS `trialStarted`): a
@@ -254,6 +289,17 @@ fun WeekRecapDeck(
     /** The trial's test is done, or could not be made — either way the level
      *  and the routine are the learner's to see. */
     val trialTestCleared = trialTest?.isFinished == true || trialState?.testThin == true
+
+    // The narration ([ReportNarration]): the fluent self reads each card.
+    val narrationScope = rememberCoroutineScope()
+    val narrator = remember { ReportNarrationPlayer(context, narrationScope) }
+    var narration by remember { mutableStateOf(ReportNarration()) }
+    /** Cards a script has been asked for, so a half is written once. */
+    val narrationAsked = remember { mutableSetOf<String>() }
+    /** The deck's start-up has loaded what was kept; the script may be asked for. */
+    var narrationReady by remember { mutableStateOf(false) }
+    /** Whether the deck reads itself: the trial report, for now. */
+    val narrates = isTrial
 
     val cards = buildList {
         val r = current
@@ -274,6 +320,7 @@ fun WeekRecapDeck(
             add(RecapCard.TEST)
         }
     }
+    val cardsNow by androidx.compose.runtime.rememberUpdatedState(cards)
     val pager = rememberPagerState(initialPage = startPage.coerceIn(0, cards.size - 1)) { cards.size }
     val revealed = remember { mutableStateListOf(startPage) }
     LaunchedEffect(pager) {
@@ -309,6 +356,105 @@ fun WeekRecapDeck(
         }
     }
 
+    // MARK: Narration
+
+    /** The script's key for a card — iOS's card name, which the prompt
+     *  carries. The trial test's line changes once the test is done, so the
+     *  done state is a key of its own. */
+    fun narrationKey(card: RecapCard): String {
+        if (card == RecapCard.TRIAL_TEST && trialTest?.isFinished == true) return "trialTestDone"
+        return card.iosName
+    }
+
+    fun narrationContext(): ReportNarrator.Context {
+        val res = context.resources
+        val done = trialTest?.isFinished == true
+        return ReportNarrator.Context(
+            recap = current, isTrial = isTrial,
+            level = trialLevel, levelRationale = trialRationale,
+            testScore = if (done) trialTest?.score else null,
+            testTotal = if (done) trialTest?.total else null,
+            testThin = trialState?.testThin == true,
+            routineHeadline = context.getString(RoutineRecipe.headline(LearningPurposeStore.purposes(context))),
+            routine = routine.map { "${RoutineText.titled(res, it.block.kind, it.block.minutes)}, ${routineWeekdaySummary(res, it.block.weekdays)}" },
+            habits = habitFindings,
+        )
+    }
+
+    /** Speaks the card on screen. [onlyIfIdle]: a script that just arrived
+     *  starts its card's line, but never cuts one already playing. */
+    fun speakCurrentCard(onlyIfIdle: Boolean = false) {
+        if (!narrates) return
+        val at = pager.currentPage
+        val card = cardsNow.getOrNull(at) ?: return
+        if (onlyIfIdle && (narrator.speakingCard != null || narrator.loadingCard != null)) return
+        val line = narration.line(narrationKey(card)) ?: run { narrator.stop(); return }
+        narrator.speak(line) {
+            // The deck moves on by itself, except past a card that asks the
+            // learner something (the test, the routine).
+            if (card in listOf(RecapCard.TRIAL_TEST, RecapCard.ROUTINE, RecapCard.TEST) ||
+                at != pager.currentPage || at >= cardsNow.size - 1) return@speak
+            narrationScope.launch {
+                delay(900)
+                if (at != pager.currentPage || showingTrialTest || showingPaywall) return@launch
+                pager.animateScrollToPage(minOf(pager.currentPage + 1, cardsNow.size - 1))
+            }
+        }
+    }
+
+    /** Asks for the lines of every card whose content is known and that has
+     *  none yet — the counts cards at once, the coach and the level as they
+     *  land. Each card is asked for once per opening. */
+    suspend fun writeNarration() {
+        if (!narrates) return
+        val ctx = narrationContext()
+        val wanted = cardsNow.mapNotNull { card ->
+            val key = narrationKey(card)
+            if (narration.line(key) != null || key in narrationAsked) return@mapNotNull null
+            if (card == RecapCard.LEVEL && !levelSettled) return@mapNotNull null
+            ReportNarrator.facts(card.iosName, ctx)?.copy(card = key)
+        }
+        if (wanted.isEmpty()) return
+        wanted.forEach { narrationAsked += it.card }
+        try {
+            val lines = ReportNarrator.write(
+                cards = wanted, firstTalks = isTrial, targetLanguage = language,
+                nativeLanguage = nativeLanguage(context), level = trialLevel ?: level,
+                learnerName = PersonaStore.shared(context).load()?.displayName)
+            narration = narration.merged(lines)
+            if (isTrial) { val kept = narration; updateTrial { it.copy(narration = kept) } }
+            narrator.prefetch(cardsNow.mapNotNull { narration.line(narrationKey(it)) })
+            speakCurrentCard(onlyIfIdle = true)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            wanted.forEach { narrationAsked -= it.card }
+            Analytics.capture("report_narration_failed", mapOf("error" to e.toString().take(160)))
+        }
+    }
+
+    suspend fun phraseHabits() {
+        try {
+            val advice = HabitAdvice.phrase(habitFindings, firstTalks = isTrial,
+                nativeLanguage = nativeLanguage(context))
+            habitAdvice = advice
+            updateTrial { it.copy(habitAdvice = advice) }
+            writeNarration()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            habitAdviceFailed = true
+            Analytics.capture("habit_advice_failed", mapOf("error" to e.toString().take(160)))
+        }
+    }
+
+    /** A block a finding changed says which finding — its "change" line. */
+    fun routineWhy(block: StudyPlan.Block): String? {
+        val rule = routineRules[block.id] ?: return null
+        val line = habitAdvice?.lines?.firstOrNull { it.rule == rule } ?: return null
+        return line.change ?: line.title
+    }
+
     LaunchedEffect(recap.end) {
         if (isTrial) {
             if (trialStarted) return@LaunchedEffect
@@ -331,13 +477,28 @@ fun WeekRecapDeck(
             val plan = StudyPlanStore.current(context)
             val builtOwn = LearningPurposeStore.routineApplied(context) ||
                 OnboardingFlags.seen(context, OnboardingFlags.DAILY_CALL)
-            if (builtOwn && plan.blocks.isNotEmpty()) {
-                routine = plan.blocks.map { RoutineRecipe.Line(it, 0) }
+            // Since 2026-10-27 the routine is built from HOW they used the app
+            // ([StudyHabits] → [HabitAdvisor]), never from a template their
+            // minutes had no say in: their own routine, or just the talk their
+            // purposes start with, plus what each finding changes.
+            val base: List<StudyPlan.Block> = if (builtOwn && plan.blocks.isNotEmpty()) {
                 routineIsOwn = true
+                plan.blocks
             } else {
-                routine = RoutineRecipe.lines(LearningPurposeStore.purposes(context),
-                    StudyPlanStore.goalMinutes(context))
+                RoutineRecipe.lines(LearningPurposeStore.purposes(context), StudyPlanStore.goalMinutes(context))
+                    .map { it.block }.filter { it.kind == StudyPlan.Kind.TALK }.take(1)
             }
+            val habits = StudyHabits.read(context, current.start, current.end, current)
+            habitFindings = HabitAdvisor.findings(habits)
+            val built = HabitAdvisor.routine(base, habits, habitFindings, StudyPlanStore.goalMinutes(context))
+            routine = built.map { RoutineRecipe.Line(it.block, 0) }
+            routineRules = buildMap { built.forEach { l -> l.rule?.let { putIfAbsent(l.block.id, it) } } }
+            val keptAdvice = trialState?.habitAdvice
+            if (keptAdvice != null) habitAdvice = keptAdvice else trialScope.launch { phraseHabits() }
+            narrator.configure(voiceId)
+            trialState?.narration?.let { narration = it }
+            narrationReady = true
+            trialScope.launch { writeNarration() }
             if (trialLevel == null) {
                 val read = assessTrialLevel(context, language, nativeLanguage(context), onMeasuredLevel)
                 trialLevel = read?.first
@@ -378,10 +539,23 @@ fun WeekRecapDeck(
     androidx.compose.runtime.DisposableEffect(Unit) {
         if (isTrial) TrialReportStore.isShowing = true
         onDispose {
+            narrator.stop()
             if (isTrial) TrialReportStore.isShowing = false
             Analytics.capture(if (isTrial) "trial_report_closed" else "week_recap_closed",
                 mapOf("reached" to ((revealed.maxOrNull() ?: 0) + 1), "cards" to cards.size))
         }
+    }
+
+    // The narration follows the page, the coach and the level as they land,
+    // and stands down under the test and the plans.
+    LaunchedEffect(pager) {
+        snapshotFlow { pager.currentPage }.distinctUntilChanged().drop(1).collect { speakCurrentCard() }
+    }
+    LaunchedEffect(narrationReady, current.coach, levelSettled, trialTest?.isFinished) {
+        if (narrationReady) trialScope.launch { writeNarration() }
+    }
+    LaunchedEffect(showingTrialTest, showingPaywall) {
+        if (showingTrialTest || showingPaywall) narrator.stop()
     }
 
     fun finish(action: WeekRecapAction?) {
@@ -403,8 +577,14 @@ fun WeekRecapDeck(
         if (!routineIsOwn && routine.isNotEmpty()) {
             StudyPlanStore.update(context, RoutineRecipe.plan(routine))
             LearningPurposeStore.setRoutineApplied(context)
+        } else if (routineIsOwn && routineRules.isNotEmpty()) {
+            // Their own routine keeps everything they set; only the blocks
+            // a finding changed or added are written.
+            StudyPlanStore.update(context, StudyPlanStore.current(context).copy(blocks = routine.map { it.block }))
         }
-        Analytics.capture("trial_report_routine", mapOf("own" to routineIsOwn))
+        Analytics.capture("trial_report_routine", mapOf("own" to routineIsOwn,
+            "changed" to routineRules.size,
+            "rules" to habitFindings.joinToString(",") { it.rule }))
         showingPaywall = true
     }
     if (showingTrialTest) {
@@ -435,7 +615,12 @@ fun WeekRecapDeck(
     Column(Modifier.fillMaxSize().background(AppSurfaces.ground)) {
         TopBar(current, cards.size, pager.currentPage, isTrial,
             onSelect = { scope.launch { pager.animateScrollToPage(it) } },
-            onClose = { finish(null) })
+            onClose = { finish(null) },
+            narration = if (narrates) narrator.isOn else null,
+            onNarration = {
+                narrator.isOn = !narrator.isOn
+                if (narrator.isOn) speakCurrentCard() else narrator.stop()
+            })
         HorizontalPager(state = pager, modifier = Modifier.weight(1f)) { index ->
             val shown = index in revealed
             val alpha by animateFloatAsState(if (shown) 1f else 0f, tween(400), label = "recapReveal")
@@ -460,9 +645,20 @@ fun WeekRecapDeck(
                         RecapCard.TEST -> { TestCard(testState); ReminderOffer() }
                         RecapCard.TRIAL_TEST -> TrialTestCard(trialTest, trialState?.testThin == true)
                         RecapCard.LEVEL -> LevelCard(trialLevel, trialRationale, levelSettled, trialTest)
-                        RecapCard.ROUTINE -> RoutineCard(routine)
+                        RecapCard.ROUTINE -> RoutineCard(routine, habitFindings, habitAdvice, habitAdviceFailed,
+                            onRetry = { habitAdviceFailed = false; trialScope.launch { phraseHabits() } },
+                            fromWhatWeSaw = !(routineRules.isEmpty() && routineIsOwn),
+                            why = ::routineWhy)
                     }
                 }
+            }
+        }
+        if (narrates) cards.getOrNull(pager.currentPage)?.let { card ->
+            narration.line(narrationKey(card))?.let { line ->
+                CaptionBox(line, speaking = narrator.speakingCard == line.card,
+                    showCaption = line.caption.isNotEmpty() &&
+                        !LanguageCatalog.sameLanguage(language, nativeLanguage(context)),
+                    onTap = { speakCurrentCard() })
             }
         }
         // The deck's one button clears the navigation bar wherever the deck is
@@ -521,7 +717,7 @@ private fun chromeLocale(): Locale {
 
 @Composable
 private fun TopBar(recap: WeekRecap, count: Int, page: Int, isTrial: Boolean, onSelect: (Int) -> Unit,
-                   onClose: () -> Unit) {
+                   onClose: () -> Unit, narration: Boolean? = null, onNarration: () -> Unit = {}) {
     val locale = chromeLocale()
     Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 4.dp, bottom = 4.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -549,6 +745,17 @@ private fun TopBar(recap: WeekRecap, count: Int, page: Int, isTrial: Boolean, on
                     color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f))
+            }
+            if (narration != null) {
+                Box(Modifier.size(32.dp).background(tertiaryFill(), CircleShape).clickable(onClick = onNarration),
+                    contentAlignment = Alignment.Center) {
+                    Icon(if (narration) Icons.AutoMirrored.Filled.VolumeUp else Icons.AutoMirrored.Filled.VolumeOff,
+                        contentDescription = stringResource(if (narration) R.string.trial_mute_narration
+                            else R.string.trial_play_narration),
+                        tint = if (narration) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp))
+                }
             }
             Box(Modifier.size(32.dp).background(tertiaryFill(), CircleShape).clickable(onClick = onClose),
                 contentAlignment = Alignment.Center) {
@@ -1096,14 +1303,22 @@ private fun LevelCard(level: CefrLevel?, rationale: String?, settled: Boolean, t
 
 // The routine — the way on, and the button to the plans.
 @Composable
-private fun RoutineCard(routine: List<RoutineRecipe.Line>) {
+private fun RoutineCard(
+    routine: List<RoutineRecipe.Line>,
+    findings: List<HabitFinding>,
+    advice: HabitAdvice?,
+    adviceFailed: Boolean,
+    onRetry: () -> Unit,
+    /** False when the routine is the learner's own, untouched by a finding. */
+    fromWhatWeSaw: Boolean,
+    why: (StudyPlan.Block) -> String?,
+) {
     val context = LocalContext.current
     val res = context.resources
     Kicker(stringResource(R.string.trial_keep_it_going), Icons.Filled.CalendarMonth)
-    Text(stringResource(RoutineRecipe.headline(LearningPurposeStore.purposes(context))),
+    HabitSection(findings, advice, adviceFailed, onRetry)
+    Text(stringResource(if (fromWhatWeSaw) R.string.trial_routine_from_what_we_saw else R.string.trial_routine_as_set),
         style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-    Secondary(stringResource(R.string.about_lld_minutes_of_talk_a_day_and_what_it_corrected_comes_22496d,
-        StudyPlanStore.goalMinutes(context)))
     RoutineWeekPicture(routine.map { it.block })
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         routine.forEach { line ->
@@ -1116,14 +1331,83 @@ private fun RoutineCard(routine: List<RoutineRecipe.Line>) {
                         style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                     Text(routineWeekdaySummary(b.weekdays), style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (line.why != 0) Text(stringResource(line.why), style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary)
+                    why(b)?.let {
+                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                    }
                 }
             }
         }
     }
     Text(stringResource(R.string.trial_change_later), style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+/** What the rules found about how they practise, worded — firm first, the
+ *  good news last. The numbers are the evidence for the routine under it. */
+@Composable
+private fun HabitSection(findings: List<HabitFinding>, advice: HabitAdvice?, failed: Boolean, onRetry: () -> Unit) {
+    when {
+        findings.isEmpty() -> Unit
+        advice != null -> Column(Modifier.fillMaxWidth().background(tertiaryFill(), RoundedCornerShape(14.dp)).padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(stringResource(R.string.trial_how_youve_been_practising), style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            advice.lines.forEach { line ->
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(habitIcon(line.tone), contentDescription = null, tint = habitColor(line.tone),
+                        modifier = Modifier.padding(top = 2.dp).size(20.dp).width(22.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(line.title, style = MaterialTheme.typography.titleSmall)
+                        Text(line.body, style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+        failed -> OutlinedButton(onClick = onRetry) {
+            Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(stringResource(R.string.try_again))
+        }
+        else -> Row(Modifier.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+            Secondary(stringResource(R.string.trial_reading_how_you_practise))
+        }
+    }
+}
+
+private fun habitIcon(tone: HabitFinding.Tone): ImageVector = when (tone) {
+    HabitFinding.Tone.FIRM -> Icons.Filled.Error
+    HabitFinding.Tone.NUDGE -> Icons.Filled.ArrowCircleRight
+    HabitFinding.Tone.GOOD -> Icons.Filled.CheckCircle
+}
+
+@Composable
+private fun habitColor(tone: HabitFinding.Tone): Color = when (tone) {
+    HabitFinding.Tone.FIRM -> Orange
+    HabitFinding.Tone.NUDGE -> MaterialTheme.colorScheme.primary
+    HabitFinding.Tone.GOOD -> Green
+}
+
+/** The line being spoken, in the target language, with its native caption —
+ *  under the card, above the button (iOS `captionBox`). */
+@Composable
+private fun CaptionBox(line: ReportNarration.Line, speaking: Boolean, showCaption: Boolean, onTap: () -> Unit) {
+    val pulse = rememberInfiniteTransition(label = "narrationPulse")
+    val wave by pulse.animateFloat(0.35f, 1f, infiniteRepeatable(tween(600), RepeatMode.Reverse), label = "wave")
+    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 8.dp)
+        .background(AppSurfaces.card, ContinuousShape(14.dp)).clickable(onClick = onTap).padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(if (speaking) Icons.Filled.GraphicEq else Icons.AutoMirrored.Outlined.Chat, contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = 2.dp).size(14.dp).alpha(if (speaking) wave else 1f))
+            Text(line.text, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+        }
+        if (showCaption) Text(line.caption, style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 22.dp))
+    }
 }
 
 // MARK: - Helpers
@@ -1257,7 +1541,8 @@ fun WeekRecapHost(ready: Boolean, blocked: Boolean, level: CefrLevel, onShowing:
  */
 @Composable
 fun TrialReportHost(ready: Boolean, inCall: Boolean, blocked: Boolean, level: CefrLevel,
-                    onMeasuredLevel: (String) -> Unit, onShowing: (Boolean) -> Unit = {}) {
+                    onMeasuredLevel: (String) -> Unit, voiceId: String? = null,
+                    onShowing: (Boolean) -> Unit = {}) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val pending by com.roro.futurevoice.data.TrialReportInbox.pending.collectAsStateWithLifecycle()
@@ -1299,6 +1584,6 @@ fun TrialReportHost(ready: Boolean, inCall: Boolean, blocked: Boolean, level: Ce
     }
     LaunchedEffect(showing != null) { onShowing(showing != null) }
     showing?.let {
-        TrialReportSheet(it, level, onMeasuredLevel) { showing = null }
+        TrialReportSheet(it, level, onMeasuredLevel, voiceId) { showing = null }
     }
 }

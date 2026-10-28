@@ -24,4 +24,12 @@
     <string name="trial_next_up">"Next up"</string>
     <string name="trial_not_enough">"Not enough for a test yet"</string>
     <string name="trial_became_yours_body">"Words and phrases that became yours."</string>
+    <!-- iOS 25c60191 / dc51e6a9. Not yet in the iOS catalog, so iOS shows them in
+         English in every language; no translation here either until it has one. -->
+    <string name="trial_mute_narration">"Mute narration"</string>
+    <string name="trial_play_narration">"Play narration"</string>
+    <string name="trial_routine_as_set">"Your routine, as you set it"</string>
+    <string name="trial_routine_from_what_we_saw">"Your routine, from what we saw"</string>
+    <string name="trial_how_youve_been_practising">"How you've been practising"</string>
+    <string name="trial_reading_how_you_practise">"Reading how you practise…"</string>
 </resources>

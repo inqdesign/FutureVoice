@@ -622,10 +622,14 @@ fun backupStepLabel(step: BackupService.Step): String = when (step) {
 /** "Every day", "Weekdays", "Weekends", or the days by name, Monday first —
  *  the way the routine draws its week (iOS `weekdaySummary`). */
 @Composable
-internal fun routineWeekdaySummary(days: Set<Int>): String = when (days) {
-    (1..7).toSet() -> stringResource(R.string.routine_every_day)
-    (2..6).toSet() -> stringResource(R.string.routine_weekdays)
-    setOf(1, 7) -> stringResource(R.string.routine_weekends)
+internal fun routineWeekdaySummary(days: Set<Int>): String =
+    routineWeekdaySummary(androidx.compose.ui.platform.LocalContext.current.resources, days)
+
+/** The same, outside composition (the narration's facts). */
+internal fun routineWeekdaySummary(res: android.content.res.Resources, days: Set<Int>): String = when (days) {
+    (1..7).toSet() -> res.getString(R.string.routine_every_day)
+    (2..6).toSet() -> res.getString(R.string.routine_weekdays)
+    setOf(1, 7) -> res.getString(R.string.routine_weekends)
     else -> {
         val fmt = java.text.SimpleDateFormat("EEE", java.util.Locale.getDefault())
         listOf(2, 3, 4, 5, 6, 7, 1).filter { it in days }.joinToString(" ") { wd ->
