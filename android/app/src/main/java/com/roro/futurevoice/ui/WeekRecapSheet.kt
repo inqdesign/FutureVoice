@@ -496,8 +496,15 @@ fun WeekRecapDeck(
             val keptAdvice = trialState?.habitAdvice
             if (keptAdvice != null) habitAdvice = keptAdvice else trialScope.launch { phraseHabits() }
             narrator.configure(voiceId)
-            trialState?.narration?.let { narration = it }
+            val keptNarration = trialState?.narration
+            if (keptNarration != null) narration = keptNarration
             narrationReady = true
+            if (keptNarration != null) {
+                // A reopened report has its whole script already; nothing new
+                // arrives to start the card on screen, so start it here.
+                narrator.prefetch(cardsNow.mapNotNull { narration.line(narrationKey(it)) })
+                speakCurrentCard(onlyIfIdle = true)
+            }
             trialScope.launch { writeNarration() }
             if (trialLevel == null) {
                 val read = assessTrialLevel(context, language, nativeLanguage(context), onMeasuredLevel)

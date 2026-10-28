@@ -24,4 +24,10 @@
     <string name="trial_next_up">"Ensuite"</string>
     <string name="trial_not_enough">"Pas encore assez pour un test"</string>
     <string name="trial_became_yours_body">"Les mots et expressions devenus les tiens."</string>
+    <string name="trial_mute_narration">"Couper la narration"</string>
+    <string name="trial_play_narration">"Activer la narration"</string>
+    <string name="trial_routine_as_set">"Ta routine, telle que tu l’as faite"</string>
+    <string name="trial_routine_from_what_we_saw">"Ta routine, d’après ta façon de pratiquer"</string>
+    <string name="trial_how_youve_been_practising">"Ta façon de pratiquer"</string>
+    <string name="trial_reading_how_you_practise">"On regarde ta façon de pratiquer…"</string>
 </resources>

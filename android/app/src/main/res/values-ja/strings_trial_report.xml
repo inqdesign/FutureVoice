@@ -24,4 +24,10 @@
     <string name="trial_next_up">"次にやること"</string>
     <string name="trial_not_enough">"まだテストを作れるほどではありません"</string>
     <string name="trial_became_yours_body">"自分のものになった単語と表現です。"</string>
+    <string name="trial_mute_narration">"読み上げをオフ"</string>
+    <string name="trial_play_narration">"読み上げをオン"</string>
+    <string name="trial_routine_as_set">"自分で決めたルーティン"</string>
+    <string name="trial_routine_from_what_we_saw">"これまでの練習から組んだルーティン"</string>
+    <string name="trial_how_youve_been_practising">"これまでの練習のしかた"</string>
+    <string name="trial_reading_how_you_practise">"練習のしかたを見ています…"</string>
 </resources>

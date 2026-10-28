@@ -57,6 +57,9 @@ class StudyHabitsTest {
         val review = routine.firstOrNull { it.block.kind == StudyPlan.Kind.REVIEW }
         assertEquals("no-review", review?.rule)
         assertEquals(8 * 60 + 15, review?.block?.startMinute)
+        // The block is the size the finding names ("a short review (10 cards)").
+        assertEquals(10, review?.block?.minutes)
+        assertTrue(noReview?.change?.contains("(10 cards)") == true)
         assertTrue(routine.any { it.block.kind == StudyPlan.Kind.SAY_IT_AGAIN })
     }
 

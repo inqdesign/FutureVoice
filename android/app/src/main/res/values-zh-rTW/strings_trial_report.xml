@@ -24,4 +24,10 @@
     <string name="trial_next_up">"接下來要做的事"</string>
     <string name="trial_not_enough">"還不夠出一份測驗"</string>
     <string name="trial_became_yours_body">"變成你的單字和用語。"</string>
+    <string name="trial_mute_narration">"關閉朗讀"</string>
+    <string name="trial_play_narration">"開啟朗讀"</string>
+    <string name="trial_routine_as_set">"照你自己定的作息"</string>
+    <string name="trial_routine_from_what_we_saw">"依你這段時間的練習排的作息"</string>
+    <string name="trial_how_youve_been_practising">"你這段時間的練習方式"</string>
+    <string name="trial_reading_how_you_practise">"正在看你的練習方式…"</string>
 </resources>

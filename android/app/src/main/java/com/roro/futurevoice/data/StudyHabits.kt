@@ -231,6 +231,9 @@ object HabitAdvisor {
      *  things that matter, not everything that's true. */
     const val MAX_FINDINGS = 4
 
+    /** The review block the no-review finding adds — the size it names. */
+    const val SHORT_REVIEW_CARDS = 10
+
     /** A routine block, and the rule that changed or added it (null: as it was). */
     data class RoutineLine(val block: StudyPlan.Block, val rule: String?)
 
@@ -269,7 +272,7 @@ object HabitAdvisor {
             if (top != null) facts += "The same correction came back ${top.count} times: \"${top.was}\" → \"${top.now}\"."
             facts += "Why it matters: talking without reviewing means making the same mistakes again; the review is where a correction becomes theirs."
             out += HabitFinding("no-review", HabitFinding.Tone.FIRM, facts,
-                "Add a short review (10 cards) right after the talk." +
+                "Add a short review ($SHORT_REVIEW_CARDS cards) right after the talk." +
                     (if (h.repeatedFixes.isEmpty()) "" else " Add say it again after the talk."))
         } else if (top != null && h.sayItAgainRuns == 0) {
             // 4. The same fix twice, never practised in context.
@@ -394,7 +397,7 @@ object HabitAdvisor {
         if ("no-review" in rules && lines.none { it.block.kind == StudyPlan.Kind.REVIEW }) {
             lines += RoutineLine(StudyPlan.Block(kind = StudyPlan.Kind.REVIEW, weekdays = talkDays,
                 hour = (after + 5) / 60 % 24, minute = (after + 5) % 60,
-                minutes = StudyPlan.Kind.REVIEW.defaultAmount), "no-review")
+                minutes = SHORT_REVIEW_CARDS), "no-review")
         }
         if (("repeated-fix" in rules || "no-say-again" in rules ||
                 ("no-review" in rules && h.repeatedFixes.isNotEmpty())) &&

@@ -24,4 +24,10 @@
     <string name="trial_next_up">"Als Nächstes"</string>
     <string name="trial_not_enough">"Noch nicht genug für einen Test"</string>
     <string name="trial_became_yours_body">"Wörter und Wendungen, die deine geworden sind."</string>
+    <string name="trial_mute_narration">"Vorlesen aus"</string>
+    <string name="trial_play_narration">"Vorlesen an"</string>
+    <string name="trial_routine_as_set">"Deine Routine, so wie du sie angelegt hast"</string>
+    <string name="trial_routine_from_what_we_saw">"Deine Routine, danach, wie du geübt hast"</string>
+    <string name="trial_how_youve_been_practising">"Wie du bisher geübt hast"</string>
+    <string name="trial_reading_how_you_practise">"Ich schaue mir an, wie du übst…"</string>
 </resources>

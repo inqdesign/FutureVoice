@@ -24,4 +24,10 @@
     <string name="trial_next_up">"다음에 할 일"</string>
     <string name="trial_not_enough">"아직 테스트를 만들 만큼은 아니에요"</string>
     <string name="trial_became_yours_body">"내 것이 된 단어와 표현이에요."</string>
+    <string name="trial_mute_narration">"읽어 주기 끄기"</string>
+    <string name="trial_play_narration">"읽어 주기 켜기"</string>
+    <string name="trial_routine_as_set">"내가 정한 루틴 그대로"</string>
+    <string name="trial_routine_from_what_we_saw">"지금까지 해 온 걸 보고 짠 루틴"</string>
+    <string name="trial_how_youve_been_practising">"지금까지 연습한 방식"</string>
+    <string name="trial_reading_how_you_practise">"연습한 방식을 살펴보는 중…"</string>
 </resources>
