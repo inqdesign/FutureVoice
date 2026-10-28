@@ -38,6 +38,8 @@ data class StudyHabits(
     val shadowTakes: Int,
     val sayItAgainRuns: Int,
     val listens: Int,
+    val scenes: Int = 0,
+    val speeches: Int = 0,
     /** Share of all effort that fell on the busiest day (0…1). */
     val busiestDayShare: Double,
     val busiestDay: Long?,
@@ -160,6 +162,8 @@ data class StudyHabits(
                 shadowTakes = count(Activity.SHADOW),
                 sayItAgainRuns = count(Activity.SAY_IT_AGAIN),
                 listens = count(Activity.LISTEN),
+                scenes = count(Activity.SCENE),
+                speeches = count(Activity.SPEECH),
                 busiestDayShare = if (total > 0) (busiest?.value ?: 0.0) / total else 0.0,
                 busiestDay = busiest?.key,
                 habitHour = habitHour,
@@ -223,6 +227,59 @@ data class HabitFinding(
         @SerialName("good") GOOD("good"),
         @SerialName("nudge") NUDGE("nudge"),
         @SerialName("firm") FIRM("firm"),
+    }
+}
+
+/**
+ * Every practice feature, and how much of it the learner used (iOS
+ * `FeatureUse`, 2026-10-28, founder: the trial report shows ALL the features,
+ * which ones were used and how much, and says plainly when only one part was).
+ * Counted in code from [StudyHabits]; the advice is picked by rule, never
+ * written by a model.
+ */
+data class FeatureUse(
+    val feature: Feature,
+    /** Talks, runs, reps, takes, scenes, pieces heard. */
+    val count: Int,
+    /** A talk's minutes; zero for everything else. */
+    val minutes: Int = 0,
+) {
+    enum class Feature(val raw: String) {
+        TALK("talk"), SAY_IT_AGAIN("sayItAgain"), REVIEW("review"), SHADOW("shadow"),
+        SCENE("scene"), LISTEN("listen"), SPEECH("speech")
+    }
+    val used: Boolean get() = count > 0 || minutes > 0
+
+    /** What the card says under the list. */
+    sealed interface Advice {
+        data object OnlyTalk : Advice
+        data class Next(val feature: Feature) : Advice
+        data object WideMix : Advice
+        data object NoTalk : Advice
+    }
+
+    companion object {
+        fun list(h: StudyHabits): List<FeatureUse> = listOf(
+            FeatureUse(Feature.TALK, h.talks, h.talkMinutes),
+            FeatureUse(Feature.SAY_IT_AGAIN, h.sayItAgainRuns),
+            FeatureUse(Feature.REVIEW, h.reviewReps),
+            FeatureUse(Feature.SHADOW, h.shadowTakes),
+            FeatureUse(Feature.SCENE, h.scenes),
+            FeatureUse(Feature.LISTEN, h.listens),
+            FeatureUse(Feature.SPEECH, h.speeches))
+
+        /** The order a missing feature is suggested in: what makes a talk's
+         *  corrections stick first, then what trains the ear and the rhythm. */
+        val suggestionOrder = listOf(Feature.SAY_IT_AGAIN, Feature.REVIEW, Feature.SHADOW,
+            Feature.SCENE, Feature.LISTEN, Feature.SPEECH)
+
+        fun advice(uses: List<FeatureUse>): Advice {
+            val used = uses.filter { it.used }.map { it.feature }.toSet()
+            if (Feature.TALK !in used) return Advice.NoTalk
+            if (used == setOf(Feature.TALK)) return Advice.OnlyTalk
+            if (used.size >= 5) return Advice.WideMix
+            return suggestionOrder.firstOrNull { it !in used }?.let { Advice.Next(it) } ?: Advice.WideMix
+        }
     }
 }
 

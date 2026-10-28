@@ -163,6 +163,9 @@ object ReportNarrator {
         val routine: List<String> = emptyList(),
         /** How they used the app ([com.roro.futurevoice.data.HabitAdvisor]), the routine's evidence. */
         val habits: List<HabitFinding> = emptyList(),
+        /** The trial's usage card (every feature, how much), which takes the
+         *  talk card's place in the trial deck. */
+        val usage: List<String> = emptyList(),
     )
 
     /** The cards whose content is known the moment the deck opens. */
@@ -181,7 +184,7 @@ object ReportNarrator {
                 }
                 else -> f += "Opening card: a quiet week, nothing practised. One talk is enough to start again."
             }
-            "talk" -> {
+            "talk" -> if (c.isTrial && c.usage.isNotEmpty()) f += c.usage else {
                 f += "They talked ${r.talkMinutes} min in ${r.talks.size} talk(s)."
                 val titles = r.talks.take(4).map { it.title }
                 if (titles.isNotEmpty()) f += "Talks: ${titles.joinToString(" · ")}"

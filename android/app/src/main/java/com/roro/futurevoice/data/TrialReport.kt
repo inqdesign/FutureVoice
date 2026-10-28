@@ -51,7 +51,26 @@ data class TrialReport(
     /** How the learner used the app, worded ([HabitAdvice]) — the routine
      *  card's evidence. */
     val habitAdvice: HabitAdvice? = null,
-)
+    /** The learner's OWN speaking time per language in the window, most first
+     *  (iOS 2026-10-28). Twenty minutes of call is rarely ten of the learner's
+     *  voice, and one learner in five splits it across languages, so the level
+     *  card says what it was read from and names the language this report
+     *  doesn't read. Empty on reports built before. */
+    val spoken: List<Speech> = emptyList(),
+) {
+    @Serializable
+    data class Speech(val language: String, val seconds: Int)
+
+    val ownSpeechSeconds: Int?
+        get() = spoken.firstOrNull { LanguageCatalog.sameLanguage(it.language, targetLanguage) }?.seconds
+    val otherLanguages: List<Speech>
+        get() = spoken.filter { !LanguageCatalog.sameLanguage(it.language, targetLanguage) && it.seconds > 0 }
+
+    companion object {
+        /** Under this much of their own speech, the level is a first read. */
+        const val THIN_SPEECH_SECONDS = 300
+    }
+}
 
 object TrialReportStore {
     const val MAX_OFFERS = 2
@@ -116,18 +135,39 @@ object TrialReportStore {
      */
     suspend fun current(c: Context, targetLanguage: String, now: Long = System.currentTimeMillis()): TrialReport {
         load(c, targetLanguage)?.let { return it }
-        val first = spokenSessions(c).map { s -> s.turns.firstOrNull()?.timestamp ?: s.startedAt }.minOrNull() ?: now
+        val sessions = spokenSessions(c)
+        val first = sessions.map { s -> s.turns.firstOrNull()?.timestamp ?: s.startedAt }.minOrNull() ?: now
         val zone = ZoneId.systemDefault()
         val start = Instant.ofEpochMilli(first).atZone(zone).toLocalDate().atStartOfDay(zone).toInstant().toEpochMilli()
-        var recap = WeekRecapBuilder.build(c, start, now + 1_000, wholeWindow = true)
+        val spoken = speech(sessions)
+        // Two languages spoken: the report reads the one it is opened in, and
+        // its minutes and talks are that language's, so the cover's number is
+        // the number the level and the coach were read from. One language:
+        // the meter's every-language total, as before.
+        val several = spoken.count { it.seconds > 0 } > 1
+        var recap = WeekRecapBuilder.build(c, start, now + 1_000, wholeWindow = true,
+                                           onlyLanguage = if (several) targetLanguage else null)
         // No week before a trial; the talk card's comparison line stays quiet.
         recap = recap.copy(previousTalkSeconds = 0, previousShadowAverage = null)
         // The meter's log is pruned at 45 days; a pool spent before that
         // still has its talks, so their own lengths stand in.
         if (recap.talkSeconds == 0) recap = recap.copy(talkSeconds = recap.talks.sumOf { it.minutes * 60 })
-        val report = TrialReport(recap = recap, targetLanguage = targetLanguage, builtAt = now)
+        val report = TrialReport(recap = recap, targetLanguage = targetLanguage, builtAt = now, spoken = spoken)
         save(c, report)
         return report
+    }
+
+    /** The learner's own speech per language, read from their turns (the
+     *  lines a level is judged on: no misheard or coach-read lines), most first. */
+    private fun speech(sessions: List<Session>): List<TrialReport.Speech> {
+        val byLanguage = linkedMapOf<String, Int>()
+        for (s in sessions) {
+            if (s.isPractice) continue
+            val ms = s.turns.filter { it.isEvidence }.sumOf { it.durationMs }
+            val key = byLanguage.keys.firstOrNull { LanguageCatalog.sameLanguage(it, s.targetLanguage) } ?: s.targetLanguage
+            byLanguage[key] = (byLanguage[key] ?: 0) + ms / 1000
+        }
+        return byLanguage.map { TrialReport.Speech(it.key, it.value) }.sortedByDescending { it.seconds }
     }
 
     /** Load, change, save in one step — the deck and the test screen both

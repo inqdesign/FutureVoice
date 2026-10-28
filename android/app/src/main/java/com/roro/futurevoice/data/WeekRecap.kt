@@ -193,13 +193,15 @@ object WeekRecapBuilder {
     }
 
     /** Metered talk, all languages, from the day [from] falls on until [to]. */
-    fun talkSeconds(context: Context, from: Long, to: Long, zone: ZoneId = ZoneId.systemDefault()): Int {
+    fun talkSeconds(context: Context, from: Long, to: Long, zone: ZoneId = ZoneId.systemDefault(),
+                    language: String? = null): Int {
         var day = Instant.ofEpochMilli(from).atZone(zone).toLocalDate()
         var seconds = 0
         while (true) {
             val at = day.atStartOfDay(zone).toInstant().toEpochMilli()
             if (at >= to) break
-            seconds += TalkTimeLog.recentSeconds(context, 1, at).firstOrNull()?.second ?: 0
+            seconds += if (language != null) TalkTimeLog.secondsOn(context, at, language)
+                else TalkTimeLog.recentSeconds(context, 1, at).firstOrNull()?.second ?: 0
             day = day.plusDays(1)
         }
         return seconds
@@ -218,12 +220,16 @@ object WeekRecapBuilder {
 
     /** [wholeWindow]: count every day from [start] to [end] instead of the
      *  week's seven — the trial report's window ([TrialReport]) can run
-     *  longer than a week, and its counts must cover all of it. */
+     *  longer than a week, and its counts must cover all of it.
+     *  [onlyLanguage]: only that language's talks and metered minutes — the
+     *  trial report of a learner who spoke two languages reads one of them,
+     *  and its minutes must be the ones its level and coach are read from. */
     suspend fun build(context: Context, start: Long, end: Long, wholeWindow: Boolean = false,
-                      zone: ZoneId = ZoneId.systemDefault()): WeekRecap {
+                      zone: ZoneId = ZoneId.systemDefault(), onlyLanguage: String? = null): WeekRecap {
         val language = LanguageScope.active(context)
         val days = if (wholeWindow) windowDays(start, end, zone) else days(start, zone)
         val sessions = sessionsAcrossLanguages(context)
+            .filter { s -> onlyLanguage == null || LanguageCatalog.sameLanguage(s.targetLanguage, onlyLanguage) }
         val spokenDays = sessions.mapNotNull { s -> lastUserLine(s) }
             .map { Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }.toSet()
         val active = days.map { day ->
@@ -242,8 +248,8 @@ object WeekRecapBuilder {
             start = start, end = end,
             activeDays = active,
             streak = TalkTimeLog.streakDays(context, end - 1),
-            talkSeconds = talkSeconds(context, start, end, zone),
-            previousTalkSeconds = talkSeconds(context, start - WEEK_MS, start, zone),
+            talkSeconds = talkSeconds(context, start, end, zone, onlyLanguage),
+            previousTalkSeconds = talkSeconds(context, start - WEEK_MS, start, zone, onlyLanguage),
             sessions = sessions,
             firstSeen = words + expressions,
             cards = cards,

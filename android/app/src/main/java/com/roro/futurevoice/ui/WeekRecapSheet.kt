@@ -151,6 +151,15 @@ import androidx.compose.material.icons.automirrored.filled.EventNote
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.roro.futurevoice.ui.brand.AppSurfaces
+import com.roro.futurevoice.data.FeatureUse
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material.icons.filled.SmartDisplay
+import com.roro.futurevoice.ui.FeedbackContext
+import com.roro.futurevoice.ui.FeedbackPrompt
 import com.roro.futurevoice.ui.brand.ContinuousShape
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -281,6 +290,12 @@ fun WeekRecapDeck(
     var habitAdviceFailed by remember { mutableStateOf(false) }
     var routineRules by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var showingPaywall by remember { mutableStateOf(false) }
+    var showingFeedback by remember { mutableStateOf(false) }
+    /** The trial's second card: every feature, and how much of each was used. */
+    var featureUses by remember { mutableStateOf<List<FeatureUse>>(emptyList()) }
+    /** Foreground time in the app over the trial window. */
+    var appSeconds by remember { mutableStateOf(0) }
+    var learnerName by remember { mutableStateOf<String?>(null) }
     var jumpToLevel by remember { mutableStateOf(false) }
     /** The deck's start-up runs once per opening (iOS `trialStarted`): a
      *  second run would count a second offer and reset the thin flag under
@@ -378,6 +393,7 @@ fun WeekRecapDeck(
             routineHeadline = context.getString(RoutineRecipe.headline(LearningPurposeStore.purposes(context))),
             routine = routine.map { "${RoutineText.titled(res, it.block.kind, it.block.minutes)}, ${routineWeekdaySummary(res, it.block.weekdays)}" },
             habits = habitFindings,
+            usage = if (isTrial) usageFacts(featureUses, appSeconds) else emptyList(),
         )
     }
 
@@ -489,6 +505,9 @@ fun WeekRecapDeck(
                     .map { it.block }.filter { it.kind == StudyPlan.Kind.TALK }.take(1)
             }
             val habits = StudyHabits.read(context, current.start, current.end, current)
+            featureUses = FeatureUse.list(habits)
+            appSeconds = trialAppSeconds(context, current)
+            learnerName = com.roro.futurevoice.data.PersonaStore.shared(context).load()?.displayName
             habitFindings = HabitAdvisor.findings(habits)
             val built = HabitAdvisor.routine(base, habits, habitFindings, StudyPlanStore.goalMinutes(context))
             routine = built.map { RoutineRecipe.Line(it.block, 0) }
@@ -613,10 +632,22 @@ fun WeekRecapDeck(
     }
     if (showingPaywall) {
         PaywallDialog(onDismiss = {
-            // The report has done its job whether or not they bought.
+            // The report has done its job whether or not they bought. Then
+            // what they thought of it, once, and the store's own rating sheet.
             showingPaywall = false
             TrialReportStore.setFinished(context)
-            onClose(null)
+            if (FeedbackPrompt.shouldShow(context, FeedbackContext.TRIAL_REPORT)) {
+                FeedbackPrompt.markShown(context, FeedbackContext.TRIAL_REPORT)
+                showingFeedback = true
+            } else {
+                endTrialReport(context, onClose)
+            }
+        })
+    }
+    if (showingFeedback) {
+        FeedbackSheet(FeedbackContext.TRIAL_REPORT, onDismiss = {
+            showingFeedback = false
+            endTrialReport(context, onClose)
         })
     }
     Column(Modifier.fillMaxSize().background(AppSurfaces.ground)) {
@@ -640,8 +671,8 @@ fun WeekRecapDeck(
                         CoachPending(coachFailed, isTrial) { coachFailed = false; coachAttempt++ }
                     }
                     when (cards[index]) {
-                        RecapCard.COVER -> if (isTrial) TrialCover(current) else Cover(current)
-                        RecapCard.TALK -> TalkCard(current)
+                        RecapCard.COVER -> if (isTrial) TrialCover(current, trialState, learnerName) else Cover(current)
+                        RecapCard.TALK -> if (isTrial) UsageCard(featureUses, appSeconds) else TalkCard(current)
                         RecapCard.USED -> UsedCard(current)
                         RecapCard.REVIEW -> ReviewCard(current, isTrial)
                         RecapCard.FRESH -> FreshCard(current)
@@ -651,7 +682,7 @@ fun WeekRecapDeck(
                         RecapCard.COACH -> CoachCard(current, pending, isTrial)
                         RecapCard.TEST -> { TestCard(testState); ReminderOffer() }
                         RecapCard.TRIAL_TEST -> TrialTestCard(trialTest, trialState?.testThin == true)
-                        RecapCard.LEVEL -> LevelCard(trialLevel, trialRationale, levelSettled, trialTest)
+                        RecapCard.LEVEL -> LevelCard(trialLevel, trialRationale, levelSettled, trialTest, trialState)
                         RecapCard.ROUTINE -> RoutineCard(routine, habitFindings, habitAdvice, habitAdviceFailed,
                             onRetry = { habitAdviceFailed = false; trialScope.launch { phraseHabits() } },
                             fromWhatWeSaw = !(routineRules.isEmpty() && routineIsOwn),
@@ -1235,13 +1266,226 @@ private fun ReminderOffer() {
 
 // MARK: - Trial report
 
-// 1 — the free minutes at a glance
+// 1 — the free minutes, handed over (iOS 2026-10-28, founder: "clean, with
+// their name, friendly, and the feeling of being looked after"). Their face
+// and name first, so the deck reads as made for one person; then the three
+// numbers the rest of it is read from.
 @Composable
-private fun TrialCover(r: WeekRecap) {
-    Kicker(stringResource(R.string.trial_free_minutes), Icons.Filled.CardGiftcard)
-    BigNumber(r.talkMinutes, stringResource(R.string.wr_min))
-    Lead(stringResource(R.string.trial_cover_body))
-    SummaryRow(r)
+private fun TrialCover(r: WeekRecap, trial: TrialReport?, displayName: String?) {
+    val locale = chromeLocale()
+    val primary = MaterialTheme.colorScheme.primary
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.border(2.5.dp, primary, CircleShape).padding(5.dp)) {
+            ProfileAvatar(displayName ?: "", 64.dp)
+        }
+        Spacer(Modifier.weight(1f))
+        Text("${monthDay(r.start, locale)} – ${monthDay(r.end - 1, locale)}", style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Kicker(stringResource(R.string.trial_made_for_you), Icons.Filled.CardGiftcard)
+        val name = coverName(displayName)
+        Text(if (name != null) stringResource(R.string.trial_report_ready_named, name)
+             else stringResource(R.string.trial_report_ready),
+            fontSize = 34.sp, lineHeight = 40.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.trial_cover_just_for_you), style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    Row(Modifier.fillMaxWidth().background(tertiaryFill(), ContinuousShape(18.dp)).padding(vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        CoverStat(r.talkMinutes, stringResource(R.string.trial_stat_min_of_talk))
+        StatDivider()
+        CoverStat(r.talks.size, stringResource(R.string.trial_stat_talks))
+        val own = trial?.ownSpeechSeconds
+        if (own != null && own > 0) {
+            StatDivider()
+            CoverStat(maxOf(1, own / 60), stringResource(R.string.trial_stat_min_you_spoke))
+        }
+    }
+    LabelRow(Icons.Filled.CalendarMonth, MaterialTheme.colorScheme.onSurfaceVariant) {
+        Text(stringResource(R.string.trial_weekly_report_note), style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/** "Oct 26" in the chrome's language. */
+private fun monthDay(at: Long, locale: java.util.Locale): String {
+    val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "MMMd")
+    return java.text.SimpleDateFormat(pattern, locale).format(java.util.Date(at))
+}
+
+/** The name the cover greets: the first word of a spaced name ("Anna
+ *  Schmidt" → Anna), the whole of an unspaced one (이응규). */
+private fun coverName(full: String?): String? {
+    val t = full?.trim().orEmpty()
+    if (t.isEmpty()) return null
+    return t.split(Regex("\\s+")).firstOrNull() ?: t
+}
+
+@Composable
+private fun RowScope.CoverStat(value: Int, label: String) {
+    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text("$value", fontSize = 30.sp, fontWeight = FontWeight.Bold)
+        Text(label, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun StatDivider() {
+    Box(Modifier.width(1.dp).height(44.dp).background(MaterialTheme.colorScheme.outlineVariant))
+}
+
+// 2 — how they used the app (iOS 2026-10-28, founder): the time it took, said
+// as time that didn't go to scrolling, then EVERY practice feature with how
+// much of it was used, so the ones they never opened are on the page too, and
+// one line on what to add.
+@Composable
+private fun UsageCard(uses: List<FeatureUse>, appSeconds: Int) {
+    Kicker(stringResource(R.string.trial_how_you_used_it), Icons.Filled.GridView)
+    BigNumber(maxOf(1, appSeconds / 60), stringResource(R.string.trial_min_in_app))
+    Lead(stringResource(R.string.trial_not_scrolling))
+    if (uses.isEmpty()) return
+    Text(stringResource(R.string.trial_tried_n_of_m, uses.count { it.used }, uses.size),
+        style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
+        modifier = Modifier.padding(top = 4.dp))
+    UsageAdvice(FeatureUse.advice(uses))
+    Column {
+        uses.forEachIndexed { index, use ->
+            if (index > 0) Box(Modifier.padding(start = 46.dp).fillMaxWidth().height(0.5.dp)
+                .background(MaterialTheme.colorScheme.outlineVariant))
+            FeatureRow(use)
+        }
+    }
+}
+
+@Composable
+private fun FeatureRow(use: FeatureUse) {
+    val res = LocalContext.current.resources
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    Row(Modifier.fillMaxWidth().padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Box(Modifier.size(34.dp).background(if (use.used) featureColor(use.feature) else tertiaryFill(), CircleShape),
+            contentAlignment = Alignment.Center) {
+            Icon(featureIcon(use.feature), contentDescription = null,
+                tint = if (use.used) Color.White else muted, modifier = Modifier.size(18.dp))
+        }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(featureName(res, use.feature), style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold, color = if (use.used) MaterialTheme.colorScheme.onSurface else muted)
+            Text(stringResource(featureBlurb(use.feature)), style = MaterialTheme.typography.bodySmall, color = muted)
+        }
+        Text(when {
+                !use.used -> stringResource(R.string.not_yet)
+                use.feature == FeatureUse.Feature.TALK -> "${maxOf(1, use.minutes)} ${stringResource(R.string.wr_min)}"
+                else -> stringResource(R.string.lld_17887f, use.count)
+            }, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold,
+            color = if (use.used) MaterialTheme.colorScheme.onSurface else muted.copy(alpha = 0.6f))
+    }
+}
+
+@Composable
+private fun UsageAdvice(advice: FeatureUse.Advice) {
+    val text = stringResource(when (advice) {
+        FeatureUse.Advice.OnlyTalk -> R.string.trial_advice_only_talk
+        FeatureUse.Advice.NoTalk -> R.string.trial_advice_no_talk
+        FeatureUse.Advice.WideMix -> R.string.trial_advice_wide_mix
+        is FeatureUse.Advice.Next -> when (advice.feature) {
+            FeatureUse.Feature.SAY_IT_AGAIN -> R.string.trial_advice_say_it_again
+            FeatureUse.Feature.REVIEW -> R.string.trial_advice_review
+            FeatureUse.Feature.SHADOW -> R.string.trial_advice_shadow
+            FeatureUse.Feature.SCENE -> R.string.trial_advice_scene
+            FeatureUse.Feature.LISTEN -> R.string.trial_advice_listen
+            FeatureUse.Feature.SPEECH -> R.string.trial_advice_speech
+            FeatureUse.Feature.TALK -> R.string.trial_advice_no_talk
+        }
+    })
+    val tint = when (advice) {
+        FeatureUse.Advice.OnlyTalk -> Orange
+        FeatureUse.Advice.WideMix -> Green
+        else -> MaterialTheme.colorScheme.primary
+    }
+    Row(Modifier.fillMaxWidth().background(tertiaryFill(), ContinuousShape(16.dp)).padding(14.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Icon(if (advice == FeatureUse.Advice.WideMix) Icons.Filled.ThumbUp else Icons.Filled.Lightbulb,
+            contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
+        Text(text, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+private fun planKind(f: FeatureUse.Feature): StudyPlan.Kind = when (f) {
+    FeatureUse.Feature.TALK, FeatureUse.Feature.SCENE -> StudyPlan.Kind.TALK
+    FeatureUse.Feature.SAY_IT_AGAIN -> StudyPlan.Kind.SAY_IT_AGAIN
+    FeatureUse.Feature.REVIEW -> StudyPlan.Kind.REVIEW
+    FeatureUse.Feature.SHADOW -> StudyPlan.Kind.SHADOW
+    FeatureUse.Feature.LISTEN -> StudyPlan.Kind.LISTEN
+    FeatureUse.Feature.SPEECH -> StudyPlan.Kind.SPEECH
+}
+
+private fun featureName(res: android.content.res.Resources, f: FeatureUse.Feature): String =
+    if (f == FeatureUse.Feature.SCENE) res.getString(R.string.scenes) else RoutineText.label(res, planKind(f))
+
+private fun featureIcon(f: FeatureUse.Feature): ImageVector =
+    if (f == FeatureUse.Feature.SCENE) Icons.Filled.SmartDisplay else planKind(f).icon()
+
+/** Mint for scenes: the one system colour no routine kind uses (indigo is the Core's). */
+private fun featureColor(f: FeatureUse.Feature): Color =
+    if (f == FeatureUse.Feature.SCENE) Color(0xFF00C7BE) else planKind(f).color()
+
+private fun featureBlurb(f: FeatureUse.Feature): Int = when (f) {
+    FeatureUse.Feature.TALK -> R.string.trial_blurb_talk
+    FeatureUse.Feature.SAY_IT_AGAIN -> R.string.trial_blurb_say_it_again
+    FeatureUse.Feature.REVIEW -> R.string.trial_blurb_review
+    FeatureUse.Feature.SHADOW -> R.string.trial_blurb_shadow
+    FeatureUse.Feature.SCENE -> R.string.trial_blurb_scene
+    FeatureUse.Feature.LISTEN -> R.string.trial_blurb_listen
+    FeatureUse.Feature.SPEECH -> R.string.trial_blurb_speech
+}
+
+/** Foreground time over the window, never less than the metered talk (a call
+ *  in a pocket is metered but not foregrounded), like the day card. */
+private fun trialAppSeconds(context: android.content.Context, r: WeekRecap): Int {
+    val zone = java.time.ZoneId.systemDefault()
+    var day = java.time.Instant.ofEpochMilli(r.start).atZone(zone).toLocalDate()
+    var seconds = 0
+    while (true) {
+        val at = day.atStartOfDay(zone).toInstant().toEpochMilli()
+        if (at >= r.end) break
+        seconds += com.roro.futurevoice.data.AppUsageLog.secondsWithOpenStint(context, at)
+        day = day.plusDays(1)
+    }
+    return maxOf(seconds, r.talkSeconds)
+}
+
+/** The usage card's facts for the narration, in place of the talk card's. */
+private fun usageFacts(uses: List<FeatureUse>, appSeconds: Int): List<String> {
+    if (uses.isEmpty()) return emptyList()
+    val f = mutableListOf("How they used the app: ${appSeconds / 60} min in the app in total (time not spent scrolling).")
+    for (u in uses) {
+        val name = u.feature.raw
+        f += if (!u.used) "$name: never used"
+            else if (u.feature == FeatureUse.Feature.TALK) "$name: ${u.minutes} min, ${u.count} talk(s)"
+            else "$name: ${u.count}"
+    }
+    f += when (val a = FeatureUse.advice(uses)) {
+        FeatureUse.Advice.OnlyTalk -> "They only talked; suggest Say it again after a call and a few review cards a day."
+        is FeatureUse.Advice.Next -> "Suggest adding ${a.feature.raw} next."
+        FeatureUse.Advice.WideMix -> "They tried most features; praise the mix."
+        FeatureUse.Advice.NoTalk -> "They never talked; talking is the heart of it."
+    }
+    return f
+}
+
+/** The deck's last step: the store's rating sheet follows whatever the
+ *  feedback sheet said (never gated on its stars), then the deck goes. Asked
+ *  after the deck has gone: over a screen mid-dismissal it can be dropped. */
+private fun endTrialReport(context: android.content.Context, onClose: (WeekRecapAction?) -> Unit) {
+    val activity = context as? android.app.Activity
+    onClose(null)
+    if (activity != null) android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+        com.roro.futurevoice.data.ReviewRequest.askAtTrialReportEnd(activity)
+    }, 1_200)
 }
 
 // The test — required: the level and the routine come after it.
@@ -1278,7 +1522,7 @@ private fun TrialTestCard(test: WeeklyTest?, thin: Boolean) {
 
 // The level — the first assessment, run early for the report.
 @Composable
-private fun LevelCard(level: CefrLevel?, rationale: String?, settled: Boolean, test: WeeklyTest?) {
+private fun LevelCard(level: CefrLevel?, rationale: String?, settled: Boolean, test: WeeklyTest?, trial: TrialReport?) {
     val context = LocalContext.current
     Kicker(stringResource(R.string.your_level_0ad2c2), Icons.Filled.BarChart)
     when {
@@ -1296,14 +1540,38 @@ private fun LevelCard(level: CefrLevel?, rationale: String?, settled: Boolean, t
             if (test != null && test.isFinished) LabelRow(Icons.Filled.Checklist, MaterialTheme.colorScheme.onSurfaceVariant) {
                 Secondary(stringResource(R.string.trial_test_score, test.score, test.total))
             }
-            Text(stringResource(R.string.trial_level_moves), style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            SpeechBasis(trial)
         }
         settled -> Lead(stringResource(R.string.trial_level_later))
         else -> Row(Modifier.padding(vertical = 20.dp), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
             Secondary(stringResource(R.string.trial_reading_level))
+        }
+    }
+}
+
+/** What the level was read from, said plainly (iOS `speechBasis`): twenty
+ *  minutes of call is a few minutes of the learner's own voice, and a confident
+ *  letter from four of them is the letter Progress contradicts later. A second
+ *  language spoken in the window is named, so its minutes aren't silently
+ *  missing from a report about the other one. */
+@Composable
+private fun SpeechBasis(trial: TrialReport?) {
+    val locale = chromeLocale()
+    val style = MaterialTheme.typography.bodySmall
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        val seconds = trial?.ownSpeechSeconds
+        Text(when {
+            seconds == null || seconds <= 0 -> stringResource(R.string.trial_level_moves)
+            seconds < TrialReport.THIN_SPEECH_SECONDS -> stringResource(R.string.trial_first_read, maxOf(1, seconds / 60))
+            else -> stringResource(R.string.trial_read_from, maxOf(1, seconds / 60))
+        }, style = style, color = muted)
+        trial?.otherLanguages?.forEach { other ->
+            Text(stringResource(R.string.trial_also_spoke,
+                    LanguageCatalog.ownName(other.language, nativeLanguage(LocalContext.current)), maxOf(1, other.seconds / 60)),
+                style = style, color = muted)
         }
     }
 }

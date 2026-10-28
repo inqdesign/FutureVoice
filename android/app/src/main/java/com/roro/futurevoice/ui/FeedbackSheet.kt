@@ -95,6 +95,10 @@ enum class FeedbackContext(
     /** A learner who came BACK and had another real call. The only ask there is. */
     RETURNING_TALK("returning_talk", R.string.how_is_it_going_so_far,
         R.string.you_ve_been_back_for_another_call_two_quick_questions_and_an_abac2f, true),
+    /** The end of the free-minutes report (iOS 2026-10-28): they have read what
+     *  twenty minutes showed, so there is something to score. Followed by the
+     *  store's rating sheet whatever they answer. */
+    TRIAL_REPORT("trial_report", R.string.trial_feedback_title, R.string.trial_feedback_subtitle, true),
 }
 
 /** Once per milestone. Key prefix is the beta-era one on purpose — it is the

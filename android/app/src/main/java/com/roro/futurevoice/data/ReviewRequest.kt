@@ -36,6 +36,18 @@ object ReviewRequest {
 
     private const val ASKED_VERSION_KEY = "futurevoice.reviewRequest.askedVersion"
 
+    fun askedThisVersion(context: Context): Boolean =
+        context.getSharedPreferences("futurevoice", 0).getString(ASKED_VERSION_KEY, null) == BuildConfig.VERSION_NAME
+
+    /** The end of the trial report (iOS `askAtTrialReportEnd`): the free
+     *  minutes are spent and the report was read to its last card, which is
+     *  the use bar here. Asked after the feedback sheet WHATEVER it said, so
+     *  it is still gated on use, never on stars. Once per version. */
+    fun askAtTrialReportEnd(activity: Activity) {
+        if (askedThisVersion(activity.applicationContext)) return
+        ask(activity, source = "trial_report")
+    }
+
     fun shouldAsk(context: Context, callSeconds: Long): Boolean {
         if (callSeconds < MIN_CALL_SECONDS) return false
         val prefs = context.getSharedPreferences("futurevoice", 0)
@@ -45,13 +57,14 @@ object ReviewRequest {
     }
 
     /** Spends this version's ask and asks Play for the sheet. */
-    fun ask(activity: Activity) {
+    fun ask(activity: Activity, source: String = "call") {
         val context = activity.applicationContext
         context.getSharedPreferences("futurevoice", 0).edit()
             .putString(ASKED_VERSION_KEY, BuildConfig.VERSION_NAME).apply()
         val props = mapOf(
             "talk_seconds" to TalkTimeLog.totalSeconds(context),
-            "talk_days" to TalkTimeLog.daysWithTalk(context))
+            "talk_days" to TalkTimeLog.daysWithTalk(context),
+            "source" to source)
         Analytics.capture("review_requested", props)
         // Also into client_events beside the feedback sheet's rows (iOS,
         // 2026-10-17). Play decides whether it appears: "requested", not "shown".
