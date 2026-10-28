@@ -98,9 +98,20 @@ struct FirstCallSetupSheet: View {
                     Text("Speaking speed")
                 }
 
+                // Same switch and words as the call's own settings.
+                if TutorMode.isAvailable {
+                    Section {
+                        Toggle(isOn: $tutor) {
+                            Label("Tutor mode", systemImage: "graduationcap")
+                        }
+                    } footer: {
+                        Text(explain("Pick a topic and your future self teaches it step by step, until you can say it without a mistake."))
+                    }
+                }
+
                 Section {
                     Toggle(isOn: $coach) {
-                        Label("Coach mode", systemImage: "lightbulb")
+                        Label("Try saying", systemImage: "lightbulb")
                     }
                 } footer: {
                     Text(explain("After each thing your future self says, you see a way to answer. Sometimes it uses a word you're studying, and your most common mistake becomes the call's focus."))
@@ -112,17 +123,6 @@ struct FirstCallSetupSheet: View {
                     }
                 } footer: {
                     Text(explain("Take your time. Your future self waits until you press Send."))
-                }
-
-                // Same switch and words as the call's own settings.
-                if TutorMode.isAvailable {
-                    Section {
-                        Toggle(isOn: $tutor) {
-                            Label("Tutor mode", systemImage: "graduationcap")
-                        }
-                    } footer: {
-                        Text(explain("Pick a topic and your future self teaches it step by step, until you can say it without a mistake."))
-                    }
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
