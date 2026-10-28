@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -493,7 +494,19 @@ fun TutorChatView(state: AppState, onDismiss: () -> Unit) {
             }
             // Watch's situation box: suggestion chips above, one field whose
             // row carries the mic, the dictation language and the send button.
-            Column(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface)
+            // The messages dissolve under it instead of being cut (iOS
+            // `fadingBottomBar`, 2026-10-28): a wash of the page colour drawn
+            // 36 dp ABOVE the bar, over the list's last lines.
+            val surface = MaterialTheme.colorScheme.surface
+            Column(Modifier.fillMaxWidth()
+                .drawBehind {
+                    val fade = 36.dp.toPx()
+                    drawRect(androidx.compose.ui.graphics.Brush.verticalGradient(
+                        listOf(surface.copy(alpha = 0f), surface), startY = -fade, endY = 0f),
+                        topLeft = androidx.compose.ui.geometry.Offset(0f, -fade),
+                        size = androidx.compose.ui.geometry.Size(size.width, fade))
+                }
+                .background(surface)
                 .padding(top = 8.dp).windowInsetsPadding(WindowInsets.navigationBars)) {
                 if (draft.isBlank()) {
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
