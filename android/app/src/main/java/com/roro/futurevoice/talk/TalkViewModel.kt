@@ -448,6 +448,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                         tutorLesson = _state.value.tutorLesson,
                         tutorJustTicked = tutorJustTicked,
                         tutorLastFixes = tutorLastFixes,
+                        tutorPlanning = _state.value.tutorPlanning,
                     ) + ConversationEngine.turnOutputInstruction(config.targetLanguage, config.nativeLanguage,
                         counterpart = config.cast?.person, inScene = config.scenarioId != null)
                 }
@@ -648,6 +649,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                         tutorLesson = _state.value.tutorLesson,
                         tutorJustTicked = tutorJustTicked,
                         tutorLastFixes = tutorLastFixes,
+                        tutorPlanning = _state.value.tutorPlanning,
                     ) + ConversationPrompt.REALTIME_STYLE_RULES
                 }
                 promptForTutor = build
@@ -1741,7 +1743,8 @@ class TalkViewModel(context: Context) : ViewModel() {
      * unfinished.
      */
     private fun startTutorLesson(request: String, askedWith: String? = null,
-                                 picked: Boolean, fromTopic: Boolean = false) {
+                                 picked: Boolean, fromTopic: Boolean = false,
+                                 nextRoundOf: TutorLesson? = null) {
         val cfg = config ?: return
         if (!tutorThisCall || _state.value.tutorPlanning) return
         val old = _state.value.tutorLesson
@@ -1749,6 +1752,10 @@ class TalkViewModel(context: Context) : ViewModel() {
             TutorLessonStore.save(appContext, old.copy(droppedAt = System.currentTimeMillis()))
         }
         _state.update { it.copy(tutorPlanning = true) }
+        // The block says "being set up" while the planner writes, so the
+        // tutor can't run a round of its own that the ready note restarts.
+        tutorJustTicked = false
+        sendTutorSystem()
         if (picked) realtime.nudge(TutorNudges.picked(request))
         viewModelScope.launch {
             var missReason = "request_failed"
@@ -1761,7 +1768,11 @@ class TalkViewModel(context: Context) : ViewModel() {
                 // failing, so it gets its own event (the console flags *_failed).
                 log(if (missReason == "no_topic") "tutor_plan_no_topic" else "tutor_plan_failed",
                     mapOf("picked" to if (picked) "1" else "0", "code" to missReason))
-                if (picked || fromTopic) realtime.nudge(TutorNudges.planFailed(request))
+                // Back off "being set up", or the tutor waits for a plan
+                // that never comes.
+                sendTutorSystem()
+                if (nextRoundOf != null) realtime.nudge(TutorNudges.nextRoundFailed(nextRoundOf.titleTarget))
+                else if (picked || fromTopic) realtime.nudge(TutorNudges.planFailed(request))
                 return@launch
             }
             val lesson = planned.copy(sessionIds = listOf(sessionId))
@@ -1773,7 +1784,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             log("tutor_lesson_started", mapOf("challenges" to lesson.challenges.size.toString(),
                 "picked" to if (picked) "1" else "0"))
             sendTutorSystem()
-            realtime.nudge(TutorNudges.READY)
+            realtime.nudge(if (nextRoundOf != null) TutorNudges.NEXT_ROUND_READY else TutorNudges.READY)
         }
     }
 
@@ -1876,7 +1887,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             when (answer.choice) {
                 TutorNext.Choice.MORE -> startTutorLesson(
                     TutorNudges.more(lesson.title, lesson.challenges.joinToString("; ") { it.task }),
-                    picked = false, fromTopic = false)
+                    picked = false, fromTopic = false, nextRoundOf = lesson)
                 TutorNext.Choice.NEW -> {
                     saveTutorBookAndMoveOn(keepingFrom = saidId)
                     answer.topic?.trim()?.takeIf { it.isNotEmpty() }?.let {

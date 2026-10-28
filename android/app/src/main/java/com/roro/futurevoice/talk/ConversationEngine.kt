@@ -77,6 +77,8 @@ object ConversationEngine {
         tutorJustTicked: Boolean = false,
         /** What the correction found on the learner's last try (iOS `tutorLastFixes:`). */
         tutorLastFixes: List<String> = emptyList(),
+        /** A lesson is being planned (iOS `tutorPlanning:`). */
+        tutorPlanning: Boolean = false,
         now: Long = System.currentTimeMillis(),
     ): String {
         val languageName = LanguageCatalog.englishName(targetLanguage)
@@ -150,7 +152,7 @@ object ConversationEngine {
             newsBlock = newsBlock, briefBlock = briefBlock,
             targetLanguage = targetLanguage, tutor = tutor,
             tutorBlock = if (tutor) TutorPrompt.block(targetLanguage, languageName, tutorLesson,
-                tutorJustTicked, tutorLastFixes) else "",
+                tutorJustTicked, tutorLastFixes, tutorPlanning) else "",
         )
     }
 

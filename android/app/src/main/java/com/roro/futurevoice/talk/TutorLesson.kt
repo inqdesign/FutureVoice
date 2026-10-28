@@ -269,9 +269,11 @@ object TutorJudge {
  */
 object TutorPrompt {
     fun block(targetLanguage: String, languageName: String, lesson: TutorLesson?,
-              justTicked: Boolean, lastFixes: List<String>): String {
+              justTicked: Boolean, lastFixes: List<String>, planning: Boolean = false): String {
         val now = lesson?.current
         val lessonPart = when {
+            planning && lesson != null -> ConversationPrompt.tutorLessonPlanning(
+                if (lesson.isFinished) " — the next round of \"${lesson.titleTarget}\", which they asked for" else "")
             lesson != null && lesson.isFinished -> ConversationPrompt.tutorLessonDone(
                 lesson.titleTarget, lesson.challenges.lastOrNull()?.task?.lowercase() ?: "do it")
             lesson != null && now != null -> {
@@ -284,7 +286,8 @@ object TutorPrompt {
             }
             else -> ConversationPrompt.TUTOR_NO_TOPIC
         }
-        return ConversationPrompt.tutorBlock(targetLanguage, languageName, lessonPart, tutorNow(lesson, justTicked))
+        return ConversationPrompt.tutorBlock(targetLanguage, languageName, lessonPart,
+            tutorNow(lesson, justTicked && !planning))
     }
 
     private fun tutorNow(lesson: TutorLesson?, justTicked: Boolean): String {
@@ -304,6 +307,8 @@ object TutorNudges {
     const val RESUME = "The learner is back to finish last time's lesson (see TUTOR MODE). Greet them in a few words, say you're picking it up where you left off and which challenge is next, give its example line, and ask them to say it."
     fun picked(request: String) = "The learner picked a topic on their screen: \"$request\". Say in a few words that this is today's lesson and that you're setting it up — nothing else yet."
     fun planFailed(request: String) = "Setting up the lesson didn't work. Ask them, in one short question, what exactly they want to be able to say about: \"$request\"."
+    const val NEXT_ROUND_READY = "The next round is ready (see TUTOR MODE): new challenges, a step further than the last round. Say so in a few words — don't go over the last round again — then start challenge 1: say what it is, give its example line, and ask them to say it about themselves."
+    fun nextRoundFailed(title: String) = "Setting up the next round of \"$title\" didn't work. Say so in a few words and ask whether they'd like another topic instead."
     const val READY = "Today's lesson is ready (see TUTOR MODE). In a few words say what it is and that you'll go one step at a time, then start challenge 1: say what it is, give its example line, and ask them to say it about themselves."
     const val SAVED_FINISHED = "The learner tapped to choose another topic. The app is saving the finished lesson in their book. Say so in a few words and ask what they want to practice next — they can also pick a topic from the button on their screen."
     const val DROPPED = "The learner tapped to choose another topic, and the app dropped today's lesson. Say sure in a few words and ask what they want to practice instead — they can also pick a topic from the button on their screen."

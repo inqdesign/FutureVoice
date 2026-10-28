@@ -118,7 +118,7 @@ system = kotlin_conv(literal_at(engine, 'return """', main_anchor), {
     "beginnerQuestions(level)": "beginnerQuestions(level)",
     # The lesson-dependent block is assembled in ConversationEngine.kt
     # (`TutorPrompt`), from the pieces lifted below.
-    'tutor ? tutorBlock(targetLanguage: targetLanguage, languageName: languageName, lesson: tutorLesson, justTicked: tutorJustTicked, lastFixes: tutorLastFixes) : ""':
+    'tutor ? tutorBlock(targetLanguage: targetLanguage, languageName: languageName, lesson: tutorLesson, justTicked: tutorJustTicked, lastFixes: tutorLastFixes, planning: tutorPlanning) : ""':
         '(if (tutor) tutorBlock else "")',
 })
 beginner = kotlin_conv(literal_at(engine, "static func beginnerQuestions(_ level: CEFRLevel)"),
@@ -132,8 +132,11 @@ guards = {
 # Tutor mode's lesson block (iOS af3c7ffe…bd242766): the text of each branch;
 # which branch, and the checklist rows, are TutorPrompt's (hand-ported).
 tb = engine.index("static func tutorBlock(targetLanguage: String, languageName: String,")
-tb_done_at = engine.index('lessonPart = """', tb)
-tutor_done = kotlin_conv(literal_at(engine, 'lessonPart = """', tb), {
+# Branch order (iOS 7629da1a): planning, done, on (after the fixes), none.
+tb_plan_at = engine.index('lessonPart = """', tb)
+tutor_planning = kotlin_conv(literal_at(engine, 'lessonPart = """', tb), {"round": "round"})
+tb_done_at = engine.index('lessonPart = """', tb_plan_at + 10)
+tutor_done = kotlin_conv(literal_at(engine, 'lessonPart = """', tb_plan_at + 10), {
     "lesson.titleTarget": "titleTarget",
     'lesson.challenges.last?.task.lowercased() ?? "do it"': "lastTask",
 })
@@ -148,7 +151,7 @@ tutor_now_part = kotlin_conv(literal_at(engine, 'lessonPart = """', tb_fix_at), 
 tutor_none = kotlin_conv(literal_at(engine, 'lessonPart = """', tb_now_at + 10), {})
 tutor = kotlin_conv(literal_at(engine, 'return """', tb),
                {"languageName": "languageName", "lessonPart": "lessonPart", **guards,
-                "tutorNow(lesson: lesson, justTicked: justTicked)": "tutorNow"})
+                "tutorNow(lesson: lesson, justTicked: justTicked && !planning)": "tutorNow"})
 tn = engine.index("private static func tutorNow(lesson: TutorLesson?, justTicked: Bool)")
 tutor_now_done = kotlin_conv(literal_at(engine, 'return """', tn), {})
 tutor_now_next = kotlin_conv(literal_at(engine, 'return """', engine.index('return """', tn) + 10), {
@@ -293,6 +296,11 @@ object ConversationPrompt {{
      *  [lessonPart] and [tutorNow] are chosen by [TutorPrompt]. */
     fun tutorBlock(targetLanguage: String, languageName: String, lessonPart: String, tutorNow: String): String =
         {tutor}
+
+    /** iOS `tutorBlock`'s lesson part while a lesson is being planned;
+     *  [round] names the finished lesson for a next round, else "". */
+    fun tutorLessonPlanning(round: String): String =
+        {tutor_planning}
 
     /** iOS `tutorBlock`'s lesson part when every challenge is ticked. */
     fun tutorLessonDone(titleTarget: String, lastTask: String): String =
