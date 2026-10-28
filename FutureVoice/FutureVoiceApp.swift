@@ -1493,6 +1493,13 @@ final class AppState: ObservableObject {
     }
 
     func savePersona(_ p: UserPersona) {
+        var p = p
+        // The goals setup picked, one step before the persona existed.
+        let pending = FutureGoalStore.pending
+        if p.goals.isEmpty, !pending.isEmpty {
+            p.goals = pending.map(\.rawValue)
+        }
+        FutureGoalStore.pending = []
         PersonaStore.shared.save(p)
         persona = p
         // Old suggestions were grounded in the previous persona — wipe them

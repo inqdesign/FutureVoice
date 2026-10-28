@@ -749,10 +749,17 @@ struct UserPersona: Codable {
     /// people differ on what counts as private, and a correction is the only
     /// signal that says where. Capped at `maxShareCorrections`.
     var shareCorrections: [ShareCorrection] = []
+    /// What their fluent self already does — `FutureGoal` ids, picked in
+    /// setup and edited in Me → Profile. Ids, not text, so the label follows
+    /// the app language. The fluent self's own prompt reads them; nothing a
+    /// stranger sees does.
+    var goals: [String] = []
+
+    var futureGoals: [FutureGoal] { FutureGoal.decode(goals) }
 
     enum CodingKeys: String, CodingKey {
         case displayName, city, country, lengthOfStay, occupation, household,
-             interests, freeNotes, updatedAt, learnedNotes, metAt, shareCorrections
+             interests, freeNotes, updatedAt, learnedNotes, metAt, shareCorrections, goals
         // Personas on disk predate multi-language prep — keep the legacy key.
         case situations = "englishSituations"
     }
@@ -963,6 +970,7 @@ extension UserPersona {
         learnedNotes = value(.learnedNotes, [])
         metAt = (try? c.decodeIfPresent(Date.self, forKey: .metAt)) ?? nil
         shareCorrections = value(.shareCorrections, [])
+        goals = value(.goals, [])
     }
 
     /// One time the learner moved a line's share level by hand.

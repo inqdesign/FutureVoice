@@ -38,6 +38,13 @@ is the code, this list is the check. An install that is already set up
 skips every step it has a flag for.
 
 1. Welcome → setup (`SetupFlowView`: languages, level, why you're learning)
+   then **Imagine your future** (2026-10-28, founder): under each purpose
+   picked, what the fluent self already DOES (`FutureGoal`, as many as
+   wanted). They are the learner's real goals: kept on `UserPersona.goals`
+   (held in `FutureGoalStore.pending` until the persona exists), edited in
+   Me → Profile → My future, and read by the fluent self's own prompt on
+   free talk and the first call only (`ConversationEngine`'s WHO YOU BECAME
+   block; empty = byte-identical). Never shown to strangers.
 2. Persona cards (`PersonaIntakeView`)
 3. The voice (`VoiceCloneOnboardingView`: record, hear it, pick the pace;
    the account is made here). The meet act opens on a choice: **My voice |

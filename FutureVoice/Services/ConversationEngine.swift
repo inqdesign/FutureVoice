@@ -327,6 +327,27 @@ enum ConversationEngine {
         about them, in one short turn, and let them pick.
         """ : ""
 
+        // The goals the learner picked in setup ("Imagine your future",
+        // 2026-10-28): what this fluent self already does. Only where the
+        // model IS the fluent self on an open line — a free talk or the
+        // first call; a scene, a news topic, a tutor lesson or a cast person
+        // each own the call. Empty goals = no block, so every prompt from
+        // before is byte-identical.
+        let futureGoals = persona?.futureGoals ?? []
+        let futureBlock = (!futureGoals.isEmpty && counterpart == nil && topic.isEmpty && !tutor) ? """
+
+
+        WHO YOU BECAME — the user picked these as the reason they're learning, \
+        and you (them, later) already live them:
+        \(futureGoals.map { "- " + $0.promptText(languageName: languageName) }.joined(separator: "\n"))
+        This is why they call you. You know from the inside what it took to \
+        get there and what it's like now. Speak from it only when the \
+        conversation goes near it, or when they're discouraged — at most once \
+        a call, a sentence of your own experience, never a pep talk, and \
+        never steer the call there. Don't invent specifics beyond these lines \
+        (no company, city, score or date they haven't told you).
+        """ : ""
+
         // When this is (`PromptClock`). The history is left out for a cast
         // stranger (no shared past, by that block's own rule) and for the
         // first meeting (whose block already says you have never spoken).
@@ -339,7 +360,7 @@ enum ConversationEngine {
         The point is for it to sound like two actual people talking — not a \
         language-class exchange. Read everything below, then talk like a real person.
 
-        \(counterpart.map { personaBlock(forCast: $0, persona: persona, languageName: languageName) } ?? personaBlock(persona, languageName: languageName))\(counterpartBlock)\(firstMeetingBlock)\(theyCalledBlock)\(ownTopicBlock)\(clockBlock)
+        \(counterpart.map { personaBlock(forCast: $0, persona: persona, languageName: languageName) } ?? personaBlock(persona, languageName: languageName))\(futureBlock)\(counterpartBlock)\(firstMeetingBlock)\(theyCalledBlock)\(ownTopicBlock)\(clockBlock)
 
         Language profile:
         - Native language: \(LanguageCatalog.englishName(nativeLanguage))
