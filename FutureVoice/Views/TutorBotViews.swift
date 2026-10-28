@@ -100,17 +100,10 @@ private struct TutorNoteCard: View {
         .accessibilityElement(children: .contain)
     }
 
-    private var face: some View {
-        WeeklyTestCharacter(mood: .happy, since: bot.bubbleSince)
-            .scaleEffect(40 / WeeklyTestCharacter.size)
-            .frame(width: 40, height: 40)
-    }
-
     // The first meeting: who this is and what it does.
     private var intro: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
-                face
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Your own nawana tutor.").font(.headline)
                     Text("I know your routine, your talks, your mistakes and your cards. My job is that you always know what to do next, and why.")
@@ -142,7 +135,6 @@ private struct TutorNoteCard: View {
         let t = bot.today
         return VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
-                face
                 VStack(alignment: .leading, spacing: 4) {
                     Text(TutorCopy.greeting()).font(.headline)
                     Text(TutorCopy.opening(bot)).font(.subheadline)
@@ -193,13 +185,16 @@ struct TutorNoteShape: Shape {
     func path(in rect: CGRect) -> Path {
         var body = rect
         body.size.height -= Self.tailHeight
-        var p = Path(roundedRect: body, cornerRadius: cornerRadius, style: .continuous)
+        let card = Path(roundedRect: body, cornerRadius: cornerRadius, style: .continuous)
         let x = rect.maxX - tailInset
-        p.move(to: CGPoint(x: x - tailHalfWidth, y: body.maxY - 1))
-        p.addLine(to: CGPoint(x: x, y: rect.maxY))
-        p.addLine(to: CGPoint(x: x + tailHalfWidth, y: body.maxY - 1))
-        p.closeSubpath()
-        return p
+        var tail = Path()
+        tail.move(to: CGPoint(x: x - tailHalfWidth, y: body.maxY - 2))
+        tail.addLine(to: CGPoint(x: x, y: rect.maxY))
+        tail.addLine(to: CGPoint(x: x + tailHalfWidth, y: body.maxY - 2))
+        tail.closeSubpath()
+        // ONE outline: drawn as two overlapping subpaths the tail met the
+        // card along a visible seam, like a separate piece stuck on.
+        return card.union(tail)
     }
 }
 
