@@ -151,7 +151,11 @@ struct ConversationHome: View {
                 // for adding one (docs/multi-language-plan.md).
                 if #available(iOS 26, *) {
                     ToolbarItem(placement: .topBarLeading) {
+                        // The bar keeps the hidden capsule's inset, which put
+                        // the chip 30 pt in while every other tab's edge is
+                        // 16 pt; pulled back to the same edge.
                         languageSwitcher
+                            .offset(x: -Self.hiddenCapsuleInsetLeading)
                     }
                     .sharedBackgroundVisibility(.hidden)
                 } else {
@@ -171,6 +175,7 @@ struct ConversationHome: View {
                 if #available(iOS 26, *) {
                     ToolbarItem(placement: .topBarTrailing) {
                         headerControl
+                            .offset(x: Self.hiddenCapsuleInsetTrailing)
                     }
                     .sharedBackgroundVisibility(.hidden)
                 } else {
@@ -716,6 +721,11 @@ struct ConversationHome: View {
     /// The glass circle's diameter — the height iOS 26 gives every other
     /// toolbar button, so the control lines up with the language chip.
     private static let controlDiameter: CGFloat = 44
+    /// What iOS 26 leaves around a toolbar item whose glass is hidden,
+    /// measured on device frames: the leading chip sat 30 pt in and the
+    /// trailing control 20 pt in, against 16 pt on every other tab.
+    private static let hiddenCapsuleInsetLeading: CGFloat = 14
+    private static let hiddenCapsuleInsetTrailing: CGFloat = 4
     /// The ring's outer diameter: the control minus a 3 pt margin off the
     /// glass rim on each side.
     private static let ringDiameter: CGFloat = controlDiameter - 2 * 3
