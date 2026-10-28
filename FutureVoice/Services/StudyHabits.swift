@@ -219,6 +219,8 @@ enum HabitAdvisor {
     /// At most this many findings reach the learner: a coach says the few
     /// things that matter, not everything that's true.
     static let maxFindings = 4
+    /// The review block the no-review finding adds — the size it names.
+    static let shortReviewCards = 10
 
     static func findings(_ h: StudyHabits) -> [HabitFinding] {
         var out: [HabitFinding] = []
@@ -254,7 +256,7 @@ enum HabitAdvisor {
             }
             facts.append("Why it matters: talking without reviewing means making the same mistakes again; the review is where a correction becomes theirs.")
             out.append(.init(rule: "no-review", tone: .firm, facts: facts,
-                             change: "Add a short review (10 cards) right after the talk."
+                             change: "Add a short review (\(shortReviewCards) cards) right after the talk."
                                  + (h.repeatedFixes.isEmpty ? "" : " Add say it again after the talk.")))
         } else if !h.repeatedFixes.isEmpty, h.sayItAgainRuns == 0, let top = h.repeatedFixes.first {
             // 4. The same fix twice, never practised in context.
@@ -372,7 +374,7 @@ enum HabitAdvisor {
 
         if rules.contains("no-review"), !lines.contains(where: { $0.block.kind == .review }) {
             lines.append((StudyPlan.Block(kind: .review, weekdays: talkDays, hour: (after + 5) / 60 % 24,
-                                          minute: (after + 5) % 60, minutes: StudyPlan.Kind.review.defaultAmount),
+                                          minute: (after + 5) % 60, minutes: HabitAdvisor.shortReviewCards),
                           "no-review"))
         }
         if rules.contains("repeated-fix") || rules.contains("no-say-again")

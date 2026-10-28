@@ -1216,7 +1216,13 @@ struct WeekRecapSheet: View {
         if UserDefaults.standard.bool(forKey: "trialtest") { showingTrialTest = true }
         #endif
         narrator.configure(voiceId: appState.speakingVoiceId)
-        if let kept = trial?.narration { narration = kept }
+        if let kept = trial?.narration {
+            narration = kept
+            // A reopened report has its whole script already; nothing new
+            // arrives to start the card on screen, so start it here.
+            narrator.prefetch(cards.compactMap { narration.line(for: narrationKey($0)) })
+            speakCurrentCard(onlyIfIdle: true)
+        }
         Task { await writeNarration() }
         async let level: Void = loadTrialLevel()
         await writeCoachIfNeeded()

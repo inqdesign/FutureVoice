@@ -47,6 +47,9 @@ final class StudyHabitsTests: XCTestCase {
         let review = routine.first { $0.block.kind == .review }
         XCTAssertEqual(review?.rule, "no-review")
         XCTAssertEqual(review.map { $0.block.startMinute }, 8 * 60 + 15)
+        // The block is the size the finding names ("a short review (10 cards)").
+        XCTAssertEqual(review?.block.minutes, 10)
+        XCTAssertTrue(noReview?.change?.contains("(10 cards)") == true)
         XCTAssertTrue(routine.contains { $0.block.kind == .sayItAgain })
     }
 
