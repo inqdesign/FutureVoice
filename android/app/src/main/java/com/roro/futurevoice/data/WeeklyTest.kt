@@ -300,6 +300,9 @@ object WeeklyTestEngine {
         /** Writes the translate items (one model call); null = no network,
          *  so no translate items (a JVM test). Args: system, user, test id. */
         val writeTranslate: (suspend (String, String, String) -> TranslatePayload?)? = null,
+        /** The trial report's fill: a talk's book words and phrases (iOS
+         *  2026-10-28). Null = no fill (the weekly paper, a JVM test). */
+        val bookOf: (suspend (Session) -> Pair<List<String>, List<String>>)? = null,
     )
 
     @Serializable
@@ -394,6 +397,10 @@ object WeeklyTestEngine {
             }.getOrDefault(emptyMap()),
             nativeLanguage = native,
             profileMistakes = profileMistakes,
+            bookOf = if (scope == null) null else { session ->
+                val book = TalkCurriculum.build(session, level, language, vocab, emptyList(), emptyList())
+                book.words.map { it.text } to book.expressions.map { it.text }
+            },
             writeTranslate = { system, user, testId ->
                 val job = coachScope.async {
                     runCatching {
@@ -520,7 +527,37 @@ object WeeklyTestEngine {
                 asRewrite(it, material.cards, material.sessions, language)
             }
         }
-        if (items.size < (scope?.minimum ?: MIN_ITEMS)) return null
+        // The trial report's test is never refused for being small (iOS
+        // 2026-10-28, founder: "make the test even if the amount is small,
+        // even from related things"). Twenty minutes rarely leave anything
+        // put off in the deck, where the paper's words and phrases come from,
+        // so it is filled from the window's own talks: the words and phrases
+        // their books teach, then their lines to hear and say. Any count is a test.
+        val bookOf = material.bookOf
+        if (scope != null && items.size < scope.minimum && bookOf != null) {
+            val books = windowSessions.map { bookOf(it) }
+            val seenWord = material.putOffWords.map { it.lowercase() }.toHashSet()
+            val bookWords = books.flatMap { it.first }.filter { seenWord.add(it.lowercase()) }
+            val seenPhrase = studyPhrases.toHashSet()
+            val bookPhrases = books.flatMap { it.second }
+                .filter { TextScript.isInTargetScript(it, language) && seenPhrase.add(it.lowercase()) }
+            val have = items.map(::itemKey).toSet()
+            val more = ArrayList<WeeklyTestItem>()
+            more += meaningItems(material, language, level, rng, gloss, words = bookWords)
+            val moreGaps = gapItems(bookPhrases, windowSessions, teachingTurns, material.sessions, openers,
+                material.sceneExamples, material.libraryExpressions, language, rng, limit = MAX_GAP * 2)
+            more += (material.checkGaps?.let { check -> runCatching { check(moreGaps, id) }.getOrDefault(emptyList()) }
+                ?: moreGaps).take(MAX_GAP)
+            // Lines carrying one of those phrases first; with still too few,
+            // any of their own talk's lines (every line contains "").
+            val phrases = if (items.size + more.size < scope.minimum) listOf("") else bookPhrases.map { it.lowercase() }
+            val heard = listenItems(teachingTurns, phrases, material.hasAudio, language, rng)
+            more += heard
+            more += speakItems(teachingTurns, phrases,
+                (listens + heard).map { CarryoverDetector.normalized(it.answer) }.toSet(), language, rng)
+            items += more.filter { itemKey(it) !in have }
+        }
+        if (items.size < (if (scope == null) MIN_ITEMS else 1)) return null
         items.shuffle(rng)
         // A test opens on something you can answer by reading.
         if (items.first().kind == WeeklyTestItem.Kind.LISTEN) {
@@ -665,11 +702,12 @@ object WeeklyTestEngine {
 
     private suspend fun meaningItems(material: Material, language: String,
                                      level: CefrLevel, rng: Random,
-                                     gloss: suspend (String) -> String?): List<WeeklyTestItem> {
+                                     gloss: suspend (String) -> String?,
+                                     words: List<String> = material.putOffWords): List<WeeklyTestItem> {
         // The words put off in the deck (iOS `studiedMaterial`, 2026-10-21):
         // what the learner studied. The week's talk books fed this before.
-        val seen = material.putOffWords.map { it.lowercase() }.toHashSet()
-        val candidates = material.putOffWords.shuffled(rng)
+        val seen = words.map { it.lowercase() }.toHashSet()
+        val candidates = words.shuffled(rng)
 
         // Decoys: the graded list at the learner's level, then the two
         // neighbouring bands; the learner's own words where there's no list.

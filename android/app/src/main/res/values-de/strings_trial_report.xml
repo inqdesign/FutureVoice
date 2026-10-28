@@ -64,4 +64,6 @@
     <string name="trial_blurb_scene">"Sieh deine Situation durchgespielt"</string>
     <string name="trial_blurb_listen">"Hören unterwegs"</string>
     <string name="trial_blurb_speech">"Nimm eine Rede auf und bekomm eine Bewertung"</string>
+    <string name="trial_auto_play">"Automatisch abspielen"</string>
+    <string name="trial_stop_auto_play">"Automatisches Abspielen stoppen"</string>
 </resources>

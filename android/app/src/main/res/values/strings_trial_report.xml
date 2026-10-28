@@ -65,4 +65,6 @@
     <string name="trial_blurb_scene">"Watch your situation played out"</string>
     <string name="trial_blurb_listen">"Listen on the go"</string>
     <string name="trial_blurb_speech">"Record a speech and get a score"</string>
+    <string name="trial_auto_play">"Auto-play"</string>
+    <string name="trial_stop_auto_play">"Stop auto-play"</string>
 </resources>

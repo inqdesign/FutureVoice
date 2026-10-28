@@ -64,4 +64,6 @@
     <string name="trial_blurb_scene">"自分の場面が演じられるのを見る"</string>
     <string name="trial_blurb_listen">"移動中に聞く"</string>
     <string name="trial_blurb_speech">"スピーチを録音して採点"</string>
+    <string name="trial_auto_play">"自動再生"</string>
+    <string name="trial_stop_auto_play">"自動再生を止める"</string>
 </resources>

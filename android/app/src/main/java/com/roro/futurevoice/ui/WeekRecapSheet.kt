@@ -151,6 +151,8 @@ import androidx.compose.material.icons.automirrored.filled.EventNote
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.roro.futurevoice.ui.brand.AppSurfaces
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Pause
 import com.roro.futurevoice.data.FeatureUse
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.RowScope
@@ -291,6 +293,11 @@ fun WeekRecapDeck(
     var routineRules by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var showingPaywall by remember { mutableStateOf(false) }
     var showingFeedback by remember { mutableStateOf(false) }
+    /** The deck turns its own pages after each card's line; the header's
+     *  pause button stops it, kept for the next report (iOS `autoAdvance`). */
+    var autoAdvance by remember {
+        mutableStateOf(context.getSharedPreferences("futurevoice", 0).getBoolean(AUTO_ADVANCE_KEY, true))
+    }
     /** The trial's second card: every feature, and how much of each was used. */
     var featureUses by remember { mutableStateOf<List<FeatureUse>>(emptyList()) }
     /** Foreground time in the app over the trial window. */
@@ -408,11 +415,11 @@ fun WeekRecapDeck(
         narrator.speak(line) {
             // The deck moves on by itself, except past a card that asks the
             // learner something (the test, the routine).
-            if (card in listOf(RecapCard.TRIAL_TEST, RecapCard.ROUTINE, RecapCard.TEST) ||
+            if (!autoAdvance || card in listOf(RecapCard.TRIAL_TEST, RecapCard.ROUTINE, RecapCard.TEST) ||
                 at != pager.currentPage || at >= cardsNow.size - 1) return@speak
             narrationScope.launch {
                 delay(900)
-                if (at != pager.currentPage || showingTrialTest || showingPaywall) return@launch
+                if (!autoAdvance || at != pager.currentPage || showingTrialTest || showingPaywall) return@launch
                 pager.animateScrollToPage(minOf(pager.currentPage + 1, cardsNow.size - 1))
             }
         }
@@ -655,6 +662,12 @@ fun WeekRecapDeck(
             onSelect = { scope.launch { pager.animateScrollToPage(it) } },
             onClose = { finish(null) },
             narration = if (narrates) narrator.isOn else null,
+            autoAdvance = if (narrates) autoAdvance else null,
+            onAutoAdvance = {
+                autoAdvance = !autoAdvance
+                context.getSharedPreferences("futurevoice", 0).edit()
+                    .putBoolean(AUTO_ADVANCE_KEY, autoAdvance).apply()
+            },
             onNarration = {
                 narrator.isOn = !narrator.isOn
                 if (narrator.isOn) speakCurrentCard() else narrator.stop()
@@ -755,7 +768,8 @@ private fun chromeLocale(): Locale {
 
 @Composable
 private fun TopBar(recap: WeekRecap, count: Int, page: Int, isTrial: Boolean, onSelect: (Int) -> Unit,
-                   onClose: () -> Unit, narration: Boolean? = null, onNarration: () -> Unit = {}) {
+                   onClose: () -> Unit, narration: Boolean? = null, onNarration: () -> Unit = {},
+                   autoAdvance: Boolean? = null, onAutoAdvance: () -> Unit = {}) {
     val locale = chromeLocale()
     Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 4.dp, bottom = 4.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -783,6 +797,19 @@ private fun TopBar(recap: WeekRecap, count: Int, page: Int, isTrial: Boolean, on
                     color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f))
+            }
+            // Auto-play (iOS 2026-10-28, founder: a way to stop it): the deck
+            // turns its own pages after each card's line.
+            if (autoAdvance != null) {
+                Box(Modifier.size(32.dp).background(tertiaryFill(), CircleShape).clickable(onClick = onAutoAdvance),
+                    contentAlignment = Alignment.Center) {
+                    Icon(if (autoAdvance) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                        contentDescription = stringResource(if (autoAdvance) R.string.trial_stop_auto_play
+                            else R.string.trial_auto_play),
+                        tint = if (autoAdvance) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp))
+                }
             }
             if (narration != null) {
                 Box(Modifier.size(32.dp).background(tertiaryFill(), CircleShape).clickable(onClick = onNarration),
@@ -1307,6 +1334,8 @@ private fun TrialCover(r: WeekRecap, trial: TrialReport?, displayName: String?) 
             color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
+
+private const val AUTO_ADVANCE_KEY = "futurevoice.report.autoAdvance"
 
 /** "Oct 26" in the chrome's language. */
 private fun monthDay(at: Long, locale: java.util.Locale): String {

@@ -64,4 +64,6 @@
     <string name="trial_blurb_scene">"내 상황이 펼쳐지는 걸 보기"</string>
     <string name="trial_blurb_listen">"이동하면서 듣기"</string>
     <string name="trial_blurb_speech">"스피치를 녹음하고 점수 받기"</string>
+    <string name="trial_auto_play">"자동 재생"</string>
+    <string name="trial_stop_auto_play">"자동 재생 멈추기"</string>
 </resources>

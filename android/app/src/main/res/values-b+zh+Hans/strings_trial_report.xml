@@ -64,4 +64,6 @@
     <string name="trial_blurb_scene">"看你的情境怎么展开"</string>
     <string name="trial_blurb_listen">"随时随地听"</string>
     <string name="trial_blurb_speech">"录一段演讲并拿到分数"</string>
+    <string name="trial_auto_play">"自动播放"</string>
+    <string name="trial_stop_auto_play">"停止自动播放"</string>
 </resources>

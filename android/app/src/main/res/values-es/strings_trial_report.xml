@@ -64,4 +64,6 @@
     <string name="trial_blurb_scene">"Mira tu situación en acción"</string>
     <string name="trial_blurb_listen">"Escucha donde estés"</string>
     <string name="trial_blurb_speech">"Graba un discurso y recibe una nota"</string>
+    <string name="trial_auto_play">"Reproducción automática"</string>
+    <string name="trial_stop_auto_play">"Detener la reproducción automática"</string>
 </resources>
