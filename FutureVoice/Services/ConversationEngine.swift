@@ -602,14 +602,42 @@ enum ConversationEngine {
             already did. If they say something, answer in one short line and \
             say it's almost ready.
             """
+        } else if let lesson, lesson.inFinalCheck {
+            let parts = lesson.challenges.enumerated()
+                .map { "  \($0.offset + 1). \($0.element.task)" }.joined(separator: "\n")
+            lessonPart = """
+            TODAY'S LESSON: "\(lesson.titleTarget)" — every challenge is \
+            checked off. Now the FINAL CHECK. The app has cleared their \
+            screen: no checklist, no hints. What they practiced (for you only \
+            — never read it out, never list it):
+            \(parts)
+            - If you haven't asked yet: in one short line, ask them to say it \
+              all now, in their own words, in one go, as if they were really \
+              in that situation. No example line, no list of what to include, \
+              no hints of any kind.
+            - When they've answered: say only a few words ("Okay, let me \
+              check that") — nothing about whether it was right or wrong, no \
+              praise, no correction. The app checks it and a note with the \
+              result follows a moment later; THEN you tell them.
+            - Stuck or asking for help → a few words of encouragement, \
+              nothing of the answer: they can say it simply, their own way.
+            - They can't skip it. If they ask to change the topic or stop \
+              the lesson, say it's the last step and only takes a moment, and \
+              ask for it again.
+            - The app's result notes tell you exactly what to say; follow them. \
+              HOW YOU RUN A CHALLENGE below does not apply to this answer: \
+              don't correct it or ask for it again until the note comes.
+            """
         } else if let lesson, lesson.isFinished {
             lessonPart = """
-            TODAY'S LESSON: "\(lesson.titleTarget)" — ALL DONE. The app has \
-            checked every challenge off. In your next turn: say warmly, in a \
-            sentence or two, that they did it — they can now \
-            \(lesson.challenges.last?.task.lowercased() ?? "do it") — then ask \
-            in one short question whether they want to keep practicing this a \
-            bit more, or move on to another topic. Never end the call or say \
+            TODAY'S LESSON: "\(lesson.titleTarget)" — ALL DONE. They passed \
+            the final check. In your next turn, if you haven't yet: tell them \
+            they passed, the way the app's note says — when it names slips, \
+            name each one by saying it the right way, and never call it \
+            great, perfect or flawless; praise is only for a clean answer. \
+            Then ask in one short question whether they want to keep \
+            practicing this a bit more, or move on to another topic (if the \
+            note suggests a next topic, offer that one). Never end the call or say \
             goodbye on your own, and never start anything until they have \
             CLEARLY picked: if they chat or react instead, answer in a line \
             and ask again, in other words. Then, by their answer:
@@ -686,11 +714,11 @@ enum ConversationEngine {
           · it was ALREADY right last time too → it's done: a short "you \
             got it", then start the next challenge in the same turn (say \
             what it is, give its example line, ask them to say it about \
-            themselves). On the last challenge, that is the lesson done: \
-            tell them so and ask whether they want more of this or another \
-            topic. If they want more, say in a few words that you're setting \
-            up the next round — the APP writes it and a note tells you when \
-            to start. Never make up a round or a challenge yourself; the \
+            themselves). On the last challenge: say that's every part, and \
+            ask them to say the whole thing now, in their own words, in one \
+            go, with no example — that is the final check, and the app \
+            clears their screen for it. The lesson isn't done until they \
+            pass it. Never make up a round or a challenge yourself; the \
             only challenges are the ones in the lesson above.
           · nailed on the very first try with nothing to fix → you may move \
             on straight away.
@@ -747,6 +775,17 @@ enum ConversationEngine {
     /// tutor kept asking for "once more" anyway (4/4, Haiku, 2026-10-24).
     private static func tutorNow(lesson: TutorLesson?, justTicked: Bool) -> String {
         guard justTicked, let lesson else { return "" }
+        if lesson.inFinalCheck {
+            return """
+
+
+            RIGHT NOW — THIS OUTRANKS "ask them to say it once more": the app has \
+            just checked off the LAST challenge. Don't ask for it again. Your \
+            next turn: say in a few words that's every part, then start the \
+            FINAL CHECK above — ask them to say it all in their own words, in \
+            one go, with no example and no hints.
+            """
+        }
         if lesson.isFinished {
             return """
 

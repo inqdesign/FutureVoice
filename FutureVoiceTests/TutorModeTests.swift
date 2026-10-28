@@ -67,17 +67,65 @@ final class TutorModeTests: XCTestCase {
     }
 
     func testFinishedLessonSaysGoodbye() {
-        let l = lesson(done: 3)
+        var l = lesson(done: 3)
+        l.finishedAt = Date()
         XCTAssertTrue(l.isFinished)
         XCTAssertEqual(l.record.done.count, 3)
-        XCTAssertTrue(prompt("en", tutor: true, lesson: l).contains("ALL DONE"))
+        let p = prompt("en", tutor: true, lesson: l)
+        XCTAssertTrue(p.contains("ALL DONE"))
+        XCTAssertTrue(p.contains("never call it great, perfect or flawless"))
+    }
+
+    /// Every challenge ticked is not the end: the final check is
+    /// (founder, 2026-10-28). The tutor asks for it all, gives nothing, and
+    /// waits for the app's verdict.
+    func testLastTickOpensTheFinalCheck() {
+        let l = lesson(done: 3)
+        XCTAssertFalse(l.isFinished)
+        XCTAssertTrue(l.inFinalCheck)
+        let p = prompt("en", tutor: true, lesson: l, ticked: true)
+        XCTAssertTrue(p.contains("Now the FINAL CHECK"))
+        XCTAssertTrue(p.contains("They can't skip it"))
+        XCTAssertTrue(p.contains("start the FINAL CHECK above"))
+        XCTAssertFalse(p.contains("ALL DONE"))
+    }
+
+    func testFinalCheckOutcome() {
+        typealias V = TutorFinalCheck.Verdict
+        func o(_ v: V, slips: Int = 0, used: Bool = false) -> TutorFinalCheck.Outcome {
+            TutorFinalCheck.outcome(v, slips: slips, onceMoreUsed: used)
+        }
+        XCTAssertEqual(o(V(attempt: false)), .notAnAttempt)
+        XCTAssertEqual(o(V(attempt: true, missing: [2], understood: true)), .notYet)
+        XCTAssertEqual(o(V(attempt: true, missing: [], understood: false)), .notYet)
+        // Small slips still pass; the slips are named, not failed.
+        XCTAssertEqual(o(V(attempt: true, missing: [], understood: true, shaky: false), slips: 2), .pass)
+        // Shaky asks once more, once.
+        XCTAssertEqual(o(V(attempt: true, understood: true, shaky: true)), .onceMore)
+        XCTAssertEqual(o(V(attempt: true, understood: true, shaky: false), slips: 3), .onceMore)
+        XCTAssertEqual(o(V(attempt: true, understood: true, shaky: true), used: true), .pass)
+    }
+
+    func testCurriculumNextPrefersAnOpenCheckThenLitTopics() {
+        XCTAssertEqual(TutorCurriculum.chapters.count, 10)
+        XCTAssertEqual(Set(TutorCurriculum.chapters.flatMap { $0.topics.map(\.id) }).count, 100)
+        XCTAssertEqual(TutorCurriculum.next(progress: [:], level: .a1)?.topic.id, "meet.intro")
+        var p: [String: TutorTopicProgress] = ["meet.intro": .init(passedAt: Date(), rounds: 1, touchedAt: Date())]
+        XCTAssertEqual(TutorCurriculum.next(progress: p, level: .a1)?.topic.id, "meet.work")
+        p["cafe.order"] = .init(startedAt: Date(), lessonDoneAt: Date(), touchedAt: Date())
+        XCTAssertEqual(TutorCurriculum.next(progress: p, level: .a1)?.topic.id, "cafe.order")
+        let stepUp = TutorCurriculum.topic("cafe.wrong")!.topic
+        XCTAssertTrue(TutorCurriculum.isStepUp(stepUp, level: .a2))
+        XCTAssertFalse(TutorCurriculum.isStepUp(stepUp, level: .b1))
     }
 
     /// While the next round is written, the finished lesson's "ask more or
     /// another topic" must not stand: the tutor ran a round of its own and
     /// the ready note sent it back to the start (2026-10-28).
     func testNextRoundBeingPlannedHoldsTheTutor() {
-        let p = prompt("en", tutor: true, lesson: lesson(done: 3), ticked: true, planning: true)
+        var passed = lesson(done: 3)
+        passed.finishedAt = Date()
+        let p = prompt("en", tutor: true, lesson: passed, ticked: true, planning: true)
         XCTAssertTrue(p.contains("BEING SET UP"))
         XCTAssertTrue(p.contains("next round of \"Introducing yourself\""))
         XCTAssertFalse(p.contains("ALL DONE"))

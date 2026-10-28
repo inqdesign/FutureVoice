@@ -1468,6 +1468,16 @@
         }
       }
     },
+    "A school event" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "학교 행사"
+          }
+        }
+      }
+    },
     "A sentence" : {
       "localizations" : {
         "de" : {
@@ -2713,6 +2723,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "咖啡廳"
+          }
+        }
+      }
+    },
+    "Café & food" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카페와 음식"
           }
         }
       }
@@ -9373,6 +9393,16 @@
         }
       }
     },
+    "Renting a car" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "차 빌리기"
+          }
+        }
+      }
+    },
     "Repeat" : {
       "localizations" : {
         "ko" : {
@@ -13307,6 +13337,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "本週次數"
+          }
+        }
+      }
+    },
+    "Taking a taxi" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "택시 타기"
           }
         }
       }
@@ -19313,6 +19353,22 @@
         }
       }
     },
+    "%lld of %lld topics passed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld topics passed"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$lld개 주제 중 %1$lld개 통과"
+          }
+        }
+      }
+    },
     "%lld of the last %lld days, %lld minutes of talk or more each. Two days off is fine." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -19507,6 +19563,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "邊看邊儲存的句子%lld個"
+          }
+        }
+      }
+    },
+    "%lld rounds" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld회 통과"
           }
         }
       }
@@ -23476,6 +23542,16 @@
         }
       }
     },
+    "A conflict you handled" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "갈등을 해결한 경험"
+          }
+        }
+      }
+    },
     "A day counts once every goal here is met — and only FINISHED work counts: “Got it” on a sentence, “I know” on a word or phrase, a recorded shadow take. Sending something to 10 minutes or tomorrow is progress, but it isn’t done. Set a goal to 0 to leave it out." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -23566,6 +23642,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "這裡的目標全部達成，那天就記為完成。單字和用語每做一次「繼續學」或「我會了」的判定都算一次，跟讀算錄好的版本。目標設為0就不計入。"
+          }
+        }
+      }
+    },
+    "A decision you made" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내가 내린 결정"
+          }
+        }
+      }
+    },
+    "A delayed or cancelled train" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "기차가 늦거나 취소됐을 때"
+          }
+        }
+      }
+    },
+    "A delivery that didn't arrive" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "택배가 안 왔을 때"
+          }
+        }
+      }
+    },
+    "A family visit" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "가족 방문"
           }
         }
       }
@@ -24073,6 +24189,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "櫃台人員"
+          }
+        }
+      }
+    },
+    "A funny story" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "웃긴 이야기"
           }
         }
       }
@@ -24719,6 +24845,26 @@
         }
       }
     },
+    "A noise complaint" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "소음 문제 말하기"
+          }
+        }
+      }
+    },
+    "A parent-teacher meeting" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "학부모 상담"
+          }
+        }
+      }
+    },
     "a passerby" : {
       "localizations" : {
         "de" : {
@@ -24761,6 +24907,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "路人"
+          }
+        }
+      }
+    },
+    "A performance review" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "성과 면담"
           }
         }
       }
@@ -25083,6 +25239,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "把接下來要上場的簡報、提案或演講拿來練。"
+          }
+        }
+      }
+    },
+    "A problem with the room" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "방에 문제가 있을 때"
           }
         }
       }
@@ -28085,6 +28251,16 @@
         }
       }
     },
+    "Agreeing and disagreeing" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "동의하고 반대하기"
+          }
+        }
+      }
+    },
     "Ahead of #2 by %lld" : {
       "localizations" : {
         "de" : {
@@ -28958,6 +29134,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "全部單字"
+          }
+        }
+      }
+    },
+    "Allergies and special requests" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "알레르기와 요청 사항"
           }
         }
       }
@@ -31093,6 +31279,16 @@
         }
       }
     },
+    "Arranging a playdate" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아이 놀이 약속 잡기"
+          }
+        }
+      }
+    },
     "As a name" : {
       "localizations" : {
         "de" : {
@@ -31313,6 +31509,46 @@
         }
       }
     },
+    "Asking another parent for help" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다른 학부모에게 부탁하기"
+          }
+        }
+      }
+    },
+    "Asking for a discount" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "깎아 달라고 하기"
+          }
+        }
+      }
+    },
+    "Asking for a size or color" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "사이즈나 색깔 물어보기"
+          }
+        }
+      }
+    },
+    "Asking for help" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "도움 요청하기"
+          }
+        }
+      }
+    },
     "Asking my manager for a raise in our next one-on-one, with the numbers ready." : {
       "localizations" : {
         "de" : {
@@ -31355,6 +31591,56 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在下次一對一時向主管提加薪，把數字都準備好。"
+          }
+        }
+      }
+    },
+    "Asking someone about themselves" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "상대에 대해 물어보기"
+          }
+        }
+      }
+    },
+    "Asking the pharmacist" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "약사에게 물어보기"
+          }
+        }
+      }
+    },
+    "Asking the price and paying" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "가격 묻고 계산하기"
+          }
+        }
+      }
+    },
+    "Asking the way" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "길 묻기"
+          }
+        }
+      }
+    },
+    "Asking what's good" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "뭐가 맛있는지 물어보기"
           }
         }
       }
@@ -33249,6 +33535,16 @@
         }
       }
     },
+    "Birthdays and invitations" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "생일과 초대"
+          }
+        }
+      }
+    },
     "Blank page" : {
       "localizations" : {
         "de" : {
@@ -33567,6 +33863,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "複習本完成"
+          }
+        }
+      }
+    },
+    "Booking a doctor's appointment" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "병원 예약하기"
+          }
+        }
+      }
+    },
+    "Booking a table" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자리 예약하기"
           }
         }
       }
@@ -35086,6 +35402,36 @@
         }
       }
     },
+    "Buying a gift" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "선물 고르기"
+          }
+        }
+      }
+    },
+    "Buying a phone plan" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "휴대폰 요금제 가입하기"
+          }
+        }
+      }
+    },
+    "Buying a ticket" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "표 사기"
+          }
+        }
+      }
+    },
     "By level" : {
       "localizations" : {
         "de" : {
@@ -35639,6 +35985,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "打電話到診所"
+          }
+        }
+      }
+    },
+    "Calling in sick" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아파서 못 간다고 연락하기"
+          }
+        }
+      }
+    },
+    "Calling the landlord" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "집주인에게 연락하기"
+          }
+        }
+      }
+    },
+    "Calling the school about an absence" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "학교에 결석 알리기"
           }
         }
       }
@@ -38057,6 +38433,16 @@
         }
       }
     },
+    "Checking in at a hotel" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "호텔 체크인"
+          }
+        }
+      }
+    },
     "Childhood friends" : {
       "localizations" : {
         "de" : {
@@ -39676,6 +40062,26 @@
         }
       }
     },
+    "Comparing life in two countries" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "두 나라 생활 비교하기"
+          }
+        }
+      }
+    },
+    "Comparing two options" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "두 가지 비교하기"
+          }
+        }
+      }
+    },
     "Comparing…" : {
       "localizations" : {
         "de" : {
@@ -39718,6 +40124,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "比較中…"
+          }
+        }
+      }
+    },
+    "Complimenting the food" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "음식 칭찬하기"
           }
         }
       }
@@ -43603,6 +44019,16 @@
         }
       }
     },
+    "Curriculum" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "커리큘럼"
+          }
+        }
+      }
+    },
     "Custom" : {
       "localizations" : {
         "de" : {
@@ -46078,6 +46504,26 @@
         }
       }
     },
+    "Describing a film or book" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "영화나 책 소개하기"
+          }
+        }
+      }
+    },
+    "Describing symptoms" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "증상 설명하기"
+          }
+        }
+      }
+    },
     "Desk neighbors" : {
       "localizations" : {
         "de" : {
@@ -46764,6 +47210,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "直來直往"
+          }
+        }
+      }
+    },
+    "Disagreeing politely" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "정중하게 반대하기"
           }
         }
       }
@@ -53671,6 +54127,26 @@
         }
       }
     },
+    "Explaining a delay" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "늦어지는 이유 설명하기"
+          }
+        }
+      }
+    },
+    "Explaining a gap" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "경력 공백 설명하기"
+          }
+        }
+      }
+    },
     "Explaining a symptom I've had for a week to a doctor, and asking what the options are." : {
       "localizations" : {
         "de" : {
@@ -53713,6 +54189,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "向醫生說明持續一週的症狀，並且問清楚有哪些選擇。"
+          }
+        }
+      }
+    },
+    "Explaining an allergy" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "알레르기 설명하기"
+          }
+        }
+      }
+    },
+    "Explaining something you know well" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "잘 아는 것 설명하기"
           }
         }
       }
@@ -56030,6 +56526,16 @@
         }
       }
     },
+    "Family & school" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "가족과 학교"
+          }
+        }
+      }
+    },
     "Family news" : {
       "localizations" : {
         "de" : {
@@ -56617,6 +57123,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "篩選"
+          }
+        }
+      }
+    },
+    "Final check" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "최종 테스트"
+          }
+        }
+      }
+    },
+    "Final check left" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "최종 테스트만 남았어요"
           }
         }
       }
@@ -57771,6 +58297,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "跟著標示唸 · 點一下取消"
+          }
+        }
+      }
+    },
+    "Following up after" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "면접 후 연락하기"
           }
         }
       }
@@ -60005,6 +60541,16 @@
         }
       }
     },
+    "Getting around" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이동과 여행"
+          }
+        }
+      }
+    },
     "Getting what your other devices did…" : {
       "localizations" : {
         "de" : {
@@ -60139,6 +60685,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "同意日期：%@"
+          }
+        }
+      }
+    },
+    "Giving directions to someone" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "길 알려 주기"
+          }
+        }
+      }
+    },
+    "Giving your opinion" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 의견 말하기"
           }
         }
       }
@@ -62688,6 +63254,16 @@
         }
       }
     },
+    "Helping someone who is unwell" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아픈 사람 도와주기"
+          }
+        }
+      }
+    },
     "Here you call yourself: the version of you who already speaks fluently, in a voice cloned from yours. There's no one to be embarrassed in front of, and you can call any time." : {
       "localizations" : {
         "de" : {
@@ -63260,6 +63836,16 @@
         }
       }
     },
+    "Hobbies" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "취미 이야기"
+          }
+        }
+      }
+    },
     "Hold and drag to move" : {
       "localizations" : {
         "de" : {
@@ -63348,6 +63934,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "句尾聲音有沒有撐住"
+          }
+        }
+      }
+    },
+    "Home & neighbors" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "집과 이웃"
           }
         }
       }
@@ -70005,6 +70601,16 @@
         }
       }
     },
+    "Introducing yourself" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자기소개하기"
+          }
+        }
+      }
+    },
     "Introduction" : {
       "localizations" : {
         "de" : {
@@ -71480,6 +72086,16 @@
         }
       }
     },
+    "Job interview" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "면접"
+          }
+        }
+      }
+    },
     "Joined with a code" : {
       "localizations" : {
         "de" : {
@@ -72590,6 +73206,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "要把練習紀錄保存在 iCloud 嗎？"
+          }
+        }
+      }
+    },
+    "Keeping a first conversation going" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "첫 대화 이어가기"
           }
         }
       }
@@ -74363,6 +74989,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "先不決定"
+          }
+        }
+      }
+    },
+    "Leaving a voicemail" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "음성 메시지 남기기"
           }
         }
       }
@@ -76811,6 +77447,16 @@
         }
       }
     },
+    "Lost luggage" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "짐을 잃어버렸을 때"
+          }
+        }
+      }
+    },
     "Lunch together" : {
       "localizations" : {
         "de" : {
@@ -77271,6 +77917,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "變成自己的"
+          }
+        }
+      }
+    },
+    "Making plans to meet again" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다시 만날 약속 잡기"
           }
         }
       }
@@ -78558,6 +79214,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "第一次見伴侶的父母，在他們家吃晚餐。"
+          }
+        }
+      }
+    },
+    "Meeting people" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "새로운 사람 만나기"
           }
         }
       }
@@ -81229,6 +81895,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "說完就會自動繼續"
+          }
+        }
+      }
+    },
+    "Moving in" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이사 오기"
           }
         }
       }
@@ -91595,6 +92271,16 @@
     "Open Your week" : {
       "shouldTranslate" : false
     },
+    "Opening a bank account" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "은행 계좌 만들기"
+          }
+        }
+      }
+    },
     "Opening the App Store…" : {
       "localizations" : {
         "de" : {
@@ -91821,6 +92507,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "開啟完整卡片"
+          }
+        }
+      }
+    },
+    "Opinions & stories" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "의견과 이야기"
           }
         }
       }
@@ -92144,6 +92840,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "自己寫"
+          }
+        }
+      }
+    },
+    "Ordering at a café" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카페에서 주문하기"
+          }
+        }
+      }
+    },
+    "Ordering at a restaurant" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "식당에서 주문하기"
           }
         }
       }
@@ -93623,6 +94339,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "停頓"
+          }
+        }
+      }
+    },
+    "Paying and splitting the bill" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "계산하고 나눠 내기"
           }
         }
       }
@@ -96189,6 +96915,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "這是預計的上市價格。最終價格會在上市時於App Store確定。"
+          }
+        }
+      }
+    },
+    "Plans and dreams" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "계획과 꿈"
           }
         }
       }
@@ -99276,6 +100012,16 @@
         }
       }
     },
+    "Questions for them" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "면접관에게 질문하기"
+          }
+        }
+      }
+    },
     "Quick quiz" : {
       "localizations" : {
         "ko" : {
@@ -99963,6 +100709,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重看對話"
+          }
+        }
+      }
+    },
+    "Reacting to news" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "뉴스에 반응하기"
           }
         }
       }
@@ -102606,6 +103362,16 @@
         }
       }
     },
+    "Recycling and house rules" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "분리수거와 생활 규칙"
+          }
+        }
+      }
+    },
     "Redeem" : {
       "localizations" : {
         "de" : {
@@ -103293,6 +104059,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "這種時候想起來"
+          }
+        }
+      }
+    },
+    "Remembering and using names" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이름 기억하고 불러 주기"
           }
         }
       }
@@ -105142,6 +105918,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重試"
+          }
+        }
+      }
+    },
+    "Returning something" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "반품하기"
           }
         }
       }
@@ -108000,6 +108786,16 @@
         }
       }
     },
+    "Say it all in your own words, in one go." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "배운 걸 내 말로, 한 번에 말해 보세요."
+          }
+        }
+      }
+    },
     "Say it better" : {
       "localizations" : {
         "de" : {
@@ -108641,6 +109437,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "唸出這一句"
+          }
+        }
+      }
+    },
+    "Saying goodbye naturally" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자연스럽게 헤어지기"
+          }
+        }
+      }
+    },
+    "Saying no to extra work" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "추가 업무 거절하기"
           }
         }
       }
@@ -110901,6 +111717,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "建立情境"
+          }
+        }
+      }
+    },
+    "Setting up internet" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "인터넷 설치하기"
           }
         }
       }
@@ -113761,6 +114587,26 @@
         }
       }
     },
+    "Something is broken" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "뭔가 고장 났을 때"
+          }
+        }
+      }
+    },
+    "Something is sold out" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "메뉴가 다 떨어졌을 때"
+          }
+        }
+      }
+    },
     "Something specific coming up with them — a talk you're dreading, news you have to break." : {
       "comment" : "Tooltip text for the \"Make a situation\" button on the FindPersonCard.",
       "isCommentAutoGenerated" : true,
@@ -116447,6 +117293,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "聲音穩定度"
+          }
+        }
+      }
+    },
+    "Step up" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "한 단계 위"
           }
         }
       }
@@ -119995,6 +120851,26 @@
         }
       }
     },
+    "Talking about food you like" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "좋아하는 음식 이야기"
+          }
+        }
+      }
+    },
+    "Talking about how you feel" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "컨디션 말하기"
+          }
+        }
+      }
+    },
     "Talking is metered by the call clock; a Watch scene costs the length of the scene it plays." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -120222,6 +121098,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "通話需要方案。複習、重聽和建立情境不管怎樣都免費。"
+          }
+        }
+      }
+    },
+    "Talking to a neighbor" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이웃과 이야기하기"
+          }
+        }
+      }
+    },
+    "Talking to your child's teacher" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아이 선생님과 이야기하기"
           }
         }
       }
@@ -128358,6 +129254,16 @@
         }
       }
     },
+    "The tutor will keep it at your level." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "튜터가 지금 레벨에 맞춰 진행해요."
+          }
+        }
+      }
+    },
     "The voice you have now is only replaced if you keep the new one." : {
       "localizations" : {
         "de" : {
@@ -130576,6 +131482,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "這個月的通話時間用完了。"
+          }
+        }
+      }
+    },
+    "This one is a step up. Try it?" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "한 단계 위 주제예요. 해 볼까요?"
           }
         }
       }
@@ -133506,6 +134422,16 @@
         }
       }
     },
+    "Try it" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "해 볼게요"
+          }
+        }
+      }
+    },
     "Try now" : {
       "localizations" : {
         "de" : {
@@ -133732,6 +134658,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "試著用"
+          }
+        }
+      }
+    },
+    "Trying things on" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "입어 보기"
           }
         }
       }
@@ -139816,6 +140752,16 @@
         }
       }
     },
+    "What happened this weekend" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "주말에 있었던 일"
+          }
+        }
+      }
+    },
     "What it is" : {
       "localizations" : {
         "de" : {
@@ -142955,6 +143901,16 @@
         }
       }
     },
+    "Where you see yourself" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "앞으로의 계획"
+          }
+        }
+      }
+    },
     "Where you stand" : {
       "localizations" : {
         "de" : {
@@ -143125,6 +144081,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "通話時所在的地方。照片就是地點，不會另外儲存位置資訊。"
+          }
+        }
+      }
+    },
+    "Where you're from and why you're here" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "어디서 왔고 왜 왔는지"
           }
         }
       }
@@ -144133,6 +145099,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "這句為什麼要改"
+          }
+        }
+      }
+    },
+    "Why this job" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지원 동기"
           }
         }
       }
@@ -152579,6 +153555,16 @@
         }
       }
     },
+    "Your family" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "가족 이야기"
+          }
+        }
+      }
+    },
     "Your feedback" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -159955,6 +160941,16 @@
         }
       }
     },
+    "Your order came out wrong" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "주문이 잘못 나왔을 때"
+          }
+        }
+      }
+    },
     "From now on your fluent self speaks with your new voice." : {
       "localizations" : {
         "de" : {
@@ -160533,6 +161529,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "고객과 통화"
+          }
+        }
+      }
+    },
+    "A check-up" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "건강검진"
           }
         }
       }
@@ -161595,6 +162601,16 @@
         }
       }
     },
+    "An emergency call" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "응급 전화하기"
+          }
+        }
+      }
+    },
     "an interviewer" : {
       "localizations" : {
         "de" : {
@@ -161637,6 +162653,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "면접관"
+          }
+        }
+      }
+    },
+    "An online order went wrong" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "온라인 주문이 잘못됐을 때"
           }
         }
       }
@@ -161687,6 +162713,16 @@
         }
       }
     },
+    "At the airport check-in" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "공항 체크인"
+          }
+        }
+      }
+    },
     "At the check-in desk" : {
       "localizations" : {
         "de" : {
@@ -161729,6 +162765,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "체크인 카운터에서"
+          }
+        }
+      }
+    },
+    "At the dentist" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "치과에서"
+          }
+        }
+      }
+    },
+    "At the kindergarten pick-up" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "유치원 하원 시간에"
+          }
+        }
+      }
+    },
+    "At the supermarket" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "마트에서"
           }
         }
       }
@@ -163809,6 +164875,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "연봉 이야기"
+          }
+        }
+      }
+    },
+    "Talking about your kids" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아이 이야기하기"
           }
         }
       }
@@ -165945,6 +167021,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "對方的聲音"
+          }
+        }
+      }
+    },
+    "Passed. You can say it now." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "통과했어요. 이제 혼자 말할 수 있어요."
           }
         }
       }
