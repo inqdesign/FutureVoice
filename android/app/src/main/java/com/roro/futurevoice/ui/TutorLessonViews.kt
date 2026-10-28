@@ -19,14 +19,22 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Contrast
+import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.outlined.Circle
+import androidx.compose.material.icons.outlined.Pending
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.TheaterComedy
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.Sync
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -45,7 +53,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -54,10 +61,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.roro.futurevoice.R
 import com.roro.futurevoice.data.CefrLevel
-import com.roro.futurevoice.data.DiscoverChip
-import com.roro.futurevoice.data.LearningPurposeStore
 import com.roro.futurevoice.data.ScenarioStore
+import com.roro.futurevoice.talk.TutorCurriculum
 import com.roro.futurevoice.talk.TutorLesson
+import com.roro.futurevoice.talk.TutorProgressStore
+import com.roro.futurevoice.talk.TutorTopicProgress
 import com.roro.futurevoice.ui.brand.Symbols
 
 private val TickGreen = Color(0xFF34C759)
@@ -194,68 +202,193 @@ private fun ChallengeRow(i: Int, c: TutorLesson.Challenge, isNow: Boolean) {
 }
 
 /**
- * Topics to practice, for a learner who has no idea (the button right of the
- * pill, iOS `TutorTopicSheet`). The Talk tab's own ready-made situations, by
- * the learner's purposes, plus the situations they built themselves — nothing
- * new to make or fetch. Picking one starts the lesson.
+ * The tutor's curriculum, behind the button right of the pill (iOS
+ * `TutorTopicSheet`, 23ce515f). One "Next up", the chapters with how many
+ * topics are passed, and inside a chapter every topic with its state. A topic
+ * above the learner's level reads "Step up" and is still a tap away, after
+ * one question (soft unlocking). The learner's own scenarios stay at the
+ * bottom; they aren't counted on the map. Picking starts the lesson:
+ * [onPick] gets the topic as the planner gets it and its curriculum id (null
+ * for the learner's own scenarios).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TutorTopicSheet(language: String, level: CefrLevel, onPick: (String) -> Unit, onDismiss: () -> Unit) {
+fun TutorTopicSheet(language: String, level: CefrLevel, onPick: (String, String?) -> Unit, onDismiss: () -> Unit) {
     val context = LocalContext.current
-    data class TopicRow(val icon: ImageVector, val title: String)
-    data class Group(val id: String, val title: String, val rows: List<TopicRow>)
-    val chips = remember(level) { LearningPurposeStore.chips(context, level) }
     var own by remember { mutableStateOf<List<com.roro.futurevoice.talk.Scenario>>(emptyList()) }
+    var progress by remember { mutableStateOf<Map<String, TutorTopicProgress>>(emptyMap()) }
+    var chapter by remember { mutableStateOf<TutorCurriculum.Chapter?>(null) }
+    var stepUp by remember { mutableStateOf<TutorCurriculum.Topic?>(null) }
     androidx.compose.runtime.LaunchedEffect(language) {
+        progress = TutorProgressStore.all(context, language)
         own = runCatching { ScenarioStore.shared(context).load(language) }.getOrDefault(emptyList())
             .filter { it.starterId == null && it.archivedAt == null }.take(12)
     }
-    val groups = buildList {
-        val seen = mutableSetOf<String>()
-        val ordered = chips.filter { it.starters != null } +
-            (if (DiscoverChip.EVERYDAY in chips) emptyList() else listOf(DiscoverChip.EVERYDAY))
-        for (chip in ordered) {
-            val rows = chip.starters.orEmpty().filter { seen.add(it.id) }
-                .map { TopicRow(Symbols.icon(it.icon), stringResource(it.title)) }
-            if (rows.isNotEmpty()) add(Group(chip.raw, stringResource(chip.label), rows))
-        }
-        if (own.isNotEmpty()) add(Group("own", stringResource(R.string.your_scenarios),
-            own.map { TopicRow(Icons.Filled.TheaterComedy, it.environment) }))
+    fun start(topic: TutorCurriculum.Topic) {
+        stepUp = null
+        onPick(context.getString(topic.title), topic.id)
+        onDismiss()
+    }
+    fun pick(topic: TutorCurriculum.Topic) {
+        if (progress[topic.id]?.passedAt == null && TutorCurriculum.isStepUp(topic, level)) stepUp = topic
+        else start(topic)
     }
     ModalBottomSheet(onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)) {
         // Not sheetBody(): its verticalScroll hands the LazyColumn below an
         // unbounded height, which crashes the moment the sheet opens.
         Column(Modifier.fillMaxWidth().bottomBarInsets()) {
+            val open = chapter
             Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
-                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.CenterStart)) {
-                    Text(stringResource(R.string.close))
+                if (open != null) {
+                    IconButton(onClick = { chapter = null }, modifier = Modifier.align(Alignment.CenterStart)) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.what_to_practice))
+                    }
+                } else {
+                    TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.CenterStart)) {
+                        Text(stringResource(R.string.close))
+                    }
                 }
-                Text(stringResource(R.string.what_to_practice), style = MaterialTheme.typography.titleMedium,
+                Text(if (open != null) stringResource(open.title) else stringResource(R.string.what_to_practice),
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold, modifier = Modifier.align(Alignment.Center))
             }
-            LazyColumn {
-                groups.forEach { g ->
-                    item(key = "h-" + g.id) {
-                        Text(g.title, style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 4.dp))
+            if (open != null) {
+                LazyColumn {
+                    items(open.topics, key = { it.id }) { topic ->
+                        Box(Modifier.fillMaxWidth().clickable { pick(topic) }
+                            .padding(horizontal = 20.dp, vertical = 12.dp)) {
+                            TopicRow(topic, progress[topic.id], level)
+                        }
                     }
-                    items(g.rows) { row ->
-                        Row(
-                            Modifier.fillMaxWidth().clickable { onPick(row.title); onDismiss() }
-                                .padding(horizontal = 20.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(row.icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(22.dp))
-                            Spacer(Modifier.width(14.dp))
-                            Text(row.title, style = MaterialTheme.typography.bodyLarge)
+                }
+            } else {
+                LazyColumn {
+                    TutorCurriculum.next(progress, level)?.let { next ->
+                        item(key = "h-next") { SheetHeader(stringResource(R.string.next_up)) }
+                        item(key = "next") {
+                            Row(
+                                Modifier.fillMaxWidth().clickable { pick(next.topic) }
+                                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                Icon(Icons.Filled.PlayCircle, contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text(stringResource(next.topic.title), style = MaterialTheme.typography.bodyLarge)
+                                    Text(if (progress[next.topic.id]?.checkLeft == true) stringResource(R.string.final_check_left)
+                                        else stringResource(next.chapter.title),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
+                    item(key = "h-curriculum") { SheetHeader(stringResource(R.string.curriculum)) }
+                    items(TutorCurriculum.chapters, key = { "c-" + it.id }) { c ->
+                        ChapterRow(c, progress, onClick = { chapter = c })
+                    }
+                    item(key = "f-curriculum") {
+                        val passed = progress.values.count { it.passedAt != null }
+                        val total = TutorCurriculum.chapters.sumOf { it.topics.size }
+                        Text(stringResource(R.string.lld_of_lld_topics_passed, passed, total),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 6.dp))
+                    }
+                    if (own.isNotEmpty()) {
+                        item(key = "h-own") { SheetHeader(stringResource(R.string.your_scenarios)) }
+                        items(own, key = { "o-" + it.id }) { sc ->
+                            Row(
+                                Modifier.fillMaxWidth().clickable { onPick(sc.environment, null); onDismiss() }
+                                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(Icons.Filled.TheaterComedy, contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                                Spacer(Modifier.width(14.dp))
+                                Text(sc.environment, style = MaterialTheme.typography.bodyLarge)
+                            }
                         }
                     }
                 }
             }
+        }
+    }
+    stepUp?.let { topic ->
+        AlertDialog(
+            onDismissRequest = { stepUp = null },
+            title = { Text(stringResource(R.string.this_one_is_a_step_up_try_it)) },
+            text = { Text(stringResource(R.string.the_tutor_will_keep_it_at_your_level)) },
+            confirmButton = { TextButton(onClick = { start(topic) }) { Text(stringResource(R.string.try_it)) } },
+            dismissButton = { TextButton(onClick = { stepUp = null }) { Text(stringResource(R.string.not_now)) } },
+        )
+    }
+}
+
+@Composable
+private fun SheetHeader(text: String) {
+    Text(text, style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 4.dp))
+}
+
+@Composable
+private fun ChapterRow(chapter: TutorCurriculum.Chapter, progress: Map<String, TutorTopicProgress>, onClick: () -> Unit) {
+    val passed = chapter.topics.count { progress[it.id]?.passedAt != null }
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(Symbols.icon(chapter.icon), contentDescription = null, tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.width(26.dp).size(22.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Text(stringResource(chapter.title), style = MaterialTheme.typography.bodyLarge)
+            LinearProgressIndicator(
+                progress = { passed.toFloat() / chapter.topics.size.coerceAtLeast(1) },
+                modifier = Modifier.fillMaxWidth(),
+                color = TickGreen,
+                drawStopIndicator = {},
+            )
+        }
+        Text("$passed/${chapter.topics.size}", style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+    }
+}
+
+@Composable
+private fun TopicRow(topic: TutorCurriculum.Topic, p: TutorTopicProgress?, level: CefrLevel) {
+    val step = p?.passedAt == null && TutorCurriculum.isStepUp(topic, level)
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        val (icon, tint) = when {
+            p?.passedAt != null -> Icons.Filled.CheckCircle to TickGreen
+            p?.checkLeft == true -> Icons.Filled.Contrast to TickGreen
+            p?.inProgress == true -> Icons.Outlined.Pending to MaterialTheme.colorScheme.primary
+            else -> Icons.Outlined.Circle to MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+        }
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(24.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(stringResource(topic.title), style = MaterialTheme.typography.bodyLarge,
+                color = if (step) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
+            if (p?.checkLeft == true) {
+                Text(stringResource(R.string.final_check_left), style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else if (p?.inProgress == true) {
+                Text(stringResource(R.string.in_progress), style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        val rounds = p?.rounds ?: 0
+        if (rounds > 1) {
+            Text(stringResource(R.string.lld_rounds, rounds), style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold, color = TickGreen)
+        } else if (step) {
+            Text(stringResource(R.string.step_up), style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold, color = Color(0xFFFF9500))
         }
     }
 }

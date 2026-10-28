@@ -113,6 +113,10 @@ object Symbols {
         "person.text.rectangle" to Icons.Filled.Badge,
         "book" to Icons.AutoMirrored.Filled.MenuBook,
         "square.and.pencil" to Icons.Filled.EditNote,
+        // The tutor's curriculum chapters (`TutorCurriculum`).
+        "person.crop.rectangle" to Icons.Filled.Badge,
+        "text.bubble" to Icons.Filled.Forum,
+        "figure.2.and.child.holdinghands" to Icons.Filled.FamilyRestroom,
     )
 
     /**

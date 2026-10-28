@@ -864,7 +864,7 @@ fun TalkScreen(
                 androidx.compose.material3.HorizontalDivider(Modifier.alpha(0.15f))
             }
             if (showingTutorTopics) {
-                TutorTopicSheet(targetLanguage, level, onPick = { vm.pickTutorTopic(it) },
+                TutorTopicSheet(targetLanguage, level, onPick = { title, id -> vm.pickTutorTopic(title, id) },
                     onDismiss = { showingTutorTopics = false })
             }
             LaunchedEffect(showingTutorTopics) { vm.setTutorTopicsShowing(showingTutorTopics) }
@@ -877,7 +877,9 @@ fun TalkScreen(
             if (showingFocus && focus != null) {
                 GrammarFocusSheet(focus, state.focusRepeatTurns.size, onDismiss = { showingFocus = false })
             }
-            if (goals.isNotEmpty() && !ended && showsGoalChips) {
+            // The final check: nothing on screen to lean on (iOS 23ce515f).
+            val tutorInFinalCheck = state.tutorOn && state.tutorLesson?.inFinalCheck == true
+            if (goals.isNotEmpty() && !ended && showsGoalChips && !tutorInFinalCheck) {
                 TalkGoalChipsRow(goals, goalsUsed, onTap = { openGoal = it })
             }
             // Nothing pauses underneath: WordLore is free and globally
@@ -1104,10 +1106,11 @@ fun TalkScreen(
                             // suggestion replaces it.
                             val coachAlpha by animateFloatAsState(if (state.coachStale) 0f else 1f, tween(200),
                                 label = "coachStale")
-                            state.coachReply?.takeIf { coachMode || it.heading != null }?.let { reply ->
+                            val inFinalCheck = state.tutorOn && state.tutorLesson?.inFinalCheck == true
+                            state.coachReply?.takeIf { (coachMode || it.heading != null) && !inFinalCheck }?.let { reply ->
                                 CoachReplyLabel(reply, Modifier.padding(horizontal = 32.dp).alpha(coachAlpha))
                             }
-                            if (coachMode) state.coachHint?.let { hint ->
+                            if (coachMode && !inFinalCheck) state.coachHint?.let { hint ->
                                 Box(Modifier.padding(horizontal = 24.dp).alpha(coachAlpha)) {
                                     CoachHintLabel(hint, used = hint.key in goalsUsed,
                                         onTap = { if (!state.coachStale) openGoal = hint })
@@ -1203,8 +1206,11 @@ fun TalkScreen(
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             } else if (state.tutorOn && onCall) {
-                                IconButton(onClick = { showingTutorTopics = true }, enabled = !state.tutorPlanning,
-                                    modifier = Modifier.align(Alignment.CenterEnd).padding(end = 16.dp)) {
+                                val inFinalCheck = state.tutorLesson?.inFinalCheck == true
+                                IconButton(onClick = { showingTutorTopics = true },
+                                    enabled = !state.tutorPlanning && !inFinalCheck,
+                                    modifier = Modifier.align(Alignment.CenterEnd).padding(end = 16.dp)
+                                        .alpha(if (inFinalCheck) 0.3f else 1f)) {
                                     Icon(Icons.Outlined.Lightbulb, contentDescription = stringResource(R.string.what_to_practice),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
