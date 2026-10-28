@@ -1,0 +1,8 @@
+New
+• Meet your personal tutor on the Talk tab: today's plan, and answers about your practice.
+• Tutor mode has a curriculum and a final check, and the tutor answers each thing you say once.
+• Swipe the ring on Home to switch between free talk and Tutor mode.
+• Your fluent self reads you the report at the end of your free minutes.
+
+Fixed
+• Talk time counts from the moment a call starts, and the Home ring shows today's time correctly.

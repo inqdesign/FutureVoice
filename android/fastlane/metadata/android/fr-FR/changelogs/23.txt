@@ -1,0 +1,8 @@
+Nouveautés
+• Ton tuteur personnel arrive dans Parler : le plan du jour et des réponses sur ta pratique.
+• Le mode tuteur a un programme et un dernier test, et répond une seule fois à chaque chose que tu dis.
+• Fais glisser l’anneau de l’accueil pour passer de la conversation libre au mode tuteur.
+• Ton moi fluide te lit le bilan à la fin de tes minutes gratuites.
+
+Corrigé
+• Le temps compte dès le début de l’appel, et l’anneau affiche bien celui du jour.

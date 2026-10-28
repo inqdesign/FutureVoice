@@ -1,0 +1,8 @@
+Novedades
+• Tu tutor personal llega a Hablar: el plan de hoy y respuestas sobre tu práctica.
+• El modo tutor tiene plan de estudio y prueba final, y responde una sola vez a cada cosa que dices.
+• Desliza el anillo de inicio para pasar de la conversación libre al modo tutor.
+• Tu yo fluido te lee el informe al terminar tus minutos gratis.
+
+Arreglado
+• El tiempo cuenta desde que empieza la llamada, y el anillo muestra bien el de hoy.
