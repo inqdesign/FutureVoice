@@ -234,6 +234,9 @@ object TalkTimeLog {
 
     private const val BACKFILL_DAYS = 14
     private const val CORRECT_DOWN_DAYS = 3
+    /** PostgREST `max_rows` — one page. */
+    private const val PAGE_SIZE = 1000
+    private const val MAX_ROWS = 8000
 
     /**
      * Rebuild the log from `usage_ledger`, where the meter's accepted ticks
@@ -255,19 +258,30 @@ object TalkTimeLog {
                 set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
             }
             val since = java.time.Instant.ofEpochMilli(cal.timeInMillis).toString()
-            val url = "${com.roro.futurevoice.core.Config.supabaseUrl.trimEnd('/')}/rest/v1/usage_ledger" +
+            // Paged, NEWEST first (iOS 2026-10-28): PostgREST answers at most
+            // PAGE_SIZE rows whatever `limit` asks, in no promised order, and a
+            // heavy fortnight passed 1,000 — the rows cut were TODAY's, so the
+            // ring was "corrected" down to part of the day. A cut now lands on
+            // the oldest days (a floor only); a failed page drops the sync.
+            val base = "${com.roro.futurevoice.core.Config.supabaseUrl.trimEnd('/')}/rest/v1/usage_ledger" +
                 "?select=created_at,idempotency_key,metadata&user_id=eq.$uid&action=eq.talk_time" +
-                "&created_at=gte.${java.net.URLEncoder.encode(since, "UTF-8")}&limit=4000"
-            val rows = runCatching {
-                val req = okhttp3.Request.Builder().url(url)
-                    .header("Authorization", "Bearer $token")
-                    .header("apikey", com.roro.futurevoice.core.Config.supabaseAnonKey).build()
-                com.roro.futurevoice.net.Edge.client.newCall(req).execute().use { resp ->
-                    if (!resp.isSuccessful) null
-                    else com.roro.futurevoice.net.Edge.json.decodeFromString(
-                        kotlinx.serialization.builtins.ListSerializer(LedgerRow.serializer()), resp.body.string())
-                }
-            }.getOrNull() ?: return@withContext false
+                "&created_at=gte.${java.net.URLEncoder.encode(since, "UTF-8")}&order=created_at.desc,id.desc"
+            val rows = mutableListOf<LedgerRow>()
+            while (rows.size < MAX_ROWS) {
+                val page = runCatching {
+                    val req = okhttp3.Request.Builder()
+                        .url("$base&offset=${rows.size}&limit=$PAGE_SIZE")
+                        .header("Authorization", "Bearer $token")
+                        .header("apikey", com.roro.futurevoice.core.Config.supabaseAnonKey).build()
+                    com.roro.futurevoice.net.Edge.client.newCall(req).execute().use { resp ->
+                        if (!resp.isSuccessful) null
+                        else com.roro.futurevoice.net.Edge.json.decodeFromString(
+                            kotlinx.serialization.builtins.ListSerializer(LedgerRow.serializer()), resp.body.string())
+                    }
+                }.getOrNull() ?: return@withContext false
+                rows += page
+                if (page.size < PAGE_SIZE) break
+            }
 
             val server = mutableMapOf<String, Int>()
             for (r in rows) {
