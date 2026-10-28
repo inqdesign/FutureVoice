@@ -45,6 +45,12 @@ data class TrialReport(
     val level: String? = null,
     val levelRationale: String? = null,
     @Serializable(with = IsoDateMillisSerializer::class) val builtAt: Long,
+    /** The fluent self's narration of the deck ([com.roro.futurevoice.net.ReportNarration]),
+     *  written once and replayed from here. */
+    val narration: com.roro.futurevoice.net.ReportNarration? = null,
+    /** How the learner used the app, worded ([HabitAdvice]) — the routine
+     *  card's evidence. */
+    val habitAdvice: HabitAdvice? = null,
 )
 
 object TrialReportStore {

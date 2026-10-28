@@ -735,6 +735,7 @@ fun RootScreen() {
             showAgeCheck || showWhatsNew,
         level = state.level,
         onMeasuredLevel = { app.applyMeasuredLevel(it, announce = false) },
+        voiceId = state.speakingVoiceId,
         onShowing = { trialReportUp = it },
     )
 
