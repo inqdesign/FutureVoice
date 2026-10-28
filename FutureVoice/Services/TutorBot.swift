@@ -137,7 +137,7 @@ final class TutorBot: ObservableObject {
                  title: occ.kind == .review ? occ.kind.label : occ.kind.titled(occ.amount),
                  start: occ.start, anytime: occ.anytime, progress: progress[occ.id] ?? 0, end: occ.end)
         }
-        out.dueCards = DrillStore.shared.dueCount(now: now) + ReviewQueue.dueItems(now: now).count
+        out.dueCards = DueReviewView.waitingDeck(now: now).count
         out.streak = PracticeStats.snapshot(now: now).streakDays
         out.talkedToday = PracticeStats.todayTalkSeconds(now: now) / 60
         if out.items.isEmpty {
@@ -290,7 +290,15 @@ final class TutorBot: ObservableObject {
             appState.requestFreeTalk(from: .tutorBot)
             return
         }
-        DailyCallInbox.shared.pendingURL = URL(string: "futurevoice://routine?kind=\(kind.rawValue)")
+        switch kind {
+        case .review, .words, .expressions:
+            // The bot says "N cards waiting" (`dueCards`); Start deals those
+            // N (`DueReviewView.waitingDeck`), never another deck. It opened
+            // the put-off deck and dealt 1 of 22 (2026-10-28).
+            DailyCallInbox.shared.pendingURL = URL(string: "futurevoice://waiting")
+        default:
+            DailyCallInbox.shared.pendingURL = URL(string: "futurevoice://routine?kind=\(kind.rawValue)")
+        }
     }
 
     #if DEBUG

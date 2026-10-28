@@ -119,6 +119,13 @@ struct PracticeTab: View {
     @State private var dueItemTexts: Set<String> = []
     /// A pinned book's chapter button was tapped — its deck, as a sheet.
     @State private var chapterStudy: ChapterStudy?
+    /// The routine's Review block, dealt as Activity deals it.
+    @State private var routineReview: RoutineReview?
+    private struct RoutineReview: Identifiable {
+        let id = UUID()
+        let cards: [StudyDeckItem]
+        let shadow: [PracticeStats.ShadowPick]
+    }
 
     private struct ChapterStudy: Identifiable {
         enum Deck {
@@ -319,6 +326,16 @@ struct PracticeTab: View {
                 DueReviewView()
                     .environmentObject(appState)
             }
+            .sheet(item: $routineReview, onDismiss: {
+                reload()
+                Task { await DrillReminder.reschedule(allowPermissionPrompt: true) }
+            }) { deck in
+                DueReviewView(hand: deck.cards, title: "Review",
+                              emptyTitle: "All caught up",
+                              emptyMessage: "Words, expressions and sentences from your talks show up here when it's time to review them.",
+                              shadowPicks: deck.shadow)
+                    .environmentObject(appState)
+            }
             // A finished test writes snoozes and Leitner moves — same
             // reminder refresh as the decks on the way out.
             .sheet(isPresented: $showingWeeklyTest, onDismiss: {
@@ -413,6 +430,21 @@ struct PracticeTab: View {
             showingExpressions = false
             shelf = .studying
             showingDueReview = true
+        case .routineReview:
+            appState.pendingPracticeRoute = nil
+            showingVocabulary = false
+            showingExpressions = false
+            shelf = .studying
+            let deck = DueReviewView.routineDeck(
+                goal: GoalStore.shared.target(.review) ?? StudyPlan.Kind.review.defaultAmount,
+                appState: appState)
+            routineReview = RoutineReview(cards: deck.cards, shadow: deck.shadow)
+        case .waitingReview:
+            appState.pendingPracticeRoute = nil
+            showingVocabulary = false
+            showingExpressions = false
+            shelf = .studying
+            routineReview = RoutineReview(cards: DueReviewView.waitingDeck(), shadow: [])
         case .weeklyTest:
             appState.pendingPracticeRoute = nil
             showingVocabulary = false

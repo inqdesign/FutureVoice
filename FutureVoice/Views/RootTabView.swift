@@ -760,6 +760,10 @@ struct RootTabView: View {
             // things you set aside are back").
             selection = .practice
             appState.pendingPracticeRoute = .review
+        case "waiting":
+            // The tutor bot's Start: the cards it counted as waiting.
+            selection = .practice
+            appState.pendingPracticeRoute = .waitingReview
         case "weeklytest":
             selection = .practice
             appState.pendingPracticeRoute = .weeklyTest
@@ -808,7 +812,13 @@ struct RootTabView: View {
         case .talk:
             selection = .home
             appState.requestFreeTalk(from: .widget)
-        case .review, .words, .expressions:
+        case .review:
+            // The block's own deck, as Activity deals it. The put-off deck
+            // (`.review`) holds only what was snoozed, so a learner with 22
+            // cards waiting was dealt one (2026-10-28).
+            selection = .practice
+            appState.pendingPracticeRoute = .routineReview
+        case .words, .expressions:
             selection = .practice
             appState.pendingPracticeRoute = .review
         case .test:

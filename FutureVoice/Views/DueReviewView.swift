@@ -114,6 +114,14 @@ struct DueReviewView: View {
         return items.filter { seen.insert($0.id).inserted }
     }
 
+    /// Everything due NOW: words and expressions back from a snooze, then
+    /// sentence cards from the talks (new ones included). The tutor bot's
+    /// count and its Start both read this, so "N waiting" deals N.
+    static func waitingDeck(now: Date = Date()) -> [StudyDeckItem] {
+        ReviewQueue.dueItems(now: now)
+            + DrillStore.shared.due(now: now).map(StudyDeckItem.sentence)
+    }
+
     /// What came back from a snooze, oldest promise first — the SAME queue
     /// the reminder counted (see `ReviewQueue`).
     static func dueDeck(now: Date = Date()) -> [StudyDeckItem] {
