@@ -5,6 +5,8 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 
 /**
  * The day's talk seconds as they were actually METERED — `TalkTimeLog.swift`.
@@ -258,45 +260,12 @@ object TalkTimeLog {
                 set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
             }
             val since = java.time.Instant.ofEpochMilli(cal.timeInMillis).toString()
-            // Paged, NEWEST first (iOS 2026-10-28): PostgREST answers at most
-            // PAGE_SIZE rows whatever `limit` asks, in no promised order, and a
-            // heavy fortnight passed 1,000 — the rows cut were TODAY's, so the
-            // ring was "corrected" down to part of the day. A cut now lands on
-            // the oldest days (a floor only); a failed page drops the sync.
-            val base = "${com.roro.futurevoice.core.Config.supabaseUrl.trimEnd('/')}/rest/v1/usage_ledger" +
-                "?select=created_at,idempotency_key,metadata&user_id=eq.$uid&action=eq.talk_time" +
-                "&created_at=gte.${java.net.URLEncoder.encode(since, "UTF-8")}&order=created_at.desc,id.desc"
-            val rows = mutableListOf<LedgerRow>()
-            while (rows.size < MAX_ROWS) {
-                val page = runCatching {
-                    val req = okhttp3.Request.Builder()
-                        .url("$base&offset=${rows.size}&limit=$PAGE_SIZE")
-                        .header("Authorization", "Bearer $token")
-                        .header("apikey", com.roro.futurevoice.core.Config.supabaseAnonKey).build()
-                    com.roro.futurevoice.net.Edge.client.newCall(req).execute().use { resp ->
-                        if (!resp.isSuccessful) null
-                        else com.roro.futurevoice.net.Edge.json.decodeFromString(
-                            kotlinx.serialization.builtins.ListSerializer(LedgerRow.serializer()), resp.body.string())
-                    }
-                }.getOrNull() ?: return@withContext false
-                rows += page
-                if (page.size < PAGE_SIZE) break
-            }
-
-            val server = mutableMapOf<String, Int>()
-            // A tick written between two pages slides the next page by a row,
-            // so the boundary row can come back twice. Every row has a unique key.
-            val seen = HashSet<String>()
-            for (r in rows) {
-                if (r.idempotency_key != null && !seen.add(r.idempotency_key)) continue
-                if (r.isPreflight) continue
-                val sec = r.metadata?.seconds ?: continue
-                if (sec <= 0) continue
-                val at = runCatching { java.time.OffsetDateTime.parse(r.created_at.replace(" ", "T")).toInstant().toEpochMilli() }
-                    .getOrNull() ?: continue
-                val k = key(at, r.metadata.language)
-                server[k] = (server[k] ?: 0) + sec
-            }
+            // The server's sum first (iOS 2026-10-28, `talk_seconds_by_local_day`):
+            // one row per local day and language. The rows are read only when
+            // that call fails (no function yet, an unknown time zone).
+            val server = summedByServer(token, since)
+                ?: summedFromRows(token, uid, since)
+                ?: return@withContext false
             if (server.isEmpty()) return@withContext false
             val map = load(context).toMutableMap()
             val before = map.toMap()
@@ -316,6 +285,83 @@ object TalkTimeLog {
             save(context, next)
             true
         }
+
+    @kotlinx.serialization.Serializable
+    internal data class DayRow(val day: String, val language: String? = null, val seconds: Int = 0)
+
+    /** `talk_seconds_by_local_day` (20261028170000): the ledger summed per LOCAL
+     *  day and language on the server, preflight left out — the same buckets
+     *  [summedFromRows] builds, in a reply of a few rows. */
+    private fun summedByServer(token: String, since: String): Map<String, Int>? = runCatching {
+        val body = kotlinx.serialization.json.buildJsonObject {
+            put("p_since", kotlinx.serialization.json.JsonPrimitive(since))
+            put("p_tz", kotlinx.serialization.json.JsonPrimitive(java.util.TimeZone.getDefault().id))
+        }.toString()
+        val req = okhttp3.Request.Builder()
+            .url("${com.roro.futurevoice.core.Config.supabaseUrl.trimEnd('/')}/rest/v1/rpc/talk_seconds_by_local_day")
+            .post(body.toRequestBody("application/json".toMediaType()))
+            .header("Authorization", "Bearer $token")
+            .header("apikey", com.roro.futurevoice.core.Config.supabaseAnonKey).build()
+        com.roro.futurevoice.net.Edge.client.newCall(req).execute().use { resp ->
+            if (!resp.isSuccessful) null
+            else com.roro.futurevoice.net.Edge.json.decodeFromString(
+                kotlinx.serialization.builtins.ListSerializer(DayRow.serializer()), resp.body.string())
+        }
+    }.getOrNull()?.let { rows ->
+        val out = mutableMapOf<String, Int>()
+        for (r in rows) {
+            if (r.seconds <= 0) continue
+            val lang = r.language?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
+            val k = if (lang == null) r.day else r.day + SEPARATOR + lang
+            out[k] = (out[k] ?: 0) + r.seconds
+        }
+        out
+    }
+
+    /**
+     * The fallback: every `talk_time` row, summed here. Paged, NEWEST first
+     * (iOS 2026-10-28): PostgREST answers at most PAGE_SIZE rows whatever
+     * `limit` asks, in no promised order, and a heavy fortnight passed 1,000
+     * — the rows cut were TODAY's, so the ring was "corrected" down to part of
+     * the day. A cut now lands on the oldest days (a floor only); a failed
+     * page drops the sync.
+     */
+    private fun summedFromRows(token: String, uid: String, since: String): Map<String, Int>? {
+        val base = "${com.roro.futurevoice.core.Config.supabaseUrl.trimEnd('/')}/rest/v1/usage_ledger" +
+            "?select=created_at,idempotency_key,metadata&user_id=eq.$uid&action=eq.talk_time" +
+            "&created_at=gte.${java.net.URLEncoder.encode(since, "UTF-8")}&order=created_at.desc,id.desc"
+        val rows = mutableListOf<LedgerRow>()
+        while (rows.size < MAX_ROWS) {
+            val page = runCatching {
+                val req = okhttp3.Request.Builder()
+                    .url("$base&offset=${rows.size}&limit=$PAGE_SIZE")
+                    .header("Authorization", "Bearer $token")
+                    .header("apikey", com.roro.futurevoice.core.Config.supabaseAnonKey).build()
+                com.roro.futurevoice.net.Edge.client.newCall(req).execute().use { resp ->
+                    if (!resp.isSuccessful) null
+                    else com.roro.futurevoice.net.Edge.json.decodeFromString(
+                        kotlinx.serialization.builtins.ListSerializer(LedgerRow.serializer()), resp.body.string())
+                }
+            }.getOrNull() ?: return null
+            rows += page
+            if (page.size < PAGE_SIZE) break
+        }
+        val out = mutableMapOf<String, Int>()
+        // A tick written between two pages slides the next page by a row, so
+        // the boundary row can come back twice. Every row has a unique key.
+        val seen = HashSet<String>()
+        for (r in rows) {
+            if (r.idempotency_key != null && !seen.add(r.idempotency_key)) continue
+            if (r.isPreflight) continue
+            val sec = r.metadata?.seconds ?: continue
+            if (sec <= 0) continue
+            val at = runCatching { java.time.OffsetDateTime.parse(r.created_at.replace(" ", "T")).toInstant().toEpochMilli() }
+                .getOrNull() ?: continue
+            val k = key(at, r.metadata.language)
+            out[k] = (out[k] ?: 0) + sec
+        }
+        return out
+    }
 
     private fun dayKey(now: Long): String =
         SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(now))
