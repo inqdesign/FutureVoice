@@ -144,6 +144,8 @@ enum TalkEntry: String {
     case weekRecap = "week_recap"
     case progressTip = "progress_tip"
     case routine
+    /// The tutor bot's note, bubble or chat (`TutorBot`).
+    case tutorBot = "tutor_bot"
     case scenarioBook = "scenario_book"
     case practiceBook = "practice_book"
     /// The empty Review page's "Start a talk".

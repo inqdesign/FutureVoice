@@ -28,6 +28,8 @@ struct ConversationHome: View {
     /// `State(initialValue:)` kept the FIRST evaluation's empty topic, so the
     /// first topic pick always fell through to free talk.
     @State private var callLaunch: CallLaunch?
+    /// This tab is the one on screen — the tutor speaks only then.
+    @State private var homeOnScreen = false
     @State private var showingProfile = false
     @State private var showingBuilder = false
     @State private var showingAddLanguage = false
@@ -95,8 +97,9 @@ struct ConversationHome: View {
             // bottom centre over the page.
             .overlay(alignment: .bottom) {
                 // Three slots (2026-10-18, founder): the player on the left,
-                // the topics button centred, the quick quiz's face on the
-                // right. The two side slots take equal widths so the centre
+                // the topics button centred, the tutor's face on the right
+                // (the quick quiz's until 2026-10-28; the quiz is now one of
+                // the things the tutor hands you). The two side slots take equal widths so the centre
                 // never moves.
                 HStack(spacing: 12) {
                     HStack {
@@ -114,12 +117,14 @@ struct ConversationHome: View {
                     .fixedSize()
                     HStack {
                         Spacer(minLength: 0)
-                        QuickQuizButton()
+                        TutorBotButton()
                     }
                     .frame(maxWidth: .infinity)
                 }
                 .padding(16)
             }
+            // The tutor's note and bubble, over the page and above the row.
+            .overlay { TutorBotLayer() }
             #if DEBUG
             .defaultScrollAnchor(DebugCapture.previewScenariosTab ? .bottom : nil)
             #endif
@@ -171,6 +176,8 @@ struct ConversationHome: View {
                 AddLanguageSheet().environmentObject(appState)
             }
             .onAppear {
+                homeOnScreen = true
+                refreshTutor(delay: 1.2)
                 reload(); drawRing()
                 #if DEBUG
                 if UserDefaults.standard.bool(forKey: "openTopics") { showingTopics = true }
@@ -187,7 +194,19 @@ struct ConversationHome: View {
                 appState.openRoutinePage = false
                 showingActivity = true
             }
+            .onDisappear { homeOnScreen = false }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active { refreshTutor(delay: 1.2) }
+            }
+            // A planned time arriving while the page sits open.
+            .task(id: homeOnScreen) {
+                while homeOnScreen, !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(60))
+                    refreshTutor(delay: 0)
+                }
+            }
             .onChange(of: appState.talkHomeReloadToken) { _, _ in
+                refreshTutor(delay: 1.5)
                 HeroGreeting.advanceRotation()
                 reload()
                 maybeOfferBackup()
@@ -781,6 +800,19 @@ struct ConversationHome: View {
     }
 
     // MARK: - Logic
+
+    /// Lets the tutor re-read the day and, if the page is really in front of
+    /// the learner, say what there is to say (`TutorBot.refresh`). The delay
+    /// lets a call's cover or a tab switch settle first.
+    private func refreshTutor(delay: Double) {
+        Task { @MainActor in
+            if delay > 0 { try? await Task.sleep(for: .seconds(delay)) }
+            let visible = homeOnScreen && scenePhase == .active && callLaunch == nil
+                && !appState.talkRingProxyActive && !showingTopics && !showingActivity
+                && !showingPaywall && !showingProfile && !routineHandoff.showHint
+            TutorBot.shared.refresh(appState: appState, visible: visible)
+        }
+    }
 
     private func reload() {
         refreshAccount()   // talks spend credits — keep the chip honest
