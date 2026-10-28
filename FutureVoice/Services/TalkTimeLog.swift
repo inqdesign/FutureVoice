@@ -155,7 +155,11 @@ enum TalkTimeLog {
         }
 
         var serverByDay: [String: Int] = [:]
+        // A tick written between two pages slides the next page by a row,
+        // so the boundary row can come back twice. Every row has a unique key.
+        var seen = Set<String>()
         for row in rows {
+            if let k = row.idempotency_key, !seen.insert(k).inserted { continue }
             guard !row.isPreflight,
                   let seconds = row.metadata?.seconds, seconds > 0,
                   let at = parseTimestamp(row.created_at) else { continue }
