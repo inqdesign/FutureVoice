@@ -1,6 +1,7 @@
 Neu
 • Im Tab Sprechen gibt es jetzt deinen persönlichen Tutor. Er zeigt dir, was heute dran ist, und du kannst ihn alles zu deinem Üben fragen.
 • Der Tutor-Modus hat jetzt einen Lehrplan: ein Thema nach dem anderen, am Ende ein Abschlusscheck.
+• Wisch über den Ring auf dem Startbildschirm, um zwischen freiem Gespräch und Tutor-Modus zu wechseln.
 • Beim Start kannst du die Zukunft wählen, auf die du hinarbeitest. Dein fließendes Ich spricht wie jemand, der sie schon lebt. Ändern kannst du sie jederzeit unter Ich → Profil → Meine Zukunft.
 • Den Bericht nach deinen Gratisminuten liest dir jetzt dein fließendes Ich vor. Er zeigt auch, wie du die App genutzt hast und worauf dein Niveau beruht.
 • Neue Rede-Challenge: „Erzähl etwas über dich“. Die Karten zeigen jetzt, wie oft es versucht wurde.
@@ -11,4 +12,6 @@ Behoben
 • Der Ring auf dem Startbildschirm zeigt die heutige Sprechzeit jetzt richtig.
 • Bei Nochmal sagen springt die App nicht mehr zur nächsten Runde, während du noch einen langen Satz liest.
 • Im Tutor-Modus wartet der Tutor nach einer Runde, bis du wählst, wie es weitergeht.
+• Im Tutor-Modus antwortet der Tutor auf alles, was du sagst, genau einmal, und die Checkliste passt immer zu dem, was er sagt.
+• Beim Abschlusscheck siehst du, was alles hineingehört, und auf Wunsch macht der Tutor es dir vor.
 • In den Anruf-Einstellungen steht der Tutor-Modus jetzt oben, und der Coach-Modus heißt jetzt „Sag mal so“.
