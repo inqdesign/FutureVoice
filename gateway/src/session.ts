@@ -352,7 +352,10 @@ export class CallSession implements DurableObject {
   /** `SetMessage.holdReplies`: a committed turn waits for the app's note. */
   private holdReplies = false
   private heldReplyTimer: number | null = null
-  private static readonly holdReplyMaxMs = 12000
+  /** Past this the turn is answered without the note — with a line that
+   *  only says the app is still checking, so the late verdict that follows
+   *  is the second half of one exchange, never a contradiction. */
+  private static readonly holdReplyMaxMs = 25000
   /** A `send` is waiting for the transcriber to finalize the last words. */
   private sendRequested = false
   private sendTimer: number | null = null
@@ -1496,7 +1499,7 @@ export class CallSession implements DurableObject {
     if (this.holdReplies) {
       if (spec) this.dropSpec()
       if (this.heldReplyTimer !== null) clearTimeout(this.heldReplyTimer)
-      this.heldReplyTimer = setTimeout(() => this.releaseHeldReply(),
+      this.heldReplyTimer = setTimeout(() => this.releaseHeldReply(true),
         CallSession.holdReplyMaxMs) as unknown as number
       return
     }
@@ -1537,10 +1540,15 @@ export class CallSession implements DurableObject {
 
   /** A held turn is answered: by the app's note (flushNudge), or here, when
    *  the note never came or the hold was switched off. */
-  private releaseHeldReply(): void {
+  private releaseHeldReply(timedOut = false): void {
     if (this.heldReplyTimer !== null) { clearTimeout(this.heldReplyTimer); this.heldReplyTimer = null }
     if (this.ended || this.activeContext !== null) return
-    if (this.history[this.history.length - 1]?.role !== "user") return
+    const last = this.history[this.history.length - 1]
+    if (last?.role !== "user") return
+    if (timedOut) {
+      this.warn("hold", "no note for a held turn")
+      last.text = `${last.text}\n[Note from the app — the learner did not say this: the app is still checking this answer. Say only a few words like "one second, let me check" — no verdict, no correction, no question.]`
+    }
     this.turnCount += 1
     const context = `t${this.turnCount}`
     this.commitAtByContext.set(context, Date.now())

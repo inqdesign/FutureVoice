@@ -2870,12 +2870,25 @@ that back. `TutorLesson.swift`, `TutorLessonViews.swift`,
   managing the conversation (a hook, listening follow-ups, tact, humor).
   From B1 up a plain transaction is A-level, so the lesson is what goes
   wrong or beyond it (wrong order, sold out, no receipt, small talk).
-- **The TICK is the app's, never the tutor's.** Clean = the per-turn
-  correction call returned no fixes AND `TutorJudge` (flash-lite) says the
-  line did the challenge. The block is resent on every tick (`set.system`);
-  the tutor asks for "once more" on a right line and moves on only when the
-  block's RIGHT NOW line says the app checked it off. Put in the lesson
-  block, the move-on note was ignored; it is last in the prompt for that.
+- **The APP decides every step, the tutor says it ONCE** (2026-10-28,
+  founder, after a day of the two disagreeing: the checklist on part 3
+  while the tutor asked for part 1 again, "not yet" spoken on top of "now
+  say it all", two replies to one answer). While a lesson exists every
+  learner turn goes through `tutorTurn` and is HELD at the gateway
+  (`set.holdReplies`); the app judges it — the correction and the judge
+  run side by side — and sends exactly one note, which is the turn's
+  reply: NOT YET (a slip, or the line doesn't do the challenge) · ONCE
+  MORE (right after a miss) · DONE (ticked; next challenge or the final
+  check), the final check's results, and after a pass the learner's
+  choice (once more · more · another topic · stop). A note is sent BEFORE
+  any state change, so the reply never comes from a block that already
+  moved on. The tutor never moves on or judges by itself (the old
+  `tutor_moved_on` reading caused cascades and is gone). A turn with no
+  note in 25 s is answered "one second, let me check" (`talk_rt_warning`
+  code `hold`). Notes answering a held turn don't count toward the cap.
+  A verdict on a turn that was since joined with its continuation is
+  dropped (`tutorStillSaid`). Only the no-lesson stage (asking for a
+  topic) and planning let the tutor answer on its own.
 - **The tutor speaks first through `nudge`** (gateway, 2026-10-24): a
   bracketed note from the app ("topic picked", "lesson ready", "back to
   finish last time's") answered as soon as no line is playing, 8 per call.

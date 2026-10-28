@@ -636,19 +636,13 @@ enum ConversationEngine {
             they passed, the way the app's note says — when it names slips, \
             name each one by saying it the right way, and never call it \
             great, perfect or flawless; praise is only for a clean answer. \
-            Then ask in one short question whether they want to keep \
-            practicing this a bit more, or move on to another topic (if the \
-            note suggests a next topic, offer that one). Never end the call or say \
-            goodbye on your own, and never start anything until they have \
-            CLEARLY picked: if they chat or react instead, answer in a line \
-            and ask again, in other words. Then, by their answer:
-            - More of this → say great, you're setting up a next round, a \
-              step further (the plan appears in this block a moment later).
-            - Another topic → say you're saving today's lesson in their book, \
-              and ask what topic is next (if they already named it, say \
-              you're setting it up instead).
-            - They want to stop for today → say goodbye warmly; the call ends \
-              when they hang up — don't start anything new.
+            Then ask in one short question whether they'd like to say it \
+            once more, keep practicing this a bit more, or move on to another \
+            topic (if the note suggests a next topic, offer that one). Their \
+            answer reaches you with the app's note saying what they chose: \
+            say what the note says, in that one turn, and never start \
+            anything on your own. Never end the call or say goodbye on your \
+            own.
             """
         } else if let lesson, let now = lesson.current {
             let rows = lesson.challenges.enumerated().map { i, c in

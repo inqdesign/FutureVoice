@@ -709,6 +709,9 @@ struct ConversationView: View {
     @State private var tutorMissedThisChallenge = false
     /// The "once more" after a miss was asked for.
     @State private var tutorCleanOnce = false
+    /// After a pass the learner asked to say it once more: their next line
+    /// is that try.
+    @State private var tutorRepeatAsked = false
     /// The lesson finished; the call ends after the tutor's goodbye.
     @State private var tutorStripExpanded = true
     @State private var showingTutorTopics = false
@@ -2949,8 +2952,9 @@ struct ConversationView: View {
                 }
                 didSaveCurrentSession = false
                 creditGoalChips(turnId: id)
-                if !flags.native { requestRealtimeSuggestion(for: id, said: joined) }
-                else { tutorCheck(turnId: id, said: joined, fixes: []) }
+                let correction = flags.native ? Task { [TurnFix]?.none }
+                    : requestRealtimeSuggestion(for: id, said: joined)
+                tutorTurn(turnId: id, said: joined, correction: correction)
                 return
             }
             var turn = Turn(id: UUID(), role: .user, audioURL: nil,
@@ -2980,9 +2984,9 @@ struct ConversationView: View {
             // A line said in their own language was answered with the target
             // way to say it; a correction of it would be built on words in
             // the wrong language.
-            if !flags.native { requestRealtimeSuggestion(for: turn.id, said: text) }
-            else { tutorCheck(turnId: turn.id, said: text, fixes: []) }
-            tutorHeard(text)
+            let correction = flags.native ? Task { [TurnFix]?.none }
+                : requestRealtimeSuggestion(for: turn.id, said: text)
+            tutorTurn(turnId: turn.id, said: text, correction: correction)
         }
         // The bubble appears WITH the voice and fills as the line is written —
         // the same "you read what you are hearing" the HTTP path gets from
@@ -3134,15 +3138,18 @@ struct ConversationView: View {
         }
     }
 
-    private func requestRealtimeSuggestion(for turnId: UUID, said: String) {
+    /// The per-turn correction. Its task answers the turn's fixes ([] when
+    /// too short to correct, nil when the call failed) so a tutor lesson can
+    /// judge the same turn alongside it (`tutorTurn`).
+    @discardableResult
+    private func requestRealtimeSuggestion(for turnId: UUID, said: String) -> Task<[TurnFix]?, Never> {
         // Words, not spaces: a Japanese line is one space-free run, and
         // counting on " " gave every Japanese turn a length of one — no
         // correction was ever requested on this path.
         guard WordSplitter.count(said) >= 3 else {
             // Too short to correct; a lesson still judges it (a name alone
             // can be a challenge done).
-            tutorCheck(turnId: turnId, said: said, fixes: [])
-            return
+            return Task { [] }
         }
         let target = appState.targetLanguage
         let native = appState.nativeLanguage
@@ -3155,7 +3162,7 @@ struct ConversationView: View {
         let content = heard.isEmpty
             ? "They said: \"\(said)\""
             : "They were just told: \"\(heard)\"\nThey said: \"\(said)\""
-        Task { @MainActor in
+        return Task { @MainActor () -> [TurnFix]? in
             let payload: ConversationTurnPayload?
             do {
                 payload = try await GeminiClient.background.sendJSON(
@@ -3181,25 +3188,18 @@ struct ConversationView: View {
                 ])
                 payload = nil
             }
-            // A lesson's tick needs the correction's answer, clean or not;
-            // a failed correction judges nothing.
-            if let payload {
-                tutorCheck(turnId: turnId, said: said,
-                           fixes: payload.turnSuggestion(for: said)?.fixes ?? [])
-            } else if tutorJudging {
-                // The lesson's turn is held for a verdict: judge it without
-                // the slips rather than leave it unanswered.
-                tutorCheck(turnId: turnId, said: said, fixes: [])
-            }
+            guard let payload else { return nil }
+            let fixes = payload.turnSuggestion(for: said)?.fixes ?? []
             // `transcript == said`: a turn that has since been joined with its
             // continuation is corrected as the whole line, not as its first half.
-            guard !isTornDown, let payload,
+            guard !isTornDown,
                   let suggestion = payload.turnSuggestion(for: said),
                   let idx = turns.firstIndex(where: { $0.id == turnId }),
-                  turns[idx].transcript == said else { return }
+                  turns[idx].transcript == said else { return fixes }
             turns[idx].suggestion = suggestion
             suggestionsShown += 1
             checkFocusRepeat(suggestion, turnId: turnId)
+            return fixes
         }
     }
 
@@ -4980,19 +4980,31 @@ struct ConversationView: View {
         await startRealtimeCall(opener: FreeTalkOpeners.tutorOpener(language: appState.targetLanguage))
     }
 
-    /// The learner said something while there is no lesson — or the last
-    /// one is finished and the tutor asked "another topic?": it may name the
-    /// next topic. The planner answers nil when it doesn't ("no, that's it
-    /// for today"), and the call simply goes on.
-    private func tutorHeard(_ text: String) {
+    /// EVERY learner turn of a tutor call lands here, once (2026-10-28,
+    /// founder: "the app decides, the tutor says it"). The stage is fixed
+    /// the moment the turn lands:
+    /// - no lesson → the line may name a topic (the tutor answers it itself:
+    ///   there is nothing to judge, and the plan's "ready" note follows);
+    /// - a challenge → `tutorCheck`;  the final check → `tutorFinalCheckTry`;
+    /// - a finished lesson → `tutorAfterLesson` (more / again / another).
+    /// While a lesson exists the gateway HOLDS the turn (`tutorJudging`) and
+    /// the tutor answers once, with the note each of those sends — every
+    /// branch below sends exactly one. The judge runs alongside the
+    /// correction, never after it, so the hold is one call long, not two.
+    private func tutorTurn(turnId: UUID, said: String, correction: Task<[TurnFix]?, Never>) {
         guard tutorThisCall, !tutorPlanning else { return }
-        if let done = tutorLesson, done.isFinished {
-            tutorAfterLesson(text, lesson: done)
+        guard let lesson = tutorLesson, lesson.droppedAt == nil else {
+            let asked = tutorLine(answeredBy: turnId)
+            startTutorLesson(request: said, askedWith: asked, picked: false, fromTopic: false)
             return
         }
-        guard tutorLesson == nil else { return }
-        let asked = turns.last(where: { $0.role == .fluentSelf })?.transcript ?? ""
-        startTutorLesson(request: text, askedWith: asked, picked: false, fromTopic: false)
+        if lesson.isFinished {
+            tutorAfterLesson(turnId: turnId, said: said, correction: correction, lesson: lesson)
+        } else if lesson.inFinalCheck {
+            tutorFinalCheckTry(turnId: turnId, said: said, correction: correction)
+        } else {
+            tutorCheck(turnId: turnId, said: said, correction: correction)
+        }
     }
 
     /// Write the curriculum for `request` and start it. `picked`: chosen on
@@ -5025,6 +5037,7 @@ struct ConversationView: View {
             tutorLastTry = ""
             tutorMissedThisChallenge = false
             tutorCleanOnce = false
+            tutorRepeatAsked = false
             sendTutorSystem()
             if lesson.inFinalCheck {
                 realtime.nudge("The learner picked a topic whose lesson they already did (see TUTOR MODE); only the final check is left. Say so in a few words and ask them to say it all in their own words, in one go — no example, no hints.")
@@ -5090,6 +5103,7 @@ struct ConversationView: View {
             tutorLastTry = ""
             tutorMissedThisChallenge = false
             tutorCleanOnce = false
+            tutorRepeatAsked = false
             Telemetry.log("tutor_lesson_started", ["challenges": String(lesson.challenges.count),
                                                    "picked": picked ? "1" : "0"])
             sendTutorSystem()
@@ -5111,24 +5125,23 @@ struct ConversationView: View {
     /// - right after a miss → ONCE MORE, so it sticks;
     /// - right on the first try, or right again after "once more" → DONE,
     ///   ticked, and the tutor starts the next challenge (or the final check).
-    private func tutorCheck(turnId: UUID, said: String, fixes: [TurnFix]) {
-        guard tutorThisCall, !tutorPlanning, let lesson = tutorLesson else { return }
-        if lesson.inFinalCheck {
-            tutorFinalCheckTry(turnId: turnId, said: said, fixes: fixes)
-            return
-        }
-        guard let i = lesson.current else { return }
+    private func tutorCheck(turnId: UUID, said: String, correction: Task<[TurnFix]?, Never>) {
+        guard let lesson = tutorLesson, let i = lesson.current else { return }
         let asked = tutorLine(answeredBy: turnId)
         let challenge = lesson.challenges[i]
+        let target = appState.targetLanguage
         Task { @MainActor in
             // Asked on every try, fixes or not: a request to change the
             // topic can come with a mistake in it.
-            let verdict = await TutorJudge.read(said, challenge: challenge,
-                                                targetLanguage: appState.targetLanguage,
-                                                askedWith: asked)
-            guard !isTornDown, var now = tutorLesson, now.id == lesson.id,
-                  now.current == i else { return }
+            async let judged = TutorJudge.read(said, challenge: challenge,
+                                               targetLanguage: target, askedWith: asked)
+            let fixes = await correction.value ?? []
+            let verdict = await judged
+            guard !isTornDown, tutorStillSaid(turnId, said), var now = tutorLesson,
+                  now.id == lesson.id, now.current == i else { return }
             if verdict?.wantsOtherTopic == true {
+                // The held turn's one line, before the lesson changes.
+                tutorNudge("They asked to leave this lesson. Agree right away in a few words — never \"let's finish this one first\". If they named what they'd like instead, say that's the new lesson and you're setting it up; otherwise ask what they'd like to practice.")
                 dropTutorLesson(said: said)
                 return
             }
@@ -5161,6 +5174,7 @@ struct ConversationView: View {
             tutorLastTry = ""
             tutorMissedThisChallenge = false
             tutorCleanOnce = false
+            tutorRepeatAsked = false
             now.challenges[i].doneAt = Date()
             now.challenges[i].line = said
             // The last tick opens the final check; passing it finishes the
@@ -5185,40 +5199,74 @@ struct ConversationView: View {
         }
     }
 
-    /// The lesson is done and the tutor asked "more of this, or another
-    /// topic?". More → a next round on the same topic, same session. Another
-    /// topic → this lesson's talk becomes its own book in the background and
-    /// the call carries on as a new session. Stop → nothing; End is theirs.
-    private func tutorAfterLesson(_ text: String, lesson: TutorLesson) {
-        let asked = turns.last(where: { $0.role == .fluentSelf })?.transcript ?? ""
-        let saidId = turns.last(where: { $0.role == .user })?.id
+    /// The lesson is done and the tutor asked "once more, more of this, or
+    /// another topic?". The turn is held; the app reads the answer and the
+    /// tutor says ONE line for it, sent BEFORE anything changes state, so
+    /// the reply never comes from a block that has already moved on.
+    /// A "once more" is judged like the final check (slips named), without
+    /// changing the pass.
+    private func tutorAfterLesson(turnId: UUID, said: String,
+                                  correction: Task<[TurnFix]?, Never>, lesson: TutorLesson) {
+        let asked = tutorLine(answeredBy: turnId)
+        let target = appState.targetLanguage
+        let repeating = tutorRepeatAsked
         let next = TutorCurriculum.next(
-            progress: TutorProgressStore.all(language: appState.targetLanguage),
+            progress: TutorProgressStore.all(language: target),
             level: appState.proficiency, excluding: lesson.topicId)
         Task { @MainActor in
-            guard let answer = await TutorNext.read(text, askedWith: asked, lesson: lesson.title,
-                                                    targetLanguage: appState.targetLanguage,
-                                                    suggested: next?.topic.english),
-                  !isTornDown, tutorLesson?.id == lesson.id, !tutorPlanning else { return }
-            Telemetry.log("tutor_after_lesson", ["choice": answer.choice.rawValue])
-            switch answer.choice {
+            if repeating {
+                tutorRepeatAsked = false
+                async let judged = TutorFinalCheck.read(said, lesson: lesson, askedWith: asked,
+                                                        targetLanguage: target)
+                let fixes = await correction.value ?? []
+                let verdict = await judged
+                guard !isTornDown, tutorStillSaid(turnId, said),
+                      tutorLesson?.id == lesson.id else { return }
+                if verdict?.attempt == true {
+                    let slips = fixes.map { "\"\($0.was)\" → \"\($0.now)\"" }
+                    if slips.isEmpty, verdict?.understood != false, (verdict?.missing ?? []).isEmpty {
+                        tutorNudge("Their once-more was clean. Say so warmly in a few words, then ask whether they want more of this topic or another one.")
+                    } else {
+                        tutorNudge("Their once-more:\(slips.isEmpty ? "" : " slips \(slips.joined(separator: "; ")).")\(verdict?.missing_note.map { " Missing or unclear: \($0)." } ?? "") Name each by saying it the right way, briefly — no \"great\". Then ask whether they want more of this topic or another one.")
+                    }
+                    return
+                }
+                // Not an attempt: read it as an answer to the question instead.
+            }
+            let answer = await TutorNext.read(said, askedWith: asked, lesson: lesson.title,
+                                              targetLanguage: target,
+                                              suggested: next?.topic.english)
+            guard !isTornDown, tutorStillSaid(turnId, said),
+                  tutorLesson?.id == lesson.id, !tutorPlanning else { return }
+            let choice = answer?.choice ?? .unclear
+            Telemetry.log("tutor_after_lesson", ["choice": choice.rawValue])
+            switch choice {
             case .more:
+                tutorNudge("They want more of this topic. Say great in a few words and that you're setting up the next round, a step further — nothing else yet.")
                 let done = lesson.challenges.map(\.task).joined(separator: "; ")
                 startTutorLesson(
                     request: "More practice on \"\(lesson.title)\" — the next round, one step further. Already done: \(done). New challenges only.",
                     picked: false, fromTopic: false, nextRoundOf: lesson)
             case .new:
-                saveTutorBookAndMoveOn(keepingFrom: saidId)
-                if let topic = answer.topic?.trimmingCharacters(in: .whitespacesAndNewlines),
-                   !topic.isEmpty {
+                let topic = answer?.topic?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                if topic.isEmpty {
+                    tutorNudge("They want another topic. Say you're saving today's lesson in their book, and ask what they want to practice next — they can also pick one from the button on their screen.")
+                } else {
+                    tutorNudge("They chose another topic: \"\(topic)\". Say you're saving today's lesson in their book and setting that one up — nothing else yet.")
+                }
+                saveTutorBookAndMoveOn(keepingFrom: turnId)
+                if !topic.isEmpty {
                     let isNext = next.map { topic.localizedCaseInsensitiveCompare($0.topic.english) == .orderedSame } ?? false
                     startTutorLesson(request: topic, picked: false, fromTopic: false,
                                      topicId: isNext ? next?.topic.id : nil)
                 }
             case .again:
-                realtime.nudge("They want to say it once more. Ask them to go ahead — the whole thing, in one go. When they have, name any slip by saying it the right way, briefly, then ask whether they want more of this or another topic.")
-            case .stop, .unclear:
-                break
+                tutorRepeatAsked = true
+                tutorNudge("They want to say it once more. Ask them to go ahead — the whole thing, in one go, no hints.")
+            case .stop:
+                tutorNudge("They're done for today. Say goodbye warmly in a few words; the call ends when they hang up. Don't start anything new.")
+            case .unclear:
+                tutorNudge("Answer what they said in one short line, then ask again, in other words: say it once more, more of this topic, or another topic?")
             }
         }
     }
@@ -5262,6 +5310,7 @@ struct ConversationView: View {
         tutorLastTry = ""
         tutorMissedThisChallenge = false
         tutorCleanOnce = false
+        tutorRepeatAsked = false
         turns = Array(turns[cut...])
         sessionId = UUID()
         sessionStartedAt = Date()
@@ -5303,6 +5352,7 @@ struct ConversationView: View {
         tutorLastTry = ""
         tutorMissedThisChallenge = false
         tutorCleanOnce = false
+        tutorRepeatAsked = false
         sendTutorSystem()
         if let said {
             // The tutor already agreed in its reply (the block's rule); the
@@ -5326,6 +5376,13 @@ struct ConversationView: View {
         }
     }
 
+    /// The turn still reads what was judged. A turn the learner carried on
+    /// after a pause is joined and judged again as a whole; the verdict on
+    /// its first half must not answer it too.
+    private func tutorStillSaid(_ turnId: UUID, _ said: String) -> Bool {
+        turns.first(where: { $0.id == turnId })?.transcript == said
+    }
+
     /// The tutor line the learner's turn ANSWERED: the last one before it.
     /// Never "the newest tutor line" — the check runs after the correction
     /// call, by when the tutor has usually already replied, so the judge
@@ -5343,24 +5400,27 @@ struct ConversationView: View {
     /// say: a pass names every slip (praise only for a clean answer), a
     /// shaky pass is asked for once more first, a missing part is named and
     /// practiced. It can't be skipped (founder, 2026-10-28).
-    private func tutorFinalCheckTry(turnId: UUID, said: String, fixes: [TurnFix]) {
+    private func tutorFinalCheckTry(turnId: UUID, said: String, correction: Task<[TurnFix]?, Never>) {
         guard let lesson = tutorLesson, lesson.inFinalCheck else { return }
         let asked = tutorLine(answeredBy: turnId)
-        let slips = fixes.map { "\"\($0.was)\" → \"\($0.now)\"" }
+        let target = appState.targetLanguage
         Task { @MainActor in
-            let verdict = await TutorFinalCheck.read(said, lesson: lesson, askedWith: asked,
-                                                     targetLanguage: appState.targetLanguage)
-            guard !isTornDown, var now = tutorLesson, now.id == lesson.id, now.inFinalCheck,
-                  var check = now.check else { return }
+            async let judged = TutorFinalCheck.read(said, lesson: lesson, askedWith: asked,
+                                                    targetLanguage: target)
+            let fixes = await correction.value ?? []
+            let slips = fixes.map { "\"\($0.was)\" → \"\($0.now)\"" }
+            let verdict = await judged
+            guard !isTornDown, tutorStillSaid(turnId, said), var now = tutorLesson,
+                  now.id == lesson.id, now.inFinalCheck, var check = now.check else { return }
             guard let verdict else {
-                realtime.nudge("The app couldn't check that answer. Ask them, in a few words, to say it all once more, in one go.")
+                tutorNudge("The app couldn't check that answer. Ask them, in a few words, to say it all once more, in one go.")
                 return
             }
             let outcome = TutorFinalCheck.outcome(verdict, slips: slips.count,
                                                   onceMoreUsed: check.onceMoreUsed)
             guard outcome != .notAnAttempt else {
                 // The turn is held for a note: answer it as what it was.
-                realtime.nudge("Final check: that was not an attempt at the whole thing (a question, a remark, or one part only). Answer what they said in a line, give no verdict and no hints, then ask them to say it all, in one go.")
+                tutorNudge("Final check: that was not an attempt at the whole thing (a question, a remark, or one part only).\(slips.isEmpty ? "" : " Slips in it: \(slips.joined(separator: "; ")) — say that line back the right way first.") Answer what they said in a line, give no verdict on the whole, then ask them to say it all, in one go.")
                 return
             }
             // A whole try with nothing on screen: the one tutor line that is
@@ -5382,13 +5442,13 @@ struct ConversationView: View {
                 TutorLessonStore.save(now)
                 tutorLesson = now
                 let what = verdict.missing_note.map { "Missing or unclear: \($0)." } ?? ""
-                realtime.nudge("Final check result: NOT YET. \(what)\(slips.isEmpty ? "" : " Slips: \(slipList).") Tell them plainly, in a few words, what was missing — no \"great job\", nothing that sounds like a pass. Then practice just that part once: give them the line for it and ask them to say it. After that, ask for the whole thing again, in one go, with no hints.")
+                tutorNudge("Final check result: NOT YET. \(what)\(slips.isEmpty ? "" : " Slips: \(slipList).") Tell them plainly, in a few words, what was missing — no \"great job\", nothing that sounds like a pass. Then practice just that part once: give them the line for it and ask them to say it. After that, ask for the whole thing again, in one go, with no hints.")
             case .onceMore:
                 check.onceMoreUsed = true
                 now.check = check
                 TutorLessonStore.save(now)
                 tutorLesson = now
-                realtime.nudge("Final check result: ONCE MORE. Every part was there and you understood it, but it wasn't clean yet.\(slips.isEmpty ? "" : " Slips: \(slipList).") Don't say they passed. Say you understood all of it\(slips.isEmpty ? "" : ", name each slip by saying it the right way, briefly"), and ask them to say the whole thing once more, in one go\(slips.isEmpty ? ", a little more smoothly" : ", with those fixed"). Don't call it great.")
+                tutorNudge("Final check result: ONCE MORE. Every part was there and you understood it, but it wasn't clean yet.\(slips.isEmpty ? "" : " Slips: \(slipList).") Don't say they passed. Say you understood all of it\(slips.isEmpty ? "" : ", name each slip by saying it the right way, briefly"), and ask them to say the whole thing once more, in one go\(slips.isEmpty ? ", a little more smoothly" : ", with those fixed"). Don't call it great.")
             case .pass:
                 check.passedAt = Date()
                 check.line = said
@@ -5417,9 +5477,9 @@ struct ConversationView: View {
                 tutorJustTicked = false
                 sendTutorSystem()
                 if slips.isEmpty {
-                    realtime.nudge("Final check result: PASSED, nothing to fix. Tell them warmly that they passed — they can say it now, on their own. Then ask whether they want more of this or another topic.\(nextLine)")
+                    tutorNudge("Final check result: PASSED, nothing to fix. Tell them warmly that they passed — they can say it now, on their own. Then ask whether they want more of this or another topic.\(nextLine)")
                 } else {
-                    realtime.nudge("Final check result: PASSED. They said every part and you understood them. Slips: \(slipList). Tell them they passed and that you understood all of it, then name each slip in a few words by saying it the right way (\"one small thing: …\"). Don't call it great, perfect or flawless. Then ask whether they'd like to say it once more, or move on.\(nextLine)")
+                    tutorNudge("Final check result: PASSED. They said every part and you understood them. Slips: \(slipList). Tell them they passed and that you understood all of it, then name each slip in a few words by saying it the right way (\"one small thing: …\"). Don't call it great, perfect or flawless. Then ask whether they'd like to say it once more, or move on.\(nextLine)")
                 }
             }
         }
@@ -5444,7 +5504,7 @@ struct ConversationView: View {
     /// waits for the app's verdict.
     private var tutorJudging: Bool {
         guard tutorThisCall, !tutorPlanning, let lesson = tutorLesson else { return false }
-        return !lesson.isFinished && lesson.droppedAt == nil
+        return lesson.droppedAt == nil
     }
 
     private var tutorInFinalCheck: Bool {
