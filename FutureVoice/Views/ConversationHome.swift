@@ -912,6 +912,8 @@ private struct TalkHeroSection: View {
     /// Latest reported global frame of the ring surface (local; see the
     /// preference handler below for why it is not published).
     @State private var ringFrame: CGRect = .zero
+    @State private var mode = TalkRingMode.current
+    @AppStorage(TutorMode.key) private var tutorModeOn = false
 
     var body: some View {
         heroSection
@@ -1130,59 +1132,118 @@ private struct TalkHeroSection: View {
                 .rotationEffect(.degrees(-90))
                 .opacity(progress > 0.97 ? 1 : 0)
 
-            Button {
-                // The gate lives in RootTabView's `startFreeTalk`, which is
-                // where BOTH paths into a free talk meet (this ring and the
-                // widget's deep link). Checking here as well would ask the
-                // server the same question twice for one tap.
-                onTap(ringFrame)
-            } label: {
-                ZStack {
-                    Futureself(mode: .idle, level: 0, virtualHeight: 64)
-                    // Wash the surface toward the page background so the
-                    // circle sits IN the page instead of glowing against it
-                    // (the shader's own base runs brighter than grouped bg).
-                    Color(.systemGroupedBackground).opacity(0.35)
-                    // Uniform inner shadow — a blurred inner ring, masked to
-                    // the circle so the vignette hugs the whole edge evenly
-                    // (a one-sided shadow here reads as a lighting mistake).
-                    // Light mode gets a MUCH gentler pass: on the airy light
-                    // surface the dark-mode strength reads as a hole.
-                    // Tight spread: a narrow stroke + small blur keeps the
-                    // vignette hugging the rim instead of flooding inward.
-                    Circle()
-                        .strokeBorder(Color.black.opacity(colorScheme == .dark ? 0.45 : 0.15),
-                                      lineWidth: 10)
-                        .blur(radius: 6)
-                        .mask(Circle())
-                    VStack(spacing: 6) {
-                        Text("Let's talk")
-                            .geistPixel(20)
-                            .foregroundStyle(.primary)
-                        Text(headline)
-                            .font(.footnote.weight(.medium))
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
+            // The surface stays put; only the label on top of it pages
+            // (2026-10-28, founder: three modes, swiped on the inside of the
+            // ring — the arc is the day's goal and does not move).
+            ZStack {
+                Futureself(mode: .idle, level: 0, virtualHeight: 64)
+                // Wash the surface toward the page background so the
+                // circle sits IN the page instead of glowing against it
+                // (the shader's own base runs brighter than grouped bg).
+                Color(.systemGroupedBackground).opacity(0.35)
+                // Uniform inner shadow — a blurred inner ring, masked to
+                // the circle so the vignette hugs the whole edge evenly
+                // (a one-sided shadow here reads as a lighting mistake).
+                // Light mode gets a MUCH gentler pass: on the airy light
+                // surface the dark-mode strength reads as a hole.
+                Circle()
+                    .strokeBorder(Color.black.opacity(colorScheme == .dark ? 0.45 : 0.15),
+                                  lineWidth: 10)
+                    .blur(radius: 6)
+                    .mask(Circle())
+                    .allowsHitTesting(false)
+                TabView(selection: $mode) {
+                    ForEach(TalkRingMode.allCases, id: \.self) { m in
+                        Button {
+                            // The gate lives in RootTabView's `startFreeTalk`,
+                            // which is where BOTH paths into a free talk meet
+                            // (this ring and the widget's deep link).
+                            guard m.isAvailable else { return }
+                            onTap(ringFrame)
+                        } label: {
+                            VStack(spacing: 6) {
+                                Text(m.title)
+                                    .geistPixel(20)
+                                    .foregroundStyle(m.isAvailable ? .primary : .secondary)
+                                Text(m.isAvailable ? headline : explain("Coming soon"))
+                                    .font(.footnote.weight(.medium))
+                                    .monospacedDigit()
+                                    .foregroundStyle(.secondary)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(m == .freeTalk ? accessibilityLabel : m.title)
+                        .tag(m)
                     }
                 }
-                // 260 = the 280 frame minus the 20 pt stroke: the surface
-                // meets the ring's inner edge with no gap.
-                .frame(width: 260, height: 260)
-                // The proxy morph needs the surface's live pose (global) —
-                // reported from HERE so it tracks layout, not guesses.
-                .background(GeometryReader { g in
-                    Color.clear.preference(key: TalkRingFrameKey.self,
-                                           value: g.frame(in: .global))
-                })
-                .clipShape(Circle())
-                .overlay(Circle().strokeBorder(Color(.separator).opacity(0.4), lineWidth: 0.5))
-                .contentShape(Circle())
+                .tabViewStyle(.page(indexDisplayMode: .never))
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(accessibilityLabel)
+            // 260 = the 280 frame minus the 20 pt stroke: the surface
+            // meets the ring's inner edge with no gap.
+            .frame(width: 260, height: 260)
+            // The proxy morph needs the surface's live pose (global) —
+            // reported from HERE so it tracks layout, not guesses.
+            .background(GeometryReader { g in
+                Color.clear.preference(key: TalkRingFrameKey.self,
+                                       value: g.frame(in: .global))
+            })
+            .clipShape(Circle())
+            .overlay(Circle().strokeBorder(Color(.separator).opacity(0.4), lineWidth: 0.5))
+            .contentShape(Circle())
         }
         .frame(width: 280, height: 280)
+        // The dots sit in the gap under the ring as an overlay, so the
+        // hero's centring maths (ring centre 160 pt above its bottom) holds.
+        .overlay(alignment: .bottom) {
+            HStack(spacing: 8) {
+                ForEach(TalkRingMode.allCases, id: \.self) { m in
+                    Circle()
+                        .fill(m == mode ? Color.primary : Color.primary.opacity(0.2))
+                        .frame(width: 6, height: 6)
+                }
+            }
+            .offset(y: 36)
+            .animation(.easeOut(duration: 0.2), value: mode)
+            .accessibilityHidden(true)
+        }
+        .onChange(of: mode) { _, m in
+            // The ring IS the tutor switch: the call reads the same key the
+            // Call settings toggle writes. Pronunciation isn't built yet and
+            // leaves the last real mode as it was.
+            switch m {
+            case .freeTalk: tutorModeOn = false
+            case .tutor: tutorModeOn = true
+            case .pronunciation: break
+            }
+            HapticEngine.selection()
+        }
+        // Flipped from Call settings: the ring follows.
+        .onChange(of: tutorModeOn) { _, on in
+            if mode != .pronunciation { mode = on ? .tutor : .freeTalk }
+        }
     }
+}
+
+/// The three things the home ring can start (2026-10-28). Free talk and the
+/// tutor are the same call with `TutorMode` off or on; pronunciation is a
+/// placeholder until its lesson exists.
+enum TalkRingMode: Int, CaseIterable {
+    case freeTalk, tutor, pronunciation
+
+    var title: String {
+        switch self {
+        case .freeTalk: return explain("Let's talk")
+        case .tutor: return explain("Tutor")
+        case .pronunciation: return explain("Pronunciation")
+        }
+    }
+
+    var isAvailable: Bool { self != .pronunciation }
+
+    /// What the ring shows on launch — the last mode the learner swiped to.
+    static var current: TalkRingMode { TutorMode.isOn ? .tutor : .freeTalk }
 }
 
 /// One talkable scenario — role icon for a face, one-line title, partner

@@ -1385,7 +1385,7 @@ struct ConversationView: View {
             // ("Did you see the news about…?"), which only ever fit the bar
             // cut off with an ellipsis.
             LevelHeaderTitle(title: topicIsNews ? explain("News")
-                                 : topic.isEmpty ? explain("Let's talk") : topic,
+                                 : topic.isEmpty ? emptyTopicTitle : topic,
                              level: appState.proficiency,
                              surface: .talk,
                              minutesLeft: meter.minutesRemaining.flatMap { $0 <= 10 ? $0 : nil },
@@ -2206,7 +2206,13 @@ struct ConversationView: View {
 
     /// What the lock screen calls this call. The same words the toolbar shows.
     private var callDisplayTitle: String {
-        topic.isEmpty ? explain("Let's talk") : topic
+        topic.isEmpty ? emptyTopicTitle : topic
+    }
+
+    /// A call with no topic is named after the home ring's page it came
+    /// from: the tutor call is "Tutor", not "Let's talk".
+    private var emptyTopicTitle: String {
+        (tutorThisCall ? TalkRingMode.tutor : TalkRingMode.freeTalk).title
     }
 
     // MARK: - Surviving the screen going away

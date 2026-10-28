@@ -475,7 +475,7 @@ struct RootTabView: View {
                 // is the EXACT two-line stack the home ring renders, so the
                 // hand-off never shifts "Let's talk" vertically.
                 VStack(spacing: 6) {
-                    Text("Let's talk")
+                    Text(TalkRingMode.current.title)
                         .geistPixel(20)
                         .foregroundStyle(.primary)
                     Text(appState.talkRingHeadline)
