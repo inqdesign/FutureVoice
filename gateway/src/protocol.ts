@@ -127,6 +127,13 @@ export interface SetMessage {
   manualTurns?: boolean
   /** Ignored (see `StartMessage.meterFromStart`). */
   meterFromStart?: boolean
+  /** Answer each committed turn only once a `nudge` arrives (2026-10-28,
+   *  tutor mode's final check): the app judges the answer and the reply is
+   *  written WITH its verdict, as one line. Without it the model answered
+   *  the turn on its own and the verdict came as a second line a few
+   *  seconds later, often contradicting the first. A turn left waiting
+   *  `holdReplyMaxMs` is answered anyway. An older gateway ignores it. */
+  holdReplies?: boolean
 }
 
 export type ClientMessage = StartMessage | SayMessage | EndMessage | SetMessage

@@ -952,6 +952,13 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         sendControl(["type": "set", "manualTurns": on])
     }
 
+    /// Tutor mode's final check: each answer waits for the app's verdict
+    /// note and is answered once, with it. An older gateway ignores it.
+    func setHoldReplies(_ on: Bool) {
+        guard !isTornDown else { return }
+        sendControl(["type": "set", "holdReplies": on])
+    }
+
     /// Tutor mode switched mid-call: counted from now on, or from the
     /// learner's first turn again.
     func setMeterFromStart(_ on: Bool) {

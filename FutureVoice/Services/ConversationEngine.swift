@@ -615,10 +615,11 @@ enum ConversationEngine {
               all now, in their own words, in one go, as if they were really \
               in that situation. No example line, no list of what to include, \
               no hints of any kind.
-            - When they've answered: say only a few words ("Okay, let me \
-              check that") — nothing about whether it was right or wrong, no \
-              praise, no correction. The app checks it and a note with the \
-              result follows a moment later; THEN you tell them.
+            - Their answer reaches you together with the app's note giving \
+              the result: answer it the way the note says, in that one turn. \
+              Never judge an answer yourself — not "okay, now the rest", not \
+              "almost", not praise. If an answer ever comes with no note, \
+              say only a few words ("Okay, let me check that").
             - Stuck or asking for help → a few words of encouragement, \
               nothing of the answer: they can say it simply, their own way.
             - They can't skip it. If they ask to change the topic or stop \

@@ -3154,6 +3154,10 @@ struct ConversationView: View {
             if let payload {
                 tutorCheck(turnId: turnId, said: said,
                            fixes: payload.turnSuggestion(for: said)?.fixes ?? [])
+            } else if tutorInFinalCheck {
+                // The final check's turn is held for a verdict: judge it
+                // without the slips rather than leave it unanswered.
+                tutorCheck(turnId: turnId, said: said, fixes: [])
             }
             // `transcript == said`: a turn that has since been joined with its
             // continuation is corrected as the whole line, not as its first half.
@@ -4934,6 +4938,7 @@ struct ConversationView: View {
             tutorLesson = saved
             await startRealtimeCall(opener: nil)
             if saved.inFinalCheck {
+                realtime.setHoldReplies(true)
                 realtime.nudge("The learner is back for the final check of last time's lesson (see TUTOR MODE). Greet them in a few words, say the only thing left is the final check, and ask them to say it all in their own words, in one go — no example, no hints.")
             } else {
                 realtime.nudge("The learner is back to finish last time's lesson (see TUTOR MODE). Greet them in a few words, say you're picking it up where you left off and which challenge is next, give its example line, and ask them to say it.")
@@ -5320,7 +5325,11 @@ struct ConversationView: View {
             }
             let outcome = TutorFinalCheck.outcome(verdict, slips: slips.count,
                                                   onceMoreUsed: check.onceMoreUsed)
-            guard outcome != .notAnAttempt else { return }
+            guard outcome != .notAnAttempt else {
+                // The turn is held for a note: answer it as what it was.
+                realtime.nudge("Final check: that was not an attempt at the whole thing (a question, a remark, or one part only). Answer what they said in a line, give no verdict and no hints, then ask them to say it all, in one go.")
+                return
+            }
             // A whole try with nothing on screen: the one tutor line that is
             // evidence of their level (founder, 2026-10-28). Stamped when the
             // talk is saved (`tutorRoled`).
@@ -5405,6 +5414,9 @@ struct ConversationView: View {
     private func sendTutorSystem() {
         guard RealtimeMode.isEnabled, phoneCallActive else { return }
         realtime.setSystem(systemPrompt() + Self.realtimeStyleRules)
+        // During the final check the tutor answers only with the app's
+        // verdict, so an answer is never met twice (device, 2026-10-28).
+        realtime.setHoldReplies(tutorInFinalCheck)
     }
 
     private func systemPrompt() -> String {
