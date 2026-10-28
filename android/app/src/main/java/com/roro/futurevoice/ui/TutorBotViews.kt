@@ -63,7 +63,9 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
@@ -153,8 +155,9 @@ fun TutorBotButton(state: AppState) {
 
 /**
  * The note and the bubble, laid over the Talk home above the bottom row (iOS
- * `TutorBotLayer`). Nothing is dimmed and nothing blocks: a tap outside the
- * note folds it back into the face. [bottom] is where the bottom row's top
+ * `TutorBotLayer`). While the note is up the page behind it goes soft (the
+ * Talk home's own overlay) and a tap outside the note folds it back into the
+ * face. [bottom] is where the bottom row's top
  * edge sits over the floating bar.
  */
 @Composable
@@ -180,7 +183,7 @@ fun TutorBotLayer(state: AppState, onOpenRoutine: () -> Unit) {
                     fadeOut(tween(350)),
             ) {
                 TutorNoteCard(state, onOpenRoutine,
-                    Modifier.padding(start = 12.dp, end = 12.dp, bottom = 84.dp))
+                    Modifier.padding(start = 12.dp, end = 12.dp, bottom = 80.dp))
             }
             val b = TutorBot.bubble
             AnimatedVisibility(
@@ -201,23 +204,90 @@ fun TutorBotLayer(state: AppState, onOpenRoutine: () -> Unit) {
 
 @Composable
 private fun TutorNoteCard(state: AppState, onOpenRoutine: () -> Unit, modifier: Modifier) {
+    val shape = remember { tutorNoteShape() }
     Column(
         modifier
             .widthIn(max = 420.dp)
-            .shadow(20.dp, RoundedCornerShape(24.dp), ambientColor = Color.Black.copy(alpha = 0.18f),
+            .shadow(20.dp, shape, ambientColor = Color.Black.copy(alpha = 0.18f),
                 spotColor = Color.Black.copy(alpha = 0.18f))
-            .background(AppSurfaces.card, RoundedCornerShape(24.dp))
+            .background(AppSurfaces.card, shape)
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
-            .padding(16.dp),
+            .padding(16.dp)
+            .padding(bottom = TUTOR_NOTE_TAIL_HEIGHT),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         if (TutorBot.introShown) TutorIntro() else TutorPlan(state, onOpenRoutine)
     }
 }
 
+private val TUTOR_NOTE_TAIL_HEIGHT = 12.dp
+
+/**
+ * The note's card with a tail at the bottom right pointing down at the
+ * tutor's face ([TutorBotButton]), so the note reads as the face talking
+ * (iOS `TutorNoteShape`, 2ff90516). ONE outline: the tail is unioned into
+ * the rounded card (iOS 7a0f3e0f) — two overlapping pieces met along a
+ * visible seam. [tailInset] is from the card's trailing edge to the tail's
+ * centre: the card sits 12 dp in from the screen edge and the face's centre
+ * 47 dp (the row's 21 dp + half of 52; iOS's 38 is its own 12 → ~50 pt).
+ */
+private fun tutorNoteShape(
+    cornerRadius: androidx.compose.ui.unit.Dp = 24.dp,
+    tailInset: androidx.compose.ui.unit.Dp = 35.dp,
+    tailHalfWidth: androidx.compose.ui.unit.Dp = 11.dp,
+) = object : androidx.compose.ui.graphics.Shape {
+    override fun createOutline(
+        size: androidx.compose.ui.geometry.Size,
+        layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+        density: androidx.compose.ui.unit.Density,
+    ): androidx.compose.ui.graphics.Outline = with(density) {
+        val bodyBottom = size.height - TUTOR_NOTE_TAIL_HEIGHT.toPx()
+        val r = cornerRadius.toPx()
+        val card = androidx.compose.ui.graphics.Path().apply {
+            addRoundRect(androidx.compose.ui.geometry.RoundRect(
+                0f, 0f, size.width, bodyBottom, androidx.compose.ui.geometry.CornerRadius(r, r)))
+        }
+        val x = size.width - tailInset.toPx()
+        val half = tailHalfWidth.toPx()
+        val tail = androidx.compose.ui.graphics.Path().apply {
+            moveTo(x - half, bodyBottom - 2.dp.toPx())
+            lineTo(x, size.height)
+            lineTo(x + half, bodyBottom - 2.dp.toPx())
+            close()
+        }
+        androidx.compose.ui.graphics.Outline.Generic(
+            androidx.compose.ui.graphics.Path.combine(
+                androidx.compose.ui.graphics.PathOperation.Union, card, tail))
+    }
+}
+
+/**
+ * The Talk page behind the tutor's note: blurred (API 31+), the blur half of
+ * iOS's `ultraThinMaterial` overlay (2ff90516); the Talk home lays the wash
+ * over it.
+ */
 @Composable
-private fun TutorFace() {
-    WeeklyTestCharacter(WeeklyTestHost.Mood.HAPPY, TutorBot.bubbleSince, Modifier.size(40.dp))
+fun Modifier.softenedPage(on: Boolean): Modifier {
+    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) return this
+    val t by androidx.compose.animation.core.animateFloatAsState(
+        if (on) 1f else 0f, tween(300), label = "softenedPage")
+    return if (t > 0f) this.blur((16 * t).dp) else this
+}
+
+/**
+ * The two other buttons of the Talk home's bottom row while the tutor's note
+ * is up: out of focus and out of reach, so only the face stays sharp (iOS
+ * `SoftenedBehindNote`). Their taps already land on the note layer's catcher.
+ */
+@Composable
+fun Modifier.softenedBehindNote(on: Boolean): Modifier {
+    val t by androidx.compose.animation.core.animateFloatAsState(
+        if (on) 1f else 0f, tween(300), label = "softened")
+    return this
+        .then(if (t > 0f && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S)
+            Modifier.blur((6 * t).dp, androidx.compose.ui.draw.BlurredEdgeTreatment.Unbounded)
+            else Modifier)
+        .graphicsLayer { alpha = 1f - 0.5f * t }
 }
 
 /** The first meeting: who this is and what it does. */
@@ -225,9 +295,9 @@ private fun TutorFace() {
 private fun TutorIntro() {
     val context = LocalContext.current
     Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        TutorFace()
+        // No face in the note: it sits over the tutor's own face (iOS 7a0f3e0f).
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(stringResource(R.string.hi_i_m_your_tutor), style = MaterialTheme.typography.titleMedium,
+            Text(stringResource(R.string.your_own_nawana_tutor), style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold)
             Text(stringResource(R.string.i_know_your_routine_your_talks_your_mistakes_and_your_cards_651e4d),
                 style = MaterialTheme.typography.bodyMedium)
@@ -276,7 +346,6 @@ private fun TutorPlan(state: AppState, onOpenRoutine: () -> Unit) {
     val res = context.resources
     val t = TutorBot.today
     Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        TutorFace()
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(TutorCopy.greeting(res), style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold)
