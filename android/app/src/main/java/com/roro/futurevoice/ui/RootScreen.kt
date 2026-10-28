@@ -1687,6 +1687,10 @@ fun RootScreen() {
             guideBlocked = paywalled || showIntroPreview || state.levelUp != null ||
                 referralJoin != null || welcomeMinutes != null || updatePending != null || showAgeCheck ||
                 showWhatsNew || buildingRoutine || firstRunHeld,
+            // The tutor speaks only to a Talk home nothing covers (iOS
+            // `refreshTutor`'s `visible`): no call, page or sheet over it.
+            tutorCovered = rootStack.size > 1 || tabSheetStack != null || pageSheet != null ||
+                paywalled || routineHint,
         )
             },
           )
@@ -1941,6 +1945,8 @@ internal fun HomeScreen(
     /** Any call has just closed — the once-only backup offer may follow. */
     backupPending: Boolean = false,
     onBackupConsumed: () -> Unit = {},
+    /** Something the root owns is over the tabs — the tutor stays quiet. */
+    tutorCovered: Boolean = false,
 ) {
     val context = LocalContext.current
     var showDeepen by remember { mutableStateOf(false) }
@@ -2034,6 +2040,30 @@ internal fun HomeScreen(
     fun launch(topic: String, facts: List<String>, scenarioId: String? = null, mint: Scenario? = null,
                blurb: String = "", entry: String) =
         launchCall(PendingLaunch(topic, facts, scenarioId, mint, blurb, entry))
+
+    // The tutor re-reads the day and, if the Talk home is really in front of
+    // the learner, says what there is to say (iOS `refreshTutor`): on
+    // arriving, on coming back to the foreground or out from under a page or
+    // call, and every minute while the page sits open, for a planned time
+    // arriving. The delay lets a call's cover or a tab switch settle first.
+    run {
+        val lifecycle = androidx.compose.ui.platform.LocalLifecycleOwner.current.lifecycle
+        val resumed = lifecycle.currentStateFlow.collectAsStateWithLifecycle().value
+            .isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
+        val onTalk = tab == HomeTab.TALK
+        val tutorVisible by androidx.compose.runtime.rememberUpdatedState(onTalk && resumed && !tutorCovered)
+        val tutorState by androidx.compose.runtime.rememberUpdatedState(state)
+        LaunchedEffect(onTalk, resumed, tutorCovered) {
+            if (!onTalk) return@LaunchedEffect
+            kotlinx.coroutines.delay(1200)
+            while (true) {
+                val s = tutorState
+                com.roro.futurevoice.talk.TutorBot.refresh(context, s.targetLanguage, s.nativeLanguage, s.level,
+                    visible = { tutorVisible })
+                kotlinx.coroutines.delay(60_000)
+            }
+        }
+    }
 
     // Writing a situation on the Watch map: the tab bar steps aside for the
     // box, and the title for Cancel (iOS `WatchCreation`).
@@ -2262,7 +2292,8 @@ internal fun HomeScreen(
         }
         // Talk's bottom row (iOS `ConversationHome`'s overlay, 2026-10-18,
         // founder): the situation player on the left, "Find a topic" centred,
-        // the quick quiz's face on the right. The two side slots take equal
+        // the tutor's face on the right (the quick quiz's until 2026-10-28;
+        // the quiz is now one of the things the tutor hands you). The two side slots take equal
         // widths so the centre never moves. Above the floating bar, fixed
         // while the page scrolls under it. 21 dp in from the edges, flush with
         // the tab bar's capsule: measured off iOS, where the row lands at 21pt
@@ -2293,10 +2324,13 @@ internal fun HomeScreen(
                         maxLines = 1)
                 }
                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
-                    QuickQuizButton(language = state.targetLanguage, native = state.nativeLanguage,
-                        level = state.level)
+                    TutorBotButton(state)
                 }
             }
+        }
+        // The tutor's note and bubble, over the page and above the row.
+        if (tab == HomeTab.TALK && !writingSituation) {
+            TutorBotLayer(state, onOpenRoutine = onOpenActivity)
         }
         // The feather under the floating bar (iOS `tabBarScrollFeather`):
         // from the physical bottom edge, 44 dp of page colour and a 72 dp

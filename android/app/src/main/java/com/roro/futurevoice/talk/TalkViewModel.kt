@@ -2296,6 +2296,8 @@ object TalkEntry {
     const val WEEK_RECAP = "week_recap"
     const val PROGRESS_TIP = "progress_tip"
     const val ROUTINE = "routine"
+    /** The tutor bot's note, bubble or chat ([TutorBot]). */
+    const val TUTOR_BOT = "tutor_bot"
     const val SCENARIO_BOOK = "scenario_book"
     const val PRACTICE_BOOK = "practice_book"
     /** The empty Review page's "Start a talk". */
