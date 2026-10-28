@@ -945,9 +945,12 @@ fun TalkScreen(
                                 name = stringResource(R.string.you),
                                 scale = DialogueScale.CALL,
                             ) {
+                                // Dimmed from the BUBBLE's text colour (iOS): a
+                                // fixed onSurfaceVariant all but vanished into
+                                // mono's solid ink bubble.
                                 Text(
                                     state.partial.ifBlank { stringResource(R.string.listening) },
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = androidx.compose.material3.LocalContentColor.current.copy(alpha = 0.6f),
                                     fontStyle = if (state.partial.isBlank()) FontStyle.Italic else FontStyle.Normal,
                                 )
                             }
