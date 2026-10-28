@@ -723,6 +723,16 @@
         }
       }
     },
+    "%lld done, %lld to go, about %lld minutes." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld개 했고 %lld개 남았어요. %lld분쯤이면 돼요."
+          }
+        }
+      }
+    },
     "%lld min other practice" : {
       "localizations" : {
         "de" : {
@@ -7487,6 +7497,16 @@
         }
       }
     },
+    "Show me today" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 할 일 보기"
+          }
+        }
+      }
+    },
     "Sign in to a Google account on this device, then try again." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -13710,6 +13730,16 @@
         }
       }
     },
+    "%lld cards from your own talks are waiting." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 대화에서 나온 카드 %lld장이 기다리고 있어요."
+          }
+        }
+      }
+    },
     "%lld characters/min" : {
       "localizations" : {
         "de" : {
@@ -14175,6 +14205,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "連續 %lld 天"
+          }
+        }
+      }
+    },
+    "%lld days in a row. Keep it going." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld일째 이어 오고 있어요. 오늘도 이어 가요."
           }
         }
       }
@@ -26563,6 +26603,16 @@
         }
       }
     },
+    "Am I getting better?" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "실력이 늘고 있나요?"
+          }
+        }
+      }
+    },
     "American" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -28446,6 +28496,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "想用多少就用多少，不設限"
+          }
+        }
+      }
+    },
+    "Ask me" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "물어보기"
+          }
+        }
+      }
+    },
+    "Ask me anything about your practice. I answer from your own talks, cards and routine." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "연습에 관해 뭐든 물어보세요. 지금까지의 대화와 카드, 루틴을 보고 답해 드릴게요."
+          }
+        }
+      }
+    },
+    "Ask me anything…" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "뭐든 물어보세요…"
+          }
+        }
+      }
+    },
+    "Ask what to do next" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다음에 뭘 할지 물어보기"
           }
         }
       }
@@ -49410,6 +49500,16 @@
         }
       }
     },
+    "Everything for today is done. See you tomorrow." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 할 일은 다 끝났어요. 내일 또 봐요."
+          }
+        }
+      }
+    },
     "Everything here waits three days before it comes back." : {
       "localizations" : {
         "de" : {
@@ -57448,6 +57548,16 @@
         }
       }
     },
+    "Good evening." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "좋은 저녁이에요."
+          }
+        }
+      }
+    },
     "Good morning" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -57491,6 +57601,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "早安"
+          }
+        }
+      }
+    },
+    "Good morning." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "좋은 아침이에요."
           }
         }
       }
@@ -59605,6 +59725,26 @@
         }
       }
     },
+    "Hi there." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "안녕하세요."
+          }
+        }
+      }
+    },
+    "Hi, I'm your tutor." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "안녕하세요, 튜터예요."
+          }
+        }
+      }
+    },
     "Hi. It's me.\nYou, already fluent." : {
       "localizations" : {
         "de" : {
@@ -60432,6 +60572,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你們的故事是怎麼開始的？"
+          }
+        }
+      }
+    },
+    "How do I reach the next level?" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다음 레벨로 가려면 어떻게 해요?"
           }
         }
       }
@@ -63793,6 +63943,16 @@
         }
       }
     },
+    "I couldn't answer that just now. Try again in a moment." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지금은 답을 못 했어요. 잠시 뒤에 다시 물어봐 주세요."
+          }
+        }
+      }
+    },
     "I go to the office early yesterday, so I left at four." : {},
     "I know" : {
       "localizations" : {
@@ -63836,6 +63996,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "我會了"
+          }
+        }
+      }
+    },
+    "I know your routine, your talks, your mistakes and your cards. My job is that you always know what to do next, and why." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "루틴, 지금까지 나눈 대화, 자주 하는 실수, 복습 카드까지 다 알고 있어요. 다음에 뭘 하면 되는지, 왜 그걸 하는지 늘 알 수 있게 돕는 게 제 일이에요."
           }
         }
       }
@@ -73360,6 +73530,16 @@
         }
       }
     },
+    "Make a routine" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "루틴 만들기"
+          }
+        }
+      }
+    },
     "Make a situation" : {
       "comment" : "A button label that says \"Make a situation\" in the context of a \"Find Person Card\".",
       "isCommentAutoGenerated" : true,
@@ -81075,6 +81255,16 @@
         }
       }
     },
+    "Nice, %@ done. Next up: %@." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 끝, 잘했어요. 다음 할 일: %@"
+          }
+        }
+      }
+    },
     "No — delete my voice" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -84803,6 +84993,16 @@
         }
       }
     },
+    "Nothing planned today." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘은 계획된 게 없어요."
+          }
+        }
+      }
+    },
     "Nothing put off" : {
       "localizations" : {
         "de" : {
@@ -86387,6 +86587,16 @@
         }
       }
     },
+    "Once a day, I leave you a short note with today's plan." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "하루에 한 번, 오늘 할 일을 짧게 적어 드려요."
+          }
+        }
+      }
+    },
     "Once a day, your fluent self phones you with one question to answer out loud. It rings even on silent, and it remembers how the last call went." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -87530,6 +87740,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "開啟設定"
+          }
+        }
+      }
+    },
+    "Open Speech" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "스피치 열기"
           }
         }
       }
@@ -90211,6 +90431,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "人物"
+          }
+        }
+      }
+    },
+    "Personal tutor" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "개인 튜터"
           }
         }
       }
@@ -95202,6 +95432,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在登上排行榜…"
+          }
+        }
+      }
+    },
+    "Quick quiz" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "퀵 퀴즈"
           }
         }
       }
@@ -111707,6 +111947,26 @@
         }
       }
     },
+    "Start review" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "복습 시작하기"
+          }
+        }
+      }
+    },
+    "Start shadowing" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "섀도잉 시작하기"
+          }
+        }
+      }
+    },
     "Start talking" : {
       "localizations" : {
         "de" : {
@@ -116918,6 +117178,16 @@
         }
       }
     },
+    "Tap me any time to ask: what to do, why a mistake keeps coming back, how you're doing." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "궁금할 땐 언제든 저를 눌러 물어보세요. 뭘 하면 좋을지, 같은 실수가 왜 반복되는지, 잘하고 있는지요."
+          }
+        }
+      }
+    },
     "Tap one to fill your scenario above, then edit it freely." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -119313,6 +119583,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "說這麼多就能評估了。"
+          }
+        }
+      }
+    },
+    "That's everything for today. Nicely done." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 할 일을 다 했어요. 정말 잘했어요."
           }
         }
       }
@@ -127567,6 +127847,36 @@
         }
       }
     },
+    "Today is a rest day in your routine. If you feel like it, %lld cards are waiting." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘은 쉬는 날이에요. 그래도 하고 싶다면 카드 %lld장이 기다리고 있어요."
+          }
+        }
+      }
+    },
+    "Today is a rest day in your routine. Nothing you have to do." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘은 쉬는 날이에요. 꼭 해야 할 건 없어요."
+          }
+        }
+      }
+    },
+    "Today: %lld things, about %lld minutes." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘은 %lld가지, %lld분쯤이면 돼요."
+          }
+        }
+      }
+    },
     "Today's %lld min used" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -127879,6 +128189,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "今天的新聞、這週會遇到的情況，或什麼都不特別聊。像打電話一樣，點一下就開始。"
+          }
+        }
+      }
+    },
+    "Today's plan" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 할 일"
           }
         }
       }
@@ -129482,6 +129802,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "可以在設定裡開啟"
+          }
+        }
+      }
+    },
+    "Tutor" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "튜터"
           }
         }
       }
@@ -134107,6 +134437,16 @@
         }
       }
     },
+    "We're working on %@. It came up in %lld of your talks." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "요즘은 %@ 연습 중이에요. 대화 %lld번에서 나왔거든요."
+          }
+        }
+      }
+    },
     "We've hit our voice-creation limit right now — nothing you did wrong. We've been alerted; please try again a bit later." : {
       "localizations" : {
         "de" : {
@@ -135358,6 +135698,16 @@
         }
       }
     },
+    "What should I do now?" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지금 뭐 하면 좋을까요?"
+          }
+        }
+      }
+    },
     "What situation should we build? The more detail, the better." : {
       "localizations" : {
         "de" : {
@@ -135492,6 +135842,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "麥克風聽到的內容"
+          }
+        }
+      }
+    },
+    "What the tutor does" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "튜터가 하는 일"
           }
         }
       }
@@ -143811,6 +144171,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你沒有完成註冊，為了安全，我們刪除了你之前複製的聲音。"
+          }
+        }
+      }
+    },
+    "You don't have a routine yet, so here's what I'd do today." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아직 루틴이 없으니, 오늘은 이렇게 해 보면 좋겠어요."
           }
         }
       }
@@ -157704,6 +158074,16 @@
         }
       }
     },
+    "I only have 5 minutes" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5분밖에 없어요"
+          }
+        }
+      }
+    },
     "I want to start speaking" : {
       "localizations" : {
         "de" : {
@@ -159682,6 +160062,16 @@
         }
       }
     },
+    "When something is ready, I'll say so here. Otherwise I stay quiet." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "할 게 생기면 여기서 말을 걸게요. 그 밖엔 조용히 있을게요."
+          }
+        }
+      }
+    },
     "Which exam?" : {
       "localizations" : {
         "de" : {
@@ -159770,6 +160160,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "왜 배워요?"
+          }
+        }
+      }
+    },
+    "Why do I keep making the same mistake?" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "왜 자꾸 같은 실수를 할까요?"
           }
         }
       }

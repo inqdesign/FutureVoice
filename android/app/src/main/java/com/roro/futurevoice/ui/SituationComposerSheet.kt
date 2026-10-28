@@ -1202,7 +1202,7 @@ private fun PersonChip(p: Counterpart?, host: ComposerHost, fixed: Boolean, onCl
 /** The dictation language, wearing the same fill as the buttons beside it —
  *  bare, it read as loose text rather than a control. */
 @Composable
-private fun DictationLanguagePill(current: String, onPick: (String) -> Unit) {
+internal fun DictationLanguagePill(current: String, onPick: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }
     val choices = remember { LanguageCatalog.nativeChoices() }
     Box {
@@ -1429,6 +1429,8 @@ internal fun SoftChip(
     selected: Boolean = false,
     /** A back chip: a chevron where the icon goes. */
     back: Boolean = false,
+    /** An icon that is not an SF name (a routine kind's own glyph). */
+    vector: androidx.compose.ui.graphics.vector.ImageVector? = null,
     onClick: () -> Unit,
 ) {
     val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
@@ -1446,6 +1448,8 @@ internal fun SoftChip(
         if (back) {
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = null, tint = ink,
                 modifier = Modifier.size(18.dp))
+        } else if (vector != null) {
+            Icon(vector, contentDescription = null, tint = ink, modifier = Modifier.size(17.dp))
         } else if (icon != null) {
             Icon(Symbols.icon(icon), contentDescription = null, tint = ink, modifier = Modifier.size(17.dp))
         }

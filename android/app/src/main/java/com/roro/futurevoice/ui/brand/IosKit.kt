@@ -8,6 +8,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -184,8 +185,11 @@ fun IosSwitch(checked: Boolean, onCheckedChange: ((Boolean) -> Unit)?, modifier:
  * iOS 26's toolbar button: a white "glass" capsule (text) or circle (icon)
  * with a soft shadow — Done, Cancel, Later, the People button.
  */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun IosGlassButton(onClick: () -> Unit, modifier: Modifier = Modifier, circle: Boolean = false,
+                   /** iOS `.contextMenu` on the button: a hold. */
+                   onLongClick: (() -> Unit)? = null,
                    content: @Composable RowScope.() -> Unit) {
     val dark = isDark()
     Row(
@@ -199,7 +203,9 @@ fun IosGlassButton(onClick: () -> Unit, modifier: Modifier = Modifier, circle: B
             .background(if (dark) Color(0xFF2C2C2E) else Color.White, CircleShape)
             .border(0.5.dp, Color.Black.copy(alpha = if (dark) 0f else 0.06f), CircleShape)
             .clip(CircleShape)
-            .clickable(onClick = onClick)
+            .then(if (onLongClick != null)
+                Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick)
+                else Modifier.clickable(onClick = onClick))
             .padding(horizontal = if (circle) 0.dp else 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
