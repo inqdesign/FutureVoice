@@ -950,16 +950,72 @@ struct WeekRecapSheet: View {
 
     // MARK: - Trial report
 
-    // 1 — the free minutes at a glance
+    // 1 — the free minutes, handed over (2026-10-28, founder: "clean, with
+    // their name, friendly, and the feeling of being looked after"). Their
+    // face and name first, so the deck reads as made for one person; then
+    // the three numbers the rest of it is read from.
     private var trialCover: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            kicker(Text("Your free minutes"), "gift")
-            bigNumber(recap.talkMinutes, unit: Text("min"))
-            Text("That was your free time. Here's what it showed.")
-                .font(.title3)
+        VStack(alignment: .leading, spacing: 22) {
+            HStack(alignment: .center) {
+                ProfileAvatar(initials: appState.persona?.displayName ?? "", size: 64)
+                    .padding(3)
+                    .overlay(Circle().strokeBorder(Color.themeAccent, lineWidth: 2.5))
+                Spacer()
+                (Text(recap.start, format: .dateTime.month().day())
+                 + Text(" – ")
+                 + Text(recap.end.addingTimeInterval(-1), format: .dateTime.month().day()))
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+            VStack(alignment: .leading, spacing: 10) {
+                kicker(Text("Made for you"), "gift.fill")
+                Group {
+                    if let name = coverName {
+                        Text("\(name), your report is ready.")
+                    } else {
+                        Text("Your report is ready.")
+                    }
+                }
+                .font(.system(size: 34, weight: .bold, design: .rounded))
                 .fixedSize(horizontal: false, vertical: true)
-            summaryRow
+                Text("We went through every minute of your free time and put this together just for you.")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            HStack(spacing: 0) {
+                coverStat(recap.talkMinutes, Text("min of talk"))
+                Divider().frame(height: 44)
+                coverStat(recap.talks.count, Text(explain(key: "trial.cover.talks", default: "talks")))
+                if let own = trial?.ownSpeechSeconds, own > 0 {
+                    Divider().frame(height: 44)
+                    coverStat(max(1, own / 60), Text("min you spoke"))
+                }
+            }
+            .padding(.vertical, 16)
+            .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
+    }
+
+    /// The name the cover greets: the first word of a spaced name ("Anna
+    /// Schmidt" → Anna), the whole of an unspaced one (이응규).
+    private var coverName: String? {
+        let full = (appState.persona?.displayName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !full.isEmpty else { return nil }
+        return full.split(separator: " ").first.map(String.init) ?? full
+    }
+
+    private func coverStat(_ value: Int, _ label: Text) -> some View {
+        VStack(spacing: 4) {
+            Text("\(value)")
+                .font(.system(size: 30, weight: .bold, design: .rounded))
+                .monospacedDigit()
+            label
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     // The test — offered; the level and the routine follow either way.
