@@ -85,6 +85,9 @@ export function claudeCorrection(apiKey: string, model: string,
  *  A purpose may only be listed here after its probe. */
 export const CLAUDE_PURPOSE_ADDENDA: Record<string, string> = {
   coach: JSON_ONLY,
+  // The tutor bot's chat ({reply, action}), founder's call 2026-10-28:
+  // everything but the live call moves to Haiku. ~1/8 the cost per question.
+  "tutor-bot": JSON_ONLY,
 }
 
 /** A buffered request a listed purpose can move: not streamed, no tools, no
