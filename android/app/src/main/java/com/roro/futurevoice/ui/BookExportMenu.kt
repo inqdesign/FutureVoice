@@ -76,7 +76,11 @@ fun BookExportMenu(
                 open = false; working = true
                 scope.launch {
                     runCatching { BookExport.writeMarkdown(context, withGlossary(context, document(), nativeLanguage, targetLanguage)) }
-                        .onSuccess { BookExport.share(context, it, "text/markdown") }
+                        // text/plain, not text/markdown: messengers (KakaoTalk) list
+                        // themselves for plain text only, so a markdown type hid
+                        // them from the chooser. The .md name still opens as
+                        // Markdown in anything that knows it (iOS: same).
+                        .onSuccess { BookExport.share(context, it, "text/plain") }
                     working = false
                 }
             },
