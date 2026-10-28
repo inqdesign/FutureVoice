@@ -112,62 +112,15 @@ enum TalkTimeLog {
                                         to: calendar.startOfDay(for: now))
         else { return }
 
-        struct LedgerRow: Decodable {
-            let created_at: String
-            let idempotency_key: String?
-            let metadata: Metadata?
-            struct Metadata: Decodable {
-                let seconds: Int?; let language: String?; let preflight: Bool?
-            }
-            /// The second charged as a call OPENS, before anyone speaks — a
-            /// wall check, never talk (see `TalkMeter.tick`). The gateway
-            /// flags it; the classic path's key ends in ":pre".
-            var isPreflight: Bool {
-                metadata?.preflight == true || (idempotency_key?.hasSuffix(":pre") ?? false)
-            }
-        }
-        // Paged, NEWEST first. PostgREST answers at most `pageSize` rows
-        // whatever `limit` asks, in no promised order — and a heavy learner
-        // writes ~80 rows a day, so a fortnight passed 1,000 and the rows
-        // cut were TODAY's: the ring was then "corrected" down to a part of
-        // the day, and every return to the tab walked it backwards
-        // (2026-10-28, 18 min billed, 4:54 on the ring). Newest first means
-        // any cut lands on the oldest days, which are only ever a floor.
-        // A page that fails drops the whole sync: a partial day must never
-        // be written as the day.
-        var rows: [LedgerRow] = []
         let since = ISO8601DateFormatter().string(from: start)
-        while rows.count < maxRows {
-            guard let page: [LedgerRow] = try? await SupabaseProvider.shared
-                .from("usage_ledger")
-                .select("created_at,idempotency_key,metadata")
-                .eq("user_id", value: session.user.id.uuidString)
-                .eq("action", value: "talk_time")
-                .gte("created_at", value: since)
-                .order("created_at", ascending: false)
-                .order("id", ascending: false)
-                .range(from: rows.count, to: rows.count + pageSize - 1)
-                .execute()
-                .value
-            else { return }
-            rows += page
-            if page.count < pageSize { break }
+        // The server's sum first: one row per day and language. The rows are
+        // read only when that call fails — a database without the function
+        // yet, or a time zone Postgres doesn't know.
+        var summed = await summedByServer(since: since, calendar: calendar)
+        if summed == nil {
+            summed = await summedFromRows(userId: session.user.id.uuidString, since: since)
         }
-
-        var serverByDay: [String: Int] = [:]
-        // A tick written between two pages slides the next page by a row,
-        // so the boundary row can come back twice. Every row has a unique key.
-        var seen = Set<String>()
-        for row in rows {
-            if let k = row.idempotency_key, !seen.insert(k).inserted { continue }
-            guard !row.isPreflight,
-                  let seconds = row.metadata?.seconds, seconds > 0,
-                  let at = parseTimestamp(row.created_at) else { continue }
-            // Ticks from a build that predates language reporting land under
-            // the bare day key, exactly where this log used to put them.
-            serverByDay[key(day: at, language: row.metadata?.language), default: 0] += seconds
-        }
-        guard !serverByDay.isEmpty else { return }
+        guard let serverByDay = summed, !serverByDay.isEmpty else { return }
 
         var map = load()
         let today = dayKey(now)
@@ -207,6 +160,87 @@ enum TalkTimeLog {
             }
         }
         save(prune(map, now: now))
+    }
+
+    /// `talk_seconds_by_local_day` (20261028170000): the ledger summed per
+    /// LOCAL day and language on the server, preflight seconds left out —
+    /// the same buckets `summedFromRows` builds, in a reply of a few rows.
+    @MainActor
+    private static func summedByServer(since: String, calendar: Calendar) async -> [String: Int]? {
+        struct DayRow: Decodable { let day: String; let language: String?; let seconds: Int }
+        guard let rows: [DayRow] = try? await SupabaseProvider.shared
+            .rpc("talk_seconds_by_local_day",
+                 params: ["p_since": since, "p_tz": calendar.timeZone.identifier])
+            .execute()
+            .value
+        else { return nil }
+        var out: [String: Int] = [:]
+        for row in rows where row.seconds > 0 {
+            let lang = row.language?.trimmingCharacters(in: .whitespaces).lowercased()
+            let k = (lang?.isEmpty ?? true) ? row.day : row.day + separator + lang!
+            out[k, default: 0] += row.seconds
+        }
+        return out
+    }
+
+    /// The fallback: every `talk_time` row, summed here.
+    ///
+    /// Paged, NEWEST first. PostgREST answers at most `pageSize` rows
+    /// whatever `limit` asks, in no promised order — and a heavy learner
+    /// writes ~80 rows a day, so a fortnight passed 1,000 and the rows cut
+    /// were TODAY's: the ring was then "corrected" down to a part of the
+    /// day, and every return to the tab walked it backwards (2026-10-28,
+    /// 18 min billed, 4:54 on the ring). Newest first means any cut lands on
+    /// the oldest days, which are only ever a floor. A page that fails drops
+    /// the whole sync: a partial day must never be written as the day.
+    @MainActor
+    private static func summedFromRows(userId: String, since: String) async -> [String: Int]? {
+        struct LedgerRow: Decodable {
+            let created_at: String
+            let idempotency_key: String?
+            let metadata: Metadata?
+            struct Metadata: Decodable {
+                let seconds: Int?; let language: String?; let preflight: Bool?
+            }
+            /// The second charged as a call OPENS, before anyone speaks — a
+            /// wall check, never talk (see `TalkMeter.tick`). The gateway
+            /// flags it; the classic path's key ends in ":pre".
+            var isPreflight: Bool {
+                metadata?.preflight == true || (idempotency_key?.hasSuffix(":pre") ?? false)
+            }
+        }
+        var rows: [LedgerRow] = []
+        while rows.count < maxRows {
+            guard let page: [LedgerRow] = try? await SupabaseProvider.shared
+                .from("usage_ledger")
+                .select("created_at,idempotency_key,metadata")
+                .eq("user_id", value: userId)
+                .eq("action", value: "talk_time")
+                .gte("created_at", value: since)
+                .order("created_at", ascending: false)
+                .order("id", ascending: false)
+                .range(from: rows.count, to: rows.count + pageSize - 1)
+                .execute()
+                .value
+            else { return nil }
+            rows += page
+            if page.count < pageSize { break }
+        }
+
+        var out: [String: Int] = [:]
+        // A tick written between two pages slides the next page by a row,
+        // so the boundary row can come back twice. Every row has a unique key.
+        var seen = Set<String>()
+        for row in rows {
+            if let k = row.idempotency_key, !seen.insert(k).inserted { continue }
+            guard !row.isPreflight,
+                  let seconds = row.metadata?.seconds, seconds > 0,
+                  let at = parseTimestamp(row.created_at) else { continue }
+            // Ticks from a build that predates language reporting land under
+            // the bare day key, exactly where this log used to put them.
+            out[key(day: at, language: row.metadata?.language), default: 0] += seconds
+        }
+        return out
     }
 
     /// How far back a day may be corrected downward. Deliberately short —
