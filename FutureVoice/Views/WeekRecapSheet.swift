@@ -50,6 +50,9 @@ struct WeekRecapSheet: View {
     @State private var routineRules: [UUID: String] = [:]
     @State private var showingPaywall = false
     @State private var showingFeedback = false
+    /// The deck turns its own pages after each card's line; the header's
+    /// pause button stops it, and the choice is kept for the next report.
+    @AppStorage("futurevoice.report.autoAdvance") private var autoAdvance = true
     /// The trial's second card: every feature, and how much of each was used.
     @State private var featureUses: [FeatureUse] = []
     /// Foreground time in the app over the trial window.
@@ -242,6 +245,17 @@ struct WeekRecapSheet: View {
                 }
                 Spacer()
                 if narrates {
+                    // Auto-play: the deck turns its own pages after each
+                    // card's line (2026-10-28, founder: a way to stop it).
+                    // Remembered; off leaves the voice to the speaker button.
+                    Button { autoAdvance.toggle() } label: {
+                        Image(systemName: autoAdvance ? "pause.fill" : "play.fill")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(autoAdvance ? Color.themeAccent : .secondary)
+                            .frame(width: 32, height: 32)
+                            .background(Color(.tertiarySystemFill), in: Circle())
+                    }
+                    .accessibilityLabel(autoAdvance ? Text("Stop auto-play") : Text("Auto-play"))
                     Button { narrator.isOn.toggle() } label: {
                         Image(systemName: narrator.isOn ? "speaker.wave.2.fill" : "speaker.slash.fill")
                             .font(.body.weight(.semibold))
@@ -1637,10 +1651,10 @@ struct WeekRecapSheet: View {
         narrator.speak(line) {
             // The deck moves on by itself, except past a card that asks
             // the learner something (the test, the routine).
-            guard ![.trialTest, .routine, .test].contains(card), at == page,
+            guard autoAdvance, ![.trialTest, .routine, .test].contains(card), at == page,
                   at < cards.count - 1 else { return }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
-                guard at == page, !showingTrialTest, !showingPaywall else { return }
+                guard autoAdvance, at == page, !showingTrialTest, !showingPaywall else { return }
                 advance()
             }
         }

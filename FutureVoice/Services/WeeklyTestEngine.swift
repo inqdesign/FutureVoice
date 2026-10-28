@@ -188,11 +188,49 @@ enum WeeklyTestEngine {
                              language: appState.targetLanguage, rng: &rng)
         }
 
+        // The trial report's test is never refused for being small
+        // (2026-10-28, founder: "make the test even if the amount is small,
+        // even from related things"). Twenty minutes rarely leave anything
+        // put off in the deck, which is where the paper's words and phrases
+        // come from, so the card offered a test and the test then said there
+        // was too little. Filled from the window's own talks instead: the
+        // words and phrases their books teach, then their lines to hear and
+        // say. Any count is a test.
+        if let scope, items.count < scope.minimum {
+            let books = windowSessions.map {
+                TalkCurriculum.build(session: $0, proficiency: appState.proficiency,
+                                     shadowAttempts: [], drillCards: [])
+            }
+            var seenWord = Set(studied.words.map { $0.lowercased() })
+            let bookWords = books.flatMap { $0.words.map(\.text) }.filter { seenWord.insert($0.lowercased()).inserted }
+            var seenPhrase = Set(studyPhrases)
+            let bookPhrases = books.flatMap { $0.expressions.map(\.text) }
+                .filter { isInTargetScript($0) && seenPhrase.insert($0.lowercased()).inserted }
+            let have = Set(items.map { itemKey($0) })
+            var more: [WeeklyTestItem] = []
+            more += await meaningItems(words: bookWords, appState: appState, rng: &rng)
+            let moreGaps = gapItems(phrases: bookPhrases, sessions: windowSessions, fluentTurns: teachingTurns,
+                                    allSessions: allSessions, openers: openers, appState: appState,
+                                    limit: maxGap * 2, rng: &rng)
+            more += Array(await onlyAnswerFits(moreGaps, appState: appState, testId: id).prefix(maxGap))
+            // Lines carrying one of those phrases first; with still too few,
+            // any of their own talk's lines (every line contains "").
+            let used = items + more
+            let phrases = used.count < scope.minimum
+                ? [""] : bookPhrases.map { $0.lowercased() }
+            let heard = listenItems(fluentTurns: teachingTurns, studyPhrases: phrases, rng: &rng)
+            more += heard
+            more += speakItems(fluentTurns: teachingTurns, studyPhrases: phrases,
+                               excluding: Set((listens + heard).map { CarryoverDetector.normalized($0.answer) }),
+                               rng: &rng)
+            items += more.filter { !have.contains(itemKey($0)) }
+        }
+
         #if DEBUG
         let counts = Dictionary(grouping: items, by: \.kind).mapValues(\.count)
         print("WEEKLYTEST built: sessions=\(windowSessions.count) items=\(counts)")
         #endif
-        guard items.count >= (scope?.minimum ?? minItems) else { return nil }
+        guard items.count >= (scope == nil ? minItems : 1) else { return nil }
         items.shuffle(using: &rng)
         // A test opens on something you can answer by reading — never on the
         // one item that needs the speaker on.
