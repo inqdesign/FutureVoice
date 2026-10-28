@@ -92894,6 +92894,16 @@
         }
       }
     },
+    "Personal tutor" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "개인 튜터"
+          }
+        }
+      }
+    },
     "Pet names" : {
       "localizations" : {
         "de" : {

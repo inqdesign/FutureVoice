@@ -309,7 +309,7 @@ struct TutorChatView: View {
                 }
             }
             .background(Color(.systemBackground).ignoresSafeArea())
-            .navigationTitle(Text("Tutor"))
+            .navigationTitle(Text("Personal tutor"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
