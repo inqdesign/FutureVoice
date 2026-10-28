@@ -133,4 +133,53 @@ final class TutorModeTests: XCTestCase {
         XCTAssertFalse(p.contains("ALL DONE"))
         XCTAssertFalse(p.contains("has just checked off"))
     }
+
+    // MARK: - What a tutor call counts (2026-10-28)
+
+    private func line(_ text: String, _ role: TutorTurnRole?) -> Turn {
+        var t = Turn(id: UUID(), role: .user, audioURL: nil, transcript: text,
+                     durationMs: 2000, timestamp: Date(), suggestion: nil)
+        t.tutorRole = role
+        return t
+    }
+
+    private func session(_ turns: [Turn], coached: Bool? = nil) -> Session {
+        Session(id: UUID(), userId: UUID(), targetLanguage: "en", mode: .conversation,
+                topic: nil, startedAt: Date(), endedAt: Date(), turns: turns,
+                summary: nil, coached: coached)
+    }
+
+    func testOnlyTheFinalCheckIsEvidence() {
+        XCTAssertFalse(line("My name is Min.", .drill).isEvidence)
+        XCTAssertTrue(line("Hi, I'm Min, from Seoul, I work in design.", .check).isEvidence)
+        XCTAssertTrue(line("Just talking.", nil).isEvidence)
+    }
+
+    func testATutorCallIsScoredOnlyOnceItReachedTheCheck() {
+        let drills = session([line("My name is Min.", .drill), line("I'm from Seoul.", .drill)])
+        XCTAssertTrue(drills.isPractice)
+        XCTAssertFalse(drills.isLevelEvidence)
+
+        let checked = session([line("My name is Min.", .drill),
+                               line("Hi, I'm Min, I'm from Seoul.", .check)])
+        XCTAssertFalse(checked.isPractice)
+        XCTAssertTrue(checked.isLevelEvidence)
+        XCTAssertEqual(ScorecardMetrics.compute(turns: checked.turns).userTurnCount, 1)
+
+        // A tutor call saved before the per-line rule stays practice.
+        XCTAssertTrue(session(checked.turns, coached: true).isPractice)
+    }
+
+    func testDrillLinesAreLabelledForTheSummary() {
+        let text = ConversationEngine.formatTranscript([line("My name is Min.", .drill),
+                                                        line("Hi, I'm Min.", .check)])
+        XCTAssertEqual(text, "[USER_DRILL] My name is Min.\n[USER] Hi, I'm Min.")
+    }
+
+    func testTutorRoleRoundTrips() throws {
+        let data = try JSONEncoder().encode(line("Hi.", .check))
+        XCTAssertEqual(try JSONDecoder().decode(Turn.self, from: data).tutorRole, .check)
+        let plain = try JSONEncoder().encode(line("Hi.", nil))
+        XCTAssertFalse(String(decoding: plain, as: UTF8.self).contains("tutorRole"))
+    }
 }

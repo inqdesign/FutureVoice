@@ -2786,10 +2786,10 @@ PLUS talk-kept notebook words (`coachExtras`) — the first device test had
   the summary transcript labels read lines `USER_READ` with a note to score
   only `USER` lines (byte-identical when there are none). A sentence built
   around the WORD hint is the learner's own and counts in full (founder:
-  making the sentence is the practice). **Tutor mode still makes the whole
-  call practice** (`Session.coached`; every turn is corrected and answered
-  back), as do coached calls saved before this date: out of the assessment,
+  making the sentence is the practice). Coached calls saved before this
+  date stay whole-call practice (`Session.coached`): out of the assessment,
   "Practice call" on the page and the book card, nothing credited as used.
+  Tutor calls are judged per line since 2026-10-28 (see Tutor mode).
   A coach-mode call reads "Coach mode" in place of "Free talk" on its card.
 - **A beginner is asked ONE concrete question** (2026-10-03, founder: "not
   'tell me about yourself' — 'what's your name?', 'where do you live?'";
@@ -2893,6 +2893,17 @@ that back. `TutorLesson.swift`, `TutorLessonViews.swift`,
   the book page shows the lines that cleared each challenge
   (`Session.tutorLesson`). Unfinished lessons resume for 21 days
   (`Documents/lang/<code>/tutor_lessons.json`, device-local).
+- **Only the final check is scored** (2026-10-28, founder). A challenge
+  line is a drill: one set sentence, an example on screen, often a repeat
+  of a correction. A try the final check judged an attempt (the whole thing
+  in one go, nothing on screen; `tutorCheckTurnIds`) is saved as
+  `Turn.tutorRole = .check` and is ordinary evidence; every other learner
+  line of a tutor call is `.drill`, which `isEvidence` leaves out and the
+  summary sees as `USER_DRILL` (`drillLineNote`). A tutor call with no check
+  try is still a practice call (`Session.isPractice`); one with a try reads
+  "Tutor" on its card. A verdict that lands after the last save leaves its
+  line a drill. Calls saved before this keep `coached: true`. Android has no
+  final check yet, so its tutor calls stay whole-call practice.
 - **The tutor's own words stay 반말**; only the practiced line has its own
   register (Haiku drifted to 해요체/여러분 to match a polite example).
 - The Claude reply ceiling went 1024 → 2048: a tick turn thinks 800–1,460

@@ -1851,11 +1851,13 @@ enum ConversationEngine {
     /// Formats the running transcript for the summary user message.
     /// A line the learner read off coach mode's suggestion is labelled
     /// `USER_READ` (`Turn.readFromCoach`) and `readLineNote` says what that
-    /// means; a transcript without one is byte-identical to before.
+    /// means; a tutor drill line is `USER_DRILL` (`Turn.tutorRole`) with
+    /// `drillLineNote`. A transcript without either is byte-identical to before.
     static func formatTranscript(_ turns: [Turn]) -> String {
         turns.map { turn in
             let label = turn.role == .fluentSelf ? "FLUENT_SELF"
-                : turn.readFromCoach ? "USER_READ" : "USER"
+                : turn.readFromCoach ? "USER_READ"
+                : turn.tutorRole == .drill ? "USER_DRILL" : "USER"
             return "[\(label)] \(turn.transcript)"
         }.joined(separator: "\n")
     }
@@ -1867,6 +1869,18 @@ enum ConversationEngine {
     level: judge the scorecard (every score, the level, the grammar range) on \
     the [USER] lines only, and quote nothing from a [USER_READ] line in \
     expressions_used, phrases_used, new_patterns_detected or grammar issues.
+    """
+
+    /// Rides under the transcript only when a `USER_DRILL` line is in it.
+    static let drillLineNote = """
+    [USER_DRILL] lines are a tutor lesson's drills: the learner said one set \
+    sentence the tutor had just asked for, usually with an example in front of \
+    them. They are part of the conversation, but they are NOT evidence of the \
+    learner's level: judge the scorecard (every score, the level, the grammar \
+    range) on the [USER] lines only — in a tutor lesson those are the final \
+    check, the whole thing said in one go with no help — and quote nothing \
+    from a [USER_DRILL] line in expressions_used, phrases_used, \
+    new_patterns_detected or grammar issues.
     """
 
     /// Maps prior `Turn`s into the role-tagged Claude message history.

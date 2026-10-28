@@ -687,6 +687,9 @@ struct ConversationView: View {
     /// Tutor mode was on at some point in this call — the whole call is then
     /// a practice call (`Session.coached`).
     @State private var tutorWasOn = TutorMode.isOn
+    /// Learner turns the final check judged as a try at the whole thing — the
+    /// only tutor lines saved as evidence (`Turn.tutorRole`).
+    @State private var tutorCheckTurnIds: Set<UUID> = []
     /// Watched only to tell a live call when the sheet flips tutor mode.
     @AppStorage(TutorMode.key) private var tutorModeChoice = false
     /// Tutor mode's lesson (`TutorLesson`): nil until a topic is set.
@@ -4607,7 +4610,7 @@ struct ConversationView: View {
             topic: topic.isEmpty ? nil : topic,
             startedAt: sessionStartedAt,
             endedAt: Date(),
-            turns: turns,
+            turns: tutorRoled(turns),
             summary: nil,
             origin: sessionOrigin,
             originScenarioId: sessionScenarioId,
@@ -4616,9 +4619,10 @@ struct ConversationView: View {
             // an empty one must not count as a clean call and retire it.
             grammarFocus: learnerSpokeThisCall
                 ? grammarFocus?.record(repeats: focusRepeatTurns.count) : nil,
-            // Tutor mode makes the whole call practice; coach mode is judged
-            // per line (`Turn.readFromCoach`). A resumed practice call stays one.
-            coached: (tutorWasOn || tutorThisCall || prior?.isPractice == true) ? true : nil,
+            // Tutor mode and coach mode are judged per line (`Turn.tutorRole`,
+            // `Turn.readFromCoach`). A resumed call saved as practice before
+            // that stays one.
+            coached: prior?.coached == true ? true : nil,
             tutorLesson: learnerSpokeThisCall ? (tutorLesson?.record ?? prior?.tutorLesson) : prior?.tutorLesson
         )
         if learnerSpokeThisCall, var lesson = tutorLesson, !lesson.sessionIds.contains(sessionId) {
@@ -4775,6 +4779,7 @@ struct ConversationView: View {
         pinPromptClock()
         tutorThisCall = TutorMode.isOn
         tutorWasOn = tutorThisCall
+        tutorCheckTurnIds = []
         learnerSpokeThisCall = false
         didSaveCurrentSession = false
         phase = .idle
@@ -5071,7 +5076,7 @@ struct ConversationView: View {
                             mayFollowTutor: Bool = true) {
         guard tutorThisCall, !tutorPlanning, let lesson = tutorLesson else { return }
         if lesson.inFinalCheck {
-            tutorFinalCheckTry(said: said, fixes: fixes)
+            tutorFinalCheckTry(turnId: turnId, said: said, fixes: fixes)
             return
         }
         guard let i = lesson.current else { return }
@@ -5108,7 +5113,7 @@ struct ConversationView: View {
                 // This line answered what the tutor asked after moving on —
                 // after the last challenge, the final check.
                 if finished {
-                    tutorFinalCheckTry(said: said, fixes: fixes)
+                    tutorFinalCheckTry(turnId: turnId, said: said, fixes: fixes)
                 } else {
                     tutorCheck(turnId: turnId, said: said, fixes: fixes, mayFollowTutor: false)
                 }
@@ -5204,12 +5209,11 @@ struct ConversationView: View {
             topic: topic.isEmpty ? nil : topic,
             startedAt: sessionStartedAt,
             endedAt: Date(),
-            turns: bookTurns,
+            turns: tutorRoled(bookTurns),
             summary: nil,
             origin: sessionOrigin,
             originScenarioId: sessionScenarioId,
             counterpartId: sessionCounterpartId,
-            coached: true,
             tutorLesson: lesson?.record
         )
         if var l = lesson, !l.sessionIds.contains(bookId) {
@@ -5291,7 +5295,7 @@ struct ConversationView: View {
     /// say: a pass names every slip (praise only for a clean answer), a
     /// shaky pass is asked for once more first, a missing part is named and
     /// practiced. It can't be skipped (founder, 2026-10-28).
-    private func tutorFinalCheckTry(said: String, fixes: [TurnFix]) {
+    private func tutorFinalCheckTry(turnId: UUID, said: String, fixes: [TurnFix]) {
         guard let lesson = tutorLesson, lesson.inFinalCheck else { return }
         let asked = turns.last(where: { $0.role == .fluentSelf })?.transcript ?? ""
         let slips = fixes.map { "\"\($0.was)\" → \"\($0.now)\"" }
@@ -5307,6 +5311,10 @@ struct ConversationView: View {
             let outcome = TutorFinalCheck.outcome(verdict, slips: slips.count,
                                                   onceMoreUsed: check.onceMoreUsed)
             guard outcome != .notAnAttempt else { return }
+            // A whole try with nothing on screen: the one tutor line that is
+            // evidence of their level (founder, 2026-10-28). Stamped when the
+            // talk is saved (`tutorRoled`).
+            tutorCheckTurnIds.insert(turnId)
             check.tries += 1
             Telemetry.log("tutor_check_result", ["outcome": outcome.rawValue,
                                                  "try": String(check.tries),
@@ -5362,6 +5370,21 @@ struct ConversationView: View {
                     realtime.nudge("Final check result: PASSED. They said every part and you understood them. Slips: \(slipList). Tell them they passed and that you understood all of it, then name each slip in a few words by saying it the right way (\"one small thing: …\"). Don't call it great, perfect or flawless. Then ask whether they'd like to say it once more, or move on.\(nextLine)")
                 }
             }
+        }
+    }
+
+    /// The call's turns with each learner line's tutor role stamped
+    /// (founder, 2026-10-28): in a tutor call every learner line is a drill
+    /// except a judged final-check try. A line already stamped (a resumed
+    /// talk) keeps its role; a call that was never tutored is unchanged.
+    private func tutorRoled(_ list: [Turn]) -> [Turn] {
+        guard tutorWasOn || tutorThisCall else { return list }
+        return list.map { t in
+            guard t.role == .user else { return t }
+            var t = t
+            if tutorCheckTurnIds.contains(t.id) { t.tutorRole = .check }
+            else if t.tutorRole == nil { t.tutorRole = .drill }
+            return t
         }
     }
 
