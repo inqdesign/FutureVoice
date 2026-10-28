@@ -256,28 +256,6 @@ enum TutorPicks {
         return topic + " " + pick([explain("Written at your level when you open it."),
                                    explain("A short article, made for your level.")], day)
     }
-
-    /// The plan's first line, from the first pick.
-    static func headline(_ pick: TutorPick?, balance: TutorBalance, day: Int) -> String? {
-        guard let pick else { return nil }
-        switch pick.kind {
-        case .rankDrop:
-            return Self.pick([explain("Someone beat your score. Want your place back?"),
-                              explain("Your place on a challenge moved. One more take?")], day)
-        case .newEpisode:
-            return Self.pick([explain("A new episode is out. Start with listening today."),
-                              explain("Today's episode is here. Listen first.")], day)
-        case .firstSpeech:
-            return Self.pick([explain("Something new today: a speech, out loud."),
-                              explain("Today, try one speech.")], day)
-        case .readScript, .readNews:
-            return Self.pick([explain("This week was all speaking. Let's read something today."),
-                              explain("No reading yet this week. Pick one to read.")], day)
-        case .listen:
-            return Self.pick([explain("Your ears need a turn. Listen to one episode today."),
-                              explain("Not much listening this week. One episode today.")], day)
-        }
-    }
 }
 
 /// A news story as an article to read (`news-article`): written once for

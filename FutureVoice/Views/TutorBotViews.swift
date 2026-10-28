@@ -136,7 +136,7 @@ private struct TutorNoteCard: View {
                 face
                 VStack(alignment: .leading, spacing: 4) {
                     Text(TutorCopy.greeting()).font(.headline)
-                    Text(TutorCopy.headline(bot) ?? TutorCopy.summary(t)).font(.subheadline)
+                    Text(TutorCopy.opening(bot)).font(.subheadline)
                         .fixedSize(horizontal: false, vertical: true)
                     if let why = TutorCopy.why(t) {
                         Text(why).font(.footnote).foregroundStyle(.secondary)
@@ -281,7 +281,7 @@ struct TutorChatView: View {
                     VStack(alignment: .leading, spacing: 14) {
                         DialogueLine(speaker: .other, name: tutorName) {
                             VStack(alignment: .leading, spacing: 6) {
-                                Text(TutorCopy.headline(bot) ?? TutorCopy.summary(bot.today))
+                                Text(TutorCopy.opening(bot))
                                 if let why = TutorCopy.why(bot.today) {
                                     Text(why).font(.subheadline).foregroundStyle(.secondary)
                                 }
@@ -289,10 +289,6 @@ struct TutorChatView: View {
                                     TutorPickRows(picks: bot.picks, balance: bot.balance).padding(.top, 4)
                                 }
                                 if !bot.today.items.isEmpty {
-                                    if !bot.picks.isEmpty {
-                                        Text(TutorCopy.summary(bot.today))
-                                            .font(.footnote).foregroundStyle(.secondary).padding(.top, 6)
-                                    }
                                     TutorPlanRows(today: bot.today).padding(.top, 4)
                                 }
                             }
@@ -332,7 +328,9 @@ struct TutorChatView: View {
                         .accessibilityLabel(Text("Close"))
                 }
             }
-            .safeAreaInset(edge: .bottom) { composer }
+            // The call's own bottom bar (`fadingBottomBar`): the messages
+            // dissolve under the chips and the box instead of being cut.
+            .fadingBottomBar { composer }
         }
         .sheet(item: $bot.reading) { r in
             TutorReadingSheet(reading: r).environmentObject(appState)
@@ -403,7 +401,6 @@ struct TutorChatView: View {
                 .padding(.bottom, 8)
         }
         .padding(.top, 8)
-        .background(Color(.systemBackground))
         .animation(.easeInOut(duration: 0.2), value: draft.isEmpty)
     }
 
@@ -446,11 +443,16 @@ enum TutorCopy {
         }
     }
 
-    /// The first pick's line, when there is one.
+    /// The note's and the chat's first line: today's plan in numbers
+    /// (2026-10-28, founder: the first pick's announcement, "Today's episode
+    /// is here. Listen first.", read wrong as the title — the pick's own row
+    /// already says it). With nothing planned but picks to offer, says so.
     @MainActor
-    static func headline(_ bot: TutorBot) -> String? {
-        let day = Calendar.current.ordinality(of: .day, in: .era, for: Date()) ?? 0
-        return TutorPicks.headline(bot.picks.first, balance: bot.balance, day: day)
+    static func opening(_ bot: TutorBot) -> String {
+        if bot.today.items.isEmpty, !bot.today.restDay, !bot.picks.isEmpty {
+            return explain("Here's what I'd pick for today.")
+        }
+        return summary(bot.today)
     }
 
     static func summary(_ t: TutorBot.Today) -> String {
