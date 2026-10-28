@@ -4681,6 +4681,52 @@
         }
       }
     },
+    "How were your first 20 minutes?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie waren deine ersten 20 Minuten?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Qué tal tus primeros 20 minutos?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comment se sont passées tes 20 premières minutes ?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最初の20分、どうでしたか？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "처음 20분, 어땠어요?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最初的 20 分钟，感觉怎么样？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最初的 20 分鐘，感覺怎麼樣？"
+          }
+        }
+      }
+    },
     "I answer the speaking test calmly" : {
       "localizations" : {
         "de" : {
@@ -161423,6 +161469,52 @@
         }
       }
     },
+    "From now on, every week's study comes to you as a report like this." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ab jetzt bekommst du jede Woche so einen Bericht über das, was du gelernt hast."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A partir de ahora, cada semana te llegará un informe así con lo que estudiaste."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Désormais, chaque semaine, tu recevras un bilan comme celui-ci de ce que tu as appris."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "これからは毎週、学んだことをこんなレポートにまとめてお届けします。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "앞으로 매주 공부한 내용을 이렇게 리포트로 정리해 드려요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "之后每周学了什么，都会像这样整理成报告给你。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "之後每週學了什麼，都會像這樣整理成報告給你。"
+          }
+        }
+      }
+    },
     "So you can practice with a voice that sounds more natural and more like you, we're moving your voice to a new voice engine. Replies get faster too." : {
       "localizations" : {
         "de" : {
@@ -165811,6 +165903,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "한 주제로 2분, 멈추지 않고"
+          }
+        }
+      }
+    },
+    "Two quick questions, and anything you want to tell us. We read every one." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur zwei kurze Fragen und alles, was du uns sagen willst. Wir lesen jede Nachricht."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solo dos preguntas, y lo que quieras contarnos. Leemos cada mensaje."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deux petites questions, et tout ce que tu veux nous dire. On lit chaque message."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "質問は2つだけ。伝えたいことがあれば何でも書いてください。ひとつ残らず読んでいます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "두 가지만 물어볼게요. 하고 싶은 말도 편하게 남겨 주세요. 하나하나 다 읽어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只问两个问题，想说什么也都可以写下来。每一条我们都会看。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只問兩個問題，想說什麼也都可以寫下來。每一則我們都會看。"
           }
         }
       }

@@ -49,6 +49,7 @@ struct WeekRecapSheet: View {
     @State private var habitAdviceFailed = false
     @State private var routineRules: [UUID: String] = [:]
     @State private var showingPaywall = false
+    @State private var showingFeedback = false
     /// The deck's start-up runs once per opening: the test's full-screen
     /// cover makes the deck disappear and reappear, which would re-run
     /// `.task` (a second offer counted, the thin flag reset under the
@@ -154,12 +155,13 @@ struct WeekRecapSheet: View {
         .onChange(of: narrator.isOn) { _, on in on ? speakCurrentCard() : narrator.stop() }
         .onChange(of: showingTrialTest) { _, up in if up { narrator.stop() } }
         .onChange(of: showingPaywall) { _, up in if up { narrator.stop() } }
+        .onChange(of: showingFeedback) { _, up in if up { narrator.stop() } }
         // One row per viewing, never one per swipe: how far the deck was
         // read is the question, and it is answered once.
         .onAppear { if isTrial { TrialReportStore.isShowing = true } }
         .onDisappear {
             // Covered by the test or the plans is not closed.
-            guard !showingTrialTest, !showingPaywall else { return }
+            guard !showingTrialTest, !showingPaywall, !showingFeedback else { return }
             narrator.stop()
             if isTrial { TrialReportStore.isShowing = false }
             Analytics.capture(isTrial ? "trial_report_closed" : "week_recap_closed",
@@ -171,11 +173,20 @@ struct WeekRecapSheet: View {
                 .environmentObject(appState)
         }
         .sheet(isPresented: $showingPaywall, onDismiss: {
-            // The report has done its job whether or not they bought.
+            // The report has done its job whether or not they bought. Then
+            // what they thought of it, once, and the App Store's own prompt.
             TrialReportStore.finished = true
-            dismiss()
+            if FeedbackPrompt.shouldShow(.trialReport) {
+                FeedbackPrompt.markShown(.trialReport)
+                showingFeedback = true
+            } else {
+                endTrialReport()
+            }
         }) {
             PaywallView(source: "trial_report")
+        }
+        .sheet(isPresented: $showingFeedback, onDismiss: endTrialReport) {
+            FeedbackSheet(context: .trialReport)
         }
         .task {
             if isTrial {
@@ -994,6 +1005,11 @@ struct WeekRecapSheet: View {
             }
             .padding(.vertical, 16)
             .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            Label { Text("From now on, every week's study comes to you as a report like this.") }
+                icon: { Image(systemName: "calendar") }
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -1352,6 +1368,13 @@ struct WeekRecapSheet: View {
                                                    "changed": routineRules.count,
                                                    "rules": habitFindings.map(\.rule).joined(separator: ",")])
         showingPaywall = true
+    }
+
+    /// The deck's last step: the review prompt follows whatever the feedback
+    /// sheet said (never gated on its stars), then the deck goes.
+    private func endTrialReport() {
+        ReviewRequest.askAtTrialReportEnd()
+        dismiss()
     }
 
     /// Re-read before writing: the test view saves its id into the same file.

@@ -22,8 +22,11 @@ import UIKit
 ///   a new rating actually describes.
 /// - **It is gated on use, never on sentiment.** Showing it only to someone who
 ///   gave `FeedbackSheet` five stars is review gating, which the guidelines
-///   forbid. The two never share a call: the feedback sheet wins its call, and
-///   this waits for a later one.
+///   forbid. After a call the two never share it: the feedback sheet wins
+///   its call, and this waits for a later one. The one place both are asked
+///   is the end of the free-minutes report (`askAtTrialReportEnd`), where the
+///   prompt follows the feedback sheet WHATEVER it said, so it is still
+///   gated on use (twenty minutes spent, the report read), never on stars.
 enum ReviewRequest {
     static let minTalkSeconds = 20 * 60
     static let minTalkDays = 3
@@ -33,6 +36,18 @@ enum ReviewRequest {
 
     private static var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+    }
+
+    static var askedThisVersion: Bool {
+        UserDefaults.standard.string(forKey: askedVersionKey) == appVersion
+    }
+
+    /// The end of the trial report: the free minutes are spent and the report
+    /// was read to its last card, which is the use bar here. Once per version.
+    @MainActor
+    static func askAtTrialReportEnd() {
+        guard !askedThisVersion else { return }
+        ask(source: "trial_report")
     }
 
     static func shouldAsk(callSeconds: TimeInterval) -> Bool {
@@ -46,17 +61,18 @@ enum ReviewRequest {
     /// Spends this version's ask and requests the prompt once the call screen
     /// has gone — presented over a screen mid-dismissal, the system can drop it.
     @MainActor
-    static func ask() {
+    static func ask(source: String = "call") {
         UserDefaults.standard.set(appVersion, forKey: askedVersionKey)
-        let props = [
+        let props: [String: Any] = [
             "talk_seconds": TalkTimeLog.totalSeconds(),
             "talk_days": TalkTimeLog.daysWithTalk(),
+            "source": source,
         ]
         Analytics.capture("review_requested", props)
         // Also into client_events, beside the feedback sheet's rows, so the
         // console can line the two asks up. iOS decides whether the prompt
         // actually appears, so this is "requested", never "shown".
-        Telemetry.log("review_requested", props.mapValues(String.init))
+        Telemetry.log("review_requested", props.mapValues { "\($0)" })
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(1.2))
             guard let scene = UIApplication.shared.connectedScenes
