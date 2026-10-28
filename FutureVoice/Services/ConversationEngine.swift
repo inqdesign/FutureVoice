@@ -163,7 +163,8 @@ enum ConversationEngine {
         learnerPicksTopic: Bool = false,
         tutorLesson: TutorLesson? = nil,
         tutorJustTicked: Bool = false,
-        tutorLastFixes: [String] = []
+        tutorLastFixes: [String] = [],
+        tutorPlanning: Bool = false
     ) -> String {
         let languageName = LanguageCatalog.englishName(targetLanguage)
         let patterns = topPatterns.prefix(3).map { "- \($0.mistake) → \($0.correction) (\($0.context))" }
@@ -538,7 +539,7 @@ enum ConversationEngine {
           or truncate; (2) re-read it against PITCH TO THEIR LEVEL
           (\(levelName)) — a word or clause above that line that isn't the one
           deliberate stretch gets the plainer version. Check (2) is the one
-          that carries their level; (1) is only about not monologuing.\(beginnerQuestions(level))\(tutor ? tutorBlock(targetLanguage: targetLanguage, languageName: languageName, lesson: tutorLesson, justTicked: tutorJustTicked, lastFixes: tutorLastFixes) : "")
+          that carries their level; (1) is only about not monologuing.\(beginnerQuestions(level))\(tutor ? tutorBlock(targetLanguage: targetLanguage, languageName: languageName, lesson: tutorLesson, justTicked: tutorJustTicked, lastFixes: tutorLastFixes, planning: tutorPlanning) : "")
         """
     }
 
@@ -562,9 +563,25 @@ enum ConversationEngine {
     /// on, so every other prompt is byte-identical (`TutorModeTests`).
     static func tutorBlock(targetLanguage: String, languageName: String,
                            lesson: TutorLesson? = nil, justTicked: Bool = false,
-                           lastFixes: [String] = []) -> String {
+                           lastFixes: [String] = [], planning: Bool = false) -> String {
         let lessonPart: String
-        if let lesson, lesson.isFinished {
+        if planning, let lesson {
+            // The next round (or a picked topic) is being written. Left on
+            // ALL DONE meanwhile, the tutor ran a round of its own and asked
+            // "more?" again, and the ready note then sent it back to the
+            // start (device, 2026-10-28).
+            let round = lesson.isFinished
+                ? " — the next round of \"\(lesson.titleTarget)\", which they asked for" : ""
+            lessonPart = """
+            A NEW LESSON IS BEING SET UP RIGHT NOW\(round). \
+            It appears in this block in a few seconds, and a note from the app \
+            will tell you to start it. Until then: don't start any challenge \
+            or practice of your own, don't ask again whether they want more \
+            or another topic (that's decided), and don't go over what they \
+            already did. If they say something, answer in one short line and \
+            say it's almost ready.
+            """
+        } else if let lesson, lesson.isFinished {
             lessonPart = """
             TODAY'S LESSON: "\(lesson.titleTarget)" — ALL DONE. The app has \
             checked every challenge off. In your next turn: say warmly, in a \
@@ -695,7 +712,7 @@ enum ConversationEngine {
           them to match it — your own words stay informal (Korean 반말, never \
           해요체, 여러분 or 당신; Japanese plain form; German du), and only \
           the quoted example line is in its own register.
-        - All of it in \(languageName) only, like everything else.\(tutorNow(lesson: lesson, justTicked: justTicked))
+        - All of it in \(languageName) only, like everything else.\(tutorNow(lesson: lesson, justTicked: justTicked && !planning))
         """
     }
 

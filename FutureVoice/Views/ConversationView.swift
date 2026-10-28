@@ -4950,13 +4950,18 @@ struct ConversationView: View {
     /// screen, so the tutor says so right away (nobody spoke). A new pick
     /// replaces the lesson in progress, which stays saved, unfinished.
     private func startTutorLesson(request: String, askedWith: String? = nil,
-                                  picked: Bool, fromTopic: Bool = false) {
+                                  picked: Bool, fromTopic: Bool = false,
+                                  nextRoundOf: TutorLesson? = nil) {
         guard tutorThisCall, !tutorPlanning else { return }
         if picked, var old = tutorLesson, !old.isFinished {
             old.droppedAt = Date()
             TutorLessonStore.save(old)
         }
         withAnimation(.easeInOut(duration: 0.25)) { tutorPlanning = true }
+        // The block says "being set up" while the planner writes, so the
+        // tutor can't run a round of its own that the ready note restarts.
+        tutorJustTicked = false
+        sendTutorSystem()
         if picked {
             realtime.nudge("The learner picked a topic on their screen: \"\(request)\". Say in a few words that this is today's lesson and that you're setting it up — nothing else yet.")
         }
@@ -4973,7 +4978,12 @@ struct ConversationView: View {
                 // failing, so it gets its own event (the console flags *_failed).
                 Telemetry.log(missReason == "no_topic" ? "tutor_plan_no_topic" : "tutor_plan_failed",
                               ["picked": picked ? "1" : "0", "code": missReason])
-                if picked || fromTopic {
+                // Back off "being set up", or the tutor waits for a plan
+                // that never comes.
+                sendTutorSystem()
+                if let round = nextRoundOf {
+                    realtime.nudge("Setting up the next round of \"\(round.titleTarget)\" didn't work. Say so in a few words and ask whether they'd like another topic instead.")
+                } else if picked || fromTopic {
                     realtime.nudge("Setting up the lesson didn't work. Ask them, in one short question, what exactly they want to be able to say about: \"\(request)\".")
                 }
                 return
@@ -4990,7 +5000,11 @@ struct ConversationView: View {
             Telemetry.log("tutor_lesson_started", ["challenges": String(lesson.challenges.count),
                                                    "picked": picked ? "1" : "0"])
             sendTutorSystem()
-            realtime.nudge("Today's lesson is ready (see TUTOR MODE). In a few words say what it is and that you'll go one step at a time, then start challenge 1: say what it is, give its example line, and ask them to say it about themselves.")
+            if nextRoundOf != nil {
+                realtime.nudge("The next round is ready (see TUTOR MODE): new challenges, a step further than the last round. Say so in a few words — don't go over the last round again — then start challenge 1: say what it is, give its example line, and ask them to say it about themselves.")
+            } else {
+                realtime.nudge("Today's lesson is ready (see TUTOR MODE). In a few words say what it is and that you'll go one step at a time, then start challenge 1: say what it is, give its example line, and ask them to say it about themselves.")
+            }
         }
     }
 
@@ -5098,7 +5112,7 @@ struct ConversationView: View {
                 let done = lesson.challenges.map(\.task).joined(separator: "; ")
                 startTutorLesson(
                     request: "More practice on \"\(lesson.title)\" — the next round, one step further. Already done: \(done). New challenges only.",
-                    picked: false, fromTopic: false)
+                    picked: false, fromTopic: false, nextRoundOf: lesson)
             case .new:
                 saveTutorBookAndMoveOn(keepingFrom: saidId)
                 if let topic = answer.topic?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -5230,7 +5244,8 @@ struct ConversationView: View {
             learnerPicksTopic: learnerPicksTopic,
             tutorLesson: tutorLesson,
             tutorJustTicked: tutorJustTicked,
-            tutorLastFixes: tutorLastFixes
+            tutorLastFixes: tutorLastFixes,
+            tutorPlanning: tutorPlanning
         )
     }
 }

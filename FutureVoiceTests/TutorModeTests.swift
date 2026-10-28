@@ -7,11 +7,12 @@ final class TutorModeTests: XCTestCase {
 
     private func prompt(_ lang: String, tutor: Bool, level: CEFRLevel = .b1,
                         lesson: TutorLesson? = nil, ticked: Bool = false,
-                        fixes: [String] = []) -> String {
+                        fixes: [String] = [], planning: Bool = false) -> String {
         ConversationEngine.conversationSystemPrompt(
             targetLanguage: lang, nativeLanguage: "ko", level: level,
             topPatterns: [], weakVocabAreas: [], topic: "", tutor: tutor,
-            tutorLesson: lesson, tutorJustTicked: ticked, tutorLastFixes: fixes)
+            tutorLesson: lesson, tutorJustTicked: ticked, tutorLastFixes: fixes,
+            tutorPlanning: planning)
     }
 
     private func lesson(done: Int, of total: Int = 3) -> TutorLesson {
@@ -70,5 +71,16 @@ final class TutorModeTests: XCTestCase {
         XCTAssertTrue(l.isFinished)
         XCTAssertEqual(l.record.done.count, 3)
         XCTAssertTrue(prompt("en", tutor: true, lesson: l).contains("ALL DONE"))
+    }
+
+    /// While the next round is written, the finished lesson's "ask more or
+    /// another topic" must not stand: the tutor ran a round of its own and
+    /// the ready note sent it back to the start (2026-10-28).
+    func testNextRoundBeingPlannedHoldsTheTutor() {
+        let p = prompt("en", tutor: true, lesson: lesson(done: 3), ticked: true, planning: true)
+        XCTAssertTrue(p.contains("BEING SET UP"))
+        XCTAssertTrue(p.contains("next round of \"Introducing yourself\""))
+        XCTAssertFalse(p.contains("ALL DONE"))
+        XCTAssertFalse(p.contains("has just checked off"))
     }
 }
