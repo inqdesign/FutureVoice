@@ -40,10 +40,41 @@ Chapter  (≈10)    Café & food
 - **Topic** — one concrete thing to be able to say, small enough for one
   lesson ("your order came out wrong", not "restaurants"). A topic is what
   the planner gets, exactly as a picked topic is today.
-- **Done** = one lesson on that topic finished 4/4. It is the check we
-  already have; no new judgment.
+- **Done** = the topic's FINAL CHECK passed (founder, 2026-10-28; see
+  below). Finishing the lesson 4/4 only opens the check.
 - **Depth** = every further round on the same topic ("more"), shown as a
   small count beside the tick. It never gates anything; it is a record.
+
+## The final check (founder, 2026-10-28)
+
+After the lesson's challenges, the screen goes BLANK: no checklist, no
+"Try saying" line, no word chips, whatever coach mode says. The tutor asks
+the learner to say what they practiced, in their own words, in one go.
+The app judges it, as it ticks challenges today, and the tutor says the
+result.
+
+**The bar is confidence, not perfection.** The goal of the product is to
+speak out loud without fear, so:
+
+- **Pass** — every challenge's point was said and the tutor understood
+  it. Small slips and some hesitation still pass.
+- **Once more** — everything was there and understood, but very shaky
+  (many slips, long stalls). The tutor asks for it one more time before
+  judging. Only once: the second answer is judged with the same bar.
+- **Not yet** — a point is missing, or it couldn't be understood. The
+  tutor names what was missing, practices that part once, and the learner
+  tries again (now or next time). The topic shows "lesson done, check not
+  passed yet".
+
+**A slip is ALWAYS named, pass or not.** "You passed, I understood all of
+it. Two small things: 'what's good here', and 'pay by card', not 'with
+card'." Never "great job / perfect" over a mistake; praise is for a clean
+answer only. An app that praises a wrong sentence loses the learner's
+trust in every verdict after it. The named slips become drill cards
+through the existing correction path.
+
+Still open: whether a learner can skip the check, and whether a chapter
+gets a check of its own.
 
 ## The catalog
 
@@ -172,7 +203,8 @@ under the Android rule; 5 is ongoing.
 ## Open questions for the founder
 
 1. Soft unlocking (recommended) or hard locks?
-2. Is "done" one finished lesson, or should a topic need two rounds?
+2. ~~Is "done" one finished lesson, or two rounds?~~ Decided: the final
+   check (above).
 3. Should the Talk tab's ready-made situations and the map be ONE list
    (a starter situation = a topic), or stay separate?
 4. Does the map belong only to tutor mode, or also on the Talk tab as
