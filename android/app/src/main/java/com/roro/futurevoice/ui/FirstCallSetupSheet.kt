@@ -198,9 +198,18 @@ fun FirstCallSetupSheet(
                     }
                 }
 
+                // Same switch and words as the call's own settings.
+                if (TutorMode.IS_AVAILABLE) {
+                    GroupedSectionSpacer()
+                    GroupedCard {
+                        SetupToggleRow(Icons.Outlined.School, stringResource(R.string.tutor_mode), tutor) { tutor = it }
+                    }
+                    GroupedFooter(stringResource(
+                        R.string.pick_a_topic_and_your_future_self_teaches_it_step_by_step_un_ad6699))
+                }
                 GroupedSectionSpacer()
                 GroupedCard {
-                    SetupToggleRow(Icons.Outlined.Lightbulb, stringResource(R.string.coach_mode), coach) { coach = it }
+                    SetupToggleRow(Icons.Outlined.Lightbulb, stringResource(R.string.try_saying), coach) { coach = it }
                 }
                 GroupedFooter(stringResource(
                     R.string.after_each_thing_your_future_self_says_you_see_a_way_to_answ_35f388))
@@ -212,15 +221,6 @@ fun FirstCallSetupSheet(
                 }
                 GroupedFooter(stringResource(R.string.take_your_time_your_future_self_waits_until_you_press_send))
 
-                // Same switch and words as the call's own settings.
-                if (TutorMode.IS_AVAILABLE) {
-                    GroupedSectionSpacer()
-                    GroupedCard {
-                        SetupToggleRow(Icons.Outlined.School, stringResource(R.string.tutor_mode), tutor) { tutor = it }
-                    }
-                    GroupedFooter(stringResource(
-                        R.string.pick_a_topic_and_your_future_self_teaches_it_step_by_step_un_ad6699))
-                }
                 Spacer(Modifier.size(12.dp))
             }
             Box(Modifier.fillMaxWidth().background(AppSurfaces.ground)

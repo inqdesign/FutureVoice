@@ -116,26 +116,6 @@ fun CallSettingsSheet(
             }
             GroupedFooter(stringResource(R.string.applies_from_the_next_thing_your_future_self_says))
 
-            // On by default for A1/A2: it trades a little of the call's pace
-            // for being walked toward the words being studied (`CoachMode`).
-            GroupedSectionSpacer()
-            GroupedCard {
-                ToggleRow(Icons.Outlined.Lightbulb, stringResource(R.string.cm_coach_mode), coachMode) {
-                    onCoachMode(it)
-                }
-            }
-            GroupedFooter(stringResource(R.string.cm_coach_mode_footer))
-
-            // Who ends the learner's turn: a pause, or their own Send
-            // (`SendToAnswer`). A flip mid-call reaches the gateway.
-            GroupedSectionSpacer()
-            GroupedCard {
-                ToggleRow(Icons.AutoMirrored.Outlined.Send, stringResource(R.string.answer_with_send), sendToAnswer) {
-                    onSendToAnswer(it)
-                }
-            }
-            GroupedFooter(stringResource(R.string.take_your_time_your_future_self_waits_until_you_press_send))
-
             // Part of the conversation prompt; a flip mid-call sends the
             // gateway the new prompt (`TutorMode`). Hidden while
             // `TutorMode.IS_AVAILABLE` is off.
@@ -148,6 +128,16 @@ fun CallSettingsSheet(
                 }
                 GroupedFooter(stringResource(R.string.pick_a_topic_and_your_future_self_teaches_it_step_by_step_un_ad6699))
             }
+
+            // Who ends the learner's turn: a pause, or their own Send
+            // (`SendToAnswer`). A flip mid-call reaches the gateway.
+            GroupedSectionSpacer()
+            GroupedCard {
+                ToggleRow(Icons.AutoMirrored.Outlined.Send, stringResource(R.string.answer_with_send), sendToAnswer) {
+                    onSendToAnswer(it)
+                }
+            }
+            GroupedFooter(stringResource(R.string.take_your_time_your_future_self_waits_until_you_press_send))
 
             GroupedSectionHeader(stringResource(R.string.screen))
             GroupedCard {
@@ -180,6 +170,12 @@ fun CallSettingsSheet(
                 GroupedRowDivider()
                 ToggleRow(Icons.Filled.Checklist, stringResource(R.string.words_to_use), showsGoalChips) {
                     onFlag(CallSettings.SHOWS_GOAL_CHIPS, it)
+                }
+                GroupedRowDivider()
+                // Coach mode (`CoachMode`, on for A1/A2), named after the
+                // panel it draws above the pill (iOS 9cff630b).
+                ToggleRow(Icons.Outlined.Lightbulb, stringResource(R.string.try_saying), coachMode) {
+                    onCoachMode(it)
                 }
             }
             GroupedFooter(stringResource(R.string.nothing_you_hide_is_lost_your_talk_s_book_keeps_every_correc_4f2f1b))
