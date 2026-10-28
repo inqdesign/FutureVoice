@@ -284,7 +284,11 @@ object TalkTimeLog {
             }
 
             val server = mutableMapOf<String, Int>()
+            // A tick written between two pages slides the next page by a row,
+            // so the boundary row can come back twice. Every row has a unique key.
+            val seen = HashSet<String>()
             for (r in rows) {
+                if (r.idempotency_key != null && !seen.add(r.idempotency_key)) continue
                 if (r.isPreflight) continue
                 val sec = r.metadata?.seconds ?: continue
                 if (sec <= 0) continue
