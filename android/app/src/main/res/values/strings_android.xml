@@ -564,4 +564,6 @@
         <item quantity="one">%d try</item>
         <item quantity="other">%d tries</item>
     </plurals>
+    <!-- iOS `explain("Coming soon")` has no catalog entry: English in every language. -->
+    <string name="coming_soon" translatable="false">Coming soon</string>
 </resources>

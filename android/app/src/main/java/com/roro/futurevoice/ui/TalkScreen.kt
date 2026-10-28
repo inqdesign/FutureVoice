@@ -772,7 +772,10 @@ fun TalkScreen(
                         // only ever fit the bar cut off with an ellipsis.
                         Text(when {
                                 newsFacts.isNotEmpty() -> stringResource(R.string.news)
-                                else -> topic.ifBlank { stringResource(R.string.lets_talk) }
+                                // A call with no topic is named after the home ring's
+                                // page it came from (iOS `emptyTopicTitle`).
+                                else -> topic.ifBlank { stringResource(
+                                    if (state.tutorOn) TalkRingMode.TUTOR.title else TalkRingMode.FREE_TALK.title) }
                             },
                             style = MaterialTheme.typography.titleMedium,
                             maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)

@@ -817,7 +817,12 @@ class TalkViewModel(context: Context) : ViewModel() {
         }
 
     private fun callTitle(cfg: TalkConfig): String =
-        cfg.cast?.name ?: cfg.topic.ifBlank { appContext.getString(com.roro.futurevoice.R.string.talk) }
+        cfg.cast?.name ?: cfg.topic.ifBlank {
+            // Named after the home ring's page it came from (iOS
+            // `callDisplayTitle` → `emptyTopicTitle`, d3a28206).
+            appContext.getString(if (tutorThisCall) com.roro.futurevoice.R.string.tutor
+                else com.roro.futurevoice.R.string.let_s_talk)
+        }
 
     private fun updateCallNotification(cfg: TalkConfig, phase: TalkPhase) {
         // A state change that lands AFTER the call ended (a late socket

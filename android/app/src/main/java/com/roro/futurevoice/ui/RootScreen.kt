@@ -137,6 +137,8 @@ import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.IconButton
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import com.roro.futurevoice.data.LanguageCatalog
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import androidx.compose.ui.draw.shadow
@@ -2468,6 +2470,39 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.weight(1f))
+        // The ring pages between three modes (iOS d3a28206, founder
+        // 2026-10-28): the surface and the goal arc stay put, only the label
+        // inside swipes, with three dots under the ring. The ring IS the
+        // tutor switch — the same key Call settings writes, each follows the
+        // other. Pronunciation isn't built yet and leaves the mode as it was.
+        val ringScope = androidx.compose.runtime.rememberCoroutineScope()
+        val pager = androidx.compose.foundation.pager.rememberPagerState(
+            initialPage = TalkRingMode.current(context).ordinal) { TalkRingMode.entries.size }
+        LaunchedEffect(pager) {
+            var first = true
+            androidx.compose.runtime.snapshotFlow { pager.currentPage }.collect { page ->
+                if (first) { first = false; return@collect }
+                when (TalkRingMode.entries[page]) {
+                    TalkRingMode.FREE_TALK -> com.roro.futurevoice.talk.TutorMode.set(context, false)
+                    TalkRingMode.TUTOR -> com.roro.futurevoice.talk.TutorMode.set(context, true)
+                    TalkRingMode.PRONUNCIATION -> {}
+                }
+                HapticEngine.selection(context)
+            }
+        }
+        // Flipped from Call settings: the ring follows.
+        androidx.compose.runtime.DisposableEffect(Unit) {
+            val prefs = context.getSharedPreferences("futurevoice", android.content.Context.MODE_PRIVATE)
+            val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+                if (key != com.roro.futurevoice.talk.TutorMode.KEY) return@OnSharedPreferenceChangeListener
+                if (TalkRingMode.entries[pager.currentPage] == TalkRingMode.PRONUNCIATION) return@OnSharedPreferenceChangeListener
+                val target = TalkRingMode.current(context).ordinal
+                if (target != pager.currentPage) ringScope.launch { pager.scrollToPage(target) }
+            }
+            prefs.registerOnSharedPreferenceChangeListener(listener)
+            onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+        }
+        Box(contentAlignment = Alignment.Center) {
         TalkRing(
             diameter = RING_DIAMETER,
             progress = seconds / 60f / goalMinutes.coerceAtLeast(1),
@@ -2479,37 +2514,81 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
             // call's pill; while its proxy is up, the ring shows none.
             surfaceAlpha = if (TalkMorph.active) 0f else 1f,
             onSurfaceBounds = { TalkMorph.ringRect = it },
-            modifier = Modifier.then(
-                if (enabled) Modifier.clickable(indication = null,
-                    interactionSource = remember { MutableInteractionSource() }) { onTap() }
-                else Modifier),
         ) {
-            // INSIDE the circle: what the tap does, and the day's one number
-            // under it. Both used to sit as a line beneath the ring, which
-            // left the ring an unlabelled ornament and the number homeless.
-            Column(horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                // `let_s_talk` (the shared catalog), not the Android-only
-                // `lets_talk`: the two had drifted into different Korean, and
-                // this string is the one word both platforms print.
-                val label = stringResource(R.string.let_s_talk)
-                Text(label, style = DisplayFace.style(label,
-                    MaterialTheme.typography.titleLarge))
-                val sub = if (seconds > 0) com.roro.futurevoice.data.TalkTime.clock(seconds)
-                    else stringResource(R.string.today_s_goal_lld_min, goalMinutes)
-                // The morph's proxy wears these exact two lines.
-                androidx.compose.runtime.SideEffect { TalkMorph.ringLabel = label; TalkMorph.ringSub = sub }
-                Text(
-                    sub,
-                    // iOS `.footnote.weight(.medium).monospacedDigit()`.
-                    style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            val sub = if (seconds > 0) com.roro.futurevoice.data.TalkTime.clock(seconds)
+                else stringResource(R.string.today_s_goal_lld_min, goalMinutes)
+            // The morph's proxy wears the CURRENT page's two lines, so the
+            // hand-off never swaps "Tutor" for "Let's talk" mid-flight.
+            val currentLabel = stringResource(TalkRingMode.entries[pager.currentPage].title)
+            androidx.compose.runtime.SideEffect { TalkMorph.ringLabel = currentLabel; TalkMorph.ringSub = sub }
+            androidx.compose.foundation.pager.HorizontalPager(
+                state = pager,
+                modifier = Modifier.fillMaxSize(),
+            ) { page ->
+                val m = TalkRingMode.entries[page]
+                // INSIDE the circle: what the tap does, and the day's one
+                // number under it (or "Coming soon" on a page with no call).
+                Column(
+                    Modifier.fillMaxSize().then(
+                        if (enabled && m.isAvailable) Modifier.clickable(indication = null,
+                            interactionSource = remember { MutableInteractionSource() }) { onTap() }
+                        else Modifier),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically),
+                ) {
+                    // `let_s_talk` (the shared catalog), not the Android-only
+                    // `lets_talk`: the two had drifted into different Korean.
+                    val label = stringResource(m.title)
+                    Text(label, style = DisplayFace.style(label,
+                        MaterialTheme.typography.titleLarge),
+                        color = if (m.isAvailable) MaterialTheme.colorScheme.onSurface
+                            else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        if (m.isAvailable) sub else stringResource(R.string.coming_soon),
+                        // iOS `.footnote.weight(.medium).monospacedDigit()`.
+                        style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
+        }
+        // The dots sit in the gap under the ring, outside its layout, so the
+        // centring maths (ring centre `RING_TAIL + radius` above the bottom)
+        // holds (iOS: an overlay at the ring's bottom, offset 36).
+        Row(
+            Modifier.align(Alignment.BottomCenter).offset(y = 36.dp)
+                .clearAndSetSemantics {},
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            TalkRingMode.entries.forEach { m ->
+                val on = m.ordinal == pager.currentPage
+                val alpha by androidx.compose.animation.core.animateFloatAsState(
+                    if (on) 1f else 0.2f, androidx.compose.animation.core.tween(200), label = "ringDot")
+                Box(Modifier.size(6.dp).background(
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = alpha), CircleShape))
+            }
+        }
         }
         // Breathing room under the ring — close enough to invite the scroll,
         // far enough not to crowd it.
         Spacer(Modifier.height(RING_TAIL))
+    }
+}
+
+/**
+ * The three things the home ring can start (iOS `TalkRingMode`, d3a28206).
+ * Free talk and the tutor are the same call with [com.roro.futurevoice.talk.TutorMode]
+ * off or on; pronunciation is a placeholder until its lesson exists.
+ */
+enum class TalkRingMode(@androidx.annotation.StringRes val title: Int) {
+    FREE_TALK(R.string.let_s_talk), TUTOR(R.string.tutor), PRONUNCIATION(R.string.pronunciation);
+
+    val isAvailable: Boolean get() = this != PRONUNCIATION
+
+    companion object {
+        /** What the ring shows on launch — the last mode the learner swiped to. */
+        fun current(context: android.content.Context): TalkRingMode =
+            if (com.roro.futurevoice.talk.TutorMode.isOn(context)) TUTOR else FREE_TALK
     }
 }
 
