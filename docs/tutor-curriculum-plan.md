@@ -73,8 +73,11 @@ answer only. An app that praises a wrong sentence loses the learner's
 trust in every verdict after it. The named slips become drill cards
 through the existing correction path.
 
-Still open: whether a learner can skip the check, and whether a chapter
-gets a check of its own.
+**The check can't be skipped** (founder): the learner is here to improve,
+and this is the part they don't get to avoid. Leaving the call is still
+leaving the call; the topic then stays "check not passed yet" and the
+tutor brings the check back next time. **No chapter check** for now —
+topics one by one.
 
 ## The catalog
 
