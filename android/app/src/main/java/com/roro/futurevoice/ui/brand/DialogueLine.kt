@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui.brand
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -66,7 +67,10 @@ fun DialogueLine(
     val fill = when {
         isMonoUser -> MaterialTheme.colorScheme.onSurface
         speaker.isUser -> accent.copy(alpha = 0.18f)
-        else -> MaterialTheme.colorScheme.surfaceVariant
+        // iOS `secondarySystemBackground`: F2F2F7 / 1C1C1E. surfaceVariant
+        // (E3E3E8) read as a heavy grey next to iOS (2026-10-29).
+        else -> if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceContainerHigh
+        else MaterialTheme.colorScheme.surfaceContainer
     }
     val foreground = if (isMonoUser) MaterialTheme.colorScheme.surface
     else MaterialTheme.colorScheme.onSurface
