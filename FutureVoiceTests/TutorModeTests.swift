@@ -98,11 +98,13 @@ final class TutorModeTests: XCTestCase {
         XCTAssertEqual(o(V(attempt: false)), .notAnAttempt)
         XCTAssertEqual(o(V(attempt: true, missing: [2], understood: true)), .notYet)
         XCTAssertEqual(o(V(attempt: true, missing: [], understood: false)), .notYet)
-        // Small slips still pass; the slips are named, not failed.
-        XCTAssertEqual(o(V(attempt: true, missing: [], understood: true, shaky: false), slips: 2), .pass)
-        // Shaky asks once more, once.
+        // A clean first try passes.
+        XCTAssertEqual(o(V(attempt: true, missing: [], understood: true, shaky: false)), .pass)
+        // Not perfect the first time (any slip, or shaky) asks once more, once.
+        XCTAssertEqual(o(V(attempt: true, understood: true, shaky: false), slips: 1), .onceMore)
         XCTAssertEqual(o(V(attempt: true, understood: true, shaky: true)), .onceMore)
-        XCTAssertEqual(o(V(attempt: true, understood: true, shaky: false), slips: 3), .onceMore)
+        // The second try passes with slips; they are named, not failed.
+        XCTAssertEqual(o(V(attempt: true, understood: true, shaky: false), slips: 2, used: true), .pass)
         XCTAssertEqual(o(V(attempt: true, understood: true, shaky: true), used: true), .pass)
     }
 

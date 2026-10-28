@@ -269,7 +269,9 @@ enum TutorPlanner {
 /// "don't hang up — ask. Keep going and the session goes on; another topic
 /// and the book is made in the background while it asks what's next").
 enum TutorNext {
-    enum Choice: String, Decodable { case more, new, stop, unclear }
+    /// `again`: say the passed lesson once more, for practice (the tutor
+    /// offers it after a pass with slips).
+    enum Choice: String, Decodable { case more, again, new, stop, unclear }
     struct Answer: Decodable {
         let choice: Choice
         /// The next topic, when they named one.
@@ -293,6 +295,9 @@ enum TutorNext {
         - "more": they clearly want to keep practicing this same topic \
           ("more", "let's keep going with this", "go deeper"), or said yes \
           when the tutor's line asked ONLY about doing more of it.
+        - "again": they want to say it (the whole thing) once more first, \
+          or said yes when the tutor's line asked ONLY about trying it once \
+          more.
         - "new": another topic. If they named a SPECIFIC one ("ordering at \
           a cafe"), put it in "topic" in their own words; "another topic" / \
           "something else" is not a topic — leave "topic" out.
@@ -301,7 +306,7 @@ enum TutorNext {
           was fun", "sounds good", "cool"), a question, noise, a "yes" to a \
           line that offered both, or a tutor line that wasn't asking about \
           this at all. When in doubt, "unclear": the tutor will ask them.\(offer)
-        Return STRICT JSON only: {"choice": "more|new|stop|unclear", "topic": "..."}
+        Return STRICT JSON only: {"choice": "more|again|new|stop|unclear", "topic": "..."}
         """
         return try? await GeminiClient.background.sendJSON(
             system: system,
@@ -414,11 +419,11 @@ enum TutorJudge {
         (in any language) — not for a mistake, a question about the \
         challenge, or "I don't know".
         Also decide "tutor_moved_on": true ONLY when the tutor's line had \
-        already finished this challenge — said they got it and started the \
-        next step (asked for something different from this challenge, or \
-        asked them to say the whole thing in one go), or said the whole \
-        lesson is done. False while the tutor is still on this challenge \
-        (asking for it, or for it again).
+        already finished this challenge — said they got it AND asked for \
+        something different from this challenge. False while the tutor is \
+        still on this challenge: asking for it, for it again, or to say it \
+        again with more in it ("say that whole thing once more, including \
+        …" is still this challenge).
         Return STRICT JSON only: {"done": true|false, "other_topic": true|false, "tutor_moved_on": true|false}
         """
         let content = """
@@ -462,13 +467,14 @@ enum TutorFinalCheck {
         var shaky: Bool? = nil
     }
 
-    /// Slips at or past this count make an answer shaky whatever the judge says.
-    static let shakySlips = 3
-
+    /// Not perfect the first time → once more, always (founder, 2026-10-28:
+    /// "if it wasn't perfect, we at least should ask one more time"). The
+    /// second try passes when every part is there and understood; the tutor
+    /// then offers one more go or moving on.
     static func outcome(_ v: Verdict, slips: Int, onceMoreUsed: Bool) -> Outcome {
         guard v.attempt else { return .notAnAttempt }
         if v.understood == false || !(v.missing ?? []).isEmpty { return .notYet }
-        if (v.shaky == true || slips >= shakySlips) && !onceMoreUsed { return .onceMore }
+        if (v.shaky == true || slips > 0) && !onceMoreUsed { return .onceMore }
         return .pass
     }
 

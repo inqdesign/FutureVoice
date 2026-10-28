@@ -5062,7 +5062,13 @@ struct ConversationView: View {
     /// judge also reports when the tutor's last line had already left this
     /// challenge — then it is ticked with the previous try, and this line is
     /// judged against the challenge the tutor is on now.
-    private func tutorCheck(turnId: UUID, said: String, fixes: [TurnFix]) {
+    ///
+    /// One line ticks at most ONE challenge by the tutor's move: the moved-on
+    /// re-check of the same line can't move on again (device, 2026-10-28:
+    /// "say that whole thing once more" read as moved-on for every
+    /// challenge, and 2–4 ticked within two seconds).
+    private func tutorCheck(turnId: UUID, said: String, fixes: [TurnFix],
+                            mayFollowTutor: Bool = true) {
         guard tutorThisCall, !tutorPlanning, let lesson = tutorLesson else { return }
         if lesson.inFinalCheck {
             tutorFinalCheckTry(said: said, fixes: fixes)
@@ -5084,7 +5090,7 @@ struct ConversationView: View {
                 dropTutorLesson(said: said)
                 return
             }
-            if verdict?.tutorMovedOn == true {
+            if mayFollowTutor, verdict?.tutorMovedOn == true {
                 now.challenges[i].doneAt = Date()
                 now.challenges[i].line = tutorLastTry.isEmpty ? said : tutorLastTry
                 tutorLastTry = ""
@@ -5104,7 +5110,7 @@ struct ConversationView: View {
                 if finished {
                     tutorFinalCheckTry(said: said, fixes: fixes)
                 } else {
-                    tutorCheck(turnId: turnId, said: said, fixes: fixes)
+                    tutorCheck(turnId: turnId, said: said, fixes: fixes, mayFollowTutor: false)
                 }
                 return
             }
@@ -5171,6 +5177,8 @@ struct ConversationView: View {
                     startTutorLesson(request: topic, picked: false, fromTopic: false,
                                      topicId: isNext ? next?.topic.id : nil)
                 }
+            case .again:
+                realtime.nudge("They want to say it once more. Ask them to go ahead — the whole thing, in one go. When they have, name any slip by saying it the right way, briefly, then ask whether they want more of this or another topic.")
             case .stop, .unclear:
                 break
             }
@@ -5320,7 +5328,7 @@ struct ConversationView: View {
                 now.check = check
                 TutorLessonStore.save(now)
                 tutorLesson = now
-                realtime.nudge("Final check result: every part was there and you understood it, but it was shaky.\(slips.isEmpty ? "" : " Slips: \(slipList).") Say you understood all of it\(slips.isEmpty ? "" : ", name each slip by saying it the right way, briefly"), and ask them to say the whole thing once more, in one go, a little more smoothly. Don't call it great.")
+                realtime.nudge("Final check result: ONCE MORE. Every part was there and you understood it, but it wasn't clean yet.\(slips.isEmpty ? "" : " Slips: \(slipList).") Don't say they passed. Say you understood all of it\(slips.isEmpty ? "" : ", name each slip by saying it the right way, briefly"), and ask them to say the whole thing once more, in one go\(slips.isEmpty ? ", a little more smoothly" : ", with those fixed"). Don't call it great.")
             case .pass:
                 check.passedAt = Date()
                 check.line = said
@@ -5351,7 +5359,7 @@ struct ConversationView: View {
                 if slips.isEmpty {
                     realtime.nudge("Final check result: PASSED, nothing to fix. Tell them warmly that they passed — they can say it now, on their own. Then ask whether they want more of this or another topic.\(nextLine)")
                 } else {
-                    realtime.nudge("Final check result: PASSED. They said every part and you understood them. Slips: \(slipList). Tell them they passed and that you understood all of it, then name each slip in a few words by saying it the right way (\"one small thing: …\"). Don't call it great, perfect or flawless. Then ask whether they want more of this or another topic.\(nextLine)")
+                    realtime.nudge("Final check result: PASSED. They said every part and you understood them. Slips: \(slipList). Tell them they passed and that you understood all of it, then name each slip in a few words by saying it the right way (\"one small thing: …\"). Don't call it great, perfect or flawless. Then ask whether they'd like to say it once more, or move on.\(nextLine)")
                 }
             }
         }
