@@ -1,0 +1,790 @@
+[
+ {
+  "en": "<title>nawana: Learn the language with the fluent you</title>",
+  "text": "<title>nawana: Aprende idiomas con tu yo fluido</title>"
+ },
+ {
+  "en": "<meta name=\"description\" content=\"The most personal way to learn a language. Talk with your fluent future voice every day, then study from a textbook made of what you actually said. iOS app.\" />",
+  "text": "<meta name=\"description\" content=\"La forma más personal de aprender un idioma. Habla cada día con la voz fluida de tu yo del futuro y estudia con un cuaderno hecho de lo que de verdad dijiste. App para iOS.\" />"
+ },
+ {
+  "en": "<meta property=\"og:title\" content=\"nawana: Learn the language with the fluent you\" />",
+  "text": "<meta property=\"og:title\" content=\"nawana: Aprende idiomas con tu yo fluido\" />"
+ },
+ {
+  "en": "<meta property=\"og:description\" content=\"Sixty seconds of recording builds your fluent future voice. Talk with it every day, then study from your own textbook.\" />",
+  "text": "<meta property=\"og:description\" content=\"Con 60 segundos de grabación nace la voz fluida de tu yo del futuro. Habla con ella cada día y estudia con tu propio cuaderno.\" />"
+ },
+ {
+  "en": "      <a href=\"#pricing\" id=\"nav-pricing\" hidden>Pricing</a>",
+  "text": "      <a href=\"#pricing\" id=\"nav-pricing\" hidden>Precios</a>"
+ },
+ {
+  "en": "      <a class=\"btn-store\" href=\"#\" data-appstore><svg viewBox=\"0 0 384 512\" fill=\"currentColor\" aria-hidden=\"true\"><use href=\"#applelogo\"/></svg><span class=\"tx\"><small>Download on the</small><b>App Store</b></span></a>",
+  "text": "      <a class=\"btn-store\" href=\"#\" data-appstore><svg viewBox=\"0 0 384 512\" fill=\"currentColor\" aria-hidden=\"true\"><use href=\"#applelogo\"/></svg><span class=\"tx\"><small>Descárgalo en el</small><b>App Store</b></span></a>"
+ },
+ {
+  "en": "      <button class=\"nav-burger\" id=\"nav-burger\" type=\"button\" aria-label=\"Menu\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M3 6h18M3 12h18M3 18h18\"/></svg></button>",
+  "text": "      <button class=\"nav-burger\" id=\"nav-burger\" type=\"button\" aria-label=\"Menú\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M3 6h18M3 12h18M3 18h18\"/></svg></button>"
+ },
+ {
+  "en": "    <a href=\"#pricing\" id=\"nav-pricing-m\" hidden>Pricing</a>",
+  "text": "    <a href=\"#pricing\" id=\"nav-pricing-m\" hidden>Precios</a>"
+ },
+ {
+  "en": "      <div class=\"n-kicker rv\"><i></i>The most personal way to learn a language</div>",
+  "text": "      <div class=\"n-kicker rv\"><i></i>La forma más personal de aprender un idioma</div>"
+ },
+ {
+  "en": "      <h1 class=\"rv\" style=\"--d:0.06s\">Learn the language<br />with the <span class=\"px-k\">fluent you</span>.</h1>",
+  "text": "      <h1 class=\"rv\" style=\"--d:0.06s\">Aprende el idioma<br />con <span class=\"px-k\">tu yo fluido</span>.</h1>"
+ },
+ {
+  "en": "      <p class=\"n-sub rv\" style=\"--d:0.12s\">Talk when you want, about what you want,<br />and study from your own textbook.</p>",
+  "text": "      <p class=\"n-sub rv\" style=\"--d:0.12s\">Habla cuando quieras, de lo que quieras,<br />y estudia con tu propio cuaderno.</p>"
+ },
+ {
+  "en": "        <a class=\"btn-store\" href=\"#\" data-appstore><svg viewBox=\"0 0 384 512\" fill=\"currentColor\" aria-hidden=\"true\"><use href=\"#applelogo\"/></svg><span class=\"tx\"><small>Download on the</small><b>App Store</b></span></a>",
+  "text": "        <a class=\"btn-store\" href=\"#\" data-appstore><svg viewBox=\"0 0 384 512\" fill=\"currentColor\" aria-hidden=\"true\"><use href=\"#applelogo\"/></svg><span class=\"tx\"><small>Descárgalo en el</small><b>App Store</b></span></a>"
+ },
+ {
+  "en": "      <span class=\"n-note rv\" style=\"--d:0.24s\"><b>iOS 17+</b> · First 20 minutes free</span>",
+  "text": "      <span class=\"n-note rv\" style=\"--d:0.24s\"><b>iOS 17 o posterior</b> · Los primeros 20 minutos, gratis</span>"
+ },
+ {
+  "en": "        <div class=\"s-cap\"><div class=\"ix\">01 / 05</div><h3>Make the <span class=\"px-k\">fluent future you</span>,<br />in your own voice</h3><p>Read aloud for a minute. You pick the accent and the pace.</p></div>",
+  "text": "        <div class=\"s-cap\"><div class=\"ix\">01 / 05</div><h3>Crea <span class=\"px-k\">tu yo fluido</span>,<br />con tu propia voz</h3><p>Lee en voz alta un minuto. Tú eliges el acento y la velocidad.</p></div>"
+ },
+ {
+  "en": "        <div class=\"s-cap\"><div class=\"ix\">02 / 05</div><h3>Then talk<br />with that future you</h3><p>Stumble freely. Every turn comes back corrected.</p></div>",
+  "text": "        <div class=\"s-cap\"><div class=\"ix\">02 / 05</div><h3>Luego habla<br />con ese yo del futuro</h3><p>Trábate sin miedo. Cada turno vuelve corregido.</p></div>"
+ },
+ {
+  "en": "        <div class=\"s-cap\"><div class=\"ix\">03 / 05</div><h3>Study from your<br />own textbook</h3><p>The exact expressions, words, and grammar you just used.</p></div>",
+  "text": "        <div class=\"s-cap\"><div class=\"ix\">03 / 05</div><h3>Estudia con tu<br />propio cuaderno</h3><p>Las expresiones, palabras y gramática que acabas de usar, tal cual.</p></div>"
+ },
+ {
+  "en": "        <div class=\"s-cap\"><div class=\"ix\">04 / 05</div><h3>The more you speak,<br />the more it stacks</h3><p>Words, expressions, sentences. Automatically.</p></div>",
+  "text": "        <div class=\"s-cap\"><div class=\"ix\">04 / 05</div><h3>Cuanto más hablas,<br />más se acumula</h3><p>Palabras, expresiones, frases. Automáticamente.</p></div>"
+ },
+ {
+  "en": "        <div class=\"s-cap\"><div class=\"ix\">05 / 05</div><h3>A level measured,<br />not guessed</h3><p>Only from what you actually said.</p></div>",
+  "text": "        <div class=\"s-cap\"><div class=\"ix\">05 / 05</div><h3>Un nivel medido,<br />no adivinado</h3><p>Solo con lo que de verdad dijiste.</p></div>"
+ },
+ {
+  "en": "        <div class=\"stg stg0\" data-step=\"0\"><div class=\"stk\" data-lang=\"en\" style=\"left:calc(var(--pw) * -0.5 - min(250px, 13vw) - 192px);top:-140px;--r:-4deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇺🇸🇬🇧</span><div><b>English</b></div></div></div></div><div class=\"stk\" data-lang=\"ja\" style=\"left:calc(var(--pw) * -0.5 - min(50px, 2.6vw) - 192px);top:20px;--r:3deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇯🇵</span><div><b>日本語</b><small>Japanese</small></div></div></div></div><div class=\"stk\" data-lang=\"de\" style=\"left:calc(var(--pw) * -0.5 - min(190px, 9.9vw) - 192px);top:190px;--r:-2deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇩🇪</span><div><b>Deutsch</b><small>German</small></div></div></div></div><div class=\"stk\" data-lang=\"ko\" style=\"left:calc(var(--pw) * 0.5 + min(150px, 7.8vw));top:-100px;--r:4deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇰🇷</span><div><b>한국어</b><small>Korean</small></div></div></div></div><div class=\"stk\" data-lang=\"es\" style=\"left:calc(var(--pw) * 0.5 + min(40px, 2.1vw));top:110px;--r:-3deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇲🇽🇪🇸</span><div><b>Español</b><small>Spanish</small></div></div></div></div></div>",
+  "text": "        <div class=\"stg stg0\" data-step=\"0\"><div class=\"stk\" data-lang=\"en\" style=\"left:calc(var(--pw) * -0.5 - min(250px, 13vw) - 192px);top:-140px;--r:-4deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇺🇸🇬🇧</span><div><b>English</b></div></div></div></div><div class=\"stk\" data-lang=\"ja\" style=\"left:calc(var(--pw) * -0.5 - min(50px, 2.6vw) - 192px);top:20px;--r:3deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇯🇵</span><div><b>日本語</b><small>Japonés</small></div></div></div></div><div class=\"stk\" data-lang=\"de\" style=\"left:calc(var(--pw) * -0.5 - min(190px, 9.9vw) - 192px);top:190px;--r:-2deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇩🇪</span><div><b>Deutsch</b><small>Alemán</small></div></div></div></div><div class=\"stk\" data-lang=\"ko\" style=\"left:calc(var(--pw) * 0.5 + min(150px, 7.8vw));top:-100px;--r:4deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇰🇷</span><div><b>한국어</b><small>Coreano</small></div></div></div></div><div class=\"stk\" data-lang=\"es\" style=\"left:calc(var(--pw) * 0.5 + min(40px, 2.1vw));top:110px;--r:-3deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇲🇽🇪🇸</span><div><b>Español</b></div></div></div></div></div>"
+ },
+ {
+  "en": "        <div class=\"stg\" data-step=\"1\"><div class=\"stk sl\" style=\"--w:230px;--r:-2deg\"><div class=\"b\"><div class=\"k\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M4 10v4M8 7v10M12 4v16M16 8v8M20 10v4\"/></svg>One minute of reading</div><div class=\"row\"><nw-futureself mode=\"listening\" level=\"0.55\" style=\"width:110px;height:42px\"></nw-futureself><span class=\"num\">0:47</span></div><div class=\"n\">Just read it aloud</div></div></div><div class=\"stk sr1\" style=\"--w:270px;--r:2deg\"><div class=\"b\"><div class=\"k\">Accent</div><div class=\"chips\"><span>American</span><span class=\"on\">British</span><span>Australian</span></div><div class=\"n\">Same voice, the accent you pick</div></div></div><div class=\"stk sr2\" style=\"--w:260px;--r:-2deg\"><div class=\"b\"><div class=\"k\">Pace</div><div class=\"chips\"><span>Normal</span><span class=\"on\">Relaxed</span><span>Slow</span></div></div></div></div>",
+  "text": "        <div class=\"stg\" data-step=\"1\"><div class=\"stk sl\" style=\"--w:230px;--r:-2deg\"><div class=\"b\"><div class=\"k\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M4 10v4M8 7v10M12 4v16M16 8v8M20 10v4\"/></svg>Un minuto de lectura</div><div class=\"row\"><nw-futureself mode=\"listening\" level=\"0.55\" style=\"width:110px;height:42px\"></nw-futureself><span class=\"num\">0:47</span></div><div class=\"n\">Solo léelo en voz alta</div></div></div><div class=\"stk sr1\" style=\"--w:270px;--r:2deg\"><div class=\"b\"><div class=\"k\">Acento</div><div class=\"chips\"><span>Americano</span><span class=\"on\">Británico</span><span>Australiano</span></div><div class=\"n\">Tu misma voz, con el acento que elijas</div></div></div><div class=\"stk sr2\" style=\"--w:260px;--r:-2deg\"><div class=\"b\"><div class=\"k\">Velocidad</div><div class=\"chips\"><span>Normal</span><span class=\"on\">Tranquila</span><span>Lenta</span></div></div></div></div>"
+ },
+ {
+  "en": "        <div class=\"stg\" data-step=\"2\"><div class=\"stk sl\" style=\"--w:230px;--r:-2deg\"><div class=\"b\"><div class=\"k\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M4 10v4M8 7v10M12 4v16M16 8v8M20 10v4\"/></svg>It answers in your voice</div><nw-futureself mode=\"speaking\" level=\"voice\" style=\"width:150px;height:56px\"></nw-futureself></div></div><div class=\"stk sr1\" style=\"--w:280px;--r:2deg\"><div class=\"b\"><div class=\"k\">What you said</div><div class=\"say\">It was a busy week. I <u>go</u> to three meetings.</div></div></div><div class=\"stk sr2\" style=\"--w:290px;--r:-2deg\"><div class=\"b\"><div class=\"k\">The fluent you's version</div><div class=\"say\">It was a busy week. I <b class=\"fx\">went</b> to three meetings.</div><div class=\"n\">It already happened, so: past tense</div></div></div></div>",
+  "text": "        <div class=\"stg\" data-step=\"2\"><div class=\"stk sl\" style=\"--w:230px;--r:-2deg\"><div class=\"b\"><div class=\"k\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M4 10v4M8 7v10M12 4v16M16 8v8M20 10v4\"/></svg>Te responde con tu voz</div><nw-futureself mode=\"speaking\" level=\"voice\" style=\"width:150px;height:56px\"></nw-futureself></div></div><div class=\"stk sr1\" style=\"--w:280px;--r:2deg\"><div class=\"b\"><div class=\"k\">Lo que dijiste</div><div class=\"say\">It was a busy week. I <u>go</u> to three meetings.</div></div></div><div class=\"stk sr2\" style=\"--w:290px;--r:-2deg\"><div class=\"b\"><div class=\"k\">La versión de tu yo fluido</div><div class=\"say\">It was a busy week. I <b class=\"fx\">went</b> to three meetings.</div><div class=\"n\">Ya pasó, así que va en pasado</div></div></div></div>"
+ },
+ {
+  "en": "        <div class=\"stg\" data-step=\"3\"><div class=\"stk sl\" style=\"--w:240px;--r:-2deg\"><div class=\"b\"><div class=\"k\">The book this talk made</div><div class=\"chips\"><span>Words <i>+5</i></span><span>Phrases <i>+3</i></span><span>Lines <i>+2</i></span></div></div></div><div class=\"stk sr1\" style=\"--w:270px;--r:2deg\"><div class=\"b\"><div class=\"k\">Review card</div><div class=\"say\"><s>I go to</s> → <b class=\"fx\">I went to</b></div><div class=\"n\">Your slip becomes a card</div></div></div><div class=\"stk sr2\" style=\"--w:200px;--r:-2deg\"><div class=\"b\"><div class=\"k\">This talk</div><div class=\"row\"><span class=\"num big\">75</span><span class=\"n\">scored at B1</span></div></div></div></div>",
+  "text": "        <div class=\"stg\" data-step=\"3\"><div class=\"stk sl\" style=\"--w:240px;--r:-2deg\"><div class=\"b\"><div class=\"k\">El cuaderno de esta conversación</div><div class=\"chips\"><span>Palabras <i>+5</i></span><span>Expresiones <i>+3</i></span><span>Frases <i>+2</i></span></div></div></div><div class=\"stk sr1\" style=\"--w:270px;--r:2deg\"><div class=\"b\"><div class=\"k\">Tarjeta de repaso</div><div class=\"say\"><s>I go to</s> → <b class=\"fx\">I went to</b></div><div class=\"n\">Tu error se vuelve tarjeta</div></div></div><div class=\"stk sr2\" style=\"--w:200px;--r:-2deg\"><div class=\"b\"><div class=\"k\">Esta conversación</div><div class=\"row\"><span class=\"num big\">75</span><span class=\"n\">nivel B1</span></div></div></div></div>"
+ },
+ {
+  "en": "        <div class=\"stg\" data-step=\"4\"><div class=\"stk sl\" style=\"--w:240px;--r:-2deg\"><div class=\"b\"><div class=\"k\">Checked off by saying it</div><div class=\"row\"><div style=\"flex:1\"><b class=\"w\">exhausting</b><div class=\"n\">adjective · very tiring</div></div><svg class=\"okc\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"10\" fill=\"#34C759\"/><path d=\"M7.5 12.3l3 3 6-6.4\" fill=\"none\" stroke=\"#fff\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></div></div></div><div class=\"stk sr1\" style=\"--w:220px;--r:2deg\"><div class=\"b\"><div class=\"k\">Words you used this week</div><span class=\"num big\">+12</span></div></div><div class=\"stk sr2\" style=\"--w:260px;--r:-2deg\"><div class=\"b\"><div class=\"k\">Used for the first time</div><div class=\"chips\"><span>negotiate</span><span>genuinely</span></div></div></div></div>",
+  "text": "        <div class=\"stg\" data-step=\"4\"><div class=\"stk sl\" style=\"--w:240px;--r:-2deg\"><div class=\"b\"><div class=\"k\">Marcada al decirla</div><div class=\"row\"><div style=\"flex:1\"><b class=\"w\">exhausting</b><div class=\"n\">adjetivo · muy cansado</div></div><svg class=\"okc\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"10\" fill=\"#34C759\"/><path d=\"M7.5 12.3l3 3 6-6.4\" fill=\"none\" stroke=\"#fff\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></div></div></div><div class=\"stk sr1\" style=\"--w:220px;--r:2deg\"><div class=\"b\"><div class=\"k\">Palabras que usaste esta semana</div><span class=\"num big\">+12</span></div></div><div class=\"stk sr2\" style=\"--w:260px;--r:-2deg\"><div class=\"b\"><div class=\"k\">Usadas por primera vez</div><div class=\"chips\"><span>negotiate</span><span>genuinely</span></div></div></div></div>"
+ },
+ {
+  "en": "        <div class=\"stg\" data-step=\"5\"><div class=\"stk sr1\" style=\"--w:230px;--r:2deg\"><div class=\"b\"><div class=\"k\">Estimated level</div><span class=\"px\">B1 → B2</span></div></div><div class=\"stk sr2\" style=\"--w:270px;--r:-2deg\"><div class=\"b\"><div class=\"k\">From what you actually said</div><div class=\"bars\"><span>Vocabulary<i><b style=\"width:82%\"></b></i></span><span>Grammar<i><b style=\"width:71%\"></b></i></span><span>Fluency<i><b style=\"width:74%\"></b></i></span></div></div></div></div>",
+  "text": "        <div class=\"stg\" data-step=\"5\"><div class=\"stk sr1\" style=\"--w:230px;--r:2deg\"><div class=\"b\"><div class=\"k\">Nivel estimado</div><span class=\"px\">B1 → B2</span></div></div><div class=\"stk sr2\" style=\"--w:270px;--r:-2deg\"><div class=\"b\"><div class=\"k\">Solo con lo que dijiste</div><div class=\"bars\"><span>Vocabulario<i><b style=\"width:82%\"></b></i></span><span>Gramática<i><b style=\"width:71%\"></b></i></span><span>Fluidez<i><b style=\"width:74%\"></b></i></span></div></div></div></div>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><span class=\"mono\">01</span>Talk · Output</div>",
+  "text": "      <div class=\"kicker rv\"><span class=\"mono\">01</span>Hablar · Producción</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">Say what you’re thinking,<br />comfortably.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">Di lo que piensas,<br />sin presión.</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>It’s your voice, not a stranger’s.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>Es tu voz, no la de un desconocido.</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>No one to feel judged by.</b> The words start coming out.</span></li>",
+  "text": "        <li data-beat=\"2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Nadie te juzga.</b> Las palabras empiezan a salir.</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Your news, your situations, free talk.</b> Whenever you want.</span></li>",
+  "text": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Tus noticias, tus situaciones, tema libre.</b> Cuando quieras.</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Every turn comes back fluent.</b></span></li>",
+  "text": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Cada turno vuelve en versión fluida.</b></span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><span class=\"mono\">02</span>Call · Habit</div>",
+  "text": "      <div class=\"kicker rv\"><span class=\"mono\">02</span>Llamada · Hábito</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">Instead of opening an app,<br />you pick up a call.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">En vez de abrir una app,<br />contestas una llamada.</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>At the time you set, the future you calls first.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>A la hora que elijas, tu yo del futuro te llama primero.</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>It rings like an alarm,</b> and the talk starts the moment you answer.</span></li>",
+  "text": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Suena como una alarma,</b> y la conversación empieza en cuanto contestas.</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Your last talk, the news, small talk.</b> A different subject each time, and every call opens with a question.</span></li>",
+  "text": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Tu última conversación, las noticias, una charla ligera.</b> Un tema distinto cada vez, y cada llamada empieza con una pregunta.</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"4\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Missed it? That’s fine.</b> No scolding. It just calls again next time.</span></li>",
+  "text": "        <li data-beat=\"4\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>¿No contestaste? No pasa nada.</b> Sin regaños. Simplemente vuelve a llamar la próxima vez.</span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><span class=\"mono\">03</span>Say it again · Replay</div>",
+  "text": "      <div class=\"kicker rv\"><span class=\"mono\">03</span>Volver a decirlo · Revivir</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">The call you just had,<br />once more, the right way.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">La llamada que acabas de tener,<br />otra vez y bien dicha.</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>Your lines come back corrected. The answers stay exactly as they were.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>Tus frases vuelven corregidas. Las respuestas, tal como fueron.</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>The whole call, not just the fixes,</b> lived again from the top.</span></li>",
+  "text": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>La llamada entera, no solo las correcciones,</b> vivida otra vez desde el principio.</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"2 3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Read the line on the prompter,</b> and the answer you heard then plays next.</span></li>",
+  "text": "        <li data-beat=\"2 3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Lee la frase en el teleprompter,</b> y después suena la respuesta que escuchaste entonces.</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"4\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Every line gets a score.</b> Stuck on one? Try it again right there.</span></li>",
+  "text": "        <li data-beat=\"4\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Cada frase recibe una puntuación.</b> ¿Te trabaste en una? Repítela ahí mismo.</span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><span class=\"mono\">04</span>Watch · Input</div>",
+  "text": "      <div class=\"kicker rv\"><span class=\"mono\">04</span>Escenas · Comprensión</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">The moments you need it<br />are yours alone.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">Los momentos en que lo necesitas<br />son solo tuyos.</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>Set up the situation ahead of you, and live it early.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>Prepara la situación que tienes por delante y vívela antes.</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Exams, interviews, speeches, travel, small talk.</b> One line opens the whole conversation.</span></li>",
+  "text": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Exámenes, entrevistas, discursos, viajes, charlas casuales.</b> Con una sola línea se abre la conversación entera.</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Your lines, in your fluent voice.</b></span></li>",
+  "text": "        <li data-beat=\"2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Tus frases, con tu voz fluida.</b></span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Any line you want, one tap</b> to shadow it right there.</span></li>",
+  "text": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>La frase que quieras, a un toque</b> del shadowing, ahí mismo.</span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><span class=\"mono\">05</span>Review · Textbook</div>",
+  "text": "      <div class=\"kicker rv\"><span class=\"mono\">05</span>Repaso · Cuaderno</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">The call you just had,<br />now a textbook.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">La llamada que acabas de tener,<br />ahora es un cuaderno.</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>Not someone else’s workbook. You study what you actually said.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>No es el libro de ejercicios de otro. Estudias lo que de verdad dijiste.</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Hang up, and the textbook is there.</b> Four chapters: words, expressions, shadowing, drills.</span></li>",
+  "text": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Cuelgas y el cuaderno ya está ahí.</b> Cuatro capítulos: palabras, expresiones, shadowing y ejercicios.</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>What you said, and what your fluent self said.</b> Both go into your notebook.</span></li>",
+  "text": "        <li data-beat=\"2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Lo que dijiste tú y lo que dijo tu yo fluido.</b> Todo va a tu libreta.</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Every mistake sits beside its fix,</b> with one line on why.</span></li>",
+  "text": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Cada error, junto a su corrección,</b> con una línea que explica por qué.</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"4\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Spaced repetition brings it back just as you forget,</b> and you answer out loud.</span></li>",
+  "text": "        <li data-beat=\"4\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>La repetición espaciada lo trae justo cuando lo olvidas,</b> y respondes en voz alta.</span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><span class=\"mono\">06</span>Shadowing · Imprint</div>",
+  "text": "      <div class=\"kicker rv\"><span class=\"mono\">06</span>Shadowing · Fijarlo</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">Shadow it until<br />it’s automatic.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">Haz shadowing hasta<br />que salga solo.</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>The voice you match is your own.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>La voz que imitas es la tuya.</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Sync shadowing.</b> A verdict on every word.</span></li>",
+  "text": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Shadowing sincronizado.</b> Un resultado para cada palabra.</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Loop just the hard part at 0.5×.</b></span></li>",
+  "text": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Repite solo la parte difícil a 0.5×.</b></span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><span class=\"mono\">07</span>Speech · Presenting</div>",
+  "text": "      <div class=\"kicker rv\"><span class=\"mono\">07</span>Discurso · Presentar</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">Say what you prepared,<br />the way you prepared it.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">Di lo que preparaste,<br />como lo preparaste.</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>Put your script up and read it aloud, like the real thing.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>Pon tu texto en pantalla y léelo en voz alta, como el día de verdad.</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>A prompter that follows your voice.</b> Camera on or off.</span></li>",
+  "text": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Un teleprompter que sigue tu voz.</b> Con cámara o sin ella.</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>A score and a note from the coach when you finish,</b> and what it was measured on.</span></li>",
+  "text": "        <li data-beat=\"2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Al terminar, una puntuación y un comentario del coach,</b> y en qué se basó la medición.</span></li>"
+ },
+ {
+  "en": "        <li><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Write the script yourself, or with AI.</b> On Plus and Max.</span></li>",
+  "text": "        <li><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Escribe el texto tú mismo o con IA.</b> En Plus y Max.</span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><span class=\"mono\">08</span>Routine · Promise</div>",
+  "text": "      <div class=\"kicker rv\"><span class=\"mono\">08</span>Rutina · Promesa</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">Plan your week,<br />then test your week.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">Planea tu semana,<br />y luego ponla a prueba.</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>Decide what each day holds, and it becomes a promise to yourself.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>Decide qué toca cada día y se convierte en una promesa contigo.</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Talks, say it again, listening, shadowing, speech, review.</b> Reminded at the times you chose.</span></li>",
+  "text": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Conversaciones, volver a decirlo, escuchar, shadowing, discurso, repaso.</b> Te avisa a las horas que elegiste.</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Your streak runs on your own bar.</b> It only grows on days you keep the promise.</span></li>",
+  "text": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Tu racha sigue tu propia meta.</b> Solo crece los días que cumples la promesa.</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"4\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>The weekly test is made of your week.</b> Words and phrases you put off, grammar you got wrong.</span></li>",
+  "text": "        <li data-beat=\"4\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>El test semanal sale de tu semana.</b> Las palabras y expresiones que dejaste para después, la gramática en la que fallaste.</span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><span class=\"mono\">09</span>Weekly · Check-in</div>",
+  "text": "      <div class=\"kicker rv\"><span class=\"mono\">09</span>Semanal · Balance</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">When the week ends,<br />your week is the test.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">Cuando acaba la semana,<br />tu semana es el examen.</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>Not a stranger’s workbook. What you said this week.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>No es el libro de ejercicios de un desconocido. Es lo que dijiste esta semana.</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>A look back at your week.</b> How many days, and what became yours.</span></li>",
+  "text": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Un repaso de tu semana.</b> Cuántos días practicaste y qué ya es tuyo.</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>A note from the coach.</b> The grammar you kept tripping on, and better words, in your own sentences.</span></li>",
+  "text": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Un comentario del coach.</b> La gramática en la que más tropezaste y palabras mejores, en tus propias frases.</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"11 12 13\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>The weekly test.</b> Built from the words and phrases you put off, and your grammar slips asked again in new sentences.</span></li>",
+  "text": "        <li data-beat=\"11 12 13\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>El test semanal.</b> Hecho con las palabras y expresiones que dejaste para después, y tus errores de gramática, preguntados otra vez en frases nuevas.</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"14\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>What you miss comes back.</b> Again on next week’s test.</span></li>",
+  "text": "        <li data-beat=\"14\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Lo que fallas vuelve.</b> Otra vez en el test de la próxima semana.</span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>People · Personas</div>",
+  "text": "      <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Personas · Personajes</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">The people from your life<br />become the cast.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">La gente de tu vida<br />se vuelve el reparto.</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>Your people, your situations.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>Tu gente, tus situaciones.</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Barista, team lead, doctor.</b> Describe them out loud, and they play in character.</span></li>",
+  "text": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Barista, jefa de equipo, médico.</b> Descríbelos en voz alta y hablan como esa persona.</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Your fluent self at the center.</b></span></li>",
+  "text": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Tu yo fluido, en el centro.</b></span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Words · Vocabulary</div>",
+  "text": "      <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Palabras · Vocabulario</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">Every word you speak<br />joins your world.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">Cada palabra que dices<br />entra en tu mundo.</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>A living map of your vocabulary.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>Un mapa vivo de tu vocabulario.</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Your level shows in the size.</b></span></li>",
+  "text": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>El tamaño muestra tu nivel.</b></span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"2 3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>One tap: meaning and examples.</b> Bookmarked means studying, checked means known.</span></li>",
+  "text": "        <li data-beat=\"2 3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Un toque: significado y ejemplos.</b> Con marcador, la estás estudiando; con check, ya la sabes.</span></li>"
+ },
+ {
+  "en": "      <div class=\"m-kick rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>One · Voice</div>",
+  "text": "      <div class=\"m-kick rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Uno · Voz</div>"
+ },
+ {
+  "en": "      <p class=\"w2-lead rv\" style=\"--d:0.06s\">Imitate a native all you want.<br /><b>Someone else’s voice<br />never becomes yours.</b></p>",
+  "text": "      <p class=\"w2-lead rv\" style=\"--d:0.06s\">Imita a un nativo todo lo que quieras.<br /><b>La voz de otro<br />nunca será la tuya.</b></p>"
+ },
+ {
+  "en": "      <p class=\"w2-line rv\" style=\"--d:0.12s\">The voice you’ll actually speak with<br /><b>is your own.</b></p>",
+  "text": "      <p class=\"w2-line rv\" style=\"--d:0.12s\">La voz con la que de verdad vas a hablar<br /><b>es la tuya.</b></p>"
+ },
+ {
+  "en": "      <p class=\"w2-line rv\" style=\"--d:0.18s\">So, a goal you can reach.<br /><b>Not “like a native”. The <span class=\"px-k\">fluent future you</span>.</b></p>",
+  "text": "      <p class=\"w2-line rv\" style=\"--d:0.18s\">Por eso, una meta alcanzable.<br /><b>No “como un nativo”. <span class=\"px-k\">Tu yo fluido del futuro</span>.</b></p>"
+ },
+ {
+  "en": "      <div class=\"m-kick rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Two · Training</div>",
+  "text": "      <div class=\"m-kick rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Dos · Entrenamiento</div>"
+ },
+ {
+  "en": "      <p class=\"w2-lead rv\" style=\"--d:0.06s\">The reason words won’t come out:<br /><b>pulling thoughts out of your head<br />was never trained.</b></p>",
+  "text": "      <p class=\"w2-lead rv\" style=\"--d:0.06s\">Si las palabras no salen, es porque<br /><b>nunca entrenaste a sacar<br />lo que tienes en la cabeza.</b></p>"
+ },
+ {
+  "en": "      <p class=\"w2-line rv\" style=\"--d:0.12s\">Not memorized lines.<br /><b>Your own thoughts, in your own words. That’s where it starts.</b></p>",
+  "text": "      <p class=\"w2-line rv\" style=\"--d:0.12s\">Nada de frases memorizadas.<br /><b>Tus propias ideas, con tus propias palabras. Ahí empieza todo.</b></p>"
+ },
+ {
+  "en": "      <p class=\"w2-line rv\" style=\"--d:0.18s\">Speak, get your grammar and phrasing fixed.<br /><b>What you said out there becomes your own textbook.</b></p>",
+  "text": "      <p class=\"w2-line rv\" style=\"--d:0.18s\">Habla y recibe correcciones de gramática y expresión.<br /><b>Lo que dijiste en la vida real se vuelve tu propio cuaderno.</b></p>"
+ },
+ {
+  "en": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>All of it, in one app</div>",
+  "text": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Todo, en una sola app</div>"
+ },
+ {
+  "en": "    <h2 class=\"head rv\" style=\"--d:0.08s\">The whole app,<br />at a glance.</h2>",
+  "text": "    <h2 class=\"head rv\" style=\"--d:0.08s\">Toda la app,<br />de un vistazo.</h2>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">01</span><span class=\"nm\">60-second voice clone</span><span class=\"ds\">One short recording at setup builds your fluent future voice.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">01</span><span class=\"nm\">Clon de voz en 60 segundos</span><span class=\"ds\">Una grabación corta al configurarla crea la voz fluida de tu yo del futuro.</span></div>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">02</span><span class=\"nm\">A fluent version, every turn</span><span class=\"ds\">Mid-conversation, what you just said comes back the way your fluent self would say it.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">02</span><span class=\"nm\">Una versión fluida en cada turno</span><span class=\"ds\">En plena conversación, lo que acabas de decir vuelve como lo diría tu yo fluido.</span></div>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">03</span><span class=\"nm\">Sync shadowing</span><span class=\"ds\">Speak along with your fluent line and get a verdict on every word, plus your pace against the target.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">03</span><span class=\"nm\">Shadowing sincronizado</span><span class=\"ds\">Habla a la vez que tu frase fluida y recibe un resultado por palabra, además de tu ritmo frente al objetivo.</span></div>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">04</span><span class=\"nm\">The people from your life</span><span class=\"ds\">Describe them out loud and they become personas that talk like the real thing.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">04</span><span class=\"nm\">La gente de tu vida</span><span class=\"ds\">Descríbelos en voz alta y se vuelven personajes que hablan como la persona real.</span></div>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">05</span><span class=\"nm\">Conversations, previewed</span><span class=\"ds\">Watch your fluent self handle the situation, and shadow any line you want on the spot.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">05</span><span class=\"nm\">Conversaciones por adelantado</span><span class=\"ds\">Mira cómo tu yo fluido resuelve la situación y haz shadowing de cualquier frase ahí mismo.</span></div>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">06</span><span class=\"nm\">Speak-aloud review</span><span class=\"ds\">Fumbled lines return as drills right before you forget them. Answered out loud, never multiple choice.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">06</span><span class=\"nm\">Repaso en voz alta</span><span class=\"ds\">Las frases en las que te trabaste vuelven como ejercicios justo antes de que las olvides. Respondes en voz alta, nunca con opción múltiple.</span></div>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">07</span><span class=\"nm\">Five-axis scorecard</span><span class=\"ds\">Vocabulary, grammar, expressiveness, fluency, pronunciation. Scored after every conversation, and pronunciation is what shadowing actually measured.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">07</span><span class=\"nm\">Evaluación en cinco áreas</span><span class=\"ds\">Vocabulario, gramática, expresión, fluidez y pronunciación. Se evalúan después de cada conversación, y la pronunciación es la que midió de verdad el shadowing.</span></div>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">08</span><span class=\"nm\">Words check themselves off</span><span class=\"ds\">A pool of about 8,000 CEFR-graded core words sits underneath, and every word you use is ticked automatically.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">08</span><span class=\"nm\">Las palabras se marcan solas</span><span class=\"ds\">Debajo hay unas 8000 palabras básicas clasificadas por nivel MCER, y cada palabra que usas se marca automáticamente.</span></div>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">09</span><span class=\"nm\">CEFR level, measured</span><span class=\"ds\">Your level is set from your real talks, vocabulary, grammar, fluency and expression together. B1 to B2 is a measurement, not an opinion.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">09</span><span class=\"nm\">Nivel MCER, medido</span><span class=\"ds\">Tu nivel sale de tus conversaciones reales: vocabulario, gramática, fluidez y expresión juntos. Pasar de B1 a B2 es una medición, no una opinión.</span></div>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">10</span><span class=\"nm\">An honest weekly report</span><span class=\"ds\">Unlocks only after fifteen minutes of real speech. Silence over noise. It fits you better the more you talk.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">10</span><span class=\"nm\">Un informe semanal honesto</span><span class=\"ds\">Se desbloquea solo tras quince minutos de habla real. Mejor silencio que ruido. Cuanto más hablas, mejor se ajusta a ti.</span></div>"
+ },
+ {
+  "en": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Pricing</div>",
+  "text": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Precios</div>"
+ },
+ {
+  "en": "    <h2 class=\"rv\" style=\"--d:0.08s\">Choose how much<br />you want to talk each month.</h2>",
+  "text": "    <h2 class=\"rv\" style=\"--d:0.08s\">Elige cuánto quieres<br />hablar cada mes.</h2>"
+ },
+ {
+  "en": "    <p class=\"pr-sub rv\" style=\"--d:0.11s\">Your first 20 minutes are free, no subscription needed.</p>",
+  "text": "    <p class=\"pr-sub rv\" style=\"--d:0.11s\">Tus primeros 20 minutos son gratis, sin suscripción.</p>"
+ },
+ {
+  "en": "      <button class=\"ct on\" data-cycle=\"monthly\" type=\"button\">Monthly</button>",
+  "text": "      <button class=\"ct on\" data-cycle=\"monthly\" type=\"button\">Mensual</button>"
+ },
+ {
+  "en": "      <button class=\"ct\" data-cycle=\"annual\" type=\"button\">Annual</button>",
+  "text": "      <button class=\"ct\" data-cycle=\"annual\" type=\"button\">Anual</button>"
+ },
+ {
+  "en": "      <div><span class=\"p-name\">Light</span></div>",
+  "text": "      <div><span class=\"p-name\">Light</span></div>"
+ },
+ {
+  "en": "      <p class=\"p-note\">A steady habit, one routine at a time.</p>",
+  "text": "      <p class=\"p-note\">Un hábito constante, una rutina a la vez.</p>"
+ },
+ {
+  "en": "        <div><dt>Talk</dt><dd data-talk=\"light\">—</dd></div>",
+  "text": "        <div><dt>Conversación</dt><dd data-talk=\"light\">—</dd></div>"
+ },
+ {
+  "en": "        <div><dt>Personalized review textbook</dt><dd>Unlimited</dd></div>",
+  "text": "        <div><dt>Cuaderno de repaso personalizado</dt><dd>Ilimitado</dd></div>"
+ },
+ {
+  "en": "        <div><dt>Shadowing · words · replay · drills</dt><dd>Unlimited</dd></div>",
+  "text": "        <div><dt>Shadowing · palabras · volver a escuchar · ejercicios</dt><dd>Ilimitado</dd></div>"
+ },
+ {
+  "en": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Start on the App Store <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>",
+  "text": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Empieza en el App Store <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>"
+ },
+ {
+  "en": "      <button class=\"btn btn-black p-buy\" data-tier=\"light\" type=\"button\" hidden>Subscribe <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></button>",
+  "text": "      <button class=\"btn btn-black p-buy\" data-tier=\"light\" type=\"button\" hidden>Suscribirse <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></button>"
+ },
+ {
+  "en": "      <div><span class=\"p-name\">Plus</span><span class=\"p-badge\">Most popular</span></div>",
+  "text": "      <div><span class=\"p-name\">Plus</span><span class=\"p-badge\">Más popular</span></div>"
+ },
+ {
+  "en": "      <p class=\"p-note\">Every day, for as long as you like.</p>",
+  "text": "      <p class=\"p-note\">Cada día, todo lo que quieras.</p>"
+ },
+ {
+  "en": "        <div><dt>Talk</dt><dd data-talk=\"plus\">—</dd></div>",
+  "text": "        <div><dt>Conversación</dt><dd data-talk=\"plus\">—</dd></div>"
+ },
+ {
+  "en": "        <div><dt>Speech</dt><dd>Included</dd></div>",
+  "text": "        <div><dt>Discurso</dt><dd>Incluido</dd></div>"
+ },
+ {
+  "en": "        <div><dt>Personalized review textbook</dt><dd>Unlimited</dd></div>",
+  "text": "        <div><dt>Cuaderno de repaso personalizado</dt><dd>Ilimitado</dd></div>"
+ },
+ {
+  "en": "        <div><dt>Shadowing · words · replay · drills</dt><dd>Unlimited</dd></div>",
+  "text": "        <div><dt>Shadowing · palabras · volver a escuchar · ejercicios</dt><dd>Ilimitado</dd></div>"
+ },
+ {
+  "en": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Start on the App Store <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>",
+  "text": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Empieza en el App Store <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>"
+ },
+ {
+  "en": "      <button class=\"btn btn-black p-buy\" data-tier=\"plus\" type=\"button\" hidden>Subscribe <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></button>",
+  "text": "      <button class=\"btn btn-black p-buy\" data-tier=\"plus\" type=\"button\" hidden>Suscribirse <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></button>"
+ },
+ {
+  "en": "      <div><span class=\"p-name\">Max</span></div>",
+  "text": "      <div><span class=\"p-name\">Max</span></div>"
+ },
+ {
+  "en": "      <p class=\"p-note\">For the months with a lot to prepare.</p>",
+  "text": "      <p class=\"p-note\">Para los meses con mucho que preparar.</p>"
+ },
+ {
+  "en": "        <div><dt>Talk</dt><dd data-talk=\"max\">—</dd></div>",
+  "text": "        <div><dt>Conversación</dt><dd data-talk=\"max\">—</dd></div>"
+ },
+ {
+  "en": "        <div><dt>Speech</dt><dd>Included</dd></div>",
+  "text": "        <div><dt>Discurso</dt><dd>Incluido</dd></div>"
+ },
+ {
+  "en": "        <div><dt>Personalized review textbook</dt><dd>Unlimited</dd></div>",
+  "text": "        <div><dt>Cuaderno de repaso personalizado</dt><dd>Ilimitado</dd></div>"
+ },
+ {
+  "en": "        <div><dt>Shadowing · words · replay · drills</dt><dd>Unlimited</dd></div>",
+  "text": "        <div><dt>Shadowing · palabras · volver a escuchar · ejercicios</dt><dd>Ilimitado</dd></div>"
+ },
+ {
+  "en": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Start on the App Store <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>",
+  "text": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Empieza en el App Store <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>"
+ },
+ {
+  "en": "      <button class=\"btn btn-black p-buy\" data-tier=\"max\" type=\"button\" hidden>Subscribe <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></button>",
+  "text": "      <button class=\"btn btn-black p-buy\" data-tier=\"max\" type=\"button\" hidden>Suscribirse <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></button>"
+ },
+ {
+  "en": "      <h3 id=\"sp-title\">Sign in with your app account</h3><p>Your subscription links straight to the account you use in the app.</p>",
+  "text": "      <h3 id=\"sp-title\">Inicia sesión con tu cuenta de la app</h3><p>Tu suscripción se vincula directamente a la cuenta que usas en la app.</p>"
+ },
+ {
+  "en": "      <a class=\"btn btn-black sp-btn\" href=\"#\" data-signin=\"apple\"><svg viewBox=\"0 0 384 512\" fill=\"currentColor\" aria-hidden=\"true\"><use href=\"#applelogo\"/></svg>Continue with Apple</a>",
+  "text": "      <a class=\"btn btn-black sp-btn\" href=\"#\" data-signin=\"apple\"><svg viewBox=\"0 0 384 512\" fill=\"currentColor\" aria-hidden=\"true\"><use href=\"#applelogo\"/></svg>Continuar con Apple</a>"
+ },
+ {
+  "en": "      <a class=\"btn sp-btn sp-g\" href=\"#\" data-signin=\"google\">Continue with Google</a>",
+  "text": "      <a class=\"btn sp-btn sp-g\" href=\"#\" data-signin=\"google\">Continuar con Google</a>"
+ },
+ {
+  "en": "      <button class=\"sp-x\" type=\"button\" data-signin-close>Close</button>",
+  "text": "      <button class=\"sp-x\" type=\"button\" data-signin-close>Cerrar</button>"
+ },
+ {
+  "en": "    <p class=\"p-fine\" id=\"manage-sub\" hidden>Subscribed on the web? Change or cancel it in <a href=\"#\" id=\"manage-link\">Manage your subscription</a>.</p>",
+  "text": "    <p class=\"p-fine\" id=\"manage-sub\" hidden>¿Te suscribiste en la web? Cámbiala o cancélala en <a href=\"#\" id=\"manage-link\">Administrar tu suscripción</a>.</p>"
+ },
+ {
+  "en": "    <p class=\"p-fine\">Talk time only runs while the conversation is moving. Pauses are free. A new Watch scene uses 5 minutes of that same time, and watching one again is free. In a month you run short, you can add minutes in the app, and you can cancel anytime on the App Store.</p>",
+  "text": "    <p class=\"p-fine\">El tiempo de conversación solo corre mientras la conversación avanza. Las pausas son gratis. Una escena nueva usa 5 minutos de ese mismo tiempo, y volver a verla es gratis. Si un mes te quedas corto, puedes añadir minutos en la app, y puedes cancelar cuando quieras en el App Store.</p>"
+ },
+ {
+  "en": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Your voice stays yours</div>",
+  "text": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Tu voz sigue siendo tuya</div>"
+ },
+ {
+  "en": "    <h2 class=\"rv\" style=\"--d:0.08s\">A voice clone,<br />treated carefully.</h2>",
+  "text": "    <h2 class=\"rv\" style=\"--d:0.08s\">Un clon de voz,<br />tratado con cuidado.</h2>"
+ },
+ {
+  "en": "    <div class=\"tcell rv\"><div class=\"ix\">A</div><h4>Recorded exactly once</h4><p>Sixty seconds at setup, and that is all. Nothing is ever recorded outside a conversation you started.</p></div>",
+  "text": "    <div class=\"tcell rv\"><div class=\"ix\">A</div><h4>Se graba una sola vez</h4><p>Sesenta segundos al configurarla, y nada más. Nunca se graba nada fuera de una conversación que hayas empezado tú.</p></div>"
+ },
+ {
+  "en": "    <div class=\"tcell rv\" style=\"--d:0.08s\"><div class=\"ix\">B</div><h4>The clone answers to you</h4><p>Re-record or delete it anytime. Replacing it permanently deletes the previous clone.</p></div>",
+  "text": "    <div class=\"tcell rv\" style=\"--d:0.08s\"><div class=\"ix\">B</div><h4>Tú decides sobre el clon</h4><p>Vuelve a grabarlo o bórralo cuando quieras. Al reemplazarlo, el clon anterior se borra para siempre.</p></div>"
+ },
+ {
+  "en": "    <div class=\"tcell rv\" style=\"--d:0.16s\"><div class=\"ix\">C</div><h4>Practice stays on your device</h4><p>Conversations, drills, and progress live on your iPhone. To pick up on another device, they sync through your own iCloud, never our servers.</p></div>",
+  "text": "    <div class=\"tcell rv\" style=\"--d:0.16s\"><div class=\"ix\">C</div><h4>Tu práctica se queda en tu dispositivo</h4><p>Las conversaciones, los ejercicios y tu progreso viven en tu iPhone. Para seguir en otro dispositivo, se sincronizan a través de tu propio iCloud, nunca de nuestros servidores.</p></div>"
+ },
+ {
+  "en": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Frequently asked</div>",
+  "text": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Preguntas frecuentes</div>"
+ },
+ {
+  "en": "    <h2 class=\"rv\" style=\"--d:0.08s\">Questions.</h2>",
+  "text": "    <h2 class=\"rv\" style=\"--d:0.08s\">Preguntas.</h2>"
+ },
+ {
+  "en": "      <summary><span class=\"ix\">01</span>How is my voice made?</summary>",
+  "text": "      <summary><span class=\"ix\">01</span>¿Cómo se crea mi voz?</summary>"
+ },
+ {
+  "en": "      <p class=\"a\"><span>One sixty-second recording at setup, and that is it. No recording is needed after that. Your fluent voice speaks every conversation, scene, and shadowing line.</span></p>",
+  "text": "      <p class=\"a\"><span>Con una grabación de sesenta segundos al configurarla, y listo. Después no hace falta grabar nada más. Tu voz fluida habla en cada conversación, cada escena y cada frase de shadowing.</span></p>"
+ },
+ {
+  "en": "      <summary><span class=\"ix\">02</span>Can I try it for free?</summary>",
+  "text": "      <summary><span class=\"ix\">02</span>¿Puedo probarla gratis?</summary>"
+ },
+ {
+  "en": "      <p class=\"a\"><span>Yes. Your first 20 minutes of talking are free, no subscription needed, and making your voice is free too.</span></p>",
+  "text": "      <p class=\"a\"><span>Sí. Tus primeros 20 minutos de conversación son gratis, sin suscripción, y crear tu voz también es gratis.</span></p>"
+ },
+ {
+  "en": "      <summary><span class=\"ix\">03</span>What does a subscription buy?</summary>",
+  "text": "      <summary><span class=\"ix\">03</span>¿Qué incluye una suscripción?</summary>"
+ },
+ {
+  "en": "      <p class=\"a\"><span>A month of talk time. Light comes with 150 minutes, Plus 450 and Max 900. A new Watch scene uses 5 of those minutes, and watching one again is free. Review, replay, and shadowing are unlimited on every plan.</span></p>",
+  "text": "      <p class=\"a\"><span>Un mes de tiempo de conversación. Light incluye 150 minutos; Plus, 450, y Max, 900. Cada escena nueva usa 5 de esos minutos, y volver a ver una es gratis. El repaso, volver a escuchar y el shadowing son ilimitados en todos los planes.</span></p>"
+ },
+ {
+  "en": "      <summary><span class=\"ix\">04</span>Can a complete beginner use it?</summary>",
+  "text": "      <summary><span class=\"ix\">04</span>¿Sirve si empiezo de cero?</summary>"
+ },
+ {
+  "en": "      <p class=\"a\"><span>Honestly, if you are starting from zero, it will be hard. It fits best once you can form sentences, however haltingly. From there every turn comes back fluent, the difficulty follows your level, and you speak more and more.</span></p>",
+  "text": "      <p class=\"a\"><span>Para ser honestos, si empiezas de cero, te va a costar. Funciona mejor cuando ya puedes armar frases, aunque sea a trompicones. A partir de ahí, cada turno vuelve en versión fluida, la dificultad se adapta a tu nivel y cada vez hablas más.</span></p>"
+ },
+ {
+  "en": "      <summary><span class=\"ix\">05</span>How do I know I am improving?</summary>",
+  "text": "      <summary><span class=\"ix\">05</span>¿Cómo sé que estoy mejorando?</summary>"
+ },
+ {
+  "en": "      <p class=\"a\"><span>Your CEFR level (A1 to C2) is measured from the words and sentences you actually spoke. It is a measurement, not an opinion, so progress shows up as a number.</span></p>",
+  "text": "      <p class=\"a\"><span>Tu nivel MCER (de A1 a C2) se mide con las palabras y frases que de verdad dijiste. Es una medición, no una opinión, así que tu progreso se ve en un número.</span></p>"
+ },
+ {
+  "en": "      <summary><span class=\"ix\">06</span>Is my voice and data safe?</summary>",
+  "text": "      <summary><span class=\"ix\">06</span>¿Mi voz y mis datos están seguros?</summary>"
+ },
+ {
+  "en": "      <p class=\"a\"><span>Nothing is ever recorded outside a conversation you started. You can rebuild or delete the clone anytime. Conversations, drills, and progress stay on your iPhone, and if you turn on sync they go only to your own iCloud, never our servers.</span></p>",
+  "text": "      <p class=\"a\"><span>Nunca se graba nada fuera de una conversación que hayas empezado tú. Puedes rehacer o borrar el clon cuando quieras. Las conversaciones, los ejercicios y tu progreso se quedan en tu iPhone, y si activas la sincronización solo van a tu propio iCloud, nunca a nuestros servidores.</span></p>"
+ },
+ {
+  "en": "      <summary><span class=\"ix\">07</span>Which languages can I learn?</summary>",
+  "text": "      <summary><span class=\"ix\">07</span>¿Qué idiomas puedo aprender?</summary>"
+ },
+ {
+  "en": "      <p class=\"a\"><span>English, German, Japanese, Spanish, and Korean. Adding a language never changes the price.</span></p>",
+  "text": "      <p class=\"a\"><span>Inglés, alemán, japonés, español y coreano. Añadir un idioma nunca cambia el precio.</span></p>"
+ },
+ {
+  "en": "    <h2 class=\"rv\">The <span class=\"px-k\">fluent future you</span>,<br />starting today.</h2>",
+  "text": "    <h2 class=\"rv\"><span class=\"px-k\">Tu yo fluido del futuro</span>,<br />desde hoy.</h2>"
+ },
+ {
+  "en": "      <button class=\"fd-orb\" id=\"d-play\" type=\"button\" aria-label=\"Hear your future voice\">",
+  "text": "      <button class=\"fd-orb\" id=\"d-play\" type=\"button\" aria-label=\"Escucha tu voz del futuro\">"
+ },
+ {
+  "en": "      <div class=\"fd-hint\">Hear your future voice</div>",
+  "text": "      <div class=\"fd-hint\">Escucha tu voz del futuro</div>"
+ },
+ {
+  "en": "      <a class=\"btn-store\" href=\"#\" data-appstore><svg viewBox=\"0 0 384 512\" fill=\"currentColor\" aria-hidden=\"true\"><use href=\"#applelogo\"/></svg><span class=\"tx\"><small>Download on the</small><b>App Store</b></span></a>",
+  "text": "      <a class=\"btn-store\" href=\"#\" data-appstore><svg viewBox=\"0 0 384 512\" fill=\"currentColor\" aria-hidden=\"true\"><use href=\"#applelogo\"/></svg><span class=\"tx\"><small>Descárgalo en el</small><b>App Store</b></span></a>"
+ },
+ {
+  "en": "  <audio id=\"d-audio\" src=\"beta-en.mp3\" preload=\"none\"></audio>",
+  "text": "  <audio id=\"d-audio\" src=\"beta-en.mp3\" preload=\"none\"></audio>"
+ },
+ {
+  "en": "      <a href=\"privacy.html\">Privacy Policy</a>",
+  "text": "      <a href=\"privacy.html\">Política de privacidad</a>"
+ },
+ {
+  "en": "      <a href=\"terms.html\">Terms</a>",
+  "text": "      <a href=\"terms.html\">Términos</a>"
+ },
+ {
+  "en": "      <a href=\"support.html\">Support</a>",
+  "text": "      <a href=\"support.html\">Soporte</a>"
+ },
+ {
+  "en": "      <a href=\"mailto:hello.dearroroapp@gmail.com\">Contact</a>",
+  "text": "      <a href=\"mailto:hello.dearroroapp@gmail.com\">Contacto</a>"
+ },
+ {
+  "en": "  audio.addEventListener('error', function(){ if(cap) cap.textContent='Couldn’t load the audio.'; });",
+  "text": "  audio.addEventListener('error', function(){ if(cap) cap.textContent='No se pudo cargar el audio.'; });"
+ },
+ {
+  "en": "    talk: \"150 min / mo\", perDay: \"About 5 min a day\",",
+  "text": "    talk: \"150 min / mes\", perDay: \"Unos 5 min al día\","
+ },
+ {
+  "en": "    monthly: { id: \"light_monthly\", price: \"$8.99\",   was: \"$9.99\",   per: \"/ mo\" },",
+  "text": "    monthly: { id: \"light_monthly\", price: \"$8.99\",   was: \"$9.99\",   per: \"/ mes\" },"
+ },
+ {
+  "en": "    annual:  { id: \"light_annual\",  price: \"$89.99\",  was: \"$99.99\",  per: \"/ yr · 2 months free\" },",
+  "text": "    annual:  { id: \"light_annual\",  price: \"$89.99\",  was: \"$99.99\",  per: \"/ año · 2 meses gratis\" },"
+ },
+ {
+  "en": "    talk: \"450 min / mo\", perDay: \"About 15 min a day\",",
+  "text": "    talk: \"450 min / mes\", perDay: \"Unos 15 min al día\","
+ },
+ {
+  "en": "    monthly: { id: \"plus_monthly\",  price: \"$22.49\",  was: \"$24.99\",  per: \"/ mo\" },",
+  "text": "    monthly: { id: \"plus_monthly\",  price: \"$22.49\",  was: \"$24.99\",  per: \"/ mes\" },"
+ },
+ {
+  "en": "    annual:  { id: \"plus_annual\",   price: \"$224.99\", was: \"$249.99\", per: \"/ yr · 2 months free\" },",
+  "text": "    annual:  { id: \"plus_annual\",   price: \"$224.99\", was: \"$249.99\", per: \"/ año · 2 meses gratis\" },"
+ },
+ {
+  "en": "    talk: \"900 min / mo\", perDay: \"About 30 min a day\",",
+  "text": "    talk: \"900 min / mes\", perDay: \"Unos 30 min al día\","
+ },
+ {
+  "en": "    monthly: { id: \"max_monthly\",   price: \"$44.99\",  was: \"$49.99\",  per: \"/ mo\" },",
+  "text": "    monthly: { id: \"max_monthly\",   price: \"$44.99\",  was: \"$49.99\",  per: \"/ mes\" },"
+ },
+ {
+  "en": "            ? p.price + ' <span>' + p.per + '</span><span class=\"p-was\" style=\"display:block;margin-top:6px;font-size:13px\">App Store <s>' + p.was + '</s> · 10% off on the web</span>'",
+  "text": "            ? p.price + ' <span>' + p.per + '</span><span class=\"p-was\" style=\"display:block;margin-top:6px;font-size:13px\">App Store <s>' + p.was + '</s> · 10% de descuento en la web</span>'"
+ },
+ {
+  "en": "        : '<span>Monthly only</span>'",
+  "text": "        : '<span>Solo mensual</span>'"
+ },
+ {
+  "en": "  toast.textContent = \"Payment complete. Open the app and sign in with the same account. Your subscription is already active.\"",
+  "text": "  toast.textContent = \"Pago completado. Abre la app e inicia sesión con la misma cuenta. Tu suscripción ya está activa.\""
+ },
+ {
+  "en": "      return \"You already have a subscription on the web. Change it under “Manage your subscription” below.\"",
+  "text": "      return \"Ya tienes una suscripción en la web. Cámbiala en “Administrar tu suscripción”, más abajo.\""
+ },
+ {
+  "en": "      return \"Your App Store subscription is still active. Buying here too would charge you twice, so manage it in the App Store instead.\"",
+  "text": "      return \"Tu suscripción del App Store sigue activa. Si compras también aquí, se te cobraría dos veces, así que adminístrala en el App Store.\""
+ },
+ {
+  "en": "    return \"Something went wrong starting checkout. Please try again.\"",
+  "text": "    return \"Algo salió mal al iniciar el pago. Inténtalo de nuevo.\""
+ },
+ {
+  "en": "        ? \"This account has no web subscription. If you subscribed in the app, manage it in your device’s subscription settings.\"",
+  "text": "        ? \"Esta cuenta no tiene suscripción web. Si te suscribiste en la app, adminístrala en los ajustes de suscripción de tu dispositivo.\""
+ },
+ {
+  "en": "        : \"Something went wrong opening subscription management. Please try again.\")",
+  "text": "        : \"Algo salió mal al abrir la gestión de la suscripción. Inténtalo de nuevo.\")"
+ },
+ {
+  "en": "  s.fix({ text: \"Maybe, if it <b>were safer</b>, I'd <b>give it a try</b>.\", note: \"It’s hypothetical, so it takes were and I’d\" });",
+  "text": "  s.fix({ text: \"Maybe, if it <b>were safer</b>, I'd <b>give it a try</b>.\", note: \"Es hipotético, así que lleva were y I’d\" });"
+ },
+ {
+  "en": "      <a href=\"#talk\">Talk</a>",
+  "text": "      <a href=\"#talk\">Hablar</a>"
+ },
+ {
+  "en": "      <a href=\"#watch\">Watch</a>",
+  "text": "      <a href=\"#watch\">Escenas</a>"
+ },
+ {
+  "en": "      <a href=\"#review\">Review</a>",
+  "text": "      <a href=\"#review\">Repaso</a>"
+ },
+ {
+  "en": "    <a href=\"#talk\">Talk</a>",
+  "text": "    <a href=\"#talk\">Hablar</a>"
+ },
+ {
+  "en": "    <a href=\"#watch\">Watch</a>",
+  "text": "    <a href=\"#watch\">Escenas</a>"
+ },
+ {
+  "en": "    <a href=\"#review\">Review</a>",
+  "text": "    <a href=\"#review\">Repaso</a>"
+ }
+]

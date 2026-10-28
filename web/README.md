@@ -11,6 +11,7 @@ Static pages, no build step. Everything (CSS/JS) is inlined.
 - `index.next.html` — the NEW English marketing page, work in progress (launch swaps this to index.html)
 - `ko.next.html` — the NEW Korean marketing page (the design lead — Korean is finalized first, then ported to en). App screens live in `shots/` (see shots/README.md for the slot map the user fills)
 - `launch.html` — the TEMPORARY App Store launch page (2026-09-08): the beta page minus the waitlist form, with the App Store badge (id6792794655) and the maker's voice note as the center play button. Ships as the root when the app goes live: `cp launch.html index.html` (until the full `index.next.html` is ready)
+- `ja.html`, `zh-hans.html`, `zh-hant.html`, `es.html`, `fr.html`, `de.html` (2026-10-28) — GENERATED from `index.html` by `python3 scripts/web-languages.py`. Never edit them by hand: each language's copy is `i18n/<code>.json`, rows keyed on the exact English line they replace. After changing the English page, run the script; rows whose English line no longer exists are listed and need new copy. Only the page's own copy is localized: the app screens in the phone frames (`kit/`) and the voice note stay English, and prices stay in USD because Stripe carries only usd/krw. The same script puts the language picker, the hreflang set and the sitemap entries on every page, `index`/`ko` (+ `.next`) included.
 - `beta.html` — same as the live root, kept under its own name
 - `waitlist.html` — an older minimal waitlist page, kept and `noindex`ed
 

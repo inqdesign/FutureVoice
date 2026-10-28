@@ -1,0 +1,766 @@
+[
+ {
+  "en": "<title>nawana: Learn the language with the fluent you</title>",
+  "text": "<title>nawana: 流暢になった自分と、言葉を学ぶ</title>"
+ },
+ {
+  "en": "<meta name=\"description\" content=\"The most personal way to learn a language. Talk with your fluent future voice every day, then study from a textbook made of what you actually said. iOS app.\" />",
+  "text": "<meta name=\"description\" content=\"いちばん自分に合った語学学習。流暢になった未来の自分の声と毎日話して、実際に話した内容でできた自分だけの教材で学べます。iOSアプリ。\" />"
+ },
+ {
+  "en": "<meta property=\"og:title\" content=\"nawana: Learn the language with the fluent you\" />",
+  "text": "<meta property=\"og:title\" content=\"nawana: 流暢になった自分と、言葉を学ぶ\" />"
+ },
+ {
+  "en": "<meta property=\"og:description\" content=\"Sixty seconds of recording builds your fluent future voice. Talk with it every day, then study from your own textbook.\" />",
+  "text": "<meta property=\"og:description\" content=\"60秒の録音で、流暢になった未来の自分の声が生まれます。毎日話して、自分だけの教材で学びましょう。\" />"
+ },
+ {
+  "en": "      <a href=\"#pricing\" id=\"nav-pricing\" hidden>Pricing</a>",
+  "text": "      <a href=\"#pricing\" id=\"nav-pricing\" hidden>料金</a>"
+ },
+ {
+  "en": "      <a class=\"btn-store\" href=\"#\" data-appstore><svg viewBox=\"0 0 384 512\" fill=\"currentColor\" aria-hidden=\"true\"><use href=\"#applelogo\"/></svg><span class=\"tx\"><small>Download on the</small><b>App Store</b></span></a>",
+  "text": "      <a class=\"btn-store\" href=\"#\" data-appstore><svg viewBox=\"0 0 384 512\" fill=\"currentColor\" aria-hidden=\"true\"><use href=\"#applelogo\"/></svg><span class=\"tx\"><small>App Storeから</small><b>ダウンロード</b></span></a>"
+ },
+ {
+  "en": "      <button class=\"nav-burger\" id=\"nav-burger\" type=\"button\" aria-label=\"Menu\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M3 6h18M3 12h18M3 18h18\"/></svg></button>",
+  "text": "      <button class=\"nav-burger\" id=\"nav-burger\" type=\"button\" aria-label=\"メニュー\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M3 6h18M3 12h18M3 18h18\"/></svg></button>"
+ },
+ {
+  "en": "    <a href=\"#pricing\" id=\"nav-pricing-m\" hidden>Pricing</a>",
+  "text": "    <a href=\"#pricing\" id=\"nav-pricing-m\" hidden>料金</a>"
+ },
+ {
+  "en": "      <div class=\"n-kicker rv\"><i></i>The most personal way to learn a language</div>",
+  "text": "      <div class=\"n-kicker rv\"><i></i>いちばん自分に合った語学学習</div>"
+ },
+ {
+  "en": "      <h1 class=\"rv\" style=\"--d:0.06s\">Learn the language<br />with the <span class=\"px-k\">fluent you</span>.</h1>",
+  "text": "      <h1 class=\"rv\" style=\"--d:0.06s\">流暢な自分と、<br />言葉を学ぶ。</h1>"
+ },
+ {
+  "en": "      <p class=\"n-sub rv\" style=\"--d:0.12s\">Talk when you want, about what you want,<br />and study from your own textbook.</p>",
+  "text": "      <p class=\"n-sub rv\" style=\"--d:0.12s\">話したいときに、話したいことを。<br />そして自分だけの教材で学ぶ。</p>"
+ },
+ {
+  "en": "        <a class=\"btn-store\" href=\"#\" data-appstore><svg viewBox=\"0 0 384 512\" fill=\"currentColor\" aria-hidden=\"true\"><use href=\"#applelogo\"/></svg><span class=\"tx\"><small>Download on the</small><b>App Store</b></span></a>",
+  "text": "        <a class=\"btn-store\" href=\"#\" data-appstore><svg viewBox=\"0 0 384 512\" fill=\"currentColor\" aria-hidden=\"true\"><use href=\"#applelogo\"/></svg><span class=\"tx\"><small>App Storeから</small><b>ダウンロード</b></span></a>"
+ },
+ {
+  "en": "      <span class=\"n-note rv\" style=\"--d:0.24s\"><b>iOS 17+</b> · First 20 minutes free</span>",
+  "text": "      <span class=\"n-note rv\" style=\"--d:0.24s\"><b>iOS 17以降</b> · 最初の20分は無料</span>"
+ },
+ {
+  "en": "        <div class=\"s-cap\"><div class=\"ix\">01 / 05</div><h3>Make the <span class=\"px-k\">fluent future you</span>,<br />in your own voice</h3><p>Read aloud for a minute. You pick the accent and the pace.</p></div>",
+  "text": "        <div class=\"s-cap\"><div class=\"ix\">01 / 05</div><h3>流暢になった未来の自分を、<br />自分の声で</h3><p>1分読み上げるだけ。アクセントと話す速さは自分で選べます。</p></div>"
+ },
+ {
+  "en": "        <div class=\"s-cap\"><div class=\"ix\">02 / 05</div><h3>Then talk<br />with that future you</h3><p>Stumble freely. Every turn comes back corrected.</p></div>",
+  "text": "        <div class=\"s-cap\"><div class=\"ix\">02 / 05</div><h3>その未来の自分と<br />話す</h3><p>詰まっても大丈夫。毎ターン、直した言い方が返ってきます。</p></div>"
+ },
+ {
+  "en": "        <div class=\"s-cap\"><div class=\"ix\">03 / 05</div><h3>Study from your<br />own textbook</h3><p>The exact expressions, words, and grammar you just used.</p></div>",
+  "text": "        <div class=\"s-cap\"><div class=\"ix\">03 / 05</div><h3>自分だけの教材で<br />学ぶ</h3><p>いま自分が使った表現・単語・文法、そのままで。</p></div>"
+ },
+ {
+  "en": "        <div class=\"s-cap\"><div class=\"ix\">04 / 05</div><h3>The more you speak,<br />the more it stacks</h3><p>Words, expressions, sentences. Automatically.</p></div>",
+  "text": "        <div class=\"s-cap\"><div class=\"ix\">04 / 05</div><h3>話すほど<br />たまっていく</h3><p>単語も、表現も、文も。自動で。</p></div>"
+ },
+ {
+  "en": "        <div class=\"s-cap\"><div class=\"ix\">05 / 05</div><h3>A level measured,<br />not guessed</h3><p>Only from what you actually said.</p></div>",
+  "text": "        <div class=\"s-cap\"><div class=\"ix\">05 / 05</div><h3>レベルは推測ではなく<br />実測</h3><p>実際に話した内容だけで。</p></div>"
+ },
+ {
+  "en": "        <div class=\"stg stg0\" data-step=\"0\"><div class=\"stk\" data-lang=\"en\" style=\"left:calc(var(--pw) * -0.5 - min(250px, 13vw) - 192px);top:-140px;--r:-4deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇺🇸🇬🇧</span><div><b>English</b></div></div></div></div><div class=\"stk\" data-lang=\"ja\" style=\"left:calc(var(--pw) * -0.5 - min(50px, 2.6vw) - 192px);top:20px;--r:3deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇯🇵</span><div><b>日本語</b><small>Japanese</small></div></div></div></div><div class=\"stk\" data-lang=\"de\" style=\"left:calc(var(--pw) * -0.5 - min(190px, 9.9vw) - 192px);top:190px;--r:-2deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇩🇪</span><div><b>Deutsch</b><small>German</small></div></div></div></div><div class=\"stk\" data-lang=\"ko\" style=\"left:calc(var(--pw) * 0.5 + min(150px, 7.8vw));top:-100px;--r:4deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇰🇷</span><div><b>한국어</b><small>Korean</small></div></div></div></div><div class=\"stk\" data-lang=\"es\" style=\"left:calc(var(--pw) * 0.5 + min(40px, 2.1vw));top:110px;--r:-3deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇲🇽🇪🇸</span><div><b>Español</b><small>Spanish</small></div></div></div></div></div>",
+  "text": "        <div class=\"stg stg0\" data-step=\"0\"><div class=\"stk\" data-lang=\"en\" style=\"left:calc(var(--pw) * -0.5 - min(250px, 13vw) - 192px);top:-140px;--r:-4deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇺🇸🇬🇧</span><div><b>English</b><small>英語</small></div></div></div></div><div class=\"stk\" data-lang=\"ja\" style=\"left:calc(var(--pw) * -0.5 - min(50px, 2.6vw) - 192px);top:20px;--r:3deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇯🇵</span><div><b>日本語</b></div></div></div></div><div class=\"stk\" data-lang=\"de\" style=\"left:calc(var(--pw) * -0.5 - min(190px, 9.9vw) - 192px);top:190px;--r:-2deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇩🇪</span><div><b>Deutsch</b><small>ドイツ語</small></div></div></div></div><div class=\"stk\" data-lang=\"ko\" style=\"left:calc(var(--pw) * 0.5 + min(150px, 7.8vw));top:-100px;--r:4deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇰🇷</span><div><b>한국어</b><small>韓国語</small></div></div></div></div><div class=\"stk\" data-lang=\"es\" style=\"left:calc(var(--pw) * 0.5 + min(40px, 2.1vw));top:110px;--r:-3deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇲🇽🇪🇸</span><div><b>Español</b><small>スペイン語</small></div></div></div></div></div>"
+ },
+ {
+  "en": "        <div class=\"stg\" data-step=\"1\"><div class=\"stk sl\" style=\"--w:230px;--r:-2deg\"><div class=\"b\"><div class=\"k\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M4 10v4M8 7v10M12 4v16M16 8v8M20 10v4\"/></svg>One minute of reading</div><div class=\"row\"><nw-futureself mode=\"listening\" level=\"0.55\" style=\"width:110px;height:42px\"></nw-futureself><span class=\"num\">0:47</span></div><div class=\"n\">Just read it aloud</div></div></div><div class=\"stk sr1\" style=\"--w:270px;--r:2deg\"><div class=\"b\"><div class=\"k\">Accent</div><div class=\"chips\"><span>American</span><span class=\"on\">British</span><span>Australian</span></div><div class=\"n\">Same voice, the accent you pick</div></div></div><div class=\"stk sr2\" style=\"--w:260px;--r:-2deg\"><div class=\"b\"><div class=\"k\">Pace</div><div class=\"chips\"><span>Normal</span><span class=\"on\">Relaxed</span><span>Slow</span></div></div></div></div>",
+  "text": "        <div class=\"stg\" data-step=\"1\"><div class=\"stk sl\" style=\"--w:230px;--r:-2deg\"><div class=\"b\"><div class=\"k\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M4 10v4M8 7v10M12 4v16M16 8v8M20 10v4\"/></svg>1分の録音</div><div class=\"row\"><nw-futureself mode=\"listening\" level=\"0.55\" style=\"width:110px;height:42px\"></nw-futureself><span class=\"num\">0:47</span></div><div class=\"n\">読み上げるだけです</div></div></div><div class=\"stk sr1\" style=\"--w:270px;--r:2deg\"><div class=\"b\"><div class=\"k\">アクセント</div><div class=\"chips\"><span>米国</span><span class=\"on\">英国</span><span>豪州</span></div><div class=\"n\">同じ声のまま、選んだアクセントで</div></div></div><div class=\"stk sr2\" style=\"--w:260px;--r:-2deg\"><div class=\"b\"><div class=\"k\">話す速さ</div><div class=\"chips\"><span>ふつう</span><span class=\"on\">ゆったり</span><span>ゆっくり</span></div></div></div></div>"
+ },
+ {
+  "en": "        <div class=\"stg\" data-step=\"2\"><div class=\"stk sl\" style=\"--w:230px;--r:-2deg\"><div class=\"b\"><div class=\"k\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M4 10v4M8 7v10M12 4v16M16 8v8M20 10v4\"/></svg>It answers in your voice</div><nw-futureself mode=\"speaking\" level=\"voice\" style=\"width:150px;height:56px\"></nw-futureself></div></div><div class=\"stk sr1\" style=\"--w:280px;--r:2deg\"><div class=\"b\"><div class=\"k\">What you said</div><div class=\"say\">It was a busy week. I <u>go</u> to three meetings.</div></div></div><div class=\"stk sr2\" style=\"--w:290px;--r:-2deg\"><div class=\"b\"><div class=\"k\">The fluent you's version</div><div class=\"say\">It was a busy week. I <b class=\"fx\">went</b> to three meetings.</div><div class=\"n\">It already happened, so: past tense</div></div></div></div>",
+  "text": "        <div class=\"stg\" data-step=\"2\"><div class=\"stk sl\" style=\"--w:230px;--r:-2deg\"><div class=\"b\"><div class=\"k\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M4 10v4M8 7v10M12 4v16M16 8v8M20 10v4\"/></svg>自分の声で返事が来る</div><nw-futureself mode=\"speaking\" level=\"voice\" style=\"width:150px;height:56px\"></nw-futureself></div></div><div class=\"stk sr1\" style=\"--w:280px;--r:2deg\"><div class=\"b\"><div class=\"k\">自分が言ったこと</div><div class=\"say\">It was a busy week. I <u>go</u> to three meetings.</div></div></div><div class=\"stk sr2\" style=\"--w:290px;--r:-2deg\"><div class=\"b\"><div class=\"k\">流暢な自分の言い方</div><div class=\"say\">It was a busy week. I <b class=\"fx\">went</b> to three meetings.</div><div class=\"n\">もう済んだことなので過去形です</div></div></div></div>"
+ },
+ {
+  "en": "        <div class=\"stg\" data-step=\"3\"><div class=\"stk sl\" style=\"--w:240px;--r:-2deg\"><div class=\"b\"><div class=\"k\">The book this talk made</div><div class=\"chips\"><span>Words <i>+5</i></span><span>Phrases <i>+3</i></span><span>Lines <i>+2</i></span></div></div></div><div class=\"stk sr1\" style=\"--w:270px;--r:2deg\"><div class=\"b\"><div class=\"k\">Review card</div><div class=\"say\"><s>I go to</s> → <b class=\"fx\">I went to</b></div><div class=\"n\">Your slip becomes a card</div></div></div><div class=\"stk sr2\" style=\"--w:200px;--r:-2deg\"><div class=\"b\"><div class=\"k\">This talk</div><div class=\"row\"><span class=\"num big\">75</span><span class=\"n\">scored at B1</span></div></div></div></div>",
+  "text": "        <div class=\"stg\" data-step=\"3\"><div class=\"stk sl\" style=\"--w:240px;--r:-2deg\"><div class=\"b\"><div class=\"k\">このトークでできた教材</div><div class=\"chips\"><span>単語 <i>+5</i></span><span>表現 <i>+3</i></span><span>文 <i>+2</i></span></div></div></div><div class=\"stk sr1\" style=\"--w:270px;--r:2deg\"><div class=\"b\"><div class=\"k\">復習カード</div><div class=\"say\"><s>I go to</s> → <b class=\"fx\">I went to</b></div><div class=\"n\">間違えた文がカードになる</div></div></div><div class=\"stk sr2\" style=\"--w:200px;--r:-2deg\"><div class=\"b\"><div class=\"k\">今回のトーク</div><div class=\"row\"><span class=\"num big\">75</span><span class=\"n\">B1基準</span></div></div></div></div>"
+ },
+ {
+  "en": "        <div class=\"stg\" data-step=\"4\"><div class=\"stk sl\" style=\"--w:240px;--r:-2deg\"><div class=\"b\"><div class=\"k\">Checked off by saying it</div><div class=\"row\"><div style=\"flex:1\"><b class=\"w\">exhausting</b><div class=\"n\">adjective · very tiring</div></div><svg class=\"okc\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"10\" fill=\"#34C759\"/><path d=\"M7.5 12.3l3 3 6-6.4\" fill=\"none\" stroke=\"#fff\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></div></div></div><div class=\"stk sr1\" style=\"--w:220px;--r:2deg\"><div class=\"b\"><div class=\"k\">Words you used this week</div><span class=\"num big\">+12</span></div></div><div class=\"stk sr2\" style=\"--w:260px;--r:-2deg\"><div class=\"b\"><div class=\"k\">Used for the first time</div><div class=\"chips\"><span>negotiate</span><span>genuinely</span></div></div></div></div>",
+  "text": "        <div class=\"stg\" data-step=\"4\"><div class=\"stk sl\" style=\"--w:240px;--r:-2deg\"><div class=\"b\"><div class=\"k\">言えたらチェック</div><div class=\"row\"><div style=\"flex:1\"><b class=\"w\">exhausting</b><div class=\"n\">形容詞 · ひどく疲れる</div></div><svg class=\"okc\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"10\" fill=\"#34C759\"/><path d=\"M7.5 12.3l3 3 6-6.4\" fill=\"none\" stroke=\"#fff\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></div></div></div><div class=\"stk sr1\" style=\"--w:220px;--r:2deg\"><div class=\"b\"><div class=\"k\">今週使った単語</div><span class=\"num big\">+12</span></div></div><div class=\"stk sr2\" style=\"--w:260px;--r:-2deg\"><div class=\"b\"><div class=\"k\">はじめて使った単語</div><div class=\"chips\"><span>negotiate</span><span>genuinely</span></div></div></div></div>"
+ },
+ {
+  "en": "        <div class=\"stg\" data-step=\"5\"><div class=\"stk sr1\" style=\"--w:230px;--r:2deg\"><div class=\"b\"><div class=\"k\">Estimated level</div><span class=\"px\">B1 → B2</span></div></div><div class=\"stk sr2\" style=\"--w:270px;--r:-2deg\"><div class=\"b\"><div class=\"k\">From what you actually said</div><div class=\"bars\"><span>Vocabulary<i><b style=\"width:82%\"></b></i></span><span>Grammar<i><b style=\"width:71%\"></b></i></span><span>Fluency<i><b style=\"width:74%\"></b></i></span></div></div></div></div>",
+  "text": "        <div class=\"stg\" data-step=\"5\"><div class=\"stk sr1\" style=\"--w:230px;--r:2deg\"><div class=\"b\"><div class=\"k\">推定レベル</div><span class=\"px\">B1 → B2</span></div></div><div class=\"stk sr2\" style=\"--w:270px;--r:-2deg\"><div class=\"b\"><div class=\"k\">実際に話した内容だけで</div><div class=\"bars\"><span>語彙<i><b style=\"width:82%\"></b></i></span><span>文法<i><b style=\"width:71%\"></b></i></span><span>流暢さ<i><b style=\"width:74%\"></b></i></span></div></div></div></div>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><span class=\"mono\">01</span>Talk · Output</div>",
+  "text": "      <div class=\"kicker rv\"><span class=\"mono\">01</span>Talk · アウトプット</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">Say what you’re thinking,<br />comfortably.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">頭の中の考えを、<br />気楽に口に出す。</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>It’s your voice, not a stranger’s.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>知らない誰かではなく、自分の声だから。</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>No one to feel judged by.</b> The words start coming out.</span></li>",
+  "text": "        <li data-beat=\"2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>間違えても、気をつかう相手がいない。</b>緊張せずに言葉が出てきます。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Your news, your situations, free talk.</b> Whenever you want.</span></li>",
+  "text": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>興味のあるニュース、自分のシチュエーション、フリートーク。</b>好きなときにいつでも。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Every turn comes back fluent.</b></span></li>",
+  "text": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>毎ターン、流暢な言い方が返ってくる。</b></span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><span class=\"mono\">02</span>Call · Habit</div>",
+  "text": "      <div class=\"kicker rv\"><span class=\"mono\">02</span>Call · 習慣</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">Instead of opening an app,<br />you pick up a call.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">アプリを開くかわりに、<br />電話に出る。</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>At the time you set, the future you calls first.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>決めた時間に、未来の自分から電話がかかってくる。</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>It rings like an alarm,</b> and the talk starts the moment you answer.</span></li>",
+  "text": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>アラームのように鳴って、</b>出ればすぐに会話が始まります。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Your last talk, the news, small talk.</b> A different subject each time, and every call opens with a question.</span></li>",
+  "text": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>前回の会話、ニュース、ちょっとした雑談。</b>毎回ちがう話題で、最初のひと言はいつも質問です。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"4\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Missed it? That’s fine.</b> No scolding. It just calls again next time.</span></li>",
+  "text": "        <li data-beat=\"4\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>出られなくても大丈夫。</b>責めたりせず、次の時間にまたかけてきます。</span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><span class=\"mono\">03</span>Say it again · Replay</div>",
+  "text": "      <div class=\"kicker rv\"><span class=\"mono\">03</span>Say it again · ふりかえり</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">The call you just had,<br />once more, the right way.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">いま終えた通話を、<br />正しい形でもう一度。</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>Your lines come back corrected. The answers stay exactly as they were.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>自分のセリフは直した文で。相手の返事はその通話のまま。</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>The whole call, not just the fixes,</b> lived again from the top.</span></li>",
+  "text": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>直した文だけでなく、通話をまるごと</b>最初からやり直します。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"2 3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Read the line on the prompter,</b> and the answer you heard then plays next.</span></li>",
+  "text": "        <li data-beat=\"2 3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>プロンプターの文を読むと、</b>あのとき聞いた返事が続きます。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"4\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Every line gets a score.</b> Stuck on one? Try it again right there.</span></li>",
+  "text": "        <li data-beat=\"4\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>1行ごとにスコアがつく。</b>詰まった行は、その場でもう一度。</span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><span class=\"mono\">04</span>Watch · Input</div>",
+  "text": "      <div class=\"kicker rv\"><span class=\"mono\">04</span>Watch · インプット</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">The moments you need it<br />are yours alone.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">外国語が必要な場面は、<br />人それぞれ。</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>Set up the situation ahead of you, and live it early.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>これから来る自分の場面を設定して、先に体験しておく。</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Exams, interviews, speeches, travel, small talk.</b> One line opens the whole conversation.</span></li>",
+  "text": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>試験、面接、スピーチ、旅行、スモールトーク。</b>一行書けば、会話がまるごと始まります。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Your lines, in your fluent voice.</b></span></li>",
+  "text": "        <li data-beat=\"2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>自分のセリフは、流暢な自分の声で。</b></span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Any line you want, one tap</b> to shadow it right there.</span></li>",
+  "text": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>覚えたい文はタップひとつで、</b>その場でシャドーイング。</span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><span class=\"mono\">05</span>Review · Textbook</div>",
+  "text": "      <div class=\"kicker rv\"><span class=\"mono\">05</span>Review · 教材</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">The call you just had,<br />now a textbook.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">いま終えた通話が、<br />一冊の教材に。</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>Not someone else’s workbook. You study what you actually said.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>誰かが作った問題集ではなく、自分が実際に話した言葉で学ぶ。</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Hang up, and the textbook is there.</b> Four chapters: words, expressions, shadowing, drills.</span></li>",
+  "text": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>通話を切ると、教材ができている。</b>単語・表現・シャドーイング・ドリルの4章です。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>What you said, and what your fluent self said.</b> Both go into your notebook.</span></li>",
+  "text": "        <li data-beat=\"2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>自分が使った表現と、流暢な自分が使った表現。</b>どちらも単語帳に入ります。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Every mistake sits beside its fix,</b> with one line on why.</span></li>",
+  "text": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>間違えた文は、直した文と並べて。</b>直した理由もひと言で。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"4\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Spaced repetition brings it back just as you forget,</b> and you answer out loud.</span></li>",
+  "text": "        <li data-beat=\"4\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>忘れかけたころに戻ってくる間隔反復で、</b>声に出して答えます。</span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><span class=\"mono\">06</span>Shadowing · Imprint</div>",
+  "text": "      <div class=\"kicker rv\"><span class=\"mono\">06</span>Shadowing · 定着</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">Shadow it until<br />it’s automatic.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">自然に口から出るまで、<br />シャドーイング。</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>The voice you match is your own.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>お手本の声は、自分自身。</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Sync shadowing.</b> A verdict on every word.</span></li>",
+  "text": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>シンクロ・シャドーイング。</b>単語ごとに結果が見えます。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Loop just the hard part at 0.5×.</b></span></li>",
+  "text": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>引っかかる部分だけを0.5×でくり返し。</b></span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><span class=\"mono\">07</span>Speech · Presenting</div>",
+  "text": "      <div class=\"kicker rv\"><span class=\"mono\">07</span>Speech · 発表</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">Say what you prepared,<br />the way you prepared it.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">準備した言葉を、<br />準備したとおりに。</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>Put your script up and read it aloud, like the real thing.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>原稿を映して、本番のように声に出して読む。</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>A prompter that follows your voice.</b> Camera on or off.</span></li>",
+  "text": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>声に合わせて進むプロンプター。</b>カメラはオンでもオフでも。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>A score and a note from the coach when you finish,</b> and what it was measured on.</span></li>",
+  "text": "        <li data-beat=\"2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>読み終えたら、スコアとコーチのひと言。</b>何を基準に測ったかまで見られます。</span></li>"
+ },
+ {
+  "en": "        <li><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Write the script yourself, or with AI.</b> On Plus and Max.</span></li>",
+  "text": "        <li><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>原稿は自分で書くか、AIと一緒に。</b>PlusとMaxで使えます。</span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><span class=\"mono\">08</span>Routine · Promise</div>",
+  "text": "      <div class=\"kicker rv\"><span class=\"mono\">08</span>Routine · 約束</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">Plan your week,<br />then test your week.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">1週間を計画して、<br />1週間をテストする。</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>Decide what each day holds, and it becomes a promise to yourself.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>曜日ごとにやることを決めれば、それが自分との約束になる。</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Talks, say it again, listening, shadowing, speech, review.</b> Reminded at the times you chose.</span></li>",
+  "text": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>トーク、もう一度話す、リスニング、シャドーイング、スピーチ、復習。</b>決めた時間にお知らせします。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Your streak runs on your own bar.</b> It only grows on days you keep the promise.</span></li>",
+  "text": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>連続記録の基準は自分で決める。</b>約束を守った日だけ続いていきます。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"4\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>The weekly test is made of your week.</b> Words and phrases you put off, grammar you got wrong.</span></li>",
+  "text": "        <li data-beat=\"4\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>週テストは自分の1週間だけで。</b>後回しにした単語と表現、間違えた文法から出ます。</span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><span class=\"mono\">09</span>Weekly · Check-in</div>",
+  "text": "      <div class=\"kicker rv\"><span class=\"mono\">09</span>Weekly · 振り返り</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">When the week ends,<br />your week is the test.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">1週間が終わったら、<br />自分の1週間でテスト。</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>Not a stranger’s workbook. What you said this week.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>誰かが作った問題集ではなく、今週自分が話したことで。</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>A look back at your week.</b> How many days, and what became yours.</span></li>",
+  "text": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>1週間のふりかえり。</b>何日やったか、何が身についたか。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>A note from the coach.</b> The grammar you kept tripping on, and better words, in your own sentences.</span></li>",
+  "text": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>コーチのひと言。</b>よくつまずいた文法と、もっといい単語を、自分の文そのままで。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"11 12 13\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>The weekly test.</b> Built from the words and phrases you put off, and your grammar slips asked again in new sentences.</span></li>",
+  "text": "        <li data-beat=\"11 12 13\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>週テスト。</b>後回しにした単語と表現から出題し、間違えた文法は新しい文でもう一度問います。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"14\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>What you miss comes back.</b> Again on next week’s test.</span></li>",
+  "text": "        <li data-beat=\"14\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>間違えた問題は戻ってくる。</b>来週のテストでもう一度。</span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>People · Personas</div>",
+  "text": "      <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>People · ペルソナ</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">The people from your life<br />become the cast.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">自分のまわりの人たちが、<br />練習の登場人物に。</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>Your people, your situations.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>練習はいつも、自分の人たちと、自分の場面で。</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Barista, team lead, doctor.</b> Describe them out loud, and they play in character.</span></li>",
+  "text": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>バリスタ、チームリーダー、かかりつけ医。</b>声で紹介すれば、その人になりきって話します。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Your fluent self at the center.</b></span></li>",
+  "text": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>真ん中には、流暢になった自分。</b></span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Words · Vocabulary</div>",
+  "text": "      <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Words · 語彙</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">Every word you speak<br />joins your world.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">話した単語が集まって、<br />自分の単語の世界に。</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>A living map of your vocabulary.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>生きている、自分の語彙マップ。</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Your level shows in the size.</b></span></li>",
+  "text": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>レベルが大きさで見える。</b></span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"2 3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>One tap: meaning and examples.</b> Bookmarked means studying, checked means known.</span></li>",
+  "text": "        <li data-beat=\"2 3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>タップひとつで意味と例文。</b>ブックマークは勉強中、チェックは知っている単語です。</span></li>"
+ },
+ {
+  "en": "      <div class=\"m-kick rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>One · Voice</div>",
+  "text": "      <div class=\"m-kick rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>ひとつめ · 声</div>"
+ },
+ {
+  "en": "      <p class=\"w2-lead rv\" style=\"--d:0.06s\">Imitate a native all you want.<br /><b>Someone else’s voice<br />never becomes yours.</b></p>",
+  "text": "      <p class=\"w2-lead rv\" style=\"--d:0.06s\">ネイティブをどれだけまねても、<br /><b>他人の声は<br />自分のものにならない。</b></p>"
+ },
+ {
+  "en": "      <p class=\"w2-line rv\" style=\"--d:0.12s\">The voice you’ll actually speak with<br /><b>is your own.</b></p>",
+  "text": "      <p class=\"w2-line rv\" style=\"--d:0.12s\">本番で話すのは、結局<br /><b>自分の声。</b></p>"
+ },
+ {
+  "en": "      <p class=\"w2-line rv\" style=\"--d:0.18s\">So, a goal you can reach.<br /><b>Not “like a native”. The <span class=\"px-k\">fluent future you</span>.</b></p>",
+  "text": "      <p class=\"w2-line rv\" style=\"--d:0.18s\">だから、手が届く目標を。<br /><b>ネイティブのようにではなく、流暢になった未来の自分。</b></p>"
+ },
+ {
+  "en": "      <div class=\"m-kick rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Two · Training</div>",
+  "text": "      <div class=\"m-kick rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>ふたつめ · 練習</div>"
+ },
+ {
+  "en": "      <p class=\"w2-lead rv\" style=\"--d:0.06s\">The reason words won’t come out:<br /><b>pulling thoughts out of your head<br />was never trained.</b></p>",
+  "text": "      <p class=\"w2-lead rv\" style=\"--d:0.06s\">言葉が出てこないのは、<br /><b>頭の中の考えを口に出す練習を<br />してこなかったから。</b></p>"
+ },
+ {
+  "en": "      <p class=\"w2-line rv\" style=\"--d:0.12s\">Not memorized lines.<br /><b>Your own thoughts, in your own words. That’s where it starts.</b></p>",
+  "text": "      <p class=\"w2-line rv\" style=\"--d:0.12s\">覚えた例文ではなく、<br /><b>自分の考えを自分の言葉で。そこから始まる。</b></p>"
+ },
+ {
+  "en": "      <p class=\"w2-line rv\" style=\"--d:0.18s\">Speak, get your grammar and phrasing fixed.<br /><b>What you said out there becomes your own textbook.</b></p>",
+  "text": "      <p class=\"w2-line rv\" style=\"--d:0.18s\">話して、文法と表現を直してもらう。<br /><b>実際に話したことが、自分だけの教材になる。</b></p>"
+ },
+ {
+  "en": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>All of it, in one app</div>",
+  "text": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>ぜんぶ、このアプリに</div>"
+ },
+ {
+  "en": "    <h2 class=\"head rv\" style=\"--d:0.08s\">The whole app,<br />at a glance.</h2>",
+  "text": "    <h2 class=\"head rv\" style=\"--d:0.08s\">アプリのすべてを、<br />ひと目で。</h2>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">01</span><span class=\"nm\">60-second voice clone</span><span class=\"ds\">One short recording at setup builds your fluent future voice.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">01</span><span class=\"nm\">60秒のボイスクローン</span><span class=\"ds\">設定のときに短く一度録音するだけで、流暢になった未来の自分の声ができます。</span></div>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">02</span><span class=\"nm\">A fluent version, every turn</span><span class=\"ds\">Mid-conversation, what you just said comes back the way your fluent self would say it.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">02</span><span class=\"nm\">毎ターン、流暢な言い方</span><span class=\"ds\">会話の途中で、いま言ったことが流暢な自分ならこう言う形で返ってきます。</span></div>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">03</span><span class=\"nm\">Sync shadowing</span><span class=\"ds\">Speak along with your fluent line and get a verdict on every word, plus your pace against the target.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">03</span><span class=\"nm\">シンクロ・シャドーイング</span><span class=\"ds\">流暢な自分の文と同時に話すと、単語ごとの結果と、お手本と比べた速さがわかります。</span></div>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">04</span><span class=\"nm\">The people from your life</span><span class=\"ds\">Describe them out loud and they become personas that talk like the real thing.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">04</span><span class=\"nm\">自分のまわりの人たち</span><span class=\"ds\">声で紹介すると、本人のように話すペルソナになります。</span></div>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">05</span><span class=\"nm\">Conversations, previewed</span><span class=\"ds\">Watch your fluent self handle the situation, and shadow any line you want on the spot.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">05</span><span class=\"nm\">先に見ておく会話</span><span class=\"ds\">流暢な自分がその場面をどう乗り切るかを見て、覚えたい文はその場でシャドーイングできます。</span></div>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">06</span><span class=\"nm\">Speak-aloud review</span><span class=\"ds\">Fumbled lines return as drills right before you forget them. Answered out loud, never multiple choice.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">06</span><span class=\"nm\">声に出す復習</span><span class=\"ds\">詰まった文が、忘れかけたころにドリルで戻ってきます。選択肢ではなく、声に出して答えます。</span></div>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">07</span><span class=\"nm\">Five-axis scorecard</span><span class=\"ds\">Vocabulary, grammar, expressiveness, fluency, pronunciation. Scored after every conversation, and pronunciation is what shadowing actually measured.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">07</span><span class=\"nm\">5軸のスコアカード</span><span class=\"ds\">語彙・文法・表現力・流暢さ・発音。会話のたびに5つの軸で採点され、発音はシャドーイングで実際に測ったスコアです。</span></div>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">08</span><span class=\"nm\">Words check themselves off</span><span class=\"ds\">A pool of about 8,000 CEFR-graded core words sits underneath, and every word you use is ticked automatically.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">08</span><span class=\"nm\">単語は自動でチェック</span><span class=\"ds\">CEFRレベル別の基本単語約8,000語が土台にあり、自分が使った単語は自動でチェックされます。</span></div>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">09</span><span class=\"nm\">CEFR level, measured</span><span class=\"ds\">Your level is set from your real talks, vocabulary, grammar, fluency and expression together. B1 to B2 is a measurement, not an opinion.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">09</span><span class=\"nm\">CEFRレベルを実測</span><span class=\"ds\">実際の会話から、語彙・文法・流暢さ・表現をあわせて見てレベルを決めます。B1からB2は、意見ではなく測定です。</span></div>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">10</span><span class=\"nm\">An honest weekly report</span><span class=\"ds\">Unlocks only after fifteen minutes of real speech. Silence over noise. It fits you better the more you talk.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">10</span><span class=\"nm\">正直な週間レポート</span><span class=\"ds\">実際の発話が15分たまってはじめて開きます。あいまいな数字を見せるより、何も見せないほうを選びます。話すほど自分に合っていきます。</span></div>"
+ },
+ {
+  "en": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Pricing</div>",
+  "text": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>料金</div>"
+ },
+ {
+  "en": "    <h2 class=\"rv\" style=\"--d:0.08s\">Choose how much<br />you want to talk each month.</h2>",
+  "text": "    <h2 class=\"rv\" style=\"--d:0.08s\">1か月にどれだけ<br />話すかを選ぶ。</h2>"
+ },
+ {
+  "en": "    <p class=\"pr-sub rv\" style=\"--d:0.11s\">Your first 20 minutes are free, no subscription needed.</p>",
+  "text": "    <p class=\"pr-sub rv\" style=\"--d:0.11s\">最初の20分は、サブスクリプションなしで無料で話せます。</p>"
+ },
+ {
+  "en": "      <button class=\"ct on\" data-cycle=\"monthly\" type=\"button\">Monthly</button>",
+  "text": "      <button class=\"ct on\" data-cycle=\"monthly\" type=\"button\">月額</button>"
+ },
+ {
+  "en": "      <button class=\"ct\" data-cycle=\"annual\" type=\"button\">Annual</button>",
+  "text": "      <button class=\"ct\" data-cycle=\"annual\" type=\"button\">年額</button>"
+ },
+ {
+  "en": "      <div><span class=\"p-name\">Light</span></div>",
+  "text": "      <div><span class=\"p-name\">Light</span></div>"
+ },
+ {
+  "en": "      <p class=\"p-note\">A steady habit, one routine at a time.</p>",
+  "text": "      <p class=\"p-note\">まずはルーティンから、コツコツ続ける。</p>"
+ },
+ {
+  "en": "        <div><dt>Talk</dt><dd data-talk=\"light\">—</dd></div>",
+  "text": "        <div><dt>通話</dt><dd data-talk=\"light\">—</dd></div>"
+ },
+ {
+  "en": "        <div><dt>Personalized review textbook</dt><dd>Unlimited</dd></div>",
+  "text": "        <div><dt>自分専用の復習教材</dt><dd>無制限</dd></div>"
+ },
+ {
+  "en": "        <div><dt>Shadowing · words · replay · drills</dt><dd>Unlimited</dd></div>",
+  "text": "        <div><dt>シャドーイング・単語・会話の再生・ドリル</dt><dd>無制限</dd></div>"
+ },
+ {
+  "en": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Start on the App Store <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>",
+  "text": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>App Storeで始める <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>"
+ },
+ {
+  "en": "      <button class=\"btn btn-black p-buy\" data-tier=\"light\" type=\"button\" hidden>Subscribe <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></button>",
+  "text": "      <button class=\"btn btn-black p-buy\" data-tier=\"light\" type=\"button\" hidden>登録する <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></button>"
+ },
+ {
+  "en": "      <div><span class=\"p-name\">Plus</span><span class=\"p-badge\">Most popular</span></div>",
+  "text": "      <div><span class=\"p-name\">Plus</span><span class=\"p-badge\">いちばん人気</span></div>"
+ },
+ {
+  "en": "      <p class=\"p-note\">Every day, for as long as you like.</p>",
+  "text": "      <p class=\"p-note\">毎日、話したいだけたっぷりと。</p>"
+ },
+ {
+  "en": "        <div><dt>Talk</dt><dd data-talk=\"plus\">—</dd></div>",
+  "text": "        <div><dt>通話</dt><dd data-talk=\"plus\">—</dd></div>"
+ },
+ {
+  "en": "        <div><dt>Speech</dt><dd>Included</dd></div>",
+  "text": "        <div><dt>スピーチ</dt><dd>あり</dd></div>"
+ },
+ {
+  "en": "        <div><dt>Personalized review textbook</dt><dd>Unlimited</dd></div>",
+  "text": "        <div><dt>自分専用の復習教材</dt><dd>無制限</dd></div>"
+ },
+ {
+  "en": "        <div><dt>Shadowing · words · replay · drills</dt><dd>Unlimited</dd></div>",
+  "text": "        <div><dt>シャドーイング・単語・会話の再生・ドリル</dt><dd>無制限</dd></div>"
+ },
+ {
+  "en": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Start on the App Store <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>",
+  "text": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>App Storeで始める <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>"
+ },
+ {
+  "en": "      <button class=\"btn btn-black p-buy\" data-tier=\"plus\" type=\"button\" hidden>Subscribe <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></button>",
+  "text": "      <button class=\"btn btn-black p-buy\" data-tier=\"plus\" type=\"button\" hidden>登録する <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></button>"
+ },
+ {
+  "en": "      <div><span class=\"p-name\">Max</span></div>",
+  "text": "      <div><span class=\"p-name\">Max</span></div>"
+ },
+ {
+  "en": "      <p class=\"p-note\">For the months with a lot to prepare.</p>",
+  "text": "      <p class=\"p-note\">準備することが多い月に、思いきり。</p>"
+ },
+ {
+  "en": "        <div><dt>Talk</dt><dd data-talk=\"max\">—</dd></div>",
+  "text": "        <div><dt>通話</dt><dd data-talk=\"max\">—</dd></div>"
+ },
+ {
+  "en": "        <div><dt>Speech</dt><dd>Included</dd></div>",
+  "text": "        <div><dt>スピーチ</dt><dd>あり</dd></div>"
+ },
+ {
+  "en": "        <div><dt>Personalized review textbook</dt><dd>Unlimited</dd></div>",
+  "text": "        <div><dt>自分専用の復習教材</dt><dd>無制限</dd></div>"
+ },
+ {
+  "en": "        <div><dt>Shadowing · words · replay · drills</dt><dd>Unlimited</dd></div>",
+  "text": "        <div><dt>シャドーイング・単語・会話の再生・ドリル</dt><dd>無制限</dd></div>"
+ },
+ {
+  "en": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Start on the App Store <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>",
+  "text": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>App Storeで始める <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>"
+ },
+ {
+  "en": "      <button class=\"btn btn-black p-buy\" data-tier=\"max\" type=\"button\" hidden>Subscribe <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></button>",
+  "text": "      <button class=\"btn btn-black p-buy\" data-tier=\"max\" type=\"button\" hidden>登録する <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></button>"
+ },
+ {
+  "en": "      <h3 id=\"sp-title\">Sign in with your app account</h3><p>Your subscription links straight to the account you use in the app.</p>",
+  "text": "      <h3 id=\"sp-title\">アプリで使っているアカウントでサインイン</h3><p>サブスクリプションが、アプリと同じアカウントにそのまま結びつきます。</p>"
+ },
+ {
+  "en": "      <a class=\"btn btn-black sp-btn\" href=\"#\" data-signin=\"apple\"><svg viewBox=\"0 0 384 512\" fill=\"currentColor\" aria-hidden=\"true\"><use href=\"#applelogo\"/></svg>Continue with Apple</a>",
+  "text": "      <a class=\"btn btn-black sp-btn\" href=\"#\" data-signin=\"apple\"><svg viewBox=\"0 0 384 512\" fill=\"currentColor\" aria-hidden=\"true\"><use href=\"#applelogo\"/></svg>Appleで続ける</a>"
+ },
+ {
+  "en": "      <a class=\"btn sp-btn sp-g\" href=\"#\" data-signin=\"google\">Continue with Google</a>",
+  "text": "      <a class=\"btn sp-btn sp-g\" href=\"#\" data-signin=\"google\">Googleで続ける</a>"
+ },
+ {
+  "en": "      <button class=\"sp-x\" type=\"button\" data-signin-close>Close</button>",
+  "text": "      <button class=\"sp-x\" type=\"button\" data-signin-close>閉じる</button>"
+ },
+ {
+  "en": "    <p class=\"p-fine\" id=\"manage-sub\" hidden>Subscribed on the web? Change or cancel it in <a href=\"#\" id=\"manage-link\">Manage your subscription</a>.</p>",
+  "text": "    <p class=\"p-fine\" id=\"manage-sub\" hidden>Webで登録した場合は、<a href=\"#\" id=\"manage-link\">サブスクリプションの管理</a>から変更・解約できます。</p>"
+ },
+ {
+  "en": "    <p class=\"p-fine\">Talk time only runs while the conversation is moving. Pauses are free. A new Watch scene uses 5 minutes of that same time, and watching one again is free. In a month you run short, you can add minutes in the app, and you can cancel anytime on the App Store.</p>",
+  "text": "    <p class=\"p-fine\">通話時間が減るのは会話が続いているあいだだけで、話が止まっているあいだは数えません。新しいシーン練習は同じ通話時間から1回5分を使い、一度見たシーンをもう一度見るのは無料です。時間が足りない月はアプリで時間を追加でき、サブスクリプションはApp Storeでいつでも解約できます。</p>"
+ },
+ {
+  "en": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Your voice stays yours</div>",
+  "text": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>自分の声は、自分のもの</div>"
+ },
+ {
+  "en": "    <h2 class=\"rv\" style=\"--d:0.08s\">A voice clone,<br />treated carefully.</h2>",
+  "text": "    <h2 class=\"rv\" style=\"--d:0.08s\">ボイスクローンは<br />慎重に扱います。</h2>"
+ },
+ {
+  "en": "    <div class=\"tcell rv\"><div class=\"ix\">A</div><h4>Recorded exactly once</h4><p>Sixty seconds at setup, and that is all. Nothing is ever recorded outside a conversation you started.</p></div>",
+  "text": "    <div class=\"tcell rv\"><div class=\"ix\">A</div><h4>録音は一度だけ</h4><p>設定のときの60秒だけです。自分で始めた会話の外で録音することはありません。</p></div>"
+ },
+ {
+  "en": "    <div class=\"tcell rv\" style=\"--d:0.08s\"><div class=\"ix\">B</div><h4>The clone answers to you</h4><p>Re-record or delete it anytime. Replacing it permanently deletes the previous clone.</p></div>",
+  "text": "    <div class=\"tcell rv\" style=\"--d:0.08s\"><div class=\"ix\">B</div><h4>クローンを決めるのは自分</h4><p>いつでも録音し直したり、削除したりできます。作り直すと、前のクローンは完全に削除されます。</p></div>"
+ },
+ {
+  "en": "    <div class=\"tcell rv\" style=\"--d:0.16s\"><div class=\"ix\">C</div><h4>Practice stays on your device</h4><p>Conversations, drills, and progress live on your iPhone. To pick up on another device, they sync through your own iCloud, never our servers.</p></div>",
+  "text": "    <div class=\"tcell rv\" style=\"--d:0.16s\"><div class=\"ix\">C</div><h4>練習の記録は自分の端末に</h4><p>会話・ドリル・学習の記録はiPhoneに保存されます。ほかの端末で続けたいときは、私たちのサーバーではなく、自分のiCloudで同期します。</p></div>"
+ },
+ {
+  "en": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Frequently asked</div>",
+  "text": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>よくある質問</div>"
+ },
+ {
+  "en": "    <h2 class=\"rv\" style=\"--d:0.08s\">Questions.</h2>",
+  "text": "    <h2 class=\"rv\" style=\"--d:0.08s\">気になること。</h2>"
+ },
+ {
+  "en": "      <summary><span class=\"ix\">01</span>How is my voice made?</summary>",
+  "text": "      <summary><span class=\"ix\">01</span>自分の声はどうやって作られますか？</summary>"
+ },
+ {
+  "en": "      <p class=\"a\"><span>One sixty-second recording at setup, and that is it. No recording is needed after that. Your fluent voice speaks every conversation, scene, and shadowing line.</span></p>",
+  "text": "      <p class=\"a\"><span>設定のときに60秒を一度録音するだけです。そのあとは録音はいりません。会話もシーン練習もシャドーイングも、すべて流暢になった自分の声が話します。</span></p>"
+ },
+ {
+  "en": "      <summary><span class=\"ix\">02</span>Can I try it for free?</summary>",
+  "text": "      <summary><span class=\"ix\">02</span>無料で試せますか？</summary>"
+ },
+ {
+  "en": "      <p class=\"a\"><span>Yes. Your first 20 minutes of talking are free, no subscription needed, and making your voice is free too.</span></p>",
+  "text": "      <p class=\"a\"><span>はい。最初の20分はサブスクリプションなしで無料で話せます。声を作るのも無料です。</span></p>"
+ },
+ {
+  "en": "      <summary><span class=\"ix\">03</span>What does a subscription buy?</summary>",
+  "text": "      <summary><span class=\"ix\">03</span>サブスクリプションで何が使えますか？</summary>"
+ },
+ {
+  "en": "      <p class=\"a\"><span>A month of talk time. Light comes with 150 minutes, Plus 450 and Max 900. A new Watch scene uses 5 of those minutes, and watching one again is free. Review, replay, and shadowing are unlimited on every plan.</span></p>",
+  "text": "      <p class=\"a\"><span>1か月分の通話時間です。Lightは150分、Plusは450分、Maxは900分。新しいシーン練習はこの時間から1回5分を使い、一度見たシーンをもう一度見るのは無料です。復習・会話の再生・シャドーイングはどのプランでも無制限です。</span></p>"
+ },
+ {
+  "en": "      <summary><span class=\"ix\">04</span>Can a complete beginner use it?</summary>",
+  "text": "      <summary><span class=\"ix\">04</span>まったくの初心者でも使えますか？</summary>"
+ },
+ {
+  "en": "      <p class=\"a\"><span>Honestly, if you are starting from zero, it will be hard. It fits best once you can form sentences, however haltingly. From there every turn comes back fluent, the difficulty follows your level, and you speak more and more.</span></p>",
+  "text": "      <p class=\"a\"><span>正直に言うと、ゼロから始める方には難しいです。たどたどしくても文を組み立てられる段階からがいちばん合っています。そこからは毎ターン流暢な言い方が返ってきて、会話の難しさもレベルに合わせて変わるので、話す量がどんどん増えていきます。</span></p>"
+ },
+ {
+  "en": "      <summary><span class=\"ix\">05</span>How do I know I am improving?</summary>",
+  "text": "      <summary><span class=\"ix\">05</span>上達したことはどうやってわかりますか？</summary>"
+ },
+ {
+  "en": "      <p class=\"a\"><span>Your CEFR level (A1 to C2) is measured from the words and sentences you actually spoke. It is a measurement, not an opinion, so progress shows up as a number.</span></p>",
+  "text": "      <p class=\"a\"><span>実際に話した単語と文から、CEFRレベル（A1〜C2）を測ります。意見ではなく実測なので、伸びが数字で見えます。</span></p>"
+ },
+ {
+  "en": "      <summary><span class=\"ix\">06</span>Is my voice and data safe?</summary>",
+  "text": "      <summary><span class=\"ix\">06</span>自分の声とデータは安全ですか？</summary>"
+ },
+ {
+  "en": "      <p class=\"a\"><span>Nothing is ever recorded outside a conversation you started. You can rebuild or delete the clone anytime. Conversations, drills, and progress stay on your iPhone, and if you turn on sync they go only to your own iCloud, never our servers.</span></p>",
+  "text": "      <p class=\"a\"><span>自分で始めた会話の外で録音することはありません。クローンはいつでも作り直したり削除したりできます。会話・ドリル・学習の記録はiPhoneに保存され、同期をオンにしても送られるのは自分のiCloudだけで、私たちのサーバーには送られません。</span></p>"
+ },
+ {
+  "en": "      <summary><span class=\"ix\">07</span>Which languages can I learn?</summary>",
+  "text": "      <summary><span class=\"ix\">07</span>どの言語を学べますか？</summary>"
+ },
+ {
+  "en": "      <p class=\"a\"><span>English, German, Japanese, Spanish, and Korean. Adding a language never changes the price.</span></p>",
+  "text": "      <p class=\"a\"><span>英語、ドイツ語、日本語、スペイン語、韓国語です。言語を増やしても料金は変わりません。</span></p>"
+ },
+ {
+  "en": "    <h2 class=\"rv\">The <span class=\"px-k\">fluent future you</span>,<br />starting today.</h2>",
+  "text": "    <h2 class=\"rv\">流暢になった未来の自分、<br />今日から。</h2>"
+ },
+ {
+  "en": "      <button class=\"fd-orb\" id=\"d-play\" type=\"button\" aria-label=\"Hear your future voice\">",
+  "text": "      <button class=\"fd-orb\" id=\"d-play\" type=\"button\" aria-label=\"未来の自分の声を聞いてみる\">"
+ },
+ {
+  "en": "      <div class=\"fd-hint\">Hear your future voice</div>",
+  "text": "      <div class=\"fd-hint\">未来の自分の声を聞いてみる</div>"
+ },
+ {
+  "en": "      <a class=\"btn-store\" href=\"#\" data-appstore><svg viewBox=\"0 0 384 512\" fill=\"currentColor\" aria-hidden=\"true\"><use href=\"#applelogo\"/></svg><span class=\"tx\"><small>Download on the</small><b>App Store</b></span></a>",
+  "text": "      <a class=\"btn-store\" href=\"#\" data-appstore><svg viewBox=\"0 0 384 512\" fill=\"currentColor\" aria-hidden=\"true\"><use href=\"#applelogo\"/></svg><span class=\"tx\"><small>App Storeから</small><b>ダウンロード</b></span></a>"
+ },
+ {
+  "en": "  <audio id=\"d-audio\" src=\"beta-en.mp3\" preload=\"none\"></audio>",
+  "text": "  <audio id=\"d-audio\" src=\"beta-en.mp3\" preload=\"none\"></audio>"
+ },
+ {
+  "en": "      <a href=\"privacy.html\">Privacy Policy</a>",
+  "text": "      <a href=\"privacy.html\">プライバシーポリシー</a>"
+ },
+ {
+  "en": "      <a href=\"terms.html\">Terms</a>",
+  "text": "      <a href=\"terms.html\">利用規約</a>"
+ },
+ {
+  "en": "      <a href=\"support.html\">Support</a>",
+  "text": "      <a href=\"support.html\">サポート</a>"
+ },
+ {
+  "en": "      <a href=\"mailto:hello.dearroroapp@gmail.com\">Contact</a>",
+  "text": "      <a href=\"mailto:hello.dearroroapp@gmail.com\">お問い合わせ</a>"
+ },
+ {
+  "en": "  audio.addEventListener('error', function(){ if(cap) cap.textContent='Couldn’t load the audio.'; });",
+  "text": "  audio.addEventListener('error', function(){ if(cap) cap.textContent='音声を読み込めませんでした。'; });"
+ },
+ {
+  "en": "    talk: \"150 min / mo\", perDay: \"About 5 min a day\",",
+  "text": "    talk: \"150分/月\", perDay: \"1日あたり約5分\","
+ },
+ {
+  "en": "    monthly: { id: \"light_monthly\", price: \"$8.99\",   was: \"$9.99\",   per: \"/ mo\" },",
+  "text": "    monthly: { id: \"light_monthly\", price: \"$8.99\",   was: \"$9.99\",   per: \"/ 月\" },"
+ },
+ {
+  "en": "    annual:  { id: \"light_annual\",  price: \"$89.99\",  was: \"$99.99\",  per: \"/ yr · 2 months free\" },",
+  "text": "    annual:  { id: \"light_annual\",  price: \"$89.99\",  was: \"$99.99\",  per: \"/ 年 · 2か月分無料\" },"
+ },
+ {
+  "en": "    talk: \"450 min / mo\", perDay: \"About 15 min a day\",",
+  "text": "    talk: \"450分/月\", perDay: \"1日あたり約15分\","
+ },
+ {
+  "en": "    monthly: { id: \"plus_monthly\",  price: \"$22.49\",  was: \"$24.99\",  per: \"/ mo\" },",
+  "text": "    monthly: { id: \"plus_monthly\",  price: \"$22.49\",  was: \"$24.99\",  per: \"/ 月\" },"
+ },
+ {
+  "en": "    annual:  { id: \"plus_annual\",   price: \"$224.99\", was: \"$249.99\", per: \"/ yr · 2 months free\" },",
+  "text": "    annual:  { id: \"plus_annual\",   price: \"$224.99\", was: \"$249.99\", per: \"/ 年 · 2か月分無料\" },"
+ },
+ {
+  "en": "    talk: \"900 min / mo\", perDay: \"About 30 min a day\",",
+  "text": "    talk: \"900分/月\", perDay: \"1日あたり約30分\","
+ },
+ {
+  "en": "    monthly: { id: \"max_monthly\",   price: \"$44.99\",  was: \"$49.99\",  per: \"/ mo\" },",
+  "text": "    monthly: { id: \"max_monthly\",   price: \"$44.99\",  was: \"$49.99\",  per: \"/ 月\" },"
+ },
+ {
+  "en": "            ? p.price + ' <span>' + p.per + '</span><span class=\"p-was\" style=\"display:block;margin-top:6px;font-size:13px\">App Store <s>' + p.was + '</s> · 10% off on the web</span>'",
+  "text": "            ? p.price + ' <span>' + p.per + '</span><span class=\"p-was\" style=\"display:block;margin-top:6px;font-size:13px\">App Store <s>' + p.was + '</s> · Webなら10%オフ</span>'"
+ },
+ {
+  "en": "        : '<span>Monthly only</span>'",
+  "text": "        : '<span>月額のみです</span>'"
+ },
+ {
+  "en": "  toast.textContent = \"Payment complete. Open the app and sign in with the same account. Your subscription is already active.\"",
+  "text": "  toast.textContent = \"お支払いが完了しました。アプリを開いて同じアカウントでサインインすると、サブスクリプションがすでに有効になっています。\""
+ },
+ {
+  "en": "      return \"You already have a subscription on the web. Change it under “Manage your subscription” below.\"",
+  "text": "      return \"すでにWebでサブスクリプションに登録しています。下の「サブスクリプションの管理」から変更できます。\""
+ },
+ {
+  "en": "      return \"Your App Store subscription is still active. Buying here too would charge you twice, so manage it in the App Store instead.\"",
+  "text": "      return \"App Storeのサブスクリプションがまだ有効です。ここでも購入すると二重に請求されるため、App Store側で管理してください。\""
+ },
+ {
+  "en": "    return \"Something went wrong starting checkout. Please try again.\"",
+  "text": "    return \"お支払いを始めるときに問題が発生しました。もう一度お試しください。\""
+ },
+ {
+  "en": "        ? \"This account has no web subscription. If you subscribed in the app, manage it in your device’s subscription settings.\"",
+  "text": "        ? \"このアカウントにはWebのサブスクリプションがありません。アプリで登録した場合は、端末のサブスクリプション設定から管理してください。\""
+ },
+ {
+  "en": "        : \"Something went wrong opening subscription management. Please try again.\")",
+  "text": "        : \"サブスクリプションの管理を開くときに問題が発生しました。もう一度お試しください。\")"
+ },
+ {
+  "en": "  s.fix({ text: \"Maybe, if it <b>were safer</b>, I'd <b>give it a try</b>.\", note: \"It’s hypothetical, so it takes were and I’d\" });",
+  "text": "  s.fix({ text: \"Maybe, if it <b>were safer</b>, I'd <b>give it a try</b>.\", note: \"仮定の話なので were と I’d を使います\" });"
+ }
+]

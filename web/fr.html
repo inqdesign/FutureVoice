@@ -1,0 +1,2377 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>nawana : apprends une langue avec ton moi fluide</title>
+<meta name="description" content="La façon la plus personnelle d’apprendre une langue. Parle chaque jour avec la voix fluide de ton futur toi, puis révise avec un carnet fait de ce que tu as vraiment dit. App iOS." />
+<meta property="og:title" content="nawana : apprends une langue avec ton moi fluide" />
+<meta property="og:description" content="Soixante secondes d’enregistrement, et ta voix fluide du futur est prête. Parle avec elle chaque jour, puis révise avec ton propre carnet." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://nawana.app/fr.html" />
+<link rel="canonical" href="https://nawana.app/fr.html" />
+<link rel="icon" href="/favicon.ico" sizes="32x32" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<meta name="color-scheme" content="light" />
+<meta name="theme-color" content="#04081A" />
+<!-- lang:hreflang -->
+<link rel="alternate" hreflang="en" href="https://nawana.app/" />
+<link rel="alternate" hreflang="ko" href="https://nawana.app/ko.html" />
+<link rel="alternate" hreflang="ja" href="https://nawana.app/ja.html" />
+<link rel="alternate" hreflang="zh-Hans" href="https://nawana.app/zh-hans.html" />
+<link rel="alternate" hreflang="zh-Hant" href="https://nawana.app/zh-hant.html" />
+<link rel="alternate" hreflang="es" href="https://nawana.app/es.html" />
+<link rel="alternate" hreflang="fr" href="https://nawana.app/fr.html" />
+<link rel="alternate" hreflang="de" href="https://nawana.app/de.html" />
+<link rel="alternate" hreflang="x-default" href="https://nawana.app/" /><!-- /lang:hreflang -->
+<style>
+/* ═══════════════════════════════════════════════════════════
+   nawana — pixel editorial, light.
+   The app's identity on paper: Geist Pixel display type, mono
+   labels, a hairline column grid, and ONE color — the mosaic
+   blue of the Futureself surface. Everything else is ink.
+   ═══════════════════════════════════════════════════════════ */
+@font-face {
+  font-family: "Geist Pixel";
+  font-style: normal; font-weight: 400; font-display: swap;
+  src: url(GeistPixel.ttf) format("truetype");
+}
+/* the wordmark's own face — the logo is Pixelify Sans, everything else
+   pixel-flavored stays Geist Pixel */
+@font-face {
+  font-family: "Pixelify Sans";
+  font-style: normal; font-weight: 400; font-display: swap;
+  src: url(PixelifySans.woff2) format("woff2");
+}
+
+:root {
+  --paper:  #FCFBF8;              /* plain sections */
+  --paper2: #F1F0EA;              /* alt sections — warm gray */
+  --ink:    #141310;
+  --dim:    #57544D;
+  --faint:  #918E85;
+  --line:   rgba(20,19,16,0.16);
+  --lns:    rgba(20,19,16,0.07);
+  --blue:   #0A5CF5;              /* the mosaic's hot cell — the only color */
+  --blue-ink: #0847BE;
+
+  --sans:  "Helvetica Neue", Helvetica, -apple-system, "Apple SD Gothic Neo", Arial, sans-serif;
+  --mono:  ui-monospace, "SF Mono", Menlo, "Roboto Mono", monospace;
+  --pixel: "Geist Pixel", "Helvetica Neue", -apple-system, "Apple SD Gothic Neo", sans-serif;
+
+  --pad: 40px;    /* outer gutter — the grid lines live here */
+  --cell: 30px;   /* content inset from its column line */
+}
+@media (max-width: 700px) { :root { --pad: 20px; --cell: 16px; } }
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+[hidden] { display: none !important; }
+/* The UA's `[hidden] { display: none }` loses to any rule that sets display —
+   `.btn` is inline-flex, so the Stripe checkout button rendered beside the App
+   Store one on a page with web billing switched off. */
+[hidden] { display: none !important; }
+html { scroll-behavior: smooth; }
+body { font-family: var(--sans); background: var(--paper); color: var(--ink); line-height: 1.66; word-break: keep-all; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+::selection { background: var(--blue); color: #fff; }
+a { color: inherit; }
+.mono { font-family: var(--mono); }
+
+/* section worlds: every section carries the hairline column grid */
+.sec { position: relative; }
+.sec::before {
+  content: ""; position: absolute; top: 0; bottom: 0;
+  left: var(--pad); right: var(--pad);
+  pointer-events: none; z-index: 0;
+  background:
+    linear-gradient(var(--gl), var(--gl)) no-repeat 0 0 / 1px 100%,
+    linear-gradient(var(--gl), var(--gl)) no-repeat 25% 0 / 1px 100%,
+    linear-gradient(var(--gl), var(--gl)) no-repeat 50% 0 / 1px 100%,
+    linear-gradient(var(--gl), var(--gl)) no-repeat 75% 0 / 1px 100%,
+    linear-gradient(var(--gl), var(--gl)) no-repeat 100% 0 / 1px 100%;
+}
+.plain { --gl: var(--lns);  background: var(--paper);  --surf: #F0EFE9; --surf2: rgba(20,19,16,0.08); }
+.alt   { --gl: rgba(20,19,16,0.055); background: var(--paper2); --surf: #FFFFFF; --surf2: rgba(20,19,16,0.07); }
+.inner { position: relative; z-index: 1; padding-left: var(--pad); padding-right: var(--pad); }
+
+/* glyphs: the app mark, a pixel cell, an action arrow */
+.mark, .dot, .arrow { display: inline-block; flex: none; vertical-align: -0.1em; }
+.mark rect, .dot rect { fill: currentColor; }
+/* <use> clones live in shadow DOM where rect selectors can't reach —
+   fill set on the svg itself INHERITS into them, so the mark follows
+   the nav's light ink on the dark chrome. */
+.mark, .dot { fill: currentColor; }
+
+/* ── type: pixel display, mono labels, sans body ──────────── */
+h1 { font-family: var(--sans); font-weight: 800; font-size: clamp(38px, 5.6vw, 78px); letter-spacing: -0.035em; line-height: 1.12; }
+h2 { font-family: var(--sans); font-weight: 800; font-size: clamp(26px, 3.4vw, 46px); letter-spacing: -0.03em; line-height: 1.22; }
+.kicker {
+  font-family: var(--mono); font-size: 12.5px; font-weight: 500;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  display: flex; align-items: center; gap: 10px; color: var(--dim);
+}
+.kicker .dot { width: 0.62em; height: 0.62em; color: var(--blue); vertical-align: 0; }
+.kicker .mono { color: var(--blue); }
+
+/* ── buttons: sharp editorial blocks ──────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: space-between; gap: 24px;
+  font-family: var(--sans); font-size: 15px; font-weight: 500;
+  padding: 15px 22px; text-decoration: none; cursor: pointer;
+  border: 0; border-radius: 0; transition: background 0.16s, color 0.16s, box-shadow 0.16s;
+}
+.btn .arrow { width: 1.15em; height: 1.15em; vertical-align: -0.24em; }
+.btn-white, .btn-black { background: var(--ink); color: var(--paper); }
+.btn-white:hover, .btn-black:hover { background: var(--blue); color: #fff; }
+.btn-dim { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+.btn-dim:hover { box-shadow: inset 0 0 0 1px var(--ink); }
+
+/* ── reveal ───────────────────────────────────────────────── */
+.js .rv { opacity: 0; transform: translateY(20px); transition: opacity 0.65s ease, transform 0.65s cubic-bezier(0.2,0.7,0.2,1); transition-delay: var(--d, 0s); }
+.rv.in { opacity: 1; transform: none; }
+
+/* ── nav ──────────────────────────────────────────────────── */
+nav.sec {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+  background: transparent; border-bottom: 1px solid transparent;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+nav.sec::before { display: none; }
+nav.sec.nav-solid {
+  background: rgba(11,10,9,0.94);
+  border-bottom-color: rgba(245,242,235,0.12);
+  backdrop-filter: saturate(160%) blur(16px); -webkit-backdrop-filter: saturate(160%) blur(16px);
+}
+.nav-in { display: flex; align-items: center; height: 64px; }
+.logo { display: flex; align-items: center; gap: 9px; font-family: "Pixelify Sans", var(--pixel); font-size: 20px; font-weight: 400; text-decoration: none; }
+/* "nawana" has no ascender and no descender, so its ink sits 0.1em BELOW the
+   line box centre that align-items:center squares the mark against — optically
+   the mark floats. The nudge puts the mark's own centre on the x-height's. */
+.logo .mark { width: 19px; height: 19px; transform: translateY(0.1em); }
+.logo sup { font-size: 8px; color: var(--faint); }
+.navlinks { margin-left: auto; display: flex; align-items: center; gap: 26px; font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+.navlinks a { text-decoration: none; }
+.navlinks a:hover { color: var(--ink); }
+.navlinks .btn { font-family: var(--sans); font-size: 14px; letter-spacing: 0; text-transform: none; padding: 11px 18px; }
+/* mobile: links fold into the burger menu; the store badge stays */
+.nav-burger { display: none; background: none; border: 0; cursor: pointer; padding: 10px 0 10px 6px; color: #F5F2EB; }
+.nav-burger svg { width: 22px; height: 22px; display: block; }
+.nav-menu { display: none; position: absolute; top: 100%; left: 0; right: 0; flex-direction: column;
+  background: rgba(11,10,9,0.97); border-bottom: 1px solid rgba(245,242,235,0.12); padding: 8px 0 14px; }
+.nav-menu a { display: block; padding: 14px var(--pad); font-family: var(--mono); font-size: 13px;
+  letter-spacing: 0.1em; text-transform: uppercase; color: #A9A49C; text-decoration: none; }
+.nav-menu a:hover, .nav-menu a:active { color: #F5F2EB; }
+@media (max-width: 860px) {
+  .navlinks a:not(.btn-store) { display: none; }
+  .nav-burger { display: block; }
+  nav.sec.nav-open .nav-menu { display: flex; }
+}
+/* on mobile the header yields while scrolling down, returns on scroll-up */
+nav.sec { transition: transform 0.3s ease; }
+nav.sec.nav-hidden { transform: translateY(-100%); }
+/* the nav sits on the night — dark chrome */
+nav.sec { --ink: #F5F2EB; --dim: #A9A49C; --faint: #8A857C; --line: rgba(245,242,235,0.14); color: var(--ink); }
+nav.sec .logo { color: #F5F2EB; }
+.navlinks .btn { background: #F5F2EB; color: #12110E; }
+.navlinks .btn:hover { background: #2F6FFF; color: #fff; }
+/* ── the App Store button: Apple's OFFICIAL badge look —
+   black, thin light outline, white  + "Download on the / App Store" ── */
+.btn-store { display: inline-flex; align-items: center; gap: 11px; text-decoration: none; cursor: pointer;
+  background: #000; color: #fff; border-radius: 13px; padding: 10px 22px 11px 17px;
+  box-shadow: inset 0 0 0 1px #A6A6A6; font-family: -apple-system, "Helvetica Neue", "Apple SD Gothic Neo", sans-serif;
+  transition: transform 0.15s ease, opacity 0.15s ease; }
+.btn-store:hover { transform: scale(1.03); }
+.btn-store svg { width: 26px; height: 26px; flex: none; }
+.btn-store .tx { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.16; }
+.btn-store .tx small { font-size: 12px; font-weight: 400; letter-spacing: 0.01em; }
+.btn-store .tx b { font-size: 19.5px; font-weight: 600; letter-spacing: -0.01em; }
+.navlinks .btn-store { padding: 6px 14px 7px 11px; gap: 8px; border-radius: 10px; font-family: -apple-system, "Helvetica Neue", "Apple SD Gothic Neo", sans-serif; text-transform: none; letter-spacing: 0; }
+.navlinks .btn-store svg { width: 18px; height: 18px; }
+.navlinks .btn-store .tx b { font-size: 14px; }
+.navlinks .btn-store .tx small { display: none; }
+
+/* ── the device: a real iPhone drawn in CSS, showing REAL app screens.
+   Screens carry their own light iOS variables so they read identically
+   on the night hero and the paper sections. ── */
+.iphone { --dr: 55px; position: relative; width: 316px; border-radius: var(--dr); background: #010101; padding: 9px; flex: none;
+  box-shadow: 0 0 0 1.5px #3A3A3C, 0 0 0 3.5px #0E0E10, 0 60px 110px -35px rgba(0,0,0,0.6); }
+.iphone .di { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 90px; height: 26px; border-radius: 14px; background: #000; z-index: 5; }
+/* the screen keeps the capture's EXACT aspect (1206×2622) — no crop, no stretch */
+.iphone .screen { position: relative; width: 100%; aspect-ratio: 1206 / 2622; border-radius: calc(var(--dr, 55px) - 9px); overflow: hidden;
+  background: #FFFFFF; color: #101013; display: flex; flex-direction: column;
+  --ink: #101013; --dim: #55555A; --faint: #8E8E93; --line: rgba(0,0,0,0.16); --lns: rgba(0,0,0,0.08);
+  --surf: #EFEFF4; --surf2: rgba(0,0,0,0.06); }
+.sbar { display: flex; justify-content: space-between; align-items: center; padding: 17px 27px 4px; font-size: 13.5px; font-weight: 600; }
+.sbar .sic { display: flex; gap: 5px; align-items: center; }
+.sbar .sic svg { height: 11px; width: auto; display: block; }
+.app-top { display: flex; align-items: baseline; justify-content: space-between; padding: 10px 18px 4px; }
+.app-top .t { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; }
+.app-top .who2 { display: block; font-family: var(--mono); font-size: 10.5px; color: var(--faint); margin-bottom: 2px; }
+.app-top .tm { font-family: var(--mono); font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.app-body { flex: 1; display: flex; flex-direction: column; padding: 6px 14px 10px; overflow: hidden; min-height: 0; }
+.tabbar { display: flex; border-top: 0.5px solid rgba(0,0,0,0.14); padding: 7px 6px 22px; background: #F9F9FB; }
+.tabbar .ti { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 9.5px; color: #8E8E93; }
+.tabbar .ti svg { width: 21px; height: 21px; }
+.tabbar .ti.on { color: #0A5CF5; }
+.call-bottom { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 8px 0 22px; }
+.call-bottom .fs-pill { width: 168px; height: 56px; }
+.call-bottom .end { width: 46px; height: 46px; border-radius: 50%; background: #E0483C; color: #fff; display: grid; place-items: center; }
+.call-bottom .end svg { width: 20px; height: 20px; transform: rotate(135deg); }
+/* app-scale overrides inside the screen */
+.iphone .shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+/* live screens from the UI kit (web/kit) sit over the capture; the capture stays as the
+   fallback until the kit has loaded (and if it never does) */
+[data-nw]:not(:defined) { display: none; }
+.s-scr > [data-nw] { z-index: 1; }
+.s-scr .shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+/* the device is the kit's iPhone 17 Pro (web/kit): island, status bar and frame drawn to the
+   real proportions. Until the kit loads it shows the capture in a plain black frame. */
+nw-phone.iphone-k { width: 330px; flex: none; }
+.weekly-show { gap: 24px; }
+.weekly-show nw-phone.iphone-k { width: 270px; }
+@media (max-width: 700px) { .weekly-show nw-phone.iphone-k { width: 46vw; } .weekly-show { gap: 10px; } }
+@media (max-width: 700px) { nw-phone.iphone-k { width: 290px; } }
+nw-phone:not(:defined) { display: block; aspect-ratio: 430 / 902; border-radius: 52px; background: #0B0B0C; padding: 3.3%; }
+nw-phone:not(:defined) > :not(img):not(.s-screens) { display: none; }
+nw-phone:not(:defined) > img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 42px; }
+/* a section's bullets follow its live screen: the bullet for the moment on screen stays,
+   the others step back */
+.hows li { transition: opacity 0.35s ease; }
+.hows.nw-beating li:not(.nw-beat-on) { opacity: 0.4; }
+.hows li.nw-beat-on .dot { animation: beatdot 1.4s ease-in-out infinite; }
+@keyframes beatdot { 50% { transform: scale(1.45); } }
+@media (prefers-reduced-motion: reduce) { .hows.nw-beating li:not(.nw-beat-on) { opacity: 1; } .hows li.nw-beat-on .dot { animation: none; } }
+.iphone .dl { gap: 10px; margin-top: auto; }
+.iphone .dl-bub { font-size: 13.5px; padding: 9px 12px; border-radius: 15px; }
+.iphone .dl-call .dl-bub { font-size: 14px; }
+.iphone .dl-name { font-size: 10px; }
+.iphone .f-sug { font-size: 11.5px; padding: 7px 10px; border-radius: 11px; background: rgba(10,92,245,0.08); color: #0847BE; }
+.iphone .f-sug svg { width: 11px; height: 11px; }
+.iphone .dl-acc a { font-size: 10.5px; }
+.iphone .dl-acc svg { width: 10px; height: 10px; }
+.iphone .sc-head .title { font-size: 17px; }
+.iphone .sc-head .who { font-size: 10.5px; }
+.iphone .wc-bar .b { height: 42px; font-size: 13.5px; border-radius: 100px; }
+.iphone .sh-head .l, .iphone .sh-head .r { font-size: 10.5px; }
+.iphone .kara { font-size: 16.5px; margin-top: 8px; }
+.iphone .scrub { padding: 12px; border-radius: 18px; margin-top: 14px; }
+.iphone .track { height: 40px; }
+.iphone .tl-labels { font-size: 10px; margin-top: 9px; }
+.iphone .tl-ctl { gap: 12px; margin-top: 11px; }
+.iphone .tl-ctl > svg { width: 33px; height: 33px; }
+.iphone .tl-ctl .sp { font-size: 12px; padding: 6px 10px; }
+.iphone .tl-ctl .mic { width: 46px; height: 46px; }
+.iphone .tl-ctl .mic svg { width: 18px; height: 18px; }
+.iphone .kv { max-width: none; width: 100%; }
+@media (max-width: 700px) { .iphone { width: 282px; --dr: 50px; } }
+
+/* ── scrollytelling: the phone peeks from the hero's bottom edge, pins
+   at the viewport centre, and its SCREEN walks the core flow while a
+   big caption changes beside it. Height = 1 hero + 5 beats. ── */
+.scrolly { position: relative; height: 620vh; }
+.s-hero { position: absolute; top: 0; left: 0; right: 0; height: 100vh; z-index: 0; /* under the pinned phone: it covers the copy while that fades */
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: 104px var(--pad) 0; pointer-events: none; }
+.s-hero h1 { margin-top: 24px; }
+.s-hero .n-sub { margin-top: 20px; }
+.s-hero .n-ctas { margin-top: 28px; }
+.s-hero .n-note { margin-top: 20px; }
+.s-hero a { pointer-events: auto; }
+.s-pin { position: sticky; top: 0; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden;
+  /* sticky makes its own stacking layer; at z-index auto it paints UNDER the
+     fixed grain (body::after, z 0, later in the DOM) and the specks land on the phone */
+  z-index: 1; }
+.s-phone { position: relative; z-index: 2; will-change: transform; transform-origin: 50% 0; }
+/* desktop: size the phone from the viewport HEIGHT so tall screens get a
+   properly big device (caps at 400px; ~85vh tall on a laptop) */
+@media (min-width: 861px) { .s-phone { width: min(400px, 40vh); --dr: min(68px, 7vh); } }
+.s-caps { position: absolute; inset: 0; z-index: 1; }
+/* ── stickers: small pieces of the real app float around the pinned phone, one set per beat.
+   They are the kit's own pieces (a correction, a line, the fluent self's pill), not drawings. ── */
+.s-stk { position: absolute; left: 50%; top: 50%; width: 0; height: 0; z-index: 3; pointer-events: none; --pw: 316px; }
+@media (min-width: 861px) { .s-stk { --pw: min(400px, 40vh); } }
+.stg { position: absolute; inset: 0; }
+.stk { position: absolute; opacity: 0; transform: translateY(14px) scale(.86) rotate(var(--r, 0deg));
+  transition: opacity .4s ease, transform .6s cubic-bezier(.3, 1.45, .5, 1); }
+.stg.on .stk { opacity: 1; transform: rotate(var(--r, 0deg)); }
+.stg.on .stk:nth-child(2) { transition-delay: .14s; }
+.stg.on .stk:nth-child(3) { transition-delay: .28s; }
+.stk > .b { background: #fff; color: #101013; border-radius: 18px; padding: 11px 14px;
+  box-shadow: 0 1px 0 rgba(255,255,255,.6) inset, 0 14px 34px rgba(8,22,60,.22), 0 2px 6px rgba(8,22,60,.10);
+  font-size: 13.5px; line-height: 1.35; animation: stkbob 6s ease-in-out infinite; }
+.stk:nth-child(2) > .b { animation-delay: -2s; } .stk:nth-child(3) > .b { animation-delay: -4s; }
+@keyframes stkbob { 50% { transform: translateY(-6px); } }
+.stk .k { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #8E8E93; margin-bottom: 4px; }
+.stk .k svg { width: 13px; height: 13px; color: var(--blue); }
+.stk b { font-weight: 600; }
+.stk .row { display: flex; align-items: center; gap: 10px; }
+.stk .ic { width: 30px; height: 30px; border-radius: 50%; background: #E5EEFC; color: var(--blue); display: grid; place-items: center; flex: none; }
+.stk .ic svg { width: 16px; height: 16px; }
+.stk .num { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.px-k { font-family: var(--pixel); font-weight: 400; letter-spacing: 0; }
+.stk .px { font-family: var(--pixel); font-size: 30px; line-height: 1; color: var(--blue); }
+.stk .chips { display: flex; gap: 6px; }
+.stk .chips span { padding: 5px 10px; border-radius: 99px; background: #F2F2F7; font-size: 12.5px; font-weight: 600; }
+.stk .chips span i { font-style: normal; color: var(--blue); }
+.stk .ok { color: #34C759; }
+.stk .bars { display: grid; gap: 5px; margin-top: 6px; width: 150px; }
+.stk .bars span { display: grid; grid-template-columns: 70px 1fr; align-items: center; gap: 8px; font-size: 11px; color: #55555A; }
+.stk .bars i { height: 4px; border-radius: 2px; background: #E5E5EA; overflow: hidden; }
+.stk .bars i b { display: block; height: 100%; background: #34C759; border-radius: 2px; }
+.stk nw-futureself { display: block; }
+.stk nw-fix, .stk nw-bubble { font-size: 13px; }
+.stk.bare > .b { background: none; box-shadow: none; padding: 0; filter: drop-shadow(0 12px 24px rgba(8,22,60,.20)) drop-shadow(0 2px 4px rgba(8,22,60,.08)); }
+.stg0 { will-change: transform; }
+/* the hero cycles the target language: the sticker of the one on the phone is lit */
+.stg0 .stk > .b { transition: box-shadow .35s ease, opacity .35s ease, transform .35s ease; }
+.stg0.cycling .stk:not(.cur) > .b { opacity: .55; }
+.stg0 .stk.cur > .b { box-shadow: 0 0 0 2.5px var(--langc, var(--blue)), 0 18px 40px rgba(8,22,60,.24), 0 2px 6px rgba(8,22,60,.10); }
+.stg0 .stk > .b { font-size: 14.5px; padding: 13px 16px; border-radius: 20px; }
+.stg0 .stk .k { font-size: 12px; }
+.stg0 .stk .lang { display: flex; align-items: center; gap: 12px; }
+.stk .fl { white-space: nowrap; font-size: 30px; line-height: 1; letter-spacing: 2px; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
+.stk .lang b { display: block; font-size: 19px; line-height: 1.2; letter-spacing: -.01em; }
+.stk .lang small { display: block; font-size: 12.5px; color: #8E8E93; margin-top: 1px; }
+.stg0.on .stk:nth-child(2) { transition-delay: .55s; } .stg0.on .stk:nth-child(6) { transition-delay: .62s; }
+.stg0.on .stk:nth-child(5) { transition-delay: .72s; } .stg0.on .stk:nth-child(1) { transition-delay: .8s; }
+.stg0.on .stk:nth-child(3) { transition-delay: .9s; } .stg0.on .stk:nth-child(7) { transition-delay: .98s; }
+.stg0.on .stk:nth-child(4) { transition-delay: 1.06s; } .stg0.on .stk:nth-child(8) { transition-delay: 1.14s; }
+@media (max-width: 860px) { .s-stk { display: none; } }
+/* ── step stickers (2026-10-26): bigger, each one LABELLED with what it is, and never on the
+   phone: one up-left (above the caption), two to the right where the page was empty. ── */
+.stg:not(.stg0) .stk { width: max-content; max-width: var(--w); }
+.stg:not(.stg0) .stk.sl { right: calc(var(--pw) * 0.5 + 36px); top: -38vh; }
+.stg:not(.stg0) .stk.sr1 { left: calc(var(--pw) * 0.5 + 40px); top: -30vh; }
+.stg:not(.stg0) .stk.sr2 { left: calc(var(--pw) * 0.5 + 76px); top: 4vh; }
+.stg:not(.stg0) .stk > .b { padding: 15px 18px 16px; border-radius: 22px; font-size: 15px; line-height: 1.45; }
+.stg:not(.stg0) .stk .k { font-size: 12.5px; font-weight: 600; color: #6E6E73; margin-bottom: 9px; }
+.stg:not(.stg0) .stk .n { font-size: 12.5px; color: #8E8E93; margin-top: 8px; }
+.stg:not(.stg0) .stk .row .n { margin-top: 0; }
+.stg:not(.stg0) .stk .say { font-size: 16px; line-height: 1.45; letter-spacing: -.01em; }
+.stg:not(.stg0) .stk .say u { text-decoration: underline wavy #FF3B30 1.5px; text-underline-offset: 4px; }
+.stg:not(.stg0) .stk .say s { color: #8E8E93; }
+.stg:not(.stg0) .stk .fx { color: var(--blue); font-weight: 700; }
+.stg:not(.stg0) .stk .chips { flex-wrap: wrap; gap: 7px; }
+.stg:not(.stg0) .stk .chips span { font-size: 13.5px; padding: 6px 12px; background: #EEF3FD; color: var(--blue); }
+.stg:not(.stg0) .stk .chips span.on { background: var(--blue); color: #fff; }
+.stg:not(.stg0) .stk .chips span i { color: inherit; font-weight: 700; }
+.stg:not(.stg0) .stk .num.big { font-size: 34px; line-height: 1; color: var(--blue); }
+.stg:not(.stg0) .stk .w { font-size: 20px; letter-spacing: -.01em; }
+.stg:not(.stg0) .stk .okc { width: 24px; height: 24px; flex: none; }
+.stg:not(.stg0) .stk .px { font-size: 36px; }
+.stg:not(.stg0) .stk .bars { width: 220px; gap: 8px; }
+.stg:not(.stg0) .stk .bars span { grid-template-columns: 84px 1fr; font-size: 12.5px; }
+.stg:not(.stg0) .stk .bars i { height: 6px; border-radius: 3px; }
+
+@media (prefers-reduced-motion: reduce) { .stk > .b { animation: none; } .stk { transition: opacity .2s; } }
+
+.s-cap { position: absolute; top: 50%; left: var(--pad); right: 66%; transform: translateY(calc(-50% + 14px));
+  opacity: 0; transition: opacity 0.45s ease, transform 0.45s ease; padding-left: var(--cell); text-align: left; }
+.s-cap.on { opacity: 1; transform: translateY(-50%); }
+.s-cap .ix { font-family: var(--pixel); font-size: 14px; letter-spacing: 0.12em; color: #7CA5FF; }
+.s-cap h3 { margin-top: 14px; font-weight: 800; font-size: clamp(30px, 3.4vw, 52px); letter-spacing: -0.03em; line-height: 1.16; }
+.s-cap p { margin-top: 14px; font-size: 17px; color: var(--dim); max-width: 20em; }
+.s-num { position: absolute; top: 50%; right: var(--pad); transform: translateY(-50%); z-index: 0;
+  font-family: var(--pixel); font-size: clamp(70px, 9vw, 150px); color: rgba(124,165,255,0.2);
+  opacity: 0; transition: opacity 0.45s ease; }
+.s-num.on { opacity: 1; }
+.s-screens { position: relative; flex: 1; min-height: 0; display: flex; }
+.s-scr { position: absolute; inset: 0; display: flex; flex-direction: column; opacity: 0; transition: opacity 0.4s ease; }
+.s-scr.on { opacity: 1; }
+@media (max-width: 860px) {
+  .s-cap { left: var(--pad); right: var(--pad); top: 6vh; bottom: auto; text-align: center; transform: translateY(10px); padding-left: 0; }
+  .s-cap.on { transform: none; }
+  .s-cap p { margin-left: auto; margin-right: auto; }
+  .s-pin { align-items: flex-end; padding-bottom: 3vh; }
+  .s-phone { width: min(272px, 64vw); }
+  .s-num { display: none; }
+}
+/* screens: Talk home */
+.home-ring { position: relative; width: 156px; aspect-ratio: 1; border-radius: 50%; overflow: hidden; margin: 14px auto 0; box-shadow: inset 0 0 0 0.5px var(--lns); }
+.home-ring canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hr-mic { position: absolute; inset: 0; display: grid; place-items: center; }
+.hr-mic i { width: 46px; height: 46px; border-radius: 50%; background: #0A5CF5; color: #fff; display: grid; place-items: center; }
+.hr-mic svg { width: 19px; height: 19px; }
+.home-lb { text-align: center; font-size: 14px; font-weight: 600; margin-top: 10px; }
+.home-sub { text-align: center; font-size: 11px; color: var(--faint); margin-top: 2px; }
+.home-row { display: flex; justify-content: space-between; align-items: center; margin-top: 9px; padding: 12px 14px; border-radius: 14px; background: var(--surf); font-size: 12.5px; }
+.home-row b { font-weight: 600; }
+.home-row span { color: var(--faint); font-size: 11px; }
+/* screens: call ended */
+.endwrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+.endwrap .eb2 { width: 62px; height: 62px; border-radius: 50%; background: #E0483C; color: #fff; display: grid; place-items: center; }
+.endwrap .eb2 svg { width: 26px; height: 26px; transform: rotate(135deg); }
+.endwrap .et { font-size: 15px; font-weight: 700; }
+.endwrap .es { font-size: 12px; color: var(--faint); display: flex; align-items: center; gap: 6px; }
+.endwrap .es i { width: 4px; height: 4px; border-radius: 50%; background: #0A5CF5; animation: blink 1.2s ease-in-out infinite; }
+.endwrap .es i:nth-child(2) { animation-delay: 0.2s; }
+.endwrap .es i:nth-child(3) { animation-delay: 0.4s; }
+/* screens: the book */
+.bk-cover { margin: 10px 4px 2px; border-radius: 14px; background: #101013; color: #F5F2EB; padding: 16px 16px 14px; }
+.bk-cover .k { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em; color: #7CA5FF; text-transform: uppercase; }
+.bk-cover .t2 { margin-top: 6px; font-size: 19px; font-weight: 800; letter-spacing: -0.02em; }
+.bk-cover .m { margin-top: 12px; font-family: var(--mono); font-size: 9.5px; color: rgba(245,242,235,0.6); }
+.bk-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 14px; margin-top: 8px; border-radius: 12px; background: var(--surf); font-size: 12.5px; }
+.bk-row b { font-weight: 600; }
+.bk-row span { color: var(--faint); font-family: var(--mono); font-size: 11px; }
+/* screens: study */
+.p-score { display: flex; align-items: flex-end; justify-content: space-between; margin: 10px 4px 0; padding: 13px 14px; border-radius: 14px; background: var(--surf); }
+.p-score .n { font-family: var(--pixel); font-size: 30px; color: #0A5CF5; line-height: 1; }
+.p-score .l2 { font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em; color: var(--faint); text-transform: uppercase; }
+.p-bars { display: flex; gap: 4px; align-items: flex-end; height: 26px; width: 76px; }
+.p-bars i { flex: 1; border-radius: 2px; background: #0A5CF5; }
+.p-drill { margin: 8px 4px 0; padding: 12px 14px; border-radius: 14px; background: var(--surf); }
+.p-drill .q { font-size: 13px; font-weight: 600; line-height: 1.35; }
+.p-drill .a { margin-top: 8px; display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: #0A5CF5; }
+.p-drill .a svg { width: 12px; height: 12px; }
+.p-chiprow { display: flex; gap: 6px; margin: 8px 4px 0; flex-wrap: wrap; }
+.p-chip { font-size: 11px; padding: 6px 10px; border-radius: 100px; background: var(--surf); color: var(--ink); }
+.p-chip.b { background: rgba(10,92,245,0.1); color: #0847BE; }
+
+/* ── night: the page opens as an incoming call from the future self.
+   One glowing thread runs from the ring to the hang-up; the page turns
+   to paper the moment the textbook is born. ── */
+.night {
+  background: #0B0A09; color: #F5F2EB;
+  --ink: #F5F2EB; --dim: #A9A49C; --faint: #716D65;
+  --line: rgba(245,242,235,0.16); --lns: rgba(245,242,235,0.07);
+  --gl: rgba(245,242,235,0.045); --surf: #1C1A17; --surf2: rgba(245,242,235,0.1);
+}
+.n-glow { position: absolute; left: 50%; top: 560px; width: 1000px; height: 1000px; transform: translate(-50%,-50%); pointer-events: none; background: radial-gradient(closest-side, rgba(47,111,255,0.17), transparent 70%); }
+.n-hero { position: relative; z-index: 1; padding: 92px var(--pad) 0; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.n-kicker { font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.16em; text-transform: uppercase; color: #7CA5FF; display: flex; gap: 10px; align-items: center; }
+.n-kicker i { width: 7px; height: 7px; border-radius: 50%; background: #2F6FFF; animation: blink 1.6s ease-in-out infinite; }
+.night h1 { margin-top: 32px; font-size: clamp(46px, 7vw, 110px); }
+.n-sub { margin-top: 28px; max-width: 30em; font-size: 19px; line-height: 1.6; color: #C9C4BA; }
+/* the ringing orb — double-ring cadence, like a phone */
+.n-orbwrap { position: relative; margin-top: 66px; width: min(62vw, 330px); aspect-ratio: 1; }
+.n-orb { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; box-shadow: 0 50px 130px -30px rgba(47,111,255,0.5), inset 0 0 0 0.5px var(--line); animation: dring 2.6s ease-in-out infinite; }
+.n-orb canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.halo { position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(124,165,255,0.5); opacity: 0; animation: haloout 2.6s ease-out infinite; pointer-events: none; }
+.halo.h2 { animation-delay: 0.3s; }
+@keyframes dring { 0%, 20%, 100% { transform: scale(1); } 5%, 15% { transform: scale(1.03); } 10% { transform: scale(1); } }
+@keyframes haloout { 0% { transform: scale(1); opacity: 0.55; } 60% { transform: scale(1.5); opacity: 0; } 100% { transform: scale(1.5); opacity: 0; } }
+.n-caller { margin-top: 32px; font-size: 16px; color: var(--ink); font-weight: 600; }
+.n-caller span { display: block; margin-top: 6px; font-family: var(--mono); font-size: 11.5px; font-weight: 400; letter-spacing: 0.12em; color: var(--faint); text-transform: uppercase; }
+.n-ctas { margin-top: 38px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.night .btn-white, .night .btn-black { background: #F5F2EB; color: #12110E; }
+.night .btn-white:hover, .night .btn-black:hover { background: #2F6FFF; color: #fff; }
+.n-note { display: block; margin-top: 26px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; color: var(--faint); }
+.n-note b { font-weight: 500; color: var(--dim); }
+/* the call thread */
+.n-story { position: relative; z-index: 1; margin-top: 100px; padding: 0 var(--pad); display: flex; flex-direction: column; align-items: center; }
+.n-story::before { content: ""; position: absolute; left: 50%; top: -70px; bottom: 120px; width: 1px; background: linear-gradient(rgba(47,111,255,0), rgba(47,111,255,0.55) 10%, rgba(47,111,255,0.55) 90%, rgba(47,111,255,0)); }
+.n-beat { position: relative; display: flex; flex-direction: column; align-items: center; padding: 52px 0; }
+.n-time { font-family: var(--pixel); font-size: 15px; letter-spacing: 0.1em; color: #7CA5FF; background: #0B0A09; padding: 7px 13px; box-shadow: inset 0 0 0 1px rgba(124,165,255,0.35); }
+.n-dl { margin-top: 36px; width: min(560px, 100%); display: flex; flex-direction: column; gap: 14px; text-align: left; }
+.n-dl .dl-bub { font-size: 17px; padding: 13px 17px; border-radius: 20px; }
+.n-dl .f-sug { font-size: 14.5px; padding: 10px 14px; background: rgba(93,140,255,0.16); color: #A9C4FF; }
+.n-cap { margin-top: 34px; font-size: 15.5px; color: var(--dim); text-align: center; }
+.n-cap b { color: var(--ink); font-weight: 600; }
+.n-endrow { margin-top: 36px; display: flex; align-items: center; gap: 18px; font-family: var(--pixel); font-size: 16px; color: var(--dim); }
+.n-endrow .eb { width: 58px; height: 58px; border-radius: 50%; background: #E0483C; color: #fff; display: grid; place-items: center; box-shadow: 0 10px 30px -8px rgba(224,72,60,0.6); }
+.n-endrow .eb svg { width: 26px; height: 26px; transform: rotate(135deg); }
+/* the book is born on the seam — half night, half day */
+.n-bookbeat { padding-bottom: 0; }
+.n-bookbeat h2 { margin-top: 26px; max-width: 15em; text-align: center; }
+.n-book { position: relative; z-index: 2; margin-top: 56px; margin-bottom: -100px; }
+.n-book .bcov { position: relative; width: 302px; border-radius: 8px 18px 18px 8px; background: #FCFBF8; color: #141310; padding: 36px 30px 30px 42px; text-align: left; box-shadow: 0 60px 120px -30px rgba(0,0,0,0.7), inset 0 0 0 1px rgba(20,19,16,0.1); }
+.n-book .bcov::before { content: ""; position: absolute; left: 17px; top: 0; bottom: 0; width: 1px; background: rgba(20,19,16,0.16); }
+.n-book .bk { font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #0A5CF5; }
+.n-book .bt { margin-top: 12px; font-family: var(--pixel); font-size: 30px; line-height: 1.12; }
+.n-book .bm { margin-top: 36px; font-family: var(--mono); font-size: 11.5px; color: rgba(20,19,16,0.55); }
+/* dawn: paper again — you study what the night produced */
+.dawn { padding-top: 170px; padding-bottom: 30px; }
+.dawn-in { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.dawn .sub { margin-top: 16px; color: var(--dim); font-size: 16.5px; }
+.dawn .f-study { margin-top: 46px; grid-template-columns: repeat(2, 214px); gap: 12px; }
+@media (max-width: 700px) { .dawn .f-study { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 700px) {
+  .n-hero { padding-top: 64px; }
+  .n-story { margin-top: 72px; }
+  .n-book { margin-bottom: -84px; }
+  .dawn { padding-top: 140px; }
+}
+
+/* ── flow: the one loop, right under the hero — call → book → study.
+   Each step SHOWS the app (iOS-shaped artifacts, like .kv), text only frames. ── */
+.flow { padding-top: 96px; padding-bottom: 110px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.flow .kicker { justify-content: center; }
+.flow-steps { margin-top: 58px; display: flex; flex-direction: column; align-items: center; position: relative; z-index: 1; }
+.fstep { display: flex; flex-direction: column; align-items: center; }
+.fstep h3 { font-family: var(--sans); font-weight: 800; font-size: clamp(24px, 3.2vw, 40px); letter-spacing: -0.03em; line-height: 1.18; }
+.fstep p { margin-top: 10px; font-size: 16px; color: var(--dim); }
+.flink { width: 1px; height: 52px; margin: 26px 0; background: var(--line); position: relative; }
+.flink::after { content: ""; position: absolute; left: 50%; bottom: -3px; width: 8px; height: 8px; background: var(--blue); transform: translateX(-50%); }
+.fart { margin-top: 28px; }
+.f-call { display: flex; align-items: center; gap: 16px; padding: 13px 18px 13px 13px; border-radius: 26px; background: var(--surf); box-shadow: inset 0 0 0 0.5px var(--lns); }
+.f-call .fs-pill { width: 116px; height: 44px; border-radius: 18px; }
+.f-call .tag { font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; color: var(--dim); display: flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
+.f-call .tag i { width: 7px; height: 7px; border-radius: 50%; background: #E0483C; animation: blink 1.6s ease-in-out infinite; }
+.f-dl { width: 340px; max-width: 86vw; text-align: left; }
+.f-sug { margin-top: 7px; display: inline-flex; align-items: center; gap: 7px; text-align: left; font-size: 13px; font-weight: 600; color: var(--blue-ink); background: rgba(10,92,245,0.09); padding: 9px 13px; border-radius: 14px; line-height: 1.35; }
+.f-sug svg { width: 13px; height: 13px; flex: none; color: var(--blue); }
+.f-end { display: flex; align-items: center; gap: 18px; font-family: var(--mono); font-size: 13px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.f-end .eb { width: 56px; height: 56px; border-radius: 50%; background: #E0483C; color: #fff; display: grid; place-items: center; box-shadow: 0 6px 16px -6px rgba(224,72,60,0.55); }
+.f-end .eb svg { width: 26px; height: 26px; transform: rotate(135deg); }
+.f-book { position: relative; }
+.f-book .back { position: absolute; inset: 0; border-radius: 6px 14px 14px 6px; background: var(--surf); box-shadow: inset 0 0 0 1px var(--lns); }
+.f-book .back.b1 { transform: translate(7px, 7px); }
+.f-book .back.b2 { transform: translate(14px, 14px); opacity: 0.7; }
+.f-book .cover { position: relative; width: 252px; border-radius: 6px 14px 14px 6px; background: var(--surf); box-shadow: inset 0 0 0 1px var(--line); padding: 26px 24px 22px 32px; text-align: left; }
+.f-book .cover::before { content: ""; position: absolute; left: 13px; top: 0; bottom: 0; width: 1px; background: var(--line); }
+.f-book .bk { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--blue); }
+.f-book .bt { margin-top: 10px; font-size: 25px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; color: var(--ink); }
+.f-book .bm { margin-top: 30px; font-family: var(--mono); font-size: 11px; color: var(--faint); }
+.f-study { display: grid; grid-template-columns: repeat(2, 186px); gap: 10px; }
+.f-card { border-radius: 18px; background: var(--surf); box-shadow: inset 0 0 0 0.5px var(--lns); padding: 14px 16px 15px; text-align: left; }
+.f-card.wide { grid-column: 1 / -1; display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+.f-card .l { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--faint); }
+.f-card .v { margin-top: 7px; font-size: 14.5px; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); line-height: 1.35; }
+.f-card .s { margin-top: 5px; font-size: 12px; color: var(--dim); display: flex; align-items: center; gap: 5px; }
+.f-card .s svg { width: 12px; height: 12px; color: var(--blue); }
+.f-card .cefr { display: inline-block; margin-left: 6px; font-family: var(--mono); font-size: 10px; font-weight: 400; padding: 2.5px 6px; background: rgba(10,92,245,0.1); color: var(--blue-ink); border-radius: 6px; vertical-align: 2px; }
+.f-score { margin-top: 8px; font-family: var(--pixel); font-size: 46px; line-height: 1; color: var(--blue); }
+.f-bars { display: flex; gap: 6px; align-items: flex-end; height: 40px; width: 120px; padding-bottom: 4px; }
+.f-bars i { flex: 1; border-radius: 3px; background: var(--blue); }
+@media (max-width: 700px) {
+  .flow { padding-top: 72px; padding-bottom: 84px; }
+  .flink { height: 40px; margin: 18px 0; }
+  .f-study { grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; max-width: 384px; }
+}
+
+/* ── call strip: a live line ruled across the page ────────── */
+.callstrip {
+  margin-top: 88px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; gap: 22px; padding: 18px 0;
+  position: relative; z-index: 1;
+}
+.callstrip .tag { flex: 1; font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em; color: var(--dim); display: flex; align-items: center; gap: 9px; white-space: nowrap; }
+.callstrip .tag.mono { justify-content: flex-end; font-variant-numeric: tabular-nums; }
+.callstrip .tag i { width: 7px; height: 7px; border-radius: 50%; background: #E0483C; flex: none; animation: blink 1.6s ease-in-out infinite; }
+@keyframes blink { 50% { opacity: 0.25; } }
+
+
+/* ── manifesto: the core claims, huge and high-contrast ────── */
+/* One claim at a time: the section pins and each line takes its own
+   stretch of scroll, so nothing stacks and the eye has one thing to
+   read. Height = one viewport per line. */
+.manif { padding: 0; }
+.m-track { position: relative; height: calc(var(--n, 3) * 100vh); }
+.m-pin { position: sticky; top: 0; height: 100vh; display: flex; align-items: center; }
+.m-pin > .inner { width: 100%; }
+.m-stack { position: relative; height: 46vh; }
+/* The swap is scroll-driven, not a class flip: JS writes opacity and the
+   offset every frame, so a claim leaves exactly as fast as the finger
+   moves. A CSS transition here would fight those writes and lag behind. */
+.js .m-stack .m-line { position: absolute; left: 0; right: 0; top: 50%; margin: 0 auto;
+  opacity: 0; transform: translateY(-50%); will-change: opacity, transform; }
+/* reduced motion (and no-JS): the three claims simply stack and sit still */
+.m-track.m-static { height: auto; }
+.m-track.m-static .m-pin { position: static; height: auto; padding: 120px 0 100px; }
+.m-track.m-static .m-stack { height: auto; }
+.m-track.m-static .m-line { position: relative; top: auto; opacity: 1; transform: none; margin: 0 auto 110px; }
+.m-kick { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 46px;
+  font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--dim); }
+.m-kick .dot { width: 0.62em; height: 0.62em; color: var(--blue); }
+.m-line { margin: 0 auto 120px; max-width: 15em; text-align: center;
+  font-size: clamp(32px, 4.6vw, 68px); font-weight: 800;
+  letter-spacing: -0.035em; line-height: 1.18; color: var(--faint); }
+.m-line b { color: var(--ink); font-weight: 800; }
+.m-line:last-child { margin-bottom: 100px; }
+@media (max-width: 700px) { .m-stack { height: 52vh; } }
+
+/* ── why, after the features: two claims, two columns, no pin ── */
+.why2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: clamp(48px, 7vw, 104px);
+  max-width: 1080px; margin: 0 auto; padding: 120px var(--pad); align-items: start; position: relative; z-index: 1; }
+.why2 .m-kick { margin: 0 0 32px; }
+.w2-lead { font-size: clamp(28px, 3.4vw, 46px); font-weight: 800; letter-spacing: -0.035em; line-height: 1.22; color: var(--faint); }
+.w2-lead b { color: var(--ink); font-weight: 800; }
+.why2-body { padding-top: 72px; }
+.w2-line { font-size: clamp(19px, 1.7vw, 23px); line-height: 1.55; letter-spacing: -0.015em; color: var(--dim); padding: 26px 0; border-top: 1px solid var(--lns); }
+.w2-line:last-child { border-bottom: 1px solid var(--lns); }
+.w2-line b { color: var(--ink); font-weight: 700; }
+@media (max-width: 800px) {
+  .why2 { grid-template-columns: minmax(0, 1fr); padding: 88px var(--pad); }
+  .why2-body { padding-top: 36px; }
+}
+
+/* ── why: lead + idea cells on the grid ───────────────────── */
+.why { padding-top: 110px; }
+.why .lead { margin-top: 44px; font-size: clamp(23px, 2.4vw, 32px); line-height: 1.42; letter-spacing: -0.015em; max-width: 24em; }
+.ideas {
+  margin-top: 100px; border-top: 1px solid var(--line);
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  padding: 0 var(--pad); position: relative; z-index: 1;
+}
+.idea { padding: 50px var(--cell) 92px; }
+.idea .ix { font-family: var(--mono); font-size: 13px; color: var(--blue); }
+.idea h4 { margin-top: 42px; font-size: 20px; font-weight: 600; letter-spacing: -0.015em; }
+.idea p { margin-top: 13px; font-size: 15.5px; color: var(--dim); line-height: 1.6; }
+@media (max-width: 860px) { .ideas { grid-template-columns: 1fr; } .idea { border-bottom: 1px solid var(--lns); padding: 40px var(--cell) 48px; } }
+
+/* ── marquee: the loop, in pixels ─────────────────────────── */
+.marquee { border-top: 1px solid var(--line); margin-top: 0; padding: 52px 0; overflow: hidden; white-space: nowrap; position: relative; z-index: 1; }
+.marquee .row { display: inline-flex; align-items: center; gap: 58px; font-family: var(--pixel); font-size: clamp(44px, 5.2vw, 76px); color: var(--ink); animation: slide 66s linear infinite; /* 4 × 9 words: two identical halves, same speed as the old 4 × 6 at 40s */ padding-right: 58px; }
+.marquee .dot { width: 0.26em; height: 0.26em; color: var(--blue); vertical-align: 0.06em; }
+@keyframes slide { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+/* ── stages: copy + live app artifact, ruled apart ────────── */
+.stage {
+  border-top: 1px solid var(--line);
+  /* copy and screen sit TOGETHER in the middle, so one glance takes in both;
+     the rule above still runs the full width */
+  display: grid; grid-template-columns: minmax(0, 480px) auto; justify-content: center; column-gap: clamp(48px, 7vw, 104px);
+  min-height: 620px; padding: 0 var(--pad); position: relative; z-index: 1;
+}
+.stage-copy { padding: 88px 0 100px; display: flex; flex-direction: column; justify-content: center; }
+.stage.flip .stage-copy { order: 2; }
+.stage-copy h2 { margin-top: 46px; max-width: 10em; font-size: clamp(28px, 3.8vw, 52px); }
+.stage-copy .one { margin-top: 24px; font-size: 19px; color: var(--dim); max-width: 26em; line-height: 1.6; }
+.stage-copy .one strong { color: var(--ink); font-weight: 700; }
+.hows { margin-top: 40px; padding-top: 0; list-style: none; }
+.hows li { border-top: 1px solid var(--lns); padding: 16px 0; font-size: 16px; color: var(--dim); display: flex; gap: 13px; line-height: 1.55; }
+.hows li b { color: var(--ink); font-weight: 700; }
+.hows li .dot { width: 9px; height: 9px; margin-top: 7px; color: var(--blue); }
+.stage-show { padding: 72px 0 80px; display: flex; align-items: center; justify-content: center; }
+@media (max-width: 960px) {
+  .stage, .stage.flip { grid-template-columns: minmax(0, 560px); min-height: 0; }
+  .stage-copy, .stage.flip .stage-copy { order: 0; padding-bottom: 36px; }
+  .stage-show { padding-top: 0; }
+}
+
+/* ── spec sheet: an index, ruled row by row ───────────────── */
+.specs { padding-top: 130px; }
+.specs .head { margin-top: 44px; max-width: 14em; }
+.spec-table { margin-top: 84px; border-top: 1px solid var(--line); position: relative; z-index: 1; }
+.srow { display: grid; grid-template-columns: 1fr 1fr 2fr; padding: 24px var(--pad); border-bottom: 1px solid var(--lns); align-items: baseline; transition: background 0.15s; }
+.srow:hover { background: rgba(10,92,245,0.04); }
+.srow .ix { font-family: var(--mono); font-size: 13px; color: var(--blue); padding-left: var(--cell); }
+.srow .nm { font-size: 19px; font-weight: 600; letter-spacing: -0.015em; padding-left: var(--cell); }
+.srow .ds { font-size: 15px; color: var(--dim); line-height: 1.55; padding: 0 var(--cell); }
+@media (max-width: 860px) { .srow { grid-template-columns: 1fr 3fr; } .srow .ds { grid-column: 2; } }
+
+/* ── trust cells ──────────────────────────────────────────── */
+.trust-sec { padding-top: 130px; }
+.trust-sec h2 { margin-top: 44px; }
+.trust {
+  margin-top: 84px; border-top: 1px solid var(--line);
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  padding: 0 var(--pad); position: relative; z-index: 1;
+}
+.tcell { padding: 50px var(--cell) 92px; }
+.tcell .ix { font-family: var(--mono); font-size: 13px; color: var(--blue); }
+.tcell h4 { margin-top: 40px; font-size: 20px; font-weight: 600; letter-spacing: -0.015em; }
+.tcell p { margin-top: 13px; font-size: 15.5px; color: var(--dim); line-height: 1.6; }
+@media (max-width: 860px) { .trust { grid-template-columns: 1fr; } .tcell { border-bottom: 1px solid var(--lns); padding: 40px var(--cell) 48px; } }
+
+/* ── pricing ──────────────────────────────────────────────── */
+.pricing-sec { padding-top: 130px; }
+.pr-sub { margin-top: 18px; font-size: 17px; color: var(--dim); }
+.cycle-toggle { margin-top: 40px; display: inline-flex; box-shadow: inset 0 0 0 1px var(--line); }
+.cycle-toggle .ct { border: 0; cursor: pointer; background: transparent; color: var(--dim); font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.08em; padding: 12px 24px; }
+.cycle-toggle .ct.on { background: var(--ink); color: var(--paper); }
+.plans { margin-top: 64px; border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 0 var(--pad); position: relative; z-index: 1; }
+.plan { padding: 50px var(--cell) 66px; display: flex; flex-direction: column; align-items: flex-start; }
+.plan .p-name { font-family: var(--mono); font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
+.plan.featured { box-shadow: inset 0 0 0 1.5px var(--blue); }
+.plan.monthly-only { opacity: 0.55; }
+.plan .p-badge { margin-left: 10px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; background: var(--blue); color: #fff; padding: 3px 8px; }
+.plan .p-price { margin-top: 30px; font-family: var(--pixel); font-size: clamp(34px, 3.4vw, 48px); letter-spacing: -0.01em; }
+.plan .p-price span { font-family: var(--mono); font-size: 14px; color: var(--faint); letter-spacing: 0; }
+.plan .p-credits { margin-top: 8px; font-size: 15px; color: var(--ink); }
+.plan .p-note { margin-top: 14px; font-size: 14.5px; color: var(--dim); max-width: 22em; }
+/* The same two labelled rows, in the same order, on both cards — the shape the
+   app's own plan picker uses, so the site and the paywall compare alike. A
+   prose sentence per plan cannot be compared across a gutter. */
+.p-specs { margin-top: 26px; width: 100%; max-width: 20em; border-top: 1px solid var(--lns); }
+.p-specs > div { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 11px 0; border-bottom: 1px solid var(--lns); }
+.p-specs dt { font-size: 14.5px; color: var(--dim); }
+.p-specs dd { margin: 0; font-family: var(--mono); font-size: 15px; letter-spacing: 0.02em; }
+/* The per-day equivalent, under the monthly figure it converts. A size cue for
+   a number nobody has an instinct for — never a limit; the pool has none. */
+.p-specs .p-sub { border-bottom: 0; padding: 0 0 11px; margin-top: -9px; }
+.p-specs .p-sub dd { font-size: 12.5px; color: var(--faint); }
+.plan .p-buy { margin-top: 38px; }
+.plan .p-buy[disabled] { opacity: 0.5; cursor: default; }
+.p-fine { margin-top: 40px; font-size: 13.5px; color: var(--faint); max-width: 46em; padding-bottom: 60px; line-height: 1.6; }
+.p-error { margin-top: 16px; font-size: 14px; color: #B4372C; display: none; }
+.toast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); z-index: 100; background: var(--ink); color: var(--paper); padding: 15px 22px; font-size: 14.5px; max-width: 90vw; }
+@media (max-width: 960px) { .plans { grid-template-columns: 1fr; } .plan { border-bottom: 1px solid var(--lns); } }
+
+/* ── faq: hairline accordion on the grid ──────────────────── */
+.faq-sec { padding-top: 130px; }
+.faq-sec h2 { margin-top: 44px; }
+.faq { margin-top: 64px; border-top: 1px solid var(--line); position: relative; z-index: 1; }
+.faq details { border-bottom: 1px solid var(--lns); }
+.faq summary { display: flex; align-items: baseline; gap: 18px; padding: 22px var(--pad); cursor: pointer; list-style: none; font-size: 17.5px; font-weight: 600; letter-spacing: -0.01em; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary .ix { font-family: var(--mono); font-size: 12.5px; color: var(--blue); flex: none; padding-left: var(--cell); }
+.faq summary::after { content: "+"; margin-left: auto; font-family: var(--mono); font-size: 17px; color: var(--faint); }
+.faq details[open] summary::after { content: "\2212"; color: var(--ink); }
+.faq .a { margin: 0; padding: 0 var(--pad) 26px; font-size: 15.5px; color: var(--dim); line-height: 1.68; }
+.faq .a span { display: block; max-width: 40em; padding-left: calc(var(--cell) + 31px); }
+@media (max-width: 700px) { .faq .a span { padding-left: var(--cell); } }
+
+/* ── final demo: the beta hero, brought home — the halftone flower
+   behind, the Futureself surface as a PLAY button, live captions. ── */
+.final-demo { position: relative; background: #121110; overflow: hidden; }
+.final-demo .flower-gl { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+.fd-in { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 150px var(--pad) 110px; }
+.fd-sub { margin-top: 18px; color: #A9A49C; font-size: 17px; }
+.fd-demo { margin-top: 64px; display: flex; flex-direction: column; align-items: center; }
+.fd-orb { position: relative; width: 172px; height: 172px; border-radius: 50%; overflow: hidden; border: 0; padding: 0; cursor: pointer; background: transparent;
+  box-shadow: 0 40px 110px -30px rgba(47,111,255,0.45), inset 0 0 0 0.5px rgba(245,242,235,0.18); }
+.fd-orb canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.fd-ico { position: absolute; inset: 0; display: grid; place-items: center; z-index: 2; color: #14130F; }
+.fd-ico svg { width: 40px; height: 40px; transition: transform 0.15s; }
+.fd-orb:hover .fd-ico svg { transform: scale(1.08); }
+.fd-ico .ico-pause { display: none; }
+.fd-orb.playing .ico-play { display: none; }
+.fd-orb.playing .ico-pause { display: block; }
+.fd-hint { margin-top: 20px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8A857C; }
+.fd-cap { margin-top: 26px; min-height: 3.4em; width: min(620px, 86vw); white-space: pre-line;
+  font-family: var(--pixel); font-weight: 400; letter-spacing: 0.01em;
+  font-size: clamp(16px, 1.9vw, 20px); line-height: 1.5; color: #F5F2EB; }
+.fd-ctas { margin-top: 46px; }
+footer.night { background: #121110; }
+@media (max-width: 700px) { .fd-in { padding: 100px var(--pad) 80px; } .fd-orb { width: 148px; height: 148px; } }
+
+/* ── final + footer ───────────────────────────────────────── */
+.final { padding-top: 140px; }
+.final h2 { max-width: 13em; }
+.final .sub { margin-top: 24px; color: var(--dim); font-size: 17.5px; }
+.final .hero-ctas { margin-top: 40px; justify-content: flex-start; }
+.final .callstrip { margin-top: 100px; }
+footer { font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; color: var(--faint); }
+.foot-in { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; padding: 26px var(--pad) 34px; position: relative; z-index: 1; }
+.foot-in .links { margin-left: auto; display: flex; gap: 24px; }
+footer a { color: var(--dim); text-decoration: none; }
+footer a:hover { color: var(--ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  .js .rv { opacity: 1; transform: none; }
+  .marquee .row { animation: none; }
+}
+
+/* ═══════ live app key-UI — the app's face, drawn in place ═══════ */
+/* These stay iOS-shaped on purpose: rounded, system-blue, alive.  */
+:root { --ac: #0A5CF5; }
+.kv { width: 100%; max-width: 380px; margin: 0 auto; font-family: var(--sans); }
+.kv-talk { min-height: 380px; display: flex; flex-direction: column; justify-content: flex-end; gap: 22px; }
+.dl { display: flex; flex-direction: column; gap: 12px; }
+.dl-turn { display: flex; }
+.dl-turn.you { justify-content: flex-end; }
+.dl-col { display: flex; flex-direction: column; max-width: 84%; }
+.dl-turn.you .dl-col { align-items: flex-end; }
+.dl-name { font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em; color: var(--faint); margin: 0 4px 5px; }
+.dl-bub { font-size: 15.5px; line-height: 1.36; letter-spacing: -0.01em; padding: 11px 14px; border-radius: 18px; background: var(--surf); color: var(--ink); box-shadow: inset 0 0 0 0.5px var(--lns); }
+.dl-turn.you .dl-bub { background: var(--ac); color: #fff; box-shadow: none; }
+.dl-bub.cur { box-shadow: 0 0 0 2px rgba(10,92,245,0.35); }
+.dl-call .dl-bub { font-size: 17px; }
+.dl-acc { display: flex; gap: 16px; margin: 7px 4px 0; }
+.dl-turn.you .dl-acc { justify-content: flex-end; }
+.dl-acc a { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--ac); }
+.dl-acc svg { width: 12px; height: 12px; }
+.fs-pill { position: relative; width: 176px; height: 62px; border-radius: 26px; overflow: hidden; align-self: center; box-shadow: inset 0 0 0 0.5px var(--line); }
+.fs-pill.wide { flex: none; }
+.fs-pill canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.fs-ic { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ink); }
+.fs-ic svg { width: 22px; height: 22px; }
+.sc-head { margin-bottom: 10px; }
+.sc-head .who { font-family: var(--mono); font-size: 12px; letter-spacing: 0.04em; color: var(--faint); }
+.sc-head .title { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-top: 3px; color: var(--ink); }
+.wc-bar { display: flex; gap: 10px; margin-top: 18px; }
+.wc-bar .b { flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px; height: 48px; border-radius: 100px; font-size: 15.5px; font-weight: 600; }
+.wc-bar .b svg { width: 16px; height: 16px; }
+.wc-bar .restart { background: var(--surf2); color: var(--ac); }
+.wc-bar .play { background: var(--ac); color: #fff; }
+.sh-head { display: flex; justify-content: space-between; align-items: baseline; }
+.sh-head .l { font-family: var(--mono); font-size: 12px; color: var(--faint); }
+.sh-head .r { font-family: var(--mono); font-size: 11px; color: var(--faint); }
+.kara { font-size: 23px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.5; margin-top: 10px; }
+.kara .k { color: var(--faint); padding: 1px 3px; border-radius: 6px; }
+.kara .k.sel { background: rgba(10,92,245,0.13); }
+.kara .k.done { color: var(--ink); }
+.kara .k.now { color: var(--ac); }
+.scrub { margin-top: 20px; padding: 16px; border-radius: 24px; background: var(--surf); box-shadow: inset 0 0 0 0.5px var(--lns); }
+.track { position: relative; height: 52px; border-radius: 10px; background: var(--surf2); }
+.track .tick { position: absolute; top: 50%; transform: translate(-50%,-50%); width: 1.5px; height: 16px; background: var(--faint); opacity: 0.55; }
+.track .band { position: absolute; top: 0; bottom: 0; background: rgba(10,92,245,0.16); border-radius: 10px; }
+.track .h { position: absolute; top: 0; bottom: 0; width: 14px; border-radius: 5px; background: var(--ac); transform: translateX(-50%); display: grid; place-items: center; }
+.track .h::after { content: ""; width: 2px; height: 16px; border-radius: 2px; background: rgba(255,255,255,0.9); }
+.track .ph { position: absolute; top: -4px; bottom: -4px; width: 2.5px; border-radius: 2px; background: var(--ink); }
+.tl-labels { display: flex; justify-content: space-between; margin-top: 12px; font-family: var(--mono); font-size: 11.5px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.tl-labels .loop { color: var(--ac); }
+.tl-ctl { display: flex; align-items: center; gap: 18px; margin-top: 14px; position: relative; }
+.tl-ctl > svg { width: 42px; height: 42px; color: var(--ac); }
+.tl-ctl .sp { margin-left: auto; font-size: 14px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; padding: 8px 12px; border-radius: 100px; background: var(--surf2); }
+.tl-ctl .mic { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); width: 56px; height: 56px; border-radius: 50%; background: var(--ac); display: grid; place-items: center; box-shadow: 0 6px 18px -6px rgba(8,71,190,0.6); }
+.tl-ctl .mic svg { width: 22px; height: 22px; color: #fff; }
+.kv-ppl { position: relative; height: 420px; }
+.kv-ppl .you { position: absolute; left: 50%; top: 46%; transform: translate(-50%,-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.kv-ppl .you .disc { width: 94px; height: 94px; border-radius: 50%; overflow: hidden; position: relative; box-shadow: inset 0 0 0 0.5px var(--line); }
+.kv-ppl .you .disc canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.kv-ppl .you .nm { font-family: var(--mono); font-size: 12px; color: var(--ink); }
+.p-bub { position: absolute; transform: translate(-50%,-50%); display: flex; flex-direction: column; align-items: center; gap: 4px; animation: kvbob 5s ease-in-out infinite; }
+.p-bub .ava { border-radius: 50%; display: grid; place-items: center; font-weight: 700; background: rgba(10,92,245,0.1); color: var(--ac); box-shadow: inset 0 0 0 1px rgba(10,92,245,0.28); }
+.p-bub .nm { font-size: 12px; font-weight: 600; color: var(--ink); }
+.p-bub .rl { font-family: var(--mono); font-size: 10px; color: var(--faint); }
+@keyframes kvbob { 0%,100% { transform: translate(-50%,-50%); } 50% { transform: translate(-50%,-57%); } }
+.kv-cloud { position: relative; height: 420px; }
+.cw { position: absolute; transform: translate(-50%,-50%); font-weight: 600; letter-spacing: -0.02em; white-space: nowrap; color: var(--ink); }
+.cw.used { color: var(--faint); font-weight: 500; }
+.cw .badge { position: absolute; left: -6px; top: -8px; }
+.cw .badge svg { width: 12px; height: 12px; }
+.cw .book { color: var(--ac); }
+.cw .check { color: #1E9E5A; }
+@media (prefers-reduced-motion: reduce) { .p-bub { animation: none; } }
+
+/* ── manifesto reading: the claim lights word by word as you scroll,
+   the same karaoke idea the shadowing screen uses. Scroll-linked, so
+   it reads at whatever pace the reader moves. ── */
+/* ONE light tone for the whole line — premise and not-yet-lit words are
+   the same colour, so the only contrast on the page is what the scroll
+   has lit. A second, subtler light tone read as a mistake. */
+.m-line b .w { color: var(--faint); transition: color 0.42s ease; }
+.m-line b .w.on { color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { .m-line b .w { color: var(--ink); } }
+
+/* ═══════════════════════════════════════════════════════════
+   WELCOME LOOK (2026-10-10) — the app's Welcome film on paper:
+   a warm cream ground, the app's blue coming down from the top
+   like a sky (night at the very top edge), film grain over
+   everything, deep blue-black ink, capsule chips, pill buttons.
+   Layered over the editorial base above; delete this block to
+   go back.
+   ═══════════════════════════════════════════════════════════ */
+:root {
+  --paper:  #F9F4E9;              /* the Welcome cream (0.975, 0.955, 0.915) */
+  --paper2: #F4EBDC;              /* the warmth gathering under its buttons */
+  /* the same two, lifted so the multiply grain (mean ×0.964) lands on them */
+  --paper-g:  #FFFDF2;
+  --paper2-g: #FDF4E4;
+  --ink:    #1C2133;              /* storyInk */
+  --dim:    #4D5263;
+  --faint:  #8B8E99;
+  --line:   rgba(28,33,51,0.14);
+  --lns:    rgba(28,33,51,0.07);
+  --blue:   #2461F5;              /* the sky's second stop */
+  --blue-ink: #1A4FD6;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Apple SD Gothic Neo", "Helvetica Neue", Arial, sans-serif;
+}
+body { background: var(--paper); }
+/* film grain, PINNED to the screen like the welcome's: one fixed layer
+   that multiplies the specks (grain-light.png, white with sparse specks up
+   to ~10% darker, 160px shown at 80 like its @2x tile) into whatever is
+   under it. Drawn in the section backgrounds it scrolled with the page,
+   and on a phone the specks crawling past read as motion sickness. The
+   ground colours are lifted (--paper-g / --paper2-g) by the tile's mean
+   (×0.964) so the cream lands where it was. z-index 0: the specks sit on
+   the section grounds and UNDER everything stacked above them (the phones,
+   the copy), so a device screen stays clean. */
+body::after {
+  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: url(grain-light.png) 0 0 / 80px 80px repeat;
+  mix-blend-mode: multiply;
+}
+/* no column grid: the film has none */
+.sec::before { display: none; }
+.plain { background-color: var(--paper-g); --surf: #FFFFFF; }
+/* alt sections are plain WHITE (2026-10-26), lifted over the fixed grain so the
+   specks don't grey it; the cream sections between them keep the grain */
+.alt   { background-color: #FFFFFF; --surf: #FFFFFF; z-index: 1; }
+/* type: the film's captions — system sans, semibold, ink */
+h1, h2 { font-weight: 700; letter-spacing: -0.025em; color: var(--ink); }
+/* kickers become the film's glimpse chips */
+.kicker, .m-kick {
+  display: flex; width: fit-content; align-items: center; gap: 8px;
+  font-family: var(--sans); font-size: 14px; font-weight: 500; letter-spacing: 0; text-transform: none;
+  color: rgba(28,33,51,0.75); padding: 7px 14px; border-radius: 999px;
+  background: rgba(255,255,255,0.55); box-shadow: inset 0 0 0 0.5px rgba(28,33,51,0.12);
+}
+.kicker .mono { font-family: var(--sans); font-weight: 600; color: var(--blue); }
+/* buttons: the film's black pills */
+.btn { border-radius: 999px; justify-content: center; }
+.btn-white, .btn-black { background: var(--ink); color: #fff; }
+.btn-white:hover, .btn-black:hover { background: var(--blue); color: #fff; }
+.btn-store { border-radius: 999px; }
+/* ── the hero: sky over cream ── */
+.night {
+  background: var(--paper); color: var(--ink);
+  --ink: #1C2133; --dim: #4D5263; --faint: #8B8E99;
+  --line: rgba(28,33,51,0.14); --lns: rgba(28,33,51,0.07); --surf: #FFFFFF;
+}
+/* the sky is drawn in the hero's own background (the separate glow layer
+   is off) */
+.night .n-glow { display: none; }
+header.night {
+  background-color: var(--paper-g);
+  background-image:
+    linear-gradient(to bottom, #04081A 0%, rgba(5,15,56,0.9) 7%, rgba(10,36,128,0.45) 15%, rgba(13,51,179,0) 24%),
+    radial-gradient(ellipse 85% 60% at 50% -8%, #0F42E6 0%, #245FF5 22%, #6699FF 46%, #B8D1FF 68%, rgba(249,244,233,0) 92%);
+  background-size: 100% 100vh, 100% 100vh;
+  background-repeat: no-repeat, no-repeat;
+}
+.night .btn-white, .night .btn-black { background: var(--ink); color: #fff; }
+.n-kicker { font-family: var(--sans); font-size: 14px; letter-spacing: 0; text-transform: none; color: rgba(28,33,51,0.72); }
+.n-kicker i { background: var(--blue); }
+.n-sub { color: var(--dim); }
+.n-note { font-family: var(--sans); letter-spacing: 0; font-size: 13px; }
+.s-hero { padding-top: 22vh; }
+.s-hero h1 { margin-top: 22px; }
+.s-cap .ix { font-family: var(--sans); font-weight: 600; letter-spacing: 0.02em; color: var(--blue); }
+.s-num { font-family: var(--sans); font-weight: 700; color: rgba(36,97,245,0.10); }
+.iphone { box-shadow: 0 0 0 1.5px #3A3A3C, 0 0 0 3.5px #0E0E10, 0 50px 90px -40px rgba(28,33,51,0.45); }
+/* nav: light on the night band, cream glass once past it */
+nav.sec.nav-solid {
+  background-color: rgba(255,253,242,0.86); border-bottom-color: rgba(28,33,51,0.08);
+  --ink: #1C2133; --dim: #4D5263; --faint: #8B8E99; color: var(--ink);
+}
+nav.sec.nav-solid .logo, nav.sec.nav-solid .nav-burger { color: var(--ink); }
+nav.sec.nav-solid .navlinks .btn { background: var(--ink); color: #fff; }
+.nav-menu { background-color: rgba(255,253,242,0.97); border-bottom-color: rgba(28,33,51,0.08); }
+.nav-menu a { font-family: var(--sans); letter-spacing: 0; text-transform: none; color: var(--dim); }
+.nav-menu a:hover, .nav-menu a:active { color: var(--ink); }
+nav.sec.nav-open .nav-burger { color: var(--ink); }
+.navlinks { font-family: var(--sans); letter-spacing: 0; text-transform: none; font-size: 14px; }
+/* the pixel face stays the wordmark's alone */
+.marquee .row { font-family: var(--sans); font-weight: 700; letter-spacing: -0.03em; }
+.plan .p-price { font-family: var(--sans); font-weight: 700; letter-spacing: -0.02em; }
+/* plans: the film's soft white tiles */
+.plans { border-top: 0; gap: 14px; padding-top: 4px; }
+.plan { border-radius: 26px; background: rgba(255,255,255,0.6); box-shadow: inset 0 0 0 0.5px rgba(28,33,51,0.12); }
+.plan.featured { box-shadow: inset 0 0 0 1.5px var(--blue); }
+.plan .p-badge { font-family: var(--sans); letter-spacing: 0; border-radius: 999px; padding: 3px 10px; font-size: 11.5px; }
+@media (max-width: 960px) { .plan { border-bottom: 0; } }
+.cycle-toggle { border-radius: 999px; overflow: hidden; }
+.cycle-toggle .ct { font-family: var(--sans); letter-spacing: 0; font-size: 14px; border-radius: 999px; }
+/* the ending: the film's night, lit from below */
+.final-demo, footer.night {
+  background: #04081A;
+  color: #F5F2EB; --ink: #F5F2EB; --dim: #B9C3E0; --faint: #8F9BC2; --line: rgba(245,242,235,0.14);
+}
+footer.night { background: #04081A; }
+.final-demo h2, footer.night h2 { color: #F5F2EB; }
+.final-demo .btn-black, .final-demo .btn-white, footer.night .btn-black { background: #F5F2EB; color: #1C2133; }
+.fd-hint { font-family: var(--sans); letter-spacing: 0; text-transform: none; font-size: 13px; }
+.m-kick { margin-left: auto; margin-right: auto; }
+/* the footer's eight links wrap on a phone — on one line they made the
+   page 486px wide at 390, which slid the nav's buttons off screen */
+.foot-in .links { flex-wrap: wrap; gap: 10px 20px; }
+
+/* sign-in chooser: a centred sheet, not a line of fine print far below the button */
+.signin-pop { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; padding: 20px;
+  background: rgba(10,14,28,.42); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.signin-pop[hidden] { display: none; }
+.sp-card { width: min(380px, 100%); background: #fff; color: #141310; border-radius: 22px; padding: 26px 22px 18px;
+  box-shadow: 0 30px 80px rgba(8,22,60,.3); text-align: center; }
+.sp-card h3 { font-size: 19px; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
+.sp-card p { margin: 8px 0 20px; font-size: 14.5px; color: #55555A; line-height: 1.5; }
+.sp-btn { display: flex; width: 100%; justify-content: center; align-items: center; gap: 8px; margin-top: 10px; }
+.sp-btn svg { width: 16px; height: 16px; }
+.sp-g { background: #fff; color: #141310; box-shadow: inset 0 0 0 1px rgba(20,19,16,.18); }
+.sp-x { margin-top: 12px; background: none; border: 0; font: inherit; font-size: 14px; color: #8E8E93; cursor: pointer; padding: 6px 12px; }
+/* lang:css */
+.langpick { position: relative; }
+.langpick summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+.langpick summary::-webkit-details-marker { display: none; }
+.langpick summary svg { width: 15px; height: 15px; display: block; }
+.langpick .lp-menu { position: absolute; right: 0; top: calc(100% + 12px); z-index: 60; min-width: 168px;
+  display: flex; flex-direction: column; padding: 6px; border-radius: 12px;
+  background: rgba(255,253,242,0.98); border: 1px solid rgba(28,33,51,0.10); box-shadow: 0 12px 32px rgba(4,8,26,0.14); }
+.langpick .lp-menu a { display: block; padding: 9px 12px; border-radius: 8px; color: #1C2133; text-decoration: none; }
+.langpick .lp-menu a:hover { background: rgba(28,33,51,0.06); }
+.langpick .lp-menu a[aria-current] { font-weight: 600; }
+.nav-menu .lp-row { display: flex; flex-wrap: wrap; padding: 4px calc(var(--pad) - 10px) 0; }
+.nav-menu .lp-row a { padding: 10px; }
+.nav-menu .lp-row a[aria-current] { color: var(--ink); font-weight: 600; }
+@media (max-width: 860px) { .navlinks .langpick { display: none; } }
+/* /lang:css */
+</style>
+<!-- PostHog web analytics -->
+<script>
+  !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug getPageViewId".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+  // Never track local dev (file://, localhost) or opted-out browsers (nawana.app/?ph=off).
+  var _opt=(location.protocol==='file:')||/^(localhost|127\.|0\.0\.0\.0|\[?::1)/.test(location.hostname);
+  try{var _q=new URLSearchParams(location.search);if(_q.get('ph')==='off'){localStorage.setItem('ph_optout','1');}if(_q.get('ph')==='on'){localStorage.removeItem('ph_optout');}if(localStorage.getItem('ph_optout')==='1'){_opt=true;}}catch(e){}
+  if(!_opt){ posthog.init('phc_QFR0wEkAigOahZAlzW9wsYzAUGQEyuurF7PueVdsDoA', {api_host:'https://eu.i.posthog.com', person_profiles:'identified_only', defaults:'2025-05-24'}); posthog.register({app:'nawana'}); }
+</script>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="arrowr">
+      <path d="M3.5 12h15M12.5 6l6 6-6 6" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"/>
+    </g>
+    <g id="pixeldot"><rect x="8" y="8" width="8" height="8"/></g>
+    <g id="applelogo"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 140.3 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></g>
+    <g id="appmark">
+      <rect x="290" y="237" width="410" height="100"/>
+      <rect x="186" y="337" width="104" height="349"/>
+      <rect x="700" y="337" width="104" height="349"/>
+      <rect x="290" y="686" width="410" height="100"/>
+      <rect x="806" y="686" width="95" height="100"/>
+    </g>
+  </defs>
+</svg>
+
+<nav class="sec plain">
+  <div class="inner nav-in">
+    <a class="logo" href="#"><svg class="mark" viewBox="0 0 1024 1024"><use href="#appmark"/></svg>nawana<sup>™</sup></a>
+    <div class="navlinks">
+      <a href="#talk">Parler</a>
+      <a href="#watch">Scènes</a>
+      <a href="#review">Révision</a>
+      <a href="#pricing" id="nav-pricing" hidden>Tarifs</a>
+      <!-- lang:pick --><details class="langpick"><summary aria-label="Langue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/></svg><span>Français</span></summary><div class="lp-menu"><a href="/" hreflang="en" lang="en">English</a><a href="ko.html" hreflang="ko" lang="ko">한국어</a><a href="ja.html" hreflang="ja" lang="ja">日本語</a><a href="zh-hans.html" hreflang="zh-Hans" lang="zh-Hans">简体中文</a><a href="zh-hant.html" hreflang="zh-Hant" lang="zh-Hant">繁體中文</a><a href="es.html" hreflang="es" lang="es">Español</a><a href="fr.html" hreflang="fr" lang="fr" aria-current="page">Français</a><a href="de.html" hreflang="de" lang="de">Deutsch</a></div></details><!-- /lang:pick -->
+      <a class="btn-store" href="#" data-appstore><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><use href="#applelogo"/></svg><span class="tx"><small>Télécharger dans l’</small><b>App Store</b></span></a>
+      <button class="nav-burger" id="nav-burger" type="button" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    </div>
+  </div>
+  <div class="nav-menu" id="nav-menu">
+    <a href="#talk">Parler</a>
+    <a href="#watch">Scènes</a>
+    <a href="#review">Révision</a>
+    <a href="#pricing" id="nav-pricing-m" hidden>Tarifs</a>
+    <!-- lang:pickm --><div class="lp-row"><a href="/" hreflang="en" lang="en">English</a><a href="ko.html" hreflang="ko" lang="ko">한국어</a><a href="ja.html" hreflang="ja" lang="ja">日本語</a><a href="zh-hans.html" hreflang="zh-Hans" lang="zh-Hans">简体中文</a><a href="zh-hant.html" hreflang="zh-Hant" lang="zh-Hant">繁體中文</a><a href="es.html" hreflang="es" lang="es">Español</a><a href="fr.html" hreflang="fr" lang="fr" aria-current="page">Français</a><a href="de.html" hreflang="de" lang="de">Deutsch</a></div><!-- /lang:pickm -->
+  </div>
+</nav>
+
+<!-- ═════════ NIGHT — an incoming call from the future self.
+     The whole top of the page is one scene: the ring, the talk, the
+     hang-up — and the textbook is born on the seam into daylight. ═════════ -->
+<header class="sec night" id="story">
+  <div class="n-glow" aria-hidden="true"></div>
+  <div class="scrolly" id="scrolly">
+    <div class="s-hero">
+      <div class="n-kicker rv"><i></i>La façon la plus personnelle d’apprendre une langue</div>
+      <h1 class="rv" style="--d:0.06s">Apprends la langue<br />avec <span class="px-k">ton moi fluide</span>.</h1>
+      <p class="n-sub rv" style="--d:0.12s">Parle quand tu veux, de ce que tu veux,<br />et révise avec ton propre carnet.</p>
+      <div class="n-ctas rv" style="--d:0.18s">
+        <a class="btn-store" href="#" data-appstore><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><use href="#applelogo"/></svg><span class="tx"><small>Télécharger dans l’</small><b>App Store</b></span></a>
+      </div>
+      <span class="n-note rv" style="--d:0.24s"><b>iOS 17 et plus</b> · 20 premières minutes offertes</span>
+    </div>
+    <div class="s-pin">
+      <div class="s-caps">
+        <div class="s-cap"><div class="ix">01 / 05</div><h3>Crée <span class="px-k">ton moi fluide du futur</span>,<br />avec ta propre voix</h3><p>Lis à voix haute une minute. Tu choisis l’accent et le débit.</p></div>
+        <div class="s-cap"><div class="ix">02 / 05</div><h3>Puis parle<br />avec ce futur toi</h3><p>Bafouille sans crainte. Chaque réplique te revient corrigée.</p></div>
+        <div class="s-cap"><div class="ix">03 / 05</div><h3>Révise avec<br />ton propre carnet</h3><p>Les expressions, les mots et la grammaire que tu viens d’employer, tels quels.</p></div>
+        <div class="s-cap"><div class="ix">04 / 05</div><h3>Plus tu parles,<br />plus ça s’accumule</h3><p>Mots, expressions, phrases. Automatiquement.</p></div>
+        <div class="s-cap"><div class="ix">05 / 05</div><h3>Un niveau mesuré,<br />pas deviné</h3><p>Uniquement d’après ce que tu as vraiment dit.</p></div>
+        <span class="s-num">01</span><span class="s-num">02</span><span class="s-num">03</span><span class="s-num">04</span><span class="s-num">05</span>
+      </div>
+      <nw-phone class="s-phone" id="s-phone">
+          <div class="s-screens">
+            <!-- hero · the Talk tab, what the app opens on — real capture -->
+            <div class="s-scr on"><img class="shot" src="shots/en-home.png" alt="" /><nw-home fill tabbar progress="0.72" data-nw id="s-home"></nw-home></div>
+            <!-- 01 · making the voice — record, then accent and pace -->
+            <div class="s-scr"><img class="shot" src="shots/en-voice.png" alt="" /><nw-voice fill data-nw></nw-voice></div>
+            <!-- 02 · in-call — real capture -->
+            <div class="s-scr"><img class="shot" src="shots/en-call.png" alt="" /><nw-call fill data-nw></nw-call></div>
+            <!-- 03 · after the call: the talk is a scored book — real capture -->
+            <div class="s-scr"><img class="shot" src="shots/en-practice.png" alt="" /><nw-book fill data-nw></nw-book></div>
+            <!-- 04 · word cloud — real capture -->
+            <div class="s-scr"><img class="shot" src="shots/en-words.png" alt="" /><nw-words fill data-nw></nw-words></div>
+            <!-- 05 · measured level — real capture -->
+            <div class="s-scr"><img class="shot" src="shots/en-progress.png" alt="" /><nw-progress fill data-nw></nw-progress></div>
+          </div>
+      </nw-phone>
+
+      <div class="s-stk" aria-hidden="true">
+        <div class="stg stg0" data-step="0"><div class="stk" data-lang="en" style="left:calc(var(--pw) * -0.5 - min(250px, 13vw) - 192px);top:-140px;--r:-4deg;width:192px"><div class="b"><div class="lang"><span class="fl">🇺🇸🇬🇧</span><div><b>English</b><small>Anglais</small></div></div></div></div><div class="stk" data-lang="ja" style="left:calc(var(--pw) * -0.5 - min(50px, 2.6vw) - 192px);top:20px;--r:3deg;width:192px"><div class="b"><div class="lang"><span class="fl">🇯🇵</span><div><b>日本語</b><small>Japonais</small></div></div></div></div><div class="stk" data-lang="de" style="left:calc(var(--pw) * -0.5 - min(190px, 9.9vw) - 192px);top:190px;--r:-2deg;width:192px"><div class="b"><div class="lang"><span class="fl">🇩🇪</span><div><b>Deutsch</b><small>Allemand</small></div></div></div></div><div class="stk" data-lang="ko" style="left:calc(var(--pw) * 0.5 + min(150px, 7.8vw));top:-100px;--r:4deg;width:192px"><div class="b"><div class="lang"><span class="fl">🇰🇷</span><div><b>한국어</b><small>Coréen</small></div></div></div></div><div class="stk" data-lang="es" style="left:calc(var(--pw) * 0.5 + min(40px, 2.1vw));top:110px;--r:-3deg;width:192px"><div class="b"><div class="lang"><span class="fl">🇲🇽🇪🇸</span><div><b>Español</b><small>Espagnol</small></div></div></div></div></div>
+        <div class="stg" data-step="1"><div class="stk sl" style="--w:230px;--r:-2deg"><div class="b"><div class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 10v4"/></svg>Une minute de lecture</div><div class="row"><nw-futureself mode="listening" level="0.55" style="width:110px;height:42px"></nw-futureself><span class="num">0:47</span></div><div class="n">Lis simplement à voix haute</div></div></div><div class="stk sr1" style="--w:270px;--r:2deg"><div class="b"><div class="k">Accent</div><div class="chips"><span>Américain</span><span class="on">Anglais</span><span>Australien</span></div><div class="n">Même voix, l’accent de ton choix</div></div></div><div class="stk sr2" style="--w:260px;--r:-2deg"><div class="b"><div class="k">Débit</div><div class="chips"><span>Normale</span><span class="on">Détendue</span><span>Lente</span></div></div></div></div>
+        <div class="stg" data-step="2"><div class="stk sl" style="--w:230px;--r:-2deg"><div class="b"><div class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 10v4"/></svg>Il te répond avec ta voix</div><nw-futureself mode="speaking" level="voice" style="width:150px;height:56px"></nw-futureself></div></div><div class="stk sr1" style="--w:280px;--r:2deg"><div class="b"><div class="k">Ce que tu as dit</div><div class="say">It was a busy week. I <u>go</u> to three meetings.</div></div></div><div class="stk sr2" style="--w:290px;--r:-2deg"><div class="b"><div class="k">La version de ton moi fluide</div><div class="say">It was a busy week. I <b class="fx">went</b> to three meetings.</div><div class="n">C’est déjà arrivé, donc au passé</div></div></div></div>
+        <div class="stg" data-step="3"><div class="stk sl" style="--w:240px;--r:-2deg"><div class="b"><div class="k">Le carnet né de cet appel</div><div class="chips"><span>Mots <i>+5</i></span><span>Expressions <i>+3</i></span><span>Phrases <i>+2</i></span></div></div></div><div class="stk sr1" style="--w:270px;--r:2deg"><div class="b"><div class="k">Carte de révision</div><div class="say"><s>I go to</s> → <b class="fx">I went to</b></div><div class="n">Ton erreur devient une carte</div></div></div><div class="stk sr2" style="--w:200px;--r:-2deg"><div class="b"><div class="k">Cet appel</div><div class="row"><span class="num big">75</span><span class="n">noté au niveau B1</span></div></div></div></div>
+        <div class="stg" data-step="4"><div class="stk sl" style="--w:240px;--r:-2deg"><div class="b"><div class="k">Coché en le disant</div><div class="row"><div style="flex:1"><b class="w">exhausting</b><div class="n">adjectif · très fatigant</div></div><svg class="okc" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#34C759"/><path d="M7.5 12.3l3 3 6-6.4" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div></div><div class="stk sr1" style="--w:220px;--r:2deg"><div class="b"><div class="k">Mots utilisés cette semaine</div><span class="num big">+12</span></div></div><div class="stk sr2" style="--w:260px;--r:-2deg"><div class="b"><div class="k">Utilisés pour la première fois</div><div class="chips"><span>negotiate</span><span>genuinely</span></div></div></div></div>
+        <div class="stg" data-step="5"><div class="stk sr1" style="--w:230px;--r:2deg"><div class="b"><div class="k">Niveau estimé</div><span class="px">B1 → B2</span></div></div><div class="stk sr2" style="--w:270px;--r:-2deg"><div class="b"><div class="k">D’après ce que tu as vraiment dit</div><div class="bars"><span>Vocabulary<i><b style="width:82%"></b></i></span><span>Grammar<i><b style="width:71%"></b></i></span><span>Fluency<i><b style="width:74%"></b></i></span></div></div></div></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ═════════ 01 TALK ═════════ -->
+<section class="sec alt" id="talk">
+  <div class="stage">
+    <div class="stage-copy">
+      <div class="kicker rv"><span class="mono">01</span>Parler · Production</div>
+      <h2 class="rv" style="--d:0.06s">Dis ce que tu penses,<br />sans stress.</h2>
+      <p class="one rv" style="--d:0.12s"><strong>C’est ta voix, pas celle d’un inconnu.</strong></p>
+      <ul class="hows rv" style="--d:0.18s">
+        <li data-beat="2"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Personne pour te juger.</b> Les mots commencent à sortir.</span></li>
+        <li data-beat="1"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Ton actu, tes situations, la conversation libre.</b> Quand tu veux.</span></li>
+        <li data-beat="3"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Chaque réplique te revient fluide.</b></span></li>
+      </ul>
+    </div>
+    <div class="stage-show">
+      <!-- SHOT SLOT: call screen — replace shots/en-call.png -->
+      <nw-phone class="iphone-k rv" style="--d:0.1s"><img class="shot" src="shots/en-call.png" alt="" /><nw-call autoplay id="talk-call" title="Bike lanes in the city" beats="#talk .hows"></nw-call></nw-phone>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ CALL ═════════ -->
+<section class="sec plain" id="call">
+  <div class="stage flip">
+    <div class="stage-copy">
+      <div class="kicker rv"><span class="mono">02</span>Appel · Habitude</div>
+      <h2 class="rv" style="--d:0.06s">Au lieu d’ouvrir une app,<br />tu décroches.</h2>
+      <p class="one rv" style="--d:0.12s"><strong>À l’heure que tu as choisie, ton futur toi t’appelle le premier.</strong></p>
+      <ul class="hows rv" style="--d:0.18s">
+        <li data-beat="1 2"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Ça sonne comme une alarme,</b> et la conversation démarre dès que tu décroches.</span></li>
+        <li data-beat="3"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Ton dernier appel, l’actu, une discussion légère.</b> Un sujet différent à chaque fois, et chaque appel commence par une question.</span></li>
+        <li data-beat="4"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Tu as manqué l’appel ? Pas grave.</b> Aucun reproche. Il rappelle simplement la fois suivante.</span></li>
+      </ul>
+    </div>
+    <div class="stage-show">
+      <!-- SHOT SLOT: daily call — TEMP ko-home.png, needs a real ring capture → shots/ko-dailycall.png -->
+      <nw-phone class="iphone-k rv" style="--d:0.1s"><img class="shot" src="shots/en-home.png" alt="" /><nw-ring autoplay beats="#call .hows"></nw-ring></nw-phone>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ SAYAGAIN ═════════ -->
+<section class="sec alt" id="sayagain">
+  <div class="stage">
+    <div class="stage-copy">
+      <div class="kicker rv"><span class="mono">03</span>Redire · Revivre</div>
+      <h2 class="rv" style="--d:0.06s">Ton dernier appel,<br />encore une fois, bien dit.</h2>
+      <p class="one rv" style="--d:0.12s"><strong>Tes répliques reviennent corrigées. Les réponses restent exactement les mêmes.</strong></p>
+      <ul class="hows rv" style="--d:0.18s">
+        <li data-beat="1"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Tout l’appel, pas seulement les corrections,</b> revécu depuis le début.</span></li>
+        <li data-beat="2 3"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Lis la phrase sur le prompteur,</b> et la réponse entendue ce jour-là enchaîne.</span></li>
+        <li data-beat="4"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Chaque phrase reçoit une note.</b> Tu bloques sur une ? Recommence-la sur place.</span></li>
+      </ul>
+    </div>
+    <div class="stage-show">
+      <!-- SHOT SLOT: say it again — replace shots/ko-sayagain.png -->
+      <nw-phone class="iphone-k rv" style="--d:0.1s"><img class="shot" src="shots/ko-sayagain.png" alt="" /><nw-sayagain autoplay beats="#sayagain .hows"></nw-sayagain></nw-phone>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ 04 WATCH ═════════ -->
+<section class="sec plain" id="watch">
+  <div class="stage flip">
+    <div class="stage-copy">
+      <div class="kicker rv"><span class="mono">04</span>Scènes · Immersion</div>
+      <h2 class="rv" style="--d:0.06s">Les moments où tu en as besoin<br />n’appartiennent qu’à toi.</h2>
+      <p class="one rv" style="--d:0.12s"><strong>Décris la situation qui t’attend, et vis-la en avance.</strong></p>
+      <ul class="hows rv" style="--d:0.18s">
+        <li data-beat="1"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Examens, entretiens, discours, voyages, discussions légères.</b> Une ligne suffit à ouvrir toute la conversation.</span></li>
+        <li data-beat="2"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Tes répliques, avec ta voix fluide.</b></span></li>
+        <li data-beat="3"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>La phrase qui te plaît, d’un toucher,</b> en shadowing sur place.</span></li>
+      </ul>
+    </div>
+    <div class="stage-show">
+      <!-- SHOT SLOT: Watch scenario book — replace shots/en-book.png -->
+      <nw-phone class="iphone-k rv" style="--d:0.1s"><img class="shot" src="shots/en-book.png" alt="" /><nw-watch autoplay beats="#watch .hows"></nw-watch></nw-phone>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ 05 REVIEW — the talk becomes a book ═════════ -->
+<section class="sec alt" id="review">
+  <div class="stage">
+    <div class="stage-copy">
+      <div class="kicker rv"><span class="mono">05</span>Révision · Carnet</div>
+      <h2 class="rv" style="--d:0.06s">Ton dernier appel,<br />devenu un carnet.</h2>
+      <p class="one rv" style="--d:0.12s"><strong>Pas le cahier d’exercices d’un autre. Tu étudies ce que tu as vraiment dit.</strong></p>
+      <ul class="hows rv" style="--d:0.18s">
+        <li data-beat="1"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Tu raccroches, et le carnet est là.</b> Quatre chapitres : mots, expressions, shadowing, exercices.</span></li>
+        <li data-beat="2"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Ce que tu as dit, et ce qu’a dit ton moi fluide.</b> Les deux vont dans ton carnet de vocabulaire.</span></li>
+        <li data-beat="3"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Chaque erreur à côté de sa correction,</b> avec une ligne pour dire pourquoi.</span></li>
+        <li data-beat="4"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>La répétition espacée la ramène au moment où tu oublies,</b> et tu réponds à voix haute.</span></li>
+      </ul>
+    </div>
+    <div class="stage-show">
+      <nw-phone class="iphone-k rv" style="--d:0.1s"><img class="shot" src="shots/en-practice.png" alt="" /><nw-review autoplay beats="#review .hows"></nw-review></nw-phone>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ 06 SHADOWING ═════════ -->
+<section class="sec plain" id="practice">
+  <div class="stage flip">
+    <div class="stage-copy">
+      <div class="kicker rv"><span class="mono">06</span>Shadowing · Ancrage</div>
+      <h2 class="rv" style="--d:0.06s">Du shadowing jusqu’à<br />ce que ça sorte tout seul.</h2>
+      <p class="one rv" style="--d:0.12s"><strong>La voix que tu imites, c’est la tienne.</strong></p>
+      <ul class="hows rv" style="--d:0.18s">
+        <li data-beat="1 2"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Shadowing synchronisé.</b> Un verdict sur chaque mot.</span></li>
+        <li data-beat="3"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Seul le passage difficile, en boucle à 0.5×.</b></span></li>
+      </ul>
+    </div>
+    <div class="stage-show">
+      <!-- SHOT SLOT: shadowing screen — replace shots/en-shadow.png -->
+      <nw-phone class="iphone-k rv" style="--d:0.1s"><img class="shot" src="shots/en-shadow.png" alt="" /><nw-shadow autoplay beats="#practice .hows"></nw-shadow></nw-phone>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ SPEECH ═════════ -->
+<section class="sec alt" id="speech">
+  <div class="stage">
+    <div class="stage-copy">
+      <div class="kicker rv"><span class="mono">07</span>Discours · Présentation</div>
+      <h2 class="rv" style="--d:0.06s">Dis ce que tu as préparé,<br />comme tu l’as préparé.</h2>
+      <p class="one rv" style="--d:0.12s"><strong>Affiche ton texte et lis-le à voix haute, comme le jour J.</strong></p>
+      <ul class="hows rv" style="--d:0.18s">
+        <li data-beat="1"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Un prompteur qui suit ta voix.</b> Caméra allumée ou éteinte.</span></li>
+        <li data-beat="2"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>À la fin, une note et un mot du coach,</b> et ce sur quoi tu as été évalué.</span></li>
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Écris le texte toi-même, ou avec l’IA.</b> Avec Plus et Max.</span></li>
+      </ul>
+    </div>
+    <div class="stage-show">
+      <!-- SHOT SLOT: speech — replace shots/ko-speech.png -->
+      <nw-phone class="iphone-k rv" style="--d:0.1s"><img class="shot" src="shots/ko-speech.png" alt="" /><nw-speech autoplay beats="#speech .hows"></nw-speech></nw-phone>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ ROUTINE ═════════ -->
+<section class="sec plain" id="routine">
+  <div class="stage flip">
+    <div class="stage-copy">
+      <div class="kicker rv"><span class="mono">08</span>Routine · Promesse</div>
+      <h2 class="rv" style="--d:0.06s">Planifie ta semaine,<br />puis teste ta semaine.</h2>
+      <p class="one rv" style="--d:0.12s"><strong>Décide ce que contient chaque jour, et ça devient une promesse envers toi-même.</strong></p>
+      <ul class="hows rv" style="--d:0.18s">
+        <li data-beat="1 2"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Appels, Redire, écoute, shadowing, discours, révision.</b> Un rappel aux heures que tu as choisies.</span></li>
+        <li data-beat="3"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Ta série suit ton propre objectif.</b> Elle ne grandit que les jours où tu tiens ta promesse.</span></li>
+        <li data-beat="4"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Le test hebdo est fait de ta semaine.</b> Les mots et expressions que tu as remis à plus tard, tes erreurs de grammaire.</span></li>
+      </ul>
+    </div>
+    <div class="stage-show">
+      <!-- SHOT SLOT: routine and weekly test — replace shots/ko-routine.png -->
+      <nw-phone class="iphone-k rv" style="--d:0.1s"><img class="shot" src="shots/ko-routine.png" alt="" /><nw-routine autoplay beats="#routine .hows"></nw-routine></nw-phone>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ 09 WEEKLY ═════════ -->
+<section class="sec alt" id="weekly">
+  <div class="stage">
+    <div class="stage-copy">
+      <div class="kicker rv"><span class="mono">09</span>Semaine · Bilan</div>
+      <h2 class="rv" style="--d:0.06s">Quand la semaine finit,<br />ta semaine devient le test.</h2>
+      <p class="one rv" style="--d:0.12s"><strong>Pas le cahier d’un inconnu. Ce que tu as dit cette semaine.</strong></p>
+      <ul class="hows rv" style="--d:0.18s">
+        <li data-beat="1 2"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Un regard sur ta semaine.</b> Combien de jours, et ce qui est devenu à toi.</span></li>
+        <li data-beat="3"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Un mot du coach.</b> La grammaire où tu butais souvent, et de meilleurs mots, dans tes propres phrases.</span></li>
+        <li data-beat="11 12 13"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Le test hebdo.</b> Fait des mots et expressions que tu as remis à plus tard, et tes erreurs de grammaire reposées dans de nouvelles phrases.</span></li>
+        <li data-beat="14"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Ce que tu rates revient.</b> Au test de la semaine suivante.</span></li>
+      </ul>
+    </div>
+    <div class="stage-show weekly-show">
+      <nw-phone class="iphone-k rv" style="--d:0.1s"><img class="shot" src="shots/ko-routine.png" alt="" /><nw-weekreport autoplay beats="#weekly .hows"></nw-weekreport></nw-phone>
+      <nw-phone class="iphone-k rv" style="--d:0.16s"><img class="shot" src="shots/ko-routine.png" alt="" /><nw-weeklytest autoplay beats="#weekly .hows" beat-offset="10"></nw-weeklytest></nw-phone>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ PEOPLE ═════════ -->
+<section class="sec plain" id="people">
+  <div class="stage flip">
+    <div class="stage-copy">
+      <div class="kicker rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>Personnes · Personnages</div>
+      <h2 class="rv" style="--d:0.06s">Les gens de ta vie<br />entrent en scène.</h2>
+      <p class="one rv" style="--d:0.12s"><strong>Tes proches, tes situations.</strong></p>
+      <ul class="hows rv" style="--d:0.18s">
+        <li data-beat="1 2"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Barista, chef d’équipe, médecin.</b> Décris-les à voix haute, et ils jouent leur rôle.</span></li>
+        <li data-beat="3"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Ton moi fluide au centre.</b></span></li>
+      </ul>
+    </div>
+    <div class="stage-show">
+      <!-- SHOT SLOT: Watch tab people + scenarios — replace shots/en-people.png -->
+      <nw-phone class="iphone-k rv" style="--d:0.1s"><img class="shot" src="shots/en-people.png" alt="" /><nw-people autoplay beats="#people .hows"></nw-people></nw-phone>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ WORDS ═════════ -->
+<section class="sec alt" id="words">
+  <div class="stage">
+    <div class="stage-copy">
+      <div class="kicker rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>Mots · Vocabulaire</div>
+      <h2 class="rv" style="--d:0.06s">Chaque mot que tu dis<br />rejoint ton univers.</h2>
+      <p class="one rv" style="--d:0.12s"><strong>Une carte vivante de ton vocabulaire.</strong></p>
+      <ul class="hows rv" style="--d:0.18s">
+        <li data-beat="1"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Ton niveau se lit dans la taille.</b></span></li>
+        <li data-beat="2 3"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Un toucher : sens et exemples.</b> Avec un signet, tu l’étudies. Coché, tu le connais.</span></li>
+      </ul>
+    </div>
+    <div class="stage-show">
+      <!-- SHOT SLOT: word cloud — replace shots/en-words.png -->
+      <nw-phone class="iphone-k rv" style="--d:0.1s"><img class="shot" src="shots/en-words.png" alt="" /><nw-words autoplay beats="#words .hows"></nw-words></nw-phone>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ WHY — after the features, two columns ═════════ -->
+<section class="sec plain">
+  <div class="why2">
+    <div class="why2-head">
+      <div class="m-kick rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>Un · Voix</div>
+      <p class="w2-lead rv" style="--d:0.06s">Imite un natif autant que tu veux.<br /><b>La voix d’un autre<br />ne sera jamais la tienne.</b></p>
+    </div>
+    <div class="why2-body">
+      <p class="w2-line rv" style="--d:0.12s">La voix avec laquelle tu parleras vraiment,<br /><b>c’est la tienne.</b></p>
+      <p class="w2-line rv" style="--d:0.18s">Alors, un objectif atteignable.<br /><b>Pas « comme un natif ». <span class="px-k">Ton moi fluide du futur</span>.</b></p>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ MANIFESTO 2 — expression ═════════ -->
+<section class="sec alt">
+  <div class="why2">
+    <div class="why2-head">
+      <div class="m-kick rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>Deux · Entraînement</div>
+      <p class="w2-lead rv" style="--d:0.06s">Si les mots ne sortent pas,<br /><b>c’est que tu n’as jamais entraîné<br />le geste de sortir ta pensée.</b></p>
+    </div>
+    <div class="why2-body">
+      <p class="w2-line rv" style="--d:0.12s">Pas des phrases apprises par cœur.<br /><b>Ta pensée, avec tes propres mots. C’est là que tout commence.</b></p>
+      <p class="w2-line rv" style="--d:0.18s">Parle, fais corriger ta grammaire et tes tournures.<br /><b>Ce que tu as dit en vrai devient ton propre carnet.</b></p>
+    </div>
+  </div>
+  <div class="marquee" aria-hidden="true">
+    <div class="row">
+      <span>Talk</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Say it again</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Shadow</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Watch</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Podcast</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Speech</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Review</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Quiz</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Weekly test</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Talk</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Say it again</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Shadow</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Watch</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Podcast</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Speech</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Review</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Quiz</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Weekly test</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Talk</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Say it again</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Shadow</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Watch</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Podcast</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Speech</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Review</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Quiz</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Weekly test</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Talk</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Say it again</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Shadow</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Watch</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Podcast</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Speech</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Review</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Quiz</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Weekly test</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ SPEC SHEET ═════════ -->
+<section class="sec plain">
+  <div class="inner specs">
+    <div class="kicker rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>Tout ça, dans une seule app</div>
+    <h2 class="head rv" style="--d:0.08s">Toute l’app,<br />d’un coup d’œil.</h2>
+  </div>
+  <div class="spec-table rv" style="--d:0.12s">
+    <div class="srow"><span class="ix">01</span><span class="nm">Clone vocal en 60 secondes</span><span class="ds">Un court enregistrement à la configuration crée ta voix fluide du futur.</span></div>
+    <div class="srow"><span class="ix">02</span><span class="nm">Une version fluide, à chaque réplique</span><span class="ds">En pleine conversation, ce que tu viens de dire te revient comme ton moi fluide le dirait.</span></div>
+    <div class="srow"><span class="ix">03</span><span class="nm">Shadowing synchronisé</span><span class="ds">Parle en même temps que ta phrase fluide et obtiens un verdict sur chaque mot, plus ton débit par rapport à la cible.</span></div>
+    <div class="srow"><span class="ix">04</span><span class="nm">Les gens de ta vie</span><span class="ds">Décris-les à voix haute et ils deviennent des personnages qui parlent comme en vrai.</span></div>
+    <div class="srow"><span class="ix">05</span><span class="nm">Des conversations en avant-première</span><span class="ds">Regarde ton moi fluide gérer la situation, et reprends en shadowing la phrase de ton choix, sur place.</span></div>
+    <div class="srow"><span class="ix">06</span><span class="nm">Révision à voix haute</span><span class="ds">Les phrases où tu as buté reviennent en exercices juste avant que tu les oublies. Réponse à voix haute, jamais en QCM.</span></div>
+    <div class="srow"><span class="ix">07</span><span class="nm">Bilan sur cinq axes</span><span class="ds">Vocabulaire, grammaire, expression, aisance, prononciation. Noté après chaque conversation, et la prononciation, c’est ce que le shadowing a vraiment mesuré.</span></div>
+    <div class="srow"><span class="ix">08</span><span class="nm">Les mots se cochent tout seuls</span><span class="ds">Environ 8 000 mots essentiels classés par niveau CECR en arrière-plan, et chaque mot que tu utilises est coché automatiquement.</span></div>
+    <div class="srow"><span class="ix">09</span><span class="nm">Niveau CECR, mesuré</span><span class="ds">Ton niveau vient de tes vraies conversations, vocabulaire, grammaire, aisance et expression ensemble. De B1 à B2, c’est une mesure, pas une opinion.</span></div>
+    <div class="srow"><span class="ix">10</span><span class="nm">Un bilan hebdo honnête</span><span class="ds">Il ne s’ouvre qu’après quinze minutes de vraie prise de parole. Plutôt le silence que du bruit. Plus tu parles, plus il te correspond.</span></div>
+  </div>
+</section>
+
+<!-- ═════════ PRICING ═════════
+     Visible at launch. The section used to be hidden behind BILLING.enabled —
+     the flag that turns on Stripe web checkout — so a page selling an iOS app
+     showed no price at all until a payment integration nobody needs at launch
+     was configured. Prices now always render; only the BUY BUTTON is gated:
+     App Store today, Stripe checkout the day BILLING.enabled flips. -->
+<section class="sec plain pricing-wrap" id="pricing">
+  <div class="inner pricing-sec">
+    <div class="kicker rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>Tarifs</div>
+    <h2 class="rv" style="--d:0.08s">Choisis combien<br />tu veux parler chaque mois.</h2>
+    <p class="pr-sub rv" style="--d:0.11s">Tes 20 premières minutes sont offertes, sans abonnement.</p>
+    <div class="cycle-toggle rv" style="--d:0.14s">
+      <button class="ct on" data-cycle="monthly" type="button">Mensuel</button>
+      <button class="ct" data-cycle="annual" type="button">Annuel</button>
+    </div>
+  </div>
+  <div class="plans rv" style="--d:0.2s">
+    <div class="plan">
+      <div><span class="p-name">Light</span></div>
+      <div class="p-price" data-price="light">—</div>
+      <p class="p-note">Une habitude régulière, une routine à la fois.</p>
+      <dl class="p-specs">
+        <div><dt>Conversation</dt><dd data-talk="light">—</dd></div>
+        <div class="p-sub"><dt></dt><dd data-perday="light">—</dd></div>
+        <div><dt>Carnet de révision personnalisé</dt><dd>Illimité</dd></div>
+        <div><dt>Shadowing · mots · réécoute · exercices</dt><dd>Illimité</dd></div>
+      </dl>
+      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>Commencer sur l’App Store <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+      <button class="btn btn-black p-buy" data-tier="light" type="button" hidden>S’abonner <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
+    </div>
+    <div class="plan featured">
+      <div><span class="p-name">Plus</span><span class="p-badge">Le plus choisi</span></div>
+      <div class="p-price" data-price="plus">—</div>
+      <p class="p-note">Chaque jour, aussi longtemps que tu veux.</p>
+      <dl class="p-specs">
+        <div><dt>Conversation</dt><dd data-talk="plus">—</dd></div>
+        <div class="p-sub"><dt></dt><dd data-perday="plus">—</dd></div>
+        <div><dt>Discours</dt><dd>Inclus</dd></div>
+        <div><dt>Carnet de révision personnalisé</dt><dd>Illimité</dd></div>
+        <div><dt>Shadowing · mots · réécoute · exercices</dt><dd>Illimité</dd></div>
+      </dl>
+      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>Commencer sur l’App Store <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+      <button class="btn btn-black p-buy" data-tier="plus" type="button" hidden>S’abonner <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
+    </div>
+    <!-- Max is monthly only, like the app's ladder; under Annual its button
+         still buys the monthly plan (the card says so). -->
+    <div class="plan" data-plan="max">
+      <div><span class="p-name">Max</span></div>
+      <div class="p-price" data-price="max">—</div>
+      <p class="p-note">Pour les mois où il y a beaucoup à préparer.</p>
+      <dl class="p-specs">
+        <div><dt>Conversation</dt><dd data-talk="max">—</dd></div>
+        <div class="p-sub"><dt></dt><dd data-perday="max">—</dd></div>
+        <div><dt>Discours</dt><dd>Inclus</dd></div>
+        <div><dt>Carnet de révision personnalisé</dt><dd>Illimité</dd></div>
+        <div><dt>Shadowing · mots · réécoute · exercices</dt><dd>Illimité</dd></div>
+      </dl>
+      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>Commencer sur l’App Store <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+      <button class="btn btn-black p-buy" data-tier="max" type="button" hidden>S’abonner <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
+    </div>
+  </div>
+  <div class="inner">
+    <p class="p-error" id="pricing-error"></p>
+    <div class="signin-pop" id="signin-choice" hidden><div class="sp-card" role="dialog" aria-modal="true" aria-labelledby="sp-title">
+      <h3 id="sp-title">Connecte-toi avec ton compte de l’app</h3><p>Ton abonnement est lié directement au compte que tu utilises dans l’app.</p>
+      <a class="btn btn-black sp-btn" href="#" data-signin="apple"><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><use href="#applelogo"/></svg>Continuer avec Apple</a>
+      <a class="btn sp-btn sp-g" href="#" data-signin="google">Continuer avec Google</a>
+      <button class="sp-x" type="button" data-signin-close>Fermer</button>
+    </div></div>
+    <p class="p-fine">Prix de l’App Store en France. Dans les autres pays, l’App Store affiche le prix local.</p>
+    <p class="p-fine" id="manage-sub" hidden>Ton abonnement est sur le web ? Modifie-le ou résilie-le dans <a href="#" id="manage-link">Gérer ton abonnement</a>.</p>
+    <p class="p-fine">Le temps de conversation ne s’écoule que pendant l’échange. Les pauses sont gratuites. Une nouvelle scène utilise 5 minutes de ce même temps, et revoir une scène est gratuit. Si tu manques de temps un mois, tu peux ajouter des minutes dans l’app, et tu peux résilier à tout moment sur l’App Store.</p>
+  </div>
+</section>
+
+<!-- ═════════ TRUST ═════════ -->
+<section class="sec alt">
+  <div class="inner trust-sec">
+    <div class="kicker rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>Ta voix reste la tienne</div>
+    <h2 class="rv" style="--d:0.08s">Un clone vocal,<br />traité avec soin.</h2>
+  </div>
+  <div class="trust">
+    <div class="tcell rv"><div class="ix">A</div><h4>Enregistré une seule fois</h4><p>Soixante secondes à la configuration, et c’est tout. Rien n’est jamais enregistré en dehors d’une conversation que tu as lancée.</p></div>
+    <div class="tcell rv" style="--d:0.08s"><div class="ix">B</div><h4>C’est toi qui décides du clone</h4><p>Réenregistre-le ou supprime-le à tout moment. Le remplacer supprime définitivement le clone précédent.</p></div>
+    <div class="tcell rv" style="--d:0.16s"><div class="ix">C</div><h4>Ta pratique reste sur ton appareil</h4><p>Conversations, exercices et progrès restent sur ton iPhone. Pour continuer sur un autre appareil, ils se synchronisent via ton propre iCloud, jamais via nos serveurs.</p></div>
+  </div>
+</section>
+
+<!-- ═════════ FAQ ═════════ -->
+<section class="sec plain" id="faq">
+  <div class="inner faq-sec">
+    <div class="kicker rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>Questions fréquentes</div>
+    <h2 class="rv" style="--d:0.08s">Questions.</h2>
+  </div>
+  <div class="faq rv" style="--d:0.12s">
+    <details>
+      <summary><span class="ix">01</span>Comment ma voix est-elle créée ?</summary>
+      <p class="a"><span>Un seul enregistrement de soixante secondes à la configuration, et c’est tout. Aucun autre enregistrement ensuite. Ta voix fluide dit chaque conversation, chaque scène et chaque phrase de shadowing.</span></p>
+    </details>
+    <details>
+      <summary><span class="ix">02</span>Je peux essayer gratuitement ?</summary>
+      <p class="a"><span>Oui. Tes 20 premières minutes de conversation sont offertes, sans abonnement, et créer ta voix est gratuit aussi.</span></p>
+    </details>
+    <details>
+      <summary><span class="ix">03</span>Que m’apporte un abonnement ?</summary>
+      <p class="a"><span>Un mois de temps de conversation. Light comprend 150 minutes, Plus 450 et Max 900. Une nouvelle scène utilise 5 de ces minutes, et revoir une scène est gratuit. La révision, la réécoute et le shadowing sont illimités avec chaque formule.</span></p>
+    </details>
+    <details>
+      <summary><span class="ix">04</span>Un vrai débutant peut-il s’en servir ?</summary>
+      <p class="a"><span>Honnêtement, si tu pars de zéro, ce sera difficile. L’app convient le mieux dès que tu sais construire des phrases, même en hésitant. À partir de là, chaque réplique te revient fluide, la difficulté suit ton niveau, et tu parles de plus en plus.</span></p>
+    </details>
+    <details>
+      <summary><span class="ix">05</span>Comment savoir si je progresse ?</summary>
+      <p class="a"><span>Ton niveau CECR (de A1 à C2) est mesuré à partir des mots et des phrases que tu as vraiment prononcés. C’est une mesure, pas une opinion, donc tes progrès se voient en chiffres.</span></p>
+    </details>
+    <details>
+      <summary><span class="ix">06</span>Ma voix et mes données sont-elles en sécurité ?</summary>
+      <p class="a"><span>Rien n’est jamais enregistré en dehors d’une conversation que tu as lancée. Tu peux recréer ou supprimer le clone à tout moment. Conversations, exercices et progrès restent sur ton iPhone, et si tu actives la synchronisation, ils ne vont que dans ton propre iCloud, jamais sur nos serveurs.</span></p>
+    </details>
+    <details>
+      <summary><span class="ix">07</span>Quelles langues puis-je apprendre ?</summary>
+      <p class="a"><span>L’anglais, l’allemand, le japonais, l’espagnol et le coréen. Ajouter une langue ne change jamais le prix.</span></p>
+    </details>
+  </div>
+</section>
+
+<!-- ═════════ FINAL — the beta hero, brought home ═════════ -->
+<section class="sec night final-demo">
+  <canvas class="flower-gl" id="flower-gl" aria-hidden="true"></canvas>
+  <div class="fd-in">
+    <h2 class="rv"><span class="px-k">Ton moi fluide du futur</span>,<br />dès aujourd’hui.</h2>
+    <div class="fd-demo rv" style="--d:0.14s">
+      <button class="fd-orb" id="d-play" type="button" aria-label="Écoute ta voix du futur">
+        <canvas class="fself" id="d-face" data-shape="circle" aria-hidden="true"></canvas>
+        <span class="fd-ico" aria-hidden="true">
+          <svg class="ico-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          <svg class="ico-pause" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h3.6v14H7zM13.4 5H17v14h-3.6z"/></svg>
+        </span>
+      </button>
+      <div class="fd-hint">Écoute ta voix du futur</div>
+      <div class="fd-cap" id="d-cap" aria-live="polite"></div>
+    </div>
+    <div class="fd-ctas rv" style="--d:0.2s">
+      <a class="btn-store" href="#" data-appstore><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><use href="#applelogo"/></svg><span class="tx"><small>Télécharger dans l’</small><b>App Store</b></span></a>
+    </div>
+  </div>
+  <audio id="d-audio" src="beta-en.mp3" preload="none"></audio>
+</section>
+
+<footer class="sec night">
+  <div class="foot-in">
+    <span>© 2026 Dear RoRo · Munich</span>
+    <div class="links">
+      <a href="privacy.html">Privacy</a>
+      <a href="privacy.html">Politique de confidentialité</a>
+      <a href="terms.html">Conditions</a>
+      <a href="impressum.html">Impressum</a>
+      <a href="support.html">Assistance</a>
+      <a href="mailto:hello.dearroroapp@gmail.com">Contact</a>
+      <a href="#" data-appstore>App Store</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+document.documentElement.classList.add("js");
+
+// ── App Store link — the ONE value to fill at launch ──
+var APP_STORE_URL = "https://apps.apple.com/app/id6792794655";
+document.querySelectorAll("[data-appstore]").forEach(function (a) {
+  a.href = APP_STORE_URL;
+  if (APP_STORE_URL !== "#") { a.target = "_blank"; a.rel = "noopener"; }
+});
+
+var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// ── mobile nav: burger menu + header that yields on scroll-down ──
+(function () {
+  var nav = document.querySelector("nav.sec");
+  if (!nav) return;
+  var burger = document.getElementById("nav-burger");
+  var menu = document.getElementById("nav-menu");
+  if (burger && menu) {
+    burger.addEventListener("click", function () { nav.classList.toggle("nav-open"); });
+    menu.querySelectorAll("a").forEach(function (a) {
+      a.addEventListener("click", function () { nav.classList.remove("nav-open"); });
+    });
+  }
+  var mq = window.matchMedia("(max-width: 860px)");
+  var lastY = window.pageYOffset;
+  var night = document.querySelector("header.night");
+  function solidCheck(y) {
+    // the nav sits light on the sky's night band only; past it, cream glass
+    var edge = Math.round(window.innerHeight * 0.18);
+    nav.classList.toggle("nav-solid", y > edge);
+  }
+  solidCheck(window.pageYOffset);
+  window.addEventListener("scroll", function () {
+    var y = window.pageYOffset;
+    solidCheck(y);
+    if (!mq.matches || nav.classList.contains("nav-open")) { nav.classList.remove("nav-hidden"); lastY = y; return; }
+    if (y > lastY + 8 && y > 80) nav.classList.add("nav-hidden");
+    else if (y < lastY - 8) nav.classList.remove("nav-hidden");
+    lastY = y;
+  }, { passive: true });
+})();
+
+// ── scroll reveal ──
+var io = new IntersectionObserver(function (entries) {
+  entries.forEach(function (e) {
+    if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+  });
+}, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
+document.querySelectorAll(".rv").forEach(function (el) { io.observe(el); });
+
+// ── Futureself: the app's call surface, ported from FutureVoice/Shaders/
+// Futureself.metal. A quantized 5-row pixel mosaic snapped to a 5-step
+// palette, each cell breathing on its own slow phase — idle mode (mode 0,
+// level 0), light palette (theme "blue"). Keep the palette and the cell
+// math in sync with the shader; this is the product's face.
+(function () {
+  // kPalette[0 /* blue */][1 /* light */] — base → hottest.
+  var RAMP = ["#F6F8FF", "#E6EBF7", "#B8D4FF", "#73ADFF", "#0A5CF5"];
+  var TAU = Math.PI * 2;
+
+  function fract(x) { return x - Math.floor(x); }
+  // hash21 from the shader, component for component.
+  function hash21(px, py) {
+    var x = fract(px * 123.34), y = fract(py * 456.21);
+    var d = x * (x + 45.32) + y * (y + 45.32);
+    x = fract(x + d); y = fract(y + d);
+    return fract(x * y);
+  }
+
+  // Cell size is PINNED (12.8pt in the app, whatever the surface size), so a
+  // bigger surface gets MORE cells, never bigger ones — the mosaic stays
+  // icon-scaled on the home circle and the in-call pill alike.
+  var CELL_CSS = 12.8;
+
+  function paint(cv, ctx, t, dpr) {
+    var w = cv.width, h = cv.height;
+    if (!w || !h) return;
+    var cellPt = CELL_CSS * dpr;
+    var cols = Math.ceil(w / cellPt), rows = Math.ceil(h / cellPt);
+    var seed = +(cv.dataset.seed || 0);
+    // Speaking: the surface rides playback energy, blooming outward from the
+    // centre. This is the fluent self actually talking — the product's face.
+    // A surface with data-drive set is scene-driven (the hero call demo):
+    // it smooths toward that level instead of idling on the sine.
+    var level;
+    if (cv.dataset.drive !== undefined) {
+      var target = +cv.dataset.drive;
+      cv._d = cv._d === undefined ? target : cv._d + (target - cv._d) * 0.07;
+      level = 0.1 + 0.62 * cv._d + 0.08 * cv._d * Math.sin(t * 2.6 + seed);
+    } else {
+      level = 0.26 + 0.22 * Math.abs(Math.sin(t * 0.85 + seed))
+            + 0.07 * Math.sin(t * 2.3 + seed * 2.0);
+    }
+    var drive = Math.max(0, Math.min(1, level)) * 1.15;
+
+    ctx.fillStyle = RAMP[0];                  // base fills the hairline gaps
+    ctx.fillRect(0, 0, w, h);
+    for (var cy = 0; cy < rows; cy++) {
+      for (var cx = 0; cx < cols; cx++) {
+        var r1 = hash21(cx + 0.13, cy + 0.13);
+        var r2 = hash21(cx + 7.77, cy + 7.77);
+        var r3 = hash21(cx + 23.19, cy + 23.19);
+        var ux = (cx + 0.5) * cellPt / w;
+        // ambient breathing — every cell on its own slow phase
+        var v = 0.16 + 0.14 * Math.sin(t * (0.35 + 0.55 * r2) + r3 * TAU);
+        // ignition order: random, biased centre-out while speaking
+        var bias = Math.abs(ux - 0.5) * 2;
+        var order = Math.max(0, Math.min(1, r1 + (bias - r1) * 0.45));
+        var ig = smoothstep(order, order + 0.22, drive);
+        v += ig * (0.55 + 0.30 * r2);
+        v += ig * 0.08 * Math.sin(t * (2 + 3 * r1) + r2 * TAU);
+
+        var step = Math.floor(v * 4 + (r3 - 0.5) * 0.9 + 0.5);
+        step = step < 0 ? 0 : step > 4 ? 4 : step;
+        ctx.fillStyle = RAMP[step];
+        ctx.fillRect(cx * cellPt + 0.7, cy * cellPt + 0.7, cellPt - 1.4, cellPt - 1.4);
+      }
+    }
+    // inner shadow: light from above, so the surface reads recessed not flat
+    var g = ctx.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, "rgba(10,40,90,0.16)");
+    g.addColorStop(0.5, "rgba(10,40,90,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  }
+
+  function smoothstep(a, b, x) {
+    var u = Math.max(0, Math.min(1, (x - a) / (b - a)));
+    return u * u * (3 - 2 * u);
+  }
+
+  var surfaces = [].slice.call(document.querySelectorAll("canvas.fself"));
+  if (!surfaces.length) return;
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+  function resize() {
+    surfaces.forEach(function (cv) {
+      var r = cv.getBoundingClientRect();
+      var w = Math.max(1, Math.round(r.width * dpr));
+      var h = Math.max(1, Math.round(r.height * dpr));
+      if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    });
+  }
+  resize();
+  window.addEventListener("resize", resize);
+
+  var ctxs = surfaces.map(function (cv) { return cv.getContext("2d"); });
+  surfaces.forEach(function (cv, i) { cv.dataset.seed = (i * 2.7).toFixed(2); });
+  function frame(ms) {
+    var t = (ms || 0) / 1000;
+    for (var i = 0; i < surfaces.length; i++) paint(surfaces[i], ctxs[i], t, dpr);
+    if (!reduce) requestAnimationFrame(frame);
+  }
+  frame(reduce ? 4200 : 0);
+})();
+
+// ── scrollytelling: the phone peeks from the hero, pins at the centre,
+// and its screen walks the core flow (making the voice → call → book →
+// study) while the caption beside it changes. Scrubbing is scroll-tied;
+// ?step=N forces a beat for debugging.
+(function () {
+  var wrap = document.getElementById("scrolly");
+  if (!wrap) return;
+  var phone = document.getElementById("s-phone");
+  var caps = [].slice.call(wrap.querySelectorAll(".s-cap"));
+  var nums = [].slice.call(wrap.querySelectorAll(".s-num"));
+  var scrs = [].slice.call(wrap.querySelectorAll(".s-scr"));
+  var stks = [].slice.call(wrap.querySelectorAll(".stg:not(.stg0)"));
+  var stk0 = wrap.querySelector(".stg0"), stkWrap = wrap.querySelector(".s-stk");
+  var pill = document.getElementById("s-callpill");
+  var note = wrap.querySelector(".n-note");
+  var heroCopy = wrap.querySelector(".s-hero"), ctas = wrap.querySelector(".n-ctas");
+  var applied = 0; // translateY currently on the phone, in px
+  var STEPS = 6; // 1 hero + 5 beats
+  var dbg = null;
+  try { var q = new URLSearchParams(location.search).get("step"); if (q !== null) dbg = +q; } catch (e) {}
+  function update() {
+    var vh = window.innerHeight || 1;
+    var r = wrap.getBoundingClientRect();
+    var total = r.height - vh;
+    var p = total > 0 ? Math.min(1, Math.max(0, -r.top / total)) : 0;
+    var f = dbg !== null ? dbg : p * STEPS;
+    // At f=0 the phone's top edge sits just under the hero text; it rises
+    // to its resting spot over the first beat. Measured from the phone's
+    // ACTUAL laid-out position (rect minus the transform we applied), so
+    // it holds on any layout — centre on desktop, bottom-anchored on
+    // mobile — instead of assuming a centred pin.
+    var naturalTop = phone.getBoundingClientRect().top - applied;
+    var noteBottom = note ? note.getBoundingClientRect().bottom : vh * 0.5;
+    var rise = Math.max(0, noteBottom + 26 - naturalTop);
+    applied = Math.max(0, 1 - f) * rise;
+    // scale-up entrance: a step smaller in the hero, full size once pinned
+    // (origin is the phone's top edge, so the rise anchor stays exact)
+    var scale = 0.84 + 0.16 * Math.min(1, Math.max(0, f));
+
+    phone.style.transform = "translateY(" + applied.toFixed(1) + "px) scale(" + scale.toFixed(3) + ")";
+    // the title and buttons fade out as the phone rises into them: fully gone by the time the
+    // phone's top edge reaches the download button, so nothing is ever drawn over the screen
+    if (heroCopy && ctas) {
+      var pTop = naturalTop + applied, cTop = ctas.getBoundingClientRect().top;
+      var fade = Math.max(0, Math.min(1, (pTop - cTop - 20) / Math.max(1, noteBottom + 26 - cTop - 20)));
+      heroCopy.style.opacity = fade.toFixed(3);
+      heroCopy.style.visibility = fade > 0 ? "" : "hidden";
+    }
+    // screen 0 is the hero's: the Talk tab, until the first beat takes over
+    var idx = Math.min(5, Math.max(0, Math.floor(f)));
+    scrs.forEach(function (el, i) {
+      el.classList.toggle("on", i === idx);
+      var live = el.querySelector("[data-nw]");
+      if (live) live.toggleAttribute("active", i === idx);
+    });
+    caps.forEach(function (el, i) { el.classList.toggle("on", f >= 1 && i + 1 === idx); });
+    nums.forEach(function (el, i) { el.classList.toggle("on", f >= 1 && i + 1 === idx); });
+    stks.forEach(function (el, i) { el.classList.toggle("on", f >= 1.15 && i + 1 === idx); });
+    if (stk0) {
+      var pr = phone.getBoundingClientRect(), sr = stkWrap.getBoundingClientRect();
+      stk0.style.transform = "translateY(" + (pr.top - sr.top).toFixed(1) + "px)";
+      stk0.style.setProperty("--pw", pr.width.toFixed(1) + "px");
+      stk0.classList.toggle("on", f < 0.3);
+    }
+    if (pill) pill.dataset.drive = idx === 2 ? 0.9 : 0.15;
+  }
+  // the hero's language cycle: every few seconds the phone switches target language (pill,
+  // greeting, ring palette) and that language's sticker lights. Only while the hero is up.
+  var home = document.getElementById("s-home");
+  var langStk = stk0 ? [].slice.call(stk0.querySelectorAll(".stk[data-lang]")) : [];
+  var LANGS = ["en", "ja", "de", "ko", "es"], li = 0;
+  // each language's palette accent, the same ones the phone switches to (kit home.js ACCENT)
+  var LANG_ACCENT = { en: "#0A5CF5", ja: "#F23B52", de: "#F58F0D", ko: "#0DA36B", es: "#0AA3C2" };
+  function showLang() {
+    var code = LANGS[li];
+    if (home && home.setLang) home.setLang(code);
+    if (stk0) { stk0.classList.add("cycling"); stk0.style.setProperty("--langc", LANG_ACCENT[code]); }
+    langStk.forEach(function (el) { el.classList.toggle("cur", el.dataset.lang === code); });
+  }
+  customElements.whenDefined("nw-home").then(showLang);
+  setInterval(function () {
+    if (document.hidden || !stk0 || !stk0.classList.contains("on")) return;
+    li = (li + 1) % LANGS.length; showLang();
+  }, 2600);
+  window.addEventListener("scroll", update, { passive: true });
+  window.addEventListener("resize", update);
+  update();
+  // re-measure once the reveal transitions have settled
+  setTimeout(update, 1000);
+  setTimeout(update, 2200);
+})();
+
+
+</script>
+<script>
+var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+// ── key visual: DeskCoach's latest halftone-flower shader ──
+// Verbatim from DeskCoach/site/index.html: ASCII glyph-atlas halftone
+// (density ramp " .,:;=+*#@"), variable-petal polar flower with a top-right
+// light source + soft aura, wind sway, stem, grain. Reduced to ONE flower,
+// and the flower TYPE changed (petal count N). Dark palette forced (this
+// hero is always dark).
+(function () {
+  var FS = 'precision highp float;uniform vec2 r;uniform float t;uniform float s;uniform sampler2D gx;uniform float gn;uniform vec3 pc;uniform vec3 ic;uniform float gr;uniform vec2 uMouse;' +
+    'float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}' +
+    'float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);' +
+    'return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}' +
+    'float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<3;i++){v+=a*n(p);p*=2.1;a*=.5;}return v;}' +
+    'float flower(vec2 p,vec2 c,float R,float q,float N){' +
+    'vec2 d=p-c;float ang=atan(d.y,d.x)+.07*sin(t*.55+q);float rad=length(d);' +
+    'float w=fbm(vec2(ang*2.3+q*3.,rad*5.)+q);' +
+    // fuller, larger petals (lower exponent = wider lobes)
+    'float lobe=pow(abs(cos(N*.5*ang+q)),.40);' +
+    'float pet=R*(.55+.45*lobe)*(.55+.9*w);' +
+    'float g=smoothstep(pet,pet*.20,rad);' +
+    // per-petal form: a lit centerline ridge fading to shadow at the petal
+    // edges and tip — so each petal shows light-catching and shaded parts
+    'float ridge=abs(cos(N*.5*ang+q));' +
+    'float rr=clamp(rad/max(pet,1e-4),0.,1.);' +
+    'float form=.40+.60*ridge*mix(1.,.55,rr);' +
+    // sun from the top-right: petals facing it brighten, the rest fall away
+    'vec2 u=d/max(rad,1e-4);' +
+    'float sun=.55+.55*dot(u,vec2(.55,.83));' +
+    'g*=clamp(form*sun,0.,1.);' +
+    // soft outer aura (light bleeding past the silhouette)
+    'g=max(g,.14*smoothstep(pet*1.6,pet*.9,rad));' +
+    'return g;}' +
+    'float stem(vec2 p,vec2 c,float q){' +
+    'if(p.y>c.y)return 0.;float dy=c.y-p.y;' +
+    'float x=c.x+.05*sin(dy*4.+q)+dy*dy*.14*sin(t*.5+q);' +
+    'return .30*smoothstep(.006,.002,abs(p.x-x));}' +
+    'void main(){' +
+    'float cell=max(10.,r.y/85.);' +
+    'vec2 id=floor(gl_FragCoord.xy/cell)+.5;vec2 cc=id*cell;' +
+    'vec2 cuv=cc/r;float asp=r.x/r.y;vec2 p=vec2(cuv.x*asp,cuv.y);' +
+    'float L=.05;' +
+    // one flower + its stem — flower TYPE changed to N=8 petals (was 6), bigger
+    // flower center follows the mouse a little (parallax)
+    'vec2 f1=vec2(asp*.70+.02*sin(t*.5+s),.55)+uMouse*vec2(.08,.06);' +
+    'L=max(L,flower(p,f1,.32,s,8.));L=max(L,stem(p,f1,s));' +
+    'float lvl=sqrt(clamp(L,0.,1.));' +
+    'float gi=floor(lvl*(gn-1.)+.5);' +
+    'vec2 iuv=fract(gl_FragCoord.xy/cell);' +
+    'float k=texture2D(gx,vec2((gi+iuv.x)/gn,iuv.y)).r;' +
+    'vec3 paper=pc;vec3 ink=ic;' +
+    'float str=mix(.20,1.,smoothstep(.05,.32,L));' +
+    'vec3 col=mix(paper,ink,k*str);' +
+    'col+=(h(gl_FragCoord.xy)-.5)*gr;' +
+    'gl_FragColor=vec4(col,1.);}';
+  var VS = 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
+
+  var cv = document.getElementById("flower-gl");
+  if (!cv) return;
+  var gl = cv.getContext('webgl', { antialias: false, alpha: false });
+  if (!gl) return;
+  function sh(ty, src) { var x = gl.createShader(ty); gl.shaderSource(x, src); gl.compileShader(x); return x; }
+  var pr = gl.createProgram();
+  gl.attachShader(pr, sh(gl.VERTEX_SHADER, VS));
+  gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS));
+  gl.linkProgram(pr); gl.useProgram(pr);
+  var b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  var lp = gl.getAttribLocation(pr, 'p');
+  gl.enableVertexAttribArray(lp); gl.vertexAttribPointer(lp, 2, gl.FLOAT, false, 0, 0);
+  // glyph atlas: a density ramp built from LETTERS — Korean jamo + Latin,
+  // ordered light→heavy by ink coverage so brightness still maps to a mark.
+  // Index 0 is a space (deepest shadow); the tail is the fullest glyphs.
+  var CH = ' .......ㄱㅏrㄴcㅗtㅓoㄷaㄹeㅋxㅂsㅍwㅁmㅇㅎ', N = CH.length, G = 64;
+  var ac = document.createElement('canvas'); ac.width = N * G; ac.height = G;
+  var cx2 = ac.getContext('2d');
+  cx2.fillStyle = '#000'; cx2.fillRect(0, 0, ac.width, ac.height);
+  cx2.fillStyle = '#fff'; cx2.font = '700 ' + (G * .74) + 'px "Apple SD Gothic Neo","SF Mono",Menlo,monospace';
+  cx2.textAlign = 'center'; cx2.textBaseline = 'middle';
+  CH.split('').forEach(function (ch, i) { cx2.fillText(ch, i * G + G / 2, G / 2 + 2); });
+  var tex = gl.createTexture(); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, ac);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.uniform1i(gl.getUniformLocation(pr, 'gx'), 0);
+  gl.uniform1f(gl.getUniformLocation(pr, 'gn'), N);
+  var uR = gl.getUniformLocation(pr, 'r'), uT = gl.getUniformLocation(pr, 't'), uS = gl.getUniformLocation(pr, 's');
+  var uPC = gl.getUniformLocation(pr, 'pc'), uIC = gl.getUniformLocation(pr, 'ic'), uGR = gl.getUniformLocation(pr, 'gr');
+  var uM = gl.getUniformLocation(pr, 'uMouse');
+  // the flower drifts toward the cursor; smoothed so it eases rather than snaps
+  var tmx = 0, tmy = 0, mx = 0, my = 0;
+  window.addEventListener('pointermove', function (e) {
+    tmx = (e.clientX / window.innerWidth - 0.5) * 2;
+    tmy = (e.clientY / window.innerHeight - 0.5) * 2;
+  });
+  var t0 = 0;
+  (function frame(ms) {
+    if (!t0) t0 = ms || 0;
+    var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    var w = Math.max(2, cv.clientWidth * dpr) | 0, hh = Math.max(2, cv.clientHeight * dpr) | 0;
+    if (cv.width !== w || cv.height !== hh) { cv.width = w; cv.height = hh; gl.viewport(0, 0, w, hh); }
+    // dark palette (this hero is always dark) — paper ≈ hero bg, ink = subtle
+    gl.uniform3f(uPC, .016, .031, .102); gl.uniform3f(uIC, .40, .60, 1.0); // welcome night + sky gl.uniform1f(uGR, .022);
+    mx += (tmx - mx) * 0.045; my += (tmy - my) * 0.045;
+    gl.uniform2f(uM, reduce ? 0 : mx, reduce ? 0 : my);
+    gl.uniform2f(uR, w, hh);
+    gl.uniform1f(uT, reduce ? 4.0 : ((ms || 0) - t0) / 1000);
+    gl.uniform1f(uS, 0.0);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    if (!reduce) requestAnimationFrame(frame);
+  })(0);
+})();
+</script>
+<script>
+// ── final demo: the beta voice, playable in place. The page's own 2D
+// Futureself painter is the play surface — the analyser drives data-drive.
+(function () {
+  var audio = document.getElementById('d-audio');
+  var pb = document.getElementById('d-play');
+  var face = document.getElementById('d-face');
+  var cap = document.getElementById('d-cap');
+  if (!audio || !pb) return;
+  var cues = [], capLoaded = false;
+  function tc(x){ x=x.trim().split(':'); var s=parseFloat(x.pop().replace(',','.'))||0; var m=parseInt(x.pop()||'0',10)||0; var h=parseInt(x.pop()||'0',10)||0; return h*3600+m*60+s; }
+  function parseVTT(text){
+    var out=[], blocks=text.replace(/\r/g,'').split('\n\n');
+    for(var i=0;i<blocks.length;i++){ var ls=blocks[i].split('\n'), ti=-1;
+      for(var j=0;j<ls.length;j++){ if(ls[j].indexOf('-->')>-1){ ti=j; break; } }
+      if(ti<0) continue; var mm=ls[ti].split('-->');
+      var tx=ls.slice(ti+1).join('\n').trim(); if(tx) out.push({s:tc(mm[0]),e:tc(mm[1]),t:tx}); }
+    return out; }
+  function loadCaptions(){ if(capLoaded) return; capLoaded=true;
+    fetch('beta-en.vtt').then(function(r){ return r.ok?r.text():''; })
+      .then(function(x){ cues=x?parseVTT(x):[]; }).catch(function(){ cues=[]; }); }
+  var actx=null, analyser=null, data=null, pumping=false;
+  // file:// taints MediaElementSource and the browser mutes it — only route
+  // through WebAudio on http(s); locally the audio plays directly and the
+  // surface breathes on a synthesized level instead.
+  var canAnalyse = location.protocol === 'http:' || location.protocol === 'https:';
+  function initAudio(){ if(!canAnalyse) return; try{
+      actx=new (window.AudioContext||window.webkitAudioContext)();
+      var srcNode=actx.createMediaElementSource(audio);
+      analyser=actx.createAnalyser(); analyser.fftSize=256;
+      srcNode.connect(analyser); analyser.connect(actx.destination);
+      data=new Uint8Array(analyser.fftSize);
+    }catch(e){ analyser=null; } }
+  function pump(){
+    if(audio.paused){ pumping=false; if(face) delete face.dataset.drive; return; }
+    var level;
+    if(analyser){ analyser.getByteTimeDomainData(data);
+      var sum=0; for(var i=0;i<data.length;i++){ var v=(data[i]-128)/128; sum+=v*v; }
+      level=Math.min(1, Math.sqrt(sum/data.length)*3.4); }
+    else { var ct=audio.currentTime;
+      level=0.45+0.3*Math.abs(Math.sin(ct*2.1))+0.15*Math.sin(ct*5.3); }
+    if(face) face.dataset.drive=(0.12+level*0.88).toFixed(3);
+    requestAnimationFrame(pump); }
+  pb.addEventListener('click', function(){
+    if(!actx) initAudio();
+    if(actx && actx.state==='suspended') actx.resume();
+    loadCaptions();
+    if(audio.paused){ audio.play().catch(function(){}); } else { audio.pause(); } });
+  audio.addEventListener('play', function(){ pb.classList.add('playing'); if(!pumping){ pumping=true; pump(); } });
+  audio.addEventListener('pause', function(){ pb.classList.remove('playing'); });
+  audio.addEventListener('ended', function(){ pb.classList.remove('playing'); if(cap) cap.textContent=''; });
+  audio.addEventListener('error', function(){ if(cap) cap.textContent='Impossible de charger l’audio.'; });
+  audio.addEventListener('timeupdate', function(){
+    if(!cap) return;
+    if(!cues.length){ cap.textContent=''; return; }
+    var ct=audio.currentTime, cur='';
+    for(var i=0;i<cues.length;i++){ if(ct>=cues[i].s && ct<cues[i].e){ cur=cues[i].t; break; } }
+    if(cap.textContent!==cur) cap.textContent=cur; });
+  // PostHog: the same beta_audio_* funnel as the live beta page
+  var started=false, marks={};
+  function track(ev, extra){ try{ if(!window.posthog) return;
+      var props={ lang:'en', t:Math.round(audio.currentTime||0), duration:Math.round(audio.duration||0) };
+      if(extra) for(var k in extra) props[k]=extra[k];
+      posthog.capture(ev, props); }catch(e){} }
+  audio.addEventListener('play', function(){ track('beta_audio_play',{resumed:started}); started=true; });
+  audio.addEventListener('pause', function(){ if(!audio.ended && audio.currentTime>0) track('beta_audio_pause'); });
+  audio.addEventListener('ended', function(){ track('beta_audio_complete'); });
+  audio.addEventListener('timeupdate', function(){ if(!audio.duration) return;
+    var p=audio.currentTime/audio.duration*100;
+    [25,50,75].forEach(function(m){ if(!marks[m]&&p>=m){ marks[m]=1; track('beta_audio_progress',{percent:m}); } }); });
+})();
+
+</script>
+<script>
+// ── manifesto stage: the section pins and hands each claim its own
+// stretch of scroll. One line is live at a time, and its words turn to
+// ink across that stretch — the sentence completes at reading pace,
+// then the next one takes the stage. Colour + a small fade only; the
+// track's height is what actually paces it.
+(function () {
+  var tracks = [].slice.call(document.querySelectorAll(".m-track"));
+  if (!tracks.length) return;
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var stages = tracks.map(function (track) {
+    var lines = [].slice.call(track.querySelectorAll(".m-line")).map(function (line) {
+      var b = line.querySelector("b"), words = [];
+      if (b) {
+        var kids = [].slice.call(b.childNodes);
+        b.textContent = "";
+        kids.forEach(function (node) {
+          if (node.nodeType === 3) {
+            node.nodeValue.split(/(\s+)/).forEach(function (chunk) {
+              if (!chunk) return;
+              if (/^\s+$/.test(chunk)) { b.appendChild(document.createTextNode(chunk)); return; }
+              var w = document.createElement("span");
+              w.className = "w"; w.textContent = chunk;
+              b.appendChild(w); words.push(w);
+            });
+          } else if (node.classList && node.classList.contains("px-k")) {
+            node.textContent.split(/(\s+)/).forEach(function (chunk) {
+              if (!chunk) return;
+              if (/^\s+$/.test(chunk)) { b.appendChild(document.createTextNode(chunk)); return; }
+              var w = document.createElement("span");
+              w.className = "w px-k"; w.textContent = chunk;
+              b.appendChild(w); words.push(w);
+            });
+          } else { b.appendChild(node); }
+        });
+      }
+      return { line: line, words: words };
+    });
+    track.style.setProperty("--n", lines.length);
+    return { track: track, lines: lines };
+  });
+  if (reduce) { tracks.forEach(function (t) { t.classList.add("m-static"); }); return; }
+  var ticking = false;
+  var RISE = 64;    // px a claim travels on the way in and on the way out
+  var ENTER = 0.18; // fraction of a segment the next claim rises over
+  var EXIT = 0.18;  // …and the one before it leaves over — they overlap
+  function ease(u) { u = Math.max(0, Math.min(1, u)); return u * u * (3 - 2 * u); }
+  function paint() {
+    ticking = false;
+    var vh = window.innerHeight || 1;
+    stages.forEach(function (st) {
+      var r = st.track.getBoundingClientRect();
+      var span = r.height - vh;
+      var p = span > 0 ? Math.max(0, Math.min(1, -r.top / span)) : 0;
+      var n = st.lines.length;
+      var seg = p * n;
+      var idx = Math.max(0, Math.min(n - 1, Math.floor(seg)));
+      // words finish before the segment does, so the completed line has a
+      // beat to be read whole before the next one arrives
+      var t = Math.max(0, Math.min(1, (seg - idx) / 0.62));
+      // Each claim owns a slot: it rises from below, holds still while its
+      // words light, then leaves upward as the next one rises into the same
+      // place. The two overlap briefly moving OPPOSITE ways, so the swap
+      // reads as a hand-off rather than two texts dissolving on top of each
+      // other. The last claim never leaves — the pin itself carries it off.
+      st.lines.forEach(function (it, i) {
+        var d = seg - i, last = i === n - 1, op, y;
+        if (d < -ENTER) { op = 0; y = RISE; }
+        else if (d < 0) { var e = ease((d + ENTER) / ENTER); op = e; y = (1 - e) * RISE; }
+        else if (!last && d > 1 - EXIT) {
+          var x = ease(Math.min(1, (d - (1 - EXIT)) / EXIT)); op = 1 - x; y = -x * RISE;
+        } else { op = 1; y = 0; }
+        it.line.style.opacity = op.toFixed(3);
+        it.line.style.transform = "translateY(calc(-50% + " + y.toFixed(1) + "px))";
+        it.line.classList.toggle("live", op > 0.5);
+        var lit = i < idx ? it.words.length
+                : i > idx ? 0
+                : Math.round(t * it.words.length);
+        for (var k = 0; k < it.words.length; k++) {
+          it.words[k].classList.toggle("on", k < lit);
+        }
+      });
+    });
+  }
+  window.addEventListener("scroll", function () {
+    if (!ticking) { ticking = true; requestAnimationFrame(paint); }
+  }, { passive: true });
+  window.addEventListener("resize", paint);
+  paint();
+})();
+</script>
+<script type="module">
+// ── Web billing (Stripe Checkout via Supabase Edge Functions) ──
+// Stays fully hidden until configured. To go live: fill supabaseUrl/anonKey,
+// set enabled=true, update the PLACEHOLDER prices, and follow web/README.md
+// (Stripe products + price IDs, webhook, Apple web sign-in in Supabase).
+const BILLING = {
+  // ON again 2026-10-11: the Stripe prices were re-cut to the App Store's live prices
+  // (light/plus/max, no trial) and subscription_plans.stripe_price_id points at them
+  // (20261011100000). Keep this page's PLANS, the Stripe prices and App Store Connect in step.
+  enabled: false,
+  supabaseUrl: "https://chhzjtigzdotacutwcyo.supabase.co",
+  supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoaHpqdGlnemRvdGFjdXR3Y3lvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5OTk3NDUsImV4cCI6MjA5NjU3NTc0NX0.tcGaH-m2jJklxsQ8YaHU1UaxtJAZkoRBq0B--inPHVU",
+}
+// Locked launch prices — keep in sync with docs/launch-billing.md.
+//
+// USD here — the App Store's US price points. Checkout passes CURRENCY
+// below ("usd") so Stripe charges exactly the dollar figure this page shows.
+//
+// Allowances are MONTHLY POOLS, bounded on every tier since 2026-09-26
+// (Light 150 min + 10 scenes, Plus 450 + 30, Max 900 + 30 — monthly only).
+// What is printed here is `subscription_plans.monthly_seconds` ÷ 60 and
+// `monthly_scenes`; annual buys the same monthly pool, twelve times, at
+// "2 months free" (back on sale 2026-10-07). These figures are the ONE thing
+// on this page that must match the database and App Store Connect — the
+// app's paywall reads them live, so a stale number here is a promise the
+// app then breaks. Since 2026-10-19 a new subscriber's Watch scene costs 5
+// talk minutes (`20261019120000`), so the cards print the minutes alone, like
+// the app's paywall, and the fine print says the price.
+const PLANS = {
+  light: {
+    talk: "150 min / mois", perDay: "Environ 5 min par jour",
+    monthly: { id: "light_monthly", price: "$8.99",   was: "9,99 €",   per: "/ mois" },
+    annual:  { id: "light_annual",  price: "$89.99",  was: "99,99 €",  per: "/ an · 2 mois offerts" },
+  },
+  plus: {
+    talk: "450 min / mois", perDay: "Environ 15 min par jour",
+    monthly: { id: "plus_monthly",  price: "$22.49",  was: "22,99 €",  per: "/ mois" },
+    annual:  { id: "plus_annual",   price: "$224.99", was: "229,99 €", per: "/ an · 2 mois offerts" },
+  },
+  max: {
+    // Monthly only (the app's ladder greys it out under Annual).
+    talk: "900 min / mois", perDay: "Environ 30 min par jour",
+    monthly: { id: "max_monthly",   price: "$44.99",  was: "44,99 €",  per: "/ mois" },
+    annual:  null,
+  },
+}
+const TIERS = ["light", "plus", "max"]
+
+// Prices render ALWAYS — they are the section, and they need no backend.
+;(function renderPricing() {
+  let cycle = "monthly"
+  function paint() {
+    for (const tier of TIERS) {
+      const t = PLANS[tier], p = t[cycle]
+      const priceEl = document.querySelector(`[data-price="${tier}"]`)
+      // `price` is the web (Stripe) price, App Store minus 10% since 2026-10-21;
+      // `was` is the App Store's. With web checkout off the page sells through
+      // the App Store, so it shows that price alone.
+      priceEl.innerHTML = p
+        ? (BILLING.enabled
+            ? p.price + ' <span>' + p.per + '</span><span class="p-was" style="display:block;margin-top:6px;font-size:13px">App Store <s>' + p.was + '</s> · 10 % de réduction sur le web</span>'
+            : p.was + ' <span>' + p.per + "</span>")
+        : '<span>Mensuel uniquement</span>'
+      priceEl.closest(".plan").classList.toggle("monthly-only", !p)
+      const dayEl = document.querySelector(`[data-perday="${tier}"]`)
+      if (dayEl) dayEl.textContent = t.perDay
+      // Plus has no talk figure to print (its row is hardcoded "no limit"),
+      // so the hook is absent by design — an unguarded write threw here and
+      // killed the rest of this module: the cycle toggle, the nav link, and
+      // the scenes row below it.
+      const talkEl = document.querySelector(`[data-talk="${tier}"]`)
+      if (talkEl) talkEl.textContent = t.talk
+    }
+  }
+  paint()
+  document.querySelectorAll(".cycle-toggle .ct").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      cycle = btn.dataset.cycle
+      document.querySelectorAll(".cycle-toggle .ct").forEach((b) =>
+        b.classList.toggle("on", b === btn))
+      paint()
+      window.__cycle = cycle
+    })
+  })
+  window.__cycle = cycle
+})()
+
+const params = new URLSearchParams(location.search)
+if (params.get("checkout") === "success") {
+  const toast = document.createElement("div")
+  toast.className = "toast"
+  toast.textContent = "Paiement effectué. Ouvre l’app et connecte-toi avec le même compte. Ton abonnement est déjà actif."
+  document.body.appendChild(toast)
+  setTimeout(() => toast.remove(), 9000)
+}
+
+// The nav link points at a section that is always there now.
+const navPricing = document.getElementById("nav-pricing")
+if (navPricing) navPricing.hidden = false
+
+if (BILLING.enabled && BILLING.supabaseUrl && BILLING.supabaseAnonKey) {
+  // Web checkout is live: swap the App Store CTA for the Stripe one. Until
+  // this runs, the cards sell the iOS app, which is the only thing on sale.
+  document.querySelectorAll("[data-store-cta]").forEach((a) => { a.hidden = true })
+  document.querySelectorAll(".p-buy[data-tier]").forEach((b) => { b.hidden = false })
+
+  const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm")
+  const sb = createClient(BILLING.supabaseUrl, BILLING.supabaseAnonKey)
+  const errEl = document.getElementById("pricing-error")
+
+  function baseUrl() { return location.origin + location.pathname }
+
+  function showError(msg) {
+    errEl.textContent = msg
+    errEl.style.display = "block"
+  }
+
+  // What this page PRINTS is what Stripe must charge — the en page passes usd.
+  const CURRENCY = "usd"
+
+  async function callFn(session, fn, body) {
+    const resp = await fetch(BILLING.supabaseUrl + "/functions/v1/" + fn, {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + session.access_token,
+        apikey: BILLING.supabaseAnonKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    })
+    const data = await resp.json().catch(() => ({}))
+    if (!resp.ok || !data.url) {
+      const err = new Error(data.error || fn + " failed")
+      err.code = data.error
+      throw err
+    }
+    location.href = data.url
+  }
+
+  function checkout(session, planId) {
+    return callFn(session, "stripe-checkout",
+      { plan_id: planId, return_url: baseUrl(), currency: CURRENCY })
+  }
+
+  function checkoutErrorMessage(e) {
+    // 409s from stripe-checkout: an entitled subscription already exists.
+    if (e.code === "already_subscribed")
+      return "Tu as déjà un abonnement sur le web. Modifie-le dans « Gérer ton abonnement », plus bas."
+    if (e.code === "store_subscription_active")
+      return "Ton abonnement App Store est toujours actif. Payer ici aussi te facturerait deux fois, alors gère-le plutôt dans l’App Store."
+    return "Un problème est survenu au lancement du paiement. Réessaie."
+  }
+
+  // Two app stores, two identities — the page can't know whether this person
+  // lives on Apple or Google, so a sign-in click reveals the chooser and the
+  // chosen provider resumes the pending action after the OAuth round trip.
+  // Either way it's the same account the app uses, so the purchase lands on
+  // the same Supabase user with no email matching.
+  let pendingAuth = null
+  const signinRow = document.getElementById("signin-choice")
+  document.body.appendChild(signinRow)   // out of the section's stacking context: always on top
+  const closeSignin = () => { signinRow.hidden = true; pendingAuth = null }
+  signinRow.addEventListener("click", (ev) => { if (ev.target === signinRow || ev.target.closest("[data-signin-close]")) closeSignin() })
+  addEventListener("keydown", (ev) => { if (ev.key === "Escape" && !signinRow.hidden) closeSignin() })
+  document.querySelectorAll("[data-signin]").forEach((a) => {
+    a.addEventListener("click", (ev) => {
+      ev.preventDefault()
+      const suffix = pendingAuth && pendingAuth.manage ? "?manage=1"
+        : pendingAuth && pendingAuth.plan ? "?plan=" + pendingAuth.plan : ""
+      sb.auth.signInWithOAuth({
+        provider: a.dataset.signin,
+        options: { redirectTo: baseUrl() + suffix },
+      })
+    })
+  })
+
+  async function buy(planId, button) {
+    errEl.style.display = "none"
+    button.disabled = true
+    try {
+      const { data: { session } } = await sb.auth.getSession()
+      if (!session) {
+        pendingAuth = { plan: planId }
+        signinRow.hidden = false
+        return
+      }
+      signinRow.hidden = true
+      await checkout(session, planId)
+    } catch (e) {
+      showError(checkoutErrorMessage(e))
+      console.error(e)
+    } finally {
+      button.disabled = false
+    }
+  }
+
+  // Self-serve cancel / plan change / card update — Stripe's hosted portal.
+  // A web subscription can't be cancelled from the App Store, so this link
+  // is the only way out; it must be visible whenever web billing is.
+  const manageRow = document.getElementById("manage-sub")
+  if (manageRow) manageRow.hidden = false
+  async function openPortal() {
+    errEl.style.display = "none"
+    try {
+      const { data: { session } } = await sb.auth.getSession()
+      if (!session) {
+        pendingAuth = { manage: true }
+        signinRow.hidden = false
+        return
+      }
+      signinRow.hidden = true
+      await callFn(session, "stripe-portal", { return_url: baseUrl() })
+    } catch (e) {
+      showError(e.code === "no_web_subscription"
+        ? "Ce compte n’a pas d’abonnement web. Si ton abonnement vient de l’app, gère-le dans les réglages d’abonnement de ton appareil."
+        : "Un problème est survenu à l’ouverture de la gestion de l’abonnement. Réessaie.")
+      console.error(e)
+    }
+  }
+  const manageLink = document.getElementById("manage-link")
+  if (manageLink) manageLink.addEventListener("click", (ev) => { ev.preventDefault(); openPortal() })
+
+  // The cycle lives on the renderer above (window.__cycle), so the toggle and
+  // the checkout can never disagree about which SKU is on screen.
+  document.querySelectorAll(".p-buy[data-tier]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const t = PLANS[btn.dataset.tier]
+      buy((t[window.__cycle] || t.monthly).id, btn)   // a monthly-only tier buys monthly under Annual
+    })
+  })
+
+  // Returning from the Apple sign-in redirect with ?plan= → continue to
+  // checkout; with ?manage=1 → continue to the portal.
+  const pendingPlan = params.get("plan")
+  if (pendingPlan) {
+    const { data: { session } } = await sb.auth.getSession()
+    if (session) {
+      history.replaceState(null, "", baseUrl())
+      checkout(session, pendingPlan).catch((e) => { showError(checkoutErrorMessage(e)); console.error(e) })
+    }
+  } else if (params.get("manage") === "1") {
+    const { data: { session } } = await sb.auth.getSession()
+    if (session) {
+      history.replaceState(null, "", baseUrl())
+      openPortal()
+    }
+  }
+}
+</script>
+<script type="module">
+// ── live app screens (web/kit): the Talk section plays a news talk, beat by beat with its bullets
+import "./kit/nawana-ui.js";
+const talk = document.getElementById("talk-call");
+if (talk) talk.scene = async s => {
+  s.goals(["bike to work", "safer", "give it a try"]);
+  await s.sleep(500);
+  s.beat(1);
+  await s.say("Saw the news about the new bike lanes? Would you ever bike to work?");
+  s.beat(2);
+  await s.listen();
+  await s.sleep(900);
+  await s.user("Um, maybe… if it is more safe, I will try it.");
+  s.tick(1);
+  s.beat(3);
+  s.fix({ text: "Maybe, if it <b>were safer</b>, I'd <b>give it a try</b>.", note: "C’est une hypothèse, donc were et I’d" });
+  await s.sleep(600);
+  await s.say("Same here. A lane with a real barrier would change everything for me.");
+  s.tick(2); s.done();
+  await s.sleep(2800);
+};
+</script>
+<!-- lang:js -->
+<script>
+document.addEventListener("click", function (e) {
+  document.querySelectorAll("details.langpick[open]").forEach(function (d) { if (!d.contains(e.target)) d.removeAttribute("open"); });
+});
+</script>
+<!-- /lang:js -->
+</body>
+</html>

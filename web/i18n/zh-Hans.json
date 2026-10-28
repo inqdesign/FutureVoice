@@ -1,0 +1,766 @@
+[
+ {
+  "en": "<title>nawana: Learn the language with the fluent you</title>",
+  "text": "<title>nawana：和流利的自己一起学语言</title>"
+ },
+ {
+  "en": "<meta name=\"description\" content=\"The most personal way to learn a language. Talk with your fluent future voice every day, then study from a textbook made of what you actually said. iOS app.\" />",
+  "text": "<meta name=\"description\" content=\"最个人化的语言学习方式。每天和流利的未来的自己通话，再用你亲口说过的话做成的教材来学习。iOS 应用。\" />"
+ },
+ {
+  "en": "<meta property=\"og:title\" content=\"nawana: Learn the language with the fluent you\" />",
+  "text": "<meta property=\"og:title\" content=\"nawana：和流利的自己一起学语言\" />"
+ },
+ {
+  "en": "<meta property=\"og:description\" content=\"Sixty seconds of recording builds your fluent future voice. Talk with it every day, then study from your own textbook.\" />",
+  "text": "<meta property=\"og:description\" content=\"录音 60 秒，就有了流利的未来的你的声音。每天和它通话，再用专属于你的教材学习。\" />"
+ },
+ {
+  "en": "      <a href=\"#pricing\" id=\"nav-pricing\" hidden>Pricing</a>",
+  "text": "      <a href=\"#pricing\" id=\"nav-pricing\" hidden>价格</a>"
+ },
+ {
+  "en": "      <a class=\"btn-store\" href=\"#\" data-appstore><svg viewBox=\"0 0 384 512\" fill=\"currentColor\" aria-hidden=\"true\"><use href=\"#applelogo\"/></svg><span class=\"tx\"><small>Download on the</small><b>App Store</b></span></a>",
+  "text": "      <a class=\"btn-store\" href=\"#\" data-appstore><svg viewBox=\"0 0 384 512\" fill=\"currentColor\" aria-hidden=\"true\"><use href=\"#applelogo\"/></svg><span class=\"tx\"><small>下载于</small><b>App Store</b></span></a>"
+ },
+ {
+  "en": "      <button class=\"nav-burger\" id=\"nav-burger\" type=\"button\" aria-label=\"Menu\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M3 6h18M3 12h18M3 18h18\"/></svg></button>",
+  "text": "      <button class=\"nav-burger\" id=\"nav-burger\" type=\"button\" aria-label=\"菜单\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M3 6h18M3 12h18M3 18h18\"/></svg></button>"
+ },
+ {
+  "en": "    <a href=\"#pricing\" id=\"nav-pricing-m\" hidden>Pricing</a>",
+  "text": "    <a href=\"#pricing\" id=\"nav-pricing-m\" hidden>价格</a>"
+ },
+ {
+  "en": "      <div class=\"n-kicker rv\"><i></i>The most personal way to learn a language</div>",
+  "text": "      <div class=\"n-kicker rv\"><i></i>最个人化的语言学习方式</div>"
+ },
+ {
+  "en": "      <h1 class=\"rv\" style=\"--d:0.06s\">Learn the language<br />with the <span class=\"px-k\">fluent you</span>.</h1>",
+  "text": "      <h1 class=\"rv\" style=\"--d:0.06s\">和流利的自己，<br />一起学语言。</h1>"
+ },
+ {
+  "en": "      <p class=\"n-sub rv\" style=\"--d:0.12s\">Talk when you want, about what you want,<br />and study from your own textbook.</p>",
+  "text": "      <p class=\"n-sub rv\" style=\"--d:0.12s\">想聊就聊，想聊什么就聊什么，<br />再用专属于你的教材学习。</p>"
+ },
+ {
+  "en": "        <a class=\"btn-store\" href=\"#\" data-appstore><svg viewBox=\"0 0 384 512\" fill=\"currentColor\" aria-hidden=\"true\"><use href=\"#applelogo\"/></svg><span class=\"tx\"><small>Download on the</small><b>App Store</b></span></a>",
+  "text": "        <a class=\"btn-store\" href=\"#\" data-appstore><svg viewBox=\"0 0 384 512\" fill=\"currentColor\" aria-hidden=\"true\"><use href=\"#applelogo\"/></svg><span class=\"tx\"><small>在 App Store</small><b>下载</b></span></a>"
+ },
+ {
+  "en": "      <span class=\"n-note rv\" style=\"--d:0.24s\"><b>iOS 17+</b> · First 20 minutes free</span>",
+  "text": "      <span class=\"n-note rv\" style=\"--d:0.24s\"><b>iOS 17 及以上</b> · 前 20 分钟免费</span>"
+ },
+ {
+  "en": "        <div class=\"s-cap\"><div class=\"ix\">01 / 05</div><h3>Make the <span class=\"px-k\">fluent future you</span>,<br />in your own voice</h3><p>Read aloud for a minute. You pick the accent and the pace.</p></div>",
+  "text": "        <div class=\"s-cap\"><div class=\"ix\">01 / 05</div><h3>用自己的声音，<br />打造流利的未来的你</h3><p>朗读一分钟就行。口音和语速由你来选。</p></div>"
+ },
+ {
+  "en": "        <div class=\"s-cap\"><div class=\"ix\">02 / 05</div><h3>Then talk<br />with that future you</h3><p>Stumble freely. Every turn comes back corrected.</p></div>",
+  "text": "        <div class=\"s-cap\"><div class=\"ix\">02 / 05</div><h3>然后，和那个<br />未来的你聊天</h3><p>尽管磕磕绊绊。每一轮都会改好再还给你。</p></div>"
+ },
+ {
+  "en": "        <div class=\"s-cap\"><div class=\"ix\">03 / 05</div><h3>Study from your<br />own textbook</h3><p>The exact expressions, words, and grammar you just used.</p></div>",
+  "text": "        <div class=\"s-cap\"><div class=\"ix\">03 / 05</div><h3>用专属于你的<br />教材学习</h3><p>就是你刚才用过的用语、单词和语法。</p></div>"
+ },
+ {
+  "en": "        <div class=\"s-cap\"><div class=\"ix\">04 / 05</div><h3>The more you speak,<br />the more it stacks</h3><p>Words, expressions, sentences. Automatically.</p></div>",
+  "text": "        <div class=\"s-cap\"><div class=\"ix\">04 / 05</div><h3>说得越多，<br />攒得越多</h3><p>单词、用语、句子，自动积累。</p></div>"
+ },
+ {
+  "en": "        <div class=\"s-cap\"><div class=\"ix\">05 / 05</div><h3>A level measured,<br />not guessed</h3><p>Only from what you actually said.</p></div>",
+  "text": "        <div class=\"s-cap\"><div class=\"ix\">05 / 05</div><h3>水平是测出来的，<br />不是猜出来的</h3><p>只根据你实际说过的话。</p></div>"
+ },
+ {
+  "en": "        <div class=\"stg stg0\" data-step=\"0\"><div class=\"stk\" data-lang=\"en\" style=\"left:calc(var(--pw) * -0.5 - min(250px, 13vw) - 192px);top:-140px;--r:-4deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇺🇸🇬🇧</span><div><b>English</b></div></div></div></div><div class=\"stk\" data-lang=\"ja\" style=\"left:calc(var(--pw) * -0.5 - min(50px, 2.6vw) - 192px);top:20px;--r:3deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇯🇵</span><div><b>日本語</b><small>Japanese</small></div></div></div></div><div class=\"stk\" data-lang=\"de\" style=\"left:calc(var(--pw) * -0.5 - min(190px, 9.9vw) - 192px);top:190px;--r:-2deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇩🇪</span><div><b>Deutsch</b><small>German</small></div></div></div></div><div class=\"stk\" data-lang=\"ko\" style=\"left:calc(var(--pw) * 0.5 + min(150px, 7.8vw));top:-100px;--r:4deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇰🇷</span><div><b>한국어</b><small>Korean</small></div></div></div></div><div class=\"stk\" data-lang=\"es\" style=\"left:calc(var(--pw) * 0.5 + min(40px, 2.1vw));top:110px;--r:-3deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇲🇽🇪🇸</span><div><b>Español</b><small>Spanish</small></div></div></div></div></div>",
+  "text": "        <div class=\"stg stg0\" data-step=\"0\"><div class=\"stk\" data-lang=\"en\" style=\"left:calc(var(--pw) * -0.5 - min(250px, 13vw) - 192px);top:-140px;--r:-4deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇺🇸🇬🇧</span><div><b>English</b></div></div></div></div><div class=\"stk\" data-lang=\"ja\" style=\"left:calc(var(--pw) * -0.5 - min(50px, 2.6vw) - 192px);top:20px;--r:3deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇯🇵</span><div><b>日本語</b><small>日语</small></div></div></div></div><div class=\"stk\" data-lang=\"de\" style=\"left:calc(var(--pw) * -0.5 - min(190px, 9.9vw) - 192px);top:190px;--r:-2deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇩🇪</span><div><b>Deutsch</b><small>德语</small></div></div></div></div><div class=\"stk\" data-lang=\"ko\" style=\"left:calc(var(--pw) * 0.5 + min(150px, 7.8vw));top:-100px;--r:4deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇰🇷</span><div><b>한국어</b><small>韩语</small></div></div></div></div><div class=\"stk\" data-lang=\"es\" style=\"left:calc(var(--pw) * 0.5 + min(40px, 2.1vw));top:110px;--r:-3deg;width:192px\"><div class=\"b\"><div class=\"lang\"><span class=\"fl\">🇲🇽🇪🇸</span><div><b>Español</b><small>西班牙语</small></div></div></div></div></div>"
+ },
+ {
+  "en": "        <div class=\"stg\" data-step=\"1\"><div class=\"stk sl\" style=\"--w:230px;--r:-2deg\"><div class=\"b\"><div class=\"k\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M4 10v4M8 7v10M12 4v16M16 8v8M20 10v4\"/></svg>One minute of reading</div><div class=\"row\"><nw-futureself mode=\"listening\" level=\"0.55\" style=\"width:110px;height:42px\"></nw-futureself><span class=\"num\">0:47</span></div><div class=\"n\">Just read it aloud</div></div></div><div class=\"stk sr1\" style=\"--w:270px;--r:2deg\"><div class=\"b\"><div class=\"k\">Accent</div><div class=\"chips\"><span>American</span><span class=\"on\">British</span><span>Australian</span></div><div class=\"n\">Same voice, the accent you pick</div></div></div><div class=\"stk sr2\" style=\"--w:260px;--r:-2deg\"><div class=\"b\"><div class=\"k\">Pace</div><div class=\"chips\"><span>Normal</span><span class=\"on\">Relaxed</span><span>Slow</span></div></div></div></div>",
+  "text": "        <div class=\"stg\" data-step=\"1\"><div class=\"stk sl\" style=\"--w:230px;--r:-2deg\"><div class=\"b\"><div class=\"k\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M4 10v4M8 7v10M12 4v16M16 8v8M20 10v4\"/></svg>一分钟朗读</div><div class=\"row\"><nw-futureself mode=\"listening\" level=\"0.55\" style=\"width:110px;height:42px\"></nw-futureself><span class=\"num\">0:47</span></div><div class=\"n\">照着读出来就行</div></div></div><div class=\"stk sr1\" style=\"--w:270px;--r:2deg\"><div class=\"b\"><div class=\"k\">口音</div><div class=\"chips\"><span>美式</span><span class=\"on\">英式</span><span>澳式</span></div><div class=\"n\">同一个声音，换成你选的口音</div></div></div><div class=\"stk sr2\" style=\"--w:260px;--r:-2deg\"><div class=\"b\"><div class=\"k\">语速</div><div class=\"chips\"><span>正常</span><span class=\"on\">从容</span><span>慢</span></div></div></div></div>"
+ },
+ {
+  "en": "        <div class=\"stg\" data-step=\"2\"><div class=\"stk sl\" style=\"--w:230px;--r:-2deg\"><div class=\"b\"><div class=\"k\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M4 10v4M8 7v10M12 4v16M16 8v8M20 10v4\"/></svg>It answers in your voice</div><nw-futureself mode=\"speaking\" level=\"voice\" style=\"width:150px;height:56px\"></nw-futureself></div></div><div class=\"stk sr1\" style=\"--w:280px;--r:2deg\"><div class=\"b\"><div class=\"k\">What you said</div><div class=\"say\">It was a busy week. I <u>go</u> to three meetings.</div></div></div><div class=\"stk sr2\" style=\"--w:290px;--r:-2deg\"><div class=\"b\"><div class=\"k\">The fluent you's version</div><div class=\"say\">It was a busy week. I <b class=\"fx\">went</b> to three meetings.</div><div class=\"n\">It already happened, so: past tense</div></div></div></div>",
+  "text": "        <div class=\"stg\" data-step=\"2\"><div class=\"stk sl\" style=\"--w:230px;--r:-2deg\"><div class=\"b\"><div class=\"k\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M4 10v4M8 7v10M12 4v16M16 8v8M20 10v4\"/></svg>用你的声音回答你</div><nw-futureself mode=\"speaking\" level=\"voice\" style=\"width:150px;height:56px\"></nw-futureself></div></div><div class=\"stk sr1\" style=\"--w:280px;--r:2deg\"><div class=\"b\"><div class=\"k\">你说的</div><div class=\"say\">It was a busy week. I <u>go</u> to three meetings.</div></div></div><div class=\"stk sr2\" style=\"--w:290px;--r:-2deg\"><div class=\"b\"><div class=\"k\">流利的你的说法</div><div class=\"say\">It was a busy week. I <b class=\"fx\">went</b> to three meetings.</div><div class=\"n\">已经发生了，所以用过去时</div></div></div></div>"
+ },
+ {
+  "en": "        <div class=\"stg\" data-step=\"3\"><div class=\"stk sl\" style=\"--w:240px;--r:-2deg\"><div class=\"b\"><div class=\"k\">The book this talk made</div><div class=\"chips\"><span>Words <i>+5</i></span><span>Phrases <i>+3</i></span><span>Lines <i>+2</i></span></div></div></div><div class=\"stk sr1\" style=\"--w:270px;--r:2deg\"><div class=\"b\"><div class=\"k\">Review card</div><div class=\"say\"><s>I go to</s> → <b class=\"fx\">I went to</b></div><div class=\"n\">Your slip becomes a card</div></div></div><div class=\"stk sr2\" style=\"--w:200px;--r:-2deg\"><div class=\"b\"><div class=\"k\">This talk</div><div class=\"row\"><span class=\"num big\">75</span><span class=\"n\">scored at B1</span></div></div></div></div>",
+  "text": "        <div class=\"stg\" data-step=\"3\"><div class=\"stk sl\" style=\"--w:240px;--r:-2deg\"><div class=\"b\"><div class=\"k\">这通对话生成的复习本</div><div class=\"chips\"><span>单词 <i>+5</i></span><span>用语 <i>+3</i></span><span>句子 <i>+2</i></span></div></div></div><div class=\"stk sr1\" style=\"--w:270px;--r:2deg\"><div class=\"b\"><div class=\"k\">复习卡</div><div class=\"say\"><s>I go to</s> → <b class=\"fx\">I went to</b></div><div class=\"n\">说错的句子变成卡片</div></div></div><div class=\"stk sr2\" style=\"--w:200px;--r:-2deg\"><div class=\"b\"><div class=\"k\">这次对话</div><div class=\"row\"><span class=\"num big\">75</span><span class=\"n\">按 B1 标准评分</span></div></div></div></div>"
+ },
+ {
+  "en": "        <div class=\"stg\" data-step=\"4\"><div class=\"stk sl\" style=\"--w:240px;--r:-2deg\"><div class=\"b\"><div class=\"k\">Checked off by saying it</div><div class=\"row\"><div style=\"flex:1\"><b class=\"w\">exhausting</b><div class=\"n\">adjective · very tiring</div></div><svg class=\"okc\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"10\" fill=\"#34C759\"/><path d=\"M7.5 12.3l3 3 6-6.4\" fill=\"none\" stroke=\"#fff\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></div></div></div><div class=\"stk sr1\" style=\"--w:220px;--r:2deg\"><div class=\"b\"><div class=\"k\">Words you used this week</div><span class=\"num big\">+12</span></div></div><div class=\"stk sr2\" style=\"--w:260px;--r:-2deg\"><div class=\"b\"><div class=\"k\">Used for the first time</div><div class=\"chips\"><span>negotiate</span><span>genuinely</span></div></div></div></div>",
+  "text": "        <div class=\"stg\" data-step=\"4\"><div class=\"stk sl\" style=\"--w:240px;--r:-2deg\"><div class=\"b\"><div class=\"k\">说出口就打勾</div><div class=\"row\"><div style=\"flex:1\"><b class=\"w\">exhausting</b><div class=\"n\">形容词 · 让人筋疲力尽的</div></div><svg class=\"okc\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"10\" fill=\"#34C759\"/><path d=\"M7.5 12.3l3 3 6-6.4\" fill=\"none\" stroke=\"#fff\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></div></div></div><div class=\"stk sr1\" style=\"--w:220px;--r:2deg\"><div class=\"b\"><div class=\"k\">这周你用过的单词</div><span class=\"num big\">+12</span></div></div><div class=\"stk sr2\" style=\"--w:260px;--r:-2deg\"><div class=\"b\"><div class=\"k\">第一次用上</div><div class=\"chips\"><span>negotiate</span><span>genuinely</span></div></div></div></div>"
+ },
+ {
+  "en": "        <div class=\"stg\" data-step=\"5\"><div class=\"stk sr1\" style=\"--w:230px;--r:2deg\"><div class=\"b\"><div class=\"k\">Estimated level</div><span class=\"px\">B1 → B2</span></div></div><div class=\"stk sr2\" style=\"--w:270px;--r:-2deg\"><div class=\"b\"><div class=\"k\">From what you actually said</div><div class=\"bars\"><span>Vocabulary<i><b style=\"width:82%\"></b></i></span><span>Grammar<i><b style=\"width:71%\"></b></i></span><span>Fluency<i><b style=\"width:74%\"></b></i></span></div></div></div></div>",
+  "text": "        <div class=\"stg\" data-step=\"5\"><div class=\"stk sr1\" style=\"--w:230px;--r:2deg\"><div class=\"b\"><div class=\"k\">估计水平</div><span class=\"px\">B1 → B2</span></div></div><div class=\"stk sr2\" style=\"--w:270px;--r:-2deg\"><div class=\"b\"><div class=\"k\">只看你实际说过的话</div><div class=\"bars\"><span>Vocabulary<i><b style=\"width:82%\"></b></i></span><span>Grammar<i><b style=\"width:71%\"></b></i></span><span>Fluency<i><b style=\"width:74%\"></b></i></span></div></div></div></div>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><span class=\"mono\">01</span>Talk · Output</div>",
+  "text": "      <div class=\"kicker rv\"><span class=\"mono\">01</span>Talk · 输出</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">Say what you’re thinking,<br />comfortably.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">脑子里想的，<br />轻松说出来。</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>It’s your voice, not a stranger’s.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>因为那不是陌生人的声音，是你自己的。</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>No one to feel judged by.</b> The words start coming out.</span></li>",
+  "text": "        <li data-beat=\"2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>没有人会对你评头论足。</b>话自然就说出来了。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Your news, your situations, free talk.</b> Whenever you want.</span></li>",
+  "text": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>感兴趣的新闻、你的情境、自由话题。</b>想聊就聊。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Every turn comes back fluent.</b></span></li>",
+  "text": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>每一轮，都会收到流利的说法。</b></span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><span class=\"mono\">02</span>Call · Habit</div>",
+  "text": "      <div class=\"kicker rv\"><span class=\"mono\">02</span>Call · 习惯</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">Instead of opening an app,<br />you pick up a call.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">不用打开应用，<br />接起电话就行。</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>At the time you set, the future you calls first.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>到了你定的时间，未来的你会先打来。</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>It rings like an alarm,</b> and the talk starts the moment you answer.</span></li>",
+  "text": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>像闹钟一样响起，</b>一接通，对话就开始。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Your last talk, the news, small talk.</b> A different subject each time, and every call opens with a question.</span></li>",
+  "text": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>上次的话题、新闻、闲聊。</b>每次聊的都不一样，开口第一句总是一个问题。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"4\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Missed it? That’s fine.</b> No scolding. It just calls again next time.</span></li>",
+  "text": "        <li data-beat=\"4\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>没接到也没关系。</b>不会责怪你，下次时间到了再打来。</span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><span class=\"mono\">03</span>Say it again · Replay</div>",
+  "text": "      <div class=\"kicker rv\"><span class=\"mono\">03</span>Say it again · 复盘</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">The call you just had,<br />once more, the right way.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">刚才那通电话，<br />好好再来一遍。</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>Your lines come back corrected. The answers stay exactly as they were.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>你的台词换成改好的句子，对方的回答原封不动。</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>The whole call, not just the fixes,</b> lived again from the top.</span></li>",
+  "text": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>不只是改过的句子，而是整通电话，</b>从头再过一遍。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"2 3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Read the line on the prompter,</b> and the answer you heard then plays next.</span></li>",
+  "text": "        <li data-beat=\"2 3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>读出提词器上的那一句，</b>当时听到的回答就接着播放。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"4\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Every line gets a score.</b> Stuck on one? Try it again right there.</span></li>",
+  "text": "        <li data-beat=\"4\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>每一句都有分数。</b>卡住的那句，当场再来。</span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><span class=\"mono\">04</span>Watch · Input</div>",
+  "text": "      <div class=\"kicker rv\"><span class=\"mono\">04</span>Watch · 输入</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">The moments you need it<br />are yours alone.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">需要外语的时刻，<br />每个人都不一样。</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>Set up the situation ahead of you, and live it early.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>设定即将到来的情境，提前经历一遍。</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Exams, interviews, speeches, travel, small talk.</b> One line opens the whole conversation.</span></li>",
+  "text": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>考试、面试、演讲、旅行、闲聊。</b>写下一句，整段对话就展开了。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Your lines, in your fluent voice.</b></span></li>",
+  "text": "        <li data-beat=\"2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>你的台词，用流利的你的声音说出来。</b></span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Any line you want, one tap</b> to shadow it right there.</span></li>",
+  "text": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>想要的句子点一下，</b>当场跟读。</span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><span class=\"mono\">05</span>Review · Textbook</div>",
+  "text": "      <div class=\"kicker rv\"><span class=\"mono\">05</span>Review · 教材</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">The call you just had,<br />now a textbook.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">刚才那通电话，<br />变成一本教材。</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>Not someone else’s workbook. You study what you actually said.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>不是别人编的练习册，学的是你实际说过的话。</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Hang up, and the textbook is there.</b> Four chapters: words, expressions, shadowing, drills.</span></li>",
+  "text": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>一挂断，教材就有了。</b>单词、用语、跟读、训练，共四章。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>What you said, and what your fluent self said.</b> Both go into your notebook.</span></li>",
+  "text": "        <li data-beat=\"2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>你用的说法，和流利的你用的说法。</b>都收进你的单词本。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Every mistake sits beside its fix,</b> with one line on why.</span></li>",
+  "text": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>说错的句子和改好的句子并排放，</b>再用一句话说明为什么改。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"4\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Spaced repetition brings it back just as you forget,</b> and you answer out loud.</span></li>",
+  "text": "        <li data-beat=\"4\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>快忘的时候，间隔重复把它带回来，</b>你开口作答。</span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><span class=\"mono\">06</span>Shadowing · Imprint</div>",
+  "text": "      <div class=\"kicker rv\"><span class=\"mono\">06</span>Shadowing · 内化</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">Shadow it until<br />it’s automatic.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">跟读到<br />脱口而出为止。</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>The voice you match is your own.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>你要模仿的声音，就是你自己。</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Sync shadowing.</b> A verdict on every word.</span></li>",
+  "text": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>同步跟读。</b>每个词都有结果。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Loop just the hard part at 0.5×.</b></span></li>",
+  "text": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>只把难的那段用 0.5× 反复练。</b></span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><span class=\"mono\">07</span>Speech · Presenting</div>",
+  "text": "      <div class=\"kicker rv\"><span class=\"mono\">07</span>Speech · 上台</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">Say what you prepared,<br />the way you prepared it.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">准备好的话，<br />照准备的说。</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>Put your script up and read it aloud, like the real thing.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>把稿子调出来，像正式上场一样大声读。</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>A prompter that follows your voice.</b> Camera on or off.</span></li>",
+  "text": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>跟着你的声音翻页的提词器。</b>相机开或关都行。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>A score and a note from the coach when you finish,</b> and what it was measured on.</span></li>",
+  "text": "        <li data-beat=\"2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>读完会有分数和教练的一句话，</b>还会告诉你按什么标准评的。</span></li>"
+ },
+ {
+  "en": "        <li><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Write the script yourself, or with AI.</b> On Plus and Max.</span></li>",
+  "text": "        <li><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>稿子可以自己写，也可以和 AI 一起写。</b>Plus 和 Max 可用。</span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><span class=\"mono\">08</span>Routine · Promise</div>",
+  "text": "      <div class=\"kicker rv\"><span class=\"mono\">08</span>Routine · 约定</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">Plan your week,<br />then test your week.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">规划一周，<br />再考一考这一周。</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>Decide what each day holds, and it becomes a promise to yourself.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>定好每天要做什么，它就成了和自己的约定。</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Talks, say it again, listening, shadowing, speech, review.</b> Reminded at the times you chose.</span></li>",
+  "text": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>对话、重说一次、听力、跟读、演讲、复习。</b>到了你定的时间就提醒你。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Your streak runs on your own bar.</b> It only grows on days you keep the promise.</span></li>",
+  "text": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>连续天数按你自己定的标准来算。</b>只有守住约定的日子才会延续。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"4\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>The weekly test is made of your week.</b> Words and phrases you put off, grammar you got wrong.</span></li>",
+  "text": "        <li data-beat=\"4\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>每周测验只出自你的这一周。</b>你推迟的单词和用语，你说错的语法。</span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><span class=\"mono\">09</span>Weekly · Check-in</div>",
+  "text": "      <div class=\"kicker rv\"><span class=\"mono\">09</span>Weekly · 检查</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">When the week ends,<br />your week is the test.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">一周结束，<br />就拿这一周来考。</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>Not a stranger’s workbook. What you said this week.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>不是陌生人编的练习册，而是你这周说过的话。</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>A look back at your week.</b> How many days, and what became yours.</span></li>",
+  "text": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>回顾这一周。</b>练了几天，哪些已经变成你的。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>A note from the coach.</b> The grammar you kept tripping on, and better words, in your own sentences.</span></li>",
+  "text": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>教练的一句话。</b>老是卡住的语法和更好的用词，就用你自己的句子来讲。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"11 12 13\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>The weekly test.</b> Built from the words and phrases you put off, and your grammar slips asked again in new sentences.</span></li>",
+  "text": "        <li data-beat=\"11 12 13\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>每周测验。</b>用你推迟的单词和用语出题，说错的语法换成新句子再考一次。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"14\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>What you miss comes back.</b> Again on next week’s test.</span></li>",
+  "text": "        <li data-beat=\"14\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>答错的会回来。</b>下周的测验里再见。</span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>People · Personas</div>",
+  "text": "      <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>People · 人物设定</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">The people from your life<br />become the cast.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">你生活里的人，<br />成为练习的角色。</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>Your people, your situations.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>练习，永远是和你的人、在你的情境里。</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Barista, team lead, doctor.</b> Describe them out loud, and they play in character.</span></li>",
+  "text": "        <li data-beat=\"1 2\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>咖啡师、组长、家庭医生。</b>开口描述一下，他们就会照着人设和你对话。</span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Your fluent self at the center.</b></span></li>",
+  "text": "        <li data-beat=\"3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>中心是流利的你。</b></span></li>"
+ },
+ {
+  "en": "      <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Words · Vocabulary</div>",
+  "text": "      <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Words · 词汇</div>"
+ },
+ {
+  "en": "      <h2 class=\"rv\" style=\"--d:0.06s\">Every word you speak<br />joins your world.</h2>",
+  "text": "      <h2 class=\"rv\" style=\"--d:0.06s\">你说过的每个词，<br />都汇入你的词汇世界。</h2>"
+ },
+ {
+  "en": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>A living map of your vocabulary.</strong></p>",
+  "text": "      <p class=\"one rv\" style=\"--d:0.12s\"><strong>一张活的词汇地图。</strong></p>"
+ },
+ {
+  "en": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>Your level shows in the size.</b></span></li>",
+  "text": "        <li data-beat=\"1\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>你的水平，从大小就看得出来。</b></span></li>"
+ },
+ {
+  "en": "        <li data-beat=\"2 3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>One tap: meaning and examples.</b> Bookmarked means studying, checked means known.</span></li>",
+  "text": "        <li data-beat=\"2 3\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg><span><b>点一下，释义和例句都在。</b>加书签表示在学，打勾表示已经会了。</span></li>"
+ },
+ {
+  "en": "      <div class=\"m-kick rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>One · Voice</div>",
+  "text": "      <div class=\"m-kick rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>一 · 声音</div>"
+ },
+ {
+  "en": "      <p class=\"w2-lead rv\" style=\"--d:0.06s\">Imitate a native all you want.<br /><b>Someone else’s voice<br />never becomes yours.</b></p>",
+  "text": "      <p class=\"w2-lead rv\" style=\"--d:0.06s\">再怎么模仿母语者，<br /><b>别人的声音<br />也不会变成你的。</b></p>"
+ },
+ {
+  "en": "      <p class=\"w2-line rv\" style=\"--d:0.12s\">The voice you’ll actually speak with<br /><b>is your own.</b></p>",
+  "text": "      <p class=\"w2-line rv\" style=\"--d:0.12s\">真正开口时用的声音，<br /><b>终究是你自己的。</b></p>"
+ },
+ {
+  "en": "      <p class=\"w2-line rv\" style=\"--d:0.18s\">So, a goal you can reach.<br /><b>Not “like a native”. The <span class=\"px-k\">fluent future you</span>.</b></p>",
+  "text": "      <p class=\"w2-line rv\" style=\"--d:0.18s\">所以，定一个够得着的目标。<br /><b>不是“像母语者一样”，而是流利的未来的你。</b></p>"
+ },
+ {
+  "en": "      <div class=\"m-kick rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Two · Training</div>",
+  "text": "      <div class=\"m-kick rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>二 · 训练</div>"
+ },
+ {
+  "en": "      <p class=\"w2-lead rv\" style=\"--d:0.06s\">The reason words won’t come out:<br /><b>pulling thoughts out of your head<br />was never trained.</b></p>",
+  "text": "      <p class=\"w2-lead rv\" style=\"--d:0.06s\">说不出口，是因为<br /><b>从来没练过<br />把脑子里的想法说出来。</b></p>"
+ },
+ {
+  "en": "      <p class=\"w2-line rv\" style=\"--d:0.12s\">Not memorized lines.<br /><b>Your own thoughts, in your own words. That’s where it starts.</b></p>",
+  "text": "      <p class=\"w2-line rv\" style=\"--d:0.12s\">不是背下来的句子，<br /><b>而是用自己的话说自己的想法。这才是起点。</b></p>"
+ },
+ {
+  "en": "      <p class=\"w2-line rv\" style=\"--d:0.18s\">Speak, get your grammar and phrasing fixed.<br /><b>What you said out there becomes your own textbook.</b></p>",
+  "text": "      <p class=\"w2-line rv\" style=\"--d:0.18s\">开口说，让语法和用语得到纠正。<br /><b>你在实战中说过的话，就成了你的专属教材。</b></p>"
+ },
+ {
+  "en": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>All of it, in one app</div>",
+  "text": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>全都在这一个应用里</div>"
+ },
+ {
+  "en": "    <h2 class=\"head rv\" style=\"--d:0.08s\">The whole app,<br />at a glance.</h2>",
+  "text": "    <h2 class=\"head rv\" style=\"--d:0.08s\">整个应用，<br />一眼看完。</h2>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">01</span><span class=\"nm\">60-second voice clone</span><span class=\"ds\">One short recording at setup builds your fluent future voice.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">01</span><span class=\"nm\">60 秒声音克隆</span><span class=\"ds\">设置时录一小段，就能做出流利的未来的你的声音。</span></div>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">02</span><span class=\"nm\">A fluent version, every turn</span><span class=\"ds\">Mid-conversation, what you just said comes back the way your fluent self would say it.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">02</span><span class=\"nm\">每一轮，都有流利的说法</span><span class=\"ds\">对话进行中，你刚说的话会以流利的你的说法回来。</span></div>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">03</span><span class=\"nm\">Sync shadowing</span><span class=\"ds\">Speak along with your fluent line and get a verdict on every word, plus your pace against the target.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">03</span><span class=\"nm\">同步跟读</span><span class=\"ds\">跟着流利的你的句子一起说，每个词都有结果，还能看到和目标相比的语速。</span></div>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">04</span><span class=\"nm\">The people from your life</span><span class=\"ds\">Describe them out loud and they become personas that talk like the real thing.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">04</span><span class=\"nm\">你生活里的人</span><span class=\"ds\">开口描述一下，他们就会变成说起话来像真人一样的人物设定。</span></div>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">05</span><span class=\"nm\">Conversations, previewed</span><span class=\"ds\">Watch your fluent self handle the situation, and shadow any line you want on the spot.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">05</span><span class=\"nm\">提前看的对话</span><span class=\"ds\">看流利的你怎么应对这个情境，想要的句子当场就能跟读。</span></div>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">06</span><span class=\"nm\">Speak-aloud review</span><span class=\"ds\">Fumbled lines return as drills right before you forget them. Answered out loud, never multiple choice.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">06</span><span class=\"nm\">开口复习</span><span class=\"ds\">说得磕磕绊绊的句子，会在你快忘的时候以训练题回来。开口作答，从不出选择题。</span></div>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">07</span><span class=\"nm\">Five-axis scorecard</span><span class=\"ds\">Vocabulary, grammar, expressiveness, fluency, pronunciation. Scored after every conversation, and pronunciation is what shadowing actually measured.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">07</span><span class=\"nm\">五维成绩单</span><span class=\"ds\">词汇、语法、表达力、流利度、发音。每次对话结束都会打分，发音用的是跟读时真正测到的分数。</span></div>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">08</span><span class=\"nm\">Words check themselves off</span><span class=\"ds\">A pool of about 8,000 CEFR-graded core words sits underneath, and every word you use is ticked automatically.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">08</span><span class=\"nm\">单词自动打勾</span><span class=\"ds\">底层有约 8,000 个按 CEFR 分级的核心单词，你用过的词会自动打勾。</span></div>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">09</span><span class=\"nm\">CEFR level, measured</span><span class=\"ds\">Your level is set from your real talks, vocabulary, grammar, fluency and expression together. B1 to B2 is a measurement, not an opinion.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">09</span><span class=\"nm\">实测 CEFR 水平</span><span class=\"ds\">根据你真实的对话，综合词汇、语法、流利度和表达来定水平。从 B1 到 B2，是测量，不是意见。</span></div>"
+ },
+ {
+  "en": "    <div class=\"srow\"><span class=\"ix\">10</span><span class=\"nm\">An honest weekly report</span><span class=\"ds\">Unlocks only after fifteen minutes of real speech. Silence over noise. It fits you better the more you talk.</span></div>",
+  "text": "    <div class=\"srow\"><span class=\"ix\">10</span><span class=\"nm\">诚实的每周报告</span><span class=\"ds\">实际说话累计满 15 分钟才会解锁。宁可沉默，也不给你噪音。说得越多，越贴合你。</span></div>"
+ },
+ {
+  "en": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Pricing</div>",
+  "text": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>价格</div>"
+ },
+ {
+  "en": "    <h2 class=\"rv\" style=\"--d:0.08s\">Choose how much<br />you want to talk each month.</h2>",
+  "text": "    <h2 class=\"rv\" style=\"--d:0.08s\">选一选，每个月<br />想聊多久。</h2>"
+ },
+ {
+  "en": "    <p class=\"pr-sub rv\" style=\"--d:0.11s\">Your first 20 minutes are free, no subscription needed.</p>",
+  "text": "    <p class=\"pr-sub rv\" style=\"--d:0.11s\">前 20 分钟免费，无需订阅。</p>"
+ },
+ {
+  "en": "      <button class=\"ct on\" data-cycle=\"monthly\" type=\"button\">Monthly</button>",
+  "text": "      <button class=\"ct on\" data-cycle=\"monthly\" type=\"button\">月付</button>"
+ },
+ {
+  "en": "      <button class=\"ct\" data-cycle=\"annual\" type=\"button\">Annual</button>",
+  "text": "      <button class=\"ct\" data-cycle=\"annual\" type=\"button\">年付</button>"
+ },
+ {
+  "en": "      <div><span class=\"p-name\">Light</span></div>",
+  "text": "      <div><span class=\"p-name\">Light</span></div>"
+ },
+ {
+  "en": "      <p class=\"p-note\">A steady habit, one routine at a time.</p>",
+  "text": "      <p class=\"p-note\">细水长流，从固定作息开始。</p>"
+ },
+ {
+  "en": "        <div><dt>Talk</dt><dd data-talk=\"light\">—</dd></div>",
+  "text": "        <div><dt>通话</dt><dd data-talk=\"light\">—</dd></div>"
+ },
+ {
+  "en": "        <div><dt>Personalized review textbook</dt><dd>Unlimited</dd></div>",
+  "text": "        <div><dt>个性化复习教材</dt><dd>无限制</dd></div>"
+ },
+ {
+  "en": "        <div><dt>Shadowing · words · replay · drills</dt><dd>Unlimited</dd></div>",
+  "text": "        <div><dt>跟读 · 单词 · 重听 · 训练</dt><dd>无限制</dd></div>"
+ },
+ {
+  "en": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Start on the App Store <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>",
+  "text": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>在 App Store 开始 <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>"
+ },
+ {
+  "en": "      <button class=\"btn btn-black p-buy\" data-tier=\"light\" type=\"button\" hidden>Subscribe <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></button>",
+  "text": "      <button class=\"btn btn-black p-buy\" data-tier=\"light\" type=\"button\" hidden>订阅 <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></button>"
+ },
+ {
+  "en": "      <div><span class=\"p-name\">Plus</span><span class=\"p-badge\">Most popular</span></div>",
+  "text": "      <div><span class=\"p-name\">Plus</span><span class=\"p-badge\">最多人选</span></div>"
+ },
+ {
+  "en": "      <p class=\"p-note\">Every day, for as long as you like.</p>",
+  "text": "      <p class=\"p-note\">每天都能聊，想聊多久就多久。</p>"
+ },
+ {
+  "en": "        <div><dt>Talk</dt><dd data-talk=\"plus\">—</dd></div>",
+  "text": "        <div><dt>通话</dt><dd data-talk=\"plus\">—</dd></div>"
+ },
+ {
+  "en": "        <div><dt>Speech</dt><dd>Included</dd></div>",
+  "text": "        <div><dt>演讲</dt><dd>包含</dd></div>"
+ },
+ {
+  "en": "        <div><dt>Personalized review textbook</dt><dd>Unlimited</dd></div>",
+  "text": "        <div><dt>个性化复习教材</dt><dd>无限制</dd></div>"
+ },
+ {
+  "en": "        <div><dt>Shadowing · words · replay · drills</dt><dd>Unlimited</dd></div>",
+  "text": "        <div><dt>跟读 · 单词 · 重听 · 训练</dt><dd>无限制</dd></div>"
+ },
+ {
+  "en": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Start on the App Store <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>",
+  "text": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>在 App Store 开始 <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>"
+ },
+ {
+  "en": "      <button class=\"btn btn-black p-buy\" data-tier=\"plus\" type=\"button\" hidden>Subscribe <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></button>",
+  "text": "      <button class=\"btn btn-black p-buy\" data-tier=\"plus\" type=\"button\" hidden>订阅 <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></button>"
+ },
+ {
+  "en": "      <div><span class=\"p-name\">Max</span></div>",
+  "text": "      <div><span class=\"p-name\">Max</span></div>"
+ },
+ {
+  "en": "      <p class=\"p-note\">For the months with a lot to prepare.</p>",
+  "text": "      <p class=\"p-note\">要准备的事多的那个月，尽情聊。</p>"
+ },
+ {
+  "en": "        <div><dt>Talk</dt><dd data-talk=\"max\">—</dd></div>",
+  "text": "        <div><dt>通话</dt><dd data-talk=\"max\">—</dd></div>"
+ },
+ {
+  "en": "        <div><dt>Speech</dt><dd>Included</dd></div>",
+  "text": "        <div><dt>演讲</dt><dd>包含</dd></div>"
+ },
+ {
+  "en": "        <div><dt>Personalized review textbook</dt><dd>Unlimited</dd></div>",
+  "text": "        <div><dt>个性化复习教材</dt><dd>无限制</dd></div>"
+ },
+ {
+  "en": "        <div><dt>Shadowing · words · replay · drills</dt><dd>Unlimited</dd></div>",
+  "text": "        <div><dt>跟读 · 单词 · 重听 · 训练</dt><dd>无限制</dd></div>"
+ },
+ {
+  "en": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Start on the App Store <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>",
+  "text": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>在 App Store 开始 <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>"
+ },
+ {
+  "en": "      <button class=\"btn btn-black p-buy\" data-tier=\"max\" type=\"button\" hidden>Subscribe <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></button>",
+  "text": "      <button class=\"btn btn-black p-buy\" data-tier=\"max\" type=\"button\" hidden>订阅 <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></button>"
+ },
+ {
+  "en": "      <h3 id=\"sp-title\">Sign in with your app account</h3><p>Your subscription links straight to the account you use in the app.</p>",
+  "text": "      <h3 id=\"sp-title\">用你在应用里的账号登录</h3><p>订阅会直接绑定到你在应用里使用的账号。</p>"
+ },
+ {
+  "en": "      <a class=\"btn btn-black sp-btn\" href=\"#\" data-signin=\"apple\"><svg viewBox=\"0 0 384 512\" fill=\"currentColor\" aria-hidden=\"true\"><use href=\"#applelogo\"/></svg>Continue with Apple</a>",
+  "text": "      <a class=\"btn btn-black sp-btn\" href=\"#\" data-signin=\"apple\"><svg viewBox=\"0 0 384 512\" fill=\"currentColor\" aria-hidden=\"true\"><use href=\"#applelogo\"/></svg>通过 Apple 继续</a>"
+ },
+ {
+  "en": "      <a class=\"btn sp-btn sp-g\" href=\"#\" data-signin=\"google\">Continue with Google</a>",
+  "text": "      <a class=\"btn sp-btn sp-g\" href=\"#\" data-signin=\"google\">通过 Google 继续</a>"
+ },
+ {
+  "en": "      <button class=\"sp-x\" type=\"button\" data-signin-close>Close</button>",
+  "text": "      <button class=\"sp-x\" type=\"button\" data-signin-close>关闭</button>"
+ },
+ {
+  "en": "    <p class=\"p-fine\" id=\"manage-sub\" hidden>Subscribed on the web? Change or cancel it in <a href=\"#\" id=\"manage-link\">Manage your subscription</a>.</p>",
+  "text": "    <p class=\"p-fine\" id=\"manage-sub\" hidden>在网页上订阅的？可以在<a href=\"#\" id=\"manage-link\">管理订阅</a>中更改或取消。</p>"
+ },
+ {
+  "en": "    <p class=\"p-fine\">Talk time only runs while the conversation is moving. Pauses are free. A new Watch scene uses 5 minutes of that same time, and watching one again is free. In a month you run short, you can add minutes in the app, and you can cancel anytime on the App Store.</p>",
+  "text": "    <p class=\"p-fine\">通话时间只在对话进行时计算，停顿不计。每个新的情境练习会从这部分时间里用掉 5 分钟，重看免费。哪个月时间不够，可以在应用里加购分钟数；订阅可随时在 App Store 取消。</p>"
+ },
+ {
+  "en": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Your voice stays yours</div>",
+  "text": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>你的声音，只属于你</div>"
+ },
+ {
+  "en": "    <h2 class=\"rv\" style=\"--d:0.08s\">A voice clone,<br />treated carefully.</h2>",
+  "text": "    <h2 class=\"rv\" style=\"--d:0.08s\">声音克隆，<br />我们小心对待。</h2>"
+ },
+ {
+  "en": "    <div class=\"tcell rv\"><div class=\"ix\">A</div><h4>Recorded exactly once</h4><p>Sixty seconds at setup, and that is all. Nothing is ever recorded outside a conversation you started.</p></div>",
+  "text": "    <div class=\"tcell rv\"><div class=\"ix\">A</div><h4>只录一次</h4><p>设置时的 60 秒，就是全部。在你自己发起的对话之外，绝不录音。</p></div>"
+ },
+ {
+  "en": "    <div class=\"tcell rv\" style=\"--d:0.08s\"><div class=\"ix\">B</div><h4>The clone answers to you</h4><p>Re-record or delete it anytime. Replacing it permanently deletes the previous clone.</p></div>",
+  "text": "    <div class=\"tcell rv\" style=\"--d:0.08s\"><div class=\"ix\">B</div><h4>克隆由你做主</h4><p>随时可以重录或删除。替换后，之前的克隆会被永久删除。</p></div>"
+ },
+ {
+  "en": "    <div class=\"tcell rv\" style=\"--d:0.16s\"><div class=\"ix\">C</div><h4>Practice stays on your device</h4><p>Conversations, drills, and progress live on your iPhone. To pick up on another device, they sync through your own iCloud, never our servers.</p></div>",
+  "text": "    <div class=\"tcell rv\" style=\"--d:0.16s\"><div class=\"ix\">C</div><h4>练习记录留在你的设备上</h4><p>对话、训练和学习进度都保存在你的 iPhone 上。想在其他设备上接着用，会通过你自己的 iCloud 同步，绝不经过我们的服务器。</p></div>"
+ },
+ {
+  "en": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Frequently asked</div>",
+  "text": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>常见问题</div>"
+ },
+ {
+  "en": "    <h2 class=\"rv\" style=\"--d:0.08s\">Questions.</h2>",
+  "text": "    <h2 class=\"rv\" style=\"--d:0.08s\">你可能想问。</h2>"
+ },
+ {
+  "en": "      <summary><span class=\"ix\">01</span>How is my voice made?</summary>",
+  "text": "      <summary><span class=\"ix\">01</span>我的声音是怎么做出来的？</summary>"
+ },
+ {
+  "en": "      <p class=\"a\"><span>One sixty-second recording at setup, and that is it. No recording is needed after that. Your fluent voice speaks every conversation, scene, and shadowing line.</span></p>",
+  "text": "      <p class=\"a\"><span>设置时录 60 秒，就这样。之后不需要再录任何东西。所有对话、情境练习和跟读，都由流利的你的声音来说。</span></p>"
+ },
+ {
+  "en": "      <summary><span class=\"ix\">02</span>Can I try it for free?</summary>",
+  "text": "      <summary><span class=\"ix\">02</span>可以免费试用吗？</summary>"
+ },
+ {
+  "en": "      <p class=\"a\"><span>Yes. Your first 20 minutes of talking are free, no subscription needed, and making your voice is free too.</span></p>",
+  "text": "      <p class=\"a\"><span>可以。前 20 分钟对话免费，无需订阅，制作声音也免费。</span></p>"
+ },
+ {
+  "en": "      <summary><span class=\"ix\">03</span>What does a subscription buy?</summary>",
+  "text": "      <summary><span class=\"ix\">03</span>订阅能得到什么？</summary>"
+ },
+ {
+  "en": "      <p class=\"a\"><span>A month of talk time. Light comes with 150 minutes, Plus 450 and Max 900. A new Watch scene uses 5 of those minutes, and watching one again is free. Review, replay, and shadowing are unlimited on every plan.</span></p>",
+  "text": "      <p class=\"a\"><span>一个月的通话时间。Light 含 150 分钟，Plus 450 分钟，Max 900 分钟。每个新的情境练习用掉其中 5 分钟，重看免费。复习、重听和跟读在所有方案中都无限制。</span></p>"
+ },
+ {
+  "en": "      <summary><span class=\"ix\">04</span>Can a complete beginner use it?</summary>",
+  "text": "      <summary><span class=\"ix\">04</span>完全零基础也能用吗？</summary>"
+ },
+ {
+  "en": "      <p class=\"a\"><span>Honestly, if you are starting from zero, it will be hard. It fits best once you can form sentences, however haltingly. From there every turn comes back fluent, the difficulty follows your level, and you speak more and more.</span></p>",
+  "text": "      <p class=\"a\"><span>说实话，如果完全从零开始，会很吃力。最适合已经能磕磕绊绊说出句子的人。从那里开始，每一轮都会收到流利的说法，难度跟着你的水平走，你会说得越来越多。</span></p>"
+ },
+ {
+  "en": "      <summary><span class=\"ix\">05</span>How do I know I am improving?</summary>",
+  "text": "      <summary><span class=\"ix\">05</span>怎么知道自己有没有进步？</summary>"
+ },
+ {
+  "en": "      <p class=\"a\"><span>Your CEFR level (A1 to C2) is measured from the words and sentences you actually spoke. It is a measurement, not an opinion, so progress shows up as a number.</span></p>",
+  "text": "      <p class=\"a\"><span>你的 CEFR 水平（A1 到 C2）是根据你实际说出的单词和句子测出来的。是测量，不是意见，所以进步会变成看得见的数字。</span></p>"
+ },
+ {
+  "en": "      <summary><span class=\"ix\">06</span>Is my voice and data safe?</summary>",
+  "text": "      <summary><span class=\"ix\">06</span>我的声音和数据安全吗？</summary>"
+ },
+ {
+  "en": "      <p class=\"a\"><span>Nothing is ever recorded outside a conversation you started. You can rebuild or delete the clone anytime. Conversations, drills, and progress stay on your iPhone, and if you turn on sync they go only to your own iCloud, never our servers.</span></p>",
+  "text": "      <p class=\"a\"><span>在你自己发起的对话之外，绝不录音。克隆随时可以重做或删除。对话、训练和学习进度保存在你的 iPhone 上；打开同步后，也只会传到你自己的 iCloud，绝不经过我们的服务器。</span></p>"
+ },
+ {
+  "en": "      <summary><span class=\"ix\">07</span>Which languages can I learn?</summary>",
+  "text": "      <summary><span class=\"ix\">07</span>可以学哪些语言？</summary>"
+ },
+ {
+  "en": "      <p class=\"a\"><span>English, German, Japanese, Spanish, and Korean. Adding a language never changes the price.</span></p>",
+  "text": "      <p class=\"a\"><span>英语、德语、日语、西班牙语和韩语。增加语言，价格不变。</span></p>"
+ },
+ {
+  "en": "    <h2 class=\"rv\">The <span class=\"px-k\">fluent future you</span>,<br />starting today.</h2>",
+  "text": "    <h2 class=\"rv\">流利的未来的你，<br />从今天开始。</h2>"
+ },
+ {
+  "en": "      <button class=\"fd-orb\" id=\"d-play\" type=\"button\" aria-label=\"Hear your future voice\">",
+  "text": "      <button class=\"fd-orb\" id=\"d-play\" type=\"button\" aria-label=\"听听未来的你的声音\">"
+ },
+ {
+  "en": "      <div class=\"fd-hint\">Hear your future voice</div>",
+  "text": "      <div class=\"fd-hint\">听听未来的你的声音</div>"
+ },
+ {
+  "en": "      <a class=\"btn-store\" href=\"#\" data-appstore><svg viewBox=\"0 0 384 512\" fill=\"currentColor\" aria-hidden=\"true\"><use href=\"#applelogo\"/></svg><span class=\"tx\"><small>Download on the</small><b>App Store</b></span></a>",
+  "text": "      <a class=\"btn-store\" href=\"#\" data-appstore><svg viewBox=\"0 0 384 512\" fill=\"currentColor\" aria-hidden=\"true\"><use href=\"#applelogo\"/></svg><span class=\"tx\"><small>在 App Store</small><b>下载</b></span></a>"
+ },
+ {
+  "en": "  <audio id=\"d-audio\" src=\"beta-en.mp3\" preload=\"none\"></audio>",
+  "text": "  <audio id=\"d-audio\" src=\"beta-en.mp3\" preload=\"none\"></audio>"
+ },
+ {
+  "en": "      <a href=\"privacy.html\">Privacy Policy</a>",
+  "text": "      <a href=\"privacy.html\">隐私政策</a>"
+ },
+ {
+  "en": "      <a href=\"terms.html\">Terms</a>",
+  "text": "      <a href=\"terms.html\">使用条款</a>"
+ },
+ {
+  "en": "      <a href=\"support.html\">Support</a>",
+  "text": "      <a href=\"support.html\">帮助与支持</a>"
+ },
+ {
+  "en": "      <a href=\"mailto:hello.dearroroapp@gmail.com\">Contact</a>",
+  "text": "      <a href=\"mailto:hello.dearroroapp@gmail.com\">联系我们</a>"
+ },
+ {
+  "en": "  audio.addEventListener('error', function(){ if(cap) cap.textContent='Couldn’t load the audio.'; });",
+  "text": "  audio.addEventListener('error', function(){ if(cap) cap.textContent='无法加载音频。'; });"
+ },
+ {
+  "en": "    talk: \"150 min / mo\", perDay: \"About 5 min a day\",",
+  "text": "    talk: \"150 分钟 / 月\", perDay: \"每天约 5 分钟\","
+ },
+ {
+  "en": "    monthly: { id: \"light_monthly\", price: \"$8.99\",   was: \"$9.99\",   per: \"/ mo\" },",
+  "text": "    monthly: { id: \"light_monthly\", price: \"$8.99\",   was: \"$9.99\",   per: \"/ 月\" },"
+ },
+ {
+  "en": "    annual:  { id: \"light_annual\",  price: \"$89.99\",  was: \"$99.99\",  per: \"/ yr · 2 months free\" },",
+  "text": "    annual:  { id: \"light_annual\",  price: \"$89.99\",  was: \"$99.99\",  per: \"/ 年 · 相当于免费 2 个月\" },"
+ },
+ {
+  "en": "    talk: \"450 min / mo\", perDay: \"About 15 min a day\",",
+  "text": "    talk: \"450 分钟 / 月\", perDay: \"每天约 15 分钟\","
+ },
+ {
+  "en": "    monthly: { id: \"plus_monthly\",  price: \"$22.49\",  was: \"$24.99\",  per: \"/ mo\" },",
+  "text": "    monthly: { id: \"plus_monthly\",  price: \"$22.49\",  was: \"$24.99\",  per: \"/ 月\" },"
+ },
+ {
+  "en": "    annual:  { id: \"plus_annual\",   price: \"$224.99\", was: \"$249.99\", per: \"/ yr · 2 months free\" },",
+  "text": "    annual:  { id: \"plus_annual\",   price: \"$224.99\", was: \"$249.99\", per: \"/ 年 · 相当于免费 2 个月\" },"
+ },
+ {
+  "en": "    talk: \"900 min / mo\", perDay: \"About 30 min a day\",",
+  "text": "    talk: \"900 分钟 / 月\", perDay: \"每天约 30 分钟\","
+ },
+ {
+  "en": "    monthly: { id: \"max_monthly\",   price: \"$44.99\",  was: \"$49.99\",  per: \"/ mo\" },",
+  "text": "    monthly: { id: \"max_monthly\",   price: \"$44.99\",  was: \"$49.99\",  per: \"/ 月\" },"
+ },
+ {
+  "en": "            ? p.price + ' <span>' + p.per + '</span><span class=\"p-was\" style=\"display:block;margin-top:6px;font-size:13px\">App Store <s>' + p.was + '</s> · 10% off on the web</span>'",
+  "text": "            ? p.price + ' <span>' + p.per + '</span><span class=\"p-was\" style=\"display:block;margin-top:6px;font-size:13px\">App Store <s>' + p.was + '</s> · 网页购买享 9 折</span>'"
+ },
+ {
+  "en": "        : '<span>Monthly only</span>'",
+  "text": "        : '<span>仅限月付</span>'"
+ },
+ {
+  "en": "  toast.textContent = \"Payment complete. Open the app and sign in with the same account. Your subscription is already active.\"",
+  "text": "  toast.textContent = \"付款完成。打开应用，用同一个账号登录，订阅就已经生效了。\""
+ },
+ {
+  "en": "      return \"You already have a subscription on the web. Change it under “Manage your subscription” below.\"",
+  "text": "      return \"你已经在网页上订阅了。可以在下方的“管理订阅”中更改。\""
+ },
+ {
+  "en": "      return \"Your App Store subscription is still active. Buying here too would charge you twice, so manage it in the App Store instead.\"",
+  "text": "      return \"你的 App Store 订阅仍然有效。在这里再买一次会被重复扣费，请到 App Store 管理订阅。\""
+ },
+ {
+  "en": "    return \"Something went wrong starting checkout. Please try again.\"",
+  "text": "    return \"开始结账时出了点问题，请再试一次。\""
+ },
+ {
+  "en": "        ? \"This account has no web subscription. If you subscribed in the app, manage it in your device’s subscription settings.\"",
+  "text": "        ? \"这个账号没有网页订阅。如果你是在应用里订阅的，请到设备的订阅设置中管理。\""
+ },
+ {
+  "en": "        : \"Something went wrong opening subscription management. Please try again.\")",
+  "text": "        : \"打开订阅管理时出了点问题，请再试一次。\")"
+ },
+ {
+  "en": "  s.fix({ text: \"Maybe, if it <b>were safer</b>, I'd <b>give it a try</b>.\", note: \"It’s hypothetical, so it takes were and I’d\" });",
+  "text": "  s.fix({ text: \"Maybe, if it <b>were safer</b>, I'd <b>give it a try</b>.\", note: \"这是在假设，所以用 were 和 I’d\" });"
+ }
+]
