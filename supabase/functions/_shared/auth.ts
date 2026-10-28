@@ -59,6 +59,18 @@ export function errorResponse(status: number, message: string, detail?: unknown)
 }
 
 /**
+ * A provider's refusal, passed on WITHOUT its billing status. 402 from this
+ * app means "the learner's minutes are spent" and raises the paywall, so a
+ * provider's 402 (our prepayment ran out, 2026-10-27) or 401/403 (our key)
+ * must never reach the app as one: a paying subscriber was shown "your talk
+ * time is used up" while it was our bill. Those become 503 (try again).
+ */
+export function upstreamErrorResponse(status: number, message: string, detail?: unknown): Response {
+  const ours = status === 401 || status === 402 || status === 403
+  return errorResponse(ours ? 503 : status >= 400 ? status : 502, message, detail)
+}
+
+/**
  * Constant-time string compare for shared secrets (cron/webhook headers), so a
  * `===` on an attacker-supplied value can't leak the secret one byte at a time
  * through response timing. Length is compared first (unavoidably non-secret),

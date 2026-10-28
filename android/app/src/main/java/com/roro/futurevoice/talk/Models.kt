@@ -10,6 +10,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.descriptors.nullable
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonArray
@@ -74,14 +75,48 @@ data class Turn(
     @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
     val coachLine: String? = null,
+    /**
+     * Tutor mode (iOS `Turn.tutorRole`, 6cc2ab2a, founder 2026-10-28): which
+     * part of the lesson this learner line was. A [TutorTurnRole.DRILL] line
+     * answered a challenge the tutor set up, with an example in front of them
+     * — practice. A [TutorTurnRole.CHECK] line was a judged try at the final
+     * check ([TutorFinalCheck]): the whole thing in one go, nothing on screen
+     * — the one tutor line that is evidence. Null outside tutor mode. Encoded
+     * only when set; a value this build doesn't know reads as null (iOS `try?`).
+     */
+    @Serializable(with = TutorTurnRoleSerializer::class)
+    val tutorRole: TutorTurnRole? = null,
 ) {
     /** The line was read off coach mode's suggestion ([CoachRead]): practice,
      *  not evidence — out of the score, the level and "used in a talk". */
     val readFromCoach: Boolean get() = role == TurnRole.USER && CoachRead.isRead(transcript, coachLine)
 
     /** A learner line every assessment path may read: not marked misheard,
-     *  not read off the coach's suggestion. */
-    val isEvidence: Boolean get() = role == TurnRole.USER && !excludedFromScoring && !readFromCoach
+     *  not read off the coach's suggestion, not a tutor drill line. */
+    val isEvidence: Boolean get() =
+        role == TurnRole.USER && !excludedFromScoring && !readFromCoach && tutorRole != TutorTurnRole.DRILL
+}
+
+/** iOS `TutorTurnRole`; see [Turn.tutorRole]. */
+enum class TutorTurnRole(val raw: String) { DRILL("drill"), CHECK("check") }
+
+/** [Turn.tutorRole] on disk: the raw string, and anything unknown is null —
+ *  one unreadable role must never cost the learner a whole talk. */
+object TutorTurnRoleSerializer : KSerializer<TutorTurnRole?> {
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    override val descriptor: SerialDescriptor =
+        kotlinx.serialization.descriptors.PrimitiveSerialDescriptor(
+            "TutorTurnRole", kotlinx.serialization.descriptors.PrimitiveKind.STRING).nullable
+
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    override fun serialize(encoder: Encoder, value: TutorTurnRole?) {
+        if (value == null) encoder.encodeNull() else encoder.encodeString(value.raw)
+    }
+
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    override fun deserialize(decoder: Decoder): TutorTurnRole? =
+        if (decoder.decodeNotNullMark()) decoder.decodeString().let { raw -> TutorTurnRole.entries.firstOrNull { it.raw == raw } }
+        else decoder.decodeNull()
 }
 
 @Serializable
@@ -161,18 +196,23 @@ data class Session(
      * corrections → cards and the book all stand. Null on old rows (same key
      * as iOS).
      *
-     * Since 2026-10-14 only TUTOR mode makes one (every turn is corrected and
-     * answered back). Coach mode is judged per line instead
-     * ([Turn.readFromCoach]); calls saved before that with coach mode on keep
-     * the flag.
+     * Nothing sets it since 2026-10-28 (iOS 6cc2ab2a): coach mode is judged
+     * per line ([Turn.readFromCoach], since 2026-10-14) and tutor mode too
+     * ([Turn.tutorRole]). Calls saved before that keep the flag.
      */
     val coached: Boolean? = null,
     /** Tutor mode's lesson as this talk left it (iOS `Session.tutorLesson`):
      *  the lines that cleared each challenge. Null on old rows. */
     val tutorLesson: TutorLessonRecord? = null,
 ) {
-    /** See [coached]. */
-    val isPractice: Boolean get() = coached == true
+    /** See [coached]. A tutor call saved since 2026-10-28 is judged by its
+     *  lines instead ([Turn.tutorRole]): only final-check tries are evidence,
+     *  so a tutor call that never reached the check is still all practice. */
+    val isPractice: Boolean get() {
+        if (coached == true) return true
+        if (turns.none { it.tutorRole != null }) return false
+        return turns.none { it.isEvidence && it.transcript.isNotBlank() }
+    }
 
     /** Newest-ended-first ordering key, as `SessionStore.swift` ranks. */
     val rank: Long get() = endedAt ?: startedAt

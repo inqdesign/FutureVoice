@@ -1,11 +1,19 @@
 package com.roro.futurevoice
 
 import com.roro.futurevoice.data.CefrLevel
+import com.roro.futurevoice.data.StoreJson
 import com.roro.futurevoice.talk.ConversationEngine
+import com.roro.futurevoice.talk.ScorecardMetrics
+import com.roro.futurevoice.talk.Session
+import com.roro.futurevoice.talk.SessionSummarizer
+import com.roro.futurevoice.talk.Turn
+import com.roro.futurevoice.talk.TurnRole
+import com.roro.futurevoice.talk.TutorFinalCheck
 import com.roro.futurevoice.talk.TutorLesson
 import com.roro.futurevoice.talk.TutorLessonStore
 import com.roro.futurevoice.talk.TutorPlanner
 import com.roro.futurevoice.talk.TutorPrompts
+import com.roro.futurevoice.talk.TutorTurnRole
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -18,10 +26,11 @@ import org.junit.Test
 class TutorModeTest {
     private fun prompt(lang: String, tutor: Boolean, level: CefrLevel = CefrLevel.B1,
                        lesson: TutorLesson? = null, ticked: Boolean = false,
-                       fixes: List<String> = emptyList()) =
+                       fixes: List<String> = emptyList(), planning: Boolean = false) =
         ConversationEngine.conversationSystemPrompt(
             targetLanguage = lang, nativeLanguage = "ko", level = level, tutor = tutor,
-            tutorLesson = lesson, tutorJustTicked = ticked, tutorLastFixes = fixes)
+            tutorLesson = lesson, tutorJustTicked = ticked, tutorLastFixes = fixes,
+            tutorPlanning = planning)
 
     private fun lesson(done: Int, total: Int = 3) = TutorLesson(
         title = "자기소개", titleTarget = "Introducing yourself", language = "en",
@@ -72,10 +81,96 @@ class TutorModeTest {
     }
 
     @Test fun finishedLessonSaysGoodbye() {
-        val l = lesson(3)
+        val l = lesson(3).copy(finishedAt = 2L)
         assertTrue(l.isFinished)
         assertEquals(3, l.record.done.size)
-        assertTrue(prompt("en", tutor = true, lesson = l).contains("ALL DONE"))
+        val p = prompt("en", tutor = true, lesson = l)
+        assertTrue(p.contains("ALL DONE"))
+        assertTrue(p.contains("never call it great, perfect or flawless"))
+    }
+
+    /** iOS `testLastTickOpensTheFinalCheck` (23ce515f). */
+    @Test fun lastTickOpensTheFinalCheck() {
+        val l = lesson(3)
+        assertFalse(l.isFinished)
+        assertTrue(l.inFinalCheck)
+        val p = prompt("en", tutor = true, lesson = l, ticked = true)
+        assertTrue(p.contains("Now the FINAL CHECK"))
+        assertTrue(p.contains("They can't skip it"))
+        assertTrue(p.contains("start the FINAL CHECK above"))
+        assertTrue(p.contains("  1. Task 0\n  2. Task 1"))
+        assertFalse(p.contains("ALL DONE"))
+    }
+
+    /** iOS `testFinalCheckOutcome`. */
+    @Test fun finalCheckOutcome() {
+        fun o(v: TutorFinalCheck.Verdict, slips: Int = 0, used: Boolean = false) =
+            TutorFinalCheck.outcome(v, slips, used)
+        assertEquals(TutorFinalCheck.Outcome.NOT_AN_ATTEMPT, o(TutorFinalCheck.Verdict(attempt = false)))
+        assertEquals(TutorFinalCheck.Outcome.NOT_YET, o(TutorFinalCheck.Verdict(attempt = true, missing = listOf(2), understood = true)))
+        assertEquals(TutorFinalCheck.Outcome.NOT_YET, o(TutorFinalCheck.Verdict(attempt = true, missing = emptyList(), understood = false)))
+        // A clean first try passes.
+        assertEquals(TutorFinalCheck.Outcome.PASS, o(TutorFinalCheck.Verdict(attempt = true, missing = emptyList(), understood = true, shaky = false)))
+        // Not perfect the first time (any slip, or shaky) asks once more, once.
+        assertEquals(TutorFinalCheck.Outcome.ONCE_MORE, o(TutorFinalCheck.Verdict(attempt = true, understood = true, shaky = false), slips = 1))
+        assertEquals(TutorFinalCheck.Outcome.ONCE_MORE, o(TutorFinalCheck.Verdict(attempt = true, understood = true, shaky = true)))
+        // The second try passes with slips; they are named, not failed.
+        assertEquals(TutorFinalCheck.Outcome.PASS, o(TutorFinalCheck.Verdict(attempt = true, understood = true, shaky = false), slips = 2, used = true))
+        assertEquals(TutorFinalCheck.Outcome.PASS, o(TutorFinalCheck.Verdict(attempt = true, understood = true, shaky = true), used = true))
+    }
+
+    /** iOS `testNextRoundBeingPlannedHoldsTheTutor`. */
+    @Test fun nextRoundBeingPlannedHoldsTheTutor() {
+        val passed = lesson(3).copy(finishedAt = 2L)
+        val p = prompt("en", tutor = true, lesson = passed, ticked = true, planning = true)
+        assertTrue(p.contains("BEING SET UP"))
+        assertTrue(p.contains("next round of \"Introducing yourself\""))
+        assertFalse(p.contains("ALL DONE"))
+        assertFalse(p.contains("has just checked off"))
+    }
+
+    private fun line(text: String, role: TutorTurnRole?) =
+        Turn(role = TurnRole.USER, transcript = text, tutorRole = role)
+
+    private fun session(turns: List<Turn>, coached: Boolean? = null) = Session(
+        id = StoreJson.newId(), userId = "U", targetLanguage = "en",
+        startedAt = 0L, endedAt = 1L, turns = turns, coached = coached)
+
+    /** iOS `testOnlyTheFinalCheckIsEvidence` (6cc2ab2a). */
+    @Test fun onlyTheFinalCheckIsEvidence() {
+        assertFalse(line("My name is Min.", TutorTurnRole.DRILL).isEvidence)
+        assertTrue(line("Hi, I'm Min, from Seoul, I work in design.", TutorTurnRole.CHECK).isEvidence)
+        assertTrue(line("Just talking.", null).isEvidence)
+    }
+
+    /** iOS `testATutorCallIsScoredOnlyOnceItReachedTheCheck`. */
+    @Test fun aTutorCallIsScoredOnlyOnceItReachedTheCheck() {
+        val drills = session(listOf(line("My name is Min.", TutorTurnRole.DRILL),
+            line("I'm from Seoul.", TutorTurnRole.DRILL)))
+        assertTrue(drills.isPractice)
+        val checked = session(listOf(line("My name is Min.", TutorTurnRole.DRILL),
+            line("Hi, I'm Min, I'm from Seoul.", TutorTurnRole.CHECK)))
+        assertFalse(checked.isPractice)
+        assertEquals(1, ScorecardMetrics.compute(checked.turns).userTurnCount)
+        // A tutor call saved before the per-line rule stays practice.
+        assertTrue(session(checked.turns, coached = true).isPractice)
+    }
+
+    /** iOS `testDrillLinesAreLabelledForTheSummary`. */
+    @Test fun drillLinesAreLabelledForTheSummary() {
+        val text = SessionSummarizer.formatTranscript(listOf(line("My name is Min.", TutorTurnRole.DRILL),
+            line("Hi, I'm Min.", TutorTurnRole.CHECK)))
+        assertEquals("[USER_DRILL] My name is Min.\n[USER] Hi, I'm Min.", text)
+    }
+
+    /** iOS `testTutorRoleRoundTrips`; an unknown role reads as none. */
+    @Test fun tutorRoleRoundTrips() {
+        val json = StoreJson.json.encodeToString(Turn.serializer(), line("Hi.", TutorTurnRole.CHECK))
+        assertEquals(TutorTurnRole.CHECK, StoreJson.json.decodeFromString(Turn.serializer(), json).tutorRole)
+        val plain = StoreJson.json.encodeToString(Turn.serializer(), line("Hi.", null))
+        assertFalse(plain.contains("tutorRole"))
+        val odd = json.replace("\"check\"", "\"chapter\"")
+        assertNull(StoreJson.json.decodeFromString(Turn.serializer(), odd).tutorRole)
     }
 
     /** iOS `TutorLessonStore.resumable`: unfinished, not dropped, under 21 days. */
@@ -84,7 +179,10 @@ class TutorModeTest {
         val fresh = lesson(1).copy(createdAt = now - 86_400_000L)
         assertEquals(fresh, TutorLessonStore.resumable(listOf(fresh), now))
         assertNull(TutorLessonStore.resumable(listOf(fresh.copy(droppedAt = now)), now))
-        assertNull(TutorLessonStore.resumable(listOf(lesson(3).copy(createdAt = now)), now))
+        assertNull(TutorLessonStore.resumable(listOf(lesson(3).copy(createdAt = now, finishedAt = now)), now))
+        // Every challenge done but the final check still open: picked up.
+        val inCheck = lesson(3).copy(createdAt = now)
+        assertEquals(inCheck, TutorLessonStore.resumable(listOf(inCheck), now))
         assertNull(TutorLessonStore.resumable(listOf(fresh.copy(createdAt = now - 22 * 86_400_000L)), now))
     }
 

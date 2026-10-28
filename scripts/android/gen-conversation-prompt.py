@@ -115,6 +115,10 @@ system = kotlin_conv(literal_at(engine, 'return """', main_anchor), {
     "varietyGuard(targetLanguage)": "LanguageVariety.guard(targetLanguage)",
     "CoachingLanguage.selfWarmth": "CoachingLanguage.selfWarmth",
     "tutor": "tutor",
+    # The learner's own goals (iOS 3d655c8b, WHO YOU BECAME): Android has no
+    # persona goals yet, so its callers pass "" — byte-identical, as iOS is
+    # with no goals.
+    "futureBlock": "futureBlock",
     "beginnerQuestions(level)": "beginnerQuestions(level)",
     # The lesson-dependent block is assembled in ConversationEngine.kt
     # (`TutorPrompt`), from the pieces lifted below.
@@ -132,13 +136,17 @@ guards = {
 # Tutor mode's lesson block (iOS af3c7ffe…bd242766): the text of each branch;
 # which branch, and the checklist rows, are TutorPrompt's (hand-ported).
 tb = engine.index("static func tutorBlock(targetLanguage: String, languageName: String,")
-# Branch order (iOS 7629da1a): planning, done, on (after the fixes), none.
+# Branch order (iOS 23ce515f): planning, final check, done, on (after the
+# fixes), none.
 tb_plan_at = engine.index('lessonPart = """', tb)
 tutor_planning = kotlin_conv(literal_at(engine, 'lessonPart = """', tb), {"round": "round"})
-tb_done_at = engine.index('lessonPart = """', tb_plan_at + 10)
-tutor_done = kotlin_conv(literal_at(engine, 'lessonPart = """', tb_plan_at + 10), {
+tb_check_at = engine.index('lessonPart = """', tb_plan_at + 10)
+tutor_check = kotlin_conv(literal_at(engine, 'lessonPart = """', tb_plan_at + 10), {
+    "lesson.titleTarget": "titleTarget", "parts": "parts",
+})
+tb_done_at = engine.index('lessonPart = """', tb_check_at + 10)
+tutor_done = kotlin_conv(literal_at(engine, 'lessonPart = """', tb_check_at + 10), {
     "lesson.titleTarget": "titleTarget",
-    'lesson.challenges.last?.task.lowercased() ?? "do it"': "lastTask",
 })
 tb_fix_at = engine.index('let fixes = lastFixes.isEmpty ? "" : """', tb)
 tutor_fixes = kotlin_conv(literal_at(engine, 'let fixes = lastFixes.isEmpty ? "" : """', tb), {
@@ -153,8 +161,11 @@ tutor = kotlin_conv(literal_at(engine, 'return """', tb),
                {"languageName": "languageName", "lessonPart": "lessonPart", **guards,
                 "tutorNow(lesson: lesson, justTicked: justTicked && !planning)": "tutorNow"})
 tn = engine.index("private static func tutorNow(lesson: TutorLesson?, justTicked: Bool)")
-tutor_now_done = kotlin_conv(literal_at(engine, 'return """', tn), {})
-tutor_now_next = kotlin_conv(literal_at(engine, 'return """', engine.index('return """', tn) + 10), {
+tn_check_at = engine.index('return """', tn)
+tutor_now_check = kotlin_conv(literal_at(engine, 'return """', tn), {})
+tn_done_at = engine.index('return """', tn_check_at + 10)
+tutor_now_done = kotlin_conv(literal_at(engine, 'return """', tn_check_at + 10), {})
+tutor_now_next = kotlin_conv(literal_at(engine, 'return """', tn_done_at + 10), {
     "now": "now", "now + 1": "(now + 1)", "next.task": "nextTask", "next.example": "nextExample",
 })
 output = kotlin_conv(literal_at(engine, "static func turnOutputInstruction("), {
@@ -302,8 +313,13 @@ object ConversationPrompt {{
     fun tutorLessonPlanning(round: String): String =
         {tutor_planning}
 
-    /** iOS `tutorBlock`'s lesson part when every challenge is ticked. */
-    fun tutorLessonDone(titleTarget: String, lastTask: String): String =
+    /** iOS `tutorBlock`'s lesson part for the final check; [parts] are the
+     *  numbered challenge tasks, one per line. */
+    fun tutorLessonFinalCheck(titleTarget: String, parts: String): String =
+        {tutor_check}
+
+    /** iOS `tutorBlock`'s lesson part once the final check is passed. */
+    fun tutorLessonDone(titleTarget: String): String =
         {tutor_done}
 
     /** iOS `tutorBlock`'s note on the last try's fixes — "" when none. */
@@ -319,7 +335,11 @@ object ConversationPrompt {{
     const val TUTOR_NO_TOPIC =
         {tutor_none}
 
-    /** iOS `tutorNow` when the LAST challenge was just ticked. */
+    /** iOS `tutorNow` when the last challenge was just ticked: the final check. */
+    const val TUTOR_NOW_FINAL_CHECK =
+        {tutor_now_check}
+
+    /** iOS `tutorNow` when the lesson is finished. */
     const val TUTOR_NOW_FINISHED =
         {tutor_now_done}
 
@@ -333,7 +353,7 @@ object ConversationPrompt {{
         personaBlock: String, counterpartBlock: String, firstMeetingBlock: String,
         theyCalledBlock: String, ownTopicBlock: String, clockBlock: String,
         patterns: String, weak: String, topic: String, newsBlock: String, briefBlock: String,
-        targetLanguage: String, tutor: Boolean, tutorBlock: String = "",
+        targetLanguage: String, tutor: Boolean, tutorBlock: String = "", futureBlock: String = "",
     ): String =
         {system}
 

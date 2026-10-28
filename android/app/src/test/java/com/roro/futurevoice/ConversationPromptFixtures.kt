@@ -124,6 +124,9 @@ object ConversationPromptFixtures {
             tutor = true, lesson = lesson(0), fixes = listOf("\"학교에 갔어요\" → \"학교에 갔어\"")),
         Fixture("tutor_en_b1_lesson_done", "en", "ko", CefrLevel.B1,
             tutor = true, lesson = lesson(3), ticked = true),
+        // Every challenge ticked = the final check (iOS 23ce515f); passed = ALL DONE.
+        Fixture("tutor_en_b1_lesson_passed", "en", "ko", CefrLevel.B1,
+            tutor = true, lesson = lesson(3).copy(finishedAt = CALL_START)),
         Fixture("tutor_de_b2_lesson_quiet", "de", "en", CefrLevel.B2,
             topic = "Ordering at a cafe", tutor = true, lesson = lesson(2)),
         Fixture("first_counterpart_ignored_es", "es", "en", CefrLevel.B2, persona = null, counterpart = manager,

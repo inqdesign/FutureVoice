@@ -77,8 +77,9 @@ fun TutorLessonStrip(lesson: TutorLesson?, planning: Boolean, expanded: Boolean,
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        val inCheck = lesson?.inFinalCheck == true
         Row(
-            Modifier.fillMaxWidth().clickable(enabled = lesson != null, onClick = onToggle),
+            Modifier.fillMaxWidth().clickable(enabled = lesson != null && !inCheck, onClick = onToggle),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -86,7 +87,15 @@ fun TutorLessonStrip(lesson: TutorLesson?, planning: Boolean, expanded: Boolean,
             Icon(if (finished) Icons.Filled.Verified else Icons.Filled.School, contentDescription = null,
                 tint = if (finished) TickGreen else MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp))
-            if (lesson != null) {
+            if (lesson != null && inCheck) {
+                // The final check: nothing to lean on (iOS 23ce515f). The
+                // title and the step, no rows, no way out of it from here.
+                Text(lesson.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                Spacer(Modifier.weight(1f))
+                Text(stringResource(R.string.final_check), style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+            } else if (lesson != null) {
                 Text(lesson.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold,
                     maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                 Spacer(Modifier.weight(1f))
@@ -117,10 +126,28 @@ fun TutorLessonStrip(lesson: TutorLesson?, planning: Boolean, expanded: Boolean,
                 CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
             }
         }
-        AnimatedVisibility(visible = lesson != null && expanded) {
+        if (lesson != null && inCheck) {
+            Text(stringResource(R.string.say_it_all_in_your_own_words_in_one_go),
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // What it should cover, as the parts' short names only — never
+            // their example lines (iOS 06933043: three or four parts are hard
+            // to hold in your head with nothing on screen).
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                lesson.challenges.forEachIndexed { i, c ->
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val color = MaterialTheme.colorScheme.onSurfaceVariant
+                        Box(Modifier.size(16.dp).border(1.dp, color, CircleShape), contentAlignment = Alignment.Center) {
+                            Text("${i + 1}", style = MaterialTheme.typography.labelSmall, color = color)
+                        }
+                        Text(c.goal, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+        AnimatedVisibility(visible = lesson != null && expanded && !inCheck) {
             if (lesson != null) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (lesson.isFinished) {
-                    Text(stringResource(R.string.all_done_you_can_say_it_now), style = MaterialTheme.typography.bodySmall,
+                    Text(stringResource(R.string.passed_you_can_say_it_now), style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 lesson.challenges.forEachIndexed { i, c -> ChallengeRow(i, c, isNow = lesson.current == i) }

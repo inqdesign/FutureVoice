@@ -422,10 +422,17 @@ private fun TalkCard(t: Session, onOpen: (String) -> Unit,
             // A coach-mode call says so in place of "Free talk" (after "News" /
             // "Scenario"). A practice call (`Session.coached` — tutor mode, or
             // coach mode before 2026-10-14) carries no score, so it is named
-            // that (iOS `OriginTag`).
+            // that (iOS `OriginTag`). A tutor call scored on its final check
+            // (`Turn.tutorRole`) says "Tutor"; one that never reached the
+            // check is a practice call.
             val coached = t.turns.any { it.coachLine != null }
-            if (!t.isPractice && !coached) return@run source
-            val coach = stringResource(if (t.isPractice) R.string.practice_call else R.string.coach_mode)
+            val tutored = t.turns.any { it.tutorRole != null }
+            if (!t.isPractice && !coached && !tutored) return@run source
+            val coach = stringResource(when {
+                t.isPractice -> R.string.practice_call
+                tutored -> R.string.tutor
+                else -> R.string.coach_mode
+            })
             when (t.origin?.name?.lowercase()) {
                 "news", "scenario" -> "$source · $coach"
                 else -> coach

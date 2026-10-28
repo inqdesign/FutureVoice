@@ -867,6 +867,7 @@ fun TalkScreen(
                 TutorTopicSheet(targetLanguage, level, onPick = { vm.pickTutorTopic(it) },
                     onDismiss = { showingTutorTopics = false })
             }
+            LaunchedEffect(showingTutorTopics) { vm.setTutorTopicsShowing(showingTutorTopics) }
             val focus = state.grammarFocus
             if (coachMode && !state.tutorOn && focus != null && !ended) {
                 GrammarFocusStrip(focus.label, focus.pattern.mistake, focus.pattern.correction,

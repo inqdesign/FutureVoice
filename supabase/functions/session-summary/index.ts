@@ -29,7 +29,7 @@
 // streaming parser is shared. Free, capped like purpose "summary".
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
-import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
+import { requireUser, handlePreflight, errorResponse, upstreamErrorResponse, cors } from "../_shared/auth.ts"
 import { recordFreeUsage, enforceRequestRate, rateLimitedResponse,
          recordProviderUsage, background, geminiUsageFields } from "../_shared/credits.ts"
 import { summarySystemPrompt, type RememberedNote, type ShareCorrection } from "./prompt.ts"
@@ -49,6 +49,19 @@ const READ_LINE_NOTE =
   "level: judge the scorecard (every score, the level, the grammar range) on " +
   "the [USER] lines only, and quote nothing from a [USER_READ] line in " +
   "expressions_used, phrases_used, new_patterns_detected or grammar issues."
+
+// `ConversationEngine.drillLineNote` (iOS 6cc2ab2a, 2026-10-28), verbatim: a
+// tutor lesson's drill line is labelled `[USER_DRILL]` (`Turn.tutorRole`);
+// only the final check's tries are `[USER]`.
+const DRILL_LINE_NOTE =
+  "[USER_DRILL] lines are a tutor lesson's drills: the learner said one set " +
+  "sentence the tutor had just asked for, usually with an example in front of " +
+  "them. They are part of the conversation, but they are NOT evidence of the " +
+  "learner's level: judge the scorecard (every score, the level, the grammar " +
+  "range) on the [USER] lines only — in a tutor lesson those are the final " +
+  "check, the whole thing said in one go with no help — and quote nothing " +
+  "from a [USER_DRILL] line in expressions_used, phrases_used, " +
+  "new_patterns_detected or grammar issues."
 
 Deno.serve(async (req) => {
   const pre = handlePreflight(req)
@@ -123,11 +136,12 @@ Deno.serve(async (req) => {
     knownAboutUser, rememberedNotes, shareCorrections, expressionBudget,
     talkDate, utcOffsetMinutes, relationshipRegisterLine, politeSettingLine,
   })
-  // Same user message SessionSummarizer.swift builds: the read-line note
-  // rides under the metrics only when a `[USER_READ]` line is in the
+  // Same user message SessionSummarizer.swift builds: the read-line and
+  // drill-line notes ride under the metrics only when such a line is in the
   // transcript, so every other message is byte-identical to before.
   let userMessage = `transcript:\n${transcript}\n\nmetrics:\n${metricsJSON}`
   if (/^\[USER_READ\] /m.test(transcript)) userMessage += "\n\n" + READ_LINE_NOTE
+  if (/^\[USER_DRILL\] /m.test(transcript)) userMessage += "\n\n" + DRILL_LINE_NOTE
   const geminiBody = {
     system_instruction: { parts: [{ text: system }] },
     contents: [{ role: "user", parts: [{ text: userMessage }] }],
@@ -147,7 +161,7 @@ Deno.serve(async (req) => {
   )
   if (!upstream.ok) {
     const detail = await upstream.text()
-    return errorResponse(upstream.status, "gemini upstream error", detail.slice(0, 500))
+    return upstreamErrorResponse(upstream.status, "gemini upstream error", detail.slice(0, 500))
   }
 
   if (stream && upstream.body) {

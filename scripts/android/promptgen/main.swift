@@ -163,6 +163,9 @@ let fixtures: [Fixture] = [
             tutor: true, lesson: lesson(done: 0), fixes: ["\"학교에 갔어요\" → \"학교에 갔어\""]),
     Fixture(name: "tutor_en_b1_lesson_done", target: "en", native: "ko", level: .b1,
             tutor: true, lesson: lesson(done: 3), ticked: true),
+    // Every challenge ticked = the final check (iOS 23ce515f); passed = ALL DONE.
+    Fixture(name: "tutor_en_b1_lesson_passed", target: "en", native: "ko", level: .b1,
+            tutor: true, lesson: { var l = lesson(done: 3); l.finishedAt = callStart; return l }()),
     Fixture(name: "tutor_de_b2_lesson_quiet", target: "de", native: "en", level: .b2,
             topic: "Ordering at a cafe", tutor: true, lesson: lesson(done: 2)),
     Fixture(name: "first_counterpart_ignored_es", target: "es", native: "en", level: .b2, persona: nil,

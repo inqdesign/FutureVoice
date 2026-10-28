@@ -644,6 +644,19 @@ class RealtimeTalkClient(private val context: Context) {
         runCatching { socket?.send("""{"type":"set","manualTurns":$on}""") }
     }
 
+    /** Tutor mode: while a lesson runs, each answer waits for the app's
+     *  verdict note and is answered once, with it (iOS `setHoldReplies`,
+     *  09fa80bd). Held with the notes until `start` is up, so it can never
+     *  reach the gateway ahead of it. An older gateway ignores it. */
+    fun setHoldReplies(on: Boolean) {
+        if (tornDown) return
+        val body = """{"type":"set","holdReplies":$on}"""
+        synchronized(nudgeLock) {
+            if (!startSent) { heldNudges += body; return }
+        }
+        runCatching { socket?.send(body) }
+    }
+
     /** Tutor mode switched mid-call (iOS `setMeterFromStart`). */
     fun setMeterFromStart(on: Boolean) {
         if (tornDown) return

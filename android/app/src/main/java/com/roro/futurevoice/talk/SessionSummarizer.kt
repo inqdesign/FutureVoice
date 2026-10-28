@@ -505,15 +505,17 @@ object SessionSummarizer {
     /**
      * `ConversationEngine.formatTranscript` — role-labelled lines. A line the
      * learner read off coach mode's suggestion is labelled `USER_READ`
-     * ([Turn.readFromCoach]); `session-summary` then adds the note saying
-     * what that means (iOS `ConversationEngine.readLineNote`). A transcript
-     * without one is byte-identical to before.
+     * ([Turn.readFromCoach]) and a tutor drill line `USER_DRILL`
+     * ([Turn.tutorRole], iOS 6cc2ab2a); `session-summary` then adds the note
+     * saying what each means (iOS `readLineNote` / `drillLineNote`). A
+     * transcript without either is byte-identical to before.
      */
     fun formatTranscript(turns: List<Turn>): String =
         turns.joinToString("\n") { t ->
             val label = when {
                 t.role == TurnRole.FLUENT_SELF -> "FLUENT_SELF"
                 t.readFromCoach -> "USER_READ"
+                t.tutorRole == TutorTurnRole.DRILL -> "USER_DRILL"
                 else -> "USER"
             }
             "[$label] ${t.transcript}"

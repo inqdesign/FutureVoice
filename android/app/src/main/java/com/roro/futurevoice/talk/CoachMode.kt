@@ -107,15 +107,19 @@ object SendToAnswer {
  *
  * The call is a LESSON with one goal: a topic (the call's own, one picked from
  * the button right of the pill, or one said when asked) becomes a curriculum of
- * 3–4 challenges ([TutorLesson]), shown as a checklist above the transcript.
- * The tutor stays on a challenge until the app ticks it — no fixes from the
- * correction call AND the judge says the line did it — then moves on; a lesson
- * left halfway is picked up by the next tutor call.
+ * 3–4 challenges ([TutorLesson]), shown as a checklist above the transcript,
+ * then a final check: the whole thing in one go, nothing on screen. The APP
+ * judges every answer — the correction call and the judge — and the tutor
+ * says the verdict: each answer is held at the gateway (`set.holdReplies`)
+ * until the app's note answers it. A lesson left halfway is picked up by the
+ * next tutor call.
  *
  * It lives in the conversation's SYSTEM prompt ([TutorPrompt]), resent on
- * every tick (`set.system`); the tutor's own lines for a topic picked or a
- * lesson ready go out as gateway `nudge` notes. Off by default. A tutored call
- * is a PRACTICE call, like a coached one (`Session.coached`).
+ * every tick (`set.system`); the app's verdicts and its lines for a topic
+ * picked or a lesson ready go out as gateway `nudge` notes. Off by default. A
+ * tutor call is judged per line ([Turn.tutorRole], iOS 6cc2ab2a): only the
+ * final check's tries are evidence, so one that never reached the check is
+ * still a practice call.
  */
 object TutorMode {
     /** Same name as iOS's defaults key. */

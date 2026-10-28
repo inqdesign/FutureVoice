@@ -465,9 +465,10 @@ private fun TalkDetailPage(
                             })
                         }
                         if (s.isPractice) {
-                            // A practice call (`Session.coached`: tutor mode, or
-                            // coach mode before 2026-10-14) is never scored on
-                            // the page (iOS `practiceBlock`).
+                            // A practice call (a tutor call that never reached
+                            // the final check, or a call saved as practice
+                            // before per-line judging) is never scored on the
+                            // page (iOS `practiceBlock`).
                             HorizontalDivider(Modifier.padding(start = 20.dp))
                             GroupLabel(Icons.Outlined.Lightbulb, stringResource(R.string.practice_call))
                             Text(stringResource(R.string.your_minutes_streak_and_book_from_this_call_all_count_as_a_p_a87a3a),
