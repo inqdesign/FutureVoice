@@ -5449,7 +5449,7 @@ private struct TurnView: View {
             // Only a genuinely EMPTY line has nothing to show yet.
             if turn.transcript.isEmpty && turn.transcriptPending {
                 Text(explain("Writing down what you said…"))
-                    .foregroundStyle(.secondary)
+                    .opacity(0.6)
                     .italic()
             } else if turn.role == .user {
                 FuriganaText(turn.transcript, rubyFont: .caption2) {
@@ -5691,8 +5691,11 @@ private struct PartialTurnView: View {
     /// becomes, so nothing jumps sideways when the final transcript lands.
     var body: some View {
         DialogueLine(speaker: .user, name: chrome("You"), scale: .call) {
+            // Dimmed by OPACITY, not `.secondary`: a caller's style replaces
+            // the bubble's text colour, and on mono's solid ink bubble the
+            // system secondary grey all but vanished into the fill.
             Text(text.isEmpty ? "Listening…" : text)
-                .foregroundStyle(.secondary)
+                .opacity(0.6)
                 .italic(text.isEmpty)
         }
     }
