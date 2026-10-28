@@ -5420,6 +5420,13 @@ struct ConversationView: View {
                                                   onceMoreUsed: check.onceMoreUsed)
             guard outcome != .notAnAttempt else {
                 // The turn is held for a note: answer it as what it was.
+                if verdict.wants_example == true {
+                    // Asked to be shown: show it, from their own lines.
+                    let own = now.challenges.compactMap(\.line).map { "\"\($0)\"" }
+                        .joined(separator: " ")
+                    tutorNudge("They asked you to show them how the whole thing goes. Show it: say it as ONE natural answer, in \(LanguageCatalog.englishName(appState.targetLanguage)), built from their own lines in this lesson\(own.isEmpty ? "" : " (\(own))") with any slip fixed — like a model answer, no list of parts. Then ask them to say it themselves now, in one go.")
+                    return
+                }
                 tutorNudge("Final check: that was not an attempt at the whole thing (a question, a remark, or one part only).\(slips.isEmpty ? "" : " Slips in it: \(slips.joined(separator: "; ")) — say that line back the right way first.") Answer what they said in a line, give no verdict on the whole, then ask them to say it all, in one go.")
                 return
             }

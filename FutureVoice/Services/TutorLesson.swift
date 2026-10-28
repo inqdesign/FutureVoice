@@ -458,6 +458,10 @@ enum TutorFinalCheck {
         var understood: Bool? = nil
         /// Very shaky: long stalls, restarts, many broken bits.
         var shaky: Bool? = nil
+        /// Not an attempt: they asked to be SHOWN how the whole thing goes
+        /// (founder, 2026-10-28: "if the user asks to show it, show it",
+        /// rather than "I can't do it for you").
+        var wants_example: Bool? = nil
     }
 
     /// Not perfect the first time → once more, always (founder, 2026-10-28:
@@ -493,9 +497,13 @@ enum TutorFinalCheck {
           mean? Grammar slips and an accent don't matter here.
         - "shaky": true only if it was VERY halting — long stalls, several \
           restarts, most sentences broken off. A little hesitation is fine.
+        - "wants_example": true when, instead of trying, they ask to be \
+          shown or told how the whole thing goes ("can you show me?", "how \
+          would you say it?", "give me an example"), in any language.
         Ignore spelling, punctuation and anything the transcriber chose.
         Return STRICT JSON only: {"attempt": true|false, "missing": [n], \
-        "missing_note": "...", "understood": true|false, "shaky": true|false}
+        "missing_note": "...", "understood": true|false, "shaky": true|false, \
+        "wants_example": true|false}
         """
         let content = """
         The parts of the lesson:
