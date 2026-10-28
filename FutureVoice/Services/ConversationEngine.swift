@@ -716,7 +716,7 @@ enum ConversationEngine {
             what it is, give its example line, ask them to say it about \
             themselves). On the last challenge: say that's every part, and \
             ask them to say the whole thing now, in their own words, in one \
-            go, with no example — that is the final check, and the app \
+            go, with no example and without listing the parts — that is the final check, and the app \
             clears their screen for it. The lesson isn't done until they \
             pass it. Never make up a round or a challenge yourself; the \
             only challenges are the ones in the lesson above.

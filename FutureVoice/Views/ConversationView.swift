@@ -5080,8 +5080,7 @@ struct ConversationView: View {
             return
         }
         guard let i = lesson.current else { return }
-        let asked = turns.last(where: { $0.role == .fluentSelf && $0.timestamp < Date() })?
-            .transcript ?? ""
+        let asked = tutorLine(answeredBy: turnId)
         let challenge = lesson.challenges[i]
         Task { @MainActor in
             // Asked on every try, fixes or not: a request to change the
@@ -5289,6 +5288,17 @@ struct ConversationView: View {
         }
     }
 
+    /// The tutor line the learner's turn ANSWERED: the last one before it.
+    /// Never "the newest tutor line" — the check runs after the correction
+    /// call, by when the tutor has usually already replied, so the judge
+    /// read the reply as the question (device, 2026-10-28: a challenge-4
+    /// answer was taken for the final check because the reply to it asked
+    /// for the whole thing, and "not yet" played over that reply).
+    private func tutorLine(answeredBy turnId: UUID) -> String {
+        let end = turns.firstIndex(where: { $0.id == turnId }) ?? turns.count
+        return turns[..<end].last(where: { $0.role == .fluentSelf })?.transcript ?? ""
+    }
+
     /// One answer during the final check. The judge says whether it was an
     /// attempt at the whole thing and what it left out; the slips are the
     /// correction call's. The outcome is code, and the tutor is told what to
@@ -5297,7 +5307,7 @@ struct ConversationView: View {
     /// practiced. It can't be skipped (founder, 2026-10-28).
     private func tutorFinalCheckTry(turnId: UUID, said: String, fixes: [TurnFix]) {
         guard let lesson = tutorLesson, lesson.inFinalCheck else { return }
-        let asked = turns.last(where: { $0.role == .fluentSelf })?.transcript ?? ""
+        let asked = tutorLine(answeredBy: turnId)
         let slips = fixes.map { "\"\($0.was)\" → \"\($0.now)\"" }
         Task { @MainActor in
             let verdict = await TutorFinalCheck.read(said, lesson: lesson, askedWith: asked,

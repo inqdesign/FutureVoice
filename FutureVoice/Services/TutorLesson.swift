@@ -420,10 +420,12 @@ enum TutorJudge {
         challenge, or "I don't know".
         Also decide "tutor_moved_on": true ONLY when the tutor's line had \
         already finished this challenge — said they got it AND asked for \
-        something different from this challenge. False while the tutor is \
-        still on this challenge: asking for it, for it again, or to say it \
-        again with more in it ("say that whole thing once more, including \
-        …" is still this challenge).
+        something different from this challenge: the next step, or every \
+        part of the lesson together in one go when THIS challenge is only \
+        one of those parts. False while the tutor is still on this \
+        challenge: asking for it, for it again, or to say it again with \
+        more in it ("say that whole thing once more, including …" while the \
+        challenge is itself a summary is still this challenge).
         Return STRICT JSON only: {"done": true|false, "other_topic": true|false, "tutor_moved_on": true|false}
         """
         let content = """
