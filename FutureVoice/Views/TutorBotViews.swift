@@ -17,7 +17,7 @@ struct TutorBotButton: View {
                 .scaleEffect(30 / WeeklyTestCharacter.size)
                 .frame(width: 30, height: 30)
         }
-        .modifier(TutorGlassCircle())
+        .modifier(GlassCircleButton())
         .accessibilityLabel(Text("Tutor"))
         .accessibilityHint(Text("Ask what to do next"))
         .contextMenu {
@@ -36,24 +36,6 @@ struct TutorBotButton: View {
         }
         .sheet(isPresented: $bot.chatOpen) {
             TutorChatView().environmentObject(appState)
-        }
-    }
-}
-
-private struct TutorGlassCircle: ViewModifier {
-    @Environment(\.colorScheme) private var colorScheme
-    func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content
-                .buttonStyle(.glass(homeGlass(colorScheme)))
-                .buttonBorderShape(.circle)
-                .controlSize(.large)
-        } else {
-            content
-                .buttonStyle(.bordered)
-                .buttonBorderShape(.circle)
-                .controlSize(.large)
-                .background(Circle().fill(.regularMaterial))
         }
     }
 }
@@ -133,8 +115,7 @@ private struct TutorNoteCard: View {
             } label: {
                 Text("Show me today").frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
+            .buttonStyle(SoftChipStyle(selected: true))
         }
     }
 
@@ -161,22 +142,23 @@ private struct TutorNoteCard: View {
             if !t.items.isEmpty {
                 TutorPlanRows(today: t)
             }
-            HStack {
+            HStack(spacing: 10) {
                 if t.suggested {
                     Button("Make a routine") {
                         bot.closeNote()
                         appState.openRoutinePage = true
                     }
+                    .buttonStyle(SoftChipStyle())
                 } else {
                     Button("Later") { bot.closeNote() }
-                        .foregroundStyle(.secondary)
+                        .buttonStyle(SoftChipStyle())
                 }
-                Spacer()
+                Spacer(minLength: 0)
                 Button { bot.openChat() } label: {
-                    Label("Ask me", systemImage: "chevron.right").labelStyle(TrailingIconLabel())
+                    Label("Ask me", systemImage: "bubble.left")
                 }
+                .buttonStyle(SoftChipStyle(selected: true))
             }
-            .font(.subheadline.weight(.semibold))
         }
     }
 }
@@ -208,8 +190,7 @@ struct TutorPlanRows: View {
                         Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
                     } else if item.id == next?.id {
                         Button("Start") { TutorBot.shared.start(item.kind, appState: appState) }
-                            .buttonStyle(.borderedProminent)
-                            .controlSize(.small)
+                            .buttonStyle(SoftChipStyle(selected: true))
                     } else if item.progress > 0 {
                         Gauge(value: item.progress) { EmptyView() }
                             .gaugeStyle(.accessoryCircularCapacity)
@@ -223,12 +204,6 @@ struct TutorPlanRows: View {
                 .contentShape(Rectangle())
             }
         }
-    }
-}
-
-private struct TrailingIconLabel: LabelStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        HStack(spacing: 3) { configuration.title; configuration.icon.imageScale(.small) }
     }
 }
 
@@ -246,15 +221,12 @@ private struct TutorBubbleView: View {
             HStack(spacing: 8) {
                 if let action = bubble.action {
                     Button(action) { bot.start(bubble.kind, appState: appState) }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.small)
+                        .buttonStyle(SoftChipStyle(selected: true))
                     Button("Not now") { bot.dismissBubble() }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
+                        .buttonStyle(SoftChipStyle())
                 } else {
                     Button("OK") { bot.dismissBubble() }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
+                        .buttonStyle(SoftChipStyle())
                 }
             }
         }
@@ -271,12 +243,17 @@ private struct TutorBubbleView: View {
 
 // MARK: - The chat
 
+/// The chat is built from what the app already has: every line is a
+/// `DialogueLine` (the call's own surface), the input is Watch's situation
+/// box (`SpeakOrTypeField` with the send button inside its row), and every
+/// button is `SoftChipStyle`.
 struct TutorChatView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var bot = TutorBot.shared
     @ObservedObject private var chat = TutorChat.shared
     @State private var draft = ""
+    @State private var dictationLocale = ""
     @FocusState private var typing: Bool
 
     private var suggestions: [String] {
@@ -287,44 +264,51 @@ struct TutorChatView: View {
          explain("How do I reach the next level?")]
     }
 
+    private var tutorName: String { explain("Tutor") }
+
     var body: some View {
         NavigationStack {
             ScrollViewReader { proxy in
-                List {
-                    Section {
-                        HStack(alignment: .top, spacing: 12) {
-                            WeeklyTestCharacter(mood: .waiting, since: .distantPast)
-                                .scaleEffect(36 / WeeklyTestCharacter.size)
-                                .frame(width: 36, height: 36)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(TutorCopy.summary(bot.today)).font(.subheadline)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 14) {
+                        DialogueLine(speaker: .other, name: tutorName) {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(TutorCopy.summary(bot.today))
                                 if let why = TutorCopy.why(bot.today) {
-                                    Text(why).font(.footnote).foregroundStyle(.secondary)
+                                    Text(why).font(.subheadline).foregroundStyle(.secondary)
+                                }
+                                if !bot.today.items.isEmpty {
+                                    TutorPlanRows(today: bot.today).padding(.top, 4)
                                 }
                             }
                         }
-                        if !bot.today.items.isEmpty {
-                            TutorPlanRows(today: bot.today)
+                        DialogueLine(speaker: .other, name: tutorName) {
+                            Text("Ask me anything about your practice. I answer from your own talks, cards and routine.")
                         }
-                    } footer: {
-                        Text("Ask me anything about your practice. I answer from your own talks, cards and routine.")
-                    }
-
-                    ForEach(chat.messages) { m in
-                        messageRow(m).id(m.id)
-                    }
-                    if chat.thinking {
-                        HStack(spacing: 8) {
-                            ProgressView()
-                            Text("Thinking…").foregroundStyle(.secondary)
+                        ForEach(chat.messages) { m in
+                            messageLine(m).id(m.id)
                         }
-                        .id("thinking")
+                        if chat.thinking {
+                            DialogueLine(speaker: .other, name: tutorName) {
+                                HStack(spacing: 8) {
+                                    ProgressView()
+                                    Text("Thinking…").foregroundStyle(.secondary)
+                                }
+                            }
+                            .id("thinking")
+                        }
                     }
+                    .padding(16)
                 }
+                .scrollDismissesKeyboard(.interactively)
                 .onChange(of: chat.messages.count) { _, _ in
                     if let last = chat.messages.last { withAnimation { proxy.scrollTo(last.id, anchor: .top) } }
                 }
+                .onChange(of: chat.thinking) { _, on in
+                    if on { withAnimation { proxy.scrollTo("thinking", anchor: .bottom) } }
+                }
             }
+            .background(Color(.systemBackground).ignoresSafeArea())
             .navigationTitle(Text("Tutor"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -335,9 +319,12 @@ struct TutorChatView: View {
             }
             .safeAreaInset(edge: .bottom) { composer }
         }
-        .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
         .onAppear {
+            if dictationLocale.isEmpty {
+                dictationLocale = SpeakOrTypeField.defaultLocale(appLanguage: appState.nativeLanguage,
+                                                                 targetLanguage: appState.targetLanguage)
+            }
             chat.resetIfNewDay()
             bot.refresh(appState: appState, visible: false)
             Analytics.capture("tutor_bot_opened")
@@ -345,63 +332,77 @@ struct TutorChatView: View {
     }
 
     @ViewBuilder
-    private func messageRow(_ m: TutorChat.Message) -> some View {
+    private func messageLine(_ m: TutorChat.Message) -> some View {
         if m.fromLearner {
-            Text(m.text)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .trailing)
+            DialogueLine(speaker: .user, name: chrome("You")) { Text(m.text) }
         } else {
-            VStack(alignment: .leading, spacing: 10) {
-                Text(m.text).font(.subheadline)
-                    .textSelection(.enabled)
+            DialogueLine(speaker: .other, name: tutorName) {
+                Text(m.text).textSelection(.enabled)
+            } accessory: {
                 if let kind = m.action {
                     Button { bot.start(kind, appState: appState) } label: {
                         Label(TutorCopy.startTitle(kind), systemImage: kind.symbol)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
+                    .buttonStyle(SoftChipStyle(selected: true))
                 } else if m.quiz {
                     Button { bot.start(nil, appState: appState) } label: {
                         Label("Quick quiz", systemImage: "questionmark.circle")
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
+                    .buttonStyle(SoftChipStyle(selected: true))
                 }
             }
         }
     }
 
+    /// Watch's situation box: suggestion chips above, one field whose row
+    /// carries the mic, the dictation language and the send button.
     private var composer: some View {
-        VStack(spacing: 8) {
-            if !typing {
+        VStack(spacing: 0) {
+            if draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
+                    HStack(spacing: 10) {
                         ForEach(suggestions, id: \.self) { q in
                             Button(q) { send(q) }
-                                .buttonStyle(.bordered)
-                                .controlSize(.small)
+                                .buttonStyle(SoftChipStyle(selected: true))
                                 .disabled(chat.thinking)
                         }
                     }
                     .padding(.horizontal, 16)
+                    .padding(.vertical, 4)
                 }
+                .padding(.bottom, 10)
+                .transition(.opacity)
             }
-            HStack(spacing: 8) {
-                TextField("Ask me anything…", text: $draft, axis: .vertical)
-                    .lineLimit(1...4)
-                    .focused($typing)
-                    .textFieldStyle(.roundedBorder)
-                    .submitLabel(.send)
-                    .onSubmit { send(draft) }
-                Button { send(draft) } label: { Image(systemName: "arrow.up.circle.fill").font(.title2) }
-                    .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty || chat.thinking)
-                    .accessibilityLabel(Text("Send"))
-            }
-            .padding(.horizontal, 16)
+            SpeakOrTypeField(text: $draft,
+                             locale: $dictationLocale,
+                             placeholder: explain("Ask me anything…"),
+                             showsLocalePicker: true,
+                             lineRange: 1...5,
+                             externalFocus: $typing,
+                             micStyle: .plain,
+                             trailingControls: AnyView(sendButton))
+                .padding(.horizontal, 12)
+                .padding(.bottom, 8)
         }
-        .padding(.vertical, 8)
-        .background(.bar)
+        .padding(.top, 8)
+        .background(Color(.systemBackground))
+        .animation(.easeInOut(duration: 0.2), value: draft.isEmpty)
+    }
+
+    /// The box's own CTA (`ScenarioComposerSheet.inlineCTA`): a filled
+    /// accent circle, shown once there is something to send.
+    @ViewBuilder private var sendButton: some View {
+        if !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, !chat.thinking {
+            Button { send(draft) } label: {
+                Image(systemName: "arrow.up")
+                    .font(.body.weight(.semibold))
+                    .frame(width: 40, height: 40)
+                    .background(Circle().fill(Color.themeAccent))
+                    .foregroundStyle(Color.onAccent)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("Send"))
+        }
     }
 
     private func send(_ q: String) {
