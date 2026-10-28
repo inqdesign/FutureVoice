@@ -126,17 +126,33 @@ enum TalkTimeLog {
                 metadata?.preflight == true || (idempotency_key?.hasSuffix(":pre") ?? false)
             }
         }
-        guard let rows: [LedgerRow] = try? await SupabaseProvider.shared
-            .from("usage_ledger")
-            .select("created_at,idempotency_key,metadata")
-            .eq("user_id", value: session.user.id.uuidString)
-            .eq("action", value: "talk_time")
-            .gte("created_at", value: ISO8601DateFormatter().string(from: start))
-            // One row per 30 s tick: a fortnight of heavy use is ~2k rows.
-            .limit(4000)
-            .execute()
-            .value
-        else { return }
+        // Paged, NEWEST first. PostgREST answers at most `pageSize` rows
+        // whatever `limit` asks, in no promised order — and a heavy learner
+        // writes ~80 rows a day, so a fortnight passed 1,000 and the rows
+        // cut were TODAY's: the ring was then "corrected" down to a part of
+        // the day, and every return to the tab walked it backwards
+        // (2026-10-28, 18 min billed, 4:54 on the ring). Newest first means
+        // any cut lands on the oldest days, which are only ever a floor.
+        // A page that fails drops the whole sync: a partial day must never
+        // be written as the day.
+        var rows: [LedgerRow] = []
+        let since = ISO8601DateFormatter().string(from: start)
+        while rows.count < maxRows {
+            guard let page: [LedgerRow] = try? await SupabaseProvider.shared
+                .from("usage_ledger")
+                .select("created_at,idempotency_key,metadata")
+                .eq("user_id", value: session.user.id.uuidString)
+                .eq("action", value: "talk_time")
+                .gte("created_at", value: since)
+                .order("created_at", ascending: false)
+                .order("id", ascending: false)
+                .range(from: rows.count, to: rows.count + pageSize - 1)
+                .execute()
+                .value
+            else { return }
+            rows += page
+            if page.count < pageSize { break }
+        }
 
         var serverByDay: [String: Int] = [:]
         for row in rows {
@@ -196,6 +212,12 @@ enum TalkTimeLog {
     /// How far back the backfill reaches — today for the ring, plus enough
     /// history for the widget's recent days.
     private static let backfillDays = 14
+
+    /// PostgREST's `max_rows` (supabase/config.toml) — one page.
+    private static let pageSize = 1000
+
+    /// One row per tick (~15–30 s): a fortnight of very heavy use.
+    private static let maxRows = 8000
 
     /// Postgres timestamps come back with fractional seconds, but not always
     /// — one formatter can't parse both, and a nil date would silently drop
