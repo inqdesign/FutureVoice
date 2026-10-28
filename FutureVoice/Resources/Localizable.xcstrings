@@ -8065,6 +8065,53 @@
         }
       }
     },
+    "Your own nawana tutor." : {
+      "comment" : "The tutor bot's first-meeting title: whose tutor this is.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein eigener nawana-Tutor."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu propio tutor de nawana."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ton tuteur nawana, rien qu’à toi."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分専用のnawanaチューターです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "나만의 나와나 튜터예요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "专属于你的 nawana 家教。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "專屬於你的 nawana 家教。"
+          }
+        }
+      }
+    },
     "nawana Podcast" : {
       "localizations" : {
         "de" : {
@@ -71622,7 +71669,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "루틴, 지금까지 나눈 대화, 자주 하는 실수, 복습 카드까지 다 알고 있어요. 다음에 뭘 하면 되는지, 왜 그걸 하는지 늘 알 수 있게 돕는 게 제 일이에요."
+            "value" : "그동안 나눈 대화, 자주 하는 실수, 복습 카드, 루틴까지 다 보고 있어요. 다음에 뭘 하면 되는지, 왜 그런지 늘 알려 드릴게요."
           }
         },
         "zh-Hans" : {
@@ -128297,7 +128344,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "궁금할 땐 언제든 저를 눌러 물어보세요. 뭘 하면 좋을지, 같은 실수가 왜 반복되는지, 잘하고 있는지요."
+            "value" : "궁금할 땐 언제든 아래의 저를 눌러 물어보세요. 뭘 하면 좋을지, 같은 실수가 왜 반복되는지, 잘하고 있는지요."
           }
         },
         "zh-Hans" : {
@@ -174084,7 +174131,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "할 게 생기면 여기서 말을 걸게요. 그 밖엔 조용히 있을게요."
+            "value" : "할 일이 생기면 여기서 먼저 말을 걸게요. 그 밖엔 조용히 있을게요."
           }
         },
         "zh-Hans" : {

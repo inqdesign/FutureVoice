@@ -47,6 +47,7 @@ struct ConversationHome: View {
     @State private var showingActivity = false
     /// The onboarding routine lands in the streak chip (`RoutineOnboardingView`).
     @ObservedObject private var routineHandoff = RoutineHandoff.shared
+    @ObservedObject private var tutorBot = TutorBot.shared
     /// Discover rail's "All scenarios" card → the full collection page.
     @State private var showingAllScenarios = false
     /// The topics page behind the home's one door (`TalkTopicsPage`).
@@ -91,6 +92,16 @@ struct ConversationHome: View {
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
             // Room under the last row for the floating button.
             .contentMargins(.bottom, 88, for: .scrollContent)
+            // While the tutor's note is up, the page goes soft behind it so
+            // the note and the face it comes from are what's left in focus.
+            .overlay {
+                if tutorBot.noteShown {
+                    Rectangle().fill(.ultraThinMaterial)
+                        .ignoresSafeArea()
+                        .onTapGesture { tutorBot.closeNote() }
+                        .transition(.opacity)
+                }
+            }
             // One button to the topics page (draft 2026-10-18) — the discover
             // block used to sit in the scroll in full. Placed and drawn exactly
             // like Watch's "New situation": glass capsule, floating at the
@@ -107,6 +118,7 @@ struct ConversationHome: View {
                         Spacer(minLength: 0)
                     }
                     .frame(maxWidth: .infinity)
+                    .modifier(SoftenedBehindNote(on: tutorBot.noteShown))
                     Button { showingTopics = true } label: {
                         Label("Find a topic", systemImage: "sparkles")
                             .font(.body.weight(.semibold))
@@ -115,6 +127,7 @@ struct ConversationHome: View {
                     }
                     .modifier(GlassFloatingButton())
                     .fixedSize()
+                    .modifier(SoftenedBehindNote(on: tutorBot.noteShown))
                     HStack {
                         Spacer(minLength: 0)
                         TutorBotButton()

@@ -18,6 +18,14 @@ struct TutorBotButton: View {
                 .frame(width: 30, height: 30)
         }
         .modifier(GlassCircleButton())
+        // The note above is this face talking: a ring says where it came from.
+        .overlay {
+            if bot.noteShown {
+                Circle().strokeBorder(Color.accentColor, lineWidth: 2)
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+            }
+        }
         .accessibilityLabel(Text("Tutor"))
         .accessibilityHint(Text("Ask what to do next"))
         .contextMenu {
@@ -56,7 +64,7 @@ struct TutorBotLayer: View {
                     .ignoresSafeArea()
                 TutorNoteCard()
                     .padding(.horizontal, 12)
-                    .padding(.bottom, 84)
+                    .padding(.bottom, 80)
                     .transition(.scale(scale: 0.2, anchor: .bottomTrailing).combined(with: .opacity))
             } else if let b = bot.bubble {
                 TutorBubbleView(bubble: b)
@@ -85,8 +93,9 @@ private struct TutorNoteCard: View {
             if bot.introShown { intro } else { plan }
         }
         .padding(16)
+        .padding(.bottom, TutorNoteShape.tailHeight)
         .frame(maxWidth: 420, alignment: .leading)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .background(Color(.secondarySystemGroupedBackground), in: TutorNoteShape())
         .shadow(color: .black.opacity(0.18), radius: 20, y: 8)
         .accessibilityElement(children: .contain)
     }
@@ -103,7 +112,7 @@ private struct TutorNoteCard: View {
             HStack(alignment: .top, spacing: 12) {
                 face
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Hi, I'm your tutor.").font(.headline)
+                    Text("Your own nawana tutor.").font(.headline)
                     Text("I know your routine, your talks, your mistakes and your cards. My job is that you always know what to do next, and why.")
                         .font(.subheadline)
                         .fixedSize(horizontal: false, vertical: true)
@@ -168,6 +177,42 @@ private struct TutorNoteCard: View {
                 .buttonStyle(SoftChipStyle(selected: true))
             }
         }
+    }
+}
+
+/// The note's card, with a tail at the bottom right pointing down at the
+/// tutor's face (`TutorBotButton`), so the note reads as the face talking.
+/// `tailInset` is from the card's trailing edge to the tail's centre: the
+/// card sits 12 pt from the screen edge and the face's centre ~50 pt.
+struct TutorNoteShape: Shape {
+    static let tailHeight: CGFloat = 12
+    var cornerRadius: CGFloat = 24
+    var tailInset: CGFloat = 38
+    var tailHalfWidth: CGFloat = 11
+
+    func path(in rect: CGRect) -> Path {
+        var body = rect
+        body.size.height -= Self.tailHeight
+        var p = Path(roundedRect: body, cornerRadius: cornerRadius, style: .continuous)
+        let x = rect.maxX - tailInset
+        p.move(to: CGPoint(x: x - tailHalfWidth, y: body.maxY - 1))
+        p.addLine(to: CGPoint(x: x, y: rect.maxY))
+        p.addLine(to: CGPoint(x: x + tailHalfWidth, y: body.maxY - 1))
+        p.closeSubpath()
+        return p
+    }
+}
+
+/// The two other buttons of the Talk home's bottom row while the tutor's
+/// note is up: out of focus and out of reach, so only the face stays sharp.
+struct SoftenedBehindNote: ViewModifier {
+    let on: Bool
+    func body(content: Content) -> some View {
+        content
+            .blur(radius: on ? 6 : 0)
+            .opacity(on ? 0.5 : 1)
+            .allowsHitTesting(!on)
+            .animation(.easeOut(duration: 0.3), value: on)
     }
 }
 
