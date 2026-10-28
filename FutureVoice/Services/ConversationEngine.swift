@@ -665,7 +665,10 @@ enum ConversationEngine {
             what it is, give its example line, ask them to say it about \
             themselves). On the last challenge, that is the lesson done: \
             tell them so and ask whether they want more of this or another \
-            topic.
+            topic. If they want more, say in a few words that you're setting \
+            up the next round — the APP writes it and a note tells you when \
+            to start. Never make up a round or a challenge yourself; the \
+            only challenges are the ones in the lesson above.
           · nailed on the very first try with nothing to fix → you may move \
             on straight away.
         - NEVER praise a line and ask for it again a second time. Every time \
