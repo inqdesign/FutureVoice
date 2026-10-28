@@ -181,6 +181,7 @@ import androidx.compose.material3.AlertDialog
 import com.roro.futurevoice.talk.SuggestedTopic
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.roro.futurevoice.talk.TutorBot
 import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.talk.Session
 
@@ -2197,6 +2198,10 @@ internal fun HomeScreen(
                     // A hidden tab stays composed but is neither measured nor
                     // placed: nothing drawn, no touches.
                     .then(if (t == tab) Modifier else Modifier.layout { _, _ -> layout(0, 0) {} })
+                    // While the tutor's note is up the Talk page goes soft
+                    // behind it (iOS: an ultraThinMaterial over the page,
+                    // 2ff90516) — the blur half; the wash is drawn over it.
+                    .then(if (t == HomeTab.TALK) Modifier.softenedPage(TutorBot.noteShown) else Modifier)
                     .then(if (paged || canvas) Modifier
                         else Modifier.verticalScroll(pageScroll).padding(horizontal = 20.dp)),
                 verticalArrangement = Arrangement.spacedBy(24.dp),
@@ -2292,6 +2297,23 @@ internal fun HomeScreen(
 
           }
         }
+        // The wash half of the softened page: the note and the face it comes
+        // from are what's left in focus. A tap anywhere closes the note.
+        if (tab == HomeTab.TALK && !writingSituation) {
+            val washContext = LocalContext.current
+            androidx.compose.animation.AnimatedVisibility(
+                visible = TutorBot.noteShown,
+                enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(300)),
+                exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(300)),
+            ) {
+                Box(Modifier.fillMaxSize()
+                    .background(AppSurfaces.ground.copy(
+                        alpha = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) 0.45f else 0.8f))
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                        TutorBot.closeNote(washContext)
+                    })
+            }
+        }
         // Talk's bottom row (iOS `ConversationHome`'s overlay, 2026-10-18,
         // founder): the situation player on the left, "Find a topic" centred,
         // the tutor's face on the right (the quick quiz's until 2026-10-28;
@@ -2308,7 +2330,8 @@ internal fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                Box(Modifier.weight(1f).softenedBehindNote(TutorBot.noteShown),
+                    contentAlignment = Alignment.CenterStart) {
                     PlaylistButton(onClick = {
                         // Nothing queued: open on what there is to hear.
                         playerAutoplay = false; playerOnList = !com.roro.futurevoice.audio.PlaylistPlayer.hasQueue; showPlayer = true
@@ -2317,7 +2340,7 @@ internal fun HomeScreen(
                 // Drawn exactly like Watch's "New situation": glass capsule,
                 // accent label.
                 com.roro.futurevoice.ui.brand.IosGlassButton(onClick = onOpenTopics,
-                    modifier = Modifier.height(50.dp)) {
+                    modifier = Modifier.softenedBehindNote(TutorBot.noteShown).height(50.dp)) {
                     Icon(Icons.Filled.AutoAwesome, contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
                     Spacer(Modifier.width(8.dp))
