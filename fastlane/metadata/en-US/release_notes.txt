@@ -1,10 +1,14 @@
 New
-• The Speech result page now marks your mistakes right on the script, like a red pen.
-• Speech challenge leaderboards now show takes that scored 80 or more.
-• In Listen, the player button opens the list right away when nothing is playing.
+• Meet your personal tutor on the Talk tab. It lays out what to do today, and you can ask it anything about your practice.
+• Tutor mode now has a curriculum: pass one topic at a time, with a final check at the end.
+• When you start, you can pick the future you're working toward. Your fluent self talks like someone already living it. Change it anytime in Me → Profile → My future.
+• The report you get when your free minutes are spent is now read to you by your fluent self. It also shows how you used the app and what your level was based on.
+• New Speech challenge: "Tell me about yourself". Challenge cards now show how many times people have tried.
+• A scheduled plan change now shows at the top of Usage.
 
 Fixed
-• In Tutor mode, say it right twice and the tutor moves on to the next step by itself.
-• With Answer with Send, the Send button now appears once you start speaking, and the topic button stays put.
-• The call timer no longer stops at 0:05.
-• Theme colors now show inside sheets and in dark mode.
+• The call timer now shows from the moment the call starts, and talk time counts from then too.
+• The Home ring now shows today's talk time correctly.
+• Say it again no longer moves to the next turn while you're still reading a long line.
+• In Tutor mode, after a round the tutor waits until you choose what's next.
+• In Call settings, Tutor mode is now at the top, and Coach mode is now "Try saying".

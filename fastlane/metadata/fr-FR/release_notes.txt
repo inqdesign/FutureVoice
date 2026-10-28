@@ -1,10 +1,14 @@
 Nouveautés
-• La page de résultat d’un discours marque tes erreurs directement sur le texte, comme au stylo rouge.
-• Le classement d’un défi de discours affiche les essais à 80 points ou plus.
-• Dans Écouter, le bouton du lecteur ouvre la liste tout de suite quand rien ne joue.
+• Ton tuteur personnel arrive dans l’onglet Parler. Il te dit quoi faire aujourd’hui, et tu peux lui poser n’importe quelle question sur ta pratique.
+• Le mode tuteur a maintenant un programme : un sujet à la fois, avec un dernier test à la fin.
+• Au début, tu peux choisir l’avenir que tu vises. Ton moi fluide en parle comme quelqu’un qui le vit déjà. Tu peux le changer quand tu veux dans Mon profil → Profil → Mon avenir.
+• Le bilan que tu reçois à la fin de tes minutes gratuites est maintenant lu par ton moi fluide. Il montre aussi comment tu as utilisé l’app et sur quoi ton niveau est basé.
+• Nouveau défi de discours : « Parle-moi de toi ». Les cartes affichent maintenant le nombre de tentatives.
+• Un changement de forfait prévu s’affiche maintenant en haut d’Utilisation.
 
 Corrections
-• En mode tuteur, dis-le correctement deux fois et le tuteur passe seul à l’étape suivante.
-• Avec Répondre avec Envoyer, le bouton Envoyer apparaît dès que tu commences à parler, et le bouton de sujet ne disparaît plus.
-• L’horloge de l’appel ne s’arrête plus à 0:05.
-• Les couleurs du thème s’affichent désormais dans les fenêtres et en mode sombre.
+• L’horloge de l’appel s’affiche dès le début de l’appel, et le temps de conversation compte à partir de là.
+• L’anneau de l’accueil affiche maintenant correctement ton temps de conversation du jour.
+• Redire ne passe plus au tour suivant pendant que tu lis encore une longue phrase.
+• En mode tuteur, après une manche, le tuteur attend que tu choisisses la suite.
+• Dans les réglages de l’appel, le mode tuteur est en haut et le mode coach devient « Essaie de dire ».

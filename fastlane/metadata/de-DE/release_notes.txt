@@ -1,10 +1,14 @@
 Neu
-• Die Ergebnisseite einer Rede markiert deine Fehler jetzt direkt im Text, wie mit Rotstift.
-• In die Rangliste einer Rede-Challenge kommen Versuche ab 80 Punkten.
-• Unter „Anhören“ öffnet der Player-Knopf sofort die Liste, wenn gerade nichts läuft.
+• Im Tab Sprechen gibt es jetzt deinen persönlichen Tutor. Er zeigt dir, was heute dran ist, und du kannst ihn alles zu deinem Üben fragen.
+• Der Tutor-Modus hat jetzt einen Lehrplan: ein Thema nach dem anderen, am Ende ein Abschlusscheck.
+• Beim Start kannst du die Zukunft wählen, auf die du hinarbeitest. Dein fließendes Ich spricht wie jemand, der sie schon lebt. Ändern kannst du sie jederzeit unter Ich → Profil → Meine Zukunft.
+• Den Bericht nach deinen Gratisminuten liest dir jetzt dein fließendes Ich vor. Er zeigt auch, wie du die App genutzt hast und worauf dein Niveau beruht.
+• Neue Rede-Challenge: „Erzähl etwas über dich“. Die Karten zeigen jetzt, wie oft es versucht wurde.
+• Eine geplante Tarifänderung steht jetzt ganz oben unter Nutzung.
 
 Behoben
-• Im Tutor-Modus geht der Tutor von selbst zum nächsten Schritt, wenn du es zweimal richtig sagst.
-• Bei „Mit Senden antworten“ erscheint der Senden-Knopf erst, wenn du zu sprechen beginnst, und der Themen-Knopf verschwindet nicht mehr.
-• Die Uhr im Gespräch bleibt nicht mehr bei 0:05 stehen.
-• Die Designfarben sind jetzt auch in Fenstern und im Dunkelmodus zu sehen.
+• Die Gesprächsuhr läuft jetzt ab dem Moment, in dem der Anruf beginnt, und die Sprechzeit zählt ab dann.
+• Der Ring auf dem Startbildschirm zeigt die heutige Sprechzeit jetzt richtig.
+• Bei Nochmal sagen springt die App nicht mehr zur nächsten Runde, während du noch einen langen Satz liest.
+• Im Tutor-Modus wartet der Tutor nach einer Runde, bis du wählst, wie es weitergeht.
+• In den Anruf-Einstellungen steht der Tutor-Modus jetzt oben, und der Coach-Modus heißt jetzt „Sag mal so“.
