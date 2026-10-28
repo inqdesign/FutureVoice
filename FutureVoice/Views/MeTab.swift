@@ -335,6 +335,21 @@ struct MeTab: View {
                             title: explain("Open Your week"),
                             subtitle: explain("The last 7 days as cards, with a fresh coach note"))
                     }
+                    // The free-minutes report is raised once, when a free
+                    // account's twenty minutes run out — never on this
+                    // account. This builds it from the last 7 days here.
+                    Button {
+                        let report = TrialReportStore.preview(targetLanguage: appState.targetLanguage)
+                        dismiss()
+                        Task { @MainActor in
+                            try? await Task.sleep(nanoseconds: 700_000_000)
+                            DailyCallInbox.shared.debugTrialReport = report
+                        }
+                    } label: {
+                        row(icon: "gift",
+                            title: explain(key: "dev.trialReport.title", default: "Preview free-minutes report"),
+                            subtitle: explain(key: "dev.trialReport.subtitle", default: "Your last 7 days, as a learner whose free time ran out"))
+                    }
                     Button {
                         let week = WeekRecapBuilder.lastWeek()
                         WeekRecapStore.shared.remove(endingAt: week.end)

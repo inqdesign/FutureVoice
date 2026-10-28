@@ -168,6 +168,26 @@ enum TrialReportStore {
         if let kept = load(language: targetLanguage) { return kept }
         let sessions = spokenSessions()
         let first = sessions.compactMap { $0.turns.first?.timestamp ?? $0.startedAt }.min() ?? now
+        return build(from: first, sessions: sessions, targetLanguage: targetLanguage, now: now)
+    }
+
+    #if DEBUG
+    /// Me → Developer: the report over the last `days` of this phone's own
+    /// talks, built fresh every time, past every gate — so it can be LOOKED
+    /// at before it reaches a learner. The end-of-report feedback ask is made
+    /// showable again; nothing else about the account changes.
+    static func preview(targetLanguage: String, days: Int = 7, now: Date = Date()) -> TrialReport {
+        try? FileManager.default.removeItem(at: url(targetLanguage))
+        FeedbackPrompt.reset(.trialReport)
+        let start = now.addingTimeInterval(-Double(days) * 86_400)
+        let sessions = spokenSessions().filter {
+            ($0.turns.last(where: { $0.role == .user })?.timestamp ?? $0.startedAt) >= start
+        }
+        return build(from: start, sessions: sessions, targetLanguage: targetLanguage, now: now)
+    }
+    #endif
+
+    private static func build(from first: Date, sessions: [Session], targetLanguage: String, now: Date) -> TrialReport {
         let spoken = speech(in: sessions)
         // Two languages spoken: the report reads the one it is opened in, and
         // its minutes and talks are that language's, so the cover's number is

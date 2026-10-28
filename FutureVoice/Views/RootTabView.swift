@@ -366,6 +366,11 @@ struct RootTabView: View {
             callInbox.pendingTrialReport = false
             offerTrialReport()
         }
+        .onChange(of: callInbox.debugTrialReport?.builtAt) { _, _ in
+            guard let report = callInbox.debugTrialReport else { return }
+            callInbox.debugTrialReport = nil
+            trialReport = report
+        }
         .onChange(of: callInbox.debugWeekRecap) { _, recap in
             guard let recap else { return }
             callInbox.debugWeekRecap = nil

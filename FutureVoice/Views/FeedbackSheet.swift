@@ -296,6 +296,11 @@ enum FeedbackPrompt {
         UserDefaults.standard.set(true, forKey: key(c))
     }
 
+    /// Developer previews only: ask again as if never asked.
+    static func reset(_ c: FeedbackSheet.Context) {
+        UserDefaults.standard.removeObject(forKey: key(c))
+    }
+
     /// The one moment worth asking a learner what they think: they had a call,
     /// they came BACK, and they have just finished another real one.
     ///
