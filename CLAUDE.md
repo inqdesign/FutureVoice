@@ -2978,8 +2978,10 @@ sync container carry over. `./scripts/mac-run.sh` builds and opens it.
   header panels run to the window's edge. A frame clipped every scroll view
   at the column. Three helpers finish it per surface: `.macCarousel()` (a
   sideways row draws past the column — Speech challenges), `.macPager()`
-  (a paging scroll is clipped to the column, or the next page sits in the
-  margin — Progress, Review), `.macEdgeToEdge()` (ignores the column — the
+  (a paging scroll runs the WINDOW's width and each page puts its content
+  back on the column with `.macPagerPage()` — paging turns by the scroll
+  view's own width, so a pager inside the column's safe area landed every
+  swipe between two pages — Progress, Review), `.macEdgeToEdge()` (ignores the column — the
   Watch map). Header panels ignore `[.top, .horizontal]`, and the bottom
   tab-bar feather is off on the Mac (no bottom tab bar to fade into).
   SwiftUI's `safeAreaPadding` at the root does NOT reach the UIKit tab and
@@ -2989,6 +2991,22 @@ sync container carry over. `./scripts/mac-run.sh` builds and opens it.
   (`watchForRelayout`): UIKit builds the tab controller late, and a launch
   that lost focus at once came up with no column and the page under the
   title bar. The Review split uses the whole window.
+- **A mouse drags a sideways scroll view** (`MacScrollDrag`, 2026-10-29,
+  founder: "no left-right swiping with the mouse anywhere"). On the Mac a
+  scroll view moves only under a trackpad or a wheel; a click-drag does
+  nothing although its pan already allows the pointer (measured). Every
+  scroll view that scrolls sideways ONLY gets a pan of its own (a swizzle of
+  `layoutSubviews` attaches it once), and on release asks the scroll view's
+  delegate for the landing point the way a flick would, so SwiftUI's paging
+  / view-aligned behaviour snaps it and `scrollPosition` (the chips above a
+  pager) follows. Vertical lists and the 2D people map are left alone.
+- **The speech take screen is a 760 pt column on the Mac** (script and
+  camera card under the lens). Its camera preview is ONE layer owned by
+  `SpeechCamera`, bound to the session before it runs: binding a layer to
+  a running session (what a preview view made after the camera was on did)
+  held the main thread 9 s on a Mac — no picture, the screen frozen.
+  Reading the take screen through Accessibility (an AX inspector) crashes
+  SwiftUI in `AccessibilityBridgedPlatformView` — click it when testing.
 - **A sheet on the Mac is its OWN window** (a macOS sheet attached to the
   app's window), so it does NOT inherit the page's zoom, and macOS
   swallows every click behind it — a click outside can never close it.

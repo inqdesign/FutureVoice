@@ -23,7 +23,16 @@ final class SpeechCamera: NSObject, ObservableObject {
     private var configured = false
     private let handlerBox = FrameHandlerBox()
     private var device: AVCaptureDevice?
-    private weak var previewLayer: AVCaptureVideoPreviewLayer?
+    /// The one preview layer, bound to the session BEFORE it runs. Binding a
+    /// layer to a session that is already running reconfigures it on the main
+    /// thread — measured on a Mac: 9 s with the screen frozen and no picture,
+    /// on every camera switch, since the preview view is made after the
+    /// camera is on. The view only hosts this layer.
+    let previewLayer: AVCaptureVideoPreviewLayer = {
+        let layer = AVCaptureVideoPreviewLayer()
+        layer.videoGravity = .resizeAspectFill
+        return layer
+    }()
     private var rotation: AVCaptureDevice.RotationCoordinator?
     private var rotationObservation: NSKeyValueObservation?
     /// What the screen asked for. A start that finishes after a stop was
@@ -123,6 +132,7 @@ final class SpeechCamera: NSObject, ObservableObject {
         self.device = device
         Self.log.notice("camera: \(device.localizedName, privacy: .public) type=\(device.deviceType.rawValue, privacy: .public)")
         observeSession()
+        previewLayer.session = session
         output.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
         output.alwaysDiscardsLateVideoFrames = true
         output.setSampleBufferDelegate(self, queue: queue)
@@ -184,17 +194,17 @@ final class SpeechCamera: NSObject, ObservableObject {
         #endif
     }
 
-    /// The preview hands its layer over so the picture can follow the SCREEN.
-    /// A fixed 90° was right only on an iPhone held upright; an iPad turns,
-    /// and its front camera may sit on the long edge, so the angle comes from
-    /// the device and the interface, never from a constant.
-    func attach(previewLayer layer: AVCaptureVideoPreviewLayer) {
-        guard previewLayer !== layer else { return }
-        previewLayer = layer
+    /// The preview view now shows the layer: the angle is read again against
+    /// the screen it is on.
+    func previewShown() {
         rotation = nil
         followRotation()
     }
 
+    /// The picture follows the SCREEN. A fixed 90° was right only on an
+    /// iPhone held upright; an iPad turns, and its front camera may sit on
+    /// the long edge, so the angle comes from the device and the interface,
+    /// never from a constant.
     private func followRotation() {
         guard let device else { return }
         if rotation == nil {
@@ -211,8 +221,8 @@ final class SpeechCamera: NSObject, ObservableObject {
     /// screen, so its picture stands the way the screen's does.
     private func applyRotation() {
         guard let angle = rotation?.videoRotationAngleForHorizonLevelPreview else { return }
-        Self.log.notice("rotation: \(angle) preview=\(self.previewLayer != nil)")
-        if let c = previewLayer?.connection, c.isVideoRotationAngleSupported(angle) {
+        Self.log.notice("rotation: \(angle)")
+        if let c = previewLayer.connection, c.isVideoRotationAngleSupported(angle) {
             c.videoRotationAngle = angle
         }
         if let c = output.connection(with: .video), c.isVideoRotationAngleSupported(angle) {
@@ -240,17 +250,30 @@ private final class FrameHandlerBox: @unchecked Sendable {
 struct SpeechCameraPreview: UIViewRepresentable {
     let camera: SpeechCamera
 
+    /// Hosts the camera's own layer (see `SpeechCamera.previewLayer`).
     final class PreviewView: UIView {
-        override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
-        var previewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
+        var preview: AVCaptureVideoPreviewLayer? {
+            didSet {
+                guard let preview, preview.superlayer !== layer else { return }
+                layer.addSublayer(preview)
+                setNeedsLayout()
+            }
+        }
+
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            preview?.frame = bounds
+            CATransaction.commit()
+        }
     }
 
     func makeUIView(context: Context) -> PreviewView {
         let view = PreviewView()
-        view.previewLayer.session = camera.session
-        view.previewLayer.videoGravity = .resizeAspectFill
         view.backgroundColor = .black
-        camera.attach(previewLayer: view.previewLayer)
+        view.preview = camera.previewLayer
+        camera.previewShown()
         return view
     }
 

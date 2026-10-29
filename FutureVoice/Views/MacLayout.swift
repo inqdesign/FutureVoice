@@ -126,13 +126,26 @@ enum MacLayout {
     }
 }
 
+private struct MacPagerPage: ViewModifier {
+    @AppStorage(MacLayout.columnKey) private var column = MacLayout.Column.regular.rawValue
+    @ObservedObject private var wide = MacLayout.Wide.shared
+
+    func body(content: Content) -> some View {
+        content
+            .frame(maxWidth: MacPageModifier.width(column: column, mode: wide.mode))
+            .frame(maxWidth: .infinity)
+    }
+}
+
 private struct MacPageModifier: ViewModifier {
     @AppStorage(MacLayout.columnKey) private var column = MacLayout.Column.regular.rawValue
     @ObservedObject private var wide = MacLayout.Wide.shared
 
-    private var width: CGFloat {
+    private var width: CGFloat { Self.width(column: column, mode: wide.mode) }
+
+    static func width(column: String, mode: MacLayout.ColumnMode) -> CGFloat {
         let picked = (MacLayout.Column(rawValue: column) ?? .regular).width ?? .infinity
-        switch wide.mode {
+        switch mode {
         case .normal: return picked
         // A split has two panes of its own to fill; the window is its column.
         case .split: return .infinity
@@ -177,12 +190,25 @@ extension View {
         #endif
     }
 
-    /// A pager is the column's own: a SwiftUI scroll view draws into the
-    /// safe area the column is made of, so without this the next page sat in
-    /// the window's margin (Mac only).
+    /// A sideways pager runs the WINDOW's width (Mac only). Paging turns by
+    /// the scroll view's own width, so a pager inside the column's safe area
+    /// had pages one column wide on a scroll view one window wide: a swipe
+    /// (trackpad or mouse) landed between two pages. Each page puts its
+    /// reading back on the column with `macPagerPage()`.
     func macPager() -> some View {
         #if targetEnvironment(macCatalyst)
-        clipped()
+        ignoresSafeArea(.container, edges: .horizontal)
+        #else
+        self
+        #endif
+    }
+
+    /// One page of a `macPager()`: its content on the column, inside a page
+    /// (and a vertical scroll view) the window's width, so nothing is clipped
+    /// at the column's edge (Mac only).
+    func macPagerPage() -> some View {
+        #if targetEnvironment(macCatalyst)
+        modifier(MacPagerPage())
         #else
         self
         #endif
@@ -290,6 +316,7 @@ enum MacWindow {
         }
         NotificationCenter.default.post(name: MacLayout.windowDidResize, object: nil)
         watchForRelayout()
+        MacScrollDrag.install()
         #endif
     }
 
@@ -695,6 +722,110 @@ struct MacGlassButtonStyle: ButtonStyle {
                 content.background(.regularMaterial, in: shape)
             }
         }
+    }
+}
+#endif
+
+#if targetEnvironment(macCatalyst)
+/// A mouse has no swipe. On the Mac a scroll view moves only under a
+/// trackpad's two fingers or a wheel — a click-and-drag does nothing, though
+/// the pan already allows the pointer (measured) — so every sideways pager
+/// (Progress and Review's pages, Speech's challenges, the week strip) could
+/// not be turned with a mouse at all. A scroll view that scrolls SIDEWAYS
+/// ONLY gets a pan of its own that drags it, and on release asks the scroll
+/// view's delegate where to land, exactly as a finger's flick would: that is
+/// where SwiftUI's paging / view-aligned behaviour snaps the target, so a
+/// mouse lands on the same page a swipe would. Vertical lists and the 2D
+/// people map are left alone (their drags select text, move sliders, pan
+/// the map).
+enum MacScrollDrag {
+    @MainActor static func install() {
+        guard !installed,
+              let original = class_getInstanceMethod(UIScrollView.self, #selector(UIScrollView.layoutSubviews)),
+              let added = class_getInstanceMethod(UIScrollView.self, #selector(UIScrollView.fv_dragLayoutSubviews))
+        else { return }
+        installed = true
+        method_exchangeImplementations(original, added)
+    }
+    @MainActor private static var installed = false
+}
+
+/// The mouse's pan on one sideways scroll view.
+@MainActor
+private final class MouseSwipe: NSObject, UIGestureRecognizerDelegate {
+    weak var scrollView: UIScrollView?
+    private var start: CGPoint = .zero
+
+    init(_ scrollView: UIScrollView) {
+        self.scrollView = scrollView
+        super.init()
+        let pan = UIPanGestureRecognizer(target: self, action: #selector(pan(_:)))
+        pan.delegate = self
+        pan.allowedScrollTypesMask = []   // a wheel or trackpad already scrolls
+        scrollView.addGestureRecognizer(pan)
+        objc_setAssociatedObject(scrollView, &MouseSwipe.key, self, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+    }
+    nonisolated(unsafe) private static var key = 0
+    static func isAttached(to scrollView: UIScrollView) -> Bool {
+        objc_getAssociatedObject(scrollView, &key) != nil
+    }
+
+    /// Sideways drags only: an up-and-down drag belongs to the page inside.
+    func gestureRecognizerShouldBegin(_ g: UIGestureRecognizer) -> Bool {
+        guard let pan = g as? UIPanGestureRecognizer, let sv = scrollView else { return false }
+        let v = pan.velocity(in: sv)
+        return sv.contentSize.width > sv.bounds.width + 1 && abs(v.x) > abs(v.y)
+    }
+
+    func gestureRecognizer(_ g: UIGestureRecognizer,
+                           shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool { false }
+
+    @objc private func pan(_ pan: UIPanGestureRecognizer) {
+        guard let sv = scrollView else { return }
+        let inset = sv.adjustedContentInset
+        let minX = -inset.left
+        let maxX = max(minX, sv.contentSize.width + inset.right - sv.bounds.width)
+        switch pan.state {
+        case .began:
+            start = sv.contentOffset
+            sv.layer.removeAllAnimations()
+            sv.delegate?.scrollViewWillBeginDragging?(sv)
+        case .changed:
+            let x = start.x - pan.translation(in: sv).x
+            // Past an end it gives a little, like a finger at the edge.
+            let clamped = x < minX ? minX - (minX - x) / 3 : x > maxX ? maxX + (x - maxX) / 3 : x
+            sv.contentOffset = CGPoint(x: clamped, y: start.y)
+        case .ended, .cancelled, .failed:
+            // UIKit's velocity is points per MILLISECOND here, and the
+            // target is where a flick would coast to.
+            let v = -pan.velocity(in: sv).x / 1000
+            var target = CGPoint(x: min(maxX, max(minX, sv.contentOffset.x + v * 300)), y: start.y)
+            let velocity = CGPoint(x: v, y: 0)
+            withUnsafeMutablePointer(to: &target) { ptr in
+                sv.delegate?.scrollViewWillEndDragging?(sv, withVelocity: velocity, targetContentOffset: ptr)
+            }
+            target.x = min(maxX, max(minX, target.x))
+            sv.delegate?.scrollViewDidEndDragging?(sv, willDecelerate: true)
+            sv.delegate?.scrollViewWillBeginDecelerating?(sv)
+            // Ended like a flick ends, so SwiftUI's scroll position (the
+            // chip above the pager) follows the page it landed on.
+            UIView.animate(withDuration: 0.3, delay: 0, options: [.curveEaseOut, .allowUserInteraction]) {
+                sv.contentOffset = target
+            } completion: { _ in
+                sv.delegate?.scrollViewDidEndDecelerating?(sv)
+            }
+        default: break
+        }
+    }
+}
+
+extension UIScrollView {
+    @objc fileprivate func fv_dragLayoutSubviews() {
+        fv_dragLayoutSubviews()   // the original, after the exchange
+        guard contentSize.width > bounds.width + 1,
+              contentSize.height <= bounds.height + 1,
+              !MouseSwipe.isAttached(to: self) else { return }
+        _ = MouseSwipe(self)
     }
 }
 #endif

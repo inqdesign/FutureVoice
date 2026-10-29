@@ -161,6 +161,11 @@ struct SpeechPrompterView: View {
                 .frame(maxHeight: .infinity)
         }
         .coordinateSpace(.named(Self.screenSpace))
+        // A Mac window is far wider than a line can be read: the script and
+        // the camera card stand in a column under the lens, the page's
+        // background fills the rest.
+        .frame(maxWidth: MacLayout.isMac ? Self.macColumn : .infinity)
+        .frame(maxWidth: .infinity)
         // Steady speed: press and hold anywhere on the screen to stop the
         // text, let go to carry on (founder, 2026-10-05; first on the text
         // only). Following the voice already stops when the reader does.
@@ -347,6 +352,9 @@ struct SpeechPrompterView: View {
         // empty space (founder, 2026-10-05).
         .ignoresSafeArea(.container, edges: .bottom)
     }
+
+    /// The take screen's width on the Mac.
+    private static let macColumn: CGFloat = 760
 
     /// Gap between the camera card and the screen's edges.
     private static let cardInset: CGFloat = 8

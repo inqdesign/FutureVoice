@@ -257,6 +257,7 @@ struct PracticeTab: View {
                                 .padding(.horizontal, 18)
                                 .padding(.top, 8)
                                 .padding(.bottom, 36)
+                                .macPagerPage()
                         }
                         .containerRelativeFrame(.horizontal)
                         .id(s)
