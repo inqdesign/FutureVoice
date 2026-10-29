@@ -1387,6 +1387,7 @@ enum ConversationEngine {
     /// weekly report's repeated-mistake detection.
     static func turnOutputInstruction(targetLanguage: String,
                                       nativeLanguage: String,
+                                      level: CEFRLevel = .b1,
                                       counterpart: Counterpart? = nil,
                                       inScene: Bool = false) -> String {
         let nativeName = LanguageCatalog.englishName(nativeLanguage)
@@ -1451,17 +1452,7 @@ enum ConversationEngine {
           CONVERSATION. It is read back aloud in place of what they said, so
           it has to stand where their line stood: every idea they raised
           survives, in their order, answering whatever was just said to them.
-          A turn of three sentences comes back as three sentences.
-        - Rewriting it means: keep their MEANING, their INTENT and their
-          REGISTER, and change only how it is said. Do not add information
-          they did not give, do not drop an idea because it was clumsy, do
-          not make it more polite or more formal than they were, and never
-          answer for them.
-        - DO drop the hesitation — fillers ("um", "uh", "like"), false
-          starts, a clause abandoned halfway, a word said twice. Those are
-          not errors and never go in "fixes"; they are simply not in the
-          fluent version. Keep the length close to what they said: this is
-          their turn said better, never a longer one.
+          A turn of three sentences comes back as three sentences.\(rewriteRules(level))
         - "alternative" must be a CONCRETE utterance the user could say out
           loud, never a rule or a category.
         - "fixes": every outright ERROR in that line, one entry each —
@@ -1568,14 +1559,7 @@ enum ConversationEngine {
           not the worst clause, not a summary. It is read back aloud in place
           of what they said, so every idea they raised has to survive, in
           their order, still answering what was said to them. Three sentences
-          come back as three sentences.
-        - Keep their MEANING, INTENT and REGISTER; change only how it is said.
-          Add nothing they did not say, drop no idea because it was clumsy,
-          and never make them more formal than they were.
-        - DO drop the hesitation — fillers ("um", "uh", "like"), false starts,
-          a clause abandoned halfway, a word said twice. Those are not errors
-          and never go in "fixes"; they are simply gone from the fluent
-          version. Keep the length close to theirs.
+          come back as three sentences.\(rewriteRules(level))
         - "fixes": every outright ERROR in the line, one entry each — "was"
           quoted VERBATIM from what they said, "now" those same words
           corrected, "why" the grammar point in \(nativeName), ≤ 12 words.
@@ -1755,6 +1739,57 @@ enum ConversationEngine {
         let right = spokenWords(ShadowEngine.expandForDiff(b, language: "ko"))
         guard left.count >= 2, left != right else { return false }
         return left.sorted() == right.sorted()
+    }
+
+    /// How "alternative" is rewritten — shared by both correction prompts.
+    ///
+    /// Until 2026-10-29 the rule was "keep their words, change only how it is
+    /// said, length close to theirs", and a B2 learner reported the result
+    /// (from a Say it again run) as their own sentence with the grammar
+    /// patched: "prominent players" left in where they meant promising, a
+    /// show "about a legendary player" read as a show NAMED that, and the
+    /// point they were making ("she's already retired" — and still does all
+    /// this) never said. The rewrite is the line they study and say again, so
+    /// it is now what they MEANT, said the way a fluent speaker would — and
+    /// how far above them it may reach depends on the level: A1/A2 get words
+    /// within reach (a step up is fine), B1 and up the complete native form.
+    /// Probed with `scripts/correction-probe.py` (en/ko/ja/de unchanged on
+    /// false fixes, missed errors and fragments).
+    static func rewriteRules(_ level: CEFRLevel) -> String {
+        let reach: String
+        switch level {
+        case .a1, .a2:
+            reach = "\n- This learner is a beginner (\(level.rawValue.uppercased())). Natural and correct,"
+                + "\n  but in words and sentence shapes they can say back: at most one"
+                + "\n  step above their level, no idiom they would stumble over."
+        case .b1, .b2, .c1, .c2:
+            reach = "\n- This learner is \(level.rawValue.uppercased()). Give them the COMPLETE form a"
+                + "\n  fluent native would say: the precise word, the idiomatic phrase,"
+                + "\n  above their level where that is what a native reaches for. This"
+                + "\n  is what they are aiming at."
+        }
+        return "\n- Say what they MEANT, the way a fluent speaker would say it. Read"
+            + "\n  for intent: where a word is plainly not the one they meant (\"make"
+            + "\n  a photo\" for take one), use the one they meant; where they point"
+            + "\n  at a thought without finishing it (\"the funny part is, I never"
+            + "\n  studied\"), finish that thought (that they passed anyway). Never"
+            + "\n  add a fact, opinion or detail they did not point to, and never"
+            + "\n  answer for them. A phrase describing someone is not a name or a"
+            + "\n  title."
+            + "\n- This line is what they will study and say again, so make it worth"
+            + "\n  learning: rebuild it freely. Split a run-on, restructure a clause,"
+            + "\n  swap a word-for-word construction for the phrase a native would"
+            + "\n  reach for (\"give it a shot\", \"ended up\", \"I'm not a big fan"
+            + "\n  of\"). Not their sentence with the grammar patched; the sentence"
+            + "\n  they would say if they were fluent."
+            + reach
+            + "\n- Keep their REGISTER (never more formal than they were) and every"
+            + "\n  idea they raised, in their order. About as long as theirs;"
+            + "\n  shorter where they repeated themselves."
+            + "\n- DO drop the hesitation: fillers (\"um\", \"uh\", \"like\"), false"
+            + "\n  starts, a clause abandoned halfway, a word said twice. Those are"
+            + "\n  not errors and never go in \"fixes\"; they are simply gone from"
+            + "\n  the fluent version."
     }
 
     /// Japanese-only line for both correction prompts: the script is the

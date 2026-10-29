@@ -74,6 +74,21 @@ def variety_guard():
             .replace("\\(languageName)", target_name))
 prompt = prompt.replace("\\(varietyGuard(targetLanguage))", variety_guard())
 
+def rewrite_rules():
+    """Mirror `rewriteRules(_:)` for LEVEL (default A2): A1/A2 get the
+    beginner reach line, everyone else the complete-form one."""
+    start = src.index("static func rewriteRules(")
+    body = src[start:src.index("\n    }\n", start)]
+    level = os.environ.get("LEVEL", "A2").upper()
+    beginner = body[body.index("case .a1, .a2:"):body.index("case .b1, .b2")]
+    upper = body[body.index("case .b1, .b2"):body.index("return ")]
+    reach = literals(beginner if level in ("A1", "A2") else upper)
+    reach = reach.replace("\\(level.rawValue.uppercased())", level)
+    tail = body[body.index("return "):]
+    head, _, rest = tail.partition("+ reach")
+    return literals(head) + reach + literals(rest)
+prompt = prompt.replace("\\(rewriteRules(level))", rewrite_rules())
+
 def scene_line():
     """Mirror `politeSettingLine(_, counterpart: nil, inScene: true)`."""
     csrc = open(os.path.join(ROOT, "FutureVoice/Services/ConversationEngine+Character.swift")).read()

@@ -4120,6 +4120,7 @@ struct ConversationView: View {
                     + ConversationEngine.turnOutputInstruction(
                         targetLanguage: appState.targetLanguage,
                         nativeLanguage: appState.nativeLanguage,
+                        level: appState.proficiency,
                         counterpart: counterpart,
                         inScene: sessionScenarioId != nil),
                 messages: messages,
