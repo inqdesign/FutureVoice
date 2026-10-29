@@ -94,6 +94,7 @@ struct SpeechTab: View {
         // The first card lines up with the list's own cards below.
         .contentMargins(.horizontal, Self.listMargin, for: .scrollContent)
         .scrollTargetBehavior(.viewAligned)
+        .macCarousel()
         .padding(.horizontal, -bleed)
         .background {
             // The header's own slot, before the bleed (padding is applied

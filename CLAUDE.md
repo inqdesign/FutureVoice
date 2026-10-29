@@ -2970,7 +2970,25 @@ sync container carry over. `./scripts/mac-run.sh` builds and opens it.
   at the root misses everything UIKit presents.
 - **Pages sit in a centred column** (`.macPage()` at the app root; View →
   Page Width: Narrow · Medium · Wide · Full width). The tabs are the title
-  bar's segmented control on their own; there is no sidebar.
+  bar's segmented control on their own; there is no sidebar. **The column
+  is SAFE AREA, never a frame** (2026-10-29, founder: "the content is cut
+  left and right, the shadows especially"): `MacWindow.insetColumn` sets
+  the tab controller's `additionalSafeAreaInsets` left/right, so nav bars,
+  titles and rows sit on the column while scroll views, backgrounds and
+  header panels run to the window's edge. A frame clipped every scroll view
+  at the column. Three helpers finish it per surface: `.macCarousel()` (a
+  sideways row draws past the column — Speech challenges), `.macPager()`
+  (a paging scroll is clipped to the column, or the next page sits in the
+  margin — Progress, Review), `.macEdgeToEdge()` (ignores the column — the
+  Watch map). Header panels ignore `[.top, .horizontal]`, and the bottom
+  tab-bar feather is off on the Mac (no bottom tab bar to fade into).
+  SwiftUI's `safeAreaPadding` at the root does NOT reach the UIKit tab and
+  nav controllers, and measuring the page to size it looped layout and hung
+  launch — don't retry either. The window layout is re-applied on
+  activate/deactivate/key edges and a few times after launch
+  (`watchForRelayout`): UIKit builds the tab controller late, and a launch
+  that lost focus at once came up with no column and the page under the
+  title bar. The Review split uses the whole window.
 - **A sheet on the Mac is its OWN window** (a macOS sheet attached to the
   app's window), so it does NOT inherit the page's zoom, and macOS
   swallows every click behind it — a click outside can never close it.

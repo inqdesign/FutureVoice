@@ -503,6 +503,7 @@ struct PeopleSkyMap: View {
                 .macDragToPan { movedByHand = true }
             }
             .defaultScrollAnchor(.center)
+            .macEdgeToEdge()
             // The map's bottom runs under the tab bar and the floating
             // "Your own situation" button, and its top under the lens picker's
             // shadow. Margins let the edges be dragged clear of all of it, so

@@ -193,6 +193,7 @@ struct ProgressTab: View {
                         .scrollTargetLayout()
                     }
                     .scrollTargetBehavior(.paging)
+                    .macPager()
                     .scrollPosition(id: $selected)
                     .scrollIndicators(.hidden)
                     .safeAreaInset(edge: .top, spacing: 0) {
@@ -216,7 +217,7 @@ struct ProgressTab: View {
                                                                .init(color: .clear, location: 1)],
                                                        startPoint: .top, endPoint: .bottom)
                                     }
-                                    .ignoresSafeArea(edges: .top)
+                                    .ignoresSafeArea(edges: [.top, .horizontal])
                             }
                     }
                     // …and the same panel mirrored at the bottom, so a page

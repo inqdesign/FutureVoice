@@ -48,6 +48,8 @@ extension View {
         // this is here to remove. So the wash rides a full-height container
         // that ignores the bottom inset, and a Spacer pushes it to the
         // physical screen edge.
+        // The Mac's tabs are in the title bar: nothing at the bottom to fade
+        // into, and the wash only drew a band the width of the column.
         overlay {
             VStack(spacing: 0) {
                 Spacer(minLength: 0)
@@ -56,6 +58,7 @@ extension View {
             }
             .ignoresSafeArea(edges: .bottom)
             .allowsHitTesting(false)
+            .opacity(MacLayout.isMac ? 0 : 1)
         }
     }
 }

@@ -363,6 +363,8 @@ struct WatchTab: View {
                                  away: $skyAway,
                                  backToMeRequest: backToMeTick)
                         .frame(height: max(geo.size.height, 200))
+                        // On a Mac the map is the whole window, not the column.
+                        .macEdgeToEdge()
                         // A tap on the empty map while writing goes back a step:
                         // to the card of the person the box was with.
                         // The people are buttons and win their own taps; this
@@ -398,6 +400,7 @@ struct WatchTab: View {
             }
             .scrollDisabled(true)
         }
+        .macEdgeToEdge()
         .ignoresSafeArea(.container, edges: [.top, .bottom])
         // The keyboard rising for the box must not shrink the map: a shorter
         // map re-centres, someone else lands in the middle and speaks, and

@@ -72,6 +72,17 @@ enum MacLayout {
     /// the window (in zoomed points). `UIScreen.main` on a Mac is the whole
     /// display, so a layout centred on it put the Talk ring below the window.
     @MainActor
+    static var screenWidth: CGFloat {
+        #if targetEnvironment(macCatalyst)
+        let window = UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.keyWindow ?? ($0 as? UIWindowScene)?.windows.first }
+            .first
+        if let width = window?.bounds.width, width > 0 { return width / zoom }
+        #endif
+        return UIScreen.main.bounds.width
+    }
+
+    @MainActor
     static var screenHeight: CGFloat {
         #if targetEnvironment(macCatalyst)
         let window = UIApplication.shared.connectedScenes
@@ -123,17 +134,18 @@ private struct MacPageModifier: ViewModifier {
         let picked = (MacLayout.Column(rawValue: column) ?? .regular).width ?? .infinity
         switch wide.mode {
         case .normal: return picked
-        case .split: return max(picked, MacLayout.splitColumnWidth)
+        // A split has two panes of its own to fill; the window is its column.
+        case .split: return .infinity
         case .narrow: return min(picked, MacLayout.Column.narrow.width ?? picked)
         }
     }
 
     func body(content: Content) -> some View {
         #if targetEnvironment(macCatalyst)
+        // The column itself is applied as safe area (`MacWindow.insetColumn`).
         content
-            .frame(maxWidth: width)
-            .frame(maxWidth: .infinity)
-            // The pages' own ground, so the column reads as the page, not a panel.
+            .onAppear { MacWindow.columnWidth = width }
+            .onChange(of: width) { _, now in MacWindow.columnWidth = now }
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
         #else
         content
@@ -149,6 +161,38 @@ extension View {
         #if targetEnvironment(macCatalyst)
         onAppear { MacLayout.Wide.shared.mode = mode }
             .onChange(of: mode) { _, now in MacLayout.Wide.shared.mode = now }
+        #else
+        self
+        #endif
+    }
+
+    /// A row that scrolls sideways inside the column draws on past it, so
+    /// its next card and every shadow reach the window's edge instead of
+    /// stopping at the column's (Mac only).
+    func macCarousel() -> some View {
+        #if targetEnvironment(macCatalyst)
+        scrollClipDisabled()
+        #else
+        self
+        #endif
+    }
+
+    /// A pager is the column's own: a SwiftUI scroll view draws into the
+    /// safe area the column is made of, so without this the next page sat in
+    /// the window's margin (Mac only).
+    func macPager() -> some View {
+        #if targetEnvironment(macCatalyst)
+        clipped()
+        #else
+        self
+        #endif
+    }
+
+    /// Runs past the column to the window's edges — a map, nothing to read
+    /// (Mac only).
+    func macEdgeToEdge() -> some View {
+        #if targetEnvironment(macCatalyst)
+        ignoresSafeArea(.container, edges: .horizontal)
         #else
         self
         #endif
@@ -207,6 +251,15 @@ enum MacWindow {
     private static let sizedKey = "mac.didSizeWindow"
     @MainActor private static var observed: [ObjectIdentifier: NSKeyValueObservation] = [:]
 
+    /// The page column, in zoomed points. Set by `macPage` from the tab on
+    /// screen and View → Page Width.
+    @MainActor static var columnWidth: CGFloat = .infinity {
+        didSet {
+            guard columnWidth != oldValue else { return }
+            for case let scene as UIWindowScene in UIApplication.shared.connectedScenes { applyZoom(to: scene) }
+        }
+    }
+
     @MainActor
     static func configure() {
         #if targetEnvironment(macCatalyst)
@@ -236,6 +289,37 @@ enum MacWindow {
             }
         }
         NotificationCenter.default.post(name: MacLayout.windowDidResize, object: nil)
+        watchForRelayout()
+        #endif
+    }
+
+    @MainActor private static var watching = false
+
+    /// The zoom and the column are laid on what UIKit builds, and UIKit builds
+    /// it late: at launch the tab controller doesn't exist yet and the title
+    /// bar's inset is still 0, and becoming or leaving key re-lays the window
+    /// without a resize. Measured: a launch that lost focus within a second
+    /// came up with no column and the page under the title bar. So the layout
+    /// is put back on every such edge, and a few times as the app settles.
+    @MainActor
+    private static func watchForRelayout() {
+        #if targetEnvironment(macCatalyst)
+        guard !watching else { return }
+        watching = true
+        let reapply = {
+            for case let scene as UIWindowScene in UIApplication.shared.connectedScenes { applyZoom(to: scene) }
+        }
+        for name in [UIScene.didActivateNotification, UIScene.willDeactivateNotification,
+                     UIWindow.didBecomeKeyNotification, UIWindow.didResignKeyNotification,
+                     UIWindow.didBecomeVisibleNotification] {
+            NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { _ in
+                MainActor.assumeIsolated { reapply() }
+                DispatchQueue.main.async { reapply() }
+            }
+        }
+        for delay in [0.1, 0.4, 1.0, 2.5] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { reapply() }
+        }
         #endif
     }
 
@@ -282,11 +366,34 @@ enum MacWindow {
         if root.transform != transform { root.transform = transform }
         if root.bounds != bounds { root.bounds = bounds }
         if root.center != center { root.center = center }
+        insetColumn(of: controller, width: bounds.width)
         #endif
     }
 }
 
 #if targetEnvironment(macCatalyst)
+extension MacWindow {
+    /// The column is SAFE AREA on the tab controller, never a frame. A frame
+    /// clipped every scroll view at the column's edge — card shadows, a
+    /// carousel's next card, the Watch map — while a horizontal safe area
+    /// centres nav bars, titles and rows on the column and lets every scroll
+    /// view, background and map run to the window's edge.
+    @MainActor
+    static func insetColumn(of root: UIViewController, width: CGFloat) {
+        let pad = max(0, ((width - columnWidth) / 2).rounded())
+        func walk(_ vc: UIViewController) {
+            if vc is UITabBarController {
+                let insets = UIEdgeInsets(top: vc.additionalSafeAreaInsets.top, left: pad,
+                                          bottom: vc.additionalSafeAreaInsets.bottom, right: pad)
+                if vc.additionalSafeAreaInsets != insets { vc.additionalSafeAreaInsets = insets }
+                return
+            }
+            vc.children.forEach(walk)
+        }
+        walk(root)
+    }
+}
+
 /// Sheets at a phone's size. The Mac idiom's form sheet is small to begin
 /// with, and the window zoom makes it smaller still (~360 × 310 pt at 1.3×),
 /// so a deck or a word card built for a phone was squeezed into a stamp.
