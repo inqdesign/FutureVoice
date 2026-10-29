@@ -242,7 +242,7 @@ struct CoreClubView: View {
                 // saying "a seat opens when someone stops" to someone looking
                 // at ninety empty ones is the app not reading its own screen.
                 if p.club_size < p.seats {
-                    Text(explain("You're in line, and there's room. You take a seat tonight."))
+                    Text(explain("You're in line, and there's room. You take a seat \(nextSettlement)."))
                         .font(.footnote).foregroundStyle(.secondary)
                 } else {
                     Text(explain("You're in line. A seat opens when someone stops."))
@@ -260,12 +260,36 @@ struct CoreClubView: View {
                 // Streak complete, settlement not yet run. Saying "0 days to
                 // go" here would read as a stall; this is the one moment the
                 // screen gets to be pleased.
-                Text(explain("You've done the \(p.entry_streak) days. You join the line tonight."))
-                    .font(.footnote).foregroundStyle(.secondary)
+                if p.club_size < p.seats {
+                    Text(explain("You've done the \(p.entry_streak) days. You take a seat \(nextSettlement)."))
+                        .font(.footnote).foregroundStyle(.secondary)
+                } else {
+                    Text(explain("You've done the \(p.entry_streak) days. You join the line \(nextSettlement)."))
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
             } else {
                 bigNumber(togo, label: "Days to go")
             }
         }
+    }
+
+    /// When the next settlement runs, on the learner's own clock. It is a
+    /// pg_cron job at 00:05 UTC (`settle_core_club`), so "tonight" was true
+    /// only in Europe: in Korea a 30th day finished at 23:00 is seated at
+    /// 09:05 the next MORNING, and the screen said tonight.
+    private var nextSettlement: String {
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(identifier: "UTC")!
+        let now = Date()
+        let next = utc.nextDate(after: now, matching: DateComponents(hour: 0, minute: 5),
+                                matchingPolicy: .nextTime) ?? now
+        let f = DateFormatter()
+        f.locale = Locale(identifier: UILanguage.chromeLanguage)
+        f.dateStyle = .medium
+        f.timeStyle = .short
+        f.doesRelativeDateFormatting = true
+        f.formattingContext = .middleOfSentence
+        return f.string(from: next)
     }
 
     private func bigNumber(_ value: Int, label: LocalizedStringKey) -> some View {

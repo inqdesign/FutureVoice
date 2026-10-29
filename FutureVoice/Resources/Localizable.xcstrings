@@ -159219,48 +159219,48 @@
         }
       }
     },
-    "You're in line, and there's room. You take a seat tonight." : {
+    "You're in line, and there's room. You take a seat %@." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Du stehst in der Warteschlange, und es ist Platz frei. Heute Nacht bekommst du deinen Platz."
+            "value" : "Du stehst in der Warteschlange, und es ist Platz frei. Du bekommst deinen Platz %@."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Estás en la cola y hay plaza libre. Esta noche te sientas."
+            "value" : "Estás en la cola y hay plaza libre. Te sientas %@."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tu es dans la file, et il y a de la place. Tu prends une place ce soir."
+            "value" : "Tu es dans la file, et il y a de la place. Tu prends ta place %@."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "順番待ちに並んでいて、席も空いています。今夜、席に着きます。"
+            "value" : "順番待ちに並んでいて、席も空いています。%@に席に着きます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "줄에 서 있고, 자리도 비어 있어요. 오늘 밤에 앉게 돼요."
+            "value" : "줄에 서 있고, 자리도 비어 있어요. %@에 앉게 돼요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已经在排队，而且还有空位。今晚就能入座。"
+            "value" : "已经在排队，而且还有空位。%@就能入座。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已經在排隊，而且還有空位。今晚就能入座。"
+            "value" : "已經在排隊，而且還有空位。%@就能入座。"
           }
         }
       }
@@ -160139,48 +160139,94 @@
         }
       }
     },
-    "You've done the %lld days. You join the line tonight." : {
+    "You've done the %lld days. You join the line %@." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Du hast die %lld Tage geschafft. Heute Nacht kommst du in die Warteschlange."
+            "value" : "Du hast die %lld Tage geschafft. Du kommst %@ in die Warteschlange."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Completaste los %lld días. Esta noche entras en la cola."
+            "value" : "Completaste los %lld días. Entras en la cola %@."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tu as fait les %lld jours. Tu entres dans la file ce soir."
+            "value" : "Tu as fait les %lld jours. Tu entres dans la file %@."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld日を満たしました。今夜、順番待ちに並びます。"
+            "value" : "%lld日を満たしました。%@に順番待ちに並びます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld일을 다 채웠어요. 오늘 밤 줄에 서요."
+            "value" : "%lld일을 다 채웠어요. %@에 줄에 서요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld天达成了。今晚就开始排队。"
+            "value" : "%lld天达成了。%@开始排队。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld天達成了。今晚就開始排隊。"
+            "value" : "%lld天達成了。%@開始排隊。"
+          }
+        }
+      }
+    },
+    "You've done the %lld days. You take a seat %@." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du hast die %lld Tage geschafft. Du bekommst deinen Platz %@."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Completaste los %lld días. Te sientas %@."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu as fait les %lld jours. Tu prends ta place %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld日を満たしました。%@に席に着きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld일을 다 채웠어요. %@에 자리에 앉아요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld天达成了。%@就能入座。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld天達成了。%@就能入座。"
           }
         }
       }
