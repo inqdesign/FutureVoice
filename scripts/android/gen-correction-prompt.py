@@ -45,6 +45,9 @@ body = kotlin(literal_at(src, 'return """', src.index("static func correctionOnl
     # stranger / public figure / colleague. Built by the caller
     # (`ConversationCharacter.politeSettingLine`), "" otherwise.
     "politeSettingLine(targetLanguage, counterpart: counterpart, inScene: inScene)": "politeLine",
+    # How "alternative" is rewritten, by level — shared with the buffered
+    # turn's `turnOutputInstruction` (gen-conversation-prompt.py).
+    "rewriteRules(level)": "rewriteRules(level)",
 })
 
 
@@ -87,6 +90,18 @@ register, register_extra = guard_chunks("registerGuard")
 if not spacing or not script or not register or set(register_extra) != {"ko", "ja"}:
     sys.exit("a guard's shape changed — spacing/script/register(ko, ja) expected")
 register_ko = register_extra['ko']
+
+# `rewriteRules(_ level:)`: a beginner reach line (A1/A2) or a complete-form
+# one, spliced between the shared bullets. `\\(level.rawValue.uppercased())`
+# is the only interpolation.
+_rw = func_body("rewriteRules")
+_lvl = lambda s: s.replace("\\(level.rawValue.uppercased())", "${level.code.uppercase()}")
+rewrite_beginner = _lvl(literals(_rw[_rw.index("case .a1, .a2:"):_rw.index("case .b1, .b2")]))
+rewrite_upper = _lvl(literals(_rw[_rw.index("case .b1, .b2"):_rw.index("return ")]))
+_rw_head, _, _rw_tail = _rw[_rw.index("return "):].partition("+ reach")
+rewrite_head, rewrite_tail = literals(_rw_head), literals(_rw_tail)
+if not (rewrite_beginner and rewrite_upper and rewrite_head and rewrite_tail) or "\\(" in rewrite_head + rewrite_tail:
+    sys.exit("rewriteRules' shape changed — head + reach(level) + tail expected")
 register_ja = register_extra['ja']
 emit(OUT, f'''package com.roro.futurevoice.talk
 
@@ -119,6 +134,17 @@ object CorrectionOnlyPrompt {{
             "ja" -> "{register}" + "{register_ja}"
             else -> ""
         }}
+
+    /** How "alternative" is rewritten: what they meant, said fluently; A1/A2
+     *  within reach, B1 and up the complete native form. Shared with
+     *  `ConversationPrompt.turnOutputInstruction`. */
+    fun rewriteRules(level: CefrLevel): String {{
+        val reach = when (level) {{
+            CefrLevel.A1, CefrLevel.A2 -> "{rewrite_beginner}"
+            else -> "{rewrite_upper}"
+        }}
+        return "{rewrite_head}" + reach + "{rewrite_tail}"
+    }}
 
     /** [relationshipLine]: `ConversationEngine.relationshipRegisterLine` for a
      *  cast call, "" otherwise; [politeLine]: `politeSettingLine` (Korean, a

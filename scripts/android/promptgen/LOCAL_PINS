@@ -6,7 +6,8 @@ gen-script-study-prompt.py 18f1fbf7
 # accent's language variety, 3709fd0e). The shared pin can't move yet: speech Study / week report.
 # + tutor mode's lesson (iOS af3c7ffe … bd242766); the final check and the
 # app's verdict on every answer (iOS 23ce515f … 06933043).
-gen-conversation-prompt.py d3a28206
+# + the rewrite says what they meant, at the level's reach (iOS 8537accf).
+gen-conversation-prompt.py 8537accf
 # The "my own topic" opener (topicOpeners, iOS deed6cf4).
 # + tutor mode's opener (iOS af3c7ffe).
 gen-free-talk-openers.py 456c94e9
@@ -14,7 +15,8 @@ gen-free-talk-openers.py 456c94e9
 # rated and written fresh, 6912c9db).
 gen-quiz-prompts.py 6912c9db
 # The accent's language variety (varietyGuard, iOS 3709fd0e).
-gen-correction-prompt.py 3709fd0e
+# + the rewrite says what they meant, at the level's reach (iOS 8537accf).
+gen-correction-prompt.py 8537accf
 # + the call so far and the learner's facts (iOS 6d8b4f56).
 gen-coach-prompts.py 456c94e9
 # Tutor mode's lesson prompts (iOS af3c7ffe … bd242766); the final check's

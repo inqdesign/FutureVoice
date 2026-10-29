@@ -176,6 +176,7 @@ output = kotlin_conv(literal_at(engine, "static func turnOutputInstruction("), {
         "ConversationCharacter.relationshipRegisterLine(targetLanguage, counterpart)",
     "politeSettingLine(targetLanguage, counterpart: counterpart, inScene: inScene)":
         "ConversationCharacter.politeSettingLine(targetLanguage, counterpart, inScene)",
+    "rewriteRules(level)": "CorrectionOnlyPrompt.rewriteRules(level)",
 })
 realtime = kotlin_conv(literal_at(view, "private static let realtimeStyleRules = "), {})
 
@@ -359,7 +360,8 @@ object ConversationPrompt {{
 
     /** iOS `turnOutputInstruction` — the JSON packaging for a buffered turn call. */
     fun turnOutputInstruction(targetLanguage: String, nativeLanguage: String,
-                              counterpart: Counterpart?, inScene: Boolean): String {{
+                              counterpart: Counterpart?, inScene: Boolean,
+                              level: CefrLevel = CefrLevel.B1): String {{
         val nativeName = LanguageCatalog.englishName(nativeLanguage)
         val targetName = LanguageCatalog.englishName(targetLanguage)
         return {output}

@@ -280,7 +280,9 @@ object ConversationEngine {
         counterpart: com.roro.futurevoice.data.Counterpart? = null,
         /** A Watch scene's call: Korean 반말 to its character may be corrected (iOS `politeSettingLine`). */
         inScene: Boolean = false,
-    ): String = ConversationPrompt.turnOutputInstruction(targetLanguage, nativeLanguage, counterpart, inScene)
+        /** How far above them "alternative" may reach (iOS `rewriteRules`). */
+        level: com.roro.futurevoice.data.CefrLevel = com.roro.futurevoice.data.CefrLevel.B1,
+    ): String = ConversationPrompt.turnOutputInstruction(targetLanguage, nativeLanguage, counterpart, inScene, level)
 
     /**
      * Prior turns → Gemini `contents`. `tail` caps history: 12 turns ≈ 6

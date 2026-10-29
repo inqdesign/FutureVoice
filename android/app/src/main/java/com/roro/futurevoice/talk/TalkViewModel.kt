@@ -471,7 +471,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                         tutorLastFixes = tutorLastFixes,
                         tutorPlanning = _state.value.tutorPlanning,
                     ) + ConversationEngine.turnOutputInstruction(config.targetLanguage, config.nativeLanguage,
-                        counterpart = config.cast?.person, inScene = config.scenarioId != null)
+                        counterpart = config.cast?.person, inScene = config.scenarioId != null, level = config.level)
                 }
                 promptForTutor = build
                 systemPrompt = build(tutorThisCall)
@@ -742,7 +742,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                         GeminiClient(auth).sendJson(
                             system = realtimeSystem + ConversationEngine.turnOutputInstruction(
                                 config.targetLanguage, config.nativeLanguage, counterpart = config.cast?.person,
-                                inScene = config.scenarioId != null),
+                                inScene = config.scenarioId != null, level = config.level),
                             messages = listOf(GeminiClient.Message(
                                 GeminiClient.Message.Role.USER,
                                 "(the call just connected — say your opening line, nothing else)")),
