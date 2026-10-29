@@ -546,8 +546,8 @@ enum DebugCapture {
             })
         case "core-seated":
             // A seated member of a club of four, the learner in seat 1.
-            let pj = #"{"seats":100,"member":{"seated":true,"days_total":12},"streak":42,"language":"en","club_size":4,"keep_grace":1,"bar_seconds":240,"queue_ahead":null,"entry_streak":30,"requalifying":false,"days_to_entry":null,"missed_recent":0,"days_to_return":null,"waiting_for_seat":false}"#
-            let mj = #"{"mine":0,"seats":100,"taken":4,"themes":[4,0,2,3],"language":"en"}"#
+            let pj = #"{"seats":100,"member":{"seated":true,"days_total":12},"streak":42,"language":"en","club_size":23,"keep_grace":1,"bar_seconds":240,"queue_ahead":null,"entry_streak":30,"requalifying":false,"days_to_entry":null,"missed_recent":0,"days_to_return":null,"waiting_for_seat":false}"#
+            let mj = #"{"mine":0,"seats":100,"taken":23,"themes":[4,0,2,3,5,0,1,2,4,3,0,5,2,0,3,4,1,0,2,5,3,0,4],"language":"en"}"#
             let p = try! JSONDecoder().decode(CoreClubService.Progress.self, from: Data(pj.utf8))
             let m = try! JSONDecoder().decode(CoreClubService.SeatMap.self, from: Data(mj.utf8))
             return AnyView(NavigationStack { CoreClubView(preview: (p, m)) }.environmentObject(appState))

@@ -92,7 +92,7 @@ struct CoreSeatGrid: View {
 
     private let columns = 10
 
-    private let gap: CGFloat = 2
+    private let gap: CGFloat = 4
 
     /// ONE view whose height is fixed by its width, drawn in a Canvas.
     ///
@@ -113,21 +113,10 @@ struct CoreSeatGrid: View {
                 let rect = CGRect(x: CGFloat(index % columns) * (side + gap),
                                   y: CGFloat(index / columns) * (side + gap),
                                   width: side, height: side)
-                // Barely-rounded rather than sharp: at this size a true right
-                // angle reads as a rendering artifact next to iOS's own
-                // geometry, and a radius any larger starts turning the block
-                // back into dots.
-                let cell = Path(roundedRect: rect, cornerRadius: 2, style: .continuous)
-                let color = fill(index)
-                context.fill(cell, with: .color(color == .clear ? Color.secondary.opacity(0.14) : color))
-                // Your own pixel is outlined in place, never recoloured or
-                // enlarged: the colour is already saying "this is me" to
-                // everyone else, and pulling the cell out of the grid would
-                // take you out of the wall you're meant to be part of.
-                if map?.mine == index {
-                    let inner = Path(roundedRect: rect.insetBy(dx: 1, dy: 1), cornerRadius: 2, style: .continuous)
-                    context.stroke(inner, with: .color(.primary), lineWidth: 2)
-                }
+                // Each seat is a small block of the cube it stands for
+                // (2026-10-29: flat fills with a black outline read as a
+                // spreadsheet, not a wall of cubes).
+                drawBlock(index, in: rect, context: &context)
             }
         }
         .aspectRatio(CGFloat(columns) / CGFloat(rows), contentMode: .fit)
@@ -156,12 +145,69 @@ struct CoreSeatGrid: View {
         .accessibilityValue(Text(verbatim: "\(map?.taken ?? 0) / \(seats)"))
     }
 
-    private func fill(_ index: Int) -> Color {
-        guard let map, index < map.themes.count else { return .clear }
-        // An index this build doesn't know is a palette shipped after it —
-        // draw the seat as taken in a neutral tone rather than as empty.
-        return FutureselfTheme(rawValue: map.themes[index])?.tint ?? .secondary
+    @Environment(\.colorScheme) private var scheme
+
+    /// One seat drawn as a small block of the cube it stands for: lit from
+    /// above, its own colour carved deeper along the bottom edge, resting on
+    /// a soft shadow. An empty seat is a shallow hollow. Yours lifts a little
+    /// and glows in its colour instead of wearing a black outline.
+    private func drawBlock(_ index: Int, in rect: CGRect, context: inout GraphicsContext) {
+        let radius = rect.width * 0.18
+        let traits = UITraitCollection(userInterfaceStyle: scheme == .dark ? .dark : .light)
+        guard let map, index < map.themes.count else {
+            // Hollow: a faint fill, darker along the top inside edge.
+            let hollow = Path(roundedRect: rect, cornerRadius: radius, style: .continuous)
+            context.fill(hollow, with: .color(Color.primary.opacity(scheme == .dark ? 0.07 : 0.05)))
+            var inner = context
+            inner.clip(to: hollow)
+            inner.fill(Path(rect.offsetBy(dx: 0, dy: -rect.height + 1.4)),
+                       with: .color(Color.black.opacity(scheme == .dark ? 0.35 : 0.08)))
+            return
+        }
+        let base = UIColor(FutureselfTheme(rawValue: map.themes[index])?.tint ?? .secondary)
+            .resolvedColor(with: traits)
+        let mine = map.mine == index
+        let body = rect.offsetBy(dx: 0, dy: mine ? -1.5 : 0)
+        let block = Path(roundedRect: body, cornerRadius: radius, style: .continuous)
+
+        // Shadow under it, wider and softer for your own.
+        var shadow = context
+        shadow.addFilter(.blur(radius: mine ? 3.5 : 1.2))
+        shadow.fill(Path(roundedRect: body.offsetBy(dx: 0, dy: mine ? 2.5 : 1.2),
+                         cornerRadius: radius, style: .continuous),
+                    with: .color(Color(mine ? base : .black).opacity(mine ? 0.55 : 0.18)))
+
+        // The block: its colour, lit from the top, carved darker at the foot.
+        context.fill(block, with: .linearGradient(
+            Gradient(stops: [
+                .init(color: Color(Self.mix(base, .white, 0.14)), location: 0),
+                .init(color: Color(base), location: 0.45),
+                .init(color: Color(base), location: 0.78),
+                .init(color: Color(Self.mix(base, CoreCubeView.carved(base), 0.55)), location: 1),
+            ]),
+            startPoint: CGPoint(x: body.midX, y: body.minY),
+            endPoint: CGPoint(x: body.midX, y: body.maxY)))
+        // A thin highlight along the top edge.
+        var lit = context
+        lit.clip(to: block)
+        lit.fill(Path(CGRect(x: body.minX, y: body.minY, width: body.width, height: 1.2)),
+                 with: .color(.white.opacity(0.3)))
+        if mine {
+            context.stroke(Path(roundedRect: body.insetBy(dx: 0.75, dy: 0.75), cornerRadius: radius,
+                                style: .continuous),
+                           with: .color(.white.opacity(0.9)), lineWidth: 1.5)
+        }
     }
+
+    private static func mix(_ a: UIColor, _ b: UIColor, _ t: CGFloat) -> UIColor {
+        var (r1, g1, b1, a1): (CGFloat, CGFloat, CGFloat, CGFloat) = (0, 0, 0, 0)
+        var (r2, g2, b2, a2): (CGFloat, CGFloat, CGFloat, CGFloat) = (0, 0, 0, 0)
+        a.getRed(&r1, green: &g1, blue: &b1, alpha: &a1)
+        b.getRed(&r2, green: &g2, blue: &b2, alpha: &a2)
+        return UIColor(red: r1 + (r2 - r1) * t, green: g1 + (g2 - g1) * t,
+                       blue: b1 + (b2 - b1) * t, alpha: 1)
+    }
+
 }
 
 #Preview {
