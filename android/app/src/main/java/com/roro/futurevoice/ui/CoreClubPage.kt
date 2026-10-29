@@ -40,6 +40,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -77,6 +81,8 @@ fun CoreClubPage(language: String, onBack: () -> Unit) {
     var seatMap by remember { mutableStateOf<CoreClubClient.SeatMap?>(null) }
     var loading by remember { mutableStateOf(true) }
     var refreshing by remember { mutableStateOf(false) }
+    var openSeat by remember { mutableStateOf<Int?>(null) }
+    var unseen by remember { mutableStateOf(0) }
 
     suspend fun load() {
         val client = CoreClubClient(AuthRepository())
@@ -87,6 +93,7 @@ fun CoreClubPage(language: String, onBack: () -> Unit) {
             val m = async { client.seatMap(language) }
             progress = p.await(); seatMap = m.await()
         }
+        if (seatMap?.mine != null) unseen = client.unseenCheers(language)
         loading = false
     }
     LaunchedEffect(language) {
@@ -96,6 +103,9 @@ fun CoreClubPage(language: String, onBack: () -> Unit) {
         load()
     }
 
+    openSeat?.let { index ->
+        CoreSeatSheet(language, index, onDismiss = { openSeat = null; scope.launch { load() } })
+    }
     Scaffold(
         contentWindowInsets = fieldScaffoldInsets,
         topBar = {
@@ -118,7 +128,7 @@ fun CoreClubPage(language: String, onBack: () -> Unit) {
                 val p = progress
                 when {
                     p != null -> {
-                        RoomSection(seatMap)
+                        RoomSection(seatMap, unseen) { openSeat = it; if (it == seatMap?.mine) unseen = 0 }
                         StandingSection(p)
                         HowItWorksSection(p)
                         WhatYouGetSection()
@@ -145,12 +155,26 @@ fun CoreClubPage(language: String, onBack: () -> Unit) {
 
 /** A hundred cells, drawn before a single number is spoken. */
 @Composable
-private fun RoomSection(map: CoreClubClient.SeatMap?) {
+private fun RoomSection(map: CoreClubClient.SeatMap?, unseen: Int, onOpen: (Int) -> Unit) {
     GroupedCard {
-        CoreSeatGrid(map, Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+        CoreSeatGrid(map, Modifier.padding(horizontal = 16.dp, vertical = 8.dp), onTap = onOpen)
     }
     if (map != null) {
         Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+            val mine = map.mine
+            if (mine != null && unseen > 0) {
+                // Quiet, on the next visit: what arrived on my cube.
+                Row(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                    .clickable { onOpen(mine) },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(androidx.compose.material.icons.Icons.Filled.Favorite, null,
+                        Modifier.size(14.dp), tint = CoreClubColor)
+                    Text(stringResource(R.string.lld_new_cheers_on_your_seat, unseen),
+                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = CoreClubColor)
+                }
+            }
             GroupedFooter(stringResource(R.string.lld_of_lld_seats_taken, map.taken, map.seats))
             GroupedFooter(stringResource(
                 if (map.mine != null) R.string.the_outlined_cell_is_you
@@ -160,41 +184,41 @@ private fun RoomSection(map: CoreClubClient.SeatMap?) {
 }
 
 /**
- * The hundred seats as a hundred PIXELS — one square block, ten by ten,
- * butted 2 dp apart so they read as one surface made of people, oldest
- * first from the top-left. A filled pixel wears its member's own palette
- * (the one screen exempt from "system colours only"), empty ones are drawn,
- * and your own is outlined in place, never recoloured or pulled out.
+ * The hundred seats as small lit blocks (iOS 2026-10-29: flat fills with a
+ * black outline read as a spreadsheet next to the 3D cube a seat now is).
+ * Oldest first from the top-left, each in its member's own palette (the one
+ * screen exempt from "system colours only"); yours lifts and glows; a tap on
+ * a taken seat opens that member's cube.
  */
 @Composable
-fun CoreSeatGrid(map: CoreClubClient.SeatMap?, modifier: Modifier = Modifier) {
+fun CoreSeatGrid(map: CoreClubClient.SeatMap?, modifier: Modifier = Modifier,
+                 onTap: ((Int) -> Unit)? = null) {
     val seats = map?.seats ?: 100
     val columns = 10
-    val empty = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.14f)
-    val ink = MaterialTheme.colorScheme.onSurface
+    val rows = (seats + columns - 1) / columns
     val neutral = MaterialTheme.colorScheme.onSurfaceVariant
-    // Resolved here: `tint()` is composable, the cells below are plain draws.
     val tints = FutureselfTheme.entries.map { it.tint() }
-    val shape = RoundedCornerShape(2.dp)
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        for (row in 0 until (seats + columns - 1) / columns) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                for (col in 0 until columns) {
+    val dark = androidx.compose.foundation.isSystemInDarkTheme()
+    val context = LocalContext.current
+    val gapPx = with(androidx.compose.ui.platform.LocalDensity.current) { 4.dp.toPx() }
+    androidx.compose.foundation.Canvas(
+        modifier.fillMaxWidth().aspectRatio(columns.toFloat() / rows)
+            .then(if (onTap == null) Modifier else Modifier.pointerInput(map) {
+                detectTapGestures { point ->
+                    val side = (size.width - gapPx * (columns - 1)) / columns
+                    val col = (point.x / (side + gapPx)).toInt(); val row = (point.y / (side + gapPx)).toInt()
                     val i = row * columns + col
-                    if (i >= seats) { Box(Modifier.weight(1f)); continue }
-                    val theme = map?.themes?.getOrNull(i)
-                    // A palette shipped after this build is drawn as taken,
-                    // in a neutral tone, never as empty.
-                    val color: Color = when {
-                        theme == null -> empty
-                        else -> tints.getOrNull(theme) ?: neutral
+                    if (col < columns && i < (map?.taken ?: 0)) {
+                        HapticEngine.selection(context); onTap(i)
                     }
-                    Box(
-                        Modifier.weight(1f).aspectRatio(1f).background(color, shape)
-                            .then(if (map?.mine == i) Modifier.border(2.dp, ink, shape) else Modifier)
-                    )
                 }
-            }
+            })
+    ) {
+        for (i in 0 until seats) {
+            val theme = map?.themes?.getOrNull(i)
+            // A palette shipped after this build is drawn as taken, neutral.
+            val color = theme?.let { tints.getOrNull(it) ?: neutral }
+            drawCoreBlock(coreCellRect(i, size, columns, gapPx), color, map?.mine == i, dark)
         }
     }
 }
@@ -313,7 +337,7 @@ private fun LabeledRow(title: String, value: String) {
 
 /** Between text-only rows: inset to the text, as iOS insets past content. */
 @Composable
-private fun TextRowDivider() {
+internal fun TextRowDivider() {
     HorizontalDivider(Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp,
         color = MaterialTheme.colorScheme.outlineVariant)
 }

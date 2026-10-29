@@ -3767,4 +3767,31 @@
     <string name="why_do_i_keep_making_the_same_mistake">"¿Por qué repito siempre el mismo error?"</string>
     <string name="you_don_t_have_a_routine_yet_so_here_s_what_i_d_do_today">"Aún no tienes una rutina, así que esto es lo que yo haría hoy."</string>
     <string name="your_own_nawana_tutor">"Tu propio tutor de nawana."</string>
+    <string name="you_re_core_member_no_lld">"¡Eres la persona n.º %d en el Núcleo!"</string>
+    <string name="lld_days_in_a_row_without_missing_one">"%d días seguidos, sin faltar ni uno."</string>
+    <string name="this_cube_is_your_seat_in_the_core_pick_its_colour">"Este cubo es tu asiento en el Núcleo. Elige su color."</string>
+    <string name="your_app_takes_this_colour_too">"La app también tomará este color."</string>
+    <string name="put_it_in_my_seat">"Ponerlo en mi asiento"</string>
+    <string name="seat_lld_of_lld">"Asiento %1$d de %2$d."</string>
+    <string name="engrave_your_cube">"Graba tu cubo"</string>
+    <string name="your_name_goes_on_one_face_your_hope_on_another">"Tu nombre va en una cara y tu deseo en otra."</string>
+    <string name="your_hope_in_one_line">"Tu deseo, en una línea"</string>
+    <!-- 'Only Core members can see your hope. Anyone can see your name.' -->
+    <string name="only_core_members_can_see_your_hope_anyone_can_see_your_name">"Solo los miembros del Núcleo pueden ver tu deseo. Tu nombre lo puede ver cualquiera."</string>
+    <string name="back_to_colours">"Volver a los colores"</string>
+    <string name="keep_this_seat_until_comes_true">"¡Guarda este asiento hasta que «%s» se haga realidad!"</string>
+    <!-- 'Miss one day a month and the seat stays yours. Miss more, and you leave the Core and start again from zero.' -->
+    <string name="miss_one_day_a_month_and_the_seat_stays_yours_miss_more_and_21a3b6">"Puedes faltar un día al mes y tu asiento sigue siendo tuyo. Si faltas más, sales del Núcleo y empiezas de cero."</string>
+    <string name="no_name_engraved">"Sin nombre grabado"</string>
+    <string name="seat_lld">"Asiento %d"</string>
+    <string name="day_lld_in_this_seat">"Día %d en este asiento"</string>
+    <string name="hope">"Deseo"</string>
+    <string name="no_hope_engraved_yet">"Aún no hay un deseo grabado"</string>
+    <string name="only_core_members_can_see_this">"Solo los miembros del Núcleo pueden verlo."</string>
+    <string name="this_seat_couldn_t_be_opened_try_again_in_a_moment">"No se pudo abrir este asiento. Inténtalo de nuevo en un momento."</string>
+    <string name="leave_a_short_cheer">"Deja un ánimo corto"</string>
+    <string name="cheers">"Ánimos"</string>
+    <string name="heart">"Corazón"</string>
+    <string name="someone">"Alguien"</string>
+    <string name="lld_new_cheers_on_your_seat">"%d ánimos nuevos en tu asiento"</string>
 </resources>

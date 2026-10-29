@@ -10,6 +10,11 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.long
 import kotlinx.serialization.json.add
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
@@ -102,6 +107,83 @@ class CoreClubClient(private val auth: AuthRepository) {
      */
     suspend fun publishTheme(theme: Int) {
         runCatching { rpc("core_set_theme", buildJsonObject { put("p_theme", theme) }) }
+    }
+
+    /**
+     * One cell of the grid (iOS `CoreClubService.SeatDetail`). `hope` is null
+     * unless the server let this reader see it — a seated member of the same
+     * club, or the owner — and `can_read_hope` says which.
+     */
+    @Serializable
+    data class SeatDetail(
+        val index: Int = 0,
+        val theme: Int = 0,
+        val name: String? = null,
+        val mine: Boolean = false,
+        val can_read_hope: Boolean = false,
+        val hope: String? = null,
+        val days_held: Int? = null,
+        val seated_since: String? = null,
+    )
+
+    @Serializable
+    data class Cheers(
+        val hearts: Int = 0,
+        val hearted: Boolean = false,
+        val mine: Boolean = false,
+        val notes: List<Note> = emptyList(),
+    ) {
+        @Serializable
+        data class Note(val id: Long = 0, val body: String = "", val name: String? = null,
+                        val by_me: Boolean = false)
+    }
+
+    suspend fun seatDetail(language: String, index: Int): SeatDetail? = runCatching {
+        val raw = rpc("core_seat_detail", buildJsonObject {
+            put("p_language", language.lowercase()); put("p_index", index) })
+        if (raw.trim() == "null") null else Edge.json.decodeFromString(SeatDetail.serializer(), raw)
+    }.getOrNull()
+
+    /** The name and hope on the learner's own cube, written together. */
+    suspend fun setEngraving(language: String, name: String, hope: String): Boolean = runCatching {
+        rpc("core_set_engraving", buildJsonObject {
+            put("p_language", language.lowercase()); put("p_name", name); put("p_hope", hope) })
+        true
+    }.getOrDefault(false)
+
+    suspend fun cheers(language: String, index: Int): Cheers? = runCatching {
+        val raw = rpc("core_cheers_for", buildJsonObject {
+            put("p_language", language.lowercase()); put("p_index", index) })
+        if (raw.trim() == "null") null else Edge.json.decodeFromString(Cheers.serializer(), raw)
+    }.getOrNull()
+
+    /** The seat's heart count after the change, or null if it failed. */
+    suspend fun setHeart(language: String, index: Int, on: Boolean): Int? = runCatching {
+        val raw = rpc("core_cheer_heart", buildJsonObject {
+            put("p_language", language.lowercase()); put("p_index", index); put("p_on", on) })
+        Edge.json.parseToJsonElement(raw).jsonObject["hearts"]?.jsonPrimitive?.int
+    }.getOrNull()
+
+    /** The new note's id, or null if it wasn't stored. */
+    suspend fun leaveNote(language: String, index: Int, body: String): Long? = runCatching {
+        val raw = rpc("core_cheer_note", buildJsonObject {
+            put("p_language", language.lowercase()); put("p_index", index); put("p_body", body) })
+        val o = Edge.json.parseToJsonElement(raw).jsonObject
+        if (o["ok"]?.jsonPrimitive?.boolean == true) o["id"]?.jsonPrimitive?.long else null
+    }.getOrNull()
+
+    suspend fun deleteNote(id: Long) {
+        runCatching { rpc("core_cheer_delete", buildJsonObject { put("p_id", id) }) }
+    }
+
+    /** Hearts and notes left on my seat since I last opened it. */
+    suspend fun unseenCheers(language: String): Int = runCatching {
+        rpc("core_cheers_unseen", buildJsonObject { put("p_language", language.lowercase()) })
+            .trim().toInt()
+    }.getOrDefault(0)
+
+    suspend fun markCheersSeen(language: String) {
+        runCatching { rpc("core_cheers_mark_seen", buildJsonObject { put("p_language", language.lowercase()) }) }
     }
 
     /**

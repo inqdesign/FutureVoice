@@ -3770,4 +3770,31 @@
     <string name="your_weekly_test_is_ready">"주간 테스트가 준비됐어요"</string>
     <string name="your_world">"내 %s 생활"</string>
     <string name="yours_to_replay_and_shadow_free">"다시 듣기와 섀도잉은 무료예요."</string>
+    <string name="you_re_core_member_no_lld">"%d번째 코어 멤버가 됐어요!"</string>
+    <string name="lld_days_in_a_row_without_missing_one">"%d일 동안 하루도 빠짐없이 말했어요."</string>
+    <string name="this_cube_is_your_seat_in_the_core_pick_its_colour">"이 큐브가 코어에 놓일 내 자리예요. 색을 골라 주세요."</string>
+    <string name="your_app_takes_this_colour_too">"앱 색도 이 색으로 바뀌어요."</string>
+    <string name="put_it_in_my_seat">"이 색으로 자리에 놓기"</string>
+    <string name="seat_lld_of_lld">"%2$d자리 중 %1$d번째 자리예요."</string>
+    <string name="engrave_your_cube">"큐브에 새기기"</string>
+    <string name="your_name_goes_on_one_face_your_hope_on_another">"한 면엔 내 이름, 다른 면엔 내 희망을 새겨요."</string>
+    <string name="your_hope_in_one_line">"이루고 싶은 것 한 줄"</string>
+    <!-- 'Only Core members can see your hope. Anyone can see your name.' -->
+    <string name="only_core_members_can_see_your_hope_anyone_can_see_your_name">"희망은 코어 멤버끼리만 볼 수 있어요. 이름은 누구나 볼 수 있어요."</string>
+    <string name="back_to_colours">"색 다시 고르기"</string>
+    <string name="keep_this_seat_until_comes_true">"‘%s’, 이 희망을 이룰 때까지 이 자리를 지켜 주세요!"</string>
+    <!-- 'Miss one day a month and the seat stays yours. Miss more, and you leave the Core and start again from zero.' -->
+    <string name="miss_one_day_a_month_and_the_seat_stays_yours_miss_more_and_21a3b6">"한 달에 하루까지는 빠져도 자리가 그대로예요. 그보다 더 빠지면 코어에서 나가고, 0일부터 다시 시작해야 해요."</string>
+    <string name="no_name_engraved">"새긴 이름 없음"</string>
+    <string name="seat_lld">"%d번 자리"</string>
+    <string name="day_lld_in_this_seat">"이 자리를 지킨 지 %d일째"</string>
+    <string name="hope">"희망"</string>
+    <string name="no_hope_engraved_yet">"아직 새긴 희망이 없어요"</string>
+    <string name="only_core_members_can_see_this">"코어 멤버끼리만 볼 수 있어요."</string>
+    <string name="this_seat_couldn_t_be_opened_try_again_in_a_moment">"이 자리를 열 수 없어요. 잠시 뒤에 다시 해 보세요."</string>
+    <string name="leave_a_short_cheer">"응원 한 줄 남기기"</string>
+    <string name="cheers">"응원"</string>
+    <string name="heart">"하트"</string>
+    <string name="someone">"누군가"</string>
+    <string name="lld_new_cheers_on_your_seat">"내 칸에 새 응원 %d개"</string>
 </resources>

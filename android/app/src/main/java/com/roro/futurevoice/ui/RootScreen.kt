@@ -742,6 +742,46 @@ fun RootScreen() {
         onShowing = { trialReportUp = it },
     )
 
+    // The Core's welcome, once per seat per device (iOS `offerCoreWelcome`):
+    // asked on arrival and whenever a call ends, raised once nothing else is up.
+    // Debug: `--ez corewelcome true` raises it on a sample seat; `--ei
+    // coreseat 1|2` opens a sample cube sheet as its owner or a stranger.
+    val debugIntent = if (BuildConfig.DEBUG) (context as? android.app.Activity)?.intent else null
+    var coreWelcome by remember { mutableStateOf<CoreWelcomeStore.Seat?>(null) }
+    var coreCandidate by remember { mutableStateOf<CoreWelcomeStore.Seat?>(null) }
+    var debugWelcomeUsed by remember { mutableStateOf(false) }
+    var debugSeat by remember { mutableStateOf(debugIntent?.getIntExtra("coreseat", 0) ?: 0) }
+    LaunchedEffect(state.setupComplete, tabsArrived, state.targetLanguage, inCall) {
+        if (!state.setupComplete || !tabsArrived || inCall) return@LaunchedEffect
+        if (debugIntent?.getBooleanExtra("corewelcome", false) == true && !debugWelcomeUsed) {
+            debugWelcomeUsed = true
+            coreCandidate = CoreWelcomeStore.preview
+            return@LaunchedEffect
+        }
+        if (coreWelcome == null) coreCandidate = CoreWelcomeStore.due(context, state.targetLanguage)
+    }
+    val coreBlocked = inCall || weekRecapUp || trialReportUp || paywalled || showIntroPreview ||
+        state.levelUp != null || referralJoin != null || welcomeMinutes != null || updatePending != null ||
+        guideUp || showAgeCheck || showWhatsNew
+    LaunchedEffect(coreCandidate, coreBlocked) {
+        if (coreCandidate != null && !coreBlocked && coreWelcome == null) {
+            coreWelcome = coreCandidate; coreCandidate = null
+        }
+    }
+    coreWelcome?.let { seat ->
+        CoreWelcome(seat, state.persona?.displayName.orEmpty()) { coreWelcome = null }
+    }
+    if (debugSeat != 0) {
+        val mineSample = debugSeat == 1
+        CoreSeatSheet("en", 0, onDismiss = { debugSeat = 0 },
+            preview = com.roro.futurevoice.net.CoreClubClient.SeatDetail(0, 4, "Minji", mineSample, mineSample,
+                if (mineSample) "Give a talk in English next year" else null, 12, "2026-10-18") to
+                com.roro.futurevoice.net.CoreClubClient.Cheers(23, false, mineSample, listOf(
+                    com.roro.futurevoice.net.CoreClubClient.Cheers.Note(1, "축하해요! 30일 대단해요", "Mina"),
+                    com.roro.futurevoice.net.CoreClubClient.Cheers.Note(2, "I'm on day 12, see you soon!", "Jonas"),
+                    com.roro.futurevoice.net.CoreClubClient.Cheers.Note(3, "You made it 🎉", null))))
+    }
+
     // A PARKED voice is rebuilt at the metered tap, on top of whatever is
     // up — sheets included (see `VoiceRevival`).
     VoiceRevivalHost(app)
