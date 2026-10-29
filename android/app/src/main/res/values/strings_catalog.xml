@@ -3506,7 +3506,7 @@
     <string name="you_re_at_1f_verified_slips_per_100_words">"You're at %1$.1f verified slips per 100 words%2$s."</string>
     <string name="you_re_in">"You're in"</string>
     <string name="you_re_in_line_a_seat_opens_when_someone_stops">"You're in line. A seat opens when someone stops."</string>
-    <string name="you_re_in_line_and_there_s_room_you_take_a_seat_tonight">"You're in line, and there's room. You take a seat tonight."</string>
+    <string name="you_re_in_line_and_there_s_room_you_take_a_seat">"You're in line, and there's room. You take a seat %s."</string>
     <!-- "You're in the pool — other %@ learners can find and talk with your persona." -->
     <string name="you_re_in_the_pool_other_learners_can_find_and_talk_with_you_b020a3">"You're in the pool — other %s learners can find and talk with your persona."</string>
     <string name="you_re_lld">"You're #%d"</string>
@@ -3547,7 +3547,8 @@
     <string name="you_ve_been_away_a_while_so_the_full_streak_counts_again">"You've been away a while, so the full streak counts again."</string>
     <!-- "You've been back for another call. Two quick questions, and anything you want to say." -->
     <string name="you_ve_been_back_for_another_call_two_quick_questions_and_an_abac2f">"You've been back for another call. Two quick questions, and anything you want to say."</string>
-    <string name="you_ve_done_the_lld_days_you_join_the_line_tonight">"You've done the %d days. You join the line tonight."</string>
+    <string name="you_ve_done_the_lld_days_you_join_the_line">"You've done the %1$d days. You join the line %2$s."</string>
+    <string name="you_ve_done_the_lld_days_you_take_a_seat">"You've done the %1$d days. You take a seat %2$s."</string>
     <!-- "You've passed the fair-use line for this period — %lld minutes." -->
     <string name="you_ve_passed_the_fair_use_line_for_this_period_lld_minutes">"You've passed the fair-use line for this period — %d minutes."</string>
     <!-- "You've passed the fair-use line for this period — %lld scenes." -->

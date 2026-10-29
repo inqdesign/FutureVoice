@@ -3451,7 +3451,7 @@
     <string name="you_re_at_1f_verified_slips_per_100_words">"Du liegst bei %1$.1f bestätigten Fehlern pro 100 Wörter%2$s."</string>
     <string name="you_re_in">"Es geht los"</string>
     <string name="you_re_in_line_a_seat_opens_when_someone_stops">"Du stehst in der Warteschlange. Ein Platz wird frei, wenn jemand aufhört."</string>
-    <string name="you_re_in_line_and_there_s_room_you_take_a_seat_tonight">"Du stehst in der Warteschlange, und es ist Platz frei. Heute Nacht bekommst du deinen Platz."</string>
+    <string name="you_re_in_line_and_there_s_room_you_take_a_seat">"Du stehst in der Warteschlange, und es ist Platz frei. Du bekommst deinen Platz %s."</string>
     <!-- "You're in the pool — other %@ learners can find and talk with your persona." -->
     <string name="you_re_in_the_pool_other_learners_can_find_and_talk_with_you_b020a3">"Du bist im Pool — andere %s-Lernende können dein Persona finden und mit ihm sprechen."</string>
     <string name="you_re_lld">"Platz %d"</string>
@@ -3492,7 +3492,8 @@
     <string name="you_ve_been_away_a_while_so_the_full_streak_counts_again">"Du warst eine Weile weg, deshalb zählt wieder die volle Serie."</string>
     <!-- "You've been back for another call. Two quick questions, and anything you want to say." -->
     <string name="you_ve_been_back_for_another_call_two_quick_questions_and_an_abac2f">"Schön, dass du noch einmal angerufen hast. Zwei kurze Fragen, und alles, was du sagen willst."</string>
-    <string name="you_ve_done_the_lld_days_you_join_the_line_tonight">"Du hast die %d Tage geschafft. Heute Nacht kommst du in die Warteschlange."</string>
+    <string name="you_ve_done_the_lld_days_you_join_the_line">"Du hast die %1$d Tage geschafft. Du kommst %2$s in die Warteschlange."</string>
+    <string name="you_ve_done_the_lld_days_you_take_a_seat">"Du hast die %1$d Tage geschafft. Du bekommst deinen Platz %2$s."</string>
     <!-- "You've passed the fair-use line for this period — %lld minutes." -->
     <string name="you_ve_passed_the_fair_use_line_for_this_period_lld_minutes">"Du hast die Fair-Use-Grenze für diesen Zeitraum überschritten: %d Minuten."</string>
     <!-- "You've passed the fair-use line for this period — %lld scenes." -->

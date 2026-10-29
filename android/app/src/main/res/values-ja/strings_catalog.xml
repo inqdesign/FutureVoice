@@ -3454,7 +3454,7 @@
     <string name="you_re_at_1f_verified_slips_per_100_words">"100単語あたりの確認済みの文法ミスは%1$.1f個です%2$s。"</string>
     <string name="you_re_in">"始まりました"</string>
     <string name="you_re_in_line_a_seat_opens_when_someone_stops">"順番待ちに並んでいます。誰かがやめると席が空きます。"</string>
-    <string name="you_re_in_line_and_there_s_room_you_take_a_seat_tonight">"順番待ちに並んでいて、席も空いています。今夜、席に着きます。"</string>
+    <string name="you_re_in_line_and_there_s_room_you_take_a_seat">"順番待ちに並んでいて、席も空いています。%sに席に着きます。"</string>
     <!-- "You're in the pool — other %@ learners can find and talk with your persona." -->
     <string name="you_re_in_the_pool_other_learners_can_find_and_talk_with_you_b020a3">"プールに登録されました。ほかの%sの学習者が、このペルソナを見つけて話せます。"</string>
     <string name="you_re_lld">"%d位です"</string>
@@ -3495,7 +3495,8 @@
     <string name="you_ve_been_away_a_while_so_the_full_streak_counts_again">"しばらく休んでいたので、連続記録を最初からやり直す必要があります。"</string>
     <!-- "You've been back for another call. Two quick questions, and anything you want to say." -->
     <string name="you_ve_been_back_for_another_call_two_quick_questions_and_an_abac2f">"また戻ってきて話してくれましたね。短い質問が二つと、言いたいことがあれば何でも。"</string>
-    <string name="you_ve_done_the_lld_days_you_join_the_line_tonight">"%d日を満たしました。今夜、順番待ちに並びます。"</string>
+    <string name="you_ve_done_the_lld_days_you_join_the_line">"%1$d日を満たしました。%2$sに順番待ちに並びます。"</string>
+    <string name="you_ve_done_the_lld_days_you_take_a_seat">"%1$d日を満たしました。%2$sに席に着きます。"</string>
     <!-- "You've passed the fair-use line for this period — %lld minutes." -->
     <string name="you_ve_passed_the_fair_use_line_for_this_period_lld_minutes">"今期のフェアユース基準の%d分を超えました。"</string>
     <!-- "You've passed the fair-use line for this period — %lld scenes." -->

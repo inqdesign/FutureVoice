@@ -238,9 +238,9 @@ private fun standingLead(p: CoreClubClient.Progress): Boolean {
         m != null -> {
             // No seal for the seatless: what they need is the way back.
             if (p.waiting_for_seat) {
-                Footnote(stringResource(
-                    if (p.club_size < p.seats) R.string.you_re_in_line_and_there_s_room_you_take_a_seat_tonight
-                    else R.string.you_re_in_line_a_seat_opens_when_someone_stops))
+                Footnote(
+                    if (p.club_size < p.seats) stringResource(R.string.you_re_in_line_and_there_s_room_you_take_a_seat, nextSettlement())
+                    else stringResource(R.string.you_re_in_line_a_seat_opens_when_someone_stops))
                 return true
             }
             val back = p.days_to_return ?: return false
@@ -258,8 +258,10 @@ private fun standingLead(p: CoreClubClient.Progress): Boolean {
             if (togo == 0) {
                 // Streak complete, settlement not yet run — the one moment
                 // this screen gets to be pleased.
-                Footnote(stringResource(R.string.you_ve_done_the_lld_days_you_join_the_line_tonight,
-                    p.entry_streak))
+                Footnote(stringResource(
+                    if (p.club_size < p.seats) R.string.you_ve_done_the_lld_days_you_take_a_seat
+                    else R.string.you_ve_done_the_lld_days_you_join_the_line,
+                    p.entry_streak, nextSettlement()))
             } else BigNumber(togo, stringResource(R.string.days_to_go))
             return true
         }
@@ -353,4 +355,21 @@ private fun WhatYouGetSection() {
     }
     GroupedFooter(stringResource(
         R.string.it_s_there_while_you_re_in_the_core_and_it_s_a_promise_to_yo_970f83))
+}
+
+/** When the next settlement runs, on the learner's own clock. It is a pg_cron
+ *  job at 00:05 UTC (`settle_core_club`), so "tonight" was only true in Europe:
+ *  in Korea a 30th day finished at 23:00 is seated at 09:05 the next morning. */
+@Composable
+private fun nextSettlement(): String {
+    val context = LocalContext.current
+    val tag = com.roro.futurevoice.core.UILanguage.current(context) ?: java.util.Locale.getDefault().toLanguageTag()
+    val now = java.time.ZonedDateTime.now(java.time.ZoneOffset.UTC)
+    var next = now.toLocalDate().atTime(0, 5).atZone(java.time.ZoneOffset.UTC)
+    if (!next.isAfter(now)) next = next.plusDays(1)
+    val f = android.icu.text.DateFormat.getDateTimeInstance(
+        android.icu.text.DateFormat.RELATIVE_MEDIUM, android.icu.text.DateFormat.SHORT,
+        android.icu.util.ULocale.forLanguageTag(tag))
+    f.setContext(android.icu.text.DisplayContext.CAPITALIZATION_FOR_MIDDLE_OF_SENTENCE)
+    return f.format(java.util.Date.from(next.toInstant()))
 }

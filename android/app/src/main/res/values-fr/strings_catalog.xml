@@ -3451,7 +3451,7 @@
     <string name="you_re_at_1f_verified_slips_per_100_words">"Tu es à %1$.1f erreurs confirmées pour 100 mots%2$s."</string>
     <string name="you_re_in">"C’est parti"</string>
     <string name="you_re_in_line_a_seat_opens_when_someone_stops">"Tu es dans la file. Une place se libère quand quelqu’un s’arrête."</string>
-    <string name="you_re_in_line_and_there_s_room_you_take_a_seat_tonight">"Tu es dans la file, et il y a de la place. Tu prends une place ce soir."</string>
+    <string name="you_re_in_line_and_there_s_room_you_take_a_seat">"Tu es dans la file, et il y a de la place. Tu prends ta place %s."</string>
     <!-- "You're in the pool — other %@ learners can find and talk with your persona." -->
     <string name="you_re_in_the_pool_other_learners_can_find_and_talk_with_you_b020a3">"Tu es dans le groupe — les autres personnes qui apprennent %s peuvent trouver ton personnage et lui parler."</string>
     <string name="you_re_lld">"%dᵉ place"</string>
@@ -3492,7 +3492,8 @@
     <string name="you_ve_been_away_a_while_so_the_full_streak_counts_again">"Tu as fait une longue pause, donc la série repart de zéro."</string>
     <!-- "You've been back for another call. Two quick questions, and anything you want to say." -->
     <string name="you_ve_been_back_for_another_call_two_quick_questions_and_an_abac2f">"Tu es revenu pour un autre appel. Deux questions rapides, et tout ce que tu veux dire."</string>
-    <string name="you_ve_done_the_lld_days_you_join_the_line_tonight">"Tu as fait les %d jours. Tu entres dans la file ce soir."</string>
+    <string name="you_ve_done_the_lld_days_you_join_the_line">"Tu as fait les %1$d jours. Tu entres dans la file %2$s."</string>
+    <string name="you_ve_done_the_lld_days_you_take_a_seat">"Tu as fait les %1$d jours. Tu prends ta place %2$s."</string>
     <!-- "You've passed the fair-use line for this period — %lld minutes." -->
     <string name="you_ve_passed_the_fair_use_line_for_this_period_lld_minutes">"Tu as dépassé le seuil d’usage raisonnable de cette période : %d minutes."</string>
     <!-- "You've passed the fair-use line for this period — %lld scenes." -->

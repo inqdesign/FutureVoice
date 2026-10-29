@@ -3451,7 +3451,7 @@
     <string name="you_re_at_1f_verified_slips_per_100_words">"Tienes %1$.1f errores confirmados por cada 100 palabras%2$s."</string>
     <string name="you_re_in">"Ya estás dentro"</string>
     <string name="you_re_in_line_a_seat_opens_when_someone_stops">"Estás en la cola. Se libera una plaza cuando alguien lo deja."</string>
-    <string name="you_re_in_line_and_there_s_room_you_take_a_seat_tonight">"Estás en la cola y hay plaza libre. Esta noche te sientas."</string>
+    <string name="you_re_in_line_and_there_s_room_you_take_a_seat">"Estás en la cola y hay plaza libre. Te sientas %s."</string>
     <!-- "You're in the pool — other %@ learners can find and talk with your persona." -->
     <string name="you_re_in_the_pool_other_learners_can_find_and_talk_with_you_b020a3">"Ya estás en el grupo: otras personas que aprenden %s pueden encontrar tu personaje y hablar con él."</string>
     <string name="you_re_lld">"Puesto %d"</string>
@@ -3492,7 +3492,8 @@
     <string name="you_ve_been_away_a_while_so_the_full_streak_counts_again">"Llevabas tiempo fuera, así que la racha completa cuenta desde cero."</string>
     <!-- "You've been back for another call. Two quick questions, and anything you want to say." -->
     <string name="you_ve_been_back_for_another_call_two_quick_questions_and_an_abac2f">"Has vuelto para otra llamada. Dos preguntas rápidas y lo que quieras contarme."</string>
-    <string name="you_ve_done_the_lld_days_you_join_the_line_tonight">"Completaste los %d días. Esta noche entras en la cola."</string>
+    <string name="you_ve_done_the_lld_days_you_join_the_line">"Completaste los %1$d días. Entras en la cola %2$s."</string>
+    <string name="you_ve_done_the_lld_days_you_take_a_seat">"Completaste los %1$d días. Te sientas %2$s."</string>
     <!-- "You've passed the fair-use line for this period — %lld minutes." -->
     <string name="you_ve_passed_the_fair_use_line_for_this_period_lld_minutes">"Pasaste el límite de uso razonable de este periodo: %d minutos."</string>
     <!-- "You've passed the fair-use line for this period — %lld scenes." -->

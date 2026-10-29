@@ -3503,7 +3503,7 @@
     <string name="you_re_at_1f_verified_slips_per_100_words">"100단어당 확인된 문법 실수가 %1$.1f개예요%2$s."</string>
     <string name="you_re_in">"시작됐어요"</string>
     <string name="you_re_in_line_a_seat_opens_when_someone_stops">"줄에 서 있어요. 누군가 그만두면 자리가 나요."</string>
-    <string name="you_re_in_line_and_there_s_room_you_take_a_seat_tonight">"줄에 서 있고, 자리도 비어 있어요. 오늘 밤에 앉게 돼요."</string>
+    <string name="you_re_in_line_and_there_s_room_you_take_a_seat">"줄에 서 있고, 자리도 비어 있어요. %s에 앉게 돼요."</string>
     <!-- "You're in the pool — other %@ learners can find and talk with your persona." -->
     <string name="you_re_in_the_pool_other_learners_can_find_and_talk_with_you_b020a3">"풀에 등록됐어요 — 다른 %s 학습자들이 내 페르소나를 찾아 대화할 수 있어요."</string>
     <string name="you_re_lld">"%d위예요"</string>
@@ -3544,7 +3544,8 @@
     <string name="you_ve_been_away_a_while_so_the_full_streak_counts_again">"오래 쉬었으니 연속 기록을 처음부터 다시 채워야 해요."</string>
     <!-- "You've been back for another call. Two quick questions, and anything you want to say." -->
     <string name="you_ve_been_back_for_another_call_two_quick_questions_and_an_abac2f">"다시 돌아와서 또 통화하셨네요. 짧게 두 가지만, 그리고 하고 싶은 말 아무거나요."</string>
-    <string name="you_ve_done_the_lld_days_you_join_the_line_tonight">"%d일을 다 채웠어요. 오늘 밤 줄에 서요."</string>
+    <string name="you_ve_done_the_lld_days_you_join_the_line">"%1$d일을 다 채웠어요. %2$s에 줄에 서요."</string>
+    <string name="you_ve_done_the_lld_days_you_take_a_seat">"%1$d일을 다 채웠어요. %2$s에 자리에 앉아요."</string>
     <!-- "You've passed the fair-use line for this period — %lld minutes." -->
     <string name="you_ve_passed_the_fair_use_line_for_this_period_lld_minutes">"이번 주기의 공정 사용 기준인 %d분을 넘었어요."</string>
     <!-- "You've passed the fair-use line for this period — %lld scenes." -->

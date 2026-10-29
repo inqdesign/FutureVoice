@@ -3454,7 +3454,7 @@
     <string name="you_re_at_1f_verified_slips_per_100_words">"每100個單字有%1$.1f個確認過的文法失誤%2$s。"</string>
     <string name="you_re_in">"開始了"</string>
     <string name="you_re_in_line_a_seat_opens_when_someone_stops">"已經在排隊。有人退出時就會空出席位。"</string>
-    <string name="you_re_in_line_and_there_s_room_you_take_a_seat_tonight">"已經在排隊，而且還有空位。今晚就能入座。"</string>
+    <string name="you_re_in_line_and_there_s_room_you_take_a_seat">"已經在排隊，而且還有空位。%s就能入座。"</string>
     <!-- "You're in the pool — other %@ learners can find and talk with your persona." -->
     <string name="you_re_in_the_pool_other_learners_can_find_and_talk_with_you_b020a3">"已經加入人物池，其他學%s的人可以找到你的角色來對話。"</string>
     <string name="you_re_lld">"第 %d 名"</string>
@@ -3495,7 +3495,8 @@
     <string name="you_ve_been_away_a_while_so_the_full_streak_counts_again">"休息太久了，連續天數要從頭重新算。"</string>
     <!-- "You've been back for another call. Two quick questions, and anything you want to say." -->
     <string name="you_ve_been_back_for_another_call_two_quick_questions_and_an_abac2f">"你又回來通話了。想問兩個小問題，還有任何你想說的話。"</string>
-    <string name="you_ve_done_the_lld_days_you_join_the_line_tonight">"%d天達成了。今晚就開始排隊。"</string>
+    <string name="you_ve_done_the_lld_days_you_join_the_line">"%1$d天達成了。%2$s開始排隊。"</string>
+    <string name="you_ve_done_the_lld_days_you_take_a_seat">"%1$d天達成了。%2$s就能入座。"</string>
     <!-- "You've passed the fair-use line for this period — %lld minutes." -->
     <string name="you_ve_passed_the_fair_use_line_for_this_period_lld_minutes">"已經超過這期的合理使用標準：%d分鐘。"</string>
     <!-- "You've passed the fair-use line for this period — %lld scenes." -->
