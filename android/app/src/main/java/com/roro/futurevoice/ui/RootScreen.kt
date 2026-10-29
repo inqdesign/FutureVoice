@@ -2321,12 +2321,14 @@ internal fun HomeScreen(
         // widths so the centre never moves. Above the floating bar, fixed
         // while the page scrolls under it. 21 dp in from the edges, flush with
         // the tab bar's capsule: measured off iOS, where the row lands at 21pt
-        // (its `.padding(16)` notwithstanding).
+        // (its `.padding(16)` notwithstanding). 16 dp above the CAPSULE, as
+        // iOS's 16pt: the capsule's top is 62 + 8 dp up — the bar's 6 dp top
+        // margin is air above it, and counting it left a 22 dp gap.
         if (tab == HomeTab.TALK && !writingSituation) {
             Row(
                 Modifier.align(Alignment.BottomCenter).fillMaxWidth()
                     .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.navigationBars)
-                    .padding(start = 21.dp, end = 21.dp, bottom = 76.dp + 16.dp),
+                    .padding(start = 21.dp, end = 21.dp, bottom = 62.dp + 8.dp + 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
