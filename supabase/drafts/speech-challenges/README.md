@@ -10,5 +10,6 @@ speech as a federal work). Steve Jobs, Martin Luther King and Churchill are
 still under copyright: never put their words on the board. The rest are
 written for nawana.
 
-A famous speech goes up in its REAL words or not at all: a speech "in the
-style of" someone has none of the pull of the original (founder, 2026-10-28).
+
+The show-host series (07-12) is what the founder wants more of: be the
+host selling one thing live. A famous speech goes up only in its REAL words.
