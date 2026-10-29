@@ -41,6 +41,11 @@ struct CoreClubView: View {
     /// shows the one the learner is currently practising — switching language
     /// in Me switches which room this is.
     @EnvironmentObject private var appState: AppState
+    /// A tapped cell of the grid (`CoreSeatDetailSheet`).
+    @State private var openSeat: SeatRef?
+    @State private var unseenCheers = 0
+
+    struct SeatRef: Identifiable { let index: Int; var id: Int { index } }
     @State private var progress: CoreClubService.Progress?
     @State private var seatMap: CoreClubService.SeatMap?
     @State private var isLoading = true
@@ -76,6 +81,9 @@ struct CoreClubView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
         .refreshable { await load() }
+        .sheet(item: $openSeat, onDismiss: { Task { await load() } }) { seat in
+            CoreSeatDetailSheet(language: appState.targetLanguage, index: seat.index)
+        }
     }
 
     // MARK: - The room
@@ -83,7 +91,7 @@ struct CoreClubView: View {
     /// A hundred dots, drawn before a single number is spoken.
     private var roomSection: some View {
         Section {
-            CoreSeatGrid(map: seatMap)
+            CoreSeatGrid(map: seatMap) { openSeat = SeatRef(index: $0) }
         } footer: {
             // A count, and the one thing the picture can't say for itself.
             // The old caption taught a three-clause legend — filled, empty,
@@ -93,6 +101,18 @@ struct CoreClubView: View {
             VStack(alignment: .leading, spacing: 6) {
                 if let m = seatMap {
                     Text(explain("\(m.taken) of \(m.seats) seats taken."))
+                    if let mine = m.mine, unseenCheers > 0 {
+                        // Quiet, on the next visit: what arrived on my cube.
+                        Button {
+                            openSeat = SeatRef(index: mine)
+                            unseenCheers = 0
+                        } label: {
+                            Label(explain("\(unseenCheers) new cheers on your seat"), systemImage: "heart.fill")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(Color.coreClub)
+                        }
+                        .buttonStyle(.plain)
+                    }
                     if m.mine != nil {
                         Text(explain("The outlined cell is you."))
                     } else {
@@ -316,6 +336,9 @@ struct CoreClubView: View {
         async let p = CoreClubService.fetchProgress(language: appState.targetLanguage)
         async let m = CoreClubService.fetchSeatMap(language: appState.targetLanguage)
         (progress, seatMap) = await (p, m)
+        if seatMap?.mine != nil {
+            unseenCheers = await CoreClubService.unseenCheers(language: appState.targetLanguage)
+        }
         isLoading = false
     }
 }

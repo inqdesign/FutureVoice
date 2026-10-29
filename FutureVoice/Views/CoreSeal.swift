@@ -87,6 +87,8 @@ struct CoreSeatGrid: View {
     /// nil while loading — the grid draws its empty block rather than a
     /// spinner, so nothing jumps when the colours land.
     let map: CoreClubService.SeatMap?
+    /// A taken cell was tapped (its index in the grid).
+    var onTap: ((Int) -> Void)? = nil
 
     private let columns = 10
 
@@ -129,6 +131,25 @@ struct CoreSeatGrid: View {
             }
         }
         .aspectRatio(CGFloat(columns) / CGFloat(rows), contentMode: .fit)
+        .overlay {
+            // Tapping a taken cell opens that member's cube: the name for
+            // anyone, the hope for members (`CoreSeatDetailSheet`).
+            if let onTap {
+                GeometryReader { geo in
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture { point in
+                            let side = (geo.size.width - gap * CGFloat(columns - 1)) / CGFloat(columns)
+                            guard side > 0 else { return }
+                            let col = Int(point.x / (side + gap)), row = Int(point.y / (side + gap))
+                            let index = row * columns + col
+                            guard col < columns, index >= 0, index < (map?.taken ?? 0) else { return }
+                            HapticEngine.selection()
+                            onTap(index)
+                        }
+                }
+            }
+        }
         .padding(.vertical, 8)
         .accessibilityElement()
         .accessibilityLabel(Text("The Core"))
