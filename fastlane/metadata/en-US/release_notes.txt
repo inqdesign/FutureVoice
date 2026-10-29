@@ -1,17 +1,8 @@
 New
-• Meet your personal tutor on the Talk tab. It lays out what to do today, and you can ask it anything about your practice.
-• Tutor mode now has a curriculum: pass one topic at a time, with a final check at the end.
-• Swipe the ring on Home to switch between free talk and Tutor mode.
-• When you start, you can pick the future you're working toward. Your fluent self talks like someone already living it. Change it anytime in Me → Profile → My future.
-• The report you get when your free minutes are spent is now read to you by your fluent self. It also shows how you used the app and what your level was based on.
-• New Speech challenge: "Tell me about yourself". Challenge cards now show how many times people have tried.
-• A scheduled plan change now shows at the top of Usage.
+• Finish your 30th day and you're in the Core right away, no waiting for the next morning.
+• Taking your seat is now a moment of its own: pick your cube's colour, engrave your name and a hope on it, and place it in your seat.
+• Tap any seat on the Core page to see that member's cube. Leave a heart or a short cheer and watch cheers rise over the cube. Only Core members can read the hope on a cube.
+• You get a notification when someone cheers your seat.
 
 Fixed
-• The call timer now shows from the moment the call starts, and talk time counts from then too.
-• The Home ring now shows today's talk time correctly.
-• Say it again no longer moves to the next turn while you're still reading a long line.
-• In Tutor mode, after a round the tutor waits until you choose what's next.
-• In Tutor mode, the tutor answers each thing you say once, and the checklist always matches what it says.
-• The final check now lists what to cover, and if you ask, the tutor shows you how it goes.
-• In Call settings, Tutor mode is now at the top, and Coach mode is now "Try saying".
+• Corrections now say what you meant, in words that fit your level, instead of patching your sentence word by word.

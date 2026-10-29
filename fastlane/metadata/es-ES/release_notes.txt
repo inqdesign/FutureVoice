@@ -1,17 +1,8 @@
 Novedades
-• En la pestaña Hablar ahora tienes un tutor personal. Te dice qué hacer hoy y puedes preguntarle lo que quieras sobre tu práctica.
-• El modo tutor ahora tiene un plan de estudio: un tema a la vez y una prueba final al terminar.
-• Desliza el anillo de inicio para pasar de la conversación libre al modo tutor.
-• Al empezar, puedes elegir el futuro al que quieres llegar. Tu yo fluido habla como alguien que ya lo vive. Cámbialo cuando quieras en Mi perfil → Perfil → Mi futuro.
-• El informe que recibes al terminar tus minutos gratis ahora te lo lee tu yo fluido. También muestra cómo usaste la app y en qué se basa tu nivel.
-• Nuevo reto de discurso: «Háblame de ti». Las tarjetas ahora muestran cuántas veces se ha intentado.
-• Un cambio de plan programado ahora aparece arriba en Uso.
+• Al completar tu día 30 entras en el Núcleo al momento, sin esperar a la mañana siguiente.
+• Ocupar tu asiento ahora es un momento especial: elige el color de tu cubo, graba en él tu nombre y un deseo, y colócalo en tu asiento.
+• Toca cualquier asiento en la página del Núcleo para ver el cubo de ese miembro. Deja un corazón o un ánimo corto y verás los ánimos subir sobre el cubo. Solo los miembros del Núcleo pueden leer el deseo de un cubo.
+• Te llega una notificación cuando alguien le deja un ánimo a tu asiento.
 
 Correcciones
-• El reloj de la llamada se ve desde el momento en que empieza, y el tiempo de conversación cuenta desde ahí.
-• El anillo de inicio ahora muestra bien tu tiempo de conversación de hoy.
-• En Volver a decirlo ya no se pasa al siguiente turno mientras todavía lees una frase larga.
-• En el modo tutor, al terminar una ronda el tutor espera a que elijas qué sigue.
-• En el modo tutor, el tutor responde una sola vez a cada cosa que dices, y la lista siempre coincide con lo que dice.
-• La prueba final muestra qué tienes que incluir y, si se lo pides, el tutor te enseña cómo se hace.
-• En Ajustes de la llamada, el modo tutor está arriba y el modo coach ahora se llama «Prueba a decir».
+• Las correcciones ahora dicen lo que querías decir, con palabras de tu nivel, en lugar de remendar tu frase palabra por palabra.
