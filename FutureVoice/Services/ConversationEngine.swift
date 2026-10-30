@@ -163,7 +163,8 @@ enum ConversationEngine {
         learnerPicksTopic: Bool = false,
         tutorLesson: TutorLesson? = nil,
         tutorJustTicked: Bool = false,
-        tutorLastFixes: [String] = []
+        tutorLastFixes: [String] = [],
+        tutorPlanning: Bool = false
     ) -> String {
         let languageName = LanguageCatalog.englishName(targetLanguage)
         let patterns = topPatterns.prefix(3).map { "- \($0.mistake) → \($0.correction) (\($0.context))" }
@@ -326,6 +327,27 @@ enum ConversationEngine {
         about them, in one short turn, and let them pick.
         """ : ""
 
+        // The goals the learner picked in setup ("Imagine your future",
+        // 2026-10-28): what this fluent self already does. Only where the
+        // model IS the fluent self on an open line — a free talk or the
+        // first call; a scene, a news topic, a tutor lesson or a cast person
+        // each own the call. Empty goals = no block, so every prompt from
+        // before is byte-identical.
+        let futureGoals = persona?.futureGoals ?? []
+        let futureBlock = (!futureGoals.isEmpty && counterpart == nil && topic.isEmpty && !tutor) ? """
+
+
+        WHO YOU BECAME — the user picked these as the reason they're learning, \
+        and you (them, later) already live them:
+        \(futureGoals.map { "- " + $0.promptText(languageName: languageName) }.joined(separator: "\n"))
+        This is why they call you. You know from the inside what it took to \
+        get there and what it's like now. Speak from it only when the \
+        conversation goes near it, or when they're discouraged — at most once \
+        a call, a sentence of your own experience, never a pep talk, and \
+        never steer the call there. Don't invent specifics beyond these lines \
+        (no company, city, score or date they haven't told you).
+        """ : ""
+
         // When this is (`PromptClock`). The history is left out for a cast
         // stranger (no shared past, by that block's own rule) and for the
         // first meeting (whose block already says you have never spoken).
@@ -338,7 +360,7 @@ enum ConversationEngine {
         The point is for it to sound like two actual people talking — not a \
         language-class exchange. Read everything below, then talk like a real person.
 
-        \(counterpart.map { personaBlock(forCast: $0, persona: persona, languageName: languageName) } ?? personaBlock(persona, languageName: languageName))\(counterpartBlock)\(firstMeetingBlock)\(theyCalledBlock)\(ownTopicBlock)\(clockBlock)
+        \(counterpart.map { personaBlock(forCast: $0, persona: persona, languageName: languageName) } ?? personaBlock(persona, languageName: languageName))\(futureBlock)\(counterpartBlock)\(firstMeetingBlock)\(theyCalledBlock)\(ownTopicBlock)\(clockBlock)
 
         Language profile:
         - Native language: \(LanguageCatalog.englishName(nativeLanguage))
@@ -538,7 +560,7 @@ enum ConversationEngine {
           or truncate; (2) re-read it against PITCH TO THEIR LEVEL
           (\(levelName)) — a word or clause above that line that isn't the one
           deliberate stretch gets the plainer version. Check (2) is the one
-          that carries their level; (1) is only about not monologuing.\(beginnerQuestions(level))\(tutor ? tutorBlock(targetLanguage: targetLanguage, languageName: languageName, lesson: tutorLesson, justTicked: tutorJustTicked, lastFixes: tutorLastFixes) : "")
+          that carries their level; (1) is only about not monologuing.\(beginnerQuestions(level))\(tutor ? tutorBlock(targetLanguage: targetLanguage, languageName: languageName, lesson: tutorLesson, justTicked: tutorJustTicked, lastFixes: tutorLastFixes, planning: tutorPlanning) : "")
         """
     }
 
@@ -562,24 +584,66 @@ enum ConversationEngine {
     /// on, so every other prompt is byte-identical (`TutorModeTests`).
     static func tutorBlock(targetLanguage: String, languageName: String,
                            lesson: TutorLesson? = nil, justTicked: Bool = false,
-                           lastFixes: [String] = []) -> String {
+                           lastFixes: [String] = [], planning: Bool = false) -> String {
         let lessonPart: String
-        if let lesson, lesson.isFinished {
+        if planning, let lesson {
+            // The next round (or a picked topic) is being written. Left on
+            // ALL DONE meanwhile, the tutor ran a round of its own and asked
+            // "more?" again, and the ready note then sent it back to the
+            // start (device, 2026-10-28).
+            let round = lesson.isFinished
+                ? " — the next round of \"\(lesson.titleTarget)\", which they asked for" : ""
             lessonPart = """
-            TODAY'S LESSON: "\(lesson.titleTarget)" — ALL DONE. The app has \
-            checked every challenge off. In your next turn: say warmly, in a \
-            sentence or two, that they did it — they can now \
-            \(lesson.challenges.last?.task.lowercased() ?? "do it") — then ask \
-            in one short question whether they want to keep practicing this a \
-            bit more, or move on to another topic. Never end the call or say \
-            goodbye on your own. Then, by their answer:
-            - More of this → say great, you're setting up a next round, a \
-              step further (the plan appears in this block a moment later).
-            - Another topic → say you're saving today's lesson in their book, \
-              and ask what topic is next (if they already named it, say \
-              you're setting it up instead).
-            - They want to stop for today → say goodbye warmly; the call ends \
-              when they hang up — don't start anything new.
+            A NEW LESSON IS BEING SET UP RIGHT NOW\(round). \
+            It appears in this block in a few seconds, and a note from the app \
+            will tell you to start it. Until then: don't start any challenge \
+            or practice of your own, don't ask again whether they want more \
+            or another topic (that's decided), and don't go over what they \
+            already did. If they say something, answer in one short line and \
+            say it's almost ready.
+            """
+        } else if let lesson, lesson.inFinalCheck {
+            let parts = lesson.challenges.enumerated()
+                .map { "  \($0.offset + 1). \($0.element.task)" }.joined(separator: "\n")
+            lessonPart = """
+            TODAY'S LESSON: "\(lesson.titleTarget)" — every challenge is \
+            checked off. Now the FINAL CHECK. Their screen shows only the \
+            parts' short names (no example lines, no hints). What they practiced (for you only \
+            — never read it out, never list it):
+            \(parts)
+            - If you haven't asked yet: in one short line, ask them to say it \
+              all now, in their own words, in one go, as if they were really \
+              in that situation. No example line, no list of what to include, \
+              no hints of any kind.
+            - Their answer reaches you together with the app's note giving \
+              the result: answer it the way the note says, in that one turn. \
+              Never judge an answer yourself — not "okay, now the rest", not \
+              "almost", not praise. If an answer ever comes with no note, \
+              say only a few words ("Okay, let me check that").
+            - Stuck → a few words of encouragement: they can say it simply, \
+              their own way. Asked to be SHOWN how it goes → show it, when \
+              the app's note says so; never "I can't do it for you".
+            - They can't skip it. If they ask to change the topic or stop \
+              the lesson, say it's the last step and only takes a moment, and \
+              ask for it again.
+            - The app's result notes tell you exactly what to say; follow them. \
+              HOW YOU RUN A CHALLENGE below does not apply to this answer: \
+              don't correct it or ask for it again until the note comes.
+            """
+        } else if let lesson, lesson.isFinished {
+            lessonPart = """
+            TODAY'S LESSON: "\(lesson.titleTarget)" — ALL DONE. They passed \
+            the final check. In your next turn, if you haven't yet: tell them \
+            they passed, the way the app's note says — when it names slips, \
+            name each one by saying it the right way, and never call it \
+            great, perfect or flawless; praise is only for a clean answer. \
+            Then ask in one short question whether they'd like to say it \
+            once more, keep practicing this a bit more, or move on to another \
+            topic (if the note suggests a next topic, offer that one). Their \
+            answer reaches you with the app's note saying what they chose: \
+            say what the note says, in that one turn, and never start \
+            anything on your own. Never end the call or say goodbye on your \
+            own.
             """
         } else if let lesson, let now = lesson.current {
             let rows = lesson.challenges.enumerated().map { i, c in
@@ -597,8 +661,10 @@ enum ConversationEngine {
             can say all of it properly, out loud, with no mistakes. The app \
             keeps the checklist; you follow it:
             \(rows)
-            You are on challenge \(now + 1). You decide when it's done (see \
-            below); the app follows you and ticks the list.\(fixes)
+            You are on challenge \(now + 1). The APP judges every answer: \
+            each of their tries reaches you with a note giving the result \
+            (NOT YET, ONCE MORE or DONE) and what to say. Follow it, and \
+            never judge an answer yourself.\(fixes)
             """
         } else {
             lessonPart = """
@@ -633,34 +699,21 @@ enum ConversationEngine {
         HOW YOU RUN A CHALLENGE — every turn, inside the sentence ceiling:
         - Ask for exactly what the challenge needs, about THEIR life, in one \
           short question or instruction ("Tell me your name and where you're from.").
-        - Their line had a real mistake → say their line back the right way, \
-          as ONE sentence ("We'd say: I'm from Busan."), and ask them to say \
-          it again. Their words and meaning, only the mistake fixed.
-        - Their line missed part of the challenge → say what's missing and \
-          ask again.
-        - Their line is right — no mistake you can hear, and it does the \
-          challenge:
-          · the FIRST right try (their line before it had a mistake or \
-            missed part, or this is their first try) → say so in a few words \
-            and ask for it once more, so it sticks.
-          · it was ALREADY right last time too → it's done: a short "you \
-            got it", then start the next challenge in the same turn (say \
-            what it is, give its example line, ask them to say it about \
-            themselves). On the last challenge, that is the lesson done: \
-            tell them so and ask whether they want more of this or another \
-            topic.
-          · nailed on the very first try with nothing to fix → you may move \
-            on straight away.
-        - NEVER praise a line and ask for it again a second time. Every time \
-          you ask for the same line again, you either name exactly what to \
-          change (say the part back the right way) or, if nothing needs \
-          changing, you move on. "Nice, once more" with nothing to fix, \
-          over and over, is the one thing never to do.
+        - Their answer comes with the app's note: NOT YET (a slip, or the \
+          line doesn't do the challenge yet), ONCE MORE (right, say it \
+          again so it sticks) or DONE (move on). Say what the note says, in \
+          your own warm words, in that one turn. Never move on, tick, praise \
+          a line as done, or ask for it again unless the note says so — the \
+          checklist on their screen follows the app, and you must match it.
+        - Fixing a line → say it back the right way as ONE sentence ("We'd \
+          say: I'm from Busan."), their words and meaning, only the slip \
+          fixed, and ask them to say it again.
+        - Starting a challenge → say what it is, give its example line, and \
+          ask them to say it about themselves. On the final check: no \
+          example and no list of the parts.
         - Stuck, silent, or answered in another language → give them the \
           line to say (the example, fitted to them), then ask again.
-        - Repetition is for getting it RIGHT: asking again after a mistake \
-          is what a good tutor does. Once it's right, once more at most. \
-          Keep it warm and brisk, a different short word each time.
+        - Keep it warm and brisk, a different short word each time.
         - They ask to change the topic, stop this lesson, or practice \
           something else → agree right away, never "let's finish this one \
           first": the lesson is theirs to leave. Ask what they'd like to \
@@ -695,7 +748,7 @@ enum ConversationEngine {
           them to match it — your own words stay informal (Korean 반말, never \
           해요체, 여러분 or 당신; Japanese plain form; German du), and only \
           the quoted example line is in its own register.
-        - All of it in \(languageName) only, like everything else.\(tutorNow(lesson: lesson, justTicked: justTicked))
+        - All of it in \(languageName) only, like everything else.\(tutorNow(lesson: lesson, justTicked: justTicked && !planning))
         """
     }
 
@@ -704,6 +757,17 @@ enum ConversationEngine {
     /// tutor kept asking for "once more" anyway (4/4, Haiku, 2026-10-24).
     private static func tutorNow(lesson: TutorLesson?, justTicked: Bool) -> String {
         guard justTicked, let lesson else { return "" }
+        if lesson.inFinalCheck {
+            return """
+
+
+            RIGHT NOW — THIS OUTRANKS "ask them to say it once more": the app has \
+            just checked off the LAST challenge. Don't ask for it again. Your \
+            next turn: say in a few words that's every part, then start the \
+            FINAL CHECK above — ask them to say it all in their own words, in \
+            one go, with no example and no hints.
+            """
+        }
         if lesson.isFinished {
             return """
 
@@ -1323,6 +1387,7 @@ enum ConversationEngine {
     /// weekly report's repeated-mistake detection.
     static func turnOutputInstruction(targetLanguage: String,
                                       nativeLanguage: String,
+                                      level: CEFRLevel = .b1,
                                       counterpart: Counterpart? = nil,
                                       inScene: Bool = false) -> String {
         let nativeName = LanguageCatalog.englishName(nativeLanguage)
@@ -1387,17 +1452,7 @@ enum ConversationEngine {
           CONVERSATION. It is read back aloud in place of what they said, so
           it has to stand where their line stood: every idea they raised
           survives, in their order, answering whatever was just said to them.
-          A turn of three sentences comes back as three sentences.
-        - Rewriting it means: keep their MEANING, their INTENT and their
-          REGISTER, and change only how it is said. Do not add information
-          they did not give, do not drop an idea because it was clumsy, do
-          not make it more polite or more formal than they were, and never
-          answer for them.
-        - DO drop the hesitation — fillers ("um", "uh", "like"), false
-          starts, a clause abandoned halfway, a word said twice. Those are
-          not errors and never go in "fixes"; they are simply not in the
-          fluent version. Keep the length close to what they said: this is
-          their turn said better, never a longer one.
+          A turn of three sentences comes back as three sentences.\(rewriteRules(level))
         - "alternative" must be a CONCRETE utterance the user could say out
           loud, never a rule or a category.
         - "fixes": every outright ERROR in that line, one entry each —
@@ -1504,14 +1559,7 @@ enum ConversationEngine {
           not the worst clause, not a summary. It is read back aloud in place
           of what they said, so every idea they raised has to survive, in
           their order, still answering what was said to them. Three sentences
-          come back as three sentences.
-        - Keep their MEANING, INTENT and REGISTER; change only how it is said.
-          Add nothing they did not say, drop no idea because it was clumsy,
-          and never make them more formal than they were.
-        - DO drop the hesitation — fillers ("um", "uh", "like"), false starts,
-          a clause abandoned halfway, a word said twice. Those are not errors
-          and never go in "fixes"; they are simply gone from the fluent
-          version. Keep the length close to theirs.
+          come back as three sentences.\(rewriteRules(level))
         - "fixes": every outright ERROR in the line, one entry each — "was"
           quoted VERBATIM from what they said, "now" those same words
           corrected, "why" the grammar point in \(nativeName), ≤ 12 words.
@@ -1693,6 +1741,57 @@ enum ConversationEngine {
         return left.sorted() == right.sorted()
     }
 
+    /// How "alternative" is rewritten — shared by both correction prompts.
+    ///
+    /// Until 2026-10-29 the rule was "keep their words, change only how it is
+    /// said, length close to theirs", and a B2 learner reported the result
+    /// (from a Say it again run) as their own sentence with the grammar
+    /// patched: "prominent players" left in where they meant promising, a
+    /// show "about a legendary player" read as a show NAMED that, and the
+    /// point they were making ("she's already retired" — and still does all
+    /// this) never said. The rewrite is the line they study and say again, so
+    /// it is now what they MEANT, said the way a fluent speaker would — and
+    /// how far above them it may reach depends on the level: A1/A2 get words
+    /// within reach (a step up is fine), B1 and up the complete native form.
+    /// Probed with `scripts/correction-probe.py` (en/ko/ja/de unchanged on
+    /// false fixes, missed errors and fragments).
+    static func rewriteRules(_ level: CEFRLevel) -> String {
+        let reach: String
+        switch level {
+        case .a1, .a2:
+            reach = "\n- This learner is a beginner (\(level.rawValue.uppercased())). Natural and correct,"
+                + "\n  but in words and sentence shapes they can say back: at most one"
+                + "\n  step above their level, no idiom they would stumble over."
+        case .b1, .b2, .c1, .c2:
+            reach = "\n- This learner is \(level.rawValue.uppercased()). Give them the COMPLETE form a"
+                + "\n  fluent native would say: the precise word, the idiomatic phrase,"
+                + "\n  above their level where that is what a native reaches for. This"
+                + "\n  is what they are aiming at."
+        }
+        return "\n- Say what they MEANT, the way a fluent speaker would say it. Read"
+            + "\n  for intent: where a word is plainly not the one they meant (\"make"
+            + "\n  a photo\" for take one), use the one they meant; where they point"
+            + "\n  at a thought without finishing it (\"the funny part is, I never"
+            + "\n  studied\"), finish that thought (that they passed anyway). Never"
+            + "\n  add a fact, opinion or detail they did not point to, and never"
+            + "\n  answer for them. A phrase describing someone is not a name or a"
+            + "\n  title."
+            + "\n- This line is what they will study and say again, so make it worth"
+            + "\n  learning: rebuild it freely. Split a run-on, restructure a clause,"
+            + "\n  swap a word-for-word construction for the phrase a native would"
+            + "\n  reach for (\"give it a shot\", \"ended up\", \"I'm not a big fan"
+            + "\n  of\"). Not their sentence with the grammar patched; the sentence"
+            + "\n  they would say if they were fluent."
+            + reach
+            + "\n- Keep their REGISTER (never more formal than they were) and every"
+            + "\n  idea they raised, in their order. About as long as theirs;"
+            + "\n  shorter where they repeated themselves."
+            + "\n- DO drop the hesitation: fillers (\"um\", \"uh\", \"like\"), false"
+            + "\n  starts, a clause abandoned halfway, a word said twice. Those are"
+            + "\n  not errors and never go in \"fixes\"; they are simply gone from"
+            + "\n  the fluent version."
+    }
+
     /// Japanese-only line for both correction prompts: the script is the
     /// transcriber's. Empty for every other target, so their prompts are
     /// byte-identical to before.
@@ -1769,11 +1868,13 @@ enum ConversationEngine {
     /// Formats the running transcript for the summary user message.
     /// A line the learner read off coach mode's suggestion is labelled
     /// `USER_READ` (`Turn.readFromCoach`) and `readLineNote` says what that
-    /// means; a transcript without one is byte-identical to before.
+    /// means; a tutor drill line is `USER_DRILL` (`Turn.tutorRole`) with
+    /// `drillLineNote`. A transcript without either is byte-identical to before.
     static func formatTranscript(_ turns: [Turn]) -> String {
         turns.map { turn in
             let label = turn.role == .fluentSelf ? "FLUENT_SELF"
-                : turn.readFromCoach ? "USER_READ" : "USER"
+                : turn.readFromCoach ? "USER_READ"
+                : turn.tutorRole == .drill ? "USER_DRILL" : "USER"
             return "[\(label)] \(turn.transcript)"
         }.joined(separator: "\n")
     }
@@ -1785,6 +1886,18 @@ enum ConversationEngine {
     level: judge the scorecard (every score, the level, the grammar range) on \
     the [USER] lines only, and quote nothing from a [USER_READ] line in \
     expressions_used, phrases_used, new_patterns_detected or grammar issues.
+    """
+
+    /// Rides under the transcript only when a `USER_DRILL` line is in it.
+    static let drillLineNote = """
+    [USER_DRILL] lines are a tutor lesson's drills: the learner said one set \
+    sentence the tutor had just asked for, usually with an example in front of \
+    them. They are part of the conversation, but they are NOT evidence of the \
+    learner's level: judge the scorecard (every score, the level, the grammar \
+    range) on the [USER] lines only — in a tutor lesson those are the final \
+    check, the whole thing said in one go with no help — and quote nothing \
+    from a [USER_DRILL] line in expressions_used, phrases_used, \
+    new_patterns_detected or grammar issues.
     """
 
     /// Maps prior `Turn`s into the role-tagged Claude message history.

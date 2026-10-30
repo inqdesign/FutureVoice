@@ -53,13 +53,27 @@ struct FeedbackSheet: View {
         /// (`first_talk`, `first_watch`) stay in the table under their own
         /// names.
         case returningTalk = "returning_talk"
+        /// The end of the free-minutes report (2026-10-28, founder): they
+        /// have read what twenty minutes showed, so there is something to
+        /// score. Followed by the App Store prompt whatever they answer.
+        case trialReport = "trial_report"
 
         var id: String { rawValue }
 
-        var title: String { explain("How is it going so far?") }
+        var title: String {
+            switch self {
+            case .returningTalk: return explain("How is it going so far?")
+            case .trialReport:   return explain("How were your first 20 minutes?")
+            }
+        }
 
         var subtitle: String {
-            explain("You've been back for another call. Two quick questions, and anything you want to say.")
+            switch self {
+            case .returningTalk:
+                return explain("You've been back for another call. Two quick questions, and anything you want to say.")
+            case .trialReport:
+                return explain("Two quick questions, and anything you want to tell us. We read every one.")
+            }
         }
     }
 
@@ -280,6 +294,11 @@ enum FeedbackPrompt {
 
     static func markShown(_ c: FeedbackSheet.Context) {
         UserDefaults.standard.set(true, forKey: key(c))
+    }
+
+    /// Developer previews only: ask again as if never asked.
+    static func reset(_ c: FeedbackSheet.Context) {
+        UserDefaults.standard.removeObject(forKey: key(c))
     }
 
     /// The one moment worth asking a learner what they think: they had a call,

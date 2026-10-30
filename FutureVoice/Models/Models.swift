@@ -144,6 +144,8 @@ enum TalkEntry: String {
     case weekRecap = "week_recap"
     case progressTip = "progress_tip"
     case routine
+    /// The tutor bot's note, bubble or chat (`TutorBot`).
+    case tutorBot = "tutor_bot"
     case scenarioBook = "scenario_book"
     case practiceBook = "practice_book"
     /// The empty Review page's "Start a talk".
@@ -198,7 +200,16 @@ struct Turn: Codable, Identifiable {
     /// judgment follows the transcript when the audio-grounded rewrite lands
     /// (`readFromCoach`). Encoded only when set.
     var coachLine: String? = nil
+    /// Tutor mode (2026-10-28, founder): which part of the lesson this learner
+    /// line was. A `.drill` line answered a challenge the tutor set up, with an
+    /// example in front of them — practice. A `.check` line was a judged try
+    /// at the final check (`TutorFinalCheck`): the whole thing in one go,
+    /// nothing on screen — the one tutor line that is evidence. Nil outside
+    /// tutor mode. Encoded only when set.
+    var tutorRole: TutorTurnRole? = nil
 }
+
+enum TutorTurnRole: String, Codable { case drill, check }
 
 extension Turn {
     /// The line was read off coach mode's suggestion (`CoachRead`): practice,
@@ -206,12 +217,14 @@ extension Turn {
     var readFromCoach: Bool { role == .user && CoachRead.isRead(transcript, line: coachLine) }
 
     /// A learner line every assessment path may read: not marked misheard,
-    /// not read off the coach's suggestion.
-    var isEvidence: Bool { role == .user && !excludedFromScoring && !readFromCoach }
+    /// not read off the coach's suggestion, not a tutor drill line.
+    var isEvidence: Bool {
+        role == .user && !excludedFromScoring && !readFromCoach && tutorRole != .drill
+    }
 
     enum CodingKeys: String, CodingKey {
         case id, role, audioURL, transcript, durationMs, timestamp
-        case suggestion, fluency, excludedFromScoring, talkedOver, coachLine
+        case suggestion, fluency, excludedFromScoring, talkedOver, coachLine, tutorRole
     }
 
     func encode(to encoder: Encoder) throws {
@@ -227,6 +240,7 @@ extension Turn {
         try c.encode(excludedFromScoring, forKey: .excludedFromScoring)
         if talkedOver { try c.encode(true, forKey: .talkedOver) }
         try c.encodeIfPresent(coachLine, forKey: .coachLine)
+        try c.encodeIfPresent(tutorRole, forKey: .tutorRole)
     }
 
     // Custom decode so turns saved before `excludedFromScoring` existed still
@@ -244,6 +258,7 @@ extension Turn {
         excludedFromScoring = try c.decodeIfPresent(Bool.self, forKey: .excludedFromScoring) ?? false
         talkedOver = try c.decodeIfPresent(Bool.self, forKey: .talkedOver) ?? false
         coachLine = try c.decodeIfPresent(String.self, forKey: .coachLine)
+        tutorRole = try? c.decodeIfPresent(TutorTurnRole.self, forKey: .tutorRole)
     }
 }
 
@@ -366,17 +381,24 @@ struct Session: Codable, Identifiable {
     /// stands — minutes, streak, corrections → cards, the book. Optional so
     /// old rows decode unchanged; an older build ignores it.
     ///
-    /// Since 2026-10-14 only TUTOR mode makes one (every turn is corrected and
-    /// answered back). Coach mode is judged per line instead
-    /// (`Turn.readFromCoach`); calls saved before that with coach mode on
-    /// keep the flag.
+    /// Nothing sets it since 2026-10-28: coach mode is judged per line
+    /// (`Turn.readFromCoach`, since 2026-10-14) and tutor mode too
+    /// (`Turn.tutorRole`). Calls saved before that keep the flag.
     var coached: Bool? = nil
     /// Tutor mode's lesson as this talk left it (`TutorLesson`): the lines
     /// that cleared each challenge. Optional, so old rows decode.
     var tutorLesson: TutorLessonRecord? = nil
 
-    /// See `coached`.
-    var isPractice: Bool { coached == true }
+    /// See `coached`. A tutor call saved since 2026-10-28 is judged by its
+    /// lines instead (`Turn.tutorRole`): only final-check tries are evidence,
+    /// so a tutor call that never reached the check is still all practice.
+    var isPractice: Bool {
+        if coached == true { return true }
+        guard turns.contains(where: { $0.tutorRole != nil }) else { return false }
+        return !turns.contains {
+            $0.isEvidence && !$0.transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+    }
 
     /// Whether this talk is something the level assessment reads: not a
     /// practice call, and the learner said at least one scorable line.
@@ -747,10 +769,17 @@ struct UserPersona: Codable {
     /// people differ on what counts as private, and a correction is the only
     /// signal that says where. Capped at `maxShareCorrections`.
     var shareCorrections: [ShareCorrection] = []
+    /// What their fluent self already does — `FutureGoal` ids, picked in
+    /// setup and edited in Me → Profile. Ids, not text, so the label follows
+    /// the app language. The fluent self's own prompt reads them; nothing a
+    /// stranger sees does.
+    var goals: [String] = []
+
+    var futureGoals: [FutureGoal] { FutureGoal.decode(goals) }
 
     enum CodingKeys: String, CodingKey {
         case displayName, city, country, lengthOfStay, occupation, household,
-             interests, freeNotes, updatedAt, learnedNotes, metAt, shareCorrections
+             interests, freeNotes, updatedAt, learnedNotes, metAt, shareCorrections, goals
         // Personas on disk predate multi-language prep — keep the legacy key.
         case situations = "englishSituations"
     }
@@ -961,6 +990,7 @@ extension UserPersona {
         learnedNotes = value(.learnedNotes, [])
         metAt = (try? c.decodeIfPresent(Date.self, forKey: .metAt)) ?? nil
         shareCorrections = value(.shareCorrections, [])
+        goals = value(.goals, [])
     }
 
     /// One time the learner moved a line's share level by hand.

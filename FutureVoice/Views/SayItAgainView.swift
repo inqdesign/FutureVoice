@@ -203,8 +203,12 @@ struct SayItAgainView: View {
     /// measures from because its countdown puts the two at the same moment.
     private static let readMsPerWord = 380
     /// The only thing that ends a take on a learner still talking: a room
-    /// that never falls quiet. Far past any line a turn can be.
+    /// that never falls quiet. At least this, and never less than
+    /// `maxReadLineFactor` times the line's own estimate (2026-10-27): a
+    /// whole-screen turn of 150+ words is ~57 s by that estimate alone, so a
+    /// flat 60 s cut a learner off mid-sentence on exactly those lines.
     private static let maxReadSeconds: TimeInterval = 60
+    private static let maxReadLineFactor = 2.5
     /// Reading pace for a fluent-self line whose recording didn't survive.
     /// Only ever sizes a pause; the line is already on screen.
     private static let silentReadMsPerWord = 380
@@ -813,15 +817,24 @@ struct SayItAgainView: View {
         // take that is still voiced keeps going, the way a call's listening
         // ceiling does, up to `maxReadSeconds` — a room that never goes quiet
         // must still end.
-        let hardStop = began.addingTimeInterval(Self.maxReadSeconds)
+        let hardStop = began.addingTimeInterval(
+            max(Self.maxReadSeconds, Double(lineMs) / 1000 * Self.maxReadLineFactor))
         while !Task.isCancelled, !skipRequested, Date() < hardStop {
             // "Quiet" is the shadow surface's 1.5 s, not a call's 0.6 s: a
             // mid-sentence breath runs up to 1.5 s, and someone reading a
             // line for the first time breathes more than a talker does.
-            let quiet = live.lastVoicedAt.map {
-                Date().timeIntervalSince($0) >= ShadowDrillView.stillSpeakingSeconds
+            // Two witnesses, and BOTH must say quiet (2026-10-27, learner:
+            // "on a long line it moves on while I'm still talking"): loudness
+            // alone dips under the bar when a long read trails off or the
+            // room is loud, while the recognizer is still writing their words.
+            let still = ShadowDrillView.stillSpeakingSeconds
+            let energyQuiet = live.lastVoicedAt.map {
+                Date().timeIntervalSince($0) >= still
             } ?? true
-            if Date() >= earliest, quiet { break }
+            let wordsQuiet = live.lastLivePartialAt.map {
+                Date().timeIntervalSince($0) >= still
+            } ?? true
+            if Date() >= earliest, energyQuiet, wordsQuiet { break }
             try? await Task.sleep(nanoseconds: 150_000_000)
         }
         return !skipRequested

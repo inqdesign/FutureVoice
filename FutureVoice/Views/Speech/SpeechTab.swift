@@ -431,6 +431,12 @@ struct SpeechScriptSheet: View {
     @State private var studyFailed = false
     @State private var studyLoading = false
     @State private var card: ScriptStudy.Highlight?
+    /// A word held down in the study text, any word at all.
+    @State private var lookedUp: LookedUpWord?
+    private struct LookedUpWord: Identifiable {
+        let word: String
+        var id: String { word }
+    }
     /// The voiceover's player lives on the sheet, not in its List row: a row
     /// scrolled off screen disappears (and may be rebuilt), which stopped
     /// the playback the moment the learner scrolled the script to follow it.
@@ -439,14 +445,21 @@ struct SpeechScriptSheet: View {
     /// episode): nothing is edited, voiced or studied on this phone — the
     /// study was written once for everybody when the episode was published.
     private let shipped: Bool
+    /// A shipped script whose study is still made on this phone: a news
+    /// article from the tutor bot is read-only like an episode, but nothing
+    /// was studied when it was written.
+    private let studyHere: Bool
 
     init(script: SpeechScript, onEdited: @escaping (SpeechScript) -> Void = { _ in },
-         study: ScriptStudy? = nil, shipped: Bool = false) {
+         study: ScriptStudy? = nil, shipped: Bool = false, studyHere: Bool = false) {
         _script = State(initialValue: script)
         _study = State(initialValue: study)
         self.onEdited = onEdited
         self.shipped = shipped
+        self.studyHere = studyHere
     }
+
+    private var studyShipped: Bool { shipped && !studyHere }
 
     private var paragraphs: [String] { ScriptStudy.paragraphs(script.body) }
 
@@ -472,7 +485,7 @@ struct SpeechScriptSheet: View {
                     // switch read as doing nothing.
                     if studying {
                         if study != nil {
-                            Text("Tap for an explanation")
+                            Text("Tap for an explanation · hold any word to look it up")
                         } else {
                             studyStatus
                         }
@@ -490,7 +503,8 @@ struct SpeechScriptSheet: View {
                         }
                         Group {
                             if studying, let study {
-                                ScriptStudyText(paragraphs: paragraphs, study: study) { card = $0 }
+                                ScriptStudyText(paragraphs: paragraphs, study: study, language: script.language,
+                                                onTap: { card = $0 }, onLookUp: { lookedUp = LookedUpWord(word: $0) })
                             } else {
                                 Text(script.body)
                                     .font(.body)
@@ -570,6 +584,10 @@ struct SpeechScriptSheet: View {
                         .environmentObject(appState)
                 }
             }
+            .sheet(item: $lookedUp) { w in
+                WordSheet(initialWord: w.word, words: [])
+                    .environmentObject(appState)
+            }
             .task(id: studyTaskId) { await loadStudy() }
             .onDisappear { voiceoverPlayer.stop() }
         }
@@ -578,7 +596,7 @@ struct SpeechScriptSheet: View {
     private var studyTaskId: String { "\(studying)|\(script.body.hashValue)" }
 
     @ViewBuilder private var studyStatus: some View {
-        if shipped {
+        if studyShipped {
             Text("Study notes for this episode aren't in your language yet.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
@@ -601,7 +619,7 @@ struct SpeechScriptSheet: View {
     }
 
     private func loadStudy(force: Bool = false) async {
-        guard studying, study == nil, !shipped, !studyLoading || force else { return }
+        guard studying, study == nil, !studyShipped, !studyLoading || force else { return }
         studyLoading = true
         studyFailed = false
         defer { studyLoading = false }

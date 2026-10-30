@@ -228,6 +228,118 @@ enum CoreClubService {
     /// updates nothing and fails at nothing, and the alternative is a
     /// round-trip to ask a question whose answer only ever suppresses a write
     /// that was already free.
+    /// One cell of the seat grid. `hope` is nil unless the server let this
+    /// reader see it (a seated member of the same club, or the owner);
+    /// `can_read_hope` says which, so a missing hope is never guessed at.
+    struct SeatDetail: Decodable {
+        let index: Int
+        let theme: Int
+        let name: String?
+        let mine: Bool
+        let can_read_hope: Bool
+        let hope: String?
+        /// Days since the seat was taken, today included (nil from a server
+        /// older than 20261029140000).
+        let days_held: Int?
+        /// The UTC day the seat was taken, "yyyy-MM-dd" (nil from a server
+        /// older than 20261029150000).
+        let seated_since: String?
+    }
+
+    static let engravedNameLimit = 24
+    static let hopeLimit = 60
+
+    static func fetchSeatDetail(language: String, index: Int) async -> SeatDetail? {
+        struct Params: Encodable { let p_language: String; let p_index: Int }
+        return try? await SupabaseProvider.shared
+            .rpc("core_seat_detail", params: Params(p_language: language.lowercased(), p_index: index))
+            .execute()
+            .value
+    }
+
+    /// The name and hope on the learner's own cube. Both at once, as the
+    /// welcome screen and the edit sheet both write them together.
+    @discardableResult
+    static func setEngraving(language: String, name: String, hope: String) async -> Bool {
+        struct Params: Encodable { let p_language: String; let p_name: String; let p_hope: String }
+        do {
+            try await SupabaseProvider.shared
+                .rpc("core_set_engraving",
+                     params: Params(p_language: language.lowercased(), p_name: name, p_hope: hope))
+                .execute()
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    // MARK: - Cheers (hearts and one-line notes on a seat)
+
+    struct Cheers: Decodable {
+        struct Note: Decodable, Identifiable, Equatable {
+            let id: Int
+            let body: String
+            let name: String?
+            let by_me: Bool
+        }
+        var hearts: Int
+        var hearted: Bool
+        let mine: Bool
+        var notes: [Note]
+    }
+
+    static let cheerLimit = 40
+
+    private struct SeatParams: Encodable { let p_language: String; let p_index: Int }
+
+    static func fetchCheers(language: String, index: Int) async -> Cheers? {
+        try? await SupabaseProvider.shared
+            .rpc("core_cheers_for", params: SeatParams(p_language: language.lowercased(), p_index: index))
+            .execute()
+            .value
+    }
+
+    /// Returns the seat's heart count after the change, or nil if it failed.
+    static func setHeart(language: String, index: Int, on: Bool) async -> Int? {
+        struct Params: Encodable { let p_language: String; let p_index: Int; let p_on: Bool }
+        struct Result: Decodable { let hearts: Int }
+        let result: Result? = try? await SupabaseProvider.shared
+            .rpc("core_cheer_heart", params: Params(p_language: language.lowercased(), p_index: index, p_on: on))
+            .execute()
+            .value
+        return result?.hearts
+    }
+
+    /// The new note's id, or nil if it wasn't stored.
+    static func leaveNote(language: String, index: Int, body: String) async -> Int? {
+        struct Params: Encodable { let p_language: String; let p_index: Int; let p_body: String }
+        struct Result: Decodable { let ok: Bool; let id: Int? }
+        let result: Result? = try? await SupabaseProvider.shared
+            .rpc("core_cheer_note", params: Params(p_language: language.lowercased(), p_index: index, p_body: body))
+            .execute()
+            .value
+        return result?.ok == true ? result?.id : nil
+    }
+
+    static func deleteNote(id: Int) async {
+        _ = try? await SupabaseProvider.shared.rpc("core_cheer_delete", params: ["p_id": id]).execute()
+    }
+
+    /// Hearts and notes left on my seat since I last opened it.
+    static func unseenCheers(language: String) async -> Int {
+        let n: Int? = try? await SupabaseProvider.shared
+            .rpc("core_cheers_unseen", params: ["p_language": language.lowercased()])
+            .execute()
+            .value
+        return n ?? 0
+    }
+
+    static func markCheersSeen(language: String) async {
+        _ = try? await SupabaseProvider.shared
+            .rpc("core_cheers_mark_seen", params: ["p_language": language.lowercased()])
+            .execute()
+    }
+
     static func publishTheme(_ rawValue: Int) async {
         _ = try? await SupabaseProvider.shared
             .rpc("core_set_theme", params: ["p_theme": rawValue])

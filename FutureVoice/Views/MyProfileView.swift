@@ -24,6 +24,7 @@ struct MyProfileView: View {
     @State private var mine: PublicPersonaService.PublicPersona?
     @State private var loaded = false
     @State private var editingProfile = false
+    @State private var editingFuture = false
     @State private var confirmingWithdraw = false
     @State private var isWorking = false
     @State private var errorText: String?
@@ -37,6 +38,7 @@ struct MyProfileView: View {
     var body: some View {
         Form {
             profileSection
+            futureSection
             publicSection
         }
         .navigationTitle(chrome("Profile"))
@@ -59,6 +61,9 @@ struct MyProfileView: View {
         }) {
             PersonaOnboardingView(initialPersona: appState.persona)
                 .environmentObject(appState)
+        }
+        .sheet(isPresented: $editingFuture) {
+            FutureGoalsEditor().environmentObject(appState)
         }
         .confirmationDialog(
             explain("Take your intro out of the pool? Learners who already met your persona keep their own past talks."),
@@ -103,6 +108,22 @@ struct MyProfileView: View {
             .buttonStyle(.plain)
         } header: {
             Text("What your fluent self knows about you")
+        }
+    }
+
+    /// What their fluent self already does (`FutureGoal`). Only for them —
+    /// the public section below never reads it.
+    private var futureSection: some View {
+        Section {
+            ForEach(persona?.futureGoals ?? []) { goal in
+                Label(goal.title, systemImage: goal.purpose.symbol)
+            }
+            Button(persona?.futureGoals.isEmpty == false
+                   ? explain("Change") : explain("Imagine your future")) {
+                editingFuture = true
+            }
+        } header: {
+            Text("My future")
         }
     }
 

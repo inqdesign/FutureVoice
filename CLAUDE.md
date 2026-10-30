@@ -38,6 +38,13 @@ is the code, this list is the check. An install that is already set up
 skips every step it has a flag for.
 
 1. Welcome → setup (`SetupFlowView`: languages, level, why you're learning)
+   then **Imagine your future** (2026-10-28, founder): under each purpose
+   picked, what the fluent self already DOES (`FutureGoal`, as many as
+   wanted). They are the learner's real goals: kept on `UserPersona.goals`
+   (held in `FutureGoalStore.pending` until the persona exists), edited in
+   Me → Profile → My future, and read by the fluent self's own prompt on
+   free talk and the first call only (`ConversationEngine`'s WHO YOU BECAME
+   block; empty = byte-identical). Never shown to strangers.
 2. Persona cards (`PersonaIntakeView`)
 3. The voice (`VoiceCloneOnboardingView`: record, hear it, pick the pace;
    the account is made here). The meet act opens on a choice: **My voice |
@@ -2074,6 +2081,27 @@ routine to keep going." `TrialReport.swift`, and `WeekRecapSheet(trial:)`.
   going with this routine" applies the purposes' routine (unless setup
   already did) and opens `PaywallView(source: "trial_report")`; closing it
   marks the report finished.
+- **It says what the level was read from, and reads ONE language**
+  (2026-10-28). Twenty minutes of call is a few minutes of the learner's own
+  voice, and 22 of 116 talkers (09-26 to 10-28) split it across languages.
+  `TrialReport.spoken` holds their own speaking time per language (evidence
+  turns' `durationMs`); the level card says "from N min of you speaking", a
+  "first read" under `thinSpeechSeconds` (5 min), and names every other
+  language spoken. With more than one language the recap is built with
+  `language:` (talks and metered minutes of the report's language only), so
+  the cover's minutes are the minutes the level and coach read. Capture:
+  `-trialdemo 1 -trialtwo 1 -trialpage 10`.
+- **Card 2 is how they USED the app, not the talk list** (2026-10-28,
+  founder). Minutes in the app (`AppUsageLog` over the window, never below
+  the metered talk), said as time not spent scrolling; then all seven
+  practice features (`FeatureUse.list` from `StudyHabits`) with how much of
+  each, unused ones greyed "Not yet"; and one line picked by rule
+  (`FeatureUse.advice`: talk only → Say it again + review; else the first
+  missing in `suggestionOrder`; five or more → keep the mix). The cover is
+  the learner's (photo, name, three numbers, "every week as a report"), and
+  the end of the deck asks `FeedbackSheet(.trialReport)` once, then the App
+  Store prompt whatever it said. Capture: `-trialdemo 1 [-trialonlytalk 1]
+  -trialpage 1`.
 - **Who**: `subscriptionStatus == "inactive"` (never subscribed — a lapsed
   subscriber's empty pool is not a trial ending), not `unlimited`,
   `needsSubscription`, a spoken talk on file. Raised by `ConversationView.endAndClose`
@@ -2758,10 +2786,10 @@ PLUS talk-kept notebook words (`coachExtras`) — the first device test had
   the summary transcript labels read lines `USER_READ` with a note to score
   only `USER` lines (byte-identical when there are none). A sentence built
   around the WORD hint is the learner's own and counts in full (founder:
-  making the sentence is the practice). **Tutor mode still makes the whole
-  call practice** (`Session.coached`; every turn is corrected and answered
-  back), as do coached calls saved before this date: out of the assessment,
+  making the sentence is the practice). Coached calls saved before this
+  date stay whole-call practice (`Session.coached`): out of the assessment,
   "Practice call" on the page and the book card, nothing credited as used.
+  Tutor calls are judged per line since 2026-10-28 (see Tutor mode).
   A coach-mode call reads "Coach mode" in place of "Free talk" on its card.
 - **A beginner is asked ONE concrete question** (2026-10-03, founder: "not
   'tell me about yourself' — 'what's your name?', 'where do you live?'";
@@ -2842,12 +2870,25 @@ that back. `TutorLesson.swift`, `TutorLessonViews.swift`,
   managing the conversation (a hook, listening follow-ups, tact, humor).
   From B1 up a plain transaction is A-level, so the lesson is what goes
   wrong or beyond it (wrong order, sold out, no receipt, small talk).
-- **The TICK is the app's, never the tutor's.** Clean = the per-turn
-  correction call returned no fixes AND `TutorJudge` (flash-lite) says the
-  line did the challenge. The block is resent on every tick (`set.system`);
-  the tutor asks for "once more" on a right line and moves on only when the
-  block's RIGHT NOW line says the app checked it off. Put in the lesson
-  block, the move-on note was ignored; it is last in the prompt for that.
+- **The APP decides every step, the tutor says it ONCE** (2026-10-28,
+  founder, after a day of the two disagreeing: the checklist on part 3
+  while the tutor asked for part 1 again, "not yet" spoken on top of "now
+  say it all", two replies to one answer). While a lesson exists every
+  learner turn goes through `tutorTurn` and is HELD at the gateway
+  (`set.holdReplies`); the app judges it — the correction and the judge
+  run side by side — and sends exactly one note, which is the turn's
+  reply: NOT YET (a slip, or the line doesn't do the challenge) · ONCE
+  MORE (right after a miss) · DONE (ticked; next challenge or the final
+  check), the final check's results, and after a pass the learner's
+  choice (once more · more · another topic · stop). A note is sent BEFORE
+  any state change, so the reply never comes from a block that already
+  moved on. The tutor never moves on or judges by itself (the old
+  `tutor_moved_on` reading caused cascades and is gone). A turn with no
+  note in 25 s is answered "one second, let me check" (`talk_rt_warning`
+  code `hold`). Notes answering a held turn don't count toward the cap.
+  A verdict on a turn that was since joined with its continuation is
+  dropped (`tutorStillSaid`). Only the no-lesson stage (asking for a
+  topic) and planning let the tutor answer on its own.
 - **The tutor speaks first through `nudge`** (gateway, 2026-10-24): a
   bracketed note from the app ("topic picked", "lesson ready", "back to
   finish last time's") answered as soon as no line is playing, 8 per call.
@@ -2865,6 +2906,24 @@ that back. `TutorLesson.swift`, `TutorLessonViews.swift`,
   the book page shows the lines that cleared each challenge
   (`Session.tutorLesson`). Unfinished lessons resume for 21 days
   (`Documents/lang/<code>/tutor_lessons.json`, device-local).
+- **Only the final check is scored** (2026-10-28, founder). A challenge
+  line is a drill: one set sentence, an example on screen, often a repeat
+  of a correction. A try the final check judged an attempt (the whole thing
+  in one go, nothing on screen; `tutorCheckTurnIds`) is saved as
+  `Turn.tutorRole = .check` and is ordinary evidence; every other learner
+  line of a tutor call is `.drill`, which `isEvidence` leaves out and the
+  summary sees as `USER_DRILL` (`drillLineNote`). A tutor call with no check
+  try is still a practice call (`Session.isPractice`); one with a try reads
+  "Tutor" on its card. A verdict that lands after the last save leaves its
+  line a drill. Calls saved before this keep `coached: true`. Android has
+  all of this since 2026-10-29 (feat/android 1304726d) except the curriculum
+  map, so an Android lesson never suggests a next topic.
+- **`session-summary` is Android's, and it lives in this tree too**
+  (2026-10-29). iOS never calls it; Android's summary does. On 10-27 a
+  deploy from this tree's stale copy silently dropped remembered notes, talk
+  dates and the read/drill-line notes from every Android summary. The two
+  copies are now the same file — keep them so, and deploy it from here
+  (this tree has the newest `_shared`).
 - **The tutor's own words stay 반말**; only the practiced line has its own
   register (Haiku drifted to 해요체/여러분 to match a polite example).
 - The Claude reply ceiling went 1024 → 2048: a tick turn thinks 800–1,460

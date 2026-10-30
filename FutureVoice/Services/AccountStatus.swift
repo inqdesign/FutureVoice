@@ -148,6 +148,24 @@ struct AccountStatus {
     var renewalPriceMilliunits: Int?
     var renewalCurrency: String?
 
+    /// A plan change Apple has scheduled for the next renewal — a downgrade
+    /// (Plus → Light, whatever the period) waits for the period to end, and
+    /// until it does Apple's own screen is the only place it shows. Computed
+    /// by the server (`subscription_summary`, 2026-10-27) so what it means
+    /// can change without a build; nil when nothing changes.
+    struct PendingPlan: Equatable {
+        let planId: String
+        let startsAt: Date
+        let monthlySeconds: Int?
+        let monthlyScenes: Int?
+        let talkUnlimited: Bool
+    }
+    var pendingPlan: PendingPlan?
+    /// Lines written by hand about subscriptions (`subscription_notes`), in
+    /// the app language — the way to tell subscribers something without a
+    /// release.
+    var subscriptionNotes: [String] = []
+
     /// How long the launch offer codes discount (docs/launch-billing.md §7:
     /// pay-as-you-go 12 months on both `Beta50 … v2` offers). Apple's
     /// transaction says WHICH offer priced a period, not how many periods the
@@ -364,10 +382,15 @@ struct AccountStatus {
             // "no plan yet" — the pool is a balance, not a tier.
             return hasLegacyPool ? explain("Free minutes") : explain("No plan")
         }
-        let name = Self.tierName(planId)
         // The trial is metered as Light whatever plan is being trialed, so
         // naming the trialed plan's tier here would promise the wrong size.
-        if isTrialing { return explain("\(name) trial") }
+        if isTrialing { return explain("\(Self.tierName(planId)) trial") }
+        return Self.planName(planId)
+    }
+
+    /// "Light · Annual" for any plan id — the held plan or a pending one.
+    static func planName(_ planId: String) -> String {
+        let name = tierName(planId)
         switch planId.split(separator: "_").dropFirst().first {
         case "annual":  return "\(name) · " + explain("Annual")
         case "monthly": return "\(name) · " + explain("Monthly")
@@ -637,6 +660,38 @@ struct AccountStatus {
             out.renewalCurrency = row.renewal_currency
         }
 
+        // The pending plan change and the hand-written notes, one RPC
+        // (20261027150000). Missing on an older database = nothing extra said.
+        struct SummaryRow: Decodable {
+            struct Pending: Decodable {
+                let plan_id: String
+                let starts_at: String
+                let monthly_seconds: Int?
+                let monthly_scenes: Int?
+                let talk_unlimited: Bool?
+            }
+            let pending: Pending?
+            let notes: [[String: String]]?
+        }
+        if out.isEntitled,
+           let summary: SummaryRow = try? await SupabaseProvider.shared
+            .rpc("subscription_summary")
+            .execute()
+            .value {
+            if let p = summary.pending, let starts = Self.timestamp(from: p.starts_at) {
+                out.pendingPlan = PendingPlan(planId: p.plan_id, startsAt: starts,
+                                              monthlySeconds: p.monthly_seconds,
+                                              monthlyScenes: p.monthly_scenes,
+                                              talkUnlimited: p.talk_unlimited ?? false)
+            }
+            let lang = LanguageCatalog.currentNative
+            out.subscriptionNotes = (summary.notes ?? []).compactMap { texts in
+                texts[lang]
+                    ?? texts.first { LanguageCatalog.sameLanguage($0.key, lang) }?.value
+                    ?? texts["en"] ?? texts.values.first
+            }
+        }
+
         if out.isEntitled {
             if let rows: [TxRow] = try? await SupabaseProvider.shared
                 .from("subscription_transactions")
@@ -716,8 +771,47 @@ struct AccountStatus {
                 out.monthlyScenesCap = scenes.cap
             }
         }
+        #if DEBUG
+        debugPendingPlanOverride(&out)
+        #endif
         return out
     }
+
+    #if DEBUG
+    /// `-debugPendingPlan light_annual` (once; it sticks until
+    /// `-debugPendingPlan off`): shows a scheduled downgrade on a real
+    /// device whose account has none. An account with no plan is dressed as
+    /// a Plus monthly subscriber first, the case that prompted the feature.
+    private static func debugPendingPlanOverride(_ out: inout AccountStatus) {
+        let key = "futurevoice.debug.pendingPlan"
+        let defaults = UserDefaults.standard
+        if let arg = defaults.volatileDomain(forName: UserDefaults.argumentDomain)["debugPendingPlan"] as? String {
+            defaults.set(arg == "off" ? nil : arg, forKey: key)
+        }
+        guard let planId = defaults.string(forKey: key) else { return }
+        if !out.isEntitled || out.periodEnd == nil {
+            out.planId = "plus_monthly"
+            out.subscriptionStatus = "active"
+            out.monthlyCapSeconds = 27000
+            out.secondsUsedPeriod = 7200
+            out.periodStart = Calendar.current.date(byAdding: .day, value: -24, to: Date())
+            out.periodEnd = Calendar.current.date(byAdding: .day, value: 6, to: Date())
+            out.source = "apple"
+            out.startedAt = out.periodStart
+            out.lastChargeMilliunits = 29_000_000
+            out.lastChargeCurrency = "KRW"
+            out.lastChargeDate = out.periodStart
+        }
+        out.renewalPriceMilliunits = planId.hasSuffix("annual") ? 149_000_000 : 15_000_000
+        out.renewalCurrency = "KRW"
+        out.pendingPlan = PendingPlan(planId: planId, startsAt: out.periodEnd ?? Date(),
+                                      monthlySeconds: planId.hasPrefix("light") ? 9000 : 27000,
+                                      monthlyScenes: 10, talkUnlimited: false)
+        if out.subscriptionNotes.isEmpty {
+            out.subscriptionNotes = ["(Dev) 서버에서 손으로 쓴 구독 안내는 여기에 나와요."]
+        }
+    }
+    #endif
 
     /// A `timestamptz` column, which PostgREST writes as ISO 8601 with a
     /// fractional second and an offset ("2026-09-11T16:31:31.123+00:00") —

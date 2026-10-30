@@ -1,10 +1,8 @@
 New
-• The Speech result page now marks your mistakes right on the script, like a red pen.
-• Speech challenge leaderboards now show takes that scored 80 or more.
-• In Listen, the player button opens the list right away when nothing is playing.
+• Finish your 30th day and you're in the Core right away, no waiting for the next morning.
+• Taking your seat is now a moment of its own: pick your cube's colour, engrave your name and a hope on it, and place it in your seat.
+• Tap any seat on the Core page to see that member's cube. Leave a heart or a short cheer and watch cheers rise over the cube. Only Core members can read the hope on a cube.
+• You get a notification when someone cheers your seat.
 
 Fixed
-• In Tutor mode, say it right twice and the tutor moves on to the next step by itself.
-• With Answer with Send, the Send button now appears once you start speaking, and the topic button stays put.
-• The call timer no longer stops at 0:05.
-• Theme colors now show inside sheets and in dark mode.
+• Corrections now say what you meant, in words that fit your level, instead of patching your sentence word by word.

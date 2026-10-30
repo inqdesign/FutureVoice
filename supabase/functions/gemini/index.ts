@@ -17,7 +17,7 @@
 // keep working.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
-import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
+import { requireUser, handlePreflight, errorResponse, upstreamErrorResponse, cors } from "../_shared/auth.ts"
 import { recordFreeUsage, enforceRequestRate, rateLimitedResponse,
          recordProviderUsage, background, geminiUsageFields,
          billingClient, type ChargeableAction } from "../_shared/credits.ts"
@@ -60,6 +60,8 @@ const DAILY_CAPS: Record<string, number> = {
   "clone-script": 20,
   "script-study": 60,          // a Speech script's study notes, cached per script
   "tutor": 400,                // tutor mode: a lesson plan per topic + a judge per learner turn
+  "report-narration": 30,      // the report's spoken script, 2–4 calls per report
+  "tutor-bot": 200,            // the Talk tab's tutor: one call per question asked
 }
 const DEFAULT_DAILY_CAP = 300
 
@@ -244,7 +246,7 @@ Deno.serve(async (req) => {
     // Nothing was charged, so there is nothing to refund. The 0-delta ledger
     // row stays — a failed upstream call is still a call worth counting.
     const detail = await upstream.text()
-    return errorResponse(upstream.status, "gemini upstream error", detail.slice(0, 500))
+    return upstreamErrorResponse(upstream.status, "gemini upstream error", detail.slice(0, 500))
   }
 
   // `X-Gemini-Stream` is the protocol handshake: a client that asked for SSE

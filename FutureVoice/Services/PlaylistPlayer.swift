@@ -476,6 +476,7 @@ final class PlaylistPlayer: ObservableObject {
             StudyWidgetRefresher.schedule()
         }
         guard let number = line.episodeNumber else { return }
+        TutorPicks.markHeard(line.bookId)
         if listening?.bookId != line.bookId {
             flushListening(finished: false)
             listening = Listening(bookId: line.bookId, number: number,

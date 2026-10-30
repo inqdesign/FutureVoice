@@ -17,7 +17,7 @@
 // flash-lite, purpose "daily-call-script".
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
-import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
+import { requireUser, handlePreflight, errorResponse, upstreamErrorResponse, cors } from "../_shared/auth.ts"
 import { recordFreeUsage, enforceRequestRate, rateLimitedResponse,
          recordProviderUsage, background, geminiUsageFields } from "../_shared/credits.ts"
 
@@ -196,7 +196,7 @@ Return STRICT JSON only — no prose, no code fences:
   )
   if (!upstream.ok) {
     const detail = await upstream.text()
-    return errorResponse(upstream.status, "gemini upstream error", detail.slice(0, 500))
+    return upstreamErrorResponse(upstream.status, "gemini upstream error", detail.slice(0, 500))
   }
   const text = await upstream.text()
   try {

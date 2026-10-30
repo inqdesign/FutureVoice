@@ -39,6 +39,21 @@ struct PlanPageView: View {
 
     var body: some View {
         List {
+            // What is about to change, and anything written by hand on the
+            // server: on top and tinted, not a grey line among the figures.
+            // A downgrade nobody noticed is what prompted it (2026-10-27).
+            if account.isEntitled, account.pendingPlan != nil || !account.subscriptionNotes.isEmpty {
+                Section {
+                    if account.pendingPlan != nil {
+                        callout(icon: "arrow.triangle.swap", title: refillTitle,
+                                subtitle: pendingSizeLine)
+                    }
+                    ForEach(account.subscriptionNotes, id: \.self) { note in
+                        callout(icon: "info.circle.fill", title: note, subtitle: nil)
+                    }
+                }
+                .listRowBackground(Color.accentColor.opacity(0.12))
+            }
             Section {
                 row(icon: "bolt.fill",
                     title: account.isTrialing ? explain("Trial talk time") : explain("Talk time"),
@@ -79,7 +94,7 @@ struct PlanPageView: View {
                         subtitle: explain("Taken from the talk time above"),
                         value: explain("\(account.sceneTalkMinutes) min each"))
                 }
-                if account.isEntitled, !account.renewalLabel.isEmpty {
+                if account.isEntitled, !account.renewalLabel.isEmpty, account.pendingPlan == nil {
                     // A trial's date is not a refill — it is the day it starts
                     // costing money. And a plan told to stop does not refill on
                     // that date either; it ends on it. Same date, three
@@ -88,7 +103,7 @@ struct PlanPageView: View {
                         title: refillTitle,
                         subtitle: account.isTrialing && !account.cancelAtPeriodEnd
                             ? explain("Cancel any time before then in the App Store")
-                            : nil)
+                            : pendingSizeLine)
                 }
             } header: {
                 Text(account.isEntitled ? explain("This month") : explain("Left to spend"))
@@ -265,6 +280,7 @@ struct PlanPageView: View {
 
     private var refillIcon: String {
         if account.cancelAtPeriodEnd { return "calendar.badge.minus" }
+        if account.pendingPlan != nil { return "arrow.triangle.swap" }
         return account.isTrialing ? "calendar.badge.exclamationmark" : "arrow.clockwise"
     }
 
@@ -289,7 +305,21 @@ struct PlanPageView: View {
         if account.isTrialing {
             return explain("Your trial becomes paid on \(account.renewalLabel)")
         }
+        // A downgrade Apple holds for the renewal (2026-10-27): the date does
+        // not refill this plan, it starts the other one — and the plans page
+        // still badges this one "Current plan" until then.
+        if let next = account.pendingPlan {
+            return explain("Changes to \(AccountStatus.planName(next.planId)) on \(account.renewalLabel)")
+        }
         return explain("Refills on \(account.renewalLabel)")
+    }
+
+    /// What the pending plan will hold — the catalog's size, from the server.
+    private var pendingSizeLine: String? {
+        guard let next = account.pendingPlan else { return nil }
+        if next.talkUnlimited { return explain("No limit on talk") }
+        guard let seconds = next.monthlySeconds, seconds > 0 else { return nil }
+        return explain("\(seconds / 60) min of talk a month from then")
     }
 
     /// Scenes are capped on EVERY tier — a scene plays itself, so a count is
@@ -298,6 +328,24 @@ struct PlanPageView: View {
     private var sceneAllowanceValue: String {
         guard let cap = account.monthlyScenesCap else { return "" }
         return "\(account.scenesUsedPeriod) / \(cap)"
+    }
+
+    /// A row that has to be read: tinted icon, a semibold title in the
+    /// primary colour, the detail in primary too rather than grey.
+    private func callout(icon: String, title: String, subtitle: String?) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Image(systemName: icon)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(.tint)
+                .frame(width: 22)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title).font(.body.weight(.semibold))
+                if let subtitle {
+                    Text(subtitle).font(.subheadline)
+                }
+            }
+        }
+        .padding(.vertical, 4)
     }
 
     /// The same shape as `MeTab`'s settings row, so a pushed page can't drift

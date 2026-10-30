@@ -76,8 +76,13 @@ def token() -> str:
     keys = [f for f in os.listdir(key_dir) if f.startswith("AuthKey_") and f.endswith(".p8")]
     if not keys:
         sys.exit(f"no App Store Connect key in {key_dir}")
-    key_path = os.path.join(key_dir, keys[0])
-    kid = keys[0][len("AuthKey_"):-len(".p8")]
+    # Two keys can sit in that folder (one per team or app); pick the one
+    # named by ASC_KEY_ID, as beta.sh does, or the first in name order.
+    wanted = os.environ.get("ASC_KEY_ID", "").strip()
+    keys.sort()
+    name = f"AuthKey_{wanted}.p8" if wanted and f"AuthKey_{wanted}.p8" in keys else keys[0]
+    key_path = os.path.join(key_dir, name)
+    kid = name[len("AuthKey_"):-len(".p8")]
     iss = open(os.path.expanduser("~/.appstoreconnect/issuer_id")).read().strip()
 
     def b64(raw: bytes) -> str:

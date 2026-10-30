@@ -42,12 +42,34 @@ struct WeekRecapSheet: View {
     @State private var levelSettled = false
     @State private var routine: [RoutineRecipe.Line] = []
     @State private var routineIsOwn = false
+    /// How they used the app (`StudyHabits`): what the rules found, the
+    /// wording once it lands, and which routine block each finding touched.
+    @State private var habitFindings: [HabitFinding] = []
+    @State private var habitAdvice: HabitAdvice?
+    @State private var habitAdviceFailed = false
+    @State private var routineRules: [UUID: String] = [:]
     @State private var showingPaywall = false
+    @State private var showingFeedback = false
+    /// The deck turns its own pages after each card's line; the header's
+    /// pause button stops it, and the choice is kept for the next report.
+    @AppStorage("futurevoice.report.autoAdvance") private var autoAdvance = true
+    /// The trial's second card: every feature, and how much of each was used.
+    @State private var featureUses: [FeatureUse] = []
+    /// Foreground time in the app over the trial window.
+    @State private var appSeconds = 0
     /// The deck's start-up runs once per opening: the test's full-screen
     /// cover makes the deck disappear and reappear, which would re-run
     /// `.task` (a second offer counted, the thin flag reset under the
     /// learner) and cancel the level read mid-call.
     @State private var trialStarted = false
+
+    // The narration (`ReportNarration`): the fluent self reads each card.
+    @StateObject private var narrator = ReportNarrationPlayer()
+    @State private var narration = ReportNarration()
+    /// Cards a script has been asked for, so a half is written once.
+    @State private var narrationAsked: Set<String> = []
+    /// Whether the deck reads itself: the trial report, for now.
+    private var narrates: Bool { isTrial }
 
     init(recap: WeekRecap, action: Binding<Action?>, startPage: Int = 0) {
         _recap = State(initialValue: recap)
@@ -122,6 +144,7 @@ struct WeekRecapSheet: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
+            if narrates { captionBox }
             bottomButton
                 .padding(.horizontal, 20)
                 .padding(.bottom, 12)
@@ -131,13 +154,22 @@ struct WeekRecapSheet: View {
         .presentationCornerRadius(28)
         .onChange(of: page) { _, new in
             withAnimation(.easeOut(duration: 0.4)) { _ = revealed.insert(new) }
+            speakCurrentCard()
         }
+        .onChange(of: recap.coach) { _, _ in Task { await writeNarration() } }
+        .onChange(of: levelSettled) { _, _ in Task { await writeNarration() } }
+        .onChange(of: trialTest?.isFinished) { _, _ in Task { await writeNarration() } }
+        .onChange(of: narrator.isOn) { _, on in on ? speakCurrentCard() : narrator.stop() }
+        .onChange(of: showingTrialTest) { _, up in if up { narrator.stop() } }
+        .onChange(of: showingPaywall) { _, up in if up { narrator.stop() } }
+        .onChange(of: showingFeedback) { _, up in if up { narrator.stop() } }
         // One row per viewing, never one per swipe: how far the deck was
         // read is the question, and it is answered once.
         .onAppear { if isTrial { TrialReportStore.isShowing = true } }
         .onDisappear {
             // Covered by the test or the plans is not closed.
-            guard !showingTrialTest, !showingPaywall else { return }
+            guard !showingTrialTest, !showingPaywall, !showingFeedback else { return }
+            narrator.stop()
             if isTrial { TrialReportStore.isShowing = false }
             Analytics.capture(isTrial ? "trial_report_closed" : "week_recap_closed",
                               ["reached": (revealed.max() ?? 0) + 1, "cards": cards.count])
@@ -148,11 +180,20 @@ struct WeekRecapSheet: View {
                 .environmentObject(appState)
         }
         .sheet(isPresented: $showingPaywall, onDismiss: {
-            // The report has done its job whether or not they bought.
+            // The report has done its job whether or not they bought. Then
+            // what they thought of it, once, and the App Store's own prompt.
             TrialReportStore.finished = true
-            dismiss()
+            if FeedbackPrompt.shouldShow(.trialReport) {
+                FeedbackPrompt.markShown(.trialReport)
+                showingFeedback = true
+            } else {
+                endTrialReport()
+            }
         }) {
             PaywallView(source: "trial_report")
+        }
+        .sheet(isPresented: $showingFeedback, onDismiss: endTrialReport) {
+            FeedbackSheet(context: .trialReport)
         }
         .task {
             if isTrial {
@@ -203,6 +244,27 @@ struct WeekRecapSheet: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
+                if narrates {
+                    // Auto-play: the deck turns its own pages after each
+                    // card's line (2026-10-28, founder: a way to stop it).
+                    // Remembered; off leaves the voice to the speaker button.
+                    Button { autoAdvance.toggle() } label: {
+                        Image(systemName: autoAdvance ? "pause.fill" : "play.fill")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(autoAdvance ? Color.themeAccent : .secondary)
+                            .frame(width: 32, height: 32)
+                            .background(Color(.tertiarySystemFill), in: Circle())
+                    }
+                    .accessibilityLabel(autoAdvance ? Text("Stop auto-play") : Text("Auto-play"))
+                    Button { narrator.isOn.toggle() } label: {
+                        Image(systemName: narrator.isOn ? "speaker.wave.2.fill" : "speaker.slash.fill")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(narrator.isOn ? Color.themeAccent : .secondary)
+                            .frame(width: 32, height: 32)
+                            .background(Color(.tertiarySystemFill), in: Circle())
+                    }
+                    .accessibilityLabel(narrator.isOn ? Text("Mute narration") : Text("Play narration"))
+                }
                 Button { dismiss() } label: {
                     Image(systemName: "xmark")
                         .font(.body.weight(.semibold))
@@ -291,7 +353,7 @@ struct WeekRecapSheet: View {
             VStack(alignment: .leading, spacing: 18) {
                 switch card {
                 case .cover:    cover
-                case .talk:     talk
+                case .talk:     if isTrial { trialUsage } else { talk }
                 case .used:     used
                 case .review:   review
                 case .fresh:    fresh
@@ -917,16 +979,241 @@ struct WeekRecapSheet: View {
 
     // MARK: - Trial report
 
-    // 1 — the free minutes at a glance
+    // 1 — the free minutes, handed over (2026-10-28, founder: "clean, with
+    // their name, friendly, and the feeling of being looked after"). Their
+    // face and name first, so the deck reads as made for one person; then
+    // the three numbers the rest of it is read from.
     private var trialCover: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            HStack(alignment: .center) {
+                ProfileAvatar(initials: appState.persona?.displayName ?? "", size: 64)
+                    .padding(3)
+                    .overlay(Circle().strokeBorder(Color.themeAccent, lineWidth: 2.5))
+                Spacer()
+                (Text(recap.start, format: .dateTime.month().day())
+                 + Text(" – ")
+                 + Text(recap.end.addingTimeInterval(-1), format: .dateTime.month().day()))
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+            VStack(alignment: .leading, spacing: 10) {
+                kicker(Text("Made for you"), "gift.fill")
+                Group {
+                    if let name = coverName {
+                        Text("\(name), your report is ready.")
+                    } else {
+                        Text("Your report is ready.")
+                    }
+                }
+                .font(.system(size: 34, weight: .bold, design: .rounded))
+                .fixedSize(horizontal: false, vertical: true)
+                Text("We went through every minute of your free time and put this together just for you.")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            HStack(spacing: 0) {
+                coverStat(recap.talkMinutes, Text("min of talk"))
+                Divider().frame(height: 44)
+                coverStat(recap.talks.count, Text(explain(key: "trial.cover.talks", default: "talks")))
+                if let own = trial?.ownSpeechSeconds, own > 0 {
+                    Divider().frame(height: 44)
+                    coverStat(max(1, own / 60), Text("min you spoke"))
+                }
+            }
+            .padding(.vertical, 16)
+            .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            Label { Text("From now on, every week's study comes to you as a report like this.") }
+                icon: { Image(systemName: "calendar") }
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// The name the cover greets: the first word of a spaced name ("Anna
+    /// Schmidt" → Anna), the whole of an unspaced one (이응규).
+    private var coverName: String? {
+        let full = (appState.persona?.displayName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !full.isEmpty else { return nil }
+        return full.split(separator: " ").first.map(String.init) ?? full
+    }
+
+    private func coverStat(_ value: Int, _ label: Text) -> some View {
+        VStack(spacing: 4) {
+            Text("\(value)")
+                .font(.system(size: 30, weight: .bold, design: .rounded))
+                .monospacedDigit()
+            label
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // 2 — how they used the app (2026-10-28, founder): the time it took,
+    // said as time that didn't go to scrolling, then EVERY practice feature
+    // with how much of it was used, so the ones they never opened are on
+    // the page too, and one line on what to add.
+    private var trialUsage: some View {
         VStack(alignment: .leading, spacing: 18) {
-            kicker(Text("Your free minutes"), "gift")
-            bigNumber(recap.talkMinutes, unit: Text("min"))
-            Text("That was your free time. Here's what it showed.")
+            kicker(Text("How you used it"), "square.grid.2x2.fill")
+            bigNumber(max(1, appSeconds / 60), unit: Text("min in the app"))
+            Text("Time that didn't go to scrolling. Well spent.")
                 .font(.title3)
                 .fixedSize(horizontal: false, vertical: true)
-            summaryRow
+            if !featureUses.isEmpty {
+                Text("You tried \(featureUses.filter(\.used).count) of \(featureUses.count).")
+                    .font(.headline)
+                    .padding(.top, 4)
+                usageAdvice(FeatureUse.advice(featureUses))
+                VStack(spacing: 0) {
+                    ForEach(Array(featureUses.enumerated()), id: \.element.id) { index, use in
+                        if index > 0 { Divider().padding(.leading, 46) }
+                        featureRow(use)
+                    }
+                }
+            }
         }
+    }
+
+    private func featureRow(_ use: FeatureUse) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: featureSymbol(use.feature))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(use.used ? Color.white : Color.secondary)
+                .frame(width: 34, height: 34)
+                .background(use.used ? featureColor(use.feature) : Color(.tertiarySystemFill), in: Circle())
+            VStack(alignment: .leading, spacing: 2) {
+                Text(featureName(use.feature))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(use.used ? Color.primary : Color.secondary)
+                Text(featureBlurb(use.feature))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 8)
+            Group {
+                if !use.used {
+                    Text("Not yet").foregroundStyle(.tertiary)
+                } else if use.feature == .talk {
+                    Text("\(max(1, use.minutes)) min")
+                } else {
+                    Text("×\(use.count)")
+                }
+            }
+            .font(.subheadline.weight(.semibold))
+            .monospacedDigit()
+        }
+        .padding(.vertical, 9)
+    }
+
+    @ViewBuilder private func usageAdvice(_ advice: FeatureUse.Advice) -> some View {
+        let text: Text = switch advice {
+        case .onlyTalk:
+            Text("You only talked. Talking makes you quicker, but a correction only sticks once you say it right yourself. After a call, run Say it again, and clear a few review cards a day.")
+        case .noTalk:
+            Text("Talking is the heart of it. Everything else is built from your calls.")
+        case .wideMix:
+            Text("You tried most of it. That mix is what makes it stick.")
+        case .next(.sayItAgain):
+            Text("Add Say it again next. It runs your last talk again with your lines corrected, and that's where the fixes stick.")
+        case .next(.review):
+            Text("Add a few review cards a day. The words and corrections from your talks come back until they're yours.")
+        case .next(.shadow):
+            Text("Add shadowing next. Saying the fluent lines in your own voice trains the rhythm talking alone doesn't.")
+        case .next(.scene):
+            Text("Try a scene next. Watch a situation you're about to face played out, then talk it through.")
+        case .next(.listen):
+            Text("Try listening next. A few minutes on the go keeps your ear in the language between calls.")
+        case .next(.speech):
+            Text("Try a speech next. One recorded take shows how you sound when you have to keep going on your own.")
+        case .next(.talk):
+            Text("Talking is the heart of it. Everything else is built from your calls.")
+        }
+        let tint: Color = switch advice {
+        case .onlyTalk: .orange
+        case .wideMix: .green
+        default: Color.themeAccent
+        }
+        Label { text.fixedSize(horizontal: false, vertical: true) }
+            icon: { Image(systemName: advice == .wideMix ? "hand.thumbsup.fill" : "lightbulb.fill").foregroundStyle(tint) }
+            .font(.subheadline)
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private func featureName(_ f: FeatureUse.Feature) -> String {
+        f == .scene ? explain("Scenes") : planKind(f).label
+    }
+
+    private func featureSymbol(_ f: FeatureUse.Feature) -> String {
+        f == .scene ? "play.rectangle.fill" : planKind(f).symbol
+    }
+
+    /// Mint for scenes: the one system colour no routine kind uses
+    /// (indigo is the Core's).
+    private func featureColor(_ f: FeatureUse.Feature) -> Color {
+        f == .scene ? .mint : planKind(f).color
+    }
+
+    private func planKind(_ f: FeatureUse.Feature) -> StudyPlan.Kind {
+        switch f {
+        case .talk: .talk
+        case .sayItAgain: .sayItAgain
+        case .review: .review
+        case .shadow: .shadow
+        case .listen: .listen
+        case .speech: .speech
+        case .scene: .talk
+        }
+    }
+
+    private func featureBlurb(_ f: FeatureUse.Feature) -> String {
+        switch f {
+        case .talk: explain("Call your fluent self")
+        case .sayItAgain: explain("Redo a talk with your lines corrected")
+        case .review: explain("Words, phrases and sentence cards")
+        case .shadow: explain("Say the fluent lines in your own voice")
+        case .scene: explain("Watch your situation played out")
+        case .listen: explain("Listen on the go")
+        case .speech: explain("Record a speech and get a score")
+        }
+    }
+
+    /// Foreground time over the window, never less than the metered talk
+    /// (a call in a pocket is metered but not foregrounded), like the day card.
+    private func trialAppSeconds() -> Int {
+        let calendar = Calendar.current
+        var seconds = 0
+        var day = calendar.startOfDay(for: recap.start)
+        while day < recap.end, let next = calendar.date(byAdding: .day, value: 1, to: day) {
+            seconds += AppUsageLog.seconds(on: day)
+            day = next
+        }
+        return max(seconds, recap.talkSeconds)
+    }
+
+    /// The usage card's facts for the narration, in place of the talk card's.
+    private var usageFacts: [String] {
+        guard isTrial, !featureUses.isEmpty else { return [] }
+        var f = ["How they used the app: \(appSeconds / 60) min in the app in total (time not spent scrolling)."]
+        for use in featureUses {
+            let name = use.feature.rawValue
+            f.append(use.used
+                     ? (use.feature == .talk ? "\(name): \(use.minutes) min, \(use.count) talk(s)" : "\(name): \(use.count)")
+                     : "\(name): never used")
+        }
+        switch FeatureUse.advice(featureUses) {
+        case .onlyTalk: f.append("They only talked; suggest Say it again after a call and a few review cards a day.")
+        case .next(let feature): f.append("Suggest adding \(feature.rawValue) next.")
+        case .wideMix: f.append("They tried most features; praise the mix.")
+        case .noTalk: f.append("They never talked; talking is the heart of it.")
+        }
+        return f
     }
 
     // The test — offered; the level and the routine follow either way.
@@ -983,9 +1270,7 @@ struct WeekRecapSheet: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
-                Text("It moves as you talk. Progress keeps track.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                speechBasis
             } else if levelSettled {
                 Text("A few more talks and your level is ready.")
                     .font(.title3)
@@ -999,6 +1284,32 @@ struct WeekRecapSheet: View {
                 .padding(.vertical, 20)
             }
         }
+    }
+
+    /// What the level was read from, said plainly: twenty minutes of call
+    /// is a few minutes of the learner's own voice, and a confident letter
+    /// from four of them is the letter Progress contradicts later. A second
+    /// language spoken in the window is named, so its minutes aren't silently
+    /// missing from a report about the other one.
+    @ViewBuilder private var speechBasis: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let seconds = trial?.ownSpeechSeconds, seconds > 0 {
+                let minutes = max(1, seconds / 60)
+                if seconds < TrialReport.thinSpeechSeconds {
+                    Text("A first read, from \(minutes) min of you speaking. It gets sharper as you talk.")
+                } else {
+                    Text("Read from \(minutes) min of you speaking. It moves as you talk, and Progress keeps track.")
+                }
+            } else {
+                Text("It moves as you talk. Progress keeps track.")
+            }
+            ForEach(trial?.otherLanguages ?? [], id: \.language) { other in
+                Text("You also spoke \(LanguageCatalog.name(other.language, in: appState.nativeLanguage)) (\(max(1, other.seconds / 60)) min). This report reads one language at a time.")
+            }
+        }
+        .font(.footnote)
+        .foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     /// Same lines as Progress's level page.
@@ -1017,12 +1328,9 @@ struct WeekRecapSheet: View {
     private var routineCard: some View {
         VStack(alignment: .leading, spacing: 18) {
             kicker(Text("Keep it going"), "calendar")
-            Text(RoutineRecipe.headline(for: LearningPurposeStore.purposes))
-                .font(.title2.weight(.bold))
-                .fixedSize(horizontal: false, vertical: true)
-            Text(explain("About \(StudyPlanStore.goalMinutes) minutes of talk a day, and what it corrected comes back the same evening."))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+            habitSection
+            (routineRules.isEmpty && routineIsOwn ? Text("Your routine, as you set it") : Text("Your routine, from what we saw"))
+                .font(.title3.weight(.bold))
                 .fixedSize(horizontal: false, vertical: true)
             RoutineWeekPicture(blocks: routine.map(\.block))
             VStack(alignment: .leading, spacing: 12) {
@@ -1039,10 +1347,11 @@ struct WeekRecapSheet: View {
                             Text(SetupFlowView.weekdaySummary(line.block.weekdays))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
-                            if !line.why.isEmpty {
-                                Text(line.why)
+                            if let why = routineWhy(line.block) {
+                                Text(verbatim: why)
                                     .font(.caption)
                                     .foregroundStyle(Color.themeAccent)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
                         }
                     }
@@ -1051,6 +1360,92 @@ struct WeekRecapSheet: View {
             Text(explain("You can change all of it later in My routine."))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    /// What the rules found about how they practise, worded — firm first,
+    /// the good news last. The numbers are the evidence for the routine
+    /// under it.
+    @ViewBuilder
+    private var habitSection: some View {
+        if habitFindings.isEmpty {
+            EmptyView()
+        } else if let advice = habitAdvice {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("How you've been practising")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                ForEach(advice.lines, id: \.self) { line in
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: habitSymbol(line.tone))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(habitColor(line.tone))
+                            .frame(width: 22)
+                            .padding(.top, 2)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(verbatim: line.title)
+                                .font(.subheadline.weight(.semibold))
+                            Text(verbatim: line.body)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        } else if habitAdviceFailed {
+            Button {
+                habitAdviceFailed = false
+                Task { await phraseHabits() }
+            } label: {
+                Label { Text("Try again") } icon: { Image(systemName: "arrow.clockwise") }
+            }
+            .buttonStyle(.bordered)
+        } else {
+            HStack(spacing: 10) {
+                ProgressView()
+                Text("Reading how you practise…")
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 12)
+        }
+    }
+
+    private func habitSymbol(_ tone: HabitFinding.Tone) -> String {
+        switch tone {
+        case .firm: return "exclamationmark.circle.fill"
+        case .nudge: return "arrow.forward.circle.fill"
+        case .good: return "checkmark.circle.fill"
+        }
+    }
+
+    private func habitColor(_ tone: HabitFinding.Tone) -> Color {
+        switch tone {
+        case .firm: return .orange
+        case .nudge: return .accentColor
+        case .good: return .green
+        }
+    }
+
+    /// A block a finding changed says which finding — its "change" line.
+    private func routineWhy(_ block: StudyPlan.Block) -> String? {
+        guard let rule = routineRules[block.id],
+              let line = habitAdvice?.lines.first(where: { $0.rule == rule }) else { return nil }
+        return line.change ?? line.title
+    }
+
+    private func phraseHabits() async {
+        do {
+            let advice = try await HabitAdvice.phrase(habitFindings, firstTalks: isTrial)
+            withAnimation(.easeOut(duration: 0.3)) { habitAdvice = advice }
+            updateTrial { $0.habitAdvice = advice }
+            await writeNarration()
+        } catch {
+            habitAdviceFailed = true
+            Analytics.capture("habit_advice_failed", ["error": "\(error)".prefix(160).description])
         }
     }
 
@@ -1070,16 +1465,61 @@ struct WeekRecapSheet: View {
         // built is never replaced from here.
         let builtOwn = UserDefaults.standard.bool(forKey: LearningPurposeStore.routineAppliedKey)
             || UserDefaults.standard.bool(forKey: "futurevoice.dailyCall.onboarded")
+        // Since 2026-10-27 the routine is built from HOW they used the app
+        // (`StudyHabits` → `HabitAdvisor`), never from a template their
+        // minutes had no say in: their own routine, or just the talk their
+        // purposes start with, plus what each finding changes.
+        let base: [StudyPlan.Block]
         if builtOwn, !StudyPlanStore.shared.plan.blocks.isEmpty {
-            routine = StudyPlanStore.shared.plan.blocks.map { RoutineRecipe.Line(block: $0, why: "") }
+            base = StudyPlanStore.shared.plan.blocks
             routineIsOwn = true
         } else {
-            routine = RoutineRecipe.lines(for: LearningPurposeStore.purposes,
-                                          goalMinutes: StudyPlanStore.goalMinutes)
+            base = RoutineRecipe.lines(for: LearningPurposeStore.purposes,
+                                       goalMinutes: StudyPlanStore.goalMinutes)
+                .map(\.block).filter { $0.kind == .talk }.prefix(1).map { $0 }
+        }
+        let habits = StudyHabits.read(start: recap.start, end: recap.end, recap: recap)
+        featureUses = FeatureUse.list(habits)
+        appSeconds = trialAppSeconds()
+        #if DEBUG
+        // `-trialdemo 1`: the demo learner talked, reviewed a little and
+        // tried one scene; `-trialonlytalk 1` shows the talk-only advice.
+        if UserDefaults.standard.bool(forKey: "trialdemo") {
+            let onlyTalk = UserDefaults.standard.bool(forKey: "trialonlytalk")
+            featureUses = FeatureUse.Feature.allCases.map { f in
+                switch f {
+                case .talk: FeatureUse(feature: .talk, count: 3, minutes: 20)
+                case .review: FeatureUse(feature: .review, count: onlyTalk ? 0 : 12)
+                case .scene: FeatureUse(feature: .scene, count: onlyTalk ? 0 : 1)
+                default: FeatureUse(feature: f, count: 0)
+                }
+            }
+            appSeconds = 34 * 60
+        }
+        #endif
+        habitFindings = HabitAdvisor.findings(habits)
+        let built = HabitAdvisor.routine(base: base, habits: habits, findings: habitFindings,
+                                         goalMinutes: StudyPlanStore.goalMinutes)
+        routine = built.map { RoutineRecipe.Line(block: $0.block, why: "") }
+        routineRules = Dictionary(built.compactMap { line in line.rule.map { (line.block.id, $0) } },
+                                  uniquingKeysWith: { a, _ in a })
+        if let kept = trial?.habitAdvice {
+            habitAdvice = kept
+        } else {
+            Task { await phraseHabits() }
         }
         #if DEBUG
         if UserDefaults.standard.bool(forKey: "trialtest") { showingTrialTest = true }
         #endif
+        narrator.configure(voiceId: appState.speakingVoiceId)
+        if let kept = trial?.narration {
+            narration = kept
+            // A reopened report has its whole script already; nothing new
+            // arrives to start the card on screen, so start it here.
+            narrator.prefetch(cards.compactMap { narration.line(for: narrationKey($0)) })
+            speakCurrentCard(onlyIfIdle: true)
+        }
+        Task { await writeNarration() }
         async let level: Void = loadTrialLevel()
         await writeCoachIfNeeded()
         await level
@@ -1117,9 +1557,24 @@ struct WeekRecapSheet: View {
         if !routineIsOwn, !routine.isEmpty {
             StudyPlanStore.shared.update(RoutineRecipe.plan(from: routine))
             UserDefaults.standard.set(true, forKey: LearningPurposeStore.routineAppliedKey)
+        } else if routineIsOwn, !routineRules.isEmpty {
+            // Their own routine keeps everything they set; only the blocks
+            // a finding changed or added are written.
+            var plan = StudyPlanStore.shared.plan
+            plan.blocks = routine.map(\.block)
+            StudyPlanStore.shared.update(plan)
         }
-        Analytics.capture("trial_report_routine", ["own": routineIsOwn])
+        Analytics.capture("trial_report_routine", ["own": routineIsOwn,
+                                                   "changed": routineRules.count,
+                                                   "rules": habitFindings.map(\.rule).joined(separator: ",")])
         showingPaywall = true
+    }
+
+    /// The deck's last step: the review prompt follows whatever the feedback
+    /// sheet said (never gated on its stars), then the deck goes.
+    private func endTrialReport() {
+        ReviewRequest.askAtTrialReportEnd()
+        dismiss()
     }
 
     /// Re-read before writing: the test view saves its id into the same file.
@@ -1131,6 +1586,111 @@ struct WeekRecapSheet: View {
             change(&copy)
             TrialReportStore.save(copy)
             trial = copy
+        }
+    }
+
+    // MARK: - Narration
+
+    /// The script's key for a card. The trial test's line changes once the
+    /// test is done, so the done state is a key of its own.
+    private func narrationKey(_ card: Card) -> String {
+        if card == .trialTest, trialTest?.isFinished == true { return "trialTestDone" }
+        return String(describing: card)
+    }
+
+    private var narrationContext: ReportNarrator.Context {
+        ReportNarrator.Context(
+            recap: recap, isTrial: isTrial,
+            level: trialLevel, levelRationale: trialRationale,
+            testScore: trialTest?.isFinished == true ? trialTest?.score : nil,
+            testTotal: trialTest?.isFinished == true ? trialTest?.total : nil,
+            testThin: trial?.testThin == true,
+            routineHeadline: RoutineRecipe.headline(for: LearningPurposeStore.purposes),
+            routine: routine.map { "\($0.block.kind.titled($0.block.minutes)), \(SetupFlowView.weekdaySummary($0.block.weekdays))" },
+            habits: habitFindings,
+            usage: usageFacts)
+    }
+
+    /// Asks for the lines of every card whose content is known and that has
+    /// none yet — the counts cards at once, the coach and the level as they
+    /// land. Each card is asked for once per opening.
+    private func writeNarration() async {
+        guard narrates else { return }
+        let context = narrationContext
+        let wanted = cards.compactMap { card -> ReportNarrator.CardFacts? in
+            let key = narrationKey(card)
+            guard narration.line(for: key) == nil, !narrationAsked.contains(key) else { return nil }
+            if card == .level, !levelSettled { return nil }
+            guard var facts = ReportNarrator.facts(card: String(describing: card), context) else { return nil }
+            facts.card = key
+            return facts
+        }
+        guard !wanted.isEmpty else { return }
+        wanted.forEach { narrationAsked.insert($0.card) }
+        do {
+            let lines = try await ReportNarrator.write(
+                cards: wanted, firstTalks: isTrial, targetLanguage: appState.targetLanguage,
+                level: trialLevel ?? appState.proficiency, learnerName: appState.persona?.displayName)
+            narration.merge(lines)
+            if isTrial { updateTrial { $0.narration = narration } }
+            narrator.prefetch(cards.compactMap { narration.line(for: narrationKey($0)) })
+            speakCurrentCard(onlyIfIdle: true)
+        } catch {
+            wanted.forEach { narrationAsked.remove($0.card) }
+            Analytics.capture("report_narration_failed", ["error": "\(error)".prefix(160).description])
+        }
+    }
+
+    /// Speaks the card on screen. `onlyIfIdle`: a script that just arrived
+    /// starts its card's line, but never cuts one already playing.
+    private func speakCurrentCard(onlyIfIdle: Bool = false) {
+        guard narrates, let card = cards[safe: page] else { return }
+        if onlyIfIdle, narrator.speakingCard != nil || narrator.loadingCard != nil { return }
+        guard let line = narration.line(for: narrationKey(card)) else { narrator.stop(); return }
+        let at = page
+        narrator.speak(line) {
+            // The deck moves on by itself, except past a card that asks
+            // the learner something (the test, the routine).
+            guard autoAdvance, ![.trialTest, .routine, .test].contains(card), at == page,
+                  at < cards.count - 1 else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+                guard autoAdvance, at == page, !showingTrialTest, !showingPaywall else { return }
+                advance()
+            }
+        }
+    }
+
+    /// The line being spoken, in the target language, with its native
+    /// caption — under the card, above the button.
+    @ViewBuilder
+    private var captionBox: some View {
+        if let card = cards[safe: page], let line = narration.line(for: narrationKey(card)) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Image(systemName: narrator.speakingCard == line.card ? "waveform" : "text.bubble")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Color.themeAccent)
+                        .symbolEffect(.variableColor.iterative, isActive: narrator.speakingCard == line.card)
+                    Text(verbatim: line.text)
+                        .font(.subheadline.weight(.medium))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if !line.caption.isEmpty, !LanguageCatalog.sameLanguage(appState.targetLanguage, appState.nativeLanguage) {
+                    Text(verbatim: line.caption)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .padding(.leading, 22)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .padding(.horizontal, 20)
+            .padding(.bottom, 8)
+            .onTapGesture { speakCurrentCard() }
+            .transition(.opacity)
+            .animation(.easeOut(duration: 0.25), value: line)
         }
     }
 

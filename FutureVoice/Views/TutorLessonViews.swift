@@ -21,7 +21,18 @@ struct TutorLessonStrip: View {
                 HStack(spacing: 8) {
                     Image(systemName: lesson?.isFinished == true ? "checkmark.seal.fill" : "graduationcap.fill")
                         .foregroundStyle(lesson?.isFinished == true ? Color.green : Color.themeAccent)
-                    if let lesson {
+                    if let lesson, lesson.inFinalCheck {
+                        // The final check: nothing to lean on (founder,
+                        // 2026-10-28). The title and the step, no rows, no
+                        // way out of it from here.
+                        Text(lesson.title)
+                            .font(.subheadline.weight(.semibold))
+                            .lineLimit(1)
+                        Spacer(minLength: 4)
+                        Text(explain("Final check"))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color.themeAccent)
+                    } else if let lesson {
                         Text(lesson.title)
                             .font(.subheadline.weight(.semibold))
                             .lineLimit(1)
@@ -57,11 +68,32 @@ struct TutorLessonStrip: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .disabled(lesson == nil)
+            .disabled(lesson == nil || lesson?.inFinalCheck == true)
 
-            if let lesson, expanded {
+            if let lesson, lesson.inFinalCheck {
+                Text(explain("Say it all in your own words, in one go."))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                // What it should cover, as the parts' short names only —
+                // never their example lines (founder, 2026-10-28: three or
+                // four parts are hard to hold in your head with nothing on
+                // screen).
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(Array(lesson.challenges.enumerated()), id: \.element.id) { i, c in
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Image(systemName: "\(i + 1).circle")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                            Text(c.goal)
+                                .font(.footnote)
+                            Spacer(minLength: 0)
+                        }
+                        .accessibilityElement(children: .combine)
+                    }
+                }
+            } else if let lesson, expanded {
                 if lesson.isFinished {
-                    Text(explain("All done. You can say it now."))
+                    Text(explain("Passed. You can say it now."))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -107,49 +139,70 @@ struct TutorLessonStrip: View {
     }
 }
 
-/// Topics to practice, for a learner who has no idea (the button right of
-/// the pill). The Talk tab's own ready-made situations, by the learner's
-/// purposes, plus the situations they built themselves — nothing new to
-/// make or fetch. Picking one starts the lesson.
+/// The tutor's curriculum, behind the button right of the pill
+/// (`TutorCurriculum`, 2026-10-28). One "Next up", the chapters with how
+/// many topics are passed, and inside a chapter every topic with its state.
+/// A topic above the learner's level reads "Step up" and is still a tap
+/// away, after one question (soft unlocking). The learner's own scenarios
+/// stay at the bottom; they aren't counted on the map. Picking starts the
+/// lesson.
 struct TutorTopicSheet: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
-    let onPick: (String) -> Void
+    /// The topic as the planner gets it, and its curriculum id (nil for the
+    /// learner's own scenarios).
+    let onPick: (String, String?) -> Void
 
-    private struct Group: Identifiable {
-        let id: String
-        let title: String
-        let rows: [(icon: String, title: String)]
-    }
+    @State private var progress: [String: TutorTopicProgress] = [:]
+    @State private var stepUp: TutorCurriculum.Topic?
 
-    private var groups: [Group] {
-        var seen = Set<String>()
-        var out: [Group] = []
-        let chips = LearningPurposeStore.chips(level: appState.proficiency)
-        let ordered = chips.filter { $0.starters != nil }
-            + (chips.contains(.everyday) ? [] : [DiscoverChip.everyday])
-        for chip in ordered {
-            let rows = (chip.starters ?? []).filter { seen.insert($0.id).inserted }
-                .map { (icon: $0.icon, title: $0.title) }
-            if !rows.isEmpty { out.append(Group(id: chip.rawValue, title: chip.label, rows: rows)) }
-        }
-        let own = appState.scenarios.filter { $0.starterId == nil && $0.archivedAt == nil }.prefix(12)
-            .map { (icon: "theatermasks.fill", title: $0.environment) }
-        if !own.isEmpty { out.append(Group(id: "own", title: chrome("Your scenarios"), rows: Array(own))) }
-        return out
-    }
+    private var level: CEFRLevel { appState.proficiency }
 
     var body: some View {
         NavigationStack {
             List {
-                ForEach(groups) { g in
-                    Section(g.title) {
-                        ForEach(Array(g.rows.enumerated()), id: \.offset) { _, row in
+                if let next = TutorCurriculum.next(progress: progress, level: level) {
+                    Section(explain("Next up")) {
+                        Button { pick(next.topic) } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "play.circle.fill")
+                                    .font(.title2)
+                                    .foregroundStyle(Color.themeAccent)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(next.topic.title).foregroundStyle(.primary)
+                                    Text(progress[next.topic.id]?.checkLeft == true
+                                         ? explain("Final check left") : next.chapter.title)
+                                        .font(.footnote)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
+                }
+                Section {
+                    ForEach(TutorCurriculum.chapters) { chapter in
+                        NavigationLink {
+                            chapterPage(chapter)
+                        } label: {
+                            chapterRow(chapter)
+                        }
+                    }
+                } header: {
+                    Text(explain("Curriculum"))
+                } footer: {
+                    let passed = progress.values.filter { $0.passedAt != nil }.count
+                    let total = TutorCurriculum.chapters.reduce(0) { $0 + $1.topics.count }
+                    Text(explain("\(passed) of \(total) topics passed"))
+                }
+                let own = appState.scenarios.filter { $0.starterId == nil && $0.archivedAt == nil }.prefix(12)
+                if !own.isEmpty {
+                    Section(chrome("Your scenarios")) {
+                        ForEach(Array(own), id: \.id) { s in
                             Button {
-                                onPick(row.title)
+                                onPick(s.environment, nil)
                                 dismiss()
                             } label: {
-                                Label(row.title, systemImage: row.icon)
+                                Label(s.environment, systemImage: "theatermasks.fill")
                                     .foregroundStyle(.primary)
                             }
                         }
@@ -163,7 +216,98 @@ struct TutorTopicSheet: View {
                     Button(explain("Close")) { dismiss() }
                 }
             }
+            .confirmationDialog(explain("This one is a step up. Try it?"),
+                                isPresented: Binding(get: { stepUp != nil },
+                                                     set: { if !$0 { stepUp = nil } }),
+                                titleVisibility: .visible,
+                                presenting: stepUp) { topic in
+                Button(explain("Try it")) { start(topic) }
+                Button(explain("Not now"), role: .cancel) { stepUp = nil }
+            } message: { _ in
+                Text(explain("The tutor will keep it at your level."))
+            }
         }
         .presentationDetents([.medium, .large])
+        .onAppear { progress = TutorProgressStore.all(language: appState.targetLanguage) }
+    }
+
+    private func chapterRow(_ chapter: TutorCurriculum.Chapter) -> some View {
+        let passed = chapter.topics.filter { progress[$0.id]?.passedAt != nil }.count
+        return HStack(spacing: 12) {
+            Image(systemName: chapter.icon)
+                .foregroundStyle(Color.themeAccent)
+                .frame(width: 26)
+            VStack(alignment: .leading, spacing: 5) {
+                Text(chapter.title).foregroundStyle(.primary)
+                ProgressView(value: Double(passed), total: Double(max(chapter.topics.count, 1)))
+                    .tint(.green)
+            }
+            Text(verbatim: "\(passed)/\(chapter.topics.count)")
+                .font(.footnote.monospacedDigit())
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 2)
+    }
+
+    private func chapterPage(_ chapter: TutorCurriculum.Chapter) -> some View {
+        List {
+            ForEach(chapter.topics) { topic in
+                Button { pick(topic) } label: { topicRow(topic) }
+            }
+        }
+        .navigationTitle(chapter.title)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func topicRow(_ topic: TutorCurriculum.Topic) -> some View {
+        let p = progress[topic.id]
+        let step = p?.passedAt == nil && TutorCurriculum.isStepUp(topic, level: level)
+        return HStack(spacing: 12) {
+            Group {
+                if p?.passedAt != nil {
+                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                } else if p?.checkLeft == true {
+                    Image(systemName: "circle.lefthalf.filled").foregroundStyle(.green)
+                } else if p?.inProgress == true {
+                    Image(systemName: "circle.dotted").foregroundStyle(Color.themeAccent)
+                } else {
+                    Image(systemName: "circle").foregroundStyle(.tertiary)
+                }
+            }
+            .font(.title3)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(topic.title).foregroundStyle(step ? .secondary : .primary)
+                if p?.checkLeft == true {
+                    Text(explain("Final check left")).font(.footnote).foregroundStyle(.secondary)
+                } else if p?.inProgress == true {
+                    Text(explain("In progress")).font(.footnote).foregroundStyle(.secondary)
+                }
+            }
+            Spacer(minLength: 4)
+            if let rounds = p?.rounds, rounds > 1 {
+                Text(explain("\(rounds) rounds"))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.green)
+            } else if step {
+                Text(explain("Step up"))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.orange)
+            }
+        }
+    }
+
+    private func pick(_ topic: TutorCurriculum.Topic) {
+        let p = progress[topic.id]
+        if p?.passedAt == nil, TutorCurriculum.isStepUp(topic, level: level) {
+            stepUp = topic
+        } else {
+            start(topic)
+        }
+    }
+
+    private func start(_ topic: TutorCurriculum.Topic) {
+        stepUp = nil
+        onPick(topic.title, topic.id)
+        dismiss()
     }
 }

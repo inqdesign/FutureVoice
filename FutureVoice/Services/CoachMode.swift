@@ -73,8 +73,11 @@ enum CoachMode {
 /// gateway `nudge` notes. Off by default; with it off the prompt is
 /// byte-identical to before (`TutorModeTests`).
 ///
-/// A tutored call is a PRACTICE call, like a coached one (`Session.coached`):
-/// a line said right after being corrected is a repeat, not evidence.
+/// A tutored call is judged LINE BY LINE (2026-10-28, `Turn.tutorRole`): a
+/// challenge line is a drill (a set sentence, an example in front of them,
+/// often a repeat of a correction) and only a try at the final check — the
+/// whole thing in one go, nothing on screen — is evidence. A call that never
+/// reached the check is a practice call (`Session.isPractice`).
 enum TutorMode {
     static let key = "futurevoice.call.tutorMode"
 

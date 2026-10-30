@@ -285,9 +285,9 @@ final class StoreKitService: ObservableObject {
                                         apple_product_id: "com.roro.futurevoice.\(tier)_\(period)"),
                            product: nil, storefrontCountry: "USA")
             }
-            options = [row("light", "monthly", 9000, 10), row("plus", "monthly", 36000, 30),
-                       row("max", "monthly", 72000, 30),
-                       row("light", "annual", 9000, 10), row("plus", "annual", 36000, 30)]
+            options = [row("light", "monthly", 9000, 10), row("plus", "monthly", 27000, 30),
+                       row("max", "monthly", 54000, 30),
+                       row("light", "annual", 9000, 10), row("plus", "annual", 27000, 30)]
             return
         }
         #endif

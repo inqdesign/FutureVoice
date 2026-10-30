@@ -11,7 +11,7 @@
 // payload closes). Purpose "weekly".
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
-import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
+import { requireUser, handlePreflight, errorResponse, upstreamErrorResponse, cors } from "../_shared/auth.ts"
 import { recordFreeUsage, enforceRequestRate, rateLimitedResponse,
          recordProviderUsage, background, geminiUsageFields } from "../_shared/credits.ts"
 import { systemPrompt } from "./prompt.ts"
@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
   )
   if (!upstream.ok) {
     const detail = await upstream.text()
-    return errorResponse(upstream.status, "gemini upstream error", detail.slice(0, 500))
+    return upstreamErrorResponse(upstream.status, "gemini upstream error", detail.slice(0, 500))
   }
   const responseText = await upstream.text()
   try {

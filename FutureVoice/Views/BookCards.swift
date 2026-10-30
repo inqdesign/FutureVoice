@@ -88,9 +88,13 @@ struct OriginTag: View {
         // A coach-mode call says so in place of "Free talk" (after "News" /
         // "Scenario"). A practice call (`Session.coached` — tutor mode, or
         // coach mode before 2026-10-14) carries no score, so it is named that.
+        // A tutor call scored on its final check (`Turn.tutorRole`) says
+        // "Tutor"; one that never reached the check is a practice call.
         let coached = session.turns.contains { $0.coachLine != nil }
-        if session.isPractice || coached {
-            let coach = session.isPractice ? explain("Practice call") : explain("Coach mode")
+        let tutored = session.turns.contains { $0.tutorRole != nil }
+        if session.isPractice || coached || tutored {
+            let coach = session.isPractice ? explain("Practice call")
+                : tutored ? explain("Tutor") : explain("Coach mode")
             switch session.origin {
             case .news, .scenario: source = [source, coach].compactMap { $0 }.joined(separator: " · ")
             default:               source = coach

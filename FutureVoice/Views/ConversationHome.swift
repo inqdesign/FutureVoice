@@ -28,6 +28,8 @@ struct ConversationHome: View {
     /// `State(initialValue:)` kept the FIRST evaluation's empty topic, so the
     /// first topic pick always fell through to free talk.
     @State private var callLaunch: CallLaunch?
+    /// This tab is the one on screen — the tutor speaks only then.
+    @State private var homeOnScreen = false
     @State private var showingProfile = false
     @State private var showingBuilder = false
     @State private var showingAddLanguage = false
@@ -45,6 +47,7 @@ struct ConversationHome: View {
     @State private var showingActivity = false
     /// The onboarding routine lands in the streak chip (`RoutineOnboardingView`).
     @ObservedObject private var routineHandoff = RoutineHandoff.shared
+    @ObservedObject private var tutorBot = TutorBot.shared
     /// Discover rail's "All scenarios" card → the full collection page.
     @State private var showingAllScenarios = false
     /// The topics page behind the home's one door (`TalkTopicsPage`).
@@ -89,14 +92,25 @@ struct ConversationHome: View {
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
             // Room under the last row for the floating button.
             .contentMargins(.bottom, 88, for: .scrollContent)
+            // While the tutor's note is up, the page goes soft behind it so
+            // the note and the face it comes from are what's left in focus.
+            .overlay {
+                if tutorBot.noteShown {
+                    Rectangle().fill(.ultraThinMaterial)
+                        .ignoresSafeArea()
+                        .onTapGesture { tutorBot.closeNote() }
+                        .transition(.opacity)
+                }
+            }
             // One button to the topics page (draft 2026-10-18) — the discover
             // block used to sit in the scroll in full. Placed and drawn exactly
             // like Watch's "New situation": glass capsule, floating at the
             // bottom centre over the page.
             .overlay(alignment: .bottom) {
                 // Three slots (2026-10-18, founder): the player on the left,
-                // the topics button centred, the quick quiz's face on the
-                // right. The two side slots take equal widths so the centre
+                // the topics button centred, the tutor's face on the right
+                // (the quick quiz's until 2026-10-28; the quiz is now one of
+                // the things the tutor hands you). The two side slots take equal widths so the centre
                 // never moves.
                 HStack(spacing: 12) {
                     HStack {
@@ -104,6 +118,7 @@ struct ConversationHome: View {
                         Spacer(minLength: 0)
                     }
                     .frame(maxWidth: .infinity)
+                    .modifier(SoftenedBehindNote(on: tutorBot.noteShown))
                     Button { showingTopics = true } label: {
                         Label("Find a topic", systemImage: "sparkles")
                             .font(.body.weight(.semibold))
@@ -112,14 +127,17 @@ struct ConversationHome: View {
                     }
                     .modifier(GlassFloatingButton())
                     .fixedSize()
+                    .modifier(SoftenedBehindNote(on: tutorBot.noteShown))
                     HStack {
                         Spacer(minLength: 0)
-                        QuickQuizButton()
+                        TutorBotButton()
                     }
                     .frame(maxWidth: .infinity)
                 }
                 .padding(16)
             }
+            // The tutor's note and bubble, over the page and above the row.
+            .overlay { TutorBotLayer() }
             #if DEBUG
             .defaultScrollAnchor(DebugCapture.previewScenariosTab ? .bottom : nil)
             #endif
@@ -133,7 +151,11 @@ struct ConversationHome: View {
                 // for adding one (docs/multi-language-plan.md).
                 if #available(iOS 26, *) {
                     ToolbarItem(placement: .topBarLeading) {
+                        // The bar keeps the hidden capsule's inset, which put
+                        // the chip 30 pt in while every other tab's edge is
+                        // 16 pt; pulled back to the same edge.
                         languageSwitcher
+                            .offset(x: -Self.hiddenCapsuleInsetLeading)
                     }
                     .sharedBackgroundVisibility(.hidden)
                 } else {
@@ -153,6 +175,7 @@ struct ConversationHome: View {
                 if #available(iOS 26, *) {
                     ToolbarItem(placement: .topBarTrailing) {
                         headerControl
+                            .offset(x: Self.hiddenCapsuleInsetTrailing)
                     }
                     .sharedBackgroundVisibility(.hidden)
                 } else {
@@ -171,6 +194,8 @@ struct ConversationHome: View {
                 AddLanguageSheet().environmentObject(appState)
             }
             .onAppear {
+                homeOnScreen = true
+                refreshTutor(delay: 1.2)
                 reload(); drawRing()
                 #if DEBUG
                 if UserDefaults.standard.bool(forKey: "openTopics") { showingTopics = true }
@@ -187,7 +212,19 @@ struct ConversationHome: View {
                 appState.openRoutinePage = false
                 showingActivity = true
             }
+            .onDisappear { homeOnScreen = false }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active { refreshTutor(delay: 1.2) }
+            }
+            // A planned time arriving while the page sits open.
+            .task(id: homeOnScreen) {
+                while homeOnScreen, !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(60))
+                    refreshTutor(delay: 0)
+                }
+            }
             .onChange(of: appState.talkHomeReloadToken) { _, _ in
+                refreshTutor(delay: 1.5)
                 HeroGreeting.advanceRotation()
                 reload()
                 maybeOfferBackup()
@@ -684,6 +721,11 @@ struct ConversationHome: View {
     /// The glass circle's diameter — the height iOS 26 gives every other
     /// toolbar button, so the control lines up with the language chip.
     private static let controlDiameter: CGFloat = 44
+    /// What iOS 26 leaves around a toolbar item whose glass is hidden,
+    /// measured on device frames: the leading chip sat 30 pt in and the
+    /// trailing control 20 pt in, against 16 pt on every other tab.
+    private static let hiddenCapsuleInsetLeading: CGFloat = 14
+    private static let hiddenCapsuleInsetTrailing: CGFloat = 4
     /// The ring's outer diameter: the control minus a 3 pt margin off the
     /// glass rim on each side.
     private static let ringDiameter: CGFloat = controlDiameter - 2 * 3
@@ -782,6 +824,19 @@ struct ConversationHome: View {
 
     // MARK: - Logic
 
+    /// Lets the tutor re-read the day and, if the page is really in front of
+    /// the learner, say what there is to say (`TutorBot.refresh`). The delay
+    /// lets a call's cover or a tab switch settle first.
+    private func refreshTutor(delay: Double) {
+        Task { @MainActor in
+            if delay > 0 { try? await Task.sleep(for: .seconds(delay)) }
+            let visible = homeOnScreen && scenePhase == .active && callLaunch == nil
+                && !appState.talkRingProxyActive && !showingTopics && !showingActivity
+                && !showingPaywall && !showingProfile && !routineHandoff.showHint
+            TutorBot.shared.refresh(appState: appState, visible: visible)
+        }
+    }
+
     private func reload() {
         refreshAccount()   // talks spend credits — keep the chip honest
         let sessions = SessionStore.shared.load()
@@ -867,6 +922,8 @@ private struct TalkHeroSection: View {
     /// Latest reported global frame of the ring surface (local; see the
     /// preference handler below for why it is not published).
     @State private var ringFrame: CGRect = .zero
+    @State private var mode = TalkRingMode.current
+    @AppStorage(TutorMode.key) private var tutorModeOn = false
 
     var body: some View {
         heroSection
@@ -1091,59 +1148,118 @@ private struct TalkHeroSection: View {
                 .rotationEffect(.degrees(-90))
                 .opacity(progress > 0.97 ? 1 : 0)
 
-            Button {
-                // The gate lives in RootTabView's `startFreeTalk`, which is
-                // where BOTH paths into a free talk meet (this ring and the
-                // widget's deep link). Checking here as well would ask the
-                // server the same question twice for one tap.
-                onTap(ringFrame)
-            } label: {
-                ZStack {
-                    Futureself(mode: .idle, level: 0, virtualHeight: 64)
-                    // Wash the surface toward the page background so the
-                    // circle sits IN the page instead of glowing against it
-                    // (the shader's own base runs brighter than grouped bg).
-                    Color(.systemGroupedBackground).opacity(0.35)
-                    // Uniform inner shadow — a blurred inner ring, masked to
-                    // the circle so the vignette hugs the whole edge evenly
-                    // (a one-sided shadow here reads as a lighting mistake).
-                    // Light mode gets a MUCH gentler pass: on the airy light
-                    // surface the dark-mode strength reads as a hole.
-                    // Tight spread: a narrow stroke + small blur keeps the
-                    // vignette hugging the rim instead of flooding inward.
-                    Circle()
-                        .strokeBorder(Color.black.opacity(colorScheme == .dark ? 0.45 : 0.15),
-                                      lineWidth: 10)
-                        .blur(radius: 6)
-                        .mask(Circle())
-                    VStack(spacing: 6) {
-                        Text("Let's talk")
-                            .geistPixel(20)
-                            .foregroundStyle(.primary)
-                        Text(headline)
-                            .font(.footnote.weight(.medium))
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
+            // The surface stays put; only the label on top of it pages
+            // (2026-10-28, founder: three modes, swiped on the inside of the
+            // ring — the arc is the day's goal and does not move).
+            ZStack {
+                Futureself(mode: .idle, level: 0, virtualHeight: 64)
+                // Wash the surface toward the page background so the
+                // circle sits IN the page instead of glowing against it
+                // (the shader's own base runs brighter than grouped bg).
+                Color(.systemGroupedBackground).opacity(0.35)
+                // Uniform inner shadow — a blurred inner ring, masked to
+                // the circle so the vignette hugs the whole edge evenly
+                // (a one-sided shadow here reads as a lighting mistake).
+                // Light mode gets a MUCH gentler pass: on the airy light
+                // surface the dark-mode strength reads as a hole.
+                Circle()
+                    .strokeBorder(Color.black.opacity(colorScheme == .dark ? 0.45 : 0.15),
+                                  lineWidth: 10)
+                    .blur(radius: 6)
+                    .mask(Circle())
+                    .allowsHitTesting(false)
+                TabView(selection: $mode) {
+                    ForEach(TalkRingMode.allCases, id: \.self) { m in
+                        Button {
+                            // The gate lives in RootTabView's `startFreeTalk`,
+                            // which is where BOTH paths into a free talk meet
+                            // (this ring and the widget's deep link).
+                            guard m.isAvailable else { return }
+                            onTap(ringFrame)
+                        } label: {
+                            VStack(spacing: 6) {
+                                Text(m.title)
+                                    .geistPixel(20)
+                                    .foregroundStyle(m.isAvailable ? .primary : .secondary)
+                                Text(m.isAvailable ? headline : explain("Coming soon"))
+                                    .font(.footnote.weight(.medium))
+                                    .monospacedDigit()
+                                    .foregroundStyle(.secondary)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(m == .freeTalk ? accessibilityLabel : m.title)
+                        .tag(m)
                     }
                 }
-                // 260 = the 280 frame minus the 20 pt stroke: the surface
-                // meets the ring's inner edge with no gap.
-                .frame(width: 260, height: 260)
-                // The proxy morph needs the surface's live pose (global) —
-                // reported from HERE so it tracks layout, not guesses.
-                .background(GeometryReader { g in
-                    Color.clear.preference(key: TalkRingFrameKey.self,
-                                           value: g.frame(in: .global))
-                })
-                .clipShape(Circle())
-                .overlay(Circle().strokeBorder(Color(.separator).opacity(0.4), lineWidth: 0.5))
-                .contentShape(Circle())
+                .tabViewStyle(.page(indexDisplayMode: .never))
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(accessibilityLabel)
+            // 260 = the 280 frame minus the 20 pt stroke: the surface
+            // meets the ring's inner edge with no gap.
+            .frame(width: 260, height: 260)
+            // The proxy morph needs the surface's live pose (global) —
+            // reported from HERE so it tracks layout, not guesses.
+            .background(GeometryReader { g in
+                Color.clear.preference(key: TalkRingFrameKey.self,
+                                       value: g.frame(in: .global))
+            })
+            .clipShape(Circle())
+            .overlay(Circle().strokeBorder(Color(.separator).opacity(0.4), lineWidth: 0.5))
+            .contentShape(Circle())
         }
         .frame(width: 280, height: 280)
+        // The dots sit in the gap under the ring as an overlay, so the
+        // hero's centring maths (ring centre 160 pt above its bottom) holds.
+        .overlay(alignment: .bottom) {
+            HStack(spacing: 8) {
+                ForEach(TalkRingMode.allCases, id: \.self) { m in
+                    Circle()
+                        .fill(m == mode ? Color.primary : Color.primary.opacity(0.2))
+                        .frame(width: 6, height: 6)
+                }
+            }
+            .offset(y: 36)
+            .animation(.easeOut(duration: 0.2), value: mode)
+            .accessibilityHidden(true)
+        }
+        .onChange(of: mode) { _, m in
+            // The ring IS the tutor switch: the call reads the same key the
+            // Call settings toggle writes. Pronunciation isn't built yet and
+            // leaves the last real mode as it was.
+            switch m {
+            case .freeTalk: tutorModeOn = false
+            case .tutor: tutorModeOn = true
+            case .pronunciation: break
+            }
+            HapticEngine.selection()
+        }
+        // Flipped from Call settings: the ring follows.
+        .onChange(of: tutorModeOn) { _, on in
+            if mode != .pronunciation { mode = on ? .tutor : .freeTalk }
+        }
     }
+}
+
+/// The three things the home ring can start (2026-10-28). Free talk and the
+/// tutor are the same call with `TutorMode` off or on; pronunciation is a
+/// placeholder until its lesson exists.
+enum TalkRingMode: Int, CaseIterable {
+    case freeTalk, tutor, pronunciation
+
+    var title: String {
+        switch self {
+        case .freeTalk: return explain("Let's talk")
+        case .tutor: return explain("Tutor")
+        case .pronunciation: return explain("Pronunciation")
+        }
+    }
+
+    var isAvailable: Bool { self != .pronunciation }
+
+    /// What the ring shows on launch — the last mode the learner swiped to.
+    static var current: TalkRingMode { TutorMode.isOn ? .tutor : .freeTalk }
 }
 
 /// One talkable scenario — role icon for a face, one-line title, partner

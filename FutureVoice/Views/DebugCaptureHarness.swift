@@ -544,6 +544,13 @@ enum DebugCapture {
                           handoff: .init(title: "Study this", action: {}))
                     .environmentObject(appState)
             })
+        case "core-seated":
+            // A seated member of a club of four, the learner in seat 1.
+            let pj = #"{"seats":100,"member":{"seated":true,"days_total":12},"streak":42,"language":"en","club_size":23,"keep_grace":1,"bar_seconds":240,"queue_ahead":null,"entry_streak":30,"requalifying":false,"days_to_entry":null,"missed_recent":0,"days_to_return":null,"waiting_for_seat":false}"#
+            let mj = #"{"mine":0,"seats":100,"taken":23,"themes":[4,0,2,3,5,0,1,2,4,3,0,5,2,0,3,4,1,0,2,5,3,0,4],"language":"en"}"#
+            let p = try! JSONDecoder().decode(CoreClubService.Progress.self, from: Data(pj.utf8))
+            let m = try! JSONDecoder().decode(CoreClubService.SeatMap.self, from: Data(mj.utf8))
+            return AnyView(NavigationStack { CoreClubView(preview: (p, m)) }.environmentObject(appState))
         case "core":
             let pj = #"{"seats":100,"member":null,"streak":1,"language":"en","club_size":0,"keep_grace":1,"bar_seconds":240,"queue_ahead":null,"entry_streak":30,"requalifying":false,"days_to_entry":29,"missed_recent":19,"days_to_return":null,"waiting_for_seat":false}"#
             let mj = #"{"mine":null,"seats":100,"taken":0,"themes":[],"language":"en"}"#
@@ -1075,6 +1082,89 @@ enum DebugCapture {
                     ToolbarItem(placement: .topBarTrailing) {
                         Text("End").fontWeight(.semibold)
                             .foregroundStyle(.red)
+                    }
+                }
+            })
+        case "call-tutor", "call-tutor-1", "call-tutor-done":
+            // Tutor mode's checklist pinned above a lesson in progress, the
+            // topic button right of the pill. Staged: a real one needs a live
+            // call and the planner. `-1` = the first challenge ticked after a
+            // fix; `-done` = every challenge ticked, the strip's done state.
+            let ko = appState.nativeLanguage.hasPrefix("ko")
+            let done = name == "call-tutor-done" ? 4 : (name == "call-tutor-1" ? 1 : 0)
+            let goals = ko
+                ? ["이름이랑 어디서 왔는지 말하기", "하는 일 말하기", "좋아하는 것 말하기", "한 번에 다 말하기"]
+                : ["Say your name and where you're from", "Say what you do", "Say what you like doing", "Say it all in one go"]
+            let lines = [("Say your name and where you're from", "I'm Mina, I'm from Busan."),
+                         ("Say what you do", "I'm a teacher."),
+                         ("Say what you like doing", "I like cooking."),
+                         ("Say it all in one go", "I'm Mina, I'm from Busan. I'm a teacher, and I like cooking.")]
+            let lesson = TutorLesson(
+                id: UUID(), title: ko ? "자기소개하기" : "Introducing yourself",
+                titleTarget: "Introducing yourself", language: "en",
+                challenges: goals.enumerated().map { i, g in
+                    TutorLesson.Challenge(id: UUID(), goal: g, task: lines[i].0, example: lines[i].1,
+                                          doneAt: i < done ? Date() : nil,
+                                          line: i < done ? lines[i].1 : nil)
+                },
+                createdAt: Date(), finishedAt: done == 4 ? Date() : nil)
+            let feed: [(DialogueSpeaker, String)] = switch done {
+            case 0: [(.other, "Okay, lesson time. What do you want to be able to say today?"),
+                     (.user, "I want to introduce myself."),
+                     (.other, "First, tell me your name and where you're from. Like: I'm Mina, I'm from Busan. Your turn!")]
+            case 1: [(.user, "I Mina, I from Seoul."),
+                     (.other, "Almost! I'm Mina, I'm from Seoul. Again?"),
+                     (.user, "I'm Mina. I'm from Seoul."),
+                     (.other, "Nice! Now, what do you do? Like: I'm a teacher.")]
+            default: [(.other, "Last one: all of it in one go!"),
+                      (.user, "I'm Mina, I'm from Seoul. I'm a nurse, and I like hiking."),
+                      (.other, "All done. You can introduce yourself now! More of this, or a new topic?")]
+            }
+            return AnyView(NavigationStack {
+                VStack(spacing: 0) {
+                    TutorLessonStrip(lesson: lesson, planning: false, expanded: .constant(true))
+                    Divider().opacity(0.15)
+                    VStack(alignment: .leading, spacing: 18) {
+                        ForEach(Array(feed.enumerated()), id: \.offset) { _, l in
+                            DialogueLine(speaker: l.0, name: l.0 == .user ? "You" : "Future self") {
+                                Text(l.1)
+                            }
+                        }
+                        Spacer()
+                    }
+                    .padding(20)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    VStack(spacing: 10) {
+                        HStack {
+                            Image(systemName: "slider.horizontal.3")
+                                .font(.system(size: 17, weight: .semibold)).foregroundStyle(.secondary)
+                                .frame(width: 44, height: 44)
+                                .background(Color(.secondarySystemBackground), in: Circle())
+                            Spacer()
+                            Capsule().fill(Color(.secondarySystemBackground))
+                                .frame(width: 156, height: 64)
+                            Spacer()
+                            Image(systemName: "lightbulb")
+                                .font(.system(size: 17, weight: .semibold)).foregroundStyle(.secondary)
+                                .frame(width: 44, height: 44)
+                                .background(Color(.secondarySystemBackground), in: Circle())
+                        }
+                        .padding(.horizontal, 20)
+                        Text("Listening · pause to send · tap to stop")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                    .padding(.top, 14).padding(.bottom, 20)
+                }
+                .background(Color(.systemBackground))
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .principal) {
+                        LevelHeaderTitle(title: explain("Let's talk"), level: .a1, surface: .talk)
+                            .environmentObject(appState)
+                    }
+                    ToolbarItem(placement: .topBarLeading) { Image(systemName: "xmark") }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Text("End").fontWeight(.semibold).foregroundStyle(.red)
                     }
                 }
             })

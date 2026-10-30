@@ -14,7 +14,7 @@
 // double-charge.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
-import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
+import { requireUser, handlePreflight, errorResponse, upstreamErrorResponse, cors } from "../_shared/auth.ts"
 import { restoreCharacters } from "../_shared/calm-exclamations.ts"
 import { speakableSymbols } from "../_shared/spoken-symbols.ts"
 import { isPresetSlot, presetVoice } from "../_shared/preset-voices.ts"
@@ -45,6 +45,8 @@ const FREE_PURPOSES = new Set([
   "shadow",         // first synthesis of a shadow line (with timestamps)
   "voice_preview",  // counterpart preset voice preview
   "daily-call",     // voicemail — the retention hook is on us, not the user
+  "report-narration", // the fluent self reading the learner's report (ReportNarration);
+                      // shown to learners whose free minutes are spent, ~1k chars, cached
 ])
 
 // TALK surfaces meter by wall-clock call time (talk-tick), so their TTS is
@@ -466,7 +468,7 @@ async function speakOnCartesia(o: {
     const r = await cartesia.synthesizeWithTimestamps(line)
     if (!r.ok) {
       await o.onFail(r.status)
-      return errorResponse(r.status >= 400 ? r.status : 502, "cartesia upstream error", r.detail)
+      return upstreamErrorResponse(r.status, "cartesia upstream error", r.detail)
     }
     // The alignment spells the text the app SENT (its "!" included).
     if (o.text !== o.originalText) {
@@ -485,7 +487,7 @@ async function speakOnCartesia(o: {
     const r = await cartesia.synthesizePcmStream(line, Number(format.slice(4)))
     if (!r.ok || !r.body) {
       await o.onFail(r.status)
-      return errorResponse(r.status >= 400 ? r.status : 502, "cartesia upstream error", (await r.text()).slice(0, 500))
+      return upstreamErrorResponse(r.status, "cartesia upstream error", (await r.text()).slice(0, 500))
     }
     headers.set("Content-Type", "application/octet-stream")
     headers.set("X-Audio-Format", format)
@@ -495,7 +497,7 @@ async function speakOnCartesia(o: {
   const r = await cartesia.synthesizeMp3(line)
   if (!r.ok || !r.body) {
     await o.onFail(r.status)
-    return errorResponse(r.status >= 400 ? r.status : 502, "cartesia upstream error", (await r.text()).slice(0, 500))
+    return upstreamErrorResponse(r.status, "cartesia upstream error", (await r.text()).slice(0, 500))
   }
   headers.set("Content-Type", "audio/mpeg")
   return new Response(r.body, { status: 200, headers })

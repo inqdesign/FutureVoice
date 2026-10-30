@@ -262,7 +262,7 @@ struct RootView: View {
     /// Make navigation-bar titles (which UIKit renders, so `.fontDesign` can't
     /// reach them) use SF Pro Rounded too.
     private static func applyRoundedNavBar() {
-        let large: [NSAttributedString.Key: Any] = [.font: roundedNavFont(34, .bold)]
+        let large = largeTitleAttributes
         let inline: [NSAttributedString.Key: Any] = [.font: roundedNavFont(17, .semibold)]
 
         let standard = UINavigationBarAppearance()
@@ -278,6 +278,16 @@ struct RootView: View {
         UINavigationBar.appearance().standardAppearance = standard
         UINavigationBar.appearance().compactAppearance = standard
         UINavigationBar.appearance().scrollEdgeAppearance = transparent
+    }
+
+    /// The tab titles. The pixel face draws its glyphs high in their line,
+    /// so a title sat ~4 pt above the centre of the buttons on its row
+    /// (Speech's +, Watch's and Review's controls); the offset sets it on
+    /// the same centre. The system fallback is centred already.
+    static var largeTitleAttributes: [NSAttributedString.Key: Any] {
+        let font = roundedNavFont(34, .bold)
+        guard UILanguage.pixelFaceCoversChrome, UIFont.appPixel(34) != nil else { return [.font: font] }
+        return [.font: font, .baselineOffset: -4]
     }
 
     /// Page/navigation titles render in Geist Pixel (bundled). Falls back to
@@ -384,7 +394,7 @@ struct TransparentRoundedNavBar: UIViewControllerRepresentable {
             guard let host = vc else { return }
             let a = UINavigationBarAppearance()
             a.configureWithTransparentBackground()
-            a.largeTitleTextAttributes = [.font: RootView.roundedNavFont(34, .bold)]
+            a.largeTitleTextAttributes = RootView.largeTitleAttributes
             a.titleTextAttributes = [.font: RootView.roundedNavFont(17, .semibold)]
             host.navigationItem.standardAppearance = a
             host.navigationItem.compactAppearance = a

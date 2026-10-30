@@ -91,27 +91,6 @@ struct CallSettingsSheet: View {
                     Text(explain("Applies from the next thing your future self says."))
                 }
 
-                // On by default for A1/A2 (`CoachMode.resolve`). What it is,
-                // first: a "try saying" under every line; the word hint and
-                // the grammar focus ride on top of it.
-                Section {
-                    Toggle(isOn: coachMode) {
-                        Label("Coach mode", systemImage: "lightbulb")
-                    }
-                } footer: {
-                    Text(explain("After each thing your future self says, you see a way to answer. Sometimes it uses a word you're studying, and your most common mistake becomes the call's focus."))
-                }
-
-                // Who ends the learner's turn: a pause, or their own Send
-                // (`SendToAnswer`). A flip mid-call reaches the gateway.
-                Section {
-                    Toggle(isOn: sendToAnswer) {
-                        Label("Answer with Send", systemImage: "paperplane")
-                    }
-                } footer: {
-                    Text(explain("Take your time. Your future self waits until you press Send."))
-                }
-
                 // Part of the conversation prompt; a flip mid-call sends the
                 // gateway the new prompt (`TutorMode`). Hidden while
                 // `TutorMode.isAvailable` is off.
@@ -123,6 +102,16 @@ struct CallSettingsSheet: View {
                     } footer: {
                         Text(explain("Pick a topic and your future self teaches it step by step, until you can say it without a mistake."))
                     }
+                }
+
+                // Who ends the learner's turn: a pause, or their own Send
+                // (`SendToAnswer`). A flip mid-call reaches the gateway.
+                Section {
+                    Toggle(isOn: sendToAnswer) {
+                        Label("Answer with Send", systemImage: "paperplane")
+                    }
+                } footer: {
+                    Text(explain("Take your time. Your future self waits until you press Send."))
                 }
 
                 Section {
@@ -151,6 +140,12 @@ struct CallSettingsSheet: View {
                     }
                     Toggle(isOn: $showsGoalChips) {
                         Label("Words to use", systemImage: "text.badge.checkmark")
+                    }
+                    // Coach mode (`CoachMode.resolve`, on for A1/A2), named
+                    // after the panel it draws above the pill: a way to answer
+                    // every line, with the word hint and grammar focus on top.
+                    Toggle(isOn: coachMode) {
+                        Label("Try saying", systemImage: "lightbulb")
                     }
                 } header: {
                     Text("Screen")

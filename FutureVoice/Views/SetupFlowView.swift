@@ -16,6 +16,10 @@ import SwiftUI
 ///                          second remix to get theirs)
 ///   3. Level             ← CEFR self-rating; calibrates every conversation
 ///   4. Purpose           ← why they're learning; sets Talk's chips
+///   5. Future            ← "Imagine your future": what the fluent self
+///                          already does, two or three per picked purpose,
+///                          as many ticked as they like (`FutureGoal`, 2026-10-28).
+///                          Skipped when no purpose was picked.
 ///
 /// The daily goal and the week used to close this flow. They moved to the
 /// routine builder over the Talk tab (`RoutineOnboardingView`, 2026-10-18),
@@ -47,6 +51,8 @@ struct SetupFlowView: View {
     @State private var purposes: [LearningPurpose] = []
     @State private var purposeDetails = PurposeDetails()
     @State private var exam: ExamKind = .ielts
+    /// The future already lived — ticked under the purposes above.
+    @State private var goals: [FutureGoal] = []
 
     /// Practice targets on offer — everything the app can deliver end to end
     /// (`LanguageCatalog.selectableTargets`). The language picked on the first
@@ -66,7 +72,7 @@ struct SetupFlowView: View {
     /// Device-preferred languages first — see `LanguageCatalog.nativeChoices`.
     private static let nativeChoices = LanguageCatalog.nativeChoices
 
-    private enum Step { case native, target, accent, level, purpose }
+    private enum Step { case native, target, accent, level, purpose, future }
 
     /// `preferredAccentId` for "keep my voice as recorded" — no remix at all
     /// (`AppState.applyDefaultAccent` skips it).
@@ -78,7 +84,7 @@ struct SetupFlowView: View {
     }
 
     private var steps: [Step] {
-        let tail: [Step] = [.purpose]
+        let tail: [Step] = purposes.isEmpty ? [.purpose] : [.purpose, .future]
         return accentOptions.count > 1 ? [.native, .target, .accent, .level] + tail
                                        : [.native, .target, .level] + tail
     }
@@ -98,6 +104,7 @@ struct SetupFlowView: View {
                     case .accent: accentStep
                     case .level:  levelStep
                     case .purpose: purposeStep
+                    case .future: futureStep
                     }
                 }
                 Spacer(minLength: 0)
@@ -123,6 +130,7 @@ struct SetupFlowView: View {
             level = appState.proficiency
             purposes = LearningPurposeStore.purposes
             purposeDetails = LearningPurposeStore.details
+            goals = appState.persona?.futureGoals ?? FutureGoalStore.pending
             // Only the PRE-selection avoids the app language — a default of
             // "learn the language you just said you read" is the wrong guess
             // for almost everyone. The learner may still pick it.
@@ -152,6 +160,7 @@ struct SetupFlowView: View {
         case .accent: return chrome("Which accent?")
         case .level:  return chrome("Your level?")
         case .purpose: return chrome("Why are you learning?")
+        case .future: return chrome("Imagine your future")
         }
     }
 
@@ -244,6 +253,22 @@ struct SetupFlowView: View {
             Text(explain("What do you want it for?"))
         } footer: {
             Text(explain("Pick as many as you like. The first one is where Talk opens."))
+        }
+    }
+
+    // MARK: - Step 5 · Future
+
+    /// What their fluent self already does, under each purpose they picked.
+    private var futureStep: some View {
+        Group {
+            Section {} header: {
+                Text(explain("What does your fluent self already do?"))
+                    .textCase(nil)
+            }
+            FutureGoalRows(purposes: purposes, picked: $goals)
+            Section {} footer: {
+                Text(explain("Pick as many as you like. Your fluent self already lives them."))
+            }
         }
     }
 
@@ -406,6 +431,10 @@ struct SetupFlowView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
+            // Gray, not the theme's faded orange: beside a solid Continue a
+            // pale accent fill read as a disabled button (founder, 2026-10-28).
+            .tint(.secondary)
+            .foregroundStyle(.primary)
             .controlSize(.large)
             Button {
                 advance()
@@ -449,6 +478,10 @@ struct SetupFlowView: View {
                LanguageCatalog.sameLanguage(targetLanguage, nativeLanguage) {
                 targetLanguage = defaultTarget
             }
+            // A goal under a purpose they just un-ticked goes with it.
+            if current == .purpose {
+                goals.removeAll { !purposes.contains($0.purpose) }
+            }
             step += 1
         } else {
             finish()
@@ -459,6 +492,15 @@ struct SetupFlowView: View {
         LearningPurposeStore.purposes = purposes
         LearningPurposeStore.details = purposeDetails
         if purposes.contains(.exam) { LearningPurposeStore.setExam(exam, for: targetLanguage) }
+        let kept = goals.filter { purposes.contains($0.purpose) }
+        if var p = appState.persona {
+            // Setup run again over a profile that already exists.
+            p.goals = kept.map(\.rawValue)
+            appState.savePersona(p)
+        } else {
+            // The persona cards come next; `savePersona` moves these onto it.
+            FutureGoalStore.pending = kept
+        }
         // Persist the answers and enroll the chosen target as the ONLY
         // language (replacing the fresh install's default enrollment), then
         // open the gate so RootView moves on to the persona cards.

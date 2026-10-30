@@ -106,8 +106,11 @@ export class CallSession implements DurableObject {
    *  delays exactly that one — reply text went from ready-at-commit to
    *  0.7–1.2 s after it. The cached system prompt (reply.ts) is what made
    *  them cheap instead; this only stops a turn that never ends from
-   *  generating forever. */
-  private static readonly specMaxFires = 12
+   *  generating forever. 12 until 2026-10-27: a long turn with many pauses
+   *  spent all twelve before it ended, so the last fire never came and the
+   *  reply was written from scratch after the commit (the founder's 7-turn
+   *  call fired 52 times). One fire is ~$0.00008 on the cached prompt. */
+  private static readonly specMaxFires = 40
   private specFiresThisTurn = 0
   private specFires = 0
   private specAdopted = 0
@@ -346,6 +349,13 @@ export class CallSession implements DurableObject {
    *  (the hold, the merge, speculation, the re-read) runs as usual; only the
    *  hold's clock is never armed. */
   private manualTurns = false
+  /** `SetMessage.holdReplies`: a committed turn waits for the app's note. */
+  private holdReplies = false
+  private heldReplyTimer: number | null = null
+  /** Past this the turn is answered without the note — with a line that
+   *  only says the app is still checking, so the late verdict that follows
+   *  is the second half of one exchange, never a contradiction. */
+  private static readonly holdReplyMaxMs = 25000
   /** A `send` is waiting for the transcriber to finalize the last words. */
   private sendRequested = false
   private sendTimer: number | null = null
@@ -674,8 +684,12 @@ export class CallSession implements DurableObject {
     }
     if (msg.type === "nudge") {
       const text = (msg.text ?? "").trim().slice(0, CallSession.maxNudgeChars)
-      if (this.ended || text.length === 0 || this.nudgesUsed >= CallSession.maxNudges) return
-      this.nudgesUsed += 1
+      // A note answering a held turn (`holdReplies`) is that turn's own
+      // reply, not an extra line: it doesn't count toward the cap.
+      const answersHeldTurn = this.heldReplyTimer !== null
+      if (this.ended || text.length === 0) return
+      if (!answersHeldTurn && this.nudgesUsed >= CallSession.maxNudges) return
+      if (!answersHeldTurn) this.nudgesUsed += 1
       this.pendingNudges.push(text)
       this.flushNudge()
       return
@@ -692,6 +706,11 @@ export class CallSession implements DurableObject {
       if (typeof msg.system === "string" && msg.system.trim()) {
         if (this.replyEngine) this.replyEngine.setSystem(msg.system)
         else this.pendingSystem = msg.system
+      }
+      if (typeof msg.holdReplies === "boolean") {
+        this.holdReplies = msg.holdReplies
+        // Switched off with a turn waiting: answer it now.
+        if (!this.holdReplies && this.heldReplyTimer !== null) this.releaseHeldReply()
       }
       if (typeof msg.manualTurns === "boolean" && msg.manualTurns !== this.manualTurns) {
         this.manualTurns = msg.manualTurns
@@ -833,7 +852,12 @@ export class CallSession implements DurableObject {
       system: this.pendingSystem ?? msg.system,
       language: this.language,
       claudeThinking: this.env.CLAUDE_REPLY_THINKING,
-      claudeEffort: this.env.CLAUDE_REPLY_EFFORT,
+      // Low by default (2026-10-27): the model default (medium) put the
+      // slowest tenth of turns at 2.6 s to the first sentence, and the
+      // learner felt the wait (field p90 1.1 s → 2.3 s from 10-21). Low:
+      // p50 1.16 → 1.01 s, p90 2.59 → 1.53 s, over 2 s 38 → 9 of 152
+      // (scratch probe, ko/en a2/b1); notes written 3/379 at both.
+      claudeEffort: this.env.CLAUDE_REPLY_EFFORT || "low",
     })
     this.replyEngine.steer = this.pendingSteer
     // Once per call, not per turn: during an outage every turn falls back,
@@ -1085,6 +1109,8 @@ export class CallSession implements DurableObject {
   /** Fire a reply generation against a SETTLED interim, before the turn is
    *  committed. Deltas buffer silently; `handleUtterance` adopts or drops. */
   private fireSpec(text: string): void {
+    // A held turn is answered with the app's note, never this speculation.
+    if (this.holdReplies) return
     this.specTimer = null
     if (this.ended || !this.started || !this.replyEngine) return
     if (this.spec || this.activeContext) return
@@ -1468,6 +1494,15 @@ export class CallSession implements DurableObject {
     if (this.specTimer !== null) { clearTimeout(this.specTimer); this.specTimer = null }
 
     const spec = this.spec as (NonNullable<CallSession["spec"]> & { context?: string }) | null
+    // The app answers this turn with a note (see `holdReplies`): nothing is
+    // written until it comes, or until the cap.
+    if (this.holdReplies) {
+      if (spec) this.dropSpec()
+      if (this.heldReplyTimer !== null) clearTimeout(this.heldReplyTimer)
+      this.heldReplyTimer = setTimeout(() => this.releaseHeldReply(true),
+        CallSession.holdReplyMaxMs) as unknown as number
+      return
+    }
     // A native line's speculation answered the raw words, without the note.
     if (spec && !native && CallSession.sameWords(spec.text, text)) {
       // The model has been writing since the interim settled — adopt it.
@@ -1497,6 +1532,23 @@ export class CallSession implements DurableObject {
     }
     if (spec) this.dropSpec()
 
+    this.turnCount += 1
+    const context = `t${this.turnCount}`
+    this.commitAtByContext.set(context, Date.now())
+    this.generateReply(context)
+  }
+
+  /** A held turn is answered: by the app's note (flushNudge), or here, when
+   *  the note never came or the hold was switched off. */
+  private releaseHeldReply(timedOut = false): void {
+    if (this.heldReplyTimer !== null) { clearTimeout(this.heldReplyTimer); this.heldReplyTimer = null }
+    if (this.ended || this.activeContext !== null) return
+    const last = this.history[this.history.length - 1]
+    if (last?.role !== "user") return
+    if (timedOut) {
+      this.warn("hold", "no note for a held turn")
+      last.text = `${last.text}\n[Note from the app — the learner did not say this: the app is still checking this answer. Say only a few words like "one second, let me check" — no verdict, no correction, no question.]`
+    }
     this.turnCount += 1
     const context = `t${this.turnCount}`
     this.commitAtByContext.set(context, Date.now())
@@ -1720,6 +1772,7 @@ export class CallSession implements DurableObject {
     if (last && last.role === "user") last.text = `${last.text}\n${note}`
     else this.history.push({ role: "user", text: note })
     console.log(`nudge: "${note.slice(0, 80)}"`)
+    if (this.heldReplyTimer !== null) { clearTimeout(this.heldReplyTimer); this.heldReplyTimer = null }
     this.turnCount += 1
     this.generateReply(`t${this.turnCount}`)
   }

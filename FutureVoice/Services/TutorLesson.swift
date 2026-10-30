@@ -40,6 +40,25 @@ struct TutorLesson: Codable, Identifiable, Equatable {
     var droppedAt: Date? = nil
     /// Every talk the lesson ran in.
     var sessionIds: [UUID] = []
+    /// The curriculum topic this lesson is for (`TutorCurriculum`), when it
+    /// came from the map. Nil for a topic the learner made up.
+    var topicId: String? = nil
+    /// The final check, once every challenge is done (founder, 2026-10-28):
+    /// the screen goes blank and they say it all in their own words, in one
+    /// go. Passing it is what finishes the lesson and ticks the topic.
+    var check: FinalCheck? = nil
+
+    struct FinalCheck: Codable, Equatable {
+        var startedAt: Date
+        /// Whole attempts judged.
+        var tries: Int = 0
+        /// "Say it once more" was asked for this attempt — only once.
+        var onceMoreUsed: Bool = false
+        var passedAt: Date?
+        /// The answer that passed, and the slips named with it.
+        var line: String?
+        var slips: [String] = []
+    }
 
     struct Challenge: Codable, Identifiable, Equatable {
         let id: UUID
@@ -57,7 +76,12 @@ struct TutorLesson: Codable, Identifiable, Equatable {
 
     var current: Int? { challenges.firstIndex { $0.doneAt == nil } }
     var doneCount: Int { challenges.filter { $0.doneAt != nil }.count }
-    var isFinished: Bool { finishedAt != nil || (!challenges.isEmpty && current == nil) }
+    var challengesDone: Bool { !challenges.isEmpty && current == nil }
+    /// Finished = the final check passed. Lessons from before the check had
+    /// `finishedAt` stamped with their last tick, so they still read done.
+    var isFinished: Bool { finishedAt != nil }
+    /// Every challenge ticked, the check not passed yet.
+    var inFinalCheck: Bool { challengesDone && finishedAt == nil }
 
     var record: TutorLessonRecord {
         TutorLessonRecord(lessonId: id, title: title,
@@ -178,11 +202,11 @@ enum TutorPlanner {
         \(levelLadder(level))
 
         Otherwise write 3 or 4 CHALLENGES that build to the goal in order, \
-        each ONE thing they must be able to say, small enough to nail in a \
-        few tries at their level. The last challenge puts it together (the \
-        whole introduction in one go, the whole order from greeting to \
-        paying, the whole answer). Practical and concrete, the way the \
-        situation really goes — not grammar topics, not quizzes.
+        each ONE part of it they must be able to say, small enough to nail \
+        in a few tries at their level. No challenge that puts it all \
+        together: after the challenges the app runs a final check where \
+        they say the whole thing in one go. Practical and concrete, the way \
+        the situation really goes — not grammar topics, not quizzes.
 
         Fields:
         - "title": the lesson's name, 2–6 words, in \(native).
@@ -245,7 +269,9 @@ enum TutorPlanner {
 /// "don't hang up — ask. Keep going and the session goes on; another topic
 /// and the book is made in the background while it asks what's next").
 enum TutorNext {
-    enum Choice: String, Decodable { case more, new, stop, unclear }
+    /// `again`: say the passed lesson once more, for practice (the tutor
+    /// offers it after a pass with slips).
+    enum Choice: String, Decodable { case more, again, new, stop, unclear }
     struct Answer: Decodable {
         let choice: Choice
         /// The next topic, when they named one.
@@ -253,19 +279,34 @@ enum TutorNext {
     }
 
     static func read(_ line: String, askedWith: String, lesson: String,
-                     targetLanguage: String) async -> Answer? {
+                     targetLanguage: String, suggested: String? = nil) async -> Answer? {
+        let offer = suggested.map { """
+
+        The tutor may have suggested a next topic from their curriculum: \
+        "\($0)". If they accept THAT one ("yes, let's do that", "that one", \
+        "sure, the next one"), the choice is "new" and "topic" is exactly \
+        "\($0)".
+        """ } ?? ""
         let system = """
         A language learner just finished a short speaking lesson ("\(lesson)") \
         and was asked whether to keep practicing it, move on to another \
         topic, or stop for today. Read their answer (transcribed from speech, \
         any language):
-        - "more": keep practicing this same topic.
+        - "more": they clearly want to keep practicing this same topic \
+          ("more", "let's keep going with this", "go deeper"), or said yes \
+          when the tutor's line asked ONLY about doing more of it.
+        - "again": they want to say it (the whole thing) once more first, \
+          or said yes when the tutor's line asked ONLY about trying it once \
+          more.
         - "new": another topic. If they named a SPECIFIC one ("ordering at \
           a cafe"), put it in "topic" in their own words; "another topic" / \
           "something else" is not a topic — leave "topic" out.
         - "stop": they're done for today.
-        - "unclear": none of these (a question, a greeting, noise).
-        Return STRICT JSON only: {"choice": "more|new|stop|unclear", "topic": "..."}
+        - "unclear": anything else — small talk, a reaction ("nice", "that \
+          was fun", "sounds good", "cool"), a question, noise, a "yes" to a \
+          line that offered both, or a tutor line that wasn't asking about \
+          this at all. When in doubt, "unclear": the tutor will ask them.\(offer)
+        Return STRICT JSON only: {"choice": "more|again|new|stop|unclear", "topic": "..."}
         """
         return try? await GeminiClient.background.sendJSON(
             system: system,
@@ -352,11 +393,8 @@ enum TutorJudge {
         /// this one first", with no way out).
         var other_topic: Bool? = nil
         var wantsOtherTopic: Bool { other_topic == true }
-        /// The tutor's last line had already left this challenge — it moves
-        /// on by its own judgment (founder, 2026-10-25), and the checklist
-        /// follows it.
-        var tutor_moved_on: Bool? = nil
-        var tutorMovedOn: Bool { tutor_moved_on == true }
+        /// What the line still lacks, in a few English words, for the tutor.
+        var missing_note: String? = nil
     }
 
     /// Did `line` do `challenge`? Content only — whether it was said
@@ -377,12 +415,9 @@ enum TutorJudge {
         topic, stop or skip this lesson, or practice something else instead \
         (in any language) — not for a mistake, a question about the \
         challenge, or "I don't know".
-        Also decide "tutor_moved_on": true ONLY when the tutor's line had \
-        already finished this challenge — said they got it and started the \
-        next step (asked for something different from this challenge), or \
-        said the whole lesson is done. False while the tutor is still on \
-        this challenge (asking for it, or for it again).
-        Return STRICT JSON only: {"done": true|false, "other_topic": true|false, "tutor_moved_on": true|false}
+        Also "missing_note": when "done" is false, what the line still \
+        lacks, in a few English words ("didn't say which size"); else "".
+        Return STRICT JSON only: {"done": true|false, "other_topic": true|false, "missing_note": "..."}
         """
         let content = """
         Challenge: \(challenge.task)
@@ -397,5 +432,90 @@ enum TutorJudge {
             idempotencyKey: "tutor-judge:\(UUID().uuidString)", requestTimeout: 10,
             fastThinking: true)
         return verdict
+    }
+}
+
+// MARK: - Final check
+
+/// The lesson's final check (founder, 2026-10-28): every challenge said in
+/// one answer, with nothing on screen to lean on. The bar is CONFIDENCE, not
+/// perfection — every part said and understood passes, small slips and a
+/// little hesitation included — but every slip is named, pass or not, and
+/// praise is for a clean answer only. The judge reads content and delivery;
+/// the slips are the per-turn correction call's, as for every tick; the
+/// outcome is code.
+enum TutorFinalCheck {
+    enum Outcome: String { case pass, onceMore, notYet, notAnAttempt }
+
+    struct Verdict: Decodable {
+        /// They tried to say the whole thing (not one part, a question, a chat).
+        let attempt: Bool
+        /// 1-based challenge numbers their answer left out.
+        var missing: [Int]? = nil
+        /// What was missing or unclear, in English, for the tutor.
+        var missing_note: String? = nil
+        /// A listener would understand what they mean.
+        var understood: Bool? = nil
+        /// Very shaky: long stalls, restarts, many broken bits.
+        var shaky: Bool? = nil
+        /// Not an attempt: they asked to be SHOWN how the whole thing goes
+        /// (founder, 2026-10-28: "if the user asks to show it, show it",
+        /// rather than "I can't do it for you").
+        var wants_example: Bool? = nil
+    }
+
+    /// Not perfect the first time → once more, always (founder, 2026-10-28:
+    /// "if it wasn't perfect, we at least should ask one more time"). The
+    /// second try passes when every part is there and understood; the tutor
+    /// then offers one more go or moving on.
+    static func outcome(_ v: Verdict, slips: Int, onceMoreUsed: Bool) -> Outcome {
+        guard v.attempt else { return .notAnAttempt }
+        if v.understood == false || !(v.missing ?? []).isEmpty { return .notYet }
+        if (v.shaky == true || slips > 0) && !onceMoreUsed { return .onceMore }
+        return .pass
+    }
+
+    static func read(_ line: String, lesson: TutorLesson, askedWith: String,
+                     targetLanguage: String) async -> Verdict? {
+        let target = LanguageCatalog.englishName(targetLanguage)
+        let parts = lesson.challenges.enumerated()
+            .map { "\($0.offset + 1). \($0.element.task)" }.joined(separator: "\n")
+        let system = """
+        A \(target) learner finished a short speaking lesson ("\(lesson.titleTarget)") \
+        and is now asked to say the whole thing in one go, in their own \
+        words, with no help. Judge the line they just said (transcribed from \
+        speech). Their own words and facts are fine; it doesn't have to match \
+        any example.
+        - "attempt": true when they are trying to say the whole thing (or \
+          most of it) — false for a question, a request for help, small \
+          talk, or practicing just one part the tutor asked for.
+        - "missing": the numbers of the parts below that their answer does \
+          NOT say at all. A part said simply, or with mistakes, is said.
+        - "missing_note": if anything is missing or can't be understood, \
+          what, in a few English words ("didn't ask to pay by card").
+        - "understood": would a patient native listener understand what they \
+          mean? Grammar slips and an accent don't matter here.
+        - "shaky": true only if it was VERY halting — long stalls, several \
+          restarts, most sentences broken off. A little hesitation is fine.
+        - "wants_example": true when, instead of trying, they ask to be \
+          shown or told how the whole thing goes ("can you show me?", "how \
+          would you say it?", "give me an example"), in any language.
+        Ignore spelling, punctuation and anything the transcriber chose.
+        Return STRICT JSON only: {"attempt": true|false, "missing": [n], \
+        "missing_note": "...", "understood": true|false, "shaky": true|false, \
+        "wants_example": true|false}
+        """
+        let content = """
+        The parts of the lesson:
+        \(parts)
+        The tutor had just said: \(askedWith)
+        The learner said: \(line)
+        """
+        return try? await GeminiClient.background.sendJSON(
+            system: system,
+            messages: [GeminiClient.Message(role: .user, content: content)],
+            maxTokens: 400, purpose: "tutor",
+            idempotencyKey: "tutor-check:\(UUID().uuidString)", requestTimeout: 15,
+            fastThinking: true)
     }
 }

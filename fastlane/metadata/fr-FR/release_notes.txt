@@ -1,10 +1,8 @@
 Nouveautés
-• La page de résultat d’un discours marque tes erreurs directement sur le texte, comme au stylo rouge.
-• Le classement d’un défi de discours affiche les essais à 80 points ou plus.
-• Dans Écouter, le bouton du lecteur ouvre la liste tout de suite quand rien ne joue.
+• Termine ton 30e jour et tu entres tout de suite dans le Noyau, sans attendre le lendemain matin.
+• Prendre ta place devient un moment à part :choisis la couleur de ton cube, grave ton nom et un souhait dessus, puis pose-le à ta place.
+• Touche n’importe quelle place sur la page du Noyau pour voir le cube de ce membre. Laisse un cœur ou un petit mot, et regarde les encouragements monter au-dessus du cube. Seuls les membres du Noyau peuvent lire le souhait d’un cube.
+• Tu reçois une notification quand quelqu’un encourage ta place.
 
 Corrections
-• En mode tuteur, dis-le correctement deux fois et le tuteur passe seul à l’étape suivante.
-• Avec Répondre avec Envoyer, le bouton Envoyer apparaît dès que tu commences à parler, et le bouton de sujet ne disparaît plus.
-• L’horloge de l’appel ne s’arrête plus à 0:05.
-• Les couleurs du thème s’affichent désormais dans les fenêtres et en mode sombre.
+• Les corrections disent maintenant ce que tu voulais dire, avec des mots à ton niveau, au lieu de rapiécer ta phrase mot par mot.

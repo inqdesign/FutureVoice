@@ -32,6 +32,9 @@ final class SpeechChallenges: ObservableObject {
         var myRank: Int?
         var myAttempts: Int?
         var topThree: [Face]? = nil
+        /// Every take anyone has put up on this board — what the card counts.
+        /// nil from a server that doesn't send it yet.
+        var attempts: Int? = nil
         /// Set once the challenge is retired: the board is frozen, nobody can
         /// enter, and it is listed under past challenges.
         var retiredAt: Date? = nil
@@ -128,6 +131,7 @@ final class SpeechChallenges: ObservableObject {
         let my_rank: Int?
         let my_attempts: Int?
         let top_three: [Face]?
+        let attempts: Int?
     }
 
     func refresh(language: String) async {
@@ -159,7 +163,7 @@ final class SpeechChallenges: ObservableObject {
         standings = Dictionary(uniqueKeysWithValues: rows.map { row in
             (row.id, Standing(entrants: row.entrants ?? 0, topScore: row.top_score,
                               myBest: row.my_best, myRank: row.my_rank,
-                              myAttempts: row.my_attempts, topThree: row.top_three,
+                              myAttempts: row.my_attempts, topThree: row.top_three, attempts: row.attempts,
                               retiredAt: row.retired_at))
         })
         writeCache(language)
@@ -249,6 +253,7 @@ final class SpeechChallenges: ObservableObject {
             }
             var standing = standings[challengeId] ?? Standing(entrants: 0)
             standing.entrants = row.entrants
+            standing.attempts = standing.attempts.map { $0 + 1 }
             standing.myBest = row.best
             standing.myRank = row.rank
             standing.myAttempts = (standing.myAttempts ?? 0) + 1

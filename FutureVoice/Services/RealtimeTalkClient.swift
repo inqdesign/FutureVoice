@@ -443,6 +443,13 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// Lines the fluent self has started on THIS call — the first one on the
     /// speaker is half-duplex (see `audio_start`).
     private var linesStarted = 0
+    /// Where each fluent-self line played (output port → lines) and how much
+    /// mic audio went up as echo-gate zeros, for `talk_rt_session`
+    /// (2026-10-27). The gateway stops forwarding zeros after a short tail,
+    /// so these say how much of a call's transcription audio was the fluent
+    /// self playing on a route the gate doesn't cover (earphones).
+    private var linesByRoute: [String: Int] = [:]
+    private var zeroSeconds: Double = 0
     /// The greeting, already synthesized and sitting in `PhraseAudioStore`,
     /// decoded and waiting for `ready`. See `playLocalOpener`.
     private var localOpener: LocalOpener?
@@ -515,6 +522,8 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         meterTotal = 0
         state = .connecting
         linesStarted = 0
+        linesByRoute = [:]
+        zeroSeconds = 0
         localOpener = nil
         openerInAir = nil
         replyInAir = nil
@@ -941,6 +950,13 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         guard !isTornDown else { return }
         if !on { sendPending = false }
         sendControl(["type": "set", "manualTurns": on])
+    }
+
+    /// Tutor mode's final check: each answer waits for the app's verdict
+    /// note and is answered once, with it. An older gateway ignores it.
+    func setHoldReplies(_ on: Bool) {
+        guard !isTornDown else { return }
+        sendControl(["type": "set", "holdReplies": on])
     }
 
     /// Tutor mode switched mid-call: counted from now on, or from the
@@ -1776,6 +1792,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         // speaker is half-duplex, because the echo canceller has not heard
         // the voice yet and cannot cancel what it has never heard.
         let halfDuplex = builtOutput == AVAudioSession.Port.builtInSpeaker.rawValue
+        linesByRoute[builtOutput, default: 0] += 1
         mic.setEchoGate(active: echoNeedsGate, halfDuplex: halfDuplex)
         state = .speaking
         replySampleRate = opener.rate
@@ -2010,6 +2027,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         Task { @MainActor [weak self] in
             guard let self else { return }
             self.micBytesSent += bytes
+            if muted { self.zeroSeconds += Double(frames) / uplink.sampleRate }
             // The pill follows whoever is actually audible. While a reply
             // plays it shows the reply — except when the mic frame passed the
             // echo gate, which means the LEARNER is talking (over it, or in
@@ -2162,6 +2180,13 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             // many times Send was pressed. Absent from an older gateway.
             "manual_turns": (json["manualTurns"] as? Bool).map { $0 ? "1" : "0" } ?? "",
             "sends": (json["sends"] as? Int).map(String.init) ?? "",
+            // Audio route (2026-10-27): the output at the end, every line's
+            // output ("Speaker:5,BluetoothA2DPOutput:2"), and seconds sent
+            // upstream as echo-gate zeros.
+            "route_out": builtOutput,
+            "line_routes": linesByRoute.sorted { $0.key < $1.key }
+                .map { "\($0.key):\($0.value)" }.joined(separator: ","),
+            "zero_s": String(Int(zeroSeconds.rounded())),
         ])
     }
 
@@ -2251,6 +2276,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             let halfDuplex = linesStarted == 1
                 && builtOutput == AVAudioSession.Port.builtInSpeaker.rawValue
             if halfDuplex { Self.step("echo gate: first line on speaker — half-duplex") }
+            linesByRoute[builtOutput, default: 0] += 1
             mic.setEchoGate(active: echoNeedsGate, halfDuplex: halfDuplex)
             replySampleRate = json["sampleRate"] as? Double ?? 22050
             ensurePlaybackFormat(rate: replySampleRate)

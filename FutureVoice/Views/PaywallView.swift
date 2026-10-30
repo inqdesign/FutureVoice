@@ -143,10 +143,18 @@ struct PaywallView: View {
         currentPlanId == "\(tier)_\(period.rawValue)"
     }
 
-    /// True when the selection IS what they already pay for — the one case
-    /// where the button must not say "Subscribe".
+    /// The plan Apple will switch this subscription to at the renewal — a
+    /// downgrade bought here waits for the period to end (2026-10-27).
+    private func isPendingPlan(tier: String, period: PlanPeriod) -> Bool {
+        isSubscriber && account.pendingPlan?.planId == "\(tier)_\(period.rawValue)"
+    }
+
+    /// True when the selection IS what they already pay for — or what they
+    /// already bought for the renewal — the cases where the button must not
+    /// say "Subscribe": buying it again changes nothing.
     private var selectionIsCurrentPlan: Bool {
         isCurrentPlan(tier: selectedTier, period: period)
+            || isPendingPlan(tier: selectedTier, period: period)
     }
 
     /// The held plan, named the way the CARDS name it ("Plus · Monthly") —
@@ -609,12 +617,27 @@ struct PaywallView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(isSubscriber ? explain("Your plan") : explain("Keep talking"))
                     .font(.largeTitle.weight(.bold))
-                if isSubscriber {
+                if isSubscriber, !account.isTrialing, let next = account.pendingPlan {
+                    // A scheduled change has to be read, not a grey footnote
+                    // (2026-10-27): the subscriber who bought a downgrade
+                    // opened this page seven times looking for it.
+                    Label(explain("You're on the \(currentPlanLabel) until \(account.renewalLabel), then \(AccountStatus.planName(next.planId))."),
+                          systemImage: "arrow.triangle.swap")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .padding(.horizontal, 14).padding(.vertical, 12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.accentColor.opacity(0.12),
+                                    in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .padding(.top, 4)
+                } else if isSubscriber {
                     Label(account.isTrialing
                           ? (account.cancelAtPeriodEnd
                              ? explain("You're on the \(currentPlanLabel) — it ends on \(account.renewalLabel).")
                              : explain("You're on the \(currentPlanLabel) — it converts unless you cancel."))
-                          : explain("You're subscribed to \(currentPlanLabel)."),
+                          : account.pendingPlan.map {
+                              explain("You're on the \(currentPlanLabel) until \(account.renewalLabel), then \(AccountStatus.planName($0.planId)).")
+                          } ?? explain("You're subscribed to \(currentPlanLabel)."),
                           systemImage: "checkmark.seal.fill")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
@@ -770,6 +793,10 @@ struct PaywallView: View {
                     // two lines (measured in de/fr, 2026-10-02).
                     if isCurrent {
                         Text(explain("Current plan"))
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.tint)
+                    } else if isPendingPlan(tier: tier, period: period) {
+                        Text(explain("From \(account.renewalLabel)"))
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(.tint)
                     } else if tier == Self.mostChosenTier {

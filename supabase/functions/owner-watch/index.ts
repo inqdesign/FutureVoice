@@ -12,7 +12,10 @@
 //   * A claimed alert is never retried. Telegram being down loses a message
 //     rather than delivering it at 3am with four copies behind it.
 //   * The TEXT is composed here, from columns. Nothing a learner can type
-//     reaches the owner's Telegram.
+//     reaches the owner's Telegram — with ONE exception: a note left on a
+//     Core seat (2026-10-29, founder) arrives with its words, because the
+//     founder reading it is how those notes are moderated. The same note
+//     also goes to the seat's owner as a push (`push-send`).
 //
 // Not user-callable: called by pg_cron every minute, which has no Supabase
 // JWT, so authenticity is CLEANUP_SECRET in X-Cleanup-Secret and an unset
@@ -76,12 +79,18 @@ Deno.serve(async (req) => {
     return json({ ok: false, error: error.message }, 500)
   }
 
-  const alerts = (data ?? []) as Alert[]
+  // Notes on Core seats, claimed separately so the three kinds above keep
+  // their own claim function untouched.
+  const { data: notes, error: notesError } = await admin.rpc("core_cheer_alerts_claim", { p_limit: MAX_PER_RUN })
+  if (notesError) console.error("owner-watch: core notes claim failed", notesError)
+
+  const alerts = [...((data ?? []) as Alert[]), ...((notes ?? []) as Alert[])]
   let sent = 0
   for (const alert of alerts) {
     const text = compose(alert)
     if (!text) continue
     if (await notifyOwner(text)) sent++
+    if (alert.kind === "core_note") await pushSeatOwner(alert)
   }
   if (alerts.length) console.log(`owner-watch: ${sent}/${alerts.length} sent`)
   return json({ ok: true, claimed: alerts.length, sent })
@@ -125,6 +134,17 @@ function compose({ kind, payload }: Alert): string | null {
       break
     }
 
+    case "core_note": {
+      const seatUser = String(p.seat_user ?? "")
+      const author = String(p.author ?? "")
+      lines.push(`[nawana] 💬 코어 칸에 새 응원${TEST_IDS.has(author) ? " (내 테스트 계정)" : ""}`,
+                 `받은 칸: ${p.seat ?? seatUser.slice(0, 8)} (${p.language ?? "?"})`,
+                 `남긴 사람: ${p.author_name ?? author.slice(0, 8)}`,
+                 `내용: ${p.body ?? ""}`,
+                 `note id: ${p.id}`)
+      return lines.filter(Boolean).join("\n")
+    }
+
     default:
       return null
   }
@@ -135,4 +155,44 @@ function compose({ kind, payload }: Alert): string | null {
 function day(v: unknown): string {
   const d = new Date(String(v))
   return Number.isNaN(d.getTime()) ? String(v) : d.toISOString().slice(0, 16).replace("T", " ") + " UTC"
+}
+
+/// The seat's owner hears about a new note on their cube. In the language
+/// they picked for the app (`push-send` chooses by `app_language`); the note
+/// itself rides as written. Never for a note left on your own seat.
+async function pushSeatOwner({ payload }: Alert): Promise<void> {
+  const p = payload ?? {}
+  const seatUser = String(p.seat_user ?? "")
+  if (!seatUser || seatUser === String(p.author ?? "")) return
+  const secret = Deno.env.get("PUSH_SECRET")
+  if (!secret) return
+  const who = p.author_name ? String(p.author_name) : null
+  const note = String(p.body ?? "")
+  const line = (from: string) => (who ? `${who}: ${note}` : `${from}: ${note}`)
+  const texts = {
+    en: { title: "A cheer on your Core seat", body: line("Someone") },
+    ko: { title: "코어 내 자리에 응원이 왔어요", body: line("누군가") },
+    ja: { title: "コアの席に応援が届きました", body: line("誰か") },
+    "zh-Hans": { title: "你的核心座位收到了加油", body: line("有人") },
+    "zh-Hant": { title: "你的核心座位收到了加油", body: line("有人") },
+    es: { title: "Un ánimo en tu asiento del Núcleo", body: line("Alguien") },
+    fr: { title: "Un encouragement sur ta place du Noyau", body: line("Quelqu’un") },
+    de: { title: "Ein Gruß an deinen Platz im Core", body: line("Jemand") },
+  }
+  try {
+    const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/push-send`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Push-Secret": secret },
+      body: JSON.stringify({
+        kind: "core_cheer",
+        dedupe_key: `note:${p.id}`,
+        user_ids: [seatUser],
+        texts,
+        url: "futurevoice://coreseat",
+      }),
+    })
+    if (!res.ok) console.error("owner-watch: core cheer push", res.status, await res.text())
+  } catch (e) {
+    console.error("owner-watch: core cheer push failed", e)
+  }
 }

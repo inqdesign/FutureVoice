@@ -22,7 +22,7 @@
 	<key>CFBundlePackageType</key>
 	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.2.5</string>
+	<string>1.2.7</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -35,7 +35,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>121</string>
+	<string>124</string>
 	<key>FVICloudContainer</key>
 	<string>$(ICLOUD_CONTAINER)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
@@ -63,6 +63,7 @@
 		<string>GeistPixel-Square.ttf</string>
 		<string>Galmuri14.ttf</string>
 		<string>PixelifySans-Regular.ttf</string>
+		<string>NanumPenScript-Regular.ttf</string>
 	</array>
 	<key>UIBackgroundModes</key>
 	<array>

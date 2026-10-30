@@ -98,6 +98,14 @@ struct RootTabView: View {
     /// The free-talk welcome waits behind the Talk introduction on a first
     /// launch: "this is Talk" reads before "here are your minutes".
     @State private var welcomeAfterIntro = false
+    /// The learner's seat in the Core, when it has not been celebrated on
+    /// this device yet (`CoreWelcomeView`).
+    @State private var coreWelcome: CoreWelcomeStore.Seat?
+    /// My own seat, opened from a cheer's push.
+    @State private var mySeatFromLink: CoreClubView.SeatRef?
+    #if DEBUG
+    @State private var debugSeatClosed = false
+    #endif
     @Environment(\.scenePhase) private var scenePhase
 
     enum Tab: Hashable {
@@ -130,7 +138,32 @@ struct RootTabView: View {
         // A tab opened while something else was up gets its introduction the
         // moment that closes.
         .onChange(of: anotherSheetUp) { _, up in
-            if !up { offerPageIntro() }
+            if !up { offerPageIntro(); offerCoreWelcome() }
+        }
+        .onAppear { offerCoreWelcome() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { offerCoreWelcome() }
+        }
+        #if DEBUG
+        .sheet(isPresented: Binding(get: { UserDefaults.standard.integer(forKey: "coreseat") != 0 && !debugSeatClosed },
+                                    set: { if !$0 { debugSeatClosed = true } })) {
+            CoreSeatDetailSheet(language: "en", index: 0,
+                                preview: .init(index: 0, theme: 4, name: "이응규",
+                                               mine: UserDefaults.standard.integer(forKey: "coreseat") == 1,
+                                               can_read_hope: UserDefaults.standard.integer(forKey: "coreseat") == 1,
+                                               hope: UserDefaults.standard.integer(forKey: "coreseat") == 1
+                                                   ? "내년엔 영어로 발표하기" : nil,
+                                               days_held: 12,
+                                               seated_since: "2026-10-18"))
+        }
+        #endif
+        .sheet(item: $mySeatFromLink) { seat in
+            CoreSeatDetailSheet(language: appState.targetLanguage, index: seat.index)
+        }
+        .fullScreenCover(item: $coreWelcome) { seat in
+            CoreWelcomeView(seat: seat, initialName: appState.persona?.displayName ?? "") {
+                coreWelcome = nil
+            }
         }
         .sheet(item: $pageIntro, onDismiss: {
             if welcomeAfterIntro {
@@ -369,6 +402,11 @@ struct RootTabView: View {
             callInbox.pendingTrialReport = false
             offerTrialReport()
         }
+        .onChange(of: callInbox.debugTrialReport?.builtAt) { _, _ in
+            guard let report = callInbox.debugTrialReport else { return }
+            callInbox.debugTrialReport = nil
+            trialReport = report
+        }
         .onChange(of: callInbox.debugWeekRecap) { _, recap in
             guard let recap else { return }
             callInbox.debugWeekRecap = nil
@@ -473,7 +511,7 @@ struct RootTabView: View {
                 // is the EXACT two-line stack the home ring renders, so the
                 // hand-off never shifts "Let's talk" vertically.
                 VStack(spacing: 6) {
-                    Text("Let's talk")
+                    Text(TalkRingMode.current.title)
                         .geistPixel(20)
                         .foregroundStyle(.primary)
                     Text(appState.talkRingHeadline)
@@ -545,7 +583,7 @@ struct RootTabView: View {
             || callInbox.pendingAnswer != nil || answeredCall != nil
             || appState.levelUpAnnouncement != nil
             || referralInbox.pendingJoin != nil || updates.pending != nil
-            || trialReport != nil
+            || trialReport != nil || coreWelcome != nil
     }
 
     /// Nothing else is up, here or in a call screen above the tabs: the
@@ -621,6 +659,30 @@ struct RootTabView: View {
         guard welcomeAfterIntro, pageIntro == nil else { return }
         welcomeAfterIntro = false
         checkFreeTalkWelcome()
+    }
+
+    /// The Core's welcome, once per seat per device. Asked on launch, on
+    /// every foreground and whenever another sheet closes — a call ending is
+    /// one of those, and the tick that seats someone happens mid-call. It
+    /// waits for the screen to be clear rather than giving up on it.
+    private func offerCoreWelcome() {
+        #if DEBUG
+        if UserDefaults.standard.bool(forKey: "corewelcome"), coreWelcome == nil {
+            UserDefaults.standard.set(false, forKey: "corewelcome")
+            coreWelcome = CoreWelcomeStore.preview
+            return
+        }
+        #endif
+        guard appState.setupComplete, coreWelcome == nil else { return }
+        let language = appState.targetLanguage
+        Task { @MainActor in
+            guard let seat = await CoreWelcomeStore.due(language: language) else { return }
+            for _ in 0..<120 where !quietForTrialReport {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+            }
+            guard quietForTrialReport, coreWelcome == nil else { return }
+            coreWelcome = seat
+        }
     }
 
     private func offerWeekRecap() {
@@ -763,6 +825,10 @@ struct RootTabView: View {
             // things you set aside are back").
             selection = .practice
             appState.pendingPracticeRoute = .review
+        case "waiting":
+            // The tutor bot's Start: the cards it counted as waiting.
+            selection = .practice
+            appState.pendingPracticeRoute = .waitingReview
         case "weeklytest":
             selection = .practice
             appState.pendingPracticeRoute = .weeklyTest
@@ -774,6 +840,14 @@ struct RootTabView: View {
         case "trialreport":
             // The push to learners who left at the end of their free minutes.
             openTrialReportFromLink()
+        case "coreseat":
+            // A cheer left on my Core seat (`owner-watch` → `push-send`).
+            let language = appState.targetLanguage
+            Task { @MainActor in
+                if let mine = await CoreClubService.fetchSeatMap(language: language)?.mine {
+                    mySeatFromLink = CoreClubView.SeatRef(index: mine)
+                }
+            }
         case "book":
             // Continue widget: open a specific book's detail page.
             let comps = URLComponents(url: url, resolvingAgainstBaseURL: false)
@@ -811,7 +885,13 @@ struct RootTabView: View {
         case .talk:
             selection = .home
             appState.requestFreeTalk(from: .widget)
-        case .review, .words, .expressions:
+        case .review:
+            // The block's own deck, as Activity deals it. The put-off deck
+            // (`.review`) holds only what was snoozed, so a learner with 22
+            // cards waiting was dealt one (2026-10-28).
+            selection = .practice
+            appState.pendingPracticeRoute = .routineReview
+        case .words, .expressions:
             selection = .practice
             appState.pendingPracticeRoute = .review
         case .test:

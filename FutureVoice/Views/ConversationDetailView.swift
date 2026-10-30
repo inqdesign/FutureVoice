@@ -841,21 +841,15 @@ struct ConversationDetailView: View {
 
     /// The drill chapter: the talk's grammar and expression fixes. The
     /// corrections are the DIAGNOSIS — read what changed and why — and the
-    /// card run below is the practice: it shows your original and asks you
+    /// card run above is the practice: it shows your original and asks you
     /// to produce the fix from memory. Saying lines aloud lives in the
     /// Shadow chapter; this one is about getting the form right.
     @ViewBuilder
     private var drillPage: some View {
         let all = corrections
-        if !all.isEmpty {
-            groupLabel("Say it better", icon: "sparkles")
-            ForEach(all) { item in
-                correctionRow(item)
-            }
-            pageFooter(explain("Each pair is what you said and its corrected form. Tap one to study it as a card — examples, variants, a memory hook. The run below then asks you to produce the fix from memory."))
-        }
+        // The run leads the page: on a long talk the list ran to fifty
+        // pairs and the button sat under all of them.
         if drillCount > 0 {
-            Divider().padding(.leading, 20).padding(.top, 12)
             NavigationLink {
                 sessionDeck
             } label: {
@@ -866,8 +860,18 @@ struct ConversationDetailView: View {
             .accentProminent()
             .controlSize(.large)
             .padding(.horizontal, 20)
-            .padding(.top, 16)
+            .padding(.top, 8)
             pageFooter(explain("A quick run through this talk's key phrases — anything left comes back in Review."))
+            if !all.isEmpty {
+                Divider().padding(.leading, 20).padding(.vertical, 8)
+            }
+        }
+        if !all.isEmpty {
+            groupLabel("Say it better", icon: "sparkles")
+            ForEach(all) { item in
+                correctionRow(item)
+            }
+            pageFooter(explain("Each pair is what you said and its corrected form. Tap one to study it as a card — examples, variants, a memory hook. The run above then asks you to produce the fix from memory."))
         }
         Color.clear.frame(height: 4)
     }

@@ -1,10 +1,8 @@
 Neu
-• Die Ergebnisseite einer Rede markiert deine Fehler jetzt direkt im Text, wie mit Rotstift.
-• In die Rangliste einer Rede-Challenge kommen Versuche ab 80 Punkten.
-• Unter „Anhören“ öffnet der Player-Knopf sofort die Liste, wenn gerade nichts läuft.
+• Schaffst du deinen 30. Tag, bist du sofort im Core und musst nicht bis zum nächsten Morgen warten.
+• Deinen Platz einzunehmen ist jetzt ein eigener Moment: Wähl die Farbe deines Würfels, graviere deinen Namen und einen Wunsch darauf und setz ihn auf deinen Platz.
+• Tipp auf der Core-Seite auf einen Platz, um den Würfel dieses Mitglieds zu sehen. Lass ein Herz oder einen kurzen Gruß da und sieh zu, wie Grüße über dem Würfel aufsteigen. Den Wunsch auf einem Würfel können nur Mitglieder des Core lesen.
+• Du bekommst eine Mitteilung, wenn jemand deinem Platz einen Gruß hinterlässt.
 
 Behoben
-• Im Tutor-Modus geht der Tutor von selbst zum nächsten Schritt, wenn du es zweimal richtig sagst.
-• Bei „Mit Senden antworten“ erscheint der Senden-Knopf erst, wenn du zu sprechen beginnst, und der Themen-Knopf verschwindet nicht mehr.
-• Die Uhr im Gespräch bleibt nicht mehr bei 0:05 stehen.
-• Die Designfarben sind jetzt auch in Fenstern und im Dunkelmodus zu sehen.
+• Korrekturen sagen jetzt, was du gemeint hast, in Worten für dein Niveau, statt deinen Satz Wort für Wort zu flicken.

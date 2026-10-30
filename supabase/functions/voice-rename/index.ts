@@ -9,7 +9,7 @@
 // write on a voice the caller already owns.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
-import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
+import { requireUser, handlePreflight, errorResponse, upstreamErrorResponse, cors } from "../_shared/auth.ts"
 import * as cartesia from "../_shared/cartesia.ts"
 
 const MAX_NAME_LENGTH = 100
@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
   // our copy is renamed.
   if (cartesia.isCartesiaVoice(body.voice_id)) {
     const r = await cartesia.renameVoice(body.voice_id, name)
-    if (!r.ok) return errorResponse(r.status, "cartesia upstream error", (r.detail ?? "").slice(0, 500))
+    if (!r.ok) return upstreamErrorResponse(r.status, "cartesia upstream error", (r.detail ?? "").slice(0, 500))
   }
 
   // Keep our copy in step with upstream. Written AFTER the upstream edit, so

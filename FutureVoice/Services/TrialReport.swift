@@ -33,6 +33,54 @@ struct TrialReport: Codable {
     var level: String?
     var levelRationale: String?
     var builtAt: Date
+    /// The fluent self's narration of the deck (`ReportNarration`), written
+    /// once and replayed from here.
+    var narration: ReportNarration? = nil
+    /// How the learner used the app, worded (`HabitAdvice`) — the routine
+    /// card's evidence.
+    var habitAdvice: HabitAdvice? = nil
+    /// The learner's OWN speaking time per language in the window, most
+    /// first (2026-10-28). Twenty minutes of call is rarely ten of the
+    /// learner's voice, and one learner in five splits it across two
+    /// languages, so the level card says what it was read from and names
+    /// the language this report doesn't read. Empty on reports built before.
+    var spoken: [Speech] = []
+
+    struct Speech: Codable, Equatable {
+        var language: String
+        var seconds: Int
+    }
+
+    /// Under this much of their own speech, the level is a first read.
+    static let thinSpeechSeconds = 300
+
+    var ownSpeechSeconds: Int? {
+        spoken.first { LanguageCatalog.sameLanguage($0.language, targetLanguage) }?.seconds
+    }
+    var otherLanguages: [Speech] {
+        spoken.filter { !LanguageCatalog.sameLanguage($0.language, targetLanguage) && $0.seconds > 0 }
+    }
+}
+
+extension TrialReport {
+    enum CodingKeys: String, CodingKey {
+        case recap, targetLanguage, testId, testThin, level, levelRationale,
+             builtAt, narration, habitAdvice, spoken
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        recap = try c.decode(WeekRecap.self, forKey: .recap)
+        targetLanguage = try c.decode(String.self, forKey: .targetLanguage)
+        testId = try c.decodeIfPresent(UUID.self, forKey: .testId)
+        testThin = try c.decodeIfPresent(Bool.self, forKey: .testThin) ?? false
+        level = try c.decodeIfPresent(String.self, forKey: .level)
+        levelRationale = try c.decodeIfPresent(String.self, forKey: .levelRationale)
+        builtAt = try c.decode(Date.self, forKey: .builtAt)
+        narration = try c.decodeIfPresent(ReportNarration.self, forKey: .narration)
+        habitAdvice = try c.decodeIfPresent(HabitAdvice.self, forKey: .habitAdvice)
+        spoken = try c.decodeIfPresent([Speech].self, forKey: .spoken) ?? []
+    }
 }
 
 @MainActor
@@ -118,9 +166,37 @@ enum TrialReportStore {
     /// second build would rewrite a coach the learner already read.
     static func current(targetLanguage: String, now: Date = Date()) -> TrialReport {
         if let kept = load(language: targetLanguage) { return kept }
-        let first = spokenSessions().compactMap { $0.turns.first?.timestamp ?? $0.startedAt }.min() ?? now
+        let sessions = spokenSessions()
+        let first = sessions.compactMap { $0.turns.first?.timestamp ?? $0.startedAt }.min() ?? now
+        return build(from: first, sessions: sessions, targetLanguage: targetLanguage, now: now)
+    }
+
+    #if DEBUG
+    /// Me → Developer: the report over the last `days` of this phone's own
+    /// talks, built fresh every time, past every gate — so it can be LOOKED
+    /// at before it reaches a learner. The end-of-report feedback ask is made
+    /// showable again; nothing else about the account changes.
+    static func preview(targetLanguage: String, days: Int = 7, now: Date = Date()) -> TrialReport {
+        try? FileManager.default.removeItem(at: url(targetLanguage))
+        FeedbackPrompt.reset(.trialReport)
+        let start = now.addingTimeInterval(-Double(days) * 86_400)
+        let sessions = spokenSessions().filter {
+            ($0.turns.last(where: { $0.role == .user })?.timestamp ?? $0.startedAt) >= start
+        }
+        return build(from: start, sessions: sessions, targetLanguage: targetLanguage, now: now)
+    }
+    #endif
+
+    private static func build(from first: Date, sessions: [Session], targetLanguage: String, now: Date) -> TrialReport {
+        let spoken = speech(in: sessions)
+        // Two languages spoken: the report reads the one it is opened in, and
+        // its minutes and talks are that language's, so the cover's number is
+        // the number the level and the coach were read from. One language:
+        // the meter's every-language total, as before.
+        let several = spoken.filter { $0.seconds > 0 }.count > 1
         var recap = WeekRecapBuilder.build(start: Calendar.current.startOfDay(for: first),
-                                           end: now.addingTimeInterval(1), wholeWindow: true)
+                                           end: now.addingTimeInterval(1), wholeWindow: true,
+                                           language: several ? targetLanguage : nil)
         // No week before a trial; the talk card's comparison line stays quiet.
         recap.previousTalkSeconds = 0
         recap.previousShadowAverage = nil
@@ -129,13 +205,28 @@ enum TrialReportStore {
         if recap.talkSeconds == 0 {
             recap.talkSeconds = recap.talks.reduce(0) { $0 + $1.minutes * 60 }
         }
-        var report = TrialReport(recap: recap, targetLanguage: targetLanguage, builtAt: now)
+        var report = TrialReport(recap: recap, targetLanguage: targetLanguage, builtAt: now,
+                                 spoken: spoken)
         #if DEBUG
         // `-trialthin 1`: skip the test, to see the level and routine cards.
         report.testThin = UserDefaults.standard.bool(forKey: "trialthin")
         #endif
         save(report)
         return report
+    }
+
+    /// The learner's own speech per language, read from their turns (the
+    /// lines a level is judged on: no misheard or coach-read lines), most first.
+    private static func speech(in sessions: [Session]) -> [TrialReport.Speech] {
+        var byLanguage: [String: Int] = [:]
+        for session in sessions where !session.isPractice {
+            let ms = session.turns.filter(\.isEvidence).reduce(0) { $0 + $1.durationMs }
+            let key = byLanguage.keys.first { LanguageCatalog.sameLanguage($0, session.targetLanguage) }
+                ?? session.targetLanguage
+            byLanguage[key, default: 0] += ms / 1000
+        }
+        return byLanguage.map { TrialReport.Speech(language: $0.key, seconds: $0.value) }
+            .sorted { $0.seconds > $1.seconds }
     }
 
     /// Developer: start over.

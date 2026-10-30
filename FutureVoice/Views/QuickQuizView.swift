@@ -30,7 +30,7 @@ struct QuickQuizButton: View {
     }
 }
 
-private struct GlassCircleButton: ViewModifier {
+struct GlassCircleButton: ViewModifier {
     @Environment(\.colorScheme) private var colorScheme
 
     func body(content: Content) -> some View {

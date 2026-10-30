@@ -247,6 +247,11 @@ final class AppState: ObservableObject {
         case expressions(phrase: String? = nil)
         case book(kind: String, id: UUID)   // Continue widget → a book's detail page
         case review                         // review reminder → the due deck
+        /// The routine's Review block (its widget row, its reminder, the
+        /// tutor bot's Start) → the same mixed deck Activity's row deals.
+        case routineReview
+        /// The tutor bot's "N cards waiting" → exactly those N cards.
+        case waitingReview
         /// A per-item callback → open exactly that card.
         case reviewItem(kind: String, value: String)
         /// The weekly test's reminder or deep link → open this week's test.
@@ -1499,6 +1504,13 @@ final class AppState: ObservableObject {
     }
 
     func savePersona(_ p: UserPersona) {
+        var p = p
+        // The goals setup picked, one step before the persona existed.
+        let pending = FutureGoalStore.pending
+        if p.goals.isEmpty, !pending.isEmpty {
+            p.goals = pending.map(\.rawValue)
+        }
+        FutureGoalStore.pending = []
         PersonaStore.shared.save(p)
         persona = p
         // Old suggestions were grounded in the previous persona — wipe them

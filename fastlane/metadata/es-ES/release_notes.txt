@@ -1,10 +1,8 @@
 Novedades
-• La página de resultados de un discurso marca tus errores sobre el texto, como con boli rojo.
-• En la clasificación de un reto de discurso aparecen los intentos de 80 puntos o más.
-• En Escuchar, el botón del reproductor abre la lista al instante cuando no suena nada.
+• Al completar tu día 30 entras en el Núcleo al momento, sin esperar a la mañana siguiente.
+• Ocupar tu asiento ahora es un momento especial: elige el color de tu cubo, graba en él tu nombre y un deseo, y colócalo en tu asiento.
+• Toca cualquier asiento en la página del Núcleo para ver el cubo de ese miembro. Deja un corazón o un ánimo corto y verás los ánimos subir sobre el cubo. Solo los miembros del Núcleo pueden leer el deseo de un cubo.
+• Te llega una notificación cuando alguien le deja un ánimo a tu asiento.
 
 Correcciones
-• En el modo tutor, si lo dices bien dos veces, el tutor pasa solo al siguiente paso.
-• Con Responder con Enviar, el botón Enviar aparece cuando empiezas a hablar, y el botón de tema ya no desaparece.
-• El reloj de la llamada ya no se detiene en 0:05.
-• Los colores del tema ahora se ven dentro de las hojas y en modo oscuro.
+• Las correcciones ahora dicen lo que querías decir, con palabras de tu nivel, en lugar de remendar tu frase palabra por palabra.
