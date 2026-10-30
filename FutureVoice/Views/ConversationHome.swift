@@ -121,7 +121,7 @@ struct ConversationHome: View {
                     }
                     .frame(maxWidth: .infinity)
                     .modifier(SoftenedBehindNote(on: tutorBot.noteShown))
-                    Button { showingTopics = true } label: {
+                    Button { openTopics() } label: {
                         Label("Find a topic", systemImage: "sparkles")
                             .font(.body.weight(.semibold))
                             .padding(.horizontal, 6)
@@ -200,7 +200,7 @@ struct ConversationHome: View {
                 refreshTutor(delay: 0.3)
                 reload(); drawRing()
                 #if DEBUG
-                if UserDefaults.standard.bool(forKey: "openTopics") { showingTopics = true }
+                if UserDefaults.standard.bool(forKey: "openTopics") { openTopics() }
                 #endif
             }
             // Ring-path calls live in RootTabView's overlay — this view never
@@ -352,42 +352,66 @@ struct ConversationHome: View {
         Task { await prewarmFreeTalkOpenerAudio() }
     }
 
-    // MARK: - Topics beside the call (Mac)
+    // MARK: - Topics beside Talk (Mac)
 
-    /// True while the topics page draws the call in its right half (the Mac,
-    /// a wide window); false everywhere else.
-    @State private var topicsSplit = false
+    /// True while the topics stand in a column right of Talk (the Mac, a
+    /// wide window); a call a topic starts then opens on Talk's side.
+    @State private var topicsBeside = false
     /// A pick while a call runs beside the topics: the call has to end first
     /// (a new launch would tear the running one down with no summary).
     @State private var topicsBusy = false
 
-    private var callInTopicsPane: Bool { topicsSplit && showingTopics }
+    private var callInTopicsPane: Bool { topicsBeside }
+
+    /// "Find a topic": a column beside Talk on a wide Mac window, the
+    /// pushed page everywhere else.
+    private func openTopics() {
+        if MacLayout.isMac, MacLayout.screenWidth >= MacLayout.reviewSplitMinWidth {
+            topicsBeside = true
+        } else {
+            showingTopics = true
+        }
+    }
 
     var body: some View {
         #if targetEnvironment(macCatalyst)
-        // The Mac: with the topics open on a wide window, the Talk stack
-        // keeps the left (the topics page on top of it) and the call a topic
-        // starts takes the right, so a topic and its talk are read side by
-        // side (founder, 2026-10-30). The split is drawn HERE, beside the
-        // stack, never inside the pushed page: a stack inside a pushed page
-        // draws no bar, and the call's ✕, title and clock live in its bar.
-        GeometryReader { geo in
-            let wide = geo.size.width >= MacLayout.reviewSplitMinWidth
-            HStack(spacing: 0) {
+        // The Mac: "Find a topic" keeps Talk on the left and opens the topics
+        // in a column on the right; a call a topic starts takes Talk's side,
+        // so the topics and the talk are on screen together (founder,
+        // 2026-10-30). Each side is its own stack: a stack inside a pushed
+        // page draws no bar, and the call's ✕, title and clock live in its bar.
+        HStack(spacing: 0) {
+            ZStack {
                 homeStack
-                    .frame(width: callInTopicsPane ? MacLayout.reviewShelfWidth : nil)
-                if callInTopicsPane {
-                    Divider().ignoresSafeArea()
-                    topicsCallPane
+                if topicsBeside, let launch = callLaunch {
+                    callView(launch, onClose: {
+                        callLaunch = nil
+                        callEnded()
+                    })
+                    .environmentObject(appState)
+                    .id(launch.id)
+                    .background(Color(.systemBackground).ignoresSafeArea())
                 }
             }
-            // Held while a call runs: a resize must never take a live call
-            // off the screen.
-            .onAppear { if callLaunch == nil { topicsSplit = wide } }
-            .onChange(of: wide) { _, now in if callLaunch == nil { topicsSplit = now } }
-            .onChange(of: callLaunch?.id) { _, _ in if callLaunch == nil { topicsSplit = wide } }
+            if topicsBeside {
+                Divider().ignoresSafeArea()
+                NavigationStack {
+                    topicsDestination
+                        .toolbar {
+                            ToolbarItem(placement: .topBarLeading) {
+                                Button { topicsBeside = false } label: {
+                                    Label("Close", systemImage: "xmark")
+                                }
+                                .labelStyle(.iconOnly)
+                                // Closing would take the running call with it.
+                                .disabled(callLaunch != nil)
+                            }
+                        }
+                }
+                .frame(width: MacLayout.reviewShelfWidth)
+            }
         }
-        .onChange(of: showingTopics, initial: true) { _, open in
+        .onChange(of: topicsBeside, initial: true) { _, open in
             MacLayout.Wide.shared.talkSplit = open
         }
         .alert(explain("End this call first"), isPresented: $topicsBusy) {
@@ -423,29 +447,6 @@ struct ConversationHome: View {
             .environmentObject(appState)
             .toolbar(MacLayout.tabBarOnPhoneOnly, for: .tabBar)
     }
-
-    #if targetEnvironment(macCatalyst)
-    @ViewBuilder private var topicsCallPane: some View {
-        Group {
-            if let launch = callLaunch {
-                callView(launch, onClose: {
-                    callLaunch = nil
-                    callEnded()
-                })
-                .environmentObject(appState)
-                .id(launch.id)
-            } else {
-                ContentUnavailableView {
-                    Label("Pick a topic", systemImage: "sparkles")
-                } description: {
-                    Text("The call opens here, beside the topics.")
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemBackground).ignoresSafeArea())
-    }
-    #endif
 
     // MARK: - Hero (welcome question + the goal ring / call button)
 
@@ -939,7 +940,7 @@ struct ConversationHome: View {
         Task { @MainActor in
             if delay > 0 { try? await Task.sleep(for: .seconds(delay)) }
             let visible = homeOnScreen && scenePhase == .active && callLaunch == nil
-                && !appState.talkRingProxyActive && !showingTopics && !showingActivity
+                && !appState.talkRingProxyActive && !showingTopics && !topicsBeside && !showingActivity
                 && !showingPaywall && !showingProfile && !routineHandoff.showHint
             TutorBot.shared.refresh(appState: appState, visible: visible)
         }

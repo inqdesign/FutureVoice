@@ -216,10 +216,26 @@ struct TutorTopicSheet: View {
             .navigationTitle(explain("What to practice"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(explain("Close")) {
-                        if let onClose { onClose() } else { dismiss() }
+                // Beside the call (an inspector) a bar item would be merged
+                // into the CALL's bar, as a "Cl…" next to its ✕ even while
+                // the column is shut, so the column carries its own ✕ below.
+                if onClose == nil {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(explain("Close")) { dismiss() }
                     }
+                }
+            }
+            .overlay(alignment: .topTrailing) {
+                if let onClose {
+                    Button(action: onClose) {
+                        Image(systemName: "xmark")
+                            .font(.body.weight(.semibold))
+                            .frame(width: 30, height: 30)
+                            .background(Circle().fill(Color(.tertiarySystemFill)))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(explain("Close"))
+                    .padding(12)
                 }
             }
             .confirmationDialog(explain("This one is a step up. Try it?"),
