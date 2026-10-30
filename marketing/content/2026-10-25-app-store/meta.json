@@ -1,0 +1,308 @@
+{
+ "en-US": {
+  "why": "'Language Learning' is the most crowded term in Education and nawana can't rank for it. 'Speaking practice' and 'AI' are what people type when they want to TALK, which is the product. Subtitle moves the hook (your fluent self) up front.",
+  "fields": {
+   "name": {
+    "now": "nawana: Language Learning",
+    "now_len": 25,
+    "new": "nawana: AI Speaking Practice",
+    "new_len": 28,
+    "limit": 30
+   },
+   "subtitle": {
+    "now": "AI speaking tutor, your voice",
+    "now_len": 29,
+    "new": "Talk to your fluent self",
+    "new_len": 24,
+    "limit": 30
+   },
+   "keywords": {
+    "now": "english,spanish,german,french,japanese,korean,conversation,shadowing,pronunciation,practice,fluent",
+    "now_len": 98,
+    "new": "spanish,japanese,korean,german,french,conversation,tutor,shadowing,pronunciation,accent,fluency,chat",
+    "new_len": 100,
+    "limit": 100
+   },
+   "promo": {
+    "now": "Your language isn't growing for one reason. You don't speak enough. Call the fluent you every day, and each talk becomes your own textbook.",
+    "now_len": 139,
+    "new": "Your first 20 minutes are free. Call the fluent you, in your own voice, and every call turns into your own review book: words, phrases and the lines you fixed.",
+    "new_len": 159,
+    "limit": 170
+   }
+  },
+  "dup_with_title": []
+ },
+ "ko": {
+  "why": "'언어학습'은 거의 검색되지 않고, 한국에서 사람들이 치는 말은 '영어회화'·'AI 영어'·'전화영어'예요. 이름에 영어회화를, 부제에 전화영어·스피킹을 올렸어요. 키워드에선 이름·부제와 겹치는 단어를 빼고 영어면접·영어발표를 넣었어요.",
+  "fields": {
+   "name": {
+    "now": "나와나: 유창해진 나와 언어학습",
+    "now_len": 17,
+    "new": "나와나: 내 목소리 AI 영어회화",
+    "new_len": 18,
+    "limit": 30
+   },
+   "subtitle": {
+    "now": "AI 영어회화·외국어 스피킹, 내 목소리로",
+    "now_len": 23,
+    "new": "전화영어처럼 매일, 스피킹 연습",
+    "new_len": 17,
+    "limit": 30
+   },
+   "keywords": {
+    "now": "영어,회화,일본어회화,전화영어,말하기,영어공부,쉐도잉,섀도잉,프리토킹,발음교정,오픽,토익스피킹,JLPT,일본어,독일어,스페인어,중국어,프랑스어,이탈리아어,튜터,음성복제,원어민",
+    "now_len": 97,
+    "new": "화상영어,AI영어,영어스피킹,오픽,토익스피킹,쉐도잉,섀도잉,프리토킹,발음교정,영어면접,영어발표,일본어회화,JLPT,스페인어,독일어,중국어,프랑스어,말하기,영어공부,원어민,튜터",
+    "new_len": 97,
+    "limit": 100
+   },
+   "promo": {
+    "now": "외국어가 늘지 않는 이유는 하나. 충분히 말하지 않아서예요. 매일 유창해진 나와 통화하세요. 통화가 끝나면 내가 쓴 단어·표현·문법으로 나만의 교재가 만들어져요.",
+    "now_len": 90,
+    "new": "첫 20분은 무료예요. 내 목소리 그대로 유창해진 나와 통화하고, 끊으면 내가 한 말로 나만의 복습 교재가 만들어져요.",
+    "new_len": 66,
+    "limit": 170
+   }
+  },
+  "dup_with_title": []
+ },
+ "ja": {
+  "why": "「英会話」「AI」「スピーキング」を名前に入れて、検索でいちばん重い欄を使います。キーワードは名前と重なる語を外し、面接・TOEICを足しました。",
+  "fields": {
+   "name": {
+    "now": "nawana: 流暢な自分と会話練習",
+    "now_len": 18,
+    "new": "nawana: AI英会話・スピーキング",
+    "new_len": 20,
+    "limit": 30
+   },
+   "subtitle": {
+    "now": "AI英会話・スピーキング、自分の声で",
+    "now_len": 18,
+    "new": "自分の声で、流暢な自分と毎日通話",
+    "new_len": 16,
+    "limit": 30
+   },
+   "keywords": {
+    "now": "英語,韓国語,外国語,ドイツ語,スペイン語,中国語,フランス語,電話,発音,シャドーイング,瞬間英作文,独り言,音読,リスニング,英単語,英語学習,ハングル,語学,発話,オンライン英会話,ネイティブ",
+    "now_len": 99,
+    "new": "英語,韓国語,外国語,ドイツ語,スペイン語,中国語,フランス語,電話,発音,シャドーイング,瞬間英作文,独り言,音読,英単語,語学,発話,オンライン英会話,ネイティブ,面接,TOEIC",
+    "new_len": 92,
+    "limit": 100
+   },
+   "promo": {
+    "now": "話せるようにならない理由はひとつ。話す量が足りないからです。毎日、流暢になった自分と通話しましょう。通話が終わると、あなたが使った単語・表現・文法で自分だけの教材ができあがります。",
+    "now_len": 90,
+    "new": "最初の20分は無料。自分の声のまま、流暢になった自分と通話できます。通話のあとは、話した内容がそのまま自分だけの復習教材に。",
+    "new_len": 62,
+    "limit": 170
+   }
+  },
+  "dup_with_title": []
+ },
+ "de-DE": {
+  "why": "Deutsche suchen 'Englisch sprechen' und 'Englisch lernen'. 'Sprechen üben' allein sagt nicht, welche Sprache. 'Bewerbung' und 'Business' passen zur Zielgruppe (Englisch für den Job).",
+  "fields": {
+   "name": {
+    "now": "nawana: Sprechen üben",
+    "now_len": 21,
+    "new": "nawana: Englisch sprechen KI",
+    "new_len": 28,
+    "limit": 30
+   },
+   "subtitle": {
+    "now": "Englisch und Sprachen mit KI",
+    "now_len": 28,
+    "new": "Übe mit deiner eigenen Stimme",
+    "new_len": 29,
+    "limit": 30
+   },
+   "keywords": {
+    "now": "lernen,Konversation,Aussprache,Shadowing,Japanisch,Koreanisch,Spanisch,Französisch,Tutor,Stimme",
+    "now_len": 95,
+    "new": "lernen,Konversation,Aussprache,Business,Vokabeln,Sprachpartner,Tutor,Bewerbung,Shadowing,Spanisch",
+    "new_len": 97,
+    "limit": 100
+   },
+   "promo": {
+    "now": "Wenn du nicht besser wirst, hat das einen einzigen Grund: Du sprichst zu wenig. Ruf jeden Tag dein fließendes Ich an. Jedes Gespräch wird zu deinem eigenen Lernbuch.",
+    "now_len": 165,
+    "new": "Die ersten 20 Minuten sind gratis. Ruf dein fließendes Ich an, mit deiner eigenen Stimme. Jedes Gespräch wird zu deinem Lernbuch.",
+    "new_len": 129,
+    "limit": 170
+   }
+  },
+  "dup_with_title": []
+ },
+ "fr-FR": {
+  "why": "« parler anglais » est la recherche principale, absente du nom actuel. « accent » et « oral » visent les francophones qui comprennent mais bloquent à l’oral.",
+  "fields": {
+   "name": {
+    "now": "nawana : parle couramment",
+    "now_len": 25,
+    "new": "nawana : parler anglais IA",
+    "new_len": 26,
+    "limit": 30
+   },
+   "subtitle": {
+    "now": "Anglais et langues avec l’IA",
+    "now_len": 28,
+    "new": "Entraîne-toi avec ta voix",
+    "new_len": 25,
+    "limit": 30
+   },
+   "keywords": {
+    "now": "parler,apprendre,conversation,prononciation,shadowing,allemand,japonais,coréen,espagnol,oral,voix",
+    "now_len": 97,
+    "new": "apprendre,conversation,prononciation,oral,accent,entretien,vocabulaire,tuteur,shadowing,espagnol",
+    "new_len": 96,
+    "limit": 100
+   },
+   "promo": {
+    "now": "Si tu ne progresses pas, c’est pour une seule raison : tu ne parles pas assez. Appelle ton moi fluide chaque jour. Chaque conversation devient ton propre carnet.",
+    "now_len": 161,
+    "new": "Les 20 premières minutes sont offertes. Appelle ton moi fluide, avec ta propre voix. Chaque appel devient ton carnet de révision.",
+    "new_len": 129,
+    "limit": 170
+   }
+  },
+  "dup_with_title": []
+ },
+ "es-ES": {
+  "why": "'Hablar inglés' es lo que se busca; el nombre actual no dice qué idioma. es-ES y es-MX llevaban textos idénticos: ahora cada uno usa sus 100 caracteres para cosas distintas.",
+  "fields": {
+   "name": {
+    "now": "nawana: Habla con tu yo fluido",
+    "now_len": 30,
+    "new": "nawana: Hablar inglés con IA",
+    "new_len": 28,
+    "limit": 30
+   },
+   "subtitle": {
+    "now": "Inglés y más idiomas con IA",
+    "now_len": 27,
+    "new": "Practica con tu propia voz",
+    "new_len": 26,
+    "limit": 30
+   },
+   "keywords": {
+    "now": "aprender,hablar,conversación,pronunciación,shadowing,alemán,japonés,coreano,francés,italiano,voz",
+    "now_len": 96,
+    "new": "aprender,conversación,pronunciación,speaking,vocabulario,entrevista,tutor,shadowing,alemán,japonés",
+    "new_len": 98,
+    "limit": 100
+   },
+   "promo": {
+    "now": "Si tu nivel no avanza, es por una sola razón: no hablas lo suficiente. Llama cada día a tu yo fluido. Cada conversación se convierte en tu propio cuaderno de estudio.",
+    "now_len": 166,
+    "new": "Los primeros 20 minutos son gratis. Llama a tu yo fluido, con tu propia voz. Cada llamada se convierte en tu cuaderno de repaso.",
+    "new_len": 128,
+    "limit": 170
+   }
+  },
+  "dup_with_title": []
+ },
+ "es-MX": {
+  "why": "es-MX también se indexa en la tienda de EE. UU. (según las herramientas de ASO; verifícalo en ASC). Sin tildes porque mucha gente las omite al buscar, y con 'trabajo', 'toefl', 'clases'.",
+  "fields": {
+   "name": {
+    "now": "nawana: Habla con tu yo fluido",
+    "now_len": 30,
+    "new": "nawana: Hablar inglés con IA",
+    "new_len": 28,
+    "limit": 30
+   },
+   "subtitle": {
+    "now": "Inglés y más idiomas con IA",
+    "now_len": 27,
+    "new": "Practica con tu propia voz",
+    "new_len": 26,
+    "limit": 30
+   },
+   "keywords": {
+    "now": "aprender,hablar,conversación,pronunciación,shadowing,alemán,japonés,coreano,francés,italiano,voz",
+    "now_len": 96,
+    "new": "ingles,aprender ingles,curso,conversacion,pronunciacion,speaking,toefl,examen,trabajo,entrevista",
+    "new_len": 96,
+    "limit": 100
+   },
+   "promo": {
+    "now": "Si tu nivel no avanza, es por una sola razón: no hablas lo suficiente. Llama cada día a tu yo fluido. Cada conversación se convierte en tu propio cuaderno de estudio.",
+    "now_len": 166,
+    "new": "Los primeros 20 minutos son gratis. Llama a tu yo fluido, con tu propia voz. Cada llamada se convierte en tu cuaderno de repaso.",
+    "new_len": 128,
+    "limit": 170
+   }
+  },
+  "dup_with_title": []
+ },
+ "zh-Hant": {
+  "why": "台灣搜尋的是「英文口說」「英文會話」，放進名稱。關鍵字移除和名稱重複的字，加入面試、簡報、托福。",
+  "fields": {
+   "name": {
+    "now": "nawana: 和流利的自己對話",
+    "now_len": 16,
+    "new": "nawana: AI英文口說・英文會話",
+    "new_len": 19,
+    "limit": 30
+   },
+   "subtitle": {
+    "now": "AI英文口說練習，用自己的聲音",
+    "now_len": 15,
+    "new": "用自己的聲音，每天練英文",
+    "new_len": 12,
+    "limit": 30
+   },
+   "keywords": {
+    "now": "英文,英語,英文會話,練英文,日文,韓文,雅思,多益,德文,西班牙文,法文,跟讀,發音,單字,聽力,外語學習,語言學習,聲音複製,家教,打電話,外語,母語,商務英文,旅遊英文",
+    "now_len": 87,
+    "new": "英語,英檢,全民英檢,自學,日文,韓文,雅思,多益,托福,德文,西班牙文,法文,跟讀,發音,單字,聽力,面試,簡報,外語學習,家教,打電話,商務英文,旅遊英文",
+    "new_len": 79,
+    "limit": 100
+   },
+   "promo": {
+    "now": "說不出口，只有一個原因：說得不夠多。每天和流利的自己通個電話。掛掉之後，你用過的單字、用語和文法會整理成一本屬於你的教材。",
+    "now_len": 61,
+    "new": "前 20 分鐘免費。用你自己的聲音，和流利的自己通電話；掛掉之後，說過的話會整理成你專屬的複習教材。",
+    "new_len": 50,
+    "limit": 170
+   }
+  },
+  "dup_with_title": []
+ },
+ "zh-Hans": {
+  "why": "名称直接用「英语口语陪练」，这是简体用户最常搜的说法。关键字去掉和名称重复的词，加入面试、托福。",
+  "fields": {
+   "name": {
+    "now": "nawana: 和流利的自己对话",
+    "now_len": 16,
+    "new": "nawana: AI英语口语陪练",
+    "new_len": 16,
+    "limit": 30
+   },
+   "subtitle": {
+    "now": "AI英语口语陪练，用自己的声音",
+    "now_len": 15,
+    "new": "用自己的声音，每天说英语",
+    "new_len": 12,
+    "limit": 30
+   },
+   "keywords": {
+    "now": "英语,口语练习,说英语,学英语,日语,韩语,雅思口语,托福,德语,西班牙语,法语,跟读,发音,纠音,听力,外语学习,语言学习,声音克隆,打电话,外教,外语,商务英语,日常对话,旅游英语",
+    "now_len": 92,
+    "new": "学英语,口语练习,英语对话,日语,韩语,雅思口语,托福,德语,西班牙语,法语,跟读,发音,纠音,听力,面试,外语学习,打电话,外教,商务英语,旅游英语,四六级,英语听力,自学",
+    "new_len": 87,
+    "limit": 100
+   },
+   "promo": {
+    "now": "开不了口，只有一个原因：说得不够多。每天和流利的自己通个电话。挂断之后，你用过的单词、用语和语法会整理成一本属于你的教材。",
+    "now_len": 61,
+    "new": "前 20 分钟免费。用你自己的声音，和流利的自己打电话；挂断之后，说过的话会整理成你的专属复习教材。",
+    "new_len": 50,
+    "limit": 170
+   }
+  },
+  "dup_with_title": []
+ }
+}

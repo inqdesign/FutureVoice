@@ -1,0 +1,316 @@
+<title>루틴은 내가 만든다</title>
+<style>
+
+/* Layout: one 1080×1350 post at a time; fixed text block on top, a window onto the real app below.
+   Inside the phone everything is authored in iOS points (402×874) and scaled ×1.5. Light only, by choice.
+   Every app-screen card shows ONE kit screen — nw-routine, the My routine page. The onboarding
+   card-by-card builder has no capture and is NEVER drawn; the "pick a card" idea lives in the copy
+   and in card 03's floating kit block tiles. */
+:root{
+  color-scheme:light;
+  --page:#E9ECF1; --card:#F7F8FA; --grid:rgba(10,40,90,.045);
+  --ink:#0D1117; --sub:#5A6170; --faint:#9AA1AD; --line:#DCE0E7;
+  --blue:#0A84FF; --ios-blue:#007AFF;
+  --sys-green:#34C759;
+  --pixel:"Geist Pixel","Galmuri14","Apple SD Gothic Neo",system-ui,sans-serif;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--sans)}
+.wrap{max-width:1100px;margin:0 auto;padding-inline:16px;padding-block:28px 56px;display:flex;flex-wrap:wrap;gap:28px 40px;align-items:flex-start;justify-content:center}
+.viewer{flex:0 1 540px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.side{flex:1 1 300px;min-width:0;max-width:440px;font-size:14px;line-height:1.6;color:var(--sub)}
+.side h1{font-family:var(--pixel);font-weight:400;font-size:26px;line-height:1.25;color:var(--ink);margin:0 0 10px;text-wrap:balance}
+.side h3{font-size:13px;letter-spacing:.06em;color:var(--ink);margin:22px 0 6px}
+.side ol{padding-left:18px;margin:0}
+.side li{margin-bottom:4px}
+.side .list button{all:unset;cursor:pointer;color:var(--ink)}
+.side .list button[aria-current="true"]{color:var(--blue);font-weight:600}
+.side .list button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.vp{position:relative;width:100%;aspect-ratio:4/5;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(13,17,23,.08),0 18px 50px rgba(13,17,23,.10);background:var(--card);touch-action:pan-y}
+.track{position:absolute;inset:0;display:flex;transition:transform .45s cubic-bezier(.3,.7,.2,1)}
+.slot{flex:0 0 100%;height:100%;position:relative;overflow:hidden}
+.controls{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.dots{display:flex;gap:7px}
+.dots button{width:8px;height:8px;border-radius:50%;border:0;padding:0;background:#C5CBD5;cursor:pointer}
+.dots button[aria-current="true"]{background:var(--blue);width:22px;border-radius:4px}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;height:36px;min-width:36px;padding:0 14px;font:inherit;font-size:13px;cursor:pointer}
+.btn:focus-visible,.dots button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.btn-row{display:flex;gap:6px}
+
+/* ───────── the post, authored at 1080×1350 ───────── */
+.card{position:absolute;left:0;top:0;width:1080px;height:1350px;transform-origin:0 0;transform:scale(var(--s,.5));background:var(--card);overflow:hidden;
+  background-image:linear-gradient(var(--grid) 2px,transparent 2px),linear-gradient(90deg,var(--grid) 2px,transparent 2px);background-size:54px 54px;background-position:-1px -1px}
+.cap{position:absolute;left:84px;right:84px;top:72px;display:flex;justify-content:space-between;align-items:center;font-family:var(--pixel);font-size:28px;color:var(--sub)}
+.cap .series{display:flex;align-items:center;gap:14px}
+.cap .series::before{content:"";width:14px;height:14px;background:var(--blue)}
+.cap .num{color:var(--faint)}
+.ttl{position:absolute;left:84px;right:84px;top:134px;margin:0;font-family:var(--pixel);font-weight:400;font-size:72px;line-height:88px;letter-spacing:-1px;color:var(--ink)}
+.ttl .en{color:var(--blue)}
+.desc{position:absolute;left:84px;right:96px;top:322px;margin:0;font-size:32px;line-height:47px;color:var(--sub);font-weight:500;letter-spacing:-.3px;word-break:keep-all}
+.desc b{color:var(--ink);font-weight:600}
+/* the window onto the phone: clipped at its top so a phone can pan up under the text */
+.stage{position:absolute;left:0;right:0;top:470px;bottom:0;overflow:hidden;
+  -webkit-mask-image:linear-gradient(transparent,#000 40px);mask-image:linear-gradient(transparent,#000 40px)}
+
+.phonewin{position:absolute;left:50%;top:44px;width:627px;margin-left:-313.5px;transition:transform .9s cubic-bezier(.45,0,.2,1)}
+.phonewin nw-phone{width:627px}
+
+/* ── card 03: floating kit block tiles (the choices you pick in setup) ── */
+.stickers{position:absolute;inset:0;pointer-events:none;z-index:6}
+.stk{position:absolute;width:272px;background:#fff;border-radius:26px;padding:22px 24px;
+  box-shadow:0 2px 6px rgba(13,17,23,.08),0 22px 48px rgba(13,17,23,.16);
+  display:flex;flex-direction:column;gap:16px;opacity:0;transform:scale(.82) translateY(12px);
+  transition:opacity .5s cubic-bezier(.3,.7,.2,1),transform .5s cubic-bezier(.3,.7,.2,1)}
+.stk.in{opacity:1;transform:none}
+.stk.in.passed{opacity:.5}
+.stk .hd{display:flex;align-items:center;gap:16px}
+.stk .btile{width:58px;height:58px;border-radius:16px;display:grid;place-items:center;flex:0 0 auto}
+.stk .btile svg{width:31px;height:31px;display:block}
+.stk .nm{font-size:30px;font-weight:600;color:var(--ink);white-space:nowrap;letter-spacing:-.4px}
+.stk .tag{align-self:flex-start;display:flex;align-items:center;gap:8px;font-size:24px;font-weight:700;padding:9px 18px;border-radius:999px;opacity:0;transform:translateY(4px);transition:opacity .4s,transform .4s}
+.stk .tag svg{width:25px;height:25px;display:block}
+.stk.tagged .tag{opacity:1;transform:none}
+.stk .tag.add{background:rgba(52,199,89,.16);color:#1F9E44}
+.stk .tag.pass{background:rgba(142,142,147,.16);color:#8A8A8E}
+
+/* ── cover ── */
+.swipe{position:absolute;left:84px;right:84px;bottom:40px;display:flex;justify-content:space-between;align-items:center;font-size:28px;color:var(--faint);z-index:7}
+.swipe b{font-family:var(--pixel);font-weight:400;color:var(--blue)}
+
+/* ── outro ── */
+.c-outro{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.c-outro .closing{font-family:var(--pixel);font-weight:400;font-size:74px;line-height:88px;letter-spacing:-1px;color:var(--ink);margin-bottom:64px}
+.c-outro nw-futureself{width:300px;height:166px;margin-bottom:54px}
+.c-outro .wm{font-family:var(--pixel);font-size:120px;line-height:1;letter-spacing:2px}
+.c-outro .tg{font-size:44px;line-height:64px;font-weight:600;margin-top:40px}
+.c-outro .free{margin-top:30px;font-size:30px;color:var(--sub)}
+.c-outro .url{position:absolute;bottom:80px;font-family:var(--pixel);font-size:34px;color:var(--blue)}
+
+@media (prefers-reduced-motion:reduce){
+  .track,.chip,.phonewin,.stk{transition:none!important}
+}
+
+/* ?solo=N — one card at its real 1080×1350, no viewer chrome: what scripts/marketing/record.mjs records */
+html.solo,html.solo body{margin:0;background:var(--card);overflow:hidden}
+html.solo .wrap{display:block;padding:0;max-width:none}
+html.solo .side,html.solo .controls{display:none}
+html.solo .viewer{display:block}
+html.solo .vp{width:1080px;max-width:none;aspect-ratio:auto;height:1350px;border-radius:0;box-shadow:none}
+html.solo .track{transition:none}
+</style>
+<div class="wrap" lang="ko">
+  <div class="viewer">
+    <div class="vp" id="vp" aria-roledescription="carousel" aria-label="루틴은 내가 만든다">
+      <div class="track" id="track">
+
+        <div class="slot"><section class="card" data-k="cover">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것 · 루틴</span><span class="num">01 / 06</span></header>
+          <h2 class="ttl">루틴은<br>내가 만든다</h2>
+          <p class="desc">앱이 정해주는 플랜이 아니에요.<br><b>내가 고른 것만</b> 모여 내 하루가 돼요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-routine></nw-routine></nw-phone></div></div>
+          <div class="swipe"><span>옆으로 넘겨보세요 →</span><b>nawana.app</b></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="setup">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것 · 루틴</span><span class="num">02 / 06</span></header>
+          <h2 class="ttl">셋업에서<br>하나씩 보여줘요</h2>
+          <p class="desc">연습할 수 있는 걸 <b>카드 한 장씩</b> 보여줘요.<br>통화 · 다시 말하기 · 복습 · 섀도잉 · 듣기 · 스피치.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-routine></nw-routine></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="pick">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것 · 루틴</span><span class="num">03 / 06</span></header>
+          <h2 class="ttl">담을 것만 담고<br>나머진 넘겨요</h2>
+          <p class="desc">원하는 것만 추가하고 나머진 넘겨요.<br><b>하나도 안 담아도 괜찮아요.</b> 나중에 만들어도 돼요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-routine></nw-routine></nw-phone></div></div>
+          <div class="stickers"></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="blocks">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것 · 루틴</span><span class="num">04 / 06</span></header>
+          <h2 class="ttl">섀도잉도 듣기도<br>각자 자리예요</h2>
+          <p class="desc">섀도잉은 이제 <b>따로 한 자리</b>예요.<br>듣기는 한 편만 들으면 그날 몫이 끝이에요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-routine></nw-routine></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="promise">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것 · 루틴</span><span class="num">05 / 06</span></header>
+          <h2 class="ttl">지키면 내가<br>나에게 한 약속</h2>
+          <p class="desc">내가 담은 루틴이 곧 내 약속이에요.<br>지킨 날이 쌓이고, 그건 <b>내가 고른 거예요.</b></p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-routine></nw-routine></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card c-outro" data-k="outro">
+          <div class="closing">내 루틴은,<br>내가 정해요.</div>
+          <nw-futureself mode="speaking" level="voice"></nw-futureself>
+          <div class="wm">nawana</div>
+          <div class="tg">유창한 나에게<br>언어를 배우세요.</div>
+          <div class="free">첫 20분은 무료예요</div>
+          <div class="url">nawana.app</div>
+        </section></div>
+
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn" id="prev" aria-label="이전 장">←</button>
+      <div class="dots" id="dots"></div>
+      <div class="btn-row"><button class="btn" id="replay">처음부터 재생</button><button class="btn" id="next" aria-label="다음 장">→</button></div>
+    </div>
+  </div>
+
+  <aside class="side">
+    <h1>루틴은 내가 만든다</h1>
+    <p>글자 자리는 고정하고, 아래 화면만 움직이는 6장짜리 시안이에요. 앱 화면은 모두 같은 UI 키트(<b>web/kit/nawana-ui.js</b>)의 <b>nw-routine</b>(나의 루틴 페이지) 하나만 써요. 셋업의 카드 빌더 화면은 캡처가 없어서 그리지 않고, '카드 하나씩 고른다'는 아이디어는 카피와 03장의 블록 타일로 전해요.</p>
+    <h3>장 목록</h3>
+    <ol class="list" id="list">
+      <li><button data-go="0">커버 · 루틴은 내가 만든다 (나의 루틴 페이지)</button></li>
+      <li><button data-go="1">셋업에서 하나씩 · 블록이 한 줄씩 등장</button></li>
+      <li><button data-go="2">담을 것만 담고 · 블록 타일 고르기</button></li>
+      <li><button data-go="3">섀도잉도 듣기도 · 섀도잉 행 강조</button></li>
+      <li><button data-go="4">지키면 약속 · 링이 차고 불꽃</button></li>
+      <li><button data-go="5">마지막 장 · nawana.app</button></li>
+    </ol>
+    <h3>올리는 방법</h3>
+    <p>커버·마지막 장은 정지 이미지(PNG), 본문 네 장은 1080×1350, 8–12초 반복 MP4예요. 화면 속 숫자(10분 · 20개 · 5문장 · N일째)는 전부 키트 샘플값이라 통계가 아니에요.</p>
+  </aside>
+</div>
+
+<script type="module">
+import "/web/kit/nawana-ui.js";
+const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const sleep = ms => new Promise(r => setTimeout(r, RM ? 0 : ms));
+
+const vp = $("#vp");
+const setScale = () => $$(".card").forEach(c => c.style.setProperty("--s", vp.clientWidth / 1080));
+new ResizeObserver(setScale).observe(vp); setScale();
+
+/* The camera: pan the phone up inside its window so the routine rows + streak sit in the card. */
+const pan = (c, y) => $(".phonewin", c).style.transform = y ? `translateY(${-y}px)` : "none";
+const PAN = 58;
+
+/* ── card 03 stickers: the five real kit block tiles (StudyPlan.Kind), copied faithfully from
+   screens/routine.js — talk · Say it again · review · shadowing · weekly test. No 듣기/스피치 tile. ── */
+const SF = {
+  talk: '<path fill="currentColor" d="M7.2 3.1c.6-.1 1.1.2 1.4.7l1.6 3c.3.6.2 1.2-.2 1.7L8.8 9.7c-.2.2-.2.5-.1.8.9 1.8 2.9 3.8 4.7 4.7.3.1.6.1.8-.1l1.2-1.2c.5-.4 1.1-.5 1.7-.2l3 1.6c.5.3.8.8.7 1.4-.3 2.3-2.2 4.1-4.6 3.9C10.4 20.1 3.9 13.6 3.3 7.7c-.2-2.4 1.6-4.3 3.9-4.6z"/>',
+  again: '<g fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M10.2 5.3A7.2 7.2 0 1 1 5.2 11"/></g><path fill="currentColor" d="M12.6 1.9v7.2L7.6 5.5z"/>',
+  review: '<g fill="currentColor"><rect x="6" y="3.2" width="12" height="2" rx="1"/><rect x="4.3" y="6.6" width="15.4" height="2.2" rx="1.1"/><rect x="2.8" y="10" width="18.4" height="11" rx="2.6"/></g>',
+  shadow: '<path d="M3.5 10.5v3M7.2 7v10M10.9 3.5v17M14.6 7.5v9M18.3 9.5v5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
+  test: (() => { let d = ""; const n = 12; for (let i = 0; i <= n * 2; i++) { const a = Math.PI * i / n - Math.PI / 2, r = i % 2 ? 8.6 : 10.2; d += `${i ? "L" : "M"}${(12 + r * Math.cos(a)).toFixed(2)} ${(12 + r * Math.sin(a)).toFixed(2)}`; } return `<path fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="${d}Z"/><path d="M8.2 12.3l2.6 2.6 5-5.4" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>`; })(),
+};
+const KIND = { talk: "#0088FF", again: "#00C3D0", test: "#FF8D28", review: "#34C759", shadow: "#FFCC00" };
+const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="currentColor"/><path d="M7 12.4l3.3 3.3L17.2 8.6" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+/* [kind, name, add?, x, y] — some added, some passed, to show the choosing (not the result) */
+const STK = [
+  ["talk", "통화", true, 8, 544],
+  ["again", "다시 말하기", false, 800, 598],
+  ["review", "복습", true, 8, 904],
+  ["shadow", "섀도잉", true, 800, 958],
+  ["test", "주간 테스트", false, 8, 1206],
+];
+function buildStickers() {
+  const host = $('[data-k="pick"] .stickers'); if (!host || host.children.length) return;
+  host.innerHTML = STK.map(([k, nm, add, x, y]) => {
+    const c = KIND[k];
+    const tag = add ? `<span class="tag add">${CHECK}추가</span>` : `<span class="tag pass">넘김</span>`;
+    return `<div class="stk${add ? "" : " passoff"}" style="left:${x}px;top:${y}px">
+      <div class="hd"><span class="btile" style="background:${c}24;color:${c}"><svg viewBox="0 0 24 24" aria-hidden="true">${SF[k]}</svg></span><span class="nm">${nm}</span></div>
+      ${tag}</div>`;
+  }).join("");
+}
+
+/* Each card: one loop of its scene. The screen is nw-routine, scripted through its own methods;
+   day-plan = the planned My routine page, day-kept = the day the promise was kept. */
+const PLAY = {
+  async cover(c) {
+    pan(c, PAN);
+    await $("nw-routine", c).run(async s => { await s.pose("day-plan"); await s.sleep(4000); });
+  },
+  // the five block rows appear one by one — each row reads as a card you just added
+  async setup(c) {
+    pan(c, PAN);
+    await $("nw-routine", c).run(async s => {
+      await s.pose("day-plan");
+      const rows = s.$$(".row");
+      rows.forEach(r => { r.style.opacity = 0; r.style.transform = "translateY(10px)"; r.style.transition = "opacity .45s ease,transform .45s ease"; });
+      await s.sleep(650);
+      for (const r of rows) { r.style.opacity = 1; r.style.transform = "none"; await s.sleep(380); }
+      await s.sleep(6500);
+    });
+  },
+  // pick / pass: the kit block tiles float in, then each gets its 추가 ✓ or 넘김 tag
+  async pick(c) {
+    pan(c, PAN); buildStickers();
+    const stk = $$(".stk", c); stk.forEach(x => x.classList.remove("in", "tagged", "passed"));
+    await $("nw-routine", c).run(async s => {
+      await s.pose("day-plan");
+      await s.sleep(600);
+      for (const x of stk) { x.classList.add("in"); await s.sleep(320); }
+      await s.sleep(520);
+      for (const x of stk) { x.classList.add("tagged"); if (x.classList.contains("passoff")) x.classList.add("passed"); await s.sleep(270); }
+      await s.sleep(6000);
+    });
+  },
+  // the 섀도잉 row (yellow) pulses to stand out; listening is in the copy only, never a row
+  async blocks(c) {
+    pan(c, PAN);
+    await $("nw-routine", c).run(async s => {
+      await s.pose("day-plan");
+      const row = s.$$(".row")[4], tile = row.querySelector(".tile");
+      row.style.transition = "background .7s ease"; tile.style.transition = "transform .7s cubic-bezier(.3,.7,.2,1)";
+      await s.sleep(800);
+      for (let i = 0; i < 3; i++) {
+        row.style.background = "rgba(255,204,0,.18)"; tile.style.transform = "scale(1.14)"; await s.sleep(900);
+        row.style.background = "transparent"; tile.style.transform = "none"; await s.sleep(700);
+      }
+      await s.sleep(2400);
+    });
+  },
+  // the payoff: the block rings fill, the flame lights, the streak reads "N일째 지키는 중" — routine page only
+  async promise(c) {
+    pan(c, PAN);
+    await $("nw-routine", c).run(async s => {
+      await s.pose("day-plan");               // empty rings, streak "3일째" lit
+      const l = s.l;
+      await s.sleep(650);
+      for (const p of [.4, .8, 1]) { s._fill(0, p); s._mark(3, "today", p * .2); await s.sleep(430); }
+      for (let i = 1; i < 5; i++) { s._fill(i, 1); s._mark(3, "today", (i + 1) / 5); await s.sleep(650); }
+      s._mark(3, "kept"); s._streak(l.kept(4), true);
+      await s.sleep(5200);
+    });
+  },
+  async outro() { await sleep(6000); },
+};
+
+const track = $("#track"), slots = $$(".slot"), cards = $$(".card"), dots = $("#dots"), list = $$("#list button");
+slots.forEach((_, i) => { const b = document.createElement("button"); b.setAttribute("aria-label", `${i + 1}번 장`); b.onclick = () => go(i); dots.append(b); });
+let idx = 0, gen = 0;
+function go(i) {
+  idx = (i + slots.length) % slots.length;
+  track.style.transform = `translateX(${-idx * 100}%)`;
+  $$("button", dots).forEach((b, j) => b.setAttribute("aria-current", j === idx));
+  list.forEach((b, j) => b.setAttribute("aria-current", j === idx));
+  $$("nw-routine").forEach(s => s.stop());
+  run(cards[idx]);
+}
+async function run(card) {
+  const g = ++gen, alive = () => g === gen;
+  await customElements.whenDefined("nw-routine");
+  await sleep(350);
+  do { await PLAY[card.dataset.k](card, alive); } while (alive() && !RM);
+}
+$("#prev").onclick = () => go(idx - 1);
+$("#next").onclick = () => go(idx + 1);
+$("#replay").onclick = () => go(idx);
+list.forEach(b => b.onclick = () => go(+b.dataset.go));
+addEventListener("keydown", e => { if (e.key === "ArrowRight") go(idx + 1); if (e.key === "ArrowLeft") go(idx - 1); });
+let x0 = null;
+vp.addEventListener("pointerdown", e => x0 = e.clientX);
+vp.addEventListener("pointerup", e => { if (x0 == null) return; const d = e.clientX - x0; x0 = null; if (Math.abs(d) > 40) go(idx + (d < 0 ? 1 : -1)); });
+const solo = +(new URLSearchParams(location.search).get("solo") || 0);
+if (solo) document.documentElement.classList.add("solo");
+const m = solo ? [0, solo] : /^#card(\d)$/.exec(location.hash);
+go(m ? +m[1] - 1 : 0);
+</script>

@@ -1,0 +1,459 @@
+<title>밖에서 주운 단어, 목록에 바로</title>
+<style>
+
+/* Layout: one 1080×1350 post at a time; fixed text block on top, a window onto the real app below.
+   Inside the phone everything is authored in iOS points (402×874) and scaled ×1.5. Light only, by choice. */
+:root{
+  color-scheme:light;
+  --page:#E9ECF1; --card:#F7F8FA; --grid:rgba(10,40,90,.045);
+  --ink:#0D1117; --sub:#5A6170; --faint:#9AA1AD; --line:#DCE0E7;
+  --blue:#0A5CF5; --ios-blue:#007AFF;
+  /* iOS system values sampled from the app's own screenshots */
+  --sys-bg:#FFFFFF; --sys-grouped:#F2F2F7; --sys-fill:#EFEFF4; --sys-gray:#8E8E93; --sys-gray3:#C7C7CC;
+  --me-bubble:#D3E2FD; --fix-bg:#EBF2FE; --btn-tint:#D6E4FB; --sys-red:#FF3B30; --sys-green:#34C759; --sys-orange:#E07B1F;
+  --pixel:"Geist Pixel","Galmuri14","Apple SD Gothic Neo",system-ui,sans-serif;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--sans)}
+.wrap{max-width:1100px;margin:0 auto;padding-inline:16px;padding-block:28px 56px;display:flex;flex-wrap:wrap;gap:28px 40px;align-items:flex-start;justify-content:center}
+.viewer{flex:0 1 540px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.side{flex:1 1 300px;min-width:0;max-width:440px;font-size:14px;line-height:1.6;color:var(--sub)}
+.side h1{font-family:var(--pixel);font-weight:400;font-size:26px;line-height:1.25;color:var(--ink);margin:0 0 10px;text-wrap:balance}
+.side h3{font-size:13px;letter-spacing:.06em;color:var(--ink);margin:22px 0 6px}
+.side ol{padding-left:18px;margin:0}
+.side li{margin-bottom:4px}
+.side .list button{all:unset;cursor:pointer;color:var(--ink)}
+.side .list button[aria-current="true"]{color:var(--blue);font-weight:600}
+.side .list button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.vp{position:relative;width:100%;aspect-ratio:4/5;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(13,17,23,.08),0 18px 50px rgba(13,17,23,.10);background:var(--card);touch-action:pan-y}
+.track{position:absolute;inset:0;display:flex;transition:transform .45s cubic-bezier(.3,.7,.2,1)}
+.slot{flex:0 0 100%;height:100%;position:relative;overflow:hidden}
+.controls{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.dots{display:flex;gap:7px}
+.dots button{width:8px;height:8px;border-radius:50%;border:0;padding:0;background:#C5CBD5;cursor:pointer}
+.dots button[aria-current="true"]{background:var(--blue);width:22px;border-radius:4px}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;height:36px;min-width:36px;padding:0 14px;font:inherit;font-size:13px;cursor:pointer}
+.btn:focus-visible,.dots button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.btn-row{display:flex;gap:6px}
+
+/* ───────── the post, authored at 1080×1350 ───────── */
+.card{position:absolute;left:0;top:0;width:1080px;height:1350px;transform-origin:0 0;transform:scale(var(--s,.5));background:var(--card);overflow:hidden;
+  background-image:linear-gradient(var(--grid) 2px,transparent 2px),linear-gradient(90deg,var(--grid) 2px,transparent 2px);background-size:54px 54px;background-position:-1px -1px}
+.cap{position:absolute;left:84px;right:84px;top:72px;display:flex;justify-content:space-between;align-items:center;font-family:var(--pixel);font-size:28px;color:var(--sub)}
+.cap .series{display:flex;align-items:center;gap:14px}
+.cap .series::before{content:"";width:14px;height:14px;background:var(--blue)}
+.cap .num{color:var(--faint)}
+.ttl{position:absolute;left:84px;right:84px;top:134px;margin:0;font-family:var(--pixel);font-weight:400;font-size:72px;line-height:88px;letter-spacing:-1px;color:var(--ink)}
+.ttl .en{color:var(--blue)}
+.desc{position:absolute;left:84px;right:96px;top:322px;margin:0;font-size:32px;line-height:47px;color:var(--sub);font-weight:500;letter-spacing:-.3px;word-break:keep-all}
+.desc b{color:var(--ink);font-weight:600}
+/* the window onto the phone: clipped at its top so a phone can pan up under the text */
+.stage{position:absolute;left:0;right:0;top:470px;bottom:0;overflow:hidden;
+  -webkit-mask-image:linear-gradient(transparent,#000 40px);mask-image:linear-gradient(transparent,#000 40px)}
+
+.phonewin{position:absolute;left:50%;top:44px;width:627px;margin-left:-313.5px;transform-origin:50% 0;transition:transform .9s cubic-bezier(.45,0,.2,1)}
+.phonewin nw-phone{width:627px}
+
+/* ── the add sheet (cards 02–03): nw-words has no add-input pose and web/ is off-limits, so the
+   real Words cloud stays in the phone and the AddToListSheet is a faithful hand-built element over
+   it, dimmed like iOS does a sheet's parent (brief's sanctioned fallback — kit gap 1). ── */
+.scrim{position:absolute;inset:0;background:rgba(10,17,30,.20);z-index:2;opacity:0;transition:opacity .4s}
+.scrim.in{opacity:1}
+.addsheet{position:absolute;left:247px;right:247px;top:230px;bottom:0;z-index:3;background:#fff;border-radius:40px 40px 0 0;
+  box-shadow:0 -12px 44px rgba(13,17,23,.16);padding:0 34px;opacity:0;transform:translateY(60px);transition:opacity .45s,transform .45s}
+.addsheet.in{opacity:1;transform:none}
+.addsheet .grab{width:52px;height:7px;border-radius:4px;background:#C7C7CC;margin:20px auto 0}
+.addsheet .ah{margin:24px 2px 20px;font-size:30px;font-weight:700;color:var(--ink);letter-spacing:-.4px}
+.afield{display:flex;align-items:center;gap:14px;height:78px;padding:0 24px;border-radius:20px;background:var(--sys-grouped);font-size:32px;color:var(--ink)}
+.afield .af-g{width:34px;height:34px;color:var(--sys-gray);flex:0 0 auto}
+.afield .af-g svg{display:block;width:100%;height:100%}
+.af-text{white-space:nowrap}
+.af-text.ph{color:var(--sys-gray)}
+.caret{display:inline-block;width:3px;height:40px;background:var(--blue);margin-left:1px;vertical-align:-7px;animation:blink 1.05s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+/* the matches sit under an "Already there" section header, as the real Form does (no search chrome) */
+.ahdr{margin:26px 8px 2px;font-size:23px;font-weight:500;color:var(--sys-gray);letter-spacing:.2px;opacity:0;transform:translateY(12px);transition:opacity .35s,transform .35s}
+.ahdr.in{opacity:1;transform:none}
+.arows{margin-top:6px}
+.mrow{display:flex;align-items:center;gap:18px;padding:22px 8px;border-top:1px solid var(--line);opacity:0;transform:translateY(12px);transition:opacity .35s,transform .35s,background .15s;border-radius:14px}
+.mrow:first-child{border-top:0}
+.mrow.in{opacity:1;transform:none}
+.mrow.tap{background:var(--sys-grouped)}
+.mrow .mw{flex:1;min-width:0}
+.mrow .mh{font-size:32px;font-weight:600;color:var(--ink);letter-spacing:-.3px}
+.mrow .mm{margin-top:4px;font-size:25px;line-height:32px;color:var(--sub);letter-spacing:-.2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mrow .mbk{flex:0 0 auto;width:34px;height:34px;color:var(--blue)}
+.mrow .mbk svg{display:block;width:100%;height:100%}
+.mrow .mlv{flex:0 0 auto;font-family:var(--pixel);font-weight:400;font-size:22px;color:var(--blue);background:var(--btn-tint);border-radius:11px;padding:7px 14px}
+.mrow .mplus{flex:0 0 auto;width:50px;height:50px;border-radius:50%;background:rgba(10,92,245,.12);color:var(--blue);display:grid;place-items:center}
+.mrow .mplus svg{display:block;width:30px;height:30px}
+
+/* ── card 04: the leveled word landing on the shared library, and the warm line ── */
+.droplevel{position:absolute;left:0;right:0;margin:0 auto;width:max-content;z-index:4;display:inline-flex;align-items:center;gap:18px;
+  background:#fff;border-radius:24px;padding:18px 26px;font-size:42px;font-weight:600;color:var(--ink);letter-spacing:-.3px;
+  box-shadow:0 1px 2px rgba(13,17,23,.06),0 16px 38px rgba(13,17,23,.16);opacity:0;transform:translateY(-30px);transition:opacity .55s cubic-bezier(.3,.8,.2,1),transform .55s cubic-bezier(.3,.8,.2,1)}
+.droplevel.in{opacity:1;transform:none}
+.droplevel .lv{font-family:var(--pixel);font-weight:400;font-size:26px;color:var(--blue);background:var(--btn-tint);border-radius:12px;padding:7px 15px}
+/* card 04's chip + warm are children of .stage, so their top is stage-relative (stage starts at card 470) */
+[data-k="shared"] .droplevel{top:465px}
+.warm{position:absolute;left:0;right:0;top:720px;margin:0 auto;width:max-content;max-width:840px;z-index:4;background:var(--ink);color:#fff;
+  font-size:29px;line-height:40px;font-weight:600;padding:18px 28px;border-radius:26px 26px 26px 8px;text-align:center;
+  box-shadow:0 14px 34px rgba(13,17,23,.22);opacity:0;transform:translateY(12px);transition:opacity .4s,transform .4s}
+.warm.in{opacity:1;transform:none}
+
+/* ── card 05: the Vocabulary home-screen widget as a sticker (no kit screen for it) ── */
+.widget{position:absolute;left:44px;bottom:72px;width:330px;z-index:5;border-radius:42px;background:#fff;padding:28px 30px;
+  box-shadow:0 2px 6px rgba(13,17,23,.08),0 22px 54px rgba(13,17,23,.20);opacity:0;transform:translateY(26px) scale(.95);transition:opacity .5s,transform .5s}
+.widget.in{opacity:1;transform:none}
+.widget .wg-h{display:flex;align-items:center;gap:11px;font-size:25px;font-weight:700;color:var(--ink);margin-bottom:6px}
+.widget .wg-h svg{width:28px;height:28px;color:var(--blue);flex:0 0 auto}
+.widget .wg-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px 0;border-top:1px solid var(--line);font-size:27px;color:var(--ink)}
+.widget .wg-row:nth-child(2){border-top:0}
+.widget .wg-row b{font-weight:600}
+.widget .wg-row .wg-lv{font-family:var(--pixel);font-weight:400;font-size:21px;color:var(--blue);background:var(--btn-tint);border-radius:9px;padding:4px 11px}
+
+/* ── cover / outro ── */
+.c-cover .ttl{top:244px;font-size:100px;line-height:118px;letter-spacing:-2px}
+.wrap:lang(en) .c-cover .ttl{font-size:82px;line-height:98px}
+.c-cover .desc{top:540px}
+.c-cover .coverart{position:absolute;left:150px;right:150px;top:656px;height:470px;overflow:hidden;
+  -webkit-mask-image:radial-gradient(ellipse 62% 70% at 50% 50%,#000 52%,transparent 100%);mask-image:radial-gradient(ellipse 62% 70% at 50% 50%,#000 52%,transparent 100%)}
+.c-cover .coverart nw-words{position:absolute;left:50%;top:-250px;width:800px;margin-left:-400px;pointer-events:none}
+.c-cover .plusbadge{position:absolute;right:214px;top:600px;width:92px;height:92px;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center;
+  box-shadow:0 10px 30px rgba(10,92,245,.42);z-index:3;opacity:0;transform:scale(.55);transition:opacity .4s,transform .4s cubic-bezier(.3,1.5,.5,1)}
+.c-cover .plusbadge svg{width:52px;height:52px}
+.c-cover .plusbadge.in{opacity:1;transform:none}
+.c-cover .coverchip{top:966px}
+.swipe{position:absolute;left:84px;right:84px;bottom:72px;display:flex;justify-content:space-between;font-size:28px;color:var(--faint)}
+.swipe b{font-family:var(--pixel);font-weight:400;color:var(--blue)}
+.c-outro{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.c-outro nw-futureself{width:300px;height:166px;margin-bottom:60px}
+.c-outro .wm{font-family:var(--pixel);font-size:120px;line-height:1;letter-spacing:2px}
+.c-outro .tg{font-size:44px;line-height:64px;font-weight:600;margin-top:44px}
+.c-outro .free{margin-top:32px;font-size:30px;color:var(--sub)}
+.c-outro .url{position:absolute;bottom:80px;font-family:var(--pixel);font-size:34px;color:var(--blue)}
+
+@media (prefers-reduced-motion:reduce){
+  .track,.phonewin,.scrim,.addsheet,.ahdr,.mrow,.droplevel,.warm,.widget,.plusbadge{transition:none!important}
+  .caret{animation:none!important}
+}
+
+/* ?solo=N — one card at its real 1080×1350, no viewer chrome: what scripts/marketing/record.mjs records */
+html.solo,html.solo body{margin:0;background:var(--card);overflow:hidden}
+html.solo .wrap{display:block;padding:0;max-width:none}
+html.solo .side,html.solo .controls{display:none}
+html.solo .viewer{display:block}
+html.solo .vp{width:1080px;max-width:none;aspect-ratio:auto;height:1350px;border-radius:0;box-shadow:none}
+html.solo .track{transition:none}
+</style>
+<div class="wrap" lang="ko" id="wrap">
+  <div class="viewer">
+    <div class="vp" id="vp" aria-roledescription="carousel" aria-label="밖에서 주운 단어, 목록에 바로">
+      <div class="track" id="track">
+
+        <div class="slot"><section class="card c-cover" data-k="cover">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">01 / 06</span></header>
+          <h2 class="ttl">밖에서 주운 단어,<br>목록에 바로</h2>
+          <p class="desc">넣으면 통화에서 나온 단어처럼<br>알아서 공부가 돼요.</p>
+          <div class="coverart"><nw-words></nw-words></div>
+          <div class="plusbadge"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></div>
+          <div class="droplevel coverchip">substantial <span class="lv">B1</span></div>
+          <div class="swipe"><span>옆으로 넘겨보세요 →</span><b>nawana.app</b></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="add">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">02 / 06</span></header>
+          <h2 class="ttl">주운 단어,<br>직접 넣어요</h2>
+          <p class="desc">단어 목록의 '+'를 눌러 그대로 적어요.<br><b>어느 언어로 써도</b> 돼요.</p>
+          <div class="stage">
+            <div class="phonewin"><nw-phone><nw-words></nw-words></nw-phone></div>
+            <div class="scrim"></div>
+            <div class="addsheet"><div class="grab"></div><div class="ah"></div>
+              <div class="afield"><span class="af-text"></span><span class="caret"></span></div>
+              <div class="ahdr"></div>
+              <div class="arows"></div></div>
+          </div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="matches">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">03 / 06</span></header>
+          <h2 class="ttl">입력하는 대로<br>이미 있는 게 떠요</h2>
+          <p class="desc">이미 있는 단어는 뜻과 함께 떠요.<br><b>누르면 열려요. 두 번 안 만들어요.</b></p>
+          <div class="stage">
+            <div class="phonewin"><nw-phone><nw-words></nw-words></nw-phone></div>
+            <div class="scrim"></div>
+            <div class="addsheet"><div class="grab"></div><div class="ah"></div>
+              <div class="afield"><span class="af-text"></span><span class="caret"></span></div>
+              <div class="ahdr"></div>
+              <div class="arows"></div></div>
+          </div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="shared">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">04 / 06</span></header>
+          <h2 class="ttl">새 단어엔<br>레벨이 붙어요</h2>
+          <p class="desc">처음 보는 단어는 한 번 확인하고 레벨을 달아,<br><b>모두의 라이브러리</b>에 담겨요.</p>
+          <div class="stage">
+            <div class="phonewin"><nw-phone><nw-words></nw-words></nw-phone></div>
+            <div class="droplevel">substantial <span class="lv">B1</span></div>
+            <div class="warm"></div>
+          </div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="payoff">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">05 / 06</span></header>
+          <h2 class="ttl">그다음은<br>통화 단어처럼</h2>
+          <p class="desc">내 목소리로 듣고, 오늘의 덱과<br><b>위젯, 복습</b>에 그대로 올라와요.</p>
+          <div class="stage">
+            <div class="phonewin"><nw-phone><nw-words></nw-words></nw-phone></div>
+            <div class="widget"></div>
+          </div>
+        </section></div>
+
+        <div class="slot"><section class="card c-outro" data-k="outro">
+          <nw-futureself mode="speaking" level="voice"></nw-futureself>
+          <div class="wm">nawana</div>
+          <div class="tg">유창한 나에게<br>언어를 배우세요.</div>
+          <div class="free">첫 20분은 무료예요</div>
+          <div class="url">nawana.app</div>
+        </section></div>
+
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn" id="prev" aria-label="이전 장">←</button>
+      <div class="dots" id="dots"></div>
+      <div class="btn-row"><button class="btn" id="replay">처음부터 재생</button><button class="btn" id="next" aria-label="다음 장">→</button></div>
+    </div>
+  </div>
+
+  <aside class="side">
+    <h1>밖에서 주운 단어, 목록에 바로</h1>
+    <p>글자 자리는 고정하고, 아래 화면만 움직이는 6장짜리 시안이에요. 단어 지도·단어 카드는 UI 키트(<b>web/kit/nawana-ui.js</b>)의 <code>nw-words</code>를 그대로 써요. 입력창과 '이미 있어요' 목록은 키트에 없어서(캡처 없음), 진짜 구름 위에 <b>추가 시트</b>를 정직하게 덧그렸어요. <code>?lang=en</code>이면 영어판이에요.</p>
+    <h3>장 목록</h3>
+    <ol class="list" id="list">
+      <li><button data-go="0">커버 · 밖에서 주운 단어, 목록에 바로</button></li>
+      <li><button data-go="1">02 · 주운 단어, 직접 넣어요</button></li>
+      <li><button data-go="2">03 · 입력하는 대로 이미 있는 게 떠요</button></li>
+      <li><button data-go="3">04 · 새 단어엔 레벨이 붙어요</button></li>
+      <li><button data-go="4">05 · 그다음은 통화 단어처럼</button></li>
+      <li><button data-go="5">마지막 장 · nawana.app</button></li>
+    </ol>
+    <h3>샘플 데이터</h3>
+    <p>히어로 단어 substantial · 레벨 B1 · 단어 지도의 B1 · 16 / 2113 · 위젯의 단어는 모두 UI 키트의 예시예요(사용자 통계가 아니에요). 레벨은 <b>그 단어의</b> 레벨이지, 학습자의 레벨이 아니에요.</p>
+  </aside>
+</div>
+
+<script type="module">
+const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const sleep = ms => new Promise(r => setTimeout(r, RM ? 0 : ms));
+const params = new URLSearchParams(location.search);
+
+/* ?lang=en — the English text block (copy.md, written separately, not translated) */
+const EN = {
+  series: "What you can do with nawana",
+  cover: { ttl: "Met a word?<br>Straight to your list", desc: "Add it and it studies itself,<br>just like a word from a call.", swipe: "Swipe →" },
+  add: { ttl: "Add it<br>yourself", desc: "Tap \"+\" on your Words list and type it in,<br><b>in either language.</b>" },
+  matches: { ttl: "As you type,<br>matches appear", desc: "What's already there surfaces with its meaning.<br><b>Tap it, don't make a twin.</b>" },
+  shared: { ttl: "New words<br>get a level", desc: "A word the library doesn't have yet is checked once,<br>then <b>leveled and shared.</b>" },
+  payoff: { ttl: "From there,<br>like a call word", desc: "Hear it in your own voice, in today's deck,<br><b>on your widget, in review.</b>" },
+  outro: { tg: "Learn a language<br>from your fluent self.", free: "Your first 20 minutes are free" },
+};
+const EN_ON = params.get("lang") === "en";
+if (EN_ON) {
+  $("#wrap").lang = "en"; document.title = "Met a word? Straight to your list";
+  for (const card of $$(".card")) {
+    const e = EN[card.dataset.k];
+    $$(".cap .series", card).forEach(x => x.textContent = EN.series);
+    if (e?.ttl) $(".ttl", card).innerHTML = e.ttl;
+    if (e?.desc) $(".desc", card).innerHTML = e.desc;
+  }
+  const cv = $('[data-k="cover"]'); $(".swipe span", cv).textContent = EN.cover.swipe;
+  const ou = $('[data-k="outro"]'); $(".tg", ou).innerHTML = EN.outro.tg; $(".free", ou).textContent = EN.outro.free;
+}
+
+await import("/web/kit/nawana-ui.js");   // after the lang switch: the kit reads lang once, when a screen is built
+
+const vp = $("#vp");
+const setScale = () => $$(".card").forEach(c => c.style.setProperty("--s", vp.clientWidth / 1080));
+new ResizeObserver(setScale).observe(vp); setScale();
+
+/* the camera: the phone pans (and may step back) inside the window. */
+const pan = (c, y, instant, k = 1) => {
+  const w = $(".phonewin", c); if (!w) return;
+  const t = `translateY(${-y}px)` + (k !== 1 ? ` scale(${k})` : "");
+  if (instant) { w.style.transition = "none"; w.style.transform = t; void w.offsetWidth; w.style.transition = ""; }
+  else w.style.transform = t;
+};
+
+const HERO = "substantial";
+/* The AddToListSheet, told straight from the Swift the brief quotes: a field, then prefix matches
+   (up to 6), each with its first-sense meaning; one already on the list (bookmark.fill = Studying),
+   one a graded-pool word showing its level + a "+". Meanings are kit sample data (the app writes them). */
+const SHEET = {
+  ko: { add: "단어 추가", hint: "단어나 표현",
+        rows: [{ w: "substantial", m: "상당한, (양·가치·중요성이) 큰", kind: "study" },
+               { w: "substitute", m: "대신하는 것, 대체물", kind: "pool", lv: "B1" }] },
+  en: { add: "Add a word", hint: "Word or phrase",
+        rows: [{ w: "substantial", m: "large in size, value or importance", kind: "study" },
+               { w: "substitute", m: "a person or thing used in place of another", kind: "pool", lv: "B1" }] },
+};
+const WIDGET = { ko: "단어장", en: "Vocabulary", rows: [["substantial", "B1"], ["deadline", "B1"], ["commute", "B2"]] };
+const SV = {
+  search: '<svg viewBox="0 0 24 24"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20.4 20.4l-4.4-4.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>',
+  bk: '<svg viewBox="0 0 24 24"><path d="M6.3 2.8h11.4c.8 0 1.4.6 1.4 1.4v16.3c0 .7-.8 1.1-1.4.7L12 17.1l-5.7 4.1c-.6.4-1.4 0-1.4-.7V4.2c0-.8.6-1.4 1.4-1.4z" fill="currentColor"/></svg>',
+  plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>',
+  cards: '<svg viewBox="0 0 24 24"><rect x="3.5" y="7" width="17" height="12.5" rx="2.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M6.8 4.4h10.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+};
+function L() { return EN_ON ? SHEET.en : SHEET.ko; }
+function fillSheet(c) {
+  const sh = $(".addsheet", c); if (!sh) return;
+  const l = L();
+  $(".ah", sh).textContent = l.add;
+  $(".ahdr", sh).textContent = EN_ON ? "Already there" : "이미 있어요";
+  $(".arows", sh).innerHTML = l.rows.map(r => `
+    <div class="mrow" data-w="${r.w}"><div class="mw"><div class="mh">${r.w}</div><div class="mm">${r.m}</div></div>
+    ${r.kind === "study" ? `<span class="mbk">${SV.bk}</span>`
+      : `<span class="mlv">${r.lv}</span><span class="mplus">${SV.plus}</span>`}</div>`).join("");
+}
+function fillWidget(c) {
+  const wg = $(".widget", c); if (!wg) return;
+  wg.innerHTML = `<div class="wg-h">${SV.cards}<span>${EN_ON ? WIDGET.en : WIDGET.ko}</span></div>` +
+    WIDGET.rows.map(([w, lv]) => `<div class="wg-row"><b>${w}</b><span class="wg-lv">${lv}</span></div>`).join("");
+}
+function resetSheet(c) {
+  const sh = $(".addsheet", c); if (!sh) return;
+  const t = $(".af-text", sh); t.textContent = L().hint; t.classList.add("ph");
+  $(".scrim", c)?.classList.remove("in"); sh.classList.remove("in");
+  $(".ahdr", sh)?.classList.remove("in");
+  $$(".mrow", sh).forEach(r => r.classList.remove("in", "tap"));
+}
+async function typeField(el, text, alive, per = 95) {
+  el.classList.remove("ph"); el.textContent = "";
+  for (const ch of text) { if (alive && !alive()) return; await sleep(per); el.textContent += ch; }
+}
+
+const PLAY = {
+  /* 01 — cover: the real Words cloud (clipped to its vignette), a "+" badge, a leveled word landing. Still (PNG). */
+  async cover(c, alive) {
+    const w = $("nw-words", c);
+    await customElements.whenDefined("nw-words");
+    w.stop(); w.reset();   // the cloud stays neutral; the leveled word rides on it as the chip
+    const plus = $(".plusbadge", c), chip = $(".coverchip", c);
+    plus.classList.remove("in"); chip.classList.remove("in");
+    await sleep(500); if (!alive()) return;
+    plus.classList.add("in"); await sleep(520); if (!alive()) return;
+    chip.classList.add("in");
+    await sleep(3800);
+  },
+  /* 02 — add it yourself: the add sheet rises over the dimmed Words cloud, the hero word is typed in. */
+  async add(c, alive) {
+    const w = $("nw-words", c);
+    await customElements.whenDefined("nw-words");
+    w.stop(); w.reset(); pan(c, 0, true);
+    fillSheet(c); resetSheet(c);
+    await sleep(500); if (!alive()) return;
+    $(".scrim", c).classList.add("in"); $(".addsheet", c).classList.add("in");
+    await sleep(700); if (!alive()) return;
+    await typeField($(".addsheet .af-text", c), HERO, alive);
+    await sleep(5400);
+  },
+  /* 03 — as you type, matches appear: "sub" surfaces two words already in the library; tap one, no twin. */
+  async matches(c, alive) {
+    const w = $("nw-words", c);
+    await customElements.whenDefined("nw-words");
+    w.stop(); w.reset(); pan(c, 0, true);
+    fillSheet(c); resetSheet(c);
+    await sleep(500); if (!alive()) return;
+    $(".scrim", c).classList.add("in"); $(".addsheet", c).classList.add("in");
+    await sleep(600); if (!alive()) return;
+    await typeField($(".addsheet .af-text", c), "sub", alive);
+    await sleep(450);
+    $(".ahdr", c).classList.add("in"); await sleep(260); if (!alive()) return;
+    const rows = $$(".mrow", c);
+    for (const r of rows) { if (!alive()) return; r.classList.add("in"); await sleep(280); }
+    await sleep(1100); if (!alive()) return;
+    rows[0].classList.add("tap"); await sleep(620); rows[0].classList.remove("tap");
+    await sleep(3400);
+  },
+  /* 04 — new words get a level, into the one shared library: the word settles onto the cloud with its level. */
+  async shared(c, alive) {
+    const w = $("nw-words", c);
+    await customElements.whenDefined("nw-words");
+    const chip = $(".droplevel", c), warm = $(".warm", c);
+    warm.innerHTML = EN_ON ? EN.shared.warm || "Your word helps the next learner too" : "그 단어가 다음 학습자에게도 도움이 돼요";
+    chip.classList.remove("in"); warm.classList.remove("in");
+    await w.run(async s => {
+      // the cloud (the shared library) at rest; the leveled word settles onto it
+      pan(c, 0, true);
+      await s.sleep(700); if (!alive()) return;
+      chip.classList.add("in"); await s.sleep(1000); if (!alive()) return;
+      warm.classList.add("in"); await s.sleep(5200);
+    });
+  },
+  /* 05 — then it's a call word: the word card opens, the pronounce button plays the clone, it's on the widget. */
+  async payoff(c, alive) {
+    const w = $("nw-words", c);
+    await customElements.whenDefined("nw-words");
+    const widget = $(".widget", c); widget.classList.remove("in");
+    await w.run(async s => {
+      s.card("substantial"); s.mark("substantial", "study");
+      pan(c, 46, true);
+      await s.sleep(700); if (!alive()) return;
+      await s.openCard("substantial");
+      await s.sleep(1000); if (!alive()) return;
+      await s.play();
+      await s.sleep(650); if (!alive()) return;
+      widget.classList.add("in");
+      await s.sleep(4200);
+    });
+  },
+  async outro() { await sleep(6000); },
+};
+
+/* no em dash on a posted image (BRAND): sweep the screens' shadow trees for any app string carrying one */
+function undash(root) {
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+  for (let n = w.currentNode; n; n = w.nextNode()) {
+    if (n.shadowRoot) undash(n.shadowRoot);
+    if (n.nodeType === 3 && n.data.includes("—")) n.data = n.data.replace(/\s*—\s*(?=([가-힣])?)/g, (_, ko) => ko ? ". " : ": ");
+  }
+}
+(function sweep() { $$(".card").forEach(c => undash(c)); requestAnimationFrame(sweep); })();
+
+for (const c of $$(".card")) { fillSheet(c); fillWidget(c); resetSheet(c); }
+
+const track = $("#track"), slots = $$(".slot"), cards = $$(".card"), dots = $("#dots"), list = $$("#list button");
+slots.forEach((_, i) => { const b = document.createElement("button"); b.setAttribute("aria-label", `${i + 1}번 장`); b.onclick = () => go(i); dots.append(b); });
+let idx = 0, gen = 0;
+const SCREENS = "nw-words";
+function go(i) {
+  idx = (i + slots.length) % slots.length;
+  track.style.transform = `translateX(${-idx * 100}%)`;
+  $$("button", dots).forEach((b, j) => b.setAttribute("aria-current", j === idx));
+  list.forEach((b, j) => b.setAttribute("aria-current", j === idx));
+  $$(SCREENS).forEach(s => s.stop());
+  run(cards[idx]);
+}
+async function run(card) {
+  const g = ++gen, alive = () => g === gen;
+  for (const n of SCREENS.split(",")) await customElements.whenDefined(n);
+  await sleep(350);
+  do { const t0 = performance.now(); const play = PLAY[card.dataset.k](card, alive); document.documentElement.dataset.scene = card.dataset.k; await play; if (alive()) document.documentElement.dataset.loopMs = Math.round(performance.now() - t0); } while (alive() && !RM);
+}
+$("#prev").onclick = () => go(idx - 1);
+$("#next").onclick = () => go(idx + 1);
+$("#replay").onclick = () => go(idx);
+list.forEach(b => b.onclick = () => go(+b.dataset.go));
+addEventListener("keydown", e => { if (e.key === "ArrowRight") go(idx + 1); if (e.key === "ArrowLeft") go(idx - 1); });
+let x0 = null;
+vp.addEventListener("pointerdown", e => x0 = e.clientX);
+vp.addEventListener("pointerup", e => { if (x0 == null) return; const d = e.clientX - x0; x0 = null; if (Math.abs(d) > 40) go(idx + (d < 0 ? 1 : -1)); });
+const solo = +(params.get("solo") || 0);
+if (solo) document.documentElement.classList.add("solo");
+const m = solo ? [0, solo] : /^#card(\d+)$/.exec(location.hash);
+go(m ? +m[1] - 1 : 0);
+</script>

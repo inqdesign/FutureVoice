@@ -1,0 +1,284 @@
+<title>이렇게 말해 봐 — coach suggestion</title>
+<style>
+
+/* Layout: one 1080×1350 post at a time; fixed text block on top, a window onto the real app below.
+   Inside the phone everything is authored in iOS points (402×874) and scaled ×1.5. Light only, by choice. */
+:root{
+  color-scheme:light;
+  --page:#E9ECF1; --card:#F7F8FA; --grid:rgba(10,40,90,.045);
+  --ink:#0D1117; --sub:#5A6170; --faint:#9AA1AD; --line:#DCE0E7;
+  --blue:#0A5CF5; --ios-blue:#007AFF;
+  --sys-bg:#FFFFFF; --sys-grouped:#F2F2F7; --sys-fill:#EFEFF4; --sys-gray:#8E8E93; --sys-gray3:#C7C7CC;
+  --me-bubble:#D3E2FD; --fix-bg:#EBF2FE; --btn-tint:#D6E4FB; --sys-red:#FF3B30; --sys-green:#34C759; --sys-orange:#E07B1F;
+  --faint-u:rgba(60,60,67,.3);
+  --pixel:"Geist Pixel","Galmuri14","Apple SD Gothic Neo",system-ui,sans-serif;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--sans)}
+.wrap{max-width:1100px;margin:0 auto;padding-inline:16px;padding-block:28px 56px;display:flex;flex-wrap:wrap;gap:28px 40px;align-items:flex-start;justify-content:center}
+.viewer{flex:0 1 540px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.side{flex:1 1 300px;min-width:0;max-width:440px;font-size:14px;line-height:1.6;color:var(--sub)}
+.side h1{font-family:var(--pixel);font-weight:400;font-size:26px;line-height:1.25;color:var(--ink);margin:0 0 10px;text-wrap:balance}
+.side h3{font-size:13px;letter-spacing:.06em;color:var(--ink);margin:22px 0 6px}
+.side ol{padding-left:18px;margin:0}
+.side li{margin-bottom:4px}
+.side .list button{all:unset;cursor:pointer;color:var(--ink)}
+.side .list button[aria-current="true"]{color:var(--blue);font-weight:600}
+.side .list button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.vp{position:relative;width:100%;aspect-ratio:4/5;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(13,17,23,.08),0 18px 50px rgba(13,17,23,.10);background:var(--card);touch-action:pan-y}
+.track{position:absolute;inset:0;display:flex;transition:transform .45s cubic-bezier(.3,.7,.2,1)}
+.slot{flex:0 0 100%;height:100%;position:relative;overflow:hidden}
+.controls{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.dots{display:flex;gap:7px}
+.dots button{width:8px;height:8px;border-radius:50%;border:0;padding:0;background:#C5CBD5;cursor:pointer}
+.dots button[aria-current="true"]{background:var(--blue);width:22px;border-radius:4px}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;height:36px;min-width:36px;padding:0 14px;font:inherit;font-size:13px;cursor:pointer}
+.btn:focus-visible,.dots button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.btn-row{display:flex;gap:6px}
+
+/* ───────── the post, authored at 1080×1350 ───────── */
+.card{position:absolute;left:0;top:0;width:1080px;height:1350px;transform-origin:0 0;transform:scale(var(--s,.5));background:var(--card);overflow:hidden;
+  background-image:linear-gradient(var(--grid) 2px,transparent 2px),linear-gradient(90deg,var(--grid) 2px,transparent 2px);background-size:54px 54px;background-position:-1px -1px}
+.cap{position:absolute;left:84px;right:84px;top:72px;display:flex;justify-content:space-between;align-items:center;font-family:var(--pixel);font-size:28px;color:var(--sub)}
+.cap .series{display:flex;align-items:center;gap:14px}
+.cap .series::before{content:"";width:14px;height:14px;background:var(--blue)}
+.cap .num{color:var(--faint)}
+.ttl{position:absolute;left:84px;right:84px;top:134px;margin:0;font-family:var(--pixel);font-weight:400;font-size:72px;line-height:88px;letter-spacing:-1px;color:var(--ink)}
+.ttl .en{color:var(--blue)}
+.desc{position:absolute;left:84px;right:96px;top:322px;margin:0;font-size:32px;line-height:47px;color:var(--sub);font-weight:500;letter-spacing:-.3px;word-break:keep-all}
+.desc b{color:var(--ink);font-weight:600}
+/* the window onto the phone: clipped at its top so a phone can pan up under the text */
+.stage{position:absolute;left:0;right:0;top:470px;bottom:0;overflow:hidden;
+  -webkit-mask-image:linear-gradient(transparent,#000 40px);mask-image:linear-gradient(transparent,#000 40px)}
+
+.phonewin{position:absolute;left:50%;top:44px;width:627px;margin-left:-313.5px;transition:transform .9s cubic-bezier(.45,0,.2,1)}
+.phonewin nw-phone{width:627px}
+
+/* ── the own-fact pointer, drawn OUTSIDE the phone frame (never on the app screen),
+      aimed at the underlined own-fact span in the suggestion line ── */
+.point{position:absolute;z-index:4;inset:0;pointer-events:none;opacity:0;transform:translateX(-14px);transition:opacity .5s,transform .5s}
+.point.in{opacity:1;transform:none}
+.point .tag{position:absolute;left:62px;top:1150px;font-size:30px;font-weight:600;color:var(--ink);background:#fff;border:2px solid var(--line);border-radius:22px;padding:14px 22px;box-shadow:0 10px 30px rgba(13,17,23,.08);white-space:nowrap}
+.point .tag b{color:var(--blue)}
+.point svg{position:absolute;left:352px;top:1058px;width:210px;height:150px;color:var(--blue)}
+
+/* ── cover ── */
+.c-cover .ttl{top:300px;font-size:116px;line-height:132px;letter-spacing:-2px}
+.c-cover .desc{top:620px;font-size:38px;line-height:56px}
+.sticker{position:absolute;left:120px;right:120px;bottom:-70px;background:#fff;border-radius:40px 40px 0 0;
+  box-shadow:0 1px 2px rgba(13,17,23,.05),0 -8px 40px rgba(13,17,23,.10);padding:52px 56px 90px;text-align:center}
+.sticker .lab{display:flex;align-items:center;justify-content:center;gap:12px;font-size:28px;color:var(--sub);margin-bottom:18px}
+.sticker .lab svg{width:30px;height:30px;color:var(--blue)}
+.sticker .line{font-size:54px;line-height:66px;font-weight:600;letter-spacing:-.5px;color:var(--ink)}
+.sticker .line u{color:var(--faint-u);text-decoration-color:var(--faint-u);text-decoration-thickness:2px;text-underline-offset:5px}
+.sticker .gloss{margin-top:16px;font-size:36px;line-height:48px;color:var(--sub)}
+.sticker .gloss u{color:var(--faint-u);text-decoration-color:var(--faint-u);text-decoration-thickness:2px;text-underline-offset:4px}
+
+/* ── outro ── */
+.c-outro{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.c-outro nw-futureself{width:300px;height:166px;margin-bottom:60px}
+.c-outro .wm{font-family:var(--pixel);font-size:120px;line-height:1;letter-spacing:2px}
+.c-outro .tg{font-size:44px;line-height:64px;font-weight:600;margin-top:44px}
+.c-outro .free{margin-top:32px;font-size:30px;color:var(--sub)}
+.c-outro .url{position:absolute;bottom:80px;font-family:var(--pixel);font-size:34px;color:var(--blue)}
+
+@media (prefers-reduced-motion:reduce){
+  .track,.phonewin,.point{transition:none!important}
+}
+
+/* ?solo=N — one card at its real 1080×1350, no viewer chrome: what scripts/marketing/record.mjs records */
+html.solo,html.solo body{margin:0;background:var(--card);overflow:hidden}
+html.solo .wrap{display:block;padding:0;max-width:none}
+html.solo .side,html.solo .controls{display:none}
+html.solo .viewer{display:block}
+html.solo .vp{width:1080px;max-width:none;aspect-ratio:auto;height:1350px;border-radius:0;box-shadow:none}
+html.solo .track{transition:none}
+</style>
+<div class="wrap" lang="ko">
+  <div class="viewer">
+    <div class="vp" id="vp" aria-roledescription="carousel" aria-label="이렇게 말해 봐">
+      <div class="track" id="track">
+
+        <div class="slot"><section class="card c-cover" data-k="cover">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">01 / 06</span></header>
+          <h2 class="ttl">답이 막혀도<br>괜찮아요</h2>
+          <p class="desc">통화하다 막히면,<br>위에 한 문장이 떠요.</p>
+          <div class="sticker">
+            <div class="lab"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.2a5.6 5.6 0 0 0-3.3 10.1c.6.5.9 1.1.9 1.8v.4h4.8v-.4c0-.7.3-1.3.9-1.8A5.6 5.6 0 0 0 10 2.2z" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linejoin="round"/><path d="M7.7 16.6h4.6M8.4 18.6h3.2" stroke="currentColor" stroke-width="1.45" stroke-linecap="round"/></svg>이렇게 말해 보세요</div>
+            <div class="line">Yes, I want to try <u>the one in Sinjeon</u>.</div>
+            <div class="gloss">응, <u>신전떡볶이</u> 먹어보고 싶어.</div>
+          </div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="moment">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">02 / 06</span></header>
+          <h2 class="ttl">막히면<br>한 문장이 떠요</h2>
+          <p class="desc">질문에 막히면 <b>“이렇게 말해 봐”</b>가 떠요.<br>내 레벨에 맞는 한 문장, 뜻은 내 말로요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-call></nw-call></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="fits">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">03 / 06</span></header>
+          <h2 class="ttl">지금 대화에<br>딱 맞춰요</h2>
+          <p class="desc">아무 예문이 아니에요.<br>방금 받은 질문에, 지금까지 한 얘기에 맞춰요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-call></nw-call></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="you">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">04 / 06</span></header>
+          <h2 class="ttl">밑줄은<br>내 얘기예요</h2>
+          <p class="desc">내가 들려준 걸 기억했다가,<br><b>그 자리에 내 얘기</b>를 넣어줘요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-call></nw-call></nw-phone></div></div>
+          <div class="point"><div class="tag">내 얘기가 <b>그 자리에</b></div><svg viewBox="0 0 210 150" aria-hidden="true"><path d="M14 134 C 74 150 150 118 194 30" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><path d="M178 16 l18 10 l-20 14" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="hand">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">05 / 06</span></header>
+          <h2 class="ttl">그대로도,<br>내 식으로도</h2>
+          <p class="desc">교정이 아니라 거들어 주는 거예요.<br><b>내 문장으로 말해도</b> 돼요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-call></nw-call></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card c-outro" data-k="outro">
+          <nw-futureself mode="speaking" level="voice"></nw-futureself>
+          <div class="wm">nawana</div>
+          <div class="tg">유창한 나에게<br>언어를 배우세요.</div>
+          <div class="free">첫 20분은 무료예요</div>
+          <div class="url">nawana.app</div>
+        </section></div>
+
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn" id="prev" aria-label="이전 장">←</button>
+      <div class="dots" id="dots"></div>
+      <div class="btn-row"><button class="btn" id="replay">처음부터 재생</button><button class="btn" id="next" aria-label="다음 장">→</button></div>
+    </div>
+  </div>
+
+  <aside class="side">
+    <h1>이렇게 말해 봐 — coach suggestion</h1>
+    <p>글자 자리는 고정하고, 아래 통화 화면만 움직이는 6장짜리 시안이에요. 폰 화면, 미래의 나 모자이크, 말풍선은 모두 웹사이트와 같은 UI 키트(<b>web/kit/nawana-ui.js</b>)로 그려요. 데모 대화는 키트의 coach 샘플(신전떡볶이)이에요.</p>
+    <h3>장 목록</h3>
+    <ol class="list" id="list">
+      <li><button data-go="0">커버 · 답이 막혀도 괜찮아요</button></li>
+      <li><button data-go="1">막히면 한 문장이 떠요 · 떠오르는 순간</button></li>
+      <li><button data-go="2">지금 대화에 딱 맞춰요 · 질문↔답</button></li>
+      <li><button data-go="3">밑줄은 내 얘기예요 · 내 사실</button></li>
+      <li><button data-go="4">그대로도, 내 식으로도 · 교정 아님</button></li>
+      <li><button data-go="5">마지막 장 · nawana.app</button></li>
+    </ol>
+  </aside>
+</div>
+
+<script type="module">
+import "/web/kit/nawana-ui.js";
+const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const sleep = ms => new Promise(r => setTimeout(r, RM ? 0 : ms));
+
+const vp = $("#vp");
+const setScale = () => $$(".card").forEach(c => c.style.setProperty("--s", vp.clientWidth / 1080));
+new ResizeObserver(setScale).observe(vp); setScale();
+
+const pan = (c, y) => $(".phonewin", c).style.transform = y ? `translateY(${-y}px)` : "none";
+const COACH = { line: "Yes, I want to try <u>the one in Sinjeon</u>.", gloss: "응, <u>신전떡볶이</u> 먹어보고 싶어." };
+
+/* Seed the canonical coach moment instantly (same content as call.js pose("coach")),
+   so the very first recorded frame is a full screen, not a loading state.
+   `withCoach` draws the suggestion line; leave it off to reveal the line as motion. */
+function seedCoach(s, withCoach) {
+  s.goals(["weekend", "next week", "a spot"]); s.tick(1);
+  const you = s._line(s.l.you, "Not yet, but I want to go there next week.", { me: true }); you.classList.add("in");
+  const q = s._line(s._otherName, "Oh, nice! Next week will be here before you know it. Do you have a specific place in mind?"); q.classList.add("in");
+  s._meLn = s._line(s.l.you, s.l.listening, { me: true }); s._meLn.classList.add("in");
+  s._meLn.querySelector(".bub").classList.add("listen");
+  [you, q].forEach(l => l.querySelector(".acc").innerHTML = s._meaning());
+  s._pill("listening");
+  s._clock(25); clearInterval(s._clockT);
+  if (withCoach) s.coach(COACH);
+  s._follow();
+}
+
+const PAN_COACH = 452;
+
+const PLAY = {
+  async cover() { await sleep(2500); },
+
+  // 02 — the line appears the moment you freeze
+  async moment(c) {
+    const call = $("nw-call", c); pan(c, PAN_COACH);
+    await call.run(async s => {
+      seedCoach(s, false);           // context up, the suggestion not yet
+      await s.sleep(1700);           // the blank-mind beat
+      s.coach(COACH);                // "Try saying" blooms in
+      await s.sleep(6000);
+    });
+  },
+
+  // 03 — the suggestion answers the exact question above it
+  async fits(c) {
+    const call = $("nw-call", c); pan(c, PAN_COACH);
+    call.pose("coach");              // question in the feed, the answer suggestion below it
+    await sleep(8000);
+  },
+
+  // 04 — the underlined span is the learner's own fact
+  async you(c) {
+    const call = $("nw-call", c); pan(c, PAN_COACH);
+    call.pose("coach");
+    const p = $(".point", c); p.classList.remove("in");
+    await sleep(1100); p.classList.add("in");
+    await sleep(6900);
+  },
+
+  // 05 — a hand, not a rule: the learner answers in their own words, and it counts
+  async hand(c) {
+    const call = $("nw-call", c); pan(c, PAN_COACH);
+    await call.run(async s => {
+      seedCoach(s, true);            // the suggestion is up
+      await s.sleep(2800);           // read it…
+      await s.user("Yeah, I keep meaning to try the tteokbokki place by my office.");  // …say it their own way
+      s.tick(2);
+      await s.sleep(600);
+      await s.say("Do it this weekend. Treat yourself.");
+      s.done();
+      await s.sleep(2800);
+    });
+  },
+
+  async outro() { await sleep(2500); },
+};
+
+const track = $("#track"), slots = $$(".slot"), cards = $$(".card"), dots = $("#dots"), list = $$("#list button");
+slots.forEach((_, i) => { const b = document.createElement("button"); b.setAttribute("aria-label", `${i + 1}번 장`); b.onclick = () => go(i); dots.append(b); });
+let idx = 0, gen = 0;
+function go(i) {
+  idx = (i + slots.length) % slots.length;
+  track.style.transform = `translateX(${-idx * 100}%)`;
+  $$("button", dots).forEach((b, j) => b.setAttribute("aria-current", j === idx));
+  list.forEach((b, j) => b.setAttribute("aria-current", j === idx));
+  $$("nw-call").forEach(s => s.stop());
+  run(cards[idx]);
+}
+async function run(card) {
+  const g = ++gen, alive = () => g === gen;
+  await customElements.whenDefined("nw-call");
+  await sleep(350);
+  do { await PLAY[card.dataset.k](card, alive); } while (alive() && !RM);
+}
+$("#prev").onclick = () => go(idx - 1);
+$("#next").onclick = () => go(idx + 1);
+$("#replay").onclick = () => go(idx);
+list.forEach(b => b.onclick = () => go(+b.dataset.go));
+addEventListener("keydown", e => { if (e.key === "ArrowRight") go(idx + 1); if (e.key === "ArrowLeft") go(idx - 1); });
+let x0 = null;
+vp.addEventListener("pointerdown", e => x0 = e.clientX);
+vp.addEventListener("pointerup", e => { if (x0 == null) return; const d = e.clientX - x0; x0 = null; if (Math.abs(d) > 40) go(idx + (d < 0 ? 1 : -1)); });
+const solo = +(new URLSearchParams(location.search).get("solo") || 0);
+if (solo) document.documentElement.classList.add("solo");
+const m = solo ? [0, solo] : /^#card(\d)$/.exec(location.hash);
+go(m ? +m[1] - 1 : 0);
+</script>

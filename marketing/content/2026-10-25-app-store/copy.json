@@ -1,0 +1,684 @@
+{
+ "ko": {
+  "raw": "ko",
+  "audience": "전화영어·오픽/토익스피킹을 준비하는 직장인. 원어민 앞이 부담스러운 사람.",
+  "shots": [
+   {
+    "id": "call",
+    "capture": "transcript",
+    "title": "유창해진 나와\n영어로 통화해요",
+    "accent": "유창해진 나",
+    "sub": "60초 녹음으로 만든 내 목소리.\n첫 20분은 무료예요."
+   },
+   {
+    "id": "focus",
+    "capture": "call-focus",
+    "title": "자꾸 틀리는 문법,\n통화 중에 잡아줘요",
+    "accent": "통화 중에",
+    "sub": "같은 실수가 또 나오면 바로 알려줘요.",
+    "callout": {
+     "crop": [
+      170,
+      1160,
+      1110,
+      500
+     ],
+     "top": 1980
+    }
+   },
+   {
+    "id": "coach",
+    "capture": "call-coach",
+    "title": "말문이 막히면\n답할 문장이 떠요",
+    "accent": "답할 문장",
+    "sub": "질문마다 내 레벨에 맞는 한 문장.",
+    "callout": {
+     "crop": [
+      60,
+      2185,
+      1200,
+      240
+     ],
+     "top": 1560
+    }
+   },
+   {
+    "id": "routine",
+    "capture": "activity-week",
+    "title": "전화영어처럼\n매일 그 시간에",
+    "accent": "매일",
+    "sub": "정한 시간이 되면 알람처럼 전화가 울려요."
+   },
+   {
+    "id": "situation",
+    "capture": "composer-box",
+    "title": "면접, 상견례, 진료.\n먼저 겪어 봐요",
+    "accent": "먼저",
+    "sub": "상황을 적으면 유창한 내가\n그 대화를 먼저 보여줘요."
+   },
+   {
+    "id": "people",
+    "capture": "watchtab-sky",
+    "title": "내 주변 사람과\n영어로 연습해요",
+    "accent": "내 주변 사람",
+    "sub": "친구, 동료, 가족. 관계에 맞는 말투로."
+   },
+   {
+    "id": "book",
+    "capture": "talkdetail",
+    "title": "통화 한 번이\n복습 교재 한 권",
+    "accent": "교재",
+    "sub": "단어·표현·고친 문장이 그대로 남아요."
+   },
+   {
+    "id": "speech",
+    "capture": "speech-result",
+    "title": "발표와 면접 답변,\n소리 내어 리허설",
+    "accent": "리허설",
+    "sub": "정확도·속도·쉼·군말까지 채점해요."
+   },
+   {
+    "id": "level",
+    "capture": "progress",
+    "title": "내 영어 레벨,\n말한 것으로만 재요",
+    "accent": "말한 것",
+    "sub": "CEFR 기준, 어휘·문법·유창성 영역별로."
+   }
+  ]
+ },
+ "ja": {
+  "raw": "ja",
+  "audience": "英会話に苦手意識がある人。オンライン英会話で講師相手に緊張する人。",
+  "shots": [
+   {
+    "id": "call",
+    "capture": "transcript",
+    "title": "相手は、\n英語が話せる自分",
+    "accent": "自分",
+    "sub": "60秒の録音で、自分の声のまま。\n最初の20分は無料です。"
+   },
+   {
+    "id": "coach",
+    "capture": "call-coach",
+    "title": "詰まっても大丈夫。\n言い方が出てくる",
+    "accent": "言い方",
+    "sub": "質問ごとに、自分のレベルに合った一文。",
+    "callout": {
+     "crop": [
+      60,
+      2185,
+      1200,
+      240
+     ],
+     "top": 1560
+    }
+   },
+   {
+    "id": "focus",
+    "capture": "call-focus",
+    "title": "いつものミスを、\n通話中にキャッチ",
+    "accent": "通話中",
+    "sub": "同じミスが出たら、その場で教えてくれます。",
+    "callout": {
+     "crop": [
+      170,
+      1160,
+      1110,
+      500
+     ],
+     "top": 1980
+    }
+   },
+   {
+    "id": "situation",
+    "capture": "composer-box",
+    "title": "面接も顔合わせも、\n先にリハーサル",
+    "accent": "リハーサル",
+    "sub": "状況を書けば、流暢な自分が先に演じてくれます。"
+   },
+   {
+    "id": "book",
+    "capture": "talkdetail",
+    "title": "通話のあとに、\n自分だけの教材",
+    "accent": "自分だけ",
+    "sub": "単語・表現・直した文がそのまま残ります。"
+   },
+   {
+    "id": "routine",
+    "capture": "activity-week",
+    "title": "毎日決まった時間に\n電話が鳴る",
+    "accent": "電話",
+    "sub": "アラームのように鳴るから、続けられる。"
+   },
+   {
+    "id": "speech",
+    "capture": "speech-result",
+    "title": "スピーチも面接も、\n声に出して練習",
+    "accent": "声に出して",
+    "sub": "正確さ・速さ・間・フィラーまで採点。"
+   },
+   {
+    "id": "people",
+    "capture": "watchtab-sky",
+    "title": "身近な人を相手に\n英語で話してみる",
+    "accent": "身近な人",
+    "sub": "友だち、同僚、家族。関係に合った話し方で。"
+   },
+   {
+    "id": "level",
+    "capture": "progress",
+    "title": "レベルは、\n話した英語で測る",
+    "accent": "話した英語",
+    "sub": "CEFR基準で、語彙・文法・流暢さを分野別に。"
+   }
+  ]
+ },
+ "de-DE": {
+  "raw": "de",
+  "audience": "Berufstätige, die Englisch für Job, Meetings und Bewerbungen sprechen müssen.",
+  "shots": [
+   {
+    "id": "call",
+    "capture": "transcript",
+    "title": "Englisch reden –\nmit dir, nur fließend",
+    "accent": "fließend",
+    "sub": "Mit deiner eigenen Stimme.\nDie ersten 20 Minuten sind gratis."
+   },
+   {
+    "id": "situation",
+    "capture": "composer-box",
+    "title": "Jobinterview?\nErst mal proben.",
+    "accent": "proben",
+    "sub": "Beschreib die Situation – dein fließendes Ich spielt sie dir vor."
+   },
+   {
+    "id": "focus",
+    "capture": "call-focus",
+    "title": "Typische Fehler,\nsofort erkannt",
+    "accent": "sofort erkannt",
+    "sub": "Wiederholst du einen Fehler, siehst du es sofort.",
+    "callout": {
+     "crop": [
+      170,
+      1160,
+      1110,
+      500
+     ],
+     "top": 1980
+    }
+   },
+   {
+    "id": "coach",
+    "capture": "call-coach",
+    "title": "Kein Wort parat?\nHier ist ein Satz.",
+    "accent": "ein Satz",
+    "sub": "Zu jeder Frage ein Vorschlag auf deinem Niveau.",
+    "callout": {
+     "crop": [
+      60,
+      2185,
+      1200,
+      240
+     ],
+     "top": 1560
+    }
+   },
+   {
+    "id": "book",
+    "capture": "talkdetail",
+    "title": "Jedes Gespräch\nwird dein Lernbuch",
+    "accent": "Lernbuch",
+    "sub": "Wörter, Wendungen und Korrekturen bleiben."
+   },
+   {
+    "id": "speech",
+    "capture": "speech-result",
+    "title": "Präsentation?\nLaut üben.",
+    "accent": "Laut üben",
+    "sub": "Bewertet nach Genauigkeit, Tempo, Pausen und Füllwörtern."
+   },
+   {
+    "id": "routine",
+    "capture": "activity-week",
+    "title": "Jeden Tag ein Anruf,\nzu deiner Zeit",
+    "accent": "Anruf",
+    "sub": "Er klingelt wie ein Wecker. So bleibst du dran."
+   },
+   {
+    "id": "people",
+    "capture": "watchtab-sky",
+    "title": "Üb mit Menschen\naus deinem Leben",
+    "accent": "deinem Leben",
+    "sub": "Freunde, Kollegen, Familie – jeweils im passenden Ton."
+   },
+   {
+    "id": "level",
+    "capture": "progress",
+    "title": "Dein Niveau,\ngemessen am Sprechen",
+    "accent": "Sprechen",
+    "sub": "Nach GER: Wortschatz, Grammatik, Flüssigkeit."
+   }
+  ]
+ },
+ "fr-FR": {
+  "raw": "fr",
+  "audience": "Francophones qui comprennent l’anglais mais bloquent à l’oral, gênés par leur accent.",
+  "shots": [
+   {
+    "id": "call",
+    "capture": "transcript",
+    "title": "Parle anglais\navec ton moi fluide",
+    "accent": "ton moi fluide",
+    "sub": "Avec ta propre voix.\nLes 20 premières minutes sont offertes."
+   },
+   {
+    "id": "coach",
+    "capture": "call-coach",
+    "title": "Un blanc ?\nVoici une phrase.",
+    "accent": "une phrase",
+    "sub": "À chaque question, une réponse à ton niveau.",
+    "callout": {
+     "crop": [
+      60,
+      2185,
+      1200,
+      240
+     ],
+     "top": 1560
+    }
+   },
+   {
+    "id": "focus",
+    "capture": "call-focus",
+    "title": "Tes erreurs,\nrepérées en direct",
+    "accent": "en direct",
+    "sub": "Si la même faute revient, tu le vois tout de suite.",
+    "callout": {
+     "crop": [
+      170,
+      1160,
+      1110,
+      500
+     ],
+     "top": 1980
+    }
+   },
+   {
+    "id": "situation",
+    "capture": "composer-box",
+    "title": "Un entretien ?\nRépète-le avant.",
+    "accent": "avant",
+    "sub": "Décris la situation : ton moi fluide la joue d’abord."
+   },
+   {
+    "id": "book",
+    "capture": "talkdetail",
+    "title": "Chaque appel\ndevient ton carnet",
+    "accent": "ton carnet",
+    "sub": "Mots, expressions et corrections : tout reste."
+   },
+   {
+    "id": "speech",
+    "capture": "speech-result",
+    "title": "Une présentation ?\nRépète à voix haute",
+    "accent": "à voix haute",
+    "sub": "Précision, débit, pauses et mots de remplissage, notés."
+   },
+   {
+    "id": "routine",
+    "capture": "activity-week",
+    "title": "Un appel par jour,\nà ton heure",
+    "accent": "Un appel",
+    "sub": "Ça sonne comme un réveil. Facile de s’y tenir."
+   },
+   {
+    "id": "people",
+    "capture": "watchtab-sky",
+    "title": "Entraîne-toi avec\nles gens de ta vie",
+    "accent": "les gens de ta vie",
+    "sub": "Amis, collègues, famille : le bon ton pour chacun."
+   },
+   {
+    "id": "level",
+    "capture": "progress",
+    "title": "Ton niveau,\nmesuré à l’oral",
+    "accent": "à l’oral",
+    "sub": "Selon le CECRL : vocabulaire, grammaire, aisance."
+   }
+  ]
+ },
+ "es": {
+  "raw": "es",
+  "audience": "Hispanohablantes que necesitan inglés para el trabajo, entrevistas o mudarse.",
+  "shots": [
+   {
+    "id": "call",
+    "capture": "transcript",
+    "title": "Habla inglés\ncon tu yo fluido",
+    "accent": "tu yo fluido",
+    "sub": "Con tu propia voz.\nLos primeros 20 minutos son gratis."
+   },
+   {
+    "id": "situation",
+    "capture": "composer-box",
+    "title": "¿Una entrevista?\nEnsáyala antes.",
+    "accent": "Ensáyala",
+    "sub": "Describe la situación y tu yo fluido la vive primero."
+   },
+   {
+    "id": "coach",
+    "capture": "call-coach",
+    "title": "¿En blanco?\nAquí va una frase.",
+    "accent": "una frase",
+    "sub": "En cada pregunta, una respuesta a tu nivel.",
+    "callout": {
+     "crop": [
+      60,
+      2185,
+      1200,
+      240
+     ],
+     "top": 1560
+    }
+   },
+   {
+    "id": "focus",
+    "capture": "call-focus",
+    "title": "Tus errores de siempre,\nen plena llamada",
+    "accent": "en plena llamada",
+    "sub": "Si repites un error, lo ves al momento.",
+    "callout": {
+     "crop": [
+      170,
+      1160,
+      1110,
+      500
+     ],
+     "top": 1980
+    }
+   },
+   {
+    "id": "book",
+    "capture": "talkdetail",
+    "title": "Cada llamada\nes tu cuaderno",
+    "accent": "tu cuaderno",
+    "sub": "Palabras, expresiones y correcciones quedan guardadas."
+   },
+   {
+    "id": "routine",
+    "capture": "activity-week",
+    "title": "Una llamada al día,\na tu hora",
+    "accent": "Una llamada",
+    "sub": "Suena como una alarma. Así no lo dejas."
+   },
+   {
+    "id": "speech",
+    "capture": "speech-result",
+    "title": "¿Una presentación?\nPractícala en voz alta",
+    "accent": "en voz alta",
+    "sub": "Se evalúan precisión, ritmo, pausas y muletillas."
+   },
+   {
+    "id": "people",
+    "capture": "watchtab-sky",
+    "title": "Practica con\nla gente de tu vida",
+    "accent": "la gente de tu vida",
+    "sub": "Amigos, colegas, familia: con el tono adecuado."
+   },
+   {
+    "id": "level",
+    "capture": "progress",
+    "title": "Tu nivel,\nmedido al hablar",
+    "accent": "al hablar",
+    "sub": "Según el MCER: vocabulario, gramática y fluidez."
+   }
+  ]
+ },
+ "zh-Hant": {
+  "raw": "zh-Hant",
+  "font": "sans-tc",
+  "audience": "準備多益口說、雅思，或工作要用英文開會的台灣上班族。",
+  "shots": [
+   {
+    "id": "call",
+    "capture": "transcript",
+    "title": "和流利的自己\n用英文通電話",
+    "accent": "流利的自己",
+    "sub": "60 秒錄音，就是你自己的聲音。\n前 20 分鐘免費。"
+   },
+   {
+    "id": "focus",
+    "capture": "call-focus",
+    "title": "老是犯的文法錯誤，\n通話中就抓出來",
+    "accent": "通話中",
+    "sub": "同樣的錯誤再出現，馬上提醒你。",
+    "callout": {
+     "crop": [
+      170,
+      1160,
+      1110,
+      500
+     ],
+     "top": 1980
+    }
+   },
+   {
+    "id": "coach",
+    "capture": "call-coach",
+    "title": "卡住說不出口？\n給你一句參考",
+    "accent": "一句參考",
+    "sub": "每個問題，都有符合你程度的回答。",
+    "callout": {
+     "crop": [
+      60,
+      2185,
+      1200,
+      240
+     ],
+     "top": 1560
+    }
+   },
+   {
+    "id": "book",
+    "capture": "talkdetail",
+    "title": "每通電話，\n都變成你的教材",
+    "accent": "你的教材",
+    "sub": "單字、用語和修正過的句子都會留下。"
+   },
+   {
+    "id": "speech",
+    "capture": "speech-result",
+    "title": "簡報、面試回答，\n開口練到順",
+    "accent": "開口",
+    "sub": "準確度、語速、停頓、贅詞，一一評分。"
+   },
+   {
+    "id": "situation",
+    "capture": "composer-box",
+    "title": "面試、見家長、看醫生，\n先演練一次",
+    "accent": "先演練",
+    "sub": "寫下情境，流利的你先示範一遍。"
+   },
+   {
+    "id": "routine",
+    "capture": "activity-week",
+    "title": "每天固定時間，\n電話會響",
+    "accent": "電話",
+    "sub": "像鬧鐘一樣響起，練習不中斷。"
+   },
+   {
+    "id": "people",
+    "capture": "watchtab-sky",
+    "title": "和身邊的人，\n用英文聊聊",
+    "accent": "身邊的人",
+    "sub": "朋友、同事、家人，用合適的語氣說。"
+   },
+   {
+    "id": "level",
+    "capture": "progress",
+    "title": "你的程度，\n只看你說了什麼",
+    "accent": "你說了什麼",
+    "sub": "依 CEFR 標準，分詞彙、文法、流暢度。"
+   }
+  ]
+ },
+ "zh-Hans": {
+  "raw": "zh-Hans",
+  "font": "sans-sc",
+  "audience": "备考雅思口语、工作要说英语的海外华人和新加坡、马来西亚用户。",
+  "shots": [
+   {
+    "id": "call",
+    "capture": "transcript",
+    "title": "和流利的自己\n用英语打电话",
+    "accent": "流利的自己",
+    "sub": "60 秒录音，就是你自己的声音。\n前 20 分钟免费。"
+   },
+   {
+    "id": "focus",
+    "capture": "call-focus",
+    "title": "总犯的语法错误，\n通话时就指出来",
+    "accent": "通话时",
+    "sub": "同样的错误再出现，马上提醒你。",
+    "callout": {
+     "crop": [
+      170,
+      1160,
+      1110,
+      500
+     ],
+     "top": 1980
+    }
+   },
+   {
+    "id": "coach",
+    "capture": "call-coach",
+    "title": "卡壳说不出来？\n给你一句参考",
+    "accent": "一句参考",
+    "sub": "每个问题，都有适合你水平的回答。",
+    "callout": {
+     "crop": [
+      60,
+      2185,
+      1200,
+      240
+     ],
+     "top": 1560
+    }
+   },
+   {
+    "id": "book",
+    "capture": "talkdetail",
+    "title": "每通电话，\n都是你的专属教材",
+    "accent": "专属教材",
+    "sub": "单词、表达和改好的句子都会保留。"
+   },
+   {
+    "id": "speech",
+    "capture": "speech-result",
+    "title": "演讲、面试回答，\n开口练到顺",
+    "accent": "开口",
+    "sub": "准确度、语速、停顿、口头禅，逐项打分。"
+   },
+   {
+    "id": "situation",
+    "capture": "composer-box",
+    "title": "面试、见家长、看病，\n先演练一遍",
+    "accent": "先演练",
+    "sub": "写下场景，流利的你先示范一遍。"
+   },
+   {
+    "id": "routine",
+    "capture": "activity-week",
+    "title": "每天固定时间，\n电话准时打来",
+    "accent": "电话",
+    "sub": "像闹钟一样响，练习不中断。"
+   },
+   {
+    "id": "people",
+    "capture": "watchtab-sky",
+    "title": "和身边的人，\n用英语聊聊",
+    "accent": "身边的人",
+    "sub": "朋友、同事、家人，用合适的语气说。"
+   },
+   {
+    "id": "level",
+    "capture": "progress",
+    "title": "你的水平，\n只看你说了什么",
+    "accent": "你说了什么",
+    "sub": "按 CEFR 标准，分词汇、语法、流利度。"
+   }
+  ]
+ },
+ "en": {
+  "raw": "en-ja",
+  "audience": "English speakers learning Japanese (and Spanish, Korean, German) who can read but freeze when they have to talk.",
+  "shots": [
+   {
+    "id": "call",
+    "capture": "transcript-ja",
+    "title": "Talk to yourself,\nfluent",
+    "accent": "fluent",
+    "sub": "Your own voice, from a 60-second recording.\nFirst 20 minutes free."
+   },
+   {
+    "id": "book",
+    "capture": "talkdetail-ja",
+    "title": "Every call leaves\nwords to keep",
+    "accent": "words to keep",
+    "sub": "The words your fluent self used, ready to review."
+   },
+   {
+    "id": "shadow",
+    "capture": "shadow-ja",
+    "title": "Shadow the voice\nyou'll sound like",
+    "accent": "you'll sound like",
+    "sub": "It's your voice, fluent. Speak along until it sticks.",
+    "callout": {
+     "crop": [
+      30,
+      440,
+      1260,
+      520
+     ],
+     "top": 1640
+    }
+   },
+   {
+    "id": "situation",
+    "capture": "composer-box",
+    "title": "Interview abroad?\nRehearse it first.",
+    "accent": "Rehearse",
+    "sub": "Describe the scene. Your fluent self plays it out."
+   },
+   {
+    "id": "speech",
+    "capture": "speech-result",
+    "title": "Rehearse a speech\nout loud",
+    "accent": "out loud",
+    "sub": "Scored on accuracy, pace, pauses and fillers."
+   },
+   {
+    "id": "routine",
+    "capture": "activity-week",
+    "title": "A call every day,\nat your time",
+    "accent": "A call",
+    "sub": "It rings like an alarm, so you keep going."
+   },
+   {
+    "id": "people",
+    "capture": "watchtab-sky",
+    "title": "Practice with the\npeople in your life",
+    "accent": "people in your life",
+    "sub": "Friends, colleagues, family, each in the right tone."
+   },
+   {
+    "id": "level",
+    "capture": "progress",
+    "title": "Your level, measured\nby what you said",
+    "accent": "what you said",
+    "sub": "CEFR and JLPT, from your real conversations."
+   }
+  ]
+ }
+}

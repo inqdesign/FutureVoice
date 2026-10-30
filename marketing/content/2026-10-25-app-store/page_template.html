@@ -1,0 +1,130 @@
+<title>nawana App Store Refresh</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: one reading column on nawana's grid paper; screenshot strips scroll sideways inside it. */
+@font-face{font-family:"Geist Pixel";src:url(data:font/ttf;base64,{{GEIST}}) format("truetype")}
+:root{
+ --ground:#F7F8FA; --grid:rgba(13,17,23,.05); --ink:#0D1117; --muted:#5A6170; --line:#E3E6EC;
+ --card:#FFFFFF; --blue:#0A5CF5; --blue-soft:#E8EFFE; --warn:#B4530A; --warn-soft:#FDF1E6;
+ --pixel:"Geist Pixel",ui-monospace,Menlo,monospace;
+ --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Apple SD Gothic Neo","Hiragino Sans","PingFang TC",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+ --ground:#0E1116; --grid:rgba(255,255,255,.045); --ink:#E8EBF0; --muted:#9AA3B2; --line:#262C36;
+ --card:#161A21; --blue:#5B93FF; --blue-soft:#17243E; --warn:#F0A060; --warn-soft:#2A1E12; color-scheme:dark}}
+:root[data-theme="dark"]{
+ --ground:#0E1116; --grid:rgba(255,255,255,.045); --ink:#E8EBF0; --muted:#9AA3B2; --line:#262C36;
+ --card:#161A21; --blue:#5B93FF; --blue-soft:#17243E; --warn:#F0A060; --warn-soft:#2A1E12; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--ground);color:var(--ink);font:15px/1.55 var(--sans);
+ background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:40px 40px;
+ padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:40px 80px}
+main{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+h1,h2{font-family:var(--pixel);font-weight:400;letter-spacing:-.5px;text-wrap:balance;margin:0}
+h1{font-size:clamp(34px,6vw,56px);line-height:1.05}
+h1 em,h2 em{font-style:normal;color:var(--blue)}
+h2{font-size:clamp(24px,3.6vw,32px)}
+h3{font-size:16px;margin:0}
+h4{font-size:13px;margin:0;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+p{margin:0;max-width:68ch}
+.lede{font-size:17px;color:var(--muted);margin-top:14px}
+.stamp{display:inline-flex;gap:8px;align-items:center;margin-top:18px;font-size:13px;color:var(--warn);background:var(--warn-soft);padding:6px 12px;border-radius:999px}
+section.block{display:flex;flex-direction:column;gap:20px}
+.findings{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px}
+.finding{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.finding b{font-family:var(--pixel);font-weight:400;font-size:30px;color:var(--blue);line-height:1}
+.finding p{color:var(--muted);font-size:14px}
+.live{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px}
+.live img{width:96px;border-radius:8px;border:1px solid var(--line);flex:none}
+.cap{font-size:13px;color:var(--muted)}
+[role=tablist]{display:flex;flex-wrap:wrap;gap:6px}
+[role=tab]{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:7px 14px;cursor:pointer}
+[role=tab][aria-selected=true]{background:var(--blue);border-color:var(--blue);color:#fff}
+[role=tab]:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+[role=tabpanel]{display:flex;flex-direction:column;gap:22px;margin-top:6px}
+.who{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:10px 24px}
+.lab{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.strip{display:flex;gap:12px;overflow-x:auto;padding-bottom:10px;scroll-snap-type:x proximity}
+.strip figure{margin:0;flex:none;width:clamp(150px,22vw,200px);scroll-snap-align:start}
+.strip img{width:100%;display:block;border-radius:10px;border:1px solid var(--line)}
+figcaption{font-size:12px;color:var(--muted);margin-top:5px;font-variant-numeric:tabular-nums}
+.meta{display:flex;flex-direction:column;gap:10px}
+.why{color:var(--muted);font-size:14px}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+table{border-collapse:collapse;width:100%;min-width:620px;font-size:14px}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-top:1px solid var(--line)}
+thead th{border-top:0;font-size:12px;color:var(--muted);font-weight:600}
+tbody th{width:120px;font-weight:600;font-size:13px;white-space:nowrap}
+td.now{color:var(--muted);width:42%}
+td.new{background:var(--blue-soft)}
+.n{display:block;font-size:11px;color:var(--muted);margin-top:3px;font-variant-numeric:tabular-nums}
+ol.moves{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:14px;max-width:72ch}
+ol.moves li::marker{color:var(--blue);font-weight:700}
+ol.moves p{color:var(--muted);font-size:14px;margin-top:2px}
+.tag{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--blue-soft);color:var(--blue);margin-left:6px;white-space:nowrap}
+code{font:12.5px ui-monospace,Menlo,monospace;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:1px 5px;word-break:break-all}
+ul.plain{margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:6px;max-width:72ch;color:var(--muted);font-size:14px}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+
+<main>
+<header>
+ <h1>App Store <em>refresh</em></h1>
+ <p class="lede">New iPhone screenshots for every storefront nawana is listed in, each written for the people who shop there, plus name, subtitle, keyword and promo text proposals. Built from the real app on the simulator, 25 Oct 2026.</p>
+ <span class="stamp">Nothing has been uploaded to App Store Connect</span>
+</header>
+
+<section class="block">
+ <h2>What the store shows today</h2>
+ <div class="findings">
+  <div class="finding"><b>8 / 10</b><h3>pages fall back to English shots</h3><p>Only en-GB and ko carry screenshots. Japanese, German, French, Spanish and Chinese shoppers see the English set.</p></div>
+  <div class="finding"><b>0</b><h3>preview videos</h3><p>No locale has an App Preview. The motion piece in <code>marketing/content/2026-10-16-app-preview</code> fits the size limits, but it animates UI pieces, and Apple asks for recordings of the app itself (2.3.4).</p></div>
+  <div class="finding"><b>2 of 3</b><h3>search-result slots are text panels</h3><p>The first three shots show in search. Two are brand panels and the third is the old home ring. Headlines name features ("Conversation", "Shadowing") instead of a reason to download.</p></div>
+  <div class="finding"><b>Older UI</b><h3>missing what shipped since</h3><p>The new home, coach mode's "try saying" line, the grammar focus card, the routine with its daily call, and the People map.</p></div>
+ </div>
+ <div class="live">{{LIVE}}</div>
+ <p class="cap">Live en-GB iPhone set (the same layout serves ko with Korean headlines).</p>
+</section>
+
+<section class="block">
+ <h2>New screenshot sets</h2>
+ <p class="lede" style="margin-top:0">Nine 6.9-inch shots per language (1320 × 2868; App Store Connect scales them down for smaller iPhones). Same app and same nine screens everywhere. The order and the headlines change with who is shopping: phone English and speaking tests in Korea, nerves about 英会話 in Japan, English for work in Europe and Latin America, speaking exams in Taiwan, and Japanese as the target language on the English pages.</p>
+ <div role="tablist" aria-label="Storefront">{{TABS}}</div>
+ {{PANELS}}
+</section>
+
+<section class="block">
+ <h2>Other store moves, in order</h2>
+ <ol class="moves">
+  <li><b>Change the promotional text now.</b><span class="tag">no review</span><p>It is the one field that updates without a new version. Every proposal above opens with "first 20 minutes free", where the live text opens on "your language isn't growing".</p></li>
+  <li><b>Ship the screenshots, name and subtitle with 1.2.4.</b><span class="tag">next version</span><p>Screenshots belong to a version and the app info only unlocks while one is being prepared, so this rides on the next submission. <code>asc-submit.py</code> writes text only; screenshots need an upload step (I can add one once you pick the sets).</p></li>
+  <li><b>A/B test the first screenshot in Korea and the US.</b><span class="tag">Product Page Optimization</span><p>Live brand hero against the new "talk with the fluent you" call screen. Up to three treatments, 90 days, needs no app update.</p></li>
+  <li><b>Custom product pages for the biggest intents.</b><span class="tag">custom product pages</span><p>"영어 면접", "오픽 / 토익스피킹", "Job interview in English", "英会話が恥ずかしい". Each gets its own URL to use in Instagram and Threads links and Apple Search Ads, with the situation or speech shot first.</p></li>
+  <li><b>Record a real App Preview.</b><span class="tag">15–30 s</span><p>A simulator screen recording of one call: the question, the learner's line, the correction card, the fluent self's answer in the same voice. Sound matters here because the voice is the product.</p></li>
+  <li><b>Run the weekly speech challenge as an In-App Event.</b><span class="tag">search + Today</span><p>Events show in search results and on the product page, so a new challenge each week is a recurring reason to appear.</p></li>
+  <li><b>Make an iPad 13-inch set.</b><span class="tag">still old</span><p>The app runs on iPad, and the seven live iPad shots are as old as the iPhone ones. They need a pass on the iPad simulator; reusing iPhone frames on an iPad page is a rejection risk.</p></li>
+ </ol>
+</section>
+
+<section class="block">
+ <h2>Before any of this goes live</h2>
+ <ul class="plain">
+  <li>Headlines in ko, ja, de, fr, es, zh-Hant and zh-Hans were written for each market, not translated. A native read is still worth it for ja, de, fr, es and both Chinese sets before upload.</li>
+  <li>Screens use the capture harness's sample data: sample names, an English talk about a job interview, a B2 level. Two leftovers show in every language: the correction card's grammar label reads "Past tense", and the routine list repeats one sample talk several times.</li>
+  <li>Keyword indexing across locales (for example es-MX counting in the US store) comes from ASO tools, not Apple documentation. Check it against Search Ads data before relying on it.</li>
+  <li>The name changes are the strongest ranking lever and the most visible change. They are proposals; the current names stay until you decide.</li>
+ </ul>
+</section>
+</main>
+
+<script>
+const tabs=[...document.querySelectorAll('[role=tab]')];
+function show(k){tabs.forEach(t=>{const on=t.dataset.k===k;t.setAttribute('aria-selected',on);document.getElementById('p-'+k).hidden=!on});
+ try{localStorage.setItem('asc-tab',k)}catch(e){}}
+tabs.forEach(t=>t.addEventListener('click',()=>show(t.dataset.k)));
+document.querySelector('[role=tablist]').addEventListener('keydown',e=>{
+ const i=tabs.findIndex(t=>t.getAttribute('aria-selected')==='true');
+ if(e.key==='ArrowRight'||e.key==='ArrowLeft'){const n=tabs[(i+(e.key==='ArrowRight'?1:tabs.length-1))%tabs.length];show(n.dataset.k);n.focus()}});
+try{const s=localStorage.getItem('asc-tab');if(s&&document.getElementById('p-'+s))show(s)}catch(e){}
+</script>

@@ -1,0 +1,380 @@
+<title>튜터 모드 · 미래의 내가 선생님이 돼요</title>
+<style>
+
+/* Layout: one 1080×1350 post at a time; fixed text block on top, a window onto the real app below.
+   Inside the phone everything is authored in iOS points (402×874) and scaled ×1.5. Light only, by choice.
+   Every body card is the SAME screen, nw-call in tutor mode: the lesson strip (call.tutor), the fix card, tutorTick / tutorDone. */
+:root{
+  color-scheme:light;
+  --page:#E9ECF1; --card:#F7F8FA; --grid:rgba(10,40,90,.045);
+  --ink:#0D1117; --sub:#5A6170; --faint:#9AA1AD; --line:#DCE0E7;
+  --blue:#0A5CF5; --ios-blue:#007AFF;
+  --sys-bg:#FFFFFF; --sys-grouped:#F2F2F7; --sys-fill:#EFEFF4; --sys-gray:#8E8E93; --sys-gray3:#C7C7CC;
+  --me-bubble:#D3E2FD; --fix-bg:#EBF2FE; --btn-tint:#D6E4FB; --sys-red:#FF3B30; --sys-green:#34C759; --sys-orange:#E07B1F;
+  --pixel:"Geist Pixel","Galmuri14","Apple SD Gothic Neo",system-ui,sans-serif;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--sans)}
+.wrap{max-width:1100px;margin:0 auto;padding-inline:16px;padding-block:28px 56px;display:flex;flex-wrap:wrap;gap:28px 40px;align-items:flex-start;justify-content:center}
+.viewer{flex:0 1 540px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.side{flex:1 1 300px;min-width:0;max-width:440px;font-size:14px;line-height:1.6;color:var(--sub)}
+.side h1{font-family:var(--pixel);font-weight:400;font-size:26px;line-height:1.25;color:var(--ink);margin:0 0 10px;text-wrap:balance}
+.side h3{font-size:13px;letter-spacing:.06em;color:var(--ink);margin:22px 0 6px}
+.side ol{padding-left:18px;margin:0}
+.side li{margin-bottom:4px}
+.side .list button{all:unset;cursor:pointer;color:var(--ink)}
+.side .list button[aria-current="true"]{color:var(--blue);font-weight:600}
+.side .list button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.vp{position:relative;width:100%;aspect-ratio:4/5;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(13,17,23,.08),0 18px 50px rgba(13,17,23,.10);background:var(--card);touch-action:pan-y}
+.track{position:absolute;inset:0;display:flex;transition:transform .45s cubic-bezier(.3,.7,.2,1)}
+.slot{flex:0 0 100%;height:100%;position:relative;overflow:hidden}
+.controls{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.dots{display:flex;gap:7px}
+.dots button{width:8px;height:8px;border-radius:50%;border:0;padding:0;background:#C5CBD5;cursor:pointer}
+.dots button[aria-current="true"]{background:var(--blue);width:22px;border-radius:4px}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;height:36px;min-width:36px;padding:0 14px;font:inherit;font-size:13px;cursor:pointer}
+.btn:focus-visible,.dots button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.btn-row{display:flex;gap:6px}
+
+/* ───────── the post, authored at 1080×1350 ───────── */
+.card{position:absolute;left:0;top:0;width:1080px;height:1350px;transform-origin:0 0;transform:scale(var(--s,.5));background:var(--card);overflow:hidden;
+  background-image:linear-gradient(var(--grid) 2px,transparent 2px),linear-gradient(90deg,var(--grid) 2px,transparent 2px);background-size:54px 54px;background-position:-1px -1px}
+.cap{position:absolute;left:84px;right:84px;top:72px;display:flex;justify-content:space-between;align-items:center;font-family:var(--pixel);font-size:28px;color:var(--sub)}
+.cap .series{display:flex;align-items:center;gap:14px}
+.cap .series::before{content:"";width:14px;height:14px;background:var(--blue)}
+.cap .num{color:var(--faint)}
+.ttl{position:absolute;left:84px;right:84px;top:134px;margin:0;font-family:var(--pixel);font-weight:400;font-size:72px;line-height:88px;letter-spacing:-1px;color:var(--ink)}
+.ttl .en{color:var(--blue)}
+.desc{position:absolute;left:84px;right:96px;top:322px;margin:0;font-size:32px;line-height:47px;color:var(--sub);font-weight:500;letter-spacing:-.3px;word-break:keep-all}
+.desc b{color:var(--ink);font-weight:600}
+/* the window onto the phone: clipped at its top so a phone can pan up under the text */
+.stage{position:absolute;left:0;right:0;top:470px;bottom:0;overflow:hidden;
+  -webkit-mask-image:linear-gradient(transparent,#000 40px);mask-image:linear-gradient(transparent,#000 40px)}
+
+.phonewin{position:absolute;left:50%;top:44px;width:627px;margin-left:-313.5px;transition:transform .9s cubic-bezier(.45,0,.2,1)}
+.phonewin nw-phone{width:627px}
+
+/* ── cover / outro ── */
+.swipe{position:absolute;left:84px;right:84px;bottom:72px;display:flex;justify-content:space-between;font-size:28px;color:var(--faint)}
+.swipe b{font-family:var(--pixel);font-weight:400;color:var(--blue)}
+.c-outro{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.c-outro nw-futureself{width:300px;height:166px;margin-bottom:60px}
+.c-outro .wm{font-family:var(--pixel);font-size:120px;line-height:1;letter-spacing:2px}
+.c-outro .tg{font-size:44px;line-height:64px;font-weight:600;margin-top:44px}
+.c-outro .free{margin-top:32px;font-size:30px;color:var(--sub)}
+.c-outro .url{position:absolute;bottom:80px;font-family:var(--pixel);font-size:34px;color:var(--blue)}
+
+@media (prefers-reduced-motion:reduce){
+  .track,.phonewin{transition:none!important}
+}
+
+/* ?solo=N — one card at its real 1080×1350, no viewer chrome: what scripts/marketing/record.mjs records */
+html.solo,html.solo body{margin:0;background:var(--card);overflow:hidden}
+html.solo .wrap{display:block;padding:0;max-width:none}
+html.solo .side,html.solo .controls{display:none}
+html.solo .viewer{display:block}
+html.solo .vp{width:1080px;max-width:none;aspect-ratio:auto;height:1350px;border-radius:0;box-shadow:none}
+html.solo .track{transition:none}
+</style>
+<style>
+/* v2 additions. The cover holds as a still: a smaller phone so the lesson title, the checklist, the opener
+   bubble with its "Future self" label and the lit pill are all inside one frame. */
+/* body cards: 500 so the nav, the whole lesson strip and the conversation's last bubbles share one frame */
+.card:not(.c-outro) .phonewin{width:500px;margin-left:-250px}
+.card:not(.c-outro) .phonewin nw-phone{width:500px}
+.card[data-k="cover"] .phonewin{width:452px;margin-left:-226px}
+.card[data-k="cover"] .phonewin nw-phone{width:452px}
+/* a one-line footer under the description (cover: swipe + url; 05: where the switch is), clear of the phone */
+.foot{position:absolute;left:84px;right:84px;top:428px;margin:0;font-size:26px;line-height:34px;color:var(--faint);font-weight:500;word-break:keep-all}
+.foot b{font-family:var(--pixel);font-weight:400;color:var(--blue)}
+.foot strong{color:var(--blue);font-weight:600}
+</style>
+<div class="wrap" lang="ko" id="wrap">
+  <div class="viewer">
+    <div class="vp" id="vp" aria-roledescription="carousel" aria-label="튜터 모드 · 미래의 내가 선생님이 돼요">
+      <div class="track" id="track">
+
+        <div class="slot"><section class="card" data-k="cover">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">01 / 06</span></header>
+          <h2 class="ttl">미래의 내가<br>선생님이 돼요</h2>
+          <p class="desc">대화 상대에서 선생님으로.<br>목표를 세우고 <b>하나씩</b> 가르쳐줘요.</p>
+          <p class="foot"><span class="sw">옆으로 넘겨보세요 →</span> · <b>nawana.app</b></p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-call level="A1"></nw-call></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="goal">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">02 / 06</span></header>
+          <h2 class="ttl">아무 주제나<br>목표가 돼요</h2>
+          <p class="desc">배우고 싶은 말을 알려주면,<br><b>과제 서너 개</b>로 목표를 세워줘요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-call level="A1"></nw-call></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="guide">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">03 / 06</span></header>
+          <h2 class="ttl">어떻게 말할지<br>먼저 알려줘요</h2>
+          <p class="desc">과제마다 예시 한 줄을 들려주고,<br><b>이제 내 차례</b>라고 해요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-call level="A1"></nw-call></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="practice">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">04 / 06</span></header>
+          <h2 class="ttl">직접 말해요,<br>될 때까지</h2>
+          <p class="desc">틀리면 내 말을 바르게 들려주고 다시 해요.<br>맞게 말하면 <b>체크</b>가 켜져요.</p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-call level="A1"></nw-call></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="fill">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">05 / 06</span></header>
+          <h2 class="ttl">다 채우면<br>말할 수 있어요</h2>
+          <p class="desc">처음 시작해도 괜찮아요.<br>레벨이 오르면 <b>과제도 어려워져요.</b></p>
+          <p class="foot"><strong>통화 설정 → 튜터 모드에서 켜요</strong></p>
+          <div class="stage"><div class="phonewin"><nw-phone><nw-call level="A1"></nw-call></nw-phone></div></div>
+        </section></div>
+
+        <div class="slot"><section class="card c-outro" data-k="outro">
+          <nw-futureself mode="speaking" level="voice"></nw-futureself>
+          <div class="wm">nawana</div>
+          <div class="tg">유창한 나에게<br>언어를 배우세요.</div>
+          <div class="free">첫 20분은 무료예요</div>
+          <div class="url">nawana.app</div>
+        </section></div>
+
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn" id="prev" aria-label="이전 장">←</button>
+      <div class="dots" id="dots"></div>
+      <div class="btn-row"><button class="btn" id="replay">처음부터 재생</button><button class="btn" id="next" aria-label="다음 장">→</button></div>
+    </div>
+  </div>
+
+  <aside class="side">
+    <h1>튜터 모드 · 미래의 내가 선생님이 돼요</h1>
+    <p>글자 자리는 고정하고, 아래 화면만 움직이는 6장짜리 시안이에요(v2). 본문 네 장은 모두 같은 앱 화면(통화, <b>nw-call</b>)이고, 위쪽에 고정된 세로 체크리스트가 튜터 모드의 과제 목록이에요(앱의 TutorLessonStrip, 시뮬레이터 캡처 call-tutor*.png와 대조). 알약 오른쪽에는 주제 고르기 전구 버튼이 보여요. 폰 화면과 미래의 나 모자이크, 말풍선, 교정 카드, 체크는 모두 웹사이트와 같은 UI 키트(<b>web/kit/nawana-ui.js</b>)로 그려요. <code>?lang=en</code>이면 영어판이에요.</p>
+    <h3>장 목록</h3>
+    <ol class="list" id="list">
+      <li><button data-go="0">커버 · 미래의 내가 선생님이 돼요</button></li>
+      <li><button data-go="1">아무 주제나 목표가 돼요 · 과제 네 개</button></li>
+      <li><button data-go="2">어떻게 말할지 먼저 알려줘요 · 예시 한 줄</button></li>
+      <li><button data-go="3">직접 말해요, 될 때까지 · 교정 → 체크</button></li>
+      <li><button data-go="4">다 채우면 말할 수 있어요</button></li>
+      <li><button data-go="5">마지막 장 · nawana.app</button></li>
+    </ol>
+  </aside>
+</div>
+
+<script type="module">
+const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const sleep = ms => new Promise(r => setTimeout(r, RM ? 0 : ms));
+const params = new URLSearchParams(location.search);
+const EN_ON = params.get("lang") === "en";
+
+/* ?lang=en — the English text block, from copy.md (written separately, not translated) */
+const EN = {
+  series: "What you can do with nawana",
+  cover: { ttl: "Your future self<br>becomes your tutor", desc: "Not just someone to talk to anymore.<br>It sets a goal and teaches you <b>step by step.</b>", sw: "Swipe →" },
+  goal: { ttl: "Any topic<br>becomes a goal", desc: "Say what you want to learn to say, and it sets<br>a goal of <b>three or four challenges.</b>" },
+  guide: { ttl: "First, it shows<br>you how", desc: "For each challenge you hear one example line,<br>then <b>it's your turn.</b>" },
+  practice: { ttl: "Your turn,<br>until it's right", desc: "Slip, and it says your line back the right way.<br>Get it right, and the row gets <b>a check.</b>" },
+  fill: { ttl: "Fill them in,<br>and you can say it", desc: "Just starting? Perfect. As your level grows,<br><b>the challenges grow with you.</b>", foot: "Turn it on in Call settings → Tutor mode" },
+  outro: { tg: "Learn a language<br>from your fluent self.", free: "Your first 20 minutes are free" },
+};
+/* the lesson the app writes in the NATIVE language (TutorPlanner title + goals): ko rows on ko, en rows on en.
+   Same strings as the simulator captures marketing/captures/call-tutor*.png. */
+const LESSON = EN_ON
+  ? { title: "Introducing yourself", rows: ["Say your name and where you're from", "Say what you do", "Say what you like doing", "Say it all in one go"], note: "Just add “I'm” in front." }
+  : { title: "자기소개하기", rows: ["이름이랑 어디서 왔는지 말하기", "하는 일 말하기", "좋아하는 것 말하기", "한 번에 다 말하기"], note: "앞에 I'm을 붙이면 돼요." };
+
+if (EN_ON) {
+  $("#wrap").lang = "en"; document.documentElement.lang = "en";
+  document.title = "Tutor mode · Your future self becomes your tutor";
+  for (const card of $$(".card")) {
+    const e = EN[card.dataset.k]; if (!e) continue;
+    if (e.ttl) $(".ttl", card).innerHTML = e.ttl;
+    if (e.desc) $(".desc", card).innerHTML = e.desc;
+    $(".cap .series", card) && ($(".cap .series", card).textContent = EN.series);
+  }
+  $('[data-k="cover"] .foot .sw').textContent = EN.cover.sw;
+  $('[data-k="fill"] .foot strong').textContent = EN.fill.foot;
+  const ou = $('[data-k="outro"]'); $(".tg", ou).innerHTML = EN.outro.tg; $(".free", ou).textContent = EN.outro.free;
+}
+document.title = document.title;
+
+await import("/web/kit/nawana-ui.js");   // after the lang switch: the kit reads lang once, when a screen is built
+
+const vp = $("#vp");
+const setScale = () => $$(".card").forEach(c => c.style.setProperty("--s", vp.clientWidth / 1080));
+new ResizeObserver(setScale).observe(vp); setScale();
+
+/* Each card: one loop of its scene, scripted through nw-call's own API (tutor / tutorTick / tutorDone /
+   say / listen / user / fix). The lesson strip is the vertical TutorLessonStrip pinned under the nav bar,
+   so one fixed camera per card keeps the nav (with its clock), the whole strip and the last lines in frame. */
+const pan = (c, y, cut = false) => {
+  const w = $(".phonewin", c); if (!w) return;
+  if (cut) w.style.transition = "none";
+  w.style.transform = y ? `translateY(${-y}px)` : "none";
+  if (cut) { void w.offsetHeight; w.style.transition = ""; }
+};
+const BODY = 52;    // body cards: nav (title + clock), the whole lesson strip, the conversation's last lines
+const COVER = 108;  // the cover still: the strip, the first challenge's guidance and the lit pill
+
+const OPENER = "Okay, lesson time. What do you want to be able to say today?";
+const ASK = "I want to introduce myself.";
+const GUIDE = "First, tell me your name and where you're from. Like: I'm Mina, I'm from Busan. Your turn!";
+const SLIP = "I Mina, I from Seoul.";
+const AGAIN = "Almost! I'm Mina, I'm from Seoul. Again?";
+const RIGHT = "I'm Mina. I'm from Seoul.";
+const NEXT1 = "Nice! Now, what do you do? Like: I'm a teacher.";
+const JOB = "I'm a nurse.";
+const NEXT2 = "Got it! What do you like doing? Like: I like cooking.";
+const LIKE = "I like hiking.";
+const LAST = "Last one: all of it in one go!";
+const ALL = "I'm Mina, I'm from Seoul. I'm a nurse, and I like hiking.";
+const DONE = "All done. You can introduce yourself now! More of this, or a new topic?";
+const FIX = () => ({ text: "<b>I'm</b> Mina. <b>I'm</b> from Seoul.", note: LESSON.note,
+  fixes: [{ was: "I Mina", now: "I'm Mina" }, { was: "I from", now: "I'm from" }] });
+
+/* lines already said before the scene starts, laid without animation (so no card opens blank) */
+function laid(s, lines) {
+  for (const [who, text] of lines) {
+    const me = who === "me", el = s._line(me ? s.l.you : s._otherName, text, { me });
+    el.classList.add("in"); el.querySelector(".acc").innerHTML = s._meaning();
+  }
+  s._follow();
+  // already on screen: finish the fade-in and the feed's slide, so frame 0 shows them in place
+  s.shadowRoot.getAnimations().filter(a => a instanceof CSSTransition).forEach(a => a.finish());
+}
+/* lay the lesson strip; `rise` drops the header and rows in one by one (card 02, the goal being set) */
+function lesson(s, rise = false) {
+  s.tutor({ title: LESSON.title, rows: LESSON.rows });
+  if (!rise || RM) { s.shadowRoot.getAnimations().filter(a => a instanceof CSSTransition).forEach(a => a.finish()); return; }
+  [s.$(".tutor .th"), ...s.$$(".tutor .tr")].forEach((el, i) =>
+    el.animate([{ opacity: 0, transform: "translateY(-6px)" }, { opacity: 1, transform: "none" }],
+      { duration: 320, delay: 140 + i * 260, easing: "ease-out", fill: "backwards" }));
+}
+const quiet = p => { p.catch(() => {}); return p; };
+
+const PLAY = {
+  // 01 Cover — a still: the lesson strip (four challenges, 1 current), the fluent self giving challenge 1, the lit pill.
+  async cover(c) {
+    const call = $("nw-call", c); pan(c, COVER, true);
+    await call.run(async s => {
+      lesson(s);
+      laid(s, [["self", OPENER], ["me", ASK]]); s._clock(18);
+      await quiet(s.say(GUIDE, { per: 0 }));
+      s.$("nw-futureself").level = "0.85";   // the pill held lit (speaking), so the still never catches it dim
+      await s.sleep(6000);
+    });
+  },
+  // 02 — you name the topic, the lesson strip of four challenges appears.
+  async goal(c) {
+    const call = $("nw-call", c); pan(c, BODY, true);
+    await call.run(async s => {
+      laid(s, [["self", OPENER]]);
+      await s.sleep(700);
+      await s.listen();
+      await s.user(ASK);
+      await s.sleep(900);
+      s._dropThink(); s.done();
+      lesson(s, true);
+      await s.sleep(5200);
+    });
+  },
+  // 03 — THE HEART: the tutor names challenge 1, gives one example line, hands over the turn.
+  async guide(c) {
+    const call = $("nw-call", c); pan(c, BODY, true);
+    await call.run(async s => {
+      lesson(s);
+      laid(s, [["self", OPENER], ["me", ASK]]); s._clock(18);
+      await s.sleep(500);
+      await quiet(s.say(GUIDE));
+      await s.sleep(2600);
+      await s.listen();
+      await s.sleep(3000);
+    });
+  },
+  // 04 — a slip, said back right, said again, row 1 turns into a green check.
+  async practice(c) {
+    const call = $("nw-call", c); pan(c, BODY, true);
+    await call.run(async s => {
+      lesson(s);
+      laid(s, [["me", ASK], ["self", GUIDE]]); s._clock(30);
+      await s.sleep(300);
+      await s.listen();
+      await s.user(SLIP);
+      await s.sleep(400);
+      s.fix(FIX());
+      await s.sleep(2400);
+      await quiet(s.say(AGAIN, { per: 130 }));
+      await s.listen();
+      await s.user(RIGHT);
+      await s.sleep(500);
+      s.done();
+      s.tutorTick(0);
+      await s.sleep(2600);
+    });
+  },
+  // 05 — the rest fill in, the last one is all of it in one go, the strip turns finished, then the closing line.
+  async fill(c) {
+    const call = $("nw-call", c); pan(c, BODY, true);
+    await call.run(async s => {
+      lesson(s); s.tutorTick(0);
+      s.$$(".tutor .ic.pop").forEach(e => e.classList.remove("pop"));
+      laid(s, [["self", AGAIN], ["me", RIGHT], ["self", NEXT1]]); s._clock(55);
+      await s.sleep(100);
+      const turn = async (line, i) => {
+        await s.listen(); await s.user(line); s._dropThink(); s.done();
+        await s.sleep(200); s.tutorTick(i); await s.sleep(300);
+      };
+      await turn(JOB, 1);
+      await quiet(s.say(NEXT2, { per: 60 }));
+      await turn(LIKE, 2);
+      await quiet(s.say(LAST, { per: 60 }));
+      await turn(ALL, 3);
+      s.tutorDone();
+      await s.sleep(300);
+      await quiet(s.say(DONE, { per: 70 }));
+      await s.sleep(1200);
+    });
+  },
+  async outro() { await sleep(6000); },
+};
+
+const track = $("#track"), slots = $$(".slot"), cards = $$(".card"), dots = $("#dots"), list = $$("#list button");
+slots.forEach((_, i) => { const b = document.createElement("button"); b.setAttribute("aria-label", `${i + 1}`); b.onclick = () => go(i); dots.append(b); });
+let idx = 0, gen = 0;
+function go(i) {
+  idx = (i + slots.length) % slots.length;
+  track.style.transform = `translateX(${-idx * 100}%)`;
+  $$("button", dots).forEach((b, j) => b.setAttribute("aria-current", j === idx));
+  list.forEach((b, j) => b.setAttribute("aria-current", j === idx));
+  $$("nw-call").forEach(s => s.stop());
+  run(cards[idx]);
+}
+async function run(card) {
+  const g = ++gen, alive = () => g === gen;
+  await customElements.whenDefined("nw-call");
+  await document.fonts.ready;
+  await sleep(350);
+  do {
+    const t0 = performance.now(); const d = document.documentElement.dataset;
+    const play = PLAY[card.dataset.k](card, alive); d.scene = card.dataset.k;
+    await play; if (alive()) d.loopMs = Math.round(performance.now() - t0);
+  } while (alive() && !RM);
+}
+$("#prev").onclick = () => go(idx - 1);
+$("#next").onclick = () => go(idx + 1);
+$("#replay").onclick = () => go(idx);
+list.forEach(b => b.onclick = () => go(+b.dataset.go));
+addEventListener("keydown", e => { if (e.key === "ArrowRight") go(idx + 1); if (e.key === "ArrowLeft") go(idx - 1); });
+let x0 = null;
+vp.addEventListener("pointerdown", e => x0 = e.clientX);
+vp.addEventListener("pointerup", e => { if (x0 == null) return; const d = e.clientX - x0; x0 = null; if (Math.abs(d) > 40) go(idx + (d < 0 ? 1 : -1)); });
+const solo = +(params.get("solo") || 0);
+if (solo) document.documentElement.classList.add("solo");
+const m = solo ? [0, solo] : /^#card(\d)$/.exec(location.hash);
+go(m ? +m[1] - 1 : 0);
+</script>
