@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -282,7 +283,8 @@ private fun MetricRow(title: String, icon: ImageVector, value: String, detail: S
         Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
         Spacer(Modifier.width(14.dp))
         Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        Column(horizontalAlignment = Alignment.End) {
+        // A long detail line must wrap under the value, never squeeze the title.
+        Column(Modifier.padding(start = 12.dp).widthIn(max = 190.dp), horizontalAlignment = Alignment.End) {
             Text(value, style = MaterialTheme.typography.bodyLarge, color = scoreColor(score))
             detail?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
