@@ -906,7 +906,12 @@ struct ConversationView: View {
                         .transition(.opacity.combined(with: .move(edge: .top)))
                     Divider().opacity(0.15)
                 }
-                if coachMode, !tutorThisCall, let focus = grammarFocus {
+                // Drawn only once the slip CAME BACK in this call (2026-10-30,
+                // founder): pinned from the first second, the same focus sat
+                // on top of every call for weeks and read as meaningless. The
+                // focus is still picked up front and still steers questions.
+                if coachMode, !tutorThisCall, let focus = grammarFocus,
+                   !focusRepeatTurns.isEmpty {
                     GrammarFocusStrip(label: focus.label,
                                       mistake: focus.pattern.mistake,
                                       correction: focus.pattern.correction,

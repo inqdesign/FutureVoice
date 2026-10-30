@@ -2866,6 +2866,11 @@ PLUS talk-kept notebook words (`coachExtras`) — the first device test had
   the name beside the learner's own pair, trimmed to the span that changed
   (`GrammarFocusPair.compact`: "…I go to… → …I went to…"; whole sentences
   truncated to one line kept the ends and cut the one word that differed).
+  **The strip is drawn only once the slip COMES BACK in the call**
+  (2026-10-30, founder: the same focus sat on top of every call for weeks
+  and read as meaningless — retirement needs two clean calls after the
+  last re-detection, which rarely happens). The focus is still picked at
+  the start and still steers questions; the learner sees it when it is news.
   The steer gains a GRAMMAR FOCUS paragraph (a question that needs the
   structure, never a correction in the reply). Every live correction with
   `fixes` is judged by flash-lite `isRepeat` — the same grammar POINT, not
