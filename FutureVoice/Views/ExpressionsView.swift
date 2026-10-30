@@ -155,7 +155,7 @@ struct ExpressionsView: View {
             selected = PhraseRef(value: p)
             appState.focusPhrase = nil
         }
-        .sheet(item: $selected) { ref in
+        .cardSheet(item: $selected) { ref in
             ExpressionSheet(initialPhrase: ref.value, phrases: entries.map(\.text))
                 .environmentObject(appState)
         }

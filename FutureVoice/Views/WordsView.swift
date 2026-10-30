@@ -239,7 +239,7 @@ struct WordsView: View {
                                         origin: .vocabulary, at: nil) }
                 .sorted { $0.key < $1.key }
         }
-        .sheet(item: $selected) { ref in
+        .cardSheet(item: $selected) { ref in
             WordSheet(initialWord: ref.value, words: items.map(\.text))
                 .environmentObject(appState)
         }

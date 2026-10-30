@@ -132,13 +132,13 @@ struct ConversationDetailView: View {
             ConversationView(resumeSession: session)
                 .environmentObject(appState)
         }
-        .sheet(item: $wordSheet, onDismiss: refresh) { ref in
+        .cardSheet(item: $wordSheet, onDismiss: refresh) { ref in
             // The app's ONE word surface — same card the scenario books open.
             // Chevrons walk the list the word was tapped from.
             WordSheet(initialWord: ref.value, words: ref.siblings)
                 .environmentObject(appState)
         }
-        .sheet(item: $phraseSheet, onDismiss: refresh) { ref in
+        .cardSheet(item: $phraseSheet, onDismiss: refresh) { ref in
             // The app's ONE expression surface — same card the scenario books
             // and the library open. Chevrons walk this talk's expressions.
             ExpressionSheet(initialPhrase: ref.value,
@@ -149,7 +149,7 @@ struct ConversationDetailView: View {
             ShadowDrillView(turn: turn, targetLanguage: appState.targetLanguage)
                 .environmentObject(appState)
         }
-        .sheet(item: $enrichmentCard, onDismiss: refresh) { card in
+        .cardSheet(item: $enrichmentCard, onDismiss: refresh) { card in
             DrillEnrichmentSheet(card: card)
                 .environmentObject(appState)
         }
@@ -1279,7 +1279,7 @@ struct TalkTranscriptView: View {
                 .environmentObject(appState)
         }
         .sheet(isPresented: $showingPaywall) { PaywallView(source: "talk_book") }
-        .sheet(item: $wordSheet) { item in
+        .cardSheet(item: $wordSheet) { item in
             WordSheet(initialWord: item.word, words: item.words)
                 .environmentObject(appState)
         }

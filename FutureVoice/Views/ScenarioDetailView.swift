@@ -137,7 +137,7 @@ struct ScenarioDetailView: View {
             ShadowDrillView(turn: turn, targetLanguage: appState.targetLanguage)
                 .environmentObject(appState)
         }
-        .sheet(item: $wordSheet, onDismiss: refreshMastery) { ref in
+        .cardSheet(item: $wordSheet, onDismiss: refreshMastery) { ref in
             // The app's ONE word surface — dictionary entry, pronunciation in
             // your voice, sentences from your talks, keep-studying / I-know-it.
             // Chevrons walk the scenario's word list.
@@ -146,7 +146,7 @@ struct ScenarioDetailView: View {
                           .map { VocabStore.lookupKey(for: $0.text) } ?? [])
                 .environmentObject(appState)
         }
-        .sheet(item: $expressionSheet, onDismiss: refreshMastery) { ref in
+        .cardSheet(item: $expressionSheet, onDismiss: refreshMastery) { ref in
             // Same treatment as a word: the expression's card — meaning,
             // examples, pronunciation, shadow, I-know-it — with chevrons
             // walking the scenario's expression list.

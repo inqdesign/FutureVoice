@@ -48,6 +48,7 @@ struct RootView: View {
         // deprecation on `.accentColor` is fine, it's still the only knob that
         // reaches `Color.accentColor` descendants.
         content
+            .macCardColumnHost()
             .fontDesign(.rounded)
             .tint(accent)
             .accentColor(accent)

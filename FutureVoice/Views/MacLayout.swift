@@ -126,6 +126,120 @@ enum MacLayout {
     }
 }
 
+extension View {
+    /// A word, expression or sentence card. On the phone a sheet; on the Mac
+    /// the window's next column (founder, 2026-10-30: "the window that opens
+    /// from a word, an expression or a sentence should be the third card"),
+    /// so the book or list it came from stays open beside it.
+    func cardSheet<Item: Identifiable, Card: View>(
+        item: Binding<Item?>, onDismiss: (() -> Void)? = nil,
+        @ViewBuilder content: @escaping (Item) -> Card
+    ) -> some View {
+        #if targetEnvironment(macCatalyst)
+        modifier(MacCardColumn(item: item, onDismiss: onDismiss, card: content))
+        #else
+        sheet(item: item, onDismiss: onDismiss, content: content)
+        #endif
+    }
+}
+
+#if targetEnvironment(macCatalyst)
+/// The one card column of the window. A card opened anywhere — from a book
+/// in the detail column or from the notebook in the sidebar — lands here, at
+/// the window's trailing edge; attached where it was opened, the notebook's
+/// card covered the notebook itself.
+@MainActor
+final class MacCardHost: ObservableObject {
+    static let shared = MacCardHost()
+    @Published private(set) var card: AnyView?
+    private var owner: UUID?
+    private var onClose: (() -> Void)?
+
+    func show(_ card: AnyView, owner: UUID, onClose: @escaping () -> Void) {
+        if let previous = self.onClose, self.owner != owner { self.onClose = nil; previous() }
+        self.card = card
+        self.owner = owner
+        self.onClose = onClose
+    }
+
+    /// The source let go of its card (closed it, or showed none).
+    func release(owner: UUID) {
+        guard self.owner == owner else { return }
+        card = nil
+        self.owner = nil
+        onClose = nil
+    }
+
+    /// The column's ✕.
+    func close() {
+        let done = onClose
+        card = nil
+        owner = nil
+        onClose = nil
+        done?()
+    }
+}
+
+private struct MacCardColumnHost: ViewModifier {
+    @ObservedObject private var host = MacCardHost.shared
+
+    func body(content: Content) -> some View {
+        content.inspector(isPresented: Binding(get: { host.card != nil },
+                                               set: { if !$0 { host.close() } })) {
+            Group {
+                if let card = host.card {
+                    card.overlay(alignment: .topLeading) {
+                        Button { host.close() } label: {
+                            Image(systemName: "xmark")
+                                .font(.footnote.weight(.bold))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 30, height: 30)
+                                .background(Circle().fill(Color(.tertiarySystemFill)))
+                        }
+                        .buttonStyle(.plain)
+                        .padding(12)
+                        .accessibilityLabel("Close")
+                    }
+                }
+            }
+            .inspectorColumnWidth(min: 360, ideal: 440, max: 600)
+        }
+    }
+}
+
+private struct MacCardColumn<Item: Identifiable, Card: View>: ViewModifier {
+    @Binding var item: Item?
+    let onDismiss: (() -> Void)?
+    let card: (Item) -> Card
+    @State private var owner = UUID()
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: item?.id, initial: true) { _, _ in
+                if let item {
+                    MacCardHost.shared.show(AnyView(card(item).id(item.id)), owner: owner) {
+                        self.item = nil
+                    }
+                } else {
+                    MacCardHost.shared.release(owner: owner)
+                }
+            }
+            .onChange(of: item == nil) { _, closed in if closed { onDismiss?() } }
+    }
+}
+#endif
+
+extension View {
+    /// Hosts the window's card column (Mac only), under the app's locale.
+    func macCardColumnHost() -> some View {
+        #if targetEnvironment(macCatalyst)
+        modifier(MacCardColumnHost())
+        #else
+        self
+        #endif
+    }
+}
+
 /// A menu whose label is drawn as written, on the Mac too. A SwiftUI `Menu`
 /// there is a macOS pull-down that keeps only the label's text OR its icon
 /// (measured, every built-in style and a custom button style alike): the
