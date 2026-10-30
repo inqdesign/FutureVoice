@@ -67,6 +67,8 @@ class SpeechChallenges private constructor(private val context: Context) {
         val retiredAt: Long? = null,
         /** Every take anyone has put up — what the card counts. Null from a server that doesn't send it. */
         val attempts: Int? = null,
+        /** What kind of challenge it is ("show_host", …); the card names it. Null on older ones. */
+        val category: String? = null,
     )
 
     @Serializable
@@ -191,6 +193,7 @@ class SpeechChallenges private constructor(private val context: Context) {
         val my_attempts: Int? = null,
         val top_three: List<Face>? = null,
         val attempts: Int? = null,
+        val category: String? = null,
     )
 
     suspend fun refresh(language: String) {
@@ -215,7 +218,7 @@ class SpeechChallenges private constructor(private val context: Context) {
         _standings.value = rows.associate { row ->
             row.id to Standing(row.entrants ?: 0, row.top_score, row.my_best, row.my_rank, row.my_attempts, row.top_three,
                 row.retired_at?.let { runCatching { OffsetDateTime.parse(it).toInstant().toEpochMilli() }.getOrNull() },
-                row.attempts)
+                row.attempts, row.category)
         }
         writeCache(language)
         importLocalBests()

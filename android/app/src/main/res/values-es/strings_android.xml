@@ -561,4 +561,9 @@
         <item quantity="one">%d intento</item>
         <item quantity="other">%d intentos</item>
     </plurals>
+    <string name="speech_category_show_host">Teletienda</string>
+    <string name="speech_category_famous_speech">Discurso célebre</string>
+    <string name="speech_category_movie_scene">Escena de película</string>
+    <string name="speech_category_acceptance">Discurso de agradecimiento</string>
+    <string name="speech_category_product_launch">Presentación de producto</string>
 </resources>

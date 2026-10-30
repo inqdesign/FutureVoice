@@ -159,9 +159,16 @@ internal fun SpeechChallengeRow(script: SpeechScript, standing: SpeechChallenges
         // The title hangs under the disc; the meta line belongs to the FOOT,
         // just above the faces, so it sits at the same height on every card
         // whatever the title's length. The slack goes between.
+        // What kind of challenge it is (iOS SpeechChallengeCategory).
+        val category = challengeCategoryLabel(standing?.category)
+        if (category != null) {
+            Text(category, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary, maxLines = 1,
+                modifier = Modifier.padding(top = 14.dp))
+        }
         Text(script.title, style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold, maxLines = 3, overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 14.dp))
+            modifier = Modifier.padding(top = if (category != null) 2.dp else 14.dp))
         Spacer(Modifier.height(16.dp))
         Spacer(Modifier.weight(1f))
         val entrants = standing?.entrants ?: 0
@@ -815,3 +822,14 @@ private val TightText = androidx.compose.ui.text.TextStyle(
         alignment = androidx.compose.ui.text.style.LineHeightStyle.Alignment.Center,
         trim = androidx.compose.ui.text.style.LineHeightStyle.Trim.Both),
 )
+
+/** A challenge's category key, named in the app language; an unknown key draws nothing. */
+@Composable
+private fun challengeCategoryLabel(key: String?): String? = when (key) {
+    "show_host" -> stringResource(R.string.speech_category_show_host)
+    "famous_speech" -> stringResource(R.string.speech_category_famous_speech)
+    "movie_scene" -> stringResource(R.string.speech_category_movie_scene)
+    "acceptance" -> stringResource(R.string.speech_category_acceptance)
+    "product_launch" -> stringResource(R.string.speech_category_product_launch)
+    else -> null
+}

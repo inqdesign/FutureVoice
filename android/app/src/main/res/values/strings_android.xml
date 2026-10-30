@@ -566,4 +566,9 @@
     </plurals>
     <!-- iOS `explain("Coming soon")` has no catalog entry: English in every language. -->
     <string name="coming_soon" translatable="false">Coming soon</string>
+    <string name="speech_category_show_host">Show host</string>
+    <string name="speech_category_famous_speech">Famous speech</string>
+    <string name="speech_category_movie_scene">Movie scene</string>
+    <string name="speech_category_acceptance">Acceptance speech</string>
+    <string name="speech_category_product_launch">Product launch</string>
 </resources>
