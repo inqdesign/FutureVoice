@@ -449,6 +449,7 @@ struct SpeechChallengeView: View {
                 Text(row.display_name)
                     .fontWeight(row.is_me ? .semibold : .regular)
                     .lineLimit(1)
+                if row.core == true { CoreSeal() }
                 if row.is_me {
                     Text("You")
                         .font(.caption.weight(.semibold))
@@ -506,9 +507,12 @@ struct SpeechPodiumRow: View {
                         .offset(x: 8, y: -4)
                 }
             VStack(alignment: .leading, spacing: 2) {
-                Text(row.display_name)
-                    .font(row.rank == 1 ? .title3.weight(.semibold) : .headline)
-                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    Text(row.display_name)
+                        .font(row.rank == 1 ? .title3.weight(.semibold) : .headline)
+                        .lineLimit(1)
+                    if row.core == true { CoreSeal(font: .subheadline) }
+                }
                 if row.is_me {
                     Text("You")
                         .font(.caption.weight(.semibold))
@@ -861,6 +865,7 @@ struct SpeechBoardRowView: View {
             Text(row.display_name)
                 .fontWeight(row.is_me ? .semibold : .regular)
                 .lineLimit(1)
+            if row.core == true { CoreSeal() }
             if row.is_me {
                 Text("You")
                     .font(.caption.weight(.semibold))
