@@ -420,6 +420,7 @@ struct SpeechScriptSheet: View {
     var onEdited: (SpeechScript) -> Void = { _ in }
     @State private var script: SpeechScript
     @State private var editing = false
+    @State private var practicing = false
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var appState: AppState
 
@@ -451,9 +452,15 @@ struct SpeechScriptSheet: View {
     /// article from the tutor bot is read-only like an episode, but nothing
     /// was studied when it was written.
     private let studyHere: Bool
+    /// A read-only script the learner may still record under the prompter:
+    /// the tutor's model answer for an upcoming goal. Recording it files it
+    /// under My scripts, where its takes live.
+    private let canPractice: Bool
 
     init(script: SpeechScript, onEdited: @escaping (SpeechScript) -> Void = { _ in },
-         study: ScriptStudy? = nil, shipped: Bool = false, studyHere: Bool = false) {
+         study: ScriptStudy? = nil, shipped: Bool = false, studyHere: Bool = false,
+         canPractice: Bool = false) {
+        self.canPractice = canPractice
         _script = State(initialValue: script)
         _study = State(initialValue: study)
         self.onEdited = onEdited
@@ -540,6 +547,21 @@ struct SpeechScriptSheet: View {
                     ScriptVoiceoverSection(script: script, player: voiceoverPlayer)
                 }
 
+                if canPractice {
+                    Section {
+                        Button {
+                            if !SpeechStore.shared.scripts.contains(where: { $0.id == script.id }) {
+                                SpeechStore.shared.add(script)
+                            }
+                            practicing = true
+                        } label: {
+                            Label("Say it out loud", systemImage: "music.mic")
+                        }
+                    } footer: {
+                        Text("Under the prompter, with a score. It's kept in My scripts.")
+                    }
+                }
+
                 if !script.keyTerms.isEmpty {
                     Section("Key terms") {
                         ForEach(script.keyTerms, id: \.self) { term in
@@ -577,6 +599,10 @@ struct SpeechScriptSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
+            }
+            .fullScreenCover(isPresented: $practicing) {
+                SpeechPrompterView(script: script, native: appState.nativeLanguage, level: appState.proficiency)
+                    .environmentObject(appState)
             }
             .sheet(isPresented: $editing) {
                 SpeechOwnScriptSheet(existing: script) { updated in

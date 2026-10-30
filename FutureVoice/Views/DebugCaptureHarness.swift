@@ -759,6 +759,13 @@ enum DebugCapture {
             once("sample-goal") { seedSampleGoal(appState) }
             return AnyView(NavigationStack { MyProfileView(showsDone: true) }
                 .environmentObject(appState))
+        case "goal-page":
+            // The tutor note's goal row, opened: likely questions + days so far.
+            once("sample-goal") { seedSampleGoal(appState) }
+            if let goal = UpcomingGoalStore.shared.goals.first { GoalPrep.seedForCapture(goal) }
+            return AnyView(UpcomingGoalPage(goal: UpcomingGoalStore.shared.goals.first
+                                            ?? UpcomingGoal(kind: .interview, title: "", language: "en"))
+                .environmentObject(appState))
         case "goal-editor":
             // Me → Profile → Coming up: one goal, opened to change it.
             once("sample-goal") { seedSampleGoal(appState) }

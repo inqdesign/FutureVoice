@@ -69,6 +69,9 @@ struct TutorBotLayer: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+        .sheet(item: $bot.goalPage) { goal in
+            UpcomingGoalPage(goal: goal).environmentObject(appState)
+        }
         // The chat shows its own; this one is for a reading opened from the note.
         .sheet(item: Binding(get: { bot.chatOpen ? nil : bot.reading },
                              set: { bot.reading = $0 })) { r in
@@ -142,7 +145,18 @@ private struct TutorNoteCard: View {
             }
             // The nearest thing they're preparing for, with its countdown.
             if let goal = UpcomingGoalStore.shared.active(language: appState.targetLanguage).first {
-                UpcomingGoalRow(goal: goal)
+                Button {
+                    bot.closeNote()
+                    bot.goalPage = goal
+                } label: {
+                    HStack(spacing: 6) {
+                        UpcomingGoalRow(goal: goal)
+                        Image(systemName: "chevron.right").font(.caption.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
             }
             if !bot.picks.isEmpty {
                 TutorPickRows(picks: Array(bot.picks.prefix(3)), balance: bot.balance)
@@ -605,7 +619,8 @@ struct TutorReadingSheet: View {
         Group {
             if let s = script ?? reading.script {
                 SpeechScriptSheet(script: s, study: reading.study, shipped: true,
-                                  studyHere: reading.script == nil)
+                                  studyHere: reading.script == nil || reading.goal != nil,
+                                  canPractice: reading.part == .speech)
             } else {
                 NavigationStack {
                     Group {

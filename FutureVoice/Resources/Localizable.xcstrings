@@ -10708,6 +10708,16 @@
         }
       }
     },
+    "Prepared so far" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지금까지 준비한 것"
+          }
+        }
+      }
+    },
     "Preparing" : {
       "localizations" : {
         "de" : {
@@ -81306,6 +81316,16 @@
         }
       }
     },
+    "Likely questions" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "나올 만한 질문"
+          }
+        }
+      }
+    },
     "Likely situations" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -130090,6 +130110,16 @@
         }
       }
     },
+    "Tap one to practice it with your tutor until it comes out clean." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "하나를 누르면 막힘없이 나올 때까지 튜터와 연습해요."
+          }
+        }
+      }
+    },
     "Tap one, then the other. Listen for the voice, not the words — everyone finds their own recording strange at first." : {
       "localizations" : {
         "de" : {
@@ -134188,6 +134218,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "共事很多年"
+          }
+        }
+      }
+    },
+    "Working out what they'll ask…" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "무엇을 물을지 살펴보고 있어요…"
           }
         }
       }
@@ -143977,6 +144017,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "每句台詞下方都有：可以當場跟讀，或存到你的用語。"
+          }
+        }
+      }
+    },
+    "Under the prompter, with a score. It's kept in My scripts." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "프롬프터를 보며 말하고 점수를 받아요. 내 스크립트에 저장돼요."
           }
         }
       }

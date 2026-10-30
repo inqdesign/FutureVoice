@@ -88,6 +88,8 @@ final class TutorBot: ObservableObject {
     @Published var reading: TutorReading?
     /// A tutor-mode call on an upcoming goal, for the Talk home to place.
     @Published var goalCall: GoalCall?
+    /// An upcoming goal's page (likely questions, days so far), from the note.
+    @Published var goalPage: UpcomingGoal?
     struct GoalCall: Identifiable, Equatable {
         let id = UUID()
         var topic: String

@@ -108,6 +108,121 @@ enum GoalPrep {
         return prep
     }
 
+    // MARK: Likely questions
+
+    /// What the day itself will most likely ask, with what each one checks.
+    /// Written once per goal (again when the goal is edited), when its page
+    /// is opened.
+    struct Question: Codable, Equatable, Identifiable {
+        var id: String { text }
+        var text: String
+        var looksFor: String
+    }
+    private struct QuestionSet: Codable {
+        var goalId: UUID
+        var goalUpdatedAt: Date
+        var questions: [Question]
+    }
+    private static var questionsURL: URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("goal_questions.json")
+    }
+    private static func questionSets() -> [QuestionSet] {
+        guard let data = try? Data(contentsOf: questionsURL) else { return [] }
+        return (try? SyncFiles.storeDecoder.decode([QuestionSet].self, from: data)) ?? []
+    }
+
+    static func cachedQuestions(for goal: UpcomingGoal) -> [Question]? {
+        questionSets().first { $0.goalId == goal.id && $0.goalUpdatedAt == goal.updatedAt }?.questions
+    }
+
+    static func questions(for goal: UpcomingGoal, appState: AppState) async throws -> [Question] {
+        if let cached = cachedQuestions(for: goal) { return cached }
+        struct Reply: Decodable {
+            /// An object as asked, or now and then a bare string (measured:
+            /// one run in two) — kept either way, without its note.
+            struct Q: Decodable {
+                let question: String
+                let looks_for: String
+                private enum K: String, CodingKey { case question, looks_for }
+                init(from decoder: Decoder) throws {
+                    if let text = try? decoder.singleValueContainer().decode(String.self) {
+                        question = text; looks_for = ""; return
+                    }
+                    let c = try decoder.container(keyedBy: K.self)
+                    question = try c.decode(String.self, forKey: .question)
+                    looks_for = (try? c.decode(String.self, forKey: .looks_for)) ?? ""
+                }
+            }
+            let questions: [Q]
+        }
+        let target = LanguageCatalog.englishName(goal.language)
+        let native = LanguageCatalog.englishName(appState.nativeLanguage)
+        let korean = appState.nativeLanguage == "ko" ? " Korean in polite 해요체 (-요), never 합니다체; never 당신." : ""
+        let r: Reply = try await GeminiClient.shared.sendJSON(
+            system: """
+                A \(target) learner (level \(appState.proficiency.rawValue.uppercased())) is preparing for this:
+                \(goal.promptLine())
+
+                List the 6 to 8 questions or tasks they will most likely meet on the day, most likely \
+                first — what an interviewer, examiner or the people there really ask or expect, for this \
+                kind of goal and, where it is widely known, this organisation or exam. No invented \
+                specifics (no figures, no names of people, no dates).
+                - "question": as it would be said to them, in \(target).
+                - "looks_for": ALWAYS present, in \(native), one short sentence on what it checks and what a strong \
+                answer does.\(korean)
+
+                Return JSON: {"questions": [{"question": "...", "looks_for": "..."}]}
+                """,
+            messages: [.init(role: .user, content: "List the likely questions.")],
+            model: .flash36, maxTokens: 2048, purpose: "goal-prep",
+            idempotencyKey: "goal-questions:\(goal.id.uuidString):\(Int(goal.updatedAt.timeIntervalSince1970))",
+            requestTimeout: 45)
+        let list = r.questions.map {
+            Question(text: $0.question.trimmingCharacters(in: .whitespacesAndNewlines),
+                     looksFor: $0.looks_for.trimmingCharacters(in: .whitespacesAndNewlines))
+        }.filter { !$0.text.isEmpty }
+        var sets = questionSets().filter { $0.goalId != goal.id }
+        sets.append(QuestionSet(goalId: goal.id, goalUpdatedAt: goal.updatedAt, questions: list))
+        if let data = try? SyncFiles.storeEncoder.encode(Array(sets.suffix(20))) {
+            try? data.write(to: questionsURL, options: .atomic)
+        }
+        return list
+    }
+
+    #if DEBUG
+    /// Captures run signed out: a goal's page with its questions and one day
+    /// already written.
+    static func seedForCapture(_ goal: UpcomingGoal) {
+        let qs = [
+            Question(text: "Tell us about yourself and why you want to fly with Lufthansa.",
+                     looksFor: "자기소개와 지원 동기가 하나로 이어지는지 봐요. 내 경험을 승무원 일과 연결하면 좋아요."),
+            Question(text: "Describe a time you dealt with an unhappy customer.",
+                     looksFor: "침착함과 공감을 봐요. 상황, 한 일, 결과 순서로 짧게 말해요."),
+            Question(text: "How would you handle a passenger who won't fasten their seatbelt?",
+                     looksFor: "안전 규칙을 지키면서도 정중하게 설득하는지 확인해요."),
+        ]
+        if let data = try? SyncFiles.storeEncoder.encode([QuestionSet(goalId: goal.id, goalUpdatedAt: goal.updatedAt, questions: qs)]) {
+            try? data.write(to: questionsURL, options: .atomic)
+        }
+        guard today(for: goal) == nil else { return }
+        save(GoalPrepDay(goalId: goal.id, day: StudyPlan.dayKey(Date()), language: goal.language,
+                         reading: .init(title: "The First Impression at Lufthansa",
+                                        summary: "루프트한자 면접에서 첫인상이 왜 중요한지 다뤄요.",
+                                        body: "When you attend your cabin crew interview at Lufthansa in Frankfurt, the recruiter wants to see your passion for hospitality."),
+                         speech: .init(title: "My Introduction and Motivation",
+                                       summary: "밝은 목소리로, 천천히 말해 보세요.",
+                                       body: "Hello! I live in Munich, where I run my own business.",
+                                       question: "Could you introduce yourself and tell us why you want to join Lufthansa?"),
+                         focus: "자기소개와 지원 동기"))
+    }
+    #endif
+
+    /// Every day written for a goal, newest first.
+    static func days(for goal: UpcomingGoal) -> [GoalPrepDay] {
+        all().filter { $0.goalId == goal.id }.sorted { $0.createdAt > $1.createdAt }
+    }
+
     // MARK: Prompt
 
     /// Where the preparation is: early days build knowledge and words, the
