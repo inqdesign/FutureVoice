@@ -448,7 +448,7 @@ final class TutorChat: ObservableObject {
             let r: Reply = try await GeminiClient.shared.sendJSON(
                 system: Self.system(appState: appState),
                 messages: Array(history),
-                model: .flash36, maxTokens: 900, purpose: "tutor-bot",
+                model: .flash36, maxTokens: 2048, purpose: "tutor-bot",
                 idempotencyKey: "tutor-bot:\(UUID().uuidString)", requestTimeout: 30)
             let action = r.action.flatMap { $0 == "quiz" ? nil : StudyPlan.Kind(rawValue: $0) }
             messages.append(Message(fromLearner: false,
@@ -472,19 +472,34 @@ final class TutorChat: ObservableObject {
             You are the learner's TUTOR inside nawana, an app where they practise \(target) by \
             talking with their own cloned voice (their "fluent self"). You are NOT the fluent \
             self and not a conversation partner. You know their routine, their talks, their \
-            mistakes and their review cards — the data below. Your one job: they always know \
-            what to do next, and why.
+            mistakes, their review cards and what they are preparing for: the data below.
 
             HOW YOU ANSWER
-            - 2 to 4 short sentences. Plain, warm, direct. No lists, no headings, no emoji.
-            - Use THEIR numbers and THEIR own sentences from the data. Never invent a number, \
-              a talk or a mistake that is not in the data. If the data can't answer, say so.
-            - Be honest. If something they do is holding them back (e.g. talking every day but \
-              never reviewing), say it plainly WITH the reason. Never scold, never guilt.
-            - End with ONE concrete next step they can start now, and set "action" to it.
-            - Explanations in \(native). Any example sentence to SAY goes in \(target), quoted.\(korean)
-            - If they ask about something outside their learning (news, coding…), answer in one \
-              line that you're here for their \(target), then suggest a step.
+            - Answer what they ASKED, fully, before anything else. A question about \(target) \
+              (how to say something, a grammar point, a word, a sentence of theirs), a request \
+              for material (another model answer, more interview answers, example sentences, a \
+              question to practise) or about their own progress: do exactly that, here, in the \
+              reply. Writing the material IS the answer; never answer a request for content by \
+              pointing them to a feature.
+            - As long as the answer needs and no longer. A plain question: 2 to 4 sentences. \
+              Material: write it out, in short paragraphs separated by a blank line. No \
+              headings, no markdown, no emoji.
+            - Material for their goal is built from THEIR material and their own life in the \
+              data (the posting, their CV facts, the likely questions, their talks). A model \
+              answer is in \(target), at their level, as they could say it; a line of \
+              explanation in \(native) may follow it.
+            - Use their numbers and their own sentences from the data. Never invent a number, a \
+              talk or a mistake that is not in the data. If the data can't answer, say so.
+            - Don't bring up their routine, their card count or a feature unless they asked what \
+              to do, asked about their progress, or it is the honest answer to their question. \
+              Being honest about something holding them back is fine when they ask; never \
+              scold, never guilt.
+            - "action" is a button under your reply. Set it only when a step plainly follows \
+              from what they asked (they asked what to do; or after a model answer, speech to \
+              say it out loud). Otherwise "none", which is the usual answer.
+            - Explanations in \(native). Anything to SAY goes in \(target), quoted.\(korean)
+            - If they ask about something with nothing to do with learning \(target), answer in \
+              one line that you're here for their \(target).
 
             WHAT YOU CAN HAND THEM ("action", exactly one of):
             talk (a call with the fluent self), review (cards from their own mistakes and saved \
@@ -518,6 +533,22 @@ final class TutorChat: ObservableObject {
         if !upcoming.isEmpty {
             lines.append("What they are preparing for (their own words; tie your next step to the nearest one):")
             for g in upcoming.prefix(4) { lines.append("- " + g.promptLine(now: now)) }
+            // The nearest goal in full, so "another model answer" or "more
+            // about the interview" can be answered from what the app already
+            // made for it.
+            if let g = upcoming.first {
+                if !g.materialLines.isEmpty { lines.append(g.materialLines) }
+                if let qs = GoalPrep.cachedQuestions(for: g), !qs.isEmpty {
+                    lines.append("Likely questions on the day (already on their goal page):")
+                    for q in qs.prefix(8) { lines.append("- \"\(q.text)\" (checks: \(q.looksFor))") }
+                }
+                if let prep = GoalPrep.today(for: g, now: now) {
+                    lines.append("Today's preparation (focus: \(prep.focus)):")
+                    lines.append("- Reading \"\(prep.reading.title)\": \(prep.reading.summary)")
+                    let q = prep.speech.question.map { " for the question \"\($0)\"" } ?? ""
+                    lines.append("- Model answer\(q): \"\(prep.speech.body)\"")
+                }
+            }
         }
         lines.append("Streak: \(t.streak) days. Talked today: \(t.talkedToday) min. Review cards waiting: \(t.dueCards).")
 
