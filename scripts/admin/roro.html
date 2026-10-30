@@ -1,0 +1,691 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Dear RoRo 어드민</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<!-- ===========================================================================
+     Dear RoRo, in nawana's console (2026-10-25).
+     The owner wanted one dashboard for both apps, starting as a COPY of the
+     nawana page and redesigned together afterwards. So this page has no
+     stylesheet of its own: the Worker pastes nawana's <style> (page.html) in
+     place of the marker below, and every class here is one of nawana's. A
+     redesign of page.html's CSS is a redesign of this page too.
+
+     Data: src/roro.ts. 1.x (the React Native app in the store) is all in
+     Supabase; 2.0 (SwiftUI) keeps the journal on the phone, so it shows up
+     only as story_usage / story_voices and PostHog events (app = dearroro).
+     Memory text, story text and titles are never read — counts and times.
+     =========================================================================== -->
+<!--__SHARED_STYLE__-->
+<style>
+/* Dear RoRo only: the few shapes nawana's page has no class for. */
+.fun .row .lbl{width:150px}
+.hm .r .c.v1{background:var(--seq1)} .hm .r .c.v2{background:var(--seq2)} .hm .r .c.v3{background:var(--seq3)}
+.hm .r .c.v4{background:var(--seq4)} .hm .r .c.v5{background:var(--seq5)} .hm .r .c.v0{background:var(--chip)}
+.hm .r .c.used.v0::after, .hm .r .c.used.v1::after{background:var(--s2)}
+.wk td.num{white-space:nowrap}
+</style>
+</head>
+<body>
+
+<aside class="side" id="side">
+  <div class="sbrand">
+    <p class="eyebrow">Dear RoRo · 내부 운영</p>
+    <nav class="appsw" aria-label="앱"><a href="__ADMIN_BASE__/">나와나</a><a href="__ADMIN_BASE__/roro" aria-current="page">Dear RoRo</a></nav>
+    <div class="stitle">어드민</div>
+    <button type="button" class="menubtn" id="menuBtn" aria-expanded="false" aria-controls="sideNav">목차</button>
+  </div>
+  <nav class="snav" id="sideNav" aria-label="어드민 목차"></nav>
+  <div class="sctl">
+    <div class="lsec">시간대</div>
+    <div class="seg" id="tzPick" role="group" aria-label="시간대" style="margin:4px 0 10px"></div>
+    <label class="toggle"><input type="checkbox" id="devToggle"> 본인·테스트 계정 포함</label>
+    <a class="linkbtn" href="__ADMIN_BASE__/logout">나가기</a>
+  </div>
+</aside>
+
+<main class="main">
+<p class="asof" id="asof"></p>
+
+<!-- ====================================================== 대시보드 -->
+<div class="grp" id="grp-dash" data-group="대시보드">
+<section id="dash" data-nav="오늘 숫자">
+  <h2>오늘</h2>
+  <p class="sub">1.x 앱(스토어에 있는 앱) 기준. 온 사람 = 앱 세션이 있었던 사람. 2.0 숫자는 맨 아래 2.0 페이지에.</p>
+  <div class="tiles" id="todayTiles"></div>
+</section>
+<div class="dgrid">
+<section id="feedSec" data-nav="일어난 일">
+  <h2>일어난 일</h2>
+  <p class="sub">최근 30일, 새것부터. 메모리·이야기 내용은 읽지 않고 남겼다는 사실만.</p>
+  <div class="seg" id="feedPick" role="group" aria-label="종류"></div>
+  <div class="card"><div class="feed" id="feed"></div></div>
+</section>
+<section id="funnelSec" data-nav="퍼널">
+  <h2>퍼널</h2>
+  <p class="sub">가입한 사람이 어디까지 갔나. 이메일·애플·구글로 가입한 계정만(2.0 익명 계정 제외).</p>
+  <div class="seg" id="funnelPick" role="group" aria-label="기간"></div>
+  <div class="card"><div class="bars fun" id="funnel"></div></div>
+</section>
+</div>
+<section id="heatmapSec" data-nav="누가 어느 날 왔나">
+  <h2>누가 어느 날 왔나</h2>
+  <p class="sub">칸 색 = 그날 앱에 있었던 시간, 점 = 그날 메모리나 이야기를 남김. 결제 중인 사람이 맨 위.</p>
+  <div class="card scroll" id="heatmap"></div>
+  <div class="legend" id="hmLegend"></div>
+</section>
+</div>
+
+<!-- ====================================================== 사용 패턴 -->
+<div class="grp" id="grp-use" data-group="사용 패턴">
+<section id="weekSec" data-nav="주별">
+  <h2>주별</h2>
+  <p class="sub">최근 26주. 온 사람은 그 주에 세션이 있었던 사람 수 — 세션은 최근 120일만 읽어서 그 전 주는 —.</p>
+  <div class="card scroll" id="weeks"></div>
+</section>
+<div class="dgrid">
+<section id="hoursSec" data-nav="몇 시에 오나">
+  <h2>몇 시에 오나</h2>
+  <p class="sub">최근 90일 세션 시작 시각, 고른 시간대 기준.</p>
+  <div class="card"><div class="bars" id="hours"></div></div>
+</section>
+<section id="dowSec" data-nav="요일">
+  <h2>요일</h2>
+  <p class="sub">최근 90일. 세션 수 · 온 사람.</p>
+  <div class="card"><div class="bars" id="dow"></div></div>
+</section>
+</div>
+<section id="kindSec" data-nav="무엇을 남기나" class="dgrid">
+  <div><h2>메모리 종류</h2><p class="sub">전체 기간.</p><div class="card"><div class="bars" id="memKinds"></div></div></div>
+  <div><h2>이야기 종류</h2><p class="sub">전체 기간, 녹음 제외.</p><div class="card"><div class="bars" id="storyKinds"></div></div></div>
+  <div><h2>데일리 기록</h2><p class="sub">얼굴 · 목소리, 전체 기간.</p><div class="card"><div class="bars" id="dailyKinds"></div></div></div>
+  <div><h2>이야기는 어디서</h2><p class="sub">AI · 직접 쓴 주제 · 데일리 · 녹음.</p><div class="card"><div class="bars" id="storySources"></div></div></div>
+</section>
+</div>
+
+<!-- ====================================================== 사람 -->
+<div class="grp" id="grp-people" data-group="사람">
+<section id="peopleTop" data-nav="사람 숫자">
+  <h2>사람 숫자</h2>
+  <div class="tiles" id="peopleTiles"></div>
+</section>
+<section id="peopleSec" data-nav="한 사람씩">
+  <h2>한 사람씩</h2>
+  <p class="sub">마지막으로 온 순서. 줄을 누르면 계정·구독·활동이 펼쳐져요.</p>
+  <div class="seg" id="peoplePick" role="group" aria-label="누구"></div>
+  <div class="card"><table id="peopleTable"></table></div>
+</section>
+</div>
+
+<!-- ====================================================== 돈 -->
+<div class="grp" id="grp-money" data-group="돈">
+<section id="planSec" data-nav="요금제">
+  <h2>요금제</h2>
+  <p class="sub">profiles.subscription_status 기준(RevenueCat 웹훅이 갱신). 베타·관리자 무제한은 결제가 아니라 따로 셉니다. 이 탭은 위 토글과 상관없이 전 계정.</p>
+  <div class="tiles" id="planTiles"></div>
+  <div class="card" style="margin-top:12px"><table id="planTable"></table></div>
+</section>
+<section id="creditSec" data-nav="크레딧">
+  <h2>스토리 크레딧</h2>
+  <p class="sub">story_credit_transactions — 구매 · 사용 · 선물. 최근 것부터.</p>
+  <div class="tiles" id="creditTiles"></div>
+  <div class="card" style="margin-top:12px"><table id="creditTable"></table></div>
+</section>
+</div>
+
+<!-- ====================================================== 2.0 -->
+<div class="grp" id="grp-v2" data-group="2.0 (iOS 새 앱)">
+<section id="v2Top" data-nav="2.0 숫자">
+  <h2>2.0 숫자</h2>
+  <p class="sub">아직 출시 전이라 2.0 익명 계정은 본인 테스트로 보고 다른 페이지에선 숨겨요(토글로 보기). 이 페이지는 전부 보여요. 저널은 폰 밖으로 안 나가서, 서버가 아는 건 이야기·목소리뿐이에요. 행동은 PostHog(app = dearroro, 개발 빌드 제외). PostHog 사람은 키체인 ID라 위 사람 표와 이어지지 않아요.</p>
+  <div class="tiles" id="v2Tiles"></div>
+</section>
+<section id="v2DaySec" data-nav="매일 온 사람">
+  <h2>매일 온 사람</h2>
+  <p class="sub">최근 30일, PostHog 이벤트가 하나라도 있었던 사람.</p>
+  <div class="card"><div class="bars" id="v2Days"></div></div>
+</section>
+<div class="dgrid">
+<section id="v2StepSec" data-nav="온보딩">
+  <h2>온보딩 단계</h2>
+  <p class="sub">onboarding_step 이벤트의 단계별 사람 수.</p>
+  <div class="card"><div class="bars" id="v2Steps"></div></div>
+</section>
+<section id="v2StorySec" data-nav="이야기·목소리">
+  <h2>이야기 · 목소리</h2>
+  <p class="sub">story_usage(만든 이야기, 무엇으로 냈나) · story_voices.</p>
+  <div class="card"><div class="bars" id="v2Stories"></div></div>
+</section>
+</div>
+<section id="v2EventSec" data-nav="이벤트">
+  <h2>이벤트</h2>
+  <div class="card"><table id="v2Events"></table></div>
+</section>
+</div>
+</main>
+
+<div id="tooltip"></div>
+
+<script>
+const DATA = __ADMIN_DATA__;
+
+/* ============================================================ helpers
+ * Copied from nawana's page.html so the two read the same. */
+const tooltip = document.getElementById('tooltip');
+function showTip(html, ev){
+  tooltip.innerHTML = html; tooltip.style.display='block';
+  const pad=14, w=tooltip.offsetWidth, h=tooltip.offsetHeight;
+  let x=ev.clientX+pad, y=ev.clientY+pad;
+  if(x+w>innerWidth-8) x=ev.clientX-w-pad;
+  if(y+h>innerHeight-8) y=ev.clientY-h-pad;
+  tooltip.style.left=x+'px'; tooltip.style.top=y+'px';
+}
+const hideTip = () => { tooltip.style.display='none'; };
+const num = n => Number(n||0).toLocaleString('ko-KR');
+const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+const pct = (a,b) => b ? Math.round(a/b*100) + '%' : '—';
+const fmtMin = secs => { const m = Math.round((secs||0)/60);
+  return m < 60 ? `${m}분` : `${Math.floor(m/60)}시간 ${m%60}분`; };
+
+const PAGE_TZ = [
+  ['berlin', '독일',  'Europe/Berlin'],
+  ['seoul',  '한국',  'Asia/Seoul'],
+  ['utc',    'UTC',   'UTC'],
+];
+let tzKey = (()=>{ try{ return localStorage.getItem('nawana.admin.tz') || 'berlin'; }
+                   catch(e){ return 'berlin'; } })();
+const tzRow   = () => PAGE_TZ.find(t=>t[0]===tzKey) || PAGE_TZ[0];
+const tzZone  = () => tzRow()[2];
+const tzLabel = () => tzRow()[1];
+function zoneOffsetHours(zone){
+  const d = new Date();
+  const utc = new Date(d.toLocaleString('en-US', { timeZone: 'UTC' }));
+  const loc = new Date(d.toLocaleString('en-US', { timeZone: zone }));
+  return Math.round((loc - utc) / 3600000);
+}
+function renderTzPick(){
+  const el = document.getElementById('tzPick');
+  el.innerHTML = PAGE_TZ.map(([k,lab,zone])=>{
+    const off = zoneOffsetHours(zone);
+    return `<button type="button" data-k="${k}" aria-pressed="${k===tzKey}">${lab}`
+      + ` <span style="opacity:.6">${off>=0?'+':''}${off}</span></button>`;
+  }).join('');
+  el.querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{
+    tzKey = b.dataset.k;
+    try{ localStorage.setItem('nawana.admin.tz', tzKey); }catch(e){}
+    render();
+  }));
+}
+const ts = iso => iso ? new Date(iso) : null;
+const fmtTs = iso => { const d=ts(iso); return d ? d.toLocaleString('ko-KR',
+  {timeZone: tzZone(), month:'numeric',day:'numeric',
+   hour:'2-digit',minute:'2-digit',hour12:false}) : '—'; };
+const fmtDay = iso => { const d=ts(iso); return d ? d.toLocaleDateString('ko-KR',
+  {timeZone: tzZone(), year:'2-digit', month:'numeric', day:'numeric'}) : '—'; };
+const ago = iso => { const d=ts(iso); if(!d) return '—';
+  const m=Math.round((Date.now()-d)/60000);
+  if(m<1) return '방금'; if(m<60) return `${m}분 전`;
+  const h=Math.round(m/60); if(h<48) return `${h}시간 전`; return `${Math.round(h/24)}일 전`; };
+const localDay = d => new Intl.DateTimeFormat('en-CA',
+  { timeZone: tzZone(), year:'numeric', month:'2-digit', day:'2-digit' }).format(new Date(d));
+const localHour = d => Number(new Intl.DateTimeFormat('en-GB',
+  { timeZone: tzZone(), hour:'2-digit', hourCycle:'h23' }).format(new Date(d)));
+const addDays = (dayKey, n) => { const [y,m,d] = dayKey.split('-').map(Number);
+  return new Date(Date.UTC(y, m-1, d+n)).toISOString().slice(0,10); };
+const dowOf = dayKey => { const [y,m,d] = dayKey.split('-').map(Number);
+  return (new Date(Date.UTC(y,m-1,d)).getUTCDay() + 6) % 7; };   // 0 = 월
+const mondayOf = dayKey => addDays(dayKey, -dowOf(dayKey));
+const DOW_KO = ['월','화','수','목','금','토','일'];
+const daysAgo = n => Date.now() - n*86400000;
+const within = (iso, days) => !!iso && Date.parse(iso) >= daysAgo(days);
+const barRows = (items, max) => items.map(it =>
+  `<div class="row"><div class="lbl">${it.lbl}</div><div class="track">`
+  + `<div class="fill" style="width:${max ? Math.max(0.5, it.v/max*100) : 0}%;${it.color?`background:${it.color}`:''}"></div></div>`
+  + `<div class="val">${it.val ?? num(it.v)}</div></div>`).join('') || '<div class="empty">아직 없어요</div>';
+
+/* ============================================================ labels */
+const TIER_KO = {free:'무료', journal:'Journal', pro:'AI Story', unlimited:'무제한(관리자)'};
+const SUBJECT_KO = {child:'아이', pet:'펫', partner:'연인'};
+const STORY_KO = {creative:'창작', talk:'이야기해주기', informative:'정보', lyrical:'서정', educator:'교육',
+  fantasy:'판타지', lullaby:'자장가', humorous:'유머', poetic:'시', bedtime:'잠자리', cover:'커버'};
+const SOURCE_KO = {ai:'AI', prompt:'직접 쓴 주제', daily:'데일리', recorded:'녹음'};
+const DAILY_KO = {face:'얼굴', voice:'목소리'};
+const CREDIT_KO = {use:'사용', purchase:'구매', gift_sent:'선물 보냄', gift_received:'선물 받음'};
+const PROVIDER_KO = {apple:'Apple', google:'Google', email:'이메일', anonymous:'익명'};
+const V2_EVENT_KO = {app_opened:'앱 열기', onboarding_step:'온보딩 단계', onboarding_done:'온보딩 끝',
+  free_week_started:'무료 1주일 시작', first_day_saved:'첫 날 저장', day_opened:'날 열어봄',
+  moment_saved:'모먼트 저장', story_made:'이야기 만듦', story_opened:'이야기 열어봄',
+  story_limit_hit:'이야기 한도에 닿음', voice_made:'목소리 만듦', paywall_shown:'페이월 봄',
+  paywall_tab:'페이월 탭 바꿈', purchase_started:'구매 시작', purchase_done:'구매 완료',
+  purchase_cancelled:'구매 취소', journal_gate_hit:'저널 잠금에 닿음', autofill_tapped:'자동 채우기 누름',
+  backup_restored:'백업 복원', uses_changed:'누구를 기록하나 바꿈', week_ending_shown:'1주일 끝 안내 봄',
+  week_ending_tapped:'1주일 끝 안내 누름'};
+
+/* ============================================================ people
+ * Per-person counts folded once from the row lists; the toggle only decides
+ * who is shown. */
+const U = DATA.users;
+U.forEach((u,i) => Object.assign(u, {idx:i, mem:0, sto:0, rec:0, kids:{}, daily:0, v2s:0, v2v:0, credits:0,
+  firstMem:null, lastMem:null, firstSto:null, lastSto:null}));
+for(const m of DATA.memories){ const u=U[m.u]; u.mem++; u.firstMem ??= m.at; u.lastMem = m.at; }
+for(const s of DATA.stories){ if(s.source==='recorded') continue; const u=U[s.u]; u.sto++; u.firstSto ??= s.at; u.lastSto = s.at; }
+for(const r of DATA.recordings){ U[r.u].rec++; }
+for(const c of DATA.children){ const k = c.subject || 'child'; U[c.u].kids[k] = (U[c.u].kids[k]||0) + 1; }
+for(const d of DATA.daily){ U[d.u].daily++; }
+for(const s of DATA.storyUsage){ U[s.u].v2s++; }
+for(const v of DATA.voices){ U[v.u].v2v++; }
+for(const c of DATA.credits){ if(c.type==='purchase') U[c.u].credits += Number(c.amount)||0; }
+const latest = (...xs) => xs.filter(Boolean).sort().pop() || null;
+U.forEach(u => { u.lastActive = latest(u.lastSession, u.lastSeen, u.lastMem, u.lastSto); });
+
+const EX = new Set(DATA.excluded);
+/** 2.0 isn't in the store yet (2026-10-25), so every anonymous account is the
+ *  owner's own phones and simulators. Set this to the release date and from
+ *  then on only accounts made BEFORE it are treated as tests. */
+const V2_RELEASE = null;
+const isV2Test = u => u.anon && (!V2_RELEASE || String(u.createdAt) < V2_RELEASE);
+const isOwnerOrTest = u => EX.has(u.idx) || u.admin || isV2Test(u);
+const showAll = () => document.getElementById('devToggle').checked;
+const visibleUsers = () => showAll() ? U : U.filter(u => !isOwnerOrTest(u));
+const visibleSet = () => new Set(visibleUsers().map(u => u.idx));
+/** Real money: a paid tier that did not come from a beta grant or the admin. */
+const isPaying = u => (u.tier==='journal' || u.tier==='pro') && u.subSource!=='beta';
+const nameOf = u => u.name || (u.email ? u.email.split('@')[0] : (u.anon ? '익명 (2.0)' : u.id.slice(0,8)));
+const kidsText = u => Object.entries(u.kids).map(([k,n]) => `${SUBJECT_KO[k]||k} ${n}`).join(' · ');
+const tierChip = u => {
+  const color = isPaying(u) ? 'var(--good)' : u.tier==='free' ? 'var(--baseline)' : 'var(--s1)';
+  const tail = u.subSource==='beta' ? ' · 베타' : u.period==='TRIAL' ? ' · 체험' : '';
+  return `<span class="chip"><span class="dot" style="background:${color}"></span>${esc(TIER_KO[u.tier]||u.tier)}<span class="tail">${tail}</span></span>`;
+};
+const badge = u => (isOwnerOrTest(u) ? '<span class="ownchip">본인·테스트</span>' : '')
+  + (u.anon ? '<span class="devchip">2.0</span>' : '')
+  + (u.version ? `<span class="verchip">${esc(u.version)}${u.build?` (${esc(u.build)})`:''}</span>` : '');
+
+/* sessions by person × local day, in the reader's zone */
+function sessionDays(vis){
+  const by = new Map();   // idx -> Map(day -> secs)
+  for(const s of DATA.sessions){
+    if(!vis.has(s.u)) continue;
+    const day = localDay(s.at);
+    const m = by.get(s.u) ?? new Map(); m.set(day, (m.get(day)||0) + s.secs); by.set(s.u, m);
+  }
+  return by;
+}
+function madeDays(vis){
+  const by = new Map();
+  for(const r of [...DATA.memories, ...DATA.stories]){
+    if(!vis.has(r.u) || !within(r.at, DATA.rawSessionDays)) continue;
+    const s = by.get(r.u) ?? new Set(); s.add(localDay(r.at)); by.set(r.u, s);
+  }
+  return by;
+}
+
+/* ============================================================ 대시보드 */
+function renderToday(){
+  const vis = visibleSet(), today = localDay(Date.now()), yday = addDays(today, -1);
+  const came = (from, to) => new Set(DATA.sessions.filter(s => vis.has(s.u)
+    && localDay(s.at) >= from && localDay(s.at) <= to).map(s => s.u)).size;
+  const real = visibleUsers().filter(u => !u.anon);
+  const cnt = (rows, from) => rows.filter(r => vis.has(r.u) && localDay(r.at) >= from).length;
+  const stories = DATA.stories.filter(s => s.source!=='recorded');
+  const tiles = [
+    ['가입한 사람', num(real.length), `오늘 ${num(real.filter(u=>localDay(u.createdAt)===today).length)} · 7일 ${num(real.filter(u=>within(u.createdAt,7)).length)}`],
+    ['오늘 온 사람', num(came(today, today)), `어제 ${num(came(yday, yday))}`],
+    ['7일 온 사람', num(came(addDays(today,-6), today)), `30일 ${num(came(addDays(today,-29), today))}`],
+    ['오늘 메모리', num(cnt(DATA.memories, today)), `7일 ${num(cnt(DATA.memories, addDays(today,-6)))}`],
+    ['오늘 이야기', num(cnt(stories, today)), `7일 ${num(cnt(stories, addDays(today,-6)))}`],
+    ['결제 중', num(visibleUsers().filter(isPaying).length),
+      `베타 ${num(visibleUsers().filter(u=>u.subSource==='beta').length)} · 무료 ${num(real.filter(u=>u.tier==='free').length)}`],
+  ];
+  document.getElementById('todayTiles').innerHTML = tiles.map(([k,v,d]) =>
+    `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`).join('');
+}
+
+const FEED_KINDS = [['all','전체'], ['signup','가입'], ['memory','메모리'], ['story','이야기'], ['money','결제·크레딧'], ['v2','2.0']];
+let feedKind = 'all';
+function renderFeed(){
+  const vis = visibleSet(), items = [];
+  const push = (kind, u, at, html, color) => { if(vis.has(u) && within(at, 30)) items.push({kind, u, at, html, color}); };
+  for(const u of U) if(!u.anon) push('signup', u.idx, u.createdAt, `가입 <span class="fw">${esc(PROVIDER_KO[u.provider]||u.provider||'')}</span>`, 'var(--s1)');
+  for(const u of U) if(u.subStarted && u.tier!=='free') push('money', u.idx, u.subStarted, `${esc(TIER_KO[u.tier]||u.tier)} 시작 <span class="fw">${esc(u.period||u.subSource||'')}</span>`, 'var(--good)');
+  for(const m of DATA.memories) push('memory', m.u, m.at, `메모리 업로드${m.video?' <span class="fw">영상</span>':''}`, 'var(--s3)');
+  for(const s of DATA.stories) push('story', s.u, s.at, s.source==='recorded' ? '이야기 녹음' : `이야기 만듦 <span class="fw">${esc(STORY_KO[s.type]||s.type||'')}</span>`, 'var(--s2)');
+  for(const c of DATA.credits) if(c.type!=='use') push('money', c.u, c.at, `크레딧 ${esc(CREDIT_KO[c.type]||c.type)} <span class="fw">${num(c.amount)}개</span>`, 'var(--good)');
+  for(const s of DATA.storyUsage) push('v2', s.u, s.at, `2.0 이야기 <span class="fw">${esc(STORY_KO[s.type]||s.type)}${s.paid?` · ${esc(s.paid)}`:''}</span>`, 'var(--warn)');
+  for(const v of DATA.voices) push('v2', v.u, v.at, `2.0 목소리 만듦`, 'var(--warn)');
+  const counts = Object.fromEntries(FEED_KINDS.map(([k]) => [k, k==='all' ? items.length : items.filter(i=>i.kind===k).length]));
+  const pick = document.getElementById('feedPick');
+  pick.innerHTML = FEED_KINDS.map(([k,lab]) => `<button type="button" data-k="${k}" aria-pressed="${k===feedKind}">${lab} ${counts[k]}</button>`).join('');
+  pick.querySelectorAll('button').forEach(b => b.onclick = () => { feedKind = b.dataset.k; renderFeed(); });
+  const shown = items.filter(i => feedKind==='all' || i.kind===feedKind).sort((a,b) => b.at.localeCompare(a.at)).slice(0, 200);
+  document.getElementById('feed').innerHTML = shown.map(i =>
+    `<div class="fe"><span class="ft">${fmtTs(i.at)}</span><span class="fd" style="background:${i.color}"></span>`
+    + `<span class="fb"><b data-tip="${esc(U[i.u].email||U[i.u].id)}">${esc(nameOf(U[i.u]))}</b> ${i.html}</span></div>`).join('')
+    || '<div class="empty">최근 30일에 일어난 일이 없어요</div>';
+}
+
+const FUNNEL_WINDOWS = [['all','전체'], ['365','1년'], ['90','90일']];
+let funnelWin = 'all';
+function renderFunnel(){
+  const pick = document.getElementById('funnelPick');
+  pick.innerHTML = FUNNEL_WINDOWS.map(([k,lab]) => `<button type="button" data-k="${k}" aria-pressed="${k===funnelWin}">${lab} 가입</button>`).join('');
+  pick.querySelectorAll('button').forEach(b => b.onclick = () => { funnelWin = b.dataset.k; renderFunnel(); });
+  const base = visibleUsers().filter(u => !u.anon && u.hasProfile && (funnelWin==='all' || within(u.createdAt, Number(funnelWin))));
+  const steps = [
+    ['가입', base],
+    ['기록 대상 등록', base.filter(u => Object.keys(u.kids).length)],
+    ['첫 메모리', base.filter(u => u.mem > 0)],
+    ['첫 이야기', base.filter(u => u.sto > 0)],
+    ['이틀 이상 옴', base.filter(u => u.activeDays >= 2)],
+    ['일주일 이상 옴', base.filter(u => u.activeDays >= 7)],
+    ['결제', base.filter(isPaying)],
+  ];
+  const max = base.length;
+  document.getElementById('funnel').innerHTML = barRows(steps.map(([lbl, list], i) => ({
+    lbl, v: list.length, val: `${num(list.length)}명 · ${pct(list.length, max)}`,
+    color: i===steps.length-1 ? 'var(--good)' : null })), max);
+}
+
+/* 히트맵: as many recent days as fit the card, like nawana's. */
+function renderHeatmap(){
+  const el = document.getElementById('heatmap');
+  const vis = visibleSet(), sd = sessionDays(vis), md = madeDays(vis);
+  const cs = innerWidth <= 700 ? 14 : 18, gap = 3, whoW = innerWidth <= 700 ? 110 : 210, tail = 130;
+  const width = Math.max(320, el.clientWidth - 40);
+  const nDays = Math.max(7, Math.min(DATA.rawSessionDays, Math.floor((width - whoW - tail) / (cs + gap))));
+  const today = localDay(Date.now());
+  const days = Array.from({length:nDays}, (_,i) => addDays(today, i - nDays + 1));
+  const rows = visibleUsers().filter(u => {
+    const a = sd.get(u.idx), b = md.get(u.idx);
+    return days.some(d => (a && a.has(d)) || (b && b.has(d)));
+  }).sort((a,b) => (isPaying(b)-isPaying(a)) || String(b.lastActive).localeCompare(String(a.lastActive)));
+  const lvl = secs => secs <= 0 ? 0 : secs < 120 ? 1 : secs < 300 ? 2 : secs < 900 ? 3 : secs < 1800 ? 4 : 5;
+  const cols = `grid-template-columns:${whoW}px repeat(${nDays}, ${cs}px) ${tail}px`;
+  const head = `<div class="r hd" style="${cols}"><div></div>` + days.map(d => {
+    const [, m, dd] = d.split('-').map(Number);
+    const show = dd === 1 || d === days[0] || dowOf(d) === 0;
+    return `<div class="d${d===today?' today':''}">${show ? `${m}/${dd}` : ''}</div>`;
+  }).join('') + `<div class="num">${nDays}일 합계</div></div>`;
+  const row = u => {
+    const a = sd.get(u.idx) ?? new Map(), b = md.get(u.idx) ?? new Set();
+    let total = 0, on = 0;
+    const cells = days.map(d => {
+      const secs = a.get(d) || 0, made = b.has(d);
+      total += secs; if(secs || made) on++;
+      const tip = `<b>${esc(nameOf(u))}</b> · ${d}<br>${secs ? `앱 ${fmtMin(secs)}` : '세션 없음'}${made ? '<br>메모리·이야기 남김' : ''}`;
+      return `<div class="c v${lvl(secs)}${made?' used':''}" data-tip="${esc(tip)}"></div>`;
+    }).join('');
+    return `<div class="r${isPaying(u)?' paying':''}" style="${cols}">`
+      + `<div class="who"><div class="n">${esc(nameOf(u))}${badge(u)}</div>`
+      + `<div class="s">${tierChip(u)} ${esc(kidsText(u))}</div></div>`
+      + cells + `<div class="num"><b>${fmtMin(total)}</b><span class="spk">${on}일</span></div></div>`;
+  };
+  el.innerHTML = rows.length
+    ? `<div class="hm" style="--cs:${cs}px">${head}${rows.map(row).join('')}</div>`
+    : '<div class="empty">이 기간에 온 사람이 없어요</div>';
+  document.getElementById('hmLegend').innerHTML = '앱에 있었던 시간'
+    + [['v0','없음'],['v1','2분 미만'],['v2','5분'],['v3','15분'],['v4','30분'],['v5','30분+']].map(([c,l]) =>
+      `<span class="cell" style="background:var(--${c==='v0'?'chip':'seq'+c.slice(1)})"></span>${l}`).join(' ')
+    + ` · <span class="cell" style="background:var(--seq4);border-radius:50%;width:6px;height:6px"></span> 메모리·이야기 남긴 날`;
+}
+
+/* ============================================================ 사용 패턴 */
+function renderWeeks(){
+  const vis = visibleSet(), thisMon = mondayOf(localDay(Date.now()));
+  const weeks = Array.from({length:26}, (_,i) => addDays(thisMon, -7*(25-i)));
+  const w = new Map(weeks.map(k => [k, {people:new Set(), secs:0, mem:0, sto:0, signups:0}]));
+  const at = iso => w.get(mondayOf(localDay(iso)));
+  for(const s of DATA.sessions){ if(!vis.has(s.u)) continue; const b = at(s.at); if(b){ b.people.add(s.u); b.secs += s.secs; } }
+  for(const m of DATA.memories){ if(!vis.has(m.u)) continue; const b = at(m.at); if(b) b.mem++; }
+  for(const s of DATA.stories){ if(!vis.has(s.u) || s.source==='recorded') continue; const b = at(s.at); if(b) b.sto++; }
+  for(const u of visibleUsers()){ if(u.anon) continue; const b = at(u.createdAt); if(b) b.signups++; }
+  const max = Math.max(1, ...[...w.values()].map(b => b.people.size));
+  const bar = (v, m, c='var(--s1)') => `<span class="ftbar"><i style="width:${m ? v/m*100 : 0}%;background:${c}"></i></span>`;
+  const maxMem = Math.max(1, ...[...w.values()].map(b => b.mem)), maxSto = Math.max(1, ...[...w.values()].map(b => b.sto));
+  document.getElementById('weeks').innerHTML = `<table class="wk"><thead><tr><th>주 (월요일)</th><th>온 사람</th>`
+    + `<th class="num">앱 시간</th><th>메모리</th><th>이야기</th><th class="num">가입</th></tr></thead><tbody>`
+    + weeks.slice().reverse().map(k => { const b = w.get(k), [, m, d] = k.split('-').map(Number);
+      // Session rows reach back only rawSessionDays; before that a 0 would be a lie.
+      const seen = Date.parse(k) >= daysAgo(DATA.rawSessionDays);
+      return `<tr><td>${m}/${d}</td><td>${seen ? bar(b.people.size, max) + num(b.people.size) : '<span class="muted">—</span>'}</td>`
+        + `<td class="num">${seen ? fmtMin(b.secs) : '<span class="muted">—</span>'}</td><td>${bar(b.mem, maxMem, 'var(--s3)')}${num(b.mem)}</td>`
+        + `<td>${bar(b.sto, maxSto, 'var(--s2)')}${num(b.sto)}</td><td class="num">${num(b.signups)}</td></tr>`; }).join('')
+    + `</tbody></table>`;
+}
+function renderHoursDow(){
+  const vis = visibleSet();
+  const recent = DATA.sessions.filter(s => vis.has(s.u) && within(s.at, 90));
+  const hours = Array.from({length:24}, () => 0), dow = Array.from({length:7}, () => ({n:0, people:new Set()}));
+  for(const s of recent){ hours[localHour(s.at)]++; const d = dowOf(localDay(s.at)); dow[d].n++; dow[d].people.add(s.u); }
+  document.getElementById('hours').innerHTML = barRows(hours.map((v,h) => ({lbl:`${h}시`, v})), Math.max(...hours));
+  document.getElementById('dow').innerHTML = barRows(dow.map((d,i) => ({lbl:DOW_KO[i], v:d.n,
+    val:`${num(d.n)}회 · ${num(d.people.size)}명`})), Math.max(...dow.map(d => d.n)));
+}
+function countBy(rows, keyOf, labels){
+  const vis = visibleSet(), m = new Map();
+  for(const r of rows){ if(!vis.has(r.u)) continue; const k = keyOf(r) ?? '(없음)'; m.set(k, (m.get(k)||0) + 1); }
+  const items = [...m.entries()].sort((a,b) => b[1]-a[1]).map(([k,v]) => ({lbl: esc(labels[k] || k), v}));
+  return barRows(items, Math.max(0, ...items.map(i => i.v)));
+}
+function renderKinds(){
+  document.getElementById('memKinds').innerHTML = countBy(DATA.memories, m => m.kind==='daily' ? '데일리' : '일반', {});
+  document.getElementById('storyKinds').innerHTML = countBy(DATA.stories.filter(s => s.source!=='recorded'), s => s.type, STORY_KO);
+  document.getElementById('dailyKinds').innerHTML = countBy(DATA.daily, d => d.type, DAILY_KO);
+  document.getElementById('storySources').innerHTML = countBy(DATA.stories, s => s.source, SOURCE_KO);
+}
+
+/* ============================================================ 사람 */
+const PEOPLE_FILTERS = [['all','전체'], ['30','30일 안에 옴'], ['paying','결제·베타'], ['anon','2.0 익명'], ['quiet','안 온 지 30일+']];
+let peopleFilter = 'all';
+const peopleOpen = new Set();
+function renderPeople(){
+  const vis = visibleUsers();
+  const tiles = [
+    ['전체 계정', num(vis.length), `프로필 있는 계정 ${num(vis.filter(u=>u.hasProfile).length)}`],
+    ['2.0 익명 계정', num(vis.filter(u=>u.anon).length), '로그인 없이 이야기·목소리용'],
+    ['30일 안에 온 사람', num(vis.filter(u=>within(u.lastActive,30)).length), `90일 ${num(vis.filter(u=>within(u.lastActive,90)).length)}`],
+    ['기록 대상 등록', num(vis.filter(u=>Object.keys(u.kids).length).length),
+      Object.entries(vis.reduce((a,u)=>{ for(const [k,n] of Object.entries(u.kids)) a[k]=(a[k]||0)+n; return a; }, {}))
+        .map(([k,n]) => `${SUBJECT_KO[k]||k} ${num(n)}`).join(' · ')],
+    ['메모리 남긴 사람', num(vis.filter(u=>u.mem).length), `메모리 ${num(vis.reduce((a,u)=>a+u.mem,0))}개`],
+    ['이야기 만든 사람', num(vis.filter(u=>u.sto).length), `이야기 ${num(vis.reduce((a,u)=>a+u.sto,0))}개`],
+  ];
+  document.getElementById('peopleTiles').innerHTML = tiles.map(([k,v,d]) =>
+    `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`).join('');
+
+  const keep = {
+    all: () => true, '30': u => within(u.lastActive, 30), paying: u => u.tier!=='free',
+    anon: u => u.anon, quiet: u => !u.anon && !within(u.lastActive, 30),
+  };
+  const pick = document.getElementById('peoplePick');
+  pick.innerHTML = PEOPLE_FILTERS.map(([k,lab]) => `<button type="button" data-k="${k}" aria-pressed="${k===peopleFilter}">${lab} ${vis.filter(keep[k]).length}</button>`).join('');
+  pick.querySelectorAll('button').forEach(b => b.onclick = () => { peopleFilter = b.dataset.k; renderPeople(); });
+  const list = vis.filter(keep[peopleFilter]).sort((a,b) => String(b.lastActive||b.createdAt).localeCompare(String(a.lastActive||a.createdAt)));
+  const li = (k, v) => `<li>${k} <b>${v ?? '—'}</b></li>`;
+  const detail = u => `<tr class="detail"><td colspan="8"><div class="dl">
+    <div><h4>계정</h4><ul>${li('가입', fmtTs(u.createdAt))}${li('로그인', esc(PROVIDER_KO[u.provider]||u.provider))}
+      ${li('마지막 로그인', fmtTs(u.lastSignIn))}${li('앱 언어', esc(u.lang))}${li('나라', esc(u.country))}
+      ${li('가족 코드', esc(u.family))}${li('초대받아 옴', u.referred ? '예' : '아니오')}</ul>
+      <div class="uid">${esc(u.id)}</div></div>
+    <div><h4>구독</h4><ul>${li('요금제', esc(TIER_KO[u.tier]||u.tier))}${li('기간', esc(u.period))}
+      ${li('자동 갱신', u.willRenew==null ? null : u.willRenew ? '켜짐' : '꺼짐')}${li('시작', fmtTs(u.subStarted))}
+      ${li('만료', fmtTs(u.subExpires))}${li('출처', esc(u.subSource))}${li('산 크레딧', num(u.credits))}</ul></div>
+    <div><h4>활동</h4><ul>${li('세션', `${num(u.sessions)}회 · ${fmtMin(u.sessionSecs)}`)}${li('온 날', `${num(u.activeDays)}일`)}
+      ${li('첫 메모리', fmtTs(u.firstMem))}${li('마지막 메모리', fmtTs(u.lastMem))}
+      ${li('첫 이야기', fmtTs(u.firstSto))}${li('마지막 이야기', fmtTs(u.lastSto))}${li('데일리 기록', num(u.daily))}</ul></div>
+    <div><h4>2.0</h4><ul>${li('만든 이야기', num(u.v2s))}${li('목소리', num(u.v2v))}</ul></div>
+  </div></td></tr>`;
+  document.getElementById('peopleTable').innerHTML = `<thead><tr><th>사람</th><th>가입</th><th>요금제</th><th>기록 대상</th>`
+    + `<th class="num">메모리</th><th class="num">이야기</th><th class="num">온 날</th><th>마지막</th></tr></thead><tbody>`
+    + list.map(u => {
+      const open = peopleOpen.has(u.id);
+      return `<tr class="xrow" data-id="${esc(u.id)}" aria-expanded="${open}">`
+        + `<td><span class="uname">${esc(nameOf(u))}</span>${badge(u)}<div class="usub">${esc(u.email||'')}</div></td>`
+        + `<td class="num">${fmtDay(u.createdAt)}</td><td>${tierChip(u)}</td><td>${esc(kidsText(u)) || '<span class="muted">—</span>'}</td>`
+        + `<td class="num">${num(u.mem)}</td><td class="num">${num(u.sto)}${u.rec?`<div class="usub">녹음 ${u.rec}</div>`:''}</td>`
+        + `<td class="num">${num(u.activeDays)}</td><td>${ago(u.lastActive)}</td></tr>` + (open ? detail(u) : '');
+    }).join('') + `</tbody>`;
+  document.querySelectorAll('#peopleTable .xrow').forEach(tr => tr.onclick = () => {
+    const id = tr.dataset.id; peopleOpen.has(id) ? peopleOpen.delete(id) : peopleOpen.add(id); renderPeople();
+  });
+}
+
+/* ============================================================ 돈
+ * Account facts, not window ones: like nawana's 돈 group, it ignores the
+ * toggle. */
+function renderMoney(){
+  const paid = U.filter(u => u.tier!=='free');
+  const by = t => U.filter(u => u.tier===t);
+  document.getElementById('planTiles').innerHTML = [
+    ['실제 결제', num(U.filter(isPaying).length), `Journal ${num(by('journal').filter(isPaying).length)} · AI Story ${num(by('pro').filter(isPaying).length)}`],
+    ['그중 체험 중', num(U.filter(u => isPaying(u) && u.period==='TRIAL').length), `자동 갱신 꺼짐 ${num(U.filter(u => isPaying(u) && u.willRenew===false).length)}`],
+    ['베타 지급', num(U.filter(u => u.subSource==='beta').length), '결제 아님'],
+    ['무제한(관리자)', num(by('unlimited').length), ''],
+    ['무료', num(by('free').filter(u=>!u.anon).length), '2.0 익명 계정 제외'],
+  ].map(([k,v,d]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`).join('');
+  document.getElementById('planTable').innerHTML = `<thead><tr><th>사람</th><th>요금제</th><th>기간</th><th>자동 갱신</th>`
+    + `<th>시작</th><th>만료</th><th>출처</th></tr></thead><tbody>`
+    + (paid.sort((a,b) => String(b.subStarted).localeCompare(String(a.subStarted))).map(u =>
+      `<tr><td><span class="uname">${esc(nameOf(u))}</span>${badge(u)}</td><td>${tierChip(u)}</td><td>${esc(u.period||'—')}</td>`
+      + `<td>${u.willRenew==null ? '—' : u.willRenew ? '<span class="ok">켜짐</span>' : '<span class="warn">꺼짐</span>'}</td>`
+      + `<td>${fmtTs(u.subStarted)}</td><td>${fmtTs(u.subExpires)}</td><td>${esc(u.subSource||'—')}</td></tr>`).join('')
+      || '<tr><td colspan="7" class="empty">아직 없어요</td></tr>') + `</tbody>`;
+
+  const cr = DATA.credits;
+  const sum = t => cr.filter(c => c.type===t).reduce((a,c) => a + (Number(c.amount)||0), 0);
+  document.getElementById('creditTiles').innerHTML = [
+    ['구매', `${num(cr.filter(c=>c.type==='purchase').length)}건`, `크레딧 ${num(sum('purchase'))}개`],
+    ['사용', `${num(cr.filter(c=>c.type==='use').length)}건`, `크레딧 ${num(Math.abs(sum('use')))}개`],
+    ['선물', `${num(cr.filter(c=>c.type.startsWith('gift')).length)}건`, ''],
+  ].map(([k,v,d]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`).join('');
+  document.getElementById('creditTable').innerHTML = `<thead><tr><th>언제</th><th>사람</th><th>종류</th><th class="num">개수</th><th>상품</th></tr></thead><tbody>`
+    + cr.slice().reverse().slice(0, 100).map(c => `<tr><td>${fmtTs(c.at)}</td><td>${esc(nameOf(U[c.u]))}</td>`
+      + `<td>${esc(CREDIT_KO[c.type]||c.type)}</td><td class="num">${num(c.amount)}</td><td>${esc(c.product||'—')}</td></tr>`).join('')
+    + `</tbody>`;
+}
+
+/* ============================================================ 2.0 */
+function renderV2(){
+  const v2 = DATA.v2;
+  const ev = n => v2?.events.find(e => e.event===n);
+  const people = n => num(ev(n)?.people || 0);
+  const su = DATA.storyUsage, vo = DATA.voices;
+  document.getElementById('v2Tiles').innerHTML = (v2 ? [
+    ['앱 연 사람', people('app_opened'), `7일 이벤트 ${num(v2.events.reduce((a,e)=>a+e.n7,0))}개`],
+    ['온보딩 끝', people('onboarding_done'), `무료 1주일 시작 ${people('free_week_started')}`],
+    ['첫 날 저장', people('first_day_saved'), `모먼트 저장 ${people('moment_saved')}`],
+    ['구매 완료', people('purchase_done'), `페이월 본 사람 ${people('paywall_shown')}`],
+  ] : [['PostHog', '—', 'POSTHOG_API_KEY가 없거나 읽기 실패']]).concat([
+    ['만든 이야기 (서버)', num(su.length), `${num(new Set(su.map(s=>s.u)).size)}명 · 7일 ${num(su.filter(s=>within(s.at,7)).length)}`],
+    ['목소리', num(vo.filter(v=>!v.removed).length), `지운 것 ${num(vo.filter(v=>v.removed).length)}`],
+  ]).map(([k,v,d]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`).join('');
+
+  const today = new Date().toISOString().slice(0,10);
+  const days = Array.from({length:30}, (_,i) => addDays(today, i-29));
+  const dm = new Map((v2?.days||[]).map(d => [d.day, d]));
+  document.getElementById('v2Days').innerHTML = v2
+    ? barRows(days.slice().reverse().map(d => ({lbl: d.slice(5).replace('-','/'), v: dm.get(d)?.people || 0,
+        val: `${num(dm.get(d)?.people || 0)}명 · ${num(dm.get(d)?.n || 0)}개`})), Math.max(1, ...days.map(d => dm.get(d)?.people || 0)))
+    : '<div class="empty">PostHog를 읽지 못했어요</div>';
+  const steps = (v2?.steps||[]).slice().sort((a,b) => b.people - a.people);
+  document.getElementById('v2Steps').innerHTML = barRows(steps.map(s => ({lbl: esc(s.step ?? '(없음)'), v: s.people, val: `${num(s.people)}명`})),
+    Math.max(0, ...steps.map(s => s.people)));
+  const byType = new Map();
+  for(const s of su){ const k = `${STORY_KO[s.type]||s.type}${s.paid ? ` · ${s.paid}` : ''}`; byType.set(k, (byType.get(k)||0) + 1); }
+  const items = [...byType.entries()].sort((a,b) => b[1]-a[1]).map(([k,v]) => ({lbl: esc(k), v}));
+  items.push({lbl:'목소리 만듦', v: vo.length, color:'var(--warn)'});
+  document.getElementById('v2Stories').innerHTML = barRows(items, Math.max(0, ...items.map(i => i.v)));
+  document.getElementById('v2Events').innerHTML = `<thead><tr><th>이벤트</th><th class="num">사람</th><th class="num">횟수</th>`
+    + `<th class="num">7일</th><th>마지막</th></tr></thead><tbody>`
+    + ((v2?.events||[]).map(e => `<tr><td>${esc(V2_EVENT_KO[e.event] || e.event)} <span class="muted">${esc(e.event)}</span></td>`
+      + `<td class="num">${num(e.people)}</td><td class="num">${num(e.n)}</td><td class="num">${num(e.n7)}</td><td>${ago(e.last)}</td></tr>`).join('')
+      || '<tr><td colspan="5" class="empty">아직 실사용 이벤트가 없어요 (개발 빌드는 빠져요)</td></tr>') + `</tbody>`;
+}
+
+/* ============================================================ render */
+function render(){
+  renderTzPick();
+  renderToday(); renderFeed(); renderFunnel(); renderHeatmap();
+  renderWeeks(); renderHoursDow(); renderKinds();
+  renderPeople(); renderMoney(); renderV2();
+}
+function redrawCharts(){ renderHeatmap(); }
+
+/* ============================================================ 목차
+ * nawana's: pages in the sidebar, sections under them, lit as you scroll. */
+let curPage = null;
+const PAGES = () => [...document.querySelectorAll('.grp')];
+function buildNav(){
+  const nav = document.getElementById('sideNav');
+  nav.innerHTML = PAGES().map(g => {
+    const items = [...g.querySelectorAll('section[data-nav]')]
+      .map(x => `<a class="sl" href="#${x.id}">${esc(x.dataset.nav)}</a>`).join('');
+    return `<div class="sg" data-page="${g.id}"><a class="sgh" href="#${g.id}">${esc(g.dataset.group)}</a>`
+      + `<div class="sls">${items}</div></div>`;
+  }).join('');
+  nav.addEventListener('click', ev => {
+    const a = ev.target.closest('a'); if(!a) return;
+    ev.preventDefault();
+    go(a.getAttribute('href').slice(1));
+    document.getElementById('side').classList.remove('open');
+    document.getElementById('menuBtn').setAttribute('aria-expanded','false');
+  });
+  const links = new Map([...nav.querySelectorAll('a.sl')].map(a => [a.getAttribute('href').slice(1), a]));
+  const seen = new Map();
+  const spy = new IntersectionObserver(es => {
+    for(const e of es) seen.set(e.target.id, e.isIntersecting);
+    const first = [...links.keys()].find(id => seen.get(id));
+    if(!first) return;
+    links.forEach((a,id) => a.classList.toggle('on', id === first));
+  }, {rootMargin:'-8% 0px -70% 0px'});
+  document.querySelectorAll('section[data-nav]').forEach(x => spy.observe(x));
+}
+function go(id){
+  const t = document.getElementById(id) || document.getElementById('grp-dash');
+  const page = t.closest('.grp') || document.getElementById('grp-dash');
+  const changed = page.id !== curPage;
+  curPage = page.id;
+  PAGES().forEach(g => { g.hidden = g !== page; });
+  document.querySelectorAll('#sideNav .sg').forEach(g => g.classList.toggle('on', g.dataset.page === page.id));
+  try{ localStorage.setItem('roro.admin.page', page.id); history.replaceState(null, '', '#' + t.id); }catch(e){}
+  hideTip();
+  if(changed) redrawCharts();
+  (t === page ? window.scrollTo(0, 0) : t.scrollIntoView());
+}
+document.getElementById('menuBtn').addEventListener('click', () => {
+  const side = document.getElementById('side'), open = !side.classList.contains('open');
+  side.classList.toggle('open', open);
+  document.getElementById('menuBtn').setAttribute('aria-expanded', String(open));
+});
+document.getElementById('devToggle').addEventListener('change', render);
+document.addEventListener('mousemove', ev => {
+  const t = ev.target.closest('[data-tip]');
+  if(t) showTip(t.getAttribute('data-tip'), ev); else hideTip();
+});
+let redrawTimer;
+addEventListener('resize', () => { clearTimeout(redrawTimer); redrawTimer = setTimeout(redrawCharts, 150); });
+
+const PAGE_LOADED_AT = Date.now(), STALE_MS = 10*60e3;
+function renderAsof(){
+  document.getElementById('asof').textContent =
+    `Dear RoRo 프로덕션 DB에서 직접 집계 · ${fmtTs(DATA.asOf)} 조회 (${tzLabel()} 시간, ${ago(DATA.asOf)}) · 새로고침하면 갱신돼요`;
+}
+renderAsof();
+setInterval(renderAsof, 60000);
+document.addEventListener('visibilitychange', () => {
+  if(!document.hidden && Date.now() - PAGE_LOADED_AT > STALE_MS) location.reload();
+});
+
+render();
+buildNav();
+let startAt = location.hash.slice(1);
+if(!startAt || !document.getElementById(startAt)){
+  try{ startAt = localStorage.getItem('roro.admin.page') || 'grp-dash'; }catch(e){ startAt = 'grp-dash'; }
+}
+go(startAt);
+</script>
+</body>
+</html>

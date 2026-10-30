@@ -29,5 +29,17 @@ fi
 cp "$SRC" "$DEST"
 echo "wrote $DEST ($(wc -c < "$DEST" | tr -d ' ') bytes, no data)"
 
+# Dear RoRo's page (2026-10-25): same guards. It has no stylesheet of its own
+# — the Worker pastes page.html's <style> in at its marker.
+RSRC=roro.html
+RDEST=../../admin/src/roro.html
+grep -q '__ADMIN_DATA__' "$RSRC" || { echo "!! $RSRC has no __ADMIN_DATA__ placeholder" >&2; exit 1; }
+grep -q '<!--__SHARED_STYLE__-->' "$RSRC" || { echo "!! $RSRC has no shared-style marker" >&2; exit 1; }
+if grep -oE '[[:alnum:]._%+-]+@[[:alnum:].-]+\.[[:alpha:]]{2,}' "$RSRC" | grep -v '@example\.com' | head -1 | grep -q .; then
+  echo "!! $RSRC contains an email address — the page must hold no data" >&2; exit 1
+fi
+cp "$RSRC" "$RDEST"
+echo "wrote $RDEST ($(wc -c < "$RDEST" | tr -d ' ') bytes, no data)"
+
 echo
 echo "→ live: bash admin/deploy.sh"

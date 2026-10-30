@@ -238,6 +238,12 @@ body{margin:0; background:var(--page); color:var(--ink); font-size:15px; line-he
   background:var(--surface); border-right:1px solid var(--grid); overflow-y:auto}
 .sbrand{padding:20px 18px 10px; display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 10px}
 .sbrand .eyebrow{width:100%; margin:0}
+/* 앱 전환 (2026-10-25): one console for both apps, same door, same look. */
+.appsw{width:100%; display:flex; gap:2px; padding:2px; margin:8px 0 6px; border-radius:9px; background:var(--chip)}
+.appsw a{flex:1; text-align:center; text-decoration:none; font-size:12.5px; font-weight:600; color:var(--ink-2);
+  padding:5px 6px; border-radius:7px; white-space:nowrap}
+.appsw a:hover{color:var(--ink)}
+.appsw a[aria-current=page]{background:var(--surface); color:var(--ink); box-shadow:0 1px 3px rgba(11,11,11,.12)}
 .stitle{font-size:21px; font-weight:700; letter-spacing:-.01em}
 .menubtn{display:none; margin-left:auto; font:inherit; font-size:13px; font-weight:600; cursor:pointer;
   background:var(--chip); color:var(--ink); border:1px solid var(--ring); border-radius:8px; padding:6px 12px}
@@ -608,6 +614,8 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
     border-bottom:1px solid var(--grid); overflow-y:visible}
   .sbrand{padding:10px 14px; flex-wrap:nowrap; align-items:center}
   .sbrand .eyebrow{display:none}
+  .appsw{width:auto; margin:0 0 0 8px; order:2}
+  .appsw a{padding:4px 8px}
   .stitle{font-size:17px}
   .menubtn{display:inline-block}
   .snav, .sctl{display:none}
@@ -674,7 +682,8 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
 
 <aside class="side" id="side">
   <div class="sbrand">
-    <p class="eyebrow">nawana · 내부 운영</p>
+    <p class="eyebrow">Dear RoRo · 내부 운영</p>
+    <nav class="appsw" aria-label="앱"><a href="__ADMIN_BASE__/" aria-current="page">나와나</a><a href="__ADMIN_BASE__/roro">Dear RoRo</a></nav>
     <div class="stitle">어드민</div>
     <button type="button" class="menubtn" id="menuBtn" aria-expanded="false" aria-controls="sideNav">목차</button>
   </div>

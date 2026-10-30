@@ -17,6 +17,24 @@ Every load reads production. There is nothing to rebuild, nothing to
 republish, and **no cache** — a reload on a launch day exists to see the
 signup from a minute ago.
 
+## Dear RoRo lives here too (2026-10-25)
+
+`/admin/roro` — the same door, a second app. The owner wanted one dashboard
+for both, built as a copy of this page first and redesigned together after.
+An app switch sits at the top of both sidebars.
+
+- Page: `scripts/admin/roro.html` → `admin/src/roro.html` (refresh.sh copies
+  both). It has **no stylesheet of its own**: the Worker pastes page.html's
+  `<style>` in at `<!--__SHARED_STYLE__-->`, so a redesign of page.html's CSS
+  is a redesign of both.
+- Data: `src/roro.ts`, read thin from Dear RoRo's Supabase
+  (`DEARRORO_SUPABASE_URL` var + `DEARRORO_SERVICE_ROLE_KEY` secret) plus
+  PostHog `app = dearroro` (same project and key as nawana). No migration.
+  Profiles is the people list — the Auth admin API on that project answers 500
+  for some pages of users, so it only fills in.
+- 2.0 is not released yet, so its anonymous accounts count as the owner's
+  tests until `V2_RELEASE` in roro.html is set.
+
 ## The page is ONE file
 
 `scripts/admin/page.html`. Edit it, run `./scripts/admin/refresh.sh` (which

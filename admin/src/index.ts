@@ -29,6 +29,8 @@
 import shell from "./shell.html";
 import { assemble } from "./assemble";
 import { marketingAction, marketingData, serveMedia } from "./marketing";
+import roroShell from "./roro.html";
+import { roroData } from "./roro";
 
 export interface Env {
   SUPABASE_URL: string;
@@ -43,6 +45,9 @@ export interface Env {
   /** R2 bucket `nawana-marketing` — the 마케팅 tab's carousel files, served
    *  publicly at /admin/media/<slug>/<file> (marketing.ts). */
   MEDIA?: R2Bucket;
+  /** Dear RoRo's Supabase project (roro.ts) — the console's second app. */
+  DEARRORO_SUPABASE_URL?: string;
+  DEARRORO_SERVICE_ROLE_KEY?: string;
 }
 
 const COOKIE = "nawana_admin";
@@ -877,8 +882,31 @@ export default {
     if (!signedIn) {
       // data.json is for scripts, and a script gets a 404 rather than a form.
       if (path === "/data.json" || path === "/live.json" || path === "/history.json"
-        || path === "/marketing.json" || path.startsWith("/marketing/")) return text("Not found", 404);
+        || path === "/marketing.json" || path.startsWith("/marketing/")
+        || path === "/roro/data.json") return text("Not found", 404);
       return html(loginPage(base), 401);
+    }
+
+    // Dear RoRo (roro.ts): its own project and key, the same door. Its page
+    // borrows nawana's stylesheet at request time, so the two apps look the
+    // same and a redesign of one is a redesign of both.
+    if (path === "/roro" || path === "/roro/" || path === "/roro/data.json") {
+      let data: unknown;
+      try {
+        data = await roroData(env);
+      } catch (e) {
+        return text(`Dear RoRo 데이터를 읽지 못했어요\n\n${(e as Error).message}\n`, 502);
+      }
+      if (path === "/roro/data.json") {
+        return new Response(JSON.stringify(data), {
+          headers: { "Content-Type": "application/json; charset=utf-8", ...PRIVATE_HEADERS },
+        });
+      }
+      const style = (shell as unknown as string).match(/<style>[\s\S]*?<\/style>/)?.[0] ?? "";
+      return html((roroShell as unknown as string)
+        .replace("<!--__SHARED_STYLE__-->", () => style)
+        .replace("__ADMIN_DATA__", () => JSON.stringify(data).replace(/</g, "\\u003c"))
+        .replaceAll("__ADMIN_BASE__", base));
     }
 
     if (!env.SUPABASE_SERVICE_ROLE_KEY) {
