@@ -281,6 +281,7 @@ enum CoachSuggester {
     static func suggest(line: String,
                         recent: [Line],
                         aboutLearner: [String] = [],
+                        otherSpeaker: String? = nil,
                         situation: String? = nil,
                         register: SpeechRegister? = nil,
                         previousSay: String? = nil,
@@ -290,6 +291,7 @@ enum CoachSuggester {
                         level: CEFRLevel,
                         turnId: UUID) async -> (reply: CoachReply, item: TalkGoalItem?)? {
         var content = ""
+        if let otherSpeaker, !otherSpeaker.isEmpty { content += "The other speaker: \(otherSpeaker)\n" }
         if let situation, !situation.isEmpty { content += "Situation: \(situation)\n" }
         if !aboutLearner.isEmpty {
             content += "About the learner:\n" + aboutLearner.map { "- \($0)" }.joined(separator: "\n") + "\n"
@@ -401,6 +403,12 @@ enum CoachSuggester {
           \(targetName) ("I'm a [designer]" for someone who designs), not a \
           guess. Bring up only what this line asks about; never pull in a \
           fact it didn't ask for.
+        - When "The other speaker" is given, answer as the learner would \
+          talk to THAT person: someone they know well gets the shorthand of \
+          people who share a life (no introductions, no "nice to meet you"), \
+          a new acquaintance gets easy small talk, a public figure gets what \
+          a fan would actually say to them. Their own future self already \
+          knows everything about them: never introduce yourself to it.
         - If the line asks nothing, "say" is a natural reaction or a short \
           follow-up question back, about what was just said.
         - Asking the same question straight back ("And you?", "Und du?", \

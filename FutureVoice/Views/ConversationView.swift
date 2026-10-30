@@ -1999,6 +1999,33 @@ struct ConversationView: View {
         return "\(place). \(side)"
     }
 
+    /// Who the "try saying" coach is answering, so a best friend, a stranger
+    /// and a singer don't all get the same line. The fluent self on a call
+    /// with no person and no scene; nil in a scene with no person (its
+    /// situation already names the role) and on a tutor call.
+    private var coachOtherSpeaker: String? {
+        let scenario = sessionScenarioId.flatMap { sid in appState.scenarios.first { $0.id == sid } }
+        let person = counterpart ?? scenario?.counterpartId.flatMap { id in
+            appState.counterparts.first { $0.id == id }
+        }
+        guard let person else {
+            if scenario != nil || tutorThisCall { return nil }
+            return "the learner's own future self, a few years on and fluent. They talk like one person talking to themselves: casual, close, nothing to introduce."
+        }
+        let name = person.name.trimmingCharacters(in: .whitespaces)
+        switch person.cast {
+        case .publicFigure:
+            let identity = person.publicIdentity?.trimmingCharacters(in: .whitespaces) ?? ""
+            return "\(identity.isEmpty ? name : identity), a public figure. The learner knows of them; they don't know the learner."
+        case .stranger:
+            return "\(name), someone the learner has just met. New acquaintances, no shared history."
+        case .ownPerson:
+            let relation = person.relationship.trimmingCharacters(in: .whitespaces)
+            let who = relation.isEmpty ? name : "\(name) (\(relation))"
+            return "\(who), someone from the learner's own life. They already know each other\(person.isClose ? " well" : "")."
+        }
+    }
+
     /// What the "try saying" coach may fill a bracket with: the learner's own
     /// facts. On a call with a stranger or a public figure, only what the
     /// learner lets strangers hear — the suggestion is said TO them.
@@ -4018,6 +4045,7 @@ struct ConversationView: View {
         Task { @MainActor in
             let result = await CoachSuggester.suggest(
                     line: text, recent: recent, aboutLearner: about,
+                    otherSpeaker: coachOtherSpeaker,
                     situation: coachSituation,
                     register: coachRegister,
                     previousSay: previousSay,
