@@ -872,7 +872,8 @@ fun TalkScreen(
             }
             LaunchedEffect(showingTutorTopics) { vm.setTutorTopicsShowing(showingTutorTopics) }
             val focus = state.grammarFocus
-            if (coachMode && !state.tutorOn && focus != null && !ended) {
+            // Drawn only once the slip came back in this call (iOS: same day).
+            if (coachMode && !state.tutorOn && focus != null && !ended && state.focusRepeatTurns.isNotEmpty()) {
                 GrammarFocusStrip(focus.label, focus.pattern.mistake, focus.pattern.correction,
                     repeats = state.focusRepeatTurns.size, talks = focus.talks, onTap = { showingFocus = true })
                 androidx.compose.material3.HorizontalDivider(Modifier.alpha(0.15f))
