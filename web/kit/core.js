@@ -142,9 +142,23 @@ const viewIO = new IntersectionObserver(entries => {
  * shape  pill | circle                                (default pill)
  * cell   cell edge in px (default: height / 5, the shader's rule)
  * ring   home-ring treatment: page wash + blurred inner ring (ConversationHome)
+ * theme  blue (default) | mono | emerald | amber | coral | aqua — the app's six palettes
  * Size it with CSS. Properties .mode and .level are live. */
 const RAMP = [[.965, .972, 1], [.900, .922, .970], [.720, .830, 1], [.450, .680, 1], [.030, .340, .950]];
 const RAMP_DARK = [[.020, .028, .060], [.080, .095, .130], [.020, .130, .400], [.040, .360, .960], [.480, .720, 1]];
+/* the other five palettes (kPalette in Futureself.metal: [theme][light, dark]), for theme="…" */
+const THEME_RAMPS = {
+  mono: [[[.970, .970, .972], [.905, .905, .910], [.760, .760, .770], [.420, .420, .430], [.070, .070, .080]],
+         [[.020, .020, .022], [.090, .090, .095], [.220, .220, .230], [.550, .550, .560], [.960, .960, .970]]],
+  emerald: [[[.960, .980, .970], [.885, .925, .905], [.700, .900, .800], [.350, .780, .560], [.020, .480, .300]],
+            [[.015, .030, .025], [.075, .100, .090], [.020, .230, .160], [.050, .640, .420], [.560, .940, .760]]],
+  amber: [[[1, .975, .950], [.945, .910, .860], [1, .850, .620], [1, .690, .330], [.900, .450, .020]],
+          [[.040, .028, .015], [.110, .095, .070], [.400, .220, .020], [.960, .560, .050], [1, .830, .480]]],
+  coral: [[[1, .960, .960], [.950, .890, .890], [1, .760, .760], [.990, .500, .520], [.870, .120, .230]],
+          [[.040, .015, .030], [.110, .070, .085], [.380, .050, .140], [.950, .230, .320], [1, .640, .660]]],
+  aqua: [[[.955, .980, .985], [.880, .925, .930], [.680, .890, .930], [.300, .760, .850], [.020, .480, .590]],
+         [[.012, .030, .036], [.070, .100, .108], [.015, .230, .280], [.040, .640, .760], [.560, .940, 1]]],
+};
 const fract = v => v - Math.floor(v);
 function hash21(x, y) {
   let qx = fract(x * 123.34), qy = fract(y * 456.21);
@@ -156,7 +170,7 @@ const smooth = (e0, e1, x) => { const t = Math.min(Math.max((x - e0) / (e1 - e0)
 const MODES = { idle: 0, listening: 1, thinking: 2, speaking: 3 };
 
 class NwFutureself extends HTMLElement {
-  static observedAttributes = ["mode", "level", "shape", "cell", "ring", "dark"];
+  static observedAttributes = ["mode", "level", "shape", "cell", "ring", "dark", "theme"];
   constructor() {
     super();
     this.attachShadow({ mode: "open" }).innerHTML = `<style>
@@ -201,7 +215,7 @@ class NwFutureself extends HTMLElement {
     if (RM) this._lvl = target;
     if (this.hasAttribute("ring")) { this.style.setProperty("--vig-w", `${10 * ch / 260}px`); this.style.setProperty("--vig-b", `${6 * ch / 260}px`); }
 
-    const ctx = this._ctx, mode = MODES[this.mode] ?? 3, dark = this.hasAttribute("dark"), ramp = dark ? RAMP_DARK : RAMP;
+    const ctx = this._ctx, mode = MODES[this.mode] ?? 3, dark = this.hasAttribute("dark"), tr = THEME_RAMPS[this.getAttribute("theme")], ramp = tr ? tr[dark ? 1 : 0] : dark ? RAMP_DARK : RAMP;
     ctx.setTransform(k, 0, 0, k, 0, 0);
     ctx.fillStyle = `rgb(${ramp[0].map(c => Math.round(c * 255)).join(",")})`; ctx.fillRect(0, 0, cw, ch);
     const cell = parseFloat(this.getAttribute("cell")) || ch / 5;

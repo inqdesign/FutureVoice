@@ -7,7 +7,12 @@ import { NwScreen, STR, esc, icon } from "../core.js";
  * idle Futureself surface, the "Tell me more about you" row, and News / Everyday / Scenarios.
  *   home.tapRing(); home.scrollTo(380); home.tab(1); home.tapRow(0)
  *   home.lists = { news:[[icon,title,sub]…], everyday:[…], scenarios:[…] }   (sub may be "")
- * Attributes: greeting, autoplay.
+ * Attributes: greeting, autoplay, list, progress (today's goal ring, 0…1), tabbar (the floating tab bar; the dock moves above it).
+ * home.setLang("ja") — the hero's language cycle: pill, greeting, ring palette.
+ * Since 2026-10-18 the tab has no list: under the ring, three floating buttons — the player
+ * (headphones), "Find a topic" (sparkles, opens the topics sheet) and the quick quiz's face
+ * (ConversationHome's bottom overlay; real/app-home.png, 2026-10-24). `list` draws the older page
+ * (about row + News · Everyday · Scenarios) for the pieces built on it.
  * Laid out in points from real/home.png and real/home-scenarios.png (iPhone 17, ko).
  *
  * The learner's own chip row (DiscoverSection at HEAD — LearningPurposeStore.chips: purposes in the
@@ -21,6 +26,27 @@ import { NwScreen, STR, esc, icon } from "../core.js";
  *                                                       categoryIcon, caption capitalized like `.capitalized`
  *   await home.tapTool("sliders"|"refresh"|"plus"); home.tab("news") also takes a key
  *   rows may carry a 4th element `true` = talked through (green check before the chevron) */
+
+/* The tab bar (RootTabView: Talk · Speech · Watch · Review · Progress, iOS 26's floating glass bar).
+ * SF Symbols waveform · music.mic · play.circle.fill · book.fill · chart.bar.fill, traced. */
+const TABS = [
+  ["대화", "Talk", '<svg viewBox="0 0 24 24"><path d="M3 10.5v3M7 7.5v9M11 4v16M15 7.5v9M19 10.5v3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>'],
+  ["스피치", "Speech", '<svg viewBox="0 0 24 24"><g fill="currentColor"><circle cx="15.5" cy="8.5" r="5"/><path d="M11.6 10.6l3.8 3.8-8.6 7.4c-.7.6-1.7.5-2.3-.1l-.2-.2c-.6-.6-.7-1.6-.1-2.3z"/></g></svg>'],
+  ["상황연습", "Watch", '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M10 7.8v8.4l6.6-4.2z" fill="#fff"/></svg>'],
+  ["복습", "Review", '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M5.5 2.5h12c1.1 0 2 .9 2 2v13.2c0 .6-.4 1-1 1H7.2c-.7 0-1.2.5-1.2 1.1s.5 1.2 1.2 1.2h11.3c.6 0 1 .4 1 .9s-.4 1-1 1H7.2c-1.8 0-3.2-1.4-3.2-3.1V4c0-.8.7-1.5 1.5-1.5z"/></svg>'],
+  ["성장", "Progress", '<svg viewBox="0 0 24 24"><g fill="currentColor"><rect x="3" y="12" width="4.4" height="9" rx="1.2"/><rect x="9.8" y="7" width="4.4" height="14" rx="1.2"/><rect x="16.6" y="2.5" width="4.4" height="18.5" rx="1.2"/></g></svg>'],
+];
+/* setLang(code): the language pill, the fluent self's greeting (MATERIAL, so the target language:
+ * HeroGreeting's evening line as each catalog column writes it) and the ring's palette. The chrome
+ * (the ring's label, the tabs) stays the page's language — that is the app's own split. */
+const ACCENT = { blue: "#0A5CF5", emerald: "#0DA36B", amber: "#F58F0D", coral: "#F23B52", aqua: "#0AA3C2" };
+const HERO_LANG = {
+  en: ["EN", "What's on your mind this evening?", "blue"],
+  ja: ["JA", "晩ごはん食べた？", "coral"],
+  de: ["DE", "Was geht dir heute Abend durch den Kopf?", "amber"],
+  ko: ["KO", "저녁 먹었어?", "emerald"],
+  es: ["ES", "¿Ya cenaste?", "aqua"],
+};
 
 /* SF Symbols, traced. Filled glyphs unless the symbol is an outline. */
 const SF = {
@@ -64,6 +90,8 @@ const SF = {
   game: `<svg viewBox="0 0 26 18"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M7.4 2.2h11.2c3 0 5.2 2.4 5.6 5.6l.6 5.4c.2 1.6-1 2.8-2.4 2.8-1 0-1.8-.5-2.4-1.4l-1.2-1.8H7.2L6 14.6c-.6.9-1.4 1.4-2.4 1.4-1.4 0-2.6-1.2-2.4-2.8l.6-5.4C2.2 4.6 4.4 2.2 7.4 2.2z"/><path d="M7.4 6v4.4M5.2 8.2h4.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><g fill="currentColor"><circle cx="17.6" cy="6.8" r="1.1"/><circle cx="19.8" cy="9.4" r="1.1"/></g></svg>`,
   phone: `<svg viewBox="0 0 20 20"><path fill="currentColor" d="M5.3 1.3c.5-.2 1.1 0 1.4.5l1.9 3.4c.3.5.2 1.1-.2 1.5L7 8.1c.9 2 2.6 3.8 4.7 4.8l1.4-1.4c.4-.4 1-.5 1.5-.2l3.4 1.9c.5.3.7.9.5 1.4l-.8 2.3c-.4 1.1-1.5 1.8-2.7 1.6C8.6 17.7 2.4 11.5 1.6 5.1 1.4 3.9 2.1 2.8 3.2 2.4z"/></svg>`,
   book: `<svg viewBox="0 0 22 20"><path fill="currentColor" d="M1 3.2C1 2.4 1.6 1.8 2.4 1.8c3 0 5.6.6 7.8 2v14.4c-2.2-1.2-4.8-1.8-7.8-1.8-.8 0-1.4-.6-1.4-1.4zm20 0v11.8c0 .8-.6 1.4-1.4 1.4-3 0-5.6.6-7.8 1.8V3.8c2.2-1.4 4.8-2 7.8-2 .8 0 1.4.6 1.4 1.4z"/></svg>`,
+  headphones: `<svg viewBox="0 0 22 20"><path fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" d="M2.4 13.4V10a8.6 8.6 0 0 1 17.2 0v3.4"/><rect x="1.4" y="11.4" width="5" height="7.6" rx="2.2" fill="currentColor"/><rect x="15.6" y="11.4" width="5" height="7.6" rx="2.2" fill="currentColor"/></svg>`,
+  sparkles: `<svg viewBox="0 0 22 22"><g fill="currentColor"><path d="M9.6 4.4c.7 4.4 2.6 6.4 7 7-4.4.7-6.3 2.6-7 7-.7-4.4-2.6-6.3-7-7 4.4-.6 6.3-2.6 7-7z"/><path d="M17 1c.3 1.8 1.1 2.6 2.9 2.9-1.8.3-2.6 1.1-2.9 2.9-.3-1.8-1.1-2.6-2.9-2.9C15.9 3.6 16.7 2.8 17 1z"/><path d="M17.6 15.6c.2 1.2.8 1.8 2 2-1.2.2-1.8.8-2 2-.2-1.2-.8-1.8-2-2 1.2-.2 1.8-.8 2-2z"/></g></svg>`,
   heart: `<svg viewBox="0 0 22 20"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" d="M11 18.6S1.8 13.2 1.8 6.8C1.8 3.9 3.9 1.8 6.6 1.8c1.9 0 3.5 1 4.4 2.6.9-1.6 2.5-2.6 4.4-2.6 2.7 0 4.8 2.1 4.8 5 0 6.4-9.2 11.8-9.2 11.8z"/></svg>`,
 };
 /* iOS ProgressView: eight spokes, the leading one darkest, turning in steps */
@@ -115,10 +143,11 @@ class NwHome extends NwScreen {
       .hdr{position:absolute;left:0;right:0;top:62px;height:44px;z-index:6}
       .gl{position:absolute;top:0;height:44px;border-radius:22px;background:#FBFBFE;
         box-shadow:inset 0 0 0 1px rgba(255,255,255,.95),0 0 0 .5px rgba(0,0,0,.035),0 4px 16px rgba(0,0,0,.065);display:flex;align-items:center;justify-content:center}
-      .lang{left:16px;width:59px;gap:6px;color:var(--blue)}
+      .lang{left:16px;width:59px;gap:6px;color:var(--blue);transition:color .5s ease}
       .lang svg{width:14.7px;height:14.7px}
       .lang b{font-size:13.7px;font-weight:600;letter-spacing:-.1px;line-height:1}
-      .act{left:159.5px;width:83px;gap:6.5px;padding-left:1px}
+      /* sized by its label, centred on the screen: 12.5 pt either side, as the capture's 83 pt pill around "활동" */
+      .act{left:201px;transform:translateX(-50%);gap:6.5px;padding:0 12.5px 0 13.5px;white-space:nowrap}
       .act svg{width:19.4px;height:17.5px;color:#6E6E73}
       .act b{font-size:15px;font-weight:600;letter-spacing:-.2px}
       .me{left:337.5px;width:44px;border-radius:50%}
@@ -134,6 +163,10 @@ class NwHome extends NwScreen {
       .greet{position:absolute;left:24px;right:24px;top:174.2px;text-align:center;font-family:"Geist Pixel","Galmuri14",monospace;font-size:28px;line-height:36.67px;letter-spacing:0}
       .ring{position:absolute;left:51px;top:287px;width:300px;height:300px;border-radius:50%;transition:transform .25s,opacity .25s}
       .ring .trk{position:absolute;inset:0;border-radius:50%;box-shadow:inset 0 0 0 20px rgba(0,0,0,.015)}
+      /* the goal ring (ConversationHome.talkRing): a 20 pt accent arc from 12 o'clock over the
+         track, round caps, drawn on when it moves. Set with home.progress = 0…1. */
+      .ring .arc{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);overflow:visible;pointer-events:none}
+      .ring .arc circle{fill:none;stroke:var(--ringc,#0A5CF5);stroke-width:20;stroke-linecap:round;transition:stroke-dashoffset 1.3s cubic-bezier(.3,.7,.2,1),stroke .5s ease,opacity .2s}
       .ring .srf{position:absolute;left:20px;top:20px;width:260px;height:260px;border-radius:50%;overflow:hidden}
       .ring nw-futureself{position:absolute;inset:0;width:100%;height:100%;display:block}
       .ring .sep{position:absolute;inset:0;border-radius:50%;box-shadow:inset 0 0 0 .5px rgba(60,60,67,.12);pointer-events:none}
@@ -180,15 +213,42 @@ class NwHome extends NwScreen {
       @keyframes sp{to{transform:rotate(360deg)}}
       .wait{display:flex;align-items:center;gap:10px;padding:0 0 0 0;height:22px;font-size:17px;line-height:22px;color:rgba(60,60,67,.6);letter-spacing:-.4px}
       .stack{display:flex;flex-direction:column;gap:10px}
+      /* the bottom row (no list since 2026-10-18): player · Find a topic · quiz face, 60 pt glass */
+      .dock{position:absolute;left:0;right:0;top:764px;height:60px;z-index:6}
+      /* with the tab bar the dock rides above it, as the safe area puts it in the app */
+      :host([tabbar]) .dock{top:712px}
+      .tbar{position:absolute;left:21px;right:21px;top:791px;height:62px;border-radius:31px;z-index:7;display:none;
+        background:rgba(250,250,252,.82);backdrop-filter:blur(14px) saturate(1.6);-webkit-backdrop-filter:blur(14px) saturate(1.6);
+        box-shadow:0 8px 30px rgba(0,0,0,.10),0 1px 3px rgba(0,0,0,.06),inset 0 0 0 .5px rgba(255,255,255,.7);padding:4px;gap:0}
+      :host([tabbar]) .tbar{display:flex}
+      .tbar span{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:27px;color:#1C1C1E;font-size:10px;font-weight:600;letter-spacing:-.1px;white-space:nowrap}
+      .tbar span svg{width:23px;height:23px}
+      .tbar span.on{background:rgba(120,120,128,.14);color:var(--blue);transition:color .5s ease}
+      .greet{transition:opacity .3s ease}
+      .greet.swap{opacity:0}
+      .dock .b{position:absolute;top:0;height:60px;border-radius:30px;background:#FBFBFE;transition:transform .15s;
+        box-shadow:inset 0 0 0 1px rgba(255,255,255,.95),0 0 0 .5px rgba(0,0,0,.035),0 6px 20px rgba(0,0,0,.07);display:flex;align-items:center;justify-content:center}
+      .dock .b.tap{transform:scale(.93)}
+      .dock .pl{left:21px;width:60px;color:#000} .dock .pl svg{width:19px;height:17.5px}
+      .dock .tp{left:130px;width:142px;gap:8px;color:var(--blue);transition:color .5s ease;font-size:17px;font-weight:600;letter-spacing:-.4px}
+      .dock .tp svg{width:19px;height:19px}
+      .dock .qz{left:321px;width:60px}
+      .dock .qz i{position:absolute;top:24.5px;width:4.4px;height:6px;border-radius:1.2px;background:#1C1C1E;animation:blink 5s infinite}
+      .dock .qz i:first-child{left:22.6px} .dock .qz i:last-child{left:33px}
+      @keyframes blink{0%,95%,100%{transform:scaleY(1)}97%{transform:scaleY(.15)}}
+      :host(:not([list])) .about,:host(:not([list])) .tabs,:host(:not([list])) .list{display:none}
+      :host([list]) .dock{display:none}
     `, `
       <div class="sc">
         <div class="greet"></div>
-        <div class="ring"><div class="trk"></div><div class="srf"><nw-futureself mode="idle" level="0" shape="circle" ring cell="12.8"></nw-futureself><div class="sep"></div><div class="lab"><b></b><small></small></div></div></div>
+        <div class="ring"><div class="trk"></div><svg class="arc" viewBox="0 0 300 300"><circle cx="150" cy="150" r="140"/></svg><div class="srf"><nw-futureself mode="idle" level="0" shape="circle" ring cell="12.8"></nw-futureself><div class="sep"></div><div class="lab"><b></b><small></small></div></div></div>
         <div class="about">${SF.personBadge.replace("<svg ", '<svg class="bi" ')}<span class="tx"><b class="a1"></b><small class="a2"></small></span>${SF.chevron.replace("<svg ", '<svg class="ch" ')}</div>
         <div class="tabs"></div>
         <div class="list"></div>
       </div>
       <div class="edge"></div>
+      <div class="tbar"></div>
+      <div class="dock"><span class="b pl">${SF.headphones}</span><span class="b tp">${SF.sparkles}<span></span></span><span class="b qz"><i></i><i></i></span></div>
       <div class="hdr">
         <div class="gl lang">${SF.globe}<b>EN</b></div>
         <div class="gl act">${SF.calendar}<b></b></div>
@@ -257,7 +317,11 @@ class NwHome extends NwScreen {
     this.$(".act b").textContent = t.activity;
     this.$(".av").textContent = this.getAttribute("initial") || (ko ? "하" : "H");
     this.$(".ring b").textContent = t.talk; this.$(".ring small").textContent = ko ? t.goal : "Today's goal 10 min";   // "Today's goal %lld min"
+    this.$(".tp span").textContent = ko ? "주제 찾기" : "Find a topic";
+    if (!ko) { const tp = this.$(".tp"); tp.style.left = "119px"; tp.style.width = "164px"; }
     this.$(".a1").textContent = t.aboutMe; this.$(".a2").textContent = t.aboutMeSub;
+    this.progress = +(this.getAttribute("progress") || 0);
+    this.$(".tbar").innerHTML = TABS.map(([k, e, g], i) => `<span${i ? "" : ' class="on"'}>${g}${ko ? k : e}</span>`).join("");
     this._renderTabs();
     this.reset();
   }
@@ -268,6 +332,33 @@ class NwHome extends NwScreen {
     tb.innerHTML = this._head ? `<div class="cw${keys.length > 3 ? " many" : ""}">${chips}</div><span class="tools"></span>` : `${chips}<span class="tools"></span>`;
   }
   reset() { this._busy.clear(); this._setTab(0); this.scrollTo(0); }
+  /** Today's goal ring, 0…1 of the goal (the arc draws on from its current length). */
+  get progress() { return this._p || 0; }
+  set progress(v) {
+    this._p = Math.max(0, Math.min(1, +v || 0));
+    const c = this.$(".ring .arc circle"), C = 2 * Math.PI * 140;
+    c.style.strokeDasharray = C; c.style.strokeDashoffset = C * (1 - this._p);
+    c.style.opacity = this._p > .005 ? 1 : 0;
+  }
+  /** Switch the target language shown: the pill, the greeting (faded across) and the palette —
+   *  the goal ring's accent redraws; the mosaic stays idle, as the app's does. */
+  async setLang(code) {
+    const L = HERO_LANG[code]; if (!L || this._lang === code) return; this._lang = code;
+    const g = this.$(".greet");
+    this.$(".lang b").textContent = L[0];
+    const fs = this.$(".ring nw-futureself");
+    fs.setAttribute("theme", L[2]);
+    // every accent on the screen follows the palette, as Color.themeAccent does in the app: the goal
+    // ring, the language pill, "Find a topic", the selected tab (inline on the host beats :host)
+    this.style.setProperty("--blue", ACCENT[L[2]]);
+    this.$(".ring").style.setProperty("--ringc", ACCENT[L[2]]);
+    if (this.hasAttribute("progress")) { this.progress = 0; requestAnimationFrame(() => requestAnimationFrame(() => { this.progress = +this.getAttribute("progress"); })); }
+    g.classList.add("swap");
+    await new Promise(r => setTimeout(r, 300));
+    if (this._lang !== code) return;
+    g.innerHTML = esc(L[1]).replace(/ (this|today|tonight)/, "<br>$1");
+    g.classList.remove("swap");
+  }
   _row([ic, ti, su, done]) {
     const n = ALIAS[ic] || ic, [w, h] = GLYPH[n] || [16, 16];
     return `<div class="row"><span class="ic">${g(n, w, h)}</span><span class="tx"><b>${esc(ti)}</b>${su ? `<small>${esc(su)}</small>` : ""}</span>${done ? SF.checkFill.replace("<svg ", '<svg class="ok" ') : ""}${SF.chevron.replace("<svg ", '<svg class="ch" ')}</div>`;
@@ -312,6 +403,7 @@ class NwHome extends NwScreen {
   _setTab(i) { const k = this._key(i); this._tab = this._idx(i); this.$$(".tabs .chip").forEach(s => s.classList.toggle("on", s.dataset.k === k)); this._fill(k); }
   /** The page can't scroll past its own end — the list's last card stops above the home indicator. */
   _maxScroll() {
+    if (!this.hasAttribute("list")) return 0;   // one screen: nothing under the ring to scroll to
     const l = this.$(".list"); const h = l.scrollHeight || l.offsetHeight;
     return Math.max(0, LIST_TOP + h - CONTENT_BOTTOM_MARGIN);
   }
@@ -364,6 +456,11 @@ class NwHome extends NwScreen {
     else { this._setTab(0); this.scrollTo(0); }
   }
   async demo() {
+    if (!this.hasAttribute("list")) {
+      await this.sleep(1200); this.beat(1); await this.tapRing(); await this.sleep(1600);
+      const tp = this.$(".tp"); this.beat(2); tp.classList.add("tap"); await this.sleep(220); tp.classList.remove("tap");
+      await this.sleep(2200); return;
+    }
     await this.sleep(1200); this.beat(1); await this.tapRing(); await this.sleep(1100);
     this.scrollTo(380); await this.sleep(1400);
     for (let i = 0; i < 3; i++) { this.beat(2 + i); if (i) await this.tab(i); await this.sleep(1600); await this.tapRow(0); await this.sleep(500); }

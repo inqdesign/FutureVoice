@@ -10,6 +10,10 @@ import { NwScreen, STR, RM, esc, icon, wordsHTML, mmss } from "../core.js";
  *              fixes: [{ was: "I go to", now: "I went to", why: "" }] })   the correction card
  *   call.coach({ line: "It was <u>a busy</u> week.", gloss: "…", word: "busy week" }) / call.coach(null)
  *   call.goals(["busy week", "catch up"]); call.tick(0)
+ *   call.tutor({ title: "Introducing yourself", rows: ["Say your name…", "Say what you do", …] })
+ *     tutor mode: the lesson strip pinned under the nav bar (the goals row goes, the lightbulb
+ *     topic button appears right of the pill); call.tutorTick(i) ticks row i and moves "now" on;
+ *     call.tutorDone() the finished state; call.tutor(null) takes it all away.
  * Attributes: title, level (default B2), other (the other side's name: a person, a scenario's role;
  * default the fluent self: "Future self", "미래의 나" on ko), autoplay. `call.other = "Sarah"` does the same from script.
  *
@@ -31,7 +35,15 @@ import { NwScreen, STR, RM, esc, icon, wordsHTML, mmss } from "../core.js";
  *   bottom bar  CoachReplyLabel (caption / body semibold / subheadline) · CoachHintLine
  *               (subheadline: lightbulb · "Try using" · word bold) · 156×64 Futureself pill with the
  *               call-settings button (44pt circle, slider.horizontal.3) pinned left · footnote hint;
- *               spacing 10, padding top 14 / bottom 20 above the home indicator */
+ *               spacing 10, padding top 14 / bottom 20 above the home indicator
+ *   tutor       TutorLessonStrip: header graduationcap.fill accent (checkmark.seal.fill green when
+ *               finished) · title subheadline semibold · "n/m" subheadline monospaced secondary ·
+ *               chevron.down caption semibold tertiary · ellipsis.circle body secondary 32×28;
+ *               rows footnote, spacing 8, padding 16×10: done checkmark.circle.fill green +
+ *               secondary struck text, now "N.circle.fill" accent + semibold, later "N.circle"
+ *               tertiary; finished adds "All done. You can say it now." footnote secondary.
+ *               Then Divider at 0.15. Bottom bar: tutorTopicButton (lightbulb, 44pt circle,
+ *               secondarySystemBackground, secondary) right of the pill, mirroring settings. */
 
 const S = {
   xmark: '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.2 4.2l11.6 11.6M15.8 4.2L4.2 15.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
@@ -44,6 +56,13 @@ const S = {
   check: '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.6l2.6 2.6L10 3.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   bulb: '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.2a5.6 5.6 0 0 0-3.3 10.1c.6.5.9 1.1.9 1.8v.4h4.8v-.4c0-.7.3-1.3.9-1.8A5.6 5.6 0 0 0 10 2.2z" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linejoin="round"/><path d="M7.7 16.6h4.6M8.4 18.6h3.2" stroke="currentColor" stroke-width="1.45" stroke-linecap="round"/></svg>',
   sliders: '<svg viewBox="0 0 22 20" aria-hidden="true"><g stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"><path d="M2 4.5h18M2 10h18M2 15.5h18"/></g><g fill="#F2F2F7" stroke="currentColor" stroke-width="2"><circle cx="14.5" cy="4.5" r="2.4"/><circle cx="7.5" cy="10" r="2.4"/><circle cx="12" cy="15.5" r="2.4"/></g></svg>',
+  grad: '<svg viewBox="0 0 26 22" aria-hidden="true"><path d="M13 1.6L25 7.2 13 12.8 1 7.2z" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/><path d="M6.2 11v4.4c1.6 2 4.1 3 6.8 3s5.2-1 6.8-3V11L13 14.2z" fill="currentColor"/><path d="M3.6 8.4v8.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M3.6 15.6c-1 0-1.5 1.6-1.5 3.6h3c0-2-.5-3.6-1.5-3.6z" fill="currentColor"/></svg>',
+  seal: (() => { const pts = []; for (let i = 0; i < 24; i++) { const a = (i / 24) * Math.PI * 2 - Math.PI / 2, r = i % 2 ? 8.1 : 9.9; pts.push(`${(11 + r * Math.cos(a)).toFixed(2)},${(11 + r * Math.sin(a)).toFixed(2)}`); }
+    return `<svg viewBox="0 0 22 22" aria-hidden="true"><polygon points="${pts.join(" ")}" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M6.9 11.3l2.8 2.8 5.5-6.1" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>`; })(),
+  chevDown: '<svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.4 1.6L6 6.2l4.6-4.6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  ellipsisCircle: '<svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="9.6" fill="none" stroke="currentColor" stroke-width="1.5"/><g fill="currentColor"><circle cx="6.6" cy="11" r="1.45"/><circle cx="11" cy="11" r="1.45"/><circle cx="15.4" cy="11" r="1.45"/></g></svg>',
+  num: (n, fill) => `<svg viewBox="0 0 20 20" aria-hidden="true">${fill ? '<circle cx="10" cy="10" r="9.3" fill="currentColor"/>' : '<circle cx="10" cy="10" r="8.7" fill="none" stroke="currentColor" stroke-width="1.2"/>'}<text x="10" y="13.9" text-anchor="middle" font-size="11" font-weight="${fill ? 600 : 500}" fill="${fill ? "#fff" : "currentColor"}" font-family="-apple-system,'SF Pro Text',sans-serif">${n}</text></svg>`,
+  bulbBig: '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1.6a5.7 5.7 0 0 0-3.4 10.3c.6.5.9 1.1.9 1.8v.7h5v-.7c0-.7.3-1.3.9-1.8A5.7 5.7 0 0 0 10 1.6z" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linejoin="round"/><path d="M7.7 16.6h4.6M8.5 18.7h3" stroke="currentColor" stroke-width="1.55" stroke-linecap="round"/></svg>',
 };
 
 /* The chrome the call writes (Localizable.xcstrings ko values). */
@@ -51,15 +70,17 @@ const L = {
   ko: { self: "미래의 나", talk: "대화하기", end: "종료", meaning: "뜻", explain: "내 언어로 설명", trySaying: "이렇게 말해 보세요",
     tryUsing: "써 볼 단어", usedIt: "썼어요", listening: "듣는 중…", thinking: "유창해진 내가 생각하는 중…", thinkingAs: n => `${n} 생각하는 중…`, you: "나",
     hintListen: "듣는 중 · 잠깐 멈추면 전송 · 누르면 종료", hintThink: "생각하는 중 · 누르면 종료",
-    hintSpeak: "말하는 중… · 끼어들어도 돼요 · 탭하면 멈춤", hintIdle: "통화 중 · 누르면 종료" },
+    hintSpeak: "말하는 중… · 끼어들어도 돼요 · 탭하면 멈춤", hintIdle: "통화 중 · 누르면 종료",
+    allDone: "다 했어요. 이제 말할 수 있어요." },
   en: { self: "Future self", talk: "Let's talk", end: "End", meaning: "Meaning", explain: "Explain in my language", trySaying: "Try saying",
     tryUsing: "Try using", usedIt: "Used it", listening: "Listening…", thinking: "Future self is thinking…", thinkingAs: n => `${n} is thinking…`, you: "You",
     hintListen: "Listening · pause to send · tap to stop", hintThink: "Thinking… · tap to stop",
-    hintSpeak: "Speaking… · talk over it · tap to stop", hintIdle: "On call · tap to stop" },
+    hintSpeak: "Speaking… · talk over it · tap to stop", hintIdle: "On call · tap to stop",
+    allDone: "All done. You can say it now." },
 };
 
 class NwCall extends NwScreen {
-  static poses = ["coach", "fix", "speaking"];
+  static poses = ["coach", "fix", "speaking", "tutor", "tutor-1", "tutor-done"];
   constructor() {
     super(`
       :host{--sec:rgba(60,60,67,.6);--ter:rgba(60,60,67,.3);--sys2:#F2F2F7;--acc:#007AFF}
@@ -136,6 +157,36 @@ class NwCall extends NwScreen {
       nw-futureself{width:156px;height:64px}
       .set{position:absolute;left:24px;top:10px;width:44px;height:44px;border-radius:50%;background:var(--sys2);color:var(--sec);display:grid;place-items:center}
       .set svg{width:19px;height:17px}
+      .bulbb{position:absolute;right:24px;top:10px;width:44px;height:44px;border-radius:50%;background:var(--sys2);color:var(--sec);display:none;place-items:center}
+      .bulbb svg{width:22px;height:22px}
+      .tut .bulbb{display:grid}
+      .tut .goals,.tut .goals+.div{display:none}
+      .tutor{position:absolute;z-index:5;left:0;right:0;top:116px;padding:10px 16px;display:none;flex-direction:column;gap:8px;background:#fff}
+      .tut .tutor{display:flex}
+      .tdiv{position:absolute;left:0;right:0;bottom:-.6px;height:.6px;background:rgba(60,60,67,.05)}
+      .th{display:flex;align-items:center;gap:8px;height:28px}
+      .th .ti{flex:0 0 26px;height:22px;color:var(--acc);display:grid;place-items:center}
+      .th .ti svg{display:block}
+      .th .ti .g{width:26px;height:22px}
+      .th .ti .k{width:22px;height:22px}
+      .th.fin .ti{color:var(--green)}
+      .th b{flex:0 1 auto;min-width:0;font-size:15px;line-height:20px;font-weight:600;letter-spacing:-.23px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .th .sp{flex:1 1 4px;min-width:4px}
+      .th .cnt{font-size:15px;line-height:20px;color:var(--sec);font-variant-numeric:tabular-nums;letter-spacing:-.23px}
+      .th .cv{width:11px;height:8px;color:var(--ter);display:block}
+      .th .el{flex:0 0 32px;height:28px;display:grid;place-items:center;color:var(--sec)}
+      .th .el svg{width:21px;height:21px}
+      .tfin{font-size:13px;line-height:15.6px;color:var(--sec);letter-spacing:-.08px;margin:0;animation:pop .3s ease-out}
+      .tr{display:flex;align-items:center;gap:8px;height:15.6px;font-size:13px;letter-spacing:-.08px}
+      .tr .ic{flex:0 0 15.5px;height:15.5px;display:grid;place-items:center;color:var(--ter)}
+      .tr .ic svg{width:13.5px;height:13.5px;display:block}
+      .tr.now .ic{color:var(--acc)}
+      .tr.done .ic{color:var(--green)}
+      .tr .ic.pop svg{animation:pop .3s cubic-bezier(.3,1.4,.5,1)}
+      @keyframes pop{from{transform:scale(.4);opacity:0}to{transform:none;opacity:1}}
+      .tr span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:line-through;text-decoration-color:transparent;text-decoration-thickness:1px;transition:color .25s,text-decoration-color .25s}
+      .tr.now span{font-weight:600}
+      .tr.done span{color:var(--sec);text-decoration-color:var(--sec)}
       .hint{height:16px;font-size:13px;line-height:16px;color:var(--sec);letter-spacing:-.08px}
     `, `
       <div class="head"></div>
@@ -143,11 +194,12 @@ class NwCall extends NwScreen {
       <div class="navt"><b></b><span><i class="lv"></i>${S.chev}<i class="clk"></i></span></div>
       <div class="glass end"></div>
       <div class="goals"></div><div class="div"></div>
+      <div class="tutor"></div>
       <div class="clip"><div class="feed"></div></div>
       <div class="bar">
         <div class="cr"></div>
         <div class="ch"></div>
-        <div class="row"><nw-futureself mode="idle" level="0"></nw-futureself><div class="set">${S.sliders}</div></div>
+        <div class="row"><nw-futureself mode="idle" level="0"></nw-futureself><div class="set">${S.sliders}</div><div class="bulbb">${S.bulbBig}</div></div>
         <div class="hint"></div>
       </div>`);
   }
@@ -170,6 +222,7 @@ class NwCall extends NwScreen {
     this.coach(null);
     this._pill("idle"); this._hint("hintListen");
     this.goals([]);
+    this.tutor(null);
     this._follow();
   }
   _hint(k) { this.$(".hint").textContent = this.l[k]; }
@@ -191,6 +244,53 @@ class NwCall extends NwScreen {
     const g = this.$$(".goal")[i]; if (!g || g.classList.contains("done")) return;
     g.classList.add("done"); g.querySelector("svg").outerHTML = S.checkFill;
     const ch = this.$(".ch"); if (ch.dataset.word === this._goalList?.[i]) this._hintLine(ch.dataset.word, true);
+  }
+  /* ── tutor mode (TutorLessonStrip + tutorTopicButton) ── */
+  tutor(lesson) {
+    const s = this.shadowRoot.querySelector(".s"), box = this.$(".tutor");
+    if (!lesson) {
+      this._tut = null; s.classList.remove("tut"); box.innerHTML = "";
+      this.$(".clip").style.top = ""; this.$(".head").style.height = ""; this._follow(); return;
+    }
+    const rows = lesson.rows.map(r => (typeof r === "string" ? r : r.goal));
+    this._tut = { title: lesson.title, rows, done: rows.map(() => false), fin: false };
+    s.classList.add("tut");
+    box.innerHTML = `<div class="th"><span class="ti">${S.grad.replace("<svg", '<svg class="g"')}</span><b>${esc(lesson.title)}</b><span class="sp"></span><span class="cnt"></span>${S.chevDown.replace("<svg", '<svg class="cv"')}<span class="el">${S.ellipsisCircle}</span></div>`
+      + rows.map(r => `<div class="tr"><span class="ic"></span><span>${esc(r)}</span></div>`).join("") + `<i class="tdiv"></i>`;
+    this._tutPaint(); this._tutLayout();
+  }
+  _tutPaint(popAt = -1) {
+    const t = this._tut; if (!t) return;
+    const now = t.done.indexOf(false);
+    this.$$(".tr").forEach((el, i) => {
+      const state = t.done[i] ? "done" : i === now ? "now" : "later";
+      if (el.dataset.st === state) return;
+      el.dataset.st = state; el.classList.toggle("done", state === "done"); el.classList.toggle("now", state === "now");
+      const ic = el.querySelector(".ic");
+      ic.innerHTML = state === "done" ? S.checkFill : S.num(i + 1, state === "now");
+      ic.classList.remove("pop");
+      if (i === popAt || (popAt >= 0 && state === "now")) { void ic.offsetWidth; ic.classList.add("pop"); }
+    });
+    this.$(".tutor .cnt").textContent = `${t.done.filter(Boolean).length}/${t.rows.length}`;
+  }
+  /* the strip's height decides where the transcript starts */
+  _tutLayout() {
+    const b = this.$(".tutor").offsetTop + this.$(".tutor").offsetHeight + .6;
+    this.$(".clip").style.top = `${b}px`; this.$(".head").style.height = `${b}px`;
+    this._follow();
+  }
+  tutorTick(i) {
+    const t = this._tut; if (!t || t.done[i] == null || t.done[i]) return;
+    t.done[i] = true; this._tutPaint(i);
+  }
+  tutorDone() {
+    const t = this._tut; if (!t || t.fin) return;
+    t.fin = true; t.done = t.done.map(() => true); this._tutPaint(-1);
+    const th = this.$(".th"); th.classList.add("fin");
+    th.querySelector(".ti").innerHTML = S.seal.replace("<svg", '<svg class="k"');
+    th.querySelector(".ti svg").style.animation = "pop .3s cubic-bezier(.3,1.4,.5,1)";
+    const p = document.createElement("p"); p.className = "tfin"; p.textContent = this.l.allDone;
+    th.after(p); this._tutLayout();
   }
   _meaning() { return `<span class="mean">${S.bubble(this.t === STR.ko ? "가" : "A")}${esc(this.l.meaning)}</span>`; }
   _add(html, instant) {
@@ -275,6 +375,7 @@ class NwCall extends NwScreen {
   async pose(name) {
     this.stop(); this.reset();
     const ko = this.t === STR.ko;
+    this.$(".lv").textContent = (this.getAttribute("level") || "B2").toUpperCase();
     if (name === "coach") {                      // real/call-coach.png
       this.goals(["total", "battery", "next"]); this.tick(2);
       this._line(this.l.you, "Not yet, but I want to go there next week.", { me: true }).classList.add("in");
@@ -299,6 +400,26 @@ class NwCall extends NwScreen {
       this._meLn.querySelector(".bub").classList.add("listen");
       this._pill("listening");
       this._clock(25); clearInterval(this._clockT);
+    } else if (name.startsWith("tutor")) {        // call-tutor[-1|-done].png (DebugCaptureHarness "call-tutor*")
+      this.$(".lv").textContent = "A1";
+      this.tutor({ title: ko ? "자기소개하기" : "Introducing yourself",
+        rows: ko ? ["이름이랑 어디서 왔는지 말하기", "하는 일 말하기", "좋아하는 것 말하기", "한 번에 다 말하기"]
+          : ["Say your name and where you're from", "Say what you do", "Say what you like doing", "Say it all in one go"] });
+      const feed = name === "tutor"
+        ? [[0, "Okay, lesson time. What do you want to be able to say today?"], [1, "I want to introduce myself."],
+           [0, "First, tell me your name and where you're from. Like: I'm Mina, I'm from Busan. Your turn!"]]
+        : name === "tutor-1"
+        ? [[1, "I Mina, I from Seoul."], [0, "Almost! I'm Mina, I'm from Seoul. Again?"], [1, "I'm Mina. I'm from Seoul."],
+           [0, "Nice! Now, what do you do? Like: I'm a teacher."]]
+        : [[0, "Last one: all of it in one go!"], [1, "I'm Mina, I'm from Seoul. I'm a nurse, and I like hiking."],
+           [0, "All done. You can introduce yourself now! More of this, or a new topic?"]];
+      for (const [me, t] of feed) this._line(me ? this.l.you : this._otherName, t, { me: !!me }).classList.add("in");
+      if (name === "tutor-1") this.tutorTick(0);
+      if (name === "tutor-done") this.tutorDone();
+      this.$$(".ic.pop").forEach(e => e.classList.remove("pop"));
+      this.$$(".tutor [style]").forEach(e => (e.style.animation = "none"));
+      this.$$(".tfin").forEach(e => (e.style.animation = "none"));
+      this._pill("listening");
     } else if (name === "speaking") {
       this.goals(["busy week", "catch up", "no wonder"]);
       const el = this._line(this._otherName, "Hey, it's you, a few years from now. So, how was your week?");

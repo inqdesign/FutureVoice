@@ -383,7 +383,7 @@ nw-phone:not(:defined) > img { display: block; width: 100%; height: 100%; object
   .s-cap.on { transform: none; }
   .s-cap p { margin-left: auto; margin-right: auto; }
   .s-pin { align-items: flex-end; padding-bottom: 3vh; }
-  .s-phone { width: min(272px, 64vw); }
+  .s-phone { width: min(272px, 64vw); transform-origin: 50% 100%; }
   .s-num { display: none; }
 }
 /* screens: Talk home */
@@ -973,6 +973,78 @@ footer.night { background: #04081A; }
 .sp-btn svg { width: 16px; height: 16px; }
 .sp-g { background: #fff; color: #141310; box-shadow: inset 0 0 0 1px rgba(20,19,16,.18); }
 .sp-x { margin-top: 12px; background: none; border: 0; font: inherit; font-size: 14px; color: #8E8E93; cursor: pointer; padding: 6px 12px; }
+/* ═══ LAYOUT PASS (2026-10-29): rhythm, phone sizes and mobile spacing ═══ */
+/* headlines break where the eye expects, not on a one-word last line */
+h1, h2, h3, .w2-lead, .m-line, .s-cap h3 { text-wrap: balance; }
+.s-cap p, .stage-copy .one, .hows li span, .tcell p, .srow .ds, .faq .a span { text-wrap: pretty; }
+/* the pinned scene is the VISIBLE screen: 100vh on a phone is taller than the
+   area under Safari's toolbars, which cut the bottom of the phone off */
+.s-hero, .s-pin, .m-pin { height: 100svh; }
+/* the two-column claims got too narrow for their own lines on a laptop */
+@media (min-width: 801px) { .why2 { max-width: 1180px; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); } }
+/* the index: number · name · line, three columns that sit together */
+.srow { grid-template-columns: 64px minmax(0, 1fr) minmax(0, 2fr); column-gap: 24px; }
+@media (max-width: 960px) {
+  /* bullets light up with the phone beside them; stacked, the phone is
+     below the fold while they are read, so they would only ever look disabled */
+  .hows.nw-beating li:not(.nw-beat-on) { opacity: 1; }
+  .hows li.nw-beat-on .dot { animation: none; }
+}
+@media (max-width: 700px) {
+  :root { --pad: 20px; --cell: 0px; }
+  h2 { font-size: 28px; line-height: 1.26; }
+  /* one rhythm for every section on a phone: 72 above a section's head,
+     24 between a head and what follows */
+  .stage, .stage.flip { padding: 0 var(--pad); }
+  .stage-copy, .stage.flip .stage-copy { padding: 64px 0 28px; }
+  .stage-copy h2 { margin-top: 18px; font-size: 28px; }
+  .stage-copy .one { margin-top: 12px; font-size: 17px; }
+  .hows { margin-top: 22px; }
+  .hows li { padding: 13px 0; font-size: 15.5px; gap: 11px; }
+  .stage-show { padding: 8px 0 64px; }
+  nw-phone.iphone-k { width: min(258px, 68vw); }
+  .weekly-show nw-phone.iphone-k { width: 44vw; }
+  .kicker, .m-kick { font-size: 13px; padding: 6px 12px; }
+  .why2 { padding: 72px var(--pad); }
+  .why2 .m-kick { margin-bottom: 20px; }
+  .w2-lead { font-size: 27px; }
+  .why2-body { padding-top: 24px; }
+  .w2-line { font-size: 17.5px; padding: 18px 0; }
+  .marquee { padding: 30px 0; }
+  .marquee .row { font-size: 38px; gap: 34px; padding-right: 34px; }
+  .specs, .trust-sec, .pricing-sec, .faq-sec { padding-top: 72px; }
+  .specs .head, .trust-sec h2, .faq-sec h2 { margin-top: 18px; }
+  .spec-table, .trust { margin-top: 32px; }
+  .faq { margin-top: 28px; }
+  /* index rows: the number rides above the name, the line under it full width */
+  .srow { grid-template-columns: minmax(0, 1fr); padding: 18px var(--pad); row-gap: 4px; }
+  .srow .ix, .srow .nm, .srow .ds { padding: 0; grid-column: 1; }
+  .srow .ix { font-size: 12px; }
+  .srow .nm { font-size: 17px; }
+  .srow .ds { font-size: 15px; }
+  .trust { padding: 0 var(--pad); }
+  .tcell { padding: 26px 0 30px; }
+  .tcell h4 { margin-top: 10px; font-size: 18px; }
+  .tcell p { margin-top: 8px; font-size: 15px; }
+  .pr-sub { margin-top: 12px; font-size: 16px; }
+  .cycle-toggle { margin-top: 24px; }
+  .plans { margin-top: 28px; gap: 12px; }
+  .plan { padding: 26px 20px 28px; border-radius: 22px; }
+  .plan .p-price { margin-top: 16px; font-size: 36px; }
+  .p-specs { margin-top: 18px; max-width: none; }
+  .plan .p-buy { margin-top: 24px; }
+  .p-fine { margin-top: 24px; padding-bottom: 48px; }
+  .faq summary { padding: 18px var(--pad); gap: 12px; font-size: 16.5px; }
+  .faq .a { padding: 0 var(--pad) 20px; font-size: 15px; }
+  .faq .a span { padding-left: 0; }
+  .fd-in { padding: 88px var(--pad) 72px; }
+  /* the hero: a headline that fits in three lines, a subline that wraps by itself,
+     and the phone's top edge in view on the first screen */
+  .s-hero { padding-top: 15vh; }
+  .night h1 { font-size: 40px; line-height: 1.12; }
+  .n-sub { font-size: 16px; margin-top: 18px; padding: 0 4px; }
+  .fd-demo { margin-top: 40px; }
+}
 /* lang:css */
 .langpick { position: relative; }
 .langpick summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 6px; }
@@ -1740,6 +1812,7 @@ document.querySelectorAll(".rv").forEach(function (el) { io.observe(el); });
   var note = wrap.querySelector(".n-note");
   var heroCopy = wrap.querySelector(".s-hero"), ctas = wrap.querySelector(".n-ctas");
   var applied = 0; // translateY currently on the phone, in px
+  var capsBox = wrap.querySelector(".s-caps");
   var STEPS = 6; // 1 hero + 5 beats
   var dbg = null;
   try { var q = new URLSearchParams(location.search).get("step"); if (q !== null) dbg = +q; } catch (e) {}
@@ -1747,20 +1820,39 @@ document.querySelectorAll(".rv").forEach(function (el) { io.observe(el); });
     var vh = window.innerHeight || 1;
     var r = wrap.getBoundingClientRect();
     var total = r.height - vh;
-    var p = total > 0 ? Math.min(1, Math.max(0, -r.top / total)) : 0;
-    var f = dbg !== null ? dbg : p * STEPS;
-    // At f=0 the phone's top edge sits just under the hero text; it rises
-    // to its resting spot over the first beat. Measured from the phone's
-    // ACTUAL laid-out position (rect minus the transform we applied), so
-    // it holds on any layout — centre on desktop, bottom-anchored on
-    // mobile — instead of assuming a centred pin.
+    var s = Math.max(0, -r.top); // how far into the scene the page has scrolled
+    // The phone's top edge starts just under the hero text and travels WITH the
+    // page (1:1, like anything in the flow) until it reaches its pinned spot;
+    // it used to rise faster than the finger and grow at the same time, which
+    // read as the phone flying in. Measured from the phone's ACTUAL laid-out
+    // position (rect minus the transform we applied), so it holds on any
+    // layout — centre on desktop, bottom-anchored on mobile.
+    // a phone screen stacks the caption ABOVE the phone; a 3-line caption on a short
+    // viewport ran under the phone and lost its last line. So on a phone the device
+    // shrinks (from its bottom edge, where it is anchored) until it clears the
+    // tallest caption — measured, because the caption's height depends on the language.
+    var wide = window.innerWidth > 860, fit = 1;
+    if (!wide && capsBox) {
+      var capBottom = 0;
+      caps.forEach(function (el) { capBottom = Math.max(capBottom, el.offsetTop + el.offsetHeight); });
+      var pinH = capsBox.offsetHeight, padB = parseFloat(getComputedStyle(capsBox.parentNode).paddingBottom) || 0;
+      var ph = phone.offsetHeight || 1;
+      fit = Math.max(0.62, Math.min(1, (pinH - padB - capBottom - 18) / ph));
+    }
+    phone.style.transform = "translateY(" + applied.toFixed(1) + "px) scale(" + (wide ? 1 : fit).toFixed(3) + ")";
     var naturalTop = phone.getBoundingClientRect().top - applied;
     var noteBottom = note ? note.getBoundingClientRect().bottom : vh * 0.5;
-    var rise = Math.max(0, noteBottom + 26 - naturalTop);
-    applied = Math.max(0, 1 - f) * rise;
-    // scale-up entrance: a step smaller in the hero, full size once pinned
-    // (origin is the phone's top edge, so the rise anchor stays exact)
-    var scale = 0.84 + 0.16 * Math.min(1, Math.max(0, f));
+    var raw = noteBottom + 26 - naturalTop;
+    applied = Math.max(0, raw);
+    // the hero beat lasts exactly as long as that travel, so the first caption
+    // arrives the moment the phone settles, never over an empty screen
+    var heroDist = Math.max(1, raw + s);
+    var f;
+    if (dbg !== null) f = dbg;
+    else if (s < heroDist) f = s / heroDist;
+    else f = 1 + Math.min(1, (s - heroDist) / Math.max(1, total - heroDist)) * (STEPS - 1) * 0.999;
+    // desktop keeps a small scale-up on the way in; a phone screen has no room for it
+    var scale = wide ? 0.84 + 0.16 * Math.min(1, f) : fit;
 
     phone.style.transform = "translateY(" + applied.toFixed(1) + "px) scale(" + scale.toFixed(3) + ")";
     // the title and buttons fade out as the phone rises into them: fully gone by the time the
@@ -1768,6 +1860,8 @@ document.querySelectorAll(".rv").forEach(function (el) { io.observe(el); });
     if (heroCopy && ctas) {
       var pTop = naturalTop + applied, cTop = ctas.getBoundingClientRect().top;
       var fade = Math.max(0, Math.min(1, (pTop - cTop - 20) / Math.max(1, noteBottom + 26 - cTop - 20)));
+      // and gone by the time the first caption takes the top of the screen
+      fade = Math.min(fade, Math.max(0, Math.min(1, (1 - f) / 0.3)));
       heroCopy.style.opacity = fade.toFixed(3);
       heroCopy.style.visibility = fade > 0 ? "" : "hidden";
     }
