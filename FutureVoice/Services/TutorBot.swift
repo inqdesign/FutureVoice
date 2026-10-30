@@ -321,12 +321,12 @@ final class TutorBot: ObservableObject {
             } else {
                 dismissBubble()
                 if noteShown { closeNote() }
-                chatOpen = false
                 // The tutor plans its own lesson from the goal; today's
                 // angle, once written, narrows it.
                 let focus = GoalPrep.today(for: goal, now: Date())?.focus
-                goalCall = GoalCall(topic: focus.map { "\($0) — \(goal.title)" } ?? goal.title,
+                let call = GoalCall(topic: focus.map { "\($0) — \(goal.title)" } ?? goal.title,
                                     blurb: goal.drillBlurb)
+                afterChatCloses { self.goalCall = call }
             }
         case .challenge(let id):
             if let rank = SpeechChallenges.shared.standings[id]?.myRank {
@@ -341,6 +341,15 @@ final class TutorBot: ObservableObject {
     }
 
     // MARK: - Actions
+
+    /// Closes the chat, then runs `open` once its sheet is gone: a call or
+    /// the quiz presented while the sheet is still sliding down is dropped
+    /// by SwiftUI, so the tap did nothing.
+    private func afterChatCloses(_ open: @escaping () -> Void) {
+        guard chatOpen else { open(); return }
+        chatOpen = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: open)
+    }
 
     func closeNote() {
         if introShown { defaults.set(true, forKey: Key.introSeen) }
@@ -371,13 +380,13 @@ final class TutorBot: ObservableObject {
     func start(_ kind: StudyPlan.Kind?, appState: AppState) {
         dismissBubble()
         if noteShown { closeNote() }
-        chatOpen = false
         Analytics.capture("tutor_bot_start", ["kind": kind?.rawValue ?? "quiz"])
-        guard let kind else { quizOpen = true; return }
+        guard let kind else { afterChatCloses { self.quizOpen = true }; return }
         if kind == .talk {
-            appState.requestFreeTalk(from: .tutorBot)
+            afterChatCloses { appState.requestFreeTalk(from: .tutorBot) }
             return
         }
+        chatOpen = false
         switch kind {
         case .review, .words, .expressions:
             // The bot says "N cards waiting" (`dueCards`); Start deals those

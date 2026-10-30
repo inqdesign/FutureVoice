@@ -235,6 +235,7 @@ struct TutorPlanRows: View {
         VStack(spacing: 0) {
             ForEach(Array(today.items.enumerated()), id: \.element.id) { i, item in
                 if i > 0 { Divider().padding(.leading, 40) }
+                Button { TutorBot.shared.start(item.kind, appState: appState) } label: {
                 HStack(spacing: 12) {
                     Image(systemName: item.kind.symbol)
                         .font(.footnote)
@@ -249,20 +250,20 @@ struct TutorPlanRows: View {
                     Spacer(minLength: 8)
                     if item.done {
                         Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                    } else if item.id == next?.id {
-                        Button("Start") { TutorBot.shared.start(item.kind, appState: appState) }
-                            .buttonStyle(SoftChipStyle(selected: true))
                     } else if item.progress > 0 {
                         Gauge(value: item.progress) { EmptyView() }
                             .gaugeStyle(.accessoryCircularCapacity)
                             .scaleEffect(0.45)
                             .frame(width: 22, height: 22)
-                    } else {
-                        Image(systemName: "circle").foregroundStyle(.tertiary)
                     }
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(item.id == next?.id ? AnyShapeStyle(.tint) : AnyShapeStyle(.tertiary))
                 }
                 .padding(.vertical, 8)
                 .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -617,6 +618,7 @@ struct TutorPickRows: View {
                 .padding(.bottom, 4)
             ForEach(Array(picks.enumerated()), id: \.element.id) { i, pick in
                 if i > 0 { Divider().padding(.leading, 40) }
+                Button { TutorBot.shared.start(pick, appState: appState) } label: {
                 HStack(alignment: .center, spacing: 12) {
                     Image(systemName: pick.symbol)
                         .font(.footnote)
@@ -634,10 +636,15 @@ struct TutorPickRows: View {
                         }
                     }
                     Spacer(minLength: 8)
-                    Button(pick.buttonTitle) { TutorBot.shared.start(pick, appState: appState) }
-                        .buttonStyle(SoftChipStyle(selected: true))
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tertiary)
                 }
                 .padding(.vertical, 8)
+                .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint(Text(pick.buttonTitle))
             }
         }
     }
