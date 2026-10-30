@@ -300,8 +300,10 @@ object CoachSuggester {
 
     /** iOS builds the user message the same way, line by line. */
     internal fun content(line: String, recent: List<Line>, aboutLearner: List<String> = emptyList(),
-                         situation: String?, candidates: List<TalkGoalItem>, previousSay: String? = null): String {
+                         situation: String?, candidates: List<TalkGoalItem>, previousSay: String? = null,
+                         otherSpeaker: String? = null): String {
         var content = ""
+        if (!otherSpeaker.isNullOrEmpty()) content += "The other speaker: $otherSpeaker\n"
         if (!situation.isNullOrEmpty()) content += "Situation: $situation\n"
         if (aboutLearner.isNotEmpty()) {
             content += "About the learner:\n" + aboutLearner.joinToString("\n") { "- $it" } + "\n"
@@ -348,6 +350,7 @@ object CoachSuggester {
         line: String,
         recent: List<Line>,
         aboutLearner: List<String> = emptyList(),
+        otherSpeaker: String? = null,
         situation: String? = null,
         register: SpeechRegister? = null,
         previousSay: String? = null,
@@ -362,7 +365,7 @@ object CoachSuggester {
                 GeminiClient(AuthRepository()).sendJson(
                     system = system(target, native, level, register),
                     messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER,
-                        content(line, recent, aboutLearner, situation, candidates, previousSay))),
+                        content(line, recent, aboutLearner, situation, candidates, previousSay, otherSpeaker))),
                     serializer = Payload.serializer(),
                     model = GeminiClient.Model.FLASH_36,
                     // Its thinking needs room, or the JSON comes back cut.

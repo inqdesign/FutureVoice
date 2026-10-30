@@ -1,5 +1,6 @@
 package com.roro.futurevoice.talk
 
+import com.roro.futurevoice.data.cast
 import com.roro.futurevoice.data.isClose
 import com.roro.futurevoice.data.effectiveMyRegister
 import android.content.Context
@@ -304,6 +305,10 @@ class TalkViewModel(context: Context) : ViewModel() {
      * decides, and the coach keeps the level of its previous suggestion.
      */
     private var coachRegister: com.roro.futurevoice.data.SpeechRegister? = null
+    /** The person this call is with, and whether it is a scene, for
+     *  [coachOtherSpeaker] (iOS `coachOtherSpeaker`). */
+    private var coachPerson: com.roro.futurevoice.data.Counterpart? = null
+    private var coachInScene = false
 
     /**
      * This call's TALK time, phone-style: the seconds the meter counts — the
@@ -385,6 +390,8 @@ class TalkViewModel(context: Context) : ViewModel() {
         coachSteerSent = ""
         coachSituation = null
         coachRegister = registerFor(config.cast?.person, inScene = config.scenarioId != null)
+        coachPerson = config.cast?.person
+        coachInScene = config.scenarioId != null
         config.scenarioId?.let { id ->
             viewModelScope.launch {
                 val scenario = runCatching {
@@ -397,6 +404,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                     }.getOrNull()
                 }
                 coachRegister = registerFor(person, inScene = scenario != null)
+                coachPerson = person
                 coachSituation = scenario?.let { sc ->
                     val role = sc.role.trim()
                     val place = if (role.isEmpty()) sc.environment else "${sc.environment} — talking with $role"
@@ -2302,6 +2310,32 @@ class TalkViewModel(context: Context) : ViewModel() {
         syncCoachSteer()
     }
 
+    /**
+     * Who the "try saying" is answering (iOS `coachOtherSpeaker`), so a best
+     * friend, a stranger and a singer don't all get the same line. The
+     * fluent self on a call with no person and no scene; null in a scene
+     * with no person (its situation already names the role) and on a tutor
+     * call.
+     */
+    private fun coachOtherSpeaker(): String? {
+        val person = coachPerson ?: return if (coachInScene || tutorThisCall) null
+            else "the learner's own future self, a few years on and fluent. They talk like one person talking to themselves: casual, close, nothing to introduce."
+        val name = person.name.trim()
+        return when (person.cast) {
+            com.roro.futurevoice.data.CounterpartCast.PUBLIC_FIGURE -> {
+                val identity = person.publicIdentity?.trim().orEmpty()
+                "${identity.ifEmpty { name }}, a public figure. The learner knows of them; they don't know the learner."
+            }
+            com.roro.futurevoice.data.CounterpartCast.STRANGER ->
+                "$name, someone the learner has just met. New acquaintances, no shared history."
+            com.roro.futurevoice.data.CounterpartCast.OWN_PERSON -> {
+                val relation = person.relationship.trim()
+                val who = if (relation.isEmpty()) name else "$name ($relation)"
+                "$who, someone from the learner's own life. They already know each other${if (person.isClose) " well" else ""}."
+            }
+        }
+    }
+
     /** iOS `coachRegister`. */
     private fun registerFor(person: com.roro.futurevoice.data.Counterpart?, inScene: Boolean) =
         if (person != null) person.effectiveMyRegister
@@ -2354,6 +2388,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         viewModelScope.launch {
             val result = CoachSuggester.suggest(
                 line = text, recent = recent, aboutLearner = about,
+                otherSpeaker = coachOtherSpeaker(),
                 situation = coachSituation,
                 register = coachRegister,
                 previousSay = previousSay,
