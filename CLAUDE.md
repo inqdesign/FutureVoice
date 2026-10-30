@@ -1866,6 +1866,37 @@ next-band density target goes away (fewer slips would move nothing) and the
 focus tip asks for longer sentences instead of fewer slips. The trend chart
 stays the accuracy curve — its zones are accuracy bands.
 
+## The vocabulary level is WHICH words, not how many (2026-10-30)
+
+Reported by the founder: a few C2 words made the vocabulary level C2. The
+rule took the highest band with a fixed count of distinct words (C2 at 15)
+over 90 days, and it rose with the amount of talk alone. Measured on the
+NICT JLE corpus (1,277 Japanese learners of English, the same 15-minute SST
+interview at nine graded levels, plus 20 natives doing the same task):
+six pooled ≈A2 interviews read B2 197 times in 200, twelve native ones C1.
+Advanced words are rare in conversation for everyone (natives used one or
+two C1/C2 words in fifteen minutes), so counting them counts minutes.
+
+- **The level is the SHARE of graded word TOKENS at B2+**
+  (`VocabSophistication`), newest talks first up to 1,500 graded tokens,
+  400 needed before a band. Cuts are the corpus medians: A2 2.6% · B1 4.1%
+  · B2 5.0% · C1 6.0% · C2 7.0%. The share holds still as talk grows (SST 4
+  ≈3.3% over one interview or twelve). TOKENS, not types: a type share
+  keeps rising with sample size.
+- **Above B2 the share stops separating levels** (SST 8 ≈ SST 9, natives
+  +1pt), so C1/C2 also need the weekly assessment's `lexical_precision`
+  (did they pick the precise word where a general one would do). No read →
+  the band stops at B2; precision only holds the top down, never below B2
+  and never up. Not measured with a probe yet.
+- **English only.** Other languages keep the old count until they are
+  calibrated, and Korean/Spanish need their lists fixed first: the Korean
+  C2 band holds 탁자, 걷기, 브랜드 (국립국어원 C grade split in two), the
+  Spanish one bitcoin, poni (frequency bands).
+- The assessment's vocab profile carries the share and says the distinct
+  counts are not a level. `scripts/vocab-calibration/` reruns the numbers
+  (corpus download in the script's header). Tests:
+  `VocabSophisticationTests`, Android `VocabShareTest`.
+
 ## The weekly test (2026-09-23)
 
 One sit-down a week, built from THAT learner's own week: the words the talks
