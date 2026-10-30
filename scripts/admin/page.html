@@ -2096,13 +2096,20 @@ function renderHeatmap(users){
   // pays stays with the subscribers.
   const androidTester = u => u.tester === 'android' && !isSubscriber(u);
   const testerRows = rows.filter(androidTester).sort(byRecent);
-  const trialRows = rows.filter(u => !androidTester(u) && isTrialing(u) && !lapsing(u)).sort(byRecent);
-  const lapseRows = rows.filter(u => !androidTester(u) && lapsing(u)).sort(byRecent);
-  const restRows = rows.filter(u => !androidTester(u) && !isSubscriber(u) && !isTrialing(u)).sort(byRecent);
+  // One month of Light, free (2026-10-30, index.ts monthFree): their own
+  // block under the testers, for the same reason — a comp code would scatter
+  // them into 그 외. One who then pays moves to the subscribers.
+  const monthFree = u => u.monthFree && !isSubscriber(u) && !androidTester(u);
+  const freeRows = rows.filter(monthFree).sort(byRecent);
+  const apart = u => androidTester(u) || monthFree(u);
+  const trialRows = rows.filter(u => !apart(u) && isTrialing(u) && !lapsing(u)).sort(byRecent);
+  const lapseRows = rows.filter(u => !apart(u) && lapsing(u)).sort(byRecent);
+  const restRows = rows.filter(u => !apart(u) && !isSubscriber(u) && !isTrialing(u)).sort(byRecent);
   const endingSoon = lapseRows.filter(u => ['오늘 끝남','내일 끝남'].includes(trialEndLabel(u))).length;
   const groups = [
     {ko:'구독 중', note:`${payRows.length}명 · 돈이 들어오고 있는 사람`, rows:payRows},
     {ko:'안드로이드 테스터', note:`${testerRows.length}명 · 테스터 코드를 받은 사람`, rows:testerRows},
+    {ko:'한 달 무료', note:`${freeRows.length}명 · 10/30 Light 한 달 코드를 받은 사람`, rows:freeRows},
     {ko:'체험 중', note:`${trialRows.length}명 · 체험이 끝나기 전에 돌아오는지`, rows:trialRows},
     {ko:'체험 취소 · 계속 사용', note:`${lapseRows.length}명 · 자동갱신을 끈 날 이후에도 다시 온 사람`
         + (endingSoon ? ` · 체험이 오늘·내일 끝나는 사람 ${endingSoon}명` : ''), rows:lapseRows},

@@ -254,6 +254,19 @@ async function fetchData(env: Env) {
       }
       for (const u of hits) u.tester = kind;
     }
+    // One month of Light, free (2026-10-30): the same lookup over the codes
+    // whose note says "month free: <email>", so the heatmap can show the
+    // group as its own block. Not testers, so `tester` stays untouched.
+    const monthFree = await testerRows(env, "month free:*").catch((e) => {
+      console.log(`monthFree: ${(e as Error).message}`);
+      return [] as Array<{ note: string; comp_redemptions: { user_id: string }[] }>;
+    });
+    for (const t of monthFree) {
+      for (const r of t.comp_redemptions || []) { const u = byId.get(r.user_id); if (u) u.monthFree = true; }
+      for (const m of t.note.match(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g) || []) {
+        const u = byEmail.get(m.toLowerCase()); if (u) u.monthFree = true;
+      }
+    }
   }
   // Say it again (다시 말하기, 2026-09-27): one row per FINISHED run
   // (`say_again_run`) and, from the build that added it, one per run
@@ -283,9 +296,9 @@ async function referralRows(env: Env): Promise<Array<{ u: string; at: string; in
   return await r.json();
 }
 
-async function testerRows(env: Env): Promise<Array<{ note: string; comp_redemptions: { user_id: string }[] }>> {
+async function testerRows(env: Env, note = "*tester*"): Promise<Array<{ note: string; comp_redemptions: { user_id: string }[] }>> {
   const url = `${env.SUPABASE_URL}/rest/v1/comp_codes`
-    + `?select=note,comp_redemptions(user_id)&note=ilike.*tester*&limit=1000`;
+    + `?select=note,comp_redemptions(user_id)&note=ilike.${encodeURIComponent(note)}&limit=1000`;
   const r = await fetch(url, {
     headers: {
       apikey: env.SUPABASE_SERVICE_ROLE_KEY,
