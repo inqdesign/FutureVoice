@@ -316,6 +316,9 @@ struct TutorChatView: View {
     @State private var draft = ""
     @State private var dictationLocale = ""
     @FocusState private var typing: Bool
+    @ObservedObject private var goals = UpcomingGoalStore.shared
+    @State private var addingGoal = false
+    @State private var goalPage: UpcomingGoal?
 
     private var suggestions: [String] {
         [explain("What should I do now?"),
@@ -332,6 +335,7 @@ struct TutorChatView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
+                        goalLine
                         DialogueLine(speaker: .other, name: tutorName) {
                             VStack(alignment: .leading, spacing: 6) {
                                 Text(TutorCopy.opening(bot))
@@ -388,6 +392,13 @@ struct TutorChatView: View {
         .sheet(item: $bot.reading) { r in
             TutorReadingSheet(reading: r).environmentObject(appState)
         }
+        .sheet(isPresented: $addingGoal) {
+            UpcomingGoalEditor(goal: nil, language: appState.targetLanguage).environmentObject(appState)
+        }
+        .sheet(item: $goalPage) { goal in
+            UpcomingGoalPage(goal: goal).environmentObject(appState)
+        }
+        .onChange(of: goals.goals) { _, _ in bot.loadPicks(appState: appState) }
         .presentationDragIndicator(.visible)
         .onAppear {
             if dictationLocale.isEmpty {
@@ -397,6 +408,39 @@ struct TutorChatView: View {
             chat.resetIfNewDay()
             bot.refresh(appState: appState, visible: false)
             Analytics.capture("tutor_bot_opened")
+        }
+    }
+
+    /// What the learner is preparing for, first: the goals ahead (tap one
+    /// for its page), or the offer to write one, right here.
+    private var goalLine: some View {
+        let ahead = goals.active(language: appState.targetLanguage)
+        return DialogueLine(speaker: .other, name: tutorName) {
+            VStack(alignment: .leading, spacing: 10) {
+                if ahead.isEmpty {
+                    Text("Preparing for something? An interview, an exam, a presentation. Tell me what and when, and every day I'll prepare you for it.")
+                    Button { addingGoal = true } label: {
+                        Label("Add a goal", systemImage: "plus")
+                    }
+                    .buttonStyle(SoftChipStyle(selected: true))
+                } else {
+                    ForEach(ahead) { goal in
+                        Button { goalPage = goal } label: {
+                            HStack(spacing: 6) {
+                                UpcomingGoalRow(goal: goal)
+                                Image(systemName: "chevron.right").font(.caption.weight(.semibold))
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    Button { addingGoal = true } label: {
+                        Label("Add a goal", systemImage: "plus")
+                    }
+                    .buttonStyle(SoftChipStyle())
+                }
+            }
         }
     }
 

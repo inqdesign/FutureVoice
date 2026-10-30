@@ -455,6 +455,8 @@ struct UpcomingGoalPage: View {
     private func drill(_ question: String) {
         Analytics.capture("upcoming_goal_question_drill", ["kind": goal.kind.rawValue])
         dismiss()
+        // Opened from the tutor chat, the chat goes too.
+        TutorBot.shared.chatOpen = false
         let call = TutorBot.GoalCall(topic: "\u{201C}\(question)\u{201D} — \(goal.title)",
                                      blurb: goal.drillBlurb)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { TutorBot.shared.goalCall = call }

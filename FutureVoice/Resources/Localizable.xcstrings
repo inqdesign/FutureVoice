@@ -10764,6 +10764,16 @@
         }
       }
     },
+    "Preparing for something? An interview, an exam, a presentation. Tell me what and when, and every day I'll prepare you for it." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "준비하는 일이 있어요? 면접, 시험, 발표 같은 거요. 무엇을 언제 하는지 알려 주면 매일 거기에 맞춰 준비시켜 줄게요."
+          }
+        }
+      }
+    },
     "Press play to hear every situation, or pick one from the list." : {
       "localizations" : {
         "ko" : {

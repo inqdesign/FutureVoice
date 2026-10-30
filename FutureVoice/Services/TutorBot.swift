@@ -96,6 +96,7 @@ final class TutorBot: ObservableObject {
         var blurb: String
     }
     private var picksLoadedAt: Date?
+    private var picksGoals = ""
     private var picksLoading = false
 
     static let maxBubbles = 3
@@ -275,7 +276,11 @@ final class TutorBot: ObservableObject {
     /// Re-reads the picks at most every 10 minutes, behind the plan.
     func loadPicks(appState: AppState, now: Date = Date(), force: Bool = false) {
         guard !picksLoading else { return }
-        if !force, let at = picksLoadedAt, now.timeIntervalSince(at) < 600 { return }
+        // A goal added or changed is read at once, not in ten minutes.
+        let goalsSeen = UpcomingGoalStore.shared.goals.map { "\($0.id)\($0.updatedAt.timeIntervalSince1970)" }.joined()
+        let goalsChanged = goalsSeen != picksGoals
+        picksGoals = goalsSeen
+        if !force, !goalsChanged, let at = picksLoadedAt, now.timeIntervalSince(at) < 600 { return }
         picksLoading = true
         Task {
             let loaded = await TutorPicks.load(appState: appState, now: now)
