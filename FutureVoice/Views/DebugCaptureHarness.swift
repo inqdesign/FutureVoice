@@ -1933,6 +1933,42 @@ enum DebugCapture {
                 appState.weeklyReports = [report]
             }
             return AnyView(ProgressTab().environmentObject(appState))
+        case "progress-vocab":
+            // Real speech behind the vocabulary level (`VocabSophistication`):
+            // `-vocabFixture <path>` is a JSON array of talks, each an array
+            // of the learner's lines (scripts/vocab-calibration writes them
+            // from NICT JLE), and `-vocabPrecision c1` adds a weekly read
+            // with that word-precision band.
+            once("progress-vocab") {
+                let path = UserDefaults.standard.string(forKey: "vocabFixture") ?? ""
+                let talks = (try? JSONDecoder().decode([[String]].self,
+                                                       from: Data(contentsOf: URL(fileURLWithPath: path)))) ?? []
+                let uid = UUID()
+                for (i, lines) in talks.enumerated() {
+                    let ended = Date().addingTimeInterval(Double(-i) * 86_400 - 3_600)
+                    let turns = lines.enumerated().map { j, line in
+                        Turn(id: UUID(), role: .user, audioURL: nil, transcript: line, durationMs: 6_000,
+                             timestamp: ended.addingTimeInterval(Double(j - lines.count) * 10), suggestion: nil)
+                    }
+                    SessionStore.shared.save(Session(
+                        id: UUID(), userId: uid, targetLanguage: "en", mode: .conversation,
+                        topic: nil, startedAt: ended.addingTimeInterval(-900), endedAt: ended,
+                        turns: turns,
+                        summary: SessionSummary(phrasesUsed: [], newPatternsDetected: [], suggestedDrills: [],
+                                                overallNote: "", scorecard: sampleScorecard),
+                        origin: .free))
+                }
+                if let band = UserDefaults.standard.string(forKey: "vocabPrecision") {
+                    let report = WeeklyReport(
+                        id: UUID(), periodStart: Date().addingTimeInterval(-7 * 86_400), periodEnd: Date(),
+                        sessionCount: talks.count, targetLanguage: "en",
+                        newExpressions: [], repeatedMistakes: [], suggestedExpressions: [],
+                        summary: "", cefrLevel: "b1", lexicalPrecision: band, generatedAt: Date())
+                    WeeklyReportStore.shared.save(report)
+                    appState.weeklyReports = [report]
+                }
+            }
+            return AnyView(ProgressTab(initialDim: .vocabulary).environmentObject(appState))
         case "progress-beginner", "progress-beginner-grammar", "progress-grammar":
             // The 2026-09-24 report: short accurate sentences, no slips —
             // used to read ≈C2. The talks carry a range of a2, so the
