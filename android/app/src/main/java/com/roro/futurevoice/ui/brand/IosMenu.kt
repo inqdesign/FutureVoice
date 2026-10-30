@@ -104,7 +104,7 @@ fun IosMenu(
             label = "scale") { if (it) 1f else 0.6f }
         val alpha by transition.animateFloat({ tween(if (state.targetState) 160 else 120) },
             label = "alpha") { if (it) 1f else 0f }
-        val dark = isSystemInDarkTheme()
+        val dark = com.roro.futurevoice.ui.appIsDark()
         // iOS 26 menus are a near-opaque glass: white in light, a lifted
         // grey in dark. Opaque here — a blur under a Popup isn't available
         // to Compose, and a translucent fill without one reads as a smudge.

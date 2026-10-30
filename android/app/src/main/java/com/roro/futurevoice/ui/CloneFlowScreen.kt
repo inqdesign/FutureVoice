@@ -1575,7 +1575,7 @@ fun CloneFlowScreen(
                 // lives in the page header.
                 CloneAct.ACCOUNT -> {
                     val pill = RoundedCornerShape(50)
-                    val dark = androidx.compose.foundation.isSystemInDarkTheme()
+                    val dark = com.roro.futurevoice.ui.appIsDark()
                     val ink = if (dark) Color.White else Color.Black
                     val onInk = if (dark) Color.Black else Color.White
                     @Composable fun provider(label: Int, onClick: () -> Unit) {

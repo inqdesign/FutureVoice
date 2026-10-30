@@ -22,12 +22,12 @@ import androidx.compose.ui.graphics.Color
 object AppSurfaces {
     /** The page ground — content sits ON this. */
     val ground: Color
-        @Composable get() = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surface
+        @Composable get() = if (com.roro.futurevoice.ui.appIsDark()) MaterialTheme.colorScheme.surface
         else MaterialTheme.colorScheme.surfaceContainer
 
     /** A card / row raised off the ground. */
     val card: Color
-        @Composable get() = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceContainerHigh
+        @Composable get() = if (com.roro.futurevoice.ui.appIsDark()) MaterialTheme.colorScheme.surfaceContainerHigh
         else MaterialTheme.colorScheme.surface
 
     /**

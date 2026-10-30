@@ -873,7 +873,7 @@ private fun RowDivider() {
 @Composable
 private fun SearchCapsule(query: String, onQuery: (String) -> Unit, placeholder: String,
                           modifier: Modifier = Modifier) {
-    val dark = androidx.compose.foundation.isSystemInDarkTheme()
+    val dark = com.roro.futurevoice.ui.appIsDark()
     val style = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface)
     Row(
         modifier.fillMaxWidth().height(48.dp)

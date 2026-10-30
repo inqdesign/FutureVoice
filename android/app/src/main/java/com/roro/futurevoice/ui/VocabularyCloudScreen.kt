@@ -314,7 +314,15 @@ private fun NotebookPeek(
         known = state == "known" || (state != null && !bookmarked)
     }
     val title = stringResource(R.string.my_words_lld, studyingOrder.size)
-    val navIndex = word?.let { studyingOrder.indexOf(it) }?.takeIf { it >= 0 }
+    // Where the word stands in the notebook. Marking it known takes it OUT
+    // of the notebook under the peek, and ↑↓ vanished with it; they now walk
+    // on from the slot it left (the next word has slid into that slot).
+    val found = word?.let { studyingOrder.indexOf(it) } ?: -1
+    val slot = remember(word) { intArrayOf(-1) }
+    if (found >= 0) slot[0] = found
+    val prevIndex = if (found >= 0) found - 1 else slot[0] - 1
+    val nextIndex = if (found >= 0) found + 1 else slot[0]
+    val showNav = slot[0] >= 0
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val shape = androidx.compose.foundation.shape.RoundedCornerShape(36.dp)
     androidx.compose.material3.Surface(
@@ -376,12 +384,12 @@ private fun NotebookPeek(
                         }
                     }
                 }
-                if (navIndex != null) {
+                if (showNav) {
                     ToolbarPill(Modifier.align(Alignment.CenterEnd)) {
                         PillIcon(Icons.Filled.KeyboardArrowUp, MaterialTheme.colorScheme.primary,
-                            navIndex > 0) { onStep(studyingOrder[navIndex - 1]) }
+                            prevIndex in studyingOrder.indices) { onStep(studyingOrder[prevIndex]) }
                         PillIcon(Icons.Filled.KeyboardArrowDown, MaterialTheme.colorScheme.primary,
-                            navIndex + 1 < studyingOrder.size) { onStep(studyingOrder[navIndex + 1]) }
+                            nextIndex in studyingOrder.indices) { onStep(studyingOrder[nextIndex]) }
                     }
                 }
             }

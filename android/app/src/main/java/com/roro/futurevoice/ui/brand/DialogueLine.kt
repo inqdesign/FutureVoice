@@ -69,7 +69,7 @@ fun DialogueLine(
         speaker.isUser -> accent.copy(alpha = 0.18f)
         // iOS `secondarySystemBackground`: F2F2F7 / 1C1C1E. surfaceVariant
         // (E3E3E8) read as a heavy grey next to iOS (2026-10-29).
-        else -> if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceContainerHigh
+        else -> if (com.roro.futurevoice.ui.appIsDark()) MaterialTheme.colorScheme.surfaceContainerHigh
         else MaterialTheme.colorScheme.surfaceContainer
     }
     val foreground = if (isMonoUser) MaterialTheme.colorScheme.surface

@@ -3333,7 +3333,7 @@ private fun RoutineHintPopover(onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         properties = androidx.compose.ui.window.PopupProperties(focusable = true),
     ) {
-        val dark = androidx.compose.foundation.isSystemInDarkTheme()
+        val dark = com.roro.futurevoice.ui.appIsDark()
         Column(
             Modifier.padding(8.dp)
                 .shadow(12.dp, RoundedCornerShape(14.dp))

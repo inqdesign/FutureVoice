@@ -35,7 +35,7 @@ fun PaywallDialog(onDismiss: () -> Unit) {
  */
 @Composable
 fun DialogSystemBarsLikeActivity() {
-    val dark = isSystemInDarkTheme()
+    val dark = com.roro.futurevoice.ui.appIsDark()
     val window = (LocalView.current.parent as? DialogWindowProvider)?.window
     SideEffect {
         window?.let {

@@ -998,7 +998,7 @@ private fun ReadingPanel(step: SayItAgainScript.Step?, otherName: String, micLev
     val context = LocalContext.current
     val theme = com.roro.futurevoice.ui.brand.FutureselfTheme.live.value
         ?: com.roro.futurevoice.ui.brand.FutureselfTheme.stored(context)
-    val dark = androidx.compose.foundation.isSystemInDarkTheme()
+    val dark = com.roro.futurevoice.ui.appIsDark()
     val tint = theme.tint()
     val ink = promptInk(tint, dark)
     val mono = theme == com.roro.futurevoice.ui.brand.FutureselfTheme.MONO

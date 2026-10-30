@@ -180,7 +180,7 @@ internal fun TalkMorphOverlay(inCall: Boolean) {
                 virtualHeight = 64f, modifier = Modifier.fillMaxSize())
             // At the ring pose the proxy wears the ring's exact dressing and
             // sheds it while docking — the call pill is bare.
-            val dark = isSystemInDarkTheme()
+            val dark = com.roro.futurevoice.ui.appIsDark()
             Canvas(Modifier.fillMaxSize().graphicsLayer { alpha = dressing }) {
                 val r = size.minDimension / 2f
                 drawCircle(Brush.radialGradient(

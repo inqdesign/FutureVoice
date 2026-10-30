@@ -198,7 +198,7 @@ fun CoreSeatGrid(map: CoreClubClient.SeatMap?, modifier: Modifier = Modifier,
     val rows = (seats + columns - 1) / columns
     val neutral = MaterialTheme.colorScheme.onSurfaceVariant
     val tints = FutureselfTheme.entries.map { it.tint() }
-    val dark = androidx.compose.foundation.isSystemInDarkTheme()
+    val dark = com.roro.futurevoice.ui.appIsDark()
     val context = LocalContext.current
     val gapPx = with(androidx.compose.ui.platform.LocalDensity.current) { 4.dp.toPx() }
     androidx.compose.foundation.Canvas(

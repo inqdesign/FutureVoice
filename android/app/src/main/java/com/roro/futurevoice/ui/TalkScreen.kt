@@ -1580,7 +1580,7 @@ private fun SuggestionChip(suggestion: com.roro.futurevoice.talk.TurnSuggestion,
     }
     // iOS `SuggestionChip`: a rounded card filled secondarySystemBackground
     // (#F2F2F7 / #1C1C1E), 12 × 8 padding — Android drew the text bare.
-    val chipFill = if (androidx.compose.foundation.isSystemInDarkTheme())
+    val chipFill = if (com.roro.futurevoice.ui.appIsDark())
         MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainer
     Column(Modifier.fillMaxWidth().padding(top = 4.dp)
             .background(chipFill, com.roro.futurevoice.ui.brand.ContinuousShape(12.dp))

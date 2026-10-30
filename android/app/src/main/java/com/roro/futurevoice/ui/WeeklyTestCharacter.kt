@@ -169,7 +169,7 @@ fun WeeklyTestCharacter(mood: WeeklyTestHost.Mood, since: Long, modifier: Modifi
     LaunchedEffect(Unit) {
         while (true) withFrameMillis { now = System.currentTimeMillis() }
     }
-    val ink = if (isSystemInDarkTheme()) Color(0xFFF5F5F5) else Color(0xFF1A1A1A)
+    val ink = if (com.roro.futurevoice.ui.appIsDark()) Color(0xFFF5F5F5) else Color(0xFF1A1A1A)
     Box(modifier
         .size(WeeklyTestHost.SIZE.dp)
         .background(tile, RoundedCornerShape(WeeklyTestHost.tileRadius.dp))

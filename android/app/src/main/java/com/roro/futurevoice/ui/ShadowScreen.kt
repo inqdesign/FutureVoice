@@ -779,7 +779,7 @@ private fun ShadowLineScreen(
         }
     }
 
-    val dark = isSystemInDarkTheme()
+    val dark = com.roro.futurevoice.ui.appIsDark()
     val page = MaterialTheme.colorScheme.surface
     val cell = if (dark) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainer
     val secondary = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1180,9 +1180,9 @@ private fun diffText(steps: List<ShadowScore.DiffStep>, wrong: Color, missed: Co
 private fun secondsLabel(s: Double) = String.format(Locale.US, "%.1fs", s)
 private fun paceLabel(r: Double) = if (r <= 0) "—" else String.format(Locale.US, "%.2fx", r)
 
-@Composable private fun green() = if (isSystemInDarkTheme()) Color(0xFF30D158) else Color(0xFF34C759)
-@Composable private fun orange() = if (isSystemInDarkTheme()) Color(0xFFFF9F0A) else Color(0xFFFF9500)
-@Composable private fun red() = if (isSystemInDarkTheme()) Color(0xFFFF453A) else Color(0xFFFF3B30)
+@Composable private fun green() = if (com.roro.futurevoice.ui.appIsDark()) Color(0xFF30D158) else Color(0xFF34C759)
+@Composable private fun orange() = if (com.roro.futurevoice.ui.appIsDark()) Color(0xFFFF9F0A) else Color(0xFFFF9500)
+@Composable private fun red() = if (com.roro.futurevoice.ui.appIsDark()) Color(0xFFFF453A) else Color(0xFFFF3B30)
 
 /** Pace within 85–125 % reads healthy (iOS `paceColor`). */
 @Composable

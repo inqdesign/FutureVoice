@@ -40,5 +40,18 @@ fun AppearanceHost(onDark: (Boolean) -> Unit = {}, content: @Composable () -> Un
                 (if (dark) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO)
         }
     }
-    CompositionLocalProvider(LocalConfiguration provides config) { content() }
+    CompositionLocalProvider(LocalConfiguration provides config, LocalAppDark provides dark) { content() }
 }
+
+/**
+ * The learner's dark/light, as every popup, dialog and sheet must read it.
+ * Those open a composition of their own that re-provides LocalConfiguration
+ * from the ACTIVITY, so `isSystemInDarkTheme()` inside them read the phone's
+ * mode: with the app on Dark and the phone on Light, the export menu drew
+ * white text on a white fill. A local of our own is inherited unchanged.
+ */
+val LocalAppDark = androidx.compose.runtime.compositionLocalOf<Boolean?> { null }
+
+/** Use this, never `isSystemInDarkTheme()`. */
+@Composable
+fun appIsDark(): Boolean = LocalAppDark.current ?: androidx.compose.foundation.isSystemInDarkTheme()

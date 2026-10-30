@@ -153,7 +153,7 @@ fun TalkRing(
             // washing it again only turned the mosaic to mud. Tight spread
             // too — a vignette that reaches inward reads as a hole punched in
             // the page instead of a sphere.
-            val dark = isSystemInDarkTheme()
+            val dark = com.roro.futurevoice.ui.appIsDark()
             Canvas(Modifier.fillMaxSize()) {
                 val r = size.minDimension / 2f
                 drawCircle(

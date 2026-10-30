@@ -26,7 +26,7 @@ import androidx.compose.ui.graphics.Color
  */
 @Composable
 fun FutureVoiceTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = com.roro.futurevoice.ui.appIsDark(),
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current

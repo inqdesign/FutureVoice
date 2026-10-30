@@ -161,7 +161,7 @@ fun Futureself(
     theme: FutureselfTheme = FutureselfTheme.BLUE,
     virtualHeight: Float? = null,
 ) {
-    val dark = isSystemInDarkTheme()
+    val dark = com.roro.futurevoice.ui.appIsDark()
     val smoother = remember { LevelSmoother() }
     // The frame loop below is started ONCE, so it closes over whatever `level`
     // was at first composition — which is zero, always. Without this the

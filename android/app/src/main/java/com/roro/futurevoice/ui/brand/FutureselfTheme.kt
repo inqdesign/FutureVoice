@@ -26,7 +26,7 @@ enum class FutureselfTheme(@androidx.annotation.StringRes private val labelRes: 
      * gets a brighter variant of the same hue.
      */
     @Composable
-    fun tint(): Color = if (isSystemInDarkTheme()) darkTint else lightTint
+    fun tint(): Color = if (com.roro.futurevoice.ui.appIsDark()) darkTint else lightTint
 
     /** The tint for a surface that is always dark or always light, whatever
      *  the phone is set to (the Core welcome's night sky). */

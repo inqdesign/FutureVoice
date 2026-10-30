@@ -35,12 +35,20 @@ object BookExport {
         }
 
     /** Hand the file to whatever the learner keeps notes in. */
-    fun share(context: Context, file: File, mime: String) {
+    fun share(context: Context, file: File, mime: String, text: String? = null) {
         val uri = FileProvider.getUriForFile(
             context, "${context.packageName}.fileprovider", file)
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = mime
             putExtra(Intent.EXTRA_STREAM, uri)
+            // A messenger (KakaoTalk) takes text/plain from EXTRA_TEXT and
+            // ignores the stream: with the file alone it was offered and then
+            // sent nothing. Notes apps and mail still get the .md file.
+            if (text != null) {
+                putExtra(Intent.EXTRA_TEXT, text)
+                putExtra(Intent.EXTRA_SUBJECT, file.nameWithoutExtension)
+            }
+            clipData = android.content.ClipData.newRawUri(file.name, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         context.startActivity(Intent.createChooser(intent, null))
