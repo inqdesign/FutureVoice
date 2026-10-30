@@ -414,6 +414,11 @@ struct RootTabView: View {
             callInbox.debugTrialReport = nil
             trialReport = report
         }
+        .onChange(of: callInbox.debugCoreWelcome) { _, seat in
+            guard let seat else { return }
+            callInbox.debugCoreWelcome = nil
+            coreWelcome = seat
+        }
         .onChange(of: callInbox.debugWeekRecap) { _, recap in
             guard let recap else { return }
             callInbox.debugWeekRecap = nil

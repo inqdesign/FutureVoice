@@ -355,9 +355,12 @@ struct CoreWelcomeView: View {
         focus = nil
         withAnimation(.easeInOut(duration: 0.35)) { stage = .placing }
         let language = seat.language, name = name, hope = hope
-        Task {
-            await CoreClubService.publishTheme(themeRaw)
-            await CoreClubService.setEngraving(language: language, name: name, hope: hope)
+        // A preview is not a seat: nothing it picks may reach the account.
+        if !seat.isPreview {
+            Task {
+                await CoreClubService.publishTheme(themeRaw)
+                await CoreClubService.setEngraving(language: language, name: name, hope: hope)
+            }
         }
         Task { @MainActor in
             // The cube turns to face the learner first (CoreCubeView's
@@ -748,6 +751,7 @@ enum CoreWelcomeStore {
 
         var id: String { userId + ":" + language }
         var number: Int { index + 1 }
+        var isPreview: Bool { userId == "preview" }
     }
 
     private static func key(_ userId: String, _ language: String) -> String {
@@ -775,8 +779,14 @@ enum CoreWelcomeStore {
 
     #if DEBUG
     /// `-corewelcome 1`: the first seat of an empty club, nothing remembered.
-    static var preview: Seat {
-        Seat(userId: "preview", language: "en", index: 0, seats: 100, streak: 30, othersThemes: [])
+    static var preview: Seat { preview(language: "en") }
+
+    /// Me → Developer: seat 24 of a club where 23 already sit, in the
+    /// learner's own language. Nothing it picks is saved (`isPreview`).
+    static func preview(language: String) -> Seat {
+        let palettes = FutureselfTheme.allCases.map(\.rawValue)
+        let others = (0..<23).map { palettes[($0 * 5 + 2) % palettes.count] }
+        return Seat(userId: "preview", language: language, index: 23, seats: 100, streak: 30, othersThemes: others)
     }
     #endif
 }

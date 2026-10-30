@@ -641,6 +641,8 @@ final class DailyCallInbox: ObservableObject {
     @Published var debugWeekRecap: WeekRecap?
     /// Me → Developer's free-minutes report preview.
     @Published var debugTrialReport: TrialReport?
+    /// Me → Developer's Core welcome preview.
+    @Published var debugCoreWelcome: CoreWelcomeStore.Seat?
     /// A call screen closed before the free-minutes report it was about to
     /// raise could appear (the ✕ during its account lookup): `RootTabView`
     /// offers it instead, so the screen that owned it can't take it along.

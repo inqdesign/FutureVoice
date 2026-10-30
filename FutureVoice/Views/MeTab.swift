@@ -350,6 +350,20 @@ struct MeTab: View {
                             title: explain(key: "dev.trialReport.title", default: "Preview free-minutes report"),
                             subtitle: explain(key: "dev.trialReport.subtitle", default: "Your last 7 days, as a learner whose free time ran out"))
                     }
+                    // The Core's welcome plays once, the day a seat is
+                    // won 30 days in. Nothing picked here is saved.
+                    Button {
+                        let seat = CoreWelcomeStore.preview(language: appState.targetLanguage)
+                        dismiss()
+                        Task { @MainActor in
+                            try? await Task.sleep(nanoseconds: 700_000_000)
+                            DailyCallInbox.shared.debugCoreWelcome = seat
+                        }
+                    } label: {
+                        row(icon: "seal.fill",
+                            title: explain(key: "dev.coreWelcome.title", default: "Preview the Core welcome"),
+                            subtitle: explain(key: "dev.coreWelcome.subtitle", default: "What a learner sees on winning a seat. Nothing is saved"))
+                    }
                     Button {
                         let week = WeekRecapBuilder.lastWeek()
                         WeekRecapStore.shared.remove(endingAt: week.end)
