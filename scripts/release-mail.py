@@ -61,26 +61,26 @@ FOOTER, TAGLINE, PER_SEND_PAUSE = upd.FOOTER, upd.TAGLINE, upd.PER_SEND_PAUSE
 THREADS_URL = "https://www.threads.com/@adaywithboram"
 INSTAGRAM_URL = "https://ig.me/m/nawana.app"
 
-CAMPAIGN = "release-1.1.8"
+CAMPAIGN = "release-1.2.7"
 # Thumbnails are static files on the site (web/mail/<campaign>/), never
 # Supabase Storage. They must be DEPLOYED before a real send; --preview points
 # at the repo copies instead.
 IMG_DIR = os.path.join(os.path.dirname(HERE), "web", "mail", CAMPAIGN)
 IMG_BASE = f"{SITE_URL}/mail/{CAMPAIGN}"
-THUMBS = ["voice.jpg", "people.jpg", "profile.jpg", "challenge.jpg", "purpose.jpg", "effort.jpg"]  # one per FEATURES row, same order
+THUMBS = ["tutor.jpg", "bot.jpg", "core.jpg", "routine.jpg", "coach.jpg", "add.jpg"]  # one per FEATURES row, same order
 
 
 # --------------------------------------------------------------------------
 # Copy. Edit here. {version} is filled from app_release.
 # --------------------------------------------------------------------------
 
-SUBJECT = "나와나 {version}이 나왔습니다: 새 목소리, 새로운 사람들, 스피치 챌린지 · nawana {version} is here"
+SUBJECT = "나와나 {version}이 나왔습니다: 튜터 모드, 개인 튜터, 코어 · nawana {version} is here"
 
 KO_HERO = "나와나 {version}이 나왔습니다"
 KO_OPEN = [
     "안녕하세요, 나와나(nawana)입니다.",
-    "지난 메일 이후 작은 업데이트를 몇 번 거쳐, 이번에 꽤 큰 버전이 나왔습니다. "
-    "가장 크게 달라진 것은 목소리입니다. 하나씩 소개해 드립니다.",
+    "지난 메일 이후 업데이트가 여러 번 쌓여, 이번 버전으로 한 번에 소개해 드립니다. "
+    "가장 크게 달라진 것은 튜터 모드입니다. 미래의 내가 대화 상대에서 선생님이 됩니다.",
 ]
 KO_MORE_TITLE = "그리고 이런 것들도 좋아졌습니다"
 KO_CTA = "App Store에서 업데이트하기"
@@ -96,8 +96,8 @@ KO_SIGN = "나와나 드림"
 EN_HERO = "nawana {version} is here"
 EN_OPEN = [
     "Hello, this is nawana.",
-    "A few small updates since my last email have added up to a big version. "
-    "The biggest change is your voice. Here is what's new.",
+    "Several updates have landed since my last email, so here they all are in one go. "
+    "The biggest change is tutor mode: your future self goes from someone to talk with to your teacher.",
 ]
 EN_MORE_TITLE = "And a few more things got better"
 EN_CTA = "Update on the App Store"
@@ -113,75 +113,88 @@ EN_SIGN = "nawana"
 # The Android banner: news to celebrate, and the one thing we ask of readers.
 # Play's closed test invites by Google account, hence the Gmail ask.
 ANDROID_GREEN = "#34A853"
-KO_ANDROID = ("안드로이드", "안드로이드 베타가 곧 시작됩니다",
-    "드디어 안드로이드 폰에서도 나와나를 쓸 수 있게 됩니다. 곧 베타 테스트를 시작합니다. 함께 축하해 주세요!",
+KO_ANDROID = ("안드로이드", "안드로이드 테스트가 시작됐습니다",
+    "안드로이드 폰에서도 나와나를 쓸 수 있게 되었고, 지금 비공개 테스트를 하고 있습니다.",
     "주위에 안드로이드 폰을 쓰면서 나와나를 좋아할 만한 친구가 있다면 소개해 주세요. "
-    "친구의 Gmail 주소를 답장으로 보내 주시면 베타에 먼저 초대하겠습니다.",
-    "친구 소개하기", "안드로이드 베타 친구 소개")
-EN_ANDROID = ("Android", "The Android beta starts soon",
-    "nawana is finally coming to Android phones, and the beta test starts soon. Celebrate with us!",
+    "친구의 Gmail 주소를 답장으로 보내 주시면 테스트에 초대하겠습니다.",
+    "친구 소개하기", "안드로이드 테스트 친구 소개")
+EN_ANDROID = ("Android", "The Android test has started",
+    "nawana now runs on Android phones, and a closed test is under way.",
     "If you have a friend on Android who would love nawana, introduce them to me. "
-    "Reply with their Gmail address and I'll invite them to the beta first.",
-    "Introduce a friend", "Android beta: a friend for you")
+    "Reply with their Gmail address and I'll invite them to the test.",
+    "Introduce a friend", "Android test: a friend for you")
 
 # (accent colour, ko tag, ko title, ko line, en tag, en title, en line)
 FEATURES = [
-    ("#0A84FF", "목소리", "더 나 같은 목소리",
-     "목소리를 새 음성 엔진으로 옮겼습니다. 더 자연스럽고 더 나 같은 목소리로 말하고, 대답도 빨라졌습니다. "
-     "업데이트 후 앱을 열면 안내가 나옵니다. 악센트를 고르고 한 번 누르면 "
-     "휴대폰에 있는 내 녹음으로 바로 다시 만들어집니다.",
-     "Your voice", "More like you",
-     "Your voice moves to a new voice engine. It sounds more natural and more like you, and replies come faster. "
-     "Open the app after updating and you'll see a note: pick an accent, tap once, "
-     "and your voice is rebuilt from the recording on your phone."),
-    ("#FF375F", "상황연습", "새로운 사람, 새로운 이야기",
-     "거리에서, 카페에서 처음 보는 사람과 말을 트듯, 유창한 내가 새로운 사람들을 만나 이야기를 나눕니다. "
-     "나는 그 대화를 지켜보고, 거기서 나온 단어와 표현은 그대로 내 교재가 됩니다. "
-     "새로운 사람을 만날수록 할 수 있는 이야기가 넓어집니다. 사람마다 자기 목소리와 억양으로 말합니다.",
-     "Watch", "New people, new conversations",
-     "Like striking up a conversation in a café or on the street, your fluent self meets new people and talks with them. "
-     "You watch, and the words and expressions from each conversation become your own book. "
-     "Every new person brings new topics, and more you can say. Each one speaks in their own voice and accent."),
-    ("#FF9F0A", "사람 찾기", "유창한 나를 공개하기",
-     "내 프로필을 공개해 두면, 다른 학습자들도 유창한 나와 자유롭게 이야기를 나눌 수 있습니다. "
-     "이때는 내 목소리가 아니라, 우리나라 목소리 중에서 내가 직접 고른 목소리로 만납니다. "
-     "내 목소리 그대로 만나게 하면 더 좋겠다는 생각도 있어서 아직 고민하고 있습니다. 어떻게 생각하시는지 들려주세요.",
-     "Find people", "Let others meet your fluent self",
-     "Make your profile public and other learners can talk freely with your fluent self. "
-     "They meet it in a voice you pick from voices of your own country, not in your own voice. "
-     "Meeting it in your own voice might be better, and I'm still thinking that through. Tell me what you think."),
-    ("#7C4DDB", "스피치", "챌린지가 열렸습니다",
-     "모두가 같은 원고를 읽고 점수로 순위를 겨룹니다. 지금 도전해서 순위표에 이름을 올려 보세요. "
-     "몇 번이고 다시 읽을 수 있고, 가장 좋은 점수가 남습니다. 지금 1등이 누구인지 확인해 보세요.",
-     "Speech", "Challenges are open",
-     "Everyone reads the same script and competes for the top score. Take it on now and get your name on the leaderboard. "
-     "Read it as many times as you like; your best score is the one that stays. Go see who's on top right now."),
-    ("#30B05A", "대화", "나에게 맞는 주제",
-     "왜 배우는지(시험, 면접, 일, 여행 등) 고르면 대화 탭의 주제가 그에 맞춰 바뀌고, 추천 루틴도 짜 드립니다.",
-     "Talk", "Topics that fit you",
-     "Choose why you're learning (an exam, an interview, work, travel and more) and the Talk tab's topics follow it, "
-     "with a routine suggested for you."),
-    ("#F2994A", "성장", "나의 노력",
-     "성장 탭에서 '나의 노력'을 누르면 한 주, 한 달 동안 무엇을 얼마나 했는지 한눈에 볼 수 있습니다.",
-     "Progress", "Your effort",
-     "Tap “Your effort” on the Progress tab to see what you practised, and how much, over a week or a month."),
+    ("#00A3BF", "튜터 모드", "미래의 내가 선생님으로",
+     "배우고 싶은 말을 알려 주시면 미래의 내가 과제 서너 개로 수업을 짭니다. "
+     "과제마다 예시를 들려준 뒤 직접 말해 보게 하고, 실수 없이 말할 때까지 함께 연습합니다. "
+     "주제를 하나씩 통과하면 마지막에 최종 점검이 있고, 멈춘 수업은 다음 통화에서 이어집니다. "
+     "홈 화면의 링을 옆으로 넘기면 자유 대화와 튜터 모드를 바로 바꿀 수 있습니다.",
+     "Tutor mode", "Your future self, now your tutor",
+     "Tell it what you want to learn to say and your future self plans a lesson of three or four challenges. "
+     "For each one it gives you an example, then has you say it yourself until you get it right. "
+     "Pass the topics one by one and a final check waits at the end; a lesson you stop picks up on your next call. "
+     "Swipe the ring on the Home Screen to switch between free talk and tutor mode."),
+    ("#FF9F0A", "개인 튜터", "매일 오늘 할 일을",
+     "대화 탭 오른쪽 아래에 개인 튜터가 생겼습니다. 매일 오늘 할 일을 정리해 주고, "
+     "새 팟캐스트 에피소드나 내 관심사에 맞춘 읽을거리도 골라 줍니다. "
+     "연습에 대해 궁금한 것은 무엇이든 '물어보기'로 물어보실 수 있습니다.",
+     "Personal tutor", "Today's plan, every day",
+     "A personal tutor now sits at the bottom right of the Talk tab. Each day it lays out what's on for today, "
+     "and picks a new podcast episode or something to read on your interests. "
+     "Anything you want to know about your practice, just tap Ask."),
+    ("#F2994A", "코어", "30일을 채우면 내 큐브가",
+     "30일 연속으로 말하면 다음 날을 기다리지 않고 바로 코어에 들어갑니다. "
+     "들어가는 순간 큐브 색을 고르고, 이름과 이루고 싶은 것을 새겨 내 자리에 놓습니다. "
+     "다른 멤버의 큐브에는 하트나 짧은 응원을 남길 수 있고, 내 자리에 응원이 오면 알림이 옵니다.",
+     "The Core", "Thirty days, and a cube of your own",
+     "Speak thirty days in a row and you enter the Core right away, no waiting for the next morning. "
+     "As you enter, you pick a colour for your cube, carve your name and what you hope to achieve, and set it in your seat. "
+     "Leave a heart or a short cheer on another member's cube, and you'll get a notification when one lands on yours."),
+    ("#0A84FF", "루틴", "나만의 루틴",
+     "매일 오는 전화의 시간과 요일을 정하고, 다시 말하기, 복습, 쉐도잉, 듣기, 스피치 중 하고 싶은 것을 골라 "
+     "시간을 정하면 한 주 계획표가 됩니다. 대화 탭 위쪽의 '활동'을 누르면 열립니다. "
+     "홈 화면에 '나의 루틴' 위젯을 두면 오늘 할 일이 보이고, 누르면 바로 시작합니다.",
+     "Routine", "Your own routine",
+     "Set the days and times of your daily call, then pick what else you want to do (say it again, review, "
+     "shadowing, listening, speech) and when. That becomes your week. Tap Activity at the top of the Talk tab to open it. "
+     "Add the My routine widget to your Home Screen to see what's on today; a tap starts it."),
+    ("#30B05A", "대화", "막히면 한 문장",
+     "질문에 막히면 '이렇게 말해 보세요'가 내 레벨에 맞는 한 문장을 띄워 줍니다. "
+     "지금까지 나눈 대화와 내 프로필을 보고 제안하기 때문에, 내가 이미 한 말과 어긋나지 않습니다. "
+     "빈칸에는 내 이야기를 넣으면 됩니다.",
+     "Talk", "One sentence when you're stuck",
+     "Stuck on a question? “Try saying” shows one sentence at your level. "
+     "It reads the whole call and your profile, so it never contradicts what you've already said. "
+     "Fill the blank with your own story."),
+    ("#FF375F", "복습", "단어를 직접 넣기",
+     "단어, 표현, 문장을 직접 입력해서 내 목록에 넣을 수 있습니다. "
+     "입력하는 동안 이미 있는 것은 뜻과 함께 찾아 보여 드리니, 같은 카드가 두 번 생기지 않습니다.",
+     "Review", "Add your own words",
+     "Type in a word, an expression or a sentence and it goes on your list. "
+     "As you type, anything already there shows up with its meaning, so nothing is added twice."),
 ]
 
 FIXES_KO = [
-    "통화에서 답이 목소리와 함께 한 문장씩 화면에 나옵니다.",
-    "섀도잉과 스피치 채점이 더 정확해졌습니다. 빠뜨린 부분은 원고에 적힌 그대로 보여 드립니다.",
-    "주간 테스트에 새 문항이 생겼습니다. 내가 틀렸던 문법을 새 문장으로 연습합니다.",
-    "나의 루틴에서 블록을 모두 시작했으면 지킨 날로 칩니다.",
-    "목소리를 30일에 한 번만 바꿀 수 있던 제한이 없어졌습니다. 나 → 악센트에서 「그대로」를 고르면 원래 목소리로 돌아갑니다.",
-    "Mac에서 통화가 연결되지 않던 문제, 나 탭을 열 때 앱이 닫히던 문제를 고쳤습니다.",
+    "처음 시작할 때 이루고 싶은 미래를 고를 수 있습니다. 유창한 나는 그 미래를 이미 살고 있는 사람처럼 이야기합니다. 나 → 프로필 → 나의 미래에서 바꿀 수 있습니다.",
+    "교정 문장이 내 문장을 군데군데 고쳐 붙이는 대신, 내가 하려던 말을 내 수준에 맞게 다시 써 줍니다.",
+    "다시 말하기에서 '내 대사'와 '양쪽 대사'를 골라, 미래의 나 대사까지 직접 말해 볼 수 있습니다.",
+    "스피치 결과에서 틀린 곳을 원고 위에 빨간 펜으로 표시해 줍니다. '자기소개 해 주세요' 챌린지도 새로 열렸습니다.",
+    "매일 오는 전화가 매번 같은 얘기를 하지 않습니다. 지난 대화, 가벼운 얘기, 오늘의 뉴스, 의견을 묻는 질문으로 돌아가며 걸려 오고, 거절한 다음 날에도 제때 옵니다.",
+    "음성 인식이 잘못 알아들었다면 복습 카드의 ⋯에서 '잘못 들림'을 고르세요. 그 말은 점수에서 빠지고 카드도 정리됩니다.",
+    "팟캐스트 에피소드 옆 책 버튼을 누르면 그 에피소드가 내 복습 교재가 됩니다.",
+    "스페인어를 배울 수 있고, 영국·호주 영어나 스페인 억양을 고르면 미래의 나도 그곳에서 쓰는 단어로 말합니다.",
 ]
 FIXES_EN = [
-    "In a call, replies now appear one sentence at a time, together with the voice.",
-    "Shadowing and Speech scores are more accurate, and anything you skipped is shown as it's written in the script.",
-    "The weekly test has a new kind of question: the grammar you got wrong, practised in a new sentence.",
-    "In My routine, a day counts once you've started every block.",
-    "The limit of one voice change every 30 days is gone. Choose “Original” in Me → Accent to go back to your voice with no accent.",
-    "Fixed calls not connecting on a Mac, and the app closing when you opened the Me tab.",
+    "When you start, you can choose the future you want. Your fluent self talks like someone already living it. Change it any time in Me → Profile → My future.",
+    "Corrections no longer patch your sentence here and there; they rewrite what you meant to say, at your level.",
+    "In Say it again, choose “My lines” or “Both sides” and read your fluent self's lines too.",
+    "Speech results mark your slips on the script in red pen, and a new “Introduce yourself” challenge is open.",
+    "Your daily call takes turns between your last talk, light chat, today's news and a question asking your opinion, and it rings on time even after you declined one.",
+    "If the speech recognition got you wrong, choose “Misheard” under ⋯ on a review card. That line leaves your score and its cards are cleared.",
+    "Tap the book button next to a podcast episode and it becomes a review book of your own.",
+    "You can now learn Spanish, and with a British, Australian or Castilian accent your fluent self uses the words people say there.",
 ]
 
 

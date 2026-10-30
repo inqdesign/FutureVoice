@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Realtime Trial</title>
+<style>
+  :root { --bg:#fff; --fg:#111; --muted:#6b6b6b; --line:#e4e4e4; --me:#f2f2f7; --accent:#0a84ff; --red:#ff3b30; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#111; --fg:#f2f2f2; --muted:#9a9a9a; --line:#2c2c2e; --me:#1c1c1e; } }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.45 -apple-system, system-ui, sans-serif; }
+  main { max-width:720px; margin:0 auto; padding:20px 16px 60px; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  .sub { color:var(--muted); margin:0 0 16px; }
+  .row { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:12px; }
+  label { display:flex; flex-direction:column; font-size:12px; color:var(--muted); gap:4px; }
+  select, button { font:inherit; padding:7px 10px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--fg); }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; padding:9px 18px; }
+  button.stop { background:var(--red); border-color:var(--red); }
+  #status { color:var(--muted); margin:8px 0 14px; min-height:1.4em; }
+  #log { border-top:1px solid var(--line); padding-top:10px; }
+  .line { margin:8px 0; padding:8px 10px; border-radius:10px; max-width:85%; }
+  .ai { background:var(--me); }
+  .you { margin-left:auto; border:1px solid var(--line); }
+  .meta { font-size:11px; color:var(--muted); margin-top:3px; }
+  table { border-collapse:collapse; width:100%; margin:14px 0; font-size:13px; }
+  td { padding:5px 4px; border-bottom:1px solid var(--line); }
+  td:last-child { text-align:right; font-variant-numeric:tabular-nums; }
+</style>
+</head>
+<body>
+<main>
+  <h1>gpt-realtime 통화 시험</h1>
+  <p class="sub">앱의 실제 통화 프롬프트로 연결해요. 이어폰을 끼면 에코가 덜해요.</p>
+
+  <div class="row">
+    <label>모델
+      <select id="model">
+        <option value="gpt-realtime-2.1-mini">gpt-realtime-2.1-mini</option>
+        <option value="gpt-realtime-2.1">gpt-realtime-2.1</option>
+      </select>
+    </label>
+    <label>배우는 언어
+      <select id="lang">
+        <option value="en">English</option><option value="ko">한국어</option>
+        <option value="ja">日本語</option><option value="de">Deutsch</option><option value="es">Español</option>
+      </select>
+    </label>
+    <label>레벨
+      <select id="level"><option value="a1">A1</option><option value="a2" selected>A2</option><option value="b1">B1</option></select>
+    </label>
+    <label>목소리
+      <select id="voice">
+        <option>marin</option><option>cedar</option><option>alloy</option><option>ash</option>
+        <option>ballad</option><option>coral</option><option>echo</option><option>sage</option><option>shimmer</option><option>verse</option>
+      </select>
+    </label>
+    <label>말 끝 판단
+      <select id="vad">
+        <option value="server-fast" selected>침묵 0.4초 (가장 빠름)</option>
+        <option value="semantic-high">의미 기반 (빠르게)</option>
+        <option value="semantic-auto">의미 기반 (보통)</option>
+        <option value="semantic-low">의미 기반 (느긋하게)</option>
+        <option value="server">침묵 0.8초</option>
+      </select>
+    </label>
+  </div>
+  <div class="row">
+    <button id="go" class="primary">통화 시작</button>
+  </div>
+  <div id="status"></div>
+
+  <table id="stats" hidden>
+    <tr><td>통화 시간</td><td id="sDur">0:00</td></tr>
+    <tr><td>말 끝 → 첫 소리 (평균 / 최근)</td><td id="sLat">-</td></tr>
+    <tr><td>모델 비용 (추정)</td><td id="sModel">$0.0000</td></tr>
+    <tr><td>받아쓰기 비용 (추정)</td><td id="sAsr">$0.0000</td></tr>
+    <tr><td><b>분당 원가 (추정)</b></td><td id="sMin"><b>-</b></td></tr>
+    <tr><td>비교: 지금 우리 통화</td><td>약 $0.030 / 분</td></tr>
+  </table>
+
+  <div id="log"></div>
+</main>
+<script>
+// $ per 1M tokens. Third-party listings, not OpenAI's page — check before quoting.
+const PRICE = {
+  "gpt-realtime-2.1":      { tIn: 4.0, aIn: 32, cached: 0.40, tOut: 24,  aOut: 64 },
+  "gpt-realtime-2.1-mini": { tIn: 0.6, aIn: 10, cached: 0.30, tOut: 2.4, aOut: 20 },
+};
+const ASR_PER_MIN = 0.003; // gpt-4o-mini-transcribe
+
+const $ = (id) => document.getElementById(id);
+let pc, dc, mic, startedAt, timer;
+let modelCost = 0, asrSeconds = 0, speechStoppedAt = 0, waitingFirstAudio = false;
+const lats = [];
+
+function status(t) { $("status").textContent = t; }
+function line(who, text, meta) {
+  const d = document.createElement("div");
+  d.className = "line " + who;
+  d.textContent = text;
+  if (meta) { const m = document.createElement("div"); m.className = "meta"; m.textContent = meta; d.appendChild(m); }
+  $("log").appendChild(d);
+  d.scrollIntoView({ block: "end" });
+}
+function money(x) { return "$" + x.toFixed(4); }
+function render() {
+  const sec = (Date.now() - startedAt) / 1000;
+  $("sDur").textContent = `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
+  const asr = asrSeconds / 60 * ASR_PER_MIN;
+  $("sModel").textContent = money(modelCost);
+  $("sAsr").textContent = money(asr);
+  $("sMin").innerHTML = sec > 20 ? `<b>${money((modelCost + asr) / (sec / 60))} / 분</b>` : "<b>-</b>";
+  if (lats.length) {
+    const avg = lats.reduce((a, b) => a + b, 0) / lats.length;
+    $("sLat").textContent = `${(avg / 1000).toFixed(2)}초 / ${(lats.at(-1) / 1000).toFixed(2)}초`;
+  }
+}
+
+function costOf(usage, model) {
+  const p = PRICE[model]; if (!usage || !p) return 0;
+  const i = usage.input_token_details || {}, o = usage.output_token_details || {};
+  const c = i.cached_tokens_details || {};
+  const cachedText = c.text_tokens || 0, cachedAudio = c.audio_tokens || 0;
+  const text = Math.max(0, (i.text_tokens || 0) - cachedText);
+  const audio = Math.max(0, (i.audio_tokens || 0) - cachedAudio);
+  return (text * p.tIn + audio * p.aIn + (cachedText + cachedAudio) * p.cached
+        + (o.text_tokens || 0) * p.tOut + (o.audio_tokens || 0) * p.aOut) / 1e6;
+}
+
+function onEvent(e, model) {
+  switch (e.type) {
+    case "input_audio_buffer.speech_stopped":
+      speechStoppedAt = performance.now(); waitingFirstAudio = true; break;
+    case "input_audio_buffer.speech_started":
+      waitingFirstAudio = false; break;
+    case "output_audio_buffer.started":
+      if (waitingFirstAudio && speechStoppedAt) { lats.push(performance.now() - speechStoppedAt); render(); }
+      waitingFirstAudio = false; break;
+    case "conversation.item.input_audio_transcription.completed":
+      if (e.usage?.seconds) asrSeconds += e.usage.seconds;
+      else if (e.usage?.input_tokens) asrSeconds += e.usage.input_tokens / 10; // ~10 audio tokens/s
+      line("you", e.transcript || "(못 알아들음)"); break;
+    case "response.output_audio_transcript.done":
+    case "response.audio_transcript.done":
+      line("ai", e.transcript, lats.length && !waitingFirstAudio ? `첫 소리까지 ${(lats.at(-1) / 1000).toFixed(2)}초` : ""); break;
+    case "response.done":
+      modelCost += costOf(e.response?.usage, model); render(); break;
+    case "error":
+      line("ai", "오류: " + (e.error?.message || JSON.stringify(e))); break;
+  }
+}
+
+async function start() {
+  const model = $("model").value, vad = $("vad").value;
+  const q = new URLSearchParams({
+    model, lang: $("lang").value, level: $("level").value, voice: $("voice").value,
+    vad: vad.startsWith("semantic") ? "semantic" : "server",
+    eagerness: vad.split("-")[1] || "low",
+    silence: vad === "server-fast" ? "400" : "800",
+  });
+  // The mic comes first: Chrome's permission bubble is easy to miss, and a
+  // page that just says "connecting" while it waits reads as broken.
+  status("마이크 허용을 기다리는 중… 주소창 왼쪽에 뜬 팝업에서 '허용'을 눌러 주세요.");
+  try {
+    mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+  } catch (e) {
+    status(e.name === "NotAllowedError"
+      ? "마이크가 막혀 있어요. 주소창 왼쪽 아이콘 → 마이크 허용. 그래도 안 되면 macOS 설정 → 개인정보 보호 및 보안 → 마이크 → Chrome 켜기."
+      : "마이크를 열 수 없어요: " + e.message);
+    return;
+  }
+  status("연결 중…");
+  const s = await fetch("/secret?" + q).then((r) => r.json());
+  if (s.error) { status(s.error); mic.getTracks().forEach((t) => t.stop()); mic = null; return; }
+
+  pc = new RTCPeerConnection();
+  const audio = document.createElement("audio"); audio.autoplay = true; document.body.appendChild(audio);
+  pc.ontrack = (ev) => { audio.srcObject = ev.streams[0]; };
+  pc.addTrack(mic.getTracks()[0]);
+  dc = pc.createDataChannel("oai-events");
+  dc.onmessage = (m) => onEvent(JSON.parse(m.data), model);
+  dc.onopen = () => {
+    // The fluent self speaks first, as the app's opener does.
+    dc.send(JSON.stringify({ type: "conversation.item.create", item: { type: "message", role: "user",
+      content: [{ type: "input_text", text: "[The call just connected. Say hello first, in one or two short sentences, and ask one easy question.]" }] } }));
+    dc.send(JSON.stringify({ type: "response.create" }));
+  };
+
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  const r = await fetch("https://api.openai.com/v1/realtime/calls", {
+    method: "POST", body: offer.sdp,
+    headers: { Authorization: `Bearer ${s.value}`, "Content-Type": "application/sdp" },
+  });
+  if (!r.ok) { status(`연결 실패 ${r.status}: ${await r.text()}`); stop(); return; }
+  await pc.setRemoteDescription({ type: "answer", sdp: await r.text() });
+
+  startedAt = Date.now(); modelCost = 0; asrSeconds = 0; lats.length = 0;
+  $("log").innerHTML = ""; $("stats").hidden = false;
+  timer = setInterval(render, 1000);
+  status(`통화 중 · ${model}`);
+  $("go").textContent = "끊기"; $("go").classList.add("stop");
+}
+
+function stop() {
+  clearInterval(timer);
+  dc?.close(); pc?.close(); mic?.getTracks().forEach((t) => t.stop());
+  pc = dc = mic = null;
+  status(startedAt ? "끊었어요. 숫자는 위에 남아 있어요." : "");
+  $("go").textContent = "통화 시작"; $("go").classList.remove("stop");
+}
+
+let busy = false;
+$("go").onclick = async () => {
+  if (pc) return stop();
+  if (busy) return;
+  busy = true;
+  try { await start(); } catch (e) { status(String(e)); stop(); } finally { busy = false; }
+};
+</script>
+</body>
+</html>
