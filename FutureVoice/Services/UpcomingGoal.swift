@@ -1,0 +1,192 @@
+import Foundation
+import SwiftUI
+
+/// Something real the learner is preparing for: an exam on a date, an
+/// interview at a company, a presentation, a move (2026-10-30, founder: "the
+/// exam, when it is; the interview, where it is; all of it in one place, and
+/// the tutor builds its content from it"). `LearningPurpose` says WHY they
+/// learn and `FutureGoal` what the fluent self already does; this is the
+/// dated, named thing in between, and the tutor bot reads it.
+///
+/// Kept in its own file and its own sync kind, never on `UserPersona`: an
+/// older build that saves the profile re-encodes it without the fields it
+/// doesn't know, and the newer `updatedAt` would win, erasing the goals.
+struct UpcomingGoal: Codable, Identifiable, Equatable {
+    enum Kind: String, Codable, CaseIterable, Identifiable {
+        case interview, exam, presentation, move, trip, other
+        var id: String { rawValue }
+
+        var label: String {
+            switch self {
+            case .interview:    return explain("Interview")
+            case .exam:         return explain("Exam")
+            case .presentation: return explain("Presentation")
+            case .move:         return explain("Moving")
+            case .trip:         return explain("Trip")
+            case .other:        return explain("Something else")
+            }
+        }
+
+        var symbol: String {
+            switch self {
+            case .interview:    return "person.text.rectangle.fill"
+            case .exam:         return "checklist"
+            case .presentation: return "person.wave.2.fill"
+            case .move:         return "house.fill"
+            case .trip:         return "airplane"
+            case .other:        return "star.fill"
+            }
+        }
+
+        var tint: Color {
+            switch self {
+            case .interview:    return .purple
+            case .exam:         return .orange
+            case .presentation: return .teal
+            case .move:         return .green
+            case .trip:         return .cyan
+            case .other:        return .blue
+            }
+        }
+
+        /// The purpose this goal is a case of — saving the goal turns it on.
+        var purpose: LearningPurpose? {
+            switch self {
+            case .interview:    return .job
+            case .exam:         return .exam
+            case .presentation: return .work
+            case .move:         return .abroad
+            case .trip:         return .travel
+            case .other:        return nil
+            }
+        }
+
+        /// The editor's example title — what kind of line belongs there.
+        var titlePrompt: String {
+            switch self {
+            case .interview:    return explain("e.g. Lufthansa cabin crew")
+            case .exam:         return explain("e.g. IELTS, band 7")
+            case .presentation: return explain("e.g. Quarterly review with the Berlin team")
+            case .move:         return explain("e.g. Moving to Munich")
+            case .trip:         return explain("e.g. Two weeks in Japan")
+            case .other:        return explain("What are you preparing for?")
+            }
+        }
+
+        var placePrompt: String {
+            switch self {
+            case .interview:    return explain("Company or place")
+            case .exam:         return explain("Test centre")
+            case .presentation: return explain("Where, and for whom")
+            case .move, .trip:  return explain("Where")
+            case .other:        return explain("Where")
+            }
+        }
+    }
+
+    var id = UUID()
+    var kind: Kind
+    var title: String
+    /// The day it happens. Optional: "someday this year" is still a goal.
+    var date: Date?
+    var place: String = ""
+    /// Anything else: the role, the score they need, who will be there.
+    var notes: String = ""
+    /// The target language it was made under — an interview is in one
+    /// language, and the tutor of another language shouldn't drill it.
+    var language: String
+    var createdAt = Date()
+    var updatedAt = Date()
+
+    /// Days from today to the goal's day: 0 = today, negative = past.
+    func daysLeft(now: Date = Date()) -> Int? {
+        guard let date else { return nil }
+        return PromptClock.calendarDays(from: now, to: date)
+    }
+
+    /// Over once its day has passed.
+    func isPast(now: Date = Date()) -> Bool { (daysLeft(now: now) ?? 0) < 0 }
+
+    /// "D-12", "D-day". Nil without a date or once it is over.
+    func countdown(now: Date = Date()) -> String? {
+        guard let d = daysLeft(now: now), d >= 0 else { return nil }
+        return d == 0 ? explain("D-day") : "D-\(d)"
+    }
+
+    /// One plain line for a prompt.
+    func promptLine(now: Date = Date()) -> String {
+        var parts = ["\(kind.rawValue): \(title)"]
+        if !place.isEmpty { parts.append("at \(place)") }
+        if let date {
+            let f = DateFormatter()
+            f.locale = Locale(identifier: "en_US_POSIX")
+            f.dateFormat = "EEE d MMM yyyy"
+            let left = daysLeft(now: now) ?? 0
+            parts.append("on \(f.string(from: date)) (\(left == 0 ? "today" : "in \(left) days"))")
+        } else {
+            parts.append("no date set")
+        }
+        if !notes.isEmpty { parts.append("notes: \(notes)") }
+        return parts.joined(separator: ", ")
+    }
+}
+
+/// `Documents/upcoming_goals.json`, one list for the install (a goal is the
+/// learner's, not a language's; each carries its own `language`).
+@MainActor
+final class UpcomingGoalStore: ObservableObject {
+    static let shared = UpcomingGoalStore()
+    static let filename = "upcoming_goals.json"
+
+    @Published private(set) var goals: [UpcomingGoal] = []
+
+    private var url: URL { SyncFiles.url(Self.filename, lang: nil) }
+
+    private init() { reload() }
+
+    func reload() {
+        goals = Self.sorted(SyncFiles.read([UpcomingGoal].self, at: url,
+                                           decoder: SyncFiles.storeDecoder, empty: []) ?? [])
+    }
+
+    /// The goals still ahead for a target language, soonest first; undated
+    /// ones after the dated ones.
+    func active(language: String, now: Date = Date()) -> [UpcomingGoal] {
+        goals.filter { LanguageCatalog.sameLanguage($0.language, language) && !$0.isPast(now: now) }
+    }
+
+    func save(_ goal: UpcomingGoal) {
+        var g = goal
+        g.updatedAt = Date()
+        var list = goals.filter { $0.id != g.id }
+        list.append(g)
+        write(list)
+        // The goal is a case of a purpose: turn that purpose on, so Talk's
+        // chips and the routine know about it too.
+        if let p = g.kind.purpose, !LearningPurposeStore.purposes.contains(p) {
+            LearningPurposeStore.purposes.append(p)
+        }
+        Analytics.capture("upcoming_goal_saved", ["kind": g.kind.rawValue, "dated": g.date != nil])
+    }
+
+    func delete(_ id: UUID) {
+        write(goals.filter { $0.id != id })
+    }
+
+    private func write(_ list: [UpcomingGoal]) {
+        goals = Self.sorted(list)
+        try? SyncFiles.write(goals, to: url, encoder: SyncFiles.storeEncoder)
+        SyncEngine.noteChanged(.upcomingGoal)
+    }
+
+    static func sorted(_ list: [UpcomingGoal]) -> [UpcomingGoal] {
+        list.sorted { a, b in
+            switch (a.date, b.date) {
+            case let (x?, y?): return x < y
+            case (_?, nil): return true
+            case (nil, _?): return false
+            case (nil, nil): return a.createdAt < b.createdAt
+            }
+        }
+    }
+}

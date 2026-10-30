@@ -140,6 +140,10 @@ private struct TutorNoteCard: View {
                     }
                 }
             }
+            // The nearest thing they're preparing for, with its countdown.
+            if let goal = UpcomingGoalStore.shared.active(language: appState.targetLanguage).first {
+                UpcomingGoalRow(goal: goal)
+            }
             if !bot.picks.isEmpty {
                 TutorPickRows(picks: Array(bot.picks.prefix(3)), balance: bot.balance)
             }

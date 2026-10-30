@@ -25,6 +25,10 @@ struct MyProfileView: View {
     @State private var loaded = false
     @State private var editingProfile = false
     @State private var editingFuture = false
+    @ObservedObject private var upcoming = UpcomingGoalStore.shared
+    /// The goal being edited; `addingGoal` opens an empty one.
+    @State private var editingGoal: UpcomingGoal?
+    @State private var addingGoal = false
     @State private var confirmingWithdraw = false
     @State private var isWorking = false
     @State private var errorText: String?
@@ -38,6 +42,7 @@ struct MyProfileView: View {
     var body: some View {
         Form {
             profileSection
+            upcomingSection
             futureSection
             publicSection
         }
@@ -64,6 +69,12 @@ struct MyProfileView: View {
         }
         .sheet(isPresented: $editingFuture) {
             FutureGoalsEditor().environmentObject(appState)
+        }
+        .sheet(item: $editingGoal) { goal in
+            UpcomingGoalEditor(goal: goal, language: appState.targetLanguage).environmentObject(appState)
+        }
+        .sheet(isPresented: $addingGoal) {
+            UpcomingGoalEditor(goal: nil, language: appState.targetLanguage).environmentObject(appState)
         }
         .confirmationDialog(
             explain("Take your intro out of the pool? Learners who already met your persona keep their own past talks."),
@@ -113,6 +124,22 @@ struct MyProfileView: View {
 
     /// What their fluent self already does (`FutureGoal`). Only for them —
     /// the public section below never reads it.
+    /// What the learner is preparing for — an exam, an interview — with
+    /// its date and place (`UpcomingGoal`). Past ones drop off the list.
+    private var upcomingSection: some View {
+        Section {
+            ForEach(upcoming.active(language: appState.targetLanguage)) { goal in
+                Button { editingGoal = goal } label: { UpcomingGoalRow(goal: goal) }
+                    .buttonStyle(.plain)
+            }
+            Button(explain("Add a goal")) { addingGoal = true }
+        } header: {
+            Text("Coming up")
+        } footer: {
+            Text(explain("An exam, an interview, a move — your tutor prepares you for it."))
+        }
+    }
+
     private var futureSection: some View {
         Section {
             ForEach(persona?.futureGoals ?? []) { goal in

@@ -476,6 +476,11 @@ final class TutorChat: ObservableObject {
             let about = [p.occupation, p.city, p.interests.joined(separator: ", ")].filter { !$0.isEmpty }
             if !about.isEmpty { lines.append("They told setup: " + about.joined(separator: " · ")) }
         }
+        let upcoming = UpcomingGoalStore.shared.active(language: appState.targetLanguage, now: now)
+        if !upcoming.isEmpty {
+            lines.append("What they are preparing for (their own words; tie your next step to the nearest one):")
+            for g in upcoming.prefix(4) { lines.append("- " + g.promptLine(now: now)) }
+        }
         lines.append("Streak: \(t.streak) days. Talked today: \(t.talkedToday) min. Review cards waiting: \(t.dueCards).")
 
         if t.restDay {

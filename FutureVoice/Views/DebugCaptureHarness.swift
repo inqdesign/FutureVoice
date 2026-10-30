@@ -109,6 +109,17 @@ enum DebugCapture {
         .init(title: "a mix-up with someone's name", blurb: "At a cafe: they called the wrong name for my drink and I sort it out."),
     ]
 
+    /// One interview twelve days out, for the profile's Coming up section.
+    @MainActor
+    private static func seedSampleGoal(_ appState: AppState) {
+        guard !UpcomingGoalStore.shared.goals.contains(where: { $0.title == "Lufthansa cabin crew" }) else { return }
+        UpcomingGoalStore.shared.save(UpcomingGoal(
+            kind: .interview, title: "Lufthansa cabin crew",
+            date: Calendar.current.date(byAdding: .day, value: 12, to: Calendar.current.startOfDay(for: Date())),
+            place: "Lufthansa, Frankfurt", notes: "First round: a group exercise, then one to one in English",
+            language: appState.targetLanguage))
+    }
+
     /// A profile with both halves filled: the typed fields and three lines
     /// the fluent self picked up, classified the way the summary call would.
     private static func seedSamplePersona(_ appState: AppState) {
@@ -745,7 +756,14 @@ enum DebugCapture {
         case "my-profile":
             // The one "me" page: profile on top, what strangers see below.
             once("sample-persona") { seedSamplePersona(appState) }
+            once("sample-goal") { seedSampleGoal(appState) }
             return AnyView(NavigationStack { MyProfileView(showsDone: true) }
+                .environmentObject(appState))
+        case "goal-editor":
+            // Me → Profile → Coming up: one goal, opened to change it.
+            once("sample-goal") { seedSampleGoal(appState) }
+            return AnyView(UpcomingGoalEditor(goal: UpcomingGoalStore.shared.goals.first,
+                                              language: appState.targetLanguage)
                 .environmentObject(appState))
         case "profile-name":
             // Me → Profile, first step: the avatar sits in the SAME card as
