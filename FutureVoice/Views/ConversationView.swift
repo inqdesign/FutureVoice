@@ -1088,12 +1088,24 @@ struct ConversationView: View {
                     realtime.nudge("Tutor mode was just turned on. Ask them, in one short question, what they want to be able to say today — they can also pick a topic from the button on their screen.")
                 }
             }
+            #if targetEnvironment(macCatalyst)
+            // The Mac: the curriculum opens as a column beside the call, so
+            // the topics and the talk are on screen together.
+            .inspector(isPresented: $showingTutorTopics) {
+                TutorTopicSheet(onPick: { picked, topicId in
+                    startTutorLesson(request: picked, picked: true, topicId: topicId)
+                }, onClose: { showingTutorTopics = false })
+                    .environmentObject(appState)
+                    .inspectorColumnWidth(min: 340, ideal: 400, max: 520)
+            }
+            #else
             .sheet(isPresented: $showingTutorTopics) {
                 TutorTopicSheet { picked, topicId in
                     startTutorLesson(request: picked, picked: true, topicId: topicId)
                 }
                     .environmentObject(appState)
             }
+            #endif
             .sheet(item: $goalDetail) { item in
                 TalkGoalSheet(item: item, used: usedGoalKeys.contains(item.key))
                     .environmentObject(appState)
@@ -1426,6 +1438,8 @@ struct ConversationView: View {
             } label: {
                 Label("Close", systemImage: "xmark")
             }
+            // The Mac's bar draws a Label's title beside its icon ("✕ Cl…").
+            .labelStyle(.iconOnly)
             // Anchored on the ✕ itself, not on the screen: iOS presents a
             // confirmation dialog as a popover that emerges from the view the
             // modifier hangs off. Attached to the root container it pointed at

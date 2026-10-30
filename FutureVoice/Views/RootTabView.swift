@@ -16,6 +16,7 @@ struct RootTabView: View {
     @ObservedObject private var routineHandoff = RoutineHandoff.shared
     @State private var firstRunHeld = false
     @ObservedObject private var watchCreation = WatchCreation.shared
+    @ObservedObject private var macWide = MacLayout.Wide.shared
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var auth: AuthService
     @State private var showingWhatsNew = false
@@ -213,9 +214,11 @@ struct RootTabView: View {
                     .tabItem { Label("Progress", systemImage: "chart.bar.fill") }
                     .tag(Tab.progress)
             }
-            // The Mac's column per tab: Review splits wide, Speech reads
-            // narrow (no-op elsewhere).
-            .macColumnMode(selection == .practice ? .split : selection == .speech ? .narrow : .normal)
+            // The Mac's column per tab: Review splits wide (and Talk while
+            // its topics sit beside a call), Speech reads narrow (no-op
+            // elsewhere).
+            .macColumnMode(selection == .practice || (selection == .home && macWide.talkSplit) ? .split
+                            : selection == .speech ? .narrow : .normal)
             // Answered the daily call. The voicemail's own line opens the
             // conversation — its audio is already in the phrase cache, so the
             // voice the learner heard on the lock screen keeps talking with

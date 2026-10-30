@@ -3182,6 +3182,16 @@ sync container carry over. `./scripts/mac-run.sh` builds and opens it.
   never fires the old tab's `onDisappear`, so Speech kept the split width).
   Speech is held NARROW the same way (`ColumnMode.narrow`, founder: it read
   too wide).
+- **Talk's topics sit beside the call** (2026-10-30, founder). With
+  Find a topic open on a wide window, the Talk stack keeps 400 pt on the
+  left and a call started from a topic opens on the right instead of
+  covering the window (`ConversationHome.body`, `topicsCallPane`); the
+  column grows like Review's (`MacLayout.Wide.talkSplit`). The split is
+  drawn BESIDE the NavigationStack, never inside the pushed page: a stack
+  inside a pushed page draws no bar, and the call's ✕, title and clock live
+  in its bar. While a call runs there, a topic tap asks to end it first. In
+  a call, the tutor's topic page is an inspector column beside the talk,
+  and a pick leaves it open (`TutorTopicSheet(onClose:)`).
 - **A Mac has many cameras, and the default one is often wrong** (the
   founder's: MacBook, Studio Display, an iPhone via Continuity, OBS and
   Elgato VIRTUAL cameras). "Slow and doesn't work" was the default video

@@ -63,6 +63,9 @@ enum MacLayout {
     final class Wide: ObservableObject {
         static let shared = Wide()
         @Published var mode: ColumnMode = .normal
+        /// Talk's topics page is open with the call beside it: the Talk tab
+        /// then wants the split column too.
+        @Published var talkSplit = false
     }
 
     /// Posted when a Mac window is resized or re-zoomed.

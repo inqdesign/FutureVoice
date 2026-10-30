@@ -152,6 +152,10 @@ struct TutorTopicSheet: View {
     /// The topic as the planner gets it, and its curriculum id (nil for the
     /// learner's own scenarios).
     let onPick: (String, String?) -> Void
+    /// Set when the page stands BESIDE the call (the Mac's side column):
+    /// Close calls it, and a pick leaves the page open so the curriculum
+    /// stays in view while the lesson runs.
+    var onClose: (() -> Void)? = nil
 
     @State private var progress: [String: TutorTopicProgress] = [:]
     @State private var stepUp: TutorCurriculum.Topic?
@@ -200,7 +204,7 @@ struct TutorTopicSheet: View {
                         ForEach(Array(own), id: \.id) { s in
                             Button {
                                 onPick(s.environment, nil)
-                                dismiss()
+                                afterPick()
                             } label: {
                                 Label(s.environment, systemImage: "theatermasks.fill")
                                     .foregroundStyle(.primary)
@@ -213,7 +217,9 @@ struct TutorTopicSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(explain("Close")) { dismiss() }
+                    Button(explain("Close")) {
+                        if let onClose { onClose() } else { dismiss() }
+                    }
                 }
             }
             .confirmationDialog(explain("This one is a step up. Try it?"),
@@ -308,6 +314,14 @@ struct TutorTopicSheet: View {
     private func start(_ topic: TutorCurriculum.Topic) {
         stepUp = nil
         onPick(topic.title, topic.id)
-        dismiss()
+        afterPick()
+    }
+
+    private func afterPick() {
+        if onClose == nil {
+            dismiss()
+        } else {
+            progress = TutorProgressStore.all(language: appState.targetLanguage)
+        }
     }
 }
