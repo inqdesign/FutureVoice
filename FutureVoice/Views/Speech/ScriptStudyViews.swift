@@ -1,3 +1,4 @@
+import NaturalLanguage
 import SwiftUI
 
 // MARK: - Study mode
@@ -10,18 +11,18 @@ import SwiftUI
 struct ScriptStudyText: View {
     let paragraphs: [String]
     let study: ScriptStudy
+    let language: String
     var onTap: (ScriptStudy.Highlight) -> Void
+    /// Any word held down (2026-10-30, founder): its notebook lookup key.
+    var onLookUp: (String) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             ForEach(Array(paragraphs.enumerated()), id: \.offset) { p, para in
                 if p > 0 { Divider() }
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(Self.attributed(para, study.highlights(in: p)))
-                        .font(.body)
-                        .lineSpacing(5)
-                        .tint(.primary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    ScriptParagraphText(text: para, highlights: study.highlights(in: p),
+                                        language: language, onTap: onTap, onLookUp: onLookUp)
                     if p < study.paragraphNotes.count, !study.paragraphNotes[p].isEmpty {
                         Text(study.paragraphNotes[p])
                             .font(.subheadline)
@@ -31,26 +32,138 @@ struct ScriptStudyText: View {
                 }
             }
         }
-        .environment(\.openURL, OpenURLAction { url in
-            guard url.scheme == "fvstudy", let id = Int(url.lastPathComponent),
-                  let h = study.highlights.first(where: { $0.id == id }) else { return .discarded }
-            onTap(h)
-            return .handled
-        })
+    }
+}
+
+/// One study paragraph, drawn by UIKit because SwiftUI's `Text` can say which
+/// link was TAPPED but not which word is under a long press. A tap on a
+/// highlight opens its card as before; holding any word opens the word card.
+struct ScriptParagraphText: UIViewRepresentable {
+    let text: String
+    let highlights: [ScriptStudy.Highlight]
+    let language: String
+    var onTap: (ScriptStudy.Highlight) -> Void
+    var onLookUp: (String) -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeUIView(context: Context) -> UITextView {
+        let v = UITextView()
+        v.isEditable = false
+        v.isSelectable = false
+        v.isScrollEnabled = false
+        v.backgroundColor = .clear
+        v.textContainerInset = .zero
+        v.textContainer.lineFragmentPadding = 0
+        v.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        v.addGestureRecognizer(UITapGestureRecognizer(target: context.coordinator,
+                                                      action: #selector(Coordinator.tapped(_:))))
+        let hold = UILongPressGestureRecognizer(target: context.coordinator,
+                                                action: #selector(Coordinator.held(_:)))
+        hold.minimumPressDuration = 0.4
+        v.addGestureRecognizer(hold)
+        return v
     }
 
-    static func attributed(_ para: String, _ highlights: [ScriptStudy.Highlight]) -> AttributedString {
-        var a = AttributedString(para)
+    func updateUIView(_ v: UITextView, context: Context) {
+        context.coordinator.parent = self
+        v.attributedText = attributed()
+        v.accessibilityCustomActions = highlights.map { h in
+            UIAccessibilityCustomAction(name: h.text) { _ in onTap(h); return true }
+        }
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
+        guard let width = proposal.width, width > 0, width.isFinite else { return nil }
+        let fit = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+        return CGSize(width: width, height: ceil(fit.height))
+    }
+
+    private func attributed() -> NSAttributedString {
+        let style = NSMutableParagraphStyle()
+        style.lineSpacing = 5
+        let a = NSMutableAttributedString(string: text, attributes: [
+            .font: UIFont.preferredFont(forTextStyle: .body),
+            .foregroundColor: UIColor.label,
+            .paragraphStyle: style,
+        ])
         for h in highlights {
-            let chars = a.characters
-            guard let lo = chars.index(chars.startIndex, offsetBy: h.offset, limitedBy: chars.endIndex),
-                  let hi = chars.index(lo, offsetBy: h.length, limitedBy: chars.endIndex) else { continue }
-            let r = lo ..< hi
-            a[r].link = URL(string: "fvstudy://h/\(h.id)")
-            a[r].backgroundColor = ScriptStudyStyle.fill(h.kind)
-            a[r].underlineStyle = ScriptStudyStyle.line(h.kind)
+            guard let r = nsRange(h) else { continue }
+            if let fill = ScriptStudyStyle.fill(h.kind) { a.addAttribute(.backgroundColor, value: UIColor(fill), range: r) }
+            let (line, color) = Self.underline(h.kind)
+            a.addAttributes([.underlineStyle: line.rawValue, .underlineColor: color], range: r)
         }
         return a
+    }
+
+    /// `ScriptStudyStyle.line` in UIKit terms.
+    private static func underline(_ kind: ScriptStudy.Kind) -> (NSUnderlineStyle, UIColor) {
+        switch kind {
+        case .expression: return (.single, .systemOrange)
+        case .grammar: return (.single, .systemBlue)
+        case .word: return ([.single, .patternDot], .secondaryLabel)
+        }
+    }
+
+    /// A highlight's Character offset/length as the UTF-16 range UIKit uses.
+    fileprivate func nsRange(_ h: ScriptStudy.Highlight) -> NSRange? {
+        guard let lo = text.index(text.startIndex, offsetBy: h.offset, limitedBy: text.endIndex),
+              let hi = text.index(lo, offsetBy: h.length, limitedBy: text.endIndex) else { return nil }
+        return NSRange(lo..<hi, in: text)
+    }
+
+    @MainActor final class Coordinator: NSObject {
+        var parent: ScriptParagraphText
+        init(_ parent: ScriptParagraphText) { self.parent = parent }
+
+        /// The UTF-16 offset of the character drawn under `point`, or nil
+        /// when the point is in the margin past a line's end.
+        private func offset(at point: CGPoint, in v: UITextView) -> Int? {
+            guard let pos = v.closestPosition(to: point),
+                  let range = v.tokenizer.rangeEnclosingPosition(pos, with: .character, inDirection: .storage(.forward))
+                    ?? v.tokenizer.rangeEnclosingPosition(pos, with: .character, inDirection: .storage(.backward)),
+                  v.selectionRects(for: range).contains(where: { $0.rect.insetBy(dx: -4, dy: -4).contains(point) })
+            else { return nil }
+            return v.offset(from: v.beginningOfDocument, to: range.start)
+        }
+
+        @objc func tapped(_ g: UITapGestureRecognizer) {
+            guard let v = g.view as? UITextView, let i = offset(at: g.location(in: v), in: v),
+                  let h = parent.highlights.first(where: { parent.nsRange($0).map { NSLocationInRange(i, $0) } ?? false })
+            else { return }
+            parent.onTap(h)
+        }
+
+        @objc func held(_ g: UILongPressGestureRecognizer) {
+            guard g.state == .began, let v = g.view as? UITextView,
+                  let i = offset(at: g.location(in: v), in: v),
+                  let word = ScriptParagraphText.word(at: i, in: parent.text, language: parent.language)
+            else { return }
+            HapticEngine.light()
+            parent.onLookUp(word)
+        }
+    }
+
+    /// The notebook key of the word over UTF-16 offset `i`. Japanese reads
+    /// the whole chunk (疲れ+た → 疲れる), like every other Japanese lookup;
+    /// everything else is the word tokenizer's word.
+    static func word(at i: Int, in text: String, language: String) -> String? {
+        let utf16 = text.utf16
+        guard let at = utf16.index(utf16.startIndex, offsetBy: i, limitedBy: utf16.endIndex),
+              at < text.endIndex else { return nil }
+        if LanguageCatalog.base(language) == "ja",
+           let hit = JapaneseMorph.headwords(in: text, lexicon: CoreVocabulary.set,
+                                             forms: JapaneseMorph.bundledForms)
+            .first(where: { $0.range.contains(at) }) {
+            return hit.headword
+        }
+        let tokenizer = NLTokenizer(unit: .word)
+        tokenizer.string = text
+        tokenizer.setLanguage(NLLanguage(rawValue: LanguageCatalog.base(language)))
+        let range = tokenizer.tokenRange(at: at)
+        guard !range.isEmpty else { return nil }
+        let key = VocabStore.lookupKey(for: String(text[range]))
+        return key.isEmpty ? nil : key
     }
 }
 

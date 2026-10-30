@@ -430,6 +430,12 @@ struct SpeechScriptSheet: View {
     @State private var studyFailed = false
     @State private var studyLoading = false
     @State private var card: ScriptStudy.Highlight?
+    /// A word held down in the study text, any word at all.
+    @State private var lookedUp: LookedUpWord?
+    private struct LookedUpWord: Identifiable {
+        let word: String
+        var id: String { word }
+    }
     /// The voiceover's player lives on the sheet, not in its List row: a row
     /// scrolled off screen disappears (and may be rebuilt), which stopped
     /// the playback the moment the learner scrolled the script to follow it.
@@ -478,7 +484,7 @@ struct SpeechScriptSheet: View {
                     // switch read as doing nothing.
                     if studying {
                         if study != nil {
-                            Text("Tap for an explanation")
+                            Text("Tap for an explanation · hold any word to look it up")
                         } else {
                             studyStatus
                         }
@@ -496,7 +502,8 @@ struct SpeechScriptSheet: View {
                         }
                         Group {
                             if studying, let study {
-                                ScriptStudyText(paragraphs: paragraphs, study: study) { card = $0 }
+                                ScriptStudyText(paragraphs: paragraphs, study: study, language: script.language,
+                                                onTap: { card = $0 }, onLookUp: { lookedUp = LookedUpWord(word: $0) })
                             } else {
                                 Text(script.body)
                                     .font(.body)
@@ -575,6 +582,10 @@ struct SpeechScriptSheet: View {
                     ScriptStudyCardSheet(highlight: h, study: study)
                         .environmentObject(appState)
                 }
+            }
+            .sheet(item: $lookedUp) { w in
+                WordSheet(initialWord: w.word, words: [])
+                    .environmentObject(appState)
             }
             .task(id: studyTaskId) { await loadStudy() }
             .onDisappear { voiceoverPlayer.stop() }
