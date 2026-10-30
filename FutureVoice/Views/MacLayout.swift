@@ -535,22 +535,33 @@ enum MacSheets {
         presented.addKeyCommand(UIKeyCommand(input: UIKeyCommand.inputEscape, modifierFlags: [],
                                              action: #selector(UIViewController.fv_macCloseSheet)))
         zoomSheet(presented)
-        // SwiftUI builds the page a beat after presenting; look then.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { addCloseButton(to: presented) }
+        // SwiftUI builds the page, and its toolbar, a beat after presenting;
+        // look then, and again once the toolbar has surely landed.
+        for delay in [0.3, 1.0] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { updateCloseButton(on: presented) }
+        }
     }
 
-    /// A visible ✕ on a sheet with no bar of its own (founder, 2026-10-30:
-    /// "there is no way to close this — every drawer"). Esc was the only way
-    /// out of a word card, and nothing on screen said so. A sheet with a
-    /// navigation bar carries its own Done/Cancel and is left alone.
+    /// A visible ✕ on a sheet that has no button of its own in a bar
+    /// (founder, 2026-10-30: "there is no way to close this — every
+    /// drawer"). Esc was the only way out of a word card, and nothing on
+    /// screen said so. The card has a navigation bar — its "1 of 24" title —
+    /// with no button in it, so it is the BUTTONS that are looked for, not
+    /// the bar.
     @MainActor
-    static func addCloseButton(to presented: UIViewController) {
-        guard let view = presented.viewIfLoaded, !presented.isBeingDismissed,
-              view.viewWithTag(closeTag) == nil, !hasNavigationBar(view) else { return }
+    static func updateCloseButton(on presented: UIViewController) {
+        guard let view = presented.viewIfLoaded, !presented.isBeingDismissed else { return }
+        let existing = view.viewWithTag(closeTag)
+        if hasBarButtons(view) {
+            existing?.removeFromSuperview()
+            return
+        }
+        guard existing == nil else { view.bringSubviewToFront(existing!); return }
         let button = UIButton(type: .close, primaryAction: UIAction { [weak presented] _ in
             if let presented { close(presented) }
         })
         button.tag = closeTag
+        button.accessibilityLabel = explain("Close")
         button.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(button)
         NSLayoutConstraint.activate([
@@ -561,9 +572,12 @@ enum MacSheets {
 
     private static let closeTag = 0x5EE7
 
-    private static func hasNavigationBar(_ view: UIView) -> Bool {
-        if let bar = view as? UINavigationBar, !bar.isHidden, bar.bounds.height > 0 { return true }
-        return view.subviews.contains(where: hasNavigationBar)
+    private static func hasBarButtons(_ view: UIView) -> Bool {
+        if let bar = view as? UINavigationBar, !bar.isHidden, let item = bar.topItem,
+           !(item.leftBarButtonItems ?? []).isEmpty || !(item.rightBarButtonItems ?? []).isEmpty {
+            return true
+        }
+        return view.subviews.contains(where: hasBarButtons)
     }
 
     /// The sheet's own page is zoomed, never its window's root: that root is
