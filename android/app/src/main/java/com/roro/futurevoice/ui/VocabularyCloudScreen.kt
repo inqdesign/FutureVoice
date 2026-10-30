@@ -350,10 +350,19 @@ private fun NotebookPeek(
             // The card's toolbar, as iOS draws it at the peek.
             Box(Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 14.dp),
                 contentAlignment = Alignment.Center) {
-                Text(title,
-                    style = com.roro.futurevoice.ui.brand.DisplayFace.style(title,
-                        androidx.compose.ui.text.TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold)),
-                    color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
+                // The title keeps clear of both pills (two 44 pt buttons each)
+                // and shrinks to fit rather than drawing under them: on a
+                // narrow phone or a large display size "My words · 122" ran
+                // across the bookmark and the arrows.
+                Box(Modifier.fillMaxWidth().padding(horizontal = 100.dp),
+                    contentAlignment = Alignment.Center) {
+                    androidx.compose.runtime.CompositionLocalProvider(
+                        androidx.compose.material3.LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
+                        com.roro.futurevoice.ui.brand.FitButtonLabel(title,
+                            com.roro.futurevoice.ui.brand.DisplayFace.style(title,
+                                androidx.compose.ui.text.TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold)))
+                    }
+                }
                 if (word != null) {
                     ToolbarPill(Modifier.align(Alignment.CenterStart)) {
                         PillIcon(if (kept) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
