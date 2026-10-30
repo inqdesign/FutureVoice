@@ -94,6 +94,9 @@ private val SysOrange = Color(0xFFFF9500)
 private val SysBlue = Color(0xFF007AFF)
 
 internal object ScriptStudyStyle {
+    /** A word the learner held down to look up (iOS `lookedUpFill`). */
+    val lookedUpFill = Color(0xFF34C759).copy(alpha = 0.18f)
+
     fun fill(kind: ScriptStudy.Kind): Color? = when (kind) {
         ScriptStudy.Kind.EXPRESSION -> SysYellow.copy(alpha = 0.32f)
         ScriptStudy.Kind.GRAMMAR -> SysBlue.copy(alpha = 0.14f)
@@ -123,12 +126,13 @@ internal object ScriptStudyStyle {
  */
 @Composable
 internal fun ScriptStudyText(paragraphs: List<String>, study: ScriptStudy, language: String,
-                             onLookUp: (String) -> Unit, onTap: (ScriptStudy.Highlight) -> Unit) {
+                             lookedUp: Set<String>, onLookUp: (String) -> Unit,
+                             onTap: (ScriptStudy.Highlight) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         paragraphs.forEachIndexed { p, para ->
             if (p > 0) FormDivider(inset = 0.dp)
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                HighlightedParagraph(para, study.highlightsIn(p), language, onLookUp, onTap)
+                HighlightedParagraph(para, study.highlightsIn(p), language, lookedUp, onLookUp, onTap)
                 study.paragraphNotes.getOrNull(p)?.takeIf { it.isNotEmpty() }?.let {
                     Text(it, style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -140,10 +144,17 @@ internal fun ScriptStudyText(paragraphs: List<String>, study: ScriptStudy, langu
 
 @Composable
 private fun HighlightedParagraph(para: String, highlights: List<ScriptStudy.Highlight>, language: String,
-                                 onLookUp: (String) -> Unit, onTap: (ScriptStudy.Highlight) -> Unit) {
-    val text: AnnotatedString = remember(para, highlights) {
+                                 lookedUp: Set<String>, onLookUp: (String) -> Unit,
+                                 onTap: (ScriptStudy.Highlight) -> Unit) {
+    val text: AnnotatedString = remember(para, highlights, lookedUp) {
         buildAnnotatedString {
             append(para)
+            // Words held down before: a quiet fill under the study's colours.
+            if (lookedUp.isNotEmpty()) {
+                for ((start, end, key) in studyWords(para, language)) {
+                    if (key in lookedUp) addStyle(SpanStyle(background = ScriptStudyStyle.lookedUpFill), start, end)
+                }
+            }
             for (h in highlights) {
                 val fill = ScriptStudyStyle.fill(h.kind) ?: continue
                 if (h.offset + h.length <= para.length) addStyle(SpanStyle(background = fill), h.offset, h.offset + h.length)
@@ -179,12 +190,17 @@ private fun HighlightedParagraph(para: String, highlights: List<ScriptStudy.High
                     }
                 }
             }
-            .pointerInput(highlights, para) {
+            .pointerInput(highlights, para, lookedUp) {
                 detectTapGestures(
                     onTap = { pos ->
                         val l = layout ?: return@detectTapGestures
                         val o = l.getOffsetForPosition(pos)
-                        highlights.firstOrNull { o >= it.offset && o < it.offset + it.length }?.let(onTap)
+                        val h = highlights.firstOrNull { o >= it.offset && o < it.offset + it.length }
+                        if (h != null) onTap(h)
+                        else if (lookedUp.isNotEmpty()) {
+                            // A word looked up once opens on a tap from then on.
+                            studyWordAt(para, o, language)?.takeIf { it in lookedUp }?.let(onLookUp)
+                        }
                     },
                     // Any word held down opens the word card (iOS 2026-10-30).
                     onLongPress = { pos ->
@@ -203,21 +219,30 @@ private fun HighlightedParagraph(para: String, highlights: List<ScriptStudy.High
 /** The notebook key of the word at [offset] (iOS `ScriptParagraphText.word`):
  *  Japanese reads the whole chunk (疲れ+た → 疲れる); everything else is the
  *  word the break iterator finds there. */
-internal fun studyWordAt(text: String, offset: Int, language: String): String? {
-    if (offset !in text.indices) return null
+internal fun studyWordAt(text: String, offset: Int, language: String): String? =
+    studyWords(text, language).firstOrNull { offset >= it.first && offset < it.second }?.third
+
+/** Every word of [text] as (start, end, notebook key). */
+internal fun studyWords(text: String, language: String): List<Triple<Int, Int, String>> {
     val lang = language.substringBefore('-')
     if (lang == "ja") {
-        JapaneseMorph.headwords(text, CoreVocabulary.set("ja"), CoreVocabulary.forms("ja"))
-            .firstOrNull { offset >= it.second && offset < it.third }?.let { return it.first }
+        return JapaneseMorph.headwords(text, CoreVocabulary.set("ja"), CoreVocabulary.forms("ja"))
+            .map { Triple(it.second, it.third, it.first) }
     }
     val words = BreakIterator.getWordInstance(Locale.forLanguageTag(language))
     words.setText(text)
-    val end = words.following(offset)
-    val start = words.previous()
-    if (start == BreakIterator.DONE || end == BreakIterator.DONE || end <= start) return null
-    val word = text.substring(start, end)
-    if (word.none { it.isLetterOrDigit() }) return null
-    return VocabLemmas.lemma(word, lang).takeIf { it.isNotBlank() }
+    val out = ArrayList<Triple<Int, Int, String>>()
+    var start = words.first()
+    var end = words.next()
+    while (end != BreakIterator.DONE) {
+        val word = text.substring(start, end)
+        if (word.any { it.isLetterOrDigit() }) {
+            VocabLemmas.lemma(word, lang).takeIf { it.isNotBlank() }?.let { out.add(Triple(start, end, it)) }
+        }
+        start = end
+        end = words.next()
+    }
+    return out
 }
 
 /** Kind · count for each kind present (iOS `ScriptStudyLegend`); how to use

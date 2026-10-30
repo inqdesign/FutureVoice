@@ -910,6 +910,9 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
     var studyAttempt by remember { mutableStateOf(0) }
     // A word held down in the study text, any word at all.
     var lookedUp by remember { mutableStateOf<String?>(null) }
+    // Every word held down in THIS script's text (iOS `ScriptLookups`).
+    val lookupsKey = remember(shown.body) { "speech.lookups." + com.roro.futurevoice.data.ScriptStudy.textHash(shown.body) }
+    var lookedUpWords by remember(lookupsKey) { mutableStateOf(prefs.getStringSet(lookupsKey, emptySet())!!.toSet()) }
     var card by remember { mutableStateOf(capture.studyCard?.let { id -> capture.study?.highlights?.firstOrNull { it.id == id } }) }
     val level = rememberLevel()
     val voiceId = rememberCloneVoiceId()
@@ -982,7 +985,12 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
                 }
                 Box(Modifier.padding(top = 4.dp)) {
                     if (studying && shownStudy != null) {
-                        ScriptStudyText(paragraphs, shownStudy, shown.language, onLookUp = { lookedUp = it }) { card = it }
+                        ScriptStudyText(paragraphs, shownStudy, shown.language, lookedUpWords,
+                            onLookUp = { w ->
+                                lookedUp = w
+                                lookedUpWords = lookedUpWords + w
+                                prefs.edit().putStringSet(lookupsKey, lookedUpWords).apply()
+                            }) { card = it }
                     } else {
                         SelectionContainer {
                             Text(shown.body, style = MaterialTheme.typography.bodyLarge.copy(
