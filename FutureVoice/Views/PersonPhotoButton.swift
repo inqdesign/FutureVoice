@@ -20,7 +20,7 @@ struct PersonPhotoButton<Label: View>: View {
     @State private var error: String?
 
     var body: some View {
-        Menu {
+        AppMenu {
             Button { pickingPhoto = true } label: { SwiftUI.Label("Photo library", systemImage: "photo.on.rectangle") }
             if UIImagePickerController.isSourceTypeAvailable(.camera) {
                 Button { showingCamera = true } label: { SwiftUI.Label("Take a photo", systemImage: "camera") }

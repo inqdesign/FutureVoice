@@ -267,7 +267,7 @@ struct SpeechChallengeView: View {
         .safeAreaInset(edge: .bottom) { actionBar }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Menu {
+                AppMenu {
                     Button {
                         startAfterNaming = false
                         naming = true

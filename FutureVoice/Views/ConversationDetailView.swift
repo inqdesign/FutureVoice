@@ -1048,7 +1048,7 @@ struct ConversationDetailView: View {
                 Button("Done") { postTalk.onDone() }
                     .fontWeight(.semibold)
             } else {
-                Menu {
+                AppMenu {
                     BookExportMenu(controller: exporter) {
                         BookDocument.make(session: session,
                                           curriculum: curriculum,

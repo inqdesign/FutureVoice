@@ -231,7 +231,7 @@ struct SpeechPrompterView: View {
                                 .offset(x: 4, y: -4)
                         }
                     }
-            Menu {
+            AppMenu {
                 Picker("Scrolling", selection: $session.followVoice) {
                     Label("Follow my voice", systemImage: "waveform").tag(true)
                     Label("Steady speed", systemImage: "speedometer").tag(false)

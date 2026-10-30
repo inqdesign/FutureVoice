@@ -150,6 +150,44 @@ struct SpeakOrTypeField: View {
     @Binding var text: String
     @Binding var locale: String
 
+    /// The dictation language. On the Mac a menu-style `Picker` is a macOS
+    /// pop-up with a bezel of its own, which sat inside this capsule as a
+    /// second one; there it is a menu with the same capsule as its label.
+    @ViewBuilder private var localeMenu: some View {
+        let picker = Picker("Language", selection: $locale) {
+            ForEach(dictationChoices, id: \.self) { code in
+                Text(LanguageCatalog.endonym(code)).tag(code)
+            }
+        }
+        if MacLayout.isMac {
+            AppMenu {
+                picker.pickerStyle(.inline).labelsHidden()
+            } label: {
+                HStack(spacing: 4) {
+                    Text(LanguageCatalog.endonym(locale))
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.caption2.weight(.semibold))
+                }
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 12)
+                .frame(height: 36)
+                .background(Capsule().fill(Color(.tertiarySystemFill)))
+                .fixedSize()
+            }
+        } else {
+            picker
+                .pickerStyle(.menu)
+                .labelsHidden()
+                .font(.subheadline)
+                .tint(.secondary)
+                .padding(.horizontal, 4)
+                .frame(height: 36)
+                .background(Capsule().fill(Color(.tertiarySystemFill)))
+                .fixedSize()
+        }
+    }
+
     /// Every language the device can dictate in, with the learner's own and
     /// the one they're practising lifted to the top.
     ///
@@ -260,19 +298,7 @@ struct SpeakOrTypeField: View {
                         // two slots. It wears the same fill as the buttons
                         // beside it — bare, it read as loose text floating in
                         // the card rather than a control.
-                        Picker("Language", selection: $locale) {
-                            ForEach(dictationChoices, id: \.self) { code in
-                                Text(LanguageCatalog.endonym(code)).tag(code)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .labelsHidden()
-                        .font(.subheadline)
-                        .tint(.secondary)
-                        .padding(.horizontal, 4)
-                        .frame(height: 36)
-                        .background(Capsule().fill(Color(.tertiarySystemFill)))
-                        .fixedSize()
+                        localeMenu
                     }
                     Button {
                         Task { await toggleMic() }

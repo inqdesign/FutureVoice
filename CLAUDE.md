@@ -3102,6 +3102,19 @@ sync container carry over. `./scripts/mac-run.sh` builds and opens it.
   delegate for the landing point the way a flick would, so SwiftUI's paging
   / view-aligned behaviour snaps it and `scrollPosition` (the chips above a
   pager) follows. Vertical lists and the 2D people map are left alone.
+- **Every menu is `AppMenu`, never `Menu`** (2026-10-30, founder: "the
+  dropdowns are doubled, and the language one looks different"). On the Mac
+  a SwiftUI `Menu` is a macOS pull-down that keeps only its label's text OR
+  its icon (every built-in style and a custom ButtonStyle tried), and in a
+  toolbar it becomes a system bar button that reduces it again. `AppMenu`
+  (same `content:label:` shape) draws the label as an ordinary view and lays
+  a menu with an empty label over it, in a ZStack so a toolbar can't see a
+  menu; on the phone it is a plain `Menu`. A `Picker` with `.pickerStyle(.menu)`
+  is a bezelled pop-up on the Mac: never wrap one in a capsule of our own
+  (the dictation language uses an `AppMenu` there).
+- **A sheet with no bar gets a ✕** (`MacSheets.addCloseButton`): macOS
+  swallows clicks behind a sheet and Esc was invisible. Sheets with a
+  navigation bar carry their own Done/Cancel and are left alone.
 - **The speech take screen is a 760 pt column on the Mac** (script and
   camera card under the lens). Its camera preview is ONE layer owned by
   `SpeechCamera`, bound to the session before it runs: binding a layer to

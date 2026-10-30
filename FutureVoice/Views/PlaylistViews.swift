@@ -675,7 +675,7 @@ private struct PlayerOptionsMenu: View {
     @AppStorage("futurevoice.playlist.translation") private var showTranslation = false
 
     var body: some View {
-        Menu {
+        AppMenu {
             Toggle(isOn: $showCaptions) { Label("Captions", systemImage: "captions.bubble") }.toggleStyle(.automatic)
             Toggle(isOn: $showTranslation) { Label("Translation", systemImage: "character.bubble") }.toggleStyle(.automatic)
             Picker(selection: $player.gap) {

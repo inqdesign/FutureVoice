@@ -150,7 +150,7 @@ struct WatchTab: View {
                     // rather than a row the map gives up space to. The icon
                     // fills while the map is narrowed, so it can't be missed.
                     ToolbarItem(placement: .topBarTrailing) {
-                        Menu {
+                        AppMenu {
                             Picker(selection: $skyLens) {
                                 ForEach(PeopleSky.Lens.allCases) { l in Text(l.title).tag(l) }
                             } label: { EmptyView() }

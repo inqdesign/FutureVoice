@@ -45,7 +45,7 @@ struct TutorLessonStrip: View {
                             .foregroundStyle(.tertiary)
                             .rotationEffect(.degrees(expanded ? 0 : -90))
                         Group {
-                            Menu {
+                            AppMenu {
                                 Button(action: onChangeTopic) {
                                     Label(explain("Choose another topic"), systemImage: "arrow.triangle.2.circlepath")
                                 }

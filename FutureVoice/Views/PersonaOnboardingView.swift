@@ -285,7 +285,7 @@ struct PersonaOnboardingView: View {
                         .foregroundStyle(.tertiary)
                 }
             }
-            Menu {
+            AppMenu {
                 sharePicker(note)
             } label: {
                 Image(systemName: shareIcon(n.share))
@@ -304,7 +304,7 @@ struct PersonaOnboardingView: View {
                     Label("Show the talk", systemImage: "waveform")
                 }
             }
-            Menu {
+            AppMenu {
                 sharePicker(note)
             } label: {
                 Label("Strangers hear", systemImage: shareIcon(n.share))

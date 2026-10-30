@@ -723,7 +723,7 @@ struct ScenarioComposerSheet: View {
     /// `Menu`, so the photo item flips a flag the `.photosPicker` modifier
     /// above the tree watches.
     private var attachMenu: some View {
-        Menu {
+        AppMenu {
             Button { addingLink = true } label: { Label("Paste a link", systemImage: "link") }
             Button { importingFile = true } label: { Label("Pick a file", systemImage: "doc") }
             Button { pickingPhoto = true } label: { Label("Photo library", systemImage: "photo.on.rectangle") }
@@ -822,7 +822,7 @@ struct ScenarioComposerSheet: View {
     private var materialSection: some View {
         Section {
             ForEach(sources) { src in materialRow(src) }
-            Menu {
+            AppMenu {
                 Button { addingLink = true } label: { Label("Paste a link", systemImage: "link") }
                 Button { importingFile = true } label: { Label("Pick a file", systemImage: "doc") }
                 Button { pickingPhoto = true } label: { Label("Photo library", systemImage: "photo.on.rectangle") }

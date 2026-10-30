@@ -946,7 +946,7 @@ struct VoiceCloneOnboardingView: View {
             // The language choice is made by LOOKING at the text — "can I
             // read this aloud for a minute without stumbling?" is answered by
             // the paragraphs below, not by a question on its own screen.
-            Menu {
+            AppMenu {
                 ForEach(scriptLanguages, id: \.self) { code in
                     Button {
                         selectScript(code)

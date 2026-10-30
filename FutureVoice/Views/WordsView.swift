@@ -139,7 +139,7 @@ struct WordsView: View {
                 }
                 .pickerStyle(.segmented)
 
-                Menu {
+                AppMenu {
                     if filter == .toStudy {
                         Picker("Source", selection: $source) {
                             ForEach(SourceFilter.allCases) { Text($0.label).tag($0) }

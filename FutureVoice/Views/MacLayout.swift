@@ -126,6 +126,48 @@ enum MacLayout {
     }
 }
 
+/// A menu whose label is drawn as written, on the Mac too. A SwiftUI `Menu`
+/// there is a macOS pull-down that keeps only the label's text OR its icon
+/// (measured, every built-in style and a custom button style alike): the
+/// Talk tab's globe-and-EN glass chip read as a bare "EN ⌄", and a label
+/// with its own capsule sat inside a second, system one. So on the Mac the
+/// label is drawn as an ordinary view and a menu with an empty label lies
+/// over it to take the click. On the phone it is a plain `Menu`.
+struct AppMenu<Content: View, Label: View>: View {
+    private let content: () -> Content
+    private let label: () -> Label
+
+    init(@ViewBuilder content: @escaping () -> Content, @ViewBuilder label: @escaping () -> Label) {
+        self.content = content
+        self.label = label
+    }
+
+    var body: some View {
+        #if targetEnvironment(macCatalyst)
+        // In a ZStack, not as the label's overlay: a toolbar item whose
+        // content IS a menu becomes a system bar button and is reduced again.
+        ZStack {
+            label()
+            Menu(content: content) {
+                Rectangle().fill(Color.black.opacity(0.001))
+            }
+            .menuStyle(.button)
+            .buttonStyle(Bare())
+            .menuIndicator(.hidden)
+        }
+        .fixedSize()
+        #else
+        Menu(content: content, label: label)
+        #endif
+    }
+
+    private struct Bare: ButtonStyle {
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label.contentShape(Rectangle())
+        }
+    }
+}
+
 private struct MacPagerPage: ViewModifier {
     @AppStorage(MacLayout.columnKey) private var column = MacLayout.Column.regular.rawValue
     @ObservedObject private var wide = MacLayout.Wide.shared
@@ -493,6 +535,35 @@ enum MacSheets {
         presented.addKeyCommand(UIKeyCommand(input: UIKeyCommand.inputEscape, modifierFlags: [],
                                              action: #selector(UIViewController.fv_macCloseSheet)))
         zoomSheet(presented)
+        // SwiftUI builds the page a beat after presenting; look then.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { addCloseButton(to: presented) }
+    }
+
+    /// A visible ✕ on a sheet with no bar of its own (founder, 2026-10-30:
+    /// "there is no way to close this — every drawer"). Esc was the only way
+    /// out of a word card, and nothing on screen said so. A sheet with a
+    /// navigation bar carries its own Done/Cancel and is left alone.
+    @MainActor
+    static func addCloseButton(to presented: UIViewController) {
+        guard let view = presented.viewIfLoaded, !presented.isBeingDismissed,
+              view.viewWithTag(closeTag) == nil, !hasNavigationBar(view) else { return }
+        let button = UIButton(type: .close, primaryAction: UIAction { [weak presented] _ in
+            if let presented { close(presented) }
+        })
+        button.tag = closeTag
+        button.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(button)
+        NSLayoutConstraint.activate([
+            button.topAnchor.constraint(equalTo: view.topAnchor, constant: 14),
+            button.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 14),
+        ])
+    }
+
+    private static let closeTag = 0x5EE7
+
+    private static func hasNavigationBar(_ view: UIView) -> Bool {
+        if let bar = view as? UINavigationBar, !bar.isHidden, bar.bounds.height > 0 { return true }
+        return view.subviews.contains(where: hasNavigationBar)
     }
 
     /// The sheet's own page is zoomed, never its window's root: that root is

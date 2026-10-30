@@ -621,7 +621,7 @@ struct ConversationHome: View {
     /// is one tap, whole app follows) plus "Add a language". Always visible
     /// even with a single language — it's how multi-language is discovered.
     private var languageSwitcher: some View {
-        Menu {
+        AppMenu {
             ForEach(appState.enrolledLanguages, id: \.self) { code in
                 Button {
                     appState.switchLanguage(to: code)

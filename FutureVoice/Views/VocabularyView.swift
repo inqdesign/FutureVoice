@@ -87,7 +87,7 @@ struct VocabularyView: View {
                 }
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Menu {
+                AppMenu {
                     Toggle("Hide words I know", isOn: $hideKnown).toggleStyle(.automatic)
                     Picker("Level", selection: $level) {
                         ForEach(LevelFilter.allCases) { Text($0.label).tag($0) }

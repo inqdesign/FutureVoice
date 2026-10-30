@@ -549,7 +549,7 @@ struct WeeklyPlanEditor: View {
     /// is a drag (founder: "the table is more direct than a sheet"); a tap on
     /// it then edits it. Tapping an empty spot still adds at that spot.
     private var addButton: some View {
-        Menu {
+        AppMenu {
             ForEach(StudyPlan.Kind.placeable) { k in
                 Button {
                     addBlock(k)

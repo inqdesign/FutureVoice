@@ -334,7 +334,7 @@ struct ShadowTimelinePlayer<MicControl: View>: View {
     }
 
     private var speedMenu: some View {
-        Menu {
+        AppMenu {
             Picker("Speed", selection: $playbackRate) {
                 ForEach(TLConst.speeds, id: \.self) { r in
                     Text(speedLabel(r)).tag(r)

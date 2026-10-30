@@ -911,7 +911,7 @@ private extension DrillView {
     @ViewBuilder
     func misheardMenu(_ card: DrillCard) -> some View {
         if let turnId = card.sourceTurnId, let sessionId = card.sourceSessionId {
-            Menu {
+            AppMenu {
                 // Plain, not destructive: red text on the menu read poorly
                 // (2026-10-22, founder).
                 Button {

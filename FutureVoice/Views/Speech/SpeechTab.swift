@@ -222,7 +222,7 @@ struct SpeechTab: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     if canWrite {
-                        Menu {
+                        AppMenu {
                             Button { composing = true } label: {
                                 Label("Write with AI", systemImage: "sparkles")
                             }

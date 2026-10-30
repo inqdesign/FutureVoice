@@ -826,7 +826,7 @@ struct ScenarioDetailView: View {
 
     private var bookMenu: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
-            Menu {
+            AppMenu {
                 if let s = scenario {
                     BookExportMenu(controller: exporter) { BookDocument.make(scenario: s, appState: appState) }
                     if s.isArchived {
