@@ -1,71 +1,79 @@
 #!/usr/bin/env python3
-"""Summarizes calibrate.swift's output: the B2+ token share by SST level, and
-what the app's rule (VocabSophistication.cuts + minGradedTokens) reads over
-pooled speakers, next to the old count rule it replaced.
+"""The calibration behind VocabSophistication, from calibrate.swift's output.
 
-usage: python3 summarize.py FutureVoice/Resources/cefr_words.tsv lemmas.tsv
+Prints, by SST level: the mean CEFR level (A1=0 … C2=5) of the graded content
+words, one interview and three pooled, and how well each candidate measure
+tracks the level (Spearman over learners). The cuts in VocabSophistication.
+profiles["en"] are read off the first table.
+
+usage: python3 summarize.py FutureVoice/Resources/cefr_words.tsv speakers.tsv
 """
-import random
-import statistics as st
-import sys
+import math, random, statistics as st, sys
 
-ORDER = ["a1", "a2", "b1", "b2", "c1", "c2"]
-CUTS = [(7.0, "C2"), (6.0, "C1"), (5.0, "B2"), (4.1, "B1"), (2.6, "A2"), (0, "A1")]  # keep = VocabSophistication.cuts
-MIN_GRADED = 400
+L = ["a1", "a2", "b1", "b2", "c1", "c2"]
+CONTENT = {"Noun", "Verb", "Adjective", "Adverb"}
+# keep = VocabSophistication.profiles["en"].stopWords
+STOP = {"be", "have", "do", "will", "would", "can", "could", "may", "might", "shall", "should",
+        "must", "ought", "that", "found", "mine", "plus"}
 
 lv = {}
 for line in open(sys.argv[1], encoding="utf-8"):
-    p = line.rstrip("\n").split("\t")
-    if len(p) >= 2 and p[1].lower() in ORDER:
-        lv[p[0].lower()] = ORDER.index(p[1].lower())
-
-speakers = {}
+    a = line.rstrip("\n").split("\t")
+    if len(a) >= 2 and a[1].lower() in L:
+        lv.setdefault(a[0].lower(), L.index(a[1].lower()))
+spk = {}
 for line in open(sys.argv[2], encoding="utf-8"):
-    p = line.rstrip("\n").split("\t")
-    if len(p) == 3:
-        speakers.setdefault(p[1], []).append(p[2].split())
+    f, sst, toks = line.rstrip("\n").split("\t")
+    pairs = [x.rsplit("|", 1) for x in toks.split() if "|" in x]
+    spk.setdefault(sst, []).append([w for w, c in pairs if c in CONTENT and w not in STOP])
+levels = sorted((k for k in spk if k != "N"), key=int)[2:] + ["N"]
 
 
-def share(toks):
+def mean_level(toks):
     g = [lv[w] for w in toks if w in lv]
-    return sum(1 for x in g if x >= 3) / max(len(g), 1) * 100, len(g)
+    return (sum(g) / len(g) if g else 0), len(g)
 
 
-def new_rule(toks):
-    s, n = share(toks)
-    return "—" if n < MIN_GRADED else next(b for c, b in CUTS if s >= c)
-
-
-def old_rule(toks):
-    c, t = [0] * 6, 0
-    for w in set(toks):
-        if w in lv:
-            c[lv[w]] += 1
-            t += 1
-    if t < 15:
-        return "—"
-    est = 0
-    for i, th in enumerate([6, 6, 8, 10, 12, 15]):
-        if c[i] >= th:
-            est = i
-    return ORDER[est].upper()
-
-
-levels = sorted((k for k in speakers if k != "N"), key=int) + ["N"]
-print("B2+ token share by level (one interview each): median, p25-p75")
-for k in levels:
-    xs = sorted(share(t)[0] for t in speakers[k])
-    print(f"  SST {k:>2} n={len(xs):4}  {st.median(xs):4.1f}%  ({xs[len(xs) // 4]:.1f}-{xs[3 * len(xs) // 4]:.1f})")
-
-random.seed(1)
-for k_pool in (3, 12):
-    print(f"\nPooling {k_pool} speakers of one level (more talk), 300 draws: new rule | old rule")
+random.seed(4)
+for pool in (1, 3):
+    cells = []
     for k in levels:
-        new, old = {}, {}
-        for _ in range(300):
-            toks = [w for s in random.sample(speakers[k], min(k_pool, len(speakers[k]))) for w in s]
-            a, b = new_rule(toks), old_rule(toks)
-            new[a] = new.get(a, 0) + 1
-            old[b] = old.get(b, 0) + 1
-        fmt = lambda d: " ".join(f"{x}:{d[x] * 100 // 300}%" for x in sorted(d))
-        print(f"  SST {k:>2}: {fmt(new):40} | {fmt(old)}")
+        xs = []
+        for i in range(300 if pool > 1 else len(spk[k])):
+            group = random.sample(spk[k], min(pool, len(spk[k]))) if pool > 1 else [spk[k][i]]
+            m, n = mean_level([w for s in group for w in s])
+            if n >= 100:
+                xs.append(m)
+        q = st.quantiles(xs, n=4)
+        cells.append(f"{k}:{st.median(xs):.3f}({q[0]:.2f}-{q[2]:.2f})")
+    print(f"mean level, {pool} interview(s): " + " ".join(cells))
+
+
+def ranks(xs):
+    order = sorted(range(len(xs)), key=lambda i: xs[i]); r = [0.0] * len(xs); i = 0
+    while i < len(order):
+        j = i
+        while j + 1 < len(order) and xs[order[j + 1]] == xs[order[i]]:
+            j += 1
+        for k in range(i, j + 1):
+            r[order[k]] = (i + j) / 2
+        i = j + 1
+    return r
+
+
+def spearman(a, b):
+    ra, rb = ranks(a), ranks(b); ma, mb = st.mean(ra), st.mean(rb)
+    return sum((x - ma) * (y - mb) for x, y in zip(ra, rb)) / math.sqrt(
+        sum((x - ma) ** 2 for x in ra) * sum((y - mb) ** 2 for y in rb))
+
+
+rows, y = [], []
+for k in levels[:-1]:
+    for t in spk[k]:
+        g = [lv[w] for w in t if w in lv]
+        if len(g) >= 100:
+            rows.append({"mean level": sum(g) / len(g), "B2+ share": sum(x >= 3 for x in g) / len(g),
+                         "B1+ share": sum(x >= 2 for x in g) / len(g)})
+            y.append(int(k))
+for key in rows[0]:
+    print(f"spearman vs SST, {key}: {spearman([r[key] for r in rows], y):.2f}")

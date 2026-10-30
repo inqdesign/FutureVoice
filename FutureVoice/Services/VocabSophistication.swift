@@ -1,95 +1,111 @@
 import Foundation
 import NaturalLanguage
 
-/// The vocabulary level, read as WHICH words a learner reaches for rather
+/// The vocabulary level, read from WHICH words a learner reaches for rather
 /// than how many advanced words they have ever said.
 ///
-/// The rule this replaced took the highest band with a fixed number of
-/// distinct words (C2 at 15) over 90 days, and it rose with talk alone:
-/// measured on the NICT JLE corpus (1,277 learners of English, the same
-/// 15-minute SST interview, nine graded levels, plus 20 native speakers doing
-/// the same task — 2026-10-30), pooling six interviews of SST 4 (≈A2) read B2
-/// 197 times in 200, and twelve native interviews read C1. Advanced words are
-/// rare in conversation for everyone — natives used one or two C1/C2 words in
-/// fifteen minutes — so a count of them is a count of minutes spoken.
+/// The count it replaced (C2 at 15 distinct words over 90 days) rose with
+/// the amount of talk alone: measured on the NICT JLE corpus (1,277 learners
+/// of English in the same 15-minute SST interview at nine levels, plus 20
+/// natives doing the same task), six pooled ≈A2 interviews read B2 197 times
+/// in 200. Advanced words are rare in conversation for everyone.
 ///
-/// What does separate levels is the SHARE of graded word tokens at B2 and
-/// above: the basic words are the floor everyone stands on (90%+ of what
-/// anyone says), and the difference lives in the tail. Medians by SST level:
-/// 3 → 2.1%, 4 → 3.1%, 5 → 3.7%, 6 → 4.5%, 7 → 4.6%, 8 → 5.5%, 9 → 5.3%,
-/// natives 6.5% — and the share holds still as the sample grows (SST 4 reads
-/// ~3.3% over one interview or twelve). The cuts below come from those
-/// medians; `scripts/vocab-calibration/` reruns the measurement.
+/// The measure is the MEAN LEVEL (A1 = 0 … C2 = 5) of the graded CONTENT
+/// words said (nouns, verbs, adjectives, adverbs), repeats counted. Two
+/// things were learned the hard way (2026-10-30):
+/// - Function words have to go. A first cut counted every graded token, and
+///   the list grades `that` B2 and auxiliary `will` as the noun — so half of
+///   a native's "B2+ share" was the word `that`, and the measure was mostly
+///   counting relative clauses. Content words only, minus `stopWords`.
+/// - Above B1 vocabulary in speech stops separating learners. Medians by
+///   SST level, one interview: 3 → 0.23, 4 → 0.27, 5 → 0.29, 6 → 0.33,
+///   7–9 → 0.32–0.34, natives 0.38. So the measure reads A1 / A2 / B1 and
+///   "native-like range"; B2–C2 come from the weekly assessment's read of
+///   word PRECISION (`WeeklyReport.lexicalPrecision`), and C1/C2 also need
+///   the native-like range.
 ///
-/// Two limits, both deliberate:
-/// - Above B2 the share stops separating (SST 8 ≈ SST 9, natives +1pt), so
-///   C1 and C2 need a second witness: the weekly assessment's read of word
-///   PRECISION (`WeeklyReport.lexicalPrecision` — did they pick the precise
-///   word where a general one would do). Without one the band stops at B2.
-/// - Calibrated for ENGLISH only. Other languages keep the old count until
-///   they have their own measurement (and Korean/Spanish their own lists).
+/// German's cuts were carried over from English through 240k held-out
+/// Tatoeba en–de sentence pairs (pooled means correlate 0.88): PROVISIONAL —
+/// no German learner speech with levels was available to check them on.
+/// `scripts/vocab-calibration/` reruns all of it.
 enum VocabSophistication {
 
-    /// Graded tokens needed before a band is read — about an hour of a
-    /// learner's own speech. Below it one talk's topic decides the number.
-    static let minGradedTokens = 400
-    /// The newest talks are read until this many graded tokens: enough for a
-    /// stable share (±1pt at the 10th–90th percentile), recent enough to be
-    /// today's vocabulary rather than last spring's.
-    static let windowGradedTokens = 1500
+    struct Profile {
+        /// Lower edges of A2, B1 and the native-like range (B2 without a
+        /// precision read; the floor for C1/C2 with one).
+        let a2: Double, b1: Double, nativeLike: Double
+        let tagger: NLLanguage
+        /// Auxiliaries, modals and homographs the pool grades by a rare
+        /// sense (`will` the noun, `found` = establish).
+        let stopWords: Set<String>
+    }
 
-    /// Lower edge of each band, in percent of graded tokens at B2+.
-    static let cuts: [(level: CEFRLevel, from: Double)] = [
-        (.c2, 7.0), (.c1, 6.0), (.b2, 5.0), (.b1, 4.1), (.a2, 2.6), (.a1, 0)
+    static let profiles: [String: Profile] = [
+        "en": Profile(a2: 0.25, b1: 0.31, nativeLike: 0.36, tagger: .english,
+                      stopWords: ["be", "have", "do", "will", "would", "can", "could", "may", "might",
+                                  "shall", "should", "must", "ought", "that", "found", "mine", "plus"]),
+        "de": Profile(a2: 0.55, b1: 0.58, nativeLike: 0.61, tagger: .german,
+                      stopWords: ["sein", "haben", "werden", "tun", "können", "müssen", "sollen",
+                                  "dürfen", "mögen", "wollen", "möchten"]),
     ]
 
-    static func isCalibrated(_ languageCode: String) -> Bool { languageCode == "en" }
+    static func isCalibrated(_ languageCode: String) -> Bool { profiles[languageCode] != nil }
+
+    /// Graded content words needed before a band is read — about an hour of
+    /// a learner's own speech (an SST interview carries 200–480).
+    static let minGradedTokens = 300
+    /// The newest talks are read until this many: three or four interviews'
+    /// worth, where one level's spread narrows to ±0.03.
+    static let windowGradedTokens = 1200
 
     struct Read: Equatable {
-        /// Graded word tokens in the window.
+        /// Graded content words in the window.
         var graded: Int
-        /// Of those, at B2 or above.
-        var advanced: Int
+        /// The sum of their levels (A1 = 0 … C2 = 5).
+        var levelSum: Int
         /// Talks the window reached back over.
         var talks: Int
-        var share: Double { graded > 0 ? Double(advanced) / Double(graded) * 100 : 0 }
+        var mean: Double { graded > 0 ? Double(levelSum) / Double(graded) : 0 }
     }
 
     enum Ceiling: Equatable {
-        /// The share alone reads C1+; no assessment has judged precision yet.
+        /// B1 or the native-like range is measured; above it needs the
+        /// assessment's precision read, which isn't there yet.
         case needsPrecision
-        /// The assessment's precision read held the band down.
+        /// The precision read set the band.
         case precision(CEFRLevel)
     }
 
     /// The band, or nil while the sample is too small.
-    static func level(_ read: Read, precision: CEFRLevel?)
+    static func level(_ read: Read, profile: Profile, precision: CEFRLevel?)
         -> (level: CEFRLevel, ceiling: Ceiling?)? {
         guard read.graded >= minGradedTokens else { return nil }
-        let byShare = cuts.first { read.share >= $0.from }?.level ?? .a1
-        guard rank(byShare) > rank(.b2) else { return (byShare, nil) }
-        guard let precision else { return (.b2, .needsPrecision) }
-        // Precision can hold C1+ down, never below what the share already
-        // shows — B2 range is measured, not judged.
-        let capped = rank(precision) < rank(byShare)
-            ? (rank(precision) > rank(.b2) ? precision : .b2) : byShare
-        return capped == byShare ? (byShare, nil) : (capped, .precision(precision))
+        let m = read.mean
+        if m < profile.a2 { return (.a1, nil) }
+        if m < profile.b1 { return (.a2, nil) }
+        let measured: CEFRLevel = m >= profile.nativeLike ? .b2 : .b1
+        guard let precision else { return (measured, .needsPrecision) }
+        // Precision decides above B1, never below it (B1 is measured), and
+        // C1/C2 also need the range a native speaker's words have.
+        var set = rank(precision) < rank(.b1) ? CEFRLevel.b1 : precision
+        if rank(set) > rank(.b2), m < profile.nativeLike { set = .b2 }
+        return (set, .precision(precision))
     }
 
     /// Walks talks NEWEST FIRST (`texts` per talk, the learner's own evidence
-    /// lines) until `windowGradedTokens`, counting every graded token.
-    static func read(talksNewestFirst: [[String]],
+    /// lines) until `windowGradedTokens`.
+    static func read(talksNewestFirst: [[String]], profile: Profile,
                      level gradeOf: (String) -> CEFRLevel?) -> Read {
-        var out = Read(graded: 0, advanced: 0, talks: 0)
-        let tagger = NLTagger(tagSchemes: [.lemma])
+        var out = Read(graded: 0, levelSum: 0, talks: 0)
+        let tagger = NLTagger(tagSchemes: [.lemma, .lexicalClass])
         for texts in talksNewestFirst {
             guard out.graded < windowGradedTokens else { break }
             let before = out.graded
             for text in texts {
-                for lemma in lemmaTokens(text, tagger: tagger) {
+                for lemma in contentLemmas(text, profile: profile, tagger: tagger) {
                     guard let lv = gradeOf(lemma) else { continue }
                     out.graded += 1
-                    if rank(lv) >= rank(.b2) { out.advanced += 1 }
+                    out.levelSum += rank(lv)
                 }
             }
             if out.graded > before { out.talks += 1 }
@@ -97,17 +113,20 @@ enum VocabSophistication {
         return out
     }
 
-    /// Every word token's lemma, in order — repeats counted, unlike
-    /// `VocabStore.lemmas(in:)`, because a share of TOKENS is what was
-    /// calibrated (a type share keeps rising with sample size).
-    static func lemmaTokens(_ text: String, tagger: NLTagger) -> [String] {
+    private static let contentClasses: Set<NLTag> = [.noun, .verb, .adjective, .adverb]
+
+    /// Every content word's lemma, in order — repeats counted, because a
+    /// token mean is what was calibrated.
+    static func contentLemmas(_ text: String, profile: Profile, tagger: NLTagger) -> [String] {
         var out: [String] = []
         tagger.string = text
-        tagger.setLanguage(.english, range: text.startIndex..<text.endIndex)
-        tagger.enumerateTags(in: text.startIndex..<text.endIndex, unit: .word, scheme: .lemma,
-                             options: [.omitPunctuation, .omitWhitespace, .omitOther]) { tag, range in
-            let lemma = (tag?.rawValue ?? String(text[range])).lowercased()
-            if lemma.count > 1 { out.append(lemma) }
+        tagger.setLanguage(profile.tagger, range: text.startIndex..<text.endIndex)
+        tagger.enumerateTags(in: text.startIndex..<text.endIndex, unit: .word, scheme: .lexicalClass,
+                             options: [.omitPunctuation, .omitWhitespace, .omitOther]) { cls, range in
+            guard let cls, contentClasses.contains(cls) else { return true }
+            let lemma = (tagger.tag(at: range.lowerBound, unit: .word, scheme: .lemma).0?.rawValue
+                         ?? String(text[range])).lowercased()
+            if lemma.count > 1, !profile.stopWords.contains(lemma) { out.append(lemma) }
             return true
         }
         return out

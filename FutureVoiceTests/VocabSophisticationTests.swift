@@ -1,79 +1,107 @@
 import XCTest
 @testable import FutureVoice
 
-/// The vocabulary level reads the SHARE of advanced word tokens, not a count
-/// of advanced words. Reported 2026-10-29: a few C2 words made the level C2,
-/// and the old count rose with the amount of talk alone (NICT JLE: six ≈A2
-/// interviews pooled read B2). These pin the rule and its calibration.
+/// The vocabulary level reads the MEAN LEVEL of the content words said, not
+/// a count of advanced words. Reported 2026-10-29: a few C2 words made the
+/// level C2, and the old count rose with the amount of talk alone (NICT JLE:
+/// six ≈A2 interviews pooled read B2). These pin the rule and its calibration.
 final class VocabSophisticationTests: XCTestCase {
 
-    private func read(graded: Int, share: Double) -> VocabSophistication.Read {
-        .init(graded: graded, advanced: Int((Double(graded) * share / 100).rounded()), talks: 3)
+    private let en = VocabSophistication.profiles["en"]!
+
+    /// A read whose mean is `mean` (A1 = 0 … C2 = 5).
+    private func read(_ mean: Double, graded: Int = 1000) -> VocabSophistication.Read {
+        .init(graded: graded, levelSum: Int((mean * Double(graded)).rounded()), talks: 3)
+    }
+
+    private func band(_ mean: Double, graded: Int = 1000, precision: CEFRLevel? = nil)
+        -> (level: CEFRLevel, ceiling: VocabSophistication.Ceiling?)? {
+        VocabSophistication.level(read(mean, graded: graded), profile: en, precision: precision)
     }
 
     func testTooLittleSpeechReadsNoLevel() {
-        XCTAssertNil(VocabSophistication.level(read(graded: 399, share: 9), precision: .c2))
+        XCTAssertNil(band(0.5, graded: 299, precision: .c2))
     }
 
-    /// The cuts are the NICT JLE medians: SST 3 ≈2.1%, SST 4–5 ≈3.1–3.7%,
-    /// SST 6–7 ≈4.5%, SST 8 ≈5.5%.
+    /// NICT JLE medians, one interview: SST 3 ≈0.23, SST 4–5 ≈0.27–0.29,
+    /// SST 6–9 ≈0.32–0.34, natives 0.38.
     func testBandsFollowTheCalibration() {
-        let cases: [(Double, CEFRLevel)] = [(2.1, .a1), (3.3, .a2), (4.5, .b1), (5.5, .b2)]
-        for (share, expected) in cases {
-            XCTAssertEqual(VocabSophistication.level(read(graded: 1000, share: share),
-                                                     precision: nil)?.level, expected, "\(share)%")
-        }
+        XCTAssertEqual(band(0.23)?.level, .a1)
+        XCTAssertEqual(band(0.28)?.level, .a2)
+        XCTAssertEqual(band(0.33)?.level, .b1)
+        XCTAssertEqual(band(0.38)?.level, .b2)
+        XCTAssertNil(band(0.28)?.ceiling)
     }
 
-    /// Above B2 the share no longer separates levels: no precision read, no C1.
-    func testC1ShareWithoutPrecisionStopsAtB2() {
-        let r = VocabSophistication.level(read(graded: 1000, share: 6.5), precision: nil)
-        XCTAssertEqual(r?.level, .b2)
-        XCTAssertEqual(r?.ceiling, .needsPrecision)
+    /// Above B1 the words alone don't separate levels: without a precision
+    /// read the band says so instead of guessing.
+    func testAboveB1WithoutPrecisionSaysSo() {
+        XCTAssertEqual(band(0.33)?.ceiling, .needsPrecision)
+        XCTAssertEqual(band(0.38)?.ceiling, .needsPrecision)
     }
 
-    func testPrecisionHoldsTheTopDown() {
-        let r = VocabSophistication.level(read(graded: 1000, share: 7.5), precision: .c1)
-        XCTAssertEqual(r?.level, .c1)
-        XCTAssertEqual(r?.ceiling, .precision(.c1))
+    /// The precision read decides above B1 — it can raise B1 to B2 …
+    func testPrecisionDecidesAboveB1() {
+        XCTAssertEqual(band(0.33, precision: .b2)?.level, .b2)
+        XCTAssertEqual(band(0.33, precision: .b2)?.ceiling, .precision(.b2))
     }
 
-    /// Precision never pulls a measured B2 range below B2.
-    func testLowPrecisionNeverGoesBelowB2() {
-        let r = VocabSophistication.level(read(graded: 1000, share: 6.5), precision: .a2)
-        XCTAssertEqual(r?.level, .b2)
+    /// … but C1/C2 also need a native speaker's range of words.
+    func testC1NeedsTheNativeLikeRange() {
+        XCTAssertEqual(band(0.33, precision: .c1)?.level, .b2)
+        XCTAssertEqual(band(0.38, precision: .c1)?.level, .c1)
+        XCTAssertEqual(band(0.38, precision: .c2)?.level, .c2)
     }
 
-    /// Precision can't RAISE the band either.
-    func testPrecisionNeverRaises() {
-        let r = VocabSophistication.level(read(graded: 1000, share: 6.2), precision: .c2)
-        XCTAssertEqual(r?.level, .c1)
-        XCTAssertNil(r?.ceiling)
+    /// Precision never takes a measured B1 below B1, and never touches A1/A2.
+    func testPrecisionNeverGoesBelowWhatIsMeasured() {
+        XCTAssertEqual(band(0.33, precision: .a2)?.level, .b1)
+        XCTAssertEqual(band(0.28, precision: .c2)?.level, .a2)
     }
 
-    private let toyLevels: [String: CEFRLevel] = [
-        "go": .a1, "shop": .a1, "buy": .a1, "bread": .a1, "negotiate": .b2, "ephemeral": .c2
+    private let toy: [String: CEFRLevel] = [
+        "buy": .a1, "bread": .a1, "price": .a1, "negotiate": .b2, "fine": .a1,
+        "that": .b2, "will": .b2,
     ]
 
-    /// Repeats count (a token share), and talking more about the same thing
-    /// doesn't move the share — the property the old count lacked.
-    func testShareIsStableAsTalkGrows() {
-        let talk = ["I go to the shop and buy bread", "I negotiate the price"]
-        let once = VocabSophistication.read(talksNewestFirst: [talk], level: { self.toyLevels[$0] })
+    /// Only content words count: the pool grades `that` and auxiliary
+    /// `will` B2, and counting them made half of a native's score the word
+    /// `that`.
+    func testFunctionWordsDoNotCount() {
+        let r = VocabSophistication.read(talksNewestFirst: [["That will be fine."]], profile: en,
+                                         level: { self.toy[$0] })
+        XCTAssertEqual(r.graded, 1)
+        XCTAssertEqual(r.levelSum, 0)
+    }
+
+    /// Repeats count (a token mean), and talking more about the same thing
+    /// doesn't move it — the property the old count lacked.
+    func testMeanIsStableAsTalkGrows() {
+        let talk = ["I buy bread.", "I negotiate the price."]
+        let once = VocabSophistication.read(talksNewestFirst: [talk], profile: en, level: { self.toy[$0] })
         let tenTimes = VocabSophistication.read(talksNewestFirst: Array(repeating: talk, count: 10),
-                                                level: { self.toyLevels[$0] })
-        XCTAssertEqual(once.graded, 5)
-        XCTAssertEqual(once.advanced, 1)
-        XCTAssertEqual(once.share, tenTimes.share, accuracy: 0.001)
+                                                profile: en, level: { self.toy[$0] })
+        XCTAssertEqual(once.graded, 4)
+        XCTAssertEqual(once.levelSum, 3)
+        XCTAssertEqual(once.mean, tenTimes.mean, accuracy: 0.001)
         XCTAssertEqual(tenTimes.talks, 10)
     }
 
     /// The window reads the newest talks only, until it has enough.
     func testWindowStopsOnceFull() {
-        let talk = Array(repeating: "go shop buy bread", count: 200)   // 800 graded
+        let talk = Array(repeating: "I buy bread.", count: 400)   // 800 graded
         let r = VocabSophistication.read(talksNewestFirst: Array(repeating: talk, count: 5),
-                                         level: { self.toyLevels[$0] })
+                                         profile: en, level: { self.toy[$0] })
         XCTAssertEqual(r.talks, 2)
         XCTAssertEqual(r.graded, 1600)
+    }
+
+    /// German's cuts sit higher (its list grades more words B1) and closer.
+    func testGermanHasItsOwnCuts() {
+        let de = VocabSophistication.profiles["de"]!
+        XCTAssertEqual(VocabSophistication.level(read(0.56), profile: de, precision: nil)?.level, .a2)
+        XCTAssertEqual(VocabSophistication.level(read(0.59), profile: de, precision: nil)?.level, .b1)
+        XCTAssertTrue(VocabSophistication.isCalibrated("de"))
+        XCTAssertFalse(VocabSophistication.isCalibrated("ko"))
     }
 }

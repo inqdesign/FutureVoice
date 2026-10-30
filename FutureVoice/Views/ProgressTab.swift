@@ -980,24 +980,24 @@ struct ProgressTab: View {
         return explain("\(effectivePace) words per minute of voiced speech — pauses and think-time removed.")
     }
 
-    /// The line under the vocabulary level when the share decides it
+    /// The line under the vocabulary level when the mean decides it
     /// (`VocabSophistication`); nil where the old count still does.
     private var vocabDetail: String? {
         guard let read = vocabRead else { return nil }
         if read.graded < VocabSophistication.minGradedTokens {
-            // ~30 graded tokens a minute of a learner's own speech (NICT JLE).
-            let left = max(1, Int((Double(VocabSophistication.minGradedTokens - read.graded) / 30).rounded(.up)))
+            // ~20 graded content words a minute of a learner's own speech (NICT JLE).
+            let left = max(1, Int((Double(VocabSophistication.minGradedTokens - read.graded) / 20).rounded(.up)))
             return String(format: explain("Needs about %lld more min of your own speech before it reads a level."), left)
         }
         switch vocabCeiling {
         case .needsPrecision:
-            return explain("Your words read above B2. C1 and up also needs the weekly assessment to judge how precisely you pick words.")
-        case .precision(let l):
-            return String(format: explain("Held at ≈%@ by how precisely you pick words, from the weekly assessment."),
-                          l.rawValue.uppercased())
+            return explain("Above B1, the words alone don't tell levels apart. The weekly assessment's read of how precisely you pick words will.")
+        case .precision:
+            return String(format: explain("From the words in your last %lld talks, and how precisely you pick them in the weekly assessment."),
+                          read.talks)
         case nil:
-            return String(format: explain("%.1f%% of the words you said in your last %lld talks are B2 or above. The level reads which words you reach for, not how many."),
-                          read.share, read.talks)
+            return String(format: explain("From the words in your last %lld talks: which words you reach for, not how many you know."),
+                          read.talks)
         }
     }
 
@@ -2118,7 +2118,7 @@ struct ProgressTab: View {
             case .c2:      return 15
             }
         }
-        if VocabSophistication.isCalibrated(LanguageScope.active) {
+        if let profile = VocabSophistication.profiles[LanguageScope.active] {
             // Which words, not how many — see `VocabSophistication`. Same
             // evidence filter as the scores: no archived talk, no practice
             // call, no misheard or read-out line.
@@ -2127,13 +2127,13 @@ struct ProgressTab: View {
                 .filter { ($0.endedAt ?? $0.startedAt) > effortNow.addingTimeInterval(-Double(vocabWindowDays) * 86_400) }
                 .sorted { ($0.endedAt ?? $0.startedAt) > ($1.endedAt ?? $1.startedAt) }
                 .map { $0.turns.filter(\.isEvidence).map(\.transcript) }
-            let read = VocabSophistication.read(talksNewestFirst: talks,
+            let read = VocabSophistication.read(talksNewestFirst: talks, profile: profile,
                                                 level: { CoreVocabulary.level(of: $0) })
             let precision = input.weeklyReports
                 .sorted { $0.generatedAt > $1.generatedAt }
                 .compactMap { $0.lexicalPrecision.flatMap { CEFRLevel(rawValue: $0) } }
                 .first
-            let band = VocabSophistication.level(read, precision: precision)
+            let band = VocabSophistication.level(read, profile: profile, precision: precision)
             out.vocabRead = read
             out.vocabLevel = band?.level
             out.vocabCeiling = band?.ceiling

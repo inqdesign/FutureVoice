@@ -1874,37 +1874,47 @@ over 90 days, and it rose with the amount of talk alone. Measured on the
 NICT JLE corpus (1,277 Japanese learners of English, the same 15-minute SST
 interview at nine graded levels, plus 20 natives doing the same task):
 six pooled ≈A2 interviews read B2 197 times in 200, twelve native ones C1.
-Advanced words are rare in conversation for everyone (natives used one or
-two C1/C2 words in fifteen minutes), so counting them counts minutes.
 
-- **The level is the SHARE of graded word TOKENS at B2+**
-  (`VocabSophistication`), newest talks first up to 1,500 graded tokens,
-  400 needed before a band. Cuts are the corpus medians: A2 2.6% · B1 4.1%
-  · B2 5.0% · C1 6.0% · C2 7.0%. The share holds still as talk grows (SST 4
-  ≈3.3% over one interview or twelve). TOKENS, not types: a type share
-  keeps rising with sample size.
-- **Above B2 the share stops separating levels** (SST 8 ≈ SST 9, natives
-  +1pt), so C1/C2 also need the weekly assessment's `lexical_precision`
-  (did they pick the precise word where a general one would do). No read →
-  the band stops at B2; precision only holds the top down, never below B2
-  and never up. Not measured with a probe yet.
-- **English only.** Other languages keep the old count until they are
-  calibrated. German can't be with its list (measured on Tatoeba's en–de
-  pairs: the same sentences that go 0% → 27% B2+ in English go 13% → 20%
-  B1+ in German, band gaps ~0.25pt against ±1pt of noise; a frequency
-  profile separated nothing even in English). Spanish's list is frequency
-  bands and stays as is.
+- **The level is the MEAN LEVEL (A1 = 0 … C2 = 5) of the graded CONTENT
+  words said** (`VocabSophistication`): nouns, verbs, adjectives and
+  adverbs by NLTagger, minus `stopWords`, repeats counted, newest talks
+  first up to 1,200 graded words, 300 needed before a band.
+- **Function words had to go, and the first cut shipped without that.** It
+  read the share of ALL graded tokens at B2+, and the English list grades
+  `that` B2 and auxiliary `will` as the noun: half of a native's share was
+  the word `that`, so it counted relative clauses, not vocabulary. Never
+  count a token without its class.
+- **Above B1, words in speech don't separate learners.** Mean level by SST,
+  one interview: 3 → 0.23 · 4 → 0.27 · 5 → 0.29 · 6 → 0.33 · 7–9 →
+  0.32–0.34 · natives 0.38 (best of the measures tried, Spearman 0.36; B2+
+  share 0.22, MTLD 0). So the measure reads A1 (< 0.25) · A2 (< 0.31) · B1
+  · a native speaker's range (≥ 0.36), and the weekly assessment's
+  `lexical_precision` (did they pick the precise word where a general one
+  would do) DECIDES B2–C2. It may raise B1 to B2, never lower a measured
+  band, and C1/C2 also need the native-like range. Without a read the page
+  says above-B1 is undecided. Not measured with a probe yet.
+- **German is calibrated through translation, PROVISIONALLY.** No German
+  learner speech with levels is open (DAFlex is CC BY-NC-SA, MERLIN and
+  DISKO are writing). The English cuts were carried over through 240k
+  held-out Tatoeba en–de pairs pooled like speakers (pooled means correlate
+  0.88): A2 0.55 · B1 0.58 · native-like 0.61 — closer together than
+  English's, so German needs more talk for the same certainty. German's
+  LIST stays: re-grading it from English through the same pairs agreed
+  WORSE with the Goethe A1–B1 lists (56% → 43% exact), because the list
+  was built on them.
 - **Korean is REGRADED by the 2017 curriculum list** (국제 통용 한국어 표준
   교육과정, 1–6급 → A1–C2, `scripts/build-ko-wordlist.py`): the 2003
   list's three grades cut into six had put 탁자, 걷기, 한식 in C2. The
   headword SET did not change, and `KoreanMorph` keeps ranking readings by
   the old bands (`ko_morph_rank.tsv`): the curriculum's extra nouns and its
   new bands each flipped verb readings in Tatoeba's Korean (사는 → 사, 오는
-  → 오, 배우는 → 배우), and a reading's likelihood is not a level.
-- The assessment's vocab profile carries the share and says the distinct
-  counts are not a level. `scripts/vocab-calibration/` reruns the numbers
-  (corpus download in the script's header). Tests:
-  `VocabSophisticationTests`, Android `VocabShareTest`.
+  → 오, 배우는 → 배우), and a reading's likelihood is not a level. Korean,
+  Japanese and Spanish still use the old count rule.
+- `scripts/vocab-calibration/` reruns all of it (corpus downloads in the
+  headers). Tests: `VocabSophisticationTests`, Android `VocabShareTest`.
+  Android reads English only: it has no German lemmatizer and no word
+  classes in context, so its English read counts list words minus the same
+  stop words.
 
 ## The weekly test (2026-09-23)
 
