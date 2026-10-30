@@ -37,6 +37,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.input.pointer.pointerInput
@@ -64,6 +66,10 @@ import com.roro.futurevoice.data.ScriptVoiceoverCenter
 import com.roro.futurevoice.data.ScriptVoiceoverStore
 import com.roro.futurevoice.data.SpeechScript
 import com.roro.futurevoice.data.VocabLemmas
+import com.roro.futurevoice.data.CoreVocabulary
+import com.roro.futurevoice.data.JapaneseMorph
+import java.text.BreakIterator
+import java.util.Locale
 import com.roro.futurevoice.net.EdgeError
 import com.roro.futurevoice.ui.AllowanceSpentSheet
 import com.roro.futurevoice.ui.FormCard
@@ -116,12 +122,13 @@ internal object ScriptStudyStyle {
  * the prompter.
  */
 @Composable
-internal fun ScriptStudyText(paragraphs: List<String>, study: ScriptStudy, onTap: (ScriptStudy.Highlight) -> Unit) {
+internal fun ScriptStudyText(paragraphs: List<String>, study: ScriptStudy, language: String,
+                             onLookUp: (String) -> Unit, onTap: (ScriptStudy.Highlight) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         paragraphs.forEachIndexed { p, para ->
             if (p > 0) FormDivider(inset = 0.dp)
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                HighlightedParagraph(para, study.highlightsIn(p), onTap)
+                HighlightedParagraph(para, study.highlightsIn(p), language, onLookUp, onTap)
                 study.paragraphNotes.getOrNull(p)?.takeIf { it.isNotEmpty() }?.let {
                     Text(it, style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -132,8 +139,8 @@ internal fun ScriptStudyText(paragraphs: List<String>, study: ScriptStudy, onTap
 }
 
 @Composable
-private fun HighlightedParagraph(para: String, highlights: List<ScriptStudy.Highlight>,
-                                 onTap: (ScriptStudy.Highlight) -> Unit) {
+private fun HighlightedParagraph(para: String, highlights: List<ScriptStudy.Highlight>, language: String,
+                                 onLookUp: (String) -> Unit, onTap: (ScriptStudy.Highlight) -> Unit) {
     val text: AnnotatedString = remember(para, highlights) {
         buildAnnotatedString {
             append(para)
@@ -144,6 +151,7 @@ private fun HighlightedParagraph(para: String, highlights: List<ScriptStudy.High
         }
     }
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
+    val haptic = LocalHapticFeedback.current
     val colors = highlights.associate { it.id to ScriptStudyStyle.line(it.kind) }
     val density = LocalDensity.current
     val stroke = with(density) { 1.3.dp.toPx() }
@@ -171,14 +179,45 @@ private fun HighlightedParagraph(para: String, highlights: List<ScriptStudy.High
                     }
                 }
             }
-            .pointerInput(highlights) {
-                detectTapGestures { pos ->
-                    val l = layout ?: return@detectTapGestures
-                    val o = l.getOffsetForPosition(pos)
-                    highlights.firstOrNull { o >= it.offset && o < it.offset + it.length }?.let(onTap)
-                }
+            .pointerInput(highlights, para) {
+                detectTapGestures(
+                    onTap = { pos ->
+                        val l = layout ?: return@detectTapGestures
+                        val o = l.getOffsetForPosition(pos)
+                        highlights.firstOrNull { o >= it.offset && o < it.offset + it.length }?.let(onTap)
+                    },
+                    // Any word held down opens the word card (iOS 2026-10-30).
+                    onLongPress = { pos ->
+                        val l = layout ?: return@detectTapGestures
+                        val o = l.getOffsetForPosition(pos)
+                        studyWordAt(para, o, language)?.let {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onLookUp(it)
+                        }
+                    },
+                )
             },
     )
+}
+
+/** The notebook key of the word at [offset] (iOS `ScriptParagraphText.word`):
+ *  Japanese reads the whole chunk (疲れ+た → 疲れる); everything else is the
+ *  word the break iterator finds there. */
+internal fun studyWordAt(text: String, offset: Int, language: String): String? {
+    if (offset !in text.indices) return null
+    val lang = language.substringBefore('-')
+    if (lang == "ja") {
+        JapaneseMorph.headwords(text, CoreVocabulary.set("ja"), CoreVocabulary.forms("ja"))
+            .firstOrNull { offset >= it.second && offset < it.third }?.let { return it.first }
+    }
+    val words = BreakIterator.getWordInstance(Locale.forLanguageTag(language))
+    words.setText(text)
+    val end = words.following(offset)
+    val start = words.previous()
+    if (start == BreakIterator.DONE || end == BreakIterator.DONE || end <= start) return null
+    val word = text.substring(start, end)
+    if (word.none { it.isLetterOrDigit() }) return null
+    return VocabLemmas.lemma(word, lang).takeIf { it.isNotBlank() }
 }
 
 /** Kind · count for each kind present (iOS `ScriptStudyLegend`); how to use

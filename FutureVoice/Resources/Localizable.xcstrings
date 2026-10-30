@@ -122351,6 +122351,52 @@
         }
       }
     },
+    "Tap for an explanation · hold any word to look it up" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tippen für Erklärung · jedes Wort gedrückt halten zum Nachschlagen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toca para ver la explicación · mantén pulsada cualquier palabra para buscarla"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touche pour l’explication · maintiens n’importe quel mot pour le chercher"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タップで解説 · どの単語も長押しで辞書"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "탭하면 설명 · 아무 단어나 길게 누르면 사전"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "点一下看说明 · 长按任何词查词典"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "點一下看說明 · 長按任何字詞查字典"
+          }
+        }
+      }
+    },
     "Tap Let's talk — or a scenario or story below — to have your first conversation. Everything you meet ends up in Review." : {
       "extractionState" : "stale",
       "localizations" : {

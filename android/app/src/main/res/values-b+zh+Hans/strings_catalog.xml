@@ -2639,6 +2639,7 @@
     <string name="tap_edit_at_the_top_right_days_run_across_hours_run_down">"点右上角的“编辑”。横向是星期，纵向是时间。"</string>
     <string name="tap_end_session_after_a_conversation_and_it_ll_show_up_here">"对话结束后点 End session，就会出现在这里。"</string>
     <string name="tap_for_an_explanation">"点一下看说明"</string>
+    <string name="tap_for_an_explanation_hold_any_word_to_look_it_up">"点一下看说明 · 长按任何词查词典"</string>
     <string name="tap_it_once_more_your_voice_didn_t_move_this_time">"请再点一次。这次没能迁移你的声音。"</string>
     <!-- 'Tap one, then the other. Listen for the voice, not the words — everyone finds their own recording strange at first.' -->
     <string name="tap_one_then_the_other_listen_for_the_voice_not_the_words_ev_f4a3b5">"两个轮流点点看。只要听声音，不用管内容。录下来的自己的声音，谁一开始听都会觉得陌生。"</string>

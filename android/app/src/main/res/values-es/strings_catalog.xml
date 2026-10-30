@@ -2636,6 +2636,7 @@
     <string name="tap_edit_at_the_top_right_days_run_across_hours_run_down">"Toca Editar arriba a la derecha. Los días van en horizontal y las horas en vertical."</string>
     <string name="tap_end_session_after_a_conversation_and_it_ll_show_up_here">"Toca End session al terminar una conversación y aparecerá aquí."</string>
     <string name="tap_for_an_explanation">"Toca para ver la explicación"</string>
+    <string name="tap_for_an_explanation_hold_any_word_to_look_it_up">"Toca para ver la explicación · mantén pulsada cualquier palabra para buscarla"</string>
     <string name="tap_it_once_more_your_voice_didn_t_move_this_time">"Tócalo una vez más. Esta vez no se pudo trasladar tu voz."</string>
     <!-- 'Tap one, then the other. Listen for the voice, not the words — everyone finds their own recording strange at first.' -->
     <string name="tap_one_then_the_other_listen_for_the_voice_not_the_words_ev_f4a3b5">"Toca una y luego la otra. Escucha la voz, no las palabras: a todo el mundo le suena raro su propio audio al principio."</string>

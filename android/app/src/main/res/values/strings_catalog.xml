@@ -2675,6 +2675,7 @@
     <string name="tap_edit_at_the_top_right_days_run_across_hours_run_down">"Tap Edit at the top right. Days run across, hours run down."</string>
     <string name="tap_end_session_after_a_conversation_and_it_ll_show_up_here">"Tap End session after a conversation and it'll show up here."</string>
     <string name="tap_for_an_explanation">"Tap for an explanation"</string>
+    <string name="tap_for_an_explanation_hold_any_word_to_look_it_up">"Tap for an explanation · hold any word to look it up"</string>
     <string name="tap_it_once_more_your_voice_didn_t_move_this_time">"Tap it once more. Your voice didn't move this time."</string>
     <!-- "Tap me any time to ask: what to do, why a mistake keeps coming back, how you're doing." -->
     <string name="tap_me_any_time_to_ask_what_to_do_why_a_mistake_keeps_coming_17424f">"Tap me any time to ask: what to do, why a mistake keeps coming back, how you're doing."</string>

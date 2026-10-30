@@ -77,6 +77,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.roro.futurevoice.R
+import com.roro.futurevoice.ui.LibraryKind
+import com.roro.futurevoice.ui.WordCardSheet
 import com.roro.futurevoice.core.Analytics
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.BillingGate
@@ -906,6 +908,8 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
     var study by remember { mutableStateOf(initialStudy ?: capture.study) }
     var studyFailed by remember { mutableStateOf(false) }
     var studyAttempt by remember { mutableStateOf(0) }
+    // A word held down in the study text, any word at all.
+    var lookedUp by remember { mutableStateOf<String?>(null) }
     var card by remember { mutableStateOf(capture.studyCard?.let { id -> capture.study?.highlights?.firstOrNull { it.id == id } }) }
     val level = rememberLevel()
     val voiceId = rememberCloneVoiceId()
@@ -952,7 +956,7 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
         // Right under the switch, where the eye is: below a long script the
         // "Preparing…" row was off screen, and the switch read as doing nothing.
         if (studying && shownStudy != null) {
-            Text(stringResource(R.string.tap_for_an_explanation), style = MaterialTheme.typography.bodySmall,
+            Text(stringResource(R.string.tap_for_an_explanation_hold_any_word_to_look_it_up), style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 7.dp))
             ScriptStudyLegend(shownStudy, Modifier.padding(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 8.dp))
@@ -978,7 +982,7 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
                 }
                 Box(Modifier.padding(top = 4.dp)) {
                     if (studying && shownStudy != null) {
-                        ScriptStudyText(paragraphs, shownStudy) { card = it }
+                        ScriptStudyText(paragraphs, shownStudy, shown.language, onLookUp = { lookedUp = it }) { card = it }
                     } else {
                         SelectionContainer {
                             Text(shown.body, style = MaterialTheme.typography.bodyLarge.copy(
@@ -1023,6 +1027,10 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
     }
     card?.let { h ->
         study?.let { st -> ScriptStudyCard(h, st, shown.language, onDismiss = { card = null }) }
+    }
+    lookedUp?.let { w ->
+        WordCardSheet(terms = listOf(w), initialTerm = w, kind = LibraryKind.WORDS,
+            language = shown.language, onDismiss = { lookedUp = null })
     }
 }
 

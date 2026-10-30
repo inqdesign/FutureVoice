@@ -2636,6 +2636,7 @@
     <string name="tap_edit_at_the_top_right_days_run_across_hours_run_down">"Tipp oben rechts auf Bearbeiten. Die Tage laufen nach rechts, die Stunden nach unten."</string>
     <string name="tap_end_session_after_a_conversation_and_it_ll_show_up_here">"Tippe nach einem Gespräch auf End session, dann erscheint es hier."</string>
     <string name="tap_for_an_explanation">"Tippen für Erklärung"</string>
+    <string name="tap_for_an_explanation_hold_any_word_to_look_it_up">"Tippen für Erklärung · jedes Wort gedrückt halten zum Nachschlagen"</string>
     <string name="tap_it_once_more_your_voice_didn_t_move_this_time">"Tipp noch einmal darauf. Diesmal konnte deine Stimme nicht umziehen."</string>
     <!-- 'Tap one, then the other. Listen for the voice, not the words — everyone finds their own recording strange at first.' -->
     <string name="tap_one_then_the_other_listen_for_the_voice_not_the_words_ev_f4a3b5">"Tippe erst die eine, dann die andere an. Achte auf die Stimme, nicht auf die Worte. Die eigene Aufnahme klingt für alle erst mal fremd."</string>

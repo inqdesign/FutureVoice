@@ -2672,6 +2672,7 @@
     <string name="tap_edit_at_the_top_right_days_run_across_hours_run_down">"오른쪽 위 편집을 누르세요. 가로는 요일, 세로는 시간이에요."</string>
     <string name="tap_end_session_after_a_conversation_and_it_ll_show_up_here">"대화 후 End session을 누르면 여기에 나타나요."</string>
     <string name="tap_for_an_explanation">"탭하면 설명"</string>
+    <string name="tap_for_an_explanation_hold_any_word_to_look_it_up">"탭하면 설명 · 아무 단어나 길게 누르면 사전"</string>
     <string name="tap_it_once_more_your_voice_didn_t_move_this_time">"한 번 더 눌러 주세요. 이번엔 목소리를 옮기지 못했어요."</string>
     <!-- "Tap me any time to ask: what to do, why a mistake keeps coming back, how you're doing." -->
     <string name="tap_me_any_time_to_ask_what_to_do_why_a_mistake_keeps_coming_17424f">"궁금할 땐 언제든 저를 눌러 물어보세요. 뭘 하면 좋을지, 같은 실수가 왜 반복되는지, 잘하고 있는지요."</string>
