@@ -226,7 +226,7 @@ struct GrammarReviewView: View {
                             }
                         }
                         .padding(.vertical, 2)
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        .rowActions(allowsFullSwipe: false) {
                             if sessionId != nil {
                                 Button(role: .destructive) {
                                     markMisheard(issue)

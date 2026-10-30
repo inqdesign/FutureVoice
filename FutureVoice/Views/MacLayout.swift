@@ -243,6 +243,51 @@ extension View {
     }
 }
 
+extension View {
+    /// A row's swipe actions, and on the Mac the same actions on a
+    /// right-click. A mouse cannot swipe a row (only a trackpad's two
+    /// fingers can), so on the Mac every row action had no way in.
+    func rowActions<T: View>(allowsFullSwipe: Bool = true,
+                             @ViewBuilder trailing: @escaping () -> T) -> some View {
+        #if targetEnvironment(macCatalyst)
+        swipeActions(edge: .trailing, allowsFullSwipe: allowsFullSwipe, content: trailing)
+            .contextMenu { trailing() }
+        #else
+        swipeActions(edge: .trailing, allowsFullSwipe: allowsFullSwipe, content: trailing)
+        #endif
+    }
+
+    /// Both edges' actions; on the Mac one right-click menu holds them all.
+    func rowActions<L: View, T: View>(@ViewBuilder leading: @escaping () -> L,
+                                      @ViewBuilder trailing: @escaping () -> T) -> some View {
+        #if targetEnvironment(macCatalyst)
+        swipeActions(edge: .leading, content: leading)
+            .swipeActions(edge: .trailing, content: trailing)
+            .contextMenu { leading(); trailing() }
+        #else
+        swipeActions(edge: .leading, content: leading)
+            .swipeActions(edge: .trailing, content: trailing)
+        #endif
+    }
+}
+
+extension View {
+    /// A row that is deleted by swiping (`onDelete`) gets Delete on a
+    /// right-click on the Mac, where a mouse cannot swipe. No-op elsewhere.
+    func macDeleteMenu(enabled: Bool = true, _ delete: @escaping () -> Void) -> some View {
+        #if targetEnvironment(macCatalyst)
+        contextMenu {
+            Button(role: .destructive, action: delete) {
+                Label("Delete", systemImage: "trash")
+            }
+            .disabled(!enabled)
+        }
+        #else
+        self
+        #endif
+    }
+}
+
 /// A menu whose label is drawn as written, on the Mac too. A SwiftUI `Menu`
 /// there is a macOS pull-down that keeps only the label's text OR its icon
 /// (measured, every built-in style and a custom button style alike): the

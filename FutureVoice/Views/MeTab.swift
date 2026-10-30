@@ -716,6 +716,9 @@ struct MeTab: View {
                     .pickerStyle(.menu)
                 }
                 .deleteDisabled(appState.enrolledLanguages.count == 1)
+                .macDeleteMenu(enabled: appState.enrolledLanguages.count > 1) {
+                    appState.removeLanguage(code)
+                }
             }
             .onDelete { indexSet in
                 for i in indexSet { appState.removeLanguage(appState.enrolledLanguages[i]) }

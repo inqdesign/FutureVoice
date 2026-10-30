@@ -304,7 +304,9 @@ struct PersonaOnboardingView: View {
                     Label("Show the talk", systemImage: "waveform")
                 }
             }
-            AppMenu {
+            // A plain Menu: inside a right-click menu it is a submenu, and
+            // AppMenu's drawn label has no place there.
+            Menu {
                 sharePicker(note)
             } label: {
                 Label("Strangers hear", systemImage: shareIcon(n.share))

@@ -227,6 +227,7 @@ struct FindPeopleSheet: View {
                         }
                     }
                 }
+                .macDeleteMenu { appState.deleteCounterpart(id: c.id) }
             }
             .onDelete { idx in
                 let people = ownPeople

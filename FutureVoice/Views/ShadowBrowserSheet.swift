@@ -158,7 +158,7 @@ private extension ShadowBrowserView {
                                     ShadowRow(turn: turn, isSaved: appState.isLineSaved(turn.id))
                                 }
                                 .buttonStyle(.plain)
-                                .swipeActions(edge: .trailing) {
+                                .rowActions {
                                     Button {
                                         appState.toggleSavedLine(turn: turn, source: session.topic ?? "")
                                     } label: {

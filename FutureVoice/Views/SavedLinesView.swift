@@ -28,6 +28,7 @@ struct SavedLinesView: View {
                             row(line)
                         }
                         .buttonStyle(.plain)
+                        .macDeleteMenu { appState.removeSavedLine(id: line.id) }
                     }
                     .onDelete { indexSet in
                         for i in indexSet { appState.removeSavedLine(id: appState.savedLines[i].id) }

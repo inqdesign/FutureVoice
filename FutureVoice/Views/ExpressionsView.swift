@@ -114,8 +114,7 @@ struct ExpressionsView: View {
                                 row(entry)
                             }
                             .buttonStyle(.plain)
-                            .swipeActions(edge: .leading) { keepAction(entry) }
-                            .swipeActions(edge: .trailing) { knownAction(entry) }
+                            .rowActions(leading: { keepAction(entry) }, trailing: { knownAction(entry) })
                             .task(id: entry.text) { await loadMeaning(entry) }
                         }
                     } header: {

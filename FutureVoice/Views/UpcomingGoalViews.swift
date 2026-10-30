@@ -201,6 +201,10 @@ struct UpcomingGoalEditor: View {
                         }
                     }
                 }
+                .macDeleteMenu {
+                    BriefAttachmentCache.shared.drop(src.id)
+                    goal.brief?.sources.removeAll { $0.id == src.id }
+                }
             }
             .onDelete { idx in
                 let gone = idx.map { sources[$0] }

@@ -189,8 +189,7 @@ struct WordsView: View {
                                 row(item)
                             }
                             .buttonStyle(.plain)
-                            .swipeActions(edge: .leading) { keepAction(item) }
-                            .swipeActions(edge: .trailing) { knownAction(item) }
+                            .rowActions(leading: { keepAction(item) }, trailing: { knownAction(item) })
                             .task(id: item.key) { await loadMeaning(item) }
                         }
                     } header: {

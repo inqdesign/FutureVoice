@@ -23,6 +23,11 @@ struct HistoryView: View {
                         } label: {
                             HistoryRow(session: session)
                         }
+                        .macDeleteMenu {
+                            if let i = sessions.firstIndex(where: { $0.id == session.id }) {
+                                delete(at: IndexSet(integer: i))
+                            }
+                        }
                     }
                     .onDelete(perform: delete)
                 }

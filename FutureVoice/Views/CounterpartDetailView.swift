@@ -245,6 +245,7 @@ struct CounterpartDetailView: View {
                         }
                         .padding(.vertical, 2)
                     }
+                    .macDeleteMenu { appState.deleteWatchDialogue(id: d.id) }
                 }
                 .onDelete { indexSet in
                     for i in indexSet { appState.deleteWatchDialogue(id: past[i].id) }

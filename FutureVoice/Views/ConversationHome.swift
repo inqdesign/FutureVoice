@@ -1444,7 +1444,7 @@ struct TalkScenariosListView: View {
                         TalkScenarioRow(scenario: s, personaName: personaName(s))
                     }
                     .buttonStyle(.plain)
-                    .swipeActions(edge: .trailing) {
+                    .rowActions {
                         Button(role: .destructive) {
                             appState.deleteScenario(id: s.id)
                         } label: {

@@ -3141,6 +3141,14 @@ sync container carry over. `./scripts/mac-run.sh` builds and opens it.
   the source letting go closes it, and the source's `onDismiss` still runs.
   Cards opened inside something that is already a sheet (the study decks,
   the speech script) stay sheets.
+- **A row's swipe is a right-click on the Mac** (2026-10-30, founder: "the
+  lists don't swipe with a mouse"). A mouse cannot swipe a row; only a
+  trackpad's two fingers can, so every row action (keep / I know, delete,
+  edit, misheard, save) had no way in. Use `.rowActions` instead of
+  `.swipeActions`: the swipe on the phone, and on the Mac the same buttons
+  in the row's right-click menu. A list deleted by `onDelete` gives each row
+  `.macDeleteMenu` (Delete on a right-click). A `Menu` inside a
+  `contextMenu` stays a plain `Menu` (a submenu), never `AppMenu`.
 - **A sheet with no bar gets a ✕** (`MacSheets.addCloseButton`): macOS
   swallows clicks behind a sheet and Esc was invisible. Sheets with a
   navigation bar carry their own Done/Cancel and are left alone.

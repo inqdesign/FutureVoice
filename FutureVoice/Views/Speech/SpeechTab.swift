@@ -176,7 +176,16 @@ struct SpeechTab: View {
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .swipeActions(edge: .trailing) {
+                        .rowActions(leading: {
+                            // Admin accounts put one of their own scripts on
+                            // every learner's tab as a challenge.
+                            if gate.account?.unlimited == true, !script.isBuiltIn {
+                                Button { publishing = script } label: {
+                                    Label("Publish as challenge", systemImage: "trophy")
+                                }
+                                .tint(.orange)
+                            }
+                        }, trailing: {
                             if !script.isBuiltIn {
                                 Button(role: .destructive) {
                                     store.deleteScript(id: script.id)
@@ -190,17 +199,7 @@ struct SpeechTab: View {
                                 }
                                 .tint(Color.themeAccent)
                             }
-                        }
-                        .swipeActions(edge: .leading) {
-                            // Admin accounts put one of their own scripts on
-                            // every learner's tab as a challenge.
-                            if gate.account?.unlimited == true, !script.isBuiltIn {
-                                Button { publishing = script } label: {
-                                    Label("Publish as challenge", systemImage: "trophy")
-                                }
-                                .tint(.orange)
-                            }
-                        }
+                        })
                     }
                 } header: {
                     Text("My scripts")
@@ -693,6 +692,7 @@ struct SpeechTakesSheet: View {
                             } label: {
                                 SpeechTakeRow(take: take)
                             }
+                            .macDeleteMenu { store.deleteTake(id: take.id) }
                         }
                         .onDelete { offsets in
                             for i in offsets { store.deleteTake(id: takes[i].id) }
