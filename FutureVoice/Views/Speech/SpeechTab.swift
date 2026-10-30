@@ -438,14 +438,21 @@ struct SpeechScriptSheet: View {
     /// episode): nothing is edited, voiced or studied on this phone — the
     /// study was written once for everybody when the episode was published.
     private let shipped: Bool
+    /// A shipped script whose study is still made on this phone: a news
+    /// article from the tutor bot is read-only like an episode, but nothing
+    /// was studied when it was written.
+    private let studyHere: Bool
 
     init(script: SpeechScript, onEdited: @escaping (SpeechScript) -> Void = { _ in },
-         study: ScriptStudy? = nil, shipped: Bool = false) {
+         study: ScriptStudy? = nil, shipped: Bool = false, studyHere: Bool = false) {
         _script = State(initialValue: script)
         _study = State(initialValue: study)
         self.onEdited = onEdited
         self.shipped = shipped
+        self.studyHere = studyHere
     }
+
+    private var studyShipped: Bool { shipped && !studyHere }
 
     private var paragraphs: [String] { ScriptStudy.paragraphs(script.body) }
 
@@ -577,7 +584,7 @@ struct SpeechScriptSheet: View {
     private var studyTaskId: String { "\(studying)|\(script.body.hashValue)" }
 
     @ViewBuilder private var studyStatus: some View {
-        if shipped {
+        if studyShipped {
             Text("Study notes for this episode aren't in your language yet.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
@@ -600,7 +607,7 @@ struct SpeechScriptSheet: View {
     }
 
     private func loadStudy(force: Bool = false) async {
-        guard studying, study == nil, !shipped, !studyLoading || force else { return }
+        guard studying, study == nil, !studyShipped, !studyLoading || force else { return }
         studyLoading = true
         studyFailed = false
         defer { studyLoading = false }

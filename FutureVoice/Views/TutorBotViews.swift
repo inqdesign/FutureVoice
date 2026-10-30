@@ -599,7 +599,8 @@ struct TutorReadingSheet: View {
     var body: some View {
         Group {
             if let s = script ?? reading.script {
-                SpeechScriptSheet(script: s, study: reading.study, shipped: true)
+                SpeechScriptSheet(script: s, study: reading.study, shipped: true,
+                                  studyHere: reading.script == nil)
             } else {
                 NavigationStack {
                     Group {
