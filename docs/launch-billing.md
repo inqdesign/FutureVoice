@@ -33,6 +33,30 @@ people, which stays true. It is not a licence to price against under-use.
 
 ---
 
+## 2026-10-27 revision — Plus 450 min, Max 900 min (new buyers)
+
+Founder decision, `20261027120000_plus_450_max_900`. Prices unchanged; the
+pool moved instead, because the price is what the paywall shows and nobody
+paying today comes near the pool (heaviest ~400 min a period).
+
+Re-measured 10-21..26, after the call reply moved to Claude Haiku: a talk
+minute is **~$0.046 all in** (Gemini €0.018 from the billing console with
+Dear RoRo's image SKUs removed, Claude ~$0.004 from the ledger, Cartesia
+~$0.02 estimated — the call's own voice is not in the ledger). The $0.03 in
+the tables below was TTS alone.
+
+| Plan | Pool | Full-use cost | Net US / KR | At full use US / KR |
+|------|------|---------------|-------------|---------------------|
+| Light $9.99 / ₩15,000 | 150 min | $6.9 | $8.49 / $8.3 | +$1.6 / +$1.4 |
+| **Plus** $24.99 / ₩29,000 | 600 → **450 min** | $20.7 | $21.2 / $16.0 | +$0.5 / −$4.7 (was −$6.4 / −$11.6) |
+| **Max** $49.99 / ₩58,000 | 1,200 → **900 min** | $41.4 | $42.5 / $32.5 | +$1.1 / −$8.9 (was −$12.7 / −$22.7) |
+
+Max stays twice Plus at twice its price. Scenes are untouched (30 each).
+Every live Plus/Max row was stamped with what it bought (600 min) before
+the catalog moved, so only new purchases get the smaller pool. The App
+Store description says 450/900 in every language — push it with the next
+submission.
+
 ## 2026-09-26 revision — bounded plans, minute packs, 20 free minutes
 
 Founder decision, after two weeks of real numbers (`usage_ledger`, the TTS
