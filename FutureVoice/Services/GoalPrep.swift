@@ -133,7 +133,11 @@ enum GoalPrep {
     }
 
     static func cachedQuestions(for goal: UpcomingGoal) -> [Question]? {
-        questionSets().first { $0.goalId == goal.id && $0.goalUpdatedAt == goal.updatedAt }?.questions
+        questionSets().first {
+            // Whole seconds: the file's ISO dates drop the fraction the
+            // goal in memory still has.
+            $0.goalId == goal.id && Int($0.goalUpdatedAt.timeIntervalSince1970) == Int(goal.updatedAt.timeIntervalSince1970)
+        }?.questions
     }
 
     static func questions(for goal: UpcomingGoal, appState: AppState) async throws -> [Question] {
@@ -163,6 +167,7 @@ enum GoalPrep {
             system: """
                 A \(target) learner (level \(appState.proficiency.rawValue.uppercased())) is preparing for this:
                 \(goal.promptLine())
+                \(goal.materialLines.isEmpty ? "" : goal.materialLines + "\nLead with what this material says they will be asked or expected to do.")
 
                 List the 6 to 8 questions or tasks they will most likely meet on the day, most likely \
                 first — what an interviewer, examiner or the people there really ask or expect, for this \
@@ -269,6 +274,7 @@ enum GoalPrep {
             THE GOAL
             \(goal.promptLine(now: now))
             \(phase(goal, now: now))
+            \(goal.materialLines.isEmpty ? "" : goal.materialLines + "\nBuild today's reading and answer on this material first: it is the real posting / CV / page.")
 
             WHAT YOU KNOW ABOUT THE LEARNER (their own words; use only this about them)
             \(about.isEmpty ? "Nothing yet." : about.joined(separator: "\n"))

@@ -321,7 +321,7 @@ final class TutorBot: ObservableObject {
                 // angle, once written, narrows it.
                 let focus = GoalPrep.today(for: goal, now: Date())?.focus
                 goalCall = GoalCall(topic: focus.map { "\($0) — \(goal.title)" } ?? goal.title,
-                                    blurb: "Preparing for: " + goal.promptLine())
+                                    blurb: goal.drillBlurb)
             }
         case .challenge(let id):
             if let rank = SpeechChallenges.shared.standings[id]?.myRank {

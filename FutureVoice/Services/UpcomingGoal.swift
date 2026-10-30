@@ -97,6 +97,10 @@ struct UpcomingGoal: Codable, Identifiable, Equatable {
     var language: String
     var createdAt = Date()
     var updatedAt = Date()
+    /// A job posting, a CV, an exam's page — read once by the same reader a
+    /// Watch scenario's material uses (`ScenarioBriefEngine`). The files are
+    /// never copied: a bookmark stays here, the bytes stay where they are.
+    var brief: ScenarioBrief? = nil
 
     /// Days from today to the goal's day: 0 = today, negative = past.
     func daysLeft(now: Date = Date()) -> Int? {
@@ -111,6 +115,26 @@ struct UpcomingGoal: Codable, Identifiable, Equatable {
     func countdown(now: Date = Date()) -> String? {
         guard let d = daysLeft(now: now), d >= 0 else { return nil }
         return d == 0 ? explain("D-day") : "D-\(d)"
+    }
+
+    /// What the reading of the attached material found, as prompt lines.
+    /// Empty when nothing is attached or it hasn't been read yet.
+    var materialLines: String {
+        guard let b = brief, b.readAt != nil, b.hasContent || !b.summary.isEmpty else { return "" }
+        var out = ["FROM THEIR OWN MATERIAL (job posting, CV, the exam's page — read from the source):"]
+        if !b.summary.isEmpty { out.append("About: \(b.summary)") }
+        if !b.counterpartFacts.isEmpty { out.append("The other side: " + b.counterpartFacts.joined(separator: "; ")) }
+        if !b.likelyQuestions.isEmpty { out.append("Likely asked: " + b.likelyQuestions.joined(separator: " | ")) }
+        if !b.learnerFacts.isEmpty { out.append("The learner's side: " + b.learnerFacts.joined(separator: "; ")) }
+        if !b.keyExpressions.isEmpty { out.append("Key expressions: " + b.keyExpressions.joined(separator: "; ")) }
+        return out.joined(separator: "\n")
+    }
+
+    /// The tutor drill's context: the goal, and what its material is about.
+    var drillBlurb: String {
+        var line = "Preparing for: " + promptLine()
+        if let s = brief?.summary, !s.isEmpty { line += ". Their material: \(s)" }
+        return line
     }
 
     /// One plain line for a prompt.
@@ -168,6 +192,32 @@ final class UpcomingGoalStore: ObservableObject {
         }
         Analytics.capture("upcoming_goal_saved", ["kind": g.kind.rawValue, "dated": g.date != nil])
     }
+
+    /// Read the goal's attached material, then save what it found. The
+    /// learner just saved the goal or opened its page, so they are here.
+    func readMaterial(_ id: UUID, appState: AppState) async {
+        guard !readingMaterial.contains(id),
+              let goal = goals.first(where: { $0.id == id }), goal.brief?.hasSources == true else { return }
+        readingMaterial.insert(id)
+        materialFailed.remove(id)
+        defer { readingMaterial.remove(id) }
+        let stand = Scenario(environment: goal.promptLine(), role: "", notes: goal.notes, brief: goal.brief)
+        do {
+            let brief = try await ScenarioBriefEngine.read(scenario: stand, persona: appState.persona,
+                                                           targetLanguage: goal.language,
+                                                           nativeLanguage: appState.nativeLanguage)
+            guard var current = goals.first(where: { $0.id == id }),
+                  current.brief?.sources.map(\.id) == brief.sources.map(\.id) else { return }
+            current.brief = brief
+            save(current)
+            Analytics.capture("upcoming_goal_material_read", ["sources": brief.sources.count])
+        } catch {
+            materialFailed.insert(id)
+        }
+    }
+
+    @Published private(set) var readingMaterial: Set<UUID> = []
+    @Published private(set) var materialFailed: Set<UUID> = []
 
     func delete(_ id: UUID) {
         write(goals.filter { $0.id != id })

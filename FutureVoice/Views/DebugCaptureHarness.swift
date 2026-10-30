@@ -762,7 +762,19 @@ enum DebugCapture {
         case "goal-page":
             // The tutor note's goal row, opened: likely questions + days so far.
             once("sample-goal") { seedSampleGoal(appState) }
-            if let goal = UpcomingGoalStore.shared.goals.first { GoalPrep.seedForCapture(goal) }
+            if var goal = UpcomingGoalStore.shared.goals.first {
+                if goal.brief == nil {
+                    goal.brief = ScenarioBrief(
+                        sources: [.init(kind: .link, label: "https://www.be-lufthansa.com/flight-attendant",
+                                        detail: "Job posting · Frankfurt"),
+                                  .init(kind: .file, label: "CV_2026.pdf", detail: "2 pages")],
+                        summary: "Lufthansa · Flight Attendant · Frankfurt base",
+                        readAt: Date())
+                    UpcomingGoalStore.shared.save(goal)
+                    goal = UpcomingGoalStore.shared.goals.first { $0.id == goal.id } ?? goal
+                }
+                GoalPrep.seedForCapture(goal)
+            }
             return AnyView(UpcomingGoalPage(goal: UpcomingGoalStore.shared.goals.first
                                             ?? UpcomingGoal(kind: .interview, title: "", language: "en"))
                 .environmentObject(appState))
