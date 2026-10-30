@@ -446,6 +446,17 @@ struct WordCard: View {
     /// The list the chevrons navigate — a caller-supplied list, or the notebook.
     private var navList: [String] { navigationWords ?? store.studying }
     private var navIndex: Int? { navList.firstIndex(of: word) }
+    /// Where the word last stood in `navList`. "I know" takes it OUT of the
+    /// notebook, and the chevrons vanished with it; they walk on from here
+    /// instead (the next word has slid into this slot).
+    @State private var lastSlot: Int?
+    /// The chevrons' targets: next to the word while it is in the list, else
+    /// either side of the slot it left. nil = nothing to walk.
+    private var step: (prev: Int, next: Int)? {
+        if let i = navIndex { return (i - 1, i + 1) }
+        if let s = lastSlot { return (s - 1, s) }
+        return nil
+    }
     /// Words the user has USED count as known too — using a word in a real
     /// conversation is stronger evidence than a self-check, and every other
     /// surface (chips, cloud, counts) already treats them that way.
@@ -486,6 +497,8 @@ struct WordCard: View {
         .toolbar { cardToolbar }
         .safeAreaInset(edge: .bottom) { if isExpanded { actionBar } }
         .task(id: word) { await load() }
+        .onChange(of: word, initial: true) { lastSlot = navIndex }
+        .onChange(of: navIndex) { _, i in if let i { lastSlot = i } }
         .onDisappear { player.stop() }
         .fullScreenCover(item: $shadowing) { turn in
             NavigationStack {
@@ -651,12 +664,12 @@ struct WordCard: View {
             }
             // Collapsed only — expanded, the same two chevrons live at the
             // bottom next to Keep / I know, and two sets would be a puzzle.
-            if !isExpanded, let i = navIndex {
+            if !isExpanded, let step {
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    Button { currentWord = navList[i - 1] } label: { Image(systemName: "chevron.up") }
-                        .disabled(i == 0)
-                    Button { currentWord = navList[i + 1] } label: { Image(systemName: "chevron.down") }
-                        .disabled(i + 1 >= navList.count)
+                    Button { currentWord = navList[step.prev] } label: { Image(systemName: "chevron.up") }
+                        .disabled(!navList.indices.contains(step.prev))
+                    Button { currentWord = navList[step.next] } label: { Image(systemName: "chevron.down") }
+                        .disabled(!navList.indices.contains(step.next))
                 }
             }
         }
@@ -868,11 +881,11 @@ struct WordCard: View {
             // move on, and both halves of that are now under the same thumb.
             // (Collapsed, where there's no action bar, the chevrons stay in
             // the toolbar.)
-            if let i = navIndex {
-                CardStepButton(icon: "chevron.up", label: "Previous word") { currentWord = navList[i - 1] }
-                    .disabled(i == 0)
-                CardStepButton(icon: "chevron.down", label: "Next word") { currentWord = navList[i + 1] }
-                    .disabled(i + 1 >= navList.count)
+            if let step {
+                CardStepButton(icon: "chevron.up", label: "Previous word") { currentWord = navList[step.prev] }
+                    .disabled(!navList.indices.contains(step.prev))
+                CardStepButton(icon: "chevron.down", label: "Next word") { currentWord = navList[step.next] }
+                    .disabled(!navList.indices.contains(step.next))
             }
         }
         .padding(.horizontal, 14)
