@@ -1,6 +1,6 @@
 -- Written for nawana: the heroine's big confession at the end of every
 -- romantic comedy. Original text; no film is quoted.
-insert into public.speech_challenges (id, language, title, genre, body, target_seconds)
+insert into public.speech_challenges (id, language, title, genre, body, target_seconds, category)
 values
   ('5beec000-0000-4000-8000-000000000019', 'en', 'Wait. Don''t get on that plane.', 'person',
    'Wait. Please, just wait. Don''t get on that plane. Not yet.
@@ -13,5 +13,5 @@ But you''re leaving anyway. And standing here, I realized that losing you becaus
 
 So I''m trying. This is me, trying. I miss you when you''re in the next room. I laugh at your terrible jokes when you''re not even there. And I don''t want a life where I have to tell someone about you in the past tense.
 
-I''m not asking you to stay. I''m just asking you to know. I love you. That''s it. That''s the whole speech.', 60)
+I''m not asking you to stay. I''m just asking you to know. I love you. That''s it. That''s the whole speech.', 60, 'movie_scene')
 on conflict (id) do nothing;

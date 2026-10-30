@@ -1,6 +1,6 @@
 -- Show host series: be the host selling one thing live on a home-shopping
 -- channel. Product and name are made up; no digits, no price figures.
-insert into public.speech_challenges (id, language, title, genre, body, target_seconds)
+insert into public.speech_challenges (id, language, title, genre, body, target_seconds, category)
 values
   ('5beec000-0000-4000-8000-00000000001f', 'en', 'Go ahead, stand on it', 'product',
    'Everyone, I want you to remember the worst airport moment of your life. The broken wheel. The handle that wont come down. The suitcase that comes out of the carousel looking like it lost a fight.
@@ -13,5 +13,5 @@ The wheels spin all the way around, so it glides next to you like a little dog. 
 
 And tonight, you get the big one for checking in and the small one for the cabin. Pick your color. We have black, navy, and this gorgeous mint, which is almost gone.
 
-Your next trip starts with this phone call. Call now!', 60)
+Your next trip starts with this phone call. Call now!', 60, 'show_host')
 on conflict (id) do nothing;

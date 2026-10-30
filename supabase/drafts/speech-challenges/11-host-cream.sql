@@ -1,6 +1,6 @@
 -- Show host series: be the host selling one thing live on a home-shopping
 -- channel. Product and name are made up; no digits, no price figures.
-insert into public.speech_challenges (id, language, title, genre, body, target_seconds)
+insert into public.speech_challenges (id, language, title, genre, body, target_seconds, category)
 values
   ('5beec000-0000-4000-8000-000000000020', 'en', 'Wake up glowing', 'product',
    'Ladies and gentlemen, before I say anything, look at my face. Up close. No filter, no foundation, nothing. Just my real skin, at the end of a very long day.
@@ -15,5 +15,5 @@ And while you sleep, it does the work. It holds the moisture in all night, so in
 
 Tonight, you get the big jar, a travel size for your bag, and a free eye cream. Three for the price of one.
 
-Your skin works hard for you every day. Give it one good night. Call now!', 60)
+Your skin works hard for you every day. Give it one good night. Call now!', 60, 'show_host')
 on conflict (id) do nothing;

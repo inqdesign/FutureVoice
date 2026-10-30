@@ -1,6 +1,6 @@
 -- Show host series: be the host selling one thing live on a home-shopping
 -- channel. Product and name are made up; no digits, no price figures.
-insert into public.speech_challenges (id, language, title, genre, body, target_seconds)
+insert into public.speech_challenges (id, language, title, genre, body, target_seconds, category)
 values
   ('5beec000-0000-4000-8000-000000000023', 'en', 'The one step everybody skips', 'product',
    'Can I ask you a question? Whats the most important thing you put on your skin every morning? Moisturizer? Serum? Nope. Its sunscreen. And I know, I know, most of us skip it.
@@ -15,5 +15,5 @@ And heres the truth nobody tells you. Most of the lines and dark spots on your f
 
 Tonight, you get two big bottles and a stick for your bag, so you can put it on again after lunch.
 
-Your future skin is going to thank you. Call now!', 60)
+Your future skin is going to thank you. Call now!', 60, 'show_host')
 on conflict (id) do nothing;

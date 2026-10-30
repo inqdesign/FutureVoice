@@ -35,6 +35,9 @@ final class SpeechChallenges: ObservableObject {
         /// Every take anyone has put up on this board — what the card counts.
         /// nil from a server that doesn't send it yet.
         var attempts: Int? = nil
+        /// What kind of challenge it is ("show_host", "famous_speech", …),
+        /// a key the card names in the learner's language. nil on older ones.
+        var category: String? = nil
         /// Set once the challenge is retired: the board is frozen, nobody can
         /// enter, and it is listed under past challenges.
         var retiredAt: Date? = nil
@@ -135,6 +138,7 @@ final class SpeechChallenges: ObservableObject {
         let my_attempts: Int?
         let top_three: [Face]?
         let attempts: Int?
+        let category: String?
     }
 
     func refresh(language: String) async {
@@ -167,7 +171,7 @@ final class SpeechChallenges: ObservableObject {
             (row.id, Standing(entrants: row.entrants ?? 0, topScore: row.top_score,
                               myBest: row.my_best, myRank: row.my_rank,
                               myAttempts: row.my_attempts, topThree: row.top_three, attempts: row.attempts,
-                              retiredAt: row.retired_at))
+                              category: row.category, retiredAt: row.retired_at))
         })
         writeCache(language)
     }

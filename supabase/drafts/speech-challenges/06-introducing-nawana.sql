@@ -2,7 +2,7 @@
 -- learner. Every claim is something the app does today (the voice clone,
 -- talking with the fluent self in that voice, scenes before they happen,
 -- saying a talk again the right way). No price, no plan size, no numbers.
-insert into public.speech_challenges (id, language, title, genre, body, target_seconds)
+insert into public.speech_challenges (id, language, title, genre, body, target_seconds, category)
 values
   ('5beec000-0000-4000-8000-00000000001b', 'en', 'Introducing nawana', 'product',
    'Good morning, everyone. Today, I want to show you something I''ve been waiting for my whole life.
@@ -21,5 +21,5 @@ Got a job interview next week? Watch your fluent self do it first. Made a mistak
 
 Because the fastest way to become fluent is to hear who you''re about to become.
 
-This is nawana. Meet your fluent self.', 60)
+This is nawana. Meet your fluent self.', 60, 'product_launch')
 on conflict (id) do nothing;

@@ -1,6 +1,6 @@
 -- Show host series: be the host selling one thing live on a home-shopping
 -- channel. Product and name are made up; no digits, no price figures.
-insert into public.speech_challenges (id, language, title, genre, body, target_seconds)
+insert into public.speech_challenges (id, language, title, genre, body, target_seconds, category)
 values
   ('5beec000-0000-4000-8000-00000000001d', 'en', 'You will sleep like a baby', 'product',
    'Raise your hand if you woke up tired this morning. Yeah. Me too. Every single morning. Until I found this.
@@ -13,5 +13,5 @@ And heres my favorite part. It stays cool. All night long. No more flipping the 
 
 Our viewers have been writing in all week, and I want to read you just one. She says, "I slept through the night for the first time in years. My husband thinks Im a new person." I love that.
 
-So tonight, buy one, and well send you a second one free. One for you, and one for the person who keeps stealing yours. The phones are open now!', 60)
+So tonight, buy one, and well send you a second one free. One for you, and one for the person who keeps stealing yours. The phones are open now!', 60, 'show_host')
 on conflict (id) do nothing;

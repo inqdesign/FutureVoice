@@ -6,9 +6,17 @@
 -- .attempts` already counts every take a learner put up, so the list adds
 -- their sum as `attempts`, last, beside everything it returned before.
 --
+-- The same migration gives a challenge its CATEGORY (founder, 2026-10-30:
+-- "people should see what kind of challenge it is" -- show host, famous
+-- speech, movie scene). A key, not a label: the app names it in the
+-- learner's language, and a key it doesn't know draws nothing. Null on
+-- every challenge published before this.
+--
 -- Builds that don't know the column ignore it (Swift Decodable, Kotlin
 -- `ignoreUnknownKeys`). The return type changes, so the function is dropped
 -- and made again with the same argument list and the same grants.
+
+alter table public.speech_challenges add column if not exists category text;
 
 drop function if exists public.speech_challenge_list(text);
 create function public.speech_challenge_list(p_language text)
@@ -17,7 +25,7 @@ returns table (
   key_terms jsonb, sources jsonb, target_seconds int, published_at timestamptz,
   retired_at timestamptz,
   entrants int, top_score int, my_best int, my_rank int, my_attempts int,
-  top_three jsonb, attempts int
+  top_three jsonb, attempts int, category text
 )
 language sql stable security definer set search_path = public as $$
   with ranked as (
@@ -45,7 +53,8 @@ language sql stable security definer set search_path = public as $$
              limit 3
            ) t
          ), '[]'::jsonb),
-         (select coalesce(sum(x.attempts), 0)::int from ranked x where x.challenge_id = c.id)
+         (select coalesce(sum(x.attempts), 0)::int from ranked x where x.challenge_id = c.id),
+         c.category
   from speech_challenges c
   left join ranked me on me.challenge_id = c.id and me.user_id = auth.uid()
   where c.language = p_language

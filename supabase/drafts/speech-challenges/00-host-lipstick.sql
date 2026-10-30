@@ -10,7 +10,7 @@
 -- and no price: a number is read in more than one way and the scorer would
 -- mark the reading wrong, so it is "half price" and "six o'clock".
 
-insert into public.speech_challenges (id, language, title, genre, body, target_seconds)
+insert into public.speech_challenges (id, language, title, genre, body, target_seconds, category)
 values
   ('5beec000-0000-4000-8000-000000000015', 'en', 'Tonight only, half price!', 'product',
    'Okay, everyone, stop what you''re doing, because this is the one you''ve been waiting for!
@@ -23,5 +23,5 @@ Now, tonight you get not one, not two, but four shades. A soft pink for the offi
 
 And here''s the best part. Tonight only, the whole set is half price.
 
-Our phones are already lighting up, and the red is going fast. So don''t wait, don''t overthink it, just pick up the phone. You deserve this. Trust me.', 60)
+Our phones are already lighting up, and the red is going fast. So don''t wait, don''t overthink it, just pick up the phone. You deserve this. Trust me.', 60, 'show_host')
 on conflict (id) do nothing;

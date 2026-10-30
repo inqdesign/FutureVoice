@@ -1,6 +1,6 @@
 -- Written for nawana: the acceptance speech everyone has rehearsed in the
 -- mirror. No real film, person or award body is named.
-insert into public.speech_challenges (id, language, title, genre, body, target_seconds)
+insert into public.speech_challenges (id, language, title, genre, body, target_seconds, category)
 values
   ('5beec000-0000-4000-8000-000000000018', 'en', 'And the award goes to… you', 'person',
    'Oh my goodness. Okay. I didn''t write anything, because I really didn''t think this was going to happen.
@@ -13,5 +13,5 @@ To the cast and the crew, you were my family for a whole year, in the rain, in t
 
 And to anyone watching at home, holding a shampoo bottle right now: keep practicing. Say it out loud. One day, you won''t need the bottle.
 
-Thank you. Good night!', 60)
+Thank you. Good night!', 60, 'acceptance')
 on conflict (id) do nothing;

@@ -48,12 +48,21 @@ struct SpeechChallengeRow: View {
             // The title hangs under the disc; the meta line belongs to the
             // FOOT, just above the faces, so it sits at the same height on
             // every card whatever the title's length. The slack goes between.
+            // What kind of challenge it is, so a title like "Wake up
+            // glowing" reads as a show host's pitch (founder, 2026-10-30).
+            if let category = SpeechChallengeCategory.label(standing?.category) {
+                Text(category)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tint)
+                    .lineLimit(1)
+                    .padding(.top, 14)
+            }
             Text(script.title)
                 .font(.headline)
                 .foregroundStyle(.primary)
                 .lineLimit(3)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, 14)
+                .padding(.top, SpeechChallengeCategory.label(standing?.category) == nil ? 14 : 2)
             Spacer(minLength: 16)
             Text(metaLine)
                 .font(.footnote)
@@ -98,6 +107,21 @@ struct SpeechChallengeRow: View {
         let entrants = standing?.entrants ?? 0
         guard entrants > 0 else { return length }
         return [explain("\(entrants) taking part"), length].joined(separator: " · ")
+    }
+}
+
+/// A challenge's category key, named in the learner's language. A key this
+/// build doesn't know draws nothing rather than the raw key.
+enum SpeechChallengeCategory {
+    static func label(_ key: String?) -> String? {
+        switch key {
+        case "show_host": return explain(key: "speech.category.show_host", default: "Show host")
+        case "famous_speech": return explain(key: "speech.category.famous_speech", default: "Famous speech")
+        case "movie_scene": return explain(key: "speech.category.movie_scene", default: "Movie scene")
+        case "acceptance": return explain(key: "speech.category.acceptance", default: "Acceptance speech")
+        case "product_launch": return explain(key: "speech.category.product_launch", default: "Product launch")
+        default: return nil
+        }
     }
 }
 

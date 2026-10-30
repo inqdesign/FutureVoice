@@ -1,6 +1,6 @@
 -- Show host series: be the host selling one thing live on a home-shopping
 -- channel. Product and name are made up; no digits, no price figures.
-insert into public.speech_challenges (id, language, title, genre, body, target_seconds)
+insert into public.speech_challenges (id, language, title, genre, body, target_seconds, category)
 values
   ('5beec000-0000-4000-8000-000000000021', 'en', 'The last mop you will ever buy', 'product',
    'Everybody, stop! Do not clean your floor tonight. Not until youve seen this.
@@ -15,5 +15,5 @@ When youre done, just pull off the pad and throw it in the washing machine. It c
 
 I have three kids and a dog, and this is the only reason my house doesnt look like a disaster.
 
-So tonight, you get the mop, the bucket, and four extra pads. Your floors, your back, and your weekends are going to thank you. Call right now, the lines are open!', 60)
+So tonight, you get the mop, the bucket, and four extra pads. Your floors, your back, and your weekends are going to thank you. Call right now, the lines are open!', 60, 'show_host')
 on conflict (id) do nothing;
