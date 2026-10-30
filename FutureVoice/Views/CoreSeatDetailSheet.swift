@@ -8,6 +8,11 @@ import SwiftUI
 struct CoreSeatDetailSheet: View {
     let language: String
     let index: Int
+    /// Opened as the news of a new member (`core_new_member`): the sheet leads
+    /// with "member no. N is here" and, for a reader without a seat, ends with
+    /// their own way in. `onTalk` starts today's talk from there.
+    var news: CoreClubService.NewMember? = nil
+    var onTalk: (() -> Void)? = nil
     #if DEBUG
     /// `-coreseat 1`: a sample seat, no server.
     var preview: CoreClubService.SeatDetail? = nil
@@ -27,6 +32,7 @@ struct CoreSeatDetailSheet: View {
     @State private var flights: [NoteFlight] = []
     @State private var hearts: [HeartFlight] = []
     @State private var bigHeart = false
+    @State private var progress: CoreClubService.Progress?
     @FocusState private var writing: Bool
 
     var body: some View {
@@ -52,6 +58,7 @@ struct CoreSeatDetailSheet: View {
             }
             Form {
                 if let detail {
+                    if let news { newsSection(news) }
                     Section {
                         VStack(alignment: .leading, spacing: 2) {
                             if let shown = detail.name, !shown.isEmpty {
@@ -113,6 +120,7 @@ struct CoreSeatDetailSheet: View {
 
                     // After the hope: the cheers can run long.
                     cheersSection
+                    if let news, !news.viewer_seated { yourTurnSection }
                 } else if loaded {
                     Text(explain("This seat couldn't be opened. Try again in a moment."))
                         .foregroundStyle(.secondary)
@@ -164,6 +172,51 @@ struct CoreSeatDetailSheet: View {
         .presentationDetents([.large])
         .task { await load() }
         .task { await runNotes() }
+        .task {
+            guard let news, !news.viewer_seated else { return }
+            progress = await CoreClubService.fetchProgress(language: language)
+        }
+    }
+
+    // MARK: - News of a new member
+
+    private func newsSection(_ news: CoreClubService.NewMember) -> some View {
+        Section {
+            VStack(spacing: 6) {
+                Text(explain("Core member no. \(news.number) is here!"))
+                    .font(.title2.weight(.bold))
+                    .multilineTextAlignment(.center)
+                Text(explain("30 days in a row without missing one. Leave a heart or a short cheer."))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity)
+            .listRowBackground(Color.clear)
+        }
+    }
+
+    /// The reader's own way in: where their streak stands, and today's talk.
+    private var yourTurnSection: some View {
+        Section {
+            if let progress {
+                if progress.streak > 0 {
+                    Text(explain("You're on day \(progress.streak). \(max(0, progress.entry_streak - progress.streak)) more days to the Core."))
+                } else {
+                    Text(explain("Talk \(max(1, progress.bar_seconds / 60)) minutes a day, \(progress.entry_streak) days in a row, and a seat is yours."))
+                }
+            }
+            if let onTalk {
+                Button {
+                    dismiss()
+                    onTalk()
+                } label: {
+                    Label("Talk today", systemImage: "phone.fill")
+                }
+            }
+        } header: {
+            Text("Your turn")
+        }
     }
 
     // MARK: - Cheers
@@ -517,4 +570,38 @@ private struct RisingHeart: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.7 + flight.delay) { onDone() }
             }
     }
+}
+
+/// Which new member's news this install has already shown, per account and
+/// club, so each arrival is offered once. A push tap asks again regardless.
+enum CoreNewsStore {
+    private static func key(_ userId: String, _ language: String) -> String {
+        "futurevoice.core.newsSeen.\(userId.lowercased()).\(language.lowercased())"
+    }
+
+    private static func userId() async -> String? {
+        try? await SupabaseProvider.shared.auth.session.user.id.uuidString.lowercased()
+    }
+
+    static func due(language: String, fromLink: Bool) async -> CoreClubService.NewMember? {
+        guard let uid = await userId() else { return nil }
+        let after = fromLink ? 0 : UserDefaults.standard.integer(forKey: key(uid, language))
+        return await CoreClubService.fetchNewMember(language: language, after: after)
+    }
+
+    static func markShown(_ news: CoreClubService.NewMember, language: String) {
+        Task {
+            guard let uid = await userId() else { return }
+            let k = key(uid, language)
+            UserDefaults.standard.set(max(news.event_id, UserDefaults.standard.integer(forKey: k)), forKey: k)
+        }
+    }
+
+    #if DEBUG
+    /// `-corenews 1`: a sample arrival, no server (1 = no seat yet, 2 = seated).
+    static var preview: CoreClubService.NewMember {
+        CoreClubService.NewMember(event_id: 1, index: 0, name: "민지", theme: 4,
+                                  viewer_seated: UserDefaults.standard.integer(forKey: "corenewsSeated") != 0)
+    }
+    #endif
 }

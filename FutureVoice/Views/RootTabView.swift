@@ -103,6 +103,9 @@ struct RootTabView: View {
     @State private var coreWelcome: CoreWelcomeStore.Seat?
     /// My own seat, opened from a cheer's push.
     @State private var mySeatFromLink: CoreClubView.SeatRef?
+    /// A new member of this language's Core, for everyone else to cheer
+    /// (`CoreNewsStore`, the push `futurevoice://corenew`).
+    @State private var coreNews: CoreClubService.NewMember?
     #if DEBUG
     @State private var debugSeatClosed = false
     #endif
@@ -138,11 +141,11 @@ struct RootTabView: View {
         // A tab opened while something else was up gets its introduction the
         // moment that closes.
         .onChange(of: anotherSheetUp) { _, up in
-            if !up { offerPageIntro(); offerCoreWelcome() }
+            if !up { offerPageIntro(); offerCoreWelcome(); offerCoreNews() }
         }
-        .onAppear { offerCoreWelcome() }
+        .onAppear { offerCoreWelcome(); offerCoreNews() }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { offerCoreWelcome() }
+            if phase == .active { offerCoreWelcome(); offerCoreNews() }
         }
         #if DEBUG
         .sheet(isPresented: Binding(get: { UserDefaults.standard.integer(forKey: "coreseat") != 0 && !debugSeatClosed },
@@ -160,6 +163,7 @@ struct RootTabView: View {
         .sheet(item: $mySeatFromLink) { seat in
             CoreSeatDetailSheet(language: appState.targetLanguage, index: seat.index)
         }
+        .sheet(item: $coreNews) { news in coreNewsSheet(news) }
         .fullScreenCover(item: $coreWelcome) { seat in
             CoreWelcomeView(seat: seat, initialName: appState.persona?.displayName ?? "") {
                 coreWelcome = nil
@@ -583,7 +587,7 @@ struct RootTabView: View {
             || callInbox.pendingAnswer != nil || answeredCall != nil
             || appState.levelUpAnnouncement != nil
             || referralInbox.pendingJoin != nil || updates.pending != nil
-            || trialReport != nil || coreWelcome != nil
+            || trialReport != nil || coreWelcome != nil || coreNews != nil
     }
 
     /// Nothing else is up, here or in a call screen above the tabs: the
@@ -682,6 +686,51 @@ struct RootTabView: View {
             }
             guard quietForTrialReport, coreWelcome == nil else { return }
             coreWelcome = seat
+        }
+    }
+
+    private func coreNewsSheet(_ news: CoreClubService.NewMember) -> some View {
+        var sheet = CoreSeatDetailSheet(language: appState.targetLanguage, index: news.index, news: news,
+                                        onTalk: {
+                                            // After the sheet has gone, or the
+                                            // call's morph starts under it.
+                                            Task { @MainActor in
+                                                try? await Task.sleep(for: .milliseconds(450))
+                                                startFreeTalk(from: .coreNews)
+                                            }
+                                        })
+        #if DEBUG
+        if news == CoreNewsStore.preview {
+            sheet.preview = .init(index: 0, theme: 4, name: news.name, mine: false,
+                                  can_read_hope: news.viewer_seated,
+                                  hope: news.viewer_seated ? "내년엔 영어로 발표하기" : nil,
+                                  days_held: 1, seated_since: "2026-10-29")
+        }
+        #endif
+        return sheet
+    }
+
+    /// Someone in this language just finished their Core welcome: everyone
+    /// else sees their cube once, to cheer, with their own way in under it.
+    /// Waits for the learner's own welcome and anything else on screen.
+    private func offerCoreNews(fromLink: Bool = false) {
+        #if DEBUG
+        if UserDefaults.standard.integer(forKey: "corenews") != 0, coreNews == nil {
+            UserDefaults.standard.set(0, forKey: "corenews")
+            coreNews = CoreNewsStore.preview
+            return
+        }
+        #endif
+        guard appState.setupComplete, coreNews == nil, coreWelcome == nil else { return }
+        let language = appState.targetLanguage
+        Task { @MainActor in
+            guard let news = await CoreNewsStore.due(language: language, fromLink: fromLink) else { return }
+            for _ in 0..<120 where !quietForTrialReport {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+            }
+            guard quietForTrialReport, coreNews == nil, coreWelcome == nil else { return }
+            CoreNewsStore.markShown(news, language: language)
+            coreNews = news
         }
     }
 
@@ -848,6 +897,9 @@ struct RootTabView: View {
                     mySeatFromLink = CoreClubView.SeatRef(index: mine)
                 }
             }
+        case "corenew":
+            // A new Core member in this language (`owner-watch` → `push-send`).
+            offerCoreNews(fromLink: true)
         case "book":
             // Continue widget: open a specific book's detail page.
             let comps = URLComponents(url: url, resolvingAgainstBaseURL: false)

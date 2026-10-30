@@ -246,6 +246,28 @@ enum CoreClubService {
         let seated_since: String?
     }
 
+    /// The newest member of a club who finished their welcome, for the
+    /// "N-th Core member" sheet everyone else in that language gets
+    /// (`core_new_member`, 20261030100000). Nil when there is none newer than
+    /// `after` in the last week, or it is the reader.
+    struct NewMember: Decodable, Identifiable, Equatable {
+        let event_id: Int
+        let index: Int
+        let name: String?
+        let theme: Int?
+        let viewer_seated: Bool
+        var id: Int { event_id }
+        var number: Int { index + 1 }
+    }
+
+    static func fetchNewMember(language: String, after: Int) async -> NewMember? {
+        struct Params: Encodable { let p_language: String; let p_after: Int }
+        return try? await SupabaseProvider.shared
+            .rpc("core_new_member", params: Params(p_language: language.lowercased(), p_after: after))
+            .execute()
+            .value
+    }
+
     static let engravedNameLimit = 24
     static let hopeLimit = 60
 
@@ -477,52 +499,16 @@ enum CoreClubService {
         defaults.set(newest, forKey: lastSeenKey)
         guard lastSeen != nil else { return }   // first run: catch up silently
 
-        let me = await myUserId()
-        // A returning member slipping back into a seat is not an arrival, and
-        // nobody gets told about their own.
-        let arrivals = rows.filter {
-            $0.kind == "seated" && $0.first_time && $0.user_id?.lowercased() != me
-        }
         let full = rows.last { $0.kind == "club_full" }
-
         if let full {
             await post(
                 title: chrome("The Core"),
                 body: explain("The Core is full — all \(full.club_size) seats taken."),
                 id: "core.full")
         }
-        guard !arrivals.isEmpty else { return }
-
-        // Coalesced: several arrivals in one poll are one line, not a pile.
-        if arrivals.count > 1, let last = arrivals.last {
-            await post(
-                title: chrome("The Core"),
-                body: explain("\(arrivals.count) new members joined — \(last.club_size) seats taken."),
-                id: "core.arrivals.\(last.id)")
-            return
-        }
-
-        guard let one = arrivals.first else { return }
-        let name = await displayName(forOwner: one.user_id)
-        let body = name.map {
-            explain("\($0) joined the Core — \(one.club_size) seats taken.")
-        } ?? explain("Someone joined the Core — \(one.club_size) seats taken.")
-        await post(title: chrome("The Core"), body: body, id: "core.arrival.\(one.id)")
-    }
-
-    /// A member's published persona name, when they have one. Members who
-    /// never published arrive unnamed — the seat count is the news either way.
-    private static func displayName(forOwner ownerId: String?) async -> String? {
-        guard let ownerId else { return nil }
-        struct Row: Decodable { let display_name: String }
-        let rows: [Row]? = try? await SupabaseProvider.shared
-            .from("public_personas")
-            .select("display_name")
-            .eq("owner_user_id", value: ownerId.lowercased())
-            .limit(1)
-            .execute()
-            .value
-        return rows?.first?.display_name
+        // Arrivals are no longer posted here: since 2026-10-30 a new member is
+        // told once they have finished their welcome, by push and a sheet
+        // (`owner-watch`, `CoreNewsStore`). Builds before that still post them.
     }
 
     /// Quiet by construction: no sound, no time-sensitive level. The daily

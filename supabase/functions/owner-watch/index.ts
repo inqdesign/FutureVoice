@@ -84,13 +84,19 @@ Deno.serve(async (req) => {
   const { data: notes, error: notesError } = await admin.rpc("core_cheer_alerts_claim", { p_limit: MAX_PER_RUN })
   if (notesError) console.error("owner-watch: core notes claim failed", notesError)
 
-  const alerts = [...((data ?? []) as Alert[]), ...((notes ?? []) as Alert[])]
+  // New Core members who finished their welcome: the founder hears it, and
+  // everyone learning that language gets a push to go and cheer.
+  const { data: arrivals, error: arrivalsError } = await admin.rpc("core_new_member_alerts_claim", { p_limit: MAX_PER_RUN })
+  if (arrivalsError) console.error("owner-watch: core arrivals claim failed", arrivalsError)
+
+  const alerts = [...((data ?? []) as Alert[]), ...((notes ?? []) as Alert[]), ...((arrivals ?? []) as Alert[])]
   let sent = 0
   for (const alert of alerts) {
     const text = compose(alert)
     if (!text) continue
     if (await notifyOwner(text)) sent++
     if (alert.kind === "core_note") await pushSeatOwner(alert)
+    if (alert.kind === "core_welcomed") await pushNewMember(admin, alert)
   }
   if (alerts.length) console.log(`owner-watch: ${sent}/${alerts.length} sent`)
   return json({ ok: true, claimed: alerts.length, sent })
@@ -145,6 +151,12 @@ function compose({ kind, payload }: Alert): string | null {
       return lines.filter(Boolean).join("\n")
     }
 
+    case "core_welcomed":
+      lines.push(`[nawana] 🧊 새 코어 멤버${tag}`,
+                 `${p.number ?? "?"}번째 · ${p.language ?? "?"} · ${p.name ?? "(이름 없음)"}`,
+                 `같은 언어 학습자에게 축하 푸시를 보냈어요`)
+      break
+
     default:
       return null
   }
@@ -194,5 +206,59 @@ async function pushSeatOwner({ payload }: Alert): Promise<void> {
     if (!res.ok) console.error("owner-watch: core cheer push", res.status, await res.text())
   } catch (e) {
     console.error("owner-watch: core cheer push failed", e)
+  }
+}
+
+/// Everyone learning the club's language hears that someone new took a seat,
+/// with a tap that opens the new member's cube to cheer. Not the member.
+async function pushNewMember(
+  admin: ReturnType<typeof createClient>,
+  { payload }: Alert,
+): Promise<void> {
+  const p = payload ?? {}
+  const member = String(p.user_id ?? "")
+  const language = String(p.language ?? "")
+  const secret = Deno.env.get("PUSH_SECRET")
+  if (!member || !language || !secret) return
+  const { data: learners, error } = await admin.rpc("core_language_learners",
+    { p_language: language, p_exclude: member })
+  if (error) { console.error("owner-watch: core learners", error); return }
+  const ids = ((learners ?? []) as { user_id: string }[]).map((r) => r.user_id).filter(Boolean)
+  if (!ids.length) return
+  const n = Number(p.number ?? 0)
+  const name = p.name ? String(p.name) : null
+  const texts = {
+    en: { title: n ? `The Core has its member no. ${n}` : "A new Core member",
+          body: name ? `${name} kept it up 30 days in a row. Send a cheer!` : "Someone kept it up 30 days in a row. Send a cheer!" },
+    ko: { title: n ? `${n}번째 코어 멤버가 탄생했어요` : "새 코어 멤버가 탄생했어요",
+          body: name ? `${name}님이 30일 연속으로 해냈어요. 축하해 주세요!` : "누군가 30일 연속으로 해냈어요. 축하해 주세요!" },
+    ja: { title: n ? `コアに${n}人目のメンバーが誕生` : "コアに新しいメンバーが誕生",
+          body: name ? `${name}さんが30日連続でやり遂げました。お祝いしよう！` : "30日連続でやり遂げた人がいます。お祝いしよう！" },
+    "zh-Hans": { title: n ? `核心迎来第 ${n} 位成员` : "核心迎来新成员",
+          body: name ? `${name} 连续坚持了 30 天，去为 TA 加油吧！` : "有人连续坚持了 30 天，去为 TA 加油吧！" },
+    "zh-Hant": { title: n ? `核心迎來第 ${n} 位成員` : "核心迎來新成員",
+          body: name ? `${name} 連續堅持了 30 天，去為 TA 加油吧！` : "有人連續堅持了 30 天，去為 TA 加油吧！" },
+    es: { title: n ? `El Núcleo tiene su miembro n.º ${n}` : "Hay un nuevo miembro en el Núcleo",
+          body: name ? `${name} lo logró 30 días seguidos. ¡Mándale un ánimo!` : "Alguien lo logró 30 días seguidos. ¡Mándale un ánimo!" },
+    fr: { title: n ? `Le Noyau accueille son ${n}${n === 1 ? "er" : "e"} membre` : "Un nouveau membre dans le Noyau",
+          body: name ? `${name} a tenu 30 jours d’affilée. Envoie-lui un encouragement !` : "Quelqu’un a tenu 30 jours d’affilée. Envoie-lui un encouragement !" },
+    de: { title: n ? `Der Core hat sein ${n}. Mitglied` : "Ein neues Mitglied im Core",
+          body: name ? `${name} hat 30 Tage am Stück durchgehalten. Schick einen Gruß!` : "Jemand hat 30 Tage am Stück durchgehalten. Schick einen Gruß!" },
+  }
+  try {
+    const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/push-send`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Push-Secret": secret },
+      body: JSON.stringify({
+        kind: "core_new_member",
+        dedupe_key: `welcomed:${p.id}`,
+        user_ids: ids,
+        texts,
+        url: "futurevoice://corenew",
+      }),
+    })
+    if (!res.ok) console.error("owner-watch: core new member push", res.status, await res.text())
+  } catch (e) {
+    console.error("owner-watch: core new member push failed", e)
   }
 }
