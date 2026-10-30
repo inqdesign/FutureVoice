@@ -24,9 +24,11 @@ import java.io.File
  */
 class KoreanMorphTest {
 
+    // The analyzer's RANK, which is frozen apart from the levels
+    // (`CoreVocabulary.koreanRank`); its headword set is the pool's.
     private val levels: Map<String, Int> by lazy {
         val order = listOf("a1", "a2", "b1", "b2", "c1", "c2")
-        File("src/main/assets/wordlists/cefr_words_ko.tsv").readLines()
+        File("src/main/assets/wordlists/ko_morph_rank.tsv").readLines()
             .mapNotNull { line ->
                 val parts = line.split('\t')
                 if (parts.size !in 2..3) return@mapNotNull null

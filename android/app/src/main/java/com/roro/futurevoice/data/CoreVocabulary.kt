@@ -278,8 +278,25 @@ object CoreVocabulary {
     fun levelRank(level: CefrLevel): Int = CefrLevel.entries.indexOf(level)
 
     /** The band [KoreanMorph] ranks competing readings by (가요 → 가다 over
-     *  the noun 가요): easier = more likely to be what was said. */
-    fun koreanRank(word: String): Int? = level(word, "ko")?.let(::levelRank)
+     *  the noun 가요): easier = more likely to be what was said. FROZEN at the
+     *  bands the analyzer was tuned on (`ko_morph_rank.tsv`, the 2003 list),
+     *  not the level (iOS `CoreVocabulary.koreanRank`): ranking by the
+     *  curriculum bands flipped 사는 → 사, 와요 → 와, 배우는 → 배우. */
+    fun koreanRank(word: String): Int? = koreanMorphRanks[word] ?: level(word, "ko")?.let(::levelRank)
+
+    private val koreanMorphRanks: Map<String, Int> by lazy {
+        val ctx = appContext ?: return@lazy emptyMap()
+        val out = HashMap<String, Int>()
+        runCatching {
+            ctx.assets.open("wordlists/ko_morph_rank.tsv").bufferedReader().forEachLine { line ->
+                val parts = line.split('\t')
+                if (parts.size < 2) return@forEachLine
+                val level = CefrLevel.entries.firstOrNull { it.code.equals(parts[1], true) } ?: return@forEachLine
+                out[parts[0]] = levelRank(level)
+            }
+        }
+        out
+    }
 
     /**
      * Every core word at or above [level], easiest first — the top-up a daily
