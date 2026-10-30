@@ -69,7 +69,7 @@ ausgeschlossen angesehen verstohlen
 DE_EN_BOTH = {"erfahren", "gefangen", "betrunken", "vergangen", "überlegen", "berufen", "verkommen"}
 
 # Korean nouns and adverbs that end in 다.
-KO_DA_NOT_PREDICATES = {"바다", "앞바다", "캐나다", "해마다", "저마다"}
+KO_DA_NOT_PREDICATES = {"바다", "앞바다", "캐나다", "해마다", "저마다", "과다", "베란다", "사이다", "수다"}
 
 
 def wordlist(name):

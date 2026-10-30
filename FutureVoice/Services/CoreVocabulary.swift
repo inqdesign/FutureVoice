@@ -139,7 +139,28 @@ enum CoreVocabulary {
 
     /// The band `KoreanMorph` ranks competing readings by (가요 → 가다 over
     /// the noun 가요): easier = more likely to be what was said.
-    static func koreanRank(_ word: String) -> Int? { level(of: word).map(levelRank) }
+    ///
+    /// FROZEN at the bands the analyzer was tuned on (`ko_morph_rank.tsv`,
+    /// the 2003 list), not the level. When the levels moved to the curriculum
+    /// list (2026-10-30), ranking by them flipped 70 readings across
+    /// Tatoeba's Korean sentences — 1급 사 "four" and 와 "wow" took 사는 and
+    /// 와요 from 사다 and 오다, 배우 "actor" took 배우는 — because how likely
+    /// a reading is in speech is not how hard the word is.
+    static func koreanRank(_ word: String) -> Int? {
+        koreanMorphRanks[word] ?? level(of: word).map(levelRank)
+    }
+
+    private static let koreanMorphRanks: [String: Int] = {
+        guard let url = Bundle.main.url(forResource: "ko_morph_rank", withExtension: "tsv"),
+              let text = try? String(contentsOf: url, encoding: .utf8) else { return [:] }
+        var out: [String: Int] = [:]
+        for line in text.split(whereSeparator: \.isNewline) {
+            let parts = line.split(separator: "\t")
+            guard parts.count >= 2, let level = CEFRLevel(rawValue: parts[1].lowercased()) else { continue }
+            out[String(parts[0])] = levelRank(level)
+        }
+        return out
+    }()
 
     /// Words per CEFR level — for filter-scoped counts in the UI.
     static var countByLevel: [CEFRLevel: Int] { current.countByLevel }

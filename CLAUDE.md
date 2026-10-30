@@ -1889,9 +1889,18 @@ two C1/C2 words in fifteen minutes), so counting them counts minutes.
   the band stops at B2; precision only holds the top down, never below B2
   and never up. Not measured with a probe yet.
 - **English only.** Other languages keep the old count until they are
-  calibrated, and Korean/Spanish need their lists fixed first: the Korean
-  C2 band holds 탁자, 걷기, 브랜드 (국립국어원 C grade split in two), the
-  Spanish one bitcoin, poni (frequency bands).
+  calibrated. German can't be with its list (measured on Tatoeba's en–de
+  pairs: the same sentences that go 0% → 27% B2+ in English go 13% → 20%
+  B1+ in German, band gaps ~0.25pt against ±1pt of noise; a frequency
+  profile separated nothing even in English). Spanish's list is frequency
+  bands and stays as is.
+- **Korean is REGRADED by the 2017 curriculum list** (국제 통용 한국어 표준
+  교육과정, 1–6급 → A1–C2, `scripts/build-ko-wordlist.py`): the 2003
+  list's three grades cut into six had put 탁자, 걷기, 한식 in C2. The
+  headword SET did not change, and `KoreanMorph` keeps ranking readings by
+  the old bands (`ko_morph_rank.tsv`): the curriculum's extra nouns and its
+  new bands each flipped verb readings in Tatoeba's Korean (사는 → 사, 오는
+  → 오, 배우는 → 배우), and a reading's likelihood is not a level.
 - The assessment's vocab profile carries the share and says the distinct
   counts are not a level. `scripts/vocab-calibration/` reruns the numbers
   (corpus download in the script's header). Tests:
