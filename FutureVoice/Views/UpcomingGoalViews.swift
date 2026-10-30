@@ -15,12 +15,15 @@ struct UpcomingGoalRow: View {
                 .background(goal.kind.tint, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
+                // Wraps rather than truncates: the tutor's rows are narrow.
                 Text(goal.title.isEmpty ? goal.kind.label : goal.title)
                     .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
                 if !detail.isEmpty {
                     Text(detail)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             Spacer(minLength: 0)

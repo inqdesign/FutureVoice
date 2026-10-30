@@ -221,11 +221,11 @@ enum TutorPicks {
                       action: .goal(goal.id, .reading)),
             TutorPick(id: "goal-speech-\(goal.id)", kind: .goalSpeech,
                       title: prep?.speech.question ?? prep?.speech.title ?? explain("An answer you can say on the day"),
-                      why: explain("Read it, hear it in your voice, then say it"),
+                      why: "",
                       action: .goal(goal.id, .speech)),
             TutorPick(id: "goal-drill-\(goal.id)", kind: .goalDrill,
                       title: prep?.focus ?? goal.title,
-                      why: explain("Your tutor drills it with you until it comes out clean"),
+                      why: "",
                       action: .goal(goal.id, nil)),
         ]
     }
@@ -268,34 +268,13 @@ enum TutorPicks {
     private static func pick(_ lines: [String], _ day: Int) -> String { lines[day % lines.count] }
 
     static func rankWhy(from: Int, to: Int, best: Int?, top: Int?, day: Int) -> String {
-        var line = pick([explain("New records pushed you from #\(from) to #\(to)."),
-                         explain("You slipped from #\(from) to #\(to) on the board."),
-                         explain("Others passed you: #\(from) → #\(to).")], day)
-        if let best, let top { line += " " + explain("Your best \(best), the top \(top).") }
-        return line
+        "#\(from) → #\(to)"
     }
-    static func newEpisodeWhy(minutes: Int, day: Int) -> String {
-        pick([explain("Out today and not heard yet · \(minutes) min"),
-              explain("Fresh episode, still unheard · \(minutes) min"),
-              explain("Today's episode is waiting · \(minutes) min")], day)
-    }
-    static func listenWhy(minutes: Int, day: Int) -> String {
-        pick([explain("You've hardly listened this week · \(minutes) min"),
-              explain("Give your ears a turn today · \(minutes) min")], day)
-    }
-    static func firstSpeechWhy(day: Int) -> String {
-        pick([explain("You haven't tried a speech yet. Read it out loud once."),
-              explain("Something new: one script, out loud. A minute is enough to start.")], day)
-    }
-    static func readScriptWhy(day: Int) -> String {
-        pick([explain("Read the script of the latest episode."),
-              explain("The episode's script, to read at your own pace.")], day)
-    }
-    static func readNewsWhy(category: String?, day: Int) -> String {
-        let topic = category.map { explain("From your interest \"\($0)\".") } ?? explain("From the news.")
-        return topic + " " + pick([explain("Written at your level when you open it."),
-                                   explain("A short article, made for your level.")], day)
-    }
+    static func newEpisodeWhy(minutes: Int, day: Int) -> String { explain("\(minutes) min") }
+    static func listenWhy(minutes: Int, day: Int) -> String { explain("\(minutes) min") }
+    static func firstSpeechWhy(day: Int) -> String { "" }
+    static func readScriptWhy(day: Int) -> String { "" }
+    static func readNewsWhy(category: String?, day: Int) -> String { category ?? "" }
 }
 
 /// A news story as an article to read (`news-article`): written once for

@@ -626,9 +626,12 @@ struct TutorPickRows: View {
                         if let tag = pick.tag {
                             Text(tag).font(.caption2.weight(.semibold)).foregroundStyle(color(pick.kind))
                         }
-                        Text(pick.title).font(.subheadline).lineLimit(2)
-                        Text(pick.why).font(.caption).foregroundStyle(.secondary)
+                        Text(pick.title).font(.subheadline)
                             .fixedSize(horizontal: false, vertical: true)
+                        if !pick.why.isEmpty {
+                            Text(pick.why).font(.caption).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
                     Spacer(minLength: 8)
                     Button(pick.buttonTitle) { TutorBot.shared.start(pick, appState: appState) }
