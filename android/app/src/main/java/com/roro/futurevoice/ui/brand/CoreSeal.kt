@@ -74,3 +74,31 @@ fun SealGlyph(modifier: Modifier, color: Color, filled: Boolean) {
         else drawPath(path, color, style = androidx.compose.ui.graphics.drawscope.Stroke(width = stroke))
     }
 }
+
+/** A seated member's cube, small, beside their name on a speech board —
+ *  iOS `CoreCubeBadge`: three faces in their seat's colour, the top lit,
+ *  the right side in shadow. */
+@Composable
+fun CoreCubeBadge(theme: Int, size: Dp = 15.dp) {
+    val color = (FutureselfTheme.entries.getOrNull(theme) ?: FutureselfTheme.BLUE).tint()
+    val label = androidx.compose.ui.res.stringResource(com.roro.futurevoice.R.string.the_core)
+    Canvas(Modifier.size(width = size * 0.87f, height = size).semantics { contentDescription = label }) {
+        val w = this.size.width; val h = this.size.height
+        val top = Offset(w / 2, 0f); val left = Offset(0f, h * 0.25f); val right = Offset(w, h * 0.25f)
+        val mid = Offset(w / 2, h * 0.5f); val bottomLeft = Offset(0f, h * 0.75f)
+        val bottomRight = Offset(w, h * 0.75f); val bottom = Offset(w / 2, h)
+        fun face(points: List<Offset>, shade: Color) {
+            val path = Path().apply {
+                moveTo(points[0].x, points[0].y)
+                points.drop(1).forEach { lineTo(it.x, it.y) }
+                close()
+            }
+            drawPath(path, shade)
+        }
+        face(listOf(top, right, mid, left), color)
+        face(listOf(left, mid, bottom, bottomLeft), color)
+        face(listOf(mid, right, bottomRight, bottom), color)
+        face(listOf(top, right, mid, left), Color.White.copy(alpha = 0.35f))
+        face(listOf(mid, right, bottomRight, bottom), Color.Black.copy(alpha = 0.28f))
+    }
+}
