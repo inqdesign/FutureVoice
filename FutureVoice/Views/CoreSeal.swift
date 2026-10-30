@@ -41,6 +41,41 @@ struct CoreSeal: View {
     }
 }
 
+/// A seated member's cube, small, beside their name where strangers see
+/// them (the speech boards, 2026-10-30, founder: "a cube, not that mark").
+/// The same object as their seat on the Core page, in the colour they gave
+/// it: three faces, the top lit, the right side in shadow.
+struct CoreCubeBadge: View {
+    let theme: Int
+    var size: CGFloat = 15
+
+    private var color: Color { (FutureselfTheme(rawValue: theme) ?? .blue).tint }
+
+    var body: some View {
+        Canvas { ctx, box in
+            let w = box.width, h = box.height
+            let top = CGPoint(x: w / 2, y: 0), left = CGPoint(x: 0, y: h * 0.25)
+            let right = CGPoint(x: w, y: h * 0.25), mid = CGPoint(x: w / 2, y: h * 0.5)
+            let bottomLeft = CGPoint(x: 0, y: h * 0.75), bottomRight = CGPoint(x: w, y: h * 0.75)
+            let bottom = CGPoint(x: w / 2, y: h)
+            func face(_ points: [CGPoint], _ shade: Color) {
+                var path = Path()
+                path.addLines(points)
+                path.closeSubpath()
+                ctx.fill(path, with: .color(shade))
+            }
+            face([top, right, mid, left], color)
+            face([left, mid, bottom, bottomLeft], color)
+            face([mid, right, bottomRight, bottom], color)
+            face([top, right, mid, left], .white.opacity(0.35))
+            face([mid, right, bottomRight, bottom], .black.opacity(0.28))
+        }
+        .frame(width: size * 0.87, height: size)
+        .accessibilityElement()
+        .accessibilityLabel(Text("The Core"))
+    }
+}
+
 /// The seal with the word for it, on the one surface that is ABOUT this
 /// person — their own club screen. Only ever drawn for a member who is in.
 ///

@@ -50,9 +50,10 @@ final class SpeechChallenges: ObservableObject {
         let is_me: Bool
         /// Base64 JPEG, only when that learner chose to show a photo.
         var avatar: String? = nil
-        /// Seated in the Core of this challenge's language today. nil from a
-        /// server that doesn't send it yet.
-        var core: Bool? = nil
+        /// The colour of their cube (theme index) when seated in the Core of
+        /// this challenge's language today; nil otherwise, or from a server
+        /// that doesn't send it yet.
+        var core_theme: Int? = nil
         var id: String { "\(rank)-\(display_name)-\(is_me)" }
         var face: Face { Face(display_name: display_name, avatar: avatar) }
     }

@@ -473,7 +473,7 @@ struct SpeechChallengeView: View {
                 Text(row.display_name)
                     .fontWeight(row.is_me ? .semibold : .regular)
                     .lineLimit(1)
-                if row.core == true { CoreSeal() }
+                if let theme = row.core_theme { CoreCubeBadge(theme: theme) }
                 if row.is_me {
                     Text("You")
                         .font(.caption.weight(.semibold))
@@ -535,7 +535,7 @@ struct SpeechPodiumRow: View {
                     Text(row.display_name)
                         .font(row.rank == 1 ? .title3.weight(.semibold) : .headline)
                         .lineLimit(1)
-                    if row.core == true { CoreSeal(font: .subheadline) }
+                    if let theme = row.core_theme { CoreCubeBadge(theme: theme, size: 18) }
                 }
                 if row.is_me {
                     Text("You")
@@ -889,7 +889,7 @@ struct SpeechBoardRowView: View {
             Text(row.display_name)
                 .fontWeight(row.is_me ? .semibold : .regular)
                 .lineLimit(1)
-            if row.core == true { CoreSeal() }
+            if let theme = row.core_theme { CoreCubeBadge(theme: theme) }
             if row.is_me {
                 Text("You")
                     .font(.caption.weight(.semibold))

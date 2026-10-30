@@ -305,7 +305,7 @@ enum DebugCapture {
         let faces = Self.sampleFaces(names)
         var board = zip(names, scores).enumerated().map { i, pair in
             SpeechChallenges.BoardRow(rank: i == 7 ? 7 : i + 1, display_name: pair.0, score: pair.1, is_me: false,
-                                      avatar: faces[i].avatar, core: i == 0 || i == 4)
+                                      avatar: faces[i].avatar, core_theme: i == 0 ? 0 : i == 4 ? 4 : nil)
         }
         board.append(SpeechChallenges.BoardRow(rank: 14, display_name: "Eunggyu", score: 81, is_me: true))
         let second_board = Array(board.prefix(5)).map {
@@ -374,7 +374,7 @@ enum DebugCapture {
         let faces = sampleFaces(names)
         var board = zip(names, scores).enumerated().map { i, pair in
             SpeechChallenges.BoardRow(rank: i == 7 ? 7 : i + 1, display_name: pair.0, score: pair.1, is_me: false,
-                                      avatar: faces[i].avatar, core: i == 0 || i == 4)
+                                      avatar: faces[i].avatar, core_theme: i == 0 ? 0 : i == 4 ? 4 : nil)
         }
         if withMe { board.append(.init(rank: 14, display_name: "Eunggyu", score: 81, is_me: true)) }
         return board
