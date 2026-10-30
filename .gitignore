@@ -94,3 +94,5 @@ reviews_full.json
 # Mac (Catalyst) builds — scripts/mac-run.sh
 build-mac/
 build-mac-ios/
+
+build-asc/
