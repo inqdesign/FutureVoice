@@ -13,4 +13,4 @@ written for nawana.
 
 The show-host series (07-12) is what the founder wants more of: be the
 host selling one thing live. A famous speech goes up only in its REAL words.
-11, 13 and 14 are the skincare set (night cream, sheet mask, sunscreen).
+11, 13 and 14 are the skincare set. One challenge goes up at a time, never a batch (founder, 2026-10-30).
