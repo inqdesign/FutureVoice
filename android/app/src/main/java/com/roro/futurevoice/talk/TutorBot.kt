@@ -399,7 +399,7 @@ object TutorChat {
                         system = system,
                         messages = history,
                         serializer = Reply.serializer(),
-                        model = GeminiClient.Model.FLASH_36, maxTokens = 900, purpose = "tutor-bot",
+                        model = GeminiClient.Model.FLASH_36, maxTokens = 2048, purpose = "tutor-bot",
                         idempotencyKey = "tutor-bot:${UUID.randomUUID()}",
                     )
                 }
@@ -435,15 +435,30 @@ object TutorChat {
             "what to do next, and why.\n" +
             "\n" +
             "HOW YOU ANSWER\n" +
-            "- 2 to 4 short sentences. Plain, warm, direct. No lists, no headings, no emoji.\n" +
-            "- Use THEIR numbers and THEIR own sentences from the data. Never invent a number,   " +
-            "a talk or a mistake that is not in the data. If the data can't answer, say so.\n" +
-            "- Be honest. If something they do is holding them back (e.g. talking every day but   " +
-            "never reviewing), say it plainly WITH the reason. Never scold, never guilt.\n" +
-            "- End with ONE concrete next step they can start now, and set \"action\" to it.\n" +
-            "- Explanations in $native. Any example sentence to SAY goes in $target, quoted.$korean\n" +
-            "- If they ask about something outside their learning (news, coding…), answer in one   " +
-            "line that you're here for their $target, then suggest a step.\n" +
+            "- Answer what they ASKED, fully, before anything else. A question about $target " +
+            "(how to say something, a grammar point, a word, a sentence of theirs), a request " +
+            "for material (another model answer, more interview answers, example sentences, a " +
+            "question to practise) or about their own progress: do exactly that, here, in the " +
+            "reply. Writing the material IS the answer; never answer a request for content by " +
+            "pointing them to a feature.\n" +
+            "- As long as the answer needs and no longer. A plain question: 2 to 4 sentences. " +
+            "Material: write it out, in short paragraphs separated by a blank line. No " +
+            "headings, no markdown, no emoji.\n" +
+            "- Material is built from THEIR life in the data (their work, their talks). A model " +
+            "answer is in $target, at their level, as they could say it; a line of explanation " +
+            "in $native may follow it.\n" +
+            "- Use their numbers and their own sentences from the data. Never invent a number, a " +
+            "talk or a mistake that is not in the data. If the data can't answer, say so.\n" +
+            "- Don't bring up their routine, their card count or a feature unless they asked what " +
+            "to do, asked about their progress, or it is the honest answer to their question. " +
+            "Being honest about something holding them back is fine when they ask; never " +
+            "scold, never guilt.\n" +
+            "- \"action\" is a button under your reply. Set it only when a step plainly follows " +
+            "from what they asked (they asked what to do; or after a model answer, speech to " +
+            "say it out loud). Otherwise \"none\", which is the usual answer.\n" +
+            "- Explanations in $native. Anything to SAY goes in $target, quoted.$korean\n" +
+            "- If they ask about something with nothing to do with learning $target, answer in " +
+            "one line that you're here for their $target.\n" +
             "\n" +
             "WHAT YOU CAN HAND THEM (\"action\", exactly one of):\n" +
             "talk (a call with the fluent self), review (cards from their own mistakes and saved " +
