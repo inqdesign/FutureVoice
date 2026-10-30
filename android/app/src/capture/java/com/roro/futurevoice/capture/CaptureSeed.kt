@@ -51,6 +51,9 @@ import java.util.UUID
  * upsert replaces, and every launch shows iOS's first-run counts.
  */
 object CaptureSeed {
+    /** The shot's native language, set by [CaptureRouter.content]. */
+    var nativeLanguage = "ko"
+
 
     // MARK: - once (iOS `DebugCapture.once`)
 
@@ -585,7 +588,10 @@ object CaptureSeed {
                     transcript = "うん、でも洗濯が溜まって、とても面倒くさいでした。", durationMs = 62_000,
                     timestamp = started + 6_000L,
                     suggestion = com.roro.futurevoice.talk.TurnSuggestion(
-                        "うん、でも洗濯が溜まって、とても面倒くさかった。", "い형용사의 과거형")),
+                        "うん、でも洗濯が溜まって、とても面倒くさかった。",
+                        // The note is coaching, so it follows the native language.
+                        if (nativeLanguage.startsWith("ko")) "い형용사의 과거형"
+                        else "Past tense of an i-adjective")),
                 Turn(id = stableId("turn", "ja-2"), role = TurnRole.FLUENT_SELF,
                     transcript = "なるほど。通勤も長いし、慌てて片付けるより、とりあえず一つずつでいいと思うよ。",
                     durationMs = 4200, timestamp = started + 70_000L),

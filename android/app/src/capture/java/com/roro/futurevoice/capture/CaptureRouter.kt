@@ -233,6 +233,7 @@ object CaptureRouter {
      */
     fun content(context: Context, mode: String?, lang: String? = null): (@Composable () -> Unit)? {
         val m = mode?.takeIf { it.isNotBlank() } ?: return null
+        if (lang != null) CaptureSeed.nativeLanguage = lang
         if (lang != null && context is android.app.Activity) {
             val prefs = context.getSharedPreferences("futurevoice", 0)
             if (prefs.getString("futurevoice.nativeLanguage", null) != lang) {
