@@ -318,9 +318,11 @@ enum CoachSuggester {
             // what the learner is about to SAY, and flash-lite wrote "I will
             // have a coffee please" and "I'm going to London, please" under
             // a prompt that forbids both; 3.6 Flash didn't, at the same
-            // ~1–1.8 s. Its thinking needs room, or the JSON comes back cut.
+            // ~1–1.8 s. Its thinking needs room, or the JSON comes back cut:
+            // routed to Haiku, it thinks 680–970 tokens on a B1+ answer, and
+            // at 1000 three of 80 probe answers came back cut (2026-10-30).
             model: .flash36,
-            maxTokens: 1000,
+            maxTokens: 2000,
             purpose: "coach",
             idempotencyKey: "coach-reply:\(turnId.uuidString)",
             requestTimeout: 8,
@@ -342,6 +344,45 @@ enum CoachSuggester {
             item = candidates.first { $0.key == wanted || CarryoverDetector.normalized($0.text) == wanted }
         }
         return (CoachReply(say: say, meaning: meaning, turnId: turnId), item)
+    }
+
+    /// What a suggestion at this level SAYS, not only which words it uses
+    /// (2026-10-30, founder: the suggestions read the same at every level).
+    /// Every band was held to 3–10 words, one sentence, "kept easy", so a C1
+    /// learner was handed "I'll have the pasta". The ladder follows the
+    /// tutor's (`TutorPlanner.levelLadder`): what grows is the content — a
+    /// reason, a story, a view, steering the talk — and length only with it.
+    static func suggestionShape(for level: CEFRLevel) -> String {
+        switch level {
+        case .a1:
+            return "3–6 words, one short sentence with ONE fact or answer. Kept easy."
+        case .a2:
+            return """
+            One sentence, about 5–10 words: the answer plus one small detail \
+              or a reason with "because" / "but". Kept easy.
+            """
+        case .b1:
+            return """
+            One or two sentences, about 8–15 words: the answer plus WHY or a \
+              short example from their own life — what a B1 speaker can say \
+              but doesn't yet say on their own.
+            """
+        case .b2:
+            return """
+            One or two sentences, about 10–20 words: a view, not only a fact \
+              — the answer with a reason, a contrast ("…, though …") or a \
+              comparison, or a follow-up that keeps the talk going. Natural \
+              hedging ("I guess", "kind of") where a native would use it.
+            """
+        case .c1, .c2:
+            return """
+            One or two sentences, about 10–25 words, the way a fluent adult \
+              really talks: an idiom or a precise word where it fits, nuance, \
+              a light aside or humour, and steering the talk where they want \
+              it. Never simplified — this learner is here for what they can't \
+              produce yet.
+            """
+        }
     }
 
     /// Internal, not private, so `CoachPromptDumpTests` can hand the live
@@ -369,11 +410,11 @@ enum CoachSuggester {
         let scale = ConversationEngine.speechScale(for: level)
         return """
         A \(level.rawValue.uppercased()) learner of \(targetName) is on a spoken call. \
-        The other speaker has just said the line below. Write ONE short thing \
-        the learner could say back next — exactly what a native speaker would \
-        actually say out loud in that moment, kept easy. Never a textbook \
-        sentence: if a native would not say it that way, it is wrong however \
-        simple it is.
+        The other speaker has just said the line below. Write ONE thing the \
+        learner could say back next — exactly what a native speaker would \
+        actually say out loud in that moment, at THIS learner's level. Never \
+        a textbook sentence: if a native would not say it that way, it is \
+        wrong however simple it is.
 
         - SPOKEN, not written: contractions where speech has them ("I'll", \
           "I'm", "don't"), the everyday phrasing people really use in that \
@@ -385,15 +426,18 @@ enum CoachSuggester {
           ("I'm going to London, please").
 
         - "say": in \(targetName) ONLY — always, even when the line contains \
-          names or words in another language. 3–10 words, one sentence (two \
-          very short ones at most). \(scale.vocabulary)\(ConversationEngine.varietyGuard(target))
+          names or words in another language. \(suggestionShape(for: level)) \
+          \(scale.vocabulary)\(ConversationEngine.varietyGuard(target))
         - Where the answer depends on something only the learner knows (their \
           name, a time, a place, what they did, what they like, which drink \
           or dish or item they want), put a \
           plausible EXAMPLE in square brackets — "I usually get up at [7]." — \
           which the learner swaps for their own. It is shown faded as a \
           placeholder, so it is never a claim about them. One or two \
-          brackets, a word or two inside each, nothing else in brackets.
+          brackets, a word or two inside each, nothing else in brackets. \
+          Every detail of their life the answer gives (a city, how long, \
+          who, what they did) is in brackets or left out, never stated \
+          plainly: a longer answer adds a reason or a view, not more facts.
         - It is the SAME person who said the learner's earlier lines in the \
           call: carry on from what they already said, never contradict it, \
           never give again a fact they already gave, and stay on the thread \
