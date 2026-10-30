@@ -197,7 +197,7 @@ struct ConversationHome: View {
             }
             .onAppear {
                 homeOnScreen = true
-                refreshTutor(delay: 1.2)
+                refreshTutor(delay: 0.3)
                 reload(); drawRing()
                 #if DEBUG
                 if UserDefaults.standard.bool(forKey: "openTopics") { showingTopics = true }
@@ -216,7 +216,7 @@ struct ConversationHome: View {
             }
             .onDisappear { homeOnScreen = false }
             .onChange(of: scenePhase) { _, phase in
-                if phase == .active { refreshTutor(delay: 1.2) }
+                if phase == .active { refreshTutor(delay: 0.3) }
             }
             // A planned time arriving while the page sits open.
             .task(id: homeOnScreen) {

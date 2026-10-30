@@ -229,7 +229,7 @@ final class TutorBot: ObservableObject {
             bubbleSince = now
             Analytics.capture("tutor_bot_note", ["intro": introShown, "items": fresh.items.count,
                                                  "suggested": fresh.suggested])
-            withAnimation(.easeOut(duration: 0.5)) { noteShown = true }
+            withAnimation(.smooth(duration: 0.3)) { noteShown = true }
             return
         }
         guard !noteShown, !chatOpen else { return }
@@ -348,7 +348,7 @@ final class TutorBot: ObservableObject {
         bubble = nil
         introShown = intro
         bubbleSince = Date()
-        withAnimation(.easeOut(duration: 0.5)) { noteShown = true }
+        withAnimation(.smooth(duration: 0.3)) { noteShown = true }
     }
 
     func dismissBubble() {

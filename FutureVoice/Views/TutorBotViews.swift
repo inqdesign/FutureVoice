@@ -60,7 +60,7 @@ struct TutorBotLayer: View {
                 TutorNoteCard()
                     .padding(.horizontal, 12)
                     .padding(.bottom, 80)
-                    .transition(.scale(scale: 0.2, anchor: .bottomTrailing).combined(with: .opacity))
+                    .transition(.scale(scale: 0.6, anchor: .bottomTrailing).combined(with: .opacity))
             } else if let b = bot.bubble {
                 TutorBubbleView(bubble: b)
                     .padding(.trailing, 16)
