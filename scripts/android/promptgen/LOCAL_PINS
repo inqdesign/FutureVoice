@@ -22,3 +22,6 @@ gen-coach-prompts.py 456c94e9
 # Tutor mode's lesson prompts (iOS af3c7ffe … bd242766); the final check's
 # judge and the next-topic offer (iOS 23ce515f … a0133a8b).
 gen-tutor-prompts.py d3a28206
+# The vocabulary level reads the share of advanced words, and the assessment
+# judges word precision (lexical_precision, iOS e7625c42).
+gen-weekly-prompt.py e7625c42

@@ -40,8 +40,8 @@ ENGINE = show(SRC)
 sp = func_body(ENGINE, "systemPrompt")
 up = func_body(ENGINE, "userPrompt")
 pin({
-    "generate": (func_body(ENGINE, "generate"), "b86493a5f0cf"),
-    "vocabProfileLine": (func_body(ENGINE, "vocabProfileLine"), "e01771edce07"),
+    "generate": (func_body(ENGINE, "generate"), "7caa12fd28b2"),
+    "vocabProfileLine": (func_body(ENGINE, "vocabProfileLine"), "d9882e1e3dde"),
     "systemPrompt (wrapper)": (sp[:sp.index('var s = """')] + sp[sp.index('\n        """'):], "2b2e93b77725"),
     "userPrompt (caps)": (up[:up.index('return """')], "5ce49ee9e906"),
 })

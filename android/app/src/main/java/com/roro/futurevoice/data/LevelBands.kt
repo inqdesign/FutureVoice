@@ -65,6 +65,62 @@ object LevelBands {
     }
 
     /**
+     * Vocabulary as WHICH words, not how many (iOS `VocabSophistication`):
+     * the share of graded word TOKENS at B2+ in the newest talks, cut at the
+     * NICT JLE medians (1,277 learners of English in the same SST interview
+     * + 20 natives). The old count below rose with talk alone — six pooled
+     * ≈A2 interviews read B2. Above B2 the share stops separating levels, so
+     * C1/C2 also need the assessment's precision read, else the band stops
+     * at B2. English only; other languages keep [vocabularyLevel].
+     */
+    object VocabShare {
+        const val MIN_GRADED_TOKENS = 400
+        const val WINDOW_GRADED_TOKENS = 1500
+        private val cuts = listOf(CefrLevel.C2 to 7.0, CefrLevel.C1 to 6.0, CefrLevel.B2 to 5.0,
+            CefrLevel.B1 to 4.1, CefrLevel.A2 to 2.6, CefrLevel.A1 to 0.0)
+
+        fun isCalibrated(language: String) = language == "en"
+
+        data class Read(val graded: Int, val advanced: Int, val talks: Int) {
+            val share: Double get() = if (graded > 0) advanced.toDouble() / graded * 100 else 0.0
+        }
+
+        /** What held the band: no precision read yet (null), or that read. */
+        data class Ceiling(val precision: CefrLevel?)
+
+        fun level(read: Read, precision: CefrLevel?): Pair<CefrLevel, Ceiling?>? {
+            if (read.graded < MIN_GRADED_TOKENS) return null
+            val all = CefrLevel.entries
+            val byShare = cuts.first { read.share >= it.second }.first
+            if (all.indexOf(byShare) <= all.indexOf(CefrLevel.B2)) return byShare to null
+            if (precision == null) return CefrLevel.B2 to Ceiling(null)
+            val capped = if (all.indexOf(precision) < all.indexOf(byShare))
+                (if (all.indexOf(precision) > all.indexOf(CefrLevel.B2)) precision else CefrLevel.B2)
+            else byShare
+            return if (capped == byShare) byShare to null else capped to Ceiling(precision)
+        }
+
+        /** Talks NEWEST FIRST, each the learner's evidence lines, until
+         *  [WINDOW_GRADED_TOKENS]. Repeats count — a token share is what was
+         *  calibrated. */
+        fun read(talksNewestFirst: List<List<String>>, gradeOf: (String) -> CefrLevel?): Read {
+            var graded = 0; var advanced = 0; var talks = 0
+            for (texts in talksNewestFirst) {
+                if (graded >= WINDOW_GRADED_TOKENS) break
+                val before = graded
+                for (text in texts) for (token in text.split(Regex("[^\\p{L}\\p{N}]+"))) {
+                    if (token.length <= 1) continue
+                    val lv = gradeOf(token.lowercase()) ?: continue
+                    graded++
+                    if (lv.ordinal >= CefrLevel.B2.ordinal) advanced++
+                }
+                if (graded > before) talks++
+            }
+            return Read(graded, advanced, talks)
+        }
+    }
+
+    /**
      * Vocabulary: the highest band where enough DISTINCT words have actually
      * been produced. The bar rises with the level — six A2 words are decent
      * evidence, six lucky C1 words (one song, one topic) are not — and a

@@ -5,6 +5,8 @@ import com.roro.futurevoice.core.Config
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.data.CoreVocabulary
+import com.roro.futurevoice.data.LevelBands
+import com.roro.futurevoice.data.VocabLemmas
 import com.roro.futurevoice.data.JapaneseMorph
 import com.roro.futurevoice.data.WordSplitter
 import com.roro.futurevoice.data.LearnedExpression
@@ -99,6 +101,7 @@ object WeeklyReportEngine {
         val summary: String = "",
         val cefr_level: String? = null,
         val level_rationale: String? = null,
+        val lexical_precision: String? = null,
         val newExpressions: List<NewExpr> = emptyList(),
         val repeatedMistakes: List<Mistake> = emptyList(),
         val suggestedExpressions: List<Suggested> = emptyList(),
@@ -217,6 +220,8 @@ object WeeklyReportEngine {
             cefrLevel = payload.cefr_level,
             levelRationale = payload.level_rationale,
             levelEvidence = evidence,
+            lexicalPrecision = CefrLevel.entries
+                .firstOrNull { it.code.equals(payload.lexical_precision, true) }?.code,
             generatedAt = now,
         )
     }
@@ -262,6 +267,22 @@ object WeeklyReportEngine {
     fun vocabProfileLine(utterances: List<String>, language: String): String {
         val counts = HashMap<CefrLevel, Int>()
         val seen = HashSet<String>()
+        // The calibrated half (iOS `VocabSophistication`): the share of graded
+        // TOKENS at B2+, which separates levels where the distinct counts
+        // only grow with the amount of talk.
+        var shareLine = ""
+        if (LevelBands.VocabShare.isCalibrated(language)) {
+            val read = LevelBands.VocabShare.read(listOf(utterances)) {
+                CoreVocabulary.levelOfSurface(VocabLemmas.lemma(it, language), language)
+            }
+            if (read.graded > 0) {
+                shareLine = "\nB2+ share of graded word tokens: " +
+                    String.format(java.util.Locale.US, "%.1f", read.share) + "% of ${read.graded} " +
+                    "(spoken-interview calibration: <2.6 A1, 2.6-4.1 A2, 4.1-5.0 B1, 5.0-6.0 B2, " +
+                    "6.0+ above B2; native speakers ~6.5). This share is RANGE; the distinct counts " +
+                    "below grow with the amount of talk and are not a level."
+            }
+        }
         for (line in utterances) {
             // Headwords for Japanese — a segment on its own can't tell 行き
             // the noun from 行き + ました (iOS `vocabProfileLine`).
@@ -278,6 +299,6 @@ object WeeklyReportEngine {
         }
         return CefrLevel.entries.joinToString(", ") {
             "${it.code.uppercase()}: ${counts[it] ?: 0}"
-        }
+        } + shareLine
     }
 }

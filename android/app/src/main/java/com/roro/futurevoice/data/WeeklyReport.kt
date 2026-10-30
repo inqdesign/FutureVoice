@@ -35,6 +35,9 @@ data class WeeklyReport(
      * surprising verdict can be checked against what it actually saw.
      */
     val levelEvidence: String? = null,
+    /** The judge's read of word PRECISION (a1…c2) — the second witness
+     *  [LevelBands.VocabShare] needs above B2. Null on older reports. */
+    val lexicalPrecision: String? = null,
     @Serializable(with = IsoDateMillisSerializer::class)
     val generatedAt: Long = System.currentTimeMillis(),
 )

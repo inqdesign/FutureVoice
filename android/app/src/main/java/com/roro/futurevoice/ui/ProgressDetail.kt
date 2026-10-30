@@ -45,6 +45,7 @@ import com.roro.futurevoice.R
 import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.data.CoreVocabulary
 import com.roro.futurevoice.data.LevelBands
+import com.roro.futurevoice.data.VocabLemmas
 import com.roro.futurevoice.data.WeeklyReport
 import com.roro.futurevoice.talk.ScorecardMetrics
 import com.roro.futurevoice.talk.Session
@@ -138,6 +139,10 @@ data class ProgressMetrics(
     val perLevel: Map<CefrLevel, Int> = emptyMap(),
     val usedTotal: Int = 0,
     val vocabLevel: CefrLevel? = null,
+    /** The share behind [vocabLevel] (English); null where the old count
+     *  still decides. */
+    val vocabRead: LevelBands.VocabShare.Read? = null,
+    val vocabCeiling: LevelBands.VocabShare.Ceiling? = null,
     val expressionCount: Int = 0,
     val fluencyTrend: List<TrendPoint> = emptyList(),
     val grammarTrend: List<TrendPoint> = emptyList(),
@@ -277,6 +282,23 @@ object ProgressMath {
             if (m.avgWordsPerUserTurn > 0) expressionTrend += TrendPoint(s.rank, m.avgWordsPerUserTurn)
         }
 
+        val language = CoreVocabulary.activeLanguage()
+        val vocabShare = if (language != null && LevelBands.VocabShare.isCalibrated(language)) {
+            // Same evidence filter as the scores, over the vocabulary window.
+            val since = System.currentTimeMillis() - 90L * 86_400_000L
+            val talks = sessions
+                .filter { it.endedAt != null && it.archivedAt == null && !it.isPractice &&
+                    (it.endedAt ?: 0L) > since }
+                .sortedByDescending { it.endedAt ?: 0L }
+                .map { s -> s.turns.filter { it.isEvidence }.map { it.transcript } }
+            val read = LevelBands.VocabShare.read(talks) {
+                CoreVocabulary.levelOfSurface(VocabLemmas.lemma(it, language), language)
+            }
+            val precision = reports.sortedByDescending { it.generatedAt }
+                .firstNotNullOfOrNull { r -> CefrLevel.entries.firstOrNull { it.code == r.lexicalPrecision } }
+            read to LevelBands.VocabShare.level(read, precision)
+        } else null
+
         val cards = scored.mapNotNull { it.summary?.scorecard }
         fun notes(get: (com.roro.futurevoice.talk.SessionScorecard) -> String) =
             cards.take(3).map(get).filter { it.isNotBlank() }
@@ -302,7 +324,10 @@ object ProgressMath {
                 .let { l -> if (l.isEmpty()) null else l[(l.size - 1) / 2] },
             perLevel = vocabByLevel,
             usedTotal = vocabByLevel.values.sum(),
-            vocabLevel = LevelBands.vocabularyLevel(vocabByLevel),
+            vocabLevel = if (vocabShare != null) vocabShare.second?.first
+                else LevelBands.vocabularyLevel(vocabByLevel),
+            vocabRead = vocabShare?.first,
+            vocabCeiling = vocabShare?.second?.second,
             expressionCount = expressionCount,
             fluencyTrend = fluencyTrend,
             grammarTrend = grammarTrend,
@@ -782,6 +807,28 @@ private fun BigFigureRow(big: String, unit: String, trailing: @Composable () -> 
     }
 }
 
+/** The line under the vocabulary level when the share decides it (iOS
+ *  `ProgressTab.vocabDetail`); null where the old count still does. */
+@Composable
+private fun vocabDetail(m: ProgressMetrics): String? {
+    val read = m.vocabRead ?: return null
+    if (read.graded < LevelBands.VocabShare.MIN_GRADED_TOKENS) {
+        // ~30 graded tokens a minute of a learner's own speech (NICT JLE).
+        val left = maxOf(1, kotlin.math.ceil(
+            (LevelBands.VocabShare.MIN_GRADED_TOKENS - read.graded) / 30.0).toInt())
+        return stringResource(R.string.needs_about_lld_more_min_of_your_own_speech_before_it_reads_8e76a8, left)
+    }
+    val ceiling = m.vocabCeiling
+    return when {
+        ceiling == null -> stringResource(R.string.s_1f_of_the_words_you_said_in_your_last_lld_talks_are_b2_or_33c9e6,
+            read.share, read.talks)
+        ceiling.precision == null ->
+            stringResource(R.string.your_words_read_above_b2_c1_and_up_also_needs_the_weekly_ass_916f42)
+        else -> stringResource(R.string.held_at_by_how_precisely_you_pick_words_from_the_weekly_asse_236fb9,
+            ceiling.precision.code.uppercase())
+    }
+}
+
 @Composable
 private fun VocabularyPage(
     m: ProgressMetrics,
@@ -796,7 +843,8 @@ private fun VocabularyPage(
             // The count is lifetime, not a window: `VocabStore` exposes the
             // per-band totals and not the dates behind them, so the sentence
             // claims no window it cannot back up.
-            Text(stringResource(R.string.estimated_from_lld_distinct_words_graded_by_cefr, m.usedTotal),
+            Text(vocabDetail(m)
+                ?: stringResource(R.string.estimated_from_lld_distinct_words_graded_by_cefr, m.usedTotal),
                 style = PT.callout, color = secondary)
         }
 
@@ -999,8 +1047,8 @@ fun HowAssessedSheet(
                 footer = stringResource(
                     R.string.marks_a_deterministic_proxy_a_real_measurement_mapped_to_a_c_729797)) {
                 AssessedRow(stringResource(R.string.vocabulary),
-                    m.vocabLevel?.code?.uppercase(),
-                    stringResource(R.string.assessed_detail_vocabulary, m.usedTotal))
+                    m.vocabLevel?.let { (if (m.vocabRead != null) "≈" else "") + it.code.uppercase() },
+                    vocabDetail(m) ?: stringResource(R.string.assessed_detail_vocabulary, m.usedTotal))
                 FormDivider()
                 AssessedRow(stringResource(R.string.fluency),
                     m.fluencyLevel?.let { "≈" + it.code.uppercase() },

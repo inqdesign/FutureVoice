@@ -320,7 +320,7 @@ fun ProgressBody(language: String, nativeLanguage: String,
                     l?.let { (if (approx) "≈" else "") + it.code.uppercase() } ?: "—"
                 LevelEqualizer.View(listOf(
                     LevelEqualizer.Bar(stringResource(R.string.axis_vocab),
-                        label(metrics.vocabLevel, false), lit(metrics.vocabLevel), Color(0xFF007AFF)),
+                        label(metrics.vocabLevel, metrics.vocabRead != null), lit(metrics.vocabLevel), Color(0xFF007AFF)),
                     LevelEqualizer.Bar(stringResource(R.string.fluency),
                         label(metrics.fluencyLevel, true), lit(metrics.fluencyLevel), Color(0xFF34C759)),
                     LevelEqualizer.Bar(stringResource(R.string.grammar),

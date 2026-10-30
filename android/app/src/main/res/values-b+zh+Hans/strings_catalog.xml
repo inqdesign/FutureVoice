@@ -3798,4 +3798,12 @@
     <string name="heart">"爱心"</string>
     <string name="someone">"有人"</string>
     <string name="lld_new_cheers_on_your_seat">"你的座位有%d条新加油"</string>
+    <!-- 'Held at ≈%@ by how precisely you pick words, from the weekly assessment.' -->
+    <string name="held_at_by_how_precisely_you_pick_words_from_the_weekly_asse_236fb9">"按等级评估中用词的准确度，定为≈%s。"</string>
+    <!-- 'Needs about %lld more min of your own speech before it reads a level.' -->
+    <string name="needs_about_lld_more_min_of_your_own_speech_before_it_reads_8e76a8">"再说大约%d分钟，这里就会显示等级。"</string>
+    <!-- '%.1f%% of the words you said in your last %lld talks are B2 or above. The level reads which words you reach for, not how many.' -->
+    <string name="s_1f_of_the_words_you_said_in_your_last_lld_talks_are_b2_or_33c9e6">"你最近%2$d次对话里说的词，有%1$.1f%%是B2及以上。等级看的是你会选用哪些词，而不是认识多少词。"</string>
+    <!-- 'Your words read above B2. C1 and up also needs the weekly assessment to judge how precisely you pick words.' -->
+    <string name="your_words_read_above_b2_c1_and_up_also_needs_the_weekly_ass_916f42">"你用的词已高于B2。到C1及以上，还要看等级评估里你用词有多准确。"</string>
 </resources>
