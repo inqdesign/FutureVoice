@@ -282,9 +282,16 @@ reasons are the design:
 - **A full iCloud is remembered, and SAID** (`SyncEngine.quotaFull`). The
   refused half (audio, or everything) is not retried for 6 h unless Sync now
   is tapped — it was retried on every write, once per turn of a live call —
-  and `SyncQuotaNotice` tells the learner once, outside a call, that their
+  and `SyncQuotaNotice` tells the learner, outside a call, that their
   recordings are on this device only and will go with the app. Me → Devices
-  keeps the same words, and the size of this device's practice.
+  keeps the same words, and the size of this device's practice. **Said again
+  a week later while it lasts** (2026-10-30, `quotaRenotice`): told once, it
+  was forgotten. One learner's phone and iPad both hit `everything` on
+  10-07, showed the alert that day, then drifted apart for three weeks with
+  nothing on screen and nothing in telemetry, because only an episode's
+  first refusal was reported. A refusal after the first now sends
+  `sync_quota_still_full` (scope), at most once a day per device, so an
+  episode that never ends shows up as one.
 - **Nothing warns at deletion time — iOS gives an app no hook** — so it is
   said before: Me → Devices says "on this device only" while sync is off, and
   `BackupOfferSheet` asks once, after the third finished talk.

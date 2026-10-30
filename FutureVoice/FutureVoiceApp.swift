@@ -148,7 +148,7 @@ struct FutureVoiceApp: App {
                 SyncEngine.shared.foregrounded()
                 // Speech videos at the picked quality (a no-op when off).
                 SpeechVideoSync.shared.ensureCopies()
-                // Told once, outside a call (see `SyncEngine.quotaFull`).
+                // Told outside a call, and again weekly while it lasts (see `SyncEngine.quotaRenotice`).
                 SyncQuotaNotice.presentIfNeeded()
             }
             // Cards drift due over time even with no store writes, so re-snapshot

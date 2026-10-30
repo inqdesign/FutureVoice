@@ -1,8 +1,9 @@
 import SwiftUI
 import UIKit
 
-/// Says, once, that iCloud is full and what that leaves unprotected
-/// (see `SyncEngine.quotaFull`). A learner who turned sync on to keep their
+/// Says that iCloud is full and what that leaves unprotected — when it
+/// starts, and again a week later for as long as iCloud keeps refusing
+/// (see `SyncEngine.quotaFull`, `quotaRenotice`). A learner who turned sync on to keep their
 /// practice safe has to be told the day it stops being safe — that is the
 /// whole promise of the toggle. Shown as a system alert on top of whatever is
 /// up, never during a call (it waits for the next pass or foreground), and the

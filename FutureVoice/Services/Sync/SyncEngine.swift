@@ -71,9 +71,22 @@ final class SyncEngine: ObservableObject {
 
     @Published private(set) var quotaFull: QuotaScope?
     private var quotaHitAt: Date?
-    /// The one-time alert for this episode has not been shown yet.
+    /// The alert has not been shown yet — for this episode, or again since
+    /// `quotaRenotice` passed with iCloud still full.
     private(set) var quotaNoticePending = false
+    /// When the alert was last shown; nil for one shown by a build before
+    /// this was kept, which counts as long ago.
+    private var quotaNoticedAt: Date?
+    /// When a refusal after the first was last reported (`sync_quota_still_full`).
+    private var quotaReportedAt: Date?
     static let quotaBackoff: TimeInterval = 6 * 3600
+    /// A full iCloud is said again a week after it was last said
+    /// (2026-10-30). Told once, it was forgotten: one learner's phone and
+    /// iPad stopped syncing on 10-07, each showed the alert that day, and for
+    /// three weeks the two drifted apart with nothing on screen (unless they
+    /// went to Me → Devices) and nothing in telemetry, since only an
+    /// episode's first refusal was reported.
+    static let quotaRenotice: TimeInterval = 7 * 86_400
     /// "Sync now" retries even inside the backoff.
     private var forceRetry = false
 
@@ -84,35 +97,54 @@ final class SyncEngine: ObservableObject {
               let d = UserDefaults.standard.dictionary(forKey: key),
               let raw = d["scope"] as? String, let scope = QuotaScope(rawValue: raw) else {
             quotaFull = nil; quotaHitAt = nil; quotaNoticePending = false
+            quotaNoticedAt = nil; quotaReportedAt = nil
             return
         }
         quotaFull = scope
         quotaHitAt = d["at"] as? Date
         quotaNoticePending = !(d["noticed"] as? Bool ?? false)
+        quotaNoticedAt = d["noticedAt"] as? Date
+        quotaReportedAt = d["reportedAt"] as? Date
     }
 
     private func saveQuota() {
         guard let key = quotaKey else { return }
         if let quotaFull {
-            UserDefaults.standard.set(["scope": quotaFull.rawValue,
-                                       "at": quotaHitAt ?? Date(),
-                                       "noticed": !quotaNoticePending], forKey: key)
+            var d: [String: Any] = ["scope": quotaFull.rawValue,
+                                    "at": quotaHitAt ?? Date(),
+                                    "noticed": !quotaNoticePending]
+            if let quotaNoticedAt { d["noticedAt"] = quotaNoticedAt }
+            if let quotaReportedAt { d["reportedAt"] = quotaReportedAt }
+            UserDefaults.standard.set(d, forKey: key)
         } else {
             UserDefaults.standard.removeObject(forKey: key)
         }
     }
 
     /// iCloud said no. Records the WIDER of what was refused and reports the
-    /// first refusal of an episode only — a full iCloud is one fact, not one
-    /// event per turn.
+    /// first refusal of an episode as `sync_error` — a full iCloud is one
+    /// fact, not one event per turn — and a later refusal as
+    /// `sync_quota_still_full`, at most once a day, so an episode that never
+    /// ends is visible as one.
     private func noteQuota(_ scope: QuotaScope) {
         let first = quotaFull == nil
+        let now = Date()
         if quotaFull != .everything { quotaFull = scope }
-        quotaHitAt = Date()
+        quotaHitAt = now
         if first {
             quotaNoticePending = true
+            quotaReportedAt = now
             Analytics.capture("sync_error", ["reason": Self.describe(.quotaExceeded),
                                              "scope": scope.rawValue])
+        } else {
+            if !quotaNoticePending,
+               now.timeIntervalSince(quotaNoticedAt ?? .distantPast) >= Self.quotaRenotice {
+                quotaNoticePending = true
+            }
+            if !Calendar.current.isDate(quotaReportedAt ?? .distantPast, inSameDayAs: now) {
+                quotaReportedAt = now
+                Analytics.capture("sync_quota_still_full", ["scope": (quotaFull ?? scope).rawValue])
+            }
         }
         saveQuota()
     }
@@ -126,6 +158,8 @@ final class SyncEngine: ObservableObject {
         quotaFull = nil
         quotaHitAt = nil
         quotaNoticePending = false
+        quotaNoticedAt = nil
+        quotaReportedAt = nil
         saveQuota()
         Analytics.capture("sync_quota_cleared")
     }
@@ -136,13 +170,15 @@ final class SyncEngine: ObservableObject {
         return Date().timeIntervalSince(at) < Self.quotaBackoff
     }
 
-    /// Raises the one-time alert (`SyncQuotaNotice`); set by the app, so the
+    /// Raises the alert (`SyncQuotaNotice`); set by the app, so the
     /// engine stays free of UI and test engines raise nothing.
     var onQuotaNotice: (() -> Void)?
 
-    /// The alert has been shown for this episode.
+    /// The alert has been shown; it comes back after `quotaRenotice` if
+    /// iCloud is still refusing then.
     func markQuotaNoticed() {
         quotaNoticePending = false
+        quotaNoticedAt = Date()
         saveQuota()
     }
 

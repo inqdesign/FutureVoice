@@ -610,4 +610,43 @@ final class SyncTests: XCTestCase {
         XCTAssertNil(a.engine.quotaFull)
         XCTAssertEqual(a.engine.status, .idle)
     }
+
+    /// A full iCloud that never empties is said again a week after the
+    /// alert, not once ever — and not sooner.
+    func testFullICloudIsSaidAgainAfterAWeek() async throws {
+        let key = "futurevoice.sync.quota.\(user)"
+        UserDefaults.standard.removeObject(forKey: key)
+        defer { UserDefaults.standard.removeObject(forKey: key) }
+
+        let cloud = InMemorySyncTransport()
+        cloud.quotaForBlobs = true
+        let a = device(cloud)
+        let turnDir = a.root.appendingPathComponent("TurnAudio", isDirectory: true)
+        try FileManager.default.createDirectory(at: turnDir, withIntermediateDirectories: true)
+        try Data([1, 2, 3]).write(to: turnDir.appendingPathComponent("T1.mp3"))
+        try await a.engine.enable()
+        await a.engine.waitUntilIdle()
+        XCTAssertTrue(a.engine.quotaNoticePending)
+        a.engine.markQuotaNoticed()
+
+        // Refused again the same day: nothing new to say.
+        on(a.root)
+        a.engine.syncNow()
+        await a.engine.waitUntilIdle()
+        XCTAssertEqual(a.engine.quotaFull, .audio)
+        XCTAssertFalse(a.engine.quotaNoticePending)
+
+        // Eight days on and still refused: said again.
+        var d = try XCTUnwrap(UserDefaults.standard.dictionary(forKey: key))
+        d["noticedAt"] = Date().addingTimeInterval(-8 * 86_400)
+        UserDefaults.standard.set(d, forKey: key)
+        // A relaunch reads it back.
+        on(a.root)
+        let relaunched = SyncEngine(transport: cloud)
+        relaunched.setUser(user)
+        relaunched.syncNow()
+        await relaunched.waitUntilIdle()
+        XCTAssertEqual(relaunched.quotaFull, .audio)
+        XCTAssertTrue(relaunched.quotaNoticePending)
+    }
 }
