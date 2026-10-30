@@ -167,6 +167,24 @@ enum ScriptStudyStore {
     }
 }
 
+/// The words a learner held down in a study script, per script TEXT (a news
+/// article gets a fresh id every time it is opened). Device-local.
+enum ScriptLookups {
+    private static func key(_ body: String) -> String { "speech.lookups.\(ScriptStudy.textHash(body))" }
+
+    static func words(body: String) -> Set<String> {
+        Set(UserDefaults.standard.stringArray(forKey: key(body)) ?? [])
+    }
+
+    @discardableResult
+    static func add(_ word: String, body: String) -> Set<String> {
+        var all = words(body: body)
+        all.insert(word)
+        UserDefaults.standard.set(Array(all).sorted(), forKey: key(body))
+        return all
+    }
+}
+
 enum ScriptStudyEngine {
     enum StudyError: LocalizedError {
         case empty

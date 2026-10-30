@@ -12,6 +12,8 @@ struct ScriptStudyText: View {
     let paragraphs: [String]
     let study: ScriptStudy
     let language: String
+    /// Words already held down in this script, marked wherever they occur.
+    var lookedUp: Set<String> = []
     var onTap: (ScriptStudy.Highlight) -> Void
     /// Any word held down (2026-10-30, founder): its notebook lookup key.
     var onLookUp: (String) -> Void
@@ -22,7 +24,8 @@ struct ScriptStudyText: View {
                 if p > 0 { Divider() }
                 VStack(alignment: .leading, spacing: 6) {
                     ScriptParagraphText(text: para, highlights: study.highlights(in: p),
-                                        language: language, onTap: onTap, onLookUp: onLookUp)
+                                        language: language, lookedUp: lookedUp,
+                                        onTap: onTap, onLookUp: onLookUp)
                     if p < study.paragraphNotes.count, !study.paragraphNotes[p].isEmpty {
                         Text(study.paragraphNotes[p])
                             .font(.subheadline)
@@ -42,6 +45,7 @@ struct ScriptParagraphText: UIViewRepresentable {
     let text: String
     let highlights: [ScriptStudy.Highlight]
     let language: String
+    var lookedUp: Set<String> = []
     var onTap: (ScriptStudy.Highlight) -> Void
     var onLookUp: (String) -> Void
 
@@ -87,6 +91,12 @@ struct ScriptParagraphText: UIViewRepresentable {
             .foregroundColor: UIColor.label,
             .paragraphStyle: style,
         ])
+        if !lookedUp.isEmpty {
+            for (range, key) in Self.words(in: text, language: language) where lookedUp.contains(key) {
+                a.addAttribute(.backgroundColor, value: ScriptStudyStyle.lookedUpFill,
+                               range: NSRange(range, in: text))
+            }
+        }
         for h in highlights {
             guard let r = nsRange(h) else { continue }
             if let fill = ScriptStudyStyle.fill(h.kind) { a.addAttribute(.backgroundColor, value: UIColor(fill), range: r) }
@@ -128,10 +138,16 @@ struct ScriptParagraphText: UIViewRepresentable {
         }
 
         @objc func tapped(_ g: UITapGestureRecognizer) {
-            guard let v = g.view as? UITextView, let i = offset(at: g.location(in: v), in: v),
-                  let h = parent.highlights.first(where: { parent.nsRange($0).map { NSLocationInRange(i, $0) } ?? false })
-            else { return }
-            parent.onTap(h)
+            guard let v = g.view as? UITextView, let i = offset(at: g.location(in: v), in: v) else { return }
+            if let h = parent.highlights.first(where: { parent.nsRange($0).map { NSLocationInRange(i, $0) } ?? false }) {
+                parent.onTap(h)
+            } else if !parent.lookedUp.isEmpty,
+                      let word = ScriptParagraphText.word(at: i, in: parent.text, language: parent.language),
+                      parent.lookedUp.contains(word) {
+                // A word looked up once opens on a tap from then on, like
+                // the study's own highlights.
+                parent.onLookUp(word)
+            }
         }
 
         @objc func held(_ g: UILongPressGestureRecognizer) {
@@ -144,30 +160,38 @@ struct ScriptParagraphText: UIViewRepresentable {
         }
     }
 
-    /// The notebook key of the word over UTF-16 offset `i`. Japanese reads
-    /// the whole chunk (疲れ+た → 疲れる), like every other Japanese lookup;
-    /// everything else is the word tokenizer's word.
+    /// The notebook key of the word over UTF-16 offset `i`.
     static func word(at i: Int, in text: String, language: String) -> String? {
         let utf16 = text.utf16
         guard let at = utf16.index(utf16.startIndex, offsetBy: i, limitedBy: utf16.endIndex),
               at < text.endIndex else { return nil }
-        if LanguageCatalog.base(language) == "ja",
-           let hit = JapaneseMorph.headwords(in: text, lexicon: CoreVocabulary.set,
-                                             forms: JapaneseMorph.bundledForms)
-            .first(where: { $0.range.contains(at) }) {
-            return hit.headword
+        return words(in: text, language: language).first { $0.range.contains(at) }?.key
+    }
+
+    /// Every word of `text` with its notebook key. Japanese reads whole
+    /// chunks (疲れ+た → 疲れる), like every other Japanese lookup; everything
+    /// else is the word tokenizer's words.
+    static func words(in text: String, language: String) -> [(range: Range<String.Index>, key: String)] {
+        if LanguageCatalog.base(language) == "ja" {
+            return JapaneseMorph.headwords(in: text, lexicon: CoreVocabulary.set,
+                                           forms: JapaneseMorph.bundledForms)
+                .map { ($0.range, $0.headword) }
         }
         let tokenizer = NLTokenizer(unit: .word)
         tokenizer.string = text
         tokenizer.setLanguage(NLLanguage(rawValue: LanguageCatalog.base(language)))
-        let range = tokenizer.tokenRange(at: at)
-        guard !range.isEmpty else { return nil }
-        let key = VocabStore.lookupKey(for: String(text[range]))
-        return key.isEmpty ? nil : key
+        return tokenizer.tokens(for: text.startIndex..<text.endIndex).compactMap { r in
+            let key = VocabStore.lookupKey(for: String(text[r]))
+            return key.isEmpty ? nil : (r, key)
+        }
     }
 }
 
 enum ScriptStudyStyle {
+    /// A word the learner held down to look up: a quiet fill under the
+    /// study's own colours, so it reads as "seen", not as a fourth kind.
+    static let lookedUpFill = UIColor.systemGreen.withAlphaComponent(0.18)
+
     static func fill(_ kind: ScriptStudy.Kind) -> Color? {
         switch kind {
         case .expression: return Color.yellow.opacity(0.32)

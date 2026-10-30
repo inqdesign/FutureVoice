@@ -433,6 +433,8 @@ struct SpeechScriptSheet: View {
     @State private var card: ScriptStudy.Highlight?
     /// A word held down in the study text, any word at all.
     @State private var lookedUp: LookedUpWord?
+    /// Every word held down in THIS script, kept so the marks come back.
+    @State private var lookedUpWords: Set<String> = []
     private struct LookedUpWord: Identifiable {
         let word: String
         var id: String { word }
@@ -504,7 +506,12 @@ struct SpeechScriptSheet: View {
                         Group {
                             if studying, let study {
                                 ScriptStudyText(paragraphs: paragraphs, study: study, language: script.language,
-                                                onTap: { card = $0 }, onLookUp: { lookedUp = LookedUpWord(word: $0) })
+                                                lookedUp: lookedUpWords,
+                                                onTap: { card = $0 },
+                                                onLookUp: { word in
+                                                    lookedUp = LookedUpWord(word: word)
+                                                    lookedUpWords = ScriptLookups.add(word, body: script.body)
+                                                })
                             } else {
                                 Text(script.body)
                                     .font(.body)
@@ -588,7 +595,10 @@ struct SpeechScriptSheet: View {
                 WordSheet(initialWord: w.word, words: [])
                     .environmentObject(appState)
             }
-            .task(id: studyTaskId) { await loadStudy() }
+            .task(id: studyTaskId) {
+                lookedUpWords = ScriptLookups.words(body: script.body)
+                await loadStudy()
+            }
             .onDisappear { voiceoverPlayer.stop() }
         }
     }
