@@ -3,17 +3,17 @@
 insert into public.speech_challenges (id, language, title, genre, body, target_seconds)
 values
   ('5beec000-0000-4000-8000-000000000020', 'en', 'Wake up glowing', 'product',
-   'Ladies and gentlemen, before I say anything, I want you to look at my face. Really look. No filter, no makeup, just me, at the end of a very long day.
+   'Ladies and gentlemen, before I say anything, look at my face. Up close. No filter, no foundation, nothing. Just my real skin, at the end of a very long day.
 
-This is what two weeks of the Morning Dew night cream does. Two weeks!
+Two weeks ago, my skin was tired. Dry around the nose, rough on the cheeks, and these little lines by my eyes every time I smiled. Sound familiar?
 
-Heres how it works. Right before bed, just a little bit, the size of a pea. You warm it between your fingers, and you press it gently into your skin. Thats it. It smells like fresh cucumber, and it melts in like water.
+This is the Morning Dew night cream. Watch how I use it. Clean skin, a little bit, the size of a pea. Warm it between your fingers, and press it in. Dont rub. Press. Forehead, cheeks, chin, and a tiny bit under the eyes.
 
-And then you sleep. And while you sleep, it works. When you wake up, your skin feels soft, it feels plump, and it has that glow. You know the glow. The one everyone asks about.
+Feel how light that is? It smells like fresh cucumber, and it disappears like water. No sticky pillow, no shiny face.
 
-Our customers keep telling us the same thing. "My friends asked if I went on vacation." Thats what we hear every single day.
+And while you sleep, it does the work. It holds the moisture in all night, so in the morning your skin is soft, plump and smooth, and your makeup goes on like silk. Some mornings, honestly, I skip the makeup.
 
-Tonight, you get the big jar, plus a travel size for your bag, plus a free eye cream. Three for the price of one.
+Tonight, you get the big jar, a travel size for your bag, and a free eye cream. Three for the price of one.
 
-Its the most popular thing weve sold all year, and its almost gone. Treat yourself tonight. Youve earned it.', 60)
+Your skin works hard for you every day. Give it one good night. Call now!', 60)
 on conflict (id) do nothing;
