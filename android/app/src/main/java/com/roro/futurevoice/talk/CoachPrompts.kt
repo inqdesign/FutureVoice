@@ -21,6 +21,19 @@ object CoachPrompts {
         else
             "- Use the same form of address the other speaker uses with them   (Korean 반말 or 존댓말, Japanese plain or polite, du or Sie, tu or   vous…), and keep ONE form for the whole call: when a previous   suggestion is given, use its form unless this line clearly   changes it."
 
+    /**
+     * iOS `CoachSuggester.suggestionShape(for:)`: what a suggestion at this
+     * level says, not only which words it uses (2026-10-30, founder: the
+     * suggestions read the same at every level).
+     */
+    fun suggestionShape(level: CefrLevel): String = when (level) {
+        CefrLevel.A1 -> "3–6 words, one short sentence with ONE fact or answer. Kept easy."
+        CefrLevel.A2 -> "One sentence, about 5–10 words: the answer plus one small detail   or a reason with \"because\" / \"but\". Kept easy."
+        CefrLevel.B1 -> "One or two sentences, about 8–15 words: the answer plus WHY or a   short example from their own life — what a B1 speaker can say   but doesn't yet say on their own."
+        CefrLevel.B2 -> "One or two sentences, about 10–20 words: a view, not only a fact   — the answer with a reason, a contrast (\"…, though …\") or a   comparison, or a follow-up that keeps the talk going. Natural   hedging (\"I guess\", \"kind of\") where a native would use it."
+        CefrLevel.C1, CefrLevel.C2 -> "One or two sentences, about 10–25 words, the way a fluent adult   really talks: an idiom or a precise word where it fits, nuance,   a light aside or humour, and steering the talk where they want   it. Never simplified — this learner is here for what they can't   produce yet."
+    }
+
     /** iOS `CoachSuggester.system(target:native:level:register:)`. */
     fun suggesterSystem(targetName: String, nativeName: String, level: CefrLevel, address: String,
                         variety: String = ""): String =
@@ -28,12 +41,14 @@ object CoachPrompts {
         level.code.uppercase() +
         " learner of " +
         targetName +
-        " is on a spoken call. The other speaker has just said the line below. Write ONE short thing the learner could say back next — exactly what a native speaker would actually say out loud in that moment, kept easy. Never a textbook sentence: if a native would not say it that way, it is wrong however simple it is.\n\n- SPOKEN, not written: contractions where speech has them (\"I'll\",   \"I'm\", \"don't\"), the everyday phrasing people really use in that   place (\"Can I get a latte?\", \"I'll have the pasta\", \"Just looking,   thanks\"), never a stiff full form (\"I will have a coffee please\").\n  When a situation is given, answer as a real customer, guest or   caller there would. One answer, one idea — not \"just looking\" AND   a request — and \"please\" only on a request, never on a statement   (\"I'm going to London, please\").\n\n- \"say\": in " +
+        " is on a spoken call. The other speaker has just said the line below. Write ONE thing the learner could say back next — exactly what a native speaker would actually say out loud in that moment, at THIS learner's level. Never a textbook sentence: if a native would not say it that way, it is wrong however simple it is.\n\n- SPOKEN, not written: contractions where speech has them (\"I'll\",   \"I'm\", \"don't\"), the everyday phrasing people really use in that   place (\"Can I get a latte?\", \"I'll have the pasta\", \"Just looking,   thanks\"), never a stiff full form (\"I will have a coffee please\").\n  When a situation is given, answer as a real customer, guest or   caller there would. One answer, one idea — not \"just looking\" AND   a request — and \"please\" only on a request, never on a statement   (\"I'm going to London, please\").\n\n- \"say\": in " +
         targetName +
-        " ONLY — always, even when the line contains   names or words in another language. 3–10 words, one sentence (two   very short ones at most). " +
+        " ONLY — always, even when the line contains   names or words in another language. " +
+        suggestionShape(level) +
+        "   " +
         ConversationPrompt.speechVocabulary(level) +
         variety +
-        "\n- Where the answer depends on something only the learner knows (their   name, a time, a place, what they did, what they like, which drink   or dish or item they want), put a   plausible EXAMPLE in square brackets — \"I usually get up at [7].\" —   which the learner swaps for their own. It is shown faded as a   placeholder, so it is never a claim about them. One or two   brackets, a word or two inside each, nothing else in brackets.\n- It is the SAME person who said the learner's earlier lines in the   call: carry on from what they already said, never contradict it,   never give again a fact they already gave, and stay on the thread   the two are on. Answer what THIS line asks, not an earlier one.\n- When the answer is about the learner and \"About the learner\"   covers it, the bracketed example IS that fact, said in   " +
+        "\n- Where the answer depends on something only the learner knows (their   name, a time, a place, what they did, what they like, which drink   or dish or item they want), put a   plausible EXAMPLE in square brackets — \"I usually get up at [7].\" —   which the learner swaps for their own. It is shown faded as a   placeholder, so it is never a claim about them. One or two   brackets, a word or two inside each, nothing else in brackets.   Every detail of their life the answer gives (a city, how long,   who, what they did) is in brackets or left out, never stated   plainly: a longer answer adds a reason or a view, not more facts.\n- It is the SAME person who said the learner's earlier lines in the   call: carry on from what they already said, never contradict it,   never give again a fact they already gave, and stay on the thread   the two are on. Answer what THIS line asks, not an earlier one.\n- When the answer is about the learner and \"About the learner\"   covers it, the bracketed example IS that fact, said in   " +
         targetName +
         " (\"I'm a [designer]\" for someone who designs), not a   guess. Bring up only what this line asks about; never pull in a   fact it didn't ask for.\n- When \"The other speaker\" is given, answer as the learner would   talk to THAT person: someone they know well gets the shorthand of   people who share a life (no introductions, no \"nice to meet you\"),   a new acquaintance gets easy small talk, a public figure gets what   a fan would actually say to them. Their own future self already   knows everything about them: never introduce yourself to it.\n- If the line asks nothing, \"say\" is a natural reaction or a short   follow-up question back, about what was just said.\n- Asking the same question straight back (\"And you?\", \"Und du?\",   \"너는?\") is something people do now and then, not on every answer:   by default \"say\" just answers. Never ask back what the line already   told them (they gave their name, then asked yours).\n" +
         address +

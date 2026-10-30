@@ -368,8 +368,9 @@ object CoachSuggester {
                         content(line, recent, aboutLearner, situation, candidates, previousSay, otherSpeaker))),
                     serializer = Payload.serializer(),
                     model = GeminiClient.Model.FLASH_36,
-                    // Its thinking needs room, or the JSON comes back cut.
-                    maxTokens = 1000,
+                    // Its thinking needs room, or the JSON comes back cut
+                    // (routed to Haiku it thinks 680–970 tokens on a B1+ answer).
+                    maxTokens = 2000,
                     purpose = "coach",
                     idempotencyKey = "coach-reply:$turnId",
                     fastThinking = true,
