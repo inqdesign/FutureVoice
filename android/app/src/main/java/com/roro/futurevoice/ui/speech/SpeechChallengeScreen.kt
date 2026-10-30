@@ -92,6 +92,7 @@ import com.roro.futurevoice.ui.NavPageBackHandler
 import com.roro.futurevoice.ui.SheetHeader
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.ui.brand.BookIconDisc
+import com.roro.futurevoice.ui.brand.CoreSeal
 import com.roro.futurevoice.ui.brand.ContinuousShape
 import com.roro.futurevoice.ui.brand.IosOutlinedButton
 import com.roro.futurevoice.ui.brand.IosButton
@@ -524,6 +525,7 @@ private fun BoardRow(row: SpeechChallenges.BoardRow) {
             Text(row.display_name, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 fontWeight = if (row.is_me) FontWeight.SemiBold else FontWeight.Normal,
                 modifier = Modifier.weight(1f, fill = false))
+            if (row.core == true) CoreSeal()
             if (row.is_me) {
                 Text(stringResource(R.string.you), style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold, color = accent)
@@ -558,9 +560,12 @@ private fun PodiumRow(row: SpeechChallenges.BoardRow) {
                     .padding(horizontal = 6.dp, vertical = 3.dp))
         }
         Column(Modifier.weight(1f)) {
-            Text(row.display_name, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                style = if (row.rank == 1) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(row.display_name, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    style = if (row.rank == 1) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f, fill = false))
+                if (row.core == true) CoreSeal(16.dp)
+            }
             if (row.is_me) {
                 Text(stringResource(R.string.you), style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold, color = accent)

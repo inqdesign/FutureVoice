@@ -77,6 +77,8 @@ class SpeechChallenges private constructor(private val context: Context) {
         val is_me: Boolean = false,
         /** Base64 JPEG, only when that learner chose to show a photo. */
         val avatar: String? = null,
+        /** Seated in the Core of this challenge's language today (iOS `core`). */
+        val core: Boolean? = null,
     ) {
         val face: Face get() = Face(display_name, avatar)
     }
