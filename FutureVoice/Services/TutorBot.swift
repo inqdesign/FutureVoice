@@ -86,6 +86,13 @@ final class TutorBot: ObservableObject {
     @Published private(set) var episodes: [NewsShowEpisode] = []
     /// A reading opened from a pick, shown by whichever tutor surface is up.
     @Published var reading: TutorReading?
+    /// A tutor-mode call on an upcoming goal, for the Talk home to place.
+    @Published var goalCall: GoalCall?
+    struct GoalCall: Identifiable, Equatable {
+        let id = UUID()
+        var topic: String
+        var blurb: String
+    }
     private var picksLoadedAt: Date?
     private var picksLoading = false
 
@@ -299,6 +306,21 @@ final class TutorBot: ObservableObject {
             reading = TutorReading(script: ep.script, study: ep.study(native: appState.nativeLanguage))
         case .readNews(let story):
             reading = TutorReading(story: story)
+        case .goal(let goalId, let part):
+            guard let goal = UpcomingGoalStore.shared.goals.first(where: { $0.id == goalId }) else { return }
+            if let part {
+                if part == .reading { ActivityEventLog.shared.record(.read) }
+                reading = TutorReading(goal: goal, part: part)
+            } else {
+                dismissBubble()
+                if noteShown { closeNote() }
+                chatOpen = false
+                // The tutor plans its own lesson from the goal; today's
+                // angle, once written, narrows it.
+                let focus = GoalPrep.today(for: goal, now: Date())?.focus
+                goalCall = GoalCall(topic: focus.map { "\($0) — \(goal.title)" } ?? goal.title,
+                                    blurb: "Preparing for: " + goal.promptLine())
+            }
         case .challenge(let id):
             if let rank = SpeechChallenges.shared.standings[id]?.myRank {
                 TutorPicks.markRankSeen(id, rank: rank)
@@ -544,4 +566,7 @@ struct TutorReading: Identifiable {
     var script: SpeechScript?
     var study: ScriptStudy?
     var story: SuggestedTopic?
+    /// Today's preparation for an upcoming goal, written when opened.
+    var goal: UpcomingGoal?
+    var part: GoalPrep.Part?
 }

@@ -86634,6 +86634,16 @@
         }
       }
     },
+    "Model answer" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "모범 답변"
+          }
+        }
+      }
+    },
     "Mono" : {
       "localizations" : {
         "de" : {
@@ -107920,6 +107930,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "大聲念出來"
+          }
+        }
+      }
+    },
+    "Read it, hear it in your voice, then say it" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "읽고, 내 목소리로 듣고, 말해 봐요"
           }
         }
       }
@@ -141786,6 +141806,16 @@
         }
       }
     },
+    "Today's reading" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘의 읽기"
+          }
+        }
+      }
+    },
     "Today's scenes are used up." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -143615,6 +143645,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "家教"
+          }
+        }
+      }
+    },
+    "Tutor drill" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "튜터 연습"
           }
         }
       }
@@ -157471,6 +157511,16 @@
         }
       }
     },
+    "Writing today's preparation for your goal…" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목표에 맞춘 오늘의 준비를 쓰고 있어요…"
+          }
+        }
+      }
+    },
     "Writing your introduction…" : {
       "localizations" : {
         "de" : {
@@ -157651,6 +157701,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "打開時會依你的程度來寫。"
+          }
+        }
+      }
+    },
+    "Written for this goal when you open it" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "열면 이 목표에 맞춰 바로 써 드려요"
           }
         }
       }
@@ -168747,6 +168807,16 @@
         }
       }
     },
+    "Your tutor drills it with you until it comes out clean" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "막힘없이 나올 때까지 튜터와 연습해요"
+          }
+        }
+      }
+    },
     "Your tutor prepares you for this. The more it knows, the closer the practice gets." : {
       "localizations" : {
         "ko" : {
@@ -172492,6 +172562,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "항공사 직원"
+          }
+        }
+      }
+    },
+    "An answer you can say on the day" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그날 그대로 말할 수 있는 답변"
           }
         }
       }

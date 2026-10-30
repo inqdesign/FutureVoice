@@ -587,6 +587,7 @@ struct TutorPickRows: View {
         case .newEpisode, .listen: return .cyan
         case .firstSpeech: return .purple
         case .readScript, .readNews: return .brown
+        case .goalReading, .goalSpeech, .goalDrill: return .purple
         }
     }
 }
@@ -617,7 +618,10 @@ struct TutorReadingSheet: View {
                                 Button("Try again") { failed = false; Task { await load() } }
                             }
                         } else {
-                            ProgressView { Text("Writing the article for your level…") }
+                            ProgressView {
+                                Text(reading.goal == nil ? "Writing the article for your level…"
+                                                         : "Writing today's preparation for your goal…")
+                            }
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -634,7 +638,18 @@ struct TutorReadingSheet: View {
     }
 
     private func load() async {
-        guard script == nil, reading.script == nil, let story = reading.story else { return }
+        guard script == nil, reading.script == nil else { return }
+        if let goal = reading.goal, let part = reading.part {
+            do {
+                let prep = try await GoalPrep.load(goal: goal, appState: appState)
+                script = prep.script(part)
+                TutorBot.shared.loadPicks(appState: appState, force: true)
+            } catch {
+                failed = true
+            }
+            return
+        }
+        guard let story = reading.story else { return }
         do {
             script = try await NewsArticle.load(story, language: appState.targetLanguage,
                                                 level: appState.proficiency)

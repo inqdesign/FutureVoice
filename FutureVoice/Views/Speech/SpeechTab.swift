@@ -534,7 +534,9 @@ struct SpeechScriptSheet: View {
                     }
                 }
 
-                if !shipped {
+                // A tutor reading (news, a goal's) is read-only but still
+                // heard in the learner's own voice.
+                if !shipped || studyHere {
                     ScriptVoiceoverSection(script: script, player: voiceoverPlayer)
                 }
 

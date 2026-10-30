@@ -247,6 +247,9 @@ struct ConversationView: View {
     /// about, and the subject the learner names is the call
     /// (`ConversationEngine`'s THEY CHOSE THE TOPIC block).
     private let learnerPicksTopic: Bool
+    /// A tutor-mode lesson on the topic whatever the Call setting says —
+    /// the tutor bot's goal drill.
+    private let forceTutor: Bool
     /// The screen this call was started from — `conversation_started` only.
     private let entry: TalkEntry
 
@@ -262,6 +265,7 @@ struct ConversationView: View {
          initialOpener: String? = nil,
          pickUpLastTalk: Bool = false,
          learnerPicksTopic: Bool = false,
+         tutor: Bool = false,
          resumeSession: Session? = nil,
          entry: TalkEntry = .other,
          onClose: (() -> Void)? = nil) {
@@ -269,6 +273,11 @@ struct ConversationView: View {
         self.initialOpener = initialOpener
         self.pickUpLastTalk = pickUpLastTalk && resumeSession == nil
         self.learnerPicksTopic = learnerPicksTopic && resumeSession == nil
+        self.forceTutor = tutor && resumeSession == nil
+        if self.forceTutor {
+            _tutorThisCall = State(initialValue: true)
+            _tutorWasOn = State(initialValue: true)
+        }
         self.entry = resumeSession != nil ? .resume : entry
         if let s = resumeSession {
             _topic = State(initialValue: s.topic ?? "")
@@ -3314,7 +3323,7 @@ struct ConversationView: View {
     private func resumeAfterFirstCallSetup() {
         // Tutor mode decides the opener, read right after this resumes; take
         // the sheet's answer here rather than trust `onChange` to have run.
-        tutorThisCall = TutorMode.isOn
+        tutorThisCall = TutorMode.isOn || forceTutor
         if tutorThisCall { tutorWasOn = true }
         firstCallSetupContinuation?.resume()
         firstCallSetupContinuation = nil
@@ -4825,7 +4834,7 @@ struct ConversationView: View {
         sessionStartedAt = Date()
         turns = []
         pinPromptClock()
-        tutorThisCall = TutorMode.isOn
+        tutorThisCall = TutorMode.isOn || forceTutor
         tutorWasOn = tutorThisCall
         tutorCheckTurnIds = []
         learnerSpokeThisCall = false

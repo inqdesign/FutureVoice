@@ -9,12 +9,15 @@ import Supabase
 /// in a few wordings that take turns by day, so the plan reads alive
 /// without a model call.
 struct TutorPick: Identifiable, Equatable {
-    enum Kind: String { case rankDrop, newEpisode, firstSpeech, readScript, readNews, listen }
+    enum Kind: String { case rankDrop, newEpisode, firstSpeech, readScript, readNews, listen,
+                              goalReading, goalSpeech, goalDrill }
     enum Action: Equatable {
         case listen(episodeId: UUID)
         case readScript(episodeId: UUID)
         case readNews(SuggestedTopic)
         case challenge(UUID)
+        /// Today's preparation for an upcoming goal (`GoalPrep`).
+        case goal(UUID, GoalPrep.Part?)
     }
     var id: String
     var kind: Kind
@@ -29,6 +32,9 @@ struct TutorPick: Identifiable, Equatable {
         case .firstSpeech: return "music.mic"
         case .readScript: return "text.book.closed.fill"
         case .readNews: return "newspaper.fill"
+        case .goalReading: return "text.book.closed.fill"
+        case .goalSpeech: return "music.mic"
+        case .goalDrill: return "graduationcap.fill"
         }
     }
     var tag: String? {
@@ -38,6 +44,9 @@ struct TutorPick: Identifiable, Equatable {
         case .firstSpeech: return explain("First time")
         case .readScript, .readNews: return explain("Reading")
         case .listen: return explain("Listening")
+        case .goalReading: return explain("Reading")
+        case .goalSpeech: return explain("Model answer")
+        case .goalDrill: return explain("Tutor drill")
         }
     }
     var buttonTitle: String {
@@ -45,7 +54,9 @@ struct TutorPick: Identifiable, Equatable {
         case .rankDrop: return explain("Try again")
         case .newEpisode, .listen: return explain("Listen")
         case .firstSpeech: return explain("Start")
-        case .readScript, .readNews: return explain("Read")
+        case .readScript, .readNews, .goalReading: return explain("Read")
+        case .goalSpeech: return explain("Open")
+        case .goalDrill: return explain("Start")
         }
     }
 }
@@ -144,6 +155,12 @@ enum TutorPicks {
         let day = Calendar.current.ordinality(of: .day, in: .era, for: now) ?? 0
         var picks: [TutorPick] = []
 
+        // 0. The nearest upcoming goal leads: today's reading, model answer
+        // and a tutor drill, all about it (`GoalPrep`). Nothing is written
+        // until one of them is tapped.
+        let goal = UpcomingGoalStore.shared.active(language: lang, now: now).first
+        if let goal { picks += goalPicks(goal, now: now) }
+
         // 1. Pushed down on a challenge.
         for drop in rankDrops().prefix(1) {
             picks.append(TutorPick(
@@ -173,7 +190,8 @@ enum TutorPicks {
                 picks.append(TutorPick(id: "script-\(ep.id)", kind: .readScript, title: ep.title,
                                        why: readScriptWhy(day: day), action: .readScript(episodeId: ep.id)))
             }
-            if let story = await newsStory(appState: appState, day: day) {
+            // With a goal ahead, its own reading stands in for the news.
+            if goal == nil, let story = await newsStory(appState: appState, day: day) {
                 picks.append(TutorPick(id: "news-\(story.title)", kind: .readNews, title: story.title,
                                        why: readNewsWhy(category: story.category, day: day),
                                        action: .readNews(story)))
@@ -187,7 +205,29 @@ enum TutorPicks {
                                    why: listenWhy(minutes: ep.minutes, day: day),
                                    action: .listen(episodeId: ep.id)))
         }
-        return (Array(picks.prefix(maxPicks)), episodes, balance)
+        return (Array(picks.prefix(maxPicks + (goal == nil ? 0 : 3))), episodes, balance)
+    }
+
+    /// The goal's three for today. Before anything is written the titles are
+    /// the goal's own; once it is, the day's.
+    @MainActor
+    static func goalPicks(_ goal: UpcomingGoal, now: Date = Date()) -> [TutorPick] {
+        let prep = GoalPrep.today(for: goal, now: now)
+        let countdown = goal.countdown(now: now).map { "\($0) · " } ?? ""
+        return [
+            TutorPick(id: "goal-read-\(goal.id)", kind: .goalReading,
+                      title: prep?.reading.title ?? explain("Today's reading"),
+                      why: countdown + (prep?.focus ?? explain("Written for this goal when you open it")),
+                      action: .goal(goal.id, .reading)),
+            TutorPick(id: "goal-speech-\(goal.id)", kind: .goalSpeech,
+                      title: prep?.speech.question ?? prep?.speech.title ?? explain("An answer you can say on the day"),
+                      why: explain("Read it, hear it in your voice, then say it"),
+                      action: .goal(goal.id, .speech)),
+            TutorPick(id: "goal-drill-\(goal.id)", kind: .goalDrill,
+                      title: prep?.focus ?? goal.title,
+                      why: explain("Your tutor drills it with you until it comes out clean"),
+                      action: .goal(goal.id, nil)),
+        ]
     }
 
     private static func showFirstSpeech(now: Date) -> Bool {

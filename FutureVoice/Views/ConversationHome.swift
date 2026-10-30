@@ -64,6 +64,8 @@ struct ConversationHome: View {
         var newsFacts: [String] = []
         var entry: TalkEntry = .other
         var learnerPicksTopic = false
+        /// A tutor-mode lesson whatever the Call setting says (a goal drill).
+        var tutor = false
     }
     /// Server-side account/billing snapshot — drives the credit chip. Credits
     /// live WITH the plan (not as a bare stat) so tapping goes to the
@@ -223,6 +225,14 @@ struct ConversationHome: View {
                     refreshTutor(delay: 0)
                 }
             }
+            // The tutor bot's goal drill: a tutor-mode call on the goal.
+            .onChange(of: tutorBot.goalCall) { _, call in
+                guard let call else { return }
+                tutorBot.goalCall = nil
+                BillingGate.start(orShow: $showingPaywall) {
+                    callLaunch = CallLaunch(topic: call.topic, blurb: call.blurb, entry: .tutorBot, tutor: true)
+                }
+            }
             .onChange(of: appState.talkHomeReloadToken) { _, _ in
                 refreshTutor(delay: 1.5)
                 HeroGreeting.advanceRotation()
@@ -333,6 +343,7 @@ struct ConversationHome: View {
                                  initialScenarioId: launch.scenarioId,
                                  initialNewsFacts: launch.newsFacts,
                                  learnerPicksTopic: launch.learnerPicksTopic,
+                                 tutor: launch.tutor,
                                  entry: launch.entry)
                     .environmentObject(appState)
             }
