@@ -2098,7 +2098,7 @@ internal fun HomeScreen(
         val tutorState by androidx.compose.runtime.rememberUpdatedState(state)
         LaunchedEffect(onTalk, resumed, tutorCovered) {
             if (!onTalk) return@LaunchedEffect
-            kotlinx.coroutines.delay(1200)
+            kotlinx.coroutines.delay(300)
             while (true) {
                 val s = tutorState
                 com.roro.futurevoice.talk.TutorBot.refresh(context, s.targetLanguage, s.nativeLanguage, s.level,

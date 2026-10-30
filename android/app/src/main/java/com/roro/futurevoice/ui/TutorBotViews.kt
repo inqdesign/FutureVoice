@@ -177,8 +177,8 @@ fun TutorBotLayer(state: AppState, onOpenRoutine: () -> Unit) {
             .padding(bottom = 76.dp)) {
             AnimatedVisibility(
                 visible = TutorBot.noteShown,
-                enter = scaleIn(tween(500), initialScale = 0.2f, transformOrigin = TransformOrigin(1f, 1f)) +
-                    fadeIn(tween(500)),
+                enter = scaleIn(tween(300), initialScale = 0.6f, transformOrigin = TransformOrigin(1f, 1f)) +
+                    fadeIn(tween(300)),
                 exit = scaleOut(tween(350), targetScale = 0.2f, transformOrigin = TransformOrigin(1f, 1f)) +
                     fadeOut(tween(350)),
             ) {
