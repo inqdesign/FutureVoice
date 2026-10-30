@@ -223,6 +223,7 @@ enum WeeklyReportEngine {
             cefrLevel: CEFRLevel(rawValue: response.cefr_level?.lowercased() ?? "")?.rawValue,
             levelRationale: response.level_rationale,
             levelEvidence: deliveryEvidence,
+            lexicalPrecision: CEFRLevel(rawValue: response.lexical_precision?.lowercased() ?? "")?.rawValue,
             generatedAt: now
         )
     }
@@ -245,6 +246,7 @@ enum WeeklyReportEngine {
           "summary": "1-2 sentences on the trend vs. last report (or this period in general if no prior).",
           "cefr_level": "a1|a2|b1|b2|c1|c2",
           "level_rationale": "2-3 sentences justifying cefr_level by CITING the evidence numbers",
+          "lexical_precision": "a1|a2|b1|b2|c1|c2",
           "newExpressions": [
             { "phrase": "...", "sampleSentence": "the user's own sentence containing the phrase" }
           ],
@@ -314,6 +316,16 @@ enum WeeklyReportEngine {
           vocab profile — and, when the level sits below some evidence band,
           saying exactly WHICH evidence held it down. Never vague ("overall
           performance suggests…"); always cite numbers you were given.
+        - lexical_precision: the CEFR band of vocabulary CONTROL alone — how
+          precisely the learner picks words, read from THIS window's
+          transcripts. Where a more precise or idiomatic word fitted, did
+          they reach for it, or fall back on a general one ("good", "thing",
+          "do", "very", "a lot")? Ignore grammar and fluency here, and do not
+          count rare words: the B2+ share in the vocab profile already
+          measures range. c1 needs precise, idiomatic choices across
+          different topics with only occasional fallbacks; c2 needs the
+          precise, natural word nearly everywhere. Most learners are b2 or
+          below — commit to the band the transcripts show. Lowercase.
         - newExpressions: ONLY include 2+ word collocations / idioms / phrasal verbs the user used in THIS window's transcripts that do NOT appear in the prior corpus. Skip single words. Skip filler.
         - repeatedMistakes: ONLY include patterns where the same fluent alternative shows up 2+ times in this window's suggestion pairs (you'll receive the pairs). Don't invent mistakes.
         - suggestedExpressions: Phrases the user did NOT produce but would fit topics they discussed. Each must be naturally usable; no textbook phrases like "the early bird catches the worm" unless the topic genuinely called for it.
@@ -361,6 +373,21 @@ enum WeeklyReportEngine {
     static func vocabProfileLine(_ utterances: [String]) -> String {
         var counts: [CEFRLevel: Int] = [:]
         var seen = Set<String>()
+        // The calibrated half: the share of graded TOKENS at B2+, which
+        // separates levels where the distinct-word counts below only grow
+        // with the amount of talk (`VocabSophistication`).
+        var shareLine = ""
+        if VocabSophistication.isCalibrated(LanguageScope.active) {
+            let read = VocabSophistication.read(talksNewestFirst: [utterances],
+                                                level: { CoreVocabulary.level(of: $0) })
+            if read.graded > 0 {
+                shareLine = String(format: "\nB2+ share of graded word tokens: %.1f%% of %d " +
+                    "(spoken-interview calibration: <2.6 A1, 2.6-4.1 A2, 4.1-5.0 B1, 5.0-6.0 B2, " +
+                    "6.0+ above B2; native speakers ~6.5). This share is RANGE; the distinct counts " +
+                    "below grow with the amount of talk and are not a level.",
+                    read.share, read.graded)
+            }
+        }
         for line in utterances {
             // Headwords for Japanese — a segment on its own can't tell 行き
             // the noun from 行き + ました (see ScorecardMetrics).
@@ -376,7 +403,7 @@ enum WeeklyReportEngine {
         }
         return CEFRLevel.allCases
             .map { "\($0.rawValue.uppercased()): \(counts[$0] ?? 0)" }
-            .joined(separator: ", ")
+            .joined(separator: ", ") + shareLine
     }
 
     // MARK: - Internal decode shapes
@@ -388,6 +415,7 @@ enum WeeklyReportEngine {
         let summary: String
         let cefr_level: String?
         let level_rationale: String?
+        let lexical_precision: String?
         let newExpressions: [NewExpr]
         let repeatedMistakes: [Mistake]
         let suggestedExpressions: [Suggested]

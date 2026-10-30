@@ -704,6 +704,12 @@ struct WeeklyReport: Codable, Identifiable {
     /// can be checked against what the judge actually saw.
     var levelEvidence: String? = nil
 
+    /// The judge's read of WORD PRECISION (a1…c2): did the learner pick the
+    /// precise or idiomatic word where a general one would do. The second
+    /// witness `VocabSophistication` needs above B2, where the share of
+    /// advanced words stops separating levels. Nil on older reports.
+    var lexicalPrecision: String? = nil
+
     var generatedAt: Date
 }
 

@@ -34,6 +34,10 @@ struct ProgressTab: View {
     @State private var aiLevel: CEFRLevel?
     // Vocabulary (objective CEFR)
     @State private var vocabLevel: CEFRLevel?
+    /// The share read behind `vocabLevel` (English); nil where the old
+    /// count still decides (`VocabSophistication.isCalibrated`).
+    @State private var vocabRead: VocabSophistication.Read?
+    @State private var vocabCeiling: VocabSophistication.Ceiling?
     @State private var perLevel: [CEFRLevel: Int] = [:]
     @State private var usedTotal = 0
     // Measured signals
@@ -976,6 +980,27 @@ struct ProgressTab: View {
         return explain("\(effectivePace) words per minute of voiced speech — pauses and think-time removed.")
     }
 
+    /// The line under the vocabulary level when the share decides it
+    /// (`VocabSophistication`); nil where the old count still does.
+    private var vocabDetail: String? {
+        guard let read = vocabRead else { return nil }
+        if read.graded < VocabSophistication.minGradedTokens {
+            // ~30 graded tokens a minute of a learner's own speech (NICT JLE).
+            let left = max(1, Int((Double(VocabSophistication.minGradedTokens - read.graded) / 30).rounded(.up)))
+            return String(format: explain("Needs about %lld more min of your own speech before it reads a level."), left)
+        }
+        switch vocabCeiling {
+        case .needsPrecision:
+            return explain("Your words read above B2. C1 and up also needs the weekly assessment to judge how precisely you pick words.")
+        case .precision(let l):
+            return String(format: explain("Held at ≈%@ by how precisely you pick words, from the weekly assessment."),
+                          l.rawValue.uppercased())
+        case nil:
+            return String(format: explain("%.1f%% of the words you said in your last %lld talks are B2 or above. The level reads which words you reach for, not how many."),
+                          read.share, read.talks)
+        }
+    }
+
     /// What held the ≈Grammar band below its accuracy read, if anything.
     enum GrammarCeiling: Equatable {
         /// The measured structural range of the assessed talks.
@@ -1086,7 +1111,7 @@ struct ProgressTab: View {
             lv.map { (approx ? "≈" : "") + $0.rawValue.uppercased() } ?? "—"
         }
         return [
-            .init(name: explain("Vocab"), level: label(vocabLevel, approx: false),
+            .init(name: explain("Vocab"), level: label(vocabLevel, approx: vocabRead != nil),
                   lit: lit(vocabLevel), color: Color(.systemBlue)),
             .init(name: explain("Fluency"), level: label(fluencyCEFR, approx: true),
                   lit: lit(fluencyCEFR), color: Color(.systemGreen)),
@@ -1272,10 +1297,10 @@ struct ProgressTab: View {
                 // the report so a surprising verdict is still reproducible.
                 Section {
                     assessedRow(name: "Vocabulary",
-                                level: vocabLevel.map { $0.rawValue.uppercased() },
-                                detail: usedTotal > 0
+                                level: vocabLevel.map { (vocabRead == nil ? "" : "≈") + $0.rawValue.uppercased() },
+                                detail: vocabDetail ?? (usedTotal > 0
                                     ? explain("\(usedTotal) distinct words you've used in the last \(Self.vocabWindowDays) days, each graded against the CEFR word list. Fully objective.")
-                                    : explain("Graded from the words you've used in the last \(Self.vocabWindowDays) days, against the CEFR word list. Fully objective."))
+                                    : explain("Graded from the words you've used in the last \(Self.vocabWindowDays) days, against the CEFR word list. Fully objective.")))
                     assessedRow(name: "Fluency",
                                 level: fluencyCEFR.map { "≈" + $0.rawValue.uppercased() },
                                 detail: fluencyDetail)
@@ -1366,7 +1391,7 @@ struct ProgressTab: View {
                         .geistPixel(44).foregroundStyle(.tint)
                     Text("vocabulary level").font(.subheadline).foregroundStyle(.secondary)
                 }
-                Text(explain("Estimated from \(usedTotal) distinct words you've used in the last \(Self.vocabWindowDays) days, each graded by CEFR level — your current speaking vocabulary, not everything ever."))
+                Text(vocabDetail ?? explain("Estimated from \(usedTotal) distinct words you've used in the last \(Self.vocabWindowDays) days, each graded by CEFR level — your current speaking vocabulary, not everything ever."))
                     .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             if vocabTrend.count >= 2 {
@@ -1864,6 +1889,8 @@ struct ProgressTab: View {
         var perLevel: [CEFRLevel: Int] = [:]
         var usedTotal = 0
         var vocabLevel: CEFRLevel?
+        var vocabRead: VocabSophistication.Read?
+        var vocabCeiling: VocabSophistication.Ceiling?
         var scoredCount = 0
         var totalSpeakingMinutes = 0
         var wpm = 0
@@ -1945,6 +1972,8 @@ struct ProgressTab: View {
         perLevel = result.perLevel
         usedTotal = result.usedTotal
         vocabLevel = result.vocabLevel
+        vocabRead = result.vocabRead
+        vocabCeiling = result.vocabCeiling
         scoredCount = result.scoredCount
         totalSpeakingMinutes = result.totalSpeakingMinutes
         wpm = result.wpm
@@ -2089,7 +2118,26 @@ struct ProgressTab: View {
             case .c2:      return 15
             }
         }
-        if total >= 15 {
+        if VocabSophistication.isCalibrated(LanguageScope.active) {
+            // Which words, not how many — see `VocabSophistication`. Same
+            // evidence filter as the scores: no archived talk, no practice
+            // call, no misheard or read-out line.
+            let talks = SessionStore.shared.load()
+                .filter { $0.endedAt != nil && $0.archivedAt == nil && !$0.isPractice }
+                .filter { ($0.endedAt ?? $0.startedAt) > effortNow.addingTimeInterval(-Double(vocabWindowDays) * 86_400) }
+                .sorted { ($0.endedAt ?? $0.startedAt) > ($1.endedAt ?? $1.startedAt) }
+                .map { $0.turns.filter(\.isEvidence).map(\.transcript) }
+            let read = VocabSophistication.read(talksNewestFirst: talks,
+                                                level: { CoreVocabulary.level(of: $0) })
+            let precision = input.weeklyReports
+                .sorted { $0.generatedAt > $1.generatedAt }
+                .compactMap { $0.lexicalPrecision.flatMap { CEFRLevel(rawValue: $0) } }
+                .first
+            let band = VocabSophistication.level(read, precision: precision)
+            out.vocabRead = read
+            out.vocabLevel = band?.level
+            out.vocabCeiling = band?.ceiling
+        } else if total >= 15 {
             var est: CEFRLevel?
             for lv in CEFRLevel.allCases where (counts[lv] ?? 0) >= threshold(for: lv) { est = lv }
             out.vocabLevel = est ?? .a1

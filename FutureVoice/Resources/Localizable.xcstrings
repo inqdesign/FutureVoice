@@ -250,6 +250,52 @@
         }
       }
     },
+    "%.1f%% of the words you said in your last %lld talks are B2 or above. The level reads which words you reach for, not how many." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%.1f %% der Wörter aus deinen letzten %lld Gesprächen sind B2 oder höher. Die Stufe zeigt, zu welchen Wörtern du greifst, nicht wie viele du kennst."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El %.1f %% de las palabras que dijiste en tus últimas %lld conversaciones son de nivel B2 o superior. El nivel mide qué palabras eliges, no cuántas conoces."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%.1f %% des mots que tu as dits dans tes %lld dernières conversations sont de niveau B2 ou plus. Le niveau regarde quels mots tu choisis, pas combien tu en connais."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近の通話%2$lld回で話した単語のうち、%1$.1f%%がB2以上です。知っている単語の数ではなく、どの単語を選んで使うかでレベルを見ています。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "최근 대화 %2$lld개에서 말한 단어의 %1$.1f%%가 B2 이상이에요. 아는 단어 수가 아니라 어떤 단어를 골라 쓰는지로 레벨을 봐요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你最近%2$lld次对话里说的词，有%1$.1f%%是B2及以上。等级看的是你会选用哪些词，而不是认识多少词。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你最近%2$lld次對話裡說的詞，有%1$.1f%%是B2以上。等級看的是你會挑哪些詞來用，而不是認得多少詞。"
+          }
+        }
+      }
+    },
     "%@ is thinking…" : {
       "localizations" : {
         "de" : {
@@ -5121,6 +5167,52 @@
         }
       }
     },
+    "Held at ≈%@ by how precisely you pick words, from the weekly assessment." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Einstufung hält das bei ≈%@, weil sie auch prüft, wie genau du deine Wörter wählst."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se queda en ≈%@ por la precisión con que eliges las palabras, según la evaluación semanal."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maintenu à ≈%@ d’après la précision de ton choix de mots dans le bilan de la semaine."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "レベル評価で見た言葉選びの正確さに合わせて、≈%@にしています。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "레벨 평가에서 본 단어 선택의 정확도에 맞춰 ≈%@로 나와요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按等级评估中用词的准确度，定为≈%@。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "依等級評估裡用詞的精準度，定在≈%@。"
+          }
+        }
+      }
+    },
     "Hope" : {
       "localizations" : {
         "ko" : {
@@ -7569,6 +7661,52 @@
         }
       }
     },
+    "Needs about %lld more min of your own speech before it reads a level." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sprich noch etwa %lld Min., dann bekommt das eine Stufe."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Habla unos %lld min más y aquí aparecerá tu nivel."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Parle encore environ %lld min, et ton niveau s’affichera ici."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "あと%lld分ほど話すとレベルが出ます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld분쯤 더 말하면 레벨이 나와요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再说大约%lld分钟，这里就会显示等级。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再說大約%lld分鐘，這裡就會顯示等級。"
+          }
+        }
+      }
+    },
     "No hope engraved yet" : {
       "localizations" : {
         "ko" : {
@@ -9314,6 +9452,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "專屬於你的 nawana 家教。"
+          }
+        }
+      }
+    },
+    "Your words read above B2. C1 and up also needs the weekly assessment to judge how precisely you pick words." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Wörter liegen über B2. Ab C1 prüft die Einstufung auch, wie genau du deine Wörter wählst."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tus palabras están por encima del B2. A partir del C1, la evaluación semanal también valora con qué precisión eliges las palabras."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tes mots sont au-dessus du B2. À partir du C1, le bilan de la semaine juge aussi la précision de ton choix de mots."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使っている単語はB2より上の水準です。C1からは、レベル評価で言葉選びの正確さも確かめます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "쓰는 단어는 B2보다 높게 나와요. C1부터는 레벨 평가에서 단어를 얼마나 정확히 골라 쓰는지도 봐야 해요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你用的词已高于B2。到C1及以上，还要看等级评估里你用词有多准确。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你用的詞已經高於B2。到C1以上，還要看等級評估裡你用詞有多精準。"
           }
         }
       }
