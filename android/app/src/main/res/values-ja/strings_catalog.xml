@@ -3798,12 +3798,12 @@
     <string name="heart">"ハート"</string>
     <string name="someone">"誰か"</string>
     <string name="lld_new_cheers_on_your_seat">"あなたの席に新しい応援が%d件"</string>
-    <!-- 'Held at ≈%@ by how precisely you pick words, from the weekly assessment.' -->
-    <string name="held_at_by_how_precisely_you_pick_words_from_the_weekly_asse_236fb9">"レベル評価で見た言葉選びの正確さに合わせて、≈%sにしています。"</string>
     <!-- 'Needs about %lld more min of your own speech before it reads a level.' -->
     <string name="needs_about_lld_more_min_of_your_own_speech_before_it_reads_8e76a8">"あと%d分ほど話すとレベルが出ます。"</string>
-    <!-- '%.1f%% of the words you said in your last %lld talks are B2 or above. The level reads which words you reach for, not how many.' -->
-    <string name="s_1f_of_the_words_you_said_in_your_last_lld_talks_are_b2_or_33c9e6">"最近の通話%2$d回で話した単語のうち、%1$.1f%%がB2以上です。知っている単語の数ではなく、どの単語を選んで使うかでレベルを見ています。"</string>
-    <!-- 'Your words read above B2. C1 and up also needs the weekly assessment to judge how precisely you pick words.' -->
-    <string name="your_words_read_above_b2_c1_and_up_also_needs_the_weekly_ass_916f42">"使っている単語はB2より上の水準です。C1からは、レベル評価で言葉選びの正確さも確かめます。"</string>
+    <!-- "Above B1, the words alone don't tell levels apart. The weekly assessment's read of how precisely you pick words will." -->
+    <string name="above_b1_the_words_alone_don_t_tell_levels_apart_the_weekly_17907e">"B1より上は、使う単語だけではレベルの差が出ません。レベル評価で、言葉をどれだけ的確に選んでいるかを見て決めます。"</string>
+    <!-- 'From the words in your last %lld talks, and how precisely you pick them in the weekly assessment.' -->
+    <string name="from_the_words_in_your_last_lld_talks_and_how_precisely_you_3675a3">"最近の通話%d回で使った単語と、レベル評価で見た言葉選びの的確さから決めています。"</string>
+    <!-- 'From the words in your last %lld talks: which words you reach for, not how many you know.' -->
+    <string name="from_the_words_in_your_last_lld_talks_which_words_you_reach_e72bf7">"最近の通話%d回で使った単語から見ています。知っている単語の数ではなく、どの単語を選んで使うかです。"</string>
 </resources>

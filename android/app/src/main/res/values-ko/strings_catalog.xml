@@ -3798,12 +3798,12 @@
     <string name="heart">"하트"</string>
     <string name="someone">"누군가"</string>
     <string name="lld_new_cheers_on_your_seat">"내 칸에 새 응원 %d개"</string>
-    <!-- 'Held at ≈%@ by how precisely you pick words, from the weekly assessment.' -->
-    <string name="held_at_by_how_precisely_you_pick_words_from_the_weekly_asse_236fb9">"레벨 평가에서 본 단어 선택의 정확도에 맞춰 ≈%s로 나와요."</string>
     <!-- 'Needs about %lld more min of your own speech before it reads a level.' -->
     <string name="needs_about_lld_more_min_of_your_own_speech_before_it_reads_8e76a8">"%d분쯤 더 말하면 레벨이 나와요."</string>
-    <!-- '%.1f%% of the words you said in your last %lld talks are B2 or above. The level reads which words you reach for, not how many.' -->
-    <string name="s_1f_of_the_words_you_said_in_your_last_lld_talks_are_b2_or_33c9e6">"최근 대화 %2$d개에서 말한 단어의 %1$.1f%%가 B2 이상이에요. 아는 단어 수가 아니라 어떤 단어를 골라 쓰는지로 레벨을 봐요."</string>
-    <!-- 'Your words read above B2. C1 and up also needs the weekly assessment to judge how precisely you pick words.' -->
-    <string name="your_words_read_above_b2_c1_and_up_also_needs_the_weekly_ass_916f42">"쓰는 단어는 B2보다 높게 나와요. C1부터는 레벨 평가에서 단어를 얼마나 정확히 골라 쓰는지도 봐야 해요."</string>
+    <!-- "Above B1, the words alone don't tell levels apart. The weekly assessment's read of how precisely you pick words will." -->
+    <string name="above_b1_the_words_alone_don_t_tell_levels_apart_the_weekly_17907e">"B1 위로는 쓰는 단어만으로 레벨이 갈리지 않아요. 레벨 평가에서 단어를 얼마나 정확히 골라 쓰는지를 보고 정해요."</string>
+    <!-- 'From the words in your last %lld talks, and how precisely you pick them in the weekly assessment.' -->
+    <string name="from_the_words_in_your_last_lld_talks_and_how_precisely_you_3675a3">"최근 대화 %d개에서 쓴 단어와, 레벨 평가에서 본 단어 선택의 정확도로 정했어요."</string>
+    <!-- 'From the words in your last %lld talks: which words you reach for, not how many you know.' -->
+    <string name="from_the_words_in_your_last_lld_talks_which_words_you_reach_e72bf7">"최근 대화 %d개에서 쓴 단어로 봤어요. 아는 단어 수가 아니라 어떤 단어를 골라 쓰는지예요."</string>
 </resources>

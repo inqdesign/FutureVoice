@@ -66,57 +66,68 @@ object LevelBands {
 
     /**
      * Vocabulary as WHICH words, not how many (iOS `VocabSophistication`):
-     * the share of graded word TOKENS at B2+ in the newest talks, cut at the
-     * NICT JLE medians (1,277 learners of English in the same SST interview
-     * + 20 natives). The old count below rose with talk alone — six pooled
-     * ≈A2 interviews read B2. Above B2 the share stops separating levels, so
-     * C1/C2 also need the assessment's precision read, else the band stops
-     * at B2. English only; other languages keep [vocabularyLevel].
+     * the MEAN LEVEL (A1 = 0 … C2 = 5) of the graded words said, repeats
+     * counted, minus auxiliaries and the homographs the pool grades by a
+     * rare sense (`that` B2, auxiliary `will` as the noun — counting them
+     * made half of a native's score the word `that`). iOS keeps content
+     * words by NLTagger class in context; Android has no tagger, so it reads
+     * list words (content words by construction) minus the same stop list.
+     * NICT JLE: the mean separates A1 / A2 / B1 and a native speaker's
+     * range, and is flat from SST 6 to 9, so the assessment's precision read
+     * decides B2–C2. English only — no German lemmatizer here.
      */
     object VocabShare {
-        const val MIN_GRADED_TOKENS = 400
-        const val WINDOW_GRADED_TOKENS = 1500
-        private val cuts = listOf(CefrLevel.C2 to 7.0, CefrLevel.C1 to 6.0, CefrLevel.B2 to 5.0,
-            CefrLevel.B1 to 4.1, CefrLevel.A2 to 2.6, CefrLevel.A1 to 0.0)
+        const val MIN_GRADED_TOKENS = 300
+        const val WINDOW_GRADED_TOKENS = 1200
 
-        fun isCalibrated(language: String) = language == "en"
+        class Profile(val a2: Double, val b1: Double, val nativeLike: Double, val stopWords: Set<String>)
 
-        data class Read(val graded: Int, val advanced: Int, val talks: Int) {
-            val share: Double get() = if (graded > 0) advanced.toDouble() / graded * 100 else 0.0
+        val profiles = mapOf(
+            "en" to Profile(0.25, 0.31, 0.36, setOf("be", "have", "do", "will", "would", "can", "could",
+                "may", "might", "shall", "should", "must", "ought", "that", "found", "mine", "plus")),
+        )
+
+        fun isCalibrated(language: String) = language in profiles
+
+        data class Read(val graded: Int, val levelSum: Int, val talks: Int) {
+            val mean: Double get() = if (graded > 0) levelSum.toDouble() / graded else 0.0
         }
 
-        /** What held the band: no precision read yet (null), or that read. */
+        /** What set the band: no precision read yet (null, above B1 is
+         *  undecided), or that read. */
         data class Ceiling(val precision: CefrLevel?)
 
-        fun level(read: Read, precision: CefrLevel?): Pair<CefrLevel, Ceiling?>? {
+        fun level(read: Read, profile: Profile, precision: CefrLevel?): Pair<CefrLevel, Ceiling?>? {
             if (read.graded < MIN_GRADED_TOKENS) return null
-            val all = CefrLevel.entries
-            val byShare = cuts.first { read.share >= it.second }.first
-            if (all.indexOf(byShare) <= all.indexOf(CefrLevel.B2)) return byShare to null
-            if (precision == null) return CefrLevel.B2 to Ceiling(null)
-            val capped = if (all.indexOf(precision) < all.indexOf(byShare))
-                (if (all.indexOf(precision) > all.indexOf(CefrLevel.B2)) precision else CefrLevel.B2)
-            else byShare
-            return if (capped == byShare) byShare to null else capped to Ceiling(precision)
+            val m = read.mean
+            if (m < profile.a2) return CefrLevel.A1 to null
+            if (m < profile.b1) return CefrLevel.A2 to null
+            val measured = if (m >= profile.nativeLike) CefrLevel.B2 else CefrLevel.B1
+            if (precision == null) return measured to Ceiling(null)
+            var set = if (precision.ordinal < CefrLevel.B1.ordinal) CefrLevel.B1 else precision
+            if (set.ordinal > CefrLevel.B2.ordinal && m < profile.nativeLike) set = CefrLevel.B2
+            return set to Ceiling(precision)
         }
 
         /** Talks NEWEST FIRST, each the learner's evidence lines, until
-         *  [WINDOW_GRADED_TOKENS]. Repeats count — a token share is what was
-         *  calibrated. */
-        fun read(talksNewestFirst: List<List<String>>, gradeOf: (String) -> CefrLevel?): Read {
-            var graded = 0; var advanced = 0; var talks = 0
+         *  [WINDOW_GRADED_TOKENS]. [lemma] maps a surface token to its
+         *  headword. */
+        fun read(talksNewestFirst: List<List<String>>, profile: Profile,
+                 lemma: (String) -> String, gradeOf: (String) -> CefrLevel?): Read {
+            var graded = 0; var sum = 0; var talks = 0
             for (texts in talksNewestFirst) {
                 if (graded >= WINDOW_GRADED_TOKENS) break
                 val before = graded
                 for (text in texts) for (token in text.split(Regex("[^\\p{L}\\p{N}]+"))) {
                     if (token.length <= 1) continue
-                    val lv = gradeOf(token.lowercase()) ?: continue
-                    graded++
-                    if (lv.ordinal >= CefrLevel.B2.ordinal) advanced++
+                    val head = lemma(token.lowercase())
+                    if (head in profile.stopWords) continue
+                    val lv = gradeOf(head) ?: continue
+                    graded++; sum += lv.ordinal
                 }
                 if (graded > before) talks++
             }
-            return Read(graded, advanced, talks)
+            return Read(graded, sum, talks)
         }
     }
 

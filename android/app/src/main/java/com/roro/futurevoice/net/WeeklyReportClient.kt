@@ -267,20 +267,21 @@ object WeeklyReportEngine {
     fun vocabProfileLine(utterances: List<String>, language: String): String {
         val counts = HashMap<CefrLevel, Int>()
         val seen = HashSet<String>()
-        // The calibrated half (iOS `VocabSophistication`): the share of graded
-        // TOKENS at B2+, which separates levels where the distinct counts
-        // only grow with the amount of talk.
+        // The calibrated half (iOS `VocabSophistication`): the mean level of
+        // the graded content words, which separates A1/A2/B1 where the
+        // distinct counts only grow with the amount of talk.
         var shareLine = ""
-        if (LevelBands.VocabShare.isCalibrated(language)) {
-            val read = LevelBands.VocabShare.read(listOf(utterances)) {
-                CoreVocabulary.levelOfSurface(VocabLemmas.lemma(it, language), language)
-            }
+        val profile = LevelBands.VocabShare.profiles[language]
+        if (profile != null) {
+            val read = LevelBands.VocabShare.read(listOf(utterances), profile,
+                { VocabLemmas.lemma(it, language) }) { CoreVocabulary.level(it, language) }
             if (read.graded > 0) {
-                shareLine = "\nB2+ share of graded word tokens: " +
-                    String.format(java.util.Locale.US, "%.1f", read.share) + "% of ${read.graded} " +
-                    "(spoken-interview calibration: <2.6 A1, 2.6-4.1 A2, 4.1-5.0 B1, 5.0-6.0 B2, " +
-                    "6.0+ above B2; native speakers ~6.5). This share is RANGE; the distinct counts " +
-                    "below grow with the amount of talk and are not a level."
+                val f = { x: Double -> String.format(java.util.Locale.US, "%.2f", x) }
+                shareLine = "\nMean CEFR level of graded content words (A1=0 … C2=5): ${f(read.mean)} over ${read.graded} " +
+                    "(spoken calibration: below ${f(profile.a2)} A1, ${f(profile.a2)}-${f(profile.b1)} A2, " +
+                    "${f(profile.b1)}+ B1, ${f(profile.nativeLike)}+ a native speaker's range). " +
+                    "This is RANGE and it stops separating levels above B1; the distinct counts below grow " +
+                    "with the amount of talk and are not a level."
             }
         }
         for (line in utterances) {

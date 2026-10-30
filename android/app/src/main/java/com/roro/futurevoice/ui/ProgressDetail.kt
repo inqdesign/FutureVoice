@@ -283,7 +283,8 @@ object ProgressMath {
         }
 
         val language = CoreVocabulary.activeLanguage()
-        val vocabShare = if (language != null && LevelBands.VocabShare.isCalibrated(language)) {
+        val profile = language?.let { LevelBands.VocabShare.profiles[it] }
+        val vocabShare = if (language != null && profile != null) {
             // Same evidence filter as the scores, over the vocabulary window.
             val since = System.currentTimeMillis() - 90L * 86_400_000L
             val talks = sessions
@@ -291,12 +292,11 @@ object ProgressMath {
                     (it.endedAt ?: 0L) > since }
                 .sortedByDescending { it.endedAt ?: 0L }
                 .map { s -> s.turns.filter { it.isEvidence }.map { it.transcript } }
-            val read = LevelBands.VocabShare.read(talks) {
-                CoreVocabulary.levelOfSurface(VocabLemmas.lemma(it, language), language)
-            }
+            val read = LevelBands.VocabShare.read(talks, profile,
+                { VocabLemmas.lemma(it, language) }) { CoreVocabulary.level(it, language) }
             val precision = reports.sortedByDescending { it.generatedAt }
                 .firstNotNullOfOrNull { r -> CefrLevel.entries.firstOrNull { it.code == r.lexicalPrecision } }
-            read to LevelBands.VocabShare.level(read, precision)
+            read to LevelBands.VocabShare.level(read, profile, precision)
         } else null
 
         val cards = scored.mapNotNull { it.summary?.scorecard }
@@ -807,25 +807,25 @@ private fun BigFigureRow(big: String, unit: String, trailing: @Composable () -> 
     }
 }
 
-/** The line under the vocabulary level when the share decides it (iOS
+/** The line under the vocabulary level when the mean decides it (iOS
  *  `ProgressTab.vocabDetail`); null where the old count still does. */
 @Composable
 private fun vocabDetail(m: ProgressMetrics): String? {
     val read = m.vocabRead ?: return null
     if (read.graded < LevelBands.VocabShare.MIN_GRADED_TOKENS) {
-        // ~30 graded tokens a minute of a learner's own speech (NICT JLE).
+        // ~20 graded content words a minute of a learner's own speech (NICT JLE).
         val left = maxOf(1, kotlin.math.ceil(
-            (LevelBands.VocabShare.MIN_GRADED_TOKENS - read.graded) / 30.0).toInt())
+            (LevelBands.VocabShare.MIN_GRADED_TOKENS - read.graded) / 20.0).toInt())
         return stringResource(R.string.needs_about_lld_more_min_of_your_own_speech_before_it_reads_8e76a8, left)
     }
     val ceiling = m.vocabCeiling
     return when {
-        ceiling == null -> stringResource(R.string.s_1f_of_the_words_you_said_in_your_last_lld_talks_are_b2_or_33c9e6,
-            read.share, read.talks)
+        ceiling == null -> stringResource(R.string.from_the_words_in_your_last_lld_talks_which_words_you_reach_e72bf7,
+            read.talks)
         ceiling.precision == null ->
-            stringResource(R.string.your_words_read_above_b2_c1_and_up_also_needs_the_weekly_ass_916f42)
-        else -> stringResource(R.string.held_at_by_how_precisely_you_pick_words_from_the_weekly_asse_236fb9,
-            ceiling.precision.code.uppercase())
+            stringResource(R.string.above_b1_the_words_alone_don_t_tell_levels_apart_the_weekly_17907e)
+        else -> stringResource(R.string.from_the_words_in_your_last_lld_talks_and_how_precisely_you_3675a3,
+            read.talks)
     }
 }
 

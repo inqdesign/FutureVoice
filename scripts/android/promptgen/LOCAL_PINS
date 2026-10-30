@@ -24,5 +24,6 @@ gen-coach-prompts.py 317e8819
 # judge and the next-topic offer (iOS 23ce515f … a0133a8b).
 gen-tutor-prompts.py d3a28206
 # The vocabulary level reads the share of advanced words, and the assessment
-# judges word precision (lexical_precision, iOS e7625c42).
-gen-weekly-prompt.py e7625c42
+# judges word precision (lexical_precision, iOS e7625c42); the mean level of
+# content words, precision deciding above B1 (iOS 4925df02).
+gen-weekly-prompt.py 4925df02
