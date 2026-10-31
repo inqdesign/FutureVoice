@@ -1009,7 +1009,9 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
             .joinToString("  ·  "), style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 16.dp, top = 7.dp))
-        if (!shipped) voiceId?.let { ScriptVoiceoverSection(shown, it) }
+        // A tutor reading (news, a goal's) is read-only but still heard in
+        // the learner's own voice (iOS 70bb10f4).
+        if (!shipped || studyHere) voiceId?.let { ScriptVoiceoverSection(shown, it) }
         if (shown.keyTerms.isNotEmpty()) {
             FormSection(stringResource(R.string.key_terms)) {
                 shown.keyTerms.forEachIndexed { i, t ->

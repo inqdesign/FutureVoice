@@ -216,6 +216,8 @@ fun RootScreen() {
     var callEntry by call.entry
     /** The topics page's "my own topic" — the call opens by asking what to talk about. */
     var callPicksTopic by call.picksTopic
+    /** The tutor bot's goal drill: a tutor-mode lesson on the topic. */
+    var callTutor by call.tutor
     /** Set when a Talk-home card's call closes; the home consumes it and
      *  offers the persona-deepen sheet (iOS `maybePromptDeepen`). */
     var deepenPending by remember { mutableStateOf(false) }
@@ -822,7 +824,8 @@ fun RootScreen() {
     /** Every metered launcher from the home lands here (`mint` = an unsaved
      *  ready-made situation, saved once the gate passes). */
     fun startCall(topic: String, facts: List<String>, scenarioId: String?, mint: Scenario?, blurb: String = "",
-                  entry: String = com.roro.futurevoice.talk.TalkEntry.OTHER, learnerPicksTopic: Boolean = false) {
+                  entry: String = com.roro.futurevoice.talk.TalkEntry.OTHER, learnerPicksTopic: Boolean = false,
+                  tutor: Boolean = false) {
         // The paywall is asked here, at the TAP — every metered
         // launcher (free talk, a news story, a scenario, a widget
         // deep link) meets in this one callback, so one gate covers
@@ -833,6 +836,7 @@ fun RootScreen() {
                 callTopic = topic; callFacts = facts; callScenarioId = scenarioId; callBlurb = blurb
                 callEntry = entry
                 callPicksTopic = learnerPicksTopic
+                callTutor = tutor
                 // A news story's title IS its opener — written by `news-topics`
                 // as a friend bringing it up ("Did you see the news about…?")
                 // and spoken verbatim, as iOS does (`openNewsConversation`).
@@ -862,6 +866,20 @@ fun RootScreen() {
                 open()
             }
         }
+    }
+    // The tutor bot's goal drill, or a call it handed out: a call on the topic,
+    // a tutor-mode lesson when it says so (iOS `ConversationHome`'s
+    // `tutorBot.goalCall`, through the same gate as every launcher).
+    val goalCall = com.roro.futurevoice.talk.TutorBot.goalCall
+    LaunchedEffect(goalCall, state.voiceId) {
+        val c = goalCall ?: return@LaunchedEffect
+        if (state.voiceId == null) return@LaunchedEffect
+        com.roro.futurevoice.talk.TutorBot.goalCall = null
+        showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false
+        showActivity = false; detailSessionId = null; bookScenarioId = null; watchScenarioId = null
+        tab = HomeTab.TALK
+        startCall(c.topic, emptyList(), null, null, c.blurb, com.roro.futurevoice.talk.TalkEntry.TUTOR_BOT,
+            tutor = c.tutor)
     }
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
     // Everything before the app proper — previews, onboarding, the gates —
@@ -1620,6 +1638,7 @@ fun RootScreen() {
                 resume = callResume,
                 entry = callEntry,
                 learnerPicksTopic = callPicksTopic,
+                tutor = callTutor,
                 onExit = {
                     // A call that flew in from the ring flies back to it.
                     TalkMorph.close(morphScope) {
@@ -1631,6 +1650,7 @@ fun RootScreen() {
                         callCastVoice = null; callCounterpartId = null; callResume = null
                         callEntry = com.roro.futurevoice.talk.TalkEntry.OTHER
                         callPicksTopic = false
+                        callTutor = false
                     }
                 },
             )
@@ -3558,6 +3578,9 @@ class CallRoute : androidx.lifecycle.ViewModel() {
     val entry = mutableStateOf(com.roro.futurevoice.talk.TalkEntry.OTHER)
     /** A "my own topic" call (topics page, iOS `CallLaunch.learnerPicksTopic`). */
     val picksTopic = mutableStateOf(false)
+    /** A tutor-mode lesson whatever the Call setting says — the tutor bot's
+     *  goal drill (iOS `CallLaunch.tutor`). */
+    val tutor = mutableStateOf(false)
 }
 
 /**

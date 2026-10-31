@@ -63,6 +63,9 @@ data class TutorPick(
         data class ReadScript(val episodeId: String) : Action
         data class ReadNews(val story: SuggestedTopic) : Action
         data class Challenge(val id: String) : Action
+        /** Today's preparation for an upcoming goal ([GoalPrep]); a null
+         *  part is the tutor drill. */
+        data class Goal(val goalId: String, val part: GoalPrep.Part?) : Action
     }
 
     fun tag(res: Resources): String? = res.getString(when (kind) {
@@ -196,6 +199,12 @@ object TutorPicks {
         val day = dayOrdinal(now)
         val picks = ArrayList<TutorPick>()
 
+        // 0. The nearest upcoming goal leads: today's reading, model answer
+        // and a tutor drill, all about it ([GoalPrep]). Nothing is written
+        // until one of them is tapped.
+        val goal = com.roro.futurevoice.data.UpcomingGoalStore.active(c, lang, now).firstOrNull()
+        if (goal != null) picks += goalPicks(c, goal, now)
+
         // 1. Pushed down on a challenge.
         rankDrops(c).take(1).forEach { drop ->
             picks += TutorPick("rank-${drop.script.id}", TutorPick.Kind.RANK_DROP, drop.script.title,
@@ -222,7 +231,8 @@ object TutorPicks {
                 picks += TutorPick("script-${ep.id}", TutorPick.Kind.READ_SCRIPT, ep.title,
                     "", TutorPick.Action.ReadScript(ep.id))
             }
-            newsStory(c, targetLanguage, persona, day)?.let { story ->
+            // With a goal ahead, its own reading stands in for the news.
+            if (goal == null) newsStory(c, targetLanguage, persona, day)?.let { story ->
                 picks += TutorPick("news-${story.title}", TutorPick.Kind.READ_NEWS, story.title,
                     story.category ?: "", TutorPick.Action.ReadNews(story))
             }
@@ -235,7 +245,27 @@ object TutorPicks {
                     minutesWhy(c.resources, ep.minutes), TutorPick.Action.Listen(ep.id))
             }
         }
-        Loaded(picks.take(MAX_PICKS), episodes, balance)
+        Loaded(picks.take(MAX_PICKS + (if (goal == null) 0 else 3)), episodes, balance)
+    }
+
+    /** The goal's three for today. Before anything is written the titles are
+     *  the goal's own; once it is, the day's. */
+    fun goalPicks(c: Context, goal: com.roro.futurevoice.data.UpcomingGoal,
+                  now: Long = System.currentTimeMillis()): List<TutorPick> {
+        val prep = GoalPrep.today(c, goal, now)
+        val countdown = goal.countdown(c, now)?.let { "$it · " } ?: ""
+        val res = c.resources
+        return listOf(
+            TutorPick("goal-read-${goal.id}", TutorPick.Kind.GOAL_READING,
+                prep?.reading?.title ?: res.getString(R.string.today_s_reading),
+                countdown + (prep?.focus ?: res.getString(R.string.written_for_this_goal_when_you_open_it)),
+                TutorPick.Action.Goal(goal.id, GoalPrep.Part.READING)),
+            TutorPick("goal-speech-${goal.id}", TutorPick.Kind.GOAL_SPEECH,
+                prep?.speech?.question ?: prep?.speech?.title ?: res.getString(R.string.an_answer_you_can_say_on_the_day),
+                "", TutorPick.Action.Goal(goal.id, GoalPrep.Part.SPEECH)),
+            TutorPick("goal-drill-${goal.id}", TutorPick.Kind.GOAL_DRILL,
+                prep?.focus ?: goal.title, "", TutorPick.Action.Goal(goal.id, null)),
+        )
     }
 
     private fun showFirstSpeech(c: Context, now: Long): Boolean {

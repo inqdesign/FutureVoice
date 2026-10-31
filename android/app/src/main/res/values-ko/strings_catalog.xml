@@ -212,6 +212,7 @@
     <string name="amber">"앰버"</string>
     <string name="amount">"양"</string>
     <string name="an_airline_agent">"항공사 직원"</string>
+    <string name="an_answer_you_can_say_on_the_day">"그날 그대로 말할 수 있는 답변"</string>
     <string name="an_emergency_call">"응급 전화하기"</string>
     <string name="an_empty_day_is_a_rest_day_so_it_doesn_t_break_your_streak">"비워 둔 날은 쉬는 날이라 연속 기록이 끊기지 않아요."</string>
     <!-- 'An exam, an interview, a move — your tutor prepares you for it.' -->
@@ -3020,6 +3021,7 @@
     <string name="today_s_done_one_more">"오늘은 이만하면 됐어. 더 할래?"</string>
     <string name="today_s_goal_lld_min">"오늘 목표 %d분"</string>
     <string name="today_s_plan">"오늘 할 일"</string>
+    <string name="today_s_reading">"오늘의 읽기"</string>
     <string name="together_for_years">"오래 사귐"</string>
     <string name="tomorrow">"내일"</string>
     <string name="too_many_call_times">"전화 시각이 너무 많아요"</string>
@@ -3490,9 +3492,11 @@
     <string name="writing_the_scene">"장면을 쓰는 중…"</string>
     <string name="writing_this_scenario_s_scene">"이 상황연습을 쓰는 중…"</string>
     <string name="writing_this_scene">"상황연습을 쓰는 중…"</string>
+    <string name="writing_today_s_preparation_for_your_goal">"목표에 맞춘 오늘의 준비를 쓰고 있어요…"</string>
     <string name="writing_topics_for_your_field">"내 분야 주제를 만드는 중…"</string>
     <string name="writing_your_introduction">"소개를 쓰는 중…"</string>
     <string name="writing_your_script">"원고를 쓰고 있어요…"</string>
+    <string name="written_for_this_goal_when_you_open_it">"열면 이 목표에 맞춰 바로 써 드려요"</string>
     <!-- 'year' -->
     <string name="year_4ff0b1">"년"</string>
     <!-- 'Year' -->

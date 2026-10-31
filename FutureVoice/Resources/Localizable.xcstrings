@@ -27981,6 +27981,16 @@
         }
       }
     },
+    "An answer you can say on the day" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그날 그대로 말할 수 있는 답변"
+          }
+        }
+      }
+    },
     "An empty day is a rest day, so it doesn't break your streak." : {
       "localizations" : {
         "de" : {
@@ -134584,6 +134594,16 @@
         }
       }
     },
+    "Today's reading" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘의 읽기"
+          }
+        }
+      }
+    },
     "Today's scenes are used up." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -150056,6 +150076,16 @@
         }
       }
     },
+    "Writing today's preparation for your goal…" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목표에 맞춘 오늘의 준비를 쓰고 있어요…"
+          }
+        }
+      }
+    },
     "Writing your introduction…" : {
       "localizations" : {
         "de" : {
@@ -150190,6 +150220,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在寫…"
+          }
+        }
+      }
+    },
+    "Written for this goal when you open it" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "열면 이 목표에 맞춰 바로 써 드려요"
           }
         }
       }

@@ -27,3 +27,5 @@ gen-tutor-prompts.py d3a28206
 # judges word precision (lexical_precision, iOS e7625c42); the mean level of
 # content words, precision deciding above B1 (iOS 4925df02).
 gen-weekly-prompt.py 4925df02
+# The upcoming goal's preparation (iOS 70bb10f4 … 67cae6a9).
+gen-goal-prep-prompts.py 39bca0b8

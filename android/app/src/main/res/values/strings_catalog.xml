@@ -212,6 +212,7 @@
     <string name="amber">"Amber"</string>
     <string name="amount">"Amount"</string>
     <string name="an_airline_agent">"an airline agent"</string>
+    <string name="an_answer_you_can_say_on_the_day">"An answer you can say on the day"</string>
     <string name="an_emergency_call">"An emergency call"</string>
     <string name="an_empty_day_is_a_rest_day_so_it_doesn_t_break_your_streak">"An empty day is a rest day, so it doesn't break your streak."</string>
     <!-- 'An exam, an interview, a move — your tutor prepares you for it.' -->
@@ -3023,6 +3024,7 @@
     <string name="today_s_done_one_more">"Today's done. One more?"</string>
     <string name="today_s_goal_lld_min">"Today's goal %d min"</string>
     <string name="today_s_plan">"Today's plan"</string>
+    <string name="today_s_reading">"Today's reading"</string>
     <string name="together_for_years">"Together for years"</string>
     <string name="tomorrow">"Tomorrow"</string>
     <string name="too_many_call_times">"Too many call times"</string>
@@ -3493,9 +3495,11 @@
     <string name="writing_the_scene">"Writing the scene…"</string>
     <string name="writing_this_scenario_s_scene">"Writing this scenario's scene…"</string>
     <string name="writing_this_scene">"Writing this scene…"</string>
+    <string name="writing_today_s_preparation_for_your_goal">"Writing today's preparation for your goal…"</string>
     <string name="writing_topics_for_your_field">"Writing topics for your field…"</string>
     <string name="writing_your_introduction">"Writing your introduction…"</string>
     <string name="writing_your_script">"Writing your script…"</string>
+    <string name="written_for_this_goal_when_you_open_it">"Written for this goal when you open it"</string>
     <!-- 'year' -->
     <string name="year_4ff0b1">"year"</string>
     <!-- 'Year' -->

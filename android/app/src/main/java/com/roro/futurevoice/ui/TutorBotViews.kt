@@ -796,6 +796,19 @@ fun TutorReadingSheet(reading: TutorReading, state: AppState) {
     val close = { TutorBot.reading = null }
     LaunchedEffect(reading.id, attempt) {
         if (script != null || reading.script != null) return@LaunchedEffect
+        val goal = reading.goal
+        val part = reading.part
+        if (goal != null && part != null) {
+            try {
+                val prep = com.roro.futurevoice.talk.GoalPrep.load(context, goal, state.nativeLanguage, state.level,
+                    state.persona)
+                script = prep.script(part)
+                TutorBot.loadPicks(context, state.targetLanguage, state.persona, force = true)
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) {
+                failed = true
+            }
+            return@LaunchedEffect
+        }
         val story = reading.story ?: return@LaunchedEffect
         try {
             script = com.roro.futurevoice.talk.NewsArticle.load(context, story, state.targetLanguage, state.level)
@@ -810,7 +823,7 @@ fun TutorReadingSheet(reading: TutorReading, state: AppState) {
     if (shown != null) {
         com.roro.futurevoice.ui.speech.SpeechScriptSheet(shown, state.nativeLanguage, onEdited = {},
             onDismiss = close, initialStudy = reading.study, shipped = true,
-            studyHere = reading.script == null)
+            studyHere = reading.script == null || reading.goal != null)
         return
     }
     com.roro.futurevoice.ui.speech.SpeechSheet(onDismiss = close) {
@@ -834,7 +847,8 @@ fun TutorReadingSheet(reading: TutorReading, state: AppState) {
                 SoftChip(stringResource(R.string.try_again), selected = true) { failed = false; attempt += 1 }
             } else {
                 CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 3.dp)
-                Text(stringResource(R.string.writing_the_article_for_your_level),
+                Text(stringResource(if (reading.goal == null) R.string.writing_the_article_for_your_level
+                    else R.string.writing_today_s_preparation_for_your_goal),
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }

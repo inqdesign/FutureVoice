@@ -133,6 +133,16 @@ object TutorBot {
         private set
     /** A reading opened from a pick, shown by whichever tutor surface is up. */
     var reading by mutableStateOf<TutorReading?>(null)
+    /** A tutor-mode call on an upcoming goal, for the root to place. */
+    var goalCall by mutableStateOf<GoalCall?>(null)
+
+    data class GoalCall(
+        val id: String = UUID.randomUUID().toString(),
+        val topic: String,
+        val blurb: String,
+        /** A tutor-mode lesson; false = an ordinary call on the topic. */
+        val tutor: Boolean = true,
+    )
     private var picksLoadedAt: Long? = null
     private var picksLoading = false
     private val scope = kotlinx.coroutines.CoroutineScope(
@@ -360,6 +370,23 @@ object TutorBot {
                 reading = TutorReading(script = ep.script, study = ep.study(nativeLanguage))
             }
             is TutorPick.Action.ReadNews -> reading = TutorReading(story = a.story)
+            is TutorPick.Action.Goal -> {
+                val goal = com.roro.futurevoice.data.UpcomingGoalStore.goal(app, a.goalId) ?: return
+                val part = a.part
+                if (part != null) {
+                    if (part == GoalPrep.Part.READING) ActivityEventLog.record(app, ActivityEventLog.Kind.READ)
+                    reading = TutorReading(goal = goal, part = part)
+                } else {
+                    dismissBubble()
+                    if (noteShown) closeNote(c)
+                    // The tutor plans its own lesson from the goal; today's
+                    // angle, once written, narrows it.
+                    val focus = GoalPrep.today(app, goal)?.focus
+                    chatOpen = false
+                    goalCall = GoalCall(topic = focus?.let { "$it — ${goal.title}" } ?: goal.title,
+                        blurb = goal.drillBlurb)
+                }
+            }
             is TutorPick.Action.Challenge -> {
                 com.roro.futurevoice.data.SpeechChallenges.shared(app).standings.value[a.id]?.myRank?.let {
                     TutorPicks.markRankSeen(app, a.id, it)
@@ -644,4 +671,7 @@ data class TutorReading(
     val script: com.roro.futurevoice.data.SpeechScript? = null,
     val study: com.roro.futurevoice.data.ScriptStudy? = null,
     val story: SuggestedTopic? = null,
+    /** Today's preparation for an upcoming goal, written when opened. */
+    val goal: com.roro.futurevoice.data.UpcomingGoal? = null,
+    val part: GoalPrep.Part? = null,
 )
