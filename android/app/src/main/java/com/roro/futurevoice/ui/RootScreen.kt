@@ -619,6 +619,8 @@ fun RootScreen() {
     fun arriveAtTabs() {
         if (tabsArrived) return
         tabsArrived = true
+        // Recent talks never tagged against the level map, once, slowly.
+        com.roro.futurevoice.talk.LevelTagging.backfillSoon(context)
         if (buildingRoutine) firstRunHeld = true else offerFirstRunSheets()
     }
     // The chip's hint has closed (on its own or by a tap): what arrival held.

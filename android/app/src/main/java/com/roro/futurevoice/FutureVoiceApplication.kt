@@ -20,6 +20,7 @@ class FutureVoiceApplication : Application() {
         CoreVocabulary.init(this)
         com.roro.futurevoice.data.SharedLibrary.init(this)
         com.roro.futurevoice.data.WordClass.init(this)
+        com.roro.futurevoice.data.LevelMap.init(this)
         com.roro.futurevoice.data.SpanishMorph.init(this)
         // A Japanese learner's dictionary: loaded if the pack is installed,
         // fetched if it isn't (off the main thread either way).
