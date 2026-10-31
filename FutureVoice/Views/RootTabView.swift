@@ -305,6 +305,8 @@ struct RootTabView: View {
             // Warm the billing snapshot so the first paid tap answers from
             // memory instead of holding the call button on a round trip.
             BillingGate.shared.warm()
+            // Recent talks never tagged against the level map, once, slowly.
+            LevelTagging.shared.backfillSoon()
             if holdingForRoutine { firstRunHeld = true } else { offerFirstRunSheets() }
             // Populate the home-screen widgets on first entry. The scenePhase
             // refresh only fires on background↔active transitions, so a cold

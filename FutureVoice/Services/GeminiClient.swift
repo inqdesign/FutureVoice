@@ -146,14 +146,15 @@ final class GeminiClient {
         idempotencyKey: String? = nil,
         jsonResponse: Bool = false,
         requestTimeout: TimeInterval? = nil,
-        fastThinking: Bool = false
+        fastThinking: Bool = false,
+        thinkingLevel: String? = nil
     ) async throws -> (text: String, finishReason: String?) {
         let request = try await makeRequest(
             system: system, messages: messages, model: model, maxTokens: maxTokens,
             temperature: temperature, searchGrounding: searchGrounding, urlContext: urlContext,
             purpose: purpose, idempotencyKey: idempotencyKey,
             jsonResponse: jsonResponse, requestTimeout: requestTimeout, stream: false,
-            fastThinking: fastThinking
+            fastThinking: fastThinking, thinkingLevel: thinkingLevel
         )
 
         let (data, response) = try await session.dataWithRetry(for: request)
@@ -193,7 +194,8 @@ final class GeminiClient {
         jsonResponse: Bool,
         requestTimeout: TimeInterval?,
         stream: Bool,
-        fastThinking: Bool = false
+        fastThinking: Bool = false,
+        thinkingLevel: String? = nil
     ) async throws -> URLRequest {
         let url = functionsBaseURL.appendingPathComponent("gemini")
 
@@ -266,8 +268,11 @@ final class GeminiClient {
                 // ~1.5s vs ~2.9s on "low", measured 2026-08-31 in
                 // gateway/test/probe-reply-ttft.mjs; still more deliberation
                 // than the 2.5 era's budget-0) and "low" for everything else.
+                // A caller nobody waits on may ask for more (`thinkingLevel`,
+                // "medium" for the level tagging, measured in
+                // scripts/level-tag-probe.py: recall 91% → 96%).
                 thinkingConfig: model.isGen3
-                    ? .init(thinkingLevel: fastThinking ? "minimal" : "low")
+                    ? .init(thinkingLevel: thinkingLevel ?? (fastThinking ? "minimal" : "low"))
                     : .init(thinkingBudget: 0),
                 // Force JSON output at the API level — prompt-only JSON drifts
                 // back to prose in long conversations because the model
@@ -354,7 +359,10 @@ final class GeminiClient {
         /// Gen-3 thinking at "minimal" instead of "low". For a call whose
         /// job is perception rather than reasoning (transcribing a file),
         /// the thinking pass is pure latency.
-        fastThinking: Bool = false
+        fastThinking: Bool = false,
+        /// Gen-3 thinking level to send instead of the default ("low"), for
+        /// a call whose answer nobody is waiting on. Overrides `fastThinking`.
+        thinkingLevel: String? = nil
     ) async throws -> T {
         let (raw, finishReason) = try await sendRaw(
             system: system,
@@ -368,7 +376,8 @@ final class GeminiClient {
             idempotencyKey: idempotencyKey,
             jsonResponse: true,
             requestTimeout: requestTimeout,
-            fastThinking: fastThinking
+            fastThinking: fastThinking,
+            thinkingLevel: thinkingLevel
         )
         // Reclassify ONLY after parsing has actually failed — never on the
         // flag alone, so a response that happens to be complete is still used.

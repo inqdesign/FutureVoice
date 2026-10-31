@@ -536,6 +536,10 @@ enum SessionSummarizer {
         // Kick off async weekly-report generation if unlock conditions are
         // met. Fires-and-forgets — UI doesn't block on Gemini.
         appState.maybeGenerateWeeklyReport(retryNow: true)
+        // Where the learner stands on the level map (`LearnerState`): its own
+        // call, in the background, after the talk is saved — never part of
+        // the summary, whose schema and prompt are measured as they are.
+        LevelTagging.shared.afterSummary(saved)
         // Fresh cards just landed in the queue — (re)schedule the due
         // reminder. This is the one contextual moment where asking for
         // notification permission makes sense.

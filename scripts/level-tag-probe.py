@@ -6,11 +6,15 @@
 # be — the AI's structure, a look-alike) and unlabelled extras to review.
 #
 #   scripts/level-tag-probe.py en scripts/level-tag-cases-en.json [runs]
-#   MODEL=gemini-3.1-flash-lite … · THINKING=medium … · --show (print prompt)
+#   MODEL=gemini-3.1-flash-lite … · THINKING=low … · --show (print prompt)
 #
+# The prompt is `LevelTagger.systemPrompt` (+ its grammarLine / functionLine
+# templates), rebuilt from FutureVoice/Services/LevelTagger.swift so it cannot
+# drift from what the app sends; thinking defaults to the app's level.
 # Every quote the model returns is checked against the learner's own turns,
-# as the app will; an item whose quote isn't theirs is dropped before
-# scoring. Reads GEMINI_API_KEY from gateway/.dev.vars.
+# as the app does (`LevelTagger.isTheirs` mirrors `theirs` below); an item
+# whose quote isn't theirs is dropped before scoring. GEMINI_API_KEY from the
+# environment, else gateway/.dev.vars.
 import json, os, re, sys, time, urllib.request, concurrent.futures as cf
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -21,35 +25,31 @@ runs = int(sys.argv[3]) if len(sys.argv) > 3 else 1
 level_map = json.load(open(os.path.join(ROOT, f"FutureVoice/Resources/LevelMap/level_map_{lang}.json")))
 
 
-def map_block(m):
-    g = "\n".join(f"- {x['id']}: {x['name']}. Counts: {x['counts']}. Right: \"{x['example']}\" Wrong: \"{x['error']}\""
-                  for x in m["grammar"])
-    f = "\n".join(f"- {x['id']}: {x['name']}. Counts: {x['counts']}." for x in m["functions"])
-    return g, f
+SRC = open(os.path.join(ROOT, "FutureVoice/Services/LevelTagger.swift")).read()
+
+
+def swift_literal(fn):
+    """The one-line string `static func <fn>(…)` returns, its `\\(x.field)`
+    interpolations left in place for `fill`."""
+    body = SRC[SRC.index("static func %s(" % fn):]
+    return re.search(r'\{\s*"((?:[^"\\]|\\.)*)"\s*\}', body).group(1)
+
+
+def fill(template, item):
+    out = re.sub(r"\\\(\w+\.(\w+)\)", lambda m: str(item[m.group(1)]), template)
+    return out.replace('\\"', '"')
 
 
 def prompt(m, target):
-    g, f = map_block(m)
-    return f"""You read one spoken {target} conversation between a language learner (USER) and their fluent future self (AI), and record which items of a fixed list the LEARNER produced.
-
-GRAMMAR ITEMS — for each item the USER produced, count the times they used it RIGHT and the times they ATTEMPTED it with an error:
-{g}
-
-FUNCTION ITEMS — what the USER did with the language:
-{f}
-
-RULES
-- Only USER lines count. A structure only the AI used is not the learner's, even if the learner answers it.
-- An item counts only when the learner's own sentence actually uses that structure. A look-alike is not the item: "I have a car" is not the present perfect; "I will" said as a word is not a future plan unless a verb follows; a bare word like "maybe" is not a modal.
-- ATTEMPTED WITH AN ERROR means they reached for that structure and formed it wrong ("I go yesterday" is a past_simple error; "since two weeks" with the present perfect is a present_perfect_since_for error). Using a simpler structure where a better one fits is NOT an error of the better one — it is simply not produced. ("Did you ever see…" for an experience question IS a present_perfect_experience error, because the item names that exact use.)
-- This is SPEECH from a transcriber: fillers (uh, um), repeated words, false starts, missing punctuation and capital letters, and contractions written out in full are never errors.
-- One error belongs to ONE item — the one it most directly breaks. A missing article is an articles error, not a present_simple error.
-- Be conservative: when unsure whether a structure is there, leave it out.
-- For each verdict give ONE short verbatim quote (3–12 words) copied exactly from a USER line.
-
-Return JSON only:
-{{"grammar": [{{"id": "...", "right": 0, "wrong": 0, "right_quote": "", "wrong_quote": ""}}], "functions": [{{"id": "...", "quote": ""}}]}}
-Leave right_quote empty when right is 0, wrong_quote empty when wrong is 0. Omit items the learner did not produce."""
+    """`LevelTagger.systemPrompt`, rebuilt from the Swift source so the probe
+    measures exactly what the app sends (the way correction-probe.py does)."""
+    body = re.search(r'static func systemPrompt\(.*?return """\n(.*?)\n        """', SRC, re.S).group(1)
+    text = "\n".join(l[8:] if l.startswith("        ") else l for l in body.splitlines())
+    g = "\n".join(fill(swift_literal("grammarLine"), x) for x in m["grammar"])
+    f = "\n".join(fill(swift_literal("functionLine"), x) for x in m["functions"])
+    text = text.replace("\\(targetName)", target).replace("\\(grammarLines)", g).replace("\\(functionLines)", f)
+    assert "\\(" not in text, text
+    return text
 
 
 SYSTEM = prompt(level_map, NAMES[lang])
@@ -57,8 +57,12 @@ if "--show" in sys.argv:
     print(SYSTEM)
     sys.exit()
 
-key = next(l.split("=", 1)[1].strip().strip('"') for l in open(os.path.join(ROOT, "gateway/.dev.vars"))
-           if l.startswith("GEMINI_API_KEY"))
+# A worktree has no gateway/.dev.vars (gitignored): pass the key in the env.
+key = os.environ.get("GEMINI_API_KEY") or next(
+    l.split("=", 1)[1].strip().strip('"') for l in open(os.path.join(ROOT, "gateway/.dev.vars"))
+    if l.startswith("GEMINI_API_KEY"))
+# The app's own level (`LevelTagger.thinkingLevel`) unless THINKING says otherwise.
+THINKING = os.environ.get("THINKING") or re.search(r'static let thinkingLevel = "(\w+)"', SRC).group(1)
 MODEL = os.environ.get("MODEL", "gemini-3.6-flash")
 URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent?key={key}"
 
@@ -67,7 +71,7 @@ def call(transcript):
     body = {"systemInstruction": {"parts": [{"text": SYSTEM}]},
             "contents": [{"role": "user", "parts": [{"text": transcript}]}],
             "generationConfig": {"maxOutputTokens": 4096, "responseMimeType": "application/json",
-                                 "thinkingConfig": {"thinkingLevel": os.environ.get("THINKING", "low")}}}
+                                 "thinkingConfig": {"thinkingLevel": THINKING}}}
     req = urllib.request.Request(URL, data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
     for attempt in range(4):
         try:
@@ -86,7 +90,8 @@ FILLERS = {"uh", "um", "er", "erm", "ah", "hmm", "mm", "eh"}
 def norm(s):
     """Lowercase words, punctuation, fillers and stutters ("I am I am")
     removed — the transcriber's noise, which a quote may fairly leave out."""
-    words = [w for w in re.sub(r"[^\w\s']", " ", s.lower()).split() if w not in FILLERS]
+    s = s.lower().replace("\u2019", "'")   # as LevelTagger.normalized: I’m == I'm
+    words = [w for w in re.sub(r"[^\w\s']", " ", s).split() if w not in FILLERS]
     changed = True
     while changed:
         changed = False
@@ -179,7 +184,7 @@ for l in extras_log:
     print("  " + l)
 e = max(1, tot["expected"])
 print(f"""
-{MODEL} thinking={os.environ.get('THINKING', 'low')} runs={runs}
+{MODEL} thinking={THINKING} runs={runs}
 grammar recall      {tot['found']}/{tot['expected']} ({100*tot['found']//e}%)
 verdict exact       {tot['verdict']}/{tot['expected']}   direction right {tot['direction']}/{tot['expected']}
 TRAPS tagged        {tot['traps']}

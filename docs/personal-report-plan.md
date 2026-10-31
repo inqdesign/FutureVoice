@@ -152,7 +152,8 @@ the deck advances when a line ends, a tap pauses. 60–90 seconds.
 | 1. English map + probe | done 2026-10-27 — see below |
 | 2. Narrated trial report | built 2026-10-27, server allowlists NOT deployed — see below |
 | 2b. Routine from how they use the app | built 2026-10-27 — see below |
-| 3–7 | not started |
+| 3. Learner state after every talk | built 2026-10-31, on device not yet seen live, `gemini` cap NOT deployed — see below |
+| 4–7 | not started |
 
 ### Step 1 result (2026-10-27)
 
@@ -234,3 +235,71 @@ Seen live on the simulator (trial demo, Korean UI): "교정된 문장 직접
 Open: the card's two new headers and the narration button labels are not in
 the string catalogs yet (English in every UI language); the weekly deck
 doesn't have the card yet.
+
+### Step 3 result (2026-10-31)
+
+One "student file" per learner and target language, behind the scenes only
+(no screen draws it): `Documents/lang/<code>/learner_state.json`.
+
+- `LevelMap` loads `level_map_<code>.json`; only `en` exists, and for every
+  other language the whole step stands down without a word.
+- `LevelTagger` is the probe's prompt moved into Swift — `systemPrompt`,
+  `grammarLine`, `functionLine`. The probe now rebuilds the prompt FROM that
+  file (like `correction-probe.py`), and the rebuilt prompt is byte-identical
+  to the one measured in step 1. Input: the learner's `isEvidence` lines
+  (`USER:`) and the fluent self's (`AI:`); non-evidence learner lines are left
+  out. Output per item: right/wrong counts and one quote each. Every quote is
+  checked in code (`isTheirs`, the probe's `norm`/`theirs` ported, plus `’` =
+  `'` in both), an item whose quote isn't the learner's is dropped, items not
+  on the map are dropped, counts capped at 20 a talk. `.flash36`, thinking
+  **medium** (`GeminiClient.sendJSON` grew a `thinkingLevel` parameter; the
+  edge function passes `generationConfig` through), `purpose: "level-tag"`,
+  `GeminiClient.longRunning` (a long talk at medium thinking can pass 60 s).
+- The talk's verified fixes ride in the USER MESSAGE under a "CORRECTIONS
+  ALREADY CHECKED" block: per-turn `fixes` on evidence turns plus the
+  summary's `phrasesUsed` whose quote is the learner's. **Not measured** —
+  the probe's cases carry no fixes, so a probe run sends exactly the step-1
+  message. Add `fixes` to cases (and to the probe) before trusting it.
+- `LearnerState` stores each tagged TALK (`SessionTag`, keyed by session id,
+  with a fingerprint of the learner's lines and the map version) and computes
+  the per-item view on read: right/wrong totals, talks, first/last seen, up to
+  three of the learner's own lines (newest), and a status by code —
+  **unseen** (never produced) · **tried** (right only, under the solid bar) ·
+  **shaky** (an error on file, not solid) · **solid** (≥3 right uses in ≥2
+  talks and ≥80% right). All-time counts; weighting recent talks is step 4's
+  call. Idempotent by construction: a talk tagged twice replaces its own
+  entry; a talk that grew (resumed, a line marked misheard) is re-tagged and
+  replaces its old contribution. Two failures on a talk and it is not tried
+  again. Device-local, not synced (derived from the talks, which do sync).
+- `LevelTagging` runs it in the background, ONE call at a time: after every
+  summary (`SessionSummarizer`, after the session is saved, never on the
+  wrap-up board) for talks with `isLevelEvidence`, and once per launch, 20 s
+  in, a backfill of the last 15 summarized talks in the active language not
+  yet tagged (deleted talks' verdicts are dropped there). Telemetry:
+  `level_tagged` (items, dropped quotes, ms) and `level_tag_failed`. Silent
+  on capture runs and unit tests.
+- `LearnerStateStore.shared.promptLines(language:level:)` → a ≤25-line plain
+  English block for a prompt (the tutor chat first): header, the solid items
+  up to the next level on one line, then the gaps in WORK order — an item
+  never before a gap it requires, then shaky → tried → unseen, lower level
+  first; shaky/tried carry one of the learner's lines (an error for shaky);
+  unseen only at the current and next level — then functions done / not yet.
+  Empty string when there is no map or nothing tagged yet. `level` defaults
+  to the learner's level setting.
+- Probe re-run through the Swift prompt (2026-10-31, gemini-3.6-flash,
+  medium, 2 runs): grammar recall 131/136 (96%), verdict exact 129/136,
+  traps 0, unverified quotes 0, functions 40/54 (44/54 in step 1 — run
+  noise on the function side; grammar is identical).
+- Tests: `LearnerStateTests` (status rule, normalisation and the quote check,
+  verify dropping unverified/unknown items, evidence-only transcript,
+  idempotency and re-tagging, persistence and aggregation, failures and
+  forgetting deleted talks, the prompt block's order).
+
+NOT done: the `gemini` edge function's `level-tag` daily cap (60) is in the
+code, not deployed — until it is, the purpose counts as unknown (30/day,
+enough for a talk-day plus most of a backfill); seeding from the profile and
+the grammar focus; writes from tutors, the weekly test and shadowing; nothing
+reads `promptLines` yet (the tutor chat is another session's); no live run on
+a device or simulator with a signed-in account; Android (owed). The founder's
+2026-10-28 rule moves non-live calls to Claude Haiku 5.5 — `level-tag` stays
+on Gemini until the probe is run against Haiku (the probe calls Gemini only).
