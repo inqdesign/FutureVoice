@@ -1099,6 +1099,13 @@ private final class MouseSwipe: NSObject, UIGestureRecognizerDelegate {
 extension UIScrollView {
     @objc fileprivate func fv_dragLayoutSubviews() {
         fv_dragLayoutSubviews()   // the original, after the exchange
+        // No scroll bars on the Mac (2026-11-01, founder). With a mouse
+        // connected macOS draws "legacy" bars that take ~15 pt OUT of the
+        // content, so a page that grew long enough to scroll re-wrapped and
+        // jumped. Wheel, trackpad and keyboard still scroll. Re-set on every
+        // layout: SwiftUI puts the indicators back on its updates.
+        if showsVerticalScrollIndicator { showsVerticalScrollIndicator = false }
+        if showsHorizontalScrollIndicator { showsHorizontalScrollIndicator = false }
         guard contentSize.width > bounds.width + 1,
               contentSize.height <= bounds.height + 1,
               !MouseSwipe.isAttached(to: self) else { return }

@@ -3207,6 +3207,11 @@ sync container carry over. `./scripts/mac-run.sh` builds and opens it.
   there read "Cl…" in every sheet; the Mac gets the ✕, the phone keeps the
   word. `.sharedBackgroundVisibility(.hidden)` on that item looked like the
   fix and held the Swift compiler for 18 minutes on one file; don't.
+- **No scroll bars on the Mac** (2026-11-01, founder). With a mouse
+  connected macOS draws legacy bars that take ~15 pt out of the content, so a
+  page (the script editor) re-wrapped and jumped the moment it grew long
+  enough to scroll. `fv_dragLayoutSubviews` turns both indicators off on
+  every layout (SwiftUI turns them back on); scrolling itself is unchanged.
 - **A sheet with no bar gets a ✕** (`MacSheets.addCloseButton`): macOS
   swallows clicks behind a sheet and Esc was invisible. Sheets with a
   navigation bar carry their own Done/Cancel and are left alone.
