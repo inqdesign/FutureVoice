@@ -39,6 +39,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Headphones
+import androidx.compose.material.icons.filled.MicExternalOn
+import androidx.compose.material.icons.filled.Newspaper
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.CheckCircle
@@ -89,6 +96,9 @@ import com.roro.futurevoice.data.StudyPlan
 import com.roro.futurevoice.talk.GrammarFocus
 import com.roro.futurevoice.talk.TutorBot
 import com.roro.futurevoice.talk.TutorChat
+import com.roro.futurevoice.talk.TutorBalance
+import com.roro.futurevoice.talk.TutorPick
+import com.roro.futurevoice.talk.TutorReading
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.ui.brand.DialogueLine
 import com.roro.futurevoice.ui.brand.DialogueSpeaker
@@ -163,6 +173,8 @@ fun TutorBotButton(state: AppState) {
 @Composable
 fun TutorBotLayer(state: AppState, onOpenRoutine: () -> Unit) {
     val context = LocalContext.current
+    // The chat shows its own; this one is for a reading opened from the note.
+    TutorBot.reading?.let { r -> if (!TutorBot.chatOpen) TutorReadingSheet(r, state) }
     Box(Modifier.fillMaxSize()) {
         if (TutorBot.noteShown) {
             Box(Modifier.fillMaxSize().clickable(
@@ -349,13 +361,14 @@ private fun TutorPlan(state: AppState, onOpenRoutine: () -> Unit) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(TutorCopy.greeting(res), style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold)
-            Text(TutorCopy.summary(res, t), style = MaterialTheme.typography.bodyMedium)
+            Text(TutorCopy.opening(res), style = MaterialTheme.typography.bodyMedium)
             TutorCopy.why(res, t)?.let { why ->
                 Text(why, style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
+    if (TutorBot.picks.isNotEmpty()) TutorPickRows(TutorBot.picks.take(3), TutorBot.balance, state)
     if (t.items.isNotEmpty()) TutorPlanRows(t)
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         if (t.suggested) {
@@ -469,7 +482,8 @@ fun TutorChatView(state: AppState, onDismiss: () -> Unit) {
     val latest by rememberUpdatedState(state)
     LaunchedEffect(Unit) {
         TutorChat.resetIfNewDay()
-        TutorBot.refresh(context, latest.targetLanguage, latest.nativeLanguage, latest.level, visible = { false })
+        TutorBot.refresh(context, latest.targetLanguage, latest.nativeLanguage, latest.level, latest.persona,
+            visible = { false })
         Analytics.capture("tutor_bot_opened")
     }
     fun send(q: String) {
@@ -490,6 +504,7 @@ fun TutorChatView(state: AppState, onDismiss: () -> Unit) {
     LaunchedEffect(TutorChat.thinking) {
         if (TutorChat.thinking) list.animateScrollToItem(2 + TutorChat.messages.size)
     }
+    TutorBot.reading?.let { r -> if (TutorBot.chatOpen) TutorReadingSheet(r, state) }
     PageSheet(onDismiss = onDismiss) {
         Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).imePadding()) {
             SheetHeader(stringResource(R.string.personal_tutor),
@@ -511,10 +526,13 @@ fun TutorChatView(state: AppState, onDismiss: () -> Unit) {
                 item("plan") {
                     DialogueLine(speaker = DialogueSpeaker.OTHER, name = tutorName) {
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(TutorCopy.summary(res, today))
+                            Text(TutorCopy.opening(res))
                             TutorCopy.why(res, today)?.let { why ->
                                 Text(why, style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            if (TutorBot.picks.isNotEmpty()) {
+                                Box(Modifier.padding(top = 4.dp)) { TutorPickRows(TutorBot.picks, TutorBot.balance, state) }
                             }
                             if (today.items.isNotEmpty()) {
                                 Box(Modifier.padding(top = 4.dp)) { TutorPlanRows(today) }
@@ -639,6 +657,18 @@ object TutorCopy {
         }
     }
 
+    /** The note's and the chat's first line: today's plan in numbers (iOS
+     *  19ba732d: the first pick's announcement read wrong as the title — the
+     *  pick's own row already says it). With nothing planned but picks to
+     *  offer, says so. */
+    fun opening(res: Resources): String {
+        val t = TutorBot.today
+        if (t.items.isEmpty() && !t.restDay && TutorBot.picks.isNotEmpty()) {
+            return res.getString(R.string.here_s_what_i_d_pick_for_today)
+        }
+        return summary(res, t)
+    }
+
     fun summary(res: Resources, t: TutorBot.Today): String {
         if (t.restDay) {
             return if (t.dueCards > 0)
@@ -685,4 +715,124 @@ object TutorCopy {
         StudyPlan.Kind.SPEECH -> R.string.open_speech
         StudyPlan.Kind.TEST -> R.string.take_the_test
     })
+}
+
+// MARK: - Picks
+
+/** Today's picks beyond the routine, each with why it is here now, under the
+ *  week's speaking / listening / reading days (iOS `TutorPickRows`). */
+@Composable
+fun TutorPickRows(picks: List<TutorPick>, balance: TutorBalance, state: AppState) {
+    val context = LocalContext.current
+    val res = context.resources
+    Column {
+        Text(stringResource(R.string.this_week_speaking_lld_d_listening_lld_d_reading_lld_d,
+            balance.speaking, balance.listening, balance.reading),
+            style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 4.dp))
+        picks.forEachIndexed { i, pick ->
+            if (i > 0) HorizontalDivider(Modifier.padding(start = 40.dp),
+                color = MaterialTheme.colorScheme.outlineVariant)
+            val hint = pick.buttonTitle(res)
+            Row(Modifier.fillMaxWidth()
+                .clickable { TutorBot.start(context, pick, state.nativeLanguage) }
+                .semantics { contentDescription = "${pick.title}. $hint" }
+                .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(Modifier.width(28.dp), contentAlignment = Alignment.Center) {
+                    Icon(pickIcon(pick.kind), contentDescription = null, tint = pickColor(pick.kind),
+                        modifier = Modifier.size(16.dp))
+                }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    pick.tag(res)?.let { tag ->
+                        Text(tag, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold,
+                            color = pickColor(pick.kind))
+                    }
+                    Text(pick.title, style = MaterialTheme.typography.bodyMedium)
+                    if (pick.why.isNotEmpty()) {
+                        Text(pick.why, style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+                    tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(18.dp))
+            }
+        }
+    }
+}
+
+/** iOS `TutorPick.symbol`. */
+fun pickIcon(kind: TutorPick.Kind): androidx.compose.ui.graphics.vector.ImageVector = when (kind) {
+    TutorPick.Kind.RANK_DROP -> Icons.Filled.EmojiEvents
+    TutorPick.Kind.NEW_EPISODE, TutorPick.Kind.LISTEN -> Icons.Filled.Headphones
+    TutorPick.Kind.FIRST_SPEECH, TutorPick.Kind.GOAL_SPEECH -> Icons.Filled.MicExternalOn
+    TutorPick.Kind.READ_SCRIPT, TutorPick.Kind.GOAL_READING -> Icons.AutoMirrored.Filled.MenuBook
+    TutorPick.Kind.READ_NEWS -> Icons.Filled.Newspaper
+    TutorPick.Kind.GOAL_DRILL -> Icons.Filled.School
+}
+
+/** iOS `TutorPickRows.color`: red, cyan, purple, brown — the system colours. */
+fun pickColor(kind: TutorPick.Kind): Color = when (kind) {
+    TutorPick.Kind.RANK_DROP -> Color(0xFFFF3B30)
+    TutorPick.Kind.NEW_EPISODE, TutorPick.Kind.LISTEN -> Color(0xFF32ADE6)
+    TutorPick.Kind.FIRST_SPEECH -> Color(0xFFAF52DE)
+    TutorPick.Kind.READ_SCRIPT, TutorPick.Kind.READ_NEWS -> Color(0xFFA2845E)
+    TutorPick.Kind.GOAL_READING, TutorPick.Kind.GOAL_SPEECH, TutorPick.Kind.GOAL_DRILL -> Color(0xFFAF52DE)
+}
+
+/** A reading opened from a pick (iOS `TutorReadingSheet`): the episode's
+ *  script at once, or the news article, written the first time anyone opens it. */
+@Composable
+fun TutorReadingSheet(reading: TutorReading, state: AppState) {
+    val context = LocalContext.current
+    var script by remember(reading.id) { mutableStateOf<com.roro.futurevoice.data.SpeechScript?>(null) }
+    var failed by remember(reading.id) { mutableStateOf(false) }
+    var attempt by remember(reading.id) { mutableStateOf(0) }
+    val close = { TutorBot.reading = null }
+    LaunchedEffect(reading.id, attempt) {
+        if (script != null || reading.script != null) return@LaunchedEffect
+        val story = reading.story ?: return@LaunchedEffect
+        try {
+            script = com.roro.futurevoice.talk.NewsArticle.load(context, story, state.targetLanguage, state.level)
+            com.roro.futurevoice.data.ActivityEventLog.record(context,
+                com.roro.futurevoice.data.ActivityEventLog.Kind.READ)
+            Analytics.capture("news_article_opened", mapOf("category" to (story.category ?: "")))
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) {
+            failed = true
+        }
+    }
+    val shown = script ?: reading.script
+    if (shown != null) {
+        com.roro.futurevoice.ui.speech.SpeechScriptSheet(shown, state.nativeLanguage, onEdited = {},
+            onDismiss = close, initialStudy = reading.study, shipped = true,
+            studyHere = reading.script == null)
+        return
+    }
+    com.roro.futurevoice.ui.speech.SpeechSheet(onDismiss = close) {
+        val closeLabel = stringResource(R.string.close)
+        SheetHeader("", leading = {
+            IosGlassButton(onClick = close, circle = true,
+                modifier = Modifier.semantics { contentDescription = closeLabel }) {
+                Icon(Icons.Filled.Close, contentDescription = null, modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurface)
+            }
+        })
+        Column(Modifier.fillMaxWidth().padding(top = 160.dp), horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (failed) {
+                Icon(Icons.Filled.Newspaper, contentDescription = null, modifier = Modifier.size(44.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.couldn_t_open_the_article), style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.check_your_connection_and_try_again),
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                SoftChip(stringResource(R.string.try_again), selected = true) { failed = false; attempt += 1 }
+            } else {
+                CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 3.dp)
+                Text(stringResource(R.string.writing_the_article_for_your_level),
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
 }

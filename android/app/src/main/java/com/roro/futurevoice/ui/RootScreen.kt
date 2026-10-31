@@ -506,6 +506,12 @@ fun RootScreen() {
                 tab = HomeTab.PRACTICE
                 routineReview = waitingDeck(context, state.targetLanguage) to emptyList()
             }
+            is DeepLinkInbox.WidgetRoute.SpeechChallenge -> {
+                showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false
+                showActivity = false; detailSessionId = null; bookScenarioId = null; watchScenarioId = null
+                tab = HomeTab.SPEECH
+                speechChallengeId = route.id
+            }
             DeepLinkInbox.WidgetRoute.FreeTalk -> {
                 tab = HomeTab.TALK
                 gate {
@@ -2128,7 +2134,7 @@ internal fun HomeScreen(
             while (true) {
                 val s = tutorState
                 com.roro.futurevoice.talk.TutorBot.refresh(context, s.targetLanguage, s.nativeLanguage, s.level,
-                    visible = { tutorVisible })
+                    s.persona, visible = { tutorVisible })
                 kotlinx.coroutines.delay(60_000)
             }
         }

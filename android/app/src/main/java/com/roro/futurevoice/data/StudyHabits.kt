@@ -198,6 +198,7 @@ data class StudyHabits(
                     ActivityEventLog.Kind.LISTEN -> Activity.LISTEN
                     ActivityEventLog.Kind.SPEECH -> Activity.SPEECH
                     ActivityEventLog.Kind.SCENE -> Activity.SCENE
+                    ActivityEventLog.Kind.READ -> continue    // not a habit the report reads yet
                 }
                 sittings += Sitting(activity, e.at)
             }

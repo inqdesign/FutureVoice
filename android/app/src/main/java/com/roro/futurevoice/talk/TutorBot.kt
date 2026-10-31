@@ -27,6 +27,7 @@ import com.roro.futurevoice.data.VocabStore
 import com.roro.futurevoice.data.nowLine
 import com.roro.futurevoice.net.GeminiClient
 import com.roro.futurevoice.ui.PlannerSnapshot
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -123,6 +124,19 @@ object TutorBot {
         private set
     var chatOpen by mutableStateOf(false)
     var quizOpen by mutableStateOf(false)
+    /** Today's picks beyond the routine ([TutorPicks]), and what they need. */
+    var picks by mutableStateOf<List<TutorPick>>(emptyList())
+        private set
+    var balance by mutableStateOf(TutorBalance())
+        private set
+    var episodes by mutableStateOf<List<com.roro.futurevoice.data.NewsShowEpisode>>(emptyList())
+        private set
+    /** A reading opened from a pick, shown by whichever tutor surface is up. */
+    var reading by mutableStateOf<TutorReading?>(null)
+    private var picksLoadedAt: Long? = null
+    private var picksLoading = false
+    private val scope = kotlinx.coroutines.CoroutineScope(
+        kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main.immediate)
 
     const val MAX_BUBBLES = 3
     /** Quiet after the note closes — the note just said everything. */
@@ -234,7 +248,8 @@ object TutorBot {
     /** Re-reads the day and decides whether there is anything to say.
      *  [visible] is the Talk home on screen with nothing over it. */
     suspend fun refresh(c: Context, targetLanguage: String, nativeLanguage: String, level: CefrLevel,
-                        visible: () -> Boolean, now: Long = System.currentTimeMillis()) {
+                        persona: UserPersona?, visible: () -> Boolean, now: Long = System.currentTimeMillis()) {
+        loadPicks(c, targetLanguage, persona, now)
         val fresh = makeToday(c, targetLanguage, nativeLanguage, level, now)
         val dayKey = StudyPlan.dayKey(now)
         val p = prefs(c)
@@ -297,6 +312,65 @@ object TutorBot {
         writeList(c, SAID_KEY, said)
         Analytics.capture("tutor_bot_bubble", mapOf("kind" to b.id.split("-").first()))
         putBubble(b)
+    }
+
+    // MARK: - Picks
+
+    /** Re-reads the picks at most every 10 minutes, behind the plan. */
+    fun loadPicks(c: Context, targetLanguage: String, persona: UserPersona?,
+                  now: Long = System.currentTimeMillis(), force: Boolean = false) {
+        if (picksLoading) return
+        val at = picksLoadedAt
+        if (!force && at != null && now - at < 600_000L) return
+        picksLoading = true
+        val app = c.applicationContext
+        scope.launch {
+            try {
+                val loaded = TutorPicks.load(app, targetLanguage, persona, now)
+                picks = loaded.picks
+                episodes = loaded.episodes
+                balance = loaded.balance
+                picksLoadedAt = System.currentTimeMillis()
+            } finally {
+                picksLoading = false
+            }
+        }
+    }
+
+    /** A pick's button. */
+    fun start(c: Context, pick: TutorPick, nativeLanguage: String) {
+        Analytics.capture("tutor_bot_pick", mapOf("kind" to pick.kind.raw))
+        val app = c.applicationContext
+        when (val a = pick.action) {
+            is TutorPick.Action.Listen -> {
+                val ep = episodes.firstOrNull { it.id == a.episodeId } ?: return
+                dismissBubble()
+                if (noteShown) closeNote(c)
+                chatOpen = false
+                scope.launch {
+                    runCatching { com.roro.futurevoice.data.NewsShow.prepare(app, ep) }
+                    com.roro.futurevoice.audio.PlaylistPlayer.play(app, ep.lines, app.getString(R.string.nawana_podcast))
+                    com.roro.futurevoice.data.PlanReminder.pendingListen.value = true
+                }
+                picks = picks.filter { it.id != pick.id }
+            }
+            is TutorPick.Action.ReadScript -> {
+                val ep = episodes.firstOrNull { it.id == a.episodeId } ?: return
+                ActivityEventLog.record(app, ActivityEventLog.Kind.READ)
+                reading = TutorReading(script = ep.script, study = ep.study(nativeLanguage))
+            }
+            is TutorPick.Action.ReadNews -> reading = TutorReading(story = a.story)
+            is TutorPick.Action.Challenge -> {
+                com.roro.futurevoice.data.SpeechChallenges.shared(app).standings.value[a.id]?.myRank?.let {
+                    TutorPicks.markRankSeen(app, a.id, it)
+                }
+                dismissBubble()
+                if (noteShown) closeNote(c)
+                chatOpen = false
+                picks = picks.filter { it.id != pick.id }
+                DeepLinkInbox.widgetRoute.value = DeepLinkInbox.WidgetRoute.SpeechChallenge(a.id)
+            }
+        }
     }
 
     // MARK: - Actions
@@ -557,3 +631,12 @@ object TutorChat {
         return lines.joinToString("\n")
     }
 }
+
+/** A reading opened from a pick (iOS `TutorReading`): an episode's script
+ *  (ready), or a news story whose article is written when it is opened. */
+data class TutorReading(
+    val id: String = UUID.randomUUID().toString(),
+    val script: com.roro.futurevoice.data.SpeechScript? = null,
+    val study: com.roro.futurevoice.data.ScriptStudy? = null,
+    val story: SuggestedTopic? = null,
+)

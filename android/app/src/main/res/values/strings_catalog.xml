@@ -441,6 +441,7 @@
     <string name="check_again">"Check again"</string>
     <string name="check_it_at_the_back">"Check it at the back"</string>
     <string name="check_the_answers_at_the_back">"Check the answers at the back"</string>
+    <string name="check_your_connection_and_try_again">"Check your connection and try again."</string>
     <string name="checking_in_at_a_hotel">"Checking in at a hotel"</string>
     <string name="childhood_friends">"Childhood friends"</string>
     <string name="choose">"Choose"</string>
@@ -539,6 +540,7 @@
     <string name="couldn_t_make_your_voice">"Couldn't make your voice"</string>
     <string name="couldn_t_open_pick_it_again">"Couldn't open — pick it again"</string>
     <string name="couldn_t_open_that_file">"Couldn't open that file."</string>
+    <string name="couldn_t_open_the_article">"Couldn't open the article"</string>
     <string name="couldn_t_open_the_microphone">"Couldn't open the microphone."</string>
     <string name="couldn_t_parse">"Couldn't parse: %s"</string>
     <string name="couldn_t_play_audio">"Couldn't play audio"</string>
@@ -900,6 +902,7 @@
     <string name="finishing_puts_you_in_line_it_doesn_t_seat_you">"Finishing puts you in line — it doesn't seat you."</string>
     <string name="first_charge">"First charge %s"</string>
     <string name="first_test_done">"First test done"</string>
+    <string name="first_time">"First time"</string>
     <string name="fix_the_sentence">"Fix the sentence"</string>
     <string name="fluency">"Fluency"</string>
     <string name="fluency_pace">"Fluency &amp; pace"</string>
@@ -1044,6 +1047,7 @@
     <string name="helping_someone_who_is_unwell">"Helping someone who is unwell"</string>
     <string name="here_s_how_this_page_helps">"Here's how this page helps"</string>
     <string name="here_s_how_this_tab_helps">"Here's how this tab helps"</string>
+    <string name="here_s_what_i_d_pick_for_today">"Here's what I'd pick for today."</string>
     <!-- "Here you call yourself: the version of you who already speaks fluently, in a voice cloned from yours. There's no one to be embarrassed in front of, and you can call any time." -->
     <string name="here_you_call_yourself_the_version_of_you_who_already_speaks_861a06">"Here you call yourself: the version of you who already speaks fluently, in a voice cloned from yours. There's no one to be embarrassed in front of, and you can call any time."</string>
     <string name="hi">"Hi"</string>
@@ -1320,6 +1324,8 @@
     <string name="listening">"Listening…"</string>
     <string name="listening_back">"Listening back…"</string>
     <string name="listening_back_to_every_word">"Listening back to every word…"</string>
+    <!-- 'Listening' -->
+    <string name="listening_dc3534">"Listening"</string>
     <string name="listening_pause_to_send_tap_to_stop">"Listening · pause to send · tap to stop"</string>
     <string name="listening_tap_to_finish">"Listening — tap to finish"</string>
     <string name="listening_tap_to_hang_up">"Listening — tap to hang up"</string>
@@ -1587,6 +1593,7 @@
     <string name="missed_this_month">"Missed this month"</string>
     <string name="mistake_notebook">"Mistake notebook"</string>
     <string name="mistakes">"Mistakes"</string>
+    <string name="model_answer">"Model answer"</string>
     <string name="money_and_plans">"Money and plans"</string>
     <string name="mono">"Mono"</string>
     <!-- 'month' -->
@@ -1648,6 +1655,7 @@
     <string name="new_">"New"</string>
     <string name="new_best_lld_of_lld">"New best · #%1$d of %2$d"</string>
     <string name="new_block">"New block"</string>
+    <string name="new_episode">"New episode"</string>
     <string name="new_expressions_from_the_call">"New expressions from the call"</string>
     <string name="new_expressions_you_used">"New expressions you used"</string>
     <string name="new_features">"New features"</string>
@@ -1847,6 +1855,11 @@
     <!-- 'Camera-on takes that score %lld or more go on the board, and your best one stands. The board shows your name and score — your video and voice stay on your phone.' -->
     <string name="camera_on_takes_that_score_lld_or_more_go_on_the_board">"Camera-on takes that score %d or more go on the board, and your best one stands. The board shows your name and score — your video and voice stay on your phone."</string>
     <string name="passed_you_can_say_it_now">"Passed. You can say it now."</string>
+    <string name="rank">"Rank"</string>
+    <!-- 'Read' -->
+    <string name="read_852b43">"Read"</string>
+    <!-- 'Reading' -->
+    <string name="reading_cffa2a">"Reading"</string>
     <string name="red_skipped_or_read_differently_the_small_red_words">"Red: skipped or read differently. The small red words are what the mic heard."</string>
     <string name="say_it_all_in_your_own_words_in_one_go">"Say it all in your own words, in one go."</string>
     <string name="takes_that_score_lld_or_more_go_on_the_board">"Takes that score %d or more go on the board."</string>
@@ -2956,6 +2969,8 @@
     <string name="this_week">"This week"</string>
     <string name="this_week_in_progress_ready">"This week in progress · ready %s"</string>
     <string name="this_week_s_test">"This week's test"</string>
+    <!-- 'This week · speaking %lld d · listening %lld d · reading %lld d' -->
+    <string name="this_week_speaking_lld_d_listening_lld_d_reading_lld_d">"This week · speaking %1$d d · listening %2$d d · reading %3$d d"</string>
     <string name="three_things_you_ll_reach_for_often">"Three things you'll reach for often."</string>
     <string name="through_friends">"Through friends"</string>
     <string name="time">"Time"</string>
@@ -3036,6 +3051,7 @@
     <string name="turn_on_photos_for_nawana_in_settings_to_save_the_card">"Turn on Photos for nawana in Settings to save the card."</string>
     <string name="turn_on_reminders">"Turn on reminders"</string>
     <string name="tutor">"Tutor"</string>
+    <string name="tutor_drill">"Tutor drill"</string>
     <string name="tutor_mode">"Tutor mode"</string>
     <string name="two_minutes_on_one_topic_without_stopping">"Two minutes on one topic, without stopping"</string>
     <!-- 'Two reads, the lower wins: the structures you actually build in a talk, and transcript-verified slips per 100 words — STT artifacts and style suggestions excluded. Short correct sentences read low, not high.' -->
@@ -3445,6 +3461,7 @@
     <string name="writing">"Writing…"</string>
     <string name="writing_down_what_you_said">"Writing down what you said…"</string>
     <string name="writing_feedback">"Writing feedback…"</string>
+    <string name="writing_the_article_for_your_level">"Writing the article for your level…"</string>
     <!-- 'Writing the backup file. This is the slow part — keep the app open.' -->
     <string name="writing_the_backup_file_this_is_the_slow_part_keep_the_app_o_5ceb52">"Writing the backup file. This is the slow part — keep the app open."</string>
     <string name="writing_the_dialogue">"Writing the dialogue…"</string>

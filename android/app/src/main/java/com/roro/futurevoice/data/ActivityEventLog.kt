@@ -32,7 +32,11 @@ object ActivityEventLog {
         /** A podcast episode or a watched situation heard in the player —
          *  one per piece per list ([com.roro.futurevoice.audio.PlaylistPlayer],
          *  iOS `4c0d8d7c`). */
-        @SerialName("listen") LISTEN;
+        @SerialName("listen") LISTEN,
+        /** An episode's script or a news article opened to read
+         *  ([com.roro.futurevoice.talk.TutorPicks], the podcast's Read). One
+         *  per opening (iOS 87bda8d6). */
+        @SerialName("read") READ;
 
         companion object {
             fun of(kind: PracticeLog.Kind): Kind = when (kind) {

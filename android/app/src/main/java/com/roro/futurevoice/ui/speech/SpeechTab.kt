@@ -895,7 +895,12 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
                                 *  Podcast episode): nothing is edited, voiced or studied on this
                                 *  phone — the study was written once for everybody when the
                                 *  episode was published. */
-                               shipped: Boolean = false) {
+                               shipped: Boolean = false,
+                               /** A shipped script whose study is still made on this phone: a
+                                *  news article from the tutor bot is read-only like an episode,
+                                *  but nothing was studied when it was written (iOS 840f4873). */
+                               studyHere: Boolean = false) {
+    val studyShipped = shipped && !studyHere
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("futurevoice", Context.MODE_PRIVATE) }
     var shown by remember { mutableStateOf(script) }
@@ -918,7 +923,7 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
     val voiceId = rememberCloneVoiceId()
     val paragraphs = remember(shown.body) { com.roro.futurevoice.data.ScriptStudy.paragraphs(shown.body) }
     LaunchedEffect(studying, shown.body, studyAttempt) {
-        if (!studying || study != null || shipped) return@LaunchedEffect
+        if (!studying || study != null || studyShipped) return@LaunchedEffect
         studyFailed = false
         study = try {
             com.roro.futurevoice.data.ScriptStudyEngine.study(context, shown, native, level)
@@ -965,7 +970,7 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
             ScriptStudyLegend(shownStudy, Modifier.padding(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 8.dp))
         } else if (studying) {
             Box(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 14.dp)) {
-                if (shipped) {
+                if (studyShipped) {
                     Text(stringResource(R.string.study_notes_for_this_episode_aren_t_in_your_language_yet),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 8.dp))
