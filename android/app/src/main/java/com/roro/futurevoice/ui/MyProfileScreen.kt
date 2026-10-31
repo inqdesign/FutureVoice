@@ -173,6 +173,8 @@ fun MyProfileScreen(
                     .padding(horizontal = 16.dp).padding(bottom = 32.dp),
             ) {
                 ProfileSection(persona, onEditProfile)
+                // What they are preparing for (iOS `upcomingSection`, a9fbef92).
+                UpcomingGoalsSection(targetLanguage)
                 PublicSection(
                     persona = persona,
                     targetLanguage = targetLanguage,

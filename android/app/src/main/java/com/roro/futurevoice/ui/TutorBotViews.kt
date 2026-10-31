@@ -368,6 +368,10 @@ private fun TutorPlan(state: AppState, onOpenRoutine: () -> Unit) {
             }
         }
     }
+    // The nearest thing they're preparing for, with its countdown.
+    com.roro.futurevoice.data.UpcomingGoalStore.active(context, state.targetLanguage).firstOrNull()?.let { goal ->
+        UpcomingGoalRow(goal)
+    }
     if (TutorBot.picks.isNotEmpty()) TutorPickRows(TutorBot.picks.take(3), TutorBot.balance, state)
     if (t.items.isNotEmpty()) TutorPlanRows(t)
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {

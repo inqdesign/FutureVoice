@@ -564,6 +564,11 @@ object TutorChat {
                 .filter { it.isNotEmpty() }
             if (about.isNotEmpty()) lines += "They told setup: " + about.joinToString(" · ")
         }
+        val upcoming = com.roro.futurevoice.data.UpcomingGoalStore.active(c, targetLanguage, now)
+        if (upcoming.isNotEmpty()) {
+            lines += "What they are preparing for (their own words; tie your next step to the nearest one):"
+            for (g in upcoming.take(4)) lines += "- " + g.promptLine(now)
+        }
         lines += "Streak: ${t.streak} days. Talked today: ${t.talkedToday} min. Review cards waiting: ${t.dueCards}."
 
         if (t.restDay) {
