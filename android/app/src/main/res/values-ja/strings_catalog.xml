@@ -500,6 +500,7 @@
     <string name="copy_the_fluent_self_s_lines_then_make_them_yours">"流暢な自分の文を写して、自分の言葉にする"</string>
     <string name="copy_the_sentence">"文を書き写す"</string>
     <string name="coral">"コーラル"</string>
+    <string name="core_member_no_lld_is_here">"コアに%d人目のメンバーが誕生！"</string>
     <string name="corrections">"言い方の直し"</string>
     <string name="corrections_and_notes_only">"修正とメモのみ"</string>
     <!-- "Corrections sit inside your own lines, so they're hidden too." -->
@@ -2229,6 +2230,8 @@
     <!-- '%.1f verified grammar slips per 100 spoken words — the same density the assessment weighs.' -->
     <string name="s_1f_verified_grammar_slips_per_100_spoken_words_the_same_de_b8c9f0">"話した100語あたりの確認済み文法ミスは%.1f件。レベル評価が見ているのと同じ数値です。"</string>
     <string name="s_2_seconds">"2秒"</string>
+    <!-- '30 days in a row without missing one. Leave a heart or a short cheer.' -->
+    <string name="s_30_days_in_a_row_without_missing_one_leave_a_heart_or_a_sh_0d416d">"1日も休まず30日連続で達成しました。ハートや短い応援を送りましょう。"</string>
     <string name="s_3_days">"3日"</string>
     <string name="said_lld">"言った回数 %d回"</string>
     <string name="same_as_before">"変化なし"</string>
@@ -2593,6 +2596,7 @@
     <string name="talk_e55e91">"会話"</string>
     <string name="talk_for_about_10_minutes">"10分ほど話す"</string>
     <string name="talk_lld_minutes_a_day_lld_days_in_a_row">"1日%1$d分の通話を、%2$d日連続。"</string>
+    <string name="talk_lld_minutes_a_day_lld_days_in_a_row_and_a_seat_is_yours">"1日%1$d分、%2$d日連続で話すとコアに席ができます。"</string>
     <!-- "Talk %lld more minutes and this level gets re-read from everything new you've said." -->
     <string name="talk_lld_more_minutes_and_this_level_gets_re_read_from_every_b72704">"あと%d分話すと、新しく話したことをすべて集めてレベルを判定し直します。"</string>
     <string name="talk_mastered">"通話を完了"</string>
@@ -2604,6 +2608,7 @@
     <string name="talk_the_way_you_would_on_the_phone_there_s_no_button_to_hol_f6c495">"電話のように話すだけです。ボタンを押し続ける必要はありません。"</string>
     <string name="talk_then_pause">"話して、少し間をあける"</string>
     <string name="talk_time">"通話時間"</string>
+    <string name="talk_today">"今日のトークを始める"</string>
     <!-- 'Talk with your fluent self like a live phone call — every reply in your cloned voice.' -->
     <string name="talk_with_your_fluent_self_like_a_live_phone_call_every_repl_d69f26">"流暢な自分と、本物の電話のようにリアルタイムで話します。返事はすべてクローンした自分の声で聞こえます。"</string>
     <string name="talk_your_fill_every_day">"毎日たっぷり話しても余ります"</string>
@@ -3460,6 +3465,7 @@
     <string name="you_re_in_the_pool_other_learners_can_find_and_talk_with_you_b020a3">"プールに登録されました。ほかの%sの学習者が、このペルソナを見つけて話せます。"</string>
     <string name="you_re_lld">"%d位です"</string>
     <string name="you_re_lld_of_lld_in_pick_up_where_you_left_off">"%2$d問中%1$d問まで進んでいます。続きからどうぞ。"</string>
+    <string name="you_re_on_day_lld_lld_more_days_to_the_core">"いま%1$d日目です。コアまであと%2$d日。"</string>
     <string name="you_re_on_the_board">"ランクインしました"</string>
     <string name="you_re_on_the_it_converts_unless_you_cancel">"%s中です。解約しなければ、そのまま有料に移行します。"</string>
     <string name="you_re_on_the_it_ends_on">"%1$s中です。%2$sに終了し、請求はありません。"</string>
@@ -3691,6 +3697,7 @@
     <string name="your_trial_starts_lld_minutes_of_talk_to_use_across_the_lld_153af7">"トライアルが始まります。%2$d日間で使える通話%1$d分と、そこから生まれる復習のすべてが一緒です。"</string>
     <!-- 'Your trial starts — talk time on us, and all the review it produces.' -->
     <string name="your_trial_starts_talk_time_on_us_and_all_the_review_it_prod_1afe94">"トライアルが始まります。通話時間はこちらが持ちます。そこから生まれる復習のすべてが一緒です。"</string>
+    <string name="your_turn">"自分も挑戦"</string>
     <!-- 'Your turns average %lld words — add detail: how things felt, not just what happened.' -->
     <string name="your_turns_average_lld_words_add_detail_how_things_felt_not_b4c918">"1回に話す長さは平均%d語です。何があったかに加えて、どう感じたかも話してみてください。"</string>
     <string name="your_video">"動画"</string>

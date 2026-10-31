@@ -169946,6 +169946,294 @@
           }
         }
       }
+    },
+    "Core member no. %lld is here!" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Core hat sein %lld. Mitglied!"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¡El Núcleo tiene su miembro n.º %lld!"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le Noyau accueille son membre nº %lld !"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "コアに%lld人目のメンバーが誕生！"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld번째 코어 멤버가 탄생했어요!"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "核心迎来第 %lld 位成员！"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "核心迎來第 %lld 位成員！"
+          }
+        }
+      }
+    },
+    "30 days in a row without missing one. Leave a heart or a short cheer." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 Tage am Stück, ohne einen auszulassen. Lass ein Herz oder einen kurzen Gruß da."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 días seguidos, sin faltar ni uno. Déjale un corazón o un ánimo corto."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 jours d’affilée, sans en manquer un seul. Laisse-lui un cœur ou un petit mot."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1日も休まず30日連続で達成しました。ハートや短い応援を送りましょう。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "하루도 빠짐없이 30일 연속으로 해냈어요. 하트나 짧은 응원을 남겨 주세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连续 30 天，一天都没落下。送个爱心或一句加油吧。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "連續 30 天，一天都沒漏掉。送個愛心或一句加油吧。"
+          }
+        }
+      }
+    },
+    "You're on day %lld. %lld more days to the Core." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du bist bei Tag %1$lld. Noch %2$lld Tage bis zum Core."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You're on day %1$lld. %2$lld more days to the Core."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vas por el día %1$lld. Te faltan %2$lld días para el Núcleo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu en es au jour %1$lld. Encore %2$lld jours avant le Noyau."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "いま%1$lld日目です。コアまであと%2$lld日。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지금 %1$lld일째예요. 코어까지 %2$lld일 남았어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你已坚持到第 %1$lld 天，离核心还有 %2$lld 天。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你已堅持到第 %1$lld 天，離核心還有 %2$lld 天。"
+          }
+        }
+      }
+    },
+    "Talk %lld minutes a day, %lld days in a row, and a seat is yours." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sprich %1$lld Minuten am Tag, %2$lld Tage am Stück, und ein Platz gehört dir."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Talk %1$lld minutes a day, %2$lld days in a row, and a seat is yours."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Habla %1$lld minutos al día, %2$lld días seguidos, y tendrás tu asiento."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Parle %1$lld minutes par jour, %2$lld jours d’affilée, et une place est à toi."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1日%1$lld分、%2$lld日連続で話すとコアに席ができます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "하루 %1$lld분씩 %2$lld일 연속으로 통화하면 코어에 자리가 생겨요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每天聊 %1$lld 分钟，连续 %2$lld 天，就能在核心占一个座位。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每天聊 %1$lld 分鐘，連續 %2$lld 天，就能在核心佔一個座位。"
+          }
+        }
+      }
+    },
+    "Talk today" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heute sprechen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hablar hoy"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Parler aujourd’hui"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今日のトークを始める"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 통화하기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天聊一聊"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天聊一聊"
+          }
+        }
+      }
+    },
+    "Your turn" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du bist dran"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu turno"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "À toi de jouer"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分も挑戦"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "나도 도전하기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "轮到你了"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "輪到你了"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

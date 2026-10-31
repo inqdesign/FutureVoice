@@ -144,6 +144,30 @@ class CoreClubClient(private val auth: AuthRepository) {
         if (raw.trim() == "null") null else Edge.json.decodeFromString(SeatDetail.serializer(), raw)
     }.getOrNull()
 
+    /**
+     * The newest member of a club who finished their welcome, for the
+     * "N-th Core member" sheet everyone else in that language gets
+     * (`core_new_member`, 20261030100000). Null when there is none newer than
+     * `after` in the last week, or it is the reader.
+     */
+    @Serializable
+    data class NewMember(
+        val event_id: Int = 0,
+        val index: Int = 0,
+        val name: String? = null,
+        val theme: Int? = null,
+        val viewer_seated: Boolean = false,
+    ) {
+        val id: Int get() = event_id
+        val number: Int get() = index + 1
+    }
+
+    suspend fun newMember(language: String, after: Int): NewMember? = runCatching {
+        val raw = rpc("core_new_member", buildJsonObject {
+            put("p_language", language.lowercase()); put("p_after", after) })
+        if (raw.trim() == "null" || raw.isBlank()) null else Edge.json.decodeFromString(NewMember.serializer(), raw)
+    }.getOrNull()
+
     /** The name and hope on the learner's own cube, written together. */
     suspend fun setEngraving(language: String, name: String, hope: String): Boolean = runCatching {
         rpc("core_set_engraving", buildJsonObject {

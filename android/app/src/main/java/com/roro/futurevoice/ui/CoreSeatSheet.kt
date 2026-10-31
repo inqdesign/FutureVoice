@@ -9,6 +9,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -33,6 +34,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -66,6 +68,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -88,7 +91,13 @@ import kotlin.random.Random
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun CoreSeatSheet(language: String, index: Int, onDismiss: () -> Unit,
-                  preview: Pair<CoreClubClient.SeatDetail, CoreClubClient.Cheers>? = null) {
+                  preview: Pair<CoreClubClient.SeatDetail, CoreClubClient.Cheers>? = null,
+                  /** Opened as the news of a new member (`core_new_member`): the
+                   *  sheet leads with "member no. N is here" and, for a reader
+                   *  without a seat, ends with their own way in. `onTalk` starts
+                   *  today's talk from there. */
+                  news: CoreClubClient.NewMember? = null,
+                  onTalk: (() -> Unit)? = null) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val client = remember { CoreClubClient(AuthRepository()) }
@@ -103,6 +112,7 @@ fun CoreSeatSheet(language: String, index: Int, onDismiss: () -> Unit,
     var rising by remember { mutableStateOf<Pair<Long, CoreClubClient.Cheers.Note>?>(null) }
     val hearts = remember { mutableStateListOf<Long>() }
     var bigHeart by remember { mutableStateOf(false) }
+    var progress by remember { mutableStateOf<CoreClubClient.Progress?>(null) }
     val someone = stringResource(R.string.someone)
     val meLabel = stringResource(R.string.me)
 
@@ -114,6 +124,10 @@ fun CoreSeatSheet(language: String, index: Int, onDismiss: () -> Unit,
         if (cheers?.mine == true) client.markCheersSeen(language)
     }
     LaunchedEffect(index) { load() }
+    LaunchedEffect(news) {
+        if (news == null || news.viewer_seated) return@LaunchedEffect
+        progress = client.progress(language)
+    }
 
     // Notes rise over the cube strictly one at a time, round and round.
     LaunchedEffect(Unit) {
@@ -217,6 +231,7 @@ fun CoreSeatSheet(language: String, index: Int, onDismiss: () -> Unit,
                     if (loaded) GroupedFooter(stringResource(R.string.this_seat_couldn_t_be_opened_try_again_in_a_moment))
                     return@Column
                 }
+                if (news != null) NewsSection(news)
                 GroupedCard {
                     Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -301,6 +316,55 @@ fun CoreSeatSheet(language: String, index: Int, onDismiss: () -> Unit,
                         }
                     }
                 }
+                if (news != null && !news.viewer_seated) {
+                    YourTurnSection(progress, onTalk?.let { talk -> { onDismiss(); talk() } })
+                }
+            }
+        }
+    }
+}
+
+// MARK: - News of a new member
+
+@Composable
+private fun NewsSection(news: CoreClubClient.NewMember) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 8.dp, bottom = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(stringResource(R.string.core_member_no_lld_is_here, news.number),
+            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+            textAlign = TextAlign.Center)
+        Text(stringResource(R.string.s_30_days_in_a_row_without_missing_one_leave_a_heart_or_a_sh_0d416d),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center)
+    }
+}
+
+/** The reader's own way in: where their streak stands, and today's talk. */
+@Composable
+private fun YourTurnSection(progress: CoreClubClient.Progress?, onTalk: (() -> Unit)?) {
+    GroupedSectionHeader(stringResource(R.string.your_turn))
+    GroupedCard {
+        if (progress != null) {
+            Text(
+                if (progress.streak > 0) stringResource(R.string.you_re_on_day_lld_lld_more_days_to_the_core,
+                    progress.streak, maxOf(0, progress.entry_streak - progress.streak))
+                else stringResource(R.string.talk_lld_minutes_a_day_lld_days_in_a_row_and_a_seat_is_yours,
+                    maxOf(1, progress.bar_seconds / 60), progress.entry_streak),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp))
+        }
+        if (onTalk != null) {
+            if (progress != null) TextRowDivider()
+            Row(Modifier.fillMaxWidth().clickable(onClick = onTalk)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Icon(Icons.Filled.Phone, null, tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp))
+                Text(stringResource(R.string.talk_today), style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.primary)
             }
         }
     }
@@ -405,4 +469,34 @@ private fun HopeVeil() {
             }
         }
     }
+}
+
+/**
+ * Which new member's news this install has already shown, per account and
+ * club, so each arrival is offered once (iOS `CoreNewsStore`). iOS also asks
+ * again from a push tap; Android has no server push, so it only asks on
+ * arrival and on coming back to the foreground.
+ */
+object CoreNewsStore {
+    private fun key(userId: String, language: String) =
+        "futurevoice.core.newsSeen.${userId.lowercase()}.${language.lowercase()}"
+
+    suspend fun due(context: android.content.Context, language: String,
+                    fromLink: Boolean = false): CoreClubClient.NewMember? {
+        val auth = AuthRepository()
+        val uid = auth.userId ?: return null
+        val after = if (fromLink) 0 else context.getSharedPreferences("futurevoice", 0).getInt(key(uid, language), 0)
+        return CoreClubClient(auth).newMember(language, after)
+    }
+
+    fun markShown(context: android.content.Context, news: CoreClubClient.NewMember, language: String) {
+        val uid = AuthRepository().userId ?: return
+        val prefs = context.getSharedPreferences("futurevoice", 0)
+        val k = key(uid, language)
+        prefs.edit().putInt(k, maxOf(news.event_id, prefs.getInt(k, 0))).apply()
+    }
+
+    /** Debug `--ei corenews 1|2`: a sample arrival, no server (1 = no seat yet, 2 = seated). */
+    fun preview(seated: Boolean) = CoreClubClient.NewMember(event_id = 1, index = 0, name = "민지", theme = 4,
+        viewer_seated = seated)
 }

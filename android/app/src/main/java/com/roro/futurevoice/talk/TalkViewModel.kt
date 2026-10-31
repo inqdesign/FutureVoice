@@ -2629,6 +2629,8 @@ object TalkEntry {
     /** The empty Review page's "Start a talk". */
     const val PRACTICE_EMPTY = "practice_empty"
     const val WATCH_PERSON = "watch_person"
+    /** "Your turn" on the news of a new Core member. */
+    const val CORE_NEWS = "core_news"
     const val RESUME = "resume"
     const val OTHER = "other"
 }

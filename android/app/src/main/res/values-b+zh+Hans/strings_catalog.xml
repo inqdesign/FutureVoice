@@ -500,6 +500,7 @@
     <string name="copy_the_fluent_self_s_lines_then_make_them_yours">"抄下流利的自己说的句子，再变成你自己的"</string>
     <string name="copy_the_sentence">"抄写句子"</string>
     <string name="coral">"珊瑚"</string>
+    <string name="core_member_no_lld_is_here">"核心迎来第 %d 位成员！"</string>
     <string name="corrections">"修正"</string>
     <string name="corrections_and_notes_only">"只有修正和笔记"</string>
     <!-- "Corrections sit inside your own lines, so they're hidden too." -->
@@ -2229,6 +2230,8 @@
     <!-- '%.1f verified grammar slips per 100 spoken words — the same density the assessment weighs.' -->
     <string name="s_1f_verified_grammar_slips_per_100_spoken_words_the_same_de_b8c9f0">"每说 100 个字有 %.1f 个确认到的语法错误，和等级评估看的是同一个数字。"</string>
     <string name="s_2_seconds">"2 秒"</string>
+    <!-- '30 days in a row without missing one. Leave a heart or a short cheer.' -->
+    <string name="s_30_days_in_a_row_without_missing_one_leave_a_heart_or_a_sh_0d416d">"连续 30 天，一天都没落下。送个爱心或一句加油吧。"</string>
     <string name="s_3_days">"3天"</string>
     <string name="said_lld">"说过%d次"</string>
     <string name="same_as_before">"没有变化"</string>
@@ -2593,6 +2596,7 @@
     <string name="talk_e55e91">"对话"</string>
     <string name="talk_for_about_10_minutes">"说大约 10 分钟"</string>
     <string name="talk_lld_minutes_a_day_lld_days_in_a_row">"每天通话%1$d分钟，连续%2$d天。"</string>
+    <string name="talk_lld_minutes_a_day_lld_days_in_a_row_and_a_seat_is_yours">"每天聊 %1$d 分钟，连续 %2$d 天，就能在核心占一个座位。"</string>
     <!-- "Talk %lld more minutes and this level gets re-read from everything new you've said." -->
     <string name="talk_lld_more_minutes_and_this_level_gets_re_read_from_every_b72704">"再聊%d分钟，就会把这段时间新说的话全部拿来重新判定水平。"</string>
     <string name="talk_mastered">"通话完成"</string>
@@ -2604,6 +2608,7 @@
     <string name="talk_the_way_you_would_on_the_phone_there_s_no_button_to_hol_f6c495">"像打电话一样说就行，不需要按住任何按钮。"</string>
     <string name="talk_then_pause">"说完，停一下"</string>
     <string name="talk_time">"通话时间"</string>
+    <string name="talk_today">"今天聊一聊"</string>
     <!-- 'Talk with your fluent self like a live phone call — every reply in your cloned voice.' -->
     <string name="talk_with_your_fluent_self_like_a_live_phone_call_every_repl_d69f26">"和流利的自己像讲真正的电话一样即时对话，每句回答都是你克隆的声音。"</string>
     <string name="talk_your_fill_every_day">"每天聊个够也用不完"</string>
@@ -3460,6 +3465,7 @@
     <string name="you_re_in_the_pool_other_learners_can_find_and_talk_with_you_b020a3">"已经加入人物池，其他学%s的人可以找到你的角色来对话。"</string>
     <string name="you_re_lld">"第 %d 名"</string>
     <string name="you_re_lld_of_lld_in_pick_up_where_you_left_off">"%2$d题里已经做了%1$d题，接着做吧。"</string>
+    <string name="you_re_on_day_lld_lld_more_days_to_the_core">"你已坚持到第 %1$d 天，离核心还有 %2$d 天。"</string>
     <string name="you_re_on_the_board">"你上榜了"</string>
     <string name="you_re_on_the_it_converts_unless_you_cancel">"目前在%s。不取消的话，会直接转成付费。"</string>
     <string name="you_re_on_the_it_ends_on">"目前在%1$s。%2$s结束，不会扣款。"</string>
@@ -3691,6 +3697,7 @@
     <string name="your_trial_starts_lld_minutes_of_talk_to_use_across_the_lld_153af7">"试用开始：%2$d天内可用的%1$d分钟通话，加上它带来的所有复习。"</string>
     <!-- 'Your trial starts — talk time on us, and all the review it produces.' -->
     <string name="your_trial_starts_talk_time_on_us_and_all_the_review_it_prod_1afe94">"试用开始。通话时间由我们请客，加上它带来的所有复习。"</string>
+    <string name="your_turn">"轮到你了"</string>
     <!-- 'Your turns average %lld words — add detail: how things felt, not just what happened.' -->
     <string name="your_turns_average_lld_words_add_detail_how_things_felt_not_b4c918">"每次发言平均%d个字。除了发生了什么，也说说当时的感觉。"</string>
     <string name="your_video">"视频"</string>

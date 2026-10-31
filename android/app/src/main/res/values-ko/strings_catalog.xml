@@ -510,6 +510,7 @@
     <string name="copy_the_fluent_self_s_lines_then_make_them_yours">"유창해진 나의 문장을 따라 쓰고 내 것으로 만들기"</string>
     <string name="copy_the_sentence">"문장 따라 쓰기"</string>
     <string name="coral">"코랄"</string>
+    <string name="core_member_no_lld_is_here">"%d번째 코어 멤버가 탄생했어요!"</string>
     <string name="corrections">"교정"</string>
     <string name="corrections_and_notes_only">"교정과 노트만"</string>
     <!-- "Corrections sit inside your own lines, so they're hidden too." -->
@@ -2259,6 +2260,8 @@
     <!-- '%.1f verified grammar slips per 100 spoken words — the same density the assessment weighs.' -->
     <string name="s_1f_verified_grammar_slips_per_100_spoken_words_the_same_de_b8c9f0">"말한 100단어당 확인된 문법 실수 %.1f개 — 레벨 평가가 보는 바로 그 수치예요."</string>
     <string name="s_2_seconds">"2초"</string>
+    <!-- '30 days in a row without missing one. Leave a heart or a short cheer.' -->
+    <string name="s_30_days_in_a_row_without_missing_one_leave_a_heart_or_a_sh_0d416d">"하루도 빠짐없이 30일 연속으로 해냈어요. 하트나 짧은 응원을 남겨 주세요."</string>
     <string name="s_3_days">"3일"</string>
     <string name="said_lld">"말한 횟수 %d번"</string>
     <string name="same_as_before">"변화 없음"</string>
@@ -2626,6 +2629,7 @@
     <string name="talk_e55e91">"대화"</string>
     <string name="talk_for_about_10_minutes">"10분 정도 말하기"</string>
     <string name="talk_lld_minutes_a_day_lld_days_in_a_row">"Talk 하루 %1$d분씩, %2$d일 연속."</string>
+    <string name="talk_lld_minutes_a_day_lld_days_in_a_row_and_a_seat_is_yours">"하루 %1$d분씩 %2$d일 연속으로 통화하면 코어에 자리가 생겨요."</string>
     <!-- "Talk %lld more minutes and this level gets re-read from everything new you've said." -->
     <string name="talk_lld_more_minutes_and_this_level_gets_re_read_from_every_b72704">"%d분 더 대화하면 그동안 새로 말한 걸 전부 모아 레벨을 다시 판정해요."</string>
     <string name="talk_mastered">"대화 완료"</string>
@@ -2637,6 +2641,7 @@
     <string name="talk_the_way_you_would_on_the_phone_there_s_no_button_to_hol_f6c495">"전화하듯 말하면 돼요. 버튼을 누르고 있을 필요가 없어요."</string>
     <string name="talk_then_pause">"말하고, 잠깐 멈추기"</string>
     <string name="talk_time">"통화 시간"</string>
+    <string name="talk_today">"오늘 통화하기"</string>
     <!-- 'Talk with your fluent self like a live phone call — every reply in your cloned voice.' -->
     <string name="talk_with_your_fluent_self_like_a_live_phone_call_every_repl_d69f26">"유창해진 나와 진짜 전화처럼 실시간으로 대화해요. 대답은 전부 복제한 내 목소리로 들려요."</string>
     <string name="talk_your_fill_every_day">"매일 실컷 이야기해도 남아요"</string>
@@ -3509,6 +3514,7 @@
     <string name="you_re_in_the_pool_other_learners_can_find_and_talk_with_you_b020a3">"풀에 등록됐어요 — 다른 %s 학습자들이 내 페르소나를 찾아 대화할 수 있어요."</string>
     <string name="you_re_lld">"%d위예요"</string>
     <string name="you_re_lld_of_lld_in_pick_up_where_you_left_off">"%2$d문제 중 %1$d문제까지 풀었어요. 이어서 풀어요."</string>
+    <string name="you_re_on_day_lld_lld_more_days_to_the_core">"지금 %1$d일째예요. 코어까지 %2$d일 남았어요."</string>
     <string name="you_re_on_the_board">"순위에 올랐어요"</string>
     <string name="you_re_on_the_it_converts_unless_you_cancel">"%s 중이에요. 해지하지 않으면 그대로 결제로 이어져요."</string>
     <string name="you_re_on_the_it_ends_on">"%1$s 중이에요. %2$s에 끝나고 결제되지 않아요."</string>
@@ -3741,6 +3747,7 @@
     <string name="your_trial_starts_lld_minutes_of_talk_to_use_across_the_lld_153af7">"체험이 시작돼요. %2$d일 동안 쓸 수 있는 통화 %1$d분과, 거기서 나오는 모든 복습이 함께예요."</string>
     <!-- 'Your trial starts — talk time on us, and all the review it produces.' -->
     <string name="your_trial_starts_talk_time_on_us_and_all_the_review_it_prod_1afe94">"체험이 시작돼요. 통화 시간은 저희가 낼게요. 거기서 나오는 모든 복습도 함께예요."</string>
+    <string name="your_turn">"나도 도전하기"</string>
     <!-- 'Your turns average %lld words — add detail: how things felt, not just what happened.' -->
     <string name="your_turns_average_lld_words_add_detail_how_things_felt_not_b4c918">"한 번 말할 때 평균 %d단어예요. 무슨 일이 있었는지에 더해 어떤 기분이었는지도 말해 보세요."</string>
     <string name="your_video">"영상"</string>

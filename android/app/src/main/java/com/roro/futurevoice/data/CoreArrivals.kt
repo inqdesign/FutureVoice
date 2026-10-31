@@ -16,7 +16,8 @@ import kotlinx.serialization.builtins.ListSerializer
 import okhttp3.Request
 
 /**
- * Someone took a seat in the Core — `CoreClubService.announceArrivals`.
+ * The Core filled up — `CoreClubService.announceArrivals`. (A new member is
+ * no longer posted here: see `CoreNewsStore`.)
  *
  * There is no push infrastructure, so this is the honest version: the app
  * notices on FOREGROUND and posts a quiet local notification. It arrives
@@ -60,54 +61,19 @@ object CoreArrivals {
         // not dump the club's whole history onto the lock screen.
         if (lastSeen == null) return
 
-        val me = myUserId?.lowercase()
-        // A returning member slipping back into a seat is not an arrival, and
-        // nobody gets told about their own.
-        val arrivals = rows.filter {
-            it.kind == "seated" && it.first_time && it.user_id?.lowercase() != me
-        }
         rows.lastOrNull { it.kind == "club_full" }?.let {
             post(context, com.roro.futurevoice.core.UILanguage.localized(context).getString(R.string.the_core_is_full_all_lld_seats_taken, it.club_size),
                 "core.full")
         }
-        if (arrivals.isEmpty()) return
-
-        // Coalesced: several arrivals in one poll are one line, not a pile.
-        if (arrivals.size > 1) {
-            val last = arrivals.last()
-            post(context, context.getString(
-                R.string.lld_new_members_joined_lld_seats_taken, arrivals.size, last.club_size),
-                "core.arrivals.${last.id}")
-            return
-        }
-        val one = arrivals.first()
-        val name = displayName(token, one.user_id)
-        val body = if (name != null) {
-            com.roro.futurevoice.core.UILanguage.localized(context).getString(R.string.joined_the_core_lld_seats_taken, name, one.club_size)
-        } else {
-            com.roro.futurevoice.core.UILanguage.localized(context).getString(R.string.someone_joined_the_core_lld_seats_taken, one.club_size)
-        }
-        post(context, body, "core.arrival.${one.id}")
+        // Arrivals are no longer posted here: since 2026-10-30 a new member is
+        // told once they have finished their welcome, by a sheet
+        // (`core_new_member`, `CoreNewsStore`). Builds before that still post them.
     }
 
     private suspend fun fetch(token: String, after: Int): List<Event> = withContext(Dispatchers.IO) {
         get(token, "core_events?select=id,kind,user_id,club_size,first_time" +
             "&kind=in.(seated,club_full)&id=gt.$after&order=id.asc&limit=200",
             Event.serializer())
-    }
-
-    /** The public pool is the only place a name may be read from — a member
-     *  who never published an intro stays "someone". */
-    @Serializable
-    private data class Persona(val display_name: String = "")
-
-    private suspend fun displayName(token: String, userId: String?): String? {
-        val id = userId?.takeIf { it.isNotBlank() } ?: return null
-        return withContext(Dispatchers.IO) {
-            get(token, "public_personas?select=display_name&owner_user_id=eq.$id&limit=1",
-                Persona.serializer())
-                .firstOrNull()?.display_name?.takeIf { it.isNotBlank() }
-        }
     }
 
     /** Quiet by construction: no sound. The daily call is the habit anchor

@@ -550,6 +550,10 @@ fun RootScreen() {
     // balance, so without this nobody is told the minutes exist (iOS
     // `ef9af00`). Once per install, and never to someone who has talked.
     var welcomeMinutes by remember { mutableStateOf<Int?>(null) }
+    /** A new member of this language's Core, for everyone else to cheer
+     *  (iOS `coreNews`, `CoreNewsStore`). Declared up here because every
+     *  other sheet waits while it is up. */
+    var coreNews by remember { mutableStateOf<com.roro.futurevoice.net.CoreClubClient.NewMember?>(null) }
     /** The store's trial, offered once after onboarding when the server says
      *  so (iOS `showingTrialOffer`, `BillingConfig.trialOfferAt`). */
     var showTrialOffer by remember { mutableStateOf(false) }
@@ -649,7 +653,7 @@ fun RootScreen() {
         val anotherSheetUp = showAgeCheck || paywalled || showTrialOffer || welcomeMinutes != null || showIntroPreview ||
             inCall || state.levelUp != null || referralJoin != null ||
             com.roro.futurevoice.data.AppUpdateService.pending.value != null ||
-            com.roro.futurevoice.data.PageIntroStore.showing.value
+            com.roro.futurevoice.data.PageIntroStore.showing.value || coreNews != null
         if (!showWhatsNew && !anotherSheetUp && WhatsNew.isDue(context, state.setupComplete)) showWhatsNew = true
     }
     var whatsNewGoals by remember { mutableStateOf(false) }
@@ -723,7 +727,7 @@ fun RootScreen() {
         ready = state.setupComplete && state.voiceId != null && tabsArrived,
         blocked = inCall || trialReportUp || paywalled || showIntroPreview || state.levelUp != null ||
             referralJoin != null || welcomeMinutes != null || updatePending != null || guideUp ||
-            showAgeCheck || showWhatsNew,
+            showAgeCheck || showWhatsNew || coreNews != null,
         level = state.level,
         onShowing = { weekRecapUp = it },
     )
@@ -735,7 +739,7 @@ fun RootScreen() {
         inCall = inCall,
         blocked = inCall || weekRecapUp || paywalled || showIntroPreview || state.levelUp != null ||
             referralJoin != null || welcomeMinutes != null || updatePending != null || guideUp ||
-            showAgeCheck || showWhatsNew,
+            showAgeCheck || showWhatsNew || coreNews != null,
         level = state.level,
         onMeasuredLevel = { app.applyMeasuredLevel(it, announce = false) },
         voiceId = state.speakingVoiceId,
@@ -760,9 +764,10 @@ fun RootScreen() {
         }
         if (coreWelcome == null) coreCandidate = CoreWelcomeStore.due(context, state.targetLanguage)
     }
-    val coreBlocked = inCall || weekRecapUp || trialReportUp || paywalled || showIntroPreview ||
+    val coreSheetsBlocked = inCall || weekRecapUp || trialReportUp || paywalled || showIntroPreview ||
         state.levelUp != null || referralJoin != null || welcomeMinutes != null || updatePending != null ||
         guideUp || showAgeCheck || showWhatsNew
+    val coreBlocked = coreSheetsBlocked || coreNews != null
     LaunchedEffect(coreCandidate, coreBlocked) {
         if (coreCandidate != null && !coreBlocked && coreWelcome == null) {
             coreWelcome = coreCandidate; coreCandidate = null
@@ -770,6 +775,54 @@ fun RootScreen() {
     }
     coreWelcome?.let { seat ->
         CoreWelcome(seat, state.persona?.displayName.orEmpty()) { coreWelcome = null }
+    }
+
+    // Someone in this language just finished their Core welcome: everyone
+    // else sees their cube once, to cheer, with their own way in under it
+    // (iOS `offerCoreNews`). Asked on arrival, on coming back to the
+    // foreground and whenever a call ends; waits for the learner's own
+    // welcome and anything else on screen. iOS also asks from a push tap;
+    // Android has no server push.
+    // Debug: `--ei corenews 1|2` raises a sample arrival (1 = no seat yet, 2 = seated).
+    var coreNewsCandidate by remember { mutableStateOf<com.roro.futurevoice.net.CoreClubClient.NewMember?>(null) }
+    var debugNewsUsed by remember { mutableStateOf(false) }
+    val coreNewsResumed = androidx.compose.ui.platform.LocalLifecycleOwner.current.lifecycle
+        .currentStateFlow.collectAsStateWithLifecycle().value
+        .isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
+    LaunchedEffect(state.setupComplete, tabsArrived, state.targetLanguage, inCall, coreNewsResumed) {
+        if (!state.setupComplete || !tabsArrived || inCall || !coreNewsResumed) return@LaunchedEffect
+        val debugNews = debugIntent?.getIntExtra("corenews", 0) ?: 0
+        if (debugNews != 0 && !debugNewsUsed && coreNews == null) {
+            debugNewsUsed = true
+            coreNews = CoreNewsStore.preview(seated = debugNews == 2)
+            return@LaunchedEffect
+        }
+        if (coreNews != null || coreWelcome != null || coreCandidate != null) return@LaunchedEffect
+        coreNewsCandidate = CoreNewsStore.due(context, state.targetLanguage)
+    }
+    LaunchedEffect(coreNewsCandidate, coreSheetsBlocked, coreWelcome, coreCandidate) {
+        val news = coreNewsCandidate ?: return@LaunchedEffect
+        if (coreSheetsBlocked || coreNews != null || coreWelcome != null || coreCandidate != null) return@LaunchedEffect
+        CoreNewsStore.markShown(context, news, state.targetLanguage)
+        coreNews = news; coreNewsCandidate = null
+    }
+    // Outlives the sheet: "Talk today" closes it, then opens the call.
+    val coreNewsScope = rememberCoroutineScope()
+    coreNews?.let { news ->
+        CoreSeatSheet(state.targetLanguage, news.index, onDismiss = { coreNews = null },
+            preview = if (news == CoreNewsStore.preview(news.viewer_seated) && debugNewsUsed)
+                com.roro.futurevoice.net.CoreClubClient.SeatDetail(0, 4, news.name, false, news.viewer_seated,
+                    if (news.viewer_seated) "내년엔 영어로 발표하기" else null, 1, "2026-10-29") to
+                    com.roro.futurevoice.net.CoreClubClient.Cheers()
+            else null,
+            news = news,
+            onTalk = {
+                // After the sheet has gone, or the call opens under it.
+                coreNewsScope.launch {
+                    delay(450)
+                    DeepLinkInbox.requestFreeTalk(com.roro.futurevoice.talk.TalkEntry.CORE_NEWS)
+                }
+            })
     }
     if (debugSeat != 0) {
         val mineSample = debugSeat == 1

@@ -497,6 +497,7 @@
     <string name="copy_the_fluent_self_s_lines_then_make_them_yours">"Copia las frases de tu yo fluido y hazlas tuyas"</string>
     <string name="copy_the_sentence">"Copia la frase"</string>
     <string name="coral">"Coral"</string>
+    <string name="core_member_no_lld_is_here">"¡El Núcleo tiene su miembro n.º %d!"</string>
     <string name="corrections">"Correcciones"</string>
     <string name="corrections_and_notes_only">"Solo correcciones y notas"</string>
     <!-- "Corrections sit inside your own lines, so they're hidden too." -->
@@ -2226,6 +2227,8 @@
     <!-- '%.1f verified grammar slips per 100 spoken words — the same density the assessment weighs.' -->
     <string name="s_1f_verified_grammar_slips_per_100_spoken_words_the_same_de_b8c9f0">"%.1f fallos de gramática confirmados por cada 100 palabras habladas: la misma densidad que pesa la evaluación."</string>
     <string name="s_2_seconds">"2 segundos"</string>
+    <!-- '30 days in a row without missing one. Leave a heart or a short cheer.' -->
+    <string name="s_30_days_in_a_row_without_missing_one_leave_a_heart_or_a_sh_0d416d">"30 días seguidos, sin faltar ni uno. Déjale un corazón o un ánimo corto."</string>
     <string name="s_3_days">"3 días"</string>
     <string name="said_lld">"Dicho %d×"</string>
     <string name="same_as_before">"igual que antes"</string>
@@ -2590,6 +2593,7 @@
     <string name="talk_e55e91">"conversación"</string>
     <string name="talk_for_about_10_minutes">"Habla unos 10 minutos"</string>
     <string name="talk_lld_minutes_a_day_lld_days_in_a_row">"Habla %1$d minutos al día, %2$d días seguidos."</string>
+    <string name="talk_lld_minutes_a_day_lld_days_in_a_row_and_a_seat_is_yours">"Habla %1$d minutos al día, %2$d días seguidos, y tendrás tu asiento."</string>
     <!-- "Talk %lld more minutes and this level gets re-read from everything new you've said." -->
     <string name="talk_lld_more_minutes_and_this_level_gets_re_read_from_every_b72704">"Habla %d minutos más y volvemos a leer este nivel con todo lo nuevo que has dicho."</string>
     <string name="talk_mastered">"Llamada completada"</string>
@@ -2601,6 +2605,7 @@
     <string name="talk_the_way_you_would_on_the_phone_there_s_no_button_to_hol_f6c495">"Habla como lo harías por teléfono. No hay que mantener pulsado ningún botón."</string>
     <string name="talk_then_pause">"Habla y haz una pausa"</string>
     <string name="talk_time">"Tiempo de conversación"</string>
+    <string name="talk_today">"Hablar hoy"</string>
     <!-- 'Talk with your fluent self like a live phone call — every reply in your cloned voice.' -->
     <string name="talk_with_your_fluent_self_like_a_live_phone_call_every_repl_d69f26">"Habla con tu yo fluido como en una llamada de verdad, en directo. Cada respuesta suena con tu voz clonada."</string>
     <string name="talk_your_fill_every_day">"Habla todo lo que quieras cada día y aún te sobra"</string>
@@ -3457,6 +3462,7 @@
     <string name="you_re_in_the_pool_other_learners_can_find_and_talk_with_you_b020a3">"Ya estás en el grupo: otras personas que aprenden %s pueden encontrar tu personaje y hablar con él."</string>
     <string name="you_re_lld">"Puesto %d"</string>
     <string name="you_re_lld_of_lld_in_pick_up_where_you_left_off">"Llevas %1$d de %2$d. Sigue donde lo dejaste."</string>
+    <string name="you_re_on_day_lld_lld_more_days_to_the_core">"Vas por el día %1$d. Te faltan %2$d días para el Núcleo."</string>
     <string name="you_re_on_the_board">"Ya estás en la clasificación"</string>
     <string name="you_re_on_the_it_converts_unless_you_cancel">"Estás en %s. Si no cancelas, pasa a cobro automático."</string>
     <string name="you_re_on_the_it_ends_on">"Estás en %1$s. Termina el %2$s, sin ningún cobro."</string>
@@ -3688,6 +3694,7 @@
     <string name="your_trial_starts_lld_minutes_of_talk_to_use_across_the_lld_153af7">"Empieza la prueba: %1$d minutos de conversación para usar en los %2$d días, y todo el repaso que sale de ahí."</string>
     <!-- 'Your trial starts — talk time on us, and all the review it produces.' -->
     <string name="your_trial_starts_talk_time_on_us_and_all_the_review_it_prod_1afe94">"Empieza la prueba: tiempo de conversación por nuestra cuenta y todo el repaso que sale de ahí."</string>
+    <string name="your_turn">"Tu turno"</string>
     <!-- 'Your turns average %lld words — add detail: how things felt, not just what happened.' -->
     <string name="your_turns_average_lld_words_add_detail_how_things_felt_not_b4c918">"Tus turnos son de %d palabras de media. Añade detalle: no solo qué pasó, también cómo te sentiste."</string>
     <string name="your_video">"Video"</string>
