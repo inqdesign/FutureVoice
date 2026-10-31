@@ -230,7 +230,7 @@ struct ConversationHome: View {
                 guard let call else { return }
                 tutorBot.goalCall = nil
                 BillingGate.start(orShow: $showingPaywall) {
-                    callLaunch = CallLaunch(topic: call.topic, blurb: call.blurb, entry: .tutorBot, tutor: true)
+                    callLaunch = CallLaunch(topic: call.topic, blurb: call.blurb, entry: .tutorBot, tutor: call.tutor)
                 }
             }
             .onChange(of: appState.talkHomeReloadToken) { _, _ in

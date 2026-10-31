@@ -2994,6 +2994,55 @@ that back. `TutorLesson.swift`, `TutorLessonViews.swift`,
   printed): after the fix, move-on 3/3 ko, 2–3/3 en; the flash-lite hedge
   moves on 4/4. Not yet tried in a real call.
 
+## The tutor bot is an AGENT, and the center of the app (2026-10-30)
+
+Founder: learners find the app "difficult, too many things to do"; the tutor
+(the face at the Talk tab's bottom right, `TutorBot`) is meant to be the one
+place where they never lose what to do, and it "really needs to feel like an
+agent". Rule for everything here: **no new screens or concepts** — improve
+and merge what exists.
+
+- **Today is CHOSEN** (`TutorTodayRows`, `TutorToday.ranked`). The note and
+  the chat's first message show ONE thing now (with why), one next, and the
+  rest folded under "N more today" — never the routine and every pick side by
+  side (it said "2 things" over six rows). Order in code: a routine block
+  whose time is on · the nearest goal's next piece not opened today · the
+  routine's next block · other picks · the rest. The headline counts the
+  ROUTINE ("Your routine today: 2 things"). Tests: `TutorAgentPromptDumpTests`.
+- **The chat answers what was asked, then guides** (`TutorChat`,
+  `TutorAgent.swift`). Before this it was told "your one job is the next
+  step" with a fixed snapshot attached, so "more Lufthansa model answers"
+  came back as "47 cards are waiting". Now: a manual of every feature
+  (`TutorAgent.manual`), an always-on context (routine, goals with their
+  material, last talks WITH ids, recurring mistakes, the student file), and
+  LOOKUPS the model asks for when that isn't enough (`TutorTools`: talks,
+  one talk's conversation and fixes, search their lines, mistakes, notebook,
+  cards, progress, goals, routine, scenarios). A JSON protocol over plain
+  `sendJSON` (`{"lookup": [...]}` or `{"reply", "actions"}`, ≤3 rounds) —
+  not provider tool calling, which the edge function strips, so no deploy.
+- **A button only OPENS something** (`TutorAction`, `TutorBot.perform`): a
+  call on a topic, a tutor lesson, a book, a goal's reading or model answer,
+  a word or expression card, review/shadow/listen/speech/test/quiz, the
+  routine, call settings. Nothing the tutor hands out changes data, so
+  following it can't hurt. An id not on the phone, or a word not in the
+  notebook, drops the button rather than drawing a dead one.
+- **Material it writes is memorized, so it must be correct and TRUE**: only
+  facts about the learner that are in the data; a story it has to invent is
+  labelled as an example to replace. Measured: Haiku put "I speak English,
+  German and some Korean" in a Korean learner's interview answer before this
+  rule.
+- **The thread is kept** per target language (`Documents/lang/<code>/
+  tutor_chat.json`, 80 messages, device-local, ⋯ → Clear); older days carry
+  a date in the prompt and on screen. A plain-text answer (no JSON) is shown
+  as the answer with no buttons.
+- `scripts/tutor-agent-probe.py <dump> gemini|haiku|both` runs the exact
+  prompt over a fixture learner and PRINTS every answer — read them. The
+  prompt is dumped by `TutorAgentPromptDumpTests` with
+  `TEST_RUNNER_PROMPT_DUMP_DIR`.
+- Not built: Android (owed), actions that change data (add a goal, move a
+  block — they'd need a confirm step), the weekly feedback cards in "Your
+  week" (proposed to the founder as a mockup first).
+
 ## Android moves WITH iOS (2026-10-07)
 
 Android (`/Users/eunggyuelee/FutureVoice-android`, branch `feat/android`) has

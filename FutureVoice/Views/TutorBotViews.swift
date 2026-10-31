@@ -158,11 +158,8 @@ private struct TutorNoteCard: View {
                 }
                 .buttonStyle(.plain)
             }
-            if !bot.picks.isEmpty {
-                TutorPickRows(picks: Array(bot.picks.prefix(3)), balance: bot.balance)
-            }
-            if !t.items.isEmpty {
-                TutorPlanRows(today: t)
+            if !bot.picks.isEmpty || !t.items.isEmpty {
+                TutorTodayRows()
             }
             HStack(spacing: 10) {
                 if t.suggested {
@@ -343,25 +340,32 @@ struct TutorChatView: View {
                                 if let why = TutorCopy.why(bot.today) {
                                     Text(why).font(.subheadline).foregroundStyle(.secondary)
                                 }
-                                if !bot.picks.isEmpty {
-                                    TutorPickRows(picks: bot.picks, balance: bot.balance).padding(.top, 4)
-                                }
-                                if !bot.today.items.isEmpty {
-                                    TutorPlanRows(today: bot.today).padding(.top, 4)
+                                if !bot.picks.isEmpty || !bot.today.items.isEmpty {
+                                    TutorTodayRows().padding(.top, 4)
                                 }
                             }
                         }
                         DialogueLine(speaker: .other, name: tutorName) {
                             Text("Ask me anything about your practice. I answer from your own talks, cards and routine.")
                         }
-                        ForEach(chat.messages) { m in
+                        ForEach(Array(chat.messages.enumerated()), id: \.element.id) { i, m in
+                            // A day's first message carries its date: the
+                            // thread is kept, so yesterday's answer must not
+                            // read as today's.
+                            if i == 0 || !Calendar.current.isDate(chat.messages[i - 1].at, inSameDayAs: m.at) {
+                                Text(m.at.formatted(.dateTime.weekday(.abbreviated).month().day()))
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .frame(maxWidth: .infinity)
+                            }
                             messageLine(m).id(m.id)
                         }
                         if chat.thinking {
                             DialogueLine(speaker: .other, name: tutorName) {
                                 HStack(spacing: 8) {
                                     ProgressView()
-                                    Text("Thinking…").foregroundStyle(.secondary)
+                                    Text(chat.status.isEmpty ? explain("Thinking…") : chat.status)
+                                        .foregroundStyle(.secondary)
                                 }
                             }
                             .id("thinking")
@@ -385,6 +389,18 @@ struct TutorChatView: View {
                     Button { dismiss() } label: { Image(systemName: "xmark") }
                         .accessibilityLabel(Text("Close"))
                 }
+                if !chat.messages.isEmpty {
+                    ToolbarItem(placement: .primaryAction) {
+                        AppMenu {
+                            Button(role: .destructive) { chat.clear() } label: {
+                                Label("Clear this chat", systemImage: "trash")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis")
+                        }
+                        .accessibilityLabel(Text("More"))
+                    }
+                }
             }
             // The call's own bottom bar (`fadingBottomBar`): the messages
             // dissolve under the chips and the box instead of being cut.
@@ -393,6 +409,7 @@ struct TutorChatView: View {
         .sheet(item: $bot.reading) { r in
             TutorReadingSheet(reading: r).environmentObject(appState)
         }
+        .sheet(isPresented: $bot.callSettingsOpen) { CallSettingsSheet() }
         .sheet(isPresented: $addingGoal) {
             UpcomingGoalEditor(goal: nil, language: appState.targetLanguage).environmentObject(appState)
         }
@@ -406,7 +423,7 @@ struct TutorChatView: View {
                 dictationLocale = SpeakOrTypeField.defaultLocale(appLanguage: appState.nativeLanguage,
                                                                  targetLanguage: appState.targetLanguage)
             }
-            chat.resetIfNewDay()
+            chat.load(language: appState.targetLanguage)
             bot.refresh(appState: appState, visible: false)
             Analytics.capture("tutor_bot_opened")
         }
@@ -453,16 +470,15 @@ struct TutorChatView: View {
             DialogueLine(speaker: .other, name: tutorName) {
                 Text(m.text).textSelection(.enabled)
             } accessory: {
-                if let kind = m.action {
-                    Button { bot.start(kind, appState: appState) } label: {
-                        Label(TutorCopy.startTitle(kind), systemImage: kind.symbol)
+                if !m.actions.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(Array(m.actions.enumerated()), id: \.offset) { i, action in
+                            Button { bot.perform(action, appState: appState) } label: {
+                                Label(action.title, systemImage: action.symbol)
+                            }
+                            .buttonStyle(SoftChipStyle(selected: i == 0))
+                        }
                     }
-                    .buttonStyle(SoftChipStyle(selected: true))
-                } else if m.quiz {
-                    Button { bot.start(nil, appState: appState) } label: {
-                        Label("Quick quiz", systemImage: "questionmark.circle")
-                    }
-                    .buttonStyle(SoftChipStyle(selected: true))
                 }
             }
         }
@@ -562,11 +578,13 @@ enum TutorCopy {
         if t.items.isEmpty { return explain("Nothing planned today.") }
         if t.allDone { return explain("Everything for today is done. See you tomorrow.") }
         if t.suggested { return explain("You don't have a routine yet, so here's what I'd do today.") }
+        // The count is the ROUTINE's: the list under it also holds the
+        // tutor's picks, and "2 things" over six rows read as wrong.
         let left = t.left.count
         if left == t.items.count {
-            return explain("Today: \(left) things, about \(t.minutesLeft) minutes.")
+            return explain("Your routine today: \(left) things, about \(t.minutesLeft) minutes.")
         }
-        return explain("\(t.items.count - left) done, \(left) to go, about \(t.minutesLeft) minutes.")
+        return explain("Routine: \(t.items.count - left) done, \(left) to go, about \(t.minutesLeft) minutes.")
     }
 
     /// Why today looks like this — one line, only when there is a reason.
@@ -622,11 +640,11 @@ struct TutorPickRows: View {
                 HStack(alignment: .center, spacing: 12) {
                     Image(systemName: pick.symbol)
                         .font(.footnote)
-                        .foregroundStyle(color(pick.kind))
+                        .foregroundStyle(Self.color(pick.kind))
                         .frame(width: 28)
                     VStack(alignment: .leading, spacing: 2) {
                         if let tag = pick.tag {
-                            Text(tag).font(.caption2.weight(.semibold)).foregroundStyle(color(pick.kind))
+                            Text(tag).font(.caption2.weight(.semibold)).foregroundStyle(Self.color(pick.kind))
                         }
                         Text(pick.title).font(.subheadline)
                             .fixedSize(horizontal: false, vertical: true)
@@ -649,7 +667,7 @@ struct TutorPickRows: View {
         }
     }
 
-    private func color(_ kind: TutorPick.Kind) -> Color {
+    static func color(_ kind: TutorPick.Kind) -> Color {
         switch kind {
         case .rankDrop: return .red
         case .newEpisode, .listen: return .cyan
