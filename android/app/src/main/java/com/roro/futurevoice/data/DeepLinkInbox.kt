@@ -46,6 +46,18 @@ object DeepLinkInbox {
 
     val pending = MutableStateFlow<Destination?>(null)
 
+    /** The word or phrase a `futurevoice://vocab?q=…` / `expressions?q=…`
+     *  link names: its card opens on the list (iOS `focusWord` /
+     *  `focusPhrase`). Read by the root with [Destination.VOCABULARY] /
+     *  [Destination.EXPRESSIONS]. */
+    val libraryFocus = MutableStateFlow<String?>(null)
+
+    /** The words or expressions page, on one item's card when [q] is set. */
+    fun openLibrary(destination: Destination, q: String?) {
+        libraryFocus.value = q?.trim()?.ifEmpty { null }
+        pending.value = destination
+    }
+
     /** The one item a per-item reminder named: (kind, value). Read by the
      *  root when it handles [Destination.REVIEW_ITEM]. */
     val reviewItem = MutableStateFlow<Pair<String, String>?>(null)
@@ -65,8 +77,10 @@ object DeepLinkInbox {
         val uri = intent?.data ?: return
         if (uri.scheme != "futurevoice") return
         pending.value = when (uri.host ?: uri.schemeSpecificPart.trimStart('/')) {
-            "vocab" -> Destination.VOCABULARY
-            "expressions" -> Destination.EXPRESSIONS
+            // A tapped widget note carries its item as ?q=… so that exact
+            // word/phrase opens; absent, the plain list (iOS `handleURL`).
+            "vocab" -> { libraryFocus.value = uri.getQueryParameter("q")?.ifBlank { null }; Destination.VOCABULARY }
+            "expressions" -> { libraryFocus.value = uri.getQueryParameter("q")?.ifBlank { null }; Destination.EXPRESSIONS }
             "practice" -> Destination.PRACTICE
             // Streak widget: open Talk so the learner does something today.
             "talk" -> { widgetRoute.value = WidgetRoute.Talk; return }

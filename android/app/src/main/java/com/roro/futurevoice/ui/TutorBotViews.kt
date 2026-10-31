@@ -90,6 +90,18 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.roro.futurevoice.R
+import com.roro.futurevoice.talk.TutorAction
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.filled.MoreHoriz
 import com.roro.futurevoice.core.Analytics
 import com.roro.futurevoice.data.LanguageCatalog
 import com.roro.futurevoice.data.QuickQuizStock
@@ -381,8 +393,7 @@ private fun TutorPlan(state: AppState, onOpenRoutine: () -> Unit) {
                 tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(18.dp))
         }
     }
-    if (TutorBot.picks.isNotEmpty()) TutorPickRows(TutorBot.picks.take(3), TutorBot.balance, state)
-    if (t.items.isNotEmpty()) TutorPlanRows(t)
+    if (TutorBot.picks.isNotEmpty() || t.items.isNotEmpty()) TutorTodayRows(state)
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         if (t.suggested) {
             SoftChip(stringResource(R.string.make_a_routine)) {
@@ -395,48 +406,6 @@ private fun TutorPlan(state: AppState, onOpenRoutine: () -> Unit) {
         Spacer(Modifier.weight(1f))
         SoftChip(stringResource(R.string.ask_me), selected = true, vector = Icons.Outlined.ChatBubbleOutline) {
             TutorBot.openChat(context)
-        }
-    }
-}
-
-/** Today's items: done ones ticked, the next one with Start. Shared by the
- *  note and the chat's first message (iOS `TutorPlanRows`). */
-@Composable
-fun TutorPlanRows(today: TutorBot.Today) {
-    val context = LocalContext.current
-    val next = today.next()
-    Column {
-        today.items.forEachIndexed { i, item ->
-            if (i > 0) HorizontalDivider(Modifier.padding(start = 40.dp),
-                color = MaterialTheme.colorScheme.outlineVariant)
-            Row(Modifier.fillMaxWidth().clickable { TutorBot.start(context, item.kind) }.padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(Modifier.width(28.dp), contentAlignment = Alignment.Center) {
-                    Icon(item.kind.icon(), contentDescription = null, tint = item.kind.color(),
-                        modifier = Modifier.size(16.dp))
-                }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                    Text(item.title, style = MaterialTheme.typography.bodyMedium,
-                        textDecoration = if (item.done) TextDecoration.LineThrough else null,
-                        color = if (item.done) MaterialTheme.colorScheme.onSurfaceVariant
-                            else MaterialTheme.colorScheme.onSurface)
-                    Text(TutorCopy.whenText(context, item), style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                when {
-                    item.done -> Icon(Icons.Filled.CheckCircle, contentDescription = null,
-                        tint = Color(0xFF34C759), modifier = Modifier.size(22.dp))
-                    item.progress > 0 -> CircularProgressIndicator(
-                        progress = { item.progress.toFloat() }, modifier = Modifier.size(20.dp),
-                        strokeWidth = 3.dp, trackColor = MaterialTheme.colorScheme.outlineVariant)
-                }
-                // The whole row starts it; the next one's chevron wears the tint
-                // (iOS 1240606d).
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
-                    tint = if (item.id == next?.id) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.size(18.dp))
-            }
         }
     }
 }
@@ -501,7 +470,7 @@ fun TutorChatView(state: AppState, onDismiss: () -> Unit) {
         TutorBot.loadPicks(context, latest.targetLanguage, latest.persona)
     }
     LaunchedEffect(Unit) {
-        TutorChat.resetIfNewDay()
+        TutorChat.load(context, latest.targetLanguage)
         TutorBot.refresh(context, latest.targetLanguage, latest.nativeLanguage, latest.level, latest.persona,
             visible = { false })
         Analytics.capture("tutor_bot_opened")
@@ -517,13 +486,26 @@ fun TutorChatView(state: AppState, onDismiss: () -> Unit) {
     }
     val list = rememberLazyListState()
     val today = TutorBot.today
+    // A day's first message carries its date: the thread is kept, so
+    // yesterday's answer must not read as today's.
+    val dayFormat = remember(LocalConfiguration.current) {
+        java.text.SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(
+            java.util.Locale.getDefault(), "EEEMMMd"), java.util.Locale.getDefault())
+    }
+    val rows = TutorChat.messages.flatMapIndexed { i, m ->
+        val newDay = i == 0 || com.roro.futurevoice.data.StudyPlan.dayKey(TutorChat.messages[i - 1].at) !=
+            com.roro.futurevoice.data.StudyPlan.dayKey(m.at)
+        listOfNotNull(if (newDay) ChatRow.Day(m.id, dayFormat.format(Date(m.at))) else null, ChatRow.Msg(m))
+    }
     // Three fixed lines lead the thread: the goals, the plan, and the offer to ask.
     LaunchedEffect(TutorChat.messages.size) {
-        if (TutorChat.messages.isNotEmpty()) list.animateScrollToItem(3 + TutorChat.messages.size - 1)
+        if (rows.isNotEmpty()) list.animateScrollToItem(3 + rows.size - 1)
     }
     LaunchedEffect(TutorChat.thinking) {
-        if (TutorChat.thinking) list.animateScrollToItem(3 + TutorChat.messages.size)
+        if (TutorChat.thinking) list.animateScrollToItem(3 + rows.size)
     }
+    var menu by remember { mutableStateOf(false) }
+    if (TutorBot.callSettingsOpen) StandaloneCallSettings(state, onDismiss = { TutorBot.callSettingsOpen = false })
     TutorBot.reading?.let { r -> if (TutorBot.chatOpen) TutorReadingSheet(r, state) }
     if (addingGoal) UpcomingGoalEditor(goal = null, language = state.targetLanguage, onDismiss = { addingGoal = false })
     goalPage?.let { g -> UpcomingGoalPage(g, state, onDismiss = { goalPage = null }) }
@@ -538,6 +520,21 @@ fun TutorChatView(state: AppState, onDismiss: () -> Unit) {
                             tint = MaterialTheme.colorScheme.onSurface)
                     }
                 },
+                trailing = if (TutorChat.messages.isEmpty()) null else ({
+                    val more = stringResource(R.string.more)
+                    Box {
+                        IosGlassButton(onClick = { menu = true }, circle = true,
+                            modifier = Modifier.semantics { contentDescription = more }) {
+                            Icon(Icons.Filled.MoreHoriz, contentDescription = null, modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSurface)
+                        }
+                        IosDropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                            IosMenuItem(stringResource(R.string.clear_this_chat), onClick = {
+                                menu = false; TutorChat.clear(context)
+                            }, icon = Icons.Outlined.Delete, destructive = true, reserveCheck = false)
+                        }
+                    }
+                }),
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp))
             LazyColumn(
                 Modifier.weight(1f).fillMaxWidth(),
@@ -555,11 +552,8 @@ fun TutorChatView(state: AppState, onDismiss: () -> Unit) {
                                 Text(why, style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            if (TutorBot.picks.isNotEmpty()) {
-                                Box(Modifier.padding(top = 4.dp)) { TutorPickRows(TutorBot.picks, TutorBot.balance, state) }
-                            }
-                            if (today.items.isNotEmpty()) {
-                                Box(Modifier.padding(top = 4.dp)) { TutorPlanRows(today) }
+                            if (TutorBot.picks.isNotEmpty() || today.items.isNotEmpty()) {
+                                Box(Modifier.padding(top = 4.dp)) { TutorTodayRows(state) }
                             }
                         }
                     }
@@ -569,24 +563,31 @@ fun TutorChatView(state: AppState, onDismiss: () -> Unit) {
                         Text(stringResource(R.string.ask_me_anything_about_your_practice_i_answer_from_your_own_t_674d72))
                     }
                 }
-                items(TutorChat.messages, key = { it.id }) { m ->
-                    if (m.fromLearner) {
-                        DialogueLine(speaker = DialogueSpeaker.USER, name = youName) { Text(m.text) }
-                    } else {
-                        DialogueLine(speaker = DialogueSpeaker.OTHER, name = tutorName, accessory = {
-                            val kind = m.action
-                            if (kind != null) {
-                                SoftChip(TutorCopy.startTitle(res, kind), selected = true, vector = kind.icon()) {
-                                    TutorBot.start(context, kind)
-                                }
-                            } else if (m.quiz) {
-                                SoftChip(stringResource(R.string.quick_quiz), selected = true,
-                                    vector = Icons.AutoMirrored.Outlined.HelpOutline) {
-                                    TutorBot.start(context, null)
+                items(rows, key = { it.key }) { row ->
+                    when (row) {
+                        is ChatRow.Day -> Text(row.label, style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth())
+                        is ChatRow.Msg -> {
+                            val m = row.message
+                            if (m.fromLearner) {
+                                DialogueLine(speaker = DialogueSpeaker.USER, name = youName) { Text(m.text) }
+                            } else {
+                                DialogueLine(speaker = DialogueSpeaker.OTHER, name = tutorName, accessory = {
+                                    if (m.actions.isNotEmpty()) {
+                                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            m.actions.forEachIndexed { i, action ->
+                                                SoftChip(action.title(res), selected = i == 0, vector = action.icon()) {
+                                                    TutorBot.perform(context, action)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }) {
+                                    SelectionContainer { Text(m.text) }
                                 }
                             }
-                        }) {
-                            SelectionContainer { Text(m.text) }
                         }
                     }
                 }
@@ -596,7 +597,7 @@ fun TutorChatView(state: AppState, onDismiss: () -> Unit) {
                             Row(verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                                Text(stringResource(R.string.thinking),
+                                Text(TutorChat.status.ifEmpty { stringResource(R.string.thinking) },
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
@@ -704,9 +705,11 @@ object TutorCopy {
         if (t.suggested) return res.getString(R.string.you_don_t_have_a_routine_yet_so_here_s_what_i_d_do_today)
         val left = t.left.size
         if (left == t.items.size) {
-            return res.getString(R.string.today_lld_things_about_lld_minutes, left, t.minutesLeft)
+            // The count is the ROUTINE's: the list under it also holds the
+            // tutor's picks, and "2 things" over six rows read as wrong.
+            return res.getString(R.string.your_routine_today_lld_things_about_lld_minutes, left, t.minutesLeft)
         }
-        return res.getString(R.string.lld_done_lld_to_go_about_lld_minutes, t.items.size - left, left, t.minutesLeft)
+        return res.getString(R.string.routine_lld_done_lld_to_go_about_lld_minutes, t.items.size - left, left, t.minutesLeft)
     }
 
     /** Why today looks like this — one line, only when there is a reason. */
@@ -742,49 +745,6 @@ object TutorCopy {
 }
 
 // MARK: - Picks
-
-/** Today's picks beyond the routine, each with why it is here now, under the
- *  week's speaking / listening / reading days (iOS `TutorPickRows`). */
-@Composable
-fun TutorPickRows(picks: List<TutorPick>, balance: TutorBalance, state: AppState) {
-    val context = LocalContext.current
-    val res = context.resources
-    Column {
-        Text(stringResource(R.string.this_week_speaking_lld_d_listening_lld_d_reading_lld_d,
-            balance.speaking, balance.listening, balance.reading),
-            style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 4.dp))
-        picks.forEachIndexed { i, pick ->
-            if (i > 0) HorizontalDivider(Modifier.padding(start = 40.dp),
-                color = MaterialTheme.colorScheme.outlineVariant)
-            val hint = pick.buttonTitle(res)
-            Row(Modifier.fillMaxWidth()
-                .clickable { TutorBot.start(context, pick, state.nativeLanguage) }
-                .semantics { contentDescription = "${pick.title}. $hint" }
-                .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(Modifier.width(28.dp), contentAlignment = Alignment.Center) {
-                    Icon(pickIcon(pick.kind), contentDescription = null, tint = pickColor(pick.kind),
-                        modifier = Modifier.size(16.dp))
-                }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    pick.tag(res)?.let { tag ->
-                        Text(tag, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold,
-                            color = pickColor(pick.kind))
-                    }
-                    Text(pick.title, style = MaterialTheme.typography.bodyMedium)
-                    if (pick.why.isNotEmpty()) {
-                        Text(pick.why, style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
-                    tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(18.dp))
-            }
-        }
-    }
-}
 
 /** iOS `TutorPick.symbol`. */
 fun pickIcon(kind: TutorPick.Kind): androidx.compose.ui.graphics.vector.ImageVector = when (kind) {
@@ -903,5 +863,187 @@ private fun TutorGoalLine(state: AppState, tutorName: String, onAdd: () -> Unit,
                 SoftChip(stringResource(R.string.add_a_goal), vector = Icons.Filled.Add, onClick = onAdd)
             }
         }
+    }
+}
+
+/** One line of the chat's thread: a day's date, or a message. */
+private sealed interface ChatRow {
+    val key: String
+    data class Day(val messageId: String, val label: String) : ChatRow { override val key get() = "day-$messageId" }
+    data class Msg(val message: TutorChat.Message) : ChatRow { override val key get() = message.id }
+}
+
+/** iOS `TutorAction.symbol`. */
+fun TutorAction.icon(): androidx.compose.ui.graphics.vector.ImageVector = when (type) {
+    TutorAction.Kind.TALK -> Icons.Filled.Phone
+    TutorAction.Kind.LESSON -> Icons.Filled.School
+    TutorAction.Kind.BOOK -> Icons.Filled.Book
+    TutorAction.Kind.GOAL -> Icons.Filled.Flag
+    TutorAction.Kind.GOAL_READING -> Icons.AutoMirrored.Filled.MenuBook
+    TutorAction.Kind.GOAL_ANSWER -> Icons.Filled.MicExternalOn
+    TutorAction.Kind.WORD, TutorAction.Kind.EXPRESSION -> Icons.Filled.Translate
+    TutorAction.Kind.REVIEW -> StudyPlan.Kind.REVIEW.icon()
+    TutorAction.Kind.SHADOW -> StudyPlan.Kind.SHADOW.icon()
+    TutorAction.Kind.SAY_IT_AGAIN -> StudyPlan.Kind.SAY_IT_AGAIN.icon()
+    TutorAction.Kind.LISTEN -> StudyPlan.Kind.LISTEN.icon()
+    TutorAction.Kind.SPEECH -> StudyPlan.Kind.SPEECH.icon()
+    TutorAction.Kind.TEST -> StudyPlan.Kind.TEST.icon()
+    TutorAction.Kind.QUIZ -> Icons.AutoMirrored.Outlined.HelpOutline
+    TutorAction.Kind.ROUTINE -> Icons.Filled.CalendarMonth
+    TutorAction.Kind.SETTINGS -> Icons.Filled.Tune
+}
+
+/** Call settings opened over the chat by a tutor button (iOS
+ *  `CallSettingsSheet()` with no call behind it): every switch writes its
+ *  setting, read by the next call. */
+@Composable
+private fun StandaloneCallSettings(state: AppState, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    var showsTranscript by remember { mutableStateOf(CallSettings.flag(context, CallSettings.SHOWS_TRANSCRIPT)) }
+    var showsCorrections by remember { mutableStateOf(CallSettings.flag(context, CallSettings.SHOWS_CORRECTIONS)) }
+    var showsGoalChips by remember { mutableStateOf(CallSettings.flag(context, CallSettings.SHOWS_GOAL_CHIPS)) }
+    var coachMode by remember {
+        mutableStateOf(com.roro.futurevoice.talk.CoachMode.resolve(
+            com.roro.futurevoice.talk.CoachMode.choice(context), state.level.code))
+    }
+    var tutorMode by remember { mutableStateOf(com.roro.futurevoice.talk.TutorMode.isOn(context)) }
+    var sendToAnswer by remember {
+        mutableStateOf(com.roro.futurevoice.talk.SendToAnswer.resolve(
+            com.roro.futurevoice.talk.SendToAnswer.choice(context), state.level.code))
+    }
+    CallSettingsSheet(
+        showsTranscript = showsTranscript, showsCorrections = showsCorrections, showsGoalChips = showsGoalChips,
+        coachMode = coachMode,
+        onCoachMode = { com.roro.futurevoice.talk.CoachMode.setChoice(context, it); coachMode = it },
+        tutorMode = tutorMode,
+        onTutorMode = { com.roro.futurevoice.talk.TutorMode.set(context, it); tutorMode = it },
+        sendToAnswer = sendToAnswer,
+        onSendToAnswer = { com.roro.futurevoice.talk.SendToAnswer.setChoice(context, it); sendToAnswer = it },
+        onFlag = { key, value ->
+            CallSettings.set(context, key, value)
+            when (key) {
+                CallSettings.SHOWS_TRANSCRIPT -> showsTranscript = value
+                CallSettings.SHOWS_CORRECTIONS -> showsCorrections = value
+                CallSettings.SHOWS_GOAL_CHIPS -> showsGoalChips = value
+            }
+        },
+        onSpeedChange = {},
+        onDismiss = onDismiss,
+    )
+}
+
+// MARK: - Today, chosen
+
+/**
+ * The note's and the chat's list (iOS `TutorTodayRows`, 57ba9c6f): now,
+ * next, and the rest folded under "N more today". The order is
+ * [com.roro.futurevoice.talk.TutorToday.ranked], fixed in code.
+ */
+@Composable
+fun TutorTodayRows(state: AppState) {
+    val context = LocalContext.current
+    val res = context.resources
+    var expanded by remember { mutableStateOf(false) }
+    val entries = com.roro.futurevoice.talk.TutorToday.ranked(TutorBot.today, TutorBot.picks,
+        opened = com.roro.futurevoice.talk.TutorToday.opened(context))
+    val open = entries.filter { !it.isDone }
+    val now = open.firstOrNull()
+    val next = open.drop(1).firstOrNull()
+    val rest = entries.filter { it.id != now?.id && it.id != next?.id }
+    @Composable fun divider() = HorizontalDivider(Modifier.padding(start = 40.dp),
+        color = MaterialTheme.colorScheme.outlineVariant)
+    @Composable fun caption(text: String) = Text(text.uppercase(), style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(start = 40.dp, top = 6.dp))
+    Column {
+        if (now != null) {
+            caption(stringResource(R.string.now))
+            TodayRow(now, prominent = true, state)
+        }
+        if (next != null) {
+            divider()
+            caption(stringResource(R.string.next))
+            TodayRow(next, prominent = false, state)
+        }
+        if (rest.isNotEmpty()) {
+            divider()
+            Row(Modifier.fillMaxWidth().clickable { expanded = !expanded }.padding(start = 40.dp)
+                .padding(vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(if (expanded) stringResource(R.string.show_less)
+                    else stringResource(R.string.lld_more_today, rest.size),
+                    style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary)
+                Icon(if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                    contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
+            }
+            if (expanded) {
+                if (TutorBot.picks.isNotEmpty()) {
+                    val b = TutorBot.balance
+                    Text(res.getString(R.string.this_week_speaking_lld_d_listening_lld_d_reading_lld_d,
+                        b.speaking, b.listening, b.reading),
+                        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 40.dp, bottom = 4.dp))
+                }
+                rest.forEachIndexed { i, e ->
+                    if (i > 0) divider()
+                    TodayRow(e, prominent = false, state)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TodayRow(e: com.roro.futurevoice.talk.TutorToday.Entry, prominent: Boolean, state: AppState) {
+    val context = LocalContext.current
+    val res = context.resources
+    when (e) {
+        is com.roro.futurevoice.talk.TutorToday.Entry.Routine -> {
+            val item = e.item
+            TodayLine(item.kind.icon(), item.kind.color(), tag = null, title = item.title,
+                detail = TutorCopy.whenText(context, item), done = item.done, progress = item.progress,
+                prominent = prominent, hint = null) { TutorBot.start(context, item.kind) }
+        }
+        is com.roro.futurevoice.talk.TutorToday.Entry.Pick -> {
+            val pick = e.pick
+            TodayLine(pickIcon(pick.kind), pickColor(pick.kind), tag = pick.tag(res), title = pick.title,
+                detail = pick.why, done = false, progress = 0.0, prominent = prominent,
+                hint = pick.buttonTitle(res)) { TutorBot.start(context, pick, state.nativeLanguage) }
+        }
+    }
+}
+
+@Composable
+private fun TodayLine(icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color, tag: String?,
+                      title: String, detail: String, done: Boolean, progress: Double, prominent: Boolean,
+                      hint: String?, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable(onClick = onClick)
+        .then(if (hint != null) Modifier.semantics { contentDescription = "$title. $hint" } else Modifier)
+        .padding(vertical = if (prominent) 10.dp else 8.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Box(Modifier.width(28.dp), contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(if (prominent) 20.dp else 16.dp))
+        }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            if (tag != null) Text(tag, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold,
+                color = color)
+            Text(title, style = if (prominent) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodyMedium,
+                fontWeight = if (prominent) FontWeight.SemiBold else null,
+                textDecoration = if (done) TextDecoration.LineThrough else null,
+                color = if (done) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface)
+            if (detail.isNotEmpty()) {
+                Text(detail, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        when {
+            done -> Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = Color(0xFF34C759),
+                modifier = Modifier.size(22.dp))
+            progress > 0 -> CircularProgressIndicator(progress = { progress.toFloat() }, modifier = Modifier.size(20.dp),
+                strokeWidth = 3.dp, trackColor = MaterialTheme.colorScheme.outlineVariant)
+        }
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+            tint = if (prominent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+            modifier = Modifier.size(18.dp))
     }
 }

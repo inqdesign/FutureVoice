@@ -448,6 +448,8 @@
     <string name="check_the_answers_at_the_back">"Check the answers at the back"</string>
     <string name="check_your_connection_and_try_again">"Check your connection and try again."</string>
     <string name="checking_in_at_a_hotel">"Checking in at a hotel"</string>
+    <string name="checking_your_cards">"Checking your cards…"</string>
+    <string name="checking_your_routine">"Checking your routine…"</string>
     <string name="childhood_friends">"Childhood friends"</string>
     <string name="choose">"Choose"</string>
     <string name="choose_a_photo">"Choose a photo"</string>
@@ -462,6 +464,7 @@
     <string name="clear">"Clear"</string>
     <!-- 'Clear, detailed talk on many topics, including some abstract ones.' -->
     <string name="clear_detailed_talk_on_many_topics_including_some_abstract_o_933630">"Clear, detailed talk on many topics, including some abstract ones."</string>
+    <string name="clear_this_chat">"Clear this chat"</string>
     <!-- 'Clear voice cache' -->
     <string name="clear_voice_cache_0d98a0">"Clear voice cache"</string>
     <!-- 'Clear voice cache?' -->
@@ -1007,6 +1010,7 @@
     <string name="go_to_review">"Go to Review"</string>
     <string name="goal">"Goal"</string>
     <string name="goal_met_how_did_it_feel">"Goal met. How did it feel?"</string>
+    <string name="going_over_your_mistakes">"Going over your mistakes…"</string>
     <string name="good_evening">"Good evening."</string>
     <string name="good_llds_more_for_the_best_result">"Good. %ds more for the best result"</string>
     <string name="good_morning">"Good morning."</string>
@@ -1439,6 +1443,7 @@
     <string name="lld_more_days">"%d more days"</string>
     <string name="lld_more_meanings">"+%d more meanings"</string>
     <string name="lld_more_min_of_new_talk">"%d more min of new talk"</string>
+    <string name="lld_more_today">"%d more today"</string>
     <string name="lld_new_members_joined_lld_seats_taken">"%1$d new members joined — %2$d seats taken."</string>
     <string name="lld_new_phrase_inflect_true_from_your_fluent_self">"^[%d new phrase](inflect: true) from your fluent self"</string>
     <string name="lld_new_review_card_inflect_true_from_your_corrections">"^[%d new review card](inflect: true) from your corrections"</string>
@@ -1516,9 +1521,12 @@
     <string name="look_up_again">"Look up again"</string>
     <string name="look_up_to_find_who_they_are_then_confirm">"Look up to find who they are, then confirm."</string>
     <string name="looked_again">"Looked again"</string>
+    <string name="looking_at_your_progress">"Looking at your progress…"</string>
+    <string name="looking_at_your_scenarios">"Looking at your scenarios…"</string>
     <string name="looking_it_up">"Looking it up…"</string>
     <string name="looking_through_your_practice">"Looking through your practice…"</string>
     <string name="looking_through_your_practice_data">"Looking through your practice data…"</string>
+    <string name="looking_through_your_talks">"Looking through your talks…"</string>
     <string name="loop">"loop %1$s–%2$s"</string>
     <string name="lost_luggage">"Lost luggage"</string>
     <string name="lots_of_inside_jokes">"Lots of inside jokes"</string>
@@ -1875,7 +1883,13 @@
     <string name="only_on">"Only on %s"</string>
     <!-- 'Camera-on takes that score %lld or more go on the board, and your best one stands. The board shows your name and score — your video and voice stay on your phone.' -->
     <string name="camera_on_takes_that_score_lld_or_more_go_on_the_board">"Camera-on takes that score %d or more go on the board, and your best one stands. The board shows your name and score — your video and voice stay on your phone."</string>
+    <string name="open_the_book">"Open the book"</string>
+    <string name="open_the_expression">"Open the expression"</string>
+    <string name="open_the_goal">"Open the goal"</string>
+    <string name="open_the_word">"Open the word"</string>
+    <string name="opening_your_notebook">"Opening your notebook…"</string>
     <string name="passed_you_can_say_it_now">"Passed. You can say it now."</string>
+    <string name="practise_it_with_the_tutor">"Practise it with the tutor"</string>
     <string name="prepared_so_far">"Prepared so far"</string>
     <!-- "Preparing for something? An interview, an exam, a presentation. Tell me what and when, and every day I'll prepare you for it." -->
     <string name="preparing_for_something_an_interview_an_exam_a_presentation_47928c">"Preparing for something? An interview, an exam, a presentation. Tell me what and when, and every day I'll prepare you for it."</string>
@@ -1888,8 +1902,12 @@
     <string name="read_once_when_you_save_files_stay_where_they_are_on_your_ph_cbc3e0">"Read once when you save. Files stay where they are on your phone."</string>
     <!-- 'Reading' -->
     <string name="reading_cffa2a">"Reading"</string>
+    <string name="reading_that_talk">"Reading that talk…"</string>
+    <string name="reading_your_goals">"Reading your goals…"</string>
     <string name="red_skipped_or_read_differently_the_small_red_words">"Red: skipped or read differently. The small red words are what the mic heard."</string>
+    <string name="routine_lld_done_lld_to_go_about_lld_minutes">"Routine: %1$d done, %2$d to go, about %3$d minutes."</string>
     <string name="say_it_all_in_your_own_words_in_one_go">"Say it all in your own words, in one go."</string>
+    <string name="searching_what_you_ve_said">"Searching what you've said…"</string>
     <string name="something_else">"Something else"</string>
     <string name="takes_that_score_lld_or_more_go_on_the_board">"Takes that score %d or more go on the board."</string>
     <!-- 'Only the call clock spends your talk minutes. Watching a scene never takes a second off them.' -->
@@ -2663,6 +2681,7 @@
     <string name="takes_this_week">"takes this week"</string>
     <string name="taking_a_taxi">"Taking a taxi"</string>
     <string name="talk">"Talk"</string>
+    <string name="talk_about_this">"Talk about this"</string>
     <string name="talk_about_what_i_like">"Talk about what I like"</string>
     <string name="talk_as_much_as_you_want">"Talk as much as you want"</string>
     <string name="talk_at_length_most_days">"Talk at length, most days"</string>
@@ -3760,6 +3779,7 @@
     <string name="your_recordings_of_this_script_will_be_here">"Your recordings of this script will be here."</string>
     <string name="your_routine_is_here">"Your routine is here"</string>
     <string name="your_routine_is_ready">"Your routine is ready"</string>
+    <string name="your_routine_today_lld_things_about_lld_minutes">"Your routine today: %1$d things, about %2$d minutes."</string>
     <string name="your_scenario">"Your scenario"</string>
     <string name="your_scenarios">"Your scenarios"</string>
     <string name="your_score">"Your score"</string>

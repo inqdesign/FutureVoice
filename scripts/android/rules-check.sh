@@ -28,7 +28,8 @@ done
 CLIENT="conversation-prompt coach-prompts correction-prompt lifted-prompts breath-punctuation
   free-talk-openers counterpart-ideas counterpart-parser path-ideas persona-polish
   shadow-coach-prompt shadow-transcribe-prompt clone-script contractions situation-tree
-  voice-accents futureself-ramp script-study-prompt quiz-prompts tutor-prompts"
+  voice-accents futureself-ramp script-study-prompt quiz-prompts tutor-prompts
+  goal-prep-prompts tutor-agent-prompts"
 SERVER="summary-prompt weekly-prompt enrichment-prompt topic-prompt voicemail-prompt
   scenario-prompt"
 for g in scripts/android/gen-*.py; do   # a new generator must be listed in one of the two

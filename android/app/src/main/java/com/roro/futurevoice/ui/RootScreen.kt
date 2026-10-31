@@ -338,6 +338,9 @@ fun RootScreen() {
     val sayAgainPending by com.roro.futurevoice.data.PlanReminder.pendingSayItAgain.collectAsStateWithLifecycle()
     var showAssessment by remember { mutableStateOf(false) }
     var library by remember { mutableStateOf<LibraryKind?>(null) }
+    /** The item whose card the library opens on (iOS `focusWord` / `focusPhrase`). */
+    var libraryFocus by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(library) { if (library == null) libraryFocus = null }
     /** The sentence-card list (iOS `SentencesView`), and whether the deck
      *  above it was pushed from one of its rows (back, not Done). */
     var showSentences by remember { mutableStateOf(false) }
@@ -386,8 +389,14 @@ fun RootScreen() {
     val deepLink by DeepLinkInbox.pending.collectAsStateWithLifecycle()
     LaunchedEffect(deepLink) {
         when (DeepLinkInbox.consume()) {
-            DeepLinkInbox.Destination.VOCABULARY -> library = LibraryKind.WORDS
-            DeepLinkInbox.Destination.EXPRESSIONS -> library = LibraryKind.EXPRESSIONS
+            DeepLinkInbox.Destination.VOCABULARY -> {
+                libraryFocus = DeepLinkInbox.libraryFocus.value; DeepLinkInbox.libraryFocus.value = null
+                tab = HomeTab.PRACTICE; library = LibraryKind.WORDS
+            }
+            DeepLinkInbox.Destination.EXPRESSIONS -> {
+                libraryFocus = DeepLinkInbox.libraryFocus.value; DeepLinkInbox.libraryFocus.value = null
+                tab = HomeTab.PRACTICE; library = LibraryKind.EXPRESSIONS
+            }
             DeepLinkInbox.Destination.REVIEW -> showDeck = true
             DeepLinkInbox.Destination.REVIEW_ITEM -> {
                 val (kind, value) = DeepLinkInbox.reviewItem.value ?: (null to null)
@@ -1331,6 +1340,7 @@ fun RootScreen() {
         is RootRoute.Library -> LibraryScreen(
             kind = r.kind,
             language = state.targetLanguage,
+            focus = libraryFocus,
             onShadow = { library = null; shadowLine = it },
             onBack = { library = null },
         )
