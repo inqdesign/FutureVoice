@@ -9,6 +9,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.nullable
 import kotlinx.serialization.encoding.Decoder
@@ -417,7 +418,19 @@ data class UserPersona(
      */
     @Serializable(with = ShareCorrectionListSerializer::class)
     val shareCorrections: List<ShareCorrection> = emptyList(),
+    /**
+     * What their fluent self already does — [com.roro.futurevoice.data.FutureGoal]
+     * ids, picked in setup and edited in Me → Profile (iOS 3d655c8b). Ids, not
+     * text, so the label follows the app language. The fluent self's own
+     * prompt reads them; nothing a stranger sees does.
+     */
+    @Serializable(with = LenientStringListSerializer::class)
+    val goals: List<String> = emptyList(),
 ) {
+    /** The goals this build knows, in the order ticked (iOS `futureGoals`). */
+    val futureGoals: List<com.roro.futurevoice.data.FutureGoal>
+        get() = com.roro.futurevoice.data.FutureGoal.decode(goals)
+
     val isMinimallyComplete: Boolean
         get() = displayName.isNotBlank() && city.isNotBlank() &&
             (occupation.isNotBlank() || household.isNotBlank() ||
@@ -652,6 +665,7 @@ open class LenientListSerializer<T>(private val element: KSerializer<T>) : KSeri
 }
 
 object PersonaNoteListSerializer : LenientListSerializer<PersonaNote>(PersonaNoteSerializer)
+object LenientStringListSerializer : LenientListSerializer<String>(String.serializer())
 object ShareCorrectionListSerializer :
     LenientListSerializer<UserPersona.ShareCorrection>(UserPersona.ShareCorrection.serializer())
 

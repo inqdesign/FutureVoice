@@ -426,6 +426,7 @@
     <string name="category_name_e_g_landlord_gym">"카테고리 이름 (예: 집주인, 헬스장)"</string>
     <string name="challenge">"챌린지"</string>
     <string name="challenges">"챌린지"</string>
+    <string name="change">"바꾸기"</string>
     <string name="change_in_my_routine">"내 루틴에서 바꾸기"</string>
     <string name="change_my_level">"레벨 변경"</string>
     <string name="change_or_cancel_your_plan">"플랜 변경 또는 해지"</string>
@@ -462,6 +463,7 @@
     <!-- 'Clears setup, voice clone and persona, then restarts the first-run flow. You stay signed in.' -->
     <string name="clears_setup_voice_clone_and_persona_then_restarts_the_first_cdfc74">"설정과 목소리, 프로필을 지우고 처음 켰을 때 화면부터 다시 시작해요. 로그인은 그대로예요."</string>
     <string name="client_calls">"고객 통화"</string>
+    <string name="client_calls_don_t_make_me_nervous">"고객 통화도 떨리지 않아"</string>
     <string name="clock_time">"통화한 시간"</string>
     <string name="cloning_your_voice">"목소리를 만드는 중…"</string>
     <string name="close">"닫기"</string>
@@ -1112,11 +1114,20 @@
     <string name="how_you_use_it">"어떻게 쓰나요"</string>
     <string name="how_your_future_self_talks">"유창해진 내가 어떻게 말하는지"</string>
     <string name="how_your_level_moves">"레벨이 움직이는 방식"</string>
+    <string name="i_answer_the_speaking_test_calmly">"말하기 시험에서 차분하게 대답해"</string>
     <string name="i_called_earlier">"아까 전화했었는데."</string>
+    <string name="i_chat_easily_with_neighbors_and_other_parents">"이웃이나 다른 학부모들이랑 편하게 수다 떨어"</string>
     <string name="i_couldn_t_answer_that_just_now_try_again_in_a_moment">"지금은 답을 못 했어요. 잠시 뒤에 다시 물어봐 주세요."</string>
+    <string name="i_got_the_job_i_wanted">"원하던 회사에 붙었어"</string>
+    <string name="i_got_the_score_i_needed">"필요한 점수를 받았어"</string>
+    <string name="i_handle_the_doctor_the_landlord_and_the_town_hall_myself">"병원, 집주인, 관공서 일도 혼자 해결해"</string>
+    <string name="i_have_friends_i_chat_with_in_the_language">"그 언어로 수다 떠는 친구들이 있어"</string>
+    <string name="i_joke_around_with_my_colleagues">"동료들이랑 농담을 주고받아"</string>
+    <string name="i_keep_a_simple_conversation_going">"간단한 대화는 끊기지 않고 이어가"</string>
     <string name="i_know">"알아요"</string>
     <!-- 'I know your routine, your talks, your mistakes and your cards. My job is that you always know what to do next, and why.' -->
     <string name="i_know_your_routine_your_talks_your_mistakes_and_your_cards_651e4d">"루틴, 지금까지 나눈 대화, 자주 하는 실수, 복습 카드까지 다 알고 있어요. 다음에 뭘 하면 되는지, 왜 그걸 하는지 늘 알 수 있게 돕는 게 제 일이에요."</string>
+    <string name="i_lead_meetings">"회의를 내가 이끌어"</string>
     <string name="i_left_you_a_message">"메시지 남겨 뒀어."</string>
     <string name="i_live_abroad">"해외에서 살아요"</string>
     <string name="i_ll_call_you_let_s_talk_five_minutes_a_day">"내가 전화 걸어 줄게.\n매일 5분, 나와 대화하자."</string>
@@ -1134,8 +1145,16 @@
     <string name="i_moved_in_recently">"내가 최근 이사 옴"</string>
     <string name="i_need_it_at_work">"일에서 써야 해요"</string>
     <string name="i_only_have_5_minutes">"5분밖에 없어요"</string>
+    <string name="i_order_and_ask_for_things_without_freezing">"주문하고 물어보는 게 안 막혀"</string>
+    <string name="i_present_my_work_with_confidence">"내 연구를 자신 있게 발표해"</string>
+    <string name="i_speak_up_in_seminars">"세미나에서 손 들고 말해"</string>
+    <string name="i_talk_about_what_i_love_for_as_long_as_i_want">"좋아하는 걸로 실컷 수다 떨어"</string>
+    <string name="i_talk_with_locals_not_just_order">"주문만 말고 현지 사람들이랑 얘기해"</string>
+    <string name="i_tell_my_story_in_interviews_without_freezing">"면접에서 내 얘기를 막힘없이 해"</string>
+    <string name="i_travel_on_my_own_without_worrying">"혼자 여행해도 걱정 없어"</string>
     <string name="i_want_to_ask_more_questions">"질문을 더 하고 싶음"</string>
     <string name="i_want_to_start_speaking">"말문을 트고 싶어요"</string>
+    <string name="i_watch_shows_without_subtitles">"자막 없이 드라마를 봐"</string>
     <!-- "iCloud isn't available on this device" -->
     <string name="icloud_isn_t_available_on_this_device_2fccd1">"이 기기에서는 iCloud를 쓸 수 없어요"</string>
     <!-- "iCloud isn't available on this device." -->
@@ -1143,6 +1162,7 @@
     <string name="icloud_storage_is_full_audio_isn_t_syncing">"iCloud 저장 공간이 꽉 찼어요 — 오디오는 동기화되지 않아요"</string>
     <string name="ideas">"아이디어"</string>
     <string name="ielts_opic_toeic_speaking">"IELTS, OPIc, TOEIC Speaking…"</string>
+    <string name="imagine_your_future">"미래를 그려 봐요"</string>
     <string name="import_practice_data">"연습 데이터 가져오기"</string>
     <string name="improvements">"성능 향상"</string>
     <string name="in_">"%1$s로는 %2$s"</string>
@@ -1615,6 +1635,7 @@
     <string name="music_teacher">"음악 선생님"</string>
     <string name="my_direct_manager">"직속 상사"</string>
     <string name="my_expressions_lld">"내 표현 · %d"</string>
+    <string name="my_future">"나의 미래"</string>
     <string name="my_kid_s_teacher">"아이 선생님"</string>
     <string name="my_lines">"내 대사"</string>
     <string name="my_own_topic">"내가 정한 주제로"</string>
@@ -1845,6 +1866,8 @@
     <!-- 'Camera-on takes that score %lld or more go on the board, and your best one stands. The board shows your name and score — your video and voice stay on your phone.' -->
     <string name="camera_on_takes_that_score_lld_or_more_go_on_the_board">"카메라를 켜고 %d점 이상 받은 도전이 순위에 올라가고, 가장 높은 점수가 남아요. 순위에는 이름과 점수만 보이고, 영상과 목소리는 내 폰에만 있어요."</string>
     <string name="passed_you_can_say_it_now">"통과했어요. 이제 혼자 말할 수 있어요."</string>
+    <!-- 'Pick as many as you like. Your fluent self already lives them.' -->
+    <string name="pick_as_many_as_you_like_your_fluent_self_already_lives_them">"마음 가는 만큼 골라요. 유창해진 나는 이미 이렇게 살고 있어요."</string>
     <string name="red_skipped_or_read_differently_the_small_red_words">"빨간 글자는 빠뜨렸거나 다르게 읽은 곳이에요. 옆의 작은 빨간 글자는 마이크가 들은 말이에요."</string>
     <string name="say_it_all_in_your_own_words_in_one_go">"배운 걸 내 말로, 한 번에 말해 보세요."</string>
     <string name="takes_that_score_lld_or_more_go_on_the_board">"%d점 이상이면 순위에 올라가요."</string>
@@ -2943,6 +2966,7 @@
     <!-- 'This permanently deletes your voice clone, talk time, and account. It cannot be undone. An active App Store subscription must be canceled separately in Settings → Apple ID → Subscriptions.' -->
     <string name="this_permanently_deletes_your_voice_clone_talk_time_and_acco_9e99be">"내 목소리와 통화 시간, 계정이 영영 지워지고 되돌릴 수 없어요. App Store 구독이 살아 있다면 설정 → Apple ID → 구독에서 따로 해지해 주세요."</string>
     <string name="this_person_has_been_deleted">"삭제된 사람이에요"</string>
+    <string name="this_place_feels_like_home">"여기가 진짜 내 동네 같아"</string>
     <string name="this_script_is_too_long_to_make_in_your_voice">"이 원고는 너무 길어서 내 목소리로 만들 수 없어요."</string>
     <!-- 'This shapes what I ask next — a manager and a best friend live in different worlds.' -->
     <string name="this_shapes_what_i_ask_next_a_manager_and_a_best_friend_live_11f75a">"그에 따라 다음 질문이 달라져요. 상사와 절친은 사는 세계가 다르니까요."</string>
@@ -3213,6 +3237,7 @@
     <string name="what_do_you_want_it_for">"어디에 쓰고 싶어요?"</string>
     <string name="what_do_you_want_to_be_able_to_do_in">"%s로 뭘 할 수 있으면 좋겠어요?"</string>
     <string name="what_do_your_work_chats_look_like">"회사에서 대화는 어떤 식인가요?"</string>
+    <string name="what_does_your_fluent_self_already_do">"유창해진 나는 이미 뭘 하고 있을까요?"</string>
     <string name="what_each_day_was_made_of">"날마다 무엇을 했는지"</string>
     <!-- 'What each day was made of — talk turns, shadow takes, drill reviews.' -->
     <string name="what_each_day_was_made_of_talk_turns_shadow_takes_drill_revi_2a49f0">"그날 무엇으로 채웠는지 — 대화 턴, 섀도잉, 드릴 복습."</string>

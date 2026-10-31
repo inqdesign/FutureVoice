@@ -413,6 +413,7 @@
     <string name="category_name_e_g_landlord_gym">"Kategoriename (z. B. Vermieter, Fitnessstudio)"</string>
     <string name="challenge">"Challenge"</string>
     <string name="challenges">"Challenges"</string>
+    <string name="change">"Ändern"</string>
     <string name="change_in_my_routine">"In meiner Routine ändern"</string>
     <string name="change_my_level">"Niveau ändern"</string>
     <string name="change_or_cancel_your_plan">"Plan ändern oder kündigen"</string>
@@ -449,6 +450,7 @@
     <!-- 'Clears setup, voice clone and persona, then restarts the first-run flow. You stay signed in.' -->
     <string name="clears_setup_voice_clone_and_persona_then_restarts_the_first_cdfc74">"Löscht Setup, Stimmklon und Persona und startet den Erstlauf neu. Du bleibst angemeldet."</string>
     <string name="client_calls">"Kundengespräche"</string>
+    <string name="client_calls_don_t_make_me_nervous">"Kundentelefonate machen mich nicht nervös"</string>
     <string name="clock_time">"Gesprächsdauer"</string>
     <string name="cloning_your_voice">"Deine Stimme wird geklont…"</string>
     <string name="close">"Schließen"</string>
@@ -1093,8 +1095,17 @@
     <string name="how_you_use_it">"So benutzt du es"</string>
     <string name="how_your_future_self_talks">"So spricht dein fließendes Ich"</string>
     <string name="how_your_level_moves">"So bewegt sich dein Niveau"</string>
+    <string name="i_answer_the_speaking_test_calmly">"In der mündlichen Prüfung antworte ich ruhig"</string>
     <string name="i_called_earlier">"Ich habe vorhin angerufen."</string>
+    <string name="i_chat_easily_with_neighbors_and_other_parents">"Mit Nachbarn und anderen Eltern plaudere ich ganz locker"</string>
+    <string name="i_got_the_job_i_wanted">"Ich habe den Job bekommen, den ich wollte"</string>
+    <string name="i_got_the_score_i_needed">"Ich habe die Punktzahl geschafft, die ich brauchte"</string>
+    <string name="i_handle_the_doctor_the_landlord_and_the_town_hall_myself">"Arzt, Vermieter, Amt: Das regle ich selbst"</string>
+    <string name="i_have_friends_i_chat_with_in_the_language">"Ich habe Freunde, mit denen ich in der Sprache quatsche"</string>
+    <string name="i_joke_around_with_my_colleagues">"Ich mache Witze mit meinen Kollegen"</string>
+    <string name="i_keep_a_simple_conversation_going">"Ein einfaches Gespräch halte ich am Laufen"</string>
     <string name="i_know">"Weiß ich"</string>
+    <string name="i_lead_meetings">"Ich leite Meetings"</string>
     <string name="i_left_you_a_message">"Ich habe dir eine Nachricht hinterlassen."</string>
     <string name="i_live_abroad">"Ich lebe im Ausland"</string>
     <string name="i_ll_call_you_let_s_talk_five_minutes_a_day">"Ich ruf dich an.\nLass uns jeden Tag fünf Minuten reden."</string>
@@ -1111,8 +1122,16 @@
     <string name="i_m_practicing_speaking_with_my_own_ai_voice_on_nawana_enter_50926d">"Ich übe Sprechen mit meiner eigenen KI-Stimme auf nawana. Gib bei der Anmeldung meinen Code %1$s ein, dann bekommen wir beide %2$d Minuten Sprechzeit."</string>
     <string name="i_moved_in_recently">"Ich bin neu eingezogen"</string>
     <string name="i_need_it_at_work">"Ich brauche es im Job"</string>
+    <string name="i_order_and_ask_for_things_without_freezing">"Ich bestelle und frage nach, ohne zu stocken"</string>
+    <string name="i_present_my_work_with_confidence">"Ich präsentiere meine Arbeit selbstbewusst"</string>
+    <string name="i_speak_up_in_seminars">"Im Seminar melde ich mich zu Wort"</string>
+    <string name="i_talk_about_what_i_love_for_as_long_as_i_want">"Über das, was ich liebe, rede ich, so lange ich will"</string>
+    <string name="i_talk_with_locals_not_just_order">"Ich rede mit Einheimischen, nicht nur beim Bestellen"</string>
+    <string name="i_tell_my_story_in_interviews_without_freezing">"Im Vorstellungsgespräch erzähle ich von mir, ohne zu stocken"</string>
+    <string name="i_travel_on_my_own_without_worrying">"Ich reise allein, ohne mir Sorgen zu machen"</string>
     <string name="i_want_to_ask_more_questions">"Ich will mehr Fragen stellen"</string>
     <string name="i_want_to_start_speaking">"Ich will endlich sprechen"</string>
+    <string name="i_watch_shows_without_subtitles">"Ich schaue Serien ohne Untertitel"</string>
     <!-- "iCloud isn't available on this device" -->
     <string name="icloud_isn_t_available_on_this_device_2fccd1">"iCloud ist auf diesem Gerät nicht verfügbar"</string>
     <!-- "iCloud isn't available on this device." -->
@@ -1120,6 +1139,7 @@
     <string name="icloud_storage_is_full_audio_isn_t_syncing">"iCloud-Speicher ist voll – Audio wird nicht synchronisiert"</string>
     <string name="ideas">"Ideen"</string>
     <string name="ielts_opic_toeic_speaking">"IELTS, OPIc, TOEIC Speaking…"</string>
+    <string name="imagine_your_future">"Stell dir deine Zukunft vor"</string>
     <string name="import_practice_data">"Übungsdaten importieren"</string>
     <string name="improvements">"Verbesserungen"</string>
     <string name="in_">"Auf %1$s: %2$s"</string>
@@ -1588,6 +1608,7 @@
     <string name="music_teacher">"Musiklehrer/in"</string>
     <string name="my_direct_manager">"Meine direkte Führungskraft"</string>
     <string name="my_expressions_lld">"Meine Wendungen · %d"</string>
+    <string name="my_future">"Meine Zukunft"</string>
     <string name="my_kid_s_teacher">"Lehrkraft meines Kindes"</string>
     <string name="my_lines">"Meine Sätze"</string>
     <string name="my_own_topic">"Mein eigenes Thema"</string>
@@ -1815,6 +1836,8 @@
     <!-- 'Camera-on takes that score %lld or more go on the board, and your best one stands. The board shows your name and score — your video and voice stay on your phone.' -->
     <string name="camera_on_takes_that_score_lld_or_more_go_on_the_board">"Versuche mit eingeschalteter Kamera ab %d Punkten kommen in die Rangliste, und dein bester bleibt stehen. In der Rangliste stehen nur Name und Punktzahl – Video und Stimme bleiben auf deinem Handy."</string>
     <string name="passed_you_can_say_it_now">"Bestanden. Jetzt kannst du es sagen."</string>
+    <!-- 'Pick as many as you like. Your fluent self already lives them.' -->
+    <string name="pick_as_many_as_you_like_your_fluent_self_already_lives_them">"Wähl so viele du willst. Dein fließendes Ich lebt schon so."</string>
     <string name="red_skipped_or_read_differently_the_small_red_words">"Rot: ausgelassen oder anders gelesen. Die kleinen roten Wörter hat das Mikro gehört."</string>
     <string name="say_it_all_in_your_own_words_in_one_go">"Sag alles in deinen eigenen Worten, in einem Rutsch."</string>
     <string name="takes_that_score_lld_or_more_go_on_the_board">"Ab %d Punkten kommst du in die Rangliste."</string>
@@ -2904,6 +2927,7 @@
     <!-- 'This permanently deletes your voice clone, talk time, and account. It cannot be undone. An active App Store subscription must be canceled separately in Settings → Apple ID → Subscriptions.' -->
     <string name="this_permanently_deletes_your_voice_clone_talk_time_and_acco_9e99be">"Damit werden Stimmklon, Sprechzeit und Konto dauerhaft gelöscht. Das lässt sich nicht rückgängig machen. Ein aktives App-Store-Abo musst du separat unter Einstellungen → Apple-ID → Abonnements kündigen."</string>
     <string name="this_person_has_been_deleted">"Diese Person wurde gelöscht"</string>
+    <string name="this_place_feels_like_home">"Hier fühle ich mich zu Hause"</string>
     <string name="this_script_is_too_long_to_make_in_your_voice">"Dieses Skript ist zu lang, um es in deiner Stimme zu erstellen."</string>
     <!-- 'This shapes what I ask next — a manager and a best friend live in different worlds.' -->
     <string name="this_shapes_what_i_ask_next_a_manager_and_a_best_friend_live_11f75a">"Davon hängt ab, was ich als Nächstes frage – Chefin und bester Freund leben in verschiedenen Welten."</string>
@@ -3167,6 +3191,7 @@
     <string name="what_do_you_want_it_for">"Wofür brauchst du es?"</string>
     <string name="what_do_you_want_to_be_able_to_do_in">"Was möchtest du auf %s können?"</string>
     <string name="what_do_your_work_chats_look_like">"Wie sehen eure Gespräche bei der Arbeit aus?"</string>
+    <string name="what_does_your_fluent_self_already_do">"Was macht dein fließendes Ich schon?"</string>
     <string name="what_each_day_was_made_of">"Woraus jeder Tag bestand"</string>
     <!-- 'What each day was made of — talk turns, shadow takes, drill reviews.' -->
     <string name="what_each_day_was_made_of_talk_turns_shadow_takes_drill_revi_2a49f0">"Woraus jeder Tag bestand — Gesprächsbeiträge, Nachsprech-Aufnahmen, Übungswiederholungen."</string>

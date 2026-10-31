@@ -52,6 +52,8 @@ import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.ui.brand.IosBackButton
 import com.roro.futurevoice.ui.brand.IosGlassTextButton
 import com.roro.futurevoice.ui.brand.IosNavTitle
+import com.roro.futurevoice.ui.brand.Symbols
+import androidx.lifecycle.viewmodel.initializer
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -95,6 +97,12 @@ fun MyProfileScreen(
     var errorText by remember { mutableStateOf<String?>(null) }
     /** The public-intro editor, pushed (iOS `NavigationLink { introEditor }`). */
     var editingIntro by rememberSaveable { mutableStateOf(false) }
+    /** Me → Profile → My future (iOS `FutureGoalsEditor` sheet, 3d655c8b). */
+    var editingFuture by rememberSaveable { mutableStateOf(false) }
+    val app: AppViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+        factory = androidx.lifecycle.viewmodel.viewModelFactory {
+            initializer { AppViewModel(context.applicationContext) }
+        })
     var reloadToken by remember { mutableStateOf(0) }
 
     val languageName = LanguageCatalog.englishName(targetLanguage)
@@ -173,6 +181,7 @@ fun MyProfileScreen(
                     .padding(horizontal = 16.dp).padding(bottom = 32.dp),
             ) {
                 ProfileSection(persona, onEditProfile)
+                FutureSection(persona) { editingFuture = true }
                 PublicSection(
                     persona = persona,
                     targetLanguage = targetLanguage,
@@ -185,6 +194,10 @@ fun MyProfileScreen(
                     onTakeDown = { confirmingWithdraw = true },
                 )
             }
+        }
+        if (editingFuture) {
+            FutureGoalsEditorSheet(persona = persona, onSave = app::savePersona,
+                onDismiss = { editingFuture = false })
         }
         if (confirmingWithdraw) {
             AlertDialog(
@@ -240,6 +253,36 @@ private fun ProfileSection(persona: UserPersona?, onEdit: () -> Unit) {
             Text(stringResource(R.string.edit), style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.primary)
         }
+    }
+}
+
+/** What their fluent self already does ([com.roro.futurevoice.data.FutureGoal],
+ *  iOS `futureSection`). Only for them — the public section below never reads it. */
+@Composable
+private fun FutureSection(persona: UserPersona?, onEdit: () -> Unit) {
+    val goals = persona?.futureGoals.orEmpty()
+    GroupedSectionHeader(stringResource(R.string.my_future))
+    GroupedCard {
+        goals.forEach { goal ->
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 11.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Icon(Symbols.icon(goal.purpose.symbol), contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                Text(stringResource(goal.title), style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+            }
+            FormDivider(inset = 54.dp)
+        }
+        Text(
+            stringResource(if (goals.isNotEmpty()) R.string.change else R.string.imagine_your_future),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.fillMaxWidth().clickable(onClick = onEdit)
+                .padding(horizontal = 16.dp, vertical = 11.dp),
+        )
     }
 }
 

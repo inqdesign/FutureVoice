@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.initializer
 import com.roro.futurevoice.R
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.data.CefrLevel
@@ -39,6 +40,7 @@ import com.roro.futurevoice.data.LanguageCatalog
 import com.roro.futurevoice.data.ExamKind
 import com.roro.futurevoice.data.LearningPurpose
 import com.roro.futurevoice.data.LearningPurposeStore
+import com.roro.futurevoice.data.FutureGoalStore
 import com.roro.futurevoice.data.RoutineRecipe
 import com.roro.futurevoice.data.RoutineText
 import com.roro.futurevoice.data.StudyPlan
@@ -51,7 +53,9 @@ import androidx.compose.ui.text.font.FontWeight
 /**
  * First-run quick-answer setup — `SetupFlowView.swift`, one question per
  * screen, mostly taps: native language → target language → (accent) →
- * level → why you're learning. The accent step shows only where the target has
+ * level → why you're learning → imagine your future (what the fluent self
+ * already does, under each purpose picked; skipped when none was; iOS
+ * 3d655c8b). The accent step shows only where the target has
  * accents to pick (English): the voice is remixed into it right after the
  * clone, so the pick costs nothing more (iOS 2026-10-08 — before, every
  * English clone was made American and a British learner paid for a second
@@ -140,7 +144,16 @@ private fun SetupFlowBody(
     var purposes by remember { mutableStateOf(LearningPurposeStore.purposes(goalContext)) }
     var purposeDetails by remember { mutableStateOf(LearningPurposeStore.details(goalContext)) }
     var exam by remember { mutableStateOf(ExamKind.IELTS) }
-    val tail = listOf(SetupStep.PURPOSE)
+    val app: AppViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+        factory = androidx.lifecycle.viewmodel.viewModelFactory {
+            initializer { AppViewModel(goalContext.applicationContext) }
+        })
+    /** The future already lived — ticked under the purposes above (iOS 3d655c8b). */
+    var goals by remember {
+        mutableStateOf(app.state.value.persona?.futureGoals ?: FutureGoalStore.pending(goalContext))
+    }
+    // "Imagine your future" follows the purposes; skipped when none was picked.
+    val tail = if (purposes.isEmpty()) listOf(SetupStep.PURPOSE) else listOf(SetupStep.PURPOSE, SetupStep.FUTURE)
     val steps = if (accentOptions.size > 1)
         listOf(SetupStep.NATIVE, SetupStep.TARGET, SetupStep.ACCENT, SetupStep.LEVEL) + tail
     else listOf(SetupStep.NATIVE, SetupStep.TARGET, SetupStep.LEVEL) + tail
@@ -197,6 +210,9 @@ private fun SetupFlowBody(
         LearningPurposeStore.setPurposes(goalContext, purposes)
         LearningPurposeStore.setDetails(goalContext, purposeDetails)
         if (LearningPurpose.EXAM in purposes) LearningPurposeStore.setExam(goalContext, exam, target)
+        // On the profile if it exists (setup run again); else held until the
+        // persona cards write it.
+        app.saveSetupGoals(goals.filter { it.purpose in purposes })
         onFinish(native, target, level, goal)
     }
 
@@ -209,19 +225,30 @@ private fun SetupFlowBody(
                     SetupStep.ACCENT -> R.string.which_accent
                     SetupStep.LEVEL -> R.string.your_level_5f68da
                     SetupStep.PURPOSE -> R.string.why_are_you_learning
+                    SetupStep.FUTURE -> R.string.imagine_your_future
                 }))
             })
         },
         bottomBar = {
             Row(Modifier.fillMaxWidth().bottomBarInsets().padding(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Gray, not the theme's faded accent: beside a solid Continue a
+                // pale accent fill read as a disabled button (iOS 3d655c8b).
                 OutlinedButton(
                     onClick = { back() },
                     modifier = Modifier.weight(1f),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.14f),
+                        contentColor = MaterialTheme.colorScheme.onSurface),
                 ) { Text(stringResource(R.string.back)) }
                 Button(
                     onClick = {
-                        if (step < steps.size - 1) { resolveCollision(); step += 1 }
+                        if (step < steps.size - 1) {
+                            resolveCollision()
+                            // A goal under a purpose they just un-ticked goes with it.
+                            if (current == SetupStep.PURPOSE) goals = goals.filter { it.purpose in purposes }
+                            step += 1
+                        }
                         else finish()
                     },
                     modifier = Modifier.weight(1f),
@@ -247,6 +274,7 @@ private fun SetupFlowBody(
                         SetupStep.ACCENT -> R.string.which_accent_do_you_want_to_speak_with
                         SetupStep.LEVEL -> R.string.how_comfortable_are_you_right_now
                         SetupStep.PURPOSE -> R.string.what_do_you_want_it_for
+                        SetupStep.FUTURE -> R.string.what_does_your_fluent_self_already_do
                         else -> R.string.how_much_will_you_talk_each_day
                     }),
                     style = MaterialTheme.typography.titleMedium,
@@ -318,6 +346,12 @@ private fun SetupFlowBody(
                     item { GroupedFooter(stringResource(R.string.pick_as_many_as_you_like_the_first_one_is_where_talk_opens)) }
                     item { Spacer(Modifier.padding(vertical = 12.dp)) }
                 }
+                // What their fluent self already does, under each purpose they picked.
+                SetupStep.FUTURE -> LazyColumn {
+                    item { FutureGoalRows(purposes, goals) { goals = it } }
+                    item { GroupedFooter(stringResource(R.string.pick_as_many_as_you_like_your_fluent_self_already_lives_them)) }
+                    item { Spacer(Modifier.padding(vertical = 12.dp)) }
+                }
             }
         }
     }
@@ -385,7 +419,7 @@ private fun ChoiceRow(title: String, subtitle: String?, selected: Boolean, onPic
     }
 }
 
-private enum class SetupStep { NATIVE, TARGET, ACCENT, LEVEL, PURPOSE }
+private enum class SetupStep { NATIVE, TARGET, ACCENT, LEVEL, PURPOSE, FUTURE }
 
 @Composable
 internal fun levelBlurb(level: CefrLevel): String = stringResource(when (level) {
