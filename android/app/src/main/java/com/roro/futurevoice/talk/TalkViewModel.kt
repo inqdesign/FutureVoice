@@ -91,9 +91,15 @@ data class TalkConfig(
      * resumed talk.
      */
     val learnerPicksTopic: Boolean = false,
+    /** A tutor-mode lesson on the topic whatever the Call setting says —
+     *  the tutor bot's goal drill (iOS `ConversationView(tutor:)`, 70bb10f4). */
+    val tutor: Boolean = false,
 ) {
     /** iOS `learnerPicksTopic && resumeSession == nil`. */
     val picksTopic: Boolean get() = learnerPicksTopic && resume == null
+
+    /** iOS `forceTutor = tutor && resumeSession == nil`. */
+    val forceTutor: Boolean get() = tutor && resume == null
 
     /** iOS `systemPrompt()`'s `composedTopic`. */
     val composedTopic: String get() = if (topicBlurb.isEmpty()) topic else "$topic. $topicBlurb"
@@ -376,7 +382,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         _state.value = TalkUiState(phase = TalkPhase.CONNECTING,
             turns = resume?.turns.orEmpty(), resumedTurnCount = resume?.turns?.size ?: 0)
         coachOn = CoachMode.resolve(CoachMode.choice(appContext), config.level.code)
-        tutorThisCall = TutorMode.isOn(appContext)
+        tutorThisCall = TutorMode.isOn(appContext) || config.forceTutor
         tutorWasOn = tutorThisCall
         tutorJustTicked = false
         tutorLastFixes = emptyList()

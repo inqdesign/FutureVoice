@@ -428,6 +428,7 @@
     <string name="check_again">"Nochmal prüfen"</string>
     <string name="check_it_at_the_back">"Hinten nachprüfen"</string>
     <string name="check_the_answers_at_the_back">"Hinten die Lösungen ansehen"</string>
+    <string name="check_your_connection_and_try_again">"Prüf deine Verbindung und versuch es noch mal."</string>
     <string name="checking_in_at_a_hotel">"Im Hotel einchecken"</string>
     <string name="childhood_friends">"Seit der Kindheit"</string>
     <string name="choose">"Wählen"</string>
@@ -528,6 +529,7 @@
     <string name="couldn_t_make_your_voice">"Deine Stimme konnte nicht erstellt werden"</string>
     <string name="couldn_t_open_pick_it_again">"Konnte nicht geöffnet werden. Wähle es nochmal aus"</string>
     <string name="couldn_t_open_that_file">"Die Datei konnte nicht geöffnet werden."</string>
+    <string name="couldn_t_open_the_article">"Der Artikel ließ sich nicht öffnen"</string>
     <string name="couldn_t_open_the_microphone">"Das Mikrofon ließ sich nicht öffnen."</string>
     <string name="couldn_t_parse">"Konnte nicht ausgewertet werden: %s"</string>
     <string name="couldn_t_play_audio">"Audio konnte nicht abgespielt werden"</string>
@@ -888,6 +890,7 @@
     <string name="finishing_puts_you_in_line_it_doesn_t_seat_you">"Wer es schafft, kommt auf die Warteliste. Einen Platz gibt es damit noch nicht."</string>
     <string name="first_charge">"Erste Abbuchung %s"</string>
     <string name="first_test_done">"Erster Test geschafft"</string>
+    <string name="first_time">"Zum ersten Mal"</string>
     <string name="fix_the_sentence">"Satz korrigieren"</string>
     <string name="fluency">"Flüssigkeit"</string>
     <string name="fluency_pace">"Flüssigkeit &amp; Tempo"</string>
@@ -1030,6 +1033,7 @@
     <string name="helping_someone_who_is_unwell">"Jemandem helfen, dem es nicht gut geht"</string>
     <string name="here_s_how_this_page_helps">"So hilft dir diese Seite"</string>
     <string name="here_s_how_this_tab_helps">"So hilft dir dieser Tab"</string>
+    <string name="here_s_what_i_d_pick_for_today">"Das würde ich dir heute vorschlagen."</string>
     <!-- "Here you call yourself: the version of you who already speaks fluently, in a voice cloned from yours. There's no one to be embarrassed in front of, and you can call any time." -->
     <string name="here_you_call_yourself_the_version_of_you_who_already_speaks_861a06">"Hier rufst du dich selbst an: die Version von dir, die schon fließend spricht, mit einer Stimme, die aus deiner geklont ist. Niemand, vor dem dir etwas peinlich sein muss, und du kannst jederzeit anrufen."</string>
     <string name="hi">"Hallo"</string>
@@ -1316,6 +1320,8 @@
     <string name="listening">"Hört zu…"</string>
     <string name="listening_back">"Höre nochmal rein…"</string>
     <string name="listening_back_to_every_word">"Höre jedes Wort nochmal an…"</string>
+    <!-- 'Listening' -->
+    <string name="listening_dc3534">"Hören"</string>
     <string name="listening_pause_to_send_tap_to_stop">"Höre zu · Pause zum Senden · tippen zum Beenden"</string>
     <string name="listening_tap_to_finish">"Höre zu — tippen zum Beenden"</string>
     <string name="listening_tap_to_hang_up">"Höre zu — tippen zum Auflegen"</string>
@@ -1641,6 +1647,7 @@
     <string name="new_">"Neu"</string>
     <string name="new_best_lld_of_lld">"Neuer Bestwert · Platz %1$d von %2$d"</string>
     <string name="new_block">"Neuer Block"</string>
+    <string name="new_episode">"Neue Folge"</string>
     <string name="new_expressions_from_the_call">"Neue Wendungen aus dem Anruf"</string>
     <string name="new_expressions_you_used">"Neue Wendungen, die du benutzt hast"</string>
     <string name="new_features">"Neue Funktionen"</string>
@@ -1839,6 +1846,11 @@
     <string name="passed_you_can_say_it_now">"Bestanden. Jetzt kannst du es sagen."</string>
     <!-- 'Pick as many as you like. Your fluent self already lives them.' -->
     <string name="pick_as_many_as_you_like_your_fluent_self_already_lives_them">"Wähl so viele du willst. Dein fließendes Ich lebt schon so."</string>
+    <string name="rank">"Platz"</string>
+    <!-- 'Read' -->
+    <string name="read_852b43">"Lesen"</string>
+    <!-- 'Reading' -->
+    <string name="reading_cffa2a">"Lesen"</string>
     <string name="red_skipped_or_read_differently_the_small_red_words">"Rot: ausgelassen oder anders gelesen. Die kleinen roten Wörter hat das Mikro gehört."</string>
     <string name="say_it_all_in_your_own_words_in_one_go">"Sag alles in deinen eigenen Worten, in einem Rutsch."</string>
     <string name="takes_that_score_lld_or_more_go_on_the_board">"Ab %d Punkten kommst du in die Rangliste."</string>
@@ -2943,6 +2955,8 @@
     <string name="this_week">"Diese Woche"</string>
     <string name="this_week_in_progress_ready">"Woche läuft · fertig am %s"</string>
     <string name="this_week_s_test">"Test dieser Woche"</string>
+    <!-- 'This week · speaking %lld d · listening %lld d · reading %lld d' -->
+    <string name="this_week_speaking_lld_d_listening_lld_d_reading_lld_d">"Diese Woche · Sprechen %1$d T. · Hören %2$d T. · Lesen %3$d T."</string>
     <string name="three_things_you_ll_reach_for_often">"Drei Dinge, die du oft brauchen wirst."</string>
     <string name="through_friends">"Über Freunde"</string>
     <string name="time">"Uhrzeit"</string>
@@ -3421,6 +3435,7 @@
     <string name="writing">"Wird geschrieben…"</string>
     <string name="writing_down_what_you_said">"Schreibe auf, was du gesagt hast…"</string>
     <string name="writing_feedback">"Feedback wird geschrieben…"</string>
+    <string name="writing_the_article_for_your_level">"Der Artikel wird für dein Niveau geschrieben …"</string>
     <!-- 'Writing the backup file. This is the slow part — keep the app open.' -->
     <string name="writing_the_backup_file_this_is_the_slow_part_keep_the_app_o_5ceb52">"Die Backup-Datei wird geschrieben. Das ist der langsame Teil — lass die App offen."</string>
     <string name="writing_the_dialogue">"Dialog wird geschrieben…"</string>

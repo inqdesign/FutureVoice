@@ -67,7 +67,7 @@ object PlannerDay {
             Actual(Actual.Kind.TALK, it.start, maxOf(it.end, it.start + MINIMUM_SPAN_MS),
                 title = it.title, sessionId = it.id)
         }.toMutableList()
-        fun group(k: ActivityEventLog.Kind): Actual.Kind = when (k) {
+        fun group(k: ActivityEventLog.Kind): Actual.Kind? = when (k) {
             // Every kind of review is one sitting of review (iOS 2026-10-03);
             // shadowing is its own again since it has its own block (iOS
             // 2026-10-20), and still covers a review block.
@@ -78,8 +78,11 @@ object PlannerDay {
             ActivityEventLog.Kind.SAY_IT_AGAIN -> Actual.Kind.SAY_IT_AGAIN
             ActivityEventLog.Kind.SPEECH -> Actual.Kind.SPEECH
             ActivityEventLog.Kind.LISTEN -> Actual.Kind.LISTEN
+            // Reading has no routine block yet (iOS 87bda8d6).
+            ActivityEventLog.Kind.READ -> null
         }
         for ((kind, events) in events.groupBy { group(it.kind) }) {
+            if (kind == null) continue
             var start = 0L; var last = 0L; var count = 0
             for (d in events.map { it.at }.sorted()) {
                 if (count > 0 && d - last <= CLUSTER_GAP_MS) { last = d; count += 1 }

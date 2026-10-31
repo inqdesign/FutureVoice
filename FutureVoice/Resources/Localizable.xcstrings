@@ -244,6 +244,16 @@
         }
       }
     },
+    "%lld more today" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 할 일 %lld개 더"
+          }
+        }
+      }
+    },
     "%lld of %lld scenes left" : {
       "localizations" : {
         "de" : {
@@ -1781,6 +1791,16 @@
         }
       }
     },
+    "Add a goal" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목표 추가"
+          }
+        }
+      }
+    },
     "After each thing your future self says, you see a way to answer. Sometimes it uses a word you're studying, and your most common mistake becomes the call's focus." : {
       "localizations" : {
         "de" : {
@@ -2007,6 +2027,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "用自己的話回答會計入你的程度，用正在學的單字造的句子也一樣。照著建議直接唸的句子算作練習。"
+          }
+        }
+      }
+    },
+    "Attach a posting, a CV, the exam's page…" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "채용 공고, 이력서, 시험 안내 페이지 붙이기…"
           }
         }
       }
@@ -2565,6 +2595,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "西班牙式"
+          }
+        }
+      }
+    },
+    "Coming up" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다가올 목표"
+          }
+        }
+      }
+    },
+    "Company or place" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "회사나 장소"
           }
         }
       }
@@ -28871,6 +28921,16 @@
         }
       }
     },
+    "An answer you can say on the day" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그날 그대로 말할 수 있는 답변"
+          }
+        }
+      }
+    },
     "An empty day is a rest day, so it doesn't break your streak." : {
       "localizations" : {
         "de" : {
@@ -28913,6 +28973,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "沒排計畫的日子是休息日，連續紀錄不會中斷。"
+          }
+        }
+      }
+    },
+    "An exam, an interview, a move — your tutor prepares you for it." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "시험, 면접, 이사처럼 앞둔 일을 적어 두면 튜터가 거기에 맞춰 준비시켜 줘요."
           }
         }
       }
@@ -38419,6 +38489,52 @@
         }
       }
     },
+    "Check your connection and try again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prüf deine Verbindung und versuch es noch mal."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Revisa tu conexión y vuelve a intentarlo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vérifie ta connexion et réessaie."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続を確認して、もう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "연결을 확인하고 다시 해 보세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请检查网络连接后再试一次。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請檢查網路連線後再試一次。"
+          }
+        }
+      }
+    },
     "Checking in at a hotel" : {
       "localizations" : {
         "de" : {
@@ -38461,6 +38577,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "飯店入住"
+          }
+        }
+      }
+    },
+    "Checking your cards…" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카드를 확인하고 있어요…"
+          }
+        }
+      }
+    },
+    "Checking your routine…" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "루틴을 확인하고 있어요…"
           }
         }
       }
@@ -38925,6 +39061,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "清除"
+          }
+        }
+      }
+    },
+    "Clear this chat" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대화 지우기"
           }
         }
       }
@@ -42436,6 +42582,52 @@
         }
       }
     },
+    "Couldn't open the article" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Artikel ließ sich nicht öffnen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo abrir el artículo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible d’ouvrir l’article"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記事を開けませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "기사를 열지 못했어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没能打开文章"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法開啟文章"
+          }
+        }
+      }
+    },
     "Couldn't parse: %@" : {
       "localizations" : {
         "de" : {
@@ -42802,6 +42994,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "無法連上伺服器。下次打開 App 時會自動加上。"
+          }
+        }
+      }
+    },
+    "Couldn't read it this time." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이번에는 읽지 못했어요."
           }
         }
       }
@@ -44285,6 +44487,16 @@
         }
       }
     },
+    "D-day" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "D-day"
+          }
+        }
+      }
+    },
     "Daily" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -44645,6 +44857,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "深色"
+          }
+        }
+      }
+    },
+    "Date" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "날짜"
           }
         }
       }
@@ -45928,6 +46150,16 @@
         }
       }
     },
+    "Delete goal" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목표 삭제"
+          }
+        }
+      }
+    },
     "Delete scenario" : {
       "comment" : "A button label that prompts the user to delete a scenario.",
       "isCommentAutoGenerated" : true,
@@ -46064,6 +46296,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "要刪除影片嗎？錄音和分數會保留。"
+          }
+        }
+      }
+    },
+    "Delete this goal?" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 목표를 삭제할까요?"
           }
         }
       }
@@ -58311,6 +58553,52 @@
         }
       }
     },
+    "First time" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zum ersten Mal"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Primera vez"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Première fois"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "はじめて"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "처음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第一次"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第一次"
+          }
+        }
+      }
+    },
     "Five minutes at the same time every day — small enough that you actually do it." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -61638,6 +61926,16 @@
         }
       }
     },
+    "Going over your mistakes…" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자주 하는 실수를 살펴보고 있어요…"
+          }
+        }
+      }
+    },
     "Good afternoon" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -63977,6 +64275,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "這個分頁能幫你什麼"
+          }
+        }
+      }
+    },
+    "Here's what I'd pick for today." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das würde ich dir heute vorschlagen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esto es lo que te propongo hoy."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voici ce que je te propose aujourd’hui."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今日のおすすめはこれです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘은 이걸 추천해요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天我推荐这些。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天我推薦這些。"
           }
         }
       }
@@ -72074,6 +72418,16 @@
         }
       }
     },
+    "It has a date" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "날짜가 정해졌어요"
+          }
+        }
+      }
+    },
     "It is used for one thing: speaking your practice lines back in your own voice. It is never sold, shared, or used to train anyone else's model." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -76536,6 +76890,16 @@
         }
       }
     },
+    "Likely questions" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "나올 만한 질문"
+          }
+        }
+      }
+    },
     "Likely situations" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -76954,7 +77318,50 @@
       }
     },
     "Listening" : {
-      "shouldTranslate" : false
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hören"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escuchar"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Écoute"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リスニング"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "듣기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "听力"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "聽力"
+          }
+        }
+      }
     },
     "Listening — tap to finish" : {
       "localizations" : {
@@ -77964,6 +78371,26 @@
         }
       }
     },
+    "Looking at your progress…" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "실력이 어떻게 변했는지 보고 있어요…"
+          }
+        }
+      }
+    },
+    "Looking at your scenarios…" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "저장한 상황을 보고 있어요…"
+          }
+        }
+      }
+    },
     "Looking it up…" : {
       "localizations" : {
         "de" : {
@@ -78098,6 +78525,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在檢視練習記錄…"
+          }
+        }
+      }
+    },
+    "Looking through your talks…" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지난 대화를 찾아보고 있어요…"
           }
         }
       }
@@ -79284,6 +79721,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "不論來自通話還是情境練習，把複習本裡的單字和句子全部學會，就會永遠留在這裡。"
+          }
+        }
+      }
+    },
+    "New goal" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "새 목표"
           }
         }
       }
@@ -81590,6 +82037,16 @@
         }
       }
     },
+    "Model answer" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "모범 답변"
+          }
+        }
+      }
+    },
     "Mono" : {
       "localizations" : {
         "de" : {
@@ -81632,6 +82089,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "單色"
+          }
+        }
+      }
+    },
+    "Moving" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이사"
+          }
+        }
+      }
+    },
+    "New episode" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neue Folge"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Episodio nuevo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nouvel épisode"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しいエピソード"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "새 에피소드"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新一期"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新的一集"
           }
         }
       }
@@ -93014,6 +93527,26 @@
         }
       }
     },
+    "Open the book" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "교재 열기"
+          }
+        }
+      }
+    },
+    "Open the expression" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "표현 보기"
+          }
+        }
+      }
+    },
     "Open to review" : {
       "localizations" : {
         "de" : {
@@ -93109,6 +93642,26 @@
     "Open Your week" : {
       "shouldTranslate" : false
     },
+    "Open the goal" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목표 보기"
+          }
+        }
+      }
+    },
+    "Open the word" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "단어 보기"
+          }
+        }
+      }
+    },
     "Opening a bank account" : {
       "localizations" : {
         "de" : {
@@ -93197,6 +93750,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在打開App Store…"
+          }
+        }
+      }
+    },
+    "Opening your notebook…" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "단어장을 펼쳐 보고 있어요…"
           }
         }
       }
@@ -96201,6 +96764,62 @@
         }
       }
     },
+    "Presentation" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "발표"
+          }
+        }
+      }
+    },
+    "Rank" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Platz"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Puesto"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rang"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "順位"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "순위"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "排名"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "名次"
+          }
+        }
+      }
+    },
     "phrases" : {
       "localizations" : {
         "de" : {
@@ -98571,6 +99190,16 @@
         }
       }
     },
+    "Practise it with the tutor" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "튜터와 말해 보기"
+          }
+        }
+      }
+    },
     "podcasts" : {
       "localizations" : {
         "de" : {
@@ -99213,6 +99842,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在 iPhone 上練習，在 iPad 上接著做。包含音訊在內的所有內容都存在你自己的 iCloud，可能會用掉幾 GB。"
+          }
+        }
+      }
+    },
+    "Prepared so far" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지금까지 준비한 것"
+          }
+        }
+      }
+    },
+    "Preparing for something? An interview, an exam, a presentation. Tell me what and when, and every day I'll prepare you for it." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "준비하는 일이 있어요? 면접, 시험, 발표 같은 거요. 무엇을 언제 하는지 알려 주면 매일 거기에 맞춰 준비시켜 줄게요."
           }
         }
       }
@@ -101735,6 +102384,52 @@
         }
       }
     },
+    "Read" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lesen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leer"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lire"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "読む"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "읽기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "阅读"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "閱讀"
+          }
+        }
+      }
+    },
     "Read %@" : {
       "localizations" : {
         "de" : {
@@ -101965,6 +102660,16 @@
         }
       }
     },
+    "Read it" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "읽기"
+          }
+        }
+      }
+    },
     "Read it aloud five times" : {
       "localizations" : {
         "de" : {
@@ -102099,6 +102804,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "大聲念出來"
+          }
+        }
+      }
+    },
+    "Read once when you save. Files stay where they are on your phone." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "저장하면 한 번 읽어요. 파일은 휴대폰의 원래 자리에 그대로 있어요."
           }
         }
       }
@@ -102517,6 +103232,52 @@
         }
       }
     },
+    "Reading" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lesen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectura"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lecture"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リーディング"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "읽기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "阅读"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "閱讀"
+          }
+        }
+      }
+    },
     "Reading %@" : {
       "localizations" : {
         "de" : {
@@ -102605,6 +103366,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "讀文章"
+          }
+        }
+      }
+    },
+    "Reading that talk…" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그 대화를 읽고 있어요…"
           }
         }
       }
@@ -102789,6 +103560,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在讀取照片"
+          }
+        }
+      }
+    },
+    "Reading your goals…" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목표를 읽고 있어요…"
           }
         }
       }
@@ -108250,6 +109031,22 @@
         }
       }
     },
+    "Routine: %lld done, %lld to go, about %lld minutes." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Routine: %1$lld done, %2$lld to go, about %3$lld minutes."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "루틴 %lld개 했고 %lld개 남았어요. %lld분쯤이면 돼요."
+          }
+        }
+      }
+    },
     "Run again" : {
       "localizations" : {
         "de" : {
@@ -111705,6 +112502,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "搜尋單字"
+          }
+        }
+      }
+    },
+    "Searching what you've said…" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그동안 한 말을 찾아보고 있어요…"
           }
         }
       }
@@ -115709,6 +116516,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你真的會聊天的人。對話會照他的說話方式模擬。"
+          }
+        }
+      }
+    },
+    "Something else" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "기타"
           }
         }
       }
@@ -121338,6 +122155,16 @@
         }
       }
     },
+    "Talk about this" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 주제로 대화하기"
+          }
+        }
+      }
+    },
     "Talk and rehearse as much as you want, every day — calls, Watch scenes, shadowing." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -123687,6 +124514,16 @@
         }
       }
     },
+    "Tap one to practice it with your tutor until it comes out clean." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "하나를 누르면 막힘없이 나올 때까지 튜터와 연습해요."
+          }
+        }
+      }
+    },
     "Tap one, then the other. Listen for the voice, not the words — everyone finds their own recording strange at first." : {
       "localizations" : {
         "de" : {
@@ -125295,6 +126132,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "使用條款"
+          }
+        }
+      }
+    },
+    "Test centre" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "시험장"
           }
         }
       }
@@ -129574,6 +130421,16 @@
         }
       }
     },
+    "The role, the score you need, who will be there…" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지원 직무, 필요한 점수, 누가 오는지…"
+          }
+        }
+      }
+    },
     "The same as getting in: %lld of the last %lld days." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -133459,6 +134316,58 @@
         }
       }
     },
+    "This week · speaking %lld d · listening %lld d · reading %lld d" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Woche · Sprechen %lld T. · Hören %lld T. · Lesen %lld T."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This week · speaking %1$lld d · listening %2$lld d · reading %3$lld d"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta semana · hablar %lld d · escuchar %lld d · leer %lld d"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette semaine · oral %lld j · écoute %lld j · lecture %lld j"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今週 · 話す%1$lld日 · 聞く%2$lld日 · 読む%3$lld日"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이번 주 · 말하기 %1$lld일 · 듣기 %2$lld일 · 읽기 %3$lld일"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本周 · 口语 %lld 天 · 听力 %lld 天 · 阅读 %lld 天"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本週 · 口說 %lld 天 · 聽力 %lld 天 · 閱讀 %lld 天"
+          }
+        }
+      }
+    },
     "This week's minutes are used up. They come back as the week rolls on." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -134881,6 +135790,16 @@
         }
       }
     },
+    "Today's reading" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘의 읽기"
+          }
+        }
+      }
+    },
     "Today's scenes are used up." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -135792,6 +136711,16 @@
         }
       }
     },
+    "Trip" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "여행"
+          }
+        }
+      }
+    },
     "True for a while. I forget these on my own after a month — or tell me when it's over." : {
       "localizations" : {
         "de" : {
@@ -136622,6 +137551,16 @@
         }
       }
     },
+    "Tutor drill" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "튜터 연습"
+          }
+        }
+      }
+    },
     "Two reads, the lower wins: the structures you actually build in a talk, and transcript-verified slips per 100 words — STT artifacts and style suggestions excluded. Short correct sentences read low, not high." : {
       "localizations" : {
         "de" : {
@@ -136940,6 +137879,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "每句台詞下方都有：可以當場跟讀，或存到你的用語。"
+          }
+        }
+      }
+    },
+    "Under the prompter, with a score. It's kept in My scripts." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "프롬프터를 보며 말하고 점수를 받아요. 내 스크립트에 저장돼요."
           }
         }
       }
@@ -142310,6 +143259,16 @@
         }
       }
     },
+    "What are you preparing for?" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "무엇을 준비하고 있어요?"
+          }
+        }
+      }
+    },
     "What do you do?" : {
       "localizations" : {
         "de" : {
@@ -142444,6 +143403,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "這個週末發生的事"
+          }
+        }
+      }
+    },
+    "What is it?" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "종류"
           }
         }
       }
@@ -145970,6 +146939,16 @@
         }
       }
     },
+    "Where, and for whom" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "어디서, 누구 앞에서"
+          }
+        }
+      }
+    },
     "Which accent do you want to speak with?" : {
       "localizations" : {
         "de" : {
@@ -148952,6 +149931,16 @@
         }
       }
     },
+    "Working out what they'll ask…" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "무엇을 물을지 살펴보고 있어요…"
+          }
+        }
+      }
+    },
     "You're out of credits — fresh scenarios need a top-up." : {
       "localizations" : {
         "de" : {
@@ -150026,6 +151015,52 @@
         }
       }
     },
+    "Writing the article for your level…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Artikel wird für dein Niveau geschrieben …"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escribiendo el artículo para tu nivel…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "J’écris l’article à ton niveau…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今のレベルに合わせて記事を書いています…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 레벨에 맞춰 기사를 쓰고 있어요…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在按你的水平写文章…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在依你的程度寫文章…"
+          }
+        }
+      }
+    },
     "Writing the backup file. This is the slow part — keep the app open." : {
       "localizations" : {
         "de" : {
@@ -150257,6 +151292,16 @@
         }
       }
     },
+    "Writing today's preparation for your goal…" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목표에 맞춘 오늘의 준비를 쓰고 있어요…"
+          }
+        }
+      }
+    },
     "Writing your introduction…" : {
       "localizations" : {
         "de" : {
@@ -150391,6 +151436,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在寫…"
+          }
+        }
+      }
+    },
+    "Written for this goal when you open it" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "열면 이 목표에 맞춰 바로 써 드려요"
           }
         }
       }
@@ -159179,6 +160234,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "這份講稿的錄製會放在這裡。"
+          }
+        }
+      }
+    },
+    "Your routine today: %lld things, about %lld minutes." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your routine today: %1$lld things, about %2$lld minutes."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 루틴은 %lld가지, %lld분쯤이면 돼요."
           }
         }
       }
@@ -168244,6 +169315,56 @@
         }
       }
     },
+    "Your tutor prepares you for this. The more it knows, the closer the practice gets." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "튜터가 이 일에 맞춰 준비시켜 줘요. 자세히 적을수록 연습이 실제에 가까워져요."
+          }
+        }
+      }
+    },
+    "e.g. IELTS, band 7" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "예: IELTS 7.0"
+          }
+        }
+      }
+    },
+    "e.g. Moving to Munich" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "예: 뮌헨으로 이사"
+          }
+        }
+      }
+    },
+    "e.g. Quarterly review with the Berlin team" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "예: 베를린 팀과 분기 보고"
+          }
+        }
+      }
+    },
+    "e.g. Two weeks in Japan" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "예: 일본 2주 여행"
+          }
+        }
+      }
+    },
     "your landlord" : {
       "localizations" : {
         "de" : {
@@ -171047,6 +172168,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld neue Grüße an deinem Platz"
+          }
+        }
+      }
+    },
+    "e.g. Lufthansa cabin crew" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "예: 루프트한자 승무원"
           }
         }
       }

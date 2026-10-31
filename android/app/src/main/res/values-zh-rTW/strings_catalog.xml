@@ -431,6 +431,7 @@
     <string name="check_again">"再確認一次"</string>
     <string name="check_it_at_the_back">"對照書末答案"</string>
     <string name="check_the_answers_at_the_back">"對照書末的答案"</string>
+    <string name="check_your_connection_and_try_again">"請檢查網路連線後再試一次。"</string>
     <string name="checking_in_at_a_hotel">"飯店入住"</string>
     <string name="childhood_friends">"從小一起長大"</string>
     <string name="choose">"自選"</string>
@@ -531,6 +532,7 @@
     <string name="couldn_t_make_your_voice">"無法製作你的聲音"</string>
     <string name="couldn_t_open_pick_it_again">"無法開啟，請重新選擇"</string>
     <string name="couldn_t_open_that_file">"無法開啟這個檔案。"</string>
+    <string name="couldn_t_open_the_article">"無法開啟文章"</string>
     <string name="couldn_t_open_the_microphone">"無法開啟麥克風。"</string>
     <string name="couldn_t_parse">"無法整理：%s"</string>
     <string name="couldn_t_play_audio">"無法播放音訊"</string>
@@ -891,6 +893,7 @@
     <string name="finishing_puts_you_in_line_it_doesn_t_seat_you">"達成後會排進隊伍，不是馬上有席位。"</string>
     <string name="first_charge">"首次扣款 %s"</string>
     <string name="first_test_done">"完成第一次測驗"</string>
+    <string name="first_time">"第一次"</string>
     <string name="fix_the_sentence">"改正句子"</string>
     <string name="fluency">"流利度"</string>
     <string name="fluency_pace">"流暢度與節奏"</string>
@@ -1033,6 +1036,7 @@
     <string name="helping_someone_who_is_unwell">"幫助身體不舒服的人"</string>
     <string name="here_s_how_this_page_helps">"這一頁能幫你什麼"</string>
     <string name="here_s_how_this_tab_helps">"這個分頁能幫你什麼"</string>
+    <string name="here_s_what_i_d_pick_for_today">"今天我推薦這些。"</string>
     <!-- "Here you call yourself: the version of you who already speaks fluently, in a voice cloned from yours. There's no one to be embarrassed in front of, and you can call any time." -->
     <string name="here_you_call_yourself_the_version_of_you_who_already_speaks_861a06">"在這裡，你打電話給已經說得很流利的自己，用的是模仿你聲音做出來的聲音。說錯也沒人會讓你尷尬，隨時都能打。"</string>
     <string name="hi">"嗨"</string>
@@ -1319,6 +1323,8 @@
     <string name="listening">"正在聽…"</string>
     <string name="listening_back">"正在聽…"</string>
     <string name="listening_back_to_every_word">"正在一字一句重聽…"</string>
+    <!-- 'Listening' -->
+    <string name="listening_dc3534">"聽力"</string>
     <string name="listening_pause_to_send_tap_to_stop">"正在聽 · 停頓就送出 · 點一下結束"</string>
     <string name="listening_tap_to_finish">"正在聽 · 點一下結束"</string>
     <string name="listening_tap_to_hang_up">"正在聽 · 點一下掛斷"</string>
@@ -1644,6 +1650,7 @@
     <string name="new_">"新"</string>
     <string name="new_best_lld_of_lld">"刷新最佳 · %2$d 人中第 %1$d 名"</string>
     <string name="new_block">"新時段"</string>
+    <string name="new_episode">"新的一集"</string>
     <string name="new_expressions_from_the_call">"通話裡撿到的新用語"</string>
     <string name="new_expressions_you_used">"你用了的新用語"</string>
     <string name="new_features">"新功能"</string>
@@ -1842,6 +1849,11 @@
     <string name="passed_you_can_say_it_now">"通過了。現在你說得出來了。"</string>
     <!-- 'Pick as many as you like. Your fluent self already lives them.' -->
     <string name="pick_as_many_as_you_like_your_fluent_self_already_lives_them">"想選幾個都可以。流利的你，已經過著這樣的日子。"</string>
+    <string name="rank">"名次"</string>
+    <!-- 'Read' -->
+    <string name="read_852b43">"閱讀"</string>
+    <!-- 'Reading' -->
+    <string name="reading_cffa2a">"閱讀"</string>
     <string name="red_skipped_or_read_differently_the_small_red_words">"紅字是漏讀或讀錯的地方，旁邊的小紅字是麥克風聽到的內容。"</string>
     <string name="say_it_all_in_your_own_words_in_one_go">"用自己的話，一口氣全部說出來。"</string>
     <string name="takes_that_score_lld_or_more_go_on_the_board">"%d分以上才會上榜。"</string>
@@ -2946,6 +2958,8 @@
     <string name="this_week">"這週要做的事"</string>
     <string name="this_week_in_progress_ready">"本週進行中 · %s 整理好"</string>
     <string name="this_week_s_test">"這週的測驗"</string>
+    <!-- 'This week · speaking %lld d · listening %lld d · reading %lld d' -->
+    <string name="this_week_speaking_lld_d_listening_lld_d_reading_lld_d">"本週 · 口說 %1$d 天 · 聽力 %2$d 天 · 閱讀 %3$d 天"</string>
     <string name="three_things_you_ll_reach_for_often">"三個你會常用到的地方。"</string>
     <string name="through_friends">"朋友介紹的"</string>
     <string name="time">"時間"</string>
@@ -3424,6 +3438,7 @@
     <string name="writing">"正在寫…"</string>
     <string name="writing_down_what_you_said">"正在記下剛才說的內容…"</string>
     <string name="writing_feedback">"正在寫回饋…"</string>
+    <string name="writing_the_article_for_your_level">"正在依你的程度寫文章…"</string>
     <!-- 'Writing the backup file. This is the slow part — keep the app open.' -->
     <string name="writing_the_backup_file_this_is_the_slow_part_keep_the_app_o_5ceb52">"正在寫入備份檔。這一步最花時間，請先不要關掉 App。"</string>
     <string name="writing_the_dialogue">"正在寫對話…"</string>

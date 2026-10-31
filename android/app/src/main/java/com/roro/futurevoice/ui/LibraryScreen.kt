@@ -221,6 +221,8 @@ private const val GLOSS_SETTLE_MS = 250L
 fun LibraryScreen(kind: LibraryKind, language: String,
                   /** Shadowing runs its own screen; the card hands it one line. */
                   onShadow: (String) -> Unit = {},
+                  /** The item whose card opens at once (iOS `focusWord` / `focusPhrase`). */
+                  focus: String? = null,
                   onBack: () -> Unit) {
     // The word cloud is PUSHED from the Words page on iOS (a toolbar
     // NavigationLink to `VocabularyView`): one small stack, the shared host.
@@ -231,7 +233,7 @@ fun LibraryScreen(kind: LibraryKind, language: String,
             language = language,
             onShadow = { line -> showCloud = false; onShadow(line) },
             onBack = { showCloud = false },
-        ) else LibraryPage(kind, language, onShadow, onBack, onOpenCloud = { showCloud = true })
+        ) else LibraryPage(kind, language, onShadow, onBack, onOpenCloud = { showCloud = true }, focus = focus)
     }
 }
 
@@ -240,7 +242,8 @@ fun LibraryScreen(kind: LibraryKind, language: String,
 private fun LibraryPage(kind: LibraryKind, language: String,
                   onShadow: (String) -> Unit,
                   onBack: () -> Unit,
-                  onOpenCloud: () -> Unit) {
+                  onOpenCloud: () -> Unit,
+                  focus: String? = null) {
     NavPageBackHandler(onBack = onBack)
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
@@ -264,8 +267,8 @@ private fun LibraryPage(kind: LibraryKind, language: String,
      *  list underneath it, so the card walks a SNAPSHOT of the list it was
      *  opened from — otherwise marking something known would drop the row and
      *  slide the next/previous terms out from under the thumb. */
-    var openTerm by remember { mutableStateOf<String?>(null) }
-    var openList by remember { mutableStateOf<List<String>>(emptyList()) }
+    var openTerm by remember { mutableStateOf<String?>(focus) }
+    var openList by remember { mutableStateOf<List<String>>(listOfNotNull(focus)) }
     var showingAdd by remember { mutableStateOf(false) }
     /** The explorable cloud over the whole graded pool — words only. */
 

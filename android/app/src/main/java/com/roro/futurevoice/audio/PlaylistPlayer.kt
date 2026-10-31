@@ -506,6 +506,7 @@ object PlaylistPlayer {
             }
         }
         val number = line.episodeNumber ?: return
+        app?.let { com.roro.futurevoice.talk.TutorPicks.markHeard(it, line.bookId) }
         if (listening?.bookId != line.bookId) {
             flushListening(finished = false)
             listening = Listening(line.bookId, number, line.episodeCategory ?: "")

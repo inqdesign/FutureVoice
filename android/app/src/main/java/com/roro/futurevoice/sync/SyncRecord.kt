@@ -45,6 +45,9 @@ enum class SyncKind(val raw: String, val isLanguageScoped: Boolean, val isBlob: 
     PROFILE("profile", false),
     COUNTERPART("counterpart", false),
     DEFAULTS("defaults", false),
+    /** Upcoming goals ([com.roro.futurevoice.data.UpcomingGoalStore], iOS
+     *  a9fbef92). An older build can't name this kind and skips the record. */
+    UPCOMING_GOAL("upcomingGoal", false),
     BLOB_TURN("blobTurn", false, isBlob = true),
     BLOB_RECORDING("blobRecording", false, isBlob = true),
     BLOB_VOICE_SAMPLE("blobVoiceSample", false, isBlob = true),

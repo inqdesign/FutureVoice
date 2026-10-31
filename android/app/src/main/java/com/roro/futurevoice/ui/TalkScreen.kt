@@ -141,8 +141,11 @@ fun TalkScreen(
     entry: String = com.roro.futurevoice.talk.TalkEntry.OTHER,
     /** A "my own topic" call (topics page, iOS `learnerPicksTopic`). */
     learnerPicksTopic: Boolean = false,
+    /** A tutor-mode lesson whatever the Call setting says (a goal drill). */
+    tutor: Boolean = false,
     onExit: () -> Unit,
 ) {
+    val forceTutor = tutor && resume == null
     // "Go to Review" on the spent sheet (iOS `routeToPracticeOnClose`):
     // whichever way the call then leaves — the summary's Done, the plans, a
     // back swipe — it lands on Review.
@@ -405,7 +408,7 @@ fun TalkScreen(
             com.roro.futurevoice.talk.CoachMode.choice(context), level.code))
     }
     // Tutor mode: a flip mid-call reaches the live call (`TutorMode`).
-    var tutorMode by remember { mutableStateOf(com.roro.futurevoice.talk.TutorMode.isOn(context)) }
+    var tutorMode by remember { mutableStateOf(com.roro.futurevoice.talk.TutorMode.isOn(context) || forceTutor) }
     // Send-to-answer: the learner's flip, else on for A1 (`SendToAnswer.resolve`).
     var sendToAnswer by remember {
         mutableStateOf(com.roro.futurevoice.talk.SendToAnswer.resolve(
@@ -489,7 +492,7 @@ fun TalkScreen(
                     com.roro.futurevoice.talk.SendToAnswer.choice(context), lvl.code)
                 // Tutor mode decides the opener (iOS f39a7f4b): `vm.start`
                 // reads it right after this.
-                tutorMode = com.roro.futurevoice.talk.TutorMode.isOn(context)
+                tutorMode = com.roro.futurevoice.talk.TutorMode.isOn(context) || forceTutor
             }
             firstCallSetupPending = false
         })
@@ -514,6 +517,7 @@ fun TalkScreen(
                 resume = resume,
                 entry = entry,
                 learnerPicksTopic = learnerPicksTopic,
+                tutor = tutor,
             )
         )
     }

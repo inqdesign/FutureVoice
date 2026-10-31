@@ -24,6 +24,12 @@ object DeepLinkInbox {
         /** The routine widget: the block of this kind's door, or My routine
          *  when there is no kind (iOS `openRoutineBlock`, a0836bbe). */
         data class Routine(val kind: StudyPlan.Kind?) : WidgetRoute
+        /** The tutor bot's "N cards waiting" → exactly those N cards (iOS
+         *  `futurevoice://waiting`, bcddcc40). */
+        data object Waiting : WidgetRoute
+        /** A speech challenge's page (iOS `futurevoice://speech?id=…`: a
+         *  challenge's push, the tutor bot's challenge pick). */
+        data class SpeechChallenge(val id: String) : WidgetRoute
     }
 
     val widgetRoute = MutableStateFlow<WidgetRoute?>(null)
@@ -39,6 +45,18 @@ object DeepLinkInbox {
     }
 
     val pending = MutableStateFlow<Destination?>(null)
+
+    /** The word or phrase a `futurevoice://vocab?q=…` / `expressions?q=…`
+     *  link names: its card opens on the list (iOS `focusWord` /
+     *  `focusPhrase`). Read by the root with [Destination.VOCABULARY] /
+     *  [Destination.EXPRESSIONS]. */
+    val libraryFocus = MutableStateFlow<String?>(null)
+
+    /** The words or expressions page, on one item's card when [q] is set. */
+    fun openLibrary(destination: Destination, q: String?) {
+        libraryFocus.value = q?.trim()?.ifEmpty { null }
+        pending.value = destination
+    }
 
     /** The one item a per-item reminder named: (kind, value). Read by the
      *  root when it handles [Destination.REVIEW_ITEM]. */
@@ -59,8 +77,10 @@ object DeepLinkInbox {
         val uri = intent?.data ?: return
         if (uri.scheme != "futurevoice") return
         pending.value = when (uri.host ?: uri.schemeSpecificPart.trimStart('/')) {
-            "vocab" -> Destination.VOCABULARY
-            "expressions" -> Destination.EXPRESSIONS
+            // A tapped widget note carries its item as ?q=… so that exact
+            // word/phrase opens; absent, the plain list (iOS `handleURL`).
+            "vocab" -> { libraryFocus.value = uri.getQueryParameter("q")?.ifBlank { null }; Destination.VOCABULARY }
+            "expressions" -> { libraryFocus.value = uri.getQueryParameter("q")?.ifBlank { null }; Destination.EXPRESSIONS }
             "practice" -> Destination.PRACTICE
             // Streak widget: open Talk so the learner does something today.
             "talk" -> { widgetRoute.value = WidgetRoute.Talk; return }
@@ -71,10 +91,17 @@ object DeepLinkInbox {
                 widgetRoute.value = WidgetRoute.Routine(StudyPlan.Kind.entries.firstOrNull { it.raw == raw })
                 return
             }
+            // The tutor bot's Start: the cards it counted as waiting.
+            "waiting" -> { widgetRoute.value = WidgetRoute.Waiting; return }
             // A routine's say-it-again reminder: the talk picker.
             "sayitagain" -> { PlanReminder.pendingSayItAgain.value = true; return }
             // A routine's Speech reminder: the Speech tab.
-            "speech" -> { PlanReminder.pendingSpeech.value = true; return }
+            "speech" -> {
+                val id = uri.getQueryParameter("id")?.takeIf { it.isNotBlank() }
+                if (id != null) widgetRoute.value = WidgetRoute.SpeechChallenge(id)
+                else PlanReminder.pendingSpeech.value = true
+                return
+            }
             // A routine's listening reminder: the player, already playing.
             "listen" -> { PlanReminder.pendingListen.value = true; return }
             // Continue widget: that book's page, else the shelf.

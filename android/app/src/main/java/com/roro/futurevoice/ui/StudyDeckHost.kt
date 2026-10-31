@@ -229,6 +229,18 @@ suspend fun putOffDeck(context: android.content.Context, language: String,
     return (scheduled + sentences).sortedBy { it.second }.map { it.first }.distinctBy { it.id }
 }
 
+/**
+ * Everything due NOW: words and expressions back from a snooze, then
+ * sentence cards from the talks (new ones included). The tutor bot's count
+ * and its Start both read this, so "N waiting" deals N (iOS
+ * `DueReviewView.waitingDeck`, bcddcc40: Start opened the put-off deck and
+ * dealt 1 of 22).
+ */
+suspend fun waitingDeck(context: android.content.Context, language: String,
+                        now: Long = System.currentTimeMillis()): List<StudyDeckItem> =
+    StudyScheduleStore.shared(context).snapshot(language).dueItems(now).map { StudyDeckItem(it.kind, it.text) } +
+        com.roro.futurevoice.data.DrillStore.shared(context).due(language, now).map(StudyDeckItem::sentence)
+
 /** What the header's put-off dot counts: words, expressions and sentence
  *  cards whose return time has COME (iOS `dueReviewCount`). */
 suspend fun putOffDueCount(context: android.content.Context, language: String,

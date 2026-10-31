@@ -216,6 +216,8 @@ fun RootScreen() {
     var callEntry by call.entry
     /** The topics page's "my own topic" — the call opens by asking what to talk about. */
     var callPicksTopic by call.picksTopic
+    /** The tutor bot's goal drill: a tutor-mode lesson on the topic. */
+    var callTutor by call.tutor
     /** Set when a Talk-home card's call closes; the home consumes it and
      *  offers the persona-deepen sheet (iOS `maybePromptDeepen`). */
     var deepenPending by remember { mutableStateOf(false) }
@@ -336,6 +338,9 @@ fun RootScreen() {
     val sayAgainPending by com.roro.futurevoice.data.PlanReminder.pendingSayItAgain.collectAsStateWithLifecycle()
     var showAssessment by remember { mutableStateOf(false) }
     var library by remember { mutableStateOf<LibraryKind?>(null) }
+    /** The item whose card the library opens on (iOS `focusWord` / `focusPhrase`). */
+    var libraryFocus by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(library) { if (library == null) libraryFocus = null }
     /** The sentence-card list (iOS `SentencesView`), and whether the deck
      *  above it was pushed from one of its rows (back, not Done). */
     var showSentences by remember { mutableStateOf(false) }
@@ -384,8 +389,14 @@ fun RootScreen() {
     val deepLink by DeepLinkInbox.pending.collectAsStateWithLifecycle()
     LaunchedEffect(deepLink) {
         when (DeepLinkInbox.consume()) {
-            DeepLinkInbox.Destination.VOCABULARY -> library = LibraryKind.WORDS
-            DeepLinkInbox.Destination.EXPRESSIONS -> library = LibraryKind.EXPRESSIONS
+            DeepLinkInbox.Destination.VOCABULARY -> {
+                libraryFocus = DeepLinkInbox.libraryFocus.value; DeepLinkInbox.libraryFocus.value = null
+                tab = HomeTab.PRACTICE; library = LibraryKind.WORDS
+            }
+            DeepLinkInbox.Destination.EXPRESSIONS -> {
+                libraryFocus = DeepLinkInbox.libraryFocus.value; DeepLinkInbox.libraryFocus.value = null
+                tab = HomeTab.PRACTICE; library = LibraryKind.EXPRESSIONS
+            }
             DeepLinkInbox.Destination.REVIEW -> showDeck = true
             DeepLinkInbox.Destination.REVIEW_ITEM -> {
                 val (kind, value) = DeepLinkInbox.reviewItem.value ?: (null to null)
@@ -453,7 +464,25 @@ fun RootScreen() {
             is DeepLinkInbox.WidgetRoute.Routine -> when (route.kind) {
                 com.roro.futurevoice.data.StudyPlan.Kind.TALK ->
                     DeepLinkInbox.requestFreeTalk(com.roro.futurevoice.talk.TalkEntry.WIDGET)
-                com.roro.futurevoice.data.StudyPlan.Kind.REVIEW, com.roro.futurevoice.data.StudyPlan.Kind.WORDS,
+                // The block's own deck, as Activity deals it. The put-off deck
+                // holds only what was snoozed, so a learner with 22 cards
+                // waiting was dealt one (iOS bcddcc40).
+                com.roro.futurevoice.data.StudyPlan.Kind.REVIEW -> {
+                    showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false
+                    showActivity = false; detailSessionId = null; bookScenarioId = null; watchScenarioId = null
+                    tab = HomeTab.PRACTICE
+                    val deck = routineDeck(context,
+                        goal = com.roro.futurevoice.data.GoalStore.target(context,
+                            com.roro.futurevoice.data.StudyPlan.Kind.REVIEW)
+                            ?: com.roro.futurevoice.data.StudyPlan.Kind.REVIEW.defaultAmount,
+                        language = state.targetLanguage, level = state.level)
+                    // No cards but lines to say: straight to the lines, as
+                    // Activity's row does.
+                    if (deck.first.isEmpty() && deck.second.isNotEmpty()) {
+                        shadowHand = deck.second; shadowAt = 0
+                    } else routineReview = deck
+                }
+                com.roro.futurevoice.data.StudyPlan.Kind.WORDS,
                 com.roro.futurevoice.data.StudyPlan.Kind.EXPRESSIONS -> {
                     showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false
                     showActivity = false; detailSessionId = null; bookScenarioId = null; watchScenarioId = null
@@ -479,6 +508,20 @@ fun RootScreen() {
                     routineOpens = route.kind
                     showActivity = true
                 }
+            }
+            // The tutor bot's Start: the cards it counted as waiting (iOS
+            // `.waitingReview`, bcddcc40).
+            DeepLinkInbox.WidgetRoute.Waiting -> {
+                showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false
+                showActivity = false; detailSessionId = null; bookScenarioId = null; watchScenarioId = null
+                tab = HomeTab.PRACTICE
+                routineReview = waitingDeck(context, state.targetLanguage) to emptyList()
+            }
+            is DeepLinkInbox.WidgetRoute.SpeechChallenge -> {
+                showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false
+                showActivity = false; detailSessionId = null; bookScenarioId = null; watchScenarioId = null
+                tab = HomeTab.SPEECH
+                speechChallengeId = route.id
             }
             DeepLinkInbox.WidgetRoute.FreeTalk -> {
                 tab = HomeTab.TALK
@@ -852,7 +895,8 @@ fun RootScreen() {
     /** Every metered launcher from the home lands here (`mint` = an unsaved
      *  ready-made situation, saved once the gate passes). */
     fun startCall(topic: String, facts: List<String>, scenarioId: String?, mint: Scenario?, blurb: String = "",
-                  entry: String = com.roro.futurevoice.talk.TalkEntry.OTHER, learnerPicksTopic: Boolean = false) {
+                  entry: String = com.roro.futurevoice.talk.TalkEntry.OTHER, learnerPicksTopic: Boolean = false,
+                  tutor: Boolean = false) {
         // The paywall is asked here, at the TAP — every metered
         // launcher (free talk, a news story, a scenario, a widget
         // deep link) meets in this one callback, so one gate covers
@@ -863,6 +907,7 @@ fun RootScreen() {
                 callTopic = topic; callFacts = facts; callScenarioId = scenarioId; callBlurb = blurb
                 callEntry = entry
                 callPicksTopic = learnerPicksTopic
+                callTutor = tutor
                 // A news story's title IS its opener — written by `news-topics`
                 // as a friend bringing it up ("Did you see the news about…?")
                 // and spoken verbatim, as iOS does (`openNewsConversation`).
@@ -892,6 +937,20 @@ fun RootScreen() {
                 open()
             }
         }
+    }
+    // The tutor bot's goal drill, or a call it handed out: a call on the topic,
+    // a tutor-mode lesson when it says so (iOS `ConversationHome`'s
+    // `tutorBot.goalCall`, through the same gate as every launcher).
+    val goalCall = com.roro.futurevoice.talk.TutorBot.goalCall
+    LaunchedEffect(goalCall, state.voiceId) {
+        val c = goalCall ?: return@LaunchedEffect
+        if (state.voiceId == null) return@LaunchedEffect
+        com.roro.futurevoice.talk.TutorBot.goalCall = null
+        showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false
+        showActivity = false; detailSessionId = null; bookScenarioId = null; watchScenarioId = null
+        tab = HomeTab.TALK
+        startCall(c.topic, emptyList(), null, null, c.blurb, com.roro.futurevoice.talk.TalkEntry.TUTOR_BOT,
+            tutor = c.tutor)
     }
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
     // Everything before the app proper — previews, onboarding, the gates —
@@ -1341,6 +1400,7 @@ fun RootScreen() {
         is RootRoute.Library -> LibraryScreen(
             kind = r.kind,
             language = state.targetLanguage,
+            focus = libraryFocus,
             onShadow = { library = null; shadowLine = it },
             onBack = { library = null },
         )
@@ -1650,6 +1710,7 @@ fun RootScreen() {
                 resume = callResume,
                 entry = callEntry,
                 learnerPicksTopic = callPicksTopic,
+                tutor = callTutor,
                 onExit = {
                     // A call that flew in from the ring flies back to it.
                     TalkMorph.close(morphScope) {
@@ -1661,6 +1722,7 @@ fun RootScreen() {
                         callCastVoice = null; callCounterpartId = null; callResume = null
                         callEntry = com.roro.futurevoice.talk.TalkEntry.OTHER
                         callPicksTopic = false
+                        callTutor = false
                     }
                 },
             )
@@ -2164,7 +2226,7 @@ internal fun HomeScreen(
             while (true) {
                 val s = tutorState
                 com.roro.futurevoice.talk.TutorBot.refresh(context, s.targetLanguage, s.nativeLanguage, s.level,
-                    visible = { tutorVisible })
+                    s.persona, visible = { tutorVisible })
                 kotlinx.coroutines.delay(60_000)
             }
         }
@@ -3588,6 +3650,9 @@ class CallRoute : androidx.lifecycle.ViewModel() {
     val entry = mutableStateOf(com.roro.futurevoice.talk.TalkEntry.OTHER)
     /** A "my own topic" call (topics page, iOS `CallLaunch.learnerPicksTopic`). */
     val picksTopic = mutableStateOf(false)
+    /** A tutor-mode lesson whatever the Call setting says — the tutor bot's
+     *  goal drill (iOS `CallLaunch.tutor`). */
+    val tutor = mutableStateOf(false)
 }
 
 /**

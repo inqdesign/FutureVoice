@@ -603,6 +603,11 @@ private fun PlayerLibrary(
         }
     }
     reading?.let { episode ->
+        // A script opened to read is reading done (iOS 87bda8d6).
+        LaunchedEffect(episode.id) {
+            com.roro.futurevoice.data.ActivityEventLog.record(context,
+                com.roro.futurevoice.data.ActivityEventLog.Kind.READ)
+        }
         com.roro.futurevoice.ui.speech.SpeechScriptSheet(episode.script, state.nativeLanguage,
             onEdited = {}, onDismiss = { reading = null },
             initialStudy = episode.study(state.nativeLanguage), shipped = true)

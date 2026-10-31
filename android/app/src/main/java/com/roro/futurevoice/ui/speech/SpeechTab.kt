@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MicExternalOn
 import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -895,7 +896,18 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
                                 *  Podcast episode): nothing is edited, voiced or studied on this
                                 *  phone — the study was written once for everybody when the
                                 *  episode was published. */
-                               shipped: Boolean = false) {
+                               shipped: Boolean = false,
+                               /** A shipped script whose study is still made on this phone: a
+                                *  news article from the tutor bot is read-only like an episode,
+                                *  but nothing was studied when it was written (iOS 840f4873). */
+                               studyHere: Boolean = false,
+                               /** A read-only script the learner may still record under the
+                                *  prompter: the tutor's model answer for an upcoming goal.
+                                *  Recording it files it under My scripts, where its takes live
+                                *  (iOS 2c8133c8). */
+                               canPractice: Boolean = false) {
+    val studyShipped = shipped && !studyHere
+    var practicing by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("futurevoice", Context.MODE_PRIVATE) }
     var shown by remember { mutableStateOf(script) }
@@ -918,7 +930,7 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
     val voiceId = rememberCloneVoiceId()
     val paragraphs = remember(shown.body) { com.roro.futurevoice.data.ScriptStudy.paragraphs(shown.body) }
     LaunchedEffect(studying, shown.body, studyAttempt) {
-        if (!studying || study != null || shipped) return@LaunchedEffect
+        if (!studying || study != null || studyShipped) return@LaunchedEffect
         studyFailed = false
         study = try {
             com.roro.futurevoice.data.ScriptStudyEngine.study(context, shown, native, level)
@@ -965,7 +977,7 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
             ScriptStudyLegend(shownStudy, Modifier.padding(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 8.dp))
         } else if (studying) {
             Box(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 14.dp)) {
-                if (shipped) {
+                if (studyShipped) {
                     Text(stringResource(R.string.study_notes_for_this_episode_aren_t_in_your_language_yet),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 8.dp))
@@ -1004,7 +1016,25 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
             .joinToString("  ·  "), style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 16.dp, top = 7.dp))
-        if (!shipped) voiceId?.let { ScriptVoiceoverSection(shown, it) }
+        // A tutor reading (news, a goal's) is read-only but still heard in
+        // the learner's own voice (iOS 70bb10f4).
+        if (!shipped || studyHere) voiceId?.let { ScriptVoiceoverSection(shown, it) }
+        if (canPractice) {
+            FormSection(null, footer = stringResource(R.string.under_the_prompter_with_a_score_it_s_kept_in_my_scripts)) {
+                Row(Modifier.fillMaxWidth().clickable {
+                    val store = SpeechStore.shared(context)
+                    if (store.scripts.value.none { it.id == shown.id }) store.add(shown)
+                    practicing = true
+                }.padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(Icons.Filled.MicExternalOn, contentDescription = null, modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(R.string.say_it_out_loud), style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.primary)
+                }
+            }
+        }
         if (shown.keyTerms.isNotEmpty()) {
             FormSection(stringResource(R.string.key_terms)) {
                 shown.keyTerms.forEachIndexed { i, t ->
@@ -1039,6 +1069,15 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
     lookedUp?.let { w ->
         WordCardSheet(terms = listOf(w), initialTerm = w, kind = LibraryKind.WORDS,
             language = shown.language, onDismiss = { lookedUp = null })
+    }
+    if (practicing) {
+        Dialog(
+            onDismissRequest = {},
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false,
+                dismissOnBackPress = false),
+        ) {
+            SpeechPrompterScreen(shown, native, level, onClose = { practicing = false })
+        }
     }
 }
 
