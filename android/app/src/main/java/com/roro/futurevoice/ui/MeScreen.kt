@@ -633,6 +633,13 @@ fun MeScreen(
                                 }
                             })
                         GroupedRowDivider()
+                        // The Core's welcome plays once, the day a seat is
+                        // won 30 days in. Nothing picked here is saved.
+                        MeRow(Icons.Filled.NotificationsActive, "Preview the Core welcome",
+                            subtitle = "What a learner sees on winning a seat. Nothing is saved",
+                            kind = MeRowKind.ACTION,
+                            onClick = { CoreWelcomeStore.debug.value = CoreWelcomeStore.preview(targetLanguage) })
+                        GroupedRowDivider()
                         MeRow(Icons.Filled.NotificationsActive, "Slide up Your week again",
                             subtitle = "Next time the app opens, as if the week just turned",
                             kind = MeRowKind.ACTION,

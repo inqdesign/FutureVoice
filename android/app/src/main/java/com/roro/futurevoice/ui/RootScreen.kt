@@ -773,6 +773,13 @@ fun RootScreen() {
             coreWelcome = coreCandidate; coreCandidate = null
         }
     }
+    // Me → Developer's preview raises it at once, like iOS.
+    val debugCoreWelcome by CoreWelcomeStore.debug.collectAsStateWithLifecycle()
+    LaunchedEffect(debugCoreWelcome) {
+        val seat = debugCoreWelcome ?: return@LaunchedEffect
+        CoreWelcomeStore.debug.value = null
+        coreWelcome = seat
+    }
     coreWelcome?.let { seat ->
         CoreWelcome(seat, state.persona?.displayName.orEmpty()) { coreWelcome = null }
     }

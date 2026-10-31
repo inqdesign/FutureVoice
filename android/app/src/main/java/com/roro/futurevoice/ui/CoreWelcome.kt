@@ -100,7 +100,11 @@ object CoreWelcomeStore {
     data class Seat(val userId: String, val language: String, val index: Int, val seats: Int,
                     val streak: Int, val othersThemes: List<Int>) {
         val number get() = index + 1
+        val isPreview get() = userId == "preview"
     }
+
+    /** Me → Developer's Core welcome preview (iOS `DailyCallInbox.debugCoreWelcome`). */
+    val debug = kotlinx.coroutines.flow.MutableStateFlow<Seat?>(null)
 
     private fun key(userId: String, language: String) =
         "futurevoice.core.welcomed.${userId.lowercase()}.${language.lowercase()}"
@@ -122,7 +126,15 @@ object CoreWelcomeStore {
     }
 
     /** Debug: the first seat of an empty club, nothing remembered. */
-    val preview get() = Seat("preview", "en", 0, 100, 30, emptyList())
+    val preview get() = preview("en")
+
+    /** Me → Developer: seat 24 of a club where 23 already sit, in the
+     *  learner's own language. Nothing it picks is saved ([Seat.isPreview]). */
+    fun preview(language: String): Seat {
+        val palettes = FutureselfTheme.entries.map { it.ordinal }
+        val others = (0 until 23).map { palettes[(it * 5 + 2) % palettes.size] }
+        return Seat("preview", language, 23, 100, 30, others)
+    }
 }
 
 private enum class Stage { ARRIVING, PICKING, ENGRAVING, PLACING, PLACED }
@@ -167,10 +179,13 @@ fun CoreWelcome(seat: CoreWelcomeStore.Seat, initialName: String, onDone: () -> 
         focus.clearFocus()
         stage = Stage.PLACING
         val language = seat.language
-        scope.launch {
-            val client = CoreClubClient(AuthRepository())
-            client.publishTheme(theme.ordinal)
-            client.setEngraving(language, name, hope)
+        // A preview is not a seat: nothing it picks may reach the account.
+        if (!seat.isPreview) {
+            scope.launch {
+                val client = CoreClubClient(AuthRepository())
+                client.publishTheme(theme.ordinal)
+                client.setEngraving(language, name, hope)
+            }
         }
         scope.launch {
             // The cube turns square to the learner first, then the face it
