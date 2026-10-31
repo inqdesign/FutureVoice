@@ -45,6 +45,10 @@ object ConversationPromptFixtures {
     val thinPersona = UserPersona(displayName = "Mina", updatedAt = now,
         learnedNotes = listOf(notes[2], notes[3]), metAt = null)
 
+    val goalsPersona get() = fullPersona.copy(
+        goals = listOf("work.meetings", "travel.locals", "someday.newer", "exam.calm"))
+    val goalsThinPersona get() = thinPersona.copy(goals = listOf("abroad.errands"))
+
     val patterns = listOf(
         LearnerPattern(mistake = "I go yesterday", correction = "I went yesterday", context = "past tense", frequency = 4),
         LearnerPattern(mistake = "more better", correction = "better", context = "comparatives", frequency = 3),
@@ -131,6 +135,16 @@ object ConversationPromptFixtures {
             topic = "Ordering at a cafe", tutor = true, lesson = lesson(2)),
         Fixture("first_counterpart_ignored_es", "es", "en", CefrLevel.B2, persona = null, counterpart = manager,
             firstMeeting = true),
+        // The learner's goals (iOS 3d655c8b): WHO YOU BECAME on a free talk and
+        // the first call only; an id this build doesn't know is skipped.
+        Fixture("goals_free_en_b1", "en", "ko", CefrLevel.B1, persona = goalsPersona,
+            clock = clock(0, null, daysBeforeCall(2))),
+        Fixture("goals_first_ko_a2", "ko", "en", CefrLevel.A2, persona = goalsThinPersona, firstMeeting = true,
+            clock = clock(0, null, null)),
+        Fixture("goals_topic_ja_b1_absent", "ja", "ko", CefrLevel.B1, topic = "Ordering at a cafe",
+            persona = goalsPersona),
+        Fixture("goals_cast_en_absent", "en", "ko", CefrLevel.B1, persona = goalsPersona, counterpart = closeFriend),
+        Fixture("goals_tutor_de_absent", "de", "en", CefrLevel.B2, persona = goalsPersona, tutor = true),
     )
 
     /** name → (target, native, counterpart, inScene) for `turnOutputInstruction`. */

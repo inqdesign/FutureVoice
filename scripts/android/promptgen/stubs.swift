@@ -30,9 +30,6 @@ enum WordSplitter { static func snippet(_ s: String, words: Int, characters: Int
 func explain(key: String, default d: String) -> String { d }
 /// Models.swift reads it for `Turn.readFromCoach` (iOS 3dc33326); no prompt fixture has a coach line.
 enum CoachRead { static func isRead(_ said: String, line: String?) -> Bool { false } }
-// The learner's own goals (iOS 3d655c8b): none in any fixture, and Android
-// has no persona goals yet, so the prompt's WHO YOU BECAME block is empty.
-enum FutureGoal {
-    static func decode(_ ids: [String]) -> [FutureGoal] { [] }
-    func promptText(languageName: String) -> String { "" }
-}
+/// `FutureGoal.swift` (iOS 3d655c8b, compiled from the ref) files each goal
+/// under its purpose; the prompt never reads the purpose.
+enum LearningPurpose { case start, hobby, exam, study, job, work, abroad, travel }

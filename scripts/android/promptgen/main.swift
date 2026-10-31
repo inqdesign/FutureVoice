@@ -40,6 +40,17 @@ let thinPersona = UserPersona(
     interests: [], situations: [], freeNotes: "", updatedAt: now,
     learnedNotes: [notes[2], notes[3]], metAt: nil)
 
+var goalsPersona: UserPersona {
+    var p = fullPersona
+    p.goals = ["work.meetings", "travel.locals", "someday.newer", "exam.calm"]
+    return p
+}
+var goalsThinPersona: UserPersona {
+    var p = thinPersona
+    p.goals = ["abroad.errands"]
+    return p
+}
+
 let patterns = [
     LearnerPattern(mistake: "I go yesterday", correction: "I went yesterday", context: "past tense", frequency: 4, lastSeenAt: now),
     LearnerPattern(mistake: "more better", correction: "better", context: "comparatives", frequency: 3, lastSeenAt: now),
@@ -170,6 +181,18 @@ let fixtures: [Fixture] = [
             topic: "Ordering at a cafe", tutor: true, lesson: lesson(done: 2)),
     Fixture(name: "first_counterpart_ignored_es", target: "es", native: "en", level: .b2, persona: nil,
             counterpart: manager, firstMeeting: true),
+    // The learner's goals (iOS 3d655c8b): WHO YOU BECAME on a free talk and
+    // the first call only; an id this build doesn't know is skipped.
+    Fixture(name: "goals_free_en_b1", target: "en", native: "ko", level: .b1, persona: goalsPersona,
+            clock: clock(0, lastToday: nil, before: daysBeforeCall(2))),
+    Fixture(name: "goals_first_ko_a2", target: "ko", native: "en", level: .a2, persona: goalsThinPersona,
+            firstMeeting: true, clock: clock(0, lastToday: nil, before: nil)),
+    Fixture(name: "goals_topic_ja_b1_absent", target: "ja", native: "ko", level: .b1,
+            topic: "Ordering at a cafe", persona: goalsPersona),
+    Fixture(name: "goals_cast_en_absent", target: "en", native: "ko", level: .b1, persona: goalsPersona,
+            counterpart: closeFriend),
+    Fixture(name: "goals_tutor_de_absent", target: "de", native: "en", level: .b2, persona: goalsPersona,
+            tutor: true),
 ]
 
 var prompts: [String: String] = [:]

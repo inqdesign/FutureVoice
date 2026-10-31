@@ -416,6 +416,7 @@
     <string name="category_name_e_g_landlord_gym">"類別名稱（例：房東、健身房）"</string>
     <string name="challenge">"挑戰"</string>
     <string name="challenges">"挑戰"</string>
+    <string name="change">"更改"</string>
     <string name="change_in_my_routine">"在例行計畫中修改"</string>
     <string name="change_my_level">"更改程度"</string>
     <string name="change_or_cancel_your_plan">"變更或取消方案"</string>
@@ -452,6 +453,7 @@
     <!-- 'Clears setup, voice clone and persona, then restarts the first-run flow. You stay signed in.' -->
     <string name="clears_setup_voice_clone_and_persona_then_restarts_the_first_cdfc74">"清除設定、聲音和個人檔案，從第一次開啟的畫面重新開始。登入狀態不變。"</string>
     <string name="client_calls">"客戶通話"</string>
+    <string name="client_calls_don_t_make_me_nervous">"和客戶通電話也不緊張"</string>
     <string name="clock_time">"通話時長"</string>
     <string name="cloning_your_voice">"正在製作你的聲音…"</string>
     <string name="close">"關閉"</string>
@@ -1097,8 +1099,17 @@
     <string name="how_you_use_it">"怎麼使用"</string>
     <string name="how_your_future_self_talks">"流利的自己怎麼說話"</string>
     <string name="how_your_level_moves">"等級怎麼變動"</string>
+    <string name="i_answer_the_speaking_test_calmly">"口說考試時從容回答"</string>
     <string name="i_called_earlier">"剛剛打給你了。"</string>
+    <string name="i_chat_easily_with_neighbors_and_other_parents">"和鄰居、其他家長輕鬆聊天"</string>
+    <string name="i_got_the_job_i_wanted">"錄取了想去的工作"</string>
+    <string name="i_got_the_score_i_needed">"考到了需要的分數"</string>
+    <string name="i_handle_the_doctor_the_landlord_and_the_town_hall_myself">"看醫生、找房東、跑公所都自己搞定"</string>
+    <string name="i_have_friends_i_chat_with_in_the_language">"有能用這個語言聊天的朋友"</string>
+    <string name="i_joke_around_with_my_colleagues">"和同事開玩笑"</string>
+    <string name="i_keep_a_simple_conversation_going">"簡單的對話可以一直聊下去"</string>
     <string name="i_know">"我會了"</string>
+    <string name="i_lead_meetings">"我主持會議"</string>
     <string name="i_left_you_a_message">"留了訊息給你。"</string>
     <string name="i_live_abroad">"住在國外"</string>
     <string name="i_ll_call_you_let_s_talk_five_minutes_a_day">"我會打電話給你。\n每天五分鐘，跟我聊聊吧。"</string>
@@ -1115,8 +1126,16 @@
     <string name="i_m_practicing_speaking_with_my_own_ai_voice_on_nawana_enter_50926d">"我在nawana用自己的AI聲音練習口說。註冊時輸入我的邀請碼%1$s，我們兩個都能拿到%2$d分鐘通話時間。"</string>
     <string name="i_moved_in_recently">"我最近才搬來"</string>
     <string name="i_need_it_at_work">"工作上要用"</string>
+    <string name="i_order_and_ask_for_things_without_freezing">"點餐、問事情都不會卡住"</string>
+    <string name="i_present_my_work_with_confidence">"有自信地發表自己的研究"</string>
+    <string name="i_speak_up_in_seminars">"在研討課上舉手發言"</string>
+    <string name="i_talk_about_what_i_love_for_as_long_as_i_want">"喜歡的事，想聊多久就聊多久"</string>
+    <string name="i_talk_with_locals_not_just_order">"不只點餐，還能和當地人聊天"</string>
+    <string name="i_tell_my_story_in_interviews_without_freezing">"面試時能流暢地講自己的經歷"</string>
+    <string name="i_travel_on_my_own_without_worrying">"一個人旅行也不擔心"</string>
     <string name="i_want_to_ask_more_questions">"我想多問問題"</string>
     <string name="i_want_to_start_speaking">"想開口說"</string>
+    <string name="i_watch_shows_without_subtitles">"不看字幕追劇"</string>
     <!-- "iCloud isn't available on this device" -->
     <string name="icloud_isn_t_available_on_this_device_2fccd1">"這台裝置無法使用 iCloud"</string>
     <!-- "iCloud isn't available on this device." -->
@@ -1124,6 +1143,7 @@
     <string name="icloud_storage_is_full_audio_isn_t_syncing">"iCloud 空間已滿，音訊不會同步"</string>
     <string name="ideas">"靈感"</string>
     <string name="ielts_opic_toeic_speaking">"IELTS、OPIc、TOEIC Speaking⋯"</string>
+    <string name="imagine_your_future">"想像你的未來"</string>
     <string name="import_practice_data">"匯入練習資料"</string>
     <string name="improvements">"效能改善"</string>
     <string name="in_">"%1$s：%2$s"</string>
@@ -1592,6 +1612,7 @@
     <string name="music_teacher">"音樂老師"</string>
     <string name="my_direct_manager">"我的直屬主管"</string>
     <string name="my_expressions_lld">"我的用語 · %d"</string>
+    <string name="my_future">"我的未來"</string>
     <string name="my_kid_s_teacher">"孩子的老師"</string>
     <string name="my_lines">"我的台詞"</string>
     <string name="my_own_topic">"聊我自己的話題"</string>
@@ -1819,6 +1840,8 @@
     <!-- 'Camera-on takes that score %lld or more go on the board, and your best one stands. The board shows your name and score — your video and voice stay on your phone.' -->
     <string name="camera_on_takes_that_score_lld_or_more_go_on_the_board">"開著相機錄、拿到%d分以上的才會上榜，留下的是你的最高分。榜上只顯示名字和分數，影片和聲音都只留在你的手機裡。"</string>
     <string name="passed_you_can_say_it_now">"通過了。現在你說得出來了。"</string>
+    <!-- 'Pick as many as you like. Your fluent self already lives them.' -->
+    <string name="pick_as_many_as_you_like_your_fluent_self_already_lives_them">"想選幾個都可以。流利的你，已經過著這樣的日子。"</string>
     <string name="red_skipped_or_read_differently_the_small_red_words">"紅字是漏讀或讀錯的地方，旁邊的小紅字是麥克風聽到的內容。"</string>
     <string name="say_it_all_in_your_own_words_in_one_go">"用自己的話，一口氣全部說出來。"</string>
     <string name="takes_that_score_lld_or_more_go_on_the_board">"%d分以上才會上榜。"</string>
@@ -2912,6 +2935,7 @@
     <!-- 'This permanently deletes your voice clone, talk time, and account. It cannot be undone. An active App Store subscription must be canceled separately in Settings → Apple ID → Subscriptions.' -->
     <string name="this_permanently_deletes_your_voice_clone_talk_time_and_acco_9e99be">"你的聲音、通話時間和帳號會被永久刪除，無法復原。如果App Store訂閱還在，請另外到「設定 → Apple ID → 訂閱」取消。"</string>
     <string name="this_person_has_been_deleted">"這個人已經刪除了"</string>
+    <string name="this_place_feels_like_home">"這裡真的像我家一樣"</string>
     <string name="this_script_is_too_long_to_make_in_your_voice">"這篇講稿太長，沒辦法用你的聲音生成。"</string>
     <!-- 'This shapes what I ask next — a manager and a best friend live in different worlds.' -->
     <string name="this_shapes_what_i_ask_next_a_manager_and_a_best_friend_live_11f75a">"這會決定我接下來問什麼——主管和好朋友是完全不同的世界。"</string>
@@ -3175,6 +3199,7 @@
     <string name="what_do_you_want_it_for">"想用在哪裡？"</string>
     <string name="what_do_you_want_to_be_able_to_do_in">"希望能用%s做什麼？"</string>
     <string name="what_do_your_work_chats_look_like">"你們工作上的對話是什麼樣子？"</string>
+    <string name="what_does_your_fluent_self_already_do">"流利的你，已經在做什麼了？"</string>
     <string name="what_each_day_was_made_of">"每天做了什麼"</string>
     <!-- 'What each day was made of — talk turns, shadow takes, drill reviews.' -->
     <string name="what_each_day_was_made_of_talk_turns_shadow_takes_drill_revi_2a49f0">"那天是由什麼組成的：對話回合、跟讀、訓練複習。"</string>

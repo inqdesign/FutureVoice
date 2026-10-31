@@ -134,6 +134,16 @@ object ConversationEngine {
         val ownTopicBlock = if (learnerPicksTopic && topic.isEmpty() && counterpart == null && !tutor)
             ConversationPrompt.ownTopicBlock else ""
 
+        // The goals the learner picked in setup ("Imagine your future", iOS
+        // 3d655c8b): what this fluent self already does. Only where the model
+        // IS the fluent self on an open line — a free talk or the first call;
+        // a scene, a news topic, a tutor lesson or a cast person each own the
+        // call. No goals = no block, so every prompt from before is byte-identical.
+        val futureGoals = persona?.futureGoals.orEmpty()
+        val futureBlock = if (futureGoals.isNotEmpty() && counterpart == null && topic.isEmpty() && !tutor)
+            ConversationPrompt.futureBlock(futureGoals.joinToString("\n") { "- " + it.promptText(languageName) })
+        else ""
+
         // History is left out for a cast stranger (no shared past) and the
         // first meeting (its own block says you have never spoken).
         val clockBlock = clock?.promptBlock(includeHistory = counterpart == null && !firstMeeting) ?: ""
@@ -153,6 +163,7 @@ object ConversationEngine {
             targetLanguage = targetLanguage, tutor = tutor,
             tutorBlock = if (tutor) TutorPrompt.block(targetLanguage, languageName, tutorLesson,
                 tutorJustTicked, tutorLastFixes, tutorPlanning) else "",
+            futureBlock = futureBlock,
         )
     }
 

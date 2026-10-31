@@ -418,7 +418,24 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
         _state.update { it.copy(reopenedPersona = it.persona, persona = null) }
     }
 
-    fun savePersona(persona: com.roro.futurevoice.talk.UserPersona) {
+    /**
+     * Setup's "Imagine your future" (iOS `SetupFlowView.finish`): over a
+     * profile that already exists (setup run again) the goals go straight
+     * on it; otherwise they wait for the persona cards, and [savePersona]
+     * moves them on.
+     */
+    fun saveSetupGoals(goals: List<com.roro.futurevoice.data.FutureGoal>) {
+        val p = _state.value.persona
+        if (p != null) savePersona(p.copy(goals = goals.map { it.raw }))
+        else com.roro.futurevoice.data.FutureGoalStore.setPending(appContext, goals)
+    }
+
+    fun savePersona(persona0: com.roro.futurevoice.talk.UserPersona) {
+        // The goals setup picked, one step before the persona existed (iOS 3d655c8b).
+        val pending = com.roro.futurevoice.data.FutureGoalStore.pending(appContext)
+        val persona = if (persona0.goals.isEmpty() && pending.isNotEmpty())
+            persona0.copy(goals = pending.map { it.raw }) else persona0
+        com.roro.futurevoice.data.FutureGoalStore.setPending(appContext, emptyList())
         _state.update { it.copy(persona = persona, reopenedPersona = null) }
         viewModelScope.launch {
             PersonaStore.shared(appContext).save(persona)

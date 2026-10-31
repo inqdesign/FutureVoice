@@ -23,6 +23,10 @@ done
 if git cat-file -e "$REF:FutureVoice/Services/TutorLesson.swift" 2>/dev/null; then
   git show "$REF:FutureVoice/Services/TutorLesson.swift" | sed '/^\/\/ MARK: - Store/,$d' > "$SRC/TutorLesson.swift"
 fi
+# The learner's own goals (iOS 3d655c8b): the WHO YOU BECAME block's lines.
+if git cat-file -e "$REF:FutureVoice/Services/FutureGoal.swift" 2>/dev/null; then
+  git show "$REF:FutureVoice/Services/FutureGoal.swift" > "$SRC/FutureGoal.swift"
+fi
 BIN=$SRC/promptgen
 swiftc -O -o "$BIN" scripts/android/promptgen/stubs.swift scripts/android/promptgen/main.swift "$SRC"/*.swift
 TZ=UTC "$BIN" "$OUT" "$(git rev-parse --short "$REF")"
