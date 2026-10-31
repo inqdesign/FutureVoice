@@ -453,7 +453,25 @@ fun RootScreen() {
             is DeepLinkInbox.WidgetRoute.Routine -> when (route.kind) {
                 com.roro.futurevoice.data.StudyPlan.Kind.TALK ->
                     DeepLinkInbox.requestFreeTalk(com.roro.futurevoice.talk.TalkEntry.WIDGET)
-                com.roro.futurevoice.data.StudyPlan.Kind.REVIEW, com.roro.futurevoice.data.StudyPlan.Kind.WORDS,
+                // The block's own deck, as Activity deals it. The put-off deck
+                // holds only what was snoozed, so a learner with 22 cards
+                // waiting was dealt one (iOS bcddcc40).
+                com.roro.futurevoice.data.StudyPlan.Kind.REVIEW -> {
+                    showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false
+                    showActivity = false; detailSessionId = null; bookScenarioId = null; watchScenarioId = null
+                    tab = HomeTab.PRACTICE
+                    val deck = routineDeck(context,
+                        goal = com.roro.futurevoice.data.GoalStore.target(context,
+                            com.roro.futurevoice.data.StudyPlan.Kind.REVIEW)
+                            ?: com.roro.futurevoice.data.StudyPlan.Kind.REVIEW.defaultAmount,
+                        language = state.targetLanguage, level = state.level)
+                    // No cards but lines to say: straight to the lines, as
+                    // Activity's row does.
+                    if (deck.first.isEmpty() && deck.second.isNotEmpty()) {
+                        shadowHand = deck.second; shadowAt = 0
+                    } else routineReview = deck
+                }
+                com.roro.futurevoice.data.StudyPlan.Kind.WORDS,
                 com.roro.futurevoice.data.StudyPlan.Kind.EXPRESSIONS -> {
                     showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false
                     showActivity = false; detailSessionId = null; bookScenarioId = null; watchScenarioId = null
@@ -479,6 +497,14 @@ fun RootScreen() {
                     routineOpens = route.kind
                     showActivity = true
                 }
+            }
+            // The tutor bot's Start: the cards it counted as waiting (iOS
+            // `.waitingReview`, bcddcc40).
+            DeepLinkInbox.WidgetRoute.Waiting -> {
+                showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false
+                showActivity = false; detailSessionId = null; bookScenarioId = null; watchScenarioId = null
+                tab = HomeTab.PRACTICE
+                routineReview = waitingDeck(context, state.targetLanguage) to emptyList()
             }
             DeepLinkInbox.WidgetRoute.FreeTalk -> {
                 tab = HomeTab.TALK

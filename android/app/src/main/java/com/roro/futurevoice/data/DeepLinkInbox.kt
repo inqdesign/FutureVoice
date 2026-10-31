@@ -24,6 +24,9 @@ object DeepLinkInbox {
         /** The routine widget: the block of this kind's door, or My routine
          *  when there is no kind (iOS `openRoutineBlock`, a0836bbe). */
         data class Routine(val kind: StudyPlan.Kind?) : WidgetRoute
+        /** The tutor bot's "N cards waiting" → exactly those N cards (iOS
+         *  `futurevoice://waiting`, bcddcc40). */
+        data object Waiting : WidgetRoute
     }
 
     val widgetRoute = MutableStateFlow<WidgetRoute?>(null)
@@ -71,6 +74,8 @@ object DeepLinkInbox {
                 widgetRoute.value = WidgetRoute.Routine(StudyPlan.Kind.entries.firstOrNull { it.raw == raw })
                 return
             }
+            // The tutor bot's Start: the cards it counted as waiting.
+            "waiting" -> { widgetRoute.value = WidgetRoute.Waiting; return }
             // A routine's say-it-again reminder: the talk picker.
             "sayitagain" -> { PlanReminder.pendingSayItAgain.value = true; return }
             // A routine's Speech reminder: the Speech tab.

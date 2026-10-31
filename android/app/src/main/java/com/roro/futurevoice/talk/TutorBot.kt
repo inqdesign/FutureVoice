@@ -12,7 +12,6 @@ import com.roro.futurevoice.data.ActivityEventLog
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.data.DeepLinkInbox
-import com.roro.futurevoice.data.DrillStore
 import com.roro.futurevoice.data.LanguageCatalog
 import com.roro.futurevoice.data.LanguageScope
 import com.roro.futurevoice.data.PlanReminder
@@ -23,7 +22,6 @@ import com.roro.futurevoice.data.RoutineText
 import com.roro.futurevoice.data.SessionStore
 import com.roro.futurevoice.data.StudyPlan
 import com.roro.futurevoice.data.StudyPlanStore
-import com.roro.futurevoice.data.StudyScheduleStore
 import com.roro.futurevoice.data.TalkTimeLog
 import com.roro.futurevoice.data.VocabStore
 import com.roro.futurevoice.data.nowLine
@@ -171,8 +169,7 @@ object TutorBot {
                 start = occ.start, anytime = occ.anytime, progress = progress[occ.id] ?: 0.0, end = occ.end)
         }
         val language = LanguageScope.active(c)
-        val dueCards = runCatching { DrillStore.shared(c).dueCount(language, now) }.getOrDefault(0) +
-            runCatching { StudyScheduleStore.shared(c).snapshot(language).dueItems(now).size }.getOrDefault(0)
+        val dueCards = runCatching { com.roro.futurevoice.ui.waitingDeck(c, language, now).size }.getOrDefault(0)
         val streak = TalkTimeLog.streakDays(c, now)
         val talkedToday = TalkTimeLog.secondsToday(c, now) / 60
         var suggested = false
@@ -346,7 +343,14 @@ object TutorBot {
             DeepLinkInbox.requestFreeTalk(TalkEntry.TUTOR_BOT)
             return
         }
-        DeepLinkInbox.widgetRoute.value = DeepLinkInbox.WidgetRoute.Routine(kind)
+        DeepLinkInbox.widgetRoute.value = when (kind) {
+            // The bot says "N cards waiting" ([Today.dueCards]); Start deals
+            // those N ([com.roro.futurevoice.ui.waitingDeck]), never another
+            // deck. It opened the put-off deck and dealt 1 of 22 (iOS bcddcc40).
+            StudyPlan.Kind.REVIEW, StudyPlan.Kind.WORDS, StudyPlan.Kind.EXPRESSIONS ->
+                DeepLinkInbox.WidgetRoute.Waiting
+            else -> DeepLinkInbox.WidgetRoute.Routine(kind)
+        }
     }
 }
 
