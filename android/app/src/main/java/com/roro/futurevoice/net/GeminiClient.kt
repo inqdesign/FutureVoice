@@ -163,11 +163,15 @@ class GeminiClient(private val auth: AuthRepository) {
         /** gen-3 "minimal" thinking — perception calls (a transcript), where
          *  thought tokens are wait time and buy no better answer. */
         fastThinking: Boolean = false,
+        /** Gen-3 thinking level to send instead of the default ("low"), for
+         *  a call whose answer nobody is waiting on. Overrides [fastThinking]
+         *  (iOS `thinkingLevel`, 465331f6). */
+        thinkingLevel: String? = null,
     ): T = withContext(Dispatchers.IO) {
         val request = buildRequest(
             system, messages, model, maxTokens, temperature, searchGrounding,
             purpose, idempotencyKey, jsonResponse = true, stream = false,
-            urlContext = urlContext, fastThinking = fastThinking,
+            urlContext = urlContext, fastThinking = fastThinking, thinkingLevel = thinkingLevel,
         )
         val (raw, finishReason) = Edge.client.newCall(request).execute().use { response ->
             val bytes = response.body.bytes()
@@ -415,6 +419,7 @@ class GeminiClient(private val auth: AuthRepository) {
         stream: Boolean,
         urlContext: Boolean = false,
         fastThinking: Boolean = false,
+        thinkingLevel: String? = null,
     ): Request {
         val usesTools = searchGrounding || urlContext
         val body = BodyDto(
@@ -441,7 +446,10 @@ class GeminiClient(private val auth: AuthRepository) {
                 maxOutputTokens = maxTokens,
                 // Latency floor for the phone-call loop: thinking OFF on 2.5, the
                 // minimum "low" level on gen-3 (which can't fully disable).
-                thinkingConfig = if (model.isGen3) ThinkingConfigDto(thinkingLevel = if (fastThinking) "minimal" else "low")
+                // A caller nobody waits on may ask for more (`thinkingLevel`,
+                // "medium" for the level tagging, measured in
+                // scripts/level-tag-probe.py: recall 91% → 96%).
+                thinkingConfig = if (model.isGen3) ThinkingConfigDto(thinkingLevel = thinkingLevel ?: if (fastThinking) "minimal" else "low")
                 else ThinkingConfigDto(thinkingBudget = 0),
                 // Force JSON at the API level — prompt-only JSON drifts back to
                 // prose in long conversations because the model imitates its own

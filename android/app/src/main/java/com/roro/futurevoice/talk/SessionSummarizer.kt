@@ -392,6 +392,10 @@ object SessionSummarizer {
                 metAt = if (wasIntroTalk) (session.endedAt ?: System.currentTimeMillis()) else null,
                 updates = updates)
         }
+        // Where the learner stands on the level map (`LearnerState`): its own
+        // call, in the background, after the talk is saved — never part of
+        // the summary, whose schema and prompt are measured as they are.
+        LevelTagging.afterSummary(context, saved)
 
         // Cards: clear this session's untouched ones (a re-analysis must not
         // reset Leitner progress), mint, then credit live production.

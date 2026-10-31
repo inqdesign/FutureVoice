@@ -214,6 +214,12 @@ data class Session(
         return turns.none { it.isEvidence && it.transcript.isNotBlank() }
     }
 
+    /** Whether this talk is something the level assessment reads: not a
+     *  practice call, and the learner said at least one scorable line (iOS
+     *  `Session.isLevelEvidence`). Archiving is checked by the caller. */
+    val isLevelEvidence: Boolean get() =
+        !isPractice && turns.any { it.isEvidence && it.transcript.isNotBlank() }
+
     /** Newest-ended-first ordering key, as `SessionStore.swift` ranks. */
     val rank: Long get() = endedAt ?: startedAt
 
