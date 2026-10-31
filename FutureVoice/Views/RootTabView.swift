@@ -500,9 +500,17 @@ struct RootTabView: View {
                               y: geo.size.height - 46 - 64,
                               width: 156, height: 64)
             let ringGlobal = appState.talkRingFrame
+            // Global frames are in WINDOW points; on the Mac the page is
+            // zoomed (`MacWindow.zoomContent`), so a global length is the
+            // local one times the zoom. Read the scale off this container
+            // (1 on the phone) or the ring starts 1.3x right and down.
+            let scale = geo.size.width > 0 ? container.width / geo.size.width : 1
             let start = ringGlobal == .zero
                 ? dock   // no measured ring (cold widget launch) — no fly-in
-                : ringGlobal.offsetBy(dx: -container.minX, dy: -container.minY)
+                : CGRect(x: (ringGlobal.minX - container.minX) / scale,
+                         y: (ringGlobal.minY - container.minY) / scale,
+                         width: ringGlobal.width / scale,
+                         height: ringGlobal.height / scale)
             let rect = pillDocked ? dock : start
             let corner: CGFloat = pillDocked ? 32 : rect.height / 2
             ZStack {
