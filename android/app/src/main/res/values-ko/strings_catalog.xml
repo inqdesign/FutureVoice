@@ -302,6 +302,7 @@
     <string name="at_the_train_station">"기차역에서"</string>
     <string name="at_your_routine_s_talk_times">"루틴에 정한 시간에 걸게: %s"</string>
     <string name="attach_a_link_or_a_file">"링크나 파일 붙이기"</string>
+    <string name="attach_a_posting_a_cv_the_exam_s_page">"채용 공고, 이력서, 시험 안내 페이지 붙이기…"</string>
     <string name="attach_material">"자료 붙이기"</string>
     <string name="audio_engine_failed_to_start">"오디오 엔진을 시작하지 못했어요"</string>
     <string name="automatic">"자동"</string>
@@ -556,6 +557,7 @@
     <string name="couldn_t_publish_check_your_connection_and_try_again">"공개하지 못했어요 — 연결을 확인하고 다시 시도해 주세요."</string>
     <!-- "Couldn't reach the server. Your minutes will be added the next time the app opens." -->
     <string name="couldn_t_reach_the_server_your_minutes_will_be_added_the_nex_82ad46">"서버에 연결하지 못했어요. 다음에 앱을 열면 시간이 추가돼요."</string>
+    <string name="couldn_t_read_it_this_time">"이번에는 읽지 못했어요."</string>
     <string name="couldn_t_read_that_file_as_a_photo">"그 파일을 사진으로 읽지 못했어요."</string>
     <string name="couldn_t_read_that_photo">"그 사진을 읽지 못했어요."</string>
     <string name="couldn_t_read_this_one">"이건 못 읽었어요"</string>
@@ -1877,6 +1879,9 @@
     <string name="rank">"순위"</string>
     <!-- 'Read' -->
     <string name="read_852b43">"읽기"</string>
+    <string name="read_it">"읽기"</string>
+    <!-- 'Read once when you save. Files stay where they are on your phone.' -->
+    <string name="read_once_when_you_save_files_stay_where_they_are_on_your_ph_cbc3e0">"저장하면 한 번 읽어요. 파일은 휴대폰의 원래 자리에 그대로 있어요."</string>
     <!-- 'Reading' -->
     <string name="reading_cffa2a">"읽기"</string>
     <string name="red_skipped_or_read_differently_the_small_red_words">"빨간 글자는 빠뜨렸거나 다르게 읽은 곳이에요. 옆의 작은 빨간 글자는 마이크가 들은 말이에요."</string>

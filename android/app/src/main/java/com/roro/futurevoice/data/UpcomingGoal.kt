@@ -9,6 +9,7 @@ import com.roro.futurevoice.R
 import com.roro.futurevoice.core.Analytics
 import com.roro.futurevoice.talk.PromptClock
 import com.roro.futurevoice.talk.ScenarioBrief
+import kotlinx.coroutines.launch
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
@@ -215,6 +216,47 @@ object UpcomingGoalStore {
         val purposes = LearningPurposeStore.purposes(c)
         if (p != null && p !in purposes) LearningPurposeStore.setPurposes(c, purposes + p)
         Analytics.capture("upcoming_goal_saved", mapOf("kind" to g.kind.raw, "dated" to (g.date != null)))
+    }
+
+    private val scope = kotlinx.coroutines.CoroutineScope(
+        kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main.immediate)
+
+    /** [readMaterial] in the background, after the editor has gone. */
+    fun readMaterialSoon(c: Context, id: String) {
+        val app = c.applicationContext
+        scope.launch {
+            val persona = runCatching { PersonaStore.shared(app).load() }.getOrNull()
+            val native = app.getSharedPreferences("futurevoice", Context.MODE_PRIVATE)
+                .getString("futurevoice.nativeLanguage", null) ?: LanguageCatalog.defaultNative()
+            readMaterial(app, id, persona, native)
+        }
+    }
+
+    /** Read the goal's attached material, then save what it found. The
+     *  learner just saved the goal or opened its page, so they are here. */
+    suspend fun readMaterial(c: Context, id: String, persona: com.roro.futurevoice.talk.UserPersona?,
+                             nativeLanguage: String) {
+        if (id in readingMaterial) return
+        val goal = goal(c, id) ?: return
+        if (goal.brief?.hasSources != true) return
+        readingMaterial = readingMaterial + id
+        materialFailed = materialFailed - id
+        try {
+            val stand = com.roro.futurevoice.talk.Scenario(environment = goal.promptLine(), role = "",
+                notes = goal.notes, brief = goal.brief)
+            val brief = com.roro.futurevoice.net.ScenarioBriefEngine.read(c, stand, persona,
+                targetLanguage = goal.language, nativeLanguage = nativeLanguage)
+            val current = goal(c, id) ?: return
+            if (current.brief?.sources?.map { it.id } != brief.sources.map { it.id }) return
+            save(c, current.copy(brief = brief))
+            Analytics.capture("upcoming_goal_material_read", mapOf("sources" to brief.sources.size))
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            materialFailed = materialFailed + id
+        } finally {
+            readingMaterial = readingMaterial - id
+        }
     }
 
     fun delete(c: Context, id: String) {

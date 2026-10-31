@@ -2021,6 +2021,16 @@
         }
       }
     },
+    "Attach a posting, a CV, the exam's page…" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "채용 공고, 이력서, 시험 안내 페이지 붙이기…"
+          }
+        }
+      }
+    },
     "Average" : {
       "localizations" : {
         "de" : {
@@ -42024,6 +42034,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "無法連上伺服器。下次打開 App 時會自動加上。"
+          }
+        }
+      }
+    },
+    "Couldn't read it this time." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이번에는 읽지 못했어요."
           }
         }
       }
@@ -101570,6 +101590,16 @@
         }
       }
     },
+    "Read it" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "읽기"
+          }
+        }
+      }
+    },
     "Read it aloud five times" : {
       "localizations" : {
         "de" : {
@@ -101704,6 +101734,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "大聲念出來"
+          }
+        }
+      }
+    },
+    "Read once when you save. Files stay where they are on your phone." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "저장하면 한 번 읽어요. 파일은 휴대폰의 원래 자리에 그대로 있어요."
           }
         }
       }

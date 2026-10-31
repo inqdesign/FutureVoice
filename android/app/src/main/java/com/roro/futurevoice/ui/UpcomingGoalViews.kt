@@ -15,6 +15,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.MicExternalOn
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Checklist
@@ -51,6 +57,13 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.roro.futurevoice.R
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import com.roro.futurevoice.data.BriefAttachmentCache
+import com.roro.futurevoice.data.ScenarioAttachmentReader
+import com.roro.futurevoice.talk.ScenarioBrief
+import kotlinx.coroutines.launch
 import com.roro.futurevoice.data.StudyPlan
 import com.roro.futurevoice.data.UpcomingGoal
 import com.roro.futurevoice.data.UpcomingGoalStore
@@ -161,15 +174,75 @@ fun UpcomingGoalEditor(goal: UpcomingGoal?, language: String, onDismiss: () -> U
     }
     var kindMenu by remember { mutableStateOf(false) }
     var confirmingDelete by remember { mutableStateOf(false) }
+    var addingLink by remember { mutableStateOf(false) }
+    var attachMenu by remember { mutableStateOf(false) }
+    var attachError by remember { mutableStateOf<String?>(null) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    /** The sources as opened, so a save knows whether to read them again. */
+    val sourcesBefore = remember { start.brief?.sources?.map { it.id } ?: emptyList() }
+    val sources = draft.brief?.sources ?: emptyList()
 
     fun save() {
-        val g = draft.copy(
+        var g = draft.copy(
             title = draft.title.trim(), place = draft.place.trim(), notes = draft.notes.trim(),
             date = if (hasDate) StudyPlan.startOfDay(pickedDate) else null,
         )
+        val changed = (g.brief?.sources?.map { it.id } ?: emptyList()) != sourcesBefore
+        if (changed && g.brief != null) {
+            // New material: what was found in the old set no longer stands.
+            val kept = g.brief?.sources ?: emptyList()
+            g = g.copy(brief = if (kept.isEmpty()) null else ScenarioBrief(sources = kept))
+        }
         UpcomingGoalStore.save(context, g)
+        if (g.brief?.needsReading == true) UpcomingGoalStore.readMaterialSoon(context, g.id)
         onSaved(UpcomingGoalStore.goal(context, g.id))
         onDismiss()
+    }
+
+    // Read from where the file lives: never copied into the app.
+    fun add(source: ScenarioBrief.Source) {
+        val brief = draft.brief ?: ScenarioBrief()
+        draft = draft.copy(brief = brief.copy(sources = brief.sources + source))
+    }
+    fun addRead(read: ScenarioAttachmentReader.Read, label: String? = null, keepUri: Boolean = true) {
+        val src = read.source.copy(label = label ?: read.source.label,
+            androidUri = if (keepUri) read.source.androidUri else null)
+        BriefAttachmentCache.put(src.id, read.data, read.mime)
+        add(src)
+    }
+    fun photoLabel() = context.getString(R.string.photo_lld,
+        sources.count { it.kind == ScenarioBrief.Kind.IMAGE } + 1)
+    val pickFiles = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        scope.launch {
+            for (uri in uris) {
+                try { addRead(ScenarioAttachmentReader.read(context, uri)) }
+                catch (e: ScenarioAttachmentReader.ReadError) { attachError = e.describe(context) }
+            }
+        }
+    }
+    val pickPhoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        scope.launch {
+            try { addRead(ScenarioAttachmentReader.read(context, uri), photoLabel(), keepUri = false) }
+            catch (e: ScenarioAttachmentReader.ReadError) { attachError = e.describe(context) }
+        }
+    }
+    val takePhoto = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bmp ->
+        bmp ?: return@rememberLauncherForActivityResult
+        val read = ScenarioAttachmentReader.read(bmp, photoLabel())
+        if (read == null) attachError = context.getString(R.string.couldn_t_read_that_photo)
+        else addRead(read)
+    }
+    fun attachLink(raw: String) {
+        var text = raw.trim()
+        if (text.isEmpty()) return
+        if (!text.lowercase().startsWith("http://") && !text.lowercase().startsWith("https://")) text = "https://$text"
+        val host = runCatching { java.net.URI(text).host }.getOrNull()
+        if (host == null || !host.contains('.')) {
+            attachError = context.getString(R.string.that_doesn_t_look_like_a_link); return
+        }
+        if (sources.any { it.kind == ScenarioBrief.Kind.LINK && it.label == text }) return
+        add(ScenarioBrief.Source(kind = ScenarioBrief.Kind.LINK, label = text))
     }
 
     com.roro.futurevoice.ui.speech.SpeechSheet(onDismiss) {
@@ -228,6 +301,58 @@ fun UpcomingGoalEditor(goal: UpcomingGoal?, language: String, onDismiss: () -> U
             FormTextRow(draft.notes, { draft = draft.copy(notes = it) },
                 stringResource(R.string.the_role_the_score_you_need_who_will_be_there), minLines = 3, maxLines = 8)
         }
+        FormSection(stringResource(R.string.material),
+            footer = stringResource(R.string.read_once_when_you_save_files_stay_where_they_are_on_your_ph_cbc3e0)) {
+            sources.forEach { src ->
+                Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Icon(briefSourceIcon(src), contentDescription = null, tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.width(22.dp).size(20.dp))
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(briefChipLabel(src), style = MaterialTheme.typography.bodyLarge, maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.MiddleEllipsis)
+                        src.detail?.takeIf { it.isNotEmpty() }?.let {
+                            Text(it, style = MaterialTheme.typography.labelMedium,
+                                color = if (src.readOK) MaterialTheme.colorScheme.onSurfaceVariant
+                                    else MaterialTheme.colorScheme.error)
+                        }
+                    }
+                    // iOS deletes a source with a swipe (or a right-click on the Mac).
+                    androidx.compose.material3.IconButton(onClick = {
+                        BriefAttachmentCache.drop(src.id)
+                        val b = draft.brief
+                        if (b != null) draft = draft.copy(brief = b.copy(sources = b.sources.filter { it.id != src.id }))
+                    }) {
+                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.remove),
+                            tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(18.dp))
+                    }
+                }
+                FormDivider()
+            }
+            Box {
+                Row(Modifier.fillMaxWidth().clickable { attachMenu = true }.padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Icon(Icons.Filled.AttachFile, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp))
+                    Text(stringResource(R.string.attach_a_posting_a_cv_the_exam_s_page), style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.primary)
+                }
+                IosMenu(attachMenu, { attachMenu = false }) {
+                    IosMenuItem(stringResource(R.string.paste_a_link), onClick = { attachMenu = false; addingLink = true },
+                        icon = Icons.Filled.Link, reserveCheck = false)
+                    IosMenuItem(stringResource(R.string.pick_a_file), onClick = {
+                        attachMenu = false; pickFiles.launch(ScenarioAttachmentReader.pickerTypes)
+                    }, icon = Icons.Filled.Description, reserveCheck = false)
+                    IosMenuItem(stringResource(R.string.photo_library), onClick = {
+                        attachMenu = false
+                        pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    }, icon = Icons.Filled.PhotoLibrary, reserveCheck = false)
+                    IosMenuItem(stringResource(R.string.take_a_photo), onClick = {
+                        attachMenu = false; runCatching { takePhoto.launch(null) }
+                    }, icon = Icons.Filled.CameraAlt, reserveCheck = false)
+                }
+            }
+        }
         if (!isNew) {
             FormSection(null) {
                 Text(stringResource(R.string.delete_goal), style = MaterialTheme.typography.bodyLarge,
@@ -236,6 +361,32 @@ fun UpcomingGoalEditor(goal: UpcomingGoal?, language: String, onDismiss: () -> U
                         .padding(horizontal = 16.dp, vertical = 12.dp))
             }
         }
+    }
+    if (addingLink) {
+        var linkText by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { addingLink = false },
+            title = { Text(stringResource(R.string.paste_a_link)) },
+            text = {
+                androidx.compose.material3.OutlinedTextField(value = linkText, onValueChange = { linkText = it },
+                    placeholder = { Text("https://…", color = com.roro.futurevoice.ui.brand.iosPlaceholder()) },
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Uri),
+                    modifier = Modifier.fillMaxWidth())
+            },
+            confirmButton = {
+                TextButton(onClick = { attachLink(linkText); addingLink = false }) { Text(stringResource(R.string.add)) }
+            },
+            dismissButton = { TextButton(onClick = { addingLink = false }) { Text(stringResource(R.string.cancel)) } },
+        )
+    }
+    attachError?.let { msg ->
+        AlertDialog(
+            onDismissRequest = { attachError = null },
+            title = { Text(msg) },
+            confirmButton = { TextButton(onClick = { attachError = null }) { Text(stringResource(R.string.ok)) } },
+        )
     }
     if (confirmingDelete) {
         AlertDialog(
@@ -311,8 +462,15 @@ fun UpcomingGoalPage(initial: UpcomingGoal, state: AppState, onDismiss: () -> Un
     var reading by remember { mutableStateOf<com.roro.futurevoice.talk.TutorReading?>(null) }
     var editing by remember { mutableStateOf(false) }
 
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     LaunchedEffect(goal.updatedAt, attempt) {
         questions = null
+        if (goal.brief?.needsReading == true && goal.id !in UpcomingGoalStore.materialFailed) {
+            UpcomingGoalStore.readMaterial(context, goal.id, state.persona, state.nativeLanguage)
+            // Read and saved: this effect runs again for the new goal. Not
+            // read: the questions go ahead without it.
+            if (UpcomingGoalStore.goal(context, goal.id)?.brief?.needsReading != true) return@LaunchedEffect
+        }
         questions = com.roro.futurevoice.talk.GoalPrep.cachedQuestions(context, goal) ?: try {
             com.roro.futurevoice.talk.GoalPrep.questions(context, goal, state.nativeLanguage, state.level)
         } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) {
@@ -341,6 +499,60 @@ fun UpcomingGoalPage(initial: UpcomingGoal, state: AppState, onDismiss: () -> Un
                 Text(goal.notes, style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp))
+            }
+        }
+        if (goal.brief?.hasSources == true) {
+            // What the material is and what the reading found, with Read again.
+            val brief = goal.brief ?: ScenarioBrief()
+            val reading = goal.id in UpcomingGoalStore.readingMaterial
+            FormSection(stringResource(R.string.material),
+                footer = brief.readAt?.let { stringResource(R.string.read, abbreviatedDate(it)) }) {
+                if (reading) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                        Text(stringResource(R.string.reading_your_material), style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    FormDivider()
+                } else if (brief.summary.isNotEmpty()) {
+                    Text(brief.summary, style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp))
+                    FormDivider()
+                }
+                brief.sources.forEach { src ->
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Icon(briefSourceIcon(src), contentDescription = null, tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp))
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(briefChipLabel(src), style = MaterialTheme.typography.bodyLarge, maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.MiddleEllipsis)
+                            src.detail?.takeIf { it.isNotEmpty() }?.let {
+                                Text(it, style = MaterialTheme.typography.labelMedium,
+                                    color = if (src.readOK) MaterialTheme.colorScheme.onSurfaceVariant
+                                        else MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    }
+                    FormDivider()
+                }
+                if (goal.id in UpcomingGoalStore.materialFailed) {
+                    Text(stringResource(R.string.couldn_t_read_it_this_time), style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                    FormDivider()
+                }
+                if (!reading) {
+                    Text(stringResource(if (brief.readAt == null) R.string.read_it else R.string.read_again),
+                        style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            val g = goal.copy(brief = brief.copy(readAt = null))
+                            UpcomingGoalStore.save(context, g)
+                            scope.launch {
+                                UpcomingGoalStore.readMaterial(context, g.id, state.persona, state.nativeLanguage)
+                            }
+                        }.padding(horizontal = 16.dp, vertical = 12.dp))
+                }
             }
         }
         val loaded = questions

@@ -302,6 +302,7 @@
     <string name="at_the_train_station">"At the train station"</string>
     <string name="at_your_routine_s_talk_times">"At your routine's talk times: %s"</string>
     <string name="attach_a_link_or_a_file">"Attach a link or a file"</string>
+    <string name="attach_a_posting_a_cv_the_exam_s_page">"Attach a posting, a CV, the exam's page…"</string>
     <string name="attach_material">"Attach material"</string>
     <string name="audio_engine_failed_to_start">"Audio engine failed to start"</string>
     <string name="automatic">"Automatic"</string>
@@ -557,6 +558,7 @@
     <string name="couldn_t_publish_check_your_connection_and_try_again">"Couldn't publish — check your connection and try again."</string>
     <!-- "Couldn't reach the server. Your minutes will be added the next time the app opens." -->
     <string name="couldn_t_reach_the_server_your_minutes_will_be_added_the_nex_82ad46">"Couldn't reach the server. Your minutes will be added the next time the app opens."</string>
+    <string name="couldn_t_read_it_this_time">"Couldn't read it this time."</string>
     <string name="couldn_t_read_that_file_as_a_photo">"Couldn't read that file as a photo."</string>
     <string name="couldn_t_read_that_photo">"Couldn't read that photo."</string>
     <string name="couldn_t_read_this_one">"Couldn't read this one"</string>
@@ -1879,6 +1881,9 @@
     <string name="rank">"Rank"</string>
     <!-- 'Read' -->
     <string name="read_852b43">"Read"</string>
+    <string name="read_it">"Read it"</string>
+    <!-- 'Read once when you save. Files stay where they are on your phone.' -->
+    <string name="read_once_when_you_save_files_stay_where_they_are_on_your_ph_cbc3e0">"Read once when you save. Files stay where they are on your phone."</string>
     <!-- 'Reading' -->
     <string name="reading_cffa2a">"Reading"</string>
     <string name="red_skipped_or_read_differently_the_small_red_words">"Red: skipped or read differently. The small red words are what the mic heard."</string>
