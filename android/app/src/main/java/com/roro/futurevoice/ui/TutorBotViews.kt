@@ -47,6 +47,7 @@ import androidx.compose.material.icons.filled.MicExternalOn
 import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
@@ -408,7 +409,8 @@ fun TutorPlanRows(today: TutorBot.Today) {
         today.items.forEachIndexed { i, item ->
             if (i > 0) HorizontalDivider(Modifier.padding(start = 40.dp),
                 color = MaterialTheme.colorScheme.outlineVariant)
-            Row(Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically,
+            Row(Modifier.fillMaxWidth().clickable { TutorBot.start(context, item.kind) }.padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.width(28.dp), contentAlignment = Alignment.Center) {
                     Icon(item.kind.icon(), contentDescription = null, tint = item.kind.color(),
@@ -425,15 +427,15 @@ fun TutorPlanRows(today: TutorBot.Today) {
                 when {
                     item.done -> Icon(Icons.Filled.CheckCircle, contentDescription = null,
                         tint = Color(0xFF34C759), modifier = Modifier.size(22.dp))
-                    item.id == next?.id -> SoftChip(stringResource(R.string.start), selected = true) {
-                        TutorBot.start(context, item.kind)
-                    }
                     item.progress > 0 -> CircularProgressIndicator(
                         progress = { item.progress.toFloat() }, modifier = Modifier.size(20.dp),
                         strokeWidth = 3.dp, trackColor = MaterialTheme.colorScheme.outlineVariant)
-                    else -> Icon(Icons.Outlined.Circle, contentDescription = null,
-                        tint = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.size(22.dp))
                 }
+                // The whole row starts it; the next one's chevron wears the tint
+                // (iOS 1240606d).
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+                    tint = if (item.id == next?.id) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.size(18.dp))
             }
         }
     }
@@ -492,6 +494,12 @@ fun TutorChatView(state: AppState, onDismiss: () -> Unit) {
         stringResource(R.string.how_do_i_reach_the_next_level),
     )
     val latest by rememberUpdatedState(state)
+    var addingGoal by remember { mutableStateOf(false) }
+    var goalPage by remember { mutableStateOf<com.roro.futurevoice.data.UpcomingGoal?>(null) }
+    // A goal added or changed reloads the tutor's picks at once.
+    LaunchedEffect(com.roro.futurevoice.data.UpcomingGoalStore.goals) {
+        TutorBot.loadPicks(context, latest.targetLanguage, latest.persona)
+    }
     LaunchedEffect(Unit) {
         TutorChat.resetIfNewDay()
         TutorBot.refresh(context, latest.targetLanguage, latest.nativeLanguage, latest.level, latest.persona,
@@ -509,14 +517,16 @@ fun TutorChatView(state: AppState, onDismiss: () -> Unit) {
     }
     val list = rememberLazyListState()
     val today = TutorBot.today
-    // Two fixed lines lead the thread: the plan, and the offer to ask.
+    // Three fixed lines lead the thread: the goals, the plan, and the offer to ask.
     LaunchedEffect(TutorChat.messages.size) {
-        if (TutorChat.messages.isNotEmpty()) list.animateScrollToItem(2 + TutorChat.messages.size - 1)
+        if (TutorChat.messages.isNotEmpty()) list.animateScrollToItem(3 + TutorChat.messages.size - 1)
     }
     LaunchedEffect(TutorChat.thinking) {
-        if (TutorChat.thinking) list.animateScrollToItem(2 + TutorChat.messages.size)
+        if (TutorChat.thinking) list.animateScrollToItem(3 + TutorChat.messages.size)
     }
     TutorBot.reading?.let { r -> if (TutorBot.chatOpen) TutorReadingSheet(r, state) }
+    if (addingGoal) UpcomingGoalEditor(goal = null, language = state.targetLanguage, onDismiss = { addingGoal = false })
+    goalPage?.let { g -> UpcomingGoalPage(g, state, onDismiss = { goalPage = null }) }
     PageSheet(onDismiss = onDismiss) {
         Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).imePadding()) {
             SheetHeader(stringResource(R.string.personal_tutor),
@@ -535,6 +545,8 @@ fun TutorChatView(state: AppState, onDismiss: () -> Unit) {
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
+                item("goals") { TutorGoalLine(state, tutorName, onAdd = { addingGoal = true },
+                    onOpen = { goalPage = it }) }
                 item("plan") {
                     DialogueLine(speaker = DialogueSpeaker.OTHER, name = tutorName) {
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -859,6 +871,36 @@ fun TutorReadingSheet(reading: TutorReading, state: AppState, onDismiss: () -> U
                 Text(stringResource(if (reading.goal == null) R.string.writing_the_article_for_your_level
                     else R.string.writing_today_s_preparation_for_your_goal),
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+/** What the learner is preparing for, first in the chat (iOS `goalLine`,
+ *  ec0de1e5): the goals ahead (tap one for its page), or the offer to write
+ *  one, right here. */
+@Composable
+private fun TutorGoalLine(state: AppState, tutorName: String, onAdd: () -> Unit,
+                          onOpen: (com.roro.futurevoice.data.UpcomingGoal) -> Unit) {
+    val context = LocalContext.current
+    val ahead = remember(com.roro.futurevoice.data.UpcomingGoalStore.goals, state.targetLanguage) {
+        com.roro.futurevoice.data.UpcomingGoalStore.active(context, state.targetLanguage)
+    }
+    DialogueLine(speaker = DialogueSpeaker.OTHER, name = tutorName) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (ahead.isEmpty()) {
+                Text(stringResource(R.string.preparing_for_something_an_interview_an_exam_a_presentation_47928c))
+                SoftChip(stringResource(R.string.add_a_goal), selected = true, vector = Icons.Filled.Add, onClick = onAdd)
+            } else {
+                ahead.forEach { goal ->
+                    Row(Modifier.fillMaxWidth().clickable { onOpen(goal) }, verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        UpcomingGoalRow(goal, Modifier.weight(1f))
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(18.dp))
+                    }
+                }
+                SoftChip(stringResource(R.string.add_a_goal), vector = Icons.Filled.Add, onClick = onAdd)
             }
         }
     }

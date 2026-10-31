@@ -1877,6 +1877,8 @@
     <string name="camera_on_takes_that_score_lld_or_more_go_on_the_board">"Camera-on takes that score %d or more go on the board, and your best one stands. The board shows your name and score — your video and voice stay on your phone."</string>
     <string name="passed_you_can_say_it_now">"Passed. You can say it now."</string>
     <string name="prepared_so_far">"Prepared so far"</string>
+    <!-- "Preparing for something? An interview, an exam, a presentation. Tell me what and when, and every day I'll prepare you for it." -->
+    <string name="preparing_for_something_an_interview_an_exam_a_presentation_47928c">"Preparing for something? An interview, an exam, a presentation. Tell me what and when, and every day I'll prepare you for it."</string>
     <string name="presentation">"Presentation"</string>
     <string name="rank">"Rank"</string>
     <!-- 'Read' -->

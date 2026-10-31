@@ -146,6 +146,7 @@ object TutorBot {
         val tutor: Boolean = true,
     )
     private var picksLoadedAt: Long? = null
+    private var picksGoals = ""
     private var picksLoading = false
     private val scope = kotlinx.coroutines.CoroutineScope(
         kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main.immediate)
@@ -332,8 +333,14 @@ object TutorBot {
     fun loadPicks(c: Context, targetLanguage: String, persona: UserPersona?,
                   now: Long = System.currentTimeMillis(), force: Boolean = false) {
         if (picksLoading) return
+        // A goal added or changed is read at once, not in ten minutes (iOS ec0de1e5).
+        val goalsSeen = com.roro.futurevoice.data.UpcomingGoalStore.let { st ->
+            st.ensureLoaded(c); st.goals.joinToString("") { "${it.id}${it.updatedAt}" }
+        }
+        val goalsChanged = goalsSeen != picksGoals
+        picksGoals = goalsSeen
         val at = picksLoadedAt
-        if (!force && at != null && now - at < 600_000L) return
+        if (!force && !goalsChanged && at != null && now - at < 600_000L) return
         picksLoading = true
         val app = c.applicationContext
         scope.launch {
