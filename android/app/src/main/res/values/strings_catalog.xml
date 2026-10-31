@@ -1330,6 +1330,7 @@
     <string name="life">"Life"</string>
     <string name="life_chip_landlord_town_hall_doctor">"Life chip · landlord, town hall, doctor"</string>
     <string name="light">"Light"</string>
+    <string name="likely_questions">"Likely questions"</string>
     <string name="lines_that_didn_t_quite_land_when_you_shadowed_them">"Lines that didn't quite land when you shadowed them."</string>
     <string name="lines_worth_saying_differently">"Lines worth saying differently"</string>
     <string name="listen">"Listen"</string>
@@ -1873,6 +1874,7 @@
     <!-- 'Camera-on takes that score %lld or more go on the board, and your best one stands. The board shows your name and score — your video and voice stay on your phone.' -->
     <string name="camera_on_takes_that_score_lld_or_more_go_on_the_board">"Camera-on takes that score %d or more go on the board, and your best one stands. The board shows your name and score — your video and voice stay on your phone."</string>
     <string name="passed_you_can_say_it_now">"Passed. You can say it now."</string>
+    <string name="prepared_so_far">"Prepared so far"</string>
     <string name="presentation">"Presentation"</string>
     <string name="rank">"Rank"</string>
     <!-- 'Read' -->
@@ -2715,6 +2717,8 @@
     <!-- 'Tap one, then the other. Listen for the voice, not the words — everyone finds their own recording strange at first.' -->
     <string name="tap_one_then_the_other_listen_for_the_voice_not_the_words_ev_f4a3b5">"Tap one, then the other. Listen for the voice, not the words — everyone finds their own recording strange at first."</string>
     <string name="tap_one_to_make_it_a_situation_with">"Tap one to make it a situation with %s."</string>
+    <!-- 'Tap one to practice it with your tutor until it comes out clean.' -->
+    <string name="tap_one_to_practice_it_with_your_tutor_until_it_comes_out_cl_2ab412">"Tap one to practice it with your tutor until it comes out clean."</string>
     <string name="tap_refresh_to_generate_scenarios">"Tap Refresh to generate scenarios."</string>
     <string name="tap_say_the_line_tap_again">"Tap, say the line, tap again"</string>
     <!-- 'Tap someone in your people row. Or leave it empty and the scene finds a fitting person for the situation.' -->
@@ -3087,6 +3091,7 @@
     <string name="unarchive">"Unarchive"</string>
     <!-- 'Under every line: shadow it right there, or save it to your expressions.' -->
     <string name="under_every_line_shadow_it_right_there_or_save_it_to_your_ex_e77ac9">"Under every line: shadow it right there, or save it to your expressions."</string>
+    <string name="under_the_prompter_with_a_score_it_s_kept_in_my_scripts">"Under the prompter, with a score. It's kept in My scripts."</string>
     <!-- "Under what you said, you'll see how a native speaker would put it and what to fix. It arrives with the answer, so the conversation keeps going." -->
     <string name="under_what_you_said_you_ll_see_how_a_native_speaker_would_pu_94460c">"Under what you said, you'll see how a native speaker would put it and what to fix. It arrives with the answer, so the conversation keeps going."</string>
     <string name="unfold_and_check_tick_the_box">"Unfold and check — tick the box"</string>
@@ -3464,6 +3469,7 @@
     <string name="workbook_redo">"Write it again"</string>
     <string name="worked_together_for_years">"Worked together for years"</string>
     <string name="working">"Working…"</string>
+    <string name="working_out_what_they_ll_ask">"Working out what they'll ask…"</string>
     <string name="works_full_time">"Works full-time"</string>
     <string name="worried_on_edge">"worried, on edge"</string>
     <string name="worth_mentioning">"Worth mentioning"</string>

@@ -140,6 +140,74 @@ object GoalPrep {
         return prep
     }
 
+    // MARK: Likely questions
+
+    /** What the day itself will most likely ask, with what each one checks.
+     *  Written once per goal (again when the goal is edited), when its page
+     *  is opened. */
+    @Serializable
+    data class Question(val text: String, val looksFor: String) {
+        val id: String get() = text
+    }
+
+    @Serializable
+    private data class QuestionSet(
+        val goalId: String,
+        @Serializable(with = IsoDateMillisSerializer::class) val goalUpdatedAt: Long,
+        val questions: List<Question>,
+    )
+
+    private val setsSerializer = ListSerializer(QuestionSet.serializer())
+    private fun questionsFile(c: Context) = File(c.applicationContext.filesDir, "goal_questions.json")
+
+    private fun questionSets(c: Context): List<QuestionSet> = runCatching {
+        questionsFile(c).takeIf { it.exists() }?.readText()?.let { StoreJson.json.decodeFromString(setsSerializer, it) }
+    }.getOrNull().orEmpty()
+
+    fun cachedQuestions(c: Context, goal: UpcomingGoal): List<Question>? =
+        questionSets(c).firstOrNull {
+            // Whole seconds: the file's ISO dates drop the fraction the goal
+            // in memory still has (iOS 67cae6a9).
+            it.goalId == goal.id && it.goalUpdatedAt / 1000 == goal.updatedAt / 1000
+        }?.questions
+
+    suspend fun questions(c: Context, goal: UpcomingGoal, nativeLanguage: String, level: CefrLevel): List<Question> {
+        cachedQuestions(c, goal)?.let { return it }
+        val r = withTimeout(45_000) {
+            GeminiClient(AuthRepository()).sendJson(
+                system = GoalPrepPrompts.questionsSystem(
+                    target = LanguageCatalog.englishName(goal.language),
+                    native = LanguageCatalog.englishName(nativeLanguage),
+                    level = level.code.uppercase(),
+                    promptLine = goal.promptLine(),
+                    materialLines = goal.materialLines,
+                    korean = GoalPrepPrompts.questionsKorean(nativeLanguage)),
+                messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER, "List the likely questions.")),
+                serializer = JsonObject.serializer(),
+                model = GeminiClient.Model.FLASH_36, maxTokens = 2048, purpose = "goal-prep",
+                idempotencyKey = "goal-questions:${goal.id.uppercase()}:${goal.updatedAt / 1000}",
+            )
+        }
+        // An object as asked, or now and then a bare string (measured: one
+        // run in two) — kept either way, without its note.
+        val raw = r["questions"] as? kotlinx.serialization.json.JsonArray ?: throw IllegalStateException("no questions")
+        val list = raw.mapNotNull { e ->
+            when (e) {
+                is JsonPrimitive -> e.contentOrNull?.let { Question(it.trim(), "") }
+                is JsonObject -> {
+                    val q = (e["question"] as? JsonPrimitive)?.contentOrNull ?: return@mapNotNull null
+                    Question(q.trim(), ((e["looks_for"] as? JsonPrimitive)?.contentOrNull ?: "").trim())
+                }
+                else -> null
+            }
+        }.filter { it.text.isNotEmpty() }
+        withContext(Dispatchers.IO) {
+            val sets = questionSets(c).filter { it.goalId != goal.id } + QuestionSet(goal.id, goal.updatedAt, list)
+            runCatching { questionsFile(c).writeText(StoreJson.json.encodeToString(setsSerializer, sets.takeLast(20))) }
+        }
+        return list
+    }
+
     // MARK: Prompt
 
     /** Where the preparation is: early days build knowledge and words, the

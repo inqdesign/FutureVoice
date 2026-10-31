@@ -133,6 +133,8 @@ object TutorBot {
         private set
     /** A reading opened from a pick, shown by whichever tutor surface is up. */
     var reading by mutableStateOf<TutorReading?>(null)
+    /** An upcoming goal's page (likely questions, days so far), from the note. */
+    var goalPage by mutableStateOf<com.roro.futurevoice.data.UpcomingGoal?>(null)
     /** A tutor-mode call on an upcoming goal, for the root to place. */
     var goalCall by mutableStateOf<GoalCall?>(null)
 

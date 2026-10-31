@@ -13,7 +13,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.MicExternalOn
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.CoPresent
 import androidx.compose.material.icons.filled.Flight
@@ -21,6 +24,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.UnfoldMore
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -288,5 +292,129 @@ private fun CompactDatePicker(millis: Long, onChange: (Long) -> Unit) {
             DatePicker(state, title = null, headline = null, showModeToggle = false,
                 colors = DatePickerDefaults.colors(containerColor = Color.Transparent))
         }
+    }
+}
+
+/**
+ * One goal's own page (iOS `UpcomingGoalPage`, 2c8133c8), opened from the
+ * tutor's note: the countdown, what the day will most likely ask (tap one to
+ * drill it with the tutor), and every day of preparation so far.
+ */
+@Composable
+fun UpcomingGoalPage(initial: UpcomingGoal, state: AppState, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    /** The goal as stored now — reading its material saves it again. */
+    val goal = UpcomingGoalStore.goals.firstOrNull { it.id == initial.id } ?: initial
+    var questions by remember { mutableStateOf<List<com.roro.futurevoice.talk.GoalPrep.Question>?>(null) }
+    var failed by remember { mutableStateOf(false) }
+    var attempt by remember { mutableStateOf(0) }
+    var reading by remember { mutableStateOf<com.roro.futurevoice.talk.TutorReading?>(null) }
+    var editing by remember { mutableStateOf(false) }
+
+    LaunchedEffect(goal.updatedAt, attempt) {
+        questions = null
+        questions = com.roro.futurevoice.talk.GoalPrep.cachedQuestions(context, goal) ?: try {
+            com.roro.futurevoice.talk.GoalPrep.questions(context, goal, state.nativeLanguage, state.level)
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) {
+            failed = true; null
+        }
+    }
+
+    /** A tutor-mode call on this one question. The page goes first, and the
+     *  chat too when it was opened from there (iOS ec0de1e5). */
+    fun drill(question: String) {
+        com.roro.futurevoice.core.Analytics.capture("upcoming_goal_question_drill", mapOf("kind" to goal.kind.raw))
+        onDismiss()
+        com.roro.futurevoice.talk.TutorBot.chatOpen = false
+        com.roro.futurevoice.talk.TutorBot.goalCall = com.roro.futurevoice.talk.TutorBot.GoalCall(
+            topic = "“$question” — ${goal.title}", blurb = goal.drillBlurb)
+    }
+
+    com.roro.futurevoice.ui.speech.SpeechSheet(onDismiss) {
+        SheetHeader(stringResource(goal.kind.label),
+            leading = { IosGlassTextButton(stringResource(R.string.edit), onClick = { editing = true }) },
+            trailing = { IosGlassTextButton(stringResource(R.string.done), onClick = onDismiss, bold = true) })
+        FormSection(null) {
+            UpcomingGoalRow(goal, Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp))
+            if (goal.notes.isNotEmpty()) {
+                FormDivider()
+                Text(goal.notes, style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp))
+            }
+        }
+        val loaded = questions
+        FormSection(stringResource(R.string.likely_questions),
+            footer = if (loaded != null) stringResource(R.string.tap_one_to_practice_it_with_your_tutor_until_it_comes_out_cl_2ab412) else null) {
+            when {
+                loaded != null -> loaded.forEachIndexed { i, q ->
+                    if (i > 0) FormDivider()
+                    Row(Modifier.fillMaxWidth().clickable { drill(q.text) }
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text(q.text, style = MaterialTheme.typography.bodyLarge)
+                            if (q.looksFor.isNotEmpty()) {
+                                Text(q.looksFor, style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        Icon(Icons.Filled.School, contentDescription = null, tint = goal.kind.color(),
+                            modifier = Modifier.size(20.dp))
+                    }
+                }
+                failed -> Text(stringResource(R.string.try_again), style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.fillMaxWidth().clickable { failed = false; attempt += 1 }
+                        .padding(horizontal = 16.dp, vertical = 12.dp))
+                else -> Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    Text(stringResource(R.string.working_out_what_they_ll_ask), style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+        val days = remember(goal.updatedAt, reading) { com.roro.futurevoice.talk.GoalPrep.days(context, goal) }
+        if (days.isNotEmpty()) {
+            FormSection(stringResource(R.string.prepared_so_far)) {
+                days.forEachIndexed { i, day ->
+                    if (i > 0) FormDivider()
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(day.focus, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                        PreparedLink(Icons.AutoMirrored.Filled.MenuBook, day.reading.title) {
+                            reading = com.roro.futurevoice.talk.TutorReading(
+                                script = day.script(com.roro.futurevoice.talk.GoalPrep.Part.READING),
+                                goal = goal, part = com.roro.futurevoice.talk.GoalPrep.Part.READING)
+                        }
+                        PreparedLink(Icons.Filled.MicExternalOn, day.speech.question ?: day.speech.title) {
+                            reading = com.roro.futurevoice.talk.TutorReading(
+                                script = day.script(com.roro.futurevoice.talk.GoalPrep.Part.SPEECH),
+                                goal = goal, part = com.roro.futurevoice.talk.GoalPrep.Part.SPEECH)
+                        }
+                    }
+                }
+            }
+        }
+    }
+    reading?.let { r -> TutorReadingSheet(r, state, onDismiss = { reading = null }) }
+    if (editing) {
+        UpcomingGoalEditor(goal = goal, language = goal.language, onDismiss = { editing = false },
+            onSaved = { saved ->
+                // Saved or deleted: the page shows a goal that may be gone.
+                if (saved == null) onDismiss()
+            })
+    }
+}
+
+/** A day's reading or answer on the goal page (iOS `.buttonStyle(.borderless)` Label). */
+@Composable
+private fun PreparedLink(icon: ImageVector, title: String, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable(onClick = onClick), verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(top = 2.dp).size(18.dp))
+        Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
     }
 }

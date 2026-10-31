@@ -173,6 +173,7 @@ fun TutorBotButton(state: AppState) {
 @Composable
 fun TutorBotLayer(state: AppState, onOpenRoutine: () -> Unit) {
     val context = LocalContext.current
+    TutorBot.goalPage?.let { goal -> UpcomingGoalPage(goal, state, onDismiss = { TutorBot.goalPage = null }) }
     // The chat shows its own; this one is for a reading opened from the note.
     TutorBot.reading?.let { r -> if (!TutorBot.chatOpen) TutorReadingSheet(r, state) }
     Box(Modifier.fillMaxSize()) {
@@ -370,7 +371,14 @@ private fun TutorPlan(state: AppState, onOpenRoutine: () -> Unit) {
     }
     // The nearest thing they're preparing for, with its countdown.
     com.roro.futurevoice.data.UpcomingGoalStore.active(context, state.targetLanguage).firstOrNull()?.let { goal ->
-        UpcomingGoalRow(goal)
+        Row(Modifier.fillMaxWidth().clickable {
+            TutorBot.closeNote(context)
+            TutorBot.goalPage = goal
+        }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            UpcomingGoalRow(goal, Modifier.weight(1f))
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+                tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(18.dp))
+        }
     }
     if (TutorBot.picks.isNotEmpty()) TutorPickRows(TutorBot.picks.take(3), TutorBot.balance, state)
     if (t.items.isNotEmpty()) TutorPlanRows(t)
@@ -788,12 +796,12 @@ fun pickColor(kind: TutorPick.Kind): Color = when (kind) {
 /** A reading opened from a pick (iOS `TutorReadingSheet`): the episode's
  *  script at once, or the news article, written the first time anyone opens it. */
 @Composable
-fun TutorReadingSheet(reading: TutorReading, state: AppState) {
+fun TutorReadingSheet(reading: TutorReading, state: AppState, onDismiss: () -> Unit = { TutorBot.reading = null }) {
     val context = LocalContext.current
     var script by remember(reading.id) { mutableStateOf<com.roro.futurevoice.data.SpeechScript?>(null) }
     var failed by remember(reading.id) { mutableStateOf(false) }
     var attempt by remember(reading.id) { mutableStateOf(0) }
-    val close = { TutorBot.reading = null }
+    val close = onDismiss
     LaunchedEffect(reading.id, attempt) {
         if (script != null || reading.script != null) return@LaunchedEffect
         val goal = reading.goal
@@ -823,7 +831,8 @@ fun TutorReadingSheet(reading: TutorReading, state: AppState) {
     if (shown != null) {
         com.roro.futurevoice.ui.speech.SpeechScriptSheet(shown, state.nativeLanguage, onEdited = {},
             onDismiss = close, initialStudy = reading.study, shipped = true,
-            studyHere = reading.script == null || reading.goal != null)
+            studyHere = reading.script == null || reading.goal != null,
+            canPractice = reading.part == com.roro.futurevoice.talk.GoalPrep.Part.SPEECH)
         return
     }
     com.roro.futurevoice.ui.speech.SpeechSheet(onDismiss = close) {
