@@ -326,7 +326,7 @@ internal fun SpeechChallengeScreen(
                 FormSection(
                     stringResource(R.string.leaderboard),
                     footer = if (isPast) stringResource(R.string.this_challenge_has_ended_these_are_the_final_standings)
-                        else stringResource(R.string.camera_on_takes_that_score_lld_or_more_go_on_the_board, SpeechChallenges.BOARD_BAR),
+                        else stringResource(R.string.camera_on_takes_that_score_lld_or_more_go_on_the_board_and_y_15915e, SpeechChallenges.BOARD_BAR),
                 ) {
                     val rows = board
                     when {

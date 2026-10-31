@@ -11,7 +11,6 @@
     <string name="add_own_lookup_failed">連不上字典，請再試一次。</string>
     <string name="add_own_reads_like_rule">這看起來像規則，不像會說出口的話。請寫下句子本身。</string>
     <string name="add_own_already_there">已經有了</string>
-    <string name="all_expressions">所有用語</string>
     <string name="add_own_did_you_mean">你是不是要找</string>
     <string name="add_own_term_footer_library">用哪種語言寫都可以。資料庫裡還沒有的，會先確認、標上程度，再加入所有學這個語言的人的資料庫。</string>
     <string name="add_own_no_names">人名、地名和品牌名稱不能加入清單。</string>

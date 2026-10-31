@@ -541,9 +541,4 @@
     <plurals name="speech_challenge_tries">
         <item quantity="other">%d번 도전</item>
     </plurals>
-    <string name="speech_category_show_host">쇼호스트</string>
-    <string name="speech_category_famous_speech">명연설</string>
-    <string name="speech_category_movie_scene">영화 장면</string>
-    <string name="speech_category_acceptance">수상 소감</string>
-    <string name="speech_category_product_launch">신제품 발표</string>
 </resources>

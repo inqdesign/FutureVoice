@@ -941,7 +941,7 @@ fun CloneFlowScreen(
                         options = listOf(stringResource(R.string.fs_voice_mine),
                             // No name: it doesn't fit beside "My voice" in
                             // every language (iOS 2026-10-24, founder).
-                            stringResource(R.string.similar_voice)),
+                            stringResource(R.string.ai_tutor)),
                         selected = if (fluentSelfPresetId == null) 0 else 1,
                         onSelect = { i -> if (!locked) selectVoice(if (i == 0) null else preset.voiceId) },
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)

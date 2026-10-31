@@ -11,7 +11,6 @@
     <string name="add_own_lookup_failed">Couldn\'t reach the dictionary. Try again.</string>
     <string name="add_own_reads_like_rule">That reads like a rule, not something you\'d say. Write the sentence itself.</string>
     <string name="add_own_already_there">Already there</string>
-    <string name="all_expressions">All expressions</string>
     <string name="add_own_did_you_mean">Did you mean</string>
     <string name="add_own_term_footer_library">Write it in either language. One the library doesn\'t have yet is checked, given a level and added for everyone learning this language.</string>
     <string name="add_own_no_names">Names of people, places and brands don\'t go on the list.</string>

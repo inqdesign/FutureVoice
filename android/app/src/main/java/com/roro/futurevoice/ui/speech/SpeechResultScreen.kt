@@ -218,7 +218,7 @@ internal fun SpeechResultScreen(takeId: String, live: SpeechTake?, onBack: () ->
             val (marksReady, paragraphs) = marks
             if (paragraphs != null) {
                 FormSection(stringResource(R.string.script),
-                    footer = if (m.missed.isNotEmpty()) stringResource(R.string.red_skipped_or_read_differently_the_small_red_words) else null) {
+                    footer = if (m.missed.isNotEmpty()) stringResource(R.string.red_skipped_or_read_differently_the_small_red_words_are_what_c3dcaa) else null) {
                     MarkedScript(paragraphs, script.language)
                 }
             } else if (marksReady && m.missed.isNotEmpty()) {

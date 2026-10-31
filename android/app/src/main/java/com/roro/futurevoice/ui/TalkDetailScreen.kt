@@ -739,7 +739,7 @@ private fun TalkDetailPage(
                         }
                         if (curriculum.corrections.isNotEmpty()) {
                             PageFooter(stringResource(
-                                R.string.each_pair_is_what_you_said_and_its_corrected_form_tap_one_to_242e42))
+                                R.string.each_pair_is_what_you_said_and_its_corrected_form_tap_one_to_813c47))
                         }
                     }
                 }

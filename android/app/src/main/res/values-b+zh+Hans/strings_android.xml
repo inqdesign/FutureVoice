@@ -541,9 +541,4 @@
     <plurals name="speech_challenge_tries">
         <item quantity="other">%d 次挑战</item>
     </plurals>
-    <string name="speech_category_show_host">电视购物</string>
-    <string name="speech_category_famous_speech">经典演讲</string>
-    <string name="speech_category_movie_scene">电影场景</string>
-    <string name="speech_category_acceptance">获奖感言</string>
-    <string name="speech_category_product_launch">新品发布</string>
 </resources>

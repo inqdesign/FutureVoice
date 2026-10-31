@@ -11,7 +11,6 @@
     <string name="add_own_lookup_failed">No se pudo conectar con el diccionario. Inténtalo de nuevo.</string>
     <string name="add_own_reads_like_rule">Eso parece una regla, no algo que dirías. Escribe la frase tal cual.</string>
     <string name="add_own_already_there">Ya está</string>
-    <string name="all_expressions">Todas</string>
     <string name="add_own_did_you_mean">¿Quisiste decir?</string>
     <string name="add_own_term_footer_library">Escríbelo en cualquiera de los dos idiomas. Si la biblioteca aún no lo tiene, se revisa, recibe un nivel y se suma para todos los que aprenden este idioma.</string>
     <string name="add_own_no_names">Los nombres de personas, lugares y marcas no van en la lista.</string>

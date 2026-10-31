@@ -541,9 +541,4 @@
     <plurals name="speech_challenge_tries">
         <item quantity="other">挑戦%d回</item>
     </plurals>
-    <string name="speech_category_show_host">テレビ通販</string>
-    <string name="speech_category_famous_speech">名演説</string>
-    <string name="speech_category_movie_scene">映画のワンシーン</string>
-    <string name="speech_category_acceptance">受賞スピーチ</string>
-    <string name="speech_category_product_launch">新製品発表</string>
 </resources>
