@@ -126,7 +126,7 @@ struct FirstCallCheckSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Later") { dismiss() }
+                    BarCloseButton(title: "Later") { dismiss() }
                 }
             }
             .safeAreaInset(edge: .bottom) {

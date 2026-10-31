@@ -218,7 +218,7 @@ struct ScenarioComposerSheet: View {
                     .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
-                        Button("Cancel") { dismiss() }
+                        BarCloseButton(title: "Cancel") { dismiss() }
                     }
                     // The CTA lives in the HEADER on both doors. It sat inside
                     // the box on the custom one until 2026-09-26, where its play

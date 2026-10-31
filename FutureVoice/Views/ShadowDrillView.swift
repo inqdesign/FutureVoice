@@ -134,6 +134,7 @@ struct ShadowDrillView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
                 .padding(.bottom, 24)
+                .macReadingColumn()
             }
             .background(Color(.systemBackground))
             .navigationTitle("Shadow")
@@ -142,7 +143,7 @@ struct ShadowDrillView: View {
                 // "Close", not "Done": nothing here gets finished by leaving —
                 // "Done" read as "mark this line complete".
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Close") { dismiss() }
+                    BarCloseButton { dismiss() }
                         .disabled(phase == .syncing || phase == .countdown)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -156,7 +157,7 @@ struct ShadowDrillView: View {
                     .accessibilityLabel(appState.isLineSaved(turn.id) ? "Remove from saved lines" : "Save line")
                 }
             }
-            .safeAreaInset(edge: .bottom) { bottomBar }
+            .safeAreaInset(edge: .bottom) { bottomBar.macReadingColumn() }
             .overlay { countdownOverlay }
             .alert("Something went wrong", isPresented: errorBinding) {
                 if outOfCredits {

@@ -128,7 +128,7 @@ struct FirstCallSetupSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Skip") { dismiss() }
+                    BarCloseButton(title: "Skip") { dismiss() }
                 }
             }
             .safeAreaInset(edge: .bottom) {

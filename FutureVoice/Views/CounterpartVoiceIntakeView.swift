@@ -65,7 +65,7 @@ struct CounterpartVoiceIntakeView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    BarCloseButton(title: "Cancel") { dismiss() }
                 }
             }
             // Same rule as the form it hands off to: once there's something

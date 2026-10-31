@@ -132,7 +132,7 @@ struct FeedbackSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Not now") { dismiss() }
+                    BarCloseButton(title: "Not now") { dismiss() }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     if sending {

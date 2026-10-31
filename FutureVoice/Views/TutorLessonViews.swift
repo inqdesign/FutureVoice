@@ -221,7 +221,7 @@ struct TutorTopicSheet: View {
                 // the column is shut, so the column carries its own ✕ below.
                 if onClose == nil {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button(explain("Close")) { dismiss() }
+                        BarCloseButton() { dismiss() }
                     }
                 }
             }

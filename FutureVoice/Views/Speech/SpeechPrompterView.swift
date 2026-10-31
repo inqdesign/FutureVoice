@@ -41,7 +41,7 @@ struct SpeechPrompterView: View {
                                      onSeeBoard: session.script.isChallenge ? { close() } : nil)
                         .toolbar {
                             ToolbarItem(placement: .cancellationAction) {
-                                Button("Done") { close() }
+                                BarCloseButton(title: "Done") { close() }
                             }
                             ToolbarItem(placement: .confirmationAction) {
                                 Button {

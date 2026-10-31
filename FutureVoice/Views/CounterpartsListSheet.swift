@@ -207,7 +207,7 @@ struct CounterpartFormView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    BarCloseButton(title: "Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {

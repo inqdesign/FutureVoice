@@ -51,7 +51,7 @@ struct VoiceComparisonSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { stopAll(); dismiss() }
+                    BarCloseButton(title: "Done") { stopAll(); dismiss() }
                 }
             }
             .task { await loadCloneLine() }

@@ -89,7 +89,7 @@ struct PersonaDeepenSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Later") { dismiss() }
+                    BarCloseButton(title: "Later") { dismiss() }
                         .disabled(isSaving)
                 }
             }

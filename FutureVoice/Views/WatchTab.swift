@@ -142,7 +142,7 @@ struct WatchTab: View {
             .toolbar {
                 if creating {
                     ToolbarItem(placement: .topBarLeading) {
-                        Button("Cancel") { afterKeyboard { creating = false; dockFill = "" } }
+                        BarCloseButton(title: "Cancel") { afterKeyboard { creating = false; dockFill = "" } }
                     }
                 }
                 if usesPeopleSky {
@@ -187,7 +187,7 @@ struct WatchTab: View {
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .topBarLeading) {
-                            Button("Done") { showingSavedScenarios = false }
+                            BarCloseButton(title: "Done") { showingSavedScenarios = false }
                         }
                     }
                 }
@@ -260,7 +260,7 @@ struct WatchTab: View {
                         .environmentObject(appState)
                         .toolbar {
                             ToolbarItem(placement: .topBarLeading) {
-                                Button("Done") { personCard = nil }
+                                BarCloseButton(title: "Done") { personCard = nil }
                             }
                         }
                 }

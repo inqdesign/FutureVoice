@@ -3198,6 +3198,15 @@ sync container carry over. `./scripts/mac-run.sh` builds and opens it.
   in the row's right-click menu. A list deleted by `onDelete` gives each row
   `.macDeleteMenu` (Delete on a right-click). A `Menu` inside a
   `contextMenu` stays a plain `Menu` (a submenu), never `AppMenu`.
+- **A page meant to be READ keeps a reading column** (`macReadingColumn()`,
+  760 pt, 2026-10-31, founder: the call across the whole window was hard to
+  read). The live call and the shadow drill use it; the background stays
+  full width. A new reading surface (a transcript, a script) takes the same.
+- **A bar's leading Close / Cancel is `BarCloseButton`** (2026-10-31). On
+  the Mac a leading bar item sits in an icon-sized glass circle, so a word
+  there read "Cl…" in every sheet; the Mac gets the ✕, the phone keeps the
+  word. `.sharedBackgroundVisibility(.hidden)` on that item looked like the
+  fix and held the Swift compiler for 18 minutes on one file; don't.
 - **A sheet with no bar gets a ✕** (`MacSheets.addCloseButton`): macOS
   swallows clicks behind a sheet and Esc was invisible. Sheets with a
   navigation bar carry their own Done/Cancel and are left alone.

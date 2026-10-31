@@ -147,7 +147,7 @@ struct CoreSeatDetailSheet: View {
             .toolbar {
                 if editing {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") { editing = false }
+                        BarCloseButton(title: "Cancel") { editing = false }
                     }
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Save") { Task { await save() } }

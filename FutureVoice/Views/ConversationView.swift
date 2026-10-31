@@ -943,6 +943,8 @@ struct ConversationView: View {
                 feed
                     .fadingBottomBar { bottomBar }
             }
+            // The Mac: lines across a whole window are hard to read.
+            .macReadingColumn()
             .background(Color(.systemBackground))
             .overlay { endingOverlay }
             .navigationBarTitleDisplayMode(.inline)

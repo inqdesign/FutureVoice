@@ -288,6 +288,36 @@ extension View {
     }
 }
 
+extension View {
+    /// A page meant to be READ (a call, a shadow line) keeps a reading
+    /// column on the Mac instead of running across the whole window; its
+    /// background stays full width. No-op on the phone.
+    func macReadingColumn(_ width: CGFloat = 760) -> some View {
+        #if targetEnvironment(macCatalyst)
+        frame(maxWidth: width).frame(maxWidth: .infinity)
+        #else
+        self
+        #endif
+    }
+}
+
+/// The leading Close / Cancel of a bar. On the Mac a bar's leading item sits
+/// in an icon-sized glass circle, so a word there read "Cl…"; the Mac gets
+/// the ✕ the circle is made for. The phone keeps the word.
+struct BarCloseButton: View {
+    var title: LocalizedStringKey = "Close"
+    let action: () -> Void
+
+    var body: some View {
+        #if targetEnvironment(macCatalyst)
+        Button(action: action) { Label(title, systemImage: "xmark") }
+            .labelStyle(.iconOnly)
+        #else
+        Button(title, action: action)
+        #endif
+    }
+}
+
 /// A menu whose label is drawn as written, on the Mac too. A SwiftUI `Menu`
 /// there is a macOS pull-down that keeps only the label's text OR its icon
 /// (measured, every built-in style and a custom button style alike): the
