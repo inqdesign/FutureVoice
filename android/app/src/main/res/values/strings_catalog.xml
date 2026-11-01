@@ -4035,7 +4035,7 @@
     <string name="your_routine_is_ready">"Your routine is ready"</string>
     <!-- 'Your routine is under Activity on the Talk screen whenever you want one.' -->
     <string name="your_routine_is_under_activity_on_the_talk_screen_whenever_y_ee22a4">"Your routine is under Activity on the Talk screen whenever you want one."</string>
-    <string name="your_routine_today_lld_things_about_lld_minutes">"Your routine today: %1$d things, about %2$d minutes."</string>
+    <string name="your_routine_today_lld_things_about_lld_minutes">"Your routine today: %1$d to do, about %2$d min."</string>
     <string name="your_scenario">"Your scenario"</string>
     <string name="your_scenarios">"Your scenarios"</string>
     <string name="your_score">"Your score"</string>

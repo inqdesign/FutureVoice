@@ -4012,7 +4012,7 @@
     <string name="your_routine_is_ready">"Deine Routine steht"</string>
     <!-- 'Your routine is under Activity on the Talk screen whenever you want one.' -->
     <string name="your_routine_is_under_activity_on_the_talk_screen_whenever_y_ee22a4">"Eine Routine kannst du jederzeit unter Aktivität auf dem Sprechen-Bildschirm anlegen."</string>
-    <string name="your_routine_today_lld_things_about_lld_minutes">"Heute in deiner Routine: %1$d Sachen, rund %2$d Minuten."</string>
+    <string name="your_routine_today_lld_things_about_lld_minutes">"Heute in deiner Routine: %1$d zu erledigen, rund %2$d Min."</string>
     <string name="your_scenario">"Deine Situation"</string>
     <string name="your_scenarios">"Deine Situationen"</string>
     <string name="your_score">"Bewertung"</string>
