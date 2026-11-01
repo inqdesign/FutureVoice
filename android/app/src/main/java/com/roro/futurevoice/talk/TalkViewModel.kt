@@ -251,6 +251,10 @@ class TalkViewModel(context: Context) : ViewModel() {
     // so the screen hands over what may be steered toward and what has been
     // said; the ration, the steer and the judge live here.
     private var coachOn = false
+    /** The last fluent-self line that finished, so coach mode switched on
+     *  mid-call answers the question already on screen (iOS
+     *  `lastFinishedReply`). */
+    private var lastFinishedReply: Pair<String, String>? = null
     private var coachPlan = CoachPlan()
     /** The steer last sent to the gateway ("" = none). */
     private var coachSteerSent = ""
@@ -974,6 +978,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                     val text = full.ifEmpty {
                         _state.value.turns.firstOrNull { it.id == id }?.transcript.orEmpty()
                     }
+                    lastFinishedReply = id to text
                     advanceCoach(text, id)
                 }
             }
@@ -1244,6 +1249,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                     else it.copy(phase = TalkPhase.LISTENING) }
                 // The first answer of a call is the hardest one — the opener
                 // gets its "try saying" like every line.
+                lastFinishedReply = turn.id to text
                 advanceCoach(text, turn.id)
             }
         }
@@ -1704,6 +1710,13 @@ class TalkViewModel(context: Context) : ViewModel() {
         if (on) config?.let { loadGrammarFocus(it) }
         else _state.update { it.copy(coachHint = null, coachReply = null, coachStale = false) }
         syncCoachSteer()
+        // Switched on while a finished question waits for an answer: suggest
+        // for it now. A line still being spoken gets it when it ends.
+        val last = lastFinishedReply
+        if (on && last != null && _state.value.coachReply == null &&
+            _state.value.turns.lastOrNull()?.id == last.first) {
+            advanceCoach(last.second, last.first)
+        }
     }
 
     /** Tutor mode flipped in the call settings (iOS `onChange(of:
