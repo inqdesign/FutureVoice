@@ -1827,6 +1827,7 @@
     <string name="next_charge">"다음 결제 %s"</string>
     <string name="next_door">"옆집"</string>
     <string name="next_expression">"다음 표현"</string>
+    <string name="next_line">"다음 대사"</string>
     <string name="next_lld">"다음 %d개"</string>
     <string name="next_one">"다음은 %s"</string>
     <string name="next_report_in_lldd_lld_more_minutes_of_practice">"다음 리포트까지 %1$d일 · 연습 %2$d분 더."</string>
@@ -2150,6 +2151,7 @@
     <string name="play_all">"전체 재생"</string>
     <string name="play_in_my_voice">"내 목소리로 재생"</string>
     <string name="play_narration">"읽어 주기 켜기"</string>
+    <string name="play_or_pause">"재생 또는 일시정지"</string>
     <string name="play_the_line">"문장 듣기"</string>
     <string name="play_the_line_in_the_app_s_shadow_chapter">"앱의 섀도잉 장에서 문장 재생하기"</string>
     <string name="play_what_you_said">"내가 말한 것 재생"</string>
