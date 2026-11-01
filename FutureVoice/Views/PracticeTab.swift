@@ -895,6 +895,9 @@ struct PracticeTab: View {
                 }
                 .background(RoundedRectangle(cornerRadius: 18)
                     .fill(Color(.secondarySystemGroupedBackground)))
+                // The whole card, chapters included: the card alone left
+                // the outline cutting across it (2026-11-01).
+                .overlay { openOutline(bookId(book), radius: 18) }
             }
             if books.isEmpty {
                 firstBookPlaceholder
@@ -962,8 +965,15 @@ struct PracticeTab: View {
     @ViewBuilder
     private func bookCard(_ book: BookPreview) -> some View {
         switch book.source {
-        case .talk(let s): talkCard(s, showsProgress: false)
-        case .scenario(let sc): scenarioCard(sc, showsProgress: false)
+        case .talk(let s): talkCard(s, showsProgress: false, outlined: false)
+        case .scenario(let sc): scenarioCard(sc, showsProgress: false, outlined: false)
+        }
+    }
+
+    private func bookId(_ book: BookPreview) -> UUID {
+        switch book.source {
+        case .talk(let s): s.id
+        case .scenario(let sc): sc.id
         }
     }
 
@@ -1146,7 +1156,7 @@ struct PracticeTab: View {
     /// One talk book card + its navigation and management actions — shared by
     /// the Talks shelf and the Studying grid.
     private func talkCard(_ session: Session,
-                          showsProgress: Bool = true) -> some View {
+                          showsProgress: Bool = true, outlined: Bool = true) -> some View {
         Group {
             if macSplit {
                 Button { openBook(session) } label: {
@@ -1164,7 +1174,7 @@ struct PracticeTab: View {
             }
         }
         .buttonStyle(.plain)
-        .overlay { openOutline(session.id) }
+        .overlay { if outlined { openOutline(session.id) } }
         .contextMenu {
             Button { setTalkArchived(session, true) } label: {
                 Label("Archive", systemImage: "archivebox")
@@ -1181,11 +1191,11 @@ struct PracticeTab: View {
     /// One scenario/topic book card + actions — shared by the Topics and
     /// Scenarios shelves and the Studying grid.
     private func scenarioCard(_ s: Scenario,
-                              showsProgress: Bool = true) -> some View {
+                              showsProgress: Bool = true, outlined: Bool = true) -> some View {
         ScenarioBookCard(scenario: s, personaName: linkedPersonaName(s),
                          showsProgress: showsProgress)
             .onTapGesture { openBook(s) }
-            .overlay { openOutline(s.id) }
+            .overlay { if outlined { openOutline(s.id) } }
             .contextMenu {
                 Button { openBook(s) } label: { Label("Open", systemImage: "book") }
                 Button {
@@ -1347,9 +1357,9 @@ struct PracticeTab: View {
     }
 
     @ViewBuilder
-    private func openOutline(_ id: UUID) -> some View {
+    private func openOutline(_ id: UUID, radius: CGFloat = 16) -> some View {
         if isOpenBook(id) {
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: radius)
                 .strokeBorder(Color.accentColor, lineWidth: 2)
                 .allowsHitTesting(false)
         }

@@ -99,7 +99,9 @@ struct VoiceRevivalView: View {
                         .foregroundStyle(.secondary)
                         .frame(width: 36, height: 36)
                 }
+                .buttonStyle(.plain)
                 .accessibilityLabel(Text("Close"))
+                .macOwnClose()
                 Spacer()
             }
             .padding(.horizontal, 12)

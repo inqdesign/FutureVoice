@@ -212,6 +212,7 @@ struct SpeechPrompterView: View {
             }
             .buttonStyle(SpeechChromeButtonStyle(onCamera: cameraShowing))
             .accessibilityLabel(Text("Close"))
+            .macOwnClose()
             .hiddenWhileRecording(isRecording)
 
             Spacer()
