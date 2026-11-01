@@ -237,7 +237,7 @@ enum GoalPrep {
             return "No date is set: build knowledge and answers steadily, one new angle per day."
         }
         switch left {
-        case 0: return "It is TODAY. Keep it short and calming: the one answer they will surely need, and the key words to have ready."
+        case ...0: return "It is TODAY. Keep it short and calming: the one answer they will surely need, and the key words to have ready."
         case 1...3: return "It is \(left) day(s) away: rehearsal. The most likely questions or tasks, said as they will be said on the day."
         case 4...14: return "It is \(left) days away: build the answers. One likely question or task per day, with what makes a strong answer."
         default: return "It is \(left) days away: build the ground first — what they will be expected to know, and the words for it."

@@ -103,9 +103,13 @@ struct UpcomingGoal: Codable, Identifiable, Equatable {
     var brief: ScenarioBrief? = nil
 
     /// Days from today to the goal's day: 0 = today, negative = past.
-    func daysLeft(now: Date = Date()) -> Int? {
+    /// Counted here, not with `PromptClock.calendarDays`, which never goes
+    /// below 0 — a past goal would never read as past.
+    func daysLeft(now: Date = Date(), calendar: Calendar = .current) -> Int? {
         guard let date else { return nil }
-        return PromptClock.calendarDays(from: now, to: date)
+        return calendar.dateComponents([.day],
+                                       from: calendar.startOfDay(for: now),
+                                       to: calendar.startOfDay(for: date)).day ?? 0
     }
 
     /// Over once its day has passed.
@@ -146,7 +150,7 @@ struct UpcomingGoal: Codable, Identifiable, Equatable {
             f.locale = Locale(identifier: "en_US_POSIX")
             f.dateFormat = "EEE d MMM yyyy"
             let left = daysLeft(now: now) ?? 0
-            parts.append("on \(f.string(from: date)) (\(left == 0 ? "today" : "in \(left) days"))")
+            parts.append("on \(f.string(from: date)) (\(left <= 0 ? "today" : "in \(left) days"))")
         } else {
             parts.append("no date set")
         }
