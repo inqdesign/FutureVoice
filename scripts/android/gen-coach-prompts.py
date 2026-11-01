@@ -20,6 +20,23 @@ from iosref import ROOT, REF, show, emit, literal_at, kotlin  # noqa: E402
 OUT = ROOT / "android/app/src/main/java/com/roro/futurevoice/talk/CoachPrompts.kt"
 coach = show("FutureVoice/Services/CoachMode.swift")
 
+# `suggestionShape(for:)`: one string per level, A1's a one-line literal.
+sh = coach.index("static func suggestionShape(for level: CEFRLevel) -> String {")
+sh_end = coach.index("static func system(", sh)
+shapes = []
+for case in ("case .a1:", "case .a2:", "case .b1:", "case .b2:", "case .c1, .c2:"):
+    at = coach.index(case, sh, sh_end)
+    line = coach[at:coach.index("\n", coach.index("return", at))]
+    if '"""' in line:
+        expr = kotlin(literal_at(coach, 'return """', at), {}, "            ")
+    else:
+        q = line.index('"')
+        expr = kotlin([("t", line[q + 1:line.rindex('"')].replace('\\"', '"'))], {})
+    names = case[len("case "):-1].replace(".", "CefrLevel.").replace("CefrLevel.a", "CefrLevel.A") \
+        .replace("CefrLevel.b", "CefrLevel.B").replace("CefrLevel.c", "CefrLevel.C")
+    shapes.append(f"        {names} -> {expr}")
+shape_when = "\n".join(shapes)
+
 fn = coach.index("static func system(target: String, native: String, level: CEFRLevel,")
 addr_set = kotlin(literal_at(coach, 'address = """', fn),
                   {"register.promptDescription(in: target)": "registerDescription"}, "            ")
@@ -28,6 +45,7 @@ suggester = kotlin(literal_at(coach, 'return """', fn), {
     "level.rawValue.uppercased()": "level.code.uppercase()",
     "targetName": "targetName",
     "nativeName": "nativeName",
+    "suggestionShape(for: level)": "suggestionShape(level)",
     "scale.vocabulary": "ConversationPrompt.speechVocabulary(level)",
     "address": "address",
     # A non-default voice accent's variety, built by the caller
@@ -63,6 +81,15 @@ object CoachPrompts {{
             {addr_set}
         else
             {addr_any}
+
+    /**
+     * iOS `CoachSuggester.suggestionShape(for:)`: what a suggestion at this
+     * level says, not only which words it uses (2026-10-30, founder: the
+     * suggestions read the same at every level).
+     */
+    fun suggestionShape(level: CefrLevel): String = when (level) {{
+{shape_when}
+    }}
 
     /** iOS `CoachSuggester.system(target:native:level:register:)`. */
     fun suggesterSystem(targetName: String, nativeName: String, level: CefrLevel, address: String,

@@ -19,7 +19,8 @@ gen-quiz-prompts.py 6912c9db
 gen-correction-prompt.py 8537accf
 # + the call so far and the learner's facts (iOS 6d8b4f56).
 # + who the other speaker is (iOS 317e8819).
-gen-coach-prompts.py 317e8819
+# + the suggestion grows with the level (suggestionShape, iOS a1e756aa).
+gen-coach-prompts.py 39bca0b8
 # Tutor mode's lesson prompts (iOS af3c7ffe … bd242766); the final check's
 # judge and the next-topic offer (iOS 23ce515f … a0133a8b).
 gen-tutor-prompts.py d3a28206
