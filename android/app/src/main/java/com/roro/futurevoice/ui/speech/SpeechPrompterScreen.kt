@@ -294,7 +294,12 @@ private fun SpeechTakeLayout(
                     if (cameraShowing) {
                         AndroidView(factory = { session.camera.previewView }, modifier = Modifier.fillMaxSize())
                     } else if (capturing && com.roro.futurevoice.capture.flags.SpeechCaptureFlags.fakeCamera) {
-                        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(
+                        val still = com.roro.futurevoice.capture.flags.SpeechCaptureFlags.fakeCameraImage
+                        if (still != null) {
+                            androidx.compose.foundation.Image(still, contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                        } else Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(
                             Color(0xFFBFBFBF), Color(0xFF8C6B59), Color(0xFF333333)))))
                     } else {
                         MicPanel(session, recording, denied = cameraOn && cameraDenied,

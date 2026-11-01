@@ -11,6 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
 import com.roro.futurevoice.capture.flags.SpeechCaptureFlags
 import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.data.LanguageCatalog
@@ -113,6 +114,13 @@ object CaptureSpeech {
     @Composable
     private fun Prompter(context: Context, cursor: Int?) {
         SpeechCaptureFlags.fakeCamera = fakeCam(context)
+        if (SpeechCaptureFlags.fakeCamera && SpeechCaptureFlags.fakeCameraImage == null) {
+            SpeechCaptureFlags.fakeCameraImage = runCatching {
+                context.assets.open("fakecam.jpg").use {
+                    android.graphics.BitmapFactory.decodeStream(it)
+                }.asImageBitmap()
+            }.getOrNull()
+        }
         Box(Modifier.fillMaxSize().background(AppSurfaces.ground)) {
             SpeechPrompterScreen(builtIn(context), native(context), CefrLevel.B1, onClose = {}, previewCursor = cursor)
         }

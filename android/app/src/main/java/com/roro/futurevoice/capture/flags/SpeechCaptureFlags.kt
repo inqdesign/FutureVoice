@@ -9,6 +9,10 @@ object SpeechCaptureFlags {
      *  the on-camera chrome, with no camera in an emulator capture. */
     @Volatile var fakeCamera: Boolean = false
 
+    /** The picture drawn in that stand-in, when the capture build ships one
+     *  (`capture/assets/fakecam.jpg`); null keeps the plain gradient. */
+    @Volatile var fakeCameraImage: androidx.compose.ui.graphics.ImageBitmap? = null
+
     /** Draw the speech sheets as the page itself — iOS's harness returns the
      *  sheet's view rather than presenting it. */
     @Volatile var inlineSheets: Boolean = false
