@@ -375,7 +375,25 @@ enum PublicPersonaService {
                 .insert(row)
                 .execute()
         }
+        await markConsented()
         await pushMyPhoto()
+    }
+
+    /// Stamp the learner's rows as AGREED (`consented_at`). The pool shows a
+    /// learner's row to strangers only once it carries this
+    /// (`20261101120000_public_personas_consent`): rows an old build put up
+    /// without asking stay visible to their owner alone. Its own write, like
+    /// the photo, so a database without the column costs nothing but this.
+    /// Only rows not yet stamped, so the first yes is the date on file.
+    static func markConsented() async {
+        guard let uid = await myUserId() else { return }
+        struct Patch: Encodable { let consented_at: String }
+        _ = try? await SupabaseProvider.shared
+            .from("public_personas")
+            .update(Patch(consented_at: ISO8601DateFormatter().string(from: Date())))
+            .eq("owner_user_id", value: uid)
+            .is("consented_at", value: nil)
+            .execute()
     }
 
     /// Take the user's intro out of the pool entirely — every language's
@@ -439,6 +457,16 @@ enum PublicPersonaService {
     /// today, not when the learner next opens the preview.
     static func autoSyncMyPersona(_ persona: UserPersona?, language: String) async {
         let d = UserDefaults.standard
+        // A learner who said yes to the preview gets the stamp an older
+        // build never wrote, so their row comes back to the pool the first
+        // time they open this build. The manual flag is NOT proof: "Not
+        // now" sets it too, and its take-down is fire-and-forget, so a row
+        // can survive a no. A row published by hand on an older build waits
+        // for its next publish instead — hidden by mistake beats shown
+        // without a yes.
+        if d.bool(forKey: autoApprovedKey) {
+            await markConsented()
+        }
         guard !d.bool(forKey: manualIntroKey), let p = persona, p.isMinimallyComplete else { return }
         guard d.bool(forKey: autoApprovedKey) else {
             await trimUnapprovedRow(p, language: language)
