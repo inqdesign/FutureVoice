@@ -3183,13 +3183,17 @@ sync container carry over. `./scripts/mac-run.sh` builds and opens it.
   (the dictation language uses an `AppMenu` there).
 - **A word, expression or sentence card is the window's third column on
   the Mac** (`cardSheet(item:)`, 2026-10-30, founder). On the phone it is
-  the same `.sheet`. On the Mac every card goes to ONE inspector column at
+  the same `.sheet`. On the Mac every card goes to ONE column at
   the window's trailing edge (`MacCardHost`, hosted in `RootView` under the
   app locale): attached where it was opened, a card from the notebook in the
   sidebar covered the notebook. Opening another card replaces it; its ✕ or
   the source letting go closes it, and the source's `onDismiss` still runs.
   Cards opened inside something that is already a sheet (the study decks,
-  the speech script) stay sheets.
+  the speech script) stay sheets. The column is an HStack of our own, never
+  `.inspector` (2026-11-01): an inspector splits the window's toolbar and
+  the tabs in the title bar re-centred over what was left, sliding left
+  every time a card opened. The tutor topics beside a call are still an
+  `.inspector`.
 - **A row's swipe is a right-click on the Mac** (2026-10-30, founder: "the
   lists don't swipe with a mouse"). A mouse cannot swipe a row; only a
   trackpad's two fingers can, so every row action (keep / I know, delete,

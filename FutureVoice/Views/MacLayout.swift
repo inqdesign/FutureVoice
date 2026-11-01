@@ -215,12 +215,17 @@ final class MacCardHost: ObservableObject {
 private struct MacCardColumnHost: ViewModifier {
     @ObservedObject private var host = MacCardHost.shared
 
+    /// A column of our own, not `.inspector`: an inspector splits the
+    /// window's toolbar, and the tabs in the title bar re-centred over the
+    /// part left of it, sliding left every time a card opened (2026-11-01).
+    static let width: CGFloat = 440
+
     func body(content: Content) -> some View {
-        content.inspector(isPresented: Binding(get: { host.card != nil },
-                                               set: { if !$0 { host.close() } })) {
-            Group {
-                if let card = host.card {
-                    card.overlay(alignment: .topLeading) {
+        HStack(spacing: 0) {
+            content
+            if let card = host.card {
+                Divider().ignoresSafeArea()
+                card.overlay(alignment: .topLeading) {
                         Button { host.close() } label: {
                             Image(systemName: "xmark")
                                 .font(.footnote.weight(.bold))
@@ -231,11 +236,13 @@ private struct MacCardColumnHost: ViewModifier {
                         .buttonStyle(.plain)
                         .padding(12)
                         .accessibilityLabel("Close")
-                    }
                 }
+                .frame(width: Self.width)
+                .background(Color(.systemBackground).ignoresSafeArea())
+                .transition(.move(edge: .trailing))
             }
-            .inspectorColumnWidth(min: 360, ideal: 440, max: 600)
         }
+        .animation(.smooth(duration: 0.25), value: host.card == nil)
     }
 }
 
