@@ -1,8 +1,12 @@
 New
-• Finish your 30th day and you're in the Core right away, no waiting for the next morning.
-• Taking your seat is now a moment of its own: pick your cube's colour, engrave your name and a hope on it, and place it in your seat.
-• Tap any seat on the Core page to see that member's cube. Leave a heart or a short cheer and watch cheers rise over the cube. Only Core members can read the hope on a cube.
-• You get a notification when someone cheers your seat.
+• Ask your tutor. Tap the face at the bottom right of Talk and it looks through your talks, cards and notebook to answer questions about your practice. The buttons under an answer take you straight to that book or word.
+• The tutor picks today's plan for you: one thing to do now and one next, with the rest folded away.
+• Coming up: add an interview, exam, presentation, move or trip to your profile and your tutor prepares you for it every day. Attach the job posting or your CV and it writes the questions you'll likely get and a model answer, then practices them with you until they come out smoothly.
+• When someone new joins the Core, you see their cube and can leave a heart or a cheer.
+• In a Speech study script, press and hold any word to see what it means. Words you looked up stay marked.
 
 Fixed
-• Corrections now say what you meant, in words that fit your level, instead of patching your sentence word by word.
+• Coach mode's "Try saying" now fits your level, in length and in what it says, and talks the way you would to the person you're with. Turn coach mode on mid-call and it suggests an answer to the question already on screen.
+• The grammar focus only appears when the same slip comes back in that call.
+• Your vocabulary level now reflects which words you use, not how many. It may read differently than before.
+• The up and down buttons on a word card stay after you tap "I know".

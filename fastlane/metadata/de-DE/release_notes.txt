@@ -1,8 +1,12 @@
 Neu
-• Schaffst du deinen 30. Tag, bist du sofort im Core und musst nicht bis zum nächsten Morgen warten.
-• Deinen Platz einzunehmen ist jetzt ein eigener Moment: Wähl die Farbe deines Würfels, graviere deinen Namen und einen Wunsch darauf und setz ihn auf deinen Platz.
-• Tipp auf der Core-Seite auf einen Platz, um den Würfel dieses Mitglieds zu sehen. Lass ein Herz oder einen kurzen Gruß da und sieh zu, wie Grüße über dem Würfel aufsteigen. Den Wunsch auf einem Würfel können nur Mitglieder des Core lesen.
-• Du bekommst eine Mitteilung, wenn jemand deinem Platz einen Gruß hinterlässt.
+• Frag deinen Tutor. Tipp im Tab Sprechen unten rechts auf das kleine Gesicht, dann öffnet sich ein Chat: Er sieht deine bisherigen Gespräche, Karten und dein Vokabelheft durch und beantwortet Fragen zu deinem Üben. Über die Buttons unter der Antwort kommst du direkt zum passenden Buch oder Wort.
+• Der Tutor stellt deinen Plan für heute zusammen: eine Sache für jetzt, eine für danach, der Rest liegt eingeklappt darunter.
+• Demnächst: Trag ein Vorstellungsgespräch, eine Prüfung, eine Präsentation, einen Umzug oder eine Reise in dein Profil ein, und der Tutor bereitet dich jeden Tag darauf vor. Häng die Stellenanzeige oder deinen Lebenslauf an, dann schreibt er dir die wahrscheinlichen Fragen und eine Musterantwort und übt sie mit dir, bis sie dir flüssig über die Lippen gehen.
+• Kommt jemand neu in den Core (den Club mit 100 Plätzen für alle, die jeden Tag sprechen), siehst du seinen Würfel und kannst ein Herz oder einen Gruß dalassen.
+• Halt in einem Lernskript unter Rede ein Wort gedrückt, um seine Bedeutung zu sehen. Nachgeschlagene Wörter bleiben markiert.
 
 Behoben
-• Korrekturen sagen jetzt, was du gemeint hast, in Worten für dein Niveau, statt deinen Satz Wort für Wort zu flicken.
+• Im Coach-Modus passt „Sag mal so“ jetzt in Länge und Inhalt zu deinem Niveau und zu der Person, mit der du sprichst. Schaltest du den Coach-Modus mitten im Anruf ein, schlägt er sofort eine Antwort auf die Frage vor, die gerade zu sehen ist.
+• Der Grammatik-Fokus erscheint nur noch, wenn derselbe Fehler im Anruf wiederkommt.
+• Dein Wortschatz-Niveau richtet sich jetzt danach, welche Wörter du benutzt, nicht wie viele. Es kann deshalb anders aussehen als vorher.
+• Auf einer Wortkarte bleiben die Pfeile nach oben und unten jetzt stehen, wenn du auf „Weiß ich“ tippst.

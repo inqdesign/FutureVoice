@@ -1,8 +1,12 @@
 Novedades
-• Al completar tu día 30 entras en el Núcleo al momento, sin esperar a la mañana siguiente.
-• Ocupar tu asiento ahora es un momento especial: elige el color de tu cubo, graba en él tu nombre y un deseo, y colócalo en tu asiento.
-• Toca cualquier asiento en la página del Núcleo para ver el cubo de ese miembro. Deja un corazón o un ánimo corto y verás los ánimos subir sobre el cubo. Solo los miembros del Núcleo pueden leer el deseo de un cubo.
-• Te llega una notificación cuando alguien le deja un ánimo a tu asiento.
+• Ahora puedes hacerle preguntas al tutor. Toca la carita de abajo a la derecha en la pestaña Hablar y se abre un chat: revisa tus conversaciones anteriores, tus tarjetas y tu libreta de palabras para responder lo que quieras saber sobre tu práctica. Los botones debajo de cada respuesta te llevan directo a ese cuaderno o a esa palabra.
+• El tutor elige tu plan de hoy: una cosa para hacer ahora y otra para después. El resto queda guardado debajo.
+• Próximos objetivos: añade a tu Perfil una entrevista, un examen, una presentación, una mudanza o un viaje, y el tutor te prepara para eso cada día. Adjunta la oferta de empleo o tu CV y te escribe las preguntas que seguramente te harán y una respuesta modelo. Después las practica contigo hasta que te salgan con soltura.
+• Cuando alguien nuevo entra en el Núcleo (el club de 100 asientos para quienes hablan todos los días), ves su cubo y puedes dejarle un corazón o un ánimo.
+• En un guion de estudio de Discurso, mantén pulsada cualquier palabra para ver qué significa. Las palabras que buscaste quedan marcadas.
 
 Correcciones
-• Las correcciones ahora dicen lo que querías decir, con palabras de tu nivel, en lugar de remendar tu frase palabra por palabra.
+• En el Modo coach, «Prueba a decir» ahora se ajusta a tu nivel en longitud y contenido, y también a la persona con la que hablas. Si activas el modo coach durante una llamada, te sugiere al momento una respuesta a la pregunta que ya está en pantalla.
+• El punto de gramática solo aparece cuando el mismo error vuelve a salir en esa llamada.
+• Tu nivel de vocabulario ahora se mide por qué palabras usas, no por cuántas. Puede que lo veas distinto que antes.
+• En una tarjeta de palabra, las flechas de arriba y abajo siguen ahí después de tocar «Ya lo sé».
