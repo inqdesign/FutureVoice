@@ -1081,7 +1081,7 @@ private struct TalkHeroSection: View {
         // guessed from the scroll viewport.
         .frame(height: heroHeight)
         .onReceive(NotificationCenter.default.publisher(for: MacLayout.windowDidResize)) { _ in
-            screenHeight = MacLayout.screenHeight
+            screenHeight = MacLayout.pageHeight
         }
         .background(GeometryReader { g in
             Color.clear.preference(key: HeroTopYKey.self,
@@ -1094,6 +1094,7 @@ private struct TalkHeroSection: View {
         // The continuous stream doubles as the scroll link: how far the hero
         // has moved up from rest drives the ring's shrink.
         .onPreferenceChange(HeroTopYKey.self) { y in
+            let y = MacLayout.pageY(fromGlobal: y)
             latestHeroTopReport = y
             scrollOffset = max(0, heroTopY - y)
         }
@@ -1121,7 +1122,7 @@ private struct TalkHeroSection: View {
             var previous = CGFloat.nan
             while !Task.isCancelled {
                 let current = latestHeroTopReport
-                if current > 40, abs(current - previous) < 0.5 {
+                if current > (MacLayout.isMac ? -50 : 40), abs(current - previous) < 0.5 {
                     heroTopY = current
                     onSettled()
                     return
@@ -1156,7 +1157,7 @@ private struct TalkHeroSection: View {
     @State private var heroTopY: CGFloat = TalkHeroSection.restTopGuess
     /// The screen the ring centres on — the window, on the Mac, which the
     /// learner resizes (`MacLayout.windowDidResize`).
-    @State private var screenHeight: CGFloat = MacLayout.screenHeight
+    @State private var screenHeight: CGFloat = MacLayout.pageHeight
     @State private var latestHeroTopReport: CGFloat = TalkHeroSection.restTopGuess
 
     /// The first frame's guess, from the window itself: status bar + the
@@ -1172,6 +1173,10 @@ private struct TalkHeroSection: View {
             .first
         let navBar: CGFloat
         if #available(iOS 26, *) { navBar = 54 } else { navBar = 44 }
+        // On the Mac the page sits below the title bar and the header floats
+        // over the hero, whose top is the page's 0; counting the title bar
+        // and a nav bar put the ring ~60 pt above the middle.
+        if MacLayout.isMac { return 0 }
         guard let top = window?.safeAreaInsets.top, top > 0 else { return 62 + navBar + 8 }
         return top + navBar + 8
     }

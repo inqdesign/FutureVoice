@@ -97,6 +97,35 @@ enum MacLayout {
         return UIScreen.main.bounds.height
     }
 
+    /// The page's own height: the window below its title bar, in zoomed
+    /// points — what a page centred on "the screen" should centre on (the
+    /// root sits below the title bar, `MacWindow.zoomContent`).
+    static var pageHeight: CGFloat {
+        #if targetEnvironment(macCatalyst)
+        let window = UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.keyWindow ?? ($0 as? UIWindowScene)?.windows.first }
+            .first
+        if let window, window.bounds.height > 0 {
+            return (window.bounds.height - window.safeAreaInsets.top) / zoom
+        }
+        #endif
+        return UIScreen.main.bounds.height
+    }
+
+    /// A SwiftUI `.global` y turned into the page's own points. On the Mac
+    /// `.global` is the WINDOW, unzoomed and counted from above the title
+    /// bar, while the page lays out in zoomed points below it.
+    static func pageY(fromGlobal y: CGFloat) -> CGFloat {
+        #if targetEnvironment(macCatalyst)
+        let window = UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.keyWindow ?? ($0 as? UIWindowScene)?.windows.first }
+            .first
+        return (y - (window?.safeAreaInsets.top ?? 0)) / zoom
+        #else
+        return y
+        #endif
+    }
+
     static var zoom: CGFloat {
         // An Int as saved by the menu, or a launch argument's string (`-mac.zoom 0`).
         let raw = UserDefaults.standard.object(forKey: zoomKey)
