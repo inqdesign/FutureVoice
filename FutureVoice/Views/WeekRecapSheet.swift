@@ -256,6 +256,7 @@ struct WeekRecapSheet: View {
                             .background(Color(.tertiarySystemFill), in: Circle())
                     }
                     .accessibilityLabel(autoAdvance ? Text("Stop auto-play") : Text("Auto-play"))
+                    .buttonStyle(.plain)
                     Button { narrator.isOn.toggle() } label: {
                         Image(systemName: narrator.isOn ? "speaker.wave.2.fill" : "speaker.slash.fill")
                             .font(.body.weight(.semibold))
@@ -264,6 +265,7 @@ struct WeekRecapSheet: View {
                             .background(Color(.tertiarySystemFill), in: Circle())
                     }
                     .accessibilityLabel(narrator.isOn ? Text("Mute narration") : Text("Play narration"))
+                    .buttonStyle(.plain)
                 }
                 Button { dismiss() } label: {
                     Image(systemName: "xmark")
@@ -272,7 +274,9 @@ struct WeekRecapSheet: View {
                         .frame(width: 32, height: 32)
                         .background(Color(.tertiarySystemFill), in: Circle())
                 }
+                .buttonStyle(.plain)
                 .accessibilityLabel(Text("Close"))
+                .macOwnClose()
             }
         }
         .padding(.horizontal, 20)

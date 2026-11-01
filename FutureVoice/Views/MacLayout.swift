@@ -318,6 +318,39 @@ extension View {
 }
 
 extension View {
+    /// Marks a sheet that draws its own close button in its content (the
+    /// week's deck), so the Mac doesn't add a second ✕ over it. No-op on
+    /// the phone.
+    func macOwnClose() -> some View {
+        #if targetEnvironment(macCatalyst)
+        background(MacOwnCloseMarker().frame(width: 0, height: 0))
+        #else
+        self
+        #endif
+    }
+}
+
+#if targetEnvironment(macCatalyst)
+private struct MacOwnCloseMarker: UIViewRepresentable {
+    func makeUIView(context: Context) -> MarkerView { MarkerView() }
+    func updateUIView(_ view: MarkerView, context: Context) {}
+    final class MarkerView: UIView {
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            var responder: UIResponder? = self
+            while let r = responder {
+                if let vc = r as? UIViewController, vc.presentingViewController != nil, vc.parent == nil {
+                    MacSheets.markOwnClose(vc)
+                    return
+                }
+                responder = r.next
+            }
+        }
+    }
+}
+#endif
+
+extension View {
     /// A picker inside a menu: on the phone its choices sit in the menu
     /// itself, on the Mac it becomes a submenu named after its label, and a
     /// picker with no label became an empty one (Watch's filter opened a
@@ -595,6 +628,7 @@ enum MacWindow {
         NotificationCenter.default.post(name: MacLayout.windowDidResize, object: nil)
         watchForRelayout()
         MacScrollDrag.install()
+        MacListRows.install()
         #endif
     }
 
@@ -798,11 +832,16 @@ enum MacSheets {
     /// screen said so. The card has a navigation bar — its "1 of 24" title —
     /// with no button in it, so it is the BUTTONS that are looked for, not
     /// the bar.
+    private static var ownCloseKey: UInt8 = 0
+    static func markOwnClose(_ presented: UIViewController) {
+        objc_setAssociatedObject(presented, &ownCloseKey, true, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+    }
+
     @MainActor
     static func updateCloseButton(on presented: UIViewController) {
         guard let view = presented.viewIfLoaded, !presented.isBeingDismissed else { return }
         let existing = view.viewWithTag(closeTag)
-        if hasBarButtons(view) {
+        if objc_getAssociatedObject(presented, &ownCloseKey) != nil || hasBarButtons(view) {
             existing?.removeFromSuperview()
             return
         }
@@ -1150,6 +1189,60 @@ enum MacScrollDrag {
         }
     }
     @MainActor private static var installed = false
+}
+
+/// List rows breathe like the phone's (founder, 2026-11-01: "the list style
+/// is broken, the padding differs"). On the Mac idiom SwiftUI leaves ~3 pt
+/// above and below a row's content, where the phone leaves 11–15, so every
+/// list read cramped. SwiftUI ignores the cell's layout margins and has no
+/// default-inset setting, so its row cell (found at runtime: the class is
+/// SwiftUI's own) asks for `extra` more height and centres its content.
+enum MacListRows {
+    static let extra: CGFloat = 8   // per side
+    @MainActor static func install() {
+        guard !installed,
+              let m1 = class_getInstanceMethod(UICollectionViewCell.self, #selector(UICollectionViewCell.layoutSubviews)),
+              let m2 = class_getInstanceMethod(UICollectionViewCell.self, #selector(UICollectionViewCell.fv_listLayoutSubviews))
+        else { return }
+        installed = true
+        method_exchangeImplementations(m1, m2)
+    }
+    @MainActor private static var installed = false
+    @MainActor private static var patched = Set<ObjectIdentifier>()
+
+    /// SwiftUI's cell overrides the sizing call, so it is replaced on that
+    /// class itself, once.
+    @MainActor static func patchSizing(of cls: AnyClass) {
+        guard !patched.contains(ObjectIdentifier(cls)) else { return }
+        patched.insert(ObjectIdentifier(cls))
+        let sel = #selector(UICollectionViewCell.preferredLayoutAttributesFitting(_:))
+        guard let method = class_getInstanceMethod(cls, sel) else { return }
+        typealias Fn = @convention(c) (AnyObject, Selector, UICollectionViewLayoutAttributes) -> UICollectionViewLayoutAttributes
+        let original = unsafeBitCast(method_getImplementation(method), to: Fn.self)
+        let block: @convention(block) (AnyObject, UICollectionViewLayoutAttributes) -> UICollectionViewLayoutAttributes = { cell, attributes in
+            let probe = attributes.copy() as! UICollectionViewLayoutAttributes
+            probe.size.height = max(1, attributes.size.height - 2 * extra)
+            let fitted = original(cell, sel, probe).copy() as! UICollectionViewLayoutAttributes
+            fitted.size.height += 2 * extra
+            return fitted
+        }
+        let imp = imp_implementationWithBlock(block)
+        if !class_addMethod(cls, sel, imp, method_getTypeEncoding(method)) {
+            method_setImplementation(method, imp)
+        }
+    }
+}
+
+extension UICollectionViewCell {
+    @objc fileprivate func fv_listLayoutSubviews() {
+        fv_listLayoutSubviews()   // the original, after the exchange
+        guard String(describing: type(of: self)) == "ListCollectionViewCell" else { return }
+        MacListRows.patchSizing(of: type(of: self))
+        let inner = contentView.bounds.insetBy(dx: 0, dy: MacListRows.extra)
+        for host in contentView.subviews where String(describing: type(of: host)).hasPrefix("CellHostingView") {
+            if host.frame != inner { host.frame = inner }
+        }
+    }
 }
 
 /// The mouse's pan on one sideways scroll view.
