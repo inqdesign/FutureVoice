@@ -688,6 +688,10 @@ struct ConversationView: View {
     /// two together read as the list jumping up and back down (2026-10-05).
     /// The slot keeps its height until the next suggestion replaces it.
     @State private var coachStale = false
+    /// The last fluent-self line the gateway finished, so coach mode switched
+    /// on mid-call can answer the question already on screen instead of
+    /// waiting for the next line (`advanceCoach` only runs as a line ends).
+    @State private var lastFinishedReply: (id: UUID, text: String)?
     /// Tutor mode as the conversation prompt has it right now (`TutorMode`).
     /// It lives in the system prompt, so a flip mid-call sends the gateway a
     /// new one (`RealtimeTalkClient.setSystem`, 2026-10-14 — it used to wait
@@ -1309,6 +1313,13 @@ struct ConversationView: View {
             .onChange(of: coachMode) { _, on in
                 if on, grammarFocus == nil { Task { await loadGrammarFocus() } }
                 syncCoachSteer()
+                // Switched on while a finished question waits for an answer:
+                // suggest for it now. A line still being spoken gets its turn
+                // from `onReplyFinished`; one already answered needs nothing.
+                if on, coachReply == nil, let last = lastFinishedReply,
+                   turns.last?.id == last.id {
+                    advanceCoach(afterReply: last.text, turnId: last.id)
+                }
                 if !on { coachHint = nil; coachReply = nil; coachStale = false }
             }
             .task {
@@ -3111,6 +3122,7 @@ struct ConversationView: View {
                 try? FileManager.default.removeItem(at: url)
             }
             didSaveCurrentSession = false
+            lastFinishedReply = (id, text)
             advanceCoach(afterReply: text, turnId: id)
         }
         await realtime.connect(
