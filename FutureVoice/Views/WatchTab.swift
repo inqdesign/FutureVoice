@@ -154,6 +154,7 @@ struct WatchTab: View {
                             Picker(selection: $skyLens) {
                                 ForEach(PeopleSky.Lens.allCases) { l in Text(l.title).tag(l) }
                             } label: { EmptyView() }
+                            .macInlinePicker()
                         } label: {
                             Image(systemName: skyLens == .all
                                   ? "line.3.horizontal.decrease.circle"

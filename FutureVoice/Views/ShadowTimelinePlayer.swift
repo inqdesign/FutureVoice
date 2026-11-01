@@ -340,6 +340,7 @@ struct ShadowTimelinePlayer<MicControl: View>: View {
                     Text(speedLabel(r)).tag(r)
                 }
             }
+            .macInlinePicker()
         } label: {
             Text(speedLabel(playbackRate))
                 .font(.subheadline.weight(.semibold))

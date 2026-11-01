@@ -123,7 +123,9 @@ struct FindPeopleSheet: View {
             }
             .navigationTitle("People")
             .toolbarTitleDisplayMode(.inline)
-            .searchable(text: $searchText, prompt: Text("Name, interests, place…"))
+            .searchable(text: $searchText, placement: MacLayout.isMac
+                            ? .navigationBarDrawer(displayMode: .always) : .automatic,
+                        prompt: Text("Name, interests, place…"))
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }

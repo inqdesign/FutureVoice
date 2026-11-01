@@ -289,6 +289,21 @@ extension View {
 }
 
 extension View {
+    /// A picker inside a menu: on the phone its choices sit in the menu
+    /// itself, on the Mac it becomes a submenu named after its label, and a
+    /// picker with no label became an empty one (Watch's filter opened a
+    /// blank menu, 2026-11-01). Inline keeps the choices in the menu on both.
+    @ViewBuilder
+    func macInlinePicker() -> some View {
+        #if targetEnvironment(macCatalyst)
+        pickerStyle(.inline)
+        #else
+        self
+        #endif
+    }
+}
+
+extension View {
     /// A page meant to be READ (a call, a shadow line) keeps a reading
     /// column on the Mac instead of running across the whole window; its
     /// background stays full width. No-op on the phone.
@@ -732,10 +747,19 @@ enum MacSheets {
         objc_setAssociatedObject(presented, &closableKey, true, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         presented.addKeyCommand(UIKeyCommand(input: UIKeyCommand.inputEscape, modifierFlags: [],
                                              action: #selector(UIViewController.fv_macCloseSheet)))
-        // SwiftUI builds the page, and its toolbar, a beat after presenting;
-        // look then, and again once the toolbar has surely landed.
-        for delay in [0.3, 1.0, 2.5] {
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { updateCloseButton(on: presented) }
+        // SwiftUI builds the page, and its toolbar, a beat after presenting,
+        // and a sheet can push pages of its own (the player's Listen page,
+        // whose back button the ✕ sat on); look again while it is open.
+        var ticks = 0
+        Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { [weak presented] timer in
+            MainActor.assumeIsolated {
+                ticks += 1
+                guard let presented, presented.presentingViewController != nil || ticks < 5 else {
+                    timer.invalidate()
+                    return
+                }
+                updateCloseButton(on: presented)
+            }
         }
     }
 
@@ -775,12 +799,53 @@ enum MacSheets {
         // Done read as no button, and the sheet got a second ✕).
         if let bar = view as? UINavigationBar, !bar.isHidden, let item = bar.topItem {
             let grouped = (item.leadingItemGroups + item.trailingItemGroups).flatMap(\.barButtonItems)
-            if !grouped.isEmpty || !(item.leftBarButtonItems ?? []).isEmpty
+            let hasBack = bar.backItem != nil && !item.hidesBackButton
+            if hasBack || !grouped.isEmpty || !(item.leftBarButtonItems ?? []).isEmpty
                 || !(item.rightBarButtonItems ?? []).isEmpty {
                 return true
             }
         }
         return view.subviews.contains(where: hasBarButtons)
+    }
+
+    /// A full-screen cover (the plan editor, the call) is presented over
+    /// the window, outside the zoomed root, so it came up at the Mac's 1.0×
+    /// with 13 pt text (2026-11-01). It gets the root's zoom and keeps it
+    /// through a window resize.
+    @MainActor
+    static func keepCoverZoomed(_ presented: UIViewController) {
+        guard String(describing: type(of: presented)).hasPrefix("PresentationHostingController"),
+              presented.modalPresentationStyle == .fullScreen
+                || presented.modalPresentationStyle == .overFullScreen else { return }
+        var ticks = 0
+        func apply() {
+            guard let view = presented.viewIfLoaded, let host = view.superview,
+                  let window = view.window else { return }
+            let zoom = MacLayout.zoom
+            let size = host.bounds.size
+            guard size.width > 0, size.height > 0 else { return }
+            _ = window
+            // Unlike the root, a cover keeps the window's safe area under the
+            // zoom, so it is scaled in place and its own bar clears the title.
+            let transform = CGAffineTransform(scaleX: zoom, y: zoom)
+            let bounds = CGRect(origin: .zero, size: CGSize(width: size.width / zoom, height: size.height / zoom))
+            let center = CGPoint(x: size.width / 2, y: size.height / 2)
+            if view.transform != transform { view.transform = transform }
+            if view.bounds != bounds { view.bounds = bounds }
+            if view.center != center { view.center = center }
+        }
+        apply()
+        Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak presented] timer in
+            MainActor.assumeIsolated {
+                ticks += 1
+                guard let presented, presented.presentingViewController != nil || ticks < 5 else {
+                    timer.invalidate()
+                    return
+                }
+                _ = presented
+                apply()
+            }
+        }
     }
 
     /// The sheet's own page is zoomed, never its window's root: that root is
@@ -828,6 +893,7 @@ extension UIViewController {
             if isSheet { MacSheets.makeClosable(presented) }
             completion?()
         }
+        if !isSheet { MacSheets.keepCoverZoomed(presented) }
         // Some sheets never call back (measured 2026-11-01: the put-off
         // deck), which left them unzoomed and with no ✕; don't wait for it.
         if isSheet {
@@ -1041,6 +1107,18 @@ enum MacScrollDrag {
         else { return }
         installed = true
         method_exchangeImplementations(original, added)
+        // SwiftUI turns the indicators back on between layouts (a month
+        // calendar scrolled to today still drew its bar), so the setters
+        // only ever hear "off".
+        for (a, b) in [(#selector(setter: UIScrollView.showsVerticalScrollIndicator),
+                        #selector(UIScrollView.fv_setShowsVerticalScrollIndicator(_:))),
+                       (#selector(setter: UIScrollView.showsHorizontalScrollIndicator),
+                        #selector(UIScrollView.fv_setShowsHorizontalScrollIndicator(_:)))] {
+            if let m1 = class_getInstanceMethod(UIScrollView.self, a),
+               let m2 = class_getInstanceMethod(UIScrollView.self, b) {
+                method_exchangeImplementations(m1, m2)
+            }
+        }
     }
     @MainActor private static var installed = false
 }
@@ -1115,6 +1193,14 @@ private final class MouseSwipe: NSObject, UIGestureRecognizerDelegate {
 }
 
 extension UIScrollView {
+    // The originals, after the exchange; always called with false.
+    @objc fileprivate func fv_setShowsVerticalScrollIndicator(_ shows: Bool) {
+        fv_setShowsVerticalScrollIndicator(false)
+    }
+    @objc fileprivate func fv_setShowsHorizontalScrollIndicator(_ shows: Bool) {
+        fv_setShowsHorizontalScrollIndicator(false)
+    }
+
     @objc fileprivate func fv_dragLayoutSubviews() {
         fv_dragLayoutSubviews()   // the original, after the exchange
         // No scroll bars on the Mac (2026-11-01, founder). With a mouse
