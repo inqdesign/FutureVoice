@@ -668,6 +668,7 @@ enum MacSheets {
 
     private static var installed = false
     fileprivate static var sizeKey: UInt8 = 0
+    private static var closableKey: UInt8 = 0
 
     @MainActor
     static func install() {
@@ -724,12 +725,16 @@ enum MacSheets {
     /// (the player).
     @MainActor
     static func makeClosable(_ presented: UIViewController) {
+        zoomSheet(presented)
+        // Called twice per sheet (the callback and a fallback for sheets
+        // that never call back); arm it once.
+        guard objc_getAssociatedObject(presented, &closableKey) == nil else { return }
+        objc_setAssociatedObject(presented, &closableKey, true, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         presented.addKeyCommand(UIKeyCommand(input: UIKeyCommand.inputEscape, modifierFlags: [],
                                              action: #selector(UIViewController.fv_macCloseSheet)))
-        zoomSheet(presented)
         // SwiftUI builds the page, and its toolbar, a beat after presenting;
         // look then, and again once the toolbar has surely landed.
-        for delay in [0.3, 1.0] {
+        for delay in [0.3, 1.0, 2.5] {
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) { updateCloseButton(on: presented) }
         }
     }
@@ -765,9 +770,15 @@ enum MacSheets {
     private static let closeTag = 0x5EE7
 
     private static func hasBarButtons(_ view: UIView) -> Bool {
-        if let bar = view as? UINavigationBar, !bar.isHidden, let item = bar.topItem,
-           !(item.leftBarButtonItems ?? []).isEmpty || !(item.rightBarButtonItems ?? []).isEmpty {
-            return true
+        // SwiftUI puts its toolbar in the item GROUPS, where
+        // left/rightBarButtonItems don't see it (measured 2026-11-01: a deck's
+        // Done read as no button, and the sheet got a second ✕).
+        if let bar = view as? UINavigationBar, !bar.isHidden, let item = bar.topItem {
+            let grouped = (item.leadingItemGroups + item.trailingItemGroups).flatMap(\.barButtonItems)
+            if !grouped.isEmpty || !(item.leftBarButtonItems ?? []).isEmpty
+                || !(item.rightBarButtonItems ?? []).isEmpty {
+                return true
+            }
         }
         return view.subviews.contains(where: hasBarButtons)
     }
@@ -816,6 +827,13 @@ extension UIViewController {
         fv_macPresent(presented, animated: animated) {
             if isSheet { MacSheets.makeClosable(presented) }
             completion?()
+        }
+        // Some sheets never call back (measured 2026-11-01: the put-off
+        // deck), which left them unzoomed and with no ✕; don't wait for it.
+        if isSheet {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak presented] in
+                if let presented { MacSheets.makeClosable(presented) }
+            }
         }
     }
 
