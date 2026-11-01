@@ -198,6 +198,13 @@ class PublicPersonaClient(private val auth: AuthRepository) {
         language: String,
     ) {
         val prefs = prefs(context)
+        // A learner who said yes to the preview gets the stamp an older build
+        // never wrote, so their row comes back to the pool (same rule as iOS).
+        // The manual flag is NOT proof: "Not now" sets it too and its
+        // take-down can fail, so a row published by hand on an older build
+        // waits for its next publish — hidden by mistake beats shown
+        // without a yes.
+        if (prefs.getBoolean(AUTO_APPROVED_KEY, false)) markConsented()
         if (prefs.getBoolean(MANUAL_INTRO_KEY, false)) return
         val p = persona ?: return
         if (!p.isMinimallyComplete) return
@@ -323,7 +330,31 @@ class PublicPersonaClient(private val auth: AuthRepository) {
         Edge.client.newCall(req).execute().use { resp ->
             if (resp.code !in 200..299) throw EdgeError.Http(resp.code, resp.body.string().take(512))
         }
+        markConsented()
         pushMyPhoto()
+    }
+
+    /**
+     * Stamp the learner's rows as AGREED (`consented_at`). The pool shows a
+     * learner's row to strangers only once it carries this
+     * (`20261101120000_public_personas_consent`); rows an old build put up
+     * without asking stay visible to their owner alone. Its own write, like
+     * the photo, so a database without the column costs nothing but this.
+     * Only rows not yet stamped, so the first yes is the date on file.
+     */
+    suspend fun markConsented() = withContext(Dispatchers.IO) {
+        val uid = auth.userId ?: return@withContext
+        val patch = buildJsonObject { put("consented_at", java.time.Instant.now().toString()) }
+        val body = Edge.json.encodeToString(JsonObject.serializer(), patch)
+            .toRequestBody("application/json".toMediaType())
+        val req = Request.Builder()
+            .url("${Config.supabaseUrl.trimEnd('/')}/rest/v1/public_personas?owner_user_id=eq.$uid&consented_at=is.null")
+            .header("Authorization", "Bearer ${auth.accessToken()}")
+            .header("apikey", Config.supabaseAnonKey)
+            .header("Prefer", "return=minimal")
+            .patch(body)
+            .build()
+        runCatching { Edge.client.newCall(req).execute().close() }
     }
 
     /**
