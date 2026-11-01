@@ -3211,9 +3211,26 @@ sync container carry over. `./scripts/mac-run.sh` builds and opens it.
   connected macOS draws legacy bars that take ~15 pt out of the content, so a
   page (the script editor) re-wrapped and jumped the moment it grew long
   enough to scroll. `fv_dragLayoutSubviews` turns both indicators off on
-  every layout (SwiftUI turns them back on); scrolling itself is unchanged.
+  every layout and the setters only ever hear "off" (SwiftUI turns them
+  back on between layouts); scrolling itself is unchanged.
+- **List rows get the phone's breathing room** (`MacListRows`, 2026-11-01,
+  founder: "the list style is broken"). The Mac idiom leaves ~3 pt above
+  and below a row's content (the phone 11–15) and SwiftUI ignores the
+  cell's margins, so SwiftUI's row cell asks for 8 pt more per side and
+  centres its content. Every `List`/`Form` gets it; headers don't.
+- **A picker inside a menu takes `.macInlinePicker()`.** On the Mac a menu
+  picker is a submenu named after its label, and one with no label was an
+  EMPTY menu (Watch's filter).
+- **Full-screen covers are zoomed too** (`MacSheets.keepCoverZoomed`): a
+  cover is presented outside the zoomed root and came up at 13 pt.
+- **A `.global` y is the window's** — unzoomed, counted from above the
+  title bar. Turn it into page points with `MacLayout.pageY(fromGlobal:)`
+  and centre on `MacLayout.pageHeight` (the Talk ring sat ~60 pt high).
 - **A sheet with no bar gets a ✕** (`MacSheets.addCloseButton`): macOS
-  swallows clicks behind a sheet and Esc was invisible. Sheets with a
+  swallows clicks behind a sheet and Esc was invisible. SwiftUI's bar
+  buttons live in the item GROUPS, a back button counts, and the check
+  re-runs while the sheet is open (it pushes pages). A sheet that draws
+  its own ✕ in its content marks it `.macOwnClose()`. Sheets with a
   navigation bar carry their own Done/Cancel and are left alone.
 - **The speech take screen is a 760 pt column on the Mac** (script and
   camera card under the lens). Its camera preview is ONE layer owned by
