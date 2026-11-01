@@ -7,13 +7,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.roro.futurevoice.R
 import com.roro.futurevoice.core.Analytics
-import com.roro.futurevoice.talk.PromptClock
 import com.roro.futurevoice.talk.ScenarioBrief
 import kotlinx.coroutines.launch
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import java.io.File
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -110,10 +113,16 @@ data class UpcomingGoal(
         }
     }
 
-    /** Days from today to the goal's day: 0 = today. iOS's
-     *  `PromptClock.calendarDays` never goes below 0, so neither does this. */
-    fun daysLeft(now: Long = System.currentTimeMillis()): Int? =
-        date?.let { PromptClock.calendarDays(now, it) }
+    /** Days from today to the goal's day: 0 = today, negative = past.
+     *  Counted here, not with `PromptClock.calendarDays`, which never goes
+     *  below 0 — a past goal would never read as past. */
+    fun daysLeft(now: Long = System.currentTimeMillis(), zone: ZoneId = ZoneId.systemDefault()): Int? =
+        date?.let {
+            ChronoUnit.DAYS.between(
+                LocalDate.ofInstant(Instant.ofEpochMilli(now), zone),
+                LocalDate.ofInstant(Instant.ofEpochMilli(it), zone),
+            ).toInt()
+        }
 
     /** Over once its day has passed. */
     fun isPast(now: Long = System.currentTimeMillis()): Boolean = (daysLeft(now) ?: 0) < 0
@@ -155,7 +164,7 @@ data class UpcomingGoal(
         if (date != null) {
             val f = SimpleDateFormat("EEE d MMM yyyy", Locale.US)
             val left = daysLeft(now) ?: 0
-            parts += "on ${f.format(Date(date))} (${if (left == 0) "today" else "in $left days"})"
+            parts += "on ${f.format(Date(date))} (${if (left <= 0) "today" else "in $left days"})"
         } else {
             parts += "no date set"
         }

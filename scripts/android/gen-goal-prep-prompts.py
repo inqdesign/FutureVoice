@@ -87,7 +87,7 @@ ph = src.index("static func phase(_ goal: UpcomingGoal")
 ph_body = func_body(src, "phase", ph)
 no_date = one_line(re.search(r"guard let left = goal\.daysLeft\(now: now\) else \{\s*return " + LIT, ph_body).group(1))
 phase_cases = {}
-for case in ("0", "1...3", "4...14"):
+for case in ("...0", "1...3", "4...14"):
     phase_cases[case] = one_line(re.search(r"case " + re.escape(case) + r": return " + LIT, ph_body).group(1),
                                  {"left": "left"})
 phase_default = one_line(re.search(r"default: return " + LIT, ph_body).group(1), {"left": "left"})
@@ -138,7 +138,7 @@ object GoalPrepPrompts {{
     fun phase(left: Int?): String {{
         if (left == null) return {no_date}
         return when (left) {{
-            0 -> {phase_cases["0"]}
+            in Int.MIN_VALUE..0 -> {phase_cases["...0"]}
             in 1..3 -> {phase_cases["1...3"]}
             in 4..14 -> {phase_cases["4...14"]}
             else -> {phase_default}
