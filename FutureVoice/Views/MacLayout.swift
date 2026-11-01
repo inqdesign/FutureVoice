@@ -183,7 +183,15 @@ extension View {
 @MainActor
 final class MacCardHost: ObservableObject {
     static let shared = MacCardHost()
-    @Published private(set) var card: AnyView?
+    @Published private(set) var card: AnyView? {
+        // The page beside the column is narrower by the column's width, and
+        // its centred column has to be measured against what is left: a
+        // Speech tab opened while Review's card was up kept the window's
+        // insets and squeezed to a strip (2026-11-01).
+        didSet { MacWindow.cardColumnWidth = card == nil ? 0 : Self.columnWidth + 1 }
+    }
+    /// The card column's width (zoomed points), plus its 1 pt divider.
+    static let columnWidth: CGFloat = 440
     private var owner: UUID?
     private var onClose: (() -> Void)?
 
@@ -218,7 +226,7 @@ private struct MacCardColumnHost: ViewModifier {
     /// A column of our own, not `.inspector`: an inspector splits the
     /// window's toolbar, and the tabs in the title bar re-centred over the
     /// part left of it, sliding left every time a card opened (2026-11-01).
-    static let width: CGFloat = 440
+    static let width = MacCardHost.columnWidth
 
     func body(content: Content) -> some View {
         HStack(spacing: 0) {
@@ -604,6 +612,14 @@ enum MacWindow {
         }
     }
 
+    /// The width the card column takes off the page (0 while it is shut).
+    @MainActor static var cardColumnWidth: CGFloat = 0 {
+        didSet {
+            guard cardColumnWidth != oldValue else { return }
+            for case let scene as UIWindowScene in UIApplication.shared.connectedScenes { applyZoom(to: scene) }
+        }
+    }
+
     @MainActor
     static func configure() {
         #if targetEnvironment(macCatalyst)
@@ -712,7 +728,7 @@ enum MacWindow {
         if root.transform != transform { root.transform = transform }
         if root.bounds != bounds { root.bounds = bounds }
         if root.center != center { root.center = center }
-        insetColumn(of: controller, width: bounds.width)
+        insetColumn(of: controller, width: max(0, bounds.width - cardColumnWidth))
         #endif
     }
 }

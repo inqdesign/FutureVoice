@@ -3201,7 +3201,16 @@ sync container carry over. `./scripts/mac-run.sh` builds and opens it.
   `.inspector` (2026-11-01): an inspector splits the window's toolbar and
   the tabs in the title bar re-centred over what was left, sliding left
   every time a card opened. The tutor topics beside a call are still an
-  `.inspector`.
+  `.inspector`. While it is open the page's centred column is measured
+  against the window MINUS the column (`MacWindow.cardColumnWidth`): a
+  Speech tab opened with Review's card up squeezed to a strip. The word
+  cloud's card lives there too (its phone sheet with a peek became a
+  window-covering sheet on the Mac), driven by a `@State` of its own — a
+  computed binding is read inside the column modifier and never updates.
+- **A file the app makes is SAVED on the Mac** (2026-11-01, founder): a
+  book's PDF/Text export opens the system save panel in Downloads
+  (`MacSaveFile`, a `UIDocumentPickerViewController` presented from UIKit,
+  never a SwiftUI sheet). The share sheet has no "Save to Downloads".
 - **A row's swipe is a right-click on the Mac** (2026-10-30, founder: "the
   lists don't swipe with a mouse"). A mouse cannot swipe a row; only a
   trackpad's two fingers can, so every row action (keep / I know, delete,

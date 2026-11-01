@@ -57,6 +57,12 @@ final class BookExportController: ObservableObject {
                                                      name: "\(doc.filename).md")
                 }
                 preparing = false
+                #if targetEnvironment(macCatalyst)
+                // A Mac saves a file where the learner puts it: the share
+                // sheet has no "Save to Downloads", so the PDF could only be
+                // mailed or messaged away (2026-11-01).
+                if MacSaveFile.present(url) { return }
+                #endif
                 shared = SharedFile(url: url)
             } catch {
                 preparing = false
@@ -143,3 +149,24 @@ private struct ShareSheet: UIViewControllerRepresentable {
 
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }
+
+#if targetEnvironment(macCatalyst)
+/// The Mac's save panel, opened in Downloads. Presented from UIKit, never
+/// from a SwiftUI `.sheet`: on the Mac a sheet is a window of its own that
+/// `MacSheets` sizes and zooms, and the panel must stay the system's.
+@MainActor
+enum MacSaveFile {
+    static func present(_ url: URL) -> Bool {
+        guard let window = UIApplication.shared.connectedScenes
+                .compactMap({ $0 as? UIWindowScene })
+                .flatMap(\.windows)
+                .first(where: \.isKeyWindow),
+              var top = window.rootViewController else { return false }
+        while let next = top.presentedViewController, !next.isBeingDismissed { top = next }
+        let picker = UIDocumentPickerViewController(forExporting: [url], asCopy: true)
+        picker.directoryURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
+        top.present(picker, animated: true)
+        return true
+    }
+}
+#endif

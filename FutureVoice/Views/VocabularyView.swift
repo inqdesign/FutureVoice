@@ -12,6 +12,9 @@ struct VocabularyView: View {
     @ObservedObject private var store = VocabStore.shared
     @State private var currentWord: String?
     @State private var showSheet = true
+    #if targetEnvironment(macCatalyst)
+    @State private var cloudCard: CloudWord?
+    #endif
     /// Two stops, not three. The old ladder was 130 → medium → large, so
     /// reading a word's meaning cost TWO drags, and the 130pt rung showed
     /// nothing the cloud hadn't already shown (the word you just tapped).
@@ -81,6 +84,9 @@ struct VocabularyView: View {
             ToolbarItem(placement: .topBarLeading) {
                 Button {
                     showSheet = false   // close the notebook first, so it doesn't linger on Progress
+                    #if targetEnvironment(macCatalyst)
+                    currentWord = nil   // and the Mac's card column with it
+                    #endif
                     dismiss()
                 } label: {
                     Image(systemName: "chevron.left")
@@ -98,6 +104,25 @@ struct VocabularyView: View {
             }
         }
         .onChange(of: level) { _, _ in rebuild(center: true) }
+        #if targetEnvironment(macCatalyst)
+        // The window's card column, like Review's: a sheet on the Mac is a
+        // window of its own that covers the cloud and blocks every click
+        // behind it, so picking the next word meant closing it first
+        // (2026-11-01). Full card always — no peek on a wide window.
+        // A State of its own: a computed binding is read inside the column
+        // modifier, so a tap in the cloud never re-ran it and the column kept
+        // the first word.
+        .onChange(of: currentWord, initial: true) { _, word in
+            if cloudCard?.word != word { cloudCard = word.map(CloudWord.init) }
+        }
+        .onChange(of: cloudCard?.word) { _, word in
+            if word == nil { currentWord = nil }
+        }
+        .cardSheet(item: $cloudCard) { _ in
+            NotebookSheet(currentWord: $currentWord, isExpanded: true)
+                .environmentObject(appState)
+        }
+        #else
         .sheet(isPresented: $showSheet) {
             NotebookSheet(currentWord: $currentWord,
                           isExpanded: detent != .height(Self.peekHeight),
@@ -108,7 +133,15 @@ struct VocabularyView: View {
                 .presentationDragIndicator(.visible)
                 .interactiveDismissDisabled(true)
         }
+        #endif
     }
+
+    #if targetEnvironment(macCatalyst)
+    private struct CloudWord: Identifiable {
+        let word: String
+        var id: String { word }
+    }
+    #endif
 
     /// Header reflects the active level filter: a specific level shows its
     /// label + how many of THAT level's words you've used or know; "All levels"
