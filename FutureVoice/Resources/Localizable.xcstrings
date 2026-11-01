@@ -180039,19 +180039,19 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Heute in deiner Routine: %lld Sachen, rund %lld Minuten."
+            "value" : "Heute in deiner Routine: %lld zu erledigen, rund %lld Min."
           }
         },
         "en" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Your routine today: %1$lld things, about %2$lld minutes."
+            "state" : "translated",
+            "value" : "Your routine today: %lld to do, about %lld min."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tu rutina de hoy: %lld cosas, unos %lld minutos."
+            "value" : "Tu rutina de hoy: %lld por hacer, unos %lld min."
           }
         },
         "fr" : {
