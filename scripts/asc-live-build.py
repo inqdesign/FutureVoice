@@ -20,7 +20,7 @@ sys.argv = sys.argv[:1]
 _spec.loader.exec_module(A)
 
 APP_ID = "6792794655"
-d = A.call("GET", f"/v1/apps/{APP_ID}/appStoreVersions?filter[platform]=IOS"
+d = A.call("GET", f"/apps/{APP_ID}/appStoreVersions?filter[platform]=IOS"
                   f"&filter[appStoreState]=READY_FOR_SALE&include=build&limit=1")
 if not d.get("data"):
     sys.exit("no READY_FOR_SALE version")
@@ -31,7 +31,7 @@ if not builds:
 version = ver["attributes"]["versionString"]
 build = builds[0]["attributes"]["version"]
 
-locs = A.call("GET", f"/v1/appStoreVersions/{ver['id']}/appStoreVersionLocalizations?limit=50")["data"]
+locs = A.call("GET", f"/appStoreVersions/{ver['id']}/appStoreVersionLocalizations?limit=50")["data"]
 notes = {l["attributes"]["locale"]: (l["attributes"].get("whatsNew") or "") for l in locs}
 en = notes.get("en-US") or notes.get("en-GB") or ""
 open(out_ko, "w").write(notes.get("ko") or en)

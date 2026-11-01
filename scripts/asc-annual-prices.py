@@ -73,7 +73,13 @@ MIN_MONTHS_FREE = 1.5
 
 def token() -> str:
     key_dir = os.path.expanduser("~/.appstoreconnect/private_keys")
-    keys = [f for f in os.listdir(key_dir) if f.startswith("AuthKey_") and f.endswith(".p8")]
+    # The key named by ASC_KEY_ID (as beta.sh and asc-submit.py do), else the
+    # first in NAME order. listdir order is arbitrary: once a second key landed
+    # on 2026-10-26, release-watch signed with the one Apple refuses (401).
+    keys = sorted(f for f in os.listdir(key_dir) if f.startswith("AuthKey_") and f.endswith(".p8"))
+    wanted = os.environ.get("ASC_KEY_ID", "").strip()
+    if wanted:
+        keys = [f for f in keys if f == f"AuthKey_{wanted}.p8"]
     if not keys:
         sys.exit(f"no App Store Connect key in {key_dir}")
     key_path = os.path.join(key_dir, keys[0])
