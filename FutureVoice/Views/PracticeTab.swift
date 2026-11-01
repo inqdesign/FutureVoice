@@ -211,8 +211,10 @@ struct PracticeTab: View {
         NavigationStack {
             if let s = openScenario {
                 ScenarioDetailView(scenarioId: s.id)
+                    .macPaneTitle(s.environment ?? "", width: bookPaneWidth)
             } else if let t = openTalkSession {
                 ConversationDetailView(session: t.session)
+                    .macPaneTitle(t.session.displayTitle, width: bookPaneWidth)
             } else {
                 ContentUnavailableView {
                     Label("Pick a book", systemImage: "book")
@@ -224,6 +226,7 @@ struct PracticeTab: View {
         .id(openScenario?.id ?? openTalkSession?.id)
         .environmentObject(appState)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onGeometryChange(for: CGFloat.self, of: { $0.size.width }) { bookPaneWidth = $0 }
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
         // What the book changed (a chapter done, a book archived) shows on
         // the shelves beside it.
@@ -231,6 +234,8 @@ struct PracticeTab: View {
         .onChange(of: openTalkSession?.id) { _, _ in reload() }
     }
     #endif
+
+    @State private var bookPaneWidth: CGFloat = 0
 
     /// True while the Mac draws the open book beside the shelves rather than
     /// pushing it; false everywhere else.
