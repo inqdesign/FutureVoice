@@ -318,31 +318,6 @@ extension View {
 }
 
 extension View {
-    /// A pane's bar title, centred and cut short rather than pushed aside.
-    /// With only a trailing button in the bar, UIKit slid a long title left
-    /// to fit it (Review's book pane, once the card column opened beside it,
-    /// 2026-11-01); a title no wider than the room both sides of the centre
-    /// stays put. No-op off the Mac.
-    @ViewBuilder
-    func macPaneTitle(_ title: String, width: CGFloat) -> some View {
-        #if targetEnvironment(macCatalyst)
-        toolbar {
-            ToolbarItem(placement: .principal) {
-                Text(title)
-                    .geistPixel(17)   // the bar title's own face
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    // The trailing button and the bar's margins, mirrored.
-                    .frame(maxWidth: max(80, width - 2 * 76))
-            }
-        }
-        #else
-        self
-        #endif
-    }
-}
-
-extension View {
     /// Marks a sheet that draws its own close button in its content (the
     /// week's deck), so the Mac doesn't add a second ✕ over it. No-op on
     /// the phone.
