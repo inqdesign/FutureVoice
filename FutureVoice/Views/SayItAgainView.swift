@@ -568,13 +568,13 @@ struct SayItAgainView: View {
         .padding(.horizontal, 20)
         .padding(.vertical, 18)
         .frame(maxWidth: .infinity)
-        // The wash sits on the page colour, never on the transcript: the
+        // The wash sits on a blur, never straight on the transcript: the
         // bar has no background of its own (`fadingBottomBar`), so a bare
         // 14% wash let every line scrolled under it read through the script.
         .background {
             let card = RoundedRectangle(cornerRadius: 22, style: .continuous)
             ZStack {
-                card.fill(Color(.systemBackground))
+                card.fill(.regularMaterial)
                 card.fill(theme.tint.opacity(washOpacity))
             }
         }
