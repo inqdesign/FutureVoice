@@ -42,6 +42,10 @@ INSTAGRAM_URL = "https://ig.me/m/nawana.app"
 CODES = [
     "KP63STHD", "EVCLJF5X", "GT6AXS2C", "3G9WRDJH", "5AL8VL8Q",
     "GXUX6PEU", "EJ5JBMWT", "9EBUKRFK", "EYXF3BNB", "GNCNJ6X3",
+    "FGUVC87T",  # 20261031120000_month_free_light_code_11
+    # 20261031130000_month_free_light_codes_spare
+    "25FMB36S", "36M27EDW", "8SW9RQHW", "BDSZJG3Y", "EP5W8VJY",
+    "N4UJ4FWT", "QPMGS8QT", "QV693BMW", "T867F3ZZ", "TGA8W8D9",
 ]
 
 # ("p", text) · ("b", text) · ("h", text) · ("ol", [items]) · ("code",)
@@ -155,6 +159,10 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("emails")
     ap.add_argument("--send", action="store_true")
+    # Codes are dealt in file order, so a later batch appends to the same file
+    # and skips the addresses already mailed. Resend's idempotency key only
+    # lasts 24 h, so re-sending the whole file a day later would mail them twice.
+    ap.add_argument("--skip", type=int, default=0, help="addresses at the top already mailed")
     args = ap.parse_args()
 
     emails = []
@@ -165,7 +173,8 @@ def main() -> None:
             emails.append(e)
     assert emails, "no addresses"
     assert len(emails) <= len(CODES), f"{len(emails)} addresses, only {len(CODES)} codes"
-    pairs = list(zip(emails, CODES))
+    pairs = list(zip(emails, CODES))[args.skip:]
+    assert pairs, "nothing left after --skip"
 
     body = text_body(pairs[0][1])
     assert "—" not in body and "—" not in html_body("X"), "em dash in copy"
