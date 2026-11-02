@@ -10,10 +10,19 @@
 # those clones. (Until 2026-10-16 an ElevenLabs sample was the fallback; with
 # ElevenLabs gone there is no second copy anywhere.)
 #
-#   ~/Desktop/beta audio/voices/<voice name>-<voice_id>/
+#   ~/Library/Application Support/nawana/voice-archive/<voice name>-<voice_id>/
 #       original-NN.wav                  the recording as the phone sent it
 #       .done                            archived — never re-fetched
 #       .missing                         no original on the server (purged or never kept)
+#       .mirrored                        copied into ~/Desktop/beta audio/voices
+#
+# The archive is written LOCALLY first and only then copied into Google Drive
+# (~/Desktop/beta audio/voices). From 2026-10-26 to 11-02 it was written
+# straight into Drive: Google Drive reconnected on 10-26 19:57, every write
+# from launchd came back "Resource deadlock avoided", the script still logged
+# SAVED (curl's HTTP code was 200 whether or not the file landed), and a week
+# of originals was purged unarchived. A Drive copy that fails now leaves the
+# recording on this Mac and is retried every run.
 #
 # Rows come from prod `voice_clones` (Management API, keychain token — see
 # memory/prod-db-query-access.md).
@@ -26,10 +35,11 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-OUT="${VOICE_ARCHIVE_DIR:-$HOME/Desktop/beta audio/voices}"
+OUT="${VOICE_ARCHIVE_DIR:-$HOME/Library/Application Support/nawana/voice-archive}"
+MIRROR="${VOICE_ARCHIVE_MIRROR-$HOME/Desktop/beta audio/voices}"
 PROJECT_REF="chhzjtigzdotacutwcyo"
 LOG="$OUT/archive.log"
-mkdir -p "$OUT"
+mkdir -p "$OUT" || { echo "cannot create $OUT" >&2; exit 1; }
 
 log() { printf '%s %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" | tee -a "$LOG"; }
 
@@ -80,7 +90,9 @@ while IFS=$'\t' read -r VOICE_ID NAME CREATED USER_ID ORIGINAL_PATH STALE; do
       S="$(curl -s -o "$DEST" -w '%{http_code}' \
         "$SUPABASE_URL/storage/v1/object/voice-originals/$ORIGINAL_PATH/$OBJ" \
         -H "apikey: $SERVICE_KEY" -H "Authorization: Bearer $SERVICE_KEY")"
-      if [ "$S" = "200" ]; then GOT=$((GOT+1)); else rm -f "$DEST"; fi
+      # A 200 is not a saved file: the write itself can fail (it did, for a
+      # week, into Google Drive). Only a non-empty file on disk counts.
+      if [ "$S" = "200" ] && [ -s "$DEST" ]; then GOT=$((GOT+1)); else rm -f "$DEST"; fi
     done < <(curl -s -X POST "$SUPABASE_URL/storage/v1/object/list/voice-originals" \
       -H "apikey: $SERVICE_KEY" -H "Authorization: Bearer $SERVICE_KEY" \
       -H "Content-Type: application/json" \
@@ -113,4 +125,23 @@ for r in json.loads(sys.argv[1]):
     print("\t".join([r["voice_id"], r["name"], r["created_at"], r["user_id"], r.get("original_path") or "", "t" if str(r.get("stale")).lower() in ("true","t") else "f"]))' "$ROWS")
 
 [ "$NEW" -gt 0 ] && log "archived $NEW new voice(s)"
+
+# ---- 3. copy what was saved into Google Drive ---------------------------
+# Only folders that hold a recording; the local copy stays either way.
+if [ -n "$MIRROR" ]; then
+  FAILED=0; COPIED=0
+  for D in "$OUT"/*/; do
+    D="${D%/}"
+    [ -e "$D/.done" ] && [ ! -e "$D/.mirrored" ] || continue
+    B="$(basename "$D")"
+    if mkdir -p "$MIRROR/$B" 2>/dev/null \
+       && cp -p "$D"/original-* "$D/.done" "$MIRROR/$B/" 2>/dev/null; then
+      date -u +%FT%TZ > "$D/.mirrored"; COPIED=$((COPIED+1))
+    else
+      FAILED=$((FAILED+1))
+    fi
+  done
+  [ "$COPIED" -gt 0 ] && log "copied $COPIED voice(s) to $MIRROR"
+  [ "$FAILED" -gt 0 ] && log "DRIVE COPY FAILED for $FAILED voice(s) — kept in $OUT, retried next run"
+fi
 exit 0
