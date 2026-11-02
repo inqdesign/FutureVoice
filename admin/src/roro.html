@@ -295,7 +295,7 @@ const EX = new Set(DATA.excluded);
  *  owner's own phones and simulators: only accounts made BEFORE this are tests. */
 const V2_RELEASE = '2026-10-31';
 const isV2Test = u => u.anon && (!V2_RELEASE || String(u.createdAt) < V2_RELEASE);
-const isOwnerOrTest = u => EX.has(u.idx) || u.admin || isV2Test(u);
+const isOwnerOrTest = u => EX.has(u.idx) || u.admin || u.dev || isV2Test(u);
 const showAll = () => document.getElementById('devToggle').checked;
 const visibleUsers = () => showAll() ? U : U.filter(u => !isOwnerOrTest(u));
 const visibleSet = () => new Set(visibleUsers().map(u => u.idx));
@@ -601,7 +601,8 @@ function renderV2(){
   const events = v2Fold(v2?.events||[], 'event').sort((a,b) => b.n - a.n);
   const ev = n => events.find(e => e.event===n);
   const people = n => num(ev(n)?.people || 0);
-  const su = DATA.storyUsage, vo = DATA.voices;
+  const vis = visibleSet();
+  const su = DATA.storyUsage.filter(s => vis.has(s.u)), vo = DATA.voices.filter(v => vis.has(v.u));
   // Server rows carry Supabase's anonymous id, not PostHog's, so they can't be split by cohort.
   const serverNote = v2Cohort==='all' ? '' : ' · 서버 기록이라 전체 숫자';
   document.getElementById('v2Tiles').innerHTML = (v2 ? [

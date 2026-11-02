@@ -104,11 +104,23 @@ const phTime = (v: unknown) => v == null ? null
  *  tagged `dev_build`, but not users either. */
 const OWNER_DEVICES = ["6082DF7E-2AE3-4B5E-9D70-5A26C3D2CD15"];
 
+/** Apple's App Review devices (owner, 2026-11-02: leave them out). Each
+ *  release brought a few installs that used the app for minutes and left:
+ *  Apple's own places (Cupertino HQ, Fremont), Apple's virtual "iPhone99,x"
+ *  model, and Cork (Ireland) on a California clock. Matched per install on
+ *  any event, so one review session drops whole. A real user in Cupertino
+ *  would be dropped too. */
+const APP_REVIEW = `properties.$geoip_city_name in ('Cupertino', 'Fremont')
+        or properties.$device_model like 'iPhone99,%' or properties.$device_model like 'iPad99,%'
+        or (properties.$geoip_country_code = 'IE' and properties.$timezone = 'America/Los_Angeles')`;
+
 /** 2.0's events. Development builds tag every event `dev_build` and are left
  *  out, the same filter the PostHog dashboard uses (SPEC §3.5c). */
 async function v2Events(env: RoroEnv) {
-  const real = `properties.app = 'dearroro' and properties.dev_build is null
-        and distinct_id not in (${OWNER_DEVICES.map((d) => `'${d}'`).join(", ")})`;
+  const ours = `properties.app = 'dearroro' and properties.dev_build is null`;
+  const real = `${ours}
+        and distinct_id not in (${OWNER_DEVICES.map((d) => `'${d}'`).join(", ")})
+        and distinct_id not in (select distinct_id from events where ${ours} and (${APP_REVIEW}))`;
   /* Who came from 1.x: the app shows the "bring my memories" screen only when
    * 1.x's session is still on the phone (DearRoRo LegacyImport.swift), and
    * every step of it sends a legacy_* event. moved = brought them in,
@@ -223,6 +235,10 @@ export async function roroData(env: RoroEnv) {
       email: (p.email as string) || (a.email as string) || null,
       provider: (a.app_metadata?.provider as string) || (p.auth_provider as string) || null,
       anon: a.is_anonymous === true || !prof.has(id),
+      // 2.0 dev builds sign up with `dev_build` in the account's metadata
+      // (DearRoRo Server.swift / Server.kt) — the server-side twin of the
+      // PostHog `dev_build` tag. Only known when auth's page for it loaded.
+      dev: a.user_metadata?.dev_build === true,
       hasProfile: prof.has(id),
       createdAt: (p.created_at as string) || (a.created_at as string) || firstV2 || null,
       lastSignIn: (a.last_sign_in_at as string) || null,
