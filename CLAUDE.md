@@ -3334,9 +3334,22 @@ sync container carry over. `./scripts/mac-run.sh` builds and opens it.
   network, mic, camera, user-picked files; no App Group — nothing on the Mac
   reads the widget container). Launch it with `open`, not the binary from a
   shell (that hangs in the window-server handshake).
-- **Not done**: shipping. App Store Connect has to offer the app on macOS
-  (the Catalyst build replaces the iPad-on-Mac listing), and `beta.sh` /
-  `asc-submit.py` archive iOS only. Never tested on a Mac: a real call
+- **Shipping it** (2026-11-02): same version and build number as the
+  iPhone build, its own archive, TestFlight and App Review.
+  `./scripts/beta.sh` (iPhone, bumps) then `./scripts/beta.sh --mac` (never
+  bumps; Catalyst archive → signed `.pkg` → upload; writes the `app_release`
+  row `mac`); `scripts/asc-submit.py <v> <b> --mac --send` makes the
+  MAC_OS version and submits it; `beta.sh released --mac` (also run by
+  `release-watch.sh`) moves the Mac update sheet once ASC sells it. The Mac
+  app reads ONLY the `mac` row for updates (`AppUpdateService.releasePlatform`;
+  no row = no notice), the speech-speed default still from `ios`. Builds are
+  looked up by platform everywhere, since both share a number.
+  `LSApplicationCategoryType` (education) is in Info.plist, the Mac
+  App Store refuses a build without it; the photos-library entitlement is
+  what lets the day card / a take save to Photos in the sandbox. Mac
+  screenshots are added in App Store Connect by hand. A Release archive
+  builds (arm64 + x86_64, macOS 14+); the first export stopped on Apple's
+  pending license agreement (PLA). Never tested on a Mac: a real call
   (mic, echo cancellation, earphones), purchase, sign-in.
 
 ## Build / run

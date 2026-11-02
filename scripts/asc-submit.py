@@ -34,6 +34,13 @@ Dry run by default; `--send` does it.
     scripts/asc-submit.py 1.0.10 61 --send --prepare # everything but the submission
     scripts/asc-submit.py 1.0.10 61 --metadata-only  # plan the page, no build/submit
     scripts/asc-submit.py 1.0.10 61 --metadata-only --send
+    scripts/asc-submit.py 1.2.9 126 --mac --send     # the MAC app's version
+
+`--mac` does all of it for the Mac App Store (platform MAC_OS): the Mac build
+of the same number (`beta.sh --mac`), the Mac version and its page, its own
+review submission. The app info (name · subtitle · privacy URL) is shared by
+both platforms. Mac screenshots are not written here — the first Mac version
+needs them added in App Store Connect (1280×800 up to 2880×1800).
 """
 
 import base64
@@ -104,6 +111,8 @@ def token() -> str:
 
 
 TOKEN = token()
+# The platform every version, build and submission below is about.
+PLATFORM = "MAC_OS" if "--mac" in sys.argv else "IOS"
 
 
 def call(method: str, path: str, body=None):
@@ -203,7 +212,7 @@ def main() -> None:
     send = "--send" in sys.argv
 
     if "--metadata-only" in sys.argv:
-        d = call("GET", f"/apps/{APP_ID}/appStoreVersions?filter[platform]=IOS&limit=10")
+        d = call("GET", f"/apps/{APP_ID}/appStoreVersions?filter[platform]={PLATFORM}&limit=10")
         ver = next((v for v in d["data"] if v["attributes"]["versionString"] == version), None)
         print(f"version {version}: {ver['attributes']['appStoreState'] if ver else 'not created'}")
         sync_page(ver, send)
@@ -224,11 +233,12 @@ def main() -> None:
     build = None
     for _ in range(90):
         d = call("GET", f"/builds?filter[app]={APP_ID}&filter[version]={build_no}"
-                        f"&filter[preReleaseVersion.version]={version}&limit=1")
+                        f"&filter[preReleaseVersion.version]={version}"
+                        f"&filter[preReleaseVersion.platform]={PLATFORM}&limit=1")
         if d["data"]:
             build = d["data"][0]
             state = build["attributes"]["processingState"]
-            print(f"build {version} ({build_no}): {state}")
+            print(f"build {version} ({build_no}) [{PLATFORM}]: {state}")
             if state == "VALID":
                 break
             if state in ("FAILED", "INVALID"):
@@ -240,7 +250,7 @@ def main() -> None:
         sys.exit("gave up waiting for the build")
 
     # 2. The version.
-    d = call("GET", f"/apps/{APP_ID}/appStoreVersions?filter[platform]=IOS&limit=10")
+    d = call("GET", f"/apps/{APP_ID}/appStoreVersions?filter[platform]={PLATFORM}&limit=10")
     ver = next((v for v in d["data"] if v["attributes"]["versionString"] == version), None)
     if ver:
         print(f"version {version}: exists, {ver['attributes']['appStoreState']}")
@@ -249,7 +259,7 @@ def main() -> None:
     else:
         ver = call("POST", "/appStoreVersions", {"data": {
             "type": "appStoreVersions",
-            "attributes": {"platform": "IOS", "versionString": version,
+            "attributes": {"platform": PLATFORM, "versionString": version,
                            "releaseType": "AFTER_APPROVAL"},
             "relationships": {"app": {"data": {"type": "apps", "id": APP_ID}}}}})["data"]
         print(f"version {version}: created {ver['id']}")
@@ -281,10 +291,10 @@ def main() -> None:
         return
 
     # 4. Submit. Reuse a submission still being assembled, else open one.
-    subs = call("GET", f"/reviewSubmissions?filter[app]={APP_ID}&filter[platform]=IOS"
+    subs = call("GET", f"/reviewSubmissions?filter[app]={APP_ID}&filter[platform]={PLATFORM}"
                        f"&filter[state]=READY_FOR_REVIEW&limit=5")["data"]
     sub = subs[0] if subs else call("POST", "/reviewSubmissions", {"data": {
-        "type": "reviewSubmissions", "attributes": {"platform": "IOS"},
+        "type": "reviewSubmissions", "attributes": {"platform": PLATFORM},
         "relationships": {"app": {"data": {"type": "apps", "id": APP_ID}}}}})["data"]
     try:
         call("POST", "/reviewSubmissionItems", {"data": {

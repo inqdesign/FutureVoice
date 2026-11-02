@@ -3,7 +3,9 @@
 Connect: prints `<version> <build>` and writes the live version's "What's New"
 (ko, en) to the two paths given, for scripts/release-watch.sh.
 
-    python3 scripts/asc-live-build.py <ko_notes_out> <en_notes_out>
+    python3 scripts/asc-live-build.py <ko_notes_out> <en_notes_out> [--mac]
+
+`--mac` asks about the Mac App Store version instead (platform MAC_OS).
 
 The iTunes lookup knows the VERSION but never the build number, and the update
 sheet compares build numbers — this is the one place that knows both.
@@ -12,7 +14,8 @@ import importlib.util
 import os
 import sys
 
-out_ko, out_en = sys.argv[1], sys.argv[2]
+PLATFORM = "MAC_OS" if "--mac" in sys.argv else "IOS"
+out_ko, out_en = [a for a in sys.argv[1:] if not a.startswith("--")][:2]
 _here = os.path.dirname(os.path.abspath(__file__))
 _spec = importlib.util.spec_from_file_location("asc", os.path.join(_here, "asc-annual-prices.py"))
 A = importlib.util.module_from_spec(_spec)
@@ -20,7 +23,7 @@ sys.argv = sys.argv[:1]
 _spec.loader.exec_module(A)
 
 APP_ID = "6792794655"
-d = A.call("GET", f"/apps/{APP_ID}/appStoreVersions?filter[platform]=IOS"
+d = A.call("GET", f"/apps/{APP_ID}/appStoreVersions?filter[platform]={PLATFORM}"
                   f"&filter[appStoreState]=READY_FOR_SALE&include=build&limit=1")
 if not d.get("data"):
     sys.exit("no READY_FOR_SALE version")

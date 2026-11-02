@@ -15,6 +15,10 @@
 	<true/>
 	<key>com.apple.security.files.user-selected.read-write</key>
 	<true/>
+	<!-- Saving the day card and a speech take to Photos (PHPhotoLibrary);
+	     the sandbox refuses the write without it. -->
+	<key>com.apple.security.personal-information.photos-library</key>
+	<true/>
 	<key>com.apple.developer.aps-environment</key>
 	<string>$(APS_ENVIRONMENT)</string>
 	<key>com.apple.developer.applesignin</key>

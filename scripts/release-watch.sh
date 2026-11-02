@@ -36,6 +36,25 @@ if [[ -n "$android_tree" && -f "$android_tree/scripts/android/play-release.py" ]
 fi
 
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+
+# The Mac app, on its own like Android: its own App Review, so its live build
+# can trail the iPhone's. Silent until a Mac version is for sale; a failure
+# never stops the iPhone half below. `beta.sh released --mac` checks the store
+# again and writes the 'mac' row only.
+mkdir -p "$tmp/mac"
+if read -r mac_version mac_build < <(python3 scripts/asc-live-build.py "$tmp/mac/ko.txt" "$tmp/mac/en.txt" --mac 2>/dev/null) \
+   && [[ "$mac_build" =~ ^[0-9]+$ ]]; then
+  raw=$(security find-generic-password -s "Supabase CLI" -w 2>/dev/null) || raw=""
+  mac_current=$(curl -sf -X POST "https://api.supabase.com/v1/projects/chhzjtigzdotacutwcyo/database/query" \
+    -H "Authorization: Bearer $(echo "${raw#go-keyring-base64:}" | base64 -d)" -H "Content-Type: application/json" \
+    -d '{"query":"select coalesce(max(latest_build), 0) as b from public.app_release where platform = '"'mac'"'"}' \
+    | python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["b"])' 2>/dev/null) || mac_current=""
+  if [[ "$mac_current" =~ ^[0-9]+$ ]] && (( mac_build > mac_current )); then
+    log "mac: store is on $mac_version ($mac_build), update sheet on $mac_current → releasing"
+    RELEASE_VERSION="$mac_version" NOTES_KO_FILE="$tmp/mac/ko.txt" NOTES_EN_FILE="$tmp/mac/en.txt" \
+      ./scripts/beta.sh released "$mac_build" --mac || log "mac: released failed"
+  fi
+fi
 read -r version build < <(python3 scripts/asc-live-build.py "$tmp/ko.txt" "$tmp/en.txt") \
   || { log "ASC lookup failed"; exit 1; }
 [[ "$build" =~ ^[0-9]+$ ]] || { log "odd build '$build' for $version"; exit 1; }

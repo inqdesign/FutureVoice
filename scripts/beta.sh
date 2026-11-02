@@ -9,6 +9,20 @@
 #                                  # about the build that is now live,
 #                                  # and post it on nawana.app/community
 #   ./scripts/beta.sh community    # (re)post the current version's news only
+#   ./scripts/beta.sh --mac        # the MAC app (Mac Catalyst) of the build
+#                                  # number already in the plist: archive,
+#                                  # export a .pkg, upload to TestFlight for Mac
+#   ./scripts/beta.sh released --mac   # the Mac build is live on the Mac App Store
+#
+# THE MAC APP IS THE SAME BUILD, SHIPPED SEPARATELY. Same bundle id, same
+# version and build number (one App Store record: subscriptions, Sign in with
+# Apple and iCloud carry over), but its own archive, its own TestFlight and its
+# own App Review. So the usual order is `./scripts/beta.sh` (bumps, ships the
+# iPhone build) then `./scripts/beta.sh --mac` (never bumps, ships that same
+# number for the Mac). It writes the 'mac' row of `app_release`, which only
+# the Mac app reads (AppUpdateService.releasePlatform). The release notes are
+# the same files; the "unchanged" and version-train checks are the iPhone
+# build's and are skipped here.
 #
 # Two audiences, two numbers (20260911140000_app_release_testflight): an
 # upload moves `latest_testflight_build`; only `released` moves `latest_build`,
@@ -35,6 +49,7 @@ APP_PLIST="FutureVoice/Resources/Info.plist"
 WIDGET_PLIST="FutureVoiceWidget/Info.plist"
 ARCHIVE="build/nawana.xcarchive"
 EXPORT_DIR="build/export"
+DESTINATION='generic/platform=iOS'
 
 plist() { /usr/libexec/PlistBuddy -c "Print :$2" "$1"; }
 set_plist() { /usr/libexec/PlistBuddy -c "Set :$2 $3" "$1"; }
@@ -97,7 +112,7 @@ print("\n".join(lines).strip())' "$1"
 publish_note_sections() {
   local ko en
   ko=$(cat "$NOTES_KO_FILE"); en=$(cat "$NOTES_EN_FILE")
-  supabase_sql "update public.app_release set notes_sections_ko = $(sql_text "$ko"), notes_sections_en = $(sql_text "$en") where platform = 'ios';" >/dev/null \
+  supabase_sql "update public.app_release set notes_sections_ko = $(sql_text "$ko"), notes_sections_en = $(sql_text "$en") where platform = '$RELEASE_ROW';" >/dev/null \
     || echo "  ! notes_sections update failed (migration 20261018150000 not applied?) — the sheet shows one flat list." >&2
 }
 
@@ -133,6 +148,21 @@ for l in open(sys.argv[1]).read().splitlines():
 
 # `./scripts/beta.sh community` posts the current version's news on its own
 # (a release whose `released` ran before this hook existed, or a failed post).
+MAC=0; NO_BUMP=0
+for a in "$@"; do
+  case "$a" in
+    --mac) MAC=1 ;;
+    --no-bump) NO_BUMP=1 ;;
+  esac
+done
+[[ "$MAC" == 1 ]] && NO_BUMP=1
+RELEASE_ROW=ios; [[ "$MAC" == 1 ]] && RELEASE_ROW=mac
+if [[ "$MAC" == 1 ]]; then
+  ARCHIVE="build/nawana-mac.xcarchive"
+  EXPORT_DIR="build/export-mac"
+  DESTINATION='generic/platform=macOS,variant=Mac Catalyst'
+fi
+
 if [[ "${1:-}" == "community" ]]; then
   community_post "$(plist "$APP_PLIST" CFBundleShortVersionString)"
   exit 0
@@ -145,6 +175,24 @@ fi
 if [[ "${1:-}" == "released" ]]; then
   VERSION=${RELEASE_VERSION:-$(plist "$APP_PLIST" CFBundleShortVersionString)}
   BUILD=${2:-$(plist "$APP_PLIST" CFBundleVersion)}
+  [[ "$BUILD" == --* ]] && BUILD=$(plist "$APP_PLIST" CFBundleVersion)
+  if [[ "$MAC" == 1 ]]; then
+    # The iTunes lookup answers for the iPhone app; App Store Connect knows
+    # which Mac build is for sale.
+    tmpn=$(mktemp -d)
+    read -r live live_build < <(python3 scripts/asc-live-build.py "$tmpn/ko" "$tmpn/en" --mac) || live=""
+    rm -rf "$tmpn"
+    if [[ "${live:-}" != "$VERSION" || "${live_build:-}" != "$BUILD" ]]; then
+      echo "✗ The Mac App Store sells '${live:-none}' (${live_build:-?}), this is $VERSION ($BUILD). Not released yet." >&2
+      exit 1
+    fi
+    notes_ko=$(sheet_notes "$NOTES_KO_FILE"); notes_en=$(sheet_notes "$NOTES_EN_FILE")
+    supabase_sql "insert into public.app_release (platform, latest_build, latest_version, notes_ko, notes_en) values ('mac', $BUILD, $(sql_text "$VERSION"), $(sql_text "$notes_ko"), $(sql_text "$notes_en")) on conflict (platform) do update set latest_build = excluded.latest_build, latest_version = excluded.latest_version, notes_ko = excluded.notes_ko, notes_en = excluded.notes_en, updated_at = now();" >/dev/null \
+      && echo "✓ app_release[mac].latest_build → $BUILD ($VERSION). Mac App Store installs now see the update sheet." \
+      || { echo "✗ app_release[mac] update failed" >&2; exit 1; }
+    publish_note_sections
+    exit 0
+  fi
   live=$(curl -s "https://itunes.apple.com/lookup?id=$APP_STORE_ID&t=$(date +%s)" \
          | python3 -c 'import json,sys; r=json.load(sys.stdin)["results"]; print(r[0]["version"] if r else "")')
   if [[ "$live" != "$VERSION" ]]; then
@@ -169,7 +217,7 @@ fi
 VERSION=$(plist "$APP_PLIST" CFBundleShortVersionString)
 BUILD=$(plist "$APP_PLIST" CFBundleVersion)
 
-if [[ "${1:-}" != "--no-bump" ]]; then
+if [[ "$NO_BUMP" != 1 ]]; then
   BUILD=$((BUILD + 1))
   set_plist "$APP_PLIST" CFBundleVersion "$BUILD"
   set_plist "$WIDGET_PLIST" CFBundleVersion "$BUILD"
@@ -181,7 +229,7 @@ if [[ "$BUILD" != "$WIDGET_BUILD" ]]; then
   echo "✗ App build $BUILD ≠ widget build $WIDGET_BUILD. Apple will reject this." >&2
   exit 1
 fi
-echo "▸ Shipping $VERSION ($BUILD)"
+if [[ "$MAC" == 1 ]]; then echo "▸ Shipping $VERSION ($BUILD) for the Mac"; else echo "▸ Shipping $VERSION ($BUILD)"; fi
 
 # --- 1a. The version TRAIN must be OPEN ------------------------------------
 # A marketing version App Review has already approved is CLOSED to new builds:
@@ -199,7 +247,7 @@ try:
 except Exception:
     r = []
 print(r[0]["version"] if r else "")' 2>/dev/null || true)
-if [[ -n "$live_version" && "$live_version" == "$VERSION" ]]; then
+if [[ "$MAC" != 1 && -n "$live_version" && "$live_version" == "$VERSION" ]]; then
   echo "✗ $VERSION is already on the App Store, so its train is closed to new builds." >&2
   echo "  Bump the marketing version in BOTH plists, then re-run with --no-bump:" >&2
   echo "    /usr/libexec/PlistBuddy -c 'Set :CFBundleShortVersionString <next>' $APP_PLIST" >&2
@@ -229,7 +277,7 @@ if grep -qiE '성능과 안정성|성능 및 안정성|performance and stability
   echo "✗ Release notes are the generic placeholder. Say what changed — that is what the update sheet shows." >&2
   exit 1
 fi
-if prev=$(supabase_sql "select notes_ko, latest_version, latest_build, latest_testflight_build from public.app_release where platform = 'ios'" 2>/dev/null); then
+if [[ "$MAC" != 1 ]] && prev=$(supabase_sql "select notes_ko, latest_version, latest_build, latest_testflight_build from public.app_release where platform = 'ios'" 2>/dev/null); then
   if PREV="$prev" NOTES="$notes_ko" python3 -c '
 import json, os, sys
 row = json.loads(os.environ["PREV"])[0]
@@ -300,7 +348,7 @@ xcodebuild archive \
   -project FutureVoice.xcodeproj \
   -scheme FutureVoice \
   -configuration Release \
-  -destination 'generic/platform=iOS' \
+  -destination "$DESTINATION" \
   -archivePath "$ARCHIVE" \
   -allowProvisioningUpdates ${AUTH[@]+"${AUTH[@]}"} \
   | grep -E '^\*\* |error: ' || true
@@ -330,8 +378,9 @@ xcodebuild -exportArchive \
   -allowProvisioningUpdates ${AUTH[@]+"${AUTH[@]}"} \
   | grep -E '^\*\* |error: ' || true
 
-IPA=$(find "$EXPORT_DIR" -name '*.ipa' | head -1)
-[[ -n "$IPA" ]] || { echo "✗ Export produced no .ipa" >&2; exit 1; }
+# The iPhone build exports an .ipa, the Mac build a signed installer .pkg.
+IPA=$(find "$EXPORT_DIR" \( -name '*.ipa' -o -name '*.pkg' \) | head -1)
+[[ -n "$IPA" ]] || { echo "✗ Export produced no .ipa/.pkg" >&2; exit 1; }
 echo "▸ Exported $IPA"
 
 # --- 6. Tell the app a newer build exists ---------------------------------
@@ -354,6 +403,18 @@ echo "▸ Exported $IPA"
 # Store installs read `latest_build`, which `./scripts/beta.sh released` sets
 # once App Review has actually put the build on the store.
 publish_release_row() {
+  if [[ "$MAC" == 1 ]]; then
+    # The 'mac' row may not exist yet; latest_build stays where it is (0 on
+    # the first insert) until `released --mac`.
+    if supabase_sql "insert into public.app_release (platform, latest_build, latest_testflight_build, latest_version, notes_ko, notes_en) values ('mac', 0, $BUILD, $(sql_text "$VERSION"), $(sql_text "$notes_ko"), $(sql_text "$notes_en")) on conflict (platform) do update set latest_testflight_build = excluded.latest_testflight_build, latest_version = excluded.latest_version, notes_ko = excluded.notes_ko, notes_en = excluded.notes_en, updated_at = now();" >/dev/null; then
+      echo "▸ app_release[mac].latest_testflight_build → $BUILD"
+      publish_note_sections
+      echo "  When App Review approves and the Mac App Store sells $VERSION:  ./scripts/beta.sh released --mac"
+    else
+      echo "  ! app_release[mac] update failed — Mac testers will not be offered $BUILD yet." >&2
+    fi
+    return
+  fi
   if supabase_sql "update public.app_release set latest_testflight_build = $BUILD, latest_version = $(sql_text "$VERSION"), notes_ko = $(sql_text "$notes_ko"), notes_en = $(sql_text "$notes_en"), updated_at = now() where platform = 'ios';" >/dev/null; then
     echo "▸ app_release.latest_testflight_build → $BUILD (TestFlight installs now see the update sheet)"
     publish_note_sections
@@ -400,7 +461,7 @@ if xcodebuild -exportArchive \
   publish_release_row
   # Marketing autopilot (marketing/AUTOMATION.md §1): starts in the background and
   # returns at once; nothing it does can fail the upload. MARKETING_AUTOPILOT=0 skips it.
-  if [[ "${MARKETING_AUTOPILOT:-1}" != "0" ]]; then
+  if [[ "$MAC" != 1 && "${MARKETING_AUTOPILOT:-1}" != "0" ]]; then
     "$ROOT/scripts/marketing/kickoff.sh" upload "$VERSION" "$BUILD" || true
   fi
   echo "  Commit the bumped build number:  git add $APP_PLIST $WIDGET_PLIST"

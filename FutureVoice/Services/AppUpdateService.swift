@@ -47,7 +47,26 @@ final class AppUpdateService: ObservableObject {
     /// either did not exist or showed a build older than the one they had —
     /// so beta users read the button as a bug. A TestFlight install updates
     /// in TestFlight; an App Store install updates in the App Store.
-    static var updateURL: URL { isTestFlight ? testFlightURL : appStoreURL }
+    static var updateURL: URL {
+        if isTestFlight { return testFlightURL }
+        #if targetEnvironment(macCatalyst)
+        // The https page opens Safari on a Mac; this opens the Mac App Store.
+        return URL(string: "macappstore://apps.apple.com/app/id6792794655")!
+        #else
+        return appStoreURL
+        #endif
+    }
+
+    /// Which `app_release` row describes THIS install's store. The Mac app is
+    /// the same bundle and the same build numbers, but its own App Review and
+    /// its own TestFlight, so a Mac build can be live days after (or never
+    /// beside) the iPhone one. Reading the iPhone row would offer Mac users an
+    /// update the Mac App Store doesn't have. No 'mac' row = no notice.
+    #if targetEnvironment(macCatalyst)
+    static let releasePlatform = "mac"
+    #else
+    static let releasePlatform = "ios"
+    #endif
 
     struct AppUpdate: Identifiable, Equatable {
         let latestBuild: Int
@@ -88,19 +107,31 @@ final class AppUpdateService: ObservableObject {
             /// `SpeechSpeed.remoteDefaultMultiplier`.
             let default_speech_speed: Double?
         }
-        guard let rows: [Row] = try? await SupabaseProvider.shared
-            .from("app_release")
-            .select("latest_build,latest_testflight_build,min_build,latest_version,notes_ko,notes_en,default_speech_speed")
-            .eq("platform", value: "ios")
-            .limit(1)
-            .execute()
-            .value,
-              let row = rows.first else { return }
+        func fetch(_ platform: String) async -> Row? {
+            let rows: [Row]? = try? await SupabaseProvider.shared
+                .from("app_release")
+                .select("latest_build,latest_testflight_build,min_build,latest_version,notes_ko,notes_en,default_speech_speed")
+                .eq("platform", value: platform)
+                .limit(1)
+                .execute()
+                .value
+            return rows?.first
+        }
+        guard let iosRow = await fetch("ios") else { return }
 
         // Before any of the update-notice guards below. They stop for reasons
         // about THIS build's version — none of which is a reason to ignore a
-        // speaking speed the server has retuned.
-        SpeechSpeed.storeRemoteDefault(row.default_speech_speed)
+        // speaking speed the server has retuned. The speed lives on the 'ios'
+        // row for every Apple install, the Mac included.
+        SpeechSpeed.storeRemoteDefault(iosRow.default_speech_speed)
+
+        let row: Row
+        if Self.releasePlatform == "ios" {
+            row = iosRow
+        } else {
+            guard let own = await fetch(Self.releasePlatform) else { return }
+            row = own
+        }
 
         let build = Self.currentBuild
         // A build of 0 means the plist couldn't be read at all. Treat that as
@@ -147,7 +178,7 @@ final class AppUpdateService: ObservableObject {
         guard let rows: [Row] = try? await SupabaseProvider.shared
             .from("app_release")
             .select("notes_sections_ko,notes_sections_en")
-            .eq("platform", value: "ios")
+            .eq("platform", value: releasePlatform)
             .limit(1)
             .execute()
             .value,
