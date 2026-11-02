@@ -40,7 +40,7 @@
   <a class="lang" href="/privacy-ko.html">한국어</a>
   <a class="top" href="/">← nawana</a>
   <h1>Privacy Policy</h1>
-  <p class="meta">nawana · Dear RoRo, Munich, Germany · Effective August 14, 2026 · Updated October 12, 2026</p>
+  <p class="meta">nawana · Dear RoRo, Munich, Germany · Effective August 14, 2026 · Updated November 1, 2026</p>
 
   <p>nawana is a language-learning app that clones your voice — once, with your explicit consent — so you can practice speaking with a fluent version of yourself. Your voice is the most personal data there is, and this policy explains exactly what we do and don't do with it.</p>
 
@@ -48,7 +48,7 @@
   <ul>
     <li><strong>You must be 16 or older.</strong> Building a voice model means processing biometric data, so you confirm your age before recording — we keep the confirmation, never a birth date.</li>
     <li><strong>One 60-second recording at setup.</strong> The app never records you outside a conversation or exercise you started yourself.</li>
-    <li><strong>Your learning data stays on your iPhone.</strong> Sessions, transcripts, drill cards, vocabulary, and progress are stored on your device, not on our servers.</li>
+    <li><strong>Your learning data stays on your phone.</strong> Sessions, transcripts, drill cards, vocabulary, and progress are stored on your device, not on our servers. If you turn on backup, a copy goes to your own iCloud (iPhone) or your own Google Drive (Android), never to us.</li>
     <li><strong>No ads, no cross-app tracking.</strong> We don't sell or share your data for advertising. The app measures its own usage (which screens people reach, whether a talk finished) through PostHog — see below — and nothing else.</li>
     <li><strong>Delete anytime.</strong> Re-recording your voice permanently deletes the old clone. Deleting your account removes your voice clone and account data.</li>
   </ul>
@@ -56,10 +56,11 @@
   <h2>What we collect and why</h2>
   <table>
     <tr><th>Data</th><th>Why</th><th>Where it lives</th></tr>
-    <tr><td>Apple ID sign-in (user identifier, email)</td><td>Your account, subscription entitlement, invite credits</td><td>Our backend (Supabase)</td></tr>
+    <tr><td>Sign in with Apple or Google (user identifier, email)</td><td>Your account, subscription entitlement, invite credits</td><td>Our backend (Supabase)</td></tr>
     <tr><td>60-second voice recording</td><td>Creating your personal voice clone</td><td>Processed by Cartesia (voices made before October 12, 2026: ElevenLabs, until you move to the new voice); a copy is kept on our backend for quality checks, and the app keeps a reference to your voice</td></tr>
-    <tr><td>Speech during conversations and shadowing</td><td>Transcription, fluent rewrites, and pronunciation scoring — the core features</td><td>Recognised on-device first; the recording of that turn is also sent for a more accurate transcription, processed per request and not retained. The resulting text stays on your iPhone</td></tr>
-    <tr><td>Subscription and credit balance</td><td>Powering conversations, voice generation, and shadowing</td><td>Apple (purchase) + our backend (balance)</td></tr>
+    <tr><td>Speech during conversations and shadowing</td><td>Transcription, fluent rewrites, and pronunciation scoring — the core features</td><td>Recognised on-device first; the recording of that turn is also sent for a more accurate transcription, processed per request and not retained. The resulting text stays on your phone</td></tr>
+    <tr><td>Subscription and credit balance</td><td>Powering conversations, voice generation, and shadowing</td><td>Apple or Google Play (purchase) + our backend (balance)</td></tr>
+    <tr><td>Backup of your learning data (optional, off by default)</td><td>Keeping your practice when you change or add a device</td><td>Your own iCloud (iPhone) or a hidden app folder in your own Google Drive (Android). We cannot read either</td></tr>
     <tr><td>Approximate location — the city your IP address points to</td><td>Seeing where nawana is used, so we know which regions and time zones to support</td><td>PostHog, on EU servers, looked up from the IP address that sends the usage events above</td></tr>
     <tr><td>Product usage events (e.g. "a talk ended", "a scene played")</td><td>Understanding which parts of the app work, and fixing the parts that don't</td><td>PostHog, on EU servers, keyed to a random account identifier</td></tr>
   </table>
@@ -91,7 +92,8 @@
     <li><strong>Cartesia</strong> — voice cloning and speech synthesis of your fluent lines (since October 12, 2026).</li>
     <li><strong>ElevenLabs</strong> — voice cloning and speech synthesis for voices made before October 12, 2026, until you move to the new voice; and the preset voices of the other people in a conversation.</li>
     <li><strong>Google (Gemini)</strong> — conversation replies, fluent rewrites, session analysis, and transcribing what you just said. The recording of a single spoken turn is sent for that transcription and is not retained after the request; nothing is used to train Google's models.</li>
-    <li><strong>Apple</strong> — Sign in with Apple, subscriptions, and on-device speech recognition.</li>
+    <li><strong>Apple</strong> — Sign in with Apple, subscriptions, and on-device speech recognition on iPhone.</li>
+    <li><strong>Google</strong> — on Android: Sign in with Google, subscriptions through Google Play, on-device speech recognition, and Google Drive if you turn on backup. The app asks Drive only for its own hidden folder and cannot see your other files.</li>
     <li><strong>PostHog</strong> — product usage events, hosted in the EU. No advertising identifiers, no session replay, no automatic screen tracking.</li>
   </ul>
   <p>These processors act under contract for us and may not use your data for their own purposes.</p>
@@ -110,7 +112,7 @@
     <li>Your voice clone exists until you replace it, delete it, or delete your account. We do not keep it on any other schedule and we do not archive superseded clones.</li>
     <li>The 60-second recording your clone was built from is kept for quality checks, so a clone that came out wrong can still be listened to. It is deleted when you withdraw voice consent, and with your account.</li>
     <li>The record of your consent — the date you gave it, and the fact that you confirmed your age — is kept while your account exists, because we are required to be able to show that consent was given. It is deleted with your account.</li>
-    <li>Account deletion (in the app: Me → Account → Delete account) removes your voice clone, account record, and credit balance. Purchase records are retained by Apple per their policy.</li>
+    <li>Account deletion (in the app: Me → Account → Delete account) removes your voice clone, account record, and credit balance. Purchase records are retained by Apple or Google per their policy.</li>
   </ul>
 
   <h2>Your rights (GDPR)</h2>
