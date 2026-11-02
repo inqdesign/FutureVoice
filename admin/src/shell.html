@@ -873,6 +873,19 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
     <div class="card bars" id="features"></div>
   </div>
 </section>
+<section id="talkModeSec" data-nav="대화 모드">
+  <h2>어떤 모드로 이야기하나</h2>
+  <p class="sub">통화를 어디서 시작했는지(PostHog <code>conversation_started</code>의 화면·종류·코치)와,
+  그 통화가 튜터 모드였는지(앱 기록 <code>talk_rt_session</code>)예요. 2026-11-02 이후 빌드는 통화마다
+  튜터 여부를 직접 적고, 그 전 빌드는 통화 중에 튜터 레슨 기록이 있었으면 튜터로 셌어요(추정). 두 표는 출처가 달라
+  합계가 안 맞아요. 왼쪽 아래 토글을 따라요.</p>
+  <div class="seg" id="talkModePick" role="group" aria-label="기간"></div>
+  <div class="tiles" id="talkModeTiles" style="margin-top:12px"></div>
+  <div class="dgrid" style="margin-top:12px">
+    <div class="card scroll"><table id="talkModeEntries"></table></div>
+    <div class="card scroll"><table id="talkModeTutor"></table></div>
+  </div>
+</section>
 <section id="featureSec" data-nav="기능별 사용">
   <h2>어떤 기능을 누가 쓰나</h2>
   <p class="sub">앱 기능마다 써 본 사람과 횟수예요(PostHog, 최근 180일; 다시 말하기는 앱 기록). <b>비율</b>은
@@ -2271,6 +2284,83 @@ function renderSpeech(users){
         + `<td>${[...o.genres].map(esc).join(', ') || '<span class="muted">—</span>'}</td>`
         + `<td class="num">${o.scripts || '—'}</td>`
         + `<td title="${esc(fmtTs(o.last))}">${ago(o.last)}</td></tr>`; }).join('');
+}
+
+/* ---- 대화 모드 -------------------------------------------------------------
+ * DATA.talkModes (index.ts talkModeRows): `starts` = conversation_started
+ * (origin, entry, coach, tutor — tutor only from 2026-11-02 builds), `calls` =
+ * talk_rt_session with `tutor` read off the row or inferred (`tutorSrc`). */
+const TALK_MODE_DAYS = [[7,'7일'],[14,'14일'],[30,'30일'],[60,'60일']];
+let talkModeDays = 14;
+const TALK_ENTRY = {
+  talk_ring:'Talk 링', widget:'위젯', welcome:'첫 통화', daily_call:'데일리 콜', resume:'이어하기',
+  talk_scenario:'Talk 상황', talk_news:'뉴스', talk_exam:'시험', talk_field:'분야', talk_own_topic:'내 토픽',
+  week_recap:'주간 리포트', progress_tip:'진도 팁', routine:'루틴', tutor_bot:'튜터 봇',
+  scenario_book:'상황 책', practice_book:'복습 책', practice_empty:'복습(빈 화면)', watch_person:'사람',
+  core_news:'코어 뉴스', other:'기타',
+};
+const TALK_ORIGIN = {free:'프리톡', scenario:'상황', news:'뉴스', person:'사람'};
+function renderTalkModes(users){
+  const pick = document.getElementById('talkModePick'), tiles = document.getElementById('talkModeTiles'),
+        ent = document.getElementById('talkModeEntries'), tut = document.getElementById('talkModeTutor');
+  if(!tiles) return;
+  pick.innerHTML = TALK_MODE_DAYS.map(([d,lab])=>
+    `<button type="button" data-d="${d}" aria-pressed="${d===talkModeDays}">${lab}</button>`).join('');
+  pick.querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{
+    talkModeDays = +b.dataset.d; renderTalkModes(visibleUsers());
+  }));
+  if(!DATA.talkModes){ tiles.innerHTML='<div class="empty">기록을 못 읽었어요 (Worker 로그의 talkModes).</div>'; ent.innerHTML=''; tut.innerHTML=''; return; }
+  const vis = new Set(users.map(u=>u.idx));
+  const since = Date.now() - talkModeDays*86400000;
+  const starts = DATA.talkModes.starts.filter(r=>vis.has(r.u) && Date.parse(r.at)>=since);
+  const calls = DATA.talkModes.calls.filter(r=>vis.has(r.u) && Date.parse(r.at)>=since);
+  const people = a => new Set(a.map(r=>r.u)).size;
+  const pct = (a,b) => b ? `${Math.round(a/b*100)}%` : '—';
+  const free = starts.filter(r=>r.origin==='free'), topic = starts.filter(r=>r.origin && r.origin!=='free');
+  const coachOn = starts.filter(r=>r.coach==='on');
+  const tCalls = calls.filter(r=>r.tutor), oCalls = calls.filter(r=>!r.tutor);
+  const t = [
+    {k:'시작한 통화', v:num(starts.length), d:`${num(people(starts))}명`},
+    {k:'프리톡', v:pct(free.length, starts.length), d:`${num(free.length)}통 · ${num(people(free))}명`},
+    {k:'토픽으로', v:pct(topic.length, starts.length), d:`상황·뉴스·사람 ${num(topic.length)}통 · ${num(people(topic))}명`},
+    {k:'코치 모드', v:pct(coachOn.length, starts.length), d:`켠 채 시작 ${num(coachOn.length)}통`},
+    {k:'튜터 모드', v:pct(tCalls.length, calls.length), d:`${num(tCalls.length)}통 · ${num(people(tCalls))}명 (끝난 통화 중)`, good: tCalls.length>0},
+  ];
+  tiles.innerHTML = t.map(x=>`<div class="tile${x.good?' good':''}"><div class="k">${x.k}</div>`
+    + `<div class="v">${x.v}</div><div class="d">${x.d}</div></div>`).join('');
+
+  const by = new Map();
+  for(const r of starts){
+    const k = r.entry || r.origin || 'other';
+    const o = by.get(k) || {k, origin:r.origin, n:0, us:new Set(), coach:0, tutorKnown:0, tutor:0};
+    o.n++; o.us.add(r.u); if(r.coach==='on') o.coach++;
+    if(r.tutor==='on' || r.tutor==='off'){ o.tutorKnown++; if(r.tutor==='on') o.tutor++; }
+    by.set(k, o);
+  }
+  const list = [...by.values()].sort((a,b)=>b.n-a.n);
+  ent.innerHTML = !list.length ? '<tr><td class="empty">이 기간엔 시작한 통화가 없어요.</td></tr>'
+    : '<tr><th>시작한 곳</th><th>종류</th><th class="num">통화</th><th class="num">사람</th>'
+      + '<th class="num">코치 켬</th><th class="num" title="튜터 여부를 적는 빌드(11-02 이후)의 통화 중">튜터</th></tr>'
+      + list.map(o=>`<tr><td>${esc(TALK_ENTRY[o.k] || o.k)}</td>`
+        + `<td class="muted">${esc(TALK_ORIGIN[o.origin] || o.origin || '—')}</td>`
+        + `<td class="num">${num(o.n)}</td><td class="num">${num(o.us.size)}</td>`
+        + `<td class="num">${pct(o.coach, o.n)}</td>`
+        + `<td class="num">${o.tutorKnown ? `${num(o.tutor)} / ${num(o.tutorKnown)}` : '<span class="muted">—</span>'}</td></tr>`).join('');
+
+  const row = (lab, a) => {
+    const spoke = a.filter(r=>r.turns>0);
+    const turns = spoke.reduce((s,r)=>s+r.turns,0), secs = a.reduce((s,r)=>s+r.secs,0);
+    const inferred = a.filter(r=>r.tutorSrc==='inferred').length;
+    return `<tr><td>${lab}</td><td class="num">${num(a.length)}</td><td class="num">${num(spoke.length)}</td>`
+      + `<td class="num">${num(people(a))}</td>`
+      + `<td class="num">${spoke.length ? (turns/spoke.length).toFixed(1) : '—'}</td>`
+      + `<td class="num">${a.length ? fmtMin(secs/a.length) : '—'}</td>`
+      + `<td class="num muted">${a.length ? pct(inferred, a.length) : '—'}</td></tr>`;
+  };
+  tut.innerHTML = !calls.length ? '<tr><td class="empty">이 기간엔 끝난 통화 기록이 없어요.</td></tr>'
+    : '<tr><th>통화</th><th class="num">통화</th><th class="num">말한 통화</th><th class="num">사람</th>'
+      + '<th class="num">평균 턴</th><th class="num">평균 길이</th><th class="num" title="튜터 여부를 레슨 기록으로 추정한 비율">추정</th></tr>'
+      + row('튜터 모드', tCalls) + row('그 외', oCalls);
 }
 
 /* ---- 앱 사용 시간 ----------------------------------------------------------
@@ -4129,7 +4219,7 @@ function render(){
   renderMoneyTiles(); renderCancelShape(); renderTrials();
   renderPlanUsage(); renderUnitTiles(); renderTiers(); renderGemini();
   renderSpeech(users); renderAppTime(users); renderPodcast(users); renderProspects(users);
-  renderFeatureUse(users); renderQuiz(users);
+  renderFeatureUse(users); renderQuiz(users); renderTalkModes(users);
   renderBurn(); renderCostMonths(); renderCostTable(); renderFairUse();
 }
 /** Only the width-dependent drawings. Same code path as the first paint, so a

@@ -279,7 +279,96 @@ async function fetchData(env: Env) {
     console.log(`sayAgain: ${(e as Error).message}`);
     return null;
   });
+  // Talk modes (2026-11-02): which door each call came through (PostHog
+  // `conversation_started`) and which calls were tutored (client_events).
+  // Optional — a failure leaves the section saying so.
+  (data as any).talkModes = await talkModeRows(env).then(({ starts, calls }) => ({
+    starts: starts.filter((r) => uidx.has(r.u)).map((r) => ({ ...r, u: uidx.get(r.u) })),
+    calls: calls.filter((r) => uidx.has(r.u)).map((r) => ({ ...r, u: uidx.get(r.u) })),
+  })).catch((e) => {
+    console.log(`talkModes: ${(e as Error).message}`);
+    return null;
+  });
   return data;
+}
+
+/** Talk modes, two sources (2026-11-02).
+ *
+ *  `starts`: every `conversation_started` in PostHog — origin (free · news ·
+ *  scenario · person), entry (which screen), coach, and `tutor` (this call,
+ *  from builds after 2026-11-02; null before).
+ *
+ *  `calls`: every finished realtime call (`talk_rt_session`) with its turns
+ *  and length, and whether it was tutored. Newer builds say so on the row;
+ *  for older ones a call counts as tutored when a tutor lesson event
+ *  (`tutor_*` — all of them are lesson events in client_events; the tutor
+ *  BOT's go to PostHog) landed while it ran. `tutorSrc` says which. */
+async function talkModeRows(env: Env): Promise<{
+  starts: Array<Record<string, any> & { u: string }>;
+  calls: Array<Record<string, any> & { u: string }>;
+}> {
+  const since = new Date(Date.now() - 60 * 86_400_000).toISOString();
+  const startRows = await hogql(env, `
+    select lower(distinct_id), timestamp, properties.origin, properties.entry,
+      properties.coach, properties.tutor, properties.resumed, properties.$os
+    from events
+    where event = 'conversation_started'
+      and timestamp > now() - interval 60 day
+      and (properties.app = 'nawana' or properties.product = 'nawana')
+    order by timestamp
+    limit 50000`);
+  const iso = (v: unknown) => new Date(String(v).replace(" ", "T")
+    + (/Z|[+-]\d\d:?\d\d$/.test(String(v)) ? "" : "Z")).toISOString();
+  const str = (v: unknown) => (v === null || v === undefined || v === "" ? null : String(v));
+  const starts = startRows.map((x) => ({
+    u: String(x[0] ?? ""), at: iso(x[1]),
+    origin: str(x[2]), entry: str(x[3]), coach: str(x[4]), tutor: str(x[5]),
+    resumed: x[6] === true || String(x[6]) === "true",
+    os: str(x[7]),
+  }));
+
+  const get = async (q: string) => {
+    const out: Array<Record<string, any>> = [];
+    const page = 1000;
+    for (let from = 0; from < 100_000; from += page) {
+      const r = await fetch(`${env.SUPABASE_URL}/rest/v1/client_events?${q}`, {
+        headers: {
+          apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+          Range: `${from}-${from + page - 1}`,
+        },
+      });
+      if (!r.ok) throw new Error(`client_events ${r.status}`);
+      const batch = await r.json() as Array<Record<string, any>>;
+      out.push(...batch);
+      if (batch.length < page) break;
+    }
+    return out;
+  };
+  const after = `created_at=gte.${encodeURIComponent(since)}&user_id=not.is.null&order=created_at.asc`;
+  const [sessions, lessons] = await Promise.all([
+    get(`select=u:user_id,at:created_at,turns:properties->>turns,ms:properties->>duration_ms,`
+      + `tutor:properties->>tutor,platform:properties->>platform&event=eq.talk_rt_session&${after}`),
+    get(`select=u:user_id,at:created_at&event=like.tutor_*&${after}`),
+  ]);
+  const lessonTimes = new Map<string, number[]>();
+  for (const l of lessons) {
+    const a = lessonTimes.get(l.u) ?? [];
+    a.push(Date.parse(l.at));
+    lessonTimes.set(l.u, a);
+  }
+  const calls = sessions.map((c) => {
+    const end = Date.parse(c.at), ms = Number(c.ms) || 0;
+    let tutor: boolean, tutorSrc: "field" | "inferred";
+    if (c.tutor === "on" || c.tutor === "off") { tutor = c.tutor === "on"; tutorSrc = "field"; }
+    else {
+      tutor = (lessonTimes.get(c.u) ?? []).some((t) => t >= end - ms && t <= end + 60_000);
+      tutorSrc = "inferred";
+    }
+    return { u: String(c.u), at: c.at, turns: Number(c.turns) || 0, secs: Math.round(ms / 1000),
+      tutor, tutorSrc, platform: c.platform ?? null };
+  });
+  return { starts, calls };
 }
 
 async function referralRows(env: Env): Promise<Array<{ u: string; at: string; inviter: string | null }>> {
