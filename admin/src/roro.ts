@@ -100,35 +100,68 @@ async function hogql(env: RoroEnv, query: string): Promise<unknown[][]> {
 const phTime = (v: unknown) => v == null ? null
   : new Date(String(v).replace(" ", "T") + (/Z|[+-]\d\d:?\d\d$/.test(String(v)) ? "" : "Z")).toISOString();
 
+/** The owner's own phones (PostHog ids): store/TestFlight builds, so not
+ *  tagged `dev_build`, but not users either. */
+const OWNER_DEVICES = ["6082DF7E-2AE3-4B5E-9D70-5A26C3D2CD15"];
+
 /** 2.0's events. Development builds tag every event `dev_build` and are left
  *  out, the same filter the PostHog dashboard uses (SPEC §3.5c). */
 async function v2Events(env: RoroEnv) {
-  const [byEvent, byDay, steps] = await Promise.all([
+  const real = `properties.app = 'dearroro' and properties.dev_build is null
+        and distinct_id not in (${OWNER_DEVICES.map((d) => `'${d}'`).join(", ")})`;
+  /* Who came from 1.x: the app shows the "bring my memories" screen only when
+   * 1.x's session is still on the phone (DearRoRo LegacyImport.swift), and
+   * every step of it sends a legacy_* event. moved = brought them in,
+   * stayed = saw the screen but didn't (fresh, failed, or not chosen yet). */
+  const cohort = `multiIf(
+        distinct_id in (select distinct_id from events where ${real} and event = 'legacy_import_done'), 'moved',
+        distinct_id in (select distinct_id from events where ${real} and startsWith(event, 'legacy_')), 'stayed',
+        'new')`;
+  const [byEvent, byDay, steps, legacy] = await Promise.all([
     hogql(env, `
-      select event, count(), uniq(distinct_id), max(timestamp),
+      select event, ${cohort} as cohort, count(), uniq(distinct_id), max(timestamp),
         countIf(timestamp > now() - interval 7 day)
       from events
-      where properties.app = 'dearroro' and properties.dev_build is null
+      where ${real}
         and not startsWith(event, '$')
-      group by event order by count() desc limit 200`),
+      group by event, cohort order by count() desc limit 600`),
     hogql(env, `
-      select toString(toDate(timestamp)), uniq(distinct_id), count()
+      select toString(toDate(timestamp)), ${cohort} as cohort, uniq(distinct_id), count()
       from events
-      where properties.app = 'dearroro' and properties.dev_build is null
+      where ${real}
         and timestamp > now() - interval 90 day
-      group by toDate(timestamp) order by toDate(timestamp) limit 200`),
+      group by toDate(timestamp), cohort order by toDate(timestamp) limit 600`),
     hogql(env, `
       select properties.step, uniq(distinct_id)
       from events
-      where properties.app = 'dearroro' and properties.dev_build is null
+      where ${real}
         and event = 'onboarding_step'
       group by properties.step limit 50`),
+    // One row per way the 1.x screen ended. A failed import shows the screen
+    // again next launch, so a later success counts as moved.
+    hogql(env, `
+      select multiIf(done, 'moved', fresh, 'fresh', failed, 'failed', 'pending') as how,
+        count(), sum(days), sum(memories)
+      from (
+        select distinct_id,
+          countIf(event = 'legacy_import_done') > 0 as done,
+          countIf(event = 'legacy_choice' and properties.choice = 'fresh') > 0 as fresh,
+          countIf(event = 'legacy_import_failed') > 0 as failed,
+          maxIf(toInt(properties.days), event = 'legacy_import_done') as days,
+          maxIf(toInt(properties.memories), event = 'legacy_import_done') as memories
+        from events
+        where ${real}
+          and startsWith(event, 'legacy_')
+        group by distinct_id)
+      group by how limit 10`),
   ]);
   return {
-    events: byEvent.map((x) => ({ event: String(x[0]), n: Number(x[1]), people: Number(x[2]),
-      last: phTime(x[3]), n7: Number(x[4]) })),
-    days: byDay.map((x) => ({ day: String(x[0]), people: Number(x[1]), n: Number(x[2]) })),
+    events: byEvent.map((x) => ({ event: String(x[0]), cohort: String(x[1]), n: Number(x[2]), people: Number(x[3]),
+      last: phTime(x[4]), n7: Number(x[5]) })),
+    days: byDay.map((x) => ({ day: String(x[0]), cohort: String(x[1]), people: Number(x[2]), n: Number(x[3]) })),
     steps: steps.map((x) => ({ step: x[0] == null ? null : String(x[0]), people: Number(x[1]) })),
+    legacy: legacy.map((x) => ({ how: String(x[0]), people: Number(x[1]), days: Number(x[2] ?? 0),
+      memories: Number(x[3] ?? 0) })),
   };
 }
 

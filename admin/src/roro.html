@@ -141,7 +141,13 @@
 <section id="v2Top" data-nav="2.0 숫자">
   <h2>2.0 숫자</h2>
   <p class="sub">아직 출시 전이라 2.0 익명 계정은 본인 테스트로 보고 다른 페이지에선 숨겨요(토글로 보기). 이 페이지는 전부 보여요. 저널은 폰 밖으로 안 나가서, 서버가 아는 건 이야기·목소리뿐이에요. 행동은 PostHog(app = dearroro, 개발 빌드 제외). PostHog 사람은 키체인 ID라 위 사람 표와 이어지지 않아요.</p>
+  <div class="seg" id="v2CohortPick" role="group" aria-label="누구"></div>
   <div class="tiles" id="v2Tiles"></div>
+</section>
+<section id="v2LegacySec" data-nav="1.x에서 넘어온 사람">
+  <h2>1.x에서 넘어온 사람</h2>
+  <p class="sub">1.x에 로그인돼 있던 폰은 3.0 첫 화면에서 "이전 메모리 가져오기 / 새로 시작"을 골라요(legacy_* 이벤트). 1.x에서 로그아웃돼 있던 폰은 이 화면이 안 떠서 "새로 온 사람"으로 셈돼요.</p>
+  <div class="card"><div class="bars" id="v2Legacy"></div></div>
 </section>
 <section id="v2DaySec" data-nav="매일 온 사람">
   <h2>매일 온 사람</h2>
@@ -262,7 +268,10 @@ const V2_EVENT_KO = {app_opened:'앱 열기', onboarding_step:'온보딩 단계'
   paywall_tab:'페이월 탭 바꿈', purchase_started:'구매 시작', purchase_done:'구매 완료',
   purchase_cancelled:'구매 취소', journal_gate_hit:'저널 잠금에 닿음', autofill_tapped:'자동 채우기 누름',
   backup_restored:'백업 복원', uses_changed:'누구를 기록하나 바꿈', week_ending_shown:'1주일 끝 안내 봄',
-  week_ending_tapped:'1주일 끝 안내 누름'};
+  week_ending_tapped:'1주일 끝 안내 누름', legacy_choice_shown:'1.x 가져오기 화면 봄',
+  legacy_choice:'1.x 가져오기 고름', legacy_import_done:'1.x 메모리 가져옴', legacy_import_failed:'1.x 가져오기 실패'};
+const V2_COHORT_KO = {moved:'1.x 전환함', stayed:'1.x 전환 안 함', new:'새로 온 사람'};
+const LEGACY_HOW_KO = {moved:'가져옴', fresh:'새로 시작', failed:'가져오다 실패 (아직 못 가져옴)', pending:'화면만 보고 아직 안 고름'};
 
 /* ============================================================ people
  * Per-person counts folded once from the row lists; the toggle only decides
@@ -282,10 +291,9 @@ const latest = (...xs) => xs.filter(Boolean).sort().pop() || null;
 U.forEach(u => { u.lastActive = latest(u.lastSession, u.lastSeen, u.lastMem, u.lastSto); });
 
 const EX = new Set(DATA.excluded);
-/** 2.0 isn't in the store yet (2026-10-25), so every anonymous account is the
- *  owner's own phones and simulators. Set this to the release date and from
- *  then on only accounts made BEFORE it are treated as tests. */
-const V2_RELEASE = null;
+/** Until 3.0 reached the store (2026-10-31) every anonymous account was the
+ *  owner's own phones and simulators: only accounts made BEFORE this are tests. */
+const V2_RELEASE = '2026-10-31';
 const isV2Test = u => u.anon && (!V2_RELEASE || String(u.createdAt) < V2_RELEASE);
 const isOwnerOrTest = u => EX.has(u.idx) || u.admin || isV2Test(u);
 const showAll = () => document.getElementById('devToggle').checked;
@@ -567,25 +575,59 @@ function renderMoney(){
     + `</tbody>`;
 }
 
-/* ============================================================ 2.0 */
+/* ============================================================ 2.0
+ * Every install is in exactly one cohort (moved / stayed / new), so folding
+ * the cohort rows back together adds people up without counting anyone twice. */
+let v2Cohort = 'all';
+function v2Fold(rows, key){
+  const m = new Map();
+  for(const r of rows){
+    if(v2Cohort!=='all' && r.cohort!==v2Cohort) continue;
+    const a = m.get(r[key]) || m.set(r[key], {[key]: r[key], n:0, people:0, n7:0, last:null, by:{}}).get(r[key]);
+    a.n += r.n; a.people += r.people; a.n7 += r.n7 || 0;
+    a.by[r.cohort] = (a.by[r.cohort]||0) + r.people;
+    if(r.last && (!a.last || r.last > a.last)) a.last = r.last;
+  }
+  return [...m.values()];
+}
 function renderV2(){
   const v2 = DATA.v2;
-  const ev = n => v2?.events.find(e => e.event===n);
+  const opened = c => (v2?.events||[]).filter(e => e.event==='app_opened' && (c==='all' || e.cohort===c)).reduce((a,e)=>a+e.people,0);
+  const pick = document.getElementById('v2CohortPick');
+  pick.innerHTML = v2 ? [['all','전체'], ...Object.entries(V2_COHORT_KO)].map(([k,lab]) =>
+    `<button type="button" data-k="${k}" aria-pressed="${k===v2Cohort}">${lab} ${num(opened(k))}</button>`).join('') : '';
+  pick.querySelectorAll('button').forEach(b => b.onclick = () => { v2Cohort = b.dataset.k; renderV2(); });
+
+  const events = v2Fold(v2?.events||[], 'event').sort((a,b) => b.n - a.n);
+  const ev = n => events.find(e => e.event===n);
   const people = n => num(ev(n)?.people || 0);
   const su = DATA.storyUsage, vo = DATA.voices;
+  // Server rows carry Supabase's anonymous id, not PostHog's, so they can't be split by cohort.
+  const serverNote = v2Cohort==='all' ? '' : ' · 서버 기록이라 전체 숫자';
   document.getElementById('v2Tiles').innerHTML = (v2 ? [
-    ['앱 연 사람', people('app_opened'), `7일 이벤트 ${num(v2.events.reduce((a,e)=>a+e.n7,0))}개`],
+    ['앱 연 사람', people('app_opened'), `7일 이벤트 ${num(events.reduce((a,e)=>a+e.n7,0))}개`],
     ['온보딩 끝', people('onboarding_done'), `무료 1주일 시작 ${people('free_week_started')}`],
     ['첫 날 저장', people('first_day_saved'), `모먼트 저장 ${people('moment_saved')}`],
     ['구매 완료', people('purchase_done'), `페이월 본 사람 ${people('paywall_shown')}`],
   ] : [['PostHog', '—', 'POSTHOG_API_KEY가 없거나 읽기 실패']]).concat([
-    ['만든 이야기 (서버)', num(su.length), `${num(new Set(su.map(s=>s.u)).size)}명 · 7일 ${num(su.filter(s=>within(s.at,7)).length)}`],
-    ['목소리', num(vo.filter(v=>!v.removed).length), `지운 것 ${num(vo.filter(v=>v.removed).length)}`],
+    ['만든 이야기 (서버)', num(su.length), `${num(new Set(su.map(s=>s.u)).size)}명 · 7일 ${num(su.filter(s=>within(s.at,7)).length)}${serverNote}`],
+    ['목소리', num(vo.filter(v=>!v.removed).length), `지운 것 ${num(vo.filter(v=>v.removed).length)}${serverNote}`],
   ]).map(([k,v,d]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`).join('');
+
+  const lg = v2?.legacy || [];
+  const lgTotal = lg.reduce((a,l)=>a+l.people,0);
+  const moved = lg.find(l => l.how==='moved');
+  document.getElementById('v2Legacy').innerHTML = v2
+    ? barRows(['moved','fresh','failed','pending'].map(h => {
+        const p = lg.find(l => l.how===h)?.people || 0;
+        return {lbl: esc(LEGACY_HOW_KO[h]), v: p, color: h==='moved' ? null : 'var(--baseline)',
+          val: `${num(p)}명 · ${pct(p, lgTotal)}${h==='moved' && moved ? ` · ${num(moved.days)}일 ${num(moved.memories)}개` : ''}`};
+      }), Math.max(0, ...lg.map(l => l.people)))
+    : '<div class="empty">PostHog를 읽지 못했어요</div>';
 
   const today = new Date().toISOString().slice(0,10);
   const days = Array.from({length:30}, (_,i) => addDays(today, i-29));
-  const dm = new Map((v2?.days||[]).map(d => [d.day, d]));
+  const dm = new Map(v2Fold(v2?.days||[], 'day').map(d => [d.day, d]));
   document.getElementById('v2Days').innerHTML = v2
     ? barRows(days.slice().reverse().map(d => ({lbl: d.slice(5).replace('-','/'), v: dm.get(d)?.people || 0,
         val: `${num(dm.get(d)?.people || 0)}명 · ${num(dm.get(d)?.n || 0)}개`})), Math.max(1, ...days.map(d => dm.get(d)?.people || 0)))
@@ -598,11 +640,15 @@ function renderV2(){
   const items = [...byType.entries()].sort((a,b) => b[1]-a[1]).map(([k,v]) => ({lbl: esc(k), v}));
   items.push({lbl:'목소리 만듦', v: vo.length, color:'var(--warn)'});
   document.getElementById('v2Stories').innerHTML = barRows(items, Math.max(0, ...items.map(i => i.v)));
-  document.getElementById('v2Events').innerHTML = `<thead><tr><th>이벤트</th><th class="num">사람</th><th class="num">횟수</th>`
-    + `<th class="num">7일</th><th>마지막</th></tr></thead><tbody>`
-    + ((v2?.events||[]).map(e => `<tr><td>${esc(V2_EVENT_KO[e.event] || e.event)} <span class="muted">${esc(e.event)}</span></td>`
-      + `<td class="num">${num(e.people)}</td><td class="num">${num(e.n)}</td><td class="num">${num(e.n7)}</td><td>${ago(e.last)}</td></tr>`).join('')
-      || '<tr><td colspan="5" class="empty">아직 실사용 이벤트가 없어요 (개발 빌드는 빠져요)</td></tr>') + `</tbody>`;
+  // On 전체 the people column is also shown per cohort, side by side.
+  const split = v2Cohort==='all' ? Object.keys(V2_COHORT_KO) : [];
+  document.getElementById('v2Events').innerHTML = `<thead><tr><th>이벤트</th><th class="num">사람</th>`
+    + split.map(c => `<th class="num">${V2_COHORT_KO[c]}</th>`).join('')
+    + `<th class="num">횟수</th><th class="num">7일</th><th>마지막</th></tr></thead><tbody>`
+    + (events.map(e => `<tr><td>${esc(V2_EVENT_KO[e.event] || e.event)} <span class="muted">${esc(e.event)}</span></td>`
+      + `<td class="num">${num(e.people)}</td>` + split.map(c => `<td class="num">${num(e.by[c]||0)}</td>`).join('')
+      + `<td class="num">${num(e.n)}</td><td class="num">${num(e.n7)}</td><td>${ago(e.last)}</td></tr>`).join('')
+      || `<tr><td colspan="${5 + split.length}" class="empty">아직 실사용 이벤트가 없어요 (개발 빌드는 빠져요)</td></tr>`) + `</tbody>`;
 }
 
 /* ============================================================ render */
