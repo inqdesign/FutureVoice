@@ -8,6 +8,7 @@
 //
 //   node22 scripts/marketing/render-frames.mjs <path> --out x.mp4 [--size 886x1920] [--seconds 29.5]
 //     [--fps 30] [--ss 2] [--from 0] [--to <seconds>] [--png-at t ...]   (repeatable: stills only)
+//     [--level 4.0] [--bitrate 11M]   H.264 level and bitrate; a 4K frame needs --level 5.1
 //     [--silent-audio]   add a silent stereo AAC track (App Store previews want an audio track)
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
@@ -29,6 +30,7 @@ const FROM = +opt("--from", 0), TO = +opt("--to", opt("--seconds", 29.5));
 const OUT = opt("--out", null);
 const PNGS = all("--png-at").map(Number);
 const SILENT = args.includes("--silent-audio");
+const LEVEL = opt("--level", "4.0"), BITRATE = opt("--bitrate", "11M");   // 4K needs --level 5.1
 
 const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".png": "image/png",
   ".jpg": "image/jpeg", ".svg": "image/svg+xml", ".woff2": "font/woff2", ".ttf": "font/ttf" };
@@ -97,8 +99,8 @@ if (OUT && !PNGS.length) {
     "-f", "image2pipe", "-framerate", String(FPS), "-i", "-",
     ...(SILENT ? ["-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=48000"] : []),
     "-vf", `scale=${W}:${H}:flags=lanczos:out_color_matrix=bt709:out_range=tv,format=yuv420p`,
-    "-c:v", "libx264", "-preset", "slow", "-profile:v", "high", "-level", "4.0", "-r", String(FPS),
-    "-b:v", "11M", "-maxrate", "12M", "-bufsize", "24M",
+    "-c:v", "libx264", "-preset", "slow", "-profile:v", "high", "-level", LEVEL, "-r", String(FPS),
+    "-b:v", BITRATE, "-maxrate", opt("--bitrate") ? BITRATE : "12M", "-bufsize", opt("--bitrate") ? BITRATE.replace(/\d+/, (n) => 2 * n) : "24M",
     "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709", "-color_range", "tv",
     ...(SILENT ? ["-c:a", "aac", "-b:a", "256k", "-shortest"] : []),
     "-movflags", "+faststart", OUT], (stdin) => { feed = stdin; });

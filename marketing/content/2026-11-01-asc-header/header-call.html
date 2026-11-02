@@ -1,0 +1,145 @@
+<!doctype html>
+<!-- App Store product page header, "a call in flow" (21:9, 3840×1646, LOOP-second loop).
+     Centre (Apple's 1646×661 safe area, what an iPhone keeps): the Futureself pill speaking,
+     its line lighting word by word under it. Wings (iPad / Mac only): the call around it —
+     the learner's line and its correction on the left, the learner saying it right on the right.
+     Lines are the kit's own <nw-bubble>/<nw-fix>; the pill is the same port as header.html,
+     lit on the page grid (grid step = cell, shared origin).
+     ?lang=ko for Korean chrome (labels, the fix note). ?safe=1 draws the safe area.
+     window.__render(t) draws second t of the loop (render-frames.mjs); t wraps at LOOP. -->
+<html><head><meta charset="utf-8"><title>Header call</title>
+<style>
+  html,body{margin:0;background:#F7F8FA;overflow:hidden}
+  #stage{position:relative;width:3840px;height:1646px}
+  canvas{position:absolute;inset:0;width:3840px;height:1646px}
+  .line{position:absolute;opacity:0;will-change:opacity,transform}
+  #mid{left:0;right:0;top:936px;display:flex;justify-content:center}
+  #mid nw-bubble{font-size:70px;--max:1600px;text-align:center}
+  #left{left:230px;top:470px;width:780px}
+  #left nw-bubble,#right nw-bubble{font-size:58px;--max:100%}
+  #fix{left:230px;top:820px;width:780px}
+  #fix nw-fix{font-size:58px}
+  #right{left:2830px;top:640px;width:780px}
+</style>
+<script type="module" src="/web/kit/nawana-ui.js"></script>
+</head><body>
+<div id="stage">
+  <canvas id="c" width="3840" height="1646"></canvas>
+  <div class="line" id="left"><nw-bubble who="me">Yesterday I go to new cafe near my office.</nw-bubble></div>
+  <div class="line" id="fix"><nw-fix noshadow>Yesterday I <b>went</b> to the new café near my office.</nw-fix></div>
+  <div class="line" id="mid"><nw-bubble who="self" nolabel id="say"></nw-bubble></div>
+  <div class="line" id="right"><nw-bubble who="me">I went back this morning, actually.</nw-bubble></div>
+</div>
+<script type="module">
+const W = 3840, H = 1646, LOOP = 14, CELL = 52, GAP = 4, TAU = Math.PI * 2;
+const q = new URLSearchParams(location.search);
+const LANG = q.get("lang") === "ko" ? "ko" : "en", SAFE = q.get("safe") === "1";
+document.documentElement.lang = LANG;
+document.querySelector("nw-fix").setAttribute("note", LANG === "ko" ? "과거 시제" : "Past tense");
+
+// ── the two lines the fluent self says, and when ──
+const LINES = [
+  { text: "The one by the station? What'd you get?", show: 2.9, from: 3.1, to: 5.8, hide: 8.3 },
+  { text: "Twice in two days? It must be good.", show: 8.4, from: 8.7, to: 10.6, hide: 12.6 },
+];
+const PHRASES = [[3.0, 6.0], [8.6, 10.8]];
+
+// ── the pill (same port as header.html: kPalette[blue][light], hash cells, centre-out) ──
+const RAMP = [[.965, .972, 1], [.900, .922, .970], [.720, .830, 1], [.450, .680, 1], [.030, .340, .950]]
+  .map(c => `rgb(${c.map(v => Math.round(v * 255)).join(",")})`);
+const fract = v => v - Math.floor(v);
+function hash21(x, y) { let a = fract(x * 123.34), b = fract(y * 456.21); const d = a * (a + 45.32) + b * (b + 45.32); a += d; b += d; return fract(a * b); }
+const smooth = (e0, e1, x) => { const t = Math.min(Math.max((x - e0) / (e1 - e0), 0), 1); return t * t * (3 - 2 * t); };
+const looped = w => Math.max(1, Math.round(w * LOOP / TAU)) * TAU / LOOP;
+const cols = 18, rows = 7, sw = cols * CELL, sh = rows * CELL;
+const x0 = Math.round((W - sw) / 2), y0 = 520, ox = x0 % CELL, oy = y0 % CELL;
+
+function level(t) {
+  let phrase = 0; for (const [a, b] of PHRASES) phrase += smooth(a - .3, a + .3, t) * (1 - smooth(b - .3, b + .3, t));
+  const syl = Math.max(0, Math.sin(t * looped(9.1)) * .5 + Math.sin(t * looped(5.3) + 1.7) * .35 + .25);
+  return phrase * Math.min(1, .3 + .62 * syl * (.6 + .4 * Math.sin(t * looped(1.3) + .4)));
+}
+function smoothedLevel(t) {   // LevelSmoother (~60 ms attack, ~350 ms release), run through two loops so it closes
+  let l = 0; const dt = 1 / 120;
+  for (let s = t - 2 * LOOP; s <= t; s += dt) { const g = level(((s % LOOP) + LOOP) % LOOP); l += (g - l) * (1 - Math.exp(-dt / (g > l ? .06 : .35))); }
+  return l;
+}
+const recess = (() => {
+  const c = document.createElement("canvas"); c.width = sw; c.height = sh;
+  const g = c.getContext("2d"), img = g.createImageData(sw, sh), d = img.data;
+  const rad = sh / 2, ax = Math.max(sw / 2 - rad, 0), fall = 7 * CELL / 12.8;
+  for (let y = 0; y < sh; y++) for (let x = 0; x < sw; x++) {
+    const px = x + .5 - sw / 2, py = y + .5 - sh / 2, qx = Math.min(Math.max(px, -ax), ax);
+    const rim = Math.exp(-Math.max(rad - Math.hypot(px - qx, py), 0) / fall);
+    const topW = Math.min(Math.max(.5 - py / sh, 0), 1);
+    const a = rim * (.14 + .34 * topW) * .45 - rim * (1 - topW) * .05, i = (y * sw + x) * 4;
+    d[i] = d[i + 1] = d[i + 2] = a >= 0 ? 0 : 255; d[i + 3] = Math.round(Math.abs(a) * 255);
+  }
+  g.putImageData(img, 0, 0); return c;
+})();
+const cv = document.getElementById("c"), ctx = cv.getContext("2d");
+const pill = g => { g.beginPath(); g.roundRect(x0, y0, sw, sh, sh / 2); };
+
+function drawPill(t) {
+  ctx.fillStyle = "#F7F8FA"; ctx.fillRect(0, 0, W, H);
+  const fade = ctx.createRadialGradient(W / 2, H / 2, 200, W / 2, H / 2, W * .55);
+  fade.addColorStop(0, "rgba(13,17,23,.075)"); fade.addColorStop(1, "rgba(13,17,23,.02)");
+  ctx.fillStyle = fade;
+  for (let x = ox - GAP / 2; x < W; x += CELL) ctx.fillRect(x, 0, 1.5, H);
+  for (let y = oy - GAP / 2; y < H; y += CELL) ctx.fillRect(0, y, W, 1.5);
+  const drive = Math.min(Math.max(smoothedLevel(t), 0), 1) * 1.15;
+  ctx.save(); pill(ctx); ctx.clip();
+  ctx.fillStyle = "#F7F8FA"; ctx.fillRect(x0, y0, sw, sh);
+  for (let cy = 0; cy < rows; cy++) for (let cx = 0; cx < cols; cx++) {
+    const x = x0 + cx * CELL, y = y0 + cy * CELL, ux = (cx + .5) / cols;
+    const r1 = hash21(cx + .13, cy + .13), r2 = hash21(cx + 7.77, cy + 7.77), r3 = hash21(cx + 23.19, cy + 23.19);
+    let v = .16 + .14 * Math.sin(t * looped(.35 + .55 * r2) + r3 * TAU);
+    const order = Math.min(Math.max(r1 + (Math.abs(ux - .5) * 2 - r1) * .45, 0), 1);
+    const ig = smooth(order, order + .22, drive);
+    v += ig * (.55 + .30 * r2) + ig * .08 * Math.sin(t * looped(2 + 3 * r1) + r2 * TAU);
+    ctx.fillStyle = RAMP[Math.min(Math.max(Math.floor(v * 4 + (r3 - .5) * .9 + .5), 0), 4)];
+    ctx.fillRect(x + GAP / 2, y + GAP / 2, CELL - GAP, CELL - GAP);
+  }
+  ctx.drawImage(recess, x0, y0);
+  ctx.restore();
+  ctx.save(); pill(ctx); ctx.clip(); pill(ctx); ctx.lineWidth = 4; ctx.strokeStyle = "rgba(60,60,67,.22)"; ctx.stroke(); ctx.restore();
+  if (SAFE) { ctx.strokeStyle = "rgba(255,0,0,.8)"; ctx.lineWidth = 4; ctx.strokeRect((W - 1646) / 2, (H - 661) / 2, 1646, 661); }
+}
+
+// ── the DOM lines ──
+const $ = s => document.querySelector(s);
+const ease = x => x * x * (3 - 2 * x), clamp = x => Math.min(Math.max(x, 0), 1);
+const appear = (t, a, b) => ease(clamp((t - a) / (b - a)));
+function place(el, o, rise = 24) { el.style.opacity = o.toFixed(3); el.style.transform = `translateY(${((1 - o) * rise).toFixed(1)}px)`; }
+let sayIdx = -1;
+function sayLine(i, lit) {
+  const bub = $("#say").shadowRoot.querySelector(".bub");
+  if (sayIdx !== i) { sayIdx = i; bub.classList.add("k"); bub.innerHTML = LINES[i].text.split(" ").map(w => `<span class="w">${w}</span>`).join(" "); }
+  bub.querySelectorAll(".w").forEach((w, k) => w.classList.toggle("on", k < lit));
+}
+
+function render(t) {
+  t = ((t % LOOP) + LOOP) % LOOP;
+  drawPill(t);
+  const out = 1 - appear(t, 12.2, 12.8);
+  place($("#left"), Math.min(appear(t, .5, 1.1), out));
+  place($("#fix"), Math.min(appear(t, 1.8, 2.4), out), 40);
+  place($("#right"), Math.min(appear(t, 6.6, 7.2), out));
+  const i = t < LINES[1].show ? 0 : 1, L = LINES[i];
+  const o = Math.min(appear(t, L.show, L.show + .4), 1 - appear(t, L.hide - .4, L.hide));
+  place($("#mid"), o, 16);
+  const n = L.text.split(" ").length;
+  sayLine(i, Math.floor(clamp((t - L.from) / (L.to - L.from)) * n + (t >= L.to ? n : 0)));
+}
+
+window.__ready = (async () => {
+  await customElements.whenDefined("nw-fix"); await document.fonts.ready;
+  // a frame is a state, not a moment in a transition
+  for (const el of document.querySelectorAll("nw-bubble,nw-fix"))
+    { const st = document.createElement("style"); st.textContent = "*{transition:none!important}"; el.shadowRoot.prepend(st); }
+})();
+window.__render = render;
+await window.__ready;
+if (q.has("still")) render(+q.get("still") || 0);
+else { const t0 = performance.now(); const tick = () => { render((performance.now() - t0) / 1000); requestAnimationFrame(tick); }; tick(); }
+</script></body></html>

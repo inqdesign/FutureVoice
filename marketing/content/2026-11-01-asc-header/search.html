@@ -1,0 +1,36 @@
+<!doctype html>
+<!-- App Store search results asset (3:2). Apple: "state the obvious, show the firsthand
+     experience" — so the real call screen (the kit's <nw-call> demo: the fluent self asks,
+     the learner answers, the correction card lands, the fluent self answers) in the kit's
+     phone, beside the brand line the outro already uses. Authored at 1920×1280 CSS px;
+     record with --scale 2 for 3840×2560.  ?lang=ko for Korean. -->
+<html><head><meta charset="utf-8"><title>Search result</title>
+<style>
+  :root{--ink:#0D1117;--sub:#5A6170;--pixel:"Geist Pixel","Galmuri14","Apple SD Gothic Neo",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Apple SD Gothic Neo",system-ui,sans-serif}
+  html,body{margin:0;background:#F7F8FA;overflow:hidden}
+  .stage{position:relative;width:1920px;height:1280px;font-family:var(--sans);color:var(--ink);
+    background-image:linear-gradient(rgba(10,40,90,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(10,40,90,.045) 1px,transparent 1px);
+    background-size:54px 54px;background-position:center}
+  .copy{position:absolute;left:150px;top:0;bottom:0;width:900px;display:flex;flex-direction:column;justify-content:center}
+  .copy nw-futureself{width:312px;height:128px;margin-bottom:72px}
+  .tg{font-family:var(--pixel);font-weight:400;font-size:84px;line-height:1.2;margin:0;letter-spacing:.5px;text-wrap:balance}
+  :lang(ko) .tg{font-size:92px;line-height:1.3}
+  .phone{position:absolute;right:190px;top:70px}
+  .phone nw-phone{width:550px}
+</style>
+<script type="module" src="/web/kit/nawana-ui.js"></script>
+</head><body>
+<div class="stage">
+  <div class="copy">
+    <nw-futureself mode="speaking" level="voice"></nw-futureself>
+    <h1 class="tg"></h1>
+  </div>
+  <div class="phone"><nw-phone><nw-call fill statusbar autoplay></nw-call></nw-phone></div>
+</div>
+<script>
+  const ko = new URLSearchParams(location.search).get("lang") === "ko";
+  document.documentElement.lang = ko ? "ko" : "en";
+  document.querySelector(".tg").innerHTML = ko ? "유창한 나에게<br>언어를 배우세요." : "Learn a language<br>from your fluent self.";
+</script>
+</body></html>

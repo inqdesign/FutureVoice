@@ -17,6 +17,7 @@
 //     --scale N         device pixel ratio (3 = an iPhone capture) default: 1
 //     --ss N            supersample: render at N× the output density, then downscale (lanczos)
 //                       so text and edges stay sharp after Instagram re-encodes   default: 2
+//     --level L         H.264 level (default 4.2; a 4K frame needs 5.1)
 //     --wait-for JS     poll this expression until truthy before the warmup starts, e.g.
 //                       "document.documentElement.dataset.scene" (a carousel sets it when its scene
 //                       starts), so the recording never opens on the page still loading
@@ -46,6 +47,7 @@ const SCALE = +opt("--scale", 1);
 const SS = +opt("--ss", 2);            // render density multiplier; output stays W*SCALE × H*SCALE
 const DPR = SCALE * SS;
 const WAIT_FOR = opt("--wait-for", null);
+const LEVEL = opt("--level", "4.2");   // H.264 level; frames past 1080p (an App Store 4K asset) need 5.1
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /* ── a static server over the repo root (the page imports /web/kit/…) ── */
@@ -147,7 +149,7 @@ for (const out of outs) {
       // expect; JPEG input used to leave full-range yuvj420p), and a high-quality H.264 so Instagram's
       // own re-encode starts from a clean source instead of a 0.4 Mbps one.
       "-vf", `fps=${FPS},scale=${W * SCALE}:${H * SCALE}:flags=lanczos:out_color_matrix=bt709:out_range=tv,format=yuv420p`,
-      "-c:v", "libx264", "-preset", "slow", "-crf", "12", "-tune", "animation", "-profile:v", "high", "-level", "4.2",
+      "-c:v", "libx264", "-preset", "slow", "-crf", "12", "-tune", "animation", "-profile:v", "high", "-level", LEVEL,
       "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709", "-color_range", "tv",
       "-movflags", "+faststart", "-t", String(SECONDS), out], { stdio: "inherit" });
     ff.on("exit", (c) => (c === 0 ? ok() : no(new Error("ffmpeg failed"))));

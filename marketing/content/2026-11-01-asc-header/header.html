@@ -1,0 +1,115 @@
+<!doctype html>
+<!-- App Store product page header (21:9, 3840×1646). The Futureself mosaic, clipped in one
+     shape, lit on the page's own grid: the grid step IS the cell (12.8pt at the app's scale,
+     ~52px here) and shares its origin, so the shape reads as the part of one display that
+     is lit. Light palette, inset hairline, no shadow.
+     Apple's safe area is the centred 1646×661 — everything that matters sits inside it.
+     ?shape=pill (default) | circle      ?safe=1 draws the safe area for checking
+     window.__render(t) draws second t of a seamless LOOP-second loop (render-frames.mjs). -->
+<html><head><meta charset="utf-8"><title>Header</title>
+<style>
+  html,body{margin:0;background:#F7F8FA}
+  canvas{display:block;width:3840px;height:1646px}
+</style></head><body><canvas id="c" width="3840" height="1646"></canvas>
+<script type="module">
+const W = 3840, H = 1646, LOOP = 10, CELL = 52, GAP = 4;
+const q = new URLSearchParams(location.search);
+const SHAPE = q.get("shape") || "pill", SAFE = q.get("safe") === "1";
+// the light ramp of the app's blue palette (kPalette[blue][light], same as web/kit/core.js)
+const RAMP = [[.965, .972, 1], [.900, .922, .970], [.720, .830, 1], [.450, .680, 1], [.030, .340, .950]]
+  .map(c => `rgb(${c.map(v => Math.round(v * 255)).join(",")})`);
+const fract = v => v - Math.floor(v);
+function hash21(x, y) { let a = fract(x * 123.34), b = fract(y * 456.21); const d = a * (a + 45.32) + b * (b + 45.32); a += d; b += d; return fract(a * b); }
+const smooth = (e0, e1, x) => { const t = Math.min(Math.max((x - e0) / (e1 - e0), 0), 1); return t * t * (3 - 2 * t); };
+const TAU = Math.PI * 2;
+// a rate (rad/s) moved to the nearest one that completes whole turns in LOOP, so t=LOOP ≡ t=0
+const looped = w => Math.max(1, Math.round(w * LOOP / TAU)) * TAU / LOOP;
+
+// the shape, in whole cells, centred
+const [cols, rows] = SHAPE === "circle" ? [12, 12] : [26, 10];
+const sw = cols * CELL, sh = rows * CELL;
+const x0 = Math.round((W - sw) / 2), y0 = Math.round((H - sh) / 2);
+const ox = x0 % CELL, oy = y0 % CELL;          // the page grid shares the shape's origin
+
+// level over the loop: a pause, two phrases with syllables, a pause — 0 at both ends
+function level(t) {
+  const phrase = smooth(.8, 1.4, t) * (1 - smooth(4.6, 5.2, t)) + smooth(5.9, 6.5, t) * (1 - smooth(8.9, 9.5, t));
+  const syl = Math.max(0, Math.sin(t * looped(9.1)) * .5 + Math.sin(t * looped(5.3) + 1.7) * .35 + .25);
+  return phrase * Math.min(1, .3 + .62 * syl * (.6 + .4 * Math.sin(t * looped(1.3) + .4)));
+}
+// a smoothed level, as LevelSmoother does in the app (~60 ms attack, ~350 ms release),
+// integrated over the two loops before t so the loop closes on itself
+function smoothedLevel(t) {
+  let l = 0; const dt = 1 / 120;
+  for (let s = t - 2 * LOOP; s <= t; s += dt) { const g = level(((s % LOOP) + LOOP) % LOOP); l += (g - l) * (1 - Math.exp(-dt / (g > l ? .06 : .35))); }
+  return l;
+}
+
+const cv = document.getElementById("c"), ctx = cv.getContext("2d");
+const inside = (px, py) => {          // shape test on a point
+  if (SHAPE === "circle") return Math.hypot(px - (x0 + sw / 2), py - (y0 + sh / 2)) <= sw / 2;
+  const r = sh / 2, cx = Math.min(Math.max(px, x0 + r), x0 + sw - r);
+  return Math.hypot(px - cx, py - (y0 + r)) <= r;
+};
+function shapePath(g) {
+  g.beginPath();
+  if (SHAPE === "circle") g.arc(x0 + sw / 2, y0 + sh / 2, sw / 2, 0, TAU);
+  else g.roundRect(x0, y0, sw, sh, sh / 2);
+}
+
+// the inner shadow (capsule/circle SDF, pooled along the top, faint lift on the bottom lip)
+const recess = (() => {
+  const c = document.createElement("canvas"); c.width = sw; c.height = sh;
+  const g = c.getContext("2d"), img = g.createImageData(sw, sh), d = img.data;
+  const rad = sh / 2, ax = Math.max(sw / 2 - rad, 0), fall = 7 * CELL / 12.8;
+  for (let y = 0; y < sh; y++) for (let x = 0; x < sw; x++) {
+    const px = x + .5 - sw / 2, py = y + .5 - sh / 2, qx = Math.min(Math.max(px, -ax), ax);
+    const rim = Math.exp(-Math.max(rad - Math.hypot(px - qx, py), 0) / fall);
+    const topW = Math.min(Math.max(.5 - py / sh, 0), 1);
+    const a = rim * (.14 + .34 * topW) * .45 - rim * (1 - topW) * .05, i = (y * sw + x) * 4;
+    d[i] = d[i + 1] = d[i + 2] = a >= 0 ? 0 : 255; d[i + 3] = Math.round(Math.abs(a) * 255);
+  }
+  g.putImageData(img, 0, 0); return c;
+})();
+
+function render(t) {
+  t = ((t % LOOP) + LOOP) % LOOP;
+  // page: ground + the grid (lines where the cells' gaps fall), fading out to the far edges
+  ctx.fillStyle = "#F7F8FA"; ctx.fillRect(0, 0, W, H);
+  const fade = ctx.createRadialGradient(W / 2, H / 2, 200, W / 2, H / 2, W * .55);
+  fade.addColorStop(0, "rgba(13,17,23,.075)"); fade.addColorStop(1, "rgba(13,17,23,.02)");
+  ctx.fillStyle = fade;
+  for (let x = ox - GAP / 2; x < W; x += CELL) ctx.fillRect(x, 0, 1.5, H);
+  for (let y = oy - GAP / 2; y < H; y += CELL) ctx.fillRect(0, y, W, 1.5);
+
+  // the lit cells, clipped to the shape; gaps stay open so the page shows through
+  const drive = Math.min(Math.max(smoothedLevel(t), 0), 1) * 1.15;
+  ctx.save(); shapePath(ctx); ctx.clip();
+  ctx.fillStyle = "#F7F8FA"; ctx.fillRect(x0, y0, sw, sh);
+  for (let cy = 0; cy < rows; cy++) for (let cx = 0; cx < cols; cx++) {
+    const x = x0 + cx * CELL, y = y0 + cy * CELL, ux = (cx + .5) / cols, uy = (cy + .5) / rows;
+    if (!inside(x + CELL / 2, y + CELL / 2) && !inside(x, y) && !inside(x + CELL, y + CELL) && !inside(x + CELL, y) && !inside(x, y + CELL)) continue;
+    const r1 = hash21(cx + .13, cy + .13), r2 = hash21(cx + 7.77, cy + 7.77), r3 = hash21(cx + 23.19, cy + 23.19);
+    let v = .16 + .14 * Math.sin(t * looped(.35 + .55 * r2) + r3 * TAU);
+    const bias = SHAPE === "circle" ? Math.min(1, Math.hypot(ux - .5, uy - .5) * 2) : Math.abs(ux - .5) * 2;  // centre out
+    const order = Math.min(Math.max(r1 + (bias - r1) * .45, 0), 1);
+    const ig = smooth(order, order + .22, drive);
+    v += ig * (.55 + .30 * r2) + ig * .08 * Math.sin(t * looped(2 + 3 * r1) + r2 * TAU);
+    const step = Math.min(Math.max(Math.floor(v * 4 + (r3 - .5) * .9 + .5), 0), 4);
+    ctx.fillStyle = RAMP[step];
+    ctx.fillRect(x + GAP / 2, y + GAP / 2, CELL - GAP, CELL - GAP);
+  }
+  ctx.drawImage(recess, x0, y0);
+  ctx.restore();
+  // the app's inset hairline (separator), no outer shadow
+  ctx.save(); shapePath(ctx); ctx.clip(); shapePath(ctx);
+  ctx.lineWidth = 4; ctx.strokeStyle = "rgba(60,60,67,.22)"; ctx.stroke(); ctx.restore();
+
+  if (SAFE) { ctx.strokeStyle = "rgba(255,0,0,.8)"; ctx.lineWidth = 4; ctx.strokeRect((W - 1646) / 2, (H - 661) / 2, 1646, 661); }
+}
+
+window.__render = render;
+window.__ready = Promise.resolve();
+if (!q.has("still")) { const t0 = performance.now(); const tick = () => { render((performance.now() - t0) / 1000); requestAnimationFrame(tick); }; tick(); }
+else render(+q.get("still") || 0);
+</script></body></html>
