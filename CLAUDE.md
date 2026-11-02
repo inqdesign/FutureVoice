@@ -3268,7 +3268,7 @@ sync container carry over. `./scripts/mac-run.sh` builds and opens it.
   SwiftUI's sheets ONLY (`PresentationHostingController`) — menus and
   pickers go through `present` too, and forcing them into a form sheet was
   the other half of every dropdown dying — and gives each a phone's size (480 wide, the window's height up to 860, in zoomed
-  points), zooms the sheet's window, and closes it on Esc under the
+  points), zooms the sheet's page on EVERY layout of its own, the first one included (put on after presenting, each sheet slid in at 13 pt and then jumped to size, 2026-11-02), and closes it on Esc under the
   swipe's own rule: never one that is modal (`interactiveDismissDisabled`)
   or whose delegate refuses, through the delegate calls a swipe makes so
   SwiftUI's `isPresented` follows. A sheet that is closed by a swipe alone
