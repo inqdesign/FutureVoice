@@ -161,8 +161,60 @@ struct DiscoverSettingsSheet: View {
     }
 }
 
+/// The same "why are you learning" rows on their own, for the two places
+/// that are not Talk's page: Me → Profile and the tutor. One answer behind
+/// all of them (`LearningPurposeStore`).
+struct PurposesEditor: View {
+    @EnvironmentObject private var appState: AppState
+    @Environment(\.dismiss) private var dismiss
+    @State private var purposes: [LearningPurpose] = []
+    @State private var exam: ExamKind = .ielts
+    @State private var details = PurposeDetails()
+    @State private var loaded = false
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    PurposePickerRows(purposes: $purposes, details: $details, exam: $exam,
+                                      language: appState.targetLanguage)
+                } footer: {
+                    Text(explain("Pick as many as you like. Talk's topics, your goals and your tutor follow them."))
+                }
+            }
+            .navigationTitle(explain("Why are you learning?"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    BarCloseButton(title: "Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Save") { save() }
+                        .fontWeight(.semibold)
+                }
+            }
+            .onAppear {
+                guard !loaded else { return }
+                purposes = LearningPurposeStore.purposes
+                exam = LearningPurposeStore.exam(for: appState.targetLanguage)
+                details = LearningPurposeStore.details
+                loaded = true
+            }
+        }
+    }
+
+    private func save() {
+        LearningPurposeStore.purposes = purposes
+        if purposes.contains(.exam) { LearningPurposeStore.setExam(exam, for: appState.targetLanguage) }
+        LearningPurposeStore.details = details
+        Analytics.capture("purposes_changed", ["count": purposes.count, "from": "editor"])
+        dismiss()
+    }
+}
+
 /// "Why are you learning?" — many answers, numbered in the order tapped.
-/// Setup asks it and Talk's settings change it; one set of rows for both.
+/// Setup asks it; Talk's settings, the profile and the tutor change it;
+/// one set of rows for all of them.
 ///
 /// An ACCORDION: picking a purpose that has more to say opens it right
 /// under its row — which exam, the role applied for, the job and the role

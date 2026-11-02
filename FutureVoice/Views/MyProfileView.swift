@@ -26,6 +26,10 @@ struct MyProfileView: View {
     @State private var editingProfile = false
     @State private var editingFuture = false
     @ObservedObject private var upcoming = UpcomingGoalStore.shared
+    @ObservedObject private var purposeModel = LearningPurposeModel.shared
+    @State private var editingPurposes = false
+    /// "Add your exam": a new goal opened on that kind.
+    @State private var addingKind: UpcomingGoal.Kind?
     /// The goal being edited; `addingGoal` opens an empty one.
     @State private var editingGoal: UpcomingGoal?
     @State private var addingGoal = false
@@ -42,6 +46,7 @@ struct MyProfileView: View {
     var body: some View {
         Form {
             profileSection
+            purposeSection
             upcomingSection
             futureSection
             publicSection
@@ -75,6 +80,12 @@ struct MyProfileView: View {
         }
         .sheet(isPresented: $addingGoal) {
             UpcomingGoalEditor(goal: nil, language: appState.targetLanguage).environmentObject(appState)
+        }
+        .sheet(item: $addingKind) { kind in
+            UpcomingGoalEditor(goal: nil, language: appState.targetLanguage, kind: kind).environmentObject(appState)
+        }
+        .sheet(isPresented: $editingPurposes) {
+            PurposesEditor().environmentObject(appState)
         }
         .confirmationDialog(
             explain("Take your intro out of the pool? Learners who already met your persona keep their own past talks."),
@@ -122,8 +133,42 @@ struct MyProfileView: View {
         }
     }
 
-    /// What their fluent self already does (`FutureGoal`). Only for them —
-    /// the public section below never reads it.
+    /// Onboarding's "why are you learning", the same answer Talk settings
+    /// and the tutor edit (`LearningPurposeStore`).
+    private var purposeSection: some View {
+        Section {
+            ForEach(purposeModel.purposes) { p in
+                Label {
+                    Text(p.title)
+                } icon: {
+                    Image(systemName: p.symbol)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 26, height: 26)
+                        .background(p.tint, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                }
+            }
+            Button(purposeModel.purposes.isEmpty ? explain("Choose") : explain("Change")) {
+                editingPurposes = true
+            }
+        } header: {
+            Text("Why are you learning?")
+        }
+    }
+
+    /// A purpose whose goal isn't on file yet — "Add your exam" opens the
+    /// editor on that kind. One row per kind, in the order the purposes
+    /// were picked.
+    private var missingGoalKinds: [UpcomingGoal.Kind] {
+        let have = Set(upcoming.active(language: appState.targetLanguage).map(\.kind))
+        var out: [UpcomingGoal.Kind] = []
+        for kind in purposeModel.purposes.compactMap(\.goalKinds.first)
+        where !have.contains(kind) && !out.contains(kind) {
+            out.append(kind)
+        }
+        return out
+    }
+
     /// What the learner is preparing for — an exam, an interview — with
     /// its date and place (`UpcomingGoal`). Past ones drop off the list.
     private var upcomingSection: some View {
@@ -131,6 +176,11 @@ struct MyProfileView: View {
             ForEach(upcoming.active(language: appState.targetLanguage)) { goal in
                 Button { editingGoal = goal } label: { UpcomingGoalRow(goal: goal) }
                     .buttonStyle(.plain)
+            }
+            ForEach(missingGoalKinds) { kind in
+                Button { addingKind = kind } label: {
+                    Label(kind.addPrompt, systemImage: "plus.circle")
+                }
             }
             Button(explain("Add a goal")) { addingGoal = true }
         } header: {
@@ -140,6 +190,8 @@ struct MyProfileView: View {
         }
     }
 
+    /// What their fluent self already does (`FutureGoal`). Only for them —
+    /// the public section below never reads it.
     private var futureSection: some View {
         Section {
             ForEach(persona?.futureGoals ?? []) { goal in

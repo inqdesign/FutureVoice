@@ -61,6 +61,18 @@ struct UpcomingGoal: Codable, Identifiable, Equatable {
             }
         }
 
+        /// The profile's row for a purpose with no goal of this kind yet.
+        var addPrompt: String {
+            switch self {
+            case .interview:    return explain("Add your interview")
+            case .exam:         return explain("Add your exam")
+            case .presentation: return explain("Add your presentation")
+            case .move:         return explain("Add your move")
+            case .trip:         return explain("Add your trip")
+            case .other:        return explain("Add a goal")
+            }
+        }
+
         /// The editor's example title — what kind of line belongs there.
         var titlePrompt: String {
             switch self {
@@ -190,10 +202,8 @@ final class UpcomingGoalStore: ObservableObject {
         list.append(g)
         write(list)
         // The goal is a case of a purpose: turn that purpose on, so Talk's
-        // chips and the routine know about it too.
-        if let p = g.kind.purpose, !LearningPurposeStore.purposes.contains(p) {
-            LearningPurposeStore.purposes.append(p)
-        }
+        // chips and the tutor know about it too.
+        LearningPurposeStore.cover(g.kind)
         Analytics.capture("upcoming_goal_saved", ["kind": g.kind.rawValue, "dated": g.date != nil])
     }
 

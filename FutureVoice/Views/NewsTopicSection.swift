@@ -114,6 +114,9 @@ struct DiscoverSection: View {
             DiscoverSettingsSheet()
                 .environmentObject(appState)
         }
+        .onReceive(NotificationCenter.default.publisher(for: LearningPurposeStore.didChange)) { _ in
+            purposesChanged()
+        }
         .onAppear {
             exam = LearningPurposeStore.exam(for: appState.targetLanguage)
             if !tabResolved || !chips.contains(tab) {
@@ -706,12 +709,18 @@ struct DiscoverSection: View {
     /// Settings closed: the chips may have changed (stay on the chip if it
     /// is still there, else the new first one), the exam, the interests.
     private func settingsClosed() {
+        purposesChanged()
+        reloadNewsForInterests()
+    }
+
+    /// The purposes moved — here, in the profile, in the tutor, or on
+    /// another device — so the row follows without waiting for a reopen.
+    private func purposesChanged() {
         settingsVersion += 1
         if !chips.contains(tab) { tab = chips.first ?? .news }
         let newExam = LearningPurposeStore.exam(for: appState.targetLanguage)
         if newExam != exam { exam = newExam; examShift = 0 }
         fieldTopics = fieldTopics.filter { fieldContext($0.key) != nil }
-        reloadNewsForInterests()
     }
 
     /// After editing interests, refresh the news list against the new set.

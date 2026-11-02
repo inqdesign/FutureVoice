@@ -137,7 +137,11 @@ enum LearningPurposeStore {
             UserDefaults.standard.data(forKey: detailsKey)
                 .flatMap { try? JSONDecoder().decode(PurposeDetails.self, from: $0) } ?? PurposeDetails()
         }
-        set { UserDefaults.standard.set(try? JSONEncoder().encode(newValue), forKey: detailsKey) }
+        set {
+            guard newValue != details else { return }
+            UserDefaults.standard.set(try? JSONEncoder().encode(newValue), forKey: detailsKey)
+            changed()
+        }
     }
     private static let detailsKey = "futurevoice.purposeDetails"
 
@@ -147,7 +151,11 @@ enum LearningPurposeStore {
             (UserDefaults.standard.stringArray(forKey: key) ?? [])
                 .compactMap(LearningPurpose.init(rawValue:))
         }
-        set { UserDefaults.standard.set(newValue.map(\.rawValue), forKey: key) }
+        set {
+            guard newValue != purposes || UserDefaults.standard.object(forKey: key) == nil else { return }
+            UserDefaults.standard.set(newValue.map(\.rawValue), forKey: key)
+            changed()
+        }
     }
 
     /// The exam picked in the Exam chip's filter, for this target language.
@@ -158,7 +166,63 @@ enum LearningPurposeStore {
     }
 
     static func setExam(_ exam: ExamKind, for language: String) {
-        UserDefaults.standard.set(exam.rawValue, forKey: examKey + "." + LanguageCatalog.base(language))
+        let k = examKey + "." + LanguageCatalog.base(language)
+        guard UserDefaults.standard.string(forKey: k) != exam.rawValue else { return }
+        UserDefaults.standard.set(exam.rawValue, forKey: k)
+        changed()
+    }
+
+    /// Saving a goal turns on the purpose it is a case of — unless one the
+    /// learner already picked covers it (a presentation is "studies" for a
+    /// student, never a second purpose "work").
+    static func cover(_ kind: UpcomingGoal.Kind) {
+        let picked = purposes
+        guard let p = kind.purpose, !picked.contains(where: { $0.goalKinds.contains(kind) }) else { return }
+        purposes = picked + [p]
+    }
+
+    // MARK: One answer, everywhere (2026-11-01)
+
+    /// Onboarding's answer is the setting, and setup, Talk settings, the
+    /// profile and the tutor all edit the same one. Every write posts this,
+    /// so whatever is on screen redraws, and asks sync to carry it to the
+    /// learner's other devices (`LearningPurposeKind`).
+    static let didChange = Notification.Name("futurevoice.learningPurposesDidChange")
+
+    private static func changed() {
+        SyncEngine.noteChanged(.learningPurpose)
+        let post = { NotificationCenter.default.post(name: didChange, object: nil) }
+        if Thread.isMainThread { post() } else { DispatchQueue.main.async(execute: post) }
+    }
+
+    /// What sync carries: the purposes, what was written under them, and
+    /// the exam per target language. nil = never answered on this device.
+    struct State: Codable, Equatable {
+        var purposes: [String]
+        var details: PurposeDetails
+        var exams: [String: String]
+    }
+
+    static var syncState: State? {
+        let d = UserDefaults.standard
+        guard d.object(forKey: key) != nil else { return nil }
+        var exams: [String: String] = [:]
+        for lang in LanguageCatalog.targets.map({ LanguageCatalog.base($0.code) }) {
+            if let raw = d.string(forKey: examKey + "." + lang) { exams[lang] = raw }
+        }
+        return State(purposes: d.stringArray(forKey: key) ?? [], details: details, exams: exams)
+    }
+
+    /// A pulled answer from another device. Written straight to defaults —
+    /// the pull's own index already holds it, so nothing is pushed back.
+    static func adopt(_ state: State) {
+        let d = UserDefaults.standard
+        d.set(state.purposes.filter { LearningPurpose(rawValue: $0) != nil }, forKey: key)
+        d.set(try? JSONEncoder().encode(state.details), forKey: detailsKey)
+        for (lang, raw) in state.exams where ExamKind(rawValue: raw) != nil {
+            d.set(raw, forKey: examKey + "." + lang)
+        }
+        NotificationCenter.default.post(name: didChange, object: nil)
     }
 
     /// Talk's chips: each purpose's own chip in the order picked, then news
@@ -466,4 +530,60 @@ struct PurposeDetails: Codable, Equatable {
     var job = ""
     var role = ""
     var target = ""
+}
+
+extension LearningPurpose {
+    /// The purpose as a prompt reads it — English, with what the learner
+    /// wrote under it (`PurposeDetails`) and the exam they picked.
+    func promptLine(language: String) -> String {
+        let d = LearningPurposeStore.details
+        func with(_ base: String, _ parts: [String]) -> String {
+            let filled = parts.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+            return filled.isEmpty ? base : "\(base) (\(filled.joined(separator: ", ")))"
+        }
+        switch self {
+        case .start:  return "to start speaking at all"
+        case .hobby:  return "for fun"
+        case .exam:   return "for an exam (\(LearningPurposeStore.exam(for: language).name))"
+        case .study:  return with("for their studies", [d.school, d.subject])
+        case .job:    return with("for a job hunt", [d.target])
+        case .work:   return with("for their work", [d.job, d.role])
+        case .abroad: return "because they live abroad"
+        case .travel: return "for travel"
+        }
+    }
+
+    /// The upcoming goals this purpose is about, the first being the one
+    /// the profile offers to add. "Start speaking" and "for fun" have none.
+    var goalKinds: [UpcomingGoal.Kind] {
+        switch self {
+        case .exam:   return [.exam]
+        case .study:  return [.presentation]
+        case .job:    return [.interview]
+        case .work:   return [.presentation]
+        case .abroad: return [.move]
+        case .travel: return [.trip]
+        case .start, .hobby: return []
+        }
+    }
+}
+
+/// Holds a view to `LearningPurposeStore`: a screen that reads the purposes
+/// in its body observes this and redraws whenever any surface (or another
+/// device) changes them.
+@MainActor
+final class LearningPurposeModel: ObservableObject {
+    static let shared = LearningPurposeModel()
+    @Published private(set) var purposes = LearningPurposeStore.purposes
+    @Published private(set) var details = LearningPurposeStore.details
+
+    private init() {
+        NotificationCenter.default.addObserver(forName: LearningPurposeStore.didChange,
+                                               object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.purposes = LearningPurposeStore.purposes
+                self?.details = LearningPurposeStore.details
+            }
+        }
+    }
 }

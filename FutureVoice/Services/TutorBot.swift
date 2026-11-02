@@ -81,6 +81,8 @@ final class TutorBot: ObservableObject {
     @Published var chatOpen = false
     /// Call settings, opened over the chat by a tutor button.
     @Published var callSettingsOpen = false
+    /// "Why are you learning", opened over the chat by a tutor button.
+    @Published var purposesOpen = false
     @Published var quizOpen = false
     /// Today's picks beyond the routine (`TutorPicks`), and what they need.
     @Published private(set) var picks: [TutorPick] = []
@@ -457,6 +459,8 @@ final class TutorBot: ObservableObject {
             afterChatCloses { appState.openRoutinePage = true }
         case .settings:
             callSettingsOpen = true
+        case .purposes:
+            purposesOpen = true
         }
     }
 
@@ -706,6 +710,11 @@ final class TutorChat: ObservableObject {
             if !p.displayName.isEmpty { lines.append("Name: \(p.displayName)") }
             let about = [p.occupation, p.city, p.interests.joined(separator: ", ")].filter { !$0.isEmpty }
             if !about.isEmpty { lines.append("They told setup: " + about.joined(separator: " · ")) }
+        }
+        let purposes = LearningPurposeStore.purposes
+        if !purposes.isEmpty {
+            lines.append("Why they are learning (their own pick, in order): "
+                         + purposes.map { $0.promptLine(language: appState.targetLanguage) }.joined(separator: "; "))
         }
         let upcoming = UpcomingGoalStore.shared.active(language: appState.targetLanguage, now: now)
         if !upcoming.isEmpty {

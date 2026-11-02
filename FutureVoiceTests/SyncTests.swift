@@ -650,3 +650,48 @@ final class SyncTests: XCTestCase {
         XCTAssertTrue(relaunched.quotaNoticePending)
     }
 }
+
+// MARK: - Why the learner is learning
+
+extension SyncTests {
+    private var purposeKey: String { "futurevoice.learningPurposes" }
+
+    /// Both "devices" share one UserDefaults here, so each device's own
+    /// answer is set just before its pass.
+    func testPurposesReachTheOtherDeviceAndARemovalStays() async throws {
+        let saved = UserDefaults.standard.object(forKey: purposeKey)
+        defer { UserDefaults.standard.set(saved, forKey: purposeKey) }
+
+        let cloud = InMemorySyncTransport()
+        let a = device(cloud)
+        LearningPurposeStore.purposes = [.job, .exam]
+        try await a.engine.enable()
+
+        // B never answered setup: it gets A's answer.
+        UserDefaults.standard.removeObject(forKey: purposeKey)
+        let b = device(cloud)
+        try await b.engine.enable()
+        XCTAssertEqual(LearningPurposeStore.purposes, [.job, .exam])
+
+        // B takes the exam off. A, still holding both, must not put it back.
+        try await Task.sleep(for: .milliseconds(20))
+        LearningPurposeStore.purposes = [.job]
+        await sync(b)
+        UserDefaults.standard.set(["job", "exam"], forKey: purposeKey)
+        await sync(a)
+        XCTAssertEqual(LearningPurposeStore.purposes, [.job])
+    }
+
+    func testAGoalTurnsOnItsPurposeUnlessOneAlreadyCoversIt() {
+        let saved = UserDefaults.standard.object(forKey: purposeKey)
+        defer { UserDefaults.standard.set(saved, forKey: purposeKey) }
+
+        LearningPurposeStore.purposes = [.study]
+        LearningPurposeStore.cover(.presentation)
+        XCTAssertEqual(LearningPurposeStore.purposes, [.study], "a student's presentation is their studies")
+        LearningPurposeStore.cover(.interview)
+        XCTAssertEqual(LearningPurposeStore.purposes, [.study, .job])
+        LearningPurposeStore.cover(.other)
+        XCTAssertEqual(LearningPurposeStore.purposes, [.study, .job])
+    }
+}

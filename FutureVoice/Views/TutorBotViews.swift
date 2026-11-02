@@ -410,6 +410,7 @@ struct TutorChatView: View {
             TutorReadingSheet(reading: r).environmentObject(appState)
         }
         .sheet(isPresented: $bot.callSettingsOpen) { CallSettingsSheet() }
+        .sheet(isPresented: $bot.purposesOpen) { PurposesEditor().environmentObject(appState) }
         .sheet(isPresented: $addingGoal) {
             UpcomingGoalEditor(goal: nil, language: appState.targetLanguage).environmentObject(appState)
         }

@@ -61,8 +61,11 @@ struct UpcomingGoalEditor: View {
     /// The sources as opened, so a save knows whether to read them again.
     private let sourcesBefore: [UUID]
 
-    init(goal: UpcomingGoal?, language: String) {
-        let g = goal ?? UpcomingGoal(kind: .interview, title: "", language: language)
+    /// `kind` for a new goal: the one asked for (the profile's "Add your
+    /// exam"), else the first the learner's purposes point to.
+    init(goal: UpcomingGoal?, language: String, kind: UpcomingGoal.Kind? = nil) {
+        let start = kind ?? LearningPurposeStore.purposes.lazy.compactMap(\.goalKinds.first).first ?? .interview
+        let g = goal ?? UpcomingGoal(kind: start, title: "", language: language)
         _goal = State(initialValue: g)
         _hasDate = State(initialValue: g.date != nil)
         isNew = goal == nil

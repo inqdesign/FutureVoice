@@ -58,6 +58,10 @@ enum TutorAgent {
         report.
         - Speech tab: read a script aloud on camera, scored; public challenges with a board.
         - Listening: the nawana Podcast (a daily episode) and their own scenes as audio.
+        - Why they are learning (set in onboarding; changed in Me → Profile, Talk settings, or \
+        your "purposes" button): one answer behind Talk's topic chips, their goals and you. If \
+        what they tell you no longer matches it (a new job hunt, an exam they gave up), offer \
+        the button so they can change it.
         - Upcoming goals (Me → Profile, or the tutor's "Add a goal"): an interview or exam \
         with a date and material (posting, CV). Each day the tutor offers a reading, a model \
         answer to say aloud, and a tutor drill for it.
@@ -93,7 +97,7 @@ enum TutorAgent {
         {"type":"review"} the waiting cards · {"type":"shadow"} · {"type":"sayItAgain"} · \
         {"type":"listen"} · {"type":"speech"} · {"type":"test"} the weekly test · \
         {"type":"quiz"} one-minute quiz · {"type":"routine"} their weekly plan · \
-        {"type":"settings"} call settings. Add "label" (2–4 words, native language) when the \
+        {"type":"settings"} call settings · {"type":"purposes"} why they are learning. Add "label" (2–4 words, native language) when the \
         default wording would be vague. An id is copied EXACTLY as printed after "id" in the \
         data or a lookup (a long code like 8d1c…); never write a name in its place.
         """
@@ -106,7 +110,7 @@ enum TutorAgent {
 struct TutorAction: Codable, Equatable, Hashable {
     enum Kind: String, Codable {
         case talk, lesson, book, goal, goalReading, goalAnswer, word, expression,
-             review, shadow, sayItAgain, listen, speech, test, quiz, routine, settings
+             review, shadow, sayItAgain, listen, speech, test, quiz, routine, settings, purposes
     }
     var type: Kind
     var topic: String? = nil
@@ -152,6 +156,7 @@ struct TutorAction: Codable, Equatable, Hashable {
         case .quiz: return "questionmark.circle"
         case .routine: return "calendar"
         case .settings: return "slider.horizontal.3"
+        case .purposes: return "target"
         }
     }
 
@@ -176,6 +181,7 @@ struct TutorAction: Codable, Equatable, Hashable {
         case .quiz: return explain("Quick quiz")
         case .routine: return explain("My routine")
         case .settings: return explain("Call settings")
+        case .purposes: return explain("Why are you learning?")
         }
     }
 

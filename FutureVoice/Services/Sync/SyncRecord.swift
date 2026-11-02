@@ -44,6 +44,10 @@ enum SyncKind: String, Codable, CaseIterable, Hashable {
     /// Upcoming goals (`UpcomingGoalStore`). An older build can't name this
     /// kind and skips the record, so no schema bump.
     case upcomingGoal
+    /// Why the learner is learning (`LearningPurposeStore`): one record, so
+    /// onboarding's answer and every later edit reach the other devices.
+    /// An older build can't name this kind and skips it, so no schema bump.
+    case learningPurpose
     // Blobs — files carried as assets, keyed by filename.
     case blobTurn
     case blobRecording
@@ -76,7 +80,7 @@ enum SyncKind: String, Codable, CaseIterable, Hashable {
              .speechScript, .speechTake:
             return true
         case .practiceDay, .talkDay, .usageDay, .persona, .personaNote, .profile,
-             .counterpart, .dayCard, .defaults, .upcomingGoal,
+             .counterpart, .dayCard, .defaults, .upcomingGoal, .learningPurpose,
              .blobTurn, .blobRecording, .blobDayCard, .blobAvatar, .blobVoiceSample,
              .blobSpeechAudio, .blobSpeechVideo:
             return false

@@ -70,6 +70,7 @@ enum SyncKindRegistry {
                                 mergeRule: SyncMerge.lww,
                                 afterWrite: { _ in UpcomingGoalStore.shared.reload() }),
         ProfileKind(),
+        LearningPurposeKind(),
         counterpartKind,
         DefaultsKind(),
         BlobKind(kind: .blobTurn, directory: SyncFiles.documents.appendingPathComponent("TurnAudio", isDirectory: true)),
@@ -497,6 +498,33 @@ struct ProfileKind: SyncKindHandler {
     func write(_ items: [String: SyncItem], lang: String?) throws {
         let list = items.values.compactMap { try? SyncCanonical.decode(LearnerProfile.self, from: $0.payload) }
         try SyncFiles.write(list, to: url, encoder: SyncFiles.storeEncoder)
+    }
+}
+
+// MARK: - Why the learner is learning
+
+/// One item, last writer wins: a purpose taken off on the tablet stays off
+/// on the phone. A union would bring it back on every pass.
+struct LearningPurposeKind: SyncKindHandler {
+    let kind: SyncKind = .learningPurpose
+    static let key = "state"
+
+    func read(lang: String?) -> SyncSnapshot? {
+        guard let state = LearningPurposeStore.syncState,
+              let data = try? SyncCanonical.encode(state) else { return [:] }
+        return [Self.key: data]
+    }
+
+    func merge(local: SyncSide?, remote: SyncSide) -> Data? {
+        SyncMerge.lww(local, remote)
+    }
+
+    @MainActor
+    func write(_ items: [String: SyncItem], lang: String?) throws {
+        guard let item = items[Self.key],
+              let state = try? SyncCanonical.decode(LearningPurposeStore.State.self, from: item.payload)
+        else { return }
+        LearningPurposeStore.adopt(state)
     }
 }
 
