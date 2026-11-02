@@ -338,6 +338,9 @@ class RealtimeTalkClient(private val context: Context) {
      *  and how much mic audio went up as echo-gate zeros, for
      *  `talk_rt_session` (iOS 2026-10-27). */
     private val linesByRoute = mutableMapOf<String, Int>()
+    /** Tutor mode was on at some point on this connection — set by the call
+     *  screen, read only for `talk_rt_session`'s `tutor` field (iOS 2026-11-02). */
+    @Volatile var tutorCall = false
     @Volatile private var zeroSeconds = 0.0
     private var bargeVoiced = 0.0
     private var bargeQuiet = 0.0
@@ -976,6 +979,7 @@ class RealtimeTalkClient(private val context: Context) {
             "voice_samples" to voice.size.toString(),
             "warnings" to num("warnings").toString(),
             "lines" to turnsThisCall.toString(),
+            "tutor" to if (tutorCall) "on" else "off",
             // Turn-taking evidence: how often the fluent self talked over the
             // learner, how often the hold window caught a continuation, and
             // how long this learner's own mid-thought pauses ran.

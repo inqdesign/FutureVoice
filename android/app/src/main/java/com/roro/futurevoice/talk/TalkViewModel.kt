@@ -648,7 +648,10 @@ class TalkViewModel(context: Context) : ViewModel() {
         com.roro.futurevoice.core.Analytics.capture("conversation_started", mapOf(
             "origin" to when { config.scenarioId != null -> "scenario"; config.newsFacts.isNotEmpty() -> "news"; config.cast != null -> "person"; else -> "free" },
             "entry" to (if (config.resume != null) TalkEntry.RESUME else config.entry),
-            "language" to config.targetLanguage, "realtime" to true, "resumed" to (config.resume != null)))
+            "language" to config.targetLanguage, "realtime" to true, "resumed" to (config.resume != null),
+            // This call, not the setting: the tutor bot opens a tutored call
+            // with the setting off.
+            "tutor" to if (tutorThisCall) "on" else "off"))
         val freeTalk = config.topic.isBlank() && config.cast == null && config.scenarioId == null
         callJob = viewModelScope.launch {
             try {
@@ -872,6 +875,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         val token = auth.accessToken()
         // A cast (Find people) speaks in its preset voice; the fluent self in
         // the learner's own clone. Ownership is enforced by the gateway.
+        realtime.tutorCall = tutorWasOn || tutorThisCall
         realtime.connect(
             token = token,
             // A preset slot speaks in the target language's own voice.
@@ -1728,7 +1732,7 @@ class TalkViewModel(context: Context) : ViewModel() {
     fun setTutorMode(on: Boolean) {
         if (on == tutorThisCall) return
         tutorThisCall = on
-        if (on) tutorWasOn = true
+        if (on) { tutorWasOn = true; realtime.tutorCall = true }
         _state.update { it.copy(tutorOn = on) }
         val build = promptForTutor ?: return   // not built yet: it reads tutorThisCall
         if (REALTIME) {
