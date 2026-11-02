@@ -478,6 +478,15 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// flight (the gateway hears `barge` a round trip later) is dropped
     /// until the next line starts.
     private var droppingCutLine = false
+    /// Chunks of the streamed line in progress arrived while the engine was
+    /// down (a rebuild's stop → settle → build gap), or the rebuild cut it
+    /// mid-line. They were recorded but never played: the gateway's greeting
+    /// landed exactly in that gap when earbuds were still moving onto HFP, so
+    /// its text came up and its voice started a second late or not at all
+    /// (device log 2026-11-02). The rebuilt engine plays the line again from
+    /// its first byte (`buildGraph`), or whole if it already ended
+    /// (`audio_end`).
+    private var lineMissedWhileDown = false
     private var bargeQuiet: Double = 0
     private var openerIsAudible: Bool {
         guard let inAir = openerInAir else { return false }
@@ -527,6 +536,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         localOpener = nil
         openerInAir = nil
         replyInAir = nil
+        lineMissedWhileDown = false
         earphoneRemoved = false
         playedBuffers = 0
         replyBytesReceived = 0
@@ -585,6 +595,12 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             // The slow half off the main thread — see `prepareAudio`. A
             // failure here falls through to the inline build below, which
             // either succeeds or takes the usual retry.
+            // Not longer than 2 s: earbuds coming off music did NOT engage HFP
+            // during a 3.5 s wait either (device log 2026-11-02, in=none the
+            // whole time) — they engaged only after the speaker fallback, and
+            // the route event that follows rebuilds the stack. A longer wait
+            // is pure delay; the greeting that lands in that rebuild is
+            // replayed instead (`lineMissedWhileDown`).
             let prepared = try? await Task.detached(priority: .userInitiated) {
                 try Self.prepareAudio(hfpGrace: 2.0)
             }.value
@@ -1403,7 +1419,19 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             case .idle, .connecting, .failed: break
             default: playLocalOpener()
             }
+        } else if lineMissedWhileDown, state == .speaking, replyContext != nil,
+                  !droppingCutLine, !replyPCM.isEmpty {
+            // A streamed line that the gap swallowed (see
+            // `lineMissedWhileDown`): play what has arrived so far, from its
+            // first byte, and the rest follows on the same queue.
+            let backlog = replyPCM
+            replyPCM = Data()
+            replyBytesReceived -= backlog.count
+            Self.step("reply: \(Int(Double(backlog.count / 2) / replySampleRate * 1000))ms "
+                + "arrived while the audio was down — playing it from the start")
+            playReplyChunk(backlog)
         }
+        lineMissedWhileDown = false
     }
 
     /// Rebuild the audio stack when the route changes under the call.
@@ -1898,6 +1926,10 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             // Its chunks die with the player; play the whole line again.
             localOpener = cut
             Self.step("reply: cut by a rebuild — replaying it on the new engine")
+        } else if !endingCall, state == .speaking, replyContext != nil, !droppingCutLine {
+            // Still streaming: what played on this engine dies with its
+            // player, so the rebuilt one starts the line over (`buildGraph`).
+            lineMissedWhileDown = true
         }
         openerInAir = nil
         replyInAir = nil
@@ -2247,6 +2279,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         case "audio_start":
             Self.step("reply audio starting")
             droppingCutLine = false
+            lineMissedWhileDown = false
             openerInAir = nil
             streamLevel = AudioLoudness.StreamingLevelEstimator()
             replyPCM = Data()
@@ -2319,6 +2352,29 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             // flipping here put the You bubble up while the fluent self was
             // still mid-sentence, or (with a long buffer) confusingly late.
             serverAudioEnded = true
+            // The whole line arrived while the engine was down: nothing of it
+            // was played. Hand it over as usual, then queue it whole for the
+            // rebuilt engine, which plays it as a replay (`buildGraph`) —
+            // instead of flipping to listening over a line nobody heard.
+            if lineMissedWhileDown, !engineRunning, !droppingCutLine,
+               state == .speaking, let context = replyContext,
+               let buffer = Self.playbackBuffer(pcm: replyPCM, rate: replySampleRate, gain: 1),
+               let samples = buffer.floatChannelData?[0] {
+                let frames = Int(buffer.frameLength)
+                updateStreamGain(samples: samples, count: frames)
+                if streamGain != 1 {
+                    for i in 0..<frames {
+                        samples[i] = max(-0.985, min(0.985, samples[i] * streamGain))
+                    }
+                }
+                let text = replyText
+                handOverReply()
+                localOpener = LocalOpener(text: text, buffer: buffer, rate: replySampleRate,
+                                          context: context, handedOver: true)
+                lineMissedWhileDown = false
+                Self.step("reply: arrived whole while the audio was down — playing it on the new engine")
+                break
+            }
             if pendingBuffers == 0, state == .speaking { state = .listening }
             handOverReply()
             // Close the gate only when the SPEAKER has finished — "sent" is
@@ -2791,7 +2847,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         // the graph can take.
         replyPCM.append(data)
         replyBytesReceived += data.count
-        guard engineRunning else { return }
+        guard engineRunning else { lineMissedWhileDown = true; return }
         // Schedule in EXACTLY the format the node is connected with. A
         // mismatch is an uncatchable ObjC exception, so a chunk that arrives
         // before `audio_start` re-wired the graph is dropped, not risked.
