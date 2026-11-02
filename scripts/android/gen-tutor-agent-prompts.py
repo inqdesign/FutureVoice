@@ -46,9 +46,9 @@ pinned = {"TutorChat.context": (func_body(bot, "context", bot.index("final class
 for name, body in tools.items():
     pinned[f"TutorTools.{name}"] = (body, f"PIN_{name.upper()}")
 FINGERPRINTS = {
-    "TutorChat.context": "1be580576a42",
+    "TutorChat.context": "3cff0fa71a5b",
     "TutorChat.ask": "7291fe3a7d88",
-    "TutorAction.title": "05873d872112",
+    "TutorAction.title": "aeb288861665",
     "TutorAction.isValid": "2e79b08b3006",
     "TutorTools.progressLine": "05daf3e31ad4",
     "TutorTools.run": "121e26343355",
