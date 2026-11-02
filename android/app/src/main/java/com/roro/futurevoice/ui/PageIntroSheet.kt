@@ -99,6 +99,7 @@ import com.roro.futurevoice.ui.brand.ContinuousShape
 import com.roro.futurevoice.ui.brand.Futureself
 import com.roro.futurevoice.ui.brand.FutureselfMode
 import com.roro.futurevoice.ui.brand.FutureselfTheme
+import com.roro.futurevoice.ui.brand.FitButtonLabel
 import com.roro.futurevoice.ui.brand.IosButton
 import com.roro.futurevoice.ui.brand.IosOutlinedButton
 import kotlinx.coroutines.delay
@@ -268,8 +269,10 @@ fun PageIntroContent(page: Page, initialStep: Int = 0, onDismiss: () -> Unit) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (!isLast) {
                     IosOutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.guide_maybe_later), fontWeight = FontWeight.SemiBold,
-                            maxLines = 1)
+                        // One line that shrinks: "나중에 볼게요" wrapped at its space,
+                        // and the first line ("나중에") sat left in the button.
+                        FitButtonLabel(stringResource(R.string.guide_maybe_later),
+                            MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold))
                     }
                 }
                 IosButton(
@@ -279,8 +282,8 @@ fun PageIntroContent(page: Page, initialStep: Int = 0, onDismiss: () -> Unit) {
                     },
                     modifier = Modifier.weight(1f),
                 ) {
-                    Text(stringResource(if (isLast) R.string.guide_lets_go else R.string.guide_next),
-                        fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    FitButtonLabel(stringResource(if (isLast) R.string.guide_lets_go else R.string.guide_next),
+                        MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold))
                 }
             }
             Text(stringResource(R.string.guide_you_can_see_these_again_anytime),
