@@ -186,11 +186,16 @@
     <!-- "Add shadowing next. Saying the fluent lines in your own voice trains the rhythm talking alone doesn't." -->
     <string name="add_shadowing_next_saying_the_fluent_lines_in_your_own_voice_092c7b">"Nimm als Nächstes Nachsprechen dazu. Die flüssigen Sätze mit deiner eigenen Stimme zu sprechen, trainiert den Rhythmus, den Reden allein nicht bringt."</string>
     <string name="add_the_role_you_re_applying_for_i_ll_ask_its_questions">"Trag die Stelle ein, auf die du dich bewirbst – dann kommen ihre Fragen"</string>
+    <string name="add_your_exam">"Prüfung hinzufügen"</string>
+    <string name="add_your_interview">"Vorstellungsgespräch hinzufügen"</string>
     <string name="add_your_job_and_role_for_topics_from_your_work">"Trag deinen Job und deine Rolle ein, dann kommen Themen aus deiner Arbeit"</string>
+    <string name="add_your_move">"Umzug hinzufügen"</string>
     <string name="add_your_own">"Eigenes Skript mitbringen"</string>
     <string name="add_your_own_comma_separated">"Eigene hinzufügen (durch Komma getrennt)"</string>
     <string name="add_your_own_script">"Eigenes Skript hinzufügen"</string>
+    <string name="add_your_presentation">"Präsentation hinzufügen"</string>
     <string name="add_your_school_and_subject_for_topics_from_your_field">"Trag Hochschule und Fach ein, dann kommen Themen aus deinem Gebiet"</string>
+    <string name="add_your_trip">"Reise hinzufügen"</string>
     <string name="advanced_i_express_myself_fluently_and_precisely">"Fortgeschritten — ich drücke mich fließend und präzise aus"</string>
     <string name="after_each_take">"Das bekommst du nach der Aufnahme"</string>
     <!-- "After each thing your future self says, you see a way to answer. Sometimes it uses a word you're studying, and your most common mistake becomes the call's focus." -->
@@ -2117,6 +2122,8 @@
     <string name="pick_a_type_like_an_explainer_a_person_or_the_news_then_a_to_08bd90">"Wähl eine Art (etwas erklären, eine Person vorstellen, Nachrichten …), ein Thema und eine Länge. Die KI schreibt ein Skript auf deinem Niveau und prüft die Fakten."</string>
     <string name="pick_an_area_to_go_one_step_deeper">"Wähl einen Bereich, um eine Stufe tiefer zu gehen."</string>
     <string name="pick_as_many_as_you_like">"Such dir so viele aus, wie du willst."</string>
+    <!-- "Pick as many as you like. Talk's topics, your goals and your tutor follow them." -->
+    <string name="pick_as_many_as_you_like_talk_s_topics_your_goals_and_your_t_6787f5">"Wähl so viele du willst. Die Themen unter Sprechen, deine Ziele und dein Tutor richten sich danach."</string>
     <!-- 'Pick as many as you like. The chips under Talk follow them in the order you picked, and what you write under one shapes its topics.' -->
     <string name="pick_as_many_as_you_like_the_chips_under_talk_follow_them_in_96d3b7">"Wähl so viele du willst. Die Chips unter Sprechen folgen ihnen in deiner Reihenfolge, und was du darunter schreibst, prägt ihre Themen."</string>
     <string name="pick_as_many_as_you_like_the_first_one_is_where_talk_opens">"Wähl so viele du willst. Mit dem ersten öffnet sich Sprechen."</string>

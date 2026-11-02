@@ -125,6 +125,8 @@ object TutorBot {
     var chatOpen by mutableStateOf(false)
     /** Call settings, opened over the chat by a tutor button. */
     var callSettingsOpen by mutableStateOf(false)
+    /** "Why are you learning", opened over the chat by a tutor button. */
+    var purposesOpen by mutableStateOf(false)
     var quizOpen by mutableStateOf(false)
     /** Today's picks beyond the routine ([TutorPicks]), and what they need. */
     var picks by mutableStateOf<List<TutorPick>>(emptyList())
@@ -508,6 +510,7 @@ object TutorBot {
                 DeepLinkInbox.widgetRoute.value = DeepLinkInbox.WidgetRoute.Routine(null)
             }
             TutorAction.Kind.SETTINGS -> callSettingsOpen = true
+            TutorAction.Kind.PURPOSES -> purposesOpen = true
         }
     }
 
@@ -725,6 +728,11 @@ object TutorChat {
             val about = listOf(persona.occupation, persona.city, persona.interests.joinToString(", "))
                 .filter { it.isNotEmpty() }
             if (about.isNotEmpty()) lines += "They told setup: " + about.joinToString(" · ")
+        }
+        val purposes = com.roro.futurevoice.data.LearningPurposeStore.purposes(c)
+        if (purposes.isNotEmpty()) {
+            lines += "Why they are learning (their own pick, in order): " +
+                purposes.joinToString("; ") { it.promptLine(c, targetLanguage) }
         }
         val upcoming = com.roro.futurevoice.data.UpcomingGoalStore.active(c, targetLanguage, now)
         if (upcoming.isNotEmpty()) {

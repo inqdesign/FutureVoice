@@ -61,9 +61,56 @@ import com.roro.futurevoice.ui.brand.Symbols
 import com.roro.futurevoice.ui.brand.iosFill
 
 /**
+ * The same "why are you learning" rows on their own, for the two places that
+ * are not Talk's page: Me → Profile and the tutor (iOS `PurposesEditor`). One
+ * answer behind all of them ([LearningPurposeStore]). Nothing is written
+ * until Save.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PurposesEditor(language: String, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    var purposes by remember { mutableStateOf(LearningPurposeStore.purposes(context)) }
+    var exam by remember { mutableStateOf(LearningPurposeStore.exam(context, language)) }
+    var details by remember { mutableStateOf(LearningPurposeStore.details(context)) }
+
+    fun save() {
+        LearningPurposeStore.setPurposes(context, purposes)
+        if (LearningPurpose.EXAM in purposes) LearningPurposeStore.setExam(context, exam, language)
+        LearningPurposeStore.setDetails(context, details)
+        com.roro.futurevoice.core.Analytics.capture("purposes_changed",
+            mapOf("count" to purposes.size, "from" to "editor"))
+        onDismiss()
+    }
+
+    ModalBottomSheet(
+        sheetState = com.roro.futurevoice.ui.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        onDismissRequest = onDismiss,
+        containerColor = AppSurfaces.ground,
+    ) {
+        SheetHeader(
+            title = stringResource(R.string.why_are_you_learning),
+            leading = { IosGlassTextButton(stringResource(R.string.cancel), onClick = onDismiss) },
+            trailing = { IosGlassTextButton(stringResource(R.string.save), onClick = { save() }, bold = true) },
+            modifier = Modifier.padding(horizontal = 16.dp).padding(top = 4.dp, bottom = 8.dp),
+        )
+        Column(Modifier.fillMaxWidth().bottomBarInsets().verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp).padding(bottom = 28.dp)) {
+            FormSection(
+                header = null,
+                footer = stringResource(R.string.pick_as_many_as_you_like_talk_s_topics_your_goals_and_your_t_6787f5),
+            ) {
+                PurposePickerRows(purposes, { purposes = it }, details, { details = it }, exam, { exam = it },
+                    language)
+            }
+        }
+    }
+}
+
+/**
  * "Why are you learning?" — many answers, numbered in the order tapped
- * (iOS `PurposePickerRows`). Setup asks it and Talk's settings change it;
- * one set of rows for both. Drawn INSIDE a card.
+ * (iOS `PurposePickerRows`). Setup asks it; Talk's settings, the profile and
+ * the tutor change it; one set of rows for all of them. Drawn INSIDE a card.
  *
  * An ACCORDION: picking a purpose that has more to say opens it right under
  * its row — which exam, the role applied for, the job and the role in it,

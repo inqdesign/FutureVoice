@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.UnfoldMore
+import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
@@ -42,6 +43,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -61,6 +63,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import com.roro.futurevoice.data.BriefAttachmentCache
+import com.roro.futurevoice.data.LearningPurposeStore
 import com.roro.futurevoice.data.ScenarioAttachmentReader
 import com.roro.futurevoice.talk.ScenarioBrief
 import kotlinx.coroutines.launch
@@ -139,14 +142,42 @@ fun UpcomingGoalsSection(targetLanguage: String) {
     val context = LocalContext.current
     var editing by remember { mutableStateOf<UpcomingGoal?>(null) }
     var adding by remember { mutableStateOf(false) }
+    /** "Add your exam": a new goal opened on that kind. */
+    var addingKind by remember { mutableStateOf<UpcomingGoal.Kind?>(null) }
     val goals = remember(UpcomingGoalStore.goals, targetLanguage) {
         UpcomingGoalStore.active(context, targetLanguage)
+    }
+    // The purposes redraw this from any surface (or another device).
+    val revision by com.roro.futurevoice.data.StoreEvents.revision.collectAsState()
+    val purposes = remember(revision) { LearningPurposeStore.purposes(context) }
+    /** A purpose whose goal isn't on file yet — "Add your exam" opens the
+     *  editor on that kind. One row per kind, in the order the purposes were
+     *  picked. */
+    val missingKinds = remember(goals, purposes) {
+        val have = goals.map { it.kind }.toSet()
+        val out = mutableListOf<UpcomingGoal.Kind>()
+        for (kind in purposes.mapNotNull { it.goalKinds.firstOrNull() }) {
+            if (kind !in have && kind !in out) out += kind
+        }
+        out
     }
     GroupedSectionHeader(stringResource(R.string.coming_up))
     GroupedCard {
         goals.forEach { goal ->
             UpcomingGoalRow(goal, Modifier.fillMaxWidth().clickable { editing = goal }
                 .padding(horizontal = 16.dp, vertical = 10.dp))
+            GroupedRowDivider(inset = false)
+        }
+        missingKinds.forEach { kind ->
+            Row(Modifier.fillMaxWidth().clickable { addingKind = kind }
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Icon(Icons.Outlined.AddCircleOutline, contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                Text(stringResource(kind.addPrompt), style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.primary)
+            }
             GroupedRowDivider(inset = false)
         }
         Text(stringResource(R.string.add_a_goal), style = MaterialTheme.typography.bodyLarge,
@@ -156,16 +187,28 @@ fun UpcomingGoalsSection(targetLanguage: String) {
     GroupedFooter(stringResource(R.string.an_exam_an_interview_a_move_your_tutor_prepares_you_for_it))
     editing?.let { g -> UpcomingGoalEditor(goal = g, language = targetLanguage, onDismiss = { editing = null }) }
     if (adding) UpcomingGoalEditor(goal = null, language = targetLanguage, onDismiss = { adding = false })
+    addingKind?.let { k ->
+        UpcomingGoalEditor(goal = null, language = targetLanguage, onDismiss = { addingKind = null }, kind = k)
+    }
 }
 
 /** Add or change one upcoming goal (iOS `UpcomingGoalEditor`). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UpcomingGoalEditor(goal: UpcomingGoal?, language: String, onDismiss: () -> Unit,
-                       onSaved: (UpcomingGoal?) -> Unit = {}) {
+                       onSaved: (UpcomingGoal?) -> Unit = {},
+                       /** For a new goal: the one asked for (the profile's
+                        *  "Add your exam"), else the first the learner's
+                        *  purposes point to. */
+                       kind: UpcomingGoal.Kind? = null) {
     val context = LocalContext.current
     val isNew = goal == null
-    val start = remember { goal ?: UpcomingGoal(kind = UpcomingGoal.Kind.INTERVIEW, title = "", language = language) }
+    val start = remember {
+        goal ?: UpcomingGoal(
+            kind = kind ?: LearningPurposeStore.purposes(context).firstNotNullOfOrNull { it.goalKinds.firstOrNull() }
+                ?: UpcomingGoal.Kind.INTERVIEW,
+            title = "", language = language)
+    }
     var draft by remember { mutableStateOf(start) }
     var hasDate by remember { mutableStateOf(start.date != null) }
     /** A date picked once survives the toggle being flipped off and on. */

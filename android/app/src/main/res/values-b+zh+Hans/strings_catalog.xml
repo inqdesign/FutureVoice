@@ -186,11 +186,16 @@
     <!-- "Add shadowing next. Saying the fluent lines in your own voice trains the rhythm talking alone doesn't." -->
     <string name="add_shadowing_next_saying_the_fluent_lines_in_your_own_voice_092c7b">"下一步加上跟读。用自己的声音跟着说流利的句子，能练出光靠对话练不到的节奏。"</string>
     <string name="add_the_role_you_re_applying_for_i_ll_ask_its_questions">"填写应聘的岗位，就会出这个岗位的面试题"</string>
+    <string name="add_your_exam">"添加考试"</string>
+    <string name="add_your_interview">"添加面试"</string>
     <string name="add_your_job_and_role_for_topics_from_your_work">"填写工作和职责，就会出贴合你工作的话题"</string>
+    <string name="add_your_move">"添加搬家"</string>
     <string name="add_your_own">"用自己的讲稿"</string>
     <string name="add_your_own_comma_separated">"自己添加（用逗号分隔）"</string>
     <string name="add_your_own_script">"添加我的讲稿"</string>
+    <string name="add_your_presentation">"添加汇报"</string>
     <string name="add_your_school_and_subject_for_topics_from_your_field">"填写学校和专业，就会出你所在领域的话题"</string>
+    <string name="add_your_trip">"添加旅行"</string>
     <string name="advanced_i_express_myself_fluently_and_precisely">"高级 · 能流利又精准地表达自己"</string>
     <string name="after_each_take">"录完你会得到这些"</string>
     <!-- "After each thing your future self says, you see a way to answer. Sometimes it uses a word you're studying, and your most common mistake becomes the call's focus." -->
@@ -2121,6 +2126,8 @@
     <string name="pick_a_type_like_an_explainer_a_person_or_the_news_then_a_to_08bd90">"选好类型（讲解、人物介绍、新闻等）、话题和长度，就会写出适合你水平的讲稿，内容也会先核实过。"</string>
     <string name="pick_an_area_to_go_one_step_deeper">"选一个领域，再往下一层。"</string>
     <string name="pick_as_many_as_you_like">"想选几个都可以。"</string>
+    <!-- "Pick as many as you like. Talk's topics, your goals and your tutor follow them." -->
+    <string name="pick_as_many_as_you_like_talk_s_topics_your_goals_and_your_t_6787f5">"可以多选。对话的话题、你的目标和家教都会照着这个答案来。"</string>
     <!-- 'Pick as many as you like. The chips under Talk follow them in the order you picked, and what you write under one shapes its topics.' -->
     <string name="pick_as_many_as_you_like_the_chips_under_talk_follow_them_in_96d3b7">"可以多选。对话页面的标签会按你选的顺序排列，下面填写的内容会用来生成该标签的话题。"</string>
     <string name="pick_as_many_as_you_like_the_first_one_is_where_talk_opens">"可以多选。第一个选的会排在对话的最前面。"</string>

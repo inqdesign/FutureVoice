@@ -2,6 +2,9 @@ package com.roro.futurevoice
 
 import com.roro.futurevoice.sync.ArrayKind
 import com.roro.futurevoice.sync.BlobKind
+import com.roro.futurevoice.sync.LearningPurposeKind
+import com.roro.futurevoice.data.LearningPurposeStore
+import com.roro.futurevoice.data.PurposeDetails
 import com.roro.futurevoice.sync.InMemorySyncTransport
 import com.roro.futurevoice.sync.StringListKind
 import com.roro.futurevoice.sync.SyncCascade
@@ -65,7 +68,10 @@ class SyncEngineTest {
                 if (x["box"]!!.jsonPrimitive.int >= y["box"]!!.jsonPrimitive.int) x else y }) })
         val studying = StringListKind(SyncKind.VOCAB_STUDYING, "vocab_studying.json", paths, true, SyncMerge::lww)
         val turns = BlobKind(SyncKind.BLOB_TURN, { File(root, "turn-audio") })
-        private val list: List<SyncKindHandler> = listOf(sessions, drills, studying, turns)
+        /** This device's "why are you learning"; null = never answered. */
+        var purposes: LearningPurposeStore.State? = null
+        val purposeKind = LearningPurposeKind(state = { purposes }, adopt = { purposes = it })
+        private val list: List<SyncKindHandler> = listOf(sessions, drills, studying, turns, purposeKind)
         override fun all() = list
         override fun handler(kind: SyncKind) = list.firstOrNull { it.kind == kind }
         override fun enrolledLanguages() = listOf("en")
@@ -173,6 +179,28 @@ class SyncEngineTest {
         tablet.write("vocab_studying.json", """["chore"]""")
         b.syncAndWait(null); a.syncAndWait(null)
         assertEquals(listOf("chore"), phone.read("vocab_studying.json").map { it.jsonPrimitive.content })
+    }
+
+    // iOS `SyncTests.testPurposesReachTheOtherDeviceAndARemovalStays`.
+    @Test
+    fun purposesReachTheOtherDeviceAndARemovalStays() = runBlocking {
+        fun answer(vararg raw: String) = LearningPurposeStore.State(raw.toList(), PurposeDetails(), emptyMap())
+        val (phone, a) = device()
+        phone.purposes = answer("job", "exam")
+        a.enable()
+
+        // The tablet never answered setup: it gets the phone's answer.
+        val (tablet, b) = device()
+        b.enable()
+        assertEquals(listOf("job", "exam"), tablet.purposes?.purposes)
+
+        // The tablet takes the exam off. The phone, still holding both, must
+        // not put it back.
+        Thread.sleep(20)
+        tablet.purposes = answer("job")
+        b.syncAndWait(null)
+        a.syncAndWait(null)
+        assertEquals(listOf("job"), phone.purposes?.purposes)
     }
 
     @Test

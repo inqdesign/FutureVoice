@@ -82,6 +82,7 @@ data class TutorAction(
         @SerialName("quiz") QUIZ("quiz"),
         @SerialName("routine") ROUTINE("routine"),
         @SerialName("settings") SETTINGS("settings"),
+        @SerialName("purposes") PURPOSES("purposes"),
     }
 
     companion object {
@@ -118,6 +119,7 @@ data class TutorAction(
             Kind.QUIZ -> res.getString(R.string.quick_quiz)
             Kind.ROUTINE -> res.getString(R.string.my_routine)
             Kind.SETTINGS -> res.getString(R.string.call_settings)
+            Kind.PURPOSES -> res.getString(R.string.why_are_you_learning)
         }
     }
 

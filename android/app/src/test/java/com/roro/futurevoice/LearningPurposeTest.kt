@@ -10,6 +10,7 @@ import com.roro.futurevoice.data.PurposeDetails
 import com.roro.futurevoice.data.RoutineRecipe
 import com.roro.futurevoice.data.StarterSituation
 import com.roro.futurevoice.data.StudyPlan
+import com.roro.futurevoice.data.UpcomingGoal
 import com.roro.futurevoice.net.PurposeTopicClient
 import com.roro.futurevoice.talk.Scenario
 import com.roro.futurevoice.talk.SuggestedTopic
@@ -21,6 +22,17 @@ import org.junit.Test
 /** "Why are you learning?" (iOS `LearningPurpose`, `8cdbb6db`): the chips it
  *  puts on Talk, the week it suggests, and what a purpose topic tells the call. */
 class LearningPurposeTest {
+
+    // iOS `SyncTests.testAGoalTurnsOnItsPurposeUnlessOneAlreadyCoversIt`.
+    @Test fun aGoalTurnsOnItsPurposeUnlessOneAlreadyCoversIt() {
+        var picked = listOf(LearningPurpose.STUDY)
+        picked = LearningPurposeStore.covering(picked, UpcomingGoal.Kind.PRESENTATION)
+        assertEquals("a student's presentation is their studies", listOf(LearningPurpose.STUDY), picked)
+        picked = LearningPurposeStore.covering(picked, UpcomingGoal.Kind.INTERVIEW)
+        assertEquals(listOf(LearningPurpose.STUDY, LearningPurpose.JOB), picked)
+        picked = LearningPurposeStore.covering(picked, UpcomingGoal.Kind.OTHER)
+        assertEquals(listOf(LearningPurpose.STUDY, LearningPurpose.JOB), picked)
+    }
 
     @Test fun noAnswerKeepsTheOldRow() {
         assertEquals(listOf(DiscoverChip.NEWS, DiscoverChip.EVERYDAY, DiscoverChip.SCENARIOS),

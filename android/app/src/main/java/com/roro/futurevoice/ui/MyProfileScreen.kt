@@ -27,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -99,6 +100,8 @@ fun MyProfileScreen(
     var editingIntro by rememberSaveable { mutableStateOf(false) }
     /** Me → Profile → My future (iOS `FutureGoalsEditor` sheet, 3d655c8b). */
     var editingFuture by rememberSaveable { mutableStateOf(false) }
+    /** "Why are you learning?" (iOS `PurposesEditor` sheet). */
+    var editingPurposes by rememberSaveable { mutableStateOf(false) }
     val app: AppViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
         factory = androidx.lifecycle.viewmodel.viewModelFactory {
             initializer { AppViewModel(context.applicationContext) }
@@ -181,6 +184,7 @@ fun MyProfileScreen(
                     .padding(horizontal = 16.dp).padding(bottom = 32.dp),
             ) {
                 ProfileSection(persona, onEditProfile)
+                PurposeSection { editingPurposes = true }
                 // What they are preparing for (iOS `upcomingSection`, a9fbef92).
                 UpcomingGoalsSection(targetLanguage)
                 FutureSection(persona) { editingFuture = true }
@@ -196,6 +200,9 @@ fun MyProfileScreen(
                     onTakeDown = { confirmingWithdraw = true },
                 )
             }
+        }
+        if (editingPurposes) {
+            PurposesEditor(language = targetLanguage, onDismiss = { editingPurposes = false })
         }
         if (editingFuture) {
             FutureGoalsEditorSheet(persona = persona, onSave = app::savePersona,
@@ -255,6 +262,45 @@ private fun ProfileSection(persona: UserPersona?, onEdit: () -> Unit) {
             Text(stringResource(R.string.edit), style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.primary)
         }
+    }
+}
+
+/** Onboarding's "why are you learning", the same answer Talk settings and
+ *  the tutor edit ([com.roro.futurevoice.data.LearningPurposeStore], iOS
+ *  `purposeSection`). */
+@Composable
+private fun PurposeSection(onEdit: () -> Unit) {
+    val context = LocalContext.current
+    // Redraws whenever any surface (or another device) changes them.
+    val revision by com.roro.futurevoice.data.StoreEvents.revision.collectAsState()
+    val purposes = remember(revision) { com.roro.futurevoice.data.LearningPurposeStore.purposes(context) }
+    GroupedSectionHeader(stringResource(R.string.why_are_you_learning))
+    GroupedCard {
+        purposes.forEach { p ->
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                androidx.compose.foundation.layout.Box(
+                    Modifier.size(26.dp).background(Color(p.tint),
+                        androidx.compose.foundation.shape.RoundedCornerShape(6.dp)),
+                    contentAlignment = Alignment.Center) {
+                    Icon(Symbols.icon(p.symbol), contentDescription = null, tint = Color.White,
+                        modifier = Modifier.size(15.dp))
+                }
+                Text(stringResource(p.title), style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+            }
+            FormDivider(inset = 58.dp)
+        }
+        Text(
+            stringResource(if (purposes.isEmpty()) R.string.choose else R.string.change),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.fillMaxWidth().clickable(onClick = onEdit)
+                .padding(horizontal = 16.dp, vertical = 11.dp),
+        )
     }
 }
 

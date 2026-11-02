@@ -84,6 +84,38 @@ enum class LearningPurpose(val raw: String) {
         TRAVEL -> DiscoverChip.TRAVEL
     }
 
+    /** The purpose as a prompt reads it — English, with what the learner
+     *  wrote under it ([PurposeDetails]) and the exam they picked. */
+    fun promptLine(c: Context, language: String): String {
+        val d = LearningPurposeStore.details(c)
+        fun with(base: String, parts: List<String>): String {
+            val filled = parts.map { it.trim() }.filter { it.isNotEmpty() }
+            return if (filled.isEmpty()) base else "$base (${filled.joinToString(", ")})"
+        }
+        return when (this) {
+            START -> "to start speaking at all"
+            HOBBY -> "for fun"
+            EXAM -> "for an exam (${LearningPurposeStore.exam(c, language).examName})"
+            STUDY -> with("for their studies", listOf(d.school, d.subject))
+            JOB -> with("for a job hunt", listOf(d.target))
+            WORK -> with("for their work", listOf(d.job, d.role))
+            ABROAD -> "because they live abroad"
+            TRAVEL -> "for travel"
+        }
+    }
+
+    /** The upcoming goals this purpose is about, the first being the one
+     *  the profile offers to add. "Start speaking" and "for fun" have none. */
+    val goalKinds: List<UpcomingGoal.Kind> get() = when (this) {
+        EXAM -> listOf(UpcomingGoal.Kind.EXAM)
+        STUDY -> listOf(UpcomingGoal.Kind.PRESENTATION)
+        JOB -> listOf(UpcomingGoal.Kind.INTERVIEW)
+        WORK -> listOf(UpcomingGoal.Kind.PRESENTATION)
+        ABROAD -> listOf(UpcomingGoal.Kind.MOVE)
+        TRAVEL -> listOf(UpcomingGoal.Kind.TRIP)
+        START, HOBBY -> emptyList()
+    }
+
     companion object {
         fun from(raw: String): LearningPurpose? = entries.firstOrNull { it.raw == raw }
     }
@@ -144,7 +176,9 @@ object LearningPurposeStore {
         (p(c).getString(KEY, null) ?: "").split(',').mapNotNull { LearningPurpose.from(it) }
 
     fun setPurposes(c: Context, value: List<LearningPurpose>) {
+        if (value == purposes(c) && p(c).contains(KEY)) return
         p(c).edit().putString(KEY, value.joinToString(",") { it.raw }).apply()
+        changed()
     }
 
     /** Each optional; a filled one turns its chip's topics into topics of
@@ -154,7 +188,9 @@ object LearningPurposeStore {
         ?: PurposeDetails()
 
     fun setDetails(c: Context, value: PurposeDetails) {
+        if (value == details(c)) return
         p(c).edit().putString(DETAILS_KEY, StoreJson.json.encodeToString(PurposeDetails.serializer(), value)).apply()
+        changed()
     }
 
     fun routineApplied(c: Context): Boolean = p(c).getBoolean(ROUTINE_APPLIED_KEY, false)
@@ -168,7 +204,67 @@ object LearningPurposeStore {
     }
 
     fun setExam(c: Context, exam: ExamKind, language: String) {
-        p(c).edit().putString(EXAM_KEY + "." + base(language), exam.raw).apply()
+        val k = EXAM_KEY + "." + base(language)
+        if (p(c).getString(k, null) == exam.raw) return
+        p(c).edit().putString(k, exam.raw).apply()
+        changed()
+    }
+
+    /** Saving a goal turns on the purpose it is a case of — unless one the
+     *  learner already picked covers it (a presentation is "studies" for a
+     *  student, never a second purpose "work"). */
+    fun cover(c: Context, kind: UpcomingGoal.Kind) {
+        val picked = purposes(c)
+        val next = covering(picked, kind)
+        if (next != picked) setPurposes(c, next)
+    }
+
+    /** [cover]'s rule, without the store. */
+    fun covering(picked: List<LearningPurpose>, kind: UpcomingGoal.Kind): List<LearningPurpose> {
+        val p = kind.purpose ?: return picked
+        return if (picked.any { kind in it.goalKinds }) picked else picked + p
+    }
+
+    // MARK: One answer, everywhere (iOS 2026-11-01)
+
+    /** Onboarding's answer is the setting, and setup, Talk settings, the
+     *  profile and the tutor all edit the same one. Every write bumps the
+     *  store revision, so whatever is on screen redraws, and asks sync to
+     *  carry it to the learner's other devices (`LearningPurposeKind`). */
+    private fun changed() { StoreEvents.bump() }
+
+    /** What sync carries: the purposes, what was written under them, and
+     *  the exam per target language. null = never answered on this device. */
+    @Serializable
+    data class State(
+        val purposes: List<String>,
+        val details: PurposeDetails,
+        val exams: Map<String, String>,
+    )
+
+    fun syncState(c: Context): State? {
+        val d = p(c)
+        if (!d.contains(KEY)) return null
+        val exams = mutableMapOf<String, String>()
+        for (lang in LanguageCatalog.targets.map { base(it.code) }) {
+            d.getString(EXAM_KEY + "." + lang, null)?.let { exams[lang] = it }
+        }
+        val raw = (d.getString(KEY, null) ?: "").split(',').filter { it.isNotEmpty() }
+        return State(purposes = raw, details = details(c), exams = exams)
+    }
+
+    /** A pulled answer from another device. Written straight to the
+     *  preferences — the pull's own index already holds it, so nothing is
+     *  pushed back. */
+    fun adopt(c: Context, state: State) {
+        val e = p(c).edit()
+        e.putString(KEY, state.purposes.filter { LearningPurpose.from(it) != null }.joinToString(","))
+        e.putString(DETAILS_KEY, StoreJson.json.encodeToString(PurposeDetails.serializer(), state.details))
+        for ((lang, raw) in state.exams) {
+            if (ExamKind.entries.any { it.raw == raw }) e.putString(EXAM_KEY + "." + lang, raw)
+        }
+        e.apply()
+        StoreEvents.bump(fromSync = true)
     }
 
     /** Talk's chips: each purpose's own chip in the order picked, then news

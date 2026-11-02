@@ -186,11 +186,16 @@
     <!-- "Add shadowing next. Saying the fluent lines in your own voice trains the rhythm talking alone doesn't." -->
     <string name="add_shadowing_next_saying_the_fluent_lines_in_your_own_voice_092c7b">"次はシャドーイングを足してみて。流暢なセリフを自分の声でなぞると、トークだけでは身につかないリズムが鍛えられます。"</string>
     <string name="add_the_role_you_re_applying_for_i_ll_ask_its_questions">"応募する職種を書くと、その職種の面接質問を用意します"</string>
+    <string name="add_your_exam">"試験を追加"</string>
+    <string name="add_your_interview">"面接を追加"</string>
     <string name="add_your_job_and_role_for_topics_from_your_work">"仕事と役割を書くと、自分の仕事に合わせた話題を用意します"</string>
+    <string name="add_your_move">"引っ越しを追加"</string>
     <string name="add_your_own">"自分の原稿を使う"</string>
     <string name="add_your_own_comma_separated">"自分で追加（カンマ区切り）"</string>
     <string name="add_your_own_script">"自分の原稿を追加"</string>
+    <string name="add_your_presentation">"発表を追加"</string>
     <string name="add_your_school_and_subject_for_topics_from_your_field">"学校と専攻を書くと、自分の分野の話題を用意します"</string>
+    <string name="add_your_trip">"旅行を追加"</string>
     <string name="advanced_i_express_myself_fluently_and_precisely">"上級 · 流暢で正確に表現できる"</string>
     <string name="after_each_take">"録画が終わったら"</string>
     <!-- "After each thing your future self says, you see a way to answer. Sometimes it uses a word you're studying, and your most common mistake becomes the call's focus." -->
@@ -2121,6 +2126,8 @@
     <string name="pick_a_type_like_an_explainer_a_person_or_the_news_then_a_to_08bd90">"解説、人物紹介、ニュースなどの種類とテーマ、長さを選ぶと、今のレベルに合った原稿を書きます。事実確認も済んでいます。"</string>
     <string name="pick_an_area_to_go_one_step_deeper">"もう一段くわしくする領域を選んでください。"</string>
     <string name="pick_as_many_as_you_like">"好きなだけ選んでください。"</string>
+    <!-- "Pick as many as you like. Talk's topics, your goals and your tutor follow them." -->
+    <string name="pick_as_many_as_you_like_talk_s_topics_your_goals_and_your_t_6787f5">"いくつ選んでも大丈夫です。トークの話題も目標もチューターも、この答えに合わせます。"</string>
     <!-- 'Pick as many as you like. The chips under Talk follow them in the order you picked, and what you write under one shapes its topics.' -->
     <string name="pick_as_many_as_you_like_the_chips_under_talk_follow_them_in_96d3b7">"いくつ選んでも大丈夫です。トークのチップが選んだ順番で並び、下に書いた内容からそのチップの話題を作ります。"</string>
     <string name="pick_as_many_as_you_like_the_first_one_is_where_talk_opens">"いくつ選んでも大丈夫です。最初に選んだものがトークの先頭に来ます。"</string>

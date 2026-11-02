@@ -95,6 +95,16 @@ data class UpcomingGoal(
             OTHER -> null
         }
 
+        /** The profile's row for a purpose with no goal of this kind yet. */
+        @get:StringRes val addPrompt: Int get() = when (this) {
+            INTERVIEW -> R.string.add_your_interview
+            EXAM -> R.string.add_your_exam
+            PRESENTATION -> R.string.add_your_presentation
+            MOVE -> R.string.add_your_move
+            TRIP -> R.string.add_your_trip
+            OTHER -> R.string.add_a_goal
+        }
+
         /** The editor's example title — what kind of line belongs there. */
         @get:StringRes val titlePrompt: Int get() = when (this) {
             INTERVIEW -> R.string.e_g_lufthansa_cabin_crew
@@ -220,10 +230,8 @@ object UpcomingGoalStore {
         val g = goal.copy(updatedAt = System.currentTimeMillis())
         write(c, goals.filter { it.id != g.id } + g)
         // The goal is a case of a purpose: turn that purpose on, so Talk's
-        // chips and the routine know about it too.
-        val p = g.kind.purpose
-        val purposes = LearningPurposeStore.purposes(c)
-        if (p != null && p !in purposes) LearningPurposeStore.setPurposes(c, purposes + p)
+        // chips and the tutor know about it too.
+        LearningPurposeStore.cover(c, g.kind)
         Analytics.capture("upcoming_goal_saved", mapOf("kind" to g.kind.raw, "dated" to (g.date != null)))
     }
 

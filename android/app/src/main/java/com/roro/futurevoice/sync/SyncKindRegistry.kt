@@ -94,6 +94,9 @@ class SyncKindRegistry(private val context: Context) : SyncRegistry {
             mergeRule = SyncMerge::lww,
             afterWrite = { com.roro.futurevoice.data.UpcomingGoalStore.reload(context); touched(it) }),
         ProfileKind(paths, ::touched),
+        LearningPurposeKind(
+            state = { com.roro.futurevoice.data.LearningPurposeStore.syncState(context) },
+            adopt = { com.roro.futurevoice.data.LearningPurposeStore.adopt(context, it) }),
         counterpartKind(),
         DefaultsKind(context),
         BlobKind(SyncKind.BLOB_TURN, { File(root, "turn-audio") }, { it.endsWith(".wav") }),
@@ -430,6 +433,41 @@ private class ProfileKind(private val paths: SyncPaths, private val after: (Stri
         SyncJson.writeFile(file, JsonArray(items.values.mapNotNull { SyncJson.obj(it.payload) }))
         after(null)
     }
+}
+
+/**
+ * Why the learner is learning (iOS `LearningPurposeKind`). One item, last
+ * writer wins: a purpose taken off on the tablet stays off on the phone. A
+ * union would bring it back on every pass. [state] null = never answered on
+ * this device, so there is nothing to push.
+ */
+class LearningPurposeKind(
+    private val state: () -> com.roro.futurevoice.data.LearningPurposeStore.State?,
+    private val adopt: (com.roro.futurevoice.data.LearningPurposeStore.State) -> Unit,
+) : SyncKindHandler {
+    override val kind = SyncKind.LEARNING_PURPOSE
+
+    override fun read(lang: String?): Map<String, String>? {
+        val s = state() ?: return emptyMap()
+        val data = runCatching {
+            SyncCanonical.canonical(SyncCanonical.json.encodeToJsonElement(
+                com.roro.futurevoice.data.LearningPurposeStore.State.serializer(), s))
+        }.getOrNull() ?: return emptyMap()
+        return mapOf(KEY to data)
+    }
+
+    override fun merge(local: SyncSide?, remote: SyncSide) = SyncMerge.lww(local, remote)
+
+    override fun write(items: Map<String, SyncItem>, lang: String?) {
+        val item = items[KEY] ?: return
+        val s = runCatching {
+            SyncCanonical.json.decodeFromString(
+                com.roro.futurevoice.data.LearningPurposeStore.State.serializer(), item.payload)
+        }.getOrNull() ?: return
+        adopt(s)
+    }
+
+    companion object { const val KEY = "state" }
 }
 
 /**

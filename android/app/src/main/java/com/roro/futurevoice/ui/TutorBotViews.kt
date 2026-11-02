@@ -95,6 +95,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Flag
@@ -506,6 +507,7 @@ fun TutorChatView(state: AppState, onDismiss: () -> Unit) {
     }
     var menu by remember { mutableStateOf(false) }
     if (TutorBot.callSettingsOpen) StandaloneCallSettings(state, onDismiss = { TutorBot.callSettingsOpen = false })
+    if (TutorBot.purposesOpen) PurposesEditor(state.targetLanguage, onDismiss = { TutorBot.purposesOpen = false })
     TutorBot.reading?.let { r -> if (TutorBot.chatOpen) TutorReadingSheet(r, state) }
     if (addingGoal) UpcomingGoalEditor(goal = null, language = state.targetLanguage, onDismiss = { addingGoal = false })
     goalPage?.let { g -> UpcomingGoalPage(g, state, onDismiss = { goalPage = null }) }
@@ -891,6 +893,7 @@ fun TutorAction.icon(): androidx.compose.ui.graphics.vector.ImageVector = when (
     TutorAction.Kind.QUIZ -> Icons.AutoMirrored.Outlined.HelpOutline
     TutorAction.Kind.ROUTINE -> Icons.Filled.CalendarMonth
     TutorAction.Kind.SETTINGS -> Icons.Filled.Tune
+    TutorAction.Kind.PURPOSES -> Icons.Filled.TrackChanges
 }
 
 /** Call settings opened over the chat by a tutor button (iOS

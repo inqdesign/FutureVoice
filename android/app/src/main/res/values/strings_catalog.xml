@@ -186,11 +186,16 @@
     <!-- "Add shadowing next. Saying the fluent lines in your own voice trains the rhythm talking alone doesn't." -->
     <string name="add_shadowing_next_saying_the_fluent_lines_in_your_own_voice_092c7b">"Add shadowing next. Saying the fluent lines in your own voice trains the rhythm talking alone doesn't."</string>
     <string name="add_the_role_you_re_applying_for_i_ll_ask_its_questions">"Add the role you're applying for — I'll ask its questions"</string>
+    <string name="add_your_exam">"Add your exam"</string>
+    <string name="add_your_interview">"Add your interview"</string>
     <string name="add_your_job_and_role_for_topics_from_your_work">"Add your job and role for topics from your work"</string>
+    <string name="add_your_move">"Add your move"</string>
     <string name="add_your_own">"Add your own"</string>
     <string name="add_your_own_comma_separated">"Add your own (comma-separated)"</string>
     <string name="add_your_own_script">"Add your own script"</string>
+    <string name="add_your_presentation">"Add your presentation"</string>
     <string name="add_your_school_and_subject_for_topics_from_your_field">"Add your school and subject for topics from your field"</string>
+    <string name="add_your_trip">"Add your trip"</string>
     <string name="advanced_i_express_myself_fluently_and_precisely">"Advanced — I express myself fluently and precisely"</string>
     <string name="after_each_take">"After each take"</string>
     <!-- "After each thing your future self says, you see a way to answer. Sometimes it uses a word you're studying, and your most common mistake becomes the call's focus." -->
@@ -2135,6 +2140,8 @@
     <string name="pick_a_type_like_an_explainer_a_person_or_the_news_then_a_to_08bd90">"Pick a type, like an explainer, a person or the news, then a topic and a length. The facts are checked and the words fit your level. Plus and Max."</string>
     <string name="pick_an_area_to_go_one_step_deeper">"Pick an area to go one step deeper."</string>
     <string name="pick_as_many_as_you_like">"Pick as many as you like."</string>
+    <!-- "Pick as many as you like. Talk's topics, your goals and your tutor follow them." -->
+    <string name="pick_as_many_as_you_like_talk_s_topics_your_goals_and_your_t_6787f5">"Pick as many as you like. Talk's topics, your goals and your tutor follow them."</string>
     <!-- 'Pick as many as you like. The chips under Talk follow them in the order you picked, and what you write under one shapes its topics.' -->
     <string name="pick_as_many_as_you_like_the_chips_under_talk_follow_them_in_96d3b7">"Pick as many as you like. The chips under Talk follow them in the order you picked, and what you write under one shapes its topics."</string>
     <string name="pick_as_many_as_you_like_the_first_one_is_where_talk_opens">"Pick as many as you like. The first one is where Talk opens."</string>

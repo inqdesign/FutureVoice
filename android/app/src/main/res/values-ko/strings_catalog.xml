@@ -186,11 +186,16 @@
     <!-- "Add shadowing next. Saying the fluent lines in your own voice trains the rhythm talking alone doesn't." -->
     <string name="add_shadowing_next_saying_the_fluent_lines_in_your_own_voice_092c7b">"다음엔 섀도잉을 더해 보세요. 자연스러운 문장을 내 목소리로 따라 하면, 대화만으로는 안 생기는 리듬이 잡혀요."</string>
     <string name="add_the_role_you_re_applying_for_i_ll_ask_its_questions">"지원하는 직무를 적으면 그 직무 면접 질문을 만들어 줘요"</string>
+    <string name="add_your_exam">"시험 추가"</string>
+    <string name="add_your_interview">"면접 추가"</string>
     <string name="add_your_job_and_role_for_topics_from_your_work">"하는 일과 역할을 적으면 내 일에 맞춘 주제를 만들어 줘요"</string>
+    <string name="add_your_move">"이사 추가"</string>
     <string name="add_your_own">"내 원고 넣기"</string>
     <string name="add_your_own_comma_separated">"직접 추가 (쉼표로 구분)"</string>
     <string name="add_your_own_script">"내 원고 넣기"</string>
+    <string name="add_your_presentation">"발표 추가"</string>
     <string name="add_your_school_and_subject_for_topics_from_your_field">"학교와 전공을 적으면 내 분야 주제를 만들어 줘요"</string>
+    <string name="add_your_trip">"여행 추가"</string>
     <string name="advanced_i_express_myself_fluently_and_precisely">"고급 — 유창하고 정확하게 표현해요"</string>
     <string name="after_each_take">"녹화를 마치면"</string>
     <!-- "After each thing your future self says, you see a way to answer. Sometimes it uses a word you're studying, and your most common mistake becomes the call's focus." -->
@@ -2121,6 +2126,8 @@
     <string name="pick_a_type_like_an_explainer_a_person_or_the_news_then_a_to_08bd90">"설명, 인물, 뉴스 같은 종류와 주제, 길이만 고르면 내 수준에 맞춰 원고를 써 줘요. 사실관계도 확인해요."</string>
     <string name="pick_an_area_to_go_one_step_deeper">"한 단계 더 들어갈 영역을 고르세요."</string>
     <string name="pick_as_many_as_you_like">"원하는 만큼 골라요."</string>
+    <!-- "Pick as many as you like. Talk's topics, your goals and your tutor follow them." -->
+    <string name="pick_as_many_as_you_like_talk_s_topics_your_goals_and_your_t_6787f5">"여러 개 골라도 돼요. 대화 주제도, 다가올 목표도, 튜터도 이 답을 따라가요."</string>
     <!-- 'Pick as many as you like. The chips under Talk follow them in the order you picked, and what you write under one shapes its topics.' -->
     <string name="pick_as_many_as_you_like_the_chips_under_talk_follow_them_in_96d3b7">"여러 개 골라도 돼요. 대화 탭의 칩이 고른 순서대로 놓이고, 아래에 적은 내용으로 그 칩의 주제를 만들어요."</string>
     <string name="pick_as_many_as_you_like_the_first_one_is_where_talk_opens">"여러 개 골라도 돼요. 처음 고른 게 대화 탭의 첫 칸이 돼요."</string>

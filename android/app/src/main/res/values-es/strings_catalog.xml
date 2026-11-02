@@ -186,11 +186,16 @@
     <!-- "Add shadowing next. Saying the fluent lines in your own voice trains the rhythm talking alone doesn't." -->
     <string name="add_shadowing_next_saying_the_fluent_lines_in_your_own_voice_092c7b">"Añade shadowing. Decir las frases fluidas con tu propia voz entrena el ritmo que hablar por sí solo no da."</string>
     <string name="add_the_role_you_re_applying_for_i_ll_ask_its_questions">"Escribe el puesto al que te presentas y te haré sus preguntas"</string>
+    <string name="add_your_exam">"Añadir tu examen"</string>
+    <string name="add_your_interview">"Añadir tu entrevista"</string>
     <string name="add_your_job_and_role_for_topics_from_your_work">"Escribe tu trabajo y tu rol para tener temas de lo que haces"</string>
+    <string name="add_your_move">"Añadir tu mudanza"</string>
     <string name="add_your_own">"Trae tu propio guion"</string>
     <string name="add_your_own_comma_separated">"Añade los tuyos (separados por comas)"</string>
     <string name="add_your_own_script">"Añadir mi guion"</string>
+    <string name="add_your_presentation">"Añadir tu presentación"</string>
     <string name="add_your_school_and_subject_for_topics_from_your_field">"Escribe tu centro y tu carrera para tener temas de tu campo"</string>
+    <string name="add_your_trip">"Añadir tu viaje"</string>
     <string name="advanced_i_express_myself_fluently_and_precisely">"Avanzado — me expreso con fluidez y precisión"</string>
     <string name="after_each_take">"Lo que recibes al terminar"</string>
     <!-- "After each thing your future self says, you see a way to answer. Sometimes it uses a word you're studying, and your most common mistake becomes the call's focus." -->
@@ -2117,6 +2122,8 @@
     <string name="pick_a_type_like_an_explainer_a_person_or_the_news_then_a_to_08bd90">"Elige el tipo (explicar algo, presentar a alguien, noticias…), el tema y la duración, y te escribe un guion a tu nivel con los datos verificados."</string>
     <string name="pick_an_area_to_go_one_step_deeper">"Elige un área para bajar un nivel más."</string>
     <string name="pick_as_many_as_you_like">"Elige todos los que quieras."</string>
+    <!-- "Pick as many as you like. Talk's topics, your goals and your tutor follow them." -->
+    <string name="pick_as_many_as_you_like_talk_s_topics_your_goals_and_your_t_6787f5">"Elige todos los que quieras. Los temas de Hablar, tus objetivos y tu tutor se guían por ellos."</string>
     <!-- 'Pick as many as you like. The chips under Talk follow them in the order you picked, and what you write under one shapes its topics.' -->
     <string name="pick_as_many_as_you_like_the_chips_under_talk_follow_them_in_96d3b7">"Elige todos los que quieras. Los chips de Hablar los siguen en el orden que elegiste, y lo que escribas debajo de cada uno da forma a sus temas."</string>
     <string name="pick_as_many_as_you_like_the_first_one_is_where_talk_opens">"Elige todos los que quieras. Hablar se abre en el primero."</string>
