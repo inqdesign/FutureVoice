@@ -1184,7 +1184,17 @@ export class CallSession implements DurableObject {
     // The pin can't stop it and no script check sees it, so a German final
     // that reads as English goes through the same re-read from audio.
     const englishInTarget = CallSession.readsAsEnglish(text, this.language)
-    if (CallSession.inTargetScript(text, this.language) && !englishInTarget) {
+    const looksRight = CallSession.inTargetScript(text, this.language) && !englishInTarget
+    // German is re-read EVERY line (2026-11-02, a learner's 1-star review:
+    // "English and even Spanish come out, I have to say each word slowly").
+    // The English fix works because a wrong English line comes out in
+    // another SCRIPT; a wrong German line comes out as English or Spanish in
+    // the same letters, so no check can tell it is wrong. ~1.2 s per turn,
+    // ~$0.001 per call minute.
+    if (looksRight && CallSession.rereadsEveryLine(this.language)) {
+      return this.checkTargetLine(text, audio)
+    }
+    if (looksRight) {
       // "I want to… 승진" — a native word inside a target line is the
       // learner reaching for one they don't have. The line is theirs as
       // written; the model is told which part they couldn't say.
@@ -1287,6 +1297,50 @@ export class CallSession implements DurableObject {
     this.emit({ type: "warning", code: "script_mismatch",
                 message: `final not in target script: ${text.slice(0, 80)}` })
     this.handleUtterance(text, this.hasNativeScript(text))
+  }
+
+  /** Targets whose every final is re-read from its audio, because their
+   *  wrong lines come out in the target's own letters (see `acceptFinal`). */
+  static rereadsEveryLine(language: string): boolean {
+    return language.toLowerCase().split("-")[0] === "de"
+  }
+
+  /** A final that LOOKS right, re-read from its audio anyway. The re-read
+   *  may only replace it with words: a line it hears as German or as the
+   *  learner's own language. Anything else — no answer in time, "only a
+   *  hesitation", a language it can't name — keeps the line exactly as the
+   *  transcriber wrote it, which is what happened before. Only a CHANGED
+   *  line is reported: every line would be a telemetry row per turn. */
+  private async checkTargetLine(text: string, audio: ArrayBuffer[]): Promise<void> {
+    if (this.pendingUtterance !== null) this.armPending(CallSession.pendingHoldMs)
+    const started = Date.now()
+    const native = this.native ?? this.inferredNative
+    const reread = await rereadUtterance(
+      this.env.GEMINI_API_KEY,
+      this.env.GEMINI_REREAD_MODEL ?? "gemini-3.1-flash-lite",
+      this.language,
+      audio,
+      native,
+      3000,
+    )
+    if (this.ended) return
+    const ms = Date.now() - started
+    const heard = reread?.text ?? ""
+    const usable = reread !== null && heard !== "" && !CallSession.isFillerOnly(heard)
+      && (reread.spoken === "target" || reread.spoken === "native"
+          || (reread.spoken === "other" && CallSession.nativeFromScript(heard, this.language) !== null))
+    if (!usable || CallSession.sameWords(heard, text)) {
+      this.handleUtterance(text, this.hasNativeScript(text))
+      return
+    }
+    const nativeLine = reread.spoken !== "target"
+      || (!CallSession.inTargetScript(heard, this.language) && this.hasNativeScript(heard, native))
+    if (nativeLine && native === null) {
+      const named = CallSession.nativeFromScript(heard, this.language)
+      if (named !== null) this.inferredNative = named
+    }
+    this.warn("script_mismatch", `checked${nativeLine ? ", native" : ""} (${ms}ms): ${text.slice(0, 40)} → ${heard.slice(0, 80)}`)
+    this.handleUtterance(heard, nativeLine || this.hasNativeScript(heard))
   }
 
   /** The transcriber finalized an utterance. It becomes a turn now, or it
