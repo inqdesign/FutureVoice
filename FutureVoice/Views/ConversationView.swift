@@ -1039,7 +1039,10 @@ struct ConversationView: View {
                 Analytics.capture("conversation_started", [
                     "origin": sessionOrigin.rawValue,
                     "entry": entry.rawValue,
-                    "resumed": isResuming
+                    "resumed": isResuming,
+                    // This call, not the setting: the tutor bot opens a
+                    // tutored call with the setting off.
+                    "tutor": tutorThisCall ? "on" : "off"
                 ])
                 pinPromptClock()
                 if isResuming {
@@ -1081,6 +1084,9 @@ struct ConversationView: View {
             .onChange(of: sendToAnswer) { _, on in
                 guard RealtimeMode.isEnabled, phoneCallActive else { return }
                 realtime.setManualTurns(on)
+            }
+            .onChange(of: tutorWasOn) { _, on in
+                if on { realtime.tutorCall = true }
             }
             .onChange(of: tutorModeChoice) { _, on in
                 guard on != tutorThisCall else { return }
@@ -3125,6 +3131,7 @@ struct ConversationView: View {
             lastFinishedReply = (id, text)
             advanceCoach(afterReply: text, turnId: id)
         }
+        realtime.tutorCall = tutorWasOn || tutorThisCall
         await realtime.connect(
             voiceId: voiceId,
             language: appState.targetLanguage,

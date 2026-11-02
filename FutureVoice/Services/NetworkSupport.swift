@@ -67,6 +67,11 @@ enum Telemetry {
             "speed_rung": SpeechSpeed.current.rawValue,
             "speed_picked": defaults.string(forKey: SpeechSpeed.key) == nil ? "0" : "1",
             "coach": CoachMode.isOn ? "on" : "off",
+            // The tutor-mode SETTING (2026-11-02). A call-level event
+            // (`conversation_started`, `talk_rt_session`) overrides it with
+            // what that call actually was: the tutor bot opens tutored calls
+            // with the setting off, and the setting can flip mid-call.
+            "tutor": TutorMode.isOn ? "on" : "off",
             // Which voice the fluent self speaks in (2026-10-24): the
             // learner's clone, a preset they chose over it, or the stand-in
             // while their clone is queued. On every event, so talk time,

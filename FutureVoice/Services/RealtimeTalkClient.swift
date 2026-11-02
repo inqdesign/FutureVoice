@@ -498,6 +498,9 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// arrive on two paths (the live read loop and the post-hang-up drain)
     /// and must count once.
     private var sessionLogged = false
+    /// Tutor mode was on at some point on this connection — set by the call
+    /// screen, read only for `talk_rt_session`'s `tutor` field.
+    var tutorCall = false
 
     // MARK: - Lifecycle
 
@@ -2200,6 +2203,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             "voice_samples": String(voice.count),
             "warnings": String(json["warnings"] as? Int ?? 0),
             "lines": String(lines.count),
+            "tutor": tutorCall ? "on" : "off",
             // Turn-taking evidence (gateway 2026-09-15): how often the
             // fluent self talked over the learner, how often the hold
             // window caught a continuation, and how long this learner's
