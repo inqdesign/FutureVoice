@@ -510,8 +510,17 @@ struct TutorChatView: View {
                              showsLocalePicker: true,
                              lineRange: 1...5,
                              externalFocus: $typing,
+                             cardBackground: Color.clear,
                              micStyle: .plain,
                              trailingControls: AnyView(sendButton))
+                // The Watch situation box's own card (24 pt, continuous):
+                // the field's built-in 12 pt card read as a different
+                // component. The fill stays grey because this chat sits on
+                // systemBackground, where the grouped white would vanish.
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 6)
+                .background(RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(Color(.secondarySystemBackground)))
                 .padding(.horizontal, 12)
                 .padding(.bottom, 8)
         }
