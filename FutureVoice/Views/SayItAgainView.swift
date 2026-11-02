@@ -180,6 +180,12 @@ struct SayItAgainView: View {
     @State private var pageHeight: CGFloat = 0
     /// The prompter line's natural height, measured inside its scroll view.
     @State private var lineHeight: CGFloat = 0
+    /// The whole prompter bar's height. When it changes the transcript is
+    /// put back on its last line: the bar settles a frame or two AFTER the
+    /// phase change that scrolls (the line is measured once it is laid
+    /// out), and without a second scroll the newest lines were left under
+    /// the card — about one line in three (2026-11-02).
+    @State private var barHeight: CGFloat = 0
     /// How long one line may wait for its rewrite before it is read as it
     /// was said. A single request lands in ~2–4 s; this only covers a
     /// network that has gone away.
@@ -234,6 +240,7 @@ struct SayItAgainView: View {
                 .defaultScrollAnchor(.bottom)
                 .onChange(of: index) { _, _ in scrollToEnd(proxy) }
                 .onChange(of: phase) { _, _ in scrollToEnd(proxy) }
+                .onChange(of: barHeight) { _, _ in scrollToEnd(proxy) }
                 // Which lines are the learner's, always in sight and one tap
                 // to change (2026-10-23, founder: the person icon behind a
                 // menu was unclear and took two taps).
@@ -390,6 +397,7 @@ struct SayItAgainView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { barHeight = $0 }
     }
 
     /// The cover of a run: what is about to happen, and how much of it. It
@@ -560,8 +568,16 @@ struct SayItAgainView: View {
         .padding(.horizontal, 20)
         .padding(.vertical, 18)
         .frame(maxWidth: .infinity)
-        .background(theme.tint.opacity(washOpacity),
-                    in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        // The wash sits on the page colour, never on the transcript: the
+        // bar has no background of its own (`fadingBottomBar`), so a bare
+        // 14% wash let every line scrolled under it read through the script.
+        .background {
+            let card = RoundedRectangle(cornerRadius: 22, style: .continuous)
+            ZStack {
+                card.fill(Color(.systemBackground))
+                card.fill(theme.tint.opacity(washOpacity))
+            }
+        }
         .overlay {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .strokeBorder(theme.tint.opacity(washOpacity * 2), lineWidth: 1)
