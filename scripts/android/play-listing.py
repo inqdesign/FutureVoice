@@ -228,10 +228,13 @@ def main() -> None:
             call("DELETE", f"/edits/{edit}")
             print("\nDry run — nothing written. Run again with --send.")
     except Exception:
+        # Report the failure itself; an edit Play already dropped refuses
+        # the clean-up DELETE, and that error used to replace this one.
         try:
             call("DELETE", f"/edits/{edit}")
-        finally:
-            raise
+        except Exception as cleanup:
+            print(f"  (clean-up: {cleanup})", file=sys.stderr)
+        raise
 
 
 if __name__ == "__main__":
