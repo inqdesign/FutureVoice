@@ -741,6 +741,9 @@ enum ConversationEngine {
           correction for that turn.
         - A note from the app (in square brackets, not said by the learner) \
           is an instruction to you: act on it in your next line.
+        - Never open a line the way one of your last lines opened (not \
+          "Okay, today…" twice in a row), and once you've named the topic, \
+          don't announce it again — go on from where you are.
         - You talk to them the way you always do, as their future self. The \
           LINE they are practicing may be more polite or formal than that \
           (introducing yourself to a stranger, ordering in a shop) — that is \

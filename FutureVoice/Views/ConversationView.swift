@@ -5136,7 +5136,7 @@ struct ConversationView: View {
         tutorJustTicked = false
         sendTutorSystem()
         if picked {
-            realtime.nudge("The learner picked a topic on their screen: \"\(request)\". Say in a few words that this is today's lesson and that you're setting it up — nothing else yet.")
+            realtime.nudge("The learner picked a topic on their screen: \"\(request)\". Say in a few words that you're setting it up — nothing else yet.")
         }
         Task { @MainActor in
             var missReason = "request_failed"
@@ -5187,7 +5187,14 @@ struct ConversationView: View {
             if nextRoundOf != nil {
                 tutorNudge("The next round is ready (see TUTOR MODE): new challenges, a step further than the last round. Say so in a few words — don't go over the last round again — then start challenge 1: say what it is, give its example line, and ask them to say it about themselves.")
             } else {
-                tutorNudge("Today's lesson is ready (see TUTOR MODE). In a few words say what it is and that you'll go one step at a time, then start challenge 1: say what it is, give its example line, and ask them to say it about themselves.")
+                // A call that opened on its own topic has said nothing yet;
+                // every other path already named it ("setting that up"), and
+                // naming it again opened three lines in a row the same way
+                // ("좋아, 오늘은…", device 2026-11-02).
+                let intro = fromTopic
+                    ? "In a few words say what it is and that you'll go one step at a time"
+                    : "Don't announce the topic again, you already did. Say in a few words that you'll go one step at a time"
+                tutorNudge("Today's lesson is ready (see TUTOR MODE). \(intro), then start challenge 1: say what it is, give its example line, and ask them to say it about themselves.")
             }
         }
     }
