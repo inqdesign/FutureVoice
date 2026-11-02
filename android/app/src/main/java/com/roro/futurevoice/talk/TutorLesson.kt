@@ -392,11 +392,18 @@ object TutorNudges {
     const val TURNED_ON = "Tutor mode was just turned on. Ask them, in one short question, what they want to be able to say today — they can also pick a topic from the button on their screen."
     const val RESUME = "The learner is back to finish last time's lesson (see TUTOR MODE). Greet them in a few words, say you're picking it up where you left off and which challenge is next, give its example line, and ask them to say it."
     const val RESUME_FINAL_CHECK = "The learner is back for the final check of last time's lesson (see TUTOR MODE). Greet them in a few words, say the only thing left is the final check, and ask them to say it all in their own words, in one go — no example, no hints."
-    fun picked(request: String) = "The learner picked a topic on their screen: \"$request\". Say in a few words that this is today's lesson and that you're setting it up — nothing else yet."
+    fun picked(request: String) = "The learner picked a topic on their screen: \"$request\". Say in a few words that you're setting it up — nothing else yet."
     fun planFailed(request: String) = "Setting up the lesson didn't work. Ask them, in one short question, what exactly they want to be able to say about: \"$request\"."
     const val NEXT_ROUND_READY = "The next round is ready (see TUTOR MODE): new challenges, a step further than the last round. Say so in a few words — don't go over the last round again — then start challenge 1: say what it is, give its example line, and ask them to say it about themselves."
     fun nextRoundFailed(title: String) = "Setting up the next round of \"$title\" didn't work. Say so in a few words and ask whether they'd like another topic instead."
-    const val READY = "Today's lesson is ready (see TUTOR MODE). In a few words say what it is and that you'll go one step at a time, then start challenge 1: say what it is, give its example line, and ask them to say it about themselves."
+    /** `fromTopic`: the call opened on its own topic and nothing named it
+     *  yet; every other path already did ("setting that up"), and naming it
+     *  again opened three lines in a row the same way (iOS, 2026-11-02). */
+    fun ready(fromTopic: Boolean): String {
+        val intro = if (fromTopic) "In a few words say what it is and that you'll go one step at a time"
+            else "Don't announce the topic again, you already did. Say in a few words that you'll go one step at a time"
+        return "Today's lesson is ready (see TUTOR MODE). $intro, then start challenge 1: say what it is, give its example line, and ask them to say it about themselves."
+    }
     const val SAVED_FINISHED = "The learner tapped to choose another topic. The app is saving the finished lesson in their book. Say so in a few words and ask what they want to practice next — they can also pick a topic from the button on their screen."
     const val DROPPED = "The learner tapped to choose another topic, and the app dropped today's lesson. Say sure in a few words and ask what they want to practice instead — they can also pick a topic from the button on their screen."
     fun more(title: String, done: String) = "More practice on \"$title\" — the next round, one step further. Already done: $done. New challenges only."

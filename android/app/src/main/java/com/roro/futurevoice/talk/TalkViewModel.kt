@@ -1927,7 +1927,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             log("tutor_lesson_started", mapOf("challenges" to lesson.challenges.size.toString(),
                 "picked" to if (picked) "1" else "0"))
             sendTutorSystem()
-            tutorNudge(if (nextRoundOf != null) TutorNudges.NEXT_ROUND_READY else TutorNudges.READY)
+            tutorNudge(if (nextRoundOf != null) TutorNudges.NEXT_ROUND_READY else TutorNudges.ready(fromTopic))
         }
     }
 
