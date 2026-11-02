@@ -194,6 +194,11 @@ export class CallSession implements DurableObject {
   private pendingSay: { text: string; alreadySpoken: boolean } | null = null
   /** App notes waiting for the line in progress to end (see NudgeMessage). */
   private pendingNudges: string[] = []
+  /** Notes waiting for the last line to finish PLAYING (see flushNudge). */
+  private nudgeTimer: number | null = null
+  /** Past the projected play-out: the phone starts a line a beat after the
+   *  gateway sent it. */
+  private static readonly nudgeAfterPlayoutMs = 150
   private nudgesUsed = 0
   static readonly maxNudges = 8
   static readonly maxNudgeChars = 600
@@ -1766,6 +1771,24 @@ export class CallSession implements DurableObject {
   private flushNudge(): void {
     if (this.ended || !this.started || this.pendingNudges.length === 0) return
     if (this.activeContext !== null || this.pendingWall !== null) return
+    // A line "ends" here when its last byte was SENT, but the phone plays it
+    // for its real length: a note that was waiting started the next line
+    // seconds before the last one had been heard, the two played back to
+    // back with no pause and the new bubble came up over the old voice
+    // (device log 2026-11-02, tutor mode: a topic line, then "lesson ready"
+    // 3.7 s in, with ~4 s of the first still queued on the phone). Wait for
+    // the play-out clock; the reply's own writing time is then the pause.
+    const wait = this.playoutEndAt + CallSession.nudgeAfterPlayoutMs - Date.now()
+    if (wait > 0) {
+      if (this.nudgeTimer === null) {
+        this.nudgeTimer = setTimeout(() => {
+          this.nudgeTimer = null
+          this.flushNudge()
+        }, wait) as unknown as number
+      }
+      return
+    }
+    if (this.nudgeTimer !== null) { clearTimeout(this.nudgeTimer); this.nudgeTimer = null }
     const note = this.pendingNudges.splice(0).map((n) =>
       `[Note from the app — the learner did not say this: ${n}]`).join("\n")
     const last = this.history[this.history.length - 1]
@@ -1894,6 +1917,9 @@ export class CallSession implements DurableObject {
   private interrupt(): void {
     const context = this.activeContext
     if (!context) return
+    // Talked over: queued notes wait for the next line's end, as they always
+    // did, instead of a timer starting a line over the learner.
+    if (this.nudgeTimer !== null) { clearTimeout(this.nudgeTimer); this.nudgeTimer = null }
     const sinceCommit = Date.now() - this.lastCommitAt
     let reopened = false
     if (sinceCommit < CallSession.cutoffWindowMs) {
@@ -2012,6 +2038,7 @@ export class CallSession implements DurableObject {
     if (this.idleTimer !== null) clearTimeout(this.idleTimer)
     if (this.wallTimer !== null) clearTimeout(this.wallTimer)
     if (this.watchTimer !== null) clearInterval(this.watchTimer)
+    if (this.nudgeTimer !== null) clearTimeout(this.nudgeTimer)
     this.clearPending()
     this.dropSpec()
     this.activeReplyAbort?.abort()
