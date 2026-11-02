@@ -779,6 +779,20 @@ enum MacSheets {
              #selector(UIViewController.fv_macPresent(_:animated:completion:)))
         swap(#selector(getter: UIViewController.preferredContentSize),
              #selector(getter: UIViewController.fv_macPreferredContentSize))
+        swap(#selector(UIViewController.viewWillLayoutSubviews),
+             #selector(UIViewController.fv_macViewWillLayoutSubviews))
+    }
+
+    /// Marks a presented page to be zoomed on every layout of its own, the
+    /// first one included. The zoom used to be put on in the present's
+    /// completion (or 0.4 s later), so every sheet slid in at the Mac's 1.0×
+    /// with 13 pt text and then jumped to size (founder, 2026-11-02: "the
+    /// font renders small and then grows, nothing is smooth"). A layout runs
+    /// before the first frame is drawn, so the sheet now appears zoomed, and
+    /// a resize of the sheet's window re-zooms it in the same pass.
+    fileprivate static var zoomKey: UInt8 = 0
+    static func zoomOnLayout(_ presented: UIViewController) {
+        objc_setAssociatedObject(presented, &zoomKey, true, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
     }
 
     private static func swap(_ a: Selector, _ b: Selector) {
@@ -808,6 +822,7 @@ enum MacSheets {
         let room = window.map { ($0.bounds.height - $0.safeAreaInsets.top) / zoom - 24 } ?? maxHeight
         let height = min(maxHeight, max(420, room))
         presented.modalPresentationStyle = .formSheet
+        zoomOnLayout(presented)
         // The sheet's window is sized in screen points, so ask for the zoomed size.
         objc_setAssociatedObject(presented, &sizeKey,
                                  NSValue(cgSize: CGSize(width: width * zoom, height: height * zoom)),
@@ -908,23 +923,11 @@ enum MacSheets {
         guard String(describing: type(of: presented)).hasPrefix("PresentationHostingController"),
               presented.modalPresentationStyle == .fullScreen
                 || presented.modalPresentationStyle == .overFullScreen else { return }
+        // Unlike the root, a cover keeps the window's safe area under the
+        // zoom, so it is scaled in place and its own bar clears the title.
+        zoomOnLayout(presented)
         var ticks = 0
-        func apply() {
-            guard let view = presented.viewIfLoaded, let host = view.superview,
-                  let window = view.window else { return }
-            let zoom = MacLayout.zoom
-            let size = host.bounds.size
-            guard size.width > 0, size.height > 0 else { return }
-            _ = window
-            // Unlike the root, a cover keeps the window's safe area under the
-            // zoom, so it is scaled in place and its own bar clears the title.
-            let transform = CGAffineTransform(scaleX: zoom, y: zoom)
-            let bounds = CGRect(origin: .zero, size: CGSize(width: size.width / zoom, height: size.height / zoom))
-            let center = CGPoint(x: size.width / 2, y: size.height / 2)
-            if view.transform != transform { view.transform = transform }
-            if view.bounds != bounds { view.bounds = bounds }
-            if view.center != center { view.center = center }
-        }
+        func apply() { zoomSheet(presented) }
         apply()
         Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak presented] timer in
             MainActor.assumeIsolated {
@@ -991,6 +994,13 @@ extension UIViewController {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak presented] in
                 if let presented { MacSheets.makeClosable(presented) }
             }
+        }
+    }
+
+    @objc fileprivate func fv_macViewWillLayoutSubviews() {
+        fv_macViewWillLayoutSubviews()
+        if objc_getAssociatedObject(self, &MacSheets.zoomKey) != nil {
+            MacSheets.zoomSheet(self)
         }
     }
 
