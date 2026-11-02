@@ -781,12 +781,12 @@ enum CoreWelcomeStore {
     /// `-corewelcome 1`: the first seat of an empty club, nothing remembered.
     static var preview: Seat { preview(language: "en") }
 
-    /// Me → Developer: seat 24 of a club where 23 already sit, in the
+    /// Me → Developer: seat 2 of a club where 1 already sits, in the
     /// learner's own language. Nothing it picks is saved (`isPreview`).
     static func preview(language: String) -> Seat {
         let palettes = FutureselfTheme.allCases.map(\.rawValue)
-        let others = (0..<23).map { palettes[($0 * 5 + 2) % palettes.count] }
-        return Seat(userId: "preview", language: language, index: 23, seats: 100, streak: 30, othersThemes: others)
+        let others = (0..<1).map { palettes[($0 * 5 + 2) % palettes.count] }
+        return Seat(userId: "preview", language: language, index: 1, seats: 100, streak: 30, othersThemes: others)
     }
     #endif
 }
