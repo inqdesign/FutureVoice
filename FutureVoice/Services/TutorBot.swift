@@ -236,7 +236,7 @@ final class TutorBot: ObservableObject {
             bubbleSince = now
             Analytics.capture("tutor_bot_note", ["intro": introShown, "items": fresh.items.count,
                                                  "suggested": fresh.suggested])
-            withAnimation(.smooth(duration: 0.3)) { noteShown = true }
+            noteShown = true
             return
         }
         guard !noteShown, !chatOpen else { return }
@@ -274,7 +274,7 @@ final class TutorBot: ObservableObject {
         said.append(b.id)
         defaults.set(said, forKey: Key.said)
         Analytics.capture("tutor_bot_bubble", ["kind": b.id.components(separatedBy: "-").first ?? b.id])
-        withAnimation(.easeOut(duration: 0.35)) { bubble = b }
+        bubble = b
     }
 
     // MARK: - Picks
@@ -358,10 +358,17 @@ final class TutorBot: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: open)
     }
 
+    // No `withAnimation` anywhere in this model (2026-11-03). Measured: the
+    // block flushes a SwiftUI update synchronously, and a published change
+    // written AFTER it in the same method was dropped until the next
+    // unrelated update — the note's "Ask me" closed the note and `chatOpen`
+    // reached no view for 18 s, 9 of 37 runs. The views animate these
+    // values themselves (`.animation(_:value:)`), so every write in a
+    // method lands in one update whatever its order.
     func closeNote() {
         if introShown { defaults.set(true, forKey: Key.introSeen) }
         noteClosedAt = Date()
-        withAnimation(.easeInOut(duration: 0.35)) { noteShown = false }
+        noteShown = false
     }
 
     /// The note, again — the face's long-press.
@@ -369,11 +376,11 @@ final class TutorBot: ObservableObject {
         bubble = nil
         introShown = intro
         bubbleSince = Date()
-        withAnimation(.smooth(duration: 0.3)) { noteShown = true }
+        noteShown = true
     }
 
     func dismissBubble() {
-        withAnimation(.easeOut(duration: 0.25)) { bubble = nil }
+        bubble = nil
     }
 
     func openChat() {

@@ -69,6 +69,10 @@ struct TutorBotLayer: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+        // The model writes these plainly (see `TutorBot.closeNote`); the
+        // note and the bubble animate here.
+        .animation(bot.noteShown ? .smooth(duration: 0.3) : .easeInOut(duration: 0.35), value: bot.noteShown)
+        .animation(bot.bubble == nil ? .easeOut(duration: 0.25) : .easeOut(duration: 0.35), value: bot.bubble)
         .sheet(item: $bot.goalPage) { goal in
             UpcomingGoalPage(goal: goal).environmentObject(appState)
         }

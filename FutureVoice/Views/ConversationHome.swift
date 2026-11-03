@@ -104,6 +104,7 @@ struct ConversationHome: View {
                         .transition(.opacity)
                 }
             }
+            .animation(.easeInOut(duration: 0.35), value: tutorBot.noteShown)
             // One button to the topics page (draft 2026-10-18) — the discover
             // block used to sit in the scroll in full. Placed and drawn exactly
             // like Watch's "New situation": glass capsule, floating at the

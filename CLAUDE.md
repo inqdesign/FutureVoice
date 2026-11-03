@@ -3182,6 +3182,14 @@ and merge what exists.
 - Not built: Android (owed), actions that change data (add a goal, move a
   block — they'd need a confirm step), the weekly feedback cards in "Your
   week" (proposed to the founder as a mockup first).
+- **`TutorBot` never calls `withAnimation`** (2026-11-03, from the
+  founder: "Ask me" on the note closed the note and opened nothing).
+  Measured with a UI test: the block flushes a SwiftUI update
+  synchronously, and a published write made AFTER it in the same method
+  (`chatOpen = true`, a pick's `pendingURL`, the note's `goalPage`) reached
+  no view until the next unrelated update — 9 of 37 runs. The model writes
+  its state plainly; `TutorBotLayer` and the Talk home's blur animate it
+  with `.animation(_:value:)`. `TutorBotUITests` is the regression test.
 
 ## Android moves WITH iOS (2026-10-07)
 
