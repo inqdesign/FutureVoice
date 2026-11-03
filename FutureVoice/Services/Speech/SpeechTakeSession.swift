@@ -239,8 +239,19 @@ final class SpeechTakeSession: ObservableObject {
             cursor = min(track.words.count, Int(position))
         }
 
-        // Finished: the last word is reached and they have stopped.
-        let quietFor = live.lastVoicedAt.map { Date().timeIntervalSince($0) } ?? clock
+        // How long nobody has been heard — by EITHER witness, the level
+        // meter or the recognizer (2026-11-03). The meter alone read the
+        // founder's whole take as silence: a phone propped up for the camera
+        // sits an arm's length from the mouth, AGC is off for the take, and
+        // the meter's floor (−32.5 dBFS) is set for a phone at the ear. With
+        // `quietFor` stuck at "forever", every piece was cut at exactly 12.0 s
+        // (28 of 28 pieces in the ledger, mid-word) and the take ENDED the
+        // instant the prompter reached the second-to-last word — the last
+        // words were never recorded, and the result said the last sentence
+        // was skipped. `voiceActive` already took both witnesses for the same
+        // reason (a reader whose phone sat on a desk); this is the same rule
+        // for the cut and the stop.
+        let quietFor = quietSeconds ?? clock
 
         // Cut a piece for the reader at a pause, never mid-word.
         if clock - lastChunkAt >= Self.chunkSeconds, quietFor >= 0.35,
@@ -277,6 +288,10 @@ final class SpeechTakeSession: ObservableObject {
         func ms(_ since: Date) -> Int { Int(Date().timeIntervalSince(since) * 1000) }
         let duration = clock
         let recorded = recorder.stop() ?? wavURL
+        // What the level meter alone made of the take — the record that
+        // says whether the cut and the stop had a working witness (see
+        // `quietSeconds`). Read before the transcriber is torn down.
+        let meterVoiced = live.fluencyStats().speakingSeconds
         let liveText = await live.stopAndFinalize()
         if let tail = live.lastChunkRecordingURL { chunkReads.append(readPiece(tail)) }
         let pieces = chunkReads
@@ -432,6 +447,7 @@ final class SpeechTakeSession: ObservableObject {
             // of it, and the coach that follows.
             "read_path": path,
             "cursor_end": cursor, "words": track.words.count, "follows": follows, "partials": partials,
+            "meter_voiced": Int(meterVoiced),
             "pieces": pieces.count,
             // How many pieces came back with a phoneme assessment, and the
             // take's number — the only record of whether the reader answers.
@@ -558,6 +574,15 @@ final class SpeechTakeSession: ObservableObject {
 
     /// The reader is pressing the prompter to hold the steady scroll.
     var holding = false
+
+    /// Seconds since anyone was last heard, by the level meter or by the
+    /// recognizer turning sound into new words — whichever is more recent.
+    /// Nil until either has heard anything.
+    private var quietSeconds: TimeInterval? {
+        let now = Date()
+        return [live.lastVoicedAt, live.lastLivePartialAt].compactMap { $0 }
+            .map { now.timeIntervalSince($0) }.min()
+    }
 
     /// Whether a voice was heard in the last moment — the prompter keeps
     /// flowing while someone is speaking and eases to a stop when they don't.
