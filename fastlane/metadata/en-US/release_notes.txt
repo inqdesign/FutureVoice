@@ -1,7 +1,9 @@
 New
-• Used up your free 20 minutes? The report now ends with a one-time free recharge of 20 more, right beside Subscribe.
-• Writing Speech scripts is open on every plan.
+• Used up your free 20 minutes? You can recharge 20 more for free, once.
+• Pronunciation is now measured sound by sound. Shadowing and Speech show which sounds to work on.
+• With iCloud sync on, your routine, tutor, photos and settings carry across your devices.
+• Speech scripts are open on every plan.
 
 Improved
-• Simpler plans. Scenes are no longer counted separately; they come out of your talk minutes, so every plan reads as one number. A scene takes 5 minutes, shown right where you start one. Plans you already have stay as they are.
+• Every plan is now one number: talk minutes. Scenes come out of them too. Plans you already have stay as they are.
 • Max is now 600 minutes at a lower price.
