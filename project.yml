@@ -5,6 +5,11 @@ options:
     iOS: "17.0"
   createIntermediateGroups: true
   groupSortPosition: top
+  # An Icon Composer icon is a folder on disk and ONE file to Xcode.
+  fileTypes:
+    icon:
+      file: true
+      buildPhase: resources
   developmentLanguage: en
   # Interface languages the app ships. NOT the device language: chrome resolves
   # in the learner's TARGET language and explanatory copy in their NATIVE one —
@@ -87,6 +92,9 @@ targets:
     settings:
       base:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # The Mac gets an Icon Composer icon: macOS 26 puts a plain square
+        # (the iPhone's 1024 PNG) inside a grey frame (2026-11-03).
+        "ASSETCATALOG_COMPILER_APPICON_NAME[sdk=macosx*]": AppIconMac
         PRODUCT_NAME: FutureVoice
         INFOPLIST_FILE: FutureVoice/Resources/Info.plist
         # 6 = Mac Catalyst with the MAC idiom ("Optimize Interface for Mac"):
