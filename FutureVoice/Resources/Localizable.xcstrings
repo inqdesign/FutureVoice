@@ -538,6 +538,52 @@
         }
       }
     },
+    "%lld min added. Talk on." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Min sind drauf. Weiter geht's."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld min añadidos. Sigue hablando."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld min ajoutées. Continue à parler."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld分チャージしました。続けて話しましょう。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld분이 충전됐어요. 계속 이야기해요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已充值 %lld 分钟，接着聊吧。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已儲值 %lld 分鐘，接著聊吧。"
+          }
+        }
+      }
+    },
     "%lld min each" : {
       "localizations" : {
         "de" : {
@@ -8019,6 +8065,52 @@
         }
       }
     },
+    "New scripts come with a plan" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neue Reden gibt es mit einem Tarif"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los discursos nuevos vienen con un plan"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les nouveaux discours viennent avec un abonnement"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しい原稿はプランから"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "새 원고는 요금제부터 쓸 수 있어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新讲稿需要订阅"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新講稿需要訂閱"
+          }
+        }
+      }
+    },
     "No hope engraved yet" : {
       "localizations" : {
         "ko" : {
@@ -8383,6 +8475,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Auf meinen Platz setzen"
+          }
+        }
+      }
+    },
+    "Recharge %lld min free" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Min gratis aufladen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recargar %lld min gratis"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recharger %lld min gratuites"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無料で%lld分チャージ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld분 무료 충전"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "免费充值 %lld 分钟"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "免費儲值 %lld 分鐘"
           }
         }
       }
@@ -8893,6 +9031,52 @@
         }
       }
     },
+    "The sample script stays free to practise. With a plan, practise any text you like." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Beispielrede bleibt kostenlos. Mit einem Tarif übst du jeden Text, den du willst."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El discurso de muestra sigue siendo gratis. Con un plan, practica cualquier texto."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le discours d’exemple reste gratuit. Avec un abonnement, entraîne-toi sur n’importe quel texte."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サンプル原稿はずっと無料です。プランがあれば、好きな文章で練習できます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "샘플 원고는 계속 무료예요. 요금제가 있으면 원하는 글은 무엇이든 연습할 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "示例讲稿一直免费。订阅后可以练习任何文本。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "範例講稿一直免費。訂閱後可以練習任何文本。"
+          }
+        }
+      }
+    },
     "This cube is your seat in the Core. Pick its colour." : {
       "localizations" : {
         "ko" : {
@@ -9027,6 +9211,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dieser Platz lässt sich gerade nicht öffnen. Versuch es gleich noch mal."
+          }
+        }
+      }
+    },
+    "Unlimited on every plan" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In jedem Tarif unbegrenzt"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sin límite en todos los planes"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Illimité dans tous les abonnements"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "どのプランでも無制限"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "모든 요금제에서 무제한"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "所有方案不限次数"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "所有方案不限次數"
           }
         }
       }
@@ -9349,6 +9579,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "用哪種語言寫都可以。資料庫裡還沒有的，會先確認、標上程度，再加入所有學這個語言的人的資料庫。"
+          }
+        }
+      }
+    },
+    "Write scripts on any topic, or add your own, with a plan." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit einem Tarif schreibst du Reden zu jedem Thema oder fügst eigene hinzu."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Con un plan, escribe discursos sobre cualquier tema o añade los tuyos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avec un abonnement, écris des discours sur n’importe quel sujet ou ajoute les tiens."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プランがあれば、どんなテーマでも原稿を作ったり、自分の原稿を入れたりできます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "요금제가 있으면 어떤 주제든 원고를 만들거나 내 원고를 넣을 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "订阅后可以就任何主题写讲稿，或加入自己的讲稿。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "訂閱後可以就任何主題寫講稿，或加入自己的講稿。"
           }
         }
       }
@@ -24627,52 +24903,6 @@
         }
       }
     },
-    "+ Speech" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "+ Rede"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "+ Discurso"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "+ Discours"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "+ スピーチ機能"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "+ 스피치 기능"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "+ 演讲功能"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "+ 演講功能"
-          }
-        }
-      }
-    },
     "+%lld min" : {
       "localizations" : {
         "de" : {
@@ -25919,52 +26149,6 @@
     },
     "A" : {
       "shouldTranslate" : false
-    },
-    "A 10-minute tutor call every weekday is about 200 minutes a month. Here, minutes count only while the conversation is going — pauses are free." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zehn Minuten Telefonunterricht an jedem Werktag sind etwa 200 Minuten im Monat. Hier zählen Minuten nur, solange ihr euch unterhaltet – Pausen sind gratis."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Una clase de 10 minutos por teléfono cada día laborable son unos 200 minutos al mes. Aquí los minutos solo cuentan mientras la conversación sigue: las pausas son gratis."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Un cours de 10 minutes au téléphone chaque jour de semaine, c’est environ 200 minutes par mois. Ici, les minutes ne comptent que pendant que la conversation avance ; les pauses sont gratuites."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "平日に毎日10分の電話レッスンなら、月に約200分です。ここでは会話が続いている間だけ時間が減り、沈黙の時間は数えません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "평일마다 10분씩 하는 전화 수업은 한 달에 약 200분이에요. 여기서는 대화가 오가는 동안만 시간이 줄고, 말이 멈춘 동안은 세지 않아요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "每个工作日上 10 分钟电话课，一个月大约 200 分钟。在这里，只有对话进行时才计时，停顿不算。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "每個平日上 10 分鐘電話課，一個月大約 200 分鐘。在這裡，只有對話進行時才計時，停頓不算。"
-          }
-        }
-      }
     },
     "A badge next to your name where you meet people." : {
       "localizations" : {
@@ -92159,52 +92343,6 @@
         }
       }
     },
-    "New scripts are a Plus feature" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Neue Skripte gibt’s mit Plus"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Crea guiones nuevos con Plus"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Crée de nouveaux textes avec Plus"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新しい原稿づくりは Plus で"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "새 원고는 Plus부터 쓸 수 있어요"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新建讲稿是 Plus 功能"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新增講稿是 Plus 的功能"
-          }
-        }
-      }
-    },
     "New situation" : {
       "localizations" : {
         "de" : {
@@ -115729,52 +115867,6 @@
         }
       }
     },
-    "Review book, shadowing, words, replays and drills are unlimited on every plan." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Übungsbuch, Nachsprechen, Wörter, Nochmal anhören und Drills sind in jedem Tarif unbegrenzt."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tu cuaderno de repaso, el shadowing, las palabras, las repeticiones y los ejercicios son ilimitados en todos los planes."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ton carnet de révision, le shadowing, les mots, les réécoutes et les exercices sont illimités dans toutes les formules."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "復習ブック、シャドーイング、単語学習、会話の再生、ドリル復習はどのプランでも無制限です。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "개인화된 복습교재, 섀도잉, 단어학습, 대화 재생, 드릴 복습은 모든 요금제에서 무제한이에요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "复习书、跟读、单词、对话重播和练习在每个方案都无限使用。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "複習書、跟讀、單字、對話重播和練習在每個方案都無限使用。"
-          }
-        }
-      }
-    },
     "Review cards" : {
       "localizations" : {
         "de" : {
@@ -139126,52 +139218,6 @@
         }
       }
     },
-    "The sample script stays free to practise. With Plus or Max, practise any text you like." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Das Beispielskript bleibt kostenlos. Mit Plus oder Max übst du jeden Text, den du willst."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "El guion de ejemplo sigue siendo gratis. Con Plus o Max practicas el texto que quieras."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Le texte d’exemple reste gratuit. Avec Plus ou Max, entraîne-toi sur le texte de ton choix."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "サンプル原稿はこれからも無料です。Plus・Max なら、好きな文章で練習できます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "샘플 원고는 계속 무료예요. Plus나 Max에서는 원하는 글은 무엇이든 연습할 수 있어요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "内置示例依然免费。订阅 Plus 或 Max，想练什么内容都可以。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "內建範例一樣免費。訂閱 Plus 或 Max，想練什麼內容都可以。"
-          }
-        }
-      }
-    },
     "The scene" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -159856,52 +159902,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "讓 AI 幫你寫講稿"
-          }
-        }
-      }
-    },
-    "Write scripts on any topic, or add your own, with Plus." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mit Plus lässt du dir Skripte zu jedem Thema schreiben oder fügst eigene hinzu."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Con Plus, pide guiones sobre cualquier tema o añade los tuyos."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Avec Plus, fais écrire des textes sur n’importe quel sujet ou ajoute les tiens."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Plus なら、好きなテーマで原稿を書いてもらったり、自分の原稿を追加したりできます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Plus에서는 어떤 주제든 원고를 만들거나 내 원고를 넣을 수 있어요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "订阅 Plus 就能让 AI 写任意话题的讲稿，也能添加自己的讲稿。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "訂閱 Plus 就能請 AI 寫任何主題的講稿，也能加入自己的講稿。"
           }
         }
       }

@@ -205,7 +205,7 @@ struct SpeechTab: View {
                     Text("My scripts")
                 } footer: {
                     if !canWrite {
-                        Text("Write scripts on any topic, or add your own, with Plus.")
+                        Text("Write scripts on any topic, or add your own, with a plan.")
                     }
                 }
             }
@@ -301,7 +301,7 @@ struct SpeechTab: View {
                                level: appState.proficiency)
                 .environmentObject(appState)
         }
-        // Any script beyond the bundled one is Plus and up. The tap is
+        // Any script beyond the bundled one needs a plan (any tier since 2026-11-03). The tap is
         // answered with what the feature is FIRST, never a bare paywall; the
         // sheet owns its paywall (a sheet raised from under a sheet never
         // appears).
@@ -1098,9 +1098,9 @@ struct SpeechPlusSheet: View {
                     Label("Plus and Max", systemImage: "lock.fill")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.tint)
-                    Text("New scripts are a Plus feature")
+                    Text("New scripts come with a plan")
                         .font(.title2.weight(.bold))
-                    Text("The sample script stays free to practise. With Plus or Max, practise any text you like.")
+                    Text("The sample script stays free to practise. With a plan, practise any text you like.")
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }

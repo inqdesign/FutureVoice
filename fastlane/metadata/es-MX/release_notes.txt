@@ -1,5 +1,4 @@
 Novedades
-• Ahora escuchamos tu pronunciación sonido por sonido. En shadowing y en Discurso, comparamos tu grabación con la pronunciación de un hablante nativo, subrayamos las palabras que no sonaron del todo bien y el coach te dice qué sonido practicar.
-
-Correcciones
-• En Volver a decirlo, la conversación ya no se transparenta detrás de la tarjeta del guion ni se mezcla con el texto.
+• ¿Se te acabaron los 20 minutos gratis? Al final del reporte puedes recargar otros 20 gratis, una sola vez, justo al lado de Suscribirse.
+• Escribir discursos está abierto en todos los planes. Los discursos se pagan con tus minutos de conversación.
+• Una página de planes más sencilla: lo que es ilimitado en todos los planes de un vistazo, y los minutos que usa una escena, justo donde la empiezas.

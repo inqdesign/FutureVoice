@@ -645,6 +645,13 @@ struct PaywallView: View {
                     Text(explain("Pick how much you want to talk each month."))
                         .foregroundStyle(.secondary)
                 }
+                // What every plan shares, right under the question it answers
+                // (2026-11-03, founder: as a footnote under the ladder it was
+                // hidden, and as a sentence it read as five things — the
+                // chips keep coming). A scene's and a voiceover's price is
+                // said on their own buttons, not here.
+                FreeFeaturesMarquee()
+                    .padding(.top, 8)
             }
             .padding(.top, 12)
 
@@ -689,17 +696,6 @@ struct PaywallView: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 10) {
-                Label(explain("Review book, shadowing, words, replays and drills are unlimited on every plan."),
-                      systemImage: "checkmark.circle")
-                Label(explain("A 10-minute tutor call every weekday is about 200 minutes a month. Here, minutes count only while the conversation is going — pauses are free."),
-                      systemImage: "phone")
-            }
-            .font(.footnote)
-            .foregroundStyle(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
-            .padding(.horizontal, 4)
-
             subscriptionLegal
         }
     }
@@ -726,7 +722,11 @@ struct PaywallView: View {
     /// The pack is for anyone — before a plan, or on top of one. Not for the
     /// few grandfathered uncapped rows, whose meter never spends a balance.
     /// Loaded alongside the catalog; draws only with a live price.
-    private var showsPack: Bool { !account.isUncappedTalk && packPrice != nil }
+    /// Hidden on the plans page for now (2026-11-03, founder): the card is
+    /// the three plans and nothing else. The pack is still sold where the
+    /// pool runs out (`DailyAllowanceSheet`, beside the move to Plus).
+    static let packOnPlansPage = false
+    private var showsPack: Bool { Self.packOnPlansPage && !account.isUncappedTalk && packPrice != nil }
 
     private var packPrice: Price? {
         #if DEBUG
@@ -828,13 +828,6 @@ struct PaywallView: View {
                     // account still on it, which is what that account buys.
                     if !account.scenesCostTalk && scenes > 0 {
                         Text(explain("+ \(scenes) scenes"))
-                            .font(.subheadline.weight(.medium))
-                    }
-                    // Writing Speech scripts (AI or your own) is these tiers'
-                    // alone — the same rule `canWriteSpeechScripts` enforces,
-                    // so the row can't promise what the tab then refuses.
-                    if ["plus", "max"].contains(tier) {
-                        Text(explain("+ Speech"))
                             .font(.subheadline.weight(.medium))
                     }
                 }

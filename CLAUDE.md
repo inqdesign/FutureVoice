@@ -3217,9 +3217,16 @@ its trailer was invisible to git whenever it sat in its own paragraph.
 - **A Watch scene costs FIVE talk minutes for everyone who subscribes from 2026-10-19** (`20261019120000_scenes_cost_talk_time`, founder decision). A scene is ~930 characters (~3 talk minutes upstream), so five minutes is above cost and below the voiceover's 3x, and with it any mix of talking and watching costs at most what the same minutes spent talking would: the plan's margin is the talk minute's alone. Charged ONCE at the claim (`begin_scene_play(p_talk => true)` → `consume_metered_seconds(300, 'talk_seconds', action 'scene_play')`), later lines ride `charge_tts_pooled(p_pool => 'scene_paid')` (ledger only, spends nothing); a spent pool is the talk wall (`daily_cap_reached`). **Short of a whole scene is answered at the TAP**, before a script is written: `BillingGate.sceneAnswer()` → `.short` raises the spent-pool sheet (`TalkWall`) from the composer, the map's person card and Find people, and `SceneCostNote` says "a scene needs 5 min · 3 min left" beforehand. Both sides count plan minutes + extra minutes (`sceneSpendableSeconds`), and the claim pays that way too — extra first, the plan the rest — so a scene the screen says fits is never refused. **Watching a scene AGAIN is free, always** (founder): a saved dialogue's lines go as `purpose: "scene-replay"` with no scene key (`WatchView.isReplay`, Android `replaySaved`), and `record_scene_replay` records the line and spends nothing — not the free review pool, which charges past 12,000 characters a day. Its only limit is an abuse ceiling (60,000 characters a day) answered as 429, never a paywall. Three rules hold it: **every account that had a subscription row that day stays on the COUNT** (`scene_count_billing`, 37 rows; the founder moves one by deleting its row after asking them); **a free account gets ONE sample scene, ever, and it takes no free minutes** (was two, charged by characters); and **only a build that sends `scene_billing: "talk"` is charged in minutes** — a store build that prints "10 scenes" keeps the count, because the server never charges in a unit the screen doesn't name. `scene_allowance` keeps every old field and adds `scene_billing` / `scene_talk_seconds` (with no plan: what a purchase would bring, which the paywall draws). The price is said before the tap: the paywall ladder and footnote, Usage, the guide, and `SceneCostNote` under the composer box, the browse leaf and the saved-scenarios sheet. Capture with `-scenetalk 1`.
 - **The plans page is three rows and one line** (2026-11-03, founder: "simple;
   everything is talk minutes"). A row is name · minutes · about N a day ·
-  price. Under the subtitle, once: the unlimited features, and "Scenes and
-  speech use the same minutes" (only to an account on talk-minute scene
-  billing). Gone: the "+ Speech" row (speech scripts come with ANY plan now,
+  price. Under the subtitle, `FreeFeaturesMarquee`: "Unlimited on every
+  plan" and a slow, endless row of icon chips, one per feature no plan
+  meters (review book, words, expressions, sentences, shadowing, say it
+  again, replay, drills, weekly test, your week, pronunciation, listening) —
+  founder: a sentence read as five things, the chips keep coming; still rows
+  under Reduce Motion. A scene's and a voiceover's price is NOT on the
+  paywall: it is on the button that spends it — `SceneCostNote` under every
+  Watch button (composer box and leaf, saved scenarios, the map's person
+  card, Find people), as the voiceover toggle already does. Gone: the "+
+  Speech" row (speech scripts come with ANY plan now,
   `canWriteSpeechScripts = unlimited || isEntitled`; the voiceover is paid in
   minutes anyway), the "10-minute tutor call every weekday" footnote, and the
   minute pack row (`PaywallView.packOnPlansPage = false` — the pack is still

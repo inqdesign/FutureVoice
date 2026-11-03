@@ -7,6 +7,8 @@
     scripts/billing-switch.py offer-at onboarding     # offer the trial once, right after onboarding
     scripts/billing-switch.py offer-at after_free     # offer the plans when the free minutes run out (default)
     scripts/billing-switch.py trial-minutes 60        # a trial may talk 60 minutes in all
+    scripts/billing-switch.py recharge 20             # the one free recharge after the free minutes is 20 min
+    scripts/billing-switch.py recharge 0              # no recharge: the report's last card shows Subscribe alone
     scripts/billing-switch.py trial-minutes default   # back to Light's month x 7/30 (35 min)
     scripts/billing-switch.py trial on 1w             # a free trial on every plan on sale (3d|1w|2w|1m)
     scripts/billing-switch.py trial off               # no trial anywhere
@@ -26,6 +28,12 @@ What each switch is:
                     voiceover's wall and the admin console all read it through
                     `trial_talk_seconds()`. Builds after 1.2.2 print it on the
                     paywall; older ones still print 35 there (they understate).
+  recharge          `billing_config.free_recharge_seconds` (20261103150000):
+                    what "Recharge N min free" on the trial report's last
+                    card gives, once per account, once the free minutes are
+                    spent (`claim_free_recharge`). The apps ask the server
+                    (`free_recharge_offer`) and draw the button only on
+                    `available`, so 0 removes it from every build at once.
   trial             the STORES' switch, not ours. App Store: an introductory
                     free-trial offer on every subscription on sale, in every
                     territory it is sold in. Google Play: the offer called
@@ -126,6 +134,18 @@ def asc_token() -> str:
     sig = b"".join(bytes.fromhex(i.rjust(64, "0")) for i in ints)
     _asc_token = f"{header}.{payload}.{b64(sig)}"
     return _asc_token
+
+
+def offer_territory(offer) -> str:
+    """The territory an offer row belongs to, for a message."""
+    try:
+        return offer["relationships"]["territory"]["data"]["id"]
+    except (KeyError, TypeError):
+        try:
+            raw = offer["id"] + "=" * (-len(offer["id"]) % 4)
+            return json.loads(base64.b64decode(raw)).get("i", offer["id"])
+        except Exception:
+            return offer["id"]
 
 
 def asc(method: str, path: str, body=None):
@@ -255,6 +275,12 @@ def show():
                                          else "default, Light's month x 7/30 (35 min)"))
         except RuntimeError:
             print("trial talk time: default (migration 20261022120000 not applied)")
+        try:
+            r2 = sql("select free_recharge_seconds from billing_config")[0]["free_recharge_seconds"]
+            print(f"free recharge after the free minutes: {r2 // 60} min ({r2} s)"
+                  + (" — off, no button" if r2 == 0 else ""))
+        except RuntimeError:
+            print("free recharge: none (migration 20261103150000 not applied)")
     else:
         print("billing_config: no row (migration 20261021120000 not applied?)")
 
@@ -354,8 +380,23 @@ def trial(state: str, length: str, send: bool):
         if state == "off":
             print(f"  {p['id']:14} delete {len(offers)} introductory offers")
             if send:
+                # Apple answers a DELETE with a 500 now and then (2026-11-03,
+                # the very first of 875): retry it, and never let one
+                # territory stop the other 874 — what is left is printed and
+                # a second run deletes it.
+                failed = []
                 for o in offers:
-                    asc("DELETE", f"/subscriptionIntroductoryOffers/{o['id']}")
+                    for attempt, pause in enumerate((0, 2, 6)):
+                        time.sleep(pause)
+                        try:
+                            asc("DELETE", f"/subscriptionIntroductoryOffers/{o['id']}")
+                            break
+                        except RuntimeError as e:
+                            if attempt == 2:
+                                failed.append((offer_territory(o), str(e)[-120:]))
+                print(f"  {p['id']:14} deleted {len(offers) - len(failed)}"
+                      + (f", FAILED {len(failed)}: " + ", ".join(t for t, _ in failed)
+                         + "\n    last error: " + failed[-1][1] if failed else ""))
             continue
         have = {(o["relationships"]["territory"]["data"] or {}).get("id") for o in offers
                 if o.get("relationships", {}).get("territory", {}).get("data")}
@@ -403,6 +444,23 @@ def trial(state: str, length: str, send: bool):
               f"'{length}' applies to the App Store only")
 
 
+def set_recharge(minutes: str, send: bool):
+    try:
+        m = int(minutes)
+    except ValueError:
+        sys.exit(f"not a number of minutes: {minutes}")
+    if not 0 <= m <= 600:
+        sys.exit("recharge minutes must be 0–600")
+    q = f"update billing_config set free_recharge_seconds = {m * 60}, updated_at = now() where id"
+    print(("SEND: " if send else "dry run: ") + q)
+    print("  accounts that already took their recharge are unchanged; "
+          + ("the button disappears everywhere" if m == 0 else
+             f"the next tap on 'Recharge free' gives {m} min, once per account"))
+    if send:
+        sql(q)
+        show()
+
+
 def main():
     args = [a for a in sys.argv[1:] if a != "--send"]
     send = "--send" in sys.argv[1:]
@@ -412,6 +470,8 @@ def main():
         set_free(args[1], send)
     elif args[0] == "trial-minutes" and len(args) == 2:
         set_trial_minutes(args[1], send)
+    elif args[0] == "recharge" and len(args) == 2:
+        set_recharge(args[1], send)
     elif args[0] == "offer-at" and len(args) == 2:
         set_offer_at(args[1], send)
     elif args[0] == "trial" and len(args) >= 2:

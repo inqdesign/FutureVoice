@@ -1539,6 +1539,10 @@ struct SkyPersonCard: View {
             }
             .font(.body.weight(.semibold))
             .controlSize(.large)
+            // What the play button spends, where it is (2026-11-03, founder:
+            // every button that starts a scene says its minutes).
+            SceneCostNote()
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, 18)
         .padding(.top, 14)

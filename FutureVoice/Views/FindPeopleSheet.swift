@@ -638,6 +638,9 @@ struct FindPersonCard: View {
                 }
                 .buttonStyle(.bordered)
             }
+            // What Watch spends, under the button that spends it.
+            SceneCostNote()
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .controlSize(.large)
             .padding(.horizontal, 20)

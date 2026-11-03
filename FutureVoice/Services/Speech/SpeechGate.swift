@@ -1,12 +1,14 @@
 import Foundation
 
 extension AccountStatus {
-    /// Writing new speech scripts is a Plus-and-up feature; the bundled
-    /// script is everyone's. Read off the TIER on purpose — this is about
-    /// which plan was bought, not about a pool — so Max is included and a
-    /// Light or free account is not. The admin flag passes like everywhere.
+    /// Writing new speech scripts comes with ANY plan (2026-11-03, founder:
+    /// "speech for everyone — it is paid out of the talk minutes anyway", the
+    /// voiceover being a minute per 100 characters). Plus-and-up from
+    /// 2026-10-16 to this date. The bundled script is everyone's; a free
+    /// account keeps its minutes for the calls the trial report is read
+    /// from. The admin flag passes like everywhere.
     var canWriteSpeechScripts: Bool {
-        unlimited || (isEntitled && ["plus", "max"].contains(tier ?? ""))
+        unlimited || isEntitled
     }
 }
 

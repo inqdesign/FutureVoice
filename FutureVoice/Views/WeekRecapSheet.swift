@@ -42,6 +42,12 @@ struct WeekRecapSheet: View {
     @State private var levelSettled = false
     @State private var routine: [RoutineRecipe.Line] = []
     @State private var routineIsOwn = false
+    /// The one free recharge after the free minutes (2026-11-03): asked of
+    /// the server when the deck opens, drawn beside Subscribe on the routine
+    /// card only on a fresh `available`. Nil or unavailable = Subscribe alone.
+    @State private var rechargeOffer: FreeRecharge.Offer?
+    @State private var recharge: RechargeState = .idle
+    private enum RechargeState: Equatable { case idle, claiming, added(Int), refused }
     /// How they used the app (`StudyHabits`): what the rules found, the
     /// wording once it lands, and which routine block each finding touched.
     @State private var habitFindings: [HabitFinding] = []
@@ -202,6 +208,7 @@ struct WeekRecapSheet: View {
                 // Unstructured, so the cover's disappear doesn't cancel the
                 // level read or the coach halfway.
                 Task { await startTrial() }
+                Task { rechargeOffer = await FreeRecharge.offer() }
                 return
             }
             // Shown means SEEN: marked here, not where it was raised, so a
@@ -289,7 +296,7 @@ struct WeekRecapSheet: View {
     private var bottomButton: some View {
         if isTrial, let card = cards[safe: page], [.trialTest, .routine].contains(card) {
             if card == .routine {
-                primary(Text("Keep going with this routine")) { keepRoutine() }
+                routineButtons
             } else if trialTestCleared {
                 primary(Text("See your level")) { advance() }
             } else {
@@ -1558,6 +1565,90 @@ struct WeekRecapSheet: View {
     }
 
     private func keepRoutine() {
+        applyRoutine()
+        Analytics.capture("trial_report_routine", ["own": routineIsOwn,
+                                                   "changed": routineRules.count,
+                                                   "rules": habitFindings.map(\.rule).joined(separator: ",")])
+        showingPaywall = true
+    }
+
+    /// The routine card's bottom: Subscribe, and beside it the one free
+    /// recharge when the server offers it (2026-11-03, founder: the two side
+    /// by side). Taken, the card says so and the deck closes on Start
+    /// talking; refused or unavailable, Subscribe stands alone — which is
+    /// what every build before this showed.
+    @ViewBuilder
+    private var routineButtons: some View {
+        switch recharge {
+        case .added(let seconds):
+            VStack(spacing: 8) {
+                Text("\(seconds / 60) min added. Talk on.")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.themeAccent)
+                primary(Text("Start talking")) { endTrialReport() }
+            }
+        case .idle, .claiming:
+            if let offer = rechargeOffer, offer.available, offer.seconds >= 60 {
+                HStack(spacing: 10) {
+                    primary(Text("Subscribe")) { keepRoutine() }
+                    Button {
+                        Task { await claimRecharge(offer) }
+                    } label: {
+                        Group {
+                            if recharge == .claiming {
+                                ProgressView()
+                            } else {
+                                Text("Recharge \(offer.seconds / 60) min free")
+                            }
+                        }
+                        .font(.body.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(Color.themeAccent)
+                    .controlSize(.large)
+                    .disabled(recharge == .claiming)
+                }
+            } else {
+                primary(Text("Keep going with this routine")) { keepRoutine() }
+            }
+        case .refused:
+            primary(Text("Keep going with this routine")) { keepRoutine() }
+        }
+    }
+
+    /// The routine is kept either way (the report built it from their own
+    /// talks), then the grant. Once it lands the report has done its job:
+    /// `finished` keeps it from being raised again at the second wall, where
+    /// the plans are the answer, and the gate's cache is dropped so the next
+    /// paid tap sees the new balance.
+    private func claimRecharge(_ offer: FreeRecharge.Offer) async {
+        guard recharge == .idle else { return }
+        recharge = .claiming
+        applyRoutine()
+        Analytics.capture("trial_recharge_tapped", ["seconds": offer.seconds])
+        do {
+            let claim = try await FreeRecharge.claim()
+            if claim.applied {
+                TrialReportStore.finished = true
+                BillingGate.shared.invalidate()
+                NotificationCenter.default.post(name: .billingStateChanged, object: nil)
+                Analytics.capture("trial_recharge_claimed", ["seconds": claim.seconds,
+                                                             "balance": claim.balance])
+                recharge = .added(claim.seconds)
+            } else {
+                Analytics.capture("trial_recharge_refused", ["reason": claim.reason ?? "unknown"])
+                recharge = .refused
+            }
+        } catch {
+            Analytics.capture("trial_recharge_refused", ["reason": "error",
+                                                         "error": String(String(describing: error).prefix(120))])
+            recharge = .refused
+        }
+    }
+
+    private func applyRoutine() {
         if !routineIsOwn, !routine.isEmpty {
             StudyPlanStore.shared.update(RoutineRecipe.plan(from: routine))
             UserDefaults.standard.set(true, forKey: LearningPurposeStore.routineAppliedKey)
@@ -1568,10 +1659,6 @@ struct WeekRecapSheet: View {
             plan.blocks = routine.map(\.block)
             StudyPlanStore.shared.update(plan)
         }
-        Analytics.capture("trial_report_routine", ["own": routineIsOwn,
-                                                   "changed": routineRules.count,
-                                                   "rules": habitFindings.map(\.rule).joined(separator: ",")])
-        showingPaywall = true
     }
 
     /// The deck's last step: the review prompt follows whatever the feedback

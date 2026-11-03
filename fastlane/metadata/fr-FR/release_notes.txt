@@ -1,5 +1,4 @@
-Nouveautés
-• Ta prononciation est maintenant écoutée son par son. En shadowing et dans Discours, ton enregistrement est comparé à la prononciation d’un locuteur natif, les mots qui ne sonnaient pas tout à fait juste sont soulignés, et le coach te dit quel son travailler.
-
-Corrections
-• Dans Redire, la conversation ne transparaît plus derrière la carte du script et ne se mélange plus à son texte.
+Nouveau
+• Tes 20 minutes gratuites sont épuisées ? À la fin du rapport, tu peux en recharger 20 de plus gratuitement, une seule fois, juste à côté de S’abonner.
+• L’écriture de discours est ouverte dans tous les abonnements. Les discours sont payés avec tes minutes de conversation.
+• Une page des abonnements plus simple : ce qui est illimité partout, en un coup d’œil, et les minutes qu’une scène utilise, affichées là où tu la lances.

@@ -1,5 +1,4 @@
 New
-• Your pronunciation is now heard sound by sound. In shadowing and Speech, your take is compared with a native speaker's, words that didn't sound right are underlined, and the coach tells you which sound to work on.
-
-Fixed
-• In Say it again, the conversation no longer shows through the script card and runs into its text.
+• Used up your free 20 minutes? The report now ends with a one-time free recharge of 20 more, right beside Subscribe.
+• Writing Speech scripts is open on every plan. Scripts are paid out of your talk minutes.
+• A simpler plans page: what is unlimited on every plan at a glance, and the talk minutes a scene uses shown right where you start one.
