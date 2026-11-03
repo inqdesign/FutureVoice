@@ -85,7 +85,17 @@ final class SpeechTakeSession: ObservableObject {
         let pron: PronunciationResult?
     }
     private var lastChunkAt: TimeInterval = 0
+    /// The prompter cursor at the last cut: the script from here to the
+    /// cursor at the next cut is that piece's reference (`scriptSpan`).
+    private var lastCutCursor = 0
     static let chunkSeconds: TimeInterval = 12
+    /// A piece is cut at a SENTENCE END once it is `chunkSeconds` long, and
+    /// at the next pause whatever the word once it is this long (the
+    /// assessment endpoint takes ≤30 s). Whole sentences of the script are
+    /// what a piece is judged against (2026-11-03): judged against its own
+    /// read-back, a piece whose first word the two readers heard differently
+    /// mis-aligned from there and marked eight right words "inserted" at 0.
+    static let chunkHardSeconds: TimeInterval = 22
 
     private let native: String
     private let level_: CEFRLevel
@@ -155,6 +165,7 @@ final class SpeechTakeSession: ObservableObject {
                            voiceProcessing: true)
             chunkReads = []
             lastChunkAt = 0
+            lastCutCursor = 0
             follows = 0
             partials = 0
             wavURL = try recorder.prepare(quality: .sttOptimal)
@@ -253,11 +264,14 @@ final class SpeechTakeSession: ObservableObject {
         // for the cut and the stop.
         let quietFor = quietSeconds ?? clock
 
-        // Cut a piece for the reader at a pause, never mid-word.
+        // Cut a piece for the reader at a pause, never mid-word — and at a
+        // sentence end while one comes within `chunkHardSeconds`, so the
+        // piece's reference is whole script sentences.
         if clock - lastChunkAt >= Self.chunkSeconds, quietFor >= 0.35,
+           atSentenceEnd || clock - lastChunkAt >= Self.chunkHardSeconds,
            let piece = live.rotateCaptureChunk() {
             lastChunkAt = clock
-            chunkReads.append(readPiece(piece))
+            chunkReads.append(readPiece(piece, reference: scriptSpan(upTo: cursor)))
         }
         // Finished = the LAST word was heard, then a second of quiet. Being
         // ON the last word isn't finished: a breath before it ("…바로 그 첫,
@@ -293,7 +307,9 @@ final class SpeechTakeSession: ObservableObject {
         // `quietSeconds`). Read before the transcriber is torn down.
         let meterVoiced = live.fluencyStats().speakingSeconds
         let liveText = await live.stopAndFinalize()
-        if let tail = live.lastChunkRecordingURL { chunkReads.append(readPiece(tail)) }
+        if let tail = live.lastChunkRecordingURL {
+            chunkReads.append(readPiece(tail, reference: scriptSpan(upTo: track.words.count)))
+        }
         let pieces = chunkReads
         chunkReads = []
 
@@ -391,6 +407,7 @@ final class SpeechTakeSession: ObservableObject {
                               metrics: metrics, coaching: nil,
                               pronunciationWords: pronunciation?.weakWords)
         SpeechStore.shared.save(take)
+        PronunciationLedger.shared.record(prons, id: id, surface: "speech", language: script.language)
         SyncEngine.noteChanged(.blobSpeechAudio)
         // A saved take is what a Speech block in the routine asks for.
         ActivityEventLog.shared.record(.speech)
@@ -459,17 +476,49 @@ final class SpeechTakeSession: ObservableObject {
         ])
     }
 
-    private func readPiece(_ url: URL) -> Task<Piece?, Never> {
+    /// Whether the word the reader just finished closes a sentence.
+    private var atSentenceEnd: Bool {
+        cursor > lastCutCursor && track.endsSentence(at: cursor - 1)
+    }
+
+    /// The script the prompter walked since the last cut — this piece's
+    /// reference — and moves the mark. Two words of overlap at the start:
+    /// a prompter a word AHEAD of the voice would otherwise open the next
+    /// piece's audio on words its reference no longer has, which is the
+    /// mis-alignment above; a word already said in the previous piece is an
+    /// omission here, which the marks ignore. Empty when the prompter did
+    /// not move (follow off, a lost recognizer), and the reader's own words
+    /// stand in.
+    private func scriptSpan(upTo end: Int) -> String {
+        let hi = min(end, track.words.count)
+        guard hi > lastCutCursor else { return "" }
+        let lo = max(0, lastCutCursor - 2)
+        lastCutCursor = hi
+        let joiner = LanguageCatalog.writesSpaces(script.language) ? " " : ""
+        return track.words[lo..<hi].map(\.text).joined(separator: joiner)
+    }
+
+    private func readPiece(_ url: URL, reference: String) -> Task<Piece?, Never> {
         let language = script.language
         return Task {
             defer { try? FileManager.default.removeItem(at: url) }
+            // The script sentences the prompter walked are the reference:
+            // what the learner was READING, judged for how it sounded. The
+            // script diff (accuracy) still comes from the read-back. With a
+            // script reference the two readers run side by side; without one
+            // (the prompter never moved) the read-back is the reference and
+            // the assessment waits for it. Either way the result never waits
+            // on this piece: it runs while the next is still being spoken.
+            if !reference.isEmpty {
+                async let read = SpeechReader.readPiece(audioURL: url, language: language)
+                async let pron = PronunciationAssessor.assess(
+                    audioURL: url, reference: reference, language: language, surface: "speech")
+                guard let text = await read else { _ = await pron; return nil }
+                return Piece(text: text, pron: await pron.result)
+            }
             guard let text = await SpeechReader.readPiece(audioURL: url, language: language) else { return nil }
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else { return Piece(text: text, pron: nil) }
-            // The piece's own words are the reference: a scripted assessment
-            // of what was said, which the docs recommend over the unscripted
-            // mode (a weaker recognizer). Runs while the next piece is still
-            // being spoken, so the result never waits on it.
             let pron = await PronunciationAssessor.assess(
                 audioURL: url, reference: trimmed, language: language, surface: "speech")
             return Piece(text: text, pron: pron.result)
@@ -505,12 +554,12 @@ final class SpeechTakeSession: ObservableObject {
         }
     }
 
-    /// The take's pronunciation from its pieces: the score weighted by each
-    /// piece's reference words, and every faulted word, worst first. nil
-    /// when no piece was assessed.
+    /// The take's pronunciation from its pieces: the SOUND score
+    /// (`soundScore`) weighted by each piece's judged words, and every
+    /// faulted word, worst first. nil when no piece was assessed.
     static func pronunciation(of pieces: [PronunciationResult])
     -> (score: Int, weakWords: [PronunciationResult.Word])? {
-        let weighted = pieces.map { (score: $0.score, weight: max(1, $0.referenceWords.count)) }
+        let weighted = pieces.map { (score: $0.soundScore, weight: max(1, $0.judgedWords.count)) }
         let total = weighted.reduce(0) { $0 + $1.weight }
         guard total > 0 else { return nil }
         let score = weighted.reduce(0) { $0 + $1.score * $1.weight } / total

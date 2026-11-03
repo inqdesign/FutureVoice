@@ -590,10 +590,21 @@ enum WeekRecapCoach {
             user += previous.grammar.map { "- grammar: \($0.rule)" }.joined(separator: "\n")
             user += "\n" + previous.upgrades.map { "- upgrade: \($0.instead) → \($0.better)" }.joined(separator: "\n")
         }
+        // What the sounds measured (2026-11-03): the month's takes as the
+        // ledger reads them, so the plan can name a sound that STAYS low.
+        // Absent when under three takes were assessed — both prompts are
+        // then byte-identical to before.
+        var systemPrompt = system
+        if let pronunciation = await MainActor.run(body: {
+            PronunciationProfile.current(language: targetLanguage, now: recap.end).promptLine
+        }) {
+            user += "\n\n# PRONUNCIATION (measured per sound against a native model, 0–100, over the month's takes — not from the talks)\n\(pronunciation)"
+            systemPrompt += "\n\n" + Self.pronunciationNote
+        }
         let response: Payload = try await GeminiClient.shared.sendJSON(
             // The trial report reads the free minutes, not a week; the
             // weekly prompt is unchanged when this is off.
-            system: firstTalks ? system + "\n\n" + Self.firstTalksNote : system,
+            system: firstTalks ? systemPrompt + "\n\n" + Self.firstTalksNote : systemPrompt,
             messages: [.init(role: .user, content: user)],
             // Three nested arrays on the app's longest evidence prompt, and
             // gen-3 thinks out of the same ceiling — a truncation loses it all.
@@ -703,6 +714,18 @@ enum WeekRecapCoach {
     // MARK: Verification
 
     /// Keep only what the learner's own lines bear out.
+    /// Appended to the system prompt only when a PRONUNCIATION section rides
+    /// in the evidence.
+    static let pronunciationNote = """
+        PRONUNCIATION: the evidence carries a measured section. If it names a \
+        weak sound (an IPA symbol) or a word low in several takes, ONE item \
+        of "plan" may be about it — name the sound or word exactly as given, \
+        in a sentence a learner can act on (which word to practise it in, \
+        what the mouth does). Never name a sound or word the section does \
+        not list, and never judge pronunciation from the transcripts: a \
+        transcript cannot hear it.
+        """
+
     static func verified(_ r: Payload, lines: [String]) -> WeekRecap.Coach {
         func said(_ quote: String) -> Bool {
             !quote.isEmpty && lines.contains { ConversationEngine.quotes(quote, from: $0) }

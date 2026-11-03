@@ -565,6 +565,25 @@ struct ShadowDrillView: View {
         }
     }
 
+    /// This take's low sounds ("θ 48 · l 55"), or its low words where the
+    /// locale names no sounds; nil when nothing stood out.
+    static func pronunciationLine(_ a: PronunciationResult) -> String? {
+        if !a.namedPhonemes.isEmpty {
+            var by: [String: [Int]] = [:]
+            for p in a.namedPhonemes { by[p.phoneme, default: []].append(p.accuracy ?? 100) }
+            var low: [(p: String, mean: Int)] = []
+            for (p, v) in by {
+                let mean = v.reduce(0, +) / v.count
+                if mean < 60 { low.append((p, mean)) }
+            }
+            low.sort { $0.mean == $1.mean ? $0.p < $1.p : $0.mean < $1.mean }
+            let parts: [String] = low.prefix(4).map { "\($0.p) \($0.mean)" }
+            return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        }
+        let parts: [String] = a.weakWords.prefix(4).map { "\($0.word) \($0.accuracy ?? 0)" }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
     /// One line under the diff: the measured pronunciation score and the
     /// words that let it down, worst first. Only when the take was assessed
     /// — a take the server could not score shows nothing here rather than a
@@ -583,14 +602,14 @@ struct ShadowDrillView: View {
                             .font(.caption2)
                             .foregroundStyle(.tertiary)
                     }
-                    Text("\(a.score)")
+                    Text("\(a.soundScore)")
                         .font(.footnote.weight(.semibold))
-                        .foregroundStyle(scoreColor(a.score))
+                        .foregroundStyle(scoreColor(a.soundScore))
                         .monospacedDigit()
                 }
-                let weak = a.weakWords.prefix(4)
-                if !weak.isEmpty {
-                    Text(weak.map { "\($0.word) \($0.accuracy ?? 0)" }.joined(separator: " · "))
+                // The sounds first (en-US names them), the words otherwise.
+                if let line = Self.pronunciationLine(a) {
+                    Text(line)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .lineLimit(2)

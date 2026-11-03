@@ -103,11 +103,12 @@ struct SpeechResultView: View {
                 // Measured per phoneme; its own row, not in the overall
                 // (the board's weighting is checked server-side).
                 if let pron = m.pronunciation {
-                    let weak = (take.pronunciationWords ?? []).prefix(3).map(\.word)
+                    // What stood out: this take's low SOUNDS (English), or a
+                    // word low here that is low across recent takes. A word
+                    // low once is not said — see `PronunciationLedger`.
                     metricRow("Pronunciation", icon: "waveform.badge.mic",
                               value: "\(pron)",
-                              detail: weak.isEmpty ? explain("Every word sounded right")
-                                                   : explain("Work on: \(weak.joined(separator: " · "))"),
+                              detail: pronunciationDetail(take, language: script.language),
                               score: pron)
                 }
                 metricRow("Pace", icon: "speedometer",
@@ -354,6 +355,17 @@ struct SpeechResultView: View {
         case .original:
             return explain("The original goes to your iCloud.")
         }
+    }
+
+    private func pronunciationDetail(_ take: SpeechTake, language: String) -> String {
+        if let entry = PronunciationLedger.shared.entry(id: take.id, language: language) {
+            return PronunciationProfile.current(language: language).noteLine(for: entry)
+                ?? explain("No sound stood out")
+        }
+        // A take from before the ledger: its own marked words.
+        let weak = (take.pronunciationWords ?? []).filter(\.isJudged).prefix(3).map(\.word)
+        return weak.isEmpty ? explain("No sound stood out")
+                            : explain("Work on: \(weak.joined(separator: " · "))")
     }
 
     private func metricRow(_ title: LocalizedStringKey, icon: String, value: String,

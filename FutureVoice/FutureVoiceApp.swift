@@ -1281,6 +1281,11 @@ final class AppState: ObservableObject {
     func saveShadowAttempt(_ a: ShadowAttempt) {
         ShadowAttemptStore.shared.save(a)
         shadowAttempts = ShadowAttemptStore.shared.load()
+        // Every assessed take, whatever screen made it (shadow, say it
+        // again, the test), goes into the one ledger the standing is read from.
+        if let assessment = a.assessment {
+            PronunciationLedger.shared.record([assessment], id: a.id, surface: "shadow", date: a.createdAt)
+        }
         Analytics.capture("shadow_attempted", ["score": a.matchScore])
     }
 

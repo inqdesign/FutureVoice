@@ -52,14 +52,17 @@ const DAILY_CAP = 1200
 const MAX_AUDIO_BYTES = 1_100_000
 const MAX_REFERENCE_CHARS = 1_500
 
-/// The Azure locale a take is judged against. The learner's picked ACCENT
-/// decides where one language has several (British English is judged by a
-/// British model, Castilian by a Spanish one); otherwise the language's
-/// default — the same default the voice speaks in (`LANGUAGE_DEFAULT_ACCENT`
-/// in the tts function: Mexican for Spanish, American for English).
+/// The Azure locale a take is judged against: ONE per language, with one
+/// exception (Castilian). English is ALWAYS en-US (2026-11-03, founder's own
+/// take): the learner's voice ACCENT used to pick the model, and en-GB /
+/// en-AU return no phoneme names and copy the word score onto every
+/// phoneme — a "some 40" with nothing underneath to say which sound. en-US
+/// is the only locale that scores the SOUNDS (IPA per phoneme) and the
+/// prosody, and the voice accent is how the fluent self sounds, not the
+/// yardstick the learner is measured by. A learner aiming at British
+/// English is still judged by the American model — the word score is
+/// lenient about vowels, and a per-sound read beats a per-word one.
 const LOCALE_BY_ACCENT: Record<string, string> = {
-  "en-US": "en-US", "en-GB": "en-GB", "en-AU": "en-AU",
-  "de-DE": "de-DE",
   "es-MX": "es-MX", "es-ES": "es-ES",
 }
 const LOCALE_BY_LANGUAGE: Record<string, string> = {

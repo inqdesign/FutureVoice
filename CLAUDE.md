@@ -2334,7 +2334,43 @@ scorecard's Pronunciation axis had been `nil` since it was drawn.
   `PronunciationAssessment` — a parser written from the docs read every
   answer as "no assessment". Both are read. Nothing here is measured on a
   real learner's voice yet.
-- Android: owed.
+- **The reader was wrong three ways on the founder's first real take, and
+  the standing is read ACROSS takes now** (same evening, founder: "a, some
+  flagged as pronunciation — this makes no sense"). Found by sending his
+  86 s take back to Azure: ① the voice ACCENT picked the model, so en-GB
+  judged it — and en-GB/en-AU return no phoneme names and copy the word
+  score onto every phoneme ("some 40" with nothing under it). **English is
+  always en-US** now (`localeFor`, and the app sends no accent for
+  English): the one locale that scores the sounds and the prosody; the
+  voice accent is how the fluent self sounds, not the yardstick. ② Each
+  speech piece was judged against its OWN read-back, and when the two
+  readers heard the piece's first word differently Azure's alignment broke
+  from there — eight right words tagged Insertion at 0, "a" an Omission at
+  0, shown red. Pieces are now cut at a SENTENCE END once 12 s long (22 s
+  hard, `chunkHardSeconds`) and judged against the SCRIPT span the
+  prompter walked (`scriptSpan`, two words of overlap at the start; the
+  read-back only when the prompter never moved), and **an Omission or
+  Insertion is never a mark** (`Word.isJudged`). ③ A word's mark is not
+  reproducible: the same file scores the same twice, but a cut moved 0.5 s
+  changes which words are marked (a clipped "k" scored "clean" 11), and
+  en-US wants /hw/ in "while". What holds is the SOUND across takes. So
+  `PronunciationLedger` (`Documents/lang/<code>/pronunciation.json`,
+  device-local, 90 days) records every assessed take through one door
+  (`saveShadowAttempt`, the speech take's save), `PronunciationProfile`
+  reads it (a sound needs 4 samples, a word 2 takes, weak < 70), and the
+  surfaces read the profile: the speech row names this take's low SOUNDS
+  (English) or a word low here AND across takes (other languages), never a
+  word low once; the shadow line shows sounds before words; the Progress
+  axis is the ledger's monthly mean with the weak sounds; the week's coach
+  gets a PRONUNCIATION section (3+ takes) and may put one plan item on a
+  named sound. **The number everywhere is `soundScore` = Azure's
+  accuracy** (the sounds), not PronScore: fluency and completeness are
+  measured elsewhere, and a piece judged against the script loses
+  completeness to the prompter being a word off. His take on en-US: no
+  sound under 78 on average, so nothing to work on, which is the truth the
+  five marked words were not. Tests: `PronunciationProfileTests`. Still
+  not folded into any deciding score; still unmeasured on other learners.
+- Android: owed (the whole reader).
 
 ## Japanese as a TARGET language (2026-09-18)
 

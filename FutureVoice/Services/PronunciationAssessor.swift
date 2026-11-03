@@ -47,6 +47,14 @@ struct PronunciationResult: Codable, Hashable {
 
         var isInsertion: Bool { error == "Insertion" }
         var isOmission: Bool { error == "Omission" }
+        /// A word whose SOUNDS were heard and scored. An Omission is a
+        /// reference word Azure never found (a swallowed "a", a word the
+        /// reference had and the mouth didn't) and comes back as accuracy 0;
+        /// an Insertion is something said that the reference lacks. Neither
+        /// says anything about how a sound was made, and both land on the
+        /// accuracy row already — until 2026-11-03 an omitted "a" was shown
+        /// red as a mispronounced word (founder's own take).
+        var isJudged: Bool { !isOmission && !isInsertion }
         /// The weakest SOUND in the word. Measured 2026-11-03: Azure's word
         /// score is lenient and the accent lives in the phonemes — a
         /// Korean-accented "think" scored 94 as a word with θ at 32 — so a
@@ -61,10 +69,10 @@ struct PronunciationResult: Codable, Hashable {
         /// (Azure's own `Mispronunciation` tag fires under 60, which caught a
         /// native Korean word at 55 — so it is not used as the red line.)
         var isMispronounced: Bool {
-            (accuracy ?? 100) < 50 || (worstPhoneme ?? 100) < 35
+            isJudged && ((accuracy ?? 100) < 50 || (worstPhoneme ?? 100) < 35)
         }
         var isShaky: Bool {
-            !isMispronounced && !isOmission
+            isJudged && !isMispronounced
                 && ((accuracy ?? 100) < 70 || (worstPhoneme ?? 100) < 45)
         }
         /// The sounds that let the word down, worst first. Azure names
@@ -84,6 +92,22 @@ struct PronunciationResult: Codable, Hashable {
     /// Reference words only (an Insertion is something the learner added and
     /// has no place on the target line), in reference order.
     var referenceWords: [Word] { words.filter { !$0.isInsertion } }
+    /// The words whose sounds were actually scored.
+    var judgedWords: [Word] { words.filter(\.isJudged) }
+
+    /// THE pronunciation number, everywhere it is shown or kept: Azure's
+    /// accuracy — how the sounds matched a native model — never `score`
+    /// (PronScore), which folds in fluency and completeness. Pauses and
+    /// skipped words are measured elsewhere in the app (pace, pauses, the
+    /// script diff, the beat dots), and a speech piece judged against the
+    /// SCRIPT would lose completeness points to the prompter being a word
+    /// off, which is no fault of the mouth.
+    var soundScore: Int { accuracy }
+
+    /// Phoneme samples with a NAME (en-US only), over the judged words.
+    var namedPhonemes: [Phoneme] {
+        judgedWords.flatMap(\.phonemes).filter { !$0.phoneme.isEmpty && $0.accuracy != nil }
+    }
 
     /// The words worth telling the learner about, worst first.
     var weakWords: [Word] {
@@ -154,11 +178,16 @@ enum PronunciationAssessor {
             let words: [Word]?
         }
 
+        let code = LanguageCatalog.language(language)?.code ?? language
         let request = Request(
             audio_b64: wav.base64EncodedString(),
-            language: LanguageCatalog.language(language)?.code ?? language,
+            language: code,
             reference: reference,
-            accent: UserDefaults.standard.string(forKey: VoiceAccentCatalog.storedAccentKey),
+            // English is judged by en-US whatever the voice's accent (see
+            // the function's `localeFor`): en-GB/en-AU score words only, no
+            // sounds. Sent as nil here too, so a server a deploy behind still
+            // lands on en-US.
+            accent: code == "en" ? nil : UserDefaults.standard.string(forKey: VoiceAccentCatalog.storedAccentKey),
             surface: surface
         )
         guard let body = try? JSONEncoder().encode(request),
@@ -304,22 +333,24 @@ enum PronunciationAssessor {
 // MARK: - The learner's standing
 
 /// The pronunciation axis as a READ over recent takes, for the scorecard: a
-/// talk's transcript cannot judge sounds, so the row shows what the shadow,
-/// say-it-again and weekly-test takes measured in the last month. Computed
-/// where it is shown, never stored on a talk.
+/// talk's transcript cannot judge sounds, so the row shows what every
+/// assessed take (shadow, say it again, the test, speech) measured in the
+/// last month — `PronunciationLedger`, the mean of the sound scores and the
+/// sounds that stay low. Computed where it is shown, never stored on a talk.
 enum PronunciationRead {
     static let windowDays = 30
     /// Fewer takes than this and one bad morning IS the number.
     static let minTakes = 3
 
+    @MainActor
     static func recentAxis(now: Date = Date()) -> AxisScore? {
-        let since = now.addingTimeInterval(-Double(windowDays) * 86_400)
-        let scores = ShadowAttemptStore.shared.load()
-            .filter { $0.createdAt >= since }
-            .compactMap { $0.assessment?.score }
-        guard scores.count >= minTakes else { return nil }
-        let mean = scores.reduce(0, +) / scores.count
-        return AxisScore(score: mean,
-                         note: explain("Measured per sound over \(scores.count) recent shadow takes."))
+        let profile = PronunciationProfile.current(now: now)
+        guard profile.takes >= minTakes, let mean = profile.meanAccuracy else { return nil }
+        var note = explain("Measured per sound over \(profile.takes) recent takes.")
+        let weak = profile.weakSounds.prefix(3)
+        if !weak.isEmpty {
+            note += " " + explain("Sounds to work on: \(weak.map { "\($0.phoneme) \($0.mean)" }.joined(separator: " · "))")
+        }
+        return AxisScore(score: mean, note: note)
     }
 }

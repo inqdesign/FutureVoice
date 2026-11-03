@@ -86,6 +86,20 @@ struct SpeechPrompterTrack {
         return glued
     }
 
+    /// Whether the display word at `index` closes a sentence — the last
+    /// letter-or-punctuation of it is a sentence end (a closing quote or
+    /// bracket after it is skipped). The speech take cuts its pieces here,
+    /// so each piece's reference is whole sentences of the script.
+    func endsSentence(at index: Int) -> Bool {
+        guard words.indices.contains(index) else { return false }
+        let trailing: Set<Character> = ["\"", "'", "”", "’", ")", "]", "」", "』", "»"]
+        let enders: Set<Character> = [".", "!", "?", "。", "！", "？", "…"]
+        for ch in words[index].text.reversed() where !trailing.contains(ch) {
+            return enders.contains(ch)
+        }
+        return false
+    }
+
     static func keys(of text: String, perChar: Bool) -> [String] {
         let cleaned = text.lowercased().filter { $0.isLetter || $0.isNumber || $0.isWhitespace }
         if perChar { return cleaned.filter { !$0.isWhitespace }.map(String.init) }
