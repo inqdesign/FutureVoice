@@ -218,6 +218,53 @@ enum PronunciationAssessor {
                             surface: surface, timeout: timeout)
     }
 
+    /// A 16 kHz mono PCM16 WAV (as `AudioLoudness.wav16kMono` writes it, a
+    /// 44-byte header) cut into windows the endpoint can take: about
+    /// `target` seconds each, cut at the quietest 50 ms in a window's last
+    /// third so a word is never split, and a remainder under 28 s kept whole
+    /// so no window is a stub. For a long take that was read as ONE file
+    /// (the live recognizer never cut it into pieces): without this it got
+    /// no pronunciation at all (founder's 67 s take, 2026-11-03).
+    static func windows(ofWAV wav: Data, target: Double = 20) -> [Data] {
+        let header = 44, rate = 16_000
+        guard wav.count > header + 2 else { return [] }
+        let pcm = wav.subdata(in: header..<wav.count)
+        let total = pcm.count / 2
+        let window = Int(target * Double(rate))
+        let keepWhole = Int(28 * Double(rate))
+        let block = rate / 20
+        var cuts: [Range<Int>] = []
+        pcm.withUnsafeBytes { raw in
+            let s = raw.bindMemory(to: Int16.self)
+            func energy(_ from: Int) -> Int64 {
+                var e: Int64 = 0
+                for i in from..<min(from + block, total) { let v = Int64(s[i]); e += v * v }
+                return e
+            }
+            var start = 0
+            while start < total {
+                var end = total
+                if total - start > keepWhole {
+                    end = start + window
+                    var best = end, bestEnergy = Int64.max
+                    var i = start + window * 2 / 3
+                    while i + block <= start + window {
+                        let e = energy(i)
+                        if e < bestEnergy { bestEnergy = e; best = i + block / 2 }
+                        i += block
+                    }
+                    end = best
+                }
+                cuts.append(start..<end)
+                start = end
+            }
+        }
+        return cuts.map {
+            AudioLoudness.wavData(fromPCM16: pcm.subdata(in: ($0.lowerBound * 2)..<($0.upperBound * 2)),
+                                  sampleRate: rate)
+        }
+    }
+
     /// Every target language the app ships has a GA Azure locale.
     static func supports(_ language: String) -> Bool {
         let code = LanguageCatalog.language(language)?.code ?? language

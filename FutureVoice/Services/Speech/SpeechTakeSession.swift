@@ -337,14 +337,21 @@ final class SpeechTakeSession: ObservableObject {
             audioGrounded = true
             path = "pieces"
         } else {
+            // A take longer than one assessment is cut into windows here and
+            // each is read and assessed on its own, BESIDE the whole read, so
+            // the sounds are still heard and the wait is the slower of the two.
+            let language = script.language
+            let long: Task<[PronunciationResult], Never>? = duration > PronunciationAssessor.maxSeconds
+                ? Task { await Self.assessInWindows(audioURL: audioURL, language: language) }
+                : nil
             let reading = await SpeechReader.read(audioURL: audioURL, liveText: liveText, language: script.language)
             transcript = reading.text
             audioGrounded = reading.audioGrounded
             path = "whole"
-            // The whole file fits one assessment only when it is short; a
-            // longer take read this way goes without (its pieces are gone).
             prons = []
-            if reading.audioGrounded, duration <= PronunciationAssessor.maxSeconds {
+            if let long {
+                prons = await long.value
+            } else if reading.audioGrounded {
                 let whole = await PronunciationAssessor.assess(
                     audioURL: audioURL, reference: transcript,
                     language: script.language, surface: "speech")
@@ -450,6 +457,35 @@ final class SpeechTakeSession: ObservableObject {
             let pron = await PronunciationAssessor.assess(
                 audioURL: url, reference: trimmed, language: language, surface: "speech")
             return Piece(text: text, pron: pron.result)
+        }
+    }
+
+    /// A long take's pronunciation when it was read as one file: windows of
+    /// ~20 s (`PronunciationAssessor.windows`), each read for its own words
+    /// (the scripted reference, as for a live piece) and assessed, all at
+    /// once. A window that can't be read or assessed is left out.
+    nonisolated private static func assessInWindows(audioURL: URL, language: String) async -> [PronunciationResult] {
+        guard PronunciationAssessor.supports(language),
+              let wav = await Task.detached(operation: { AudioLoudness.wav16kMono(fromFileAt: audioURL) }).value
+        else { return [] }
+        let windows = PronunciationAssessor.windows(ofWAV: wav)
+        return await withTaskGroup(of: (Int, PronunciationResult?).self) { group in
+            for (index, piece) in windows.enumerated() {
+                group.addTask {
+                    let url = FileManager.default.temporaryDirectory
+                        .appendingPathComponent("pron-\(UUID().uuidString).wav")
+                    guard (try? piece.write(to: url)) != nil else { return (index, nil) }
+                    defer { try? FileManager.default.removeItem(at: url) }
+                    guard let text = await SpeechReader.readPiece(audioURL: url, language: language),
+                          !text.isEmpty else { return (index, nil) }
+                    let assessed = await PronunciationAssessor.assess(
+                        wav: piece, reference: text, language: language, surface: "speech")
+                    return (index, assessed.result)
+                }
+            }
+            var got: [(Int, PronunciationResult)] = []
+            for await (index, result) in group { if let result { got.append((index, result)) } }
+            return got.sorted { $0.0 < $1.0 }.map(\.1)
         }
     }
 
