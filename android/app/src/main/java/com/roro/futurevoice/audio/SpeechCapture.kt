@@ -43,6 +43,9 @@ class SpeechCapture(private val context: Context) {
     private var lastLevelLogMs = 0L
     private val meter = FluencyMeter()
     val lastVoicedAtMs: Long? get() = meter.lastVoicedAt()
+    /** Seconds the meter alone called speech — the take event's record of
+     *  whether the cut and the stop had a working level witness. */
+    val meterVoicedSeconds: Double get() = meter.snapshot().speakingSeconds
     /** `System.nanoTime()` of the first sample written — the clock camera
      *  frames are stamped on too. */
     @Volatile var startNanos: Long = 0L; private set

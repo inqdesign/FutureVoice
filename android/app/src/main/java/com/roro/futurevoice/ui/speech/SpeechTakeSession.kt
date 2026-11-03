@@ -233,7 +233,14 @@ class SpeechTakeSession(
             position += t.wordsPerSecond(language) * _speed.value * 0.1
             _cursor.value = minOf(t.words.size, position.toInt())
         }
-        val quietFor = capture?.lastVoicedAtMs?.let { (System.currentTimeMillis() - it) / 1000.0 } ?: clock
+        // How long nobody has been heard — by EITHER witness, the level
+        // meter or the recognizer (iOS 2026-11-03). The meter alone read a
+        // whole take as silence (a phone propped up for the camera, an arm's
+        // length away): every piece was cut at exactly 12.0 s, mid-word, and
+        // the take ended the instant the prompter reached the second-to-last
+        // word, so the last words were never recorded and the result said the
+        // last sentence was skipped. `voiceActive` already takes both.
+        val quietFor = quietSeconds() ?: clock
 
         // Cut a piece for the reader at a pause, never mid-word.
         if (clock - lastChunkAt >= CHUNK_SECONDS && quietFor >= 0.35) {
@@ -257,6 +264,15 @@ class SpeechTakeSession(
         if (clock > _script.value.targetSeconds * 3 + 60) scope.launch { stop() }
     }
 
+    /** Seconds since anyone was last heard, by the level meter or by the
+     *  recognizer producing new words — whichever is more recent. Null until
+     *  either has heard anything. */
+    private fun quietSeconds(): Double? {
+        val now = System.currentTimeMillis()
+        val heard = listOfNotNull(capture?.lastVoicedAtMs, lastPartialAtMs.takeIf { it > 0 })
+        return heard.maxOrNull()?.let { (now - it) / 1000.0 }
+    }
+
     /** Whether a voice was heard a moment ago — the prompter keeps flowing
      *  while someone speaks. Two witnesses, either is enough. */
     fun voiceActive(): Boolean {
@@ -276,6 +292,7 @@ class SpeechTakeSession(
         val duration = clock
         val cap = capture
         capture = null
+        val meterVoiced = cap?.meterVoicedSeconds ?: 0.0
         val tail = cap?.stop()
         val liveText = stopLive()
         tail?.let { pieces += readPiece(it) }
@@ -384,6 +401,7 @@ class SpeechTakeSession(
             "camera" to hasVideo, "follow" to _followVoice.value, "audio_grounded" to audioGrounded,
             "read_path" to path, "cursor_end" to _cursor.value, "words" to _track.value.words.size,
             "follows" to follows, "partials" to partials, "pieces" to reads.size,
+            "meter_voiced" to meterVoiced.toInt(),
             "live_dropped" to liveDropped,
             "read_ms" to readMs, "result_ms" to resultMs, "coach_ms" to coachMs,
         ))
