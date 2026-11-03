@@ -126,7 +126,13 @@ final class PronunciationLedger {
         if let data = try? encoder.encode(all) {
             try? data.write(to: Self.url(for: language), options: .atomic)
         }
+        SyncEngine.noteChanged(.pronunciation)
         return entry
+    }
+
+    /// Another device's takes were merged into the file.
+    func invalidate(language: String) {
+        cache[language] = nil
     }
 
     /// Test hook.

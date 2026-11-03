@@ -164,8 +164,8 @@ struct LearnerState: Codable {
 /// `Documents/lang/<code>/learner_state.json`, one file per target language.
 ///
 /// Not a `LanguageScopedStore`: every call names its language, so a switch
-/// has nothing to repoint. Device-local and not synced — it is derived from
-/// the talks, which do sync, and the other device builds its own from them.
+/// has nothing to repoint. Synced (`SyncKind.learnerState`) so the other
+/// device doesn't pay to tag the same talks again.
 final class LearnerStateStore {
     static let shared = LearnerStateStore()
     static let filename = "learner_state.json"
@@ -217,6 +217,12 @@ final class LearnerStateStore {
         if let data = try? encoder.encode(state) {
             try? data.write(to: url(language), options: .atomic)
         }
+        SyncEngine.noteChanged(.learnerState)
+    }
+
+    /// Another device's verdicts were merged into the file.
+    func invalidate(language: String) {
+        lock.lock(); cache[key(language)] = nil; lock.unlock()
     }
 
     /// Whether this talk still needs a tagging call: never tagged, tagged

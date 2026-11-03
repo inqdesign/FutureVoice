@@ -737,7 +737,8 @@ final class SyncEngine: ObservableObject {
                 entry.needsPush = false
                 entry.pushedAt = now
                 entry.hash = ""
-            } else if let fingerprint = local[key] {
+            } else if let fingerprint = local[key],
+                      !(blob.replaceable && record.modifiedAt > entry.observedAt) {
                 entry.hash = String(decoding: fingerprint, as: UTF8.self)
                 entry.deletedAt = nil
                 entry.wanted = false

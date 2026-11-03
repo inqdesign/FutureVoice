@@ -45,12 +45,14 @@ final class CounterpartPhotoStore: ObservableObject {
         try? data.write(to: url(id), options: [.atomic])
         cache[id] = sized
         version += 1
+        SyncEngine.noteChanged(.blobCounterpartPhoto)
     }
 
     func delete(for id: UUID) {
         try? FileManager.default.removeItem(at: url(id))
         cache[id] = nil
         version += 1
+        SyncEngine.noteChanged(.blobCounterpartPhoto)
     }
 
     private func url(_ id: UUID) -> URL {

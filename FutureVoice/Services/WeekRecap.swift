@@ -426,6 +426,7 @@ final class WeekRecapStore {
         all.append(recap)
         guard let data = try? Self.encoder.encode(all) else { return }
         try? data.write(to: fileURL, options: [.atomic])
+        SyncEngine.noteChanged(.weekRecap)
     }
 
     /// The last week's recap — frozen on first ask, since the week is over.

@@ -254,6 +254,21 @@ reasons are the design:
   decodes and FROZEN in the index either way (never pushed back, never
   tombstoned) — the day an old phone quietly deletes what a new one wrote is
   the day sync is uninstalled.
+- **Almost everything a learner makes syncs** (2026-11-03, founder: "it
+  should be nearly all of it"). Added that day beside the talks, cards and
+  words: the routine with its promise days and rep times (see the
+  timetable section), tutor lessons, the tutor chat, curriculum progress,
+  the student file (`learnerState`, so a second device doesn't pay to tag
+  the same talks), the pronunciation ledger, goal prep days, the "Your
+  week" archive, people's photos, the profile photo, day cards (photo +
+  frozen JSON — the `dayCard`/`blobDayCard`/`blobAvatar` kinds had been
+  declared and never wired), and the settings that shape practice (speech
+  speed, the fluent self's voice pick, coach/tutor mode, call display
+  options, furigana, exam, the weekly test's day and time, player prefs).
+  A photo re-picked under the same name replaces the other device's copy
+  (`BlobKind.replaceable`, newer `modifiedAt` wins); every other blob is
+  written once. Settings values keep their real type
+  (`DefaultsKind.value(of:)` — a Bool bridges as a number).
 - **Never synced:** every cache (PhraseAudio, DrillEnrichment, topics, news,
   translations, openers), the daily call (two devices must not ring at once),
   consent, and `BackupService.excludedDefaults`.
@@ -356,7 +371,7 @@ could read. Now a situation can carry MATERIAL (`ScenarioBrief`, on
   (library · camera · Files) on the intake's first card and on the form,
   and drawn by `PersonBubble(photoId:)` and `DialogueLine(avatar:)`, so the
   stories row, the scene's speaker label, the composer and the book cover
-  show one face. Local only — not in the sync payload.
+  show one face. Synced (`blobCounterpartPhoto`) since 2026-11-03.
 
 ### The situation box, and what fills the space above it
 
@@ -3151,7 +3166,7 @@ that back. `TutorLesson.swift`, `TutorLessonViews.swift`,
   mid-lesson (judge `other_topic`) or the menu drops a lesson for good;
   the book page shows the lines that cleared each challenge
   (`Session.tutorLesson`). Unfinished lessons resume for 21 days
-  (`Documents/lang/<code>/tutor_lessons.json`, device-local).
+  (`Documents/lang/<code>/tutor_lessons.json`, synced since 2026-11-03).
 - **Only the final check is scored** (2026-10-28, founder). A challenge
   line is a drill: one set sentence, an example on screen, often a repeat
   of a correction. A try the final check judged an attempt (the whole thing
@@ -3216,7 +3231,7 @@ and merge what exists.
   German and some Korean" in a Korean learner's interview answer before this
   rule.
 - **The thread is kept** per target language (`Documents/lang/<code>/
-  tutor_chat.json`, 80 messages, device-local, ⋯ → Clear); older days carry
+  tutor_chat.json`, 80 messages, synced since 2026-11-03, ⋯ → Clear); older days carry
   a date in the prompt and on screen. A plain-text answer (no JSON) is shown
   as the answer with no buttons.
 - `scripts/tutor-agent-probe.py <dump> gemini|haiku|both` runs the exact

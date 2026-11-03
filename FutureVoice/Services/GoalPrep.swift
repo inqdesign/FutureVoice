@@ -74,6 +74,7 @@ enum GoalPrep {
         list.append(prep)
         list = Array(list.sorted { $0.createdAt > $1.createdAt }.prefix(keep))
         if let data = try? SyncFiles.storeEncoder.encode(list) { try? data.write(to: url, options: .atomic) }
+        SyncEngine.noteChanged(.goalPrep)
     }
 
     /// Today's set, written now if it isn't yet. Throws when the call fails.

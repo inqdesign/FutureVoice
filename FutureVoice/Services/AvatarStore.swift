@@ -9,6 +9,7 @@ import UIKit
 @MainActor
 final class AvatarStore: ObservableObject {
     static let shared = AvatarStore()
+    static let filename = "profile_avatar.jpg"
 
     @Published private(set) var image: UIImage?
 
@@ -16,7 +17,7 @@ final class AvatarStore: ObservableObject {
 
     init() {
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        url = docs.appendingPathComponent("profile_avatar.jpg")
+        url = docs.appendingPathComponent(Self.filename)
         image = UIImage(contentsOfFile: url.path)
     }
 
@@ -27,6 +28,7 @@ final class AvatarStore: ObservableObject {
         guard let data = sized.jpegData(compressionQuality: 0.85) else { return }
         try? data.write(to: url, options: [.atomic])
         image = sized
+        SyncEngine.noteChanged(.blobAvatar)
         // A published profile wears this face too; no row, no write.
         Task { await PublicPersonaService.pushMyPhoto() }
     }
@@ -34,6 +36,7 @@ final class AvatarStore: ObservableObject {
     func clear() {
         try? FileManager.default.removeItem(at: url)
         image = nil
+        SyncEngine.noteChanged(.blobAvatar)
         Task { await PublicPersonaService.pushMyPhoto() }
     }
 }

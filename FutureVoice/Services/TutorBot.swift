@@ -529,6 +529,15 @@ final class TutorChat: ObservableObject {
         let url = Self.url(language)
         try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         if let data = try? SyncFiles.storeEncoder.encode(messages) { try? data.write(to: url, options: .atomic) }
+        SyncEngine.noteChanged(.tutorChat)
+    }
+
+    /// Another device's messages were merged into the file.
+    func reloadFromDisk(language code: String) {
+        guard code == language,
+              let data = try? Data(contentsOf: Self.url(code)),
+              let saved = try? SyncFiles.storeDecoder.decode([Message].self, from: data) else { return }
+        messages = saved
     }
 
     func clear() {

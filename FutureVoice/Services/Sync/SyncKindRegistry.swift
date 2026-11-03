@@ -58,6 +58,29 @@ enum SyncKindRegistry {
                                 sortForFile: { $0.filter { !$0.isBuiltIn }.sorted { $0.createdAt > $1.createdAt } },
                                 afterWrite: reloadSpeech),
         speechTakeKind,
+        KeyedListKind<TutorLesson>(kind: .tutorLesson, filename: "tutor_lessons.json",
+                                   key: { $0.id.uuidString },
+                                   encoder: isoEncoder, decoder: isoDecoder, mergeRule: SyncMerge.lww,
+                                   sortForFile: { $0.sorted { $0.createdAt > $1.createdAt } }),
+        KeyedListKind<TutorChat.Message>(kind: .tutorChat, filename: "tutor_chat.json",
+                                         key: { $0.id.uuidString },
+                                         mergeRule: SyncMerge.lww,
+                                         sortForFile: { Array($0.sorted { $0.at < $1.at }.suffix(TutorChat.keep)) },
+                                         afterWrite: { lang in
+                                             if let lang { TutorChat.shared.reloadFromDisk(language: lang) }
+                                         }),
+        DictKind<TutorTopicProgress>(kind: .tutorProgress, filename: "tutor_progress.json",
+                                     encoder: isoEncoder, decoder: isoDecoder,
+                                     mergeRule: { SyncMerge.union($0, $1, combine: SyncMerge.typed(furtherTopic)) }),
+        LearnerStateKind(),
+        KeyedListKind<PronunciationEntry>(kind: .pronunciation, filename: "pronunciation.json",
+                                          key: { $0.id.uuidString },
+                                          encoder: isoEncoder, decoder: isoDecoder,
+                                          mergeRule: { SyncMerge.union($0, $1) { a, _ in a } },
+                                          sortForFile: { Array($0.sorted { $0.date < $1.date }.suffix(PronunciationLedger.maxEntries)) },
+                                          afterWrite: { lang in
+                                              if let lang { PronunciationLedger.shared.invalidate(language: lang) }
+                                          }),
         DictKind<PracticeLog.Day>(kind: .practiceDay, filename: "practice-log.json",
                                   encoder: SyncFiles.bareEncoder, decoder: SyncFiles.bareDecoder,
                                   mergeRule: { SyncMerge.union($0, $1, combine: SyncMerge.typed(maxDay)) },
@@ -80,8 +103,24 @@ enum SyncKindRegistry {
                                           StudyWidgetRefresher.schedule()
                                       }),
         ActivityEventKind(),
+        KeyedListKind<GoalPrepDay>(kind: .goalPrep, filename: GoalPrep.filename, key: { $0.id },
+                                   mergeRule: SyncMerge.lww,
+                                   sortForFile: { $0.sorted { $0.createdAt > $1.createdAt } }),
+        KeyedListKind<WeekRecap>(kind: .weekRecap, filename: "week-recaps-v3.json",
+                                 key: { ISO8601DateFormatter().string(from: $0.end) },
+                                 encoder: isoEncoder, decoder: isoDecoder, mergeRule: SyncMerge.lww,
+                                 sortForFile: { $0.sorted { $0.end > $1.end } }),
         counterpartKind,
         DefaultsKind(),
+        BlobKind(kind: .blobCounterpartPhoto,
+                 directory: SyncFiles.documents.appendingPathComponent("counterpart_photos", isDirectory: true),
+                 accepts: { $0.hasSuffix(".jpg") }, replaceable: true),
+        BlobKind(kind: .blobAvatar, directory: SyncFiles.documents,
+                 accepts: { $0 == AvatarStore.filename }, replaceable: true),
+        // A day's photo and its frozen card (the JSON is re-settled once).
+        BlobKind(kind: .blobDayCard,
+                 directory: SyncFiles.documents.appendingPathComponent("day_cards", isDirectory: true),
+                 accepts: { $0.hasSuffix(".jpg") || $0.hasSuffix(".json") }, replaceable: true),
         BlobKind(kind: .blobTurn, directory: SyncFiles.documents.appendingPathComponent("TurnAudio", isDirectory: true)),
         BlobKind(kind: .blobRecording, directory: SyncFiles.documents.appendingPathComponent("Recordings", isDirectory: true)),
         BlobKind(kind: .blobVoiceSample,
@@ -114,6 +153,41 @@ enum SyncKindRegistry {
         if a.done != b.done { return a.done > b.done ? a : b }
         if a.settled != b.settled { return a.settled ? a : b }
         return a
+    }
+
+    /// ISO-8601 dates, compact and sorted — what the tutor, recap and
+    /// pronunciation stores write (they all decode ISO, pretty or not).
+    static let isoEncoder: JSONEncoder = {
+        let e = JSONEncoder()
+        e.outputFormatting = [.sortedKeys]
+        e.dateEncodingStrategy = .iso8601
+        return e
+    }()
+    static let isoDecoder: JSONDecoder = {
+        let d = JSONDecoder()
+        d.dateDecodingStrategy = .iso8601
+        return d
+    }()
+
+    /// One curriculum topic on two devices: the earliest start and finish,
+    /// the most rounds, the latest touch. Progress never goes back.
+    static func furtherTopic(_ a: TutorTopicProgress, _ b: TutorTopicProgress) -> TutorTopicProgress {
+        func earliest(_ x: Date?, _ y: Date?) -> Date? {
+            switch (x, y) {
+            case let (x?, y?): return min(x, y)
+            default: return x ?? y
+            }
+        }
+        var out = a
+        out.startedAt = earliest(a.startedAt, b.startedAt)
+        out.lessonDoneAt = earliest(a.lessonDoneAt, b.lessonDoneAt)
+        out.passedAt = earliest(a.passedAt, b.passedAt)
+        out.rounds = max(a.rounds, b.rounds)
+        switch (a.touchedAt, b.touchedAt) {
+        case let (x?, y?): out.touchedAt = max(x, y)
+        default: out.touchedAt = a.touchedAt ?? b.touchedAt
+        }
+        return out
     }
 
     static func handler(for kind: SyncKind) -> (any SyncKindHandler)? {
@@ -574,7 +648,47 @@ struct DefaultsKind: SyncKindHandler {
         "futurevoice.goal.expressionsPerDay",
         "futurevoice.goal.shadowsPerDay",
         "futurevoice.vocab.hideKnown",
+        // How the call and the voice behave (2026-11-03, founder: the Mac
+        // must feel like the same app). The voice CLONE and its accent ride
+        // with the account, never here.
+        "futurevoice.speechSpeed",
+        "futurevoice.fluentSelfPreset",
+        "futurevoice.call.coachMode",
+        "futurevoice.call.tutorMode",
+        "futurevoice.call.showsTranscript",
+        "futurevoice.call.showsCorrections",
+        "futurevoice.call.showsGoalChips",
+        "futurevoice.call.sendToAnswer",
+        "futurevoice.sayItAgain.bothSides",
+        "futurevoice.furigana",
+        "futurevoice.examKind",
+        // The weekly test's opening is where "this week" ends — two devices
+        // must agree on it. Its reminder stays per device.
+        "futurevoice.weeklyTest.weekday",
+        "futurevoice.weeklyTest.hour",
+        "futurevoice.weeklyTest.minute",
+        "futurevoice.weeklyTest.sounds",
+        "futurevoice.playlist.captions",
+        "futurevoice.playlist.translation",
+        "futurevoice.playlist.gap",
+        "futurevoice.playlist.repeat",
+        "futurevoice.playlist.shuffle",
+        "futurevoice.playlist.speed",
     ]
+
+    /// A stored value as its own type. `Bool` bridges as a number and a
+    /// whole `Double` passes `as? Int`, so the number's real kind is read
+    /// off the NSNumber instead of guessed by casting.
+    static func value(of raw: Any) -> Value? {
+        if let n = raw as? NSNumber, !(raw is String) {
+            if CFGetTypeID(n) == CFBooleanGetTypeID() { return .bool(n.boolValue) }
+            switch String(cString: n.objCType) {
+            case "f", "d": return .double(n.doubleValue)
+            default: return .int(n.intValue)
+            }
+        }
+        return Value(raw)
+    }
 
     enum Value: Codable, Equatable {
         case string(String)
@@ -609,15 +723,7 @@ struct DefaultsKind: SyncKindHandler {
         var out: SyncSnapshot = [:]
         for key in Self.keys {
             guard let raw = UserDefaults.standard.object(forKey: key) else { continue }
-            // `Bool` bridges as a number; the keys that are booleans are
-            // known, so decode them as such rather than as 0/1.
-            let value: Value?
-            if key == "futurevoice.vocab.hideKnown" {
-                value = .bool(UserDefaults.standard.bool(forKey: key))
-            } else {
-                value = Value(raw)
-            }
-            if let value, let data = try? SyncCanonical.encode(value) { out[key] = data }
+            if let value = Self.value(of: raw), let data = try? SyncCanonical.encode(value) { out[key] = data }
         }
         return out
     }
@@ -639,9 +745,13 @@ struct DefaultsKind: SyncKindHandler {
     func write(_ items: [String: SyncItem], lang: String?) throws {
         let defaults = UserDefaults.standard
         for key in Self.keys {
-            guard let item = items[key],
-                  let value = try? SyncCanonical.decode(Value.self, from: item.payload)
-            else { continue }
+            guard let item = items[key] else {
+                // Cleared on the other device (the voice switched back to
+                // the clone): cleared here too.
+                if defaults.object(forKey: key) != nil { defaults.removeObject(forKey: key) }
+                continue
+            }
+            guard let value = try? SyncCanonical.decode(Value.self, from: item.payload) else { continue }
             defaults.set(value.any, forKey: key)
         }
     }
@@ -717,5 +827,81 @@ struct ActivityEventKind: SyncKindHandler {
             .sorted { $0.at < $1.at }
         try SyncFiles.write(list, to: url, encoder: ActivityEventLog.encoder)
         ActivityEventLog.shared.reloadFromDisk()
+    }
+}
+
+
+// MARK: - Lists keyed by something other than a UUID id
+
+/// A file holding `[T]`, each item keyed by `key` (a goal's day, a week's
+/// end) — `ArrayKind` for types whose identity isn't a UUID.
+struct KeyedListKind<T: Codable>: SyncKindHandler {
+    let kind: SyncKind
+    let filename: String
+    let key: (T) -> String
+    var encoder: JSONEncoder = SyncFiles.storeEncoder
+    var decoder: JSONDecoder = SyncFiles.storeDecoder
+    var mergeRule: (SyncSide?, SyncSide) -> Data?
+    var sortForFile: ([T]) -> [T] = { $0 }
+    var afterWrite: @MainActor (String?) -> Void = { _ in }
+
+    func read(lang: String?) -> SyncSnapshot? {
+        guard let list = SyncFiles.read([T].self, at: SyncFiles.url(filename, lang: lang),
+                                        decoder: decoder, empty: []) else { return nil }
+        var out: SyncSnapshot = [:]
+        for item in list {
+            if let data = try? SyncCanonical.encode(item) { out[key(item)] = data }
+        }
+        return out
+    }
+
+    func merge(local: SyncSide?, remote: SyncSide) -> Data? { mergeRule(local, remote) }
+
+    @MainActor
+    func write(_ items: [String: SyncItem], lang: String?) throws {
+        let list = items.values.compactMap { try? SyncCanonical.decode(T.self, from: $0.payload) }
+        try SyncFiles.write(sortForFile(list), to: SyncFiles.url(filename, lang: lang), encoder: encoder)
+        afterWrite(lang)
+    }
+}
+
+// MARK: - The student file
+
+/// Each talk's verified verdicts, keyed by the talk. A talk re-tagged later
+/// (it grew, or the level map moved) replaces its own entry; the failure
+/// counts stay on the device that paid for them.
+struct LearnerStateKind: SyncKindHandler {
+    let kind: SyncKind = .learnerState
+    private func url(_ lang: String?) -> URL { SyncFiles.url(LearnerStateStore.filename, lang: lang) }
+
+    func read(lang: String?) -> SyncSnapshot? {
+        guard let state = SyncFiles.read(LearnerState.self, at: url(lang), decoder: SyncKindRegistry.isoDecoder,
+                                         empty: LearnerState()) else { return nil }
+        var out: SyncSnapshot = [:]
+        for (id, tag) in state.sessions {
+            if let data = try? SyncCanonical.encode(tag) { out[id] = data }
+        }
+        return out
+    }
+
+    func merge(local: SyncSide?, remote: SyncSide) -> Data? {
+        SyncMerge.combineOrNewerDelete(local, remote, combine: SyncMerge.typed {
+            (a: LearnerState.SessionTag, b: LearnerState.SessionTag) in a.taggedAt >= b.taggedAt ? a : b
+        })
+    }
+
+    @MainActor
+    func write(_ items: [String: SyncItem], lang: String?) throws {
+        var state = SyncFiles.read(LearnerState.self, at: url(lang), decoder: SyncKindRegistry.isoDecoder,
+                                   empty: LearnerState()) ?? LearnerState()
+        var sessions: [String: LearnerState.SessionTag] = [:]
+        for (id, item) in items {
+            if let tag = try? SyncCanonical.decode(LearnerState.SessionTag.self, from: item.payload) {
+                sessions[id] = tag
+            }
+        }
+        state.sessions = sessions
+        try SyncFiles.write(state, to: url(lang), encoder: SyncKindRegistry.isoEncoder)
+        if let lang { LearnerStateStore.shared.invalidate(language: lang) }
     }
 }

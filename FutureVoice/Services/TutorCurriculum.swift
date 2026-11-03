@@ -216,7 +216,7 @@ struct TutorTopicProgress: Codable, Equatable {
 }
 
 /// `Documents/lang/<code>/tutor_progress.json`, per target language.
-/// Device-local for now; syncing it is phase 4 of the plan.
+/// Synced (`SyncKind.tutorProgress`): a topic done anywhere is done.
 enum TutorProgressStore {
     private static func url(_ language: String) -> URL {
         LanguageScope.directory(for: LanguageCatalog.base(language))
@@ -241,5 +241,6 @@ enum TutorProgressStore {
         enc.dateEncodingStrategy = .iso8601
         guard let data = try? enc.encode(all) else { return }
         try? data.write(to: url(language), options: .atomic)
+        SyncEngine.noteChanged(.tutorProgress)
     }
 }

@@ -555,6 +555,52 @@ final class SyncTests: XCTestCase {
         XCTAssertEqual(b.engine.blobState(kind: .blobTurn, key: "T1.mp3"), .local)
     }
 
+    /// A person's photo picked again keeps its filename; the new one must
+    /// still replace the old copy on the other device.
+    func testAReplacedPhotoReachesTheOtherDevice() async throws {
+        let cloud = InMemorySyncTransport()
+        let a = device(cloud)
+        let dir = a.root.appendingPathComponent("counterpart_photos", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let name = "\(UUID().uuidString).jpg"
+        try Data([1, 2, 3]).write(to: dir.appendingPathComponent(name))
+        try await a.engine.enable()
+        await a.engine.waitUntilIdle()
+
+        let b = device(cloud)
+        try await b.engine.enable()
+        await b.engine.waitUntilIdle()
+        let landed = b.root.appendingPathComponent("counterpart_photos/\(name)")
+        XCTAssertEqual(try Data(contentsOf: landed), Data([1, 2, 3]))
+
+        try await Task.sleep(nanoseconds: 1_100_000_000)
+        on(a.root)
+        try Data([9, 9, 9, 9]).write(to: dir.appendingPathComponent(name))
+        await sync(a)
+        await a.engine.waitUntilIdle()
+        await sync(b)
+        await b.engine.waitUntilIdle()
+        XCTAssertEqual(try Data(contentsOf: landed), Data([9, 9, 9, 9]))
+    }
+
+    func testSettingsKeepTheirTypes() {
+        XCTAssertEqual(DefaultsKind.value(of: NSNumber(value: true)), .bool(true))
+        XCTAssertEqual(DefaultsKind.value(of: NSNumber(value: 1)), .int(1))
+        XCTAssertEqual(DefaultsKind.value(of: NSNumber(value: 1.0)), .double(1.0))
+        XCTAssertEqual(DefaultsKind.value(of: NSNumber(value: 0.9)), .double(0.9))
+        XCTAssertEqual(DefaultsKind.value(of: "preset"), .string("preset"))
+    }
+
+    func testTutorTopicProgressNeverGoesBack() {
+        var a = TutorTopicProgress(); a.startedAt = Date(timeIntervalSince1970: 100); a.rounds = 1
+        a.passedAt = Date(timeIntervalSince1970: 300)
+        var b = TutorTopicProgress(); b.startedAt = Date(timeIntervalSince1970: 50); b.rounds = 3
+        let m = SyncKindRegistry.furtherTopic(a, b)
+        XCTAssertEqual(m.startedAt, Date(timeIntervalSince1970: 50))
+        XCTAssertEqual(m.passedAt, Date(timeIntervalSince1970: 300))
+        XCTAssertEqual(m.rounds, 3)
+    }
+
     // MARK: - Speech
 
     private func speechTake(_ id: UUID) -> SpeechTake {

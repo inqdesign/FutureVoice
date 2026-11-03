@@ -31,6 +31,16 @@ enum SyncKind: String, Codable, CaseIterable, Hashable {
     /// Small; the recordings travel as `blobSpeechAudio` / `blobSpeechVideo`.
     case speechScript
     case speechTake
+    /// Tutor lessons in progress (`TutorLessonStore`), the tutor chat thread
+    /// (`TutorChat`), which curriculum topics are done (`TutorProgressStore`),
+    /// the student file (`LearnerStateStore`) and the pronunciation ledger
+    /// (`PronunciationLedger`) — 2026-11-03, founder: a learner's practice
+    /// is the same on every device. An older build skips these kinds.
+    case tutorLesson
+    case tutorChat
+    case tutorProgress
+    case learnerState
+    case pronunciation
     // Global (Documents root / UserDefaults).
     case practiceDay
     case talkDay
@@ -59,6 +69,11 @@ enum SyncKind: String, Codable, CaseIterable, Hashable {
     /// When each rep happened (`ActivityEventLog`), so a routine block done
     /// on the Mac is ticked on the phone.
     case activityEvent
+    /// A day's reading and model answer for an upcoming goal (`GoalPrep`):
+    /// written once, so the other device reads the same text.
+    case goalPrep
+    /// The "Your week" archive (`WeekRecapStore`), keyed by the week's end.
+    case weekRecap
     // Blobs — files carried as assets, keyed by filename.
     case blobTurn
     case blobRecording
@@ -79,6 +94,8 @@ enum SyncKind: String, Codable, CaseIterable, Hashable {
     /// original, and the original is downloaded on another device only when
     /// asked for (`BlobKind.onDemand`).
     case blobSpeechVideo
+    /// A person's photo (`CounterpartPhotoStore`), one small JPEG per id.
+    case blobCounterpartPhoto
 
     /// Whether items live under `Documents/lang/<code>/` (one set per
     /// enrolled language) or once per install.
@@ -88,11 +105,13 @@ enum SyncKind: String, Codable, CaseIterable, Hashable {
              .vocabStudyingExpression, .vocabRemovedByHand, .vocabAutoKept,
              .vocabDismissed, .vocabIngested, .vocabExpressionIngested,
              .schedule, .shadow, .savedLine, .scenario, .dialogue, .weekly, .weeklyTest,
-             .speechScript, .speechTake:
+             .speechScript, .speechTake,
+             .tutorLesson, .tutorChat, .tutorProgress, .learnerState, .pronunciation:
             return true
         case .practiceDay, .talkDay, .usageDay, .persona, .personaNote, .profile,
              .counterpart, .dayCard, .defaults, .upcomingGoal, .learningPurpose,
-             .studyPlan, .promiseDay, .activityEvent,
+             .studyPlan, .promiseDay, .activityEvent, .goalPrep, .weekRecap,
+             .blobCounterpartPhoto,
              .blobTurn, .blobRecording, .blobDayCard, .blobAvatar, .blobVoiceSample,
              .blobSpeechAudio, .blobSpeechVideo:
             return false
@@ -104,7 +123,7 @@ enum SyncKind: String, Codable, CaseIterable, Hashable {
     var isBlob: Bool {
         switch self {
         case .blobTurn, .blobRecording, .blobDayCard, .blobAvatar, .blobVoiceSample,
-             .blobSpeechAudio, .blobSpeechVideo: return true
+             .blobSpeechAudio, .blobSpeechVideo, .blobCounterpartPhoto: return true
         default: return false
         }
     }

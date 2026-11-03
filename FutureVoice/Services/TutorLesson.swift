@@ -109,8 +109,9 @@ struct TutorLessonRecord: Codable, Equatable {
 
 // MARK: - Store
 
-/// `Documents/lang/<code>/tutor_lessons.json`. Device-local, like the daily
-/// call: the talks a lesson ran in sync; the checklist is this phone's.
+/// `Documents/lang/<code>/tutor_lessons.json`. Synced since 2026-11-03
+/// (`SyncKind.tutorLesson`), so a lesson started on the phone resumes on
+/// the Mac.
 enum TutorLessonStore {
     /// An unfinished lesson older than this is not offered again.
     static let resumeDays = 21
@@ -135,6 +136,7 @@ enum TutorLessonStore {
         enc.dateEncodingStrategy = .iso8601
         guard let data = try? enc.encode(Array(list.prefix(keep))) else { return }
         try? data.write(to: url(lesson.language), options: .atomic)
+        SyncEngine.noteChanged(.tutorLesson)
     }
 
     /// The newest unfinished lesson, if it is recent enough to pick up.

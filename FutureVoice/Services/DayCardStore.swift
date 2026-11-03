@@ -48,6 +48,7 @@ final class DayCardStore: ObservableObject {
         guard card.hasActivity, let data = try? JSONEncoder().encode(card) else { return }
         try? data.write(to: metaURL(card.date), options: [.atomic])
         version += 1
+        SyncEngine.noteChanged(.blobDayCard)
     }
 
     /// Settle every past day of the last `AppUsageLog` window that has
@@ -139,6 +140,7 @@ final class DayCardStore: ObservableObject {
             try? FileManager.default.removeItem(at: url(day))
         }
         version += 1
+        SyncEngine.noteChanged(.blobDayCard)
     }
 
     private func url(_ day: Date) -> URL {

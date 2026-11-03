@@ -334,6 +334,10 @@ struct BlobKind: SyncKindHandler {
     /// Downloaded copies stay out of the device backup: iCloud already
     /// holds them.
     var excludeFromBackup = false
+    /// A file rewritten under the same name — a person's photo picked again,
+    /// the profile photo, a day card. A newer copy from another device
+    /// replaces the one here; every other blob is written once.
+    var replaceable = false
 
     func fileURL(_ key: String) -> URL { directory.appendingPathComponent(key) }
 

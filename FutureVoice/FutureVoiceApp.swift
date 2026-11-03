@@ -2216,6 +2216,8 @@ final class AppState: ObservableObject {
             }
             if let raw = defaults.string(forKey: Self.proficiencyKey),
                let level = CEFRLevel(rawValue: raw), level != proficiency { proficiency = level }
+            let preset = defaults.string(forKey: Self.fluentSelfPresetKey)
+            if preset != fluentSelfPresetId { fluentSelfPresetId = preset }
             GoalStore.shared.reloadFromDefaults()
         }
         if kinds.contains(.profile) {
