@@ -604,7 +604,16 @@ this time, words at that time, per weekday, combined with my activity". Kept on
 its own branch so the founder picks the build it ships in.
 
 - **`StudyPlan` is a weekly template + per-date edits** (`Services/StudyPlan.swift`,
-  `Documents/study_plan.json`, device-local like the daily call it schedules).
+  `Documents/study_plan.json`). **Synced since 2026-11-03** (founder: the
+  routine is the same everywhere, the phone rings): `StudyPlanKind`, one
+  record, a real routine over a seed (`isSeed`, set on a fresh install's
+  plan) then the later `editedAt`, then the older `streakSince` for plans
+  from before the stamps — so a new Mac never replaces the phone's routine.
+  The promise ledger (`promiseDay`, a kept day stays kept) and the rep times
+  (`activityEvent`, union) sync with it. What RINGS stays per device: the
+  call is `DailyCallStore.isEnabled` (never synced), and block reminders go
+  off on an iPhone, or on an iPad/Mac whose own call is on
+  (`PlanReminder.ringsHere`).
   Rest days and one-off exceptions ("just this day" on a drag) are keyed
   `yyyy-MM-dd`. Two kinds are DERIVED, never stored, so no second copy can
   drift: the weekly test (`WeeklyTestSettings`) and the review slot
@@ -776,8 +785,7 @@ its own branch so the founder picks the build it ships in.
   plan's key (요금제).
 - Captures: `-capture activity-week` / `activity-week-edit` / `plan-settings`
   / `plan-block`. Tests: `StudyPlanTests`.
-- Not built: Talk tab's "today" list, per-block topics,
-  syncing the plan. Kinds placed by hand: talk, review, say it again,
+- Not built: Talk tab's "today" list, per-block topics. Kinds placed by hand: talk, review, say it again,
   shadowing, listening, speech (`Kind.placeable`).
 
 ## Onboarding builds the routine (2026-10-18, cards since 2026-10-20)

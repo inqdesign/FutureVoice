@@ -71,6 +71,15 @@ enum SyncKindRegistry {
                                 afterWrite: { _ in UpcomingGoalStore.shared.reload() }),
         ProfileKind(),
         LearningPurposeKind(),
+        StudyPlanKind(),
+        DictKind<PromiseLedger.Entry>(kind: .promiseDay, filename: "promise_days.json",
+                                      encoder: SyncFiles.bareEncoder, decoder: SyncFiles.bareDecoder,
+                                      mergeRule: { SyncMerge.union($0, $1, combine: SyncMerge.typed(fullerDay)) },
+                                      afterWrite: { _ in
+                                          PromiseLedger.shared.reloadFromDisk()
+                                          StudyWidgetRefresher.schedule()
+                                      }),
+        ActivityEventKind(),
         counterpartKind,
         DefaultsKind(),
         BlobKind(kind: .blobTurn, directory: SyncFiles.documents.appendingPathComponent("TurnAudio", isDirectory: true)),
@@ -89,6 +98,23 @@ enum SyncKindRegistry {
                  onDemand: SpeechVideoSync.isOriginalCopy,
                  excludeFromBackup: true),
     ] }
+
+    /// One promise day judged on two devices: a kept day stays kept, then
+    /// the device that saw more of the day done, then a settled verdict over
+    /// a provisional one.
+    static func fullerDay(_ a: PromiseLedger.Entry, _ b: PromiseLedger.Entry) -> PromiseLedger.Entry {
+        switch (a.keptAt, b.keptAt) {
+        case let (x?, y?): return x <= y ? a : b
+        case (_?, nil): return a
+        case (nil, _?): return b
+        case (nil, nil): break
+        }
+        let ta = a.touched ?? a.done, tb = b.touched ?? b.done
+        if ta != tb { return ta > tb ? a : b }
+        if a.done != b.done { return a.done > b.done ? a : b }
+        if a.settled != b.settled { return a.settled ? a : b }
+        return a
+    }
 
     static func handler(for kind: SyncKind) -> (any SyncKindHandler)? {
         all.first { $0.kind == kind }
@@ -618,5 +644,78 @@ struct DefaultsKind: SyncKindHandler {
             else { continue }
             defaults.set(value.any, forKey: key)
         }
+    }
+}
+
+
+// MARK: - The routine, and when its reps happened
+
+/// The routine: one record. A real routine beats a seed, then the later
+/// edit (`StudyPlan.later`); with neither stamp, the sync's own clock.
+struct StudyPlanKind: SyncKindHandler {
+    let kind: SyncKind = .studyPlan
+    static let key = "plan"
+    private var url: URL { SyncFiles.url("study_plan.json", lang: nil) }
+
+    func read(lang: String?) -> SyncSnapshot? {
+        guard let data = try? Data(contentsOf: url) else { return [:] }
+        guard let plan = try? JSONDecoder().decode(StudyPlan.self, from: data) else { return nil }
+        guard let payload = try? SyncCanonical.encode(plan) else { return nil }
+        return [Self.key: payload]
+    }
+
+    func merge(local: SyncSide?, remote: SyncSide) -> Data? {
+        if let lp = local?.payload, local?.deleted == false, let rp = remote.payload, !remote.deleted,
+           lp != rp,
+           let a = try? SyncCanonical.decode(StudyPlan.self, from: lp),
+           let b = try? SyncCanonical.decode(StudyPlan.self, from: rp),
+           let winner = StudyPlan.later(a, b) {
+            return winner == a ? lp : rp
+        }
+        // A routine is never deleted: an emptied one is still a routine.
+        return SyncMerge.lww(local, remote) ?? (local?.deleted == false ? local?.payload : nil)
+    }
+
+    @MainActor
+    func write(_ items: [String: SyncItem], lang: String?) throws {
+        guard let item = items[Self.key],
+              let plan = try? SyncCanonical.decode(StudyPlan.self, from: item.payload) else { return }
+        if SyncFiles.documentsOverride != nil {
+            let enc = JSONEncoder()
+            enc.outputFormatting = [.sortedKeys]
+            try SyncFiles.write(plan, to: url, encoder: enc)
+        } else {
+            StudyPlanStore.shared.adoptSynced(plan)
+        }
+    }
+}
+
+/// When each rep happened. Reps are facts, so the union of both devices',
+/// never a deletion: each device prunes its own past 60 days.
+struct ActivityEventKind: SyncKindHandler {
+    let kind: SyncKind = .activityEvent
+    private var url: URL { SyncFiles.url("activity_events.json", lang: nil) }
+
+    func read(lang: String?) -> SyncSnapshot? {
+        guard let list = SyncFiles.read([ActivityEventLog.Event].self, at: url,
+                                        decoder: ActivityEventLog.decoder, empty: []) else { return nil }
+        var out: SyncSnapshot = [:]
+        for (key, event) in ActivityEventLog.syncKeys(list) {
+            if let data = try? SyncCanonical.encode(event) { out[key] = data }
+        }
+        return out
+    }
+
+    func merge(local: SyncSide?, remote: SyncSide) -> Data? {
+        SyncMerge.union(local, remote) { l, _ in l }
+    }
+
+    @MainActor
+    func write(_ items: [String: SyncItem], lang: String?) throws {
+        let list = items.values
+            .compactMap { try? SyncCanonical.decode(ActivityEventLog.Event.self, from: $0.payload) }
+            .sorted { $0.at < $1.at }
+        try SyncFiles.write(list, to: url, encoder: ActivityEventLog.encoder)
+        ActivityEventLog.shared.reloadFromDisk()
     }
 }

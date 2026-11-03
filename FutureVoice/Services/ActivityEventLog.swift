@@ -59,6 +59,27 @@ final class ActivityEventLog: @unchecked Sendable {
         }
         // Every rep passes here: the routine widget's ticks follow.
         StudyWidgetRefresher.schedule()
+        SyncEngine.noteChanged(.activityEvent)
+    }
+
+    /// Another device's reps were merged into the file (`SyncKindRegistry`).
+    func reloadFromDisk() {
+        let fresh = (try? Data(contentsOf: url)).flatMap { try? Self.decoder.decode([Event].self, from: $0) } ?? []
+        lock.lock(); events = fresh; lock.unlock()
+        StudyWidgetRefresher.schedule()
+    }
+
+    /// The file's events keyed for sync: kind, the second it happened, and
+    /// which of that second's events of that kind it is — two cards dealt in
+    /// one second are two reps, not one.
+    static func syncKeys(_ list: [Event]) -> [(key: String, event: Event)] {
+        var seen: [String: Int] = [:]
+        return list.map { e in
+            let base = "\(e.kind.rawValue)|\(Int(e.at.timeIntervalSince1970.rounded(.down)))"
+            let n = seen[base, default: 0]
+            seen[base] = n + 1
+            return ("\(base)|\(n)", e)
+        }
     }
 
     /// Events within `[start, end)`, oldest first.
@@ -74,10 +95,10 @@ final class ActivityEventLog: @unchecked Sendable {
     }
     #endif
 
-    private static let encoder: JSONEncoder = {
+    static let encoder: JSONEncoder = {
         let e = JSONEncoder(); e.dateEncodingStrategy = .iso8601; return e
     }()
-    private static let decoder: JSONDecoder = {
+    static let decoder: JSONDecoder = {
         let d = JSONDecoder(); d.dateDecodingStrategy = .iso8601; return d
     }()
 }

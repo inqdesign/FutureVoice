@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import UserNotifications
 
 /// A local reminder at each hand-placed timetable block (words, expressions,
@@ -18,6 +19,17 @@ enum PlanReminder {
     static let listenCategoryId = "futurevoice.plan.listen"
     static let horizonDays = 7
 
+    /// The routine is the same on every synced device, so its reminders would
+    /// go off on each of them (2026-11-03, founder: the phone rings). The
+    /// iPhone rings; an iPad or Mac rings only when its own daily call is
+    /// on, which is that device's "ring here too". A device that isn't
+    /// syncing has only its own routine and rings as before.
+    static var ringsHere: Bool {
+        UIDevice.current.userInterfaceIdiom == .phone
+            || DailyCallStore.shared.isEnabled
+            || !SyncEngine.shared.isEnabled
+    }
+
     static func reschedule(now: Date = Date(), calendar: Calendar = .current) async {
         let center = UNUserNotificationCenter.current()
         let pending = await center.pendingNotificationRequests()
@@ -28,6 +40,7 @@ enum PlanReminder {
         case .authorized, .provisional, .ephemeral: break
         default: return
         }
+        guard ringsHere else { return }
 
         let plan = StudyPlanStore.shared.plan
         let today = calendar.startOfDay(for: now)

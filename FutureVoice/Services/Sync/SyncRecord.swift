@@ -48,6 +48,17 @@ enum SyncKind: String, Codable, CaseIterable, Hashable {
     /// onboarding's answer and every later edit reach the other devices.
     /// An older build can't name this kind and skips it, so no schema bump.
     case learningPurpose
+    /// The routine (`StudyPlanStore`, one record). It used to stay on the
+    /// device "because two devices must not both ring" — but what rings is
+    /// the daily call, whose switch stays per device (2026-11-03, founder:
+    /// the routine is the same everywhere, the phone rings).
+    case studyPlan
+    /// The promise's judged days (`PromiseLedger`), one record per day, so
+    /// the streak reads the same on every device.
+    case promiseDay
+    /// When each rep happened (`ActivityEventLog`), so a routine block done
+    /// on the Mac is ticked on the phone.
+    case activityEvent
     // Blobs — files carried as assets, keyed by filename.
     case blobTurn
     case blobRecording
@@ -81,6 +92,7 @@ enum SyncKind: String, Codable, CaseIterable, Hashable {
             return true
         case .practiceDay, .talkDay, .usageDay, .persona, .personaNote, .profile,
              .counterpart, .dayCard, .defaults, .upcomingGoal, .learningPurpose,
+             .studyPlan, .promiseDay, .activityEvent,
              .blobTurn, .blobRecording, .blobDayCard, .blobAvatar, .blobVoiceSample,
              .blobSpeechAudio, .blobSpeechVideo:
             return false

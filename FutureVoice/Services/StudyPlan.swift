@@ -134,6 +134,37 @@ struct StudyPlan: Codable, Equatable {
     var streakSince: Date? = nil
     /// `yyyy-MM-dd` → that date's own blocks, replacing the template's.
     var exceptions: [String: [Block]] = [:]
+    /// The app wrote this plan on a fresh install and nobody has changed it
+    /// since. A synced routine from another device always beats it — a new
+    /// Mac must never replace the phone's routine with its own seed.
+    var isSeed: Bool? = nil
+    /// When the routine was last changed (`StudyPlanStore.update`). Two
+    /// devices' routines merge to the later one.
+    var editedAt: Date? = nil
+
+    /// Which of two devices' routines stands: a real routine over a seed,
+    /// then the later edit. nil when neither says (both older than these
+    /// fields) — the sync's own clock decides then.
+    static func later(_ a: StudyPlan, _ b: StudyPlan) -> StudyPlan? {
+        let aSeed = a.isSeed == true, bSeed = b.isSeed == true
+        if aSeed != bSeed { return aSeed ? b : a }
+        switch (a.editedAt, b.editedAt) {
+        case let (x?, y?): return x >= y ? a : b
+        case (_?, nil): return a
+        case (nil, _?): return b
+        case (nil, nil):
+            // Both from before these fields — the case for every device
+            // that already had the app when sync of the routine arrived. A
+            // second device's routine is a seed written the day it was
+            // installed, so the routine kept the longest is the real one.
+            switch (a.streakSince, b.streakSince) {
+            case let (x?, y?) where x != y: return x < y ? a : b
+            case (_?, nil): return a
+            case (nil, _?): return b
+            default: return nil
+            }
+        }
+    }
 
     /// At most this many distinct call times across the week — the same
     /// ceiling as `DailyCallStore.maxTimes`, so the call list in Me can show
@@ -640,9 +671,11 @@ final class StudyPlanStore: ObservableObject {
                                               goalMinutes: Self.goalMinutes)
             if plan != decoded { write(plan) }
         } else {
-            plan = StudyPlan.seeded(callTimes: DailyCallStore.shared.times,
-                                    goalMinutes: Self.goalMinutes,
-                                    callEnabled: DailyCallStore.shared.isEnabled)
+            var seed = StudyPlan.seeded(callTimes: DailyCallStore.shared.times,
+                                        goalMinutes: Self.goalMinutes,
+                                        callEnabled: DailyCallStore.shared.isEnabled)
+            seed.isSeed = true
+            plan = seed
             write(plan)
         }
     }
@@ -688,6 +721,8 @@ final class StudyPlanStore: ObservableObject {
         // shadowing blocks are shadowing.
         var new = new
         new.shadowIsOwn = true
+        new.isSeed = nil
+        new.editedAt = Date()
         new = new.foldingIntoReview()
         if new.blocks.isEmpty {
             new.streakSince = nil
@@ -740,11 +775,39 @@ final class StudyPlanStore: ObservableObject {
         var new = plan
         new.adoptCallTimes(times, defaultMinutes: Self.goalMinutes)
         guard new != plan else { return }
+        new.isSeed = nil
+        new.editedAt = Date()
         plan = new
         write(new)
     }
 
-    private func write(_ plan: StudyPlan) {
+    /// The routine another device synced (`StudyPlanKind`). Taken as it is —
+    /// the streak start, the edit stamp, the seed mark all came with it —
+    /// and then everything that follows a routine follows it here: the day's
+    /// promise, the call times, the reminders. Whether the call RINGS on
+    /// this device is still this device's switch (`DailyCallStore.isEnabled`).
+    func adoptSynced(_ incoming: StudyPlan) {
+        let new = incoming.convertingLegacySayItAgain().convertingToCounts().convertingReviewSwitch()
+            .foldingIntoReview()
+        guard new != plan, new.isCallable else { return }
+        PromiseJudge.refresh()
+        let callsChanged = new.callTimes != plan.callTimes
+        plan = new
+        write(new, fromSync: true)
+        PromiseJudge.refresh()
+        if callsChanged {
+            mirroring = true
+            if !new.callTimes.isEmpty { DailyCallStore.shared.times = new.callTimes }
+            mirroring = false
+            DailyCallScheduler.rearmFromStoredPlan()
+        }
+        Task {
+            await DrillReminder.reschedule()
+            await PlanReminder.reschedule()
+        }
+    }
+
+    private func write(_ plan: StudyPlan, fromSync: Bool = false) {
         Self.setCurrent(plan)
         let enc = JSONEncoder()
         enc.outputFormatting = [.sortedKeys]
@@ -752,5 +815,6 @@ final class StudyPlanStore: ObservableObject {
         try? data.write(to: url, options: [.atomic])
         // The routine widget draws this plan.
         StudyWidgetRefresher.schedule()
+        if !fromSync { SyncEngine.noteChanged(.studyPlan) }
     }
 }

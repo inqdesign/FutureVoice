@@ -229,6 +229,88 @@ final class SyncTests: XCTestCase {
         XCTAssertEqual(SyncMerge.union(local, tomb) { a, _ in a }, payload)
     }
 
+    // MARK: - The routine
+
+    private func planSide(_ plan: StudyPlan, at: TimeInterval) throws -> SyncSide {
+        SyncSide(payload: try SyncCanonical.encode(plan), at: Date(timeIntervalSince1970: at), deleted: false)
+    }
+
+    /// A new Mac seeds a routine the moment it launches, so its copy is the
+    /// newest by the sync's clock — and must still lose to the phone's.
+    func testASeededRoutineNeverBeatsARealOne() throws {
+        var seed = StudyPlan(); seed.isSeed = true
+        var real = StudyPlan(); real.streakSince = Date(timeIntervalSince1970: 1_000)
+        real.editedAt = Date(timeIntervalSince1970: 1_000)
+        let kind = StudyPlanKind()
+        let merged = kind.merge(local: try planSide(seed, at: 9_000), remote: try planSide(real, at: 100))
+        XCTAssertEqual(merged, try SyncCanonical.encode(real))
+    }
+
+    func testTheLaterRoutineEditWins() throws {
+        var a = StudyPlan(); a.editedAt = Date(timeIntervalSince1970: 500); a.autoReview = true
+        var b = StudyPlan(); b.editedAt = Date(timeIntervalSince1970: 900)
+        let merged = StudyPlanKind().merge(local: try planSide(a, at: 9_000), remote: try planSide(b, at: 100))
+        XCTAssertEqual(merged, try SyncCanonical.encode(b))
+    }
+
+    /// Routines written before the stamps: the one kept longest is the real one.
+    func testUnstampedRoutinesKeepTheOlderPromise() throws {
+        var phone = StudyPlan(); phone.streakSince = Date(timeIntervalSince1970: 1_000)
+        var mac = StudyPlan(); mac.streakSince = Date(timeIntervalSince1970: 50_000)
+        let merged = StudyPlanKind().merge(local: try planSide(mac, at: 9_000), remote: try planSide(phone, at: 100))
+        XCTAssertEqual(merged, try SyncCanonical.encode(phone))
+    }
+
+    func testAKeptPromiseDayStaysKeptAndTheFullerDayWins() {
+        let kept = PromiseLedger.Entry(planned: 3, done: 1, keptAt: Date(), touched: 3)
+        let behind = PromiseLedger.Entry(planned: 4, done: 2, touched: 2)
+        XCTAssertEqual(SyncKindRegistry.fullerDay(behind, kept), kept)
+        let more = PromiseLedger.Entry(planned: 3, done: 1, touched: 2)
+        let less = PromiseLedger.Entry(planned: 3, done: 1, touched: 1)
+        XCTAssertEqual(SyncKindRegistry.fullerDay(less, more), more)
+    }
+
+    func testRepTimesReachTheOtherDeviceIncludingTwoInOneSecond() async throws {
+        let cloud = InMemorySyncTransport()
+        let a = device(cloud)
+        let t = Date(timeIntervalSince1970: 1_800_000_000)
+        let events = [ActivityEventLog.Event(kind: .sayItAgain, at: t),
+                      ActivityEventLog.Event(kind: .sayItAgain, at: t),
+                      ActivityEventLog.Event(kind: .listen, at: t.addingTimeInterval(60))]
+        on(a.root)
+        try SyncFiles.write(events, to: SyncFiles.url("activity_events.json", lang: nil),
+                            encoder: ActivityEventLog.encoder)
+        try await a.engine.enable()
+
+        let b = device(cloud)
+        try await b.engine.enable()
+        on(b.root)
+        let got = SyncFiles.read([ActivityEventLog.Event].self, at: SyncFiles.url("activity_events.json", lang: nil),
+                                 decoder: ActivityEventLog.decoder, empty: []) ?? []
+        XCTAssertEqual(got.filter { $0.kind == .sayItAgain }.count, 2)
+        XCTAssertEqual(got.count, 3)
+    }
+
+    func testTheRoutineReachesTheOtherDevice() async throws {
+        let cloud = InMemorySyncTransport()
+        let a = device(cloud)
+        var plan = StudyPlan(); plan.streakSince = Date(timeIntervalSince1970: 1_000)
+        plan.editedAt = Date(timeIntervalSince1970: 2_000); plan.autoReview = true
+        on(a.root)
+        try SyncFiles.write(plan, to: SyncFiles.url("study_plan.json", lang: nil), encoder: JSONEncoder())
+        try await a.engine.enable()
+
+        let b = device(cloud)
+        var seed = StudyPlan(); seed.isSeed = true
+        on(b.root)
+        try SyncFiles.write(seed, to: SyncFiles.url("study_plan.json", lang: nil), encoder: JSONEncoder())
+        try await b.engine.enable()
+        on(b.root)
+        let got = try JSONDecoder().decode(StudyPlan.self,
+                                           from: Data(contentsOf: SyncFiles.url("study_plan.json", lang: nil)))
+        XCTAssertEqual(got, plan)
+    }
+
     func testPracticeDayTakesTheMaxPerFieldNotTheSum() {
         var a = PracticeLog.Day(); a.drillReps = 3; a.wordDone = 1
         var b = PracticeLog.Day(); b.drillReps = 5; b.wordDone = 0; b.shadowReps = 2

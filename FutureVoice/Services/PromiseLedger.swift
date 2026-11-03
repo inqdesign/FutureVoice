@@ -66,6 +66,14 @@ final class PromiseLedger: @unchecked Sendable {
         if let data = try? JSONEncoder().encode(snapshot) {
             try? data.write(to: url, options: [.atomic])
         }
+        SyncEngine.noteChanged(.promiseDay)
+    }
+
+    /// Another device's days were merged into the file (`SyncKindRegistry`).
+    func reloadFromDisk() {
+        let fresh = (try? Data(contentsOf: url))
+            .flatMap { try? JSONDecoder().decode([String: Entry].self, from: $0) } ?? [:]
+        lock.lock(); entries = fresh; lock.unlock()
     }
 
     var isEmpty: Bool {
