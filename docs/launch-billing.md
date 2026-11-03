@@ -33,6 +33,39 @@ people, which stays true. It is not a licence to price against under-use.
 
 ---
 
+## 2026-11-03 revision — Plus 400 min, Max 600 min; the cost measured
+
+Founder decision, `20261103170000_plus_400_max_600`. Prices: Plus unchanged
+(₩29,000 / $19.99 — "₩29,000 is already heavy", so no raise), Max ₩58,000 →
+**₩45,000 / $34.99** (set in App Store Connect by hand; lowering needs no
+consent sheet). Light untouched.
+
+**The talk minute is ~$0.046, now measured rather than estimated.** Cartesia's
+usage API (admin key, `~/keys/cartesia-admin.txt`), 10-13..11-03, credits per
+voice set against the ledger's metered minutes: nawana's own voices spend
+**~600 credits per metered minute** (the August "365 chars" was the short-turn
+HTTP path; the fluent self talks twice as much now). Plan: Startup $49 /
+1.25M credits, overage **$45/M** (we run ~2.4M a month, so ~$100/month; Scale
+at $299 / 8M would cost more). TTS $0.027/min at the margin + LLM $0.017–0.024
+(ledger / console) = **$0.044–0.051**. Dear RoRo shares the account but is
+4–9% of the credits.
+
+| Plan | Pool | Full-use cost | Net US / KR | At full use US / KR |
+|------|------|---------------|-------------|---------------------|
+| Light | 150 min | $6.9 | $8.49 / $8.3 | +$1.6 / +$1.4 |
+| **Plus** $19.99 / ₩29,000 | 450 → **400 min** | $18.4 | $17.0 / $16.0 | −$1.4 / −$2.4 |
+| **Max** $34.99 / ₩45,000 | 900 → **600 min** | $27.6 | $29.7 / $24.7 | +$2.1 / −$2.9 |
+
+Why 400 / 600 and not a cheaper Plus: the heaviest account (a daily user, Plus
+since 09-12) talks ~260 min a period and would reach ~440 with its scenes
+counted in minutes — Plus 400 walls exactly that person, which is the point:
+the wall is a step to Max 600 at ₩45,000, a size that fits them, instead of a
+900-minute tier nobody bought. ₩25,000 for Plus would lose $4.6 per full user;
+the only lever left for a cheaper Plus is a shorter fluent-self turn (600 →
+400 chars a minute would take ~$0.01 off), not measured yet. Scenes stay at
+5 min from the same pool; speech scripts are open on every plan (paid in
+minutes). Every live Plus/Max row keeps the size it bought.
+
 ## 2026-10-27 revision — Plus 450 min, Max 900 min (new buyers)
 
 Founder decision, `20261027120000_plus_450_max_900`. Prices unchanged; the
