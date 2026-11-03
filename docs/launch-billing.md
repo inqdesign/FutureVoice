@@ -33,9 +33,9 @@ people, which stays true. It is not a licence to price against under-use.
 
 ---
 
-## 2026-11-03 revision — Plus 400 min, Max 600 min; the cost measured
+## 2026-11-03 revision — Max 600 min (Plus stays 450); the cost measured
 
-Founder decision, `20261103170000_plus_400_max_600`. Prices: Plus unchanged
+Founder decision, `20261103170000_max_600`. Prices: Plus unchanged
 (₩29,000 / $19.99 — "₩29,000 is already heavy", so no raise), Max ₩58,000 →
 **₩45,000 / $34.99** (set in App Store Connect by hand; lowering needs no
 consent sheet). Light untouched.
@@ -53,14 +53,17 @@ at $299 / 8M would cost more). TTS $0.027/min at the margin + LLM $0.017–0.024
 | Plan | Pool | Full-use cost | Net US / KR | At full use US / KR |
 |------|------|---------------|-------------|---------------------|
 | Light | 150 min | $6.9 | $8.49 / $8.3 | +$1.6 / +$1.4 |
-| **Plus** $19.99 / ₩29,000 | 450 → **400 min** | $18.4 | $17.0 / $16.0 | −$1.4 / −$2.4 |
+| Plus $19.99 / ₩29,000 | 450 min (unchanged) | $20.7 all talk; ~$14 at the real mix | $17.0 / $16.0 | −$3.7 / −$4.7 all talk; +$2 at the mix |
 | **Max** $34.99 / ₩45,000 | 900 → **600 min** | $27.6 | $29.7 / $24.7 | +$2.1 / −$2.9 |
 
-Why 400 / 600 and not a cheaper Plus: the heaviest account (a daily user, Plus
-since 09-12) talks ~260 min a period and would reach ~440 with its scenes
-counted in minutes — Plus 400 walls exactly that person, which is the point:
-the wall is a step to Max 600 at ₩45,000, a size that fits them, instead of a
-900-minute tier nobody bought. ₩25,000 for Plus would lose $4.6 per full user;
+Why Plus stays 450: a pool minute is not a talk minute. A scene is charged 5
+min and costs ~$0.05 (a quarter of five talk minutes), a voiceover minute
+costs ~$0.005 (a tenth), so the heaviest account (a daily user, Plus since
+09-12: 263 min talk + 34 scenes + 4 min voiceover ≈ 437 min) costs ~$14
+against $16 net, and nobody has ever talked 450 pure minutes (the all-talk
+column is a tail bounded by effort). A Plus 400 was written and withdrawn
+the same hour. Max 600 at ₩45,000 is the step for that learner instead of a
+900-minute tier nobody bought. ₩25,000 for Plus would lose $4.6 per all-talk user;
 the only lever left for a cheaper Plus is a shorter fluent-self turn (600 →
 400 chars a minute would take ~$0.01 off), not measured yet. Scenes stay at
 5 min from the same pool; speech scripts are open on every plan (paid in
