@@ -9,6 +9,8 @@
 #                                  # about the build that is now live,
 #                                  # and post it on nawana.app/community
 #   ./scripts/beta.sh community    # (re)post the current version's news only
+#   ./scripts/beta.sh notes        # re-push the release notes to the update
+#                                  # sheet (app_release) for the build already up
 #   ./scripts/beta.sh --mac        # the MAC app (Mac Catalyst) of the build
 #                                  # number already in the plist: archive,
 #                                  # export a .pkg, upload to TestFlight for Mac
@@ -165,6 +167,23 @@ fi
 
 if [[ "${1:-}" == "community" ]]; then
   community_post "$(plist "$APP_PLIST" CFBundleShortVersionString)"
+  exit 0
+fi
+
+# --- `notes`: re-push the release notes of the build already uploaded -------
+# The update sheet reads app_release, which beta.sh wrote at upload time; a
+# note rewritten AFTER the upload (2026-11-03: the plans paragraph moved from
+# "New" to "Improved") would otherwise reach the store on submission and
+# never the sheet. Rewrites both the flat copy and the sections for the
+# current row, nothing else.
+if [[ "${1:-}" == "notes" ]]; then
+  notes_ko=$(sheet_notes "$NOTES_KO_FILE"); notes_en=$(sheet_notes "$NOTES_EN_FILE")
+  [[ -n "$notes_ko" && -n "$notes_en" ]] || { echo "✗ Release notes missing." >&2; exit 1; }
+  supabase_sql "update public.app_release set notes_ko = $(sql_text "$notes_ko"), notes_en = $(sql_text "$notes_en"), updated_at = now() where platform = '$RELEASE_ROW';" >/dev/null \
+    || { echo "✗ app_release notes update failed" >&2; exit 1; }
+  publish_note_sections
+  echo "▸ app_release.$RELEASE_ROW notes refreshed from $NOTES_KO_FILE / $NOTES_EN_FILE:"
+  sed 's/^/    /' "$NOTES_KO_FILE"
   exit 0
 fi
 

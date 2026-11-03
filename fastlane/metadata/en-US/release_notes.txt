@@ -1,4 +1,7 @@
 New
 • Used up your free 20 minutes? The report now ends with a one-time free recharge of 20 more, right beside Subscribe.
-• Writing Speech scripts is open on every plan. Scripts are paid out of your talk minutes.
-• A simpler plans page: what is unlimited on every plan at a glance, and the talk minutes a scene uses shown right where you start one.
+• Writing Speech scripts is open on every plan.
+
+Improved
+• Simpler plans. Scenes are no longer counted separately; they come out of your talk minutes, so every plan reads as one number. A scene takes 5 minutes, shown right where you start one. Plans you already have stay as they are.
+• Max is now 600 minutes at a lower price.

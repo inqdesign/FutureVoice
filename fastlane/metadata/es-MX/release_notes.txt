@@ -1,4 +1,7 @@
 Novedades
 • ¿Se te acabaron los 20 minutos gratis? Al final del reporte puedes recargar otros 20 gratis, una sola vez, justo al lado de Suscribirse.
-• Escribir discursos está abierto en todos los planes. Los discursos se pagan con tus minutos de conversación.
-• Una página de planes más sencilla: lo que es ilimitado en todos los planes de un vistazo, y los minutos que usa una escena, justo donde la empiezas.
+• Escribir discursos está abierto en todos los planes.
+
+Mejoras
+• Planes más sencillos. Las escenas ya no se cuentan aparte: salen de tus minutos de conversación, así que cada plan es un solo número. Una escena usa 5 minutos, y lo ves justo donde la empiezas. Los planes que ya tienes siguen igual.
+• Max ahora tiene 600 minutos a un precio más bajo.
