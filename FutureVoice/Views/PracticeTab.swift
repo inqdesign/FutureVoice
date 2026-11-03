@@ -1581,10 +1581,10 @@ struct WeeklyTestSettingsSection: View {
             } label: {
                 Label("Test day", systemImage: "checklist")
             }
-            DatePicker(selection: Binding(
+            AppTimePicker(selection: Binding(
                 get: { settings.timeOfDay },
                 set: { settings.timeOfDay = $0 }
-            ), displayedComponents: .hourAndMinute) {
+            )) {
                 Label("Opens at", systemImage: "clock")
             }
             Toggle(isOn: Binding(

@@ -375,7 +375,7 @@ struct RoutineOnboardingView: View {
                             }
                         }
                         .pickerStyle(.segmented)
-                        DatePicker("Calls at", selection: $callTime, displayedComponents: .hourAndMinute)
+                        AppTimePicker("Calls at", selection: $callTime)
                             .environment(\.locale, uiLocale)
                     }
                     dayChips
@@ -390,7 +390,7 @@ struct RoutineOnboardingView: View {
                         row(kind)
                         // A ticked block's time, changed right on it.
                         if selected.contains(kind) {
-                            DatePicker("Time", selection: timeBinding(kind), displayedComponents: .hourAndMinute)
+                            AppTimePicker("Time", selection: timeBinding(kind))
                                 .environment(\.locale, uiLocale)
                                 .padding(.leading, 42)
                         }

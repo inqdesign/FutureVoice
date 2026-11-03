@@ -1372,3 +1372,76 @@ extension UIScrollView {
     }
 }
 #endif
+
+// MARK: - Time of day
+
+/// A time of day. On the phone it is the system's `DatePicker`; on the Mac
+/// that picker is a text field you click into and type (a segment lights up,
+/// nothing opens), which read as a dead dropdown (2026-11-03, founder). So the
+/// Mac gets two dropdowns: the hour and the minute, in 5-minute steps.
+struct AppTimePicker<Label: View>: View {
+    @Binding var selection: Date
+    private let label: () -> Label
+    @Environment(\.locale) private var locale
+
+    init(selection: Binding<Date>, @ViewBuilder label: @escaping () -> Label) {
+        _selection = selection
+        self.label = label
+    }
+
+    var body: some View {
+        #if targetEnvironment(macCatalyst)
+        HStack {
+            label()
+            Spacer(minLength: 12)
+            AppMenu {
+                ForEach(0..<24, id: \.self) { h in
+                    Button(hourText(h)) { set(hour: h, minute: parts.minute) }
+                }
+            } label: { chip(hourText(parts.hour)) }
+            AppMenu {
+                ForEach(Array(stride(from: 0, to: 60, by: 5)), id: \.self) { m in
+                    Button(String(format: "%02d", m)) { set(hour: parts.hour, minute: m) }
+                }
+            } label: { chip(String(format: "%02d", parts.minute)) }
+        }
+        #else
+        DatePicker(selection: $selection, displayedComponents: .hourAndMinute, label: label)
+        #endif
+    }
+
+    private var parts: (hour: Int, minute: Int) {
+        let c = Calendar.current.dateComponents([.hour, .minute], from: selection)
+        return (c.hour ?? 0, c.minute ?? 0)
+    }
+
+    private func set(hour: Int, minute: Int) {
+        let cal = Calendar.current
+        selection = cal.date(bySettingHour: hour, minute: minute, second: 0, of: selection) ?? selection
+    }
+
+    /// The hour as the learner's language writes it ("오전 8시", "8 AM", "08").
+    private func hourText(_ h: Int) -> String {
+        let f = DateFormatter()
+        f.locale = locale
+        f.setLocalizedDateFormatFromTemplate("j")
+        let date = Calendar.current.date(bySettingHour: h, minute: 0, second: 0, of: Date()) ?? Date()
+        return f.string(from: date)
+    }
+
+    private func chip(_ text: String) -> some View {
+        HStack(spacing: 4) {
+            Text(text).monospacedDigit()
+            Image(systemName: "chevron.up.chevron.down").font(.caption2).foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 7))
+    }
+}
+
+extension AppTimePicker where Label == Text {
+    init(_ titleKey: LocalizedStringKey, selection: Binding<Date>) {
+        self.init(selection: selection) { Text(titleKey) }
+    }
+}

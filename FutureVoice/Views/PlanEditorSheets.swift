@@ -117,7 +117,7 @@ struct PlanBlockEditor: View {
                 Section {
                     Toggle("Any time of day", isOn: $anytime)
                     if !anytime {
-                        DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute)
+                        AppTimePicker("Time", selection: $time)
                             .environment(\.locale, uiLocale)
                     }
                     // A talk is promised in minutes; everything else in the
