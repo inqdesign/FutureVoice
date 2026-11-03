@@ -177,8 +177,21 @@ def sync_localizations(kind: str, parent_rel: str, parent_type: str, parent_id: 
         desc = ", ".join(f"{k} {len(cur['attributes'].get(k) or '')}→{len(v)}" for k, v in changed.items())
         print(f"  {kind} {loc}: CHANGE {desc}")
         if send:
-            call("PATCH", f"/{kind}/{cur['id']}", {"data": {
-                "type": kind, "id": cur["id"], "attributes": changed}})
+            try:
+                call("PATCH", f"/{kind}/{cur['id']}", {"data": {
+                    "type": kind, "id": cur["id"], "attributes": changed}})
+            except RuntimeError as e:
+                # A platform's FIRST version has no "What's New" (nothing came
+                # before it), and App Store Connect refuses the field outright.
+                if "'whatsNew' cannot be edited" not in str(e) or len(changed) == 1:
+                    if "'whatsNew' cannot be edited" in str(e):
+                        print(f"  {kind} {loc}: whatsNew skipped (first version on this platform)")
+                        continue
+                    raise
+                changed.pop("whatsNew")
+                print(f"  {kind} {loc}: whatsNew skipped (first version on this platform)")
+                call("PATCH", f"/{kind}/{cur['id']}", {"data": {
+                    "type": kind, "id": cur["id"], "attributes": changed}})
 
 
 MAC_SHOTS = os.path.join(ROOT, "fastlane/screenshots-mac")
