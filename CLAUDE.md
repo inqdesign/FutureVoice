@@ -2259,14 +2259,30 @@ scorecard's Pronunciation axis had been `nil` since it was drawn.
   (`scripts/pronunciation-probe.sh`, the founder's own takes — never a
   learner's recording), and for the board it changes what people already
   on it were scored by. On the shadow screen: a dotted UNDERLINE under a
-  word Azure faulted (red < 60, Azure's own line; orange < 80) — text
-  colour already means "wrong word" and the dot below means the beat — and
+  word Azure faulted — text colour already means "wrong word" and the dot
+  below means the beat — and
   a Pronunciation line under the diff with the score and the weak words.
   The coach prompt gets a `pronunciation:` line and is told to name the
   word and the sound in plain words when it is measured, and to speak only
   of words heard when it is "n/a". The speech result has a Pronunciation
   row; the scorecard's axis is `PronunciationRead.recentAxis()` — the mean
   over the last 30 days' assessed takes (≥3), computed where it is shown.
+- **The accent lives in the PHONEMES, and the REST shape is flat**
+  (probe, same day, macOS voices as speakers). Native English scored 96
+  (every word 100, prosody 91); the same line read by the Korean voice
+  scored 77 — but as WORDS it still read 85–97, with θ in "think" at 32
+  and ð in "this" at 27. So a word is marked by its weakest sound as well
+  as its own score (`PronunciationResult.Word.isMispronounced` / `isShaky`).
+  German separates well (native 91 · English accent 66 · Korean accent
+  44), Spanish barely (98 vs 95). Native takes are not always clean: one
+  German and one Korean native word scored 45–55, which is why the red bar
+  sits under 50 and a native slip reads orange at worst. Phoneme NAMES come
+  back in IPA for English only; other locales send the score with an empty
+  name. And the REST endpoint puts every score FLAT on NBest / word /
+  phoneme, while the docs' samples (SDK JSON) nest them under
+  `PronunciationAssessment` — a parser written from the docs read every
+  answer as "no assessment". Both are read. Nothing here is measured on a
+  real learner's voice yet.
 - Android: owed.
 
 ## Japanese as a TARGET language (2026-09-18)

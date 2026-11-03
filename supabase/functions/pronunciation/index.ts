@@ -68,20 +68,32 @@ const LOCALE_BY_LANGUAGE: Record<string, string> = {
 // Prosody (stress, intonation, rhythm) is assessed by Azure for en-US only.
 const PROSODY_LOCALES = new Set(["en-US"])
 
-type AzureWord = {
+// The REST short-audio endpoint puts the scores FLAT on NBest / word /
+// phoneme (measured 2026-11-03: `NBest[0].AccuracyScore`, `Words[i].ErrorType`,
+// `Phonemes[j].AccuracyScore`). The SDK's JSON nests them under
+// `PronunciationAssessment`, which is what the docs' samples show — a parser
+// written from the docs read every REST answer as "no assessment". Both are
+// read, flat first.
+type Scores = {
+  AccuracyScore?: number; FluencyScore?: number; CompletenessScore?: number
+  ProsodyScore?: number; PronScore?: number; ErrorType?: string
+}
+type AzureWord = Scores & {
   Word: string
   Offset?: number
   Duration?: number
-  PronunciationAssessment?: { AccuracyScore?: number; ErrorType?: string }
-  Phonemes?: { Phoneme: string; PronunciationAssessment?: { AccuracyScore?: number } }[]
+  PronunciationAssessment?: Scores
+  Phonemes?: (Scores & { Phoneme: string; PronunciationAssessment?: Scores })[]
+  Feedback?: { Prosody?: { Intonation?: { ErrorTypes?: string[] } } }
 }
-type AzureNBest = {
+type AzureNBest = Scores & {
   Display?: string
-  PronunciationAssessment?: {
-    AccuracyScore?: number; FluencyScore?: number; CompletenessScore?: number
-    ProsodyScore?: number; PronScore?: number
-  }
+  PronunciationAssessment?: Scores
   Words?: AzureWord[]
+}
+/** Flat field first (REST), nested second (SDK shape). */
+function pick(o: Scores & { PronunciationAssessment?: Scores }, key: keyof Scores) {
+  return o[key] ?? o.PronunciationAssessment?.[key]
 }
 type AzureResponse = { RecognitionStatus?: string; NBest?: AzureNBest[] }
 
@@ -188,31 +200,36 @@ Deno.serve(async (req) => {
   }
   const parsed = (await upstream.json().catch(() => null)) as AzureResponse | null
   const best = parsed?.NBest?.[0]
-  if (!parsed || parsed.RecognitionStatus !== "Success" || !best?.PronunciationAssessment) {
+  if (!parsed || parsed.RecognitionStatus !== "Success" || !best
+      || typeof pick(best, "AccuracyScore") !== "number") {
     // NoMatch / InitialSilenceTimeout: nothing was said. Not an error.
     return new Response(null, { status: 204, headers: cors() })
   }
 
-  const pa = best.PronunciationAssessment
-  const words = (best.Words ?? []).map((w) => ({
-    word: w.Word,
-    accuracy: score(w.PronunciationAssessment?.AccuracyScore),
-    error: w.PronunciationAssessment?.ErrorType ?? "None",
-    offset_ms: ms(w.Offset),
-    duration_ms: ms(w.Duration),
-    phonemes: (w.Phonemes ?? []).map((p) => ({
-      phoneme: p.Phoneme,
-      accuracy: score(p.PronunciationAssessment?.AccuracyScore),
-    })),
-  }))
+  const words = (best.Words ?? []).map((w) => {
+    const error = (pick(w, "ErrorType") as string | undefined) ?? "None"
+    // Monotone lives under the prosody feedback, not ErrorType (en-US only).
+    const monotone = w.Feedback?.Prosody?.Intonation?.ErrorTypes?.includes("Monotone")
+    return {
+      word: w.Word,
+      accuracy: score(pick(w, "AccuracyScore") as number | undefined),
+      error: error === "None" && monotone ? "Monotone" : error,
+      offset_ms: ms(w.Offset),
+      duration_ms: ms(w.Duration),
+      phonemes: (w.Phonemes ?? []).map((p) => ({
+        phoneme: p.Phoneme,
+        accuracy: score(pick(p, "AccuracyScore") as number | undefined),
+      })),
+    }
+  })
 
   return new Response(JSON.stringify({
     locale,
-    score: score(pa.PronScore),
-    accuracy: score(pa.AccuracyScore),
-    fluency: score(pa.FluencyScore),
-    completeness: score(pa.CompletenessScore),
-    prosody: score(pa.ProsodyScore),
+    score: score(pick(best, "PronScore") as number | undefined),
+    accuracy: score(pick(best, "AccuracyScore") as number | undefined),
+    fluency: score(pick(best, "FluencyScore") as number | undefined),
+    completeness: score(pick(best, "CompletenessScore") as number | undefined),
+    prosody: score(pick(best, "ProsodyScore") as number | undefined),
     recognized: best.Display ?? "",
     words,
   }), { status: 200, headers: { ...cors(), "Content-Type": "application/json" } })

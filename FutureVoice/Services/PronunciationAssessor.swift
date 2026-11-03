@@ -47,13 +47,32 @@ struct PronunciationResult: Codable, Hashable {
 
         var isInsertion: Bool { error == "Insertion" }
         var isOmission: Bool { error == "Omission" }
-        /// Azure flags a word under 60 as mispronounced; the orange band
-        /// above it is "heard, but not quite".
-        var isMispronounced: Bool { error == "Mispronunciation" || (accuracy ?? 100) < 60 }
-        var isShaky: Bool { !isMispronounced && !isOmission && (accuracy ?? 100) < 80 }
-        /// The sounds that let the word down, worst first.
+        /// The weakest SOUND in the word. Measured 2026-11-03: Azure's word
+        /// score is lenient and the accent lives in the phonemes — a
+        /// Korean-accented "think" scored 94 as a word with θ at 32 — so a
+        /// mark built on word scores alone underlined almost nothing.
+        var worstPhoneme: Int? { phonemes.compactMap(\.accuracy).min() }
+        /// Red: Azure's own Mispronunciation, a word under 50, or a sound
+        /// under 35. Orange: a word under 70 or a sound under 45. Set from
+        /// the probe (scripts/pronunciation-probe.sh): native voices scored
+        /// every word 100 in English, but a native German and Korean take
+        /// each had one word at 45–55, so the bars sit below that and a
+        /// native slip reads orange at worst, never red.
+        /// (Azure's own `Mispronunciation` tag fires under 60, which caught a
+        /// native Korean word at 55 — so it is not used as the red line.)
+        var isMispronounced: Bool {
+            (accuracy ?? 100) < 50 || (worstPhoneme ?? 100) < 35
+        }
+        var isShaky: Bool {
+            !isMispronounced && !isOmission
+                && ((accuracy ?? 100) < 70 || (worstPhoneme ?? 100) < 45)
+        }
+        /// The sounds that let the word down, worst first. Azure names
+        /// phonemes in IPA for English only; other locales send the score
+        /// with an empty name, which is kept out of anything shown.
         var weakPhonemes: [Phoneme] {
-            phonemes.filter { ($0.accuracy ?? 100) < 70 }.sorted { ($0.accuracy ?? 0) < ($1.accuracy ?? 0) }
+            phonemes.filter { !$0.phoneme.isEmpty && ($0.accuracy ?? 100) < 60 }
+                .sorted { ($0.accuracy ?? 0) < ($1.accuracy ?? 0) }
         }
     }
 
@@ -72,11 +91,9 @@ struct PronunciationResult: Codable, Hashable {
             .sorted { ($0.accuracy ?? 0) < ($1.accuracy ?? 0) }
     }
 
-    /// A score as a colour band, the one the shadow screen already uses for
-    /// the beat (green · orange · red).
-    static func grade(_ accuracy: Int?) -> Int {
-        guard let accuracy else { return 0 }
-        return accuracy >= 80 ? 2 : (accuracy >= 60 ? 1 : 0)
+    /// A word's mark as the beat's colour scale: 0 red · 1 orange · 2 fine.
+    static func grade(_ word: Word) -> Int {
+        word.isMispronounced ? 0 : (word.isShaky ? 1 : 2)
     }
 }
 

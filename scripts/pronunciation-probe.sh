@@ -56,19 +56,20 @@ import json, sys
 r = json.load(open(sys.argv[1]))
 print(f"round trip: {float(sys.argv[3]) - float(sys.argv[2]):.2f}s   status: {r.get('RecognitionStatus')}")
 best = (r.get("NBest") or [{}])[0]
-pa = best.get("PronunciationAssessment") or {}
+# REST puts scores flat on each object; the SDK nests them. Read either.
+def g(o, k):
+    return o.get(k, (o.get("PronunciationAssessment") or {}).get(k))
 print("recognized:", best.get("Display"))
-print("  score(PronScore) {:>5}  accuracy {:>5}  fluency {:>5}  completeness {:>5}  prosody {}".format(
-    pa.get("PronScore"), pa.get("AccuracyScore"), pa.get("FluencyScore"),
-    pa.get("CompletenessScore"), pa.get("ProsodyScore", "-")))
+print("  score(PronScore) {}  accuracy {}  fluency {}  completeness {}  prosody {}".format(
+    g(best, "PronScore"), g(best, "AccuracyScore"), g(best, "FluencyScore"),
+    g(best, "CompletenessScore"), g(best, "ProsodyScore")))
 print()
 for w in best.get("Words") or []:
-    wpa = w.get("PronunciationAssessment") or {}
-    acc = wpa.get("AccuracyScore")
-    err = wpa.get("ErrorType", "None")
-    weak = [f"{p['Phoneme']}:{int(p['PronunciationAssessment']['AccuracyScore'])}"
+    acc = g(w, "AccuracyScore")
+    err = g(w, "ErrorType") or "None"
+    weak = [f"{p['Phoneme']}:{int(g(p, 'AccuracyScore'))}"
             for p in (w.get("Phonemes") or [])
-            if p.get("PronunciationAssessment", {}).get("AccuracyScore", 100) < 70]
-    flag = "  <--" if (acc is not None and acc < 60) or err not in ("None",) else ""
+            if (g(p, "AccuracyScore") or 100) < 70]
+    flag = "  <--" if (acc is not None and acc < 60) or err != "None" else ""
     print(f"  {w['Word']:<18} {str(acc):>5}  {err:<16} {' '.join(weak)}{flag}")
 EOF

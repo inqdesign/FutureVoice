@@ -550,14 +550,15 @@ struct ShadowDrillView: View {
 
     // MARK: - Pronunciation marks
 
-    /// The underline colour for a word the phoneme assessment faulted — red
-    /// under 60 (Azure's own "mispronounced" line), orange under 80 — and
+    /// The underline colour for a word the phoneme assessment faulted —
+    /// red / orange by `PronunciationResult.Word`'s bars (a weak SOUND
+    /// counts, not only a weak word) — and
     /// nil for a word said well, unmeasured, or skipped (a skipped word is
     /// already grey, and a verdict on its sounds would be a verdict on
     /// nothing). Hidden while the line is being read back, like the colours.
     private func pronunciationMark(at i: Int) -> Color? {
         guard !karaokeAnimating, phase != .syncing, let w = wordMarks[i], !w.isOmission else { return nil }
-        switch PronunciationResult.grade(w.accuracy) {
+        switch PronunciationResult.grade(w) {
         case 2:  return nil
         case 1:  return .orange
         default: return .red
