@@ -96,6 +96,11 @@ object AacEncoder {
         }
     }
 
+    /** Frames of silence appended before encoding for Gemini: 5% of the
+     *  file, at least 1 s (see the note in [adts]). */
+    fun tailSilenceFrames(frames: Int, sampleRate: Int): Int =
+        maxOf(sampleRate.toDouble(), frames * 0.05).toInt()
+
     /** ADTS-framed AAC of a 16-bit mono WAV, or null. */
     fun adts(pcm: WavPcm, bitrate: Int = 32_000): ByteArray? {
         val freqIndex = when (pcm.sampleRate) {
@@ -104,7 +109,16 @@ object AacEncoder {
             else -> return null
         }
         val out = ByteArrayOutputStream()
-        val ok = encode(pcm.samples, pcm.sampleRate, bitrate) { buf, info ->
+        // Silence after the last word — Gemini reads the END of a long ADTS
+        // stream short (iOS 2026-11-03): an 86 s speech take came back 2,100
+        // audio tokens where 12 s pieces read 25.1/s (= 83.7 s), and the
+        // closing "Call now!" at 83.7–84.2 s was dropped 3 runs out of 3;
+        // with 2 s of silence appended it read 3/3. The stream itself decodes
+        // to full length, so the pad is what keeps the words inside what
+        // Gemini reads: 5% of the file, at least 1 s.
+        val pad = tailSilenceFrames(pcm.samples.size, pcm.sampleRate)
+        val samples = pcm.samples.copyOf(pcm.samples.size + pad)
+        val ok = encode(samples, pcm.sampleRate, bitrate) { buf, info ->
             val len = info.size + 7
             val header = byteArrayOf(
                 0xFF.toByte(), 0xF1.toByte(),
