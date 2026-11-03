@@ -423,6 +423,10 @@ enum ShadowEngine {
         [word +Nms] = the learner hit that word N ms LATE relative to the \
         target's rhythm, [word -Nms] = early. Only off-beat words are listed. \
         May be "n/a" when timing extraction failed.
+          • pronunciation     — a MEASURED phoneme-level assessment of the \
+        audio against a native model (0–100 overall, then the words that \
+        scored low with their weakest sounds in IPA). May be "n/a" when it \
+        was not measured. This is the ONLY sound data you have.
 
         Treat the diff as ground truth for which words diverged. If STT clearly \
         misheard (e.g. a homophone), say so plainly — don't penalize the learner \
@@ -438,14 +442,25 @@ enum ShadowEngine {
           practice language it just gets skipped. Words and sounds you cite \
           from the diff stay in their original spelling, quoted inside the \
           \(nativeName) sentence, never transliterated or translated.
-        - "pronunciation": one sentence on pronunciation, citing specific tokens \
-          from the diff. If the diff is all `=`, congratulate plainly.
+        - "pronunciation": one sentence. When the pronunciation line is \
+          MEASURED, build it on that: name the word(s) that scored low and \
+          say which sound in plain words a learner knows ("the th in think", \
+          "the r in really"), quoting the IPA only after the plain name. A \
+          word the diff marks wrong but the assessment scores well was a \
+          different WORD, not bad pronunciation — say so. If everything scored \
+          well, congratulate plainly. When the line is "n/a" you have NO sound \
+          data: speak only of which words came out differently in the diff, \
+          never of an accent or a sound you did not measure. If the diff is \
+          all `=`, congratulate plainly.
         - "pacing": one sentence. Use duration_ratio for overall speed \
           (0.85–1.25 ≈ healthy, <0.85 = rushed, >1.25 = slow — matches the \
           duration card in the UI) and, when rhythm data is present, cite the \
           most off-beat word(s) by name ("you land late on X"). Base timing \
-          claims ONLY on duration_ratio and rhythm — you have no pitch data, \
-          so never claim to hear intonation, melody, or emphasis.
+          claims ONLY on duration_ratio and rhythm. Intonation, melody and \
+          emphasis: only when the pronunciation line carries a prosody score \
+          (en-US only) may you mention them, and then only what that number \
+          and a "Monotone" tag support — otherwise you have no pitch data and \
+          never claim to hear them.
         - "fix": one concrete thing for the next attempt. Reference a specific \
           word or sound, not generic advice ("stress the second syllable in X", \
           not "speak more clearly").
@@ -462,7 +477,8 @@ enum ShadowEngine {
         targetDurationMs: Int,
         learnerDurationMs: Int,
         diffSteps: [DiffStep],
-        rhythm: RhythmAnalysis? = nil
+        rhythm: RhythmAnalysis? = nil,
+        pronunciation: PronunciationResult? = nil
     ) -> String {
         let ratio: String
         if targetDurationMs > 0 {
@@ -478,7 +494,25 @@ enum ShadowEngine {
         duration_ratio: \(ratio)
         diff: \(renderDiffForPrompt(diffSteps))
         rhythm: \(renderRhythmForPrompt(rhythm))
+        pronunciation: \(renderPronunciationForPrompt(pronunciation))
         """
+    }
+
+    /// The measured assessment for the coach, or "n/a". Score and parts,
+    /// then each faulted word with its weakest sounds — the model is told to
+    /// name those and nothing it did not measure.
+    static func renderPronunciationForPrompt(_ p: PronunciationResult?) -> String {
+        guard let p else { return "n/a" }
+        var parts = ["overall \(p.score)", "accuracy \(p.accuracy)", "fluency \(p.fluency)"]
+        if let prosody = p.prosody { parts.append("prosody \(prosody)") }
+        let weak = p.weakWords.prefix(6).map { w -> String in
+            let sounds = w.weakPhonemes.prefix(3).map { "\($0.phoneme) \($0.accuracy ?? 0)" }
+            let tag = w.error == "None" || w.error == "Mispronunciation" ? "" : " \(w.error)"
+            return "[\(w.word) \(w.accuracy ?? 0)\(tag)\(sounds.isEmpty ? "" : ": " + sounds.joined(separator: ", "))]"
+        }
+        let monotone = p.words.contains { $0.error == "Monotone" } ? " Monotone" : ""
+        return parts.joined(separator: " · ") + monotone
+            + (weak.isEmpty ? " — every word scored well" : " — low words: " + weak.joined(separator: " "))
     }
 
     // MARK: - Internals

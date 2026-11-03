@@ -1,0 +1,219 @@
+// Phoneme-level pronunciation assessment of ONE recorded take — Azure Speech
+// (Pronunciation Assessment, scripted mode). Free to the learner, daily-capped.
+//
+// Body: {
+//   audio_b64: string,   // WAV, 16 kHz mono PCM16, ≤ 30 s (the REST short-audio limit)
+//   language:  string,   // target language code ("en", "de", "ja", "ko", "es")
+//   reference: string,   // the line the learner was reading — scripted assessment
+//   accent?:   string,   // the learner's voice accent id ("en-GB", "es-ES") → locale
+//   surface?:  string    // "shadow" | "speech" | …, ledger metadata only
+// }
+// Returns (200): {
+//   score, accuracy, fluency, completeness, prosody?,   // 0–100, full-text level
+//   recognized,                                          // Azure's own read of the audio
+//   words: [{ word, accuracy, error, offset_ms, duration_ms,
+//             phonemes: [{ phoneme, accuracy }] }]
+// }
+// 204 when Azure heard no speech. 503 `not_configured` when the secrets are
+// unset — the app treats every non-200 as "no assessment", never as a failed
+// take.
+//
+// Why this exists (2026-11-03): every speaking score in the app was a
+// TRANSCRIPT compared with the target. A transcriber writes the word the
+// learner was reaching for whenever it can tell what that was, so an accent
+// that is still intelligible scored 100 — the number measured whether a
+// machine could understand them, not how they pronounced it. This is the one
+// reader in the app that hears the SOUNDS: per-phoneme accuracy against a
+// native model, for every target language the app ships (prosody — stress and
+// intonation — is en-US only on Azure's side).
+//
+// Why Azure and not the model that already transcribes the take: a pronunciation
+// verdict from an LLM listening to audio was measured at chance on accent
+// (Korean cross-lingual probe, 2026-09), and a score must be computed, never
+// written ("Deterministic scores stay deterministic"). Azure's number is a
+// model's too, but it is a per-phoneme acoustic score with a fixed rubric, and
+// the same take gets the same number twice.
+//
+// Cost: billed by audio second at the standard STT rate (~$1 per audio HOUR),
+// so a 6-second shadow take is ~$0.002. The cap below is abuse insurance, not
+// a budget.
+
+import "jsr:@supabase/functions-js/edge-runtime.d.ts"
+import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
+import { recordFreeUsage, rateLimitedResponse } from "../_shared/credits.ts"
+
+const SOURCE_FN = "pronunciation"
+// Shadow takes are one line each; a speech take is cut into ~12 s pieces, so a
+// three-minute speech is ~15 calls. 1,200 a day is a learner who did nothing
+// else all day; past it the take is still scored by words, just not by sound.
+const DAILY_CAP = 1200
+// 30 s of 16 kHz mono PCM16 is 960 KB; base64 ×4/3. The REST short-audio
+// endpoint assesses up to ~30 s; a longer file is the caller's to cut.
+const MAX_AUDIO_BYTES = 1_100_000
+const MAX_REFERENCE_CHARS = 1_500
+
+/// The Azure locale a take is judged against. The learner's picked ACCENT
+/// decides where one language has several (British English is judged by a
+/// British model, Castilian by a Spanish one); otherwise the language's
+/// default — the same default the voice speaks in (`LANGUAGE_DEFAULT_ACCENT`
+/// in the tts function: Mexican for Spanish, American for English).
+const LOCALE_BY_ACCENT: Record<string, string> = {
+  "en-US": "en-US", "en-GB": "en-GB", "en-AU": "en-AU",
+  "de-DE": "de-DE",
+  "es-MX": "es-MX", "es-ES": "es-ES",
+}
+const LOCALE_BY_LANGUAGE: Record<string, string> = {
+  en: "en-US", de: "de-DE", ja: "ja-JP", ko: "ko-KR", es: "es-MX",
+}
+// Prosody (stress, intonation, rhythm) is assessed by Azure for en-US only.
+const PROSODY_LOCALES = new Set(["en-US"])
+
+type AzureWord = {
+  Word: string
+  Offset?: number
+  Duration?: number
+  PronunciationAssessment?: { AccuracyScore?: number; ErrorType?: string }
+  Phonemes?: { Phoneme: string; PronunciationAssessment?: { AccuracyScore?: number } }[]
+}
+type AzureNBest = {
+  Display?: string
+  PronunciationAssessment?: {
+    AccuracyScore?: number; FluencyScore?: number; CompletenessScore?: number
+    ProsodyScore?: number; PronScore?: number
+  }
+  Words?: AzureWord[]
+}
+type AzureResponse = { RecognitionStatus?: string; NBest?: AzureNBest[] }
+
+export function localeFor(language: string, accent?: string | null): string | null {
+  if (accent && LOCALE_BY_ACCENT[accent]) {
+    // An accent of another language than the one being read is a stale pick,
+    // not a locale: "en-GB" on a German line must not judge German as English.
+    if (LOCALE_BY_ACCENT[accent].slice(0, 2) === language) return LOCALE_BY_ACCENT[accent]
+  }
+  return LOCALE_BY_LANGUAGE[language] ?? null
+}
+
+/** Azure's 100-ns ticks → whole milliseconds. */
+const ms = (ticks?: number) => Math.round((ticks ?? 0) / 10_000)
+const score = (n?: number) => (typeof n === "number" ? Math.max(0, Math.min(100, Math.round(n))) : null)
+
+Deno.serve(async (req) => {
+  const pre = handlePreflight(req)
+  if (pre) return pre
+  if (req.method !== "POST") return errorResponse(405, "method not allowed")
+
+  const authed = await requireUser(req)
+  if (authed instanceof Response) return authed
+  const { user, supabase } = authed
+
+  const key = Deno.env.get("AZURE_SPEECH_KEY")
+  const region = Deno.env.get("AZURE_SPEECH_REGION")
+  if (!key || !region) return errorResponse(503, "not_configured")
+
+  let body: {
+    audio_b64?: string; language?: string; reference?: string
+    accent?: string | null; surface?: string
+  }
+  try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
+
+  const language = (body.language ?? "").trim().toLowerCase()
+  const reference = (body.reference ?? "").trim()
+  const audioB64 = body.audio_b64 ?? ""
+  if (!language || !reference || !audioB64) {
+    return errorResponse(400, "audio_b64, language and reference required")
+  }
+  if (reference.length > MAX_REFERENCE_CHARS) return errorResponse(400, "reference too long")
+  const locale = localeFor(language, body.accent)
+  if (!locale) return errorResponse(400, "unsupported language")
+
+  let audio: Uint8Array
+  try {
+    audio = Uint8Array.from(atob(audioB64), (c) => c.charCodeAt(0))
+  } catch {
+    return errorResponse(400, "audio_b64 is not base64")
+  }
+  if (audio.byteLength < 1_000) return errorResponse(400, "audio too short")
+  if (audio.byteLength > MAX_AUDIO_BYTES) return errorResponse(413, "audio too long")
+  // 16 kHz mono PCM16 WAV: 44-byte header, 32,000 bytes a second.
+  const audioMs = Math.round(((audio.byteLength - 44) / 32_000) * 1000)
+
+  const idemKey = req.headers.get("X-Idempotency-Key") ?? crypto.randomUUID()
+  const rec = await recordFreeUsage({
+    supabase, userId: user.id, action: "pronunciation", purpose: "pronunciation",
+    dailyCap: DAILY_CAP, sourceFn: SOURCE_FN, idempotencyKey: idemKey,
+    metadata: { locale, audio_ms: audioMs, surface: body.surface ?? null },
+  })
+  if (!rec.ok) {
+    if (rec.reason === "rate_limited") return rateLimitedResponse(cors())
+    return errorResponse(500, "usage record failed", rec.detail)
+  }
+
+  const assessment = {
+    ReferenceText: reference,
+    GradingSystem: "HundredMark",
+    Granularity: "Phoneme",
+    Dimension: "Comprehensive",
+    // Omission / Insertion tags against the reference — the diff the app
+    // already draws comes from its own transcript; these are kept so the
+    // phoneme list lines up with the reference words.
+    EnableMiscue: true,
+    EnableProsodyAssessment: PROSODY_LOCALES.has(locale),
+    // IPA for every locale, so a phoneme the app shows reads the same in
+    // German and Korean. (The default alphabet is SAPI for English only.)
+    PhonemeAlphabet: "IPA",
+  }
+  const url = `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1`
+    + `?language=${encodeURIComponent(locale)}&format=detailed`
+
+  let upstream: Response
+  try {
+    upstream = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Ocp-Apim-Subscription-Key": key,
+        "Content-Type": "audio/wav; codecs=audio/pcm; samplerate=16000",
+        "Accept": "application/json",
+        "Pronunciation-Assessment": btoa(JSON.stringify(assessment)),
+      },
+      body: audio,
+      signal: AbortSignal.timeout(20_000),
+    })
+  } catch (e) {
+    return errorResponse(502, "azure unreachable", String(e))
+  }
+  if (!upstream.ok) {
+    const detail = await upstream.text().catch(() => "")
+    return errorResponse(502, "azure error", `${upstream.status} ${detail.slice(0, 300)}`)
+  }
+  const parsed = (await upstream.json().catch(() => null)) as AzureResponse | null
+  const best = parsed?.NBest?.[0]
+  if (!parsed || parsed.RecognitionStatus !== "Success" || !best?.PronunciationAssessment) {
+    // NoMatch / InitialSilenceTimeout: nothing was said. Not an error.
+    return new Response(null, { status: 204, headers: cors() })
+  }
+
+  const pa = best.PronunciationAssessment
+  const words = (best.Words ?? []).map((w) => ({
+    word: w.Word,
+    accuracy: score(w.PronunciationAssessment?.AccuracyScore),
+    error: w.PronunciationAssessment?.ErrorType ?? "None",
+    offset_ms: ms(w.Offset),
+    duration_ms: ms(w.Duration),
+    phonemes: (w.Phonemes ?? []).map((p) => ({
+      phoneme: p.Phoneme,
+      accuracy: score(p.PronunciationAssessment?.AccuracyScore),
+    })),
+  }))
+
+  return new Response(JSON.stringify({
+    locale,
+    score: score(pa.PronScore),
+    accuracy: score(pa.AccuracyScore),
+    fluency: score(pa.FluencyScore),
+    completeness: score(pa.CompletenessScore),
+    prosody: score(pa.ProsodyScore),
+    recognized: best.Display ?? "",
+    words,
+  }), { status: 200, headers: { ...cors(), "Content-Type": "application/json" } })
+})

@@ -100,6 +100,16 @@ struct SpeechResultView: View {
             Section("Measured") {
                 metricRow("Accuracy", icon: "text.badge.checkmark",
                           value: "\(m.accuracy)%", score: m.accuracy)
+                // Measured per phoneme; its own row, not in the overall
+                // (the board's weighting is checked server-side).
+                if let pron = m.pronunciation {
+                    let weak = (take.pronunciationWords ?? []).prefix(3).map(\.word)
+                    metricRow("Pronunciation", icon: "waveform.badge.mic",
+                              value: "\(pron)",
+                              detail: weak.isEmpty ? explain("Every word sounded right")
+                                                   : explain("Work on: \(weak.joined(separator: " · "))"),
+                              score: pron)
+                }
                 metricRow("Pace", icon: "speedometer",
                           value: SpeechFormat.rate(m.rate, language: script.language),
                           detail: explain("Comfortable: \(m.rateLow)–\(m.rateHigh)"),

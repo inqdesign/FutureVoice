@@ -65,6 +65,12 @@ struct ShadowDrillView: View {
     /// in the body.
     @State private var wordOps = PositionAlignment()
     @State private var wordBeats: [Int: ShadowEngine.RhythmWord] = [:]
+    /// The phoneme assessment of the take on screen, and its words placed on
+    /// the line (target index → verdict). Both nil/empty until a result
+    /// lands; the server may also simply not answer, and the take is then
+    /// scored by words alone.
+    @State private var assessment: PronunciationResult?
+    @State private var wordMarks: [Int: PronunciationResult.Word] = [:]
     /// Word onsets of the SCORED attempt, kept past `analyze` so the duet can
     /// line the take up on its first word instead of on the file's start.
     @State private var attemptWordTimings: [WordTiming] = []
@@ -300,6 +306,13 @@ struct ShadowDrillView: View {
                     }
                         .font(.title2.weight(.semibold))
                         .foregroundStyle(wordColor(at: i, wt: wt))
+                        // The SOUND verdict rides on the underline: text
+                        // colour already means "wrong word" and the dot
+                        // below means the beat, so a word that was heard but
+                        // not pronounced well is underlined in the score's
+                        // colour scale. Nothing while the karaoke is moving.
+                        .underline(pronunciationMark(at: i) != nil, pattern: .dot,
+                                   color: pronunciationMark(at: i))
                         .padding(.horizontal, spaced ? 2 : 0)
                         .padding(.vertical, 1)
                         .background(
@@ -535,6 +548,56 @@ struct ShadowDrillView: View {
         }
     }
 
+    // MARK: - Pronunciation marks
+
+    /// The underline colour for a word the phoneme assessment faulted — red
+    /// under 60 (Azure's own "mispronounced" line), orange under 80 — and
+    /// nil for a word said well, unmeasured, or skipped (a skipped word is
+    /// already grey, and a verdict on its sounds would be a verdict on
+    /// nothing). Hidden while the line is being read back, like the colours.
+    private func pronunciationMark(at i: Int) -> Color? {
+        guard !karaokeAnimating, phase != .syncing, let w = wordMarks[i], !w.isOmission else { return nil }
+        switch PronunciationResult.grade(w.accuracy) {
+        case 2:  return nil
+        case 1:  return .orange
+        default: return .red
+        }
+    }
+
+    /// One line under the diff: the measured pronunciation score and the
+    /// words that let it down, worst first. Only when the take was assessed
+    /// — a take the server could not score shows nothing here rather than a
+    /// placeholder, because the words-only score above is still complete.
+    @ViewBuilder
+    private var pronunciationSection: some View {
+        if let a = assessment {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Label("Pronunciation", systemImage: "waveform.badge.mic")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    if let p = a.prosody {
+                        Text(explain("intonation \(p)"))
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                    Text("\(a.score)")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(scoreColor(a.score))
+                        .monospacedDigit()
+                }
+                let weak = a.weakWords.prefix(4)
+                if !weak.isEmpty {
+                    Text(weak.map { "\($0.word) \($0.accuracy ?? 0)" }.joined(separator: " · "))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+            }
+        }
+    }
+
 
     // MARK: - Position alignment (diff-only)
 
@@ -601,6 +664,7 @@ struct ShadowDrillView: View {
             if !diffSteps.isEmpty {
                 diffSection
             }
+            pronunciationSection
             if recordingFileURL != nil {
                 playbackRow
             }
@@ -1455,6 +1519,8 @@ struct ShadowDrillView: View {
         shownAttemptId = nil
         diffSteps = []
         rhythm = nil
+        assessment = nil
+        wordMarks = [:]
         wordOps = PositionAlignment()
         wordBeats = [:]
         attemptWordTimings = []
@@ -1522,9 +1588,21 @@ struct ShadowDrillView: View {
             audioURL: recordingFileURL,
             liveText: finalText,
             targetLanguage: targetLanguage,
-            recognitionHints: Self.recognitionHints(for: attemptTargetText)
+            recognitionHints: Self.recognitionHints(for: attemptTargetText),
+            referenceText: attemptTargetText
         )
         let scoredText = reading.text
+        assessment = reading.pronunciation
+        // The practiced range's words are re-based onto the whole line, as
+        // the beat dots are.
+        wordMarks = [:]
+        if let assessment {
+            let base = activeRange?.lowerBound ?? 0
+            let targetWords = (activeRange.map { Array(timings[$0]) } ?? timings).map(\.word)
+            for (i, w) in PronunciationAssessor.wordMarks(assessment, targetWords: targetWords) {
+                wordMarks[i + base] = w
+            }
+        }
         let learnerTimings = reading.wordTimings
         attemptWordTimings = learnerTimings
         prevTranscript = scoredText
@@ -1544,6 +1622,7 @@ struct ShadowDrillView: View {
             "audio": reading.audioOutcome.rawValue,
             "device_ms": "\(reading.deviceMs)",
             "audio_ms": "\(reading.audioMs)",
+            "pron": reading.pronunciationOutcome.rawValue,
         ])
 
         // No speech at all — a learner who never started, a mic that never
@@ -1626,7 +1705,8 @@ struct ShadowDrillView: View {
             pacing: "",
             fix: "",
             matchScore: analysis.score,
-            rhythmScore: rhythm?.score
+            rhythmScore: rhythm?.score,
+            pronunciationScore: assessment?.score
         )
         coachPending = coachable
         phase = .result
@@ -1645,7 +1725,8 @@ struct ShadowDrillView: View {
             pronunciation: feedback?.pronunciation ?? "",
             pacing: "",
             fix: "",
-            phraseRange: activeRange
+            phraseRange: activeRange,
+            assessment: assessment
         )
         shownAttemptId = attempt.id
         appState.saveShadowAttempt(attempt)
@@ -1667,7 +1748,8 @@ struct ShadowDrillView: View {
                         targetDurationMs: attemptTargetDurationMs,
                         learnerDurationMs: learnerDurMs,
                         diffSteps: analysis.steps,
-                        rhythm: rhythm
+                        rhythm: rhythm,
+                        pronunciation: assessment
                     )
                 )],
                 // Three native-language bullets — cheap, but 300 left no

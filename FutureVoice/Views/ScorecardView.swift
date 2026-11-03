@@ -95,8 +95,13 @@ struct ScorecardView: View {
         }
     }
 
+    /// The one axis a talk cannot judge from its transcript. It is read at
+    /// display time from the learner's recent shadow takes — the phoneme
+    /// assessment (`PronunciationAssessor`), averaged over the last month —
+    /// never stored on the talk, because a talk did not measure it.
     private var pronunciationRow: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        let measured = scorecard.pronunciation ?? PronunciationRead.recentAxis()
+        return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Image(systemName: "waveform.badge.mic")
                     .foregroundStyle(.secondary)
@@ -106,7 +111,7 @@ struct ScorecardView: View {
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.secondary)
                 Spacer()
-                if let axis = scorecard.pronunciation {
+                if let axis = measured {
                     Text("\(axis.score)")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(color(for: axis.score))
@@ -117,7 +122,7 @@ struct ScorecardView: View {
                         .foregroundStyle(.tertiary)
                 }
             }
-            Text(scorecard.pronunciation?.note ?? explain("Practice shadow drills to track this."))
+            Text(measured?.note ?? explain("Practice shadow drills to track this."))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }

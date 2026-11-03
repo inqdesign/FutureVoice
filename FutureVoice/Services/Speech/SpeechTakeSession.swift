@@ -73,7 +73,17 @@ final class SpeechTakeSession: ObservableObject {
     /// so stopping leaves only the last few seconds to read instead of the
     /// whole take (a three-minute file used to be read from scratch after
     /// the reader had already stopped). In order; nil = that piece failed.
-    private var chunkReads: [Task<String?, Never>] = []
+    private var chunkReads: [Task<Piece?, Never>] = []
+
+    /// One piece of the take: its words, and how they were pronounced
+    /// (`PronunciationAssessor`, scripted against those same words — the
+    /// reader's text is the reference, so the assessment scores the sounds
+    /// of what was SAID; the script diff is accuracy's job). `pron` is nil
+    /// when the piece held no speech or the server did not answer.
+    struct Piece {
+        let text: String
+        let pron: PronunciationResult?
+    }
     private var lastChunkAt: TimeInterval = 0
     static let chunkSeconds: TimeInterval = 12
 
@@ -310,9 +320,11 @@ final class SpeechTakeSession: ObservableObject {
         // hole is never scored as skipped words.
         let readStart = Date()
         var texts: [String] = []
+        var prons: [PronunciationResult] = []
         for piece in pieces {
-            guard let text = await piece.value else { texts = []; break }
-            texts.append(text)
+            guard let piece = await piece.value else { texts = []; prons = []; break }
+            texts.append(piece.text)
+            if let pron = piece.pron { prons.append(pron) }
         }
         let transcript: String
         let audioGrounded: Bool
@@ -329,19 +341,33 @@ final class SpeechTakeSession: ObservableObject {
             transcript = reading.text
             audioGrounded = reading.audioGrounded
             path = "whole"
+            // The whole file fits one assessment only when it is short; a
+            // longer take read this way goes without (its pieces are gone).
+            prons = []
+            if reading.audioGrounded, duration <= PronunciationAssessor.maxSeconds {
+                let whole = await PronunciationAssessor.assess(
+                    audioURL: audioURL, reference: transcript,
+                    language: script.language, surface: "speech")
+                if let r = whole.result { prons = [r] }
+            }
         }
         let readMs = ms(readStart)
         // The diff is O(script × transcript) — by syllable for Korean, a
         // million cells for a long script — so it runs off the main thread.
         let body = script.body, language = script.language
-        let metrics = await Task.detached {
+        var metrics = await Task.detached {
             SpeechAnalyzer.analyze(script: body, transcript: transcript, language: language, envelope: envelope)
         }.value
+        // One number for the take: each piece's score weighted by how many
+        // words it judged. Its own row on the result, not part of `overall`.
+        let pronunciation = Self.pronunciation(of: prons)
+        metrics.pronunciation = pronunciation?.score
 
         let take = SpeechTake(id: id, scriptId: script.id, createdAt: Date(),
                               durationSeconds: duration, audioFilename: audioName,
                               videoFilename: nil, transcript: transcript,
-                              metrics: metrics, coaching: nil)
+                              metrics: metrics, coaching: nil,
+                              pronunciationWords: pronunciation?.weakWords)
         SpeechStore.shared.save(take)
         SyncEngine.noteChanged(.blobSpeechAudio)
         // A saved take is what a Speech block in the routine asks for.
@@ -400,18 +426,45 @@ final class SpeechTakeSession: ObservableObject {
             "read_path": path,
             "cursor_end": cursor, "words": track.words.count, "follows": follows, "partials": partials,
             "pieces": pieces.count,
+            // How many pieces came back with a phoneme assessment, and the
+            // take's number — the only record of whether the reader answers.
+            "pron_pieces": prons.count,
+            "pron": metrics.pronunciation ?? -1,
             "read_ms": readMs,
             "result_ms": resultMs,
             "coach_ms": coachMs,
         ])
     }
 
-    private func readPiece(_ url: URL) -> Task<String?, Never> {
+    private func readPiece(_ url: URL) -> Task<Piece?, Never> {
         let language = script.language
         return Task {
             defer { try? FileManager.default.removeItem(at: url) }
-            return await SpeechReader.readPiece(audioURL: url, language: language)
+            guard let text = await SpeechReader.readPiece(audioURL: url, language: language) else { return nil }
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return Piece(text: text, pron: nil) }
+            // The piece's own words are the reference: a scripted assessment
+            // of what was said, which the docs recommend over the unscripted
+            // mode (a weaker recognizer). Runs while the next piece is still
+            // being spoken, so the result never waits on it.
+            let pron = await PronunciationAssessor.assess(
+                audioURL: url, reference: trimmed, language: language, surface: "speech")
+            return Piece(text: text, pron: pron.result)
         }
+    }
+
+    /// The take's pronunciation from its pieces: the score weighted by each
+    /// piece's reference words, and every faulted word, worst first. nil
+    /// when no piece was assessed.
+    static func pronunciation(of pieces: [PronunciationResult])
+    -> (score: Int, weakWords: [PronunciationResult.Word])? {
+        let weighted = pieces.map { (score: $0.score, weight: max(1, $0.referenceWords.count)) }
+        let total = weighted.reduce(0) { $0 + $1.weight }
+        guard total > 0 else { return nil }
+        let score = weighted.reduce(0) { $0 + $1.score * $1.weight } / total
+        let weak = pieces.flatMap(\.weakWords)
+            .sorted { ($0.accuracy ?? 0) < ($1.accuracy ?? 0) }
+        return (score, Array(weak.prefix(12)))
     }
 
     /// Applies a change to the stored take and to the one on screen.

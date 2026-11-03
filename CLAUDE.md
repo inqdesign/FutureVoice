@@ -2204,6 +2204,71 @@ routine to keep going." `TrialReport.swift`, and `WeekRecapSheet(trial:)`.
   account, seeds three realistic talks and lets the REAL coach, level and
   test run (no database change; the dev account is in `~/keys`).
 
+## Pronunciation is MEASURED per sound (2026-11-03)
+
+Founder's question that day: "does the app check accent and pronunciation
+at all?" It did not. Every speaking score — shadowing, say it again, the
+weekly test's speak item, the speech take — was a TRANSCRIPT compared with
+the target, and a transcriber writes the word the learner was reaching for
+whenever it can tell what that was. An accent that stays intelligible scored
+100; the number measured whether a machine could understand them. The beat
+dots (word onsets) were the only sound measurement in the app, the coach's
+"pronunciation" bullet was about which words came out different, and the
+scorecard's Pronunciation axis had been `nil` since it was drawn.
+
+- **One reader hears the sounds: Azure Speech pronunciation assessment**,
+  scripted mode, behind `supabase/functions/pronunciation` (the only thing
+  that holds `AZURE_SPEECH_KEY` / `AZURE_SPEECH_REGION`; 503
+  `not_configured` without them, and the app reads every non-200 as "no
+  assessment", never as a failed take). Per-phoneme accuracy against a
+  native model, word error types (Mispronunciation · Omission · Insertion),
+  fluency, completeness. Every target language the app ships is a GA locale
+  (en-US/GB/AU, de-DE, ja-JP, ko-KR, es-MX/ES); the learner's picked voice
+  accent chooses the locale where one language has several
+  (`localeFor`). **Prosody — stress and intonation — is en-US only on
+  Azure's side**; everywhere else intonation is still unmeasured and the
+  coach prompt says so. Not an LLM listening: that was measured at chance
+  on accent (Korean cross-lingual probe, 2026-09), and a score is computed
+  ("Deterministic scores stay deterministic").
+- **Cost is by audio second** (~$1 per audio hour at the standard STT rate,
+  the pricing page hides the figure until a region is picked): a 6 s shadow
+  take ≈ $0.002, a speech take ≈ $0.02–0.03. Measured volume (30 days to
+  2026-11-03): 1,185 shadow takes, 37 learners ≈ 2 audio hours ≈ $2–4 a
+  month for the whole app. Free to the learner (`purpose: "pronunciation"`,
+  cap 1,200/day — abuse insurance, not a budget). Ledger action
+  `pronunciation`, metadata `audio_ms` + `locale`.
+- **It rides through the one door** (`ShadowTranscriber.read(referenceText:)`):
+  the SAME levelled WAV the blind reader gets goes to Azure beside it, in a
+  task of its own, abandoned after `pronunciationGrace` (5 s) past the
+  words. It needs the target line (scripted by design) and never touches the
+  words the take is scored on, so handing it the target cannot inflate the
+  match. Shadow, say it again and the weekly test's speak item all pass the
+  line; the result is `ShadowAttempt.assessment` (optional, old records
+  decode). **Speech takes are assessed PIECE by piece** (`SpeechTakeSession
+  .Piece`): each ~12 s chunk is read, then assessed with its OWN transcript
+  as the reference — what the docs recommend over the unscripted mode, and
+  the REST endpoint takes ≤30 s anyway — and the take's number is the
+  pieces' scores weighted by their words (`SpeechMetrics.pronunciation`,
+  `SpeechTake.pronunciationWords`). A whole-file read is assessed only
+  under 30 s.
+- **The score is SHOWN, not yet folded into any number that decides
+  something.** `ShadowAttempt.overallScore` (mastery) and
+  `SpeechMetrics.overall` (the public board, whose weighting
+  `submit_speech_challenge_take` re-checks) are unchanged; folding a new
+  reader into them is a decision taken after the probe
+  (`scripts/pronunciation-probe.sh`, the founder's own takes — never a
+  learner's recording), and for the board it changes what people already
+  on it were scored by. On the shadow screen: a dotted UNDERLINE under a
+  word Azure faulted (red < 60, Azure's own line; orange < 80) — text
+  colour already means "wrong word" and the dot below means the beat — and
+  a Pronunciation line under the diff with the score and the weak words.
+  The coach prompt gets a `pronunciation:` line and is told to name the
+  word and the sound in plain words when it is measured, and to speak only
+  of words heard when it is "n/a". The speech result has a Pronunciation
+  row; the scorecard's axis is `PronunciationRead.recentAxis()` — the mean
+  over the last 30 days' assessed takes (≥3), computed where it is shown.
+- Android: owed.
+
 ## Japanese as a TARGET language (2026-09-18)
 
 Japanese was wired for STT, shadow scoring and the clone script from the

@@ -2072,6 +2072,11 @@ struct ShadowAttempt: Codable, Identifiable, Hashable {
     /// used to check off the sentence it came from.
     var phraseRange: ClosedRange<Int>? = nil
     var isPartial: Bool { phraseRange != nil }
+    /// How the take was PRONOUNCED, per phoneme (`PronunciationAssessor`,
+    /// 2026-11-03). Optional: attempts before it decode, and a take the
+    /// server could not assess is still a take. Not part of `overallScore`
+    /// — see `PronunciationResult`.
+    var assessment: PronunciationResult? = nil
 
     /// The number this attempt is JUDGED by, everywhere. `matchScore` alone
     /// answers "did you say the right words", which is reading aloud;
@@ -2097,6 +2102,9 @@ struct ShadowFeedback: Codable, Hashable {
     /// nil = the attempt could not be timed, which the score card says out
     /// loud rather than quietly reverting to a words-only number.
     var rhythmScore: Int? = nil
+    /// The phoneme assessment's score, shown beside the headline — not in
+    /// it (2026-11-03).
+    var pronunciationScore: Int? = nil
 
     var overallScore: Int {
         ShadowEngine.overallScore(match: matchScore, rhythm: rhythmScore)
@@ -2329,6 +2337,10 @@ struct SpeechTake: Codable, Identifiable, Hashable {
     var transcript: String
     var metrics: SpeechMetrics
     var coaching: SpeechCoaching?
+    /// The words the phoneme assessment marked (mispronounced or shaky),
+    /// worst first, over the whole take (2026-11-03). nil on takes made
+    /// before it, or when the server could not assess the take.
+    var pronunciationWords: [PronunciationResult.Word]? = nil
 }
 
 struct SpeechMetrics: Codable, Hashable {
@@ -2360,6 +2372,11 @@ struct SpeechMetrics: Codable, Hashable {
     /// `SpeechAnalyzer.scoringVersion` the take was scored by; nil = before
     /// 2026-10-14, when every part was lenient.
     var scoring: Int? = nil
+    /// Phoneme-level pronunciation, 0–100 (`PronunciationAssessor`, the
+    /// pieces' scores weighted by their words). Shown as its own row; NOT in
+    /// `overall`, whose weighting the challenge server re-checks
+    /// (`submit_speech_challenge_take`). nil = not assessed.
+    var pronunciation: Int? = nil
 }
 
 /// The model's notes on a take, in the NATIVE language, anchored to the

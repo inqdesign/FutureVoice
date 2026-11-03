@@ -694,7 +694,8 @@ struct WeeklyTestView: View {
         speakPhase = .reading
         let reading = await ShadowTranscriber.read(
             audioURL: url, liveText: "", targetLanguage: appState.targetLanguage,
-            recognitionHints: ShadowDrillView.recognitionHints(for: item.answer))
+            recognitionHints: ShadowDrillView.recognitionHints(for: item.answer),
+            referenceText: item.answer)
         let heard = reading.text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !heard.isEmpty else {
             if let url { try? FileManager.default.removeItem(at: url) }
@@ -713,7 +714,7 @@ struct WeeklyTestView: View {
             appState.saveShadowAttempt(ShadowAttempt(
                 turnId: turnId, targetText: item.answer, learnerTranscript: heard,
                 recordingFilename: url?.lastPathComponent, matchScore: score, rhythmScore: nil,
-                pronunciation: "", pacing: "", fix: ""))
+                pronunciation: "", pacing: "", fix: "", assessment: reading.pronunciation))
         }
         settle(correct: score >= WeeklyTestEngine.speakPassScore, given: heard, test: test, item: item,
                score: score)

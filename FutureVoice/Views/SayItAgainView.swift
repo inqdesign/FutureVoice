@@ -865,7 +865,8 @@ struct SayItAgainView: View {
             audioURL: url,
             liveText: liveText,
             targetLanguage: source.targetLanguage,
-            recognitionHints: ShadowDrillView.recognitionHints(for: step.text))
+            recognitionHints: ShadowDrillView.recognitionHints(for: step.text),
+            referenceText: step.text)
         // A retry cancels the score task it replaced — but the read it was
         // already inside finishes anyway, and writing its verdict would put
         // the OLD take's number on the NEW one.
@@ -905,7 +906,8 @@ struct SayItAgainView: View {
             rhythmScore: nil,
             pronunciation: "",
             pacing: "",
-            fix: ""))
+            fix: "",
+            assessment: reading.pronunciation))
     }
 
     /// Flip "Read both sides". The script changes under the run, so a run

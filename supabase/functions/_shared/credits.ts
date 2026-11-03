@@ -37,6 +37,7 @@ export type ChargeableAction =
   | "gemini_weekly"     // weekly report
   | "gemini_enrichment" // drill enrichment
   | "gemini_transcribe" // verbatim transcript of one spoken turn (flash-lite)
+  | "pronunciation"     // Azure phoneme assessment of one take — free, daily-capped
 
 /**
  * Returns the SECONDS-of-talk cost for a given action + parameters. Only the

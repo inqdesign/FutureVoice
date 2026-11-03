@@ -65,6 +65,12 @@ enum ShadowTranscriber {
         /// was abandoned.
         let deviceMs: Int
         let audioMs: Int
+        /// How the take was PRONOUNCED, per phoneme (`PronunciationAssessor`),
+        /// when a reference line was given and the server answered in time.
+        /// nil leaves the take scored by words alone, as every take was
+        /// before 2026-11-03.
+        var pronunciation: PronunciationResult? = nil
+        var pronunciationOutcome: PronunciationAssessor.Outcome = .skipped
     }
 
     enum AudioOutcome: String {
@@ -88,11 +94,18 @@ enum ShadowTranscriber {
     ///     Biasing Apple toward the target is safe because Apple's text is now
     ///     the FALLBACK, and it is what recovers usable timestamps; the
     ///     audio-grounded reader is deliberately kept blind to it.
+    ///   - referenceText: the line the learner was reading, for the phoneme
+    ///     assessment — which is SCRIPTED by design: it scores how each sound
+    ///     of a known line was produced, so it needs the line. It never
+    ///     touches the words the take is scored on (those still come from the
+    ///     blind reader), so handing it the target cannot inflate the match.
+    ///     nil = no assessment.
     static func read(
         audioURL: URL?,
         liveText: String,
         targetLanguage: String,
-        recognitionHints: [String]
+        recognitionHints: [String],
+        referenceText: String? = nil
     ) async -> Reading {
         guard let audioURL, FileManager.default.fileExists(atPath: audioURL.path) else {
             return Reading(text: liveText, wordTimings: [], source: .rough, readersDisagreed: false,
@@ -120,6 +133,22 @@ enum ShadowTranscriber {
         // in hand the better reader gets `audioGraceAfterDevice` to land,
         // and no longer.
         let audioTask = Task { await heard(audioURL: levelled, targetLanguage: targetLanguage) }
+        // The phoneme assessment reads the SAME levelled bytes, beside the
+        // other two readers. Its own task so it can be abandoned like the
+        // audio read: an upgrade, never something the score waits long for.
+        typealias Answer = (result: PronunciationResult?, outcome: PronunciationAssessor.Outcome)
+        let pronunciationTask: Task<Answer?, Never>? =
+            referenceText.map { reference in
+                Task<Answer?, Never> {
+                    guard let wav = try? Data(contentsOf: levelled) else {
+                        return Answer(result: nil, outcome: .skipped)
+                    }
+                    let answer = await PronunciationAssessor.assess(
+                        wav: wav, reference: reference, language: targetLanguage,
+                        surface: "shadow", timeout: pronunciationRequestTimeout)
+                    return Answer(result: answer.result, outcome: answer.outcome)
+                }
+            }
         let device = await SpeechTranscriber.transcribeForScoring(
             audioURL: levelled,
             languageCode: targetLanguage,
@@ -140,24 +169,43 @@ enum ShadowTranscriber {
         let disagreed = !deviceText.isEmpty && audio != nil
             && LocalAlignment.normalized(deviceText) != LocalAlignment.normalized(audio ?? "")
 
+        // The assessment has had the whole read so far; it gets a little
+        // more, then the take is scored without it.
+        var pronunciation: PronunciationResult? = nil
+        var pronunciationOutcome: PronunciationAssessor.Outcome = .skipped
+        if let pronunciationTask {
+            let (pron, pronTimedOut) = await value(of: pronunciationTask, within: pronunciationGrace)
+            pronunciation = pron?.result
+            pronunciationOutcome = pronTimedOut ? .failed : (pron?.outcome ?? .failed)
+        }
+
+        var reading: Reading
         if let audio {
             let words = Self.words(of: audio)
-            return Reading(
+            reading = Reading(
                 text: audio,
                 wordTimings: realigned(words: words, onto: device?.wordTimings ?? []),
                 source: .audioGrounded,
                 readersDisagreed: disagreed,
                 audioOutcome: audioOutcome, deviceMs: deviceMs, audioMs: audioMs
             )
+        } else if let device, !deviceText.isEmpty {
+            reading = Reading(text: device.text, wordTimings: device.wordTimings,
+                              source: .onDevice, readersDisagreed: false,
+                              audioOutcome: audioOutcome, deviceMs: deviceMs, audioMs: audioMs)
+        } else {
+            reading = Reading(text: liveText, wordTimings: [], source: .rough, readersDisagreed: false,
+                              audioOutcome: audioOutcome, deviceMs: deviceMs, audioMs: audioMs)
         }
-        if let device, !deviceText.isEmpty {
-            return Reading(text: device.text, wordTimings: device.wordTimings,
-                           source: .onDevice, readersDisagreed: false,
-                           audioOutcome: audioOutcome, deviceMs: deviceMs, audioMs: audioMs)
-        }
-        return Reading(text: liveText, wordTimings: [], source: .rough, readersDisagreed: false,
-                       audioOutcome: audioOutcome, deviceMs: deviceMs, audioMs: audioMs)
+        reading.pronunciation = pronunciation
+        reading.pronunciationOutcome = pronunciationOutcome
+        return reading
     }
+
+    /// How long the phoneme assessment may still take once the words are in.
+    /// Azure answers a short take in ~1–2 s; this covers jitter.
+    static let pronunciationGrace: TimeInterval = 5
+    private static let pronunciationRequestTimeout: TimeInterval = 15
 
     /// How long the audio-grounded read may still take once the on-device
     /// pass has delivered a line. A healthy call lands in ~2 s (ledger,
