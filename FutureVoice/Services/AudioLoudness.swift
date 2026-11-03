@@ -428,7 +428,9 @@ enum AudioLoudness {
                                          interleaved: false),
               let down = AVAudioConverter(from: inFormat, to: pcm16k) else { return nil }
         let ratio = 16_000.0 / inFormat.sampleRate
-        let capacity = AVAudioFrameCount(Double(inBuffer.frameLength) * ratio) + 4096
+        let sourceSeconds = Double(inBuffer.frameLength) / inFormat.sampleRate
+        let padFrames = AVAudioFrameCount(Self.tailSilenceSeconds(for: sourceSeconds) * 16_000)
+        let capacity = AVAudioFrameCount(Double(inBuffer.frameLength) * ratio) + 4096 + padFrames
         guard let pcmBuffer = AVAudioPCMBuffer(pcmFormat: pcm16k, frameCapacity: capacity) else { return nil }
 
         var fedDown = false
@@ -440,6 +442,25 @@ enum AudioLoudness {
             return inBuffer
         }
         guard downStatus != .error, downError == nil, pcmBuffer.frameLength > 0 else { return nil }
+
+        // Silence after the last word — Gemini reads the END of a long ADTS
+        // stream short (2026-11-03). A founder's 86 s speech take, encoded
+        // whole, came back 2,100 audio tokens where its 12 s pieces read
+        // 25.1 tokens/s (= 83.7 s), and "Call now!" at 83.7–84.2 s was
+        // dropped 3 runs out of 3; the same file with 2 s of silence appended
+        // read "Call now" 3/3 (2,146 tokens — the same short rate, so what
+        // falls off the end is now silence). The encoder is not it: the
+        // stream decodes to its full 86.08 s with afconvert. CBR (below)
+        // closed most of this on 2026-10-13 and this closes the rest; 12 s
+        // pieces lose nothing, a 49 s synthetic file lost nothing, so the
+        // pad is sized to the file, 5% with a 1 s floor (~5% more free
+        // audio tokens on a long read, nothing on the words).
+        if padFrames > 0, let data = pcmBuffer.floatChannelData,
+           pcmBuffer.frameLength + padFrames <= pcmBuffer.frameCapacity {
+            data[0].advanced(by: Int(pcmBuffer.frameLength))
+                .update(repeating: 0, count: Int(padFrames))
+            pcmBuffer.frameLength += padFrames
+        }
 
         // Stage 2: encode AAC-LC and frame each packet with an ADTS header.
         var aacDesc = AudioStreamBasicDescription(
@@ -487,6 +508,12 @@ enum AudioLoudness {
             if status == .endOfStream || packets == 0 { break }
         }
         return adts.isEmpty ? nil : adts
+    }
+
+    /// Seconds of silence appended before encoding for Gemini: 5% of the
+    /// file, at least 1 s (see the note in `aacADTS16kMono`).
+    static func tailSilenceSeconds(for sourceSeconds: Double) -> Double {
+        max(1.0, sourceSeconds * 0.05)
     }
 
     /// 7-byte ADTS header for one AAC-LC packet: 16 kHz (sampling index 8),

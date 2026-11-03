@@ -1321,6 +1321,24 @@ alone heard: near 0 beside a real `partials` count is this bug. Don't lower
 the meter's floor for the take instead; the recognizer is the witness that
 is there whenever the prompter is following.
 
+**And the same day, the last WORD** (the recording whole this time, 1.7 s
+of silence after "now!" on the WAV pulled off the phone): Gemini reads the
+end of a LONG ADTS stream short even at CBR — the founder's 86 s take read
+2,100 audio tokens where its 12 s pieces read 25.1/s (= 83.7 s), and "Call
+now!" at 83.7–84.2 s was dropped 3/3; with 2 s of silence appended, 3/3
+"Call now" at the same short rate, so what falls off is silence. The
+encoder is innocent (the stream decodes to its full 86.08 s), 12 s pieces
+and a 49 s synthetic file lose nothing, so `aacADTS16kMono` (and Android's
+`AacEncoder.adts`) now appends 5% of the file, at least 1 s, of silence —
+every reader of that function gets it (turn transcripts, shadow, speech),
+~5% more free audio tokens on a long read. Measured with the scratch tools
+of that session (the app's encoder compiled standalone + the reader's exact
+prompt): run both before touching the encoder or the read prompt again.
+Seen while measuring, NOT fixed: on the 86 s file 1 run in 3 came back as
+the model's reasoning instead of JSON (`fastThinking` = thinking level
+minimal), which the app answers by falling back to the whole-file read or
+Apple's text.
+
 ## Say it again (다시 말하기) — the whole talk, done again the right way (2026-09-27)
 
 The third door on a talk book, and the only one that puts the learner back
