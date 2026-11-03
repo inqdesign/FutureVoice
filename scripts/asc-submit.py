@@ -39,8 +39,9 @@ Dry run by default; `--send` does it.
 `--mac` does all of it for the Mac App Store (platform MAC_OS): the Mac build
 of the same number (`beta.sh --mac`), the Mac version and its page, its own
 review submission. The app info (name · subtitle · privacy URL) is shared by
-both platforms. Mac screenshots are not written here — the first Mac version
-needs them added in App Store Connect (1280×800 up to 2880×1800).
+both platforms. Mac screenshots come from fastlane/screenshots-mac/ (2880×1800
+window captures, made with the DEBUG `-capture` screens) and go to the primary
+locale once; a set that already has screenshots is left alone.
 """
 
 import base64
@@ -180,6 +181,62 @@ def sync_localizations(kind: str, parent_rel: str, parent_type: str, parent_id: 
                 "type": kind, "id": cur["id"], "attributes": changed}})
 
 
+MAC_SHOTS = os.path.join(ROOT, "fastlane/screenshots-mac")
+# The store's primary language. Every other locale shows its screenshots
+# until it gets its own, so one set covers the whole Mac page.
+PRIMARY_LOCALE = "en-GB"
+
+
+def sync_mac_screenshots(ver: dict | None, send: bool) -> None:
+    """Upload fastlane/screenshots-mac/*.png (2880×1800, the real Mac window)
+    to the Mac version's primary locale, once: a set that already holds
+    screenshots is left alone, so a re-run never duplicates them."""
+    import hashlib
+    files = sorted(f for f in os.listdir(MAC_SHOTS) if f.endswith(".png")) if os.path.isdir(MAC_SHOTS) else []
+    if not files:
+        print("  mac screenshots: none on file")
+        return
+    if ver is None:
+        print(f"  mac screenshots: would upload {len(files)} once the version exists")
+        return
+    locs = call("GET", f"/appStoreVersions/{ver['id']}/appStoreVersionLocalizations?limit=50")["data"]
+    loc = next((l for l in locs if l["attributes"]["locale"] == PRIMARY_LOCALE), None)
+    if loc is None:
+        print(f"  mac screenshots: no {PRIMARY_LOCALE} localization yet")
+        return
+    sets = call("GET", f"/appStoreVersionLocalizations/{loc['id']}/appScreenshotSets?limit=50")["data"]
+    shot_set = next((s for s in sets if s["attributes"]["screenshotDisplayType"] == "APP_DESKTOP"), None)
+    if shot_set:
+        have = call("GET", f"/appScreenshotSets/{shot_set['id']}/appScreenshots?limit=20")["data"]
+        if have:
+            print(f"  mac screenshots: {len(have)} already on {PRIMARY_LOCALE}, unchanged")
+            return
+    print(f"  mac screenshots: UPLOAD {len(files)} to {PRIMARY_LOCALE}")
+    if not send:
+        return
+    if shot_set is None:
+        shot_set = call("POST", "/appScreenshotSets", {"data": {
+            "type": "appScreenshotSets", "attributes": {"screenshotDisplayType": "APP_DESKTOP"},
+            "relationships": {"appStoreVersionLocalization": {"data": {
+                "type": "appStoreVersionLocalizations", "id": loc["id"]}}}}})["data"]
+    for name in files:
+        raw = open(os.path.join(MAC_SHOTS, name), "rb").read()
+        shot = call("POST", "/appScreenshots", {"data": {
+            "type": "appScreenshots", "attributes": {"fileName": name, "fileSize": len(raw)},
+            "relationships": {"appScreenshotSet": {"data": {
+                "type": "appScreenshotSets", "id": shot_set["id"]}}}}})["data"]
+        for op in shot["attributes"]["uploadOperations"]:
+            chunk = raw[op["offset"]:op["offset"] + op["length"]]
+            req = urllib.request.Request(op["url"], data=chunk, method=op["method"])
+            for h in op.get("requestHeaders") or []:
+                req.add_header(h["name"], h["value"])
+            urllib.request.urlopen(req, timeout=120).read()
+        call("PATCH", f"/appScreenshots/{shot['id']}", {"data": {
+            "type": "appScreenshots", "id": shot["id"],
+            "attributes": {"uploaded": True, "sourceFileChecksum": hashlib.md5(raw).hexdigest()}}})
+        print(f"    {name}: uploaded")
+
+
 def sync_page(ver: dict | None, send: bool) -> None:
     version_page, info_page = wanted(VERSION_FIELDS), wanted(INFO_FIELDS)
     check_limits(version_page, info_page)
@@ -266,6 +323,8 @@ def main() -> None:
 
     if not send:
         sync_page(ver, send=False)
+        if PLATFORM == "MAC_OS":
+            sync_mac_screenshots(ver, send=False)
         print("dry run — re-run with --send")
         return
 
@@ -282,6 +341,8 @@ def main() -> None:
     print("build attached")
 
     sync_page(ver, send=True)
+    if PLATFORM == "MAC_OS":
+        sync_mac_screenshots(ver, send=True)
 
     # `--prepare`: a draft a person can read in App Store Connect before it
     # goes anywhere. Re-run with --send (no --prepare) to submit it.

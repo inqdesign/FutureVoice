@@ -833,7 +833,13 @@ struct ConversationHome: View {
     /// What iOS 26 leaves around a toolbar item whose glass is hidden,
     /// measured on device frames: the leading chip sat 30 pt in and the
     /// trailing control 20 pt in, against 16 pt on every other tab.
+    /// The Mac's bar leaves no such inset: pulled back by 14, the chip sat
+    /// on the window's left edge with nothing beside it (2026-11-03).
+    #if targetEnvironment(macCatalyst)
+    private static let hiddenCapsuleInsetLeading: CGFloat = 0
+    #else
     private static let hiddenCapsuleInsetLeading: CGFloat = 14
+    #endif
     private static let hiddenCapsuleInsetTrailing: CGFloat = 4
     /// The ring's outer diameter: the control minus a 3 pt margin off the
     /// glass rim on each side.
