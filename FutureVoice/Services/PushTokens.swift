@@ -119,7 +119,7 @@ enum PushTokens {
     /// Which APNs host this build exists on, read from the profile it was
     /// actually signed with. A build with no embedded profile is a simulator
     /// build, where `#if DEBUG` is the honest answer.
-    private static func apsEnvironment() -> String {
+    static func apsEnvironment() -> String {
         guard let url = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision"),
               let data = try? Data(contentsOf: url),
               let text = String(data: data, encoding: .isoLatin1),

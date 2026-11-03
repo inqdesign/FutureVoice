@@ -89,6 +89,12 @@ targets:
         # profile the same way. So this documents intent and keeps an archive
         # from having to be rewritten — it is not the switch.
         aps-environment: $(APS_ENVIRONMENT)
+        # Which CloudKit database: pinned per config, NOT left to the signing.
+        # Unpinned, a Release build installed from Xcode (developer-signed)
+        # synced into Development while the App Store build on the learner's
+        # Mac synced into Production — same zone name, two databases, both
+        # saying "synced" (2026-10-19 to 11-02, the founder's phone and Mac).
+        com.apple.developer.icloud-container-environment: $(ICLOUD_ENVIRONMENT)
     settings:
       base:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
@@ -122,11 +128,13 @@ targets:
           APP_DISPLAY_NAME: nawana dev
           ICLOUD_CONTAINER: iCloud.com.roro.futurevoice.dev
           APS_ENVIRONMENT: development
+          ICLOUD_ENVIRONMENT: Development
         Release:
           PRODUCT_BUNDLE_IDENTIFIER: com.roro.futurevoice
           APP_DISPLAY_NAME: nawana
           ICLOUD_CONTAINER: iCloud.com.roro.futurevoice
           APS_ENVIRONMENT: production
+          ICLOUD_ENVIRONMENT: Production
     configFiles:
       Debug: Config/FutureVoice.xcconfig
       Release: Config/FutureVoice.xcconfig

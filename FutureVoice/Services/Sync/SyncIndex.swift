@@ -57,6 +57,9 @@ final class SyncIndex {
         /// Bumped when the app's `SyncSchema.version` moves past the one this
         /// index was written under, so frozen entries thaw once.
         var schema: Int = SyncSchema.version
+        /// The CloudKit environment (Development / Production) this index's
+        /// change tags belong to. Nil on an index written before the field.
+        var cloudEnvironment: String?
     }
 
     private(set) var entries: [String: Entry] = [:]

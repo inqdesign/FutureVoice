@@ -473,6 +473,7 @@ final class SyncEngine: ObservableObject {
         case .restricted: status = .paused(.restricted); return
         }
         status = .syncing
+        if await adoptCloudEnvironment(index: index, zone: zone) == false { return }
         defer {
             progress = nil
             refreshCounts()
@@ -524,6 +525,53 @@ final class SyncEngine: ObservableObject {
             status = .failed(error.localizedDescription)
             Analytics.capture("sync_error", ["reason": error.localizedDescription])
         }
+    }
+
+    /// The CloudKit environment this build talks to. Pinned by the
+    /// `com.apple.developer.icloud-container-environment` entitlement
+    /// (`ICLOUD_ENVIRONMENT` in project.yml), so it can't depend on how the
+    /// build was signed.
+    static var cloudEnvironment: String {
+        #if DEBUG
+        return "Development"
+        #else
+        return "Production"
+        #endif
+    }
+
+    /// An index whose change tags belong to the OTHER environment is a
+    /// library the server here has never seen: forget the server and push it
+    /// all. Before the pin (2026-11-02) a Release build installed from Xcode
+    /// synced into Development while the store build on the learner's other
+    /// device synced into Production, and both said "synced" — so an index
+    /// with no environment on file, written by a developer-signed build, is
+    /// taken to be Development's. Returns false when the pass must stop.
+    private func adoptCloudEnvironment(index: SyncIndex, zone: String) async -> Bool {
+        let current = Self.cloudEnvironment
+        let recorded = index.state.cloudEnvironment
+            ?? (PushTokens.apsEnvironment() == "sandbox" ? "Development" : "Production")
+        guard recorded != current else {
+            if index.state.cloudEnvironment == nil {
+                index.state.cloudEnvironment = current
+                index.save()
+            }
+            return true
+        }
+        index.forgetServer()
+        do {
+            try await transport.ensureZone(zone)
+        } catch let e as SyncTransportError {
+            index.save()
+            handle(e)
+            return false
+        } catch {
+            status = .failed(error.localizedDescription)
+            return false
+        }
+        index.state.cloudEnvironment = current
+        index.save()
+        Analytics.capture("sync_environment_changed", ["from": recorded, "to": current])
+        return true
     }
 
     private func handle(_ error: SyncTransportError) {
