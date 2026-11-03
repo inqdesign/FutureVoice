@@ -659,6 +659,8 @@ internal fun FindPersonCard(
                         Text(stringResource(R.string.talk))
                     }
                 }
+                // What Watch spends, under the button that spends it.
+                SceneCostNote(Modifier.padding(top = 8.dp))
             }
         },
     ) { padding ->

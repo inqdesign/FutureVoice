@@ -245,7 +245,10 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
         }
     }
 
-    val showsPack = TopUpOffer.onPaywall(account, pack?.formattedPrice != null)
+    // Hidden on the plans page for now (2026-11-03, founder; iOS
+    // `packOnPlansPage`): the card is the three plans and nothing else. The
+    // pack is still sold where the pool runs out, beside the move to Plus.
+    val showsPack = PACK_ON_PLANS_PAGE && TopUpOffer.onPaywall(account, pack?.formattedPrice != null)
     // Opened on the pack (a capture, or a stale pick) with no pack to show:
     // the selection falls back to the plan most people choose.
     LaunchedEffect(settled, showsPack, pack) {
@@ -657,6 +660,8 @@ private const val APP_STORE_SUBSCRIPTIONS_URL = "https://apps.apple.com/account/
  */
 private const val MOST_CHOSEN_TIER = "plus"
 
+private const val PACK_ON_PLANS_PAGE = false
+
 /** The ladder's selection key for the one-time pack — never a plan tier. */
 private const val PACK = "pack"
 
@@ -774,6 +779,12 @@ private fun PlansStep(
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            // What every plan shares, right under the question it answers
+            // (2026-11-03, founder: as a footnote under the ladder it was
+            // hidden, and as a sentence it read as five things — the chips
+            // keep coming; iOS the same). A scene's and a voiceover's price
+            // is said on their own buttons, not here.
+            FreeFeaturesMarquee(Modifier.padding(top = 8.dp))
         }
 
         if (periods.size > 1) {
@@ -825,26 +836,10 @@ private fun PlansStep(
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
-        // What every plan shares, said ONCE — on the cards it was two rows
-        // identical on all of them.
-        Column(Modifier.padding(horizontal = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            FootnoteRow(Icons.Filled.CheckCircle, stringResource(R.string.paywall_shared_unlimited))
-            FootnoteRow(Icons.Filled.Phone, stringResource(R.string.paywall_tutor_call))
-        }
-
         SubscriptionLegal()
     }
 }
 
-@Composable
-private fun FootnoteRow(icon: ImageVector, text: String) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(16.dp).padding(top = 1.dp))
-        Text(text, style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
 
 /**
  * One line of the ladder: name and minutes, scenes, the per-day cue, the
@@ -941,12 +936,6 @@ private fun LadderRow(
             }
             if (!scenesCostTalk && scenes > 0) {
                 Text(stringResource(R.string.paywall_plus_scenes, scenes),
-                    style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-            }
-            // Writing Speech scripts (AI or your own) is these tiers' alone
-            // (iOS 63817b73, the same rule as `canWriteSpeechScripts`).
-            if (tier == "plus" || tier == "max") {
-                Text(stringResource(R.string.speech_d35aea),
                     style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
             }
         }

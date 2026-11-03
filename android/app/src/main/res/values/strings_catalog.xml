@@ -4,7 +4,6 @@
      catalog and re-run. Names are resource_name(<English key>). -->
 <resources>
     <!-- 'A 10-minute tutor call every weekday is about 200 minutes a month. Here, minutes count only while the conversation is going — pauses are free.' -->
-    <string name="a_10_minute_tutor_call_every_weekday_is_about_200_minutes_a_0d4b45">"A 10-minute tutor call every weekday is about 200 minutes a month. Here, minutes count only while the conversation is going — pauses are free."</string>
     <string name="a_badge_next_to_your_name_where_you_meet_people">"A badge next to your name where you meet people."</string>
     <string name="a_barista">"a barista"</string>
     <string name="a_better_word">"A better word"</string>
@@ -1823,7 +1822,7 @@
     <string name="new_records_pushed_you_from_lld_to_lld">"New records pushed you from #%1$d to #%2$d."</string>
     <string name="new_scenario">"New scenario"</string>
     <string name="new_script">"New script"</string>
-    <string name="new_scripts_are_a_plus_feature">"New scripts are a Plus feature"</string>
+    <string name="new_scripts_are_a_plus_feature">"New scripts come with a plan"</string>
     <string name="new_situation">"New situation"</string>
     <string name="new_talk_lld_10_min">"New talk %d/10 min"</string>
     <!-- "New talks and recordings aren't backed up to iCloud right now, so they're on this device only. If you delete the app on this device, they're deleted with it." -->
@@ -2740,7 +2739,6 @@
     <!-- 'Speech' -->
     <string name="speech_d00d85">"Speech"</string>
     <!-- '+ Speech' -->
-    <string name="speech_d35aea">"+ Speech"</string>
     <string name="speech_genre_briefing">"Briefing"</string>
     <string name="speech_genre_explain">"Explainer"</string>
     <string name="speech_genre_news">"News"</string>
@@ -3109,7 +3107,7 @@
     <!-- 'The same setting as Me → Level. The next assessment overwrites it with what your talks show.' -->
     <string name="the_same_setting_as_me_level_the_next_assessment_overwrites_9d19dc">"The same setting as Me → Level. The next assessment overwrites it with what your talks show."</string>
     <!-- 'The sample script stays free to practise. With Plus or Max, practise any text you like.' -->
-    <string name="the_sample_script_stays_free_to_practise_with_plus_or_max_pr_9a1a82">"The sample script stays free to practise. With Plus or Max, practise any text you like."</string>
+    <string name="the_sample_script_stays_free_to_practise_with_plus_or_max_pr_9a1a82">"The sample script stays free to practise. With a plan, practise any text you like."</string>
     <!-- "The scene's book brings its words and expressions back to you as cards." -->
     <string name="the_scene_s_book_brings_its_words_and_expressions_back_to_yo_bf4a1f">"The scene's book brings its words and expressions back to you as cards."</string>
     <!-- 'The script and your face together in one vertical video. Save it to Photos to share, or delete it.' -->
@@ -3744,7 +3742,7 @@
     <string name="write_it_the_way_you_d_say_it_now">"Write it the way you'd say it now"</string>
     <string name="write_one_for_me">"Write one for me"</string>
     <string name="write_one_with_ai">"Write one with AI"</string>
-    <string name="write_scripts_on_any_topic_or_add_your_own_with_plus">"Write scripts on any topic, or add your own, with Plus."</string>
+    <string name="write_scripts_on_any_topic_or_add_your_own_with_plus">"Write scripts on any topic, or add your own, with a plan."</string>
     <!-- 'Write to us to see or correct what we hold about you, including the date you gave consent.' -->
     <string name="write_to_us_to_see_or_correct_what_we_hold_about_you_includi_0fbfc2">"Write to us to see or correct what we hold about you, including the date you gave consent."</string>
     <string name="write_with_ai">"Write with AI"</string>

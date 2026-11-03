@@ -66,4 +66,6 @@
     <string name="trial_blurb_speech">"스피치를 녹음하고 점수 받기"</string>
     <string name="trial_auto_play">"자동 재생"</string>
     <string name="trial_stop_auto_play">"자동 재생 멈추기"</string>
+    <string name="trial_recharge_free">"%d분 무료 충전"</string>
+    <string name="trial_recharge_added">"%d분이 충전됐어요. 계속 이야기해요."</string>
 </resources>

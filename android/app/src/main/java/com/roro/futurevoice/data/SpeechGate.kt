@@ -7,7 +7,7 @@ package com.roro.futurevoice.data
  * Light or free account is not. The admin flag passes like everywhere.
  */
 val AccountStatus.canWriteSpeechScripts: Boolean
-    get() = unlimited || (isEntitled && tier in setOf("plus", "max"))
+    get() = unlimited || isEntitled  // any plan since 2026-11-03 (founder); Plus-and-up before
 
 object SpeechGate {
     /** Same cache rule as the billing gate: a yes from cache, a no only from

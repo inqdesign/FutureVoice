@@ -509,7 +509,6 @@
     <string name="paywall_keep_talking">Continue à parler</string>
     <string name="paywall_pick_how_much">Choisis combien tu veux parler chaque mois.</string>
     <string name="paywall_shared_unlimited">Ton carnet de révision, le shadowing, les mots, les réécoutes et les exercices sont illimités dans toutes les formules.</string>
-    <string name="paywall_tutor_call">Un cours de 10 minutes au téléphone chaque jour de semaine, c’est environ 200 minutes par mois. Ici, les minutes ne comptent que pendant que la conversation avance ; les pauses sont gratuites.</string>
     <string name="paywall_most_chosen">Le plus choisi</string>
     <string name="paywall_plus_scenes">+ %d scènes</string>
     <string name="paywall_monthly_only">Mensuel uniquement</string>
@@ -548,4 +547,5 @@
         <item quantity="one">%d essai</item>
         <item quantity="other">%d essais</item>
     </plurals>
+    <string name="paywall_unlimited_every_plan">Illimité dans tous les abonnements</string>
 </resources>

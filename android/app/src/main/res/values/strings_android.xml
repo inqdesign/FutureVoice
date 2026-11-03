@@ -523,7 +523,6 @@
     <string name="paywall_keep_talking">Keep talking</string>
     <string name="paywall_pick_how_much">Pick how much you want to talk each month.</string>
     <string name="paywall_shared_unlimited">Review book, shadowing, words, replays and drills are unlimited on every plan.</string>
-    <string name="paywall_tutor_call">A 10-minute tutor call every weekday is about 200 minutes a month. Here, minutes count only while the conversation is going — pauses are free.</string>
     <string name="paywall_most_chosen">Most chosen</string>
     <string name="paywall_plus_scenes">+ %d scenes</string>
     <string name="paywall_monthly_only">Monthly only</string>
@@ -566,4 +565,5 @@
     </plurals>
     <!-- iOS `explain("Coming soon")` has no catalog entry: English in every language. -->
     <string name="coming_soon" translatable="false">Coming soon</string>
+    <string name="paywall_unlimited_every_plan">Unlimited on every plan</string>
 </resources>

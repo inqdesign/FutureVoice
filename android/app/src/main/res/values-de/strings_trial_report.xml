@@ -66,4 +66,6 @@
     <string name="trial_blurb_speech">"Nimm eine Rede auf und bekomm eine Bewertung"</string>
     <string name="trial_auto_play">"Automatisch abspielen"</string>
     <string name="trial_stop_auto_play">"Automatisches Abspielen stoppen"</string>
+    <string name="trial_recharge_free">"%d Min gratis aufladen"</string>
+    <string name="trial_recharge_added">"%d Min sind drauf. Weiter geht\'s."</string>
 </resources>

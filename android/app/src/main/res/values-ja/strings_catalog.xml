@@ -4,7 +4,6 @@
      catalog and re-run. Names are resource_name(<English key>). -->
 <resources>
     <!-- 'A 10-minute tutor call every weekday is about 200 minutes a month. Here, minutes count only while the conversation is going — pauses are free.' -->
-    <string name="a_10_minute_tutor_call_every_weekday_is_about_200_minutes_a_0d4b45">"平日に毎日10分の電話レッスンなら、月に約200分です。ここでは会話が続いている間だけ時間が減り、沈黙の時間は数えません。"</string>
     <string name="a_badge_next_to_your_name_where_you_meet_people">"人と出会う場所で、名前の横にバッジが付きます。"</string>
     <string name="a_barista">"バリスタ"</string>
     <string name="a_better_word">"もっといい言い方"</string>
@@ -1811,7 +1810,7 @@
     <string name="new_records_pushed_you_from_lld_to_lld">"新記録が出て、%1$d位から%2$d位に下がりました。"</string>
     <string name="new_scenario">"新しいシチュエーション"</string>
     <string name="new_script">"新しい原稿"</string>
-    <string name="new_scripts_are_a_plus_feature">"新しい原稿づくりは Plus で"</string>
+    <string name="new_scripts_are_a_plus_feature">"新しい原稿はプランから"</string>
     <string name="new_situation">"新しい場面"</string>
     <string name="new_talk_lld_10_min">"新しい通話 %d/10分"</string>
     <!-- "New talks and recordings aren't backed up to iCloud right now, so they're on this device only. If you delete the app on this device, they're deleted with it." -->
@@ -2725,7 +2724,6 @@
     <!-- 'Speech' -->
     <string name="speech_d00d85">"スピーチ"</string>
     <!-- '+ Speech' -->
-    <string name="speech_d35aea">"+ スピーチ機能"</string>
     <string name="speech_genre_briefing">"ブリーフィング"</string>
     <string name="speech_genre_explain">"解説"</string>
     <string name="speech_genre_news">"ニュース"</string>
@@ -3094,7 +3092,7 @@
     <!-- 'The same setting as Me → Level. The next assessment overwrites it with what your talks show.' -->
     <string name="the_same_setting_as_me_level_the_next_assessment_overwrites_9d19dc">"マイページ → レベルと同じ項目です。次の評価で、実際の通話が示した値に上書きされます。"</string>
     <!-- 'The sample script stays free to practise. With Plus or Max, practise any text you like.' -->
-    <string name="the_sample_script_stays_free_to_practise_with_plus_or_max_pr_9a1a82">"サンプル原稿はこれからも無料です。Plus・Max なら、好きな文章で練習できます。"</string>
+    <string name="the_sample_script_stays_free_to_practise_with_plus_or_max_pr_9a1a82">"サンプル原稿はずっと無料です。プランがあれば、好きな文章で練習できます。"</string>
     <!-- "The scene's book brings its words and expressions back to you as cards." -->
     <string name="the_scene_s_book_brings_its_words_and_expressions_back_to_yo_bf4a1f">"シーンの教材が、単語と表現をカードでもう一度出してくれます。"</string>
     <!-- 'The script and your face together in one vertical video. Save it to Photos to share, or delete it.' -->
@@ -3725,7 +3723,7 @@
     <string name="write_it_the_way_you_d_say_it_now">"今ならどう言うか書く"</string>
     <string name="write_one_for_me">"自動で書く"</string>
     <string name="write_one_with_ai">"AIに原稿を書いてもらう"</string>
-    <string name="write_scripts_on_any_topic_or_add_your_own_with_plus">"Plus なら、好きなテーマで原稿を書いてもらったり、自分の原稿を追加したりできます。"</string>
+    <string name="write_scripts_on_any_topic_or_add_your_own_with_plus">"プランがあれば、どんなテーマでも原稿を作ったり、自分の原稿を入れたりできます。"</string>
     <!-- 'Write to us to see or correct what we hold about you, including the date you gave consent.' -->
     <string name="write_to_us_to_see_or_correct_what_we_hold_about_you_includi_0fbfc2">"同意した日付を含め、保管中の情報の確認や修正はお問い合わせください。"</string>
     <string name="write_with_ai">"AIで書く"</string>

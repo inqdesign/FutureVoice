@@ -495,7 +495,6 @@
     <string name="paywall_keep_talking">Weiter sprechen</string>
     <string name="paywall_pick_how_much">Wähle, wie viel du jeden Monat sprechen willst.</string>
     <string name="paywall_shared_unlimited">Übungsbuch, Nachsprechen, Wörter, Nochmal anhören und Drills sind in jedem Tarif unbegrenzt.</string>
-    <string name="paywall_tutor_call">Zehn Minuten Telefonunterricht an jedem Werktag sind etwa 200 Minuten im Monat. Hier zählen Minuten nur, solange ihr euch unterhaltet – Pausen sind gratis.</string>
     <string name="paywall_most_chosen">Am häufigsten gewählt</string>
     <string name="paywall_plus_scenes">+ %d Szenen</string>
     <string name="paywall_monthly_only">Nur monatlich</string>
@@ -534,4 +533,5 @@
         <item quantity="one">%d Versuch</item>
         <item quantity="other">%d Versuche</item>
     </plurals>
+    <string name="paywall_unlimited_every_plan">In jedem Tarif unbegrenzt</string>
 </resources>

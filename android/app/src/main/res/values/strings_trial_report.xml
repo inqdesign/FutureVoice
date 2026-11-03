@@ -67,4 +67,6 @@
     <string name="trial_blurb_speech">"Record a speech and get a score"</string>
     <string name="trial_auto_play">"Auto-play"</string>
     <string name="trial_stop_auto_play">"Stop auto-play"</string>
+    <string name="trial_recharge_free">"Recharge %d min free"</string>
+    <string name="trial_recharge_added">"%d min added. Talk on."</string>
 </resources>

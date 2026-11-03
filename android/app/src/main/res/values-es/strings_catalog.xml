@@ -4,7 +4,6 @@
      catalog and re-run. Names are resource_name(<English key>). -->
 <resources>
     <!-- 'A 10-minute tutor call every weekday is about 200 minutes a month. Here, minutes count only while the conversation is going — pauses are free.' -->
-    <string name="a_10_minute_tutor_call_every_weekday_is_about_200_minutes_a_0d4b45">"Una clase de 10 minutos por teléfono cada día laborable son unos 200 minutos al mes. Aquí los minutos solo cuentan mientras la conversación sigue: las pausas son gratis."</string>
     <string name="a_badge_next_to_your_name_where_you_meet_people">"Una insignia junto a tu nombre, ahí donde conoces gente."</string>
     <string name="a_barista">"un barista"</string>
     <string name="a_better_word">"Una palabra mejor"</string>
@@ -1807,7 +1806,7 @@
     <string name="new_records_pushed_you_from_lld_to_lld">"Nuevas marcas te bajaron del puesto %1$d al %2$d."</string>
     <string name="new_scenario">"Nueva situación"</string>
     <string name="new_script">"Nuevo guion"</string>
-    <string name="new_scripts_are_a_plus_feature">"Crea guiones nuevos con Plus"</string>
+    <string name="new_scripts_are_a_plus_feature">"Los discursos nuevos vienen con un plan"</string>
     <string name="new_situation">"Nueva situación"</string>
     <string name="new_talk_lld_10_min">"Llamada nueva %d/10 min"</string>
     <!-- "New talks and recordings aren't backed up to iCloud right now, so they're on this device only. If you delete the app on this device, they're deleted with it." -->
@@ -2721,7 +2720,6 @@
     <!-- 'Speech' -->
     <string name="speech_d00d85">"Discurso"</string>
     <!-- '+ Speech' -->
-    <string name="speech_d35aea">"+ Discurso"</string>
     <string name="speech_genre_briefing">"Briefing"</string>
     <string name="speech_genre_explain">"Explicación"</string>
     <string name="speech_genre_news">"Noticias"</string>
@@ -3090,7 +3088,7 @@
     <!-- 'The same setting as Me → Level. The next assessment overwrites it with what your talks show.' -->
     <string name="the_same_setting_as_me_level_the_next_assessment_overwrites_9d19dc">"Es lo mismo que Mi perfil → Nivel. La próxima evaluación lo sobrescribe con lo que muestren tus llamadas."</string>
     <!-- 'The sample script stays free to practise. With Plus or Max, practise any text you like.' -->
-    <string name="the_sample_script_stays_free_to_practise_with_plus_or_max_pr_9a1a82">"El guion de ejemplo sigue siendo gratis. Con Plus o Max practicas el texto que quieras."</string>
+    <string name="the_sample_script_stays_free_to_practise_with_plus_or_max_pr_9a1a82">"El discurso de muestra sigue siendo gratis. Con un plan, practica cualquier texto."</string>
     <!-- "The scene's book brings its words and expressions back to you as cards." -->
     <string name="the_scene_s_book_brings_its_words_and_expressions_back_to_yo_bf4a1f">"El cuaderno de la escena te trae sus palabras y expresiones en forma de tarjetas."</string>
     <!-- 'The script and your face together in one vertical video. Save it to Photos to share, or delete it.' -->
@@ -3721,7 +3719,7 @@
     <string name="write_it_the_way_you_d_say_it_now">"Escríbelo como lo dirías ahora"</string>
     <string name="write_one_for_me">"Escríbelo por mí"</string>
     <string name="write_one_with_ai">"Pide un guion a la IA"</string>
-    <string name="write_scripts_on_any_topic_or_add_your_own_with_plus">"Con Plus, pide guiones sobre cualquier tema o añade los tuyos."</string>
+    <string name="write_scripts_on_any_topic_or_add_your_own_with_plus">"Con un plan, escribe discursos sobre cualquier tema o añade los tuyos."</string>
     <!-- 'Write to us to see or correct what we hold about you, including the date you gave consent.' -->
     <string name="write_to_us_to_see_or_correct_what_we_hold_about_you_includi_0fbfc2">"Escríbenos para ver o corregir lo que guardamos sobre ti, incluida la fecha en que diste tu consentimiento."</string>
     <string name="write_with_ai">"Escribir con IA"</string>

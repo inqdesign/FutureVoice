@@ -4,7 +4,6 @@
      catalog and re-run. Names are resource_name(<English key>). -->
 <resources>
     <!-- 'A 10-minute tutor call every weekday is about 200 minutes a month. Here, minutes count only while the conversation is going — pauses are free.' -->
-    <string name="a_10_minute_tutor_call_every_weekday_is_about_200_minutes_a_0d4b45">"평일마다 10분씩 하는 전화 수업은 한 달에 약 200분이에요. 여기서는 대화가 오가는 동안만 시간이 줄고, 말이 멈춘 동안은 세지 않아요."</string>
     <string name="a_badge_next_to_your_name_where_you_meet_people">"사람 만나는 곳에서 이름 옆에 배지가 붙어요."</string>
     <string name="a_barista">"바리스타"</string>
     <string name="a_better_word">"더 나은 표현"</string>
@@ -1811,7 +1810,7 @@
     <string name="new_records_pushed_you_from_lld_to_lld">"새 기록이 나와서 %1$d위에서 %2$d위로 밀렸어요."</string>
     <string name="new_scenario">"새 상황"</string>
     <string name="new_script">"새 원고"</string>
-    <string name="new_scripts_are_a_plus_feature">"새 원고는 Plus부터 쓸 수 있어요"</string>
+    <string name="new_scripts_are_a_plus_feature">"새 원고는 요금제부터 쓸 수 있어요"</string>
     <string name="new_situation">"새 상황"</string>
     <string name="new_talk_lld_10_min">"새 대화 %d/10분"</string>
     <!-- "New talks and recordings aren't backed up to iCloud right now, so they're on this device only. If you delete the app on this device, they're deleted with it." -->
@@ -2725,7 +2724,6 @@
     <!-- 'Speech' -->
     <string name="speech_d00d85">"스피치"</string>
     <!-- '+ Speech' -->
-    <string name="speech_d35aea">"+ 스피치 기능"</string>
     <string name="speech_genre_briefing">"브리핑"</string>
     <string name="speech_genre_explain">"설명"</string>
     <string name="speech_genre_news">"뉴스"</string>
@@ -3094,7 +3092,7 @@
     <!-- 'The same setting as Me → Level. The next assessment overwrites it with what your talks show.' -->
     <string name="the_same_setting_as_me_level_the_next_assessment_overwrites_9d19dc">"설정 → 레벨과 같은 항목이에요. 다음 평가 때 실제 대화가 보여준 값으로 덮어써요."</string>
     <!-- 'The sample script stays free to practise. With Plus or Max, practise any text you like.' -->
-    <string name="the_sample_script_stays_free_to_practise_with_plus_or_max_pr_9a1a82">"샘플 원고는 계속 무료예요. Plus나 Max에서는 원하는 글은 무엇이든 연습할 수 있어요."</string>
+    <string name="the_sample_script_stays_free_to_practise_with_plus_or_max_pr_9a1a82">"샘플 원고는 계속 무료예요. 요금제가 있으면 원하는 글은 무엇이든 연습할 수 있어요."</string>
     <!-- "The scene's book brings its words and expressions back to you as cards." -->
     <string name="the_scene_s_book_brings_its_words_and_expressions_back_to_yo_bf4a1f">"장면의 교재가 단어와 표현을 카드로 다시 보여줘요."</string>
     <!-- 'The script and your face together in one vertical video. Save it to Photos to share, or delete it.' -->
@@ -3725,7 +3723,7 @@
     <string name="write_it_the_way_you_d_say_it_now">"지금이라면 어떻게 말할지 쓰기"</string>
     <string name="write_one_for_me">"자동으로 쓰기"</string>
     <string name="write_one_with_ai">"AI에게 맡기기"</string>
-    <string name="write_scripts_on_any_topic_or_add_your_own_with_plus">"Plus에서는 어떤 주제든 원고를 만들거나 내 원고를 넣을 수 있어요."</string>
+    <string name="write_scripts_on_any_topic_or_add_your_own_with_plus">"요금제가 있으면 어떤 주제든 원고를 만들거나 내 원고를 넣을 수 있어요."</string>
     <!-- 'Write to us to see or correct what we hold about you, including the date you gave consent.' -->
     <string name="write_to_us_to_see_or_correct_what_we_hold_about_you_includi_0fbfc2">"동의한 날짜를 비롯해 보관 중인 내 정보를 확인하거나 고치고 싶으면 문의해 주세요."</string>
     <string name="write_with_ai">"AI로 쓰기"</string>

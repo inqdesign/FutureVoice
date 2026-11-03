@@ -503,7 +503,6 @@
     <string name="paywall_keep_talking">繼續聊下去</string>
     <string name="paywall_pick_how_much">選擇每個月想聊多久。</string>
     <string name="paywall_shared_unlimited">複習書、跟讀、單字、對話重播和練習在每個方案都無限使用。</string>
-    <string name="paywall_tutor_call">每個平日上 10 分鐘電話課，一個月大約 200 分鐘。在這裡，只有對話進行時才計時，停頓不算。</string>
     <string name="paywall_most_chosen">最多人選</string>
     <string name="paywall_plus_scenes">+ 情境練習 %d 次</string>
     <string name="paywall_monthly_only">僅限月繳</string>
@@ -541,4 +540,5 @@
     <plurals name="speech_challenge_tries">
         <item quantity="other">%d 次挑戰</item>
     </plurals>
+    <string name="paywall_unlimited_every_plan">所有方案不限次數</string>
 </resources>

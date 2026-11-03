@@ -503,7 +503,6 @@
     <string name="paywall_keep_talking">会話を続けましょう</string>
     <string name="paywall_pick_how_much">毎月どれくらい話すか選んでください。</string>
     <string name="paywall_shared_unlimited">復習ブック、シャドーイング、単語学習、会話の再生、ドリル復習はどのプランでも無制限です。</string>
-    <string name="paywall_tutor_call">平日に毎日10分の電話レッスンなら、月に約200分です。ここでは会話が続いている間だけ時間が減り、沈黙の時間は数えません。</string>
     <string name="paywall_most_chosen">いちばん人気</string>
     <string name="paywall_plus_scenes">+ シーン練習%d回</string>
     <string name="paywall_monthly_only">月額のみ</string>
@@ -541,4 +540,5 @@
     <plurals name="speech_challenge_tries">
         <item quantity="other">挑戦%d回</item>
     </plurals>
+    <string name="paywall_unlimited_every_plan">どのプランでも無制限</string>
 </resources>

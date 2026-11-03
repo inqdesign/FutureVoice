@@ -826,6 +826,9 @@ internal fun SkyPersonCard(
             CardIconButton(Icons.Filled.PlayArrow, stringResource(R.string.watch), onWatch)
             CardIconButton(Icons.Filled.Phone, stringResource(R.string.talk), onTalk)
         }
+        // What the play button spends, where it is (2026-11-03, founder:
+        // every button that starts a scene says its minutes).
+        SceneCostNote(Modifier.padding(top = 8.dp))
     }
 }
 

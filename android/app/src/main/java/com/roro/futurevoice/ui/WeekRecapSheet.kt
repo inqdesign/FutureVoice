@@ -70,6 +70,8 @@ import androidx.compose.material3.MaterialTheme
 import com.roro.futurevoice.ui.brand.IosOutlinedButton as OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import com.roro.futurevoice.net.FreeRecharge
+import com.roro.futurevoice.data.BillingGate
 import com.roro.futurevoice.ui.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -292,6 +294,11 @@ fun WeekRecapDeck(
     var habitAdviceFailed by remember { mutableStateOf(false) }
     var routineRules by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var showingPaywall by remember { mutableStateOf(false) }
+    // The one free recharge after the free minutes (2026-11-03): asked of the
+    // server when the deck opens, drawn beside Subscribe on the routine card
+    // only on a fresh `available`. Null or unavailable = Subscribe alone.
+    var rechargeOffer by remember { mutableStateOf<FreeRecharge.Offer?>(null) }
+    var recharge by remember { mutableStateOf<RechargeState>(RechargeState.Idle) }
     var showingFeedback by remember { mutableStateOf(false) }
     /** The deck turns its own pages after each card's line; the header's
      *  pause button stops it, kept for the next report (iOS `autoAdvance`). */
@@ -484,6 +491,7 @@ fun WeekRecapDeck(
             trialStarted = true
             TrialReportStore.countOffer(context)
             Analytics.capture("trial_report_opened", mapOf("talk_min" to recap.talkMinutes, "cards" to cards.size))
+            launch { rechargeOffer = FreeRecharge.offer() }
             // A test that could not be made last time (offline, a failed
             // write) is tried again: the minutes can't grow, but the network
             // can come back.
@@ -606,7 +614,7 @@ fun WeekRecapDeck(
     fun advance() {
         scope.launch { pager.animateScrollToPage(minOf(pager.currentPage + 1, cards.size - 1)) }
     }
-    fun keepRoutine() {
+    fun applyRoutine() {
         if (!routineIsOwn && routine.isNotEmpty()) {
             StudyPlanStore.update(context, RoutineRecipe.plan(routine))
             LearningPurposeStore.setRoutineApplied(context)
@@ -615,6 +623,32 @@ fun WeekRecapDeck(
             // a finding changed or added are written.
             StudyPlanStore.update(context, StudyPlanStore.current(context).copy(blocks = routine.map { it.block }))
         }
+    }
+    // The routine is kept either way (the report built it from their own
+    // talks), then the grant. Once it lands the report has done its job:
+    // `finished` keeps it from being raised again at the second wall, where
+    // the plans are the answer, and the gate's cache is dropped so the next
+    // paid tap sees the new balance.
+    fun claimRecharge(offer: FreeRecharge.Offer) {
+        if (recharge != RechargeState.Idle) return
+        recharge = RechargeState.Claiming
+        applyRoutine()
+        Analytics.capture("trial_recharge_tapped", mapOf("seconds" to offer.seconds))
+        scope.launch {
+            val claim = runCatching { FreeRecharge.claim() }.getOrNull()
+            if (claim?.applied == true) {
+                TrialReportStore.setFinished(context)
+                BillingGate.invalidate()
+                Analytics.capture("trial_recharge_claimed", mapOf("seconds" to claim.seconds, "balance" to claim.balance))
+                recharge = RechargeState.Added(claim.seconds)
+            } else {
+                Analytics.capture("trial_recharge_refused", mapOf("reason" to (claim?.reason ?: "error")))
+                recharge = RechargeState.Refused
+            }
+        }
+    }
+    fun keepRoutine() {
+        applyRoutine()
         Analytics.capture("trial_report_routine", mapOf("own" to routineIsOwn,
             "changed" to routineRules.size,
             "rules" to habitFindings.joinToString(",") { it.rule }))
@@ -719,8 +753,45 @@ fun WeekRecapDeck(
             if (isTrial && (card == RecapCard.TRIAL_TEST || card == RecapCard.ROUTINE)) {
                 val t = trialTest
                 when {
-                    card == RecapCard.ROUTINE ->
-                        Primary(stringResource(R.string.trial_keep_routine)) { keepRoutine() }
+                    card == RecapCard.ROUTINE -> {
+                        // Subscribe, and beside it the one free recharge when
+                        // the server offers it (2026-11-03, founder: the two
+                        // side by side). Taken, the card says so and the deck
+                        // closes on Start talking; refused or unavailable,
+                        // Subscribe stands alone, as every build before this.
+                        val offer = rechargeOffer
+                        when (val r = recharge) {
+                            is RechargeState.Added -> Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(stringResource(R.string.trial_recharge_added, r.seconds / 60),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary)
+                                Primary(stringResource(R.string.start_talking)) { endTrialReport(context, onClose) }
+                            }
+                            RechargeState.Refused ->
+                                Primary(stringResource(R.string.trial_keep_routine)) { keepRoutine() }
+                            else -> if (offer != null && offer.available && offer.seconds >= 60) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    Button(onClick = { keepRoutine() },
+                                        modifier = Modifier.weight(1f).height(52.dp)) {
+                                        Text(stringResource(R.string.subscribe), fontWeight = FontWeight.SemiBold)
+                                    }
+                                    OutlinedButton(onClick = { claimRecharge(offer) },
+                                        enabled = recharge == RechargeState.Idle,
+                                        modifier = Modifier.weight(1f).height(52.dp)) {
+                                        if (recharge == RechargeState.Claiming)
+                                            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                                        else Text(stringResource(R.string.trial_recharge_free, offer.seconds / 60),
+                                            fontWeight = FontWeight.SemiBold)
+                                    }
+                                }
+                            } else {
+                                Primary(stringResource(R.string.trial_keep_routine)) { keepRoutine() }
+                            }
+                        }
+                    }
                     trialTestCleared -> Primary(stringResource(R.string.trial_see_level)) { advance() }
                     else -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         if (t != null && t.answers.isNotEmpty())
@@ -1897,4 +1968,12 @@ fun TrialReportHost(ready: Boolean, inCall: Boolean, blocked: Boolean, level: Ce
     showing?.let {
         TrialReportSheet(it, level, onMeasuredLevel, voiceId) { showing = null }
     }
+}
+
+/** The routine card's recharge button, step by step (iOS `RechargeState`). */
+private sealed class RechargeState {
+    object Idle : RechargeState()
+    object Claiming : RechargeState()
+    data class Added(val seconds: Int) : RechargeState()
+    object Refused : RechargeState()
 }

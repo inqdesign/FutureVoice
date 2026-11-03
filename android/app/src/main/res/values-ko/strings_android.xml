@@ -503,7 +503,6 @@
     <string name="paywall_keep_talking">계속 이야기해요</string>
     <string name="paywall_pick_how_much">한 달에 얼마나 이야기할지 골라요.</string>
     <string name="paywall_shared_unlimited">개인화된 복습교재, 섀도잉, 단어학습, 대화 재생, 드릴 복습은 모든 요금제에서 무제한이에요.</string>
-    <string name="paywall_tutor_call">평일마다 10분씩 하는 전화 수업은 한 달에 약 200분이에요. 여기서는 대화가 오가는 동안만 시간이 줄고, 말이 멈춘 동안은 세지 않아요.</string>
     <string name="paywall_most_chosen">가장 많이 선택</string>
     <string name="paywall_plus_scenes">+ 상황연습 %d개</string>
     <string name="paywall_monthly_only">월간만 있어요</string>
@@ -541,4 +540,5 @@
     <plurals name="speech_challenge_tries">
         <item quantity="other">%d번 도전</item>
     </plurals>
+    <string name="paywall_unlimited_every_plan">모든 요금제에서 무제한</string>
 </resources>

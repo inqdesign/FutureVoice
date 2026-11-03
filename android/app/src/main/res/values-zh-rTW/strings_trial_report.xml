@@ -66,4 +66,6 @@
     <string name="trial_blurb_speech">"錄一段演講並拿到分數"</string>
     <string name="trial_auto_play">"自動播放"</string>
     <string name="trial_stop_auto_play">"停止自動播放"</string>
+    <string name="trial_recharge_free">"免費儲值 %d 分鐘"</string>
+    <string name="trial_recharge_added">"已儲值 %d 分鐘，接著聊吧。"</string>
 </resources>

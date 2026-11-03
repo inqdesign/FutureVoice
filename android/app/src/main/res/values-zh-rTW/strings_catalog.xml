@@ -4,7 +4,6 @@
      catalog and re-run. Names are resource_name(<English key>). -->
 <resources>
     <!-- 'A 10-minute tutor call every weekday is about 200 minutes a month. Here, minutes count only while the conversation is going — pauses are free.' -->
-    <string name="a_10_minute_tutor_call_every_weekday_is_about_200_minutes_a_0d4b45">"每個平日上 10 分鐘電話課，一個月大約 200 分鐘。在這裡，只有對話進行時才計時，停頓不算。"</string>
     <string name="a_badge_next_to_your_name_where_you_meet_people">"在認識人的地方，名字旁邊會多一個徽章。"</string>
     <string name="a_barista">"咖啡師"</string>
     <string name="a_better_word">"更好的說法"</string>
@@ -1811,7 +1810,7 @@
     <string name="new_records_pushed_you_from_lld_to_lld">"有人刷新紀錄，你從第 %1$d 名掉到第 %2$d 名。"</string>
     <string name="new_scenario">"新情境"</string>
     <string name="new_script">"新講稿"</string>
-    <string name="new_scripts_are_a_plus_feature">"新增講稿是 Plus 的功能"</string>
+    <string name="new_scripts_are_a_plus_feature">"新講稿需要訂閱"</string>
     <string name="new_situation">"新情境"</string>
     <string name="new_talk_lld_10_min">"新通話 %d/10分鐘"</string>
     <!-- "New talks and recordings aren't backed up to iCloud right now, so they're on this device only. If you delete the app on this device, they're deleted with it." -->
@@ -2725,7 +2724,6 @@
     <!-- 'Speech' -->
     <string name="speech_d00d85">"演講"</string>
     <!-- '+ Speech' -->
-    <string name="speech_d35aea">"+ 演講功能"</string>
     <string name="speech_genre_briefing">"簡報"</string>
     <string name="speech_genre_explain">"解說"</string>
     <string name="speech_genre_news">"新聞"</string>
@@ -3094,7 +3092,7 @@
     <!-- 'The same setting as Me → Level. The next assessment overwrites it with what your talks show.' -->
     <string name="the_same_setting_as_me_level_the_next_assessment_overwrites_9d19dc">"和「我的 → 程度」是同一個設定。下次評估會用實際通話顯示的結果覆蓋。"</string>
     <!-- 'The sample script stays free to practise. With Plus or Max, practise any text you like.' -->
-    <string name="the_sample_script_stays_free_to_practise_with_plus_or_max_pr_9a1a82">"內建範例一樣免費。訂閱 Plus 或 Max，想練什麼內容都可以。"</string>
+    <string name="the_sample_script_stays_free_to_practise_with_plus_or_max_pr_9a1a82">"範例講稿一直免費。訂閱後可以練習任何文本。"</string>
     <!-- "The scene's book brings its words and expressions back to you as cards." -->
     <string name="the_scene_s_book_brings_its_words_and_expressions_back_to_yo_bf4a1f">"情境的教材會把單字和用語做成卡片再讓你看。"</string>
     <!-- 'The script and your face together in one vertical video. Save it to Photos to share, or delete it.' -->
@@ -3725,7 +3723,7 @@
     <string name="write_it_the_way_you_d_say_it_now">"寫下你現在會怎麼說"</string>
     <string name="write_one_for_me">"幫我寫"</string>
     <string name="write_one_with_ai">"讓 AI 幫你寫講稿"</string>
-    <string name="write_scripts_on_any_topic_or_add_your_own_with_plus">"訂閱 Plus 就能請 AI 寫任何主題的講稿，也能加入自己的講稿。"</string>
+    <string name="write_scripts_on_any_topic_or_add_your_own_with_plus">"訂閱後可以就任何主題寫講稿，或加入自己的講稿。"</string>
     <!-- 'Write to us to see or correct what we hold about you, including the date you gave consent.' -->
     <string name="write_to_us_to_see_or_correct_what_we_hold_about_you_includi_0fbfc2">"想確認或修改我們保存的資料（包含同意日期），請來信告訴我們。"</string>
     <string name="write_with_ai">"用 AI 撰寫"</string>
