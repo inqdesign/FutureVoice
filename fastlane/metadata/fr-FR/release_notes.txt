@@ -1,12 +1,5 @@
 Nouveautés
-• Pose tes questions au tuteur. Touche le petit visage en bas à droite de l’onglet Parler pour ouvrir le chat : il parcourt tes conversations passées, tes cartes et ton carnet de vocabulaire pour répondre à tes questions sur ta pratique. Les boutons sous sa réponse t’emmènent directement au carnet ou au mot concerné.
-• Le tuteur choisit ton programme du jour : une chose à faire maintenant, une pour la suite, et le reste replié en dessous.
-• À venir : ajoute à ton Profil un entretien, un examen, une présentation, un déménagement ou un voyage, et le tuteur te prépare chaque jour. Joins l’offre d’emploi ou ton CV : il rédige les questions probables et une réponse modèle, puis te les fait travailler jusqu’à ce que tu les dises sans accroc.
-• Quand quelqu’un rejoint le Noyau (le club de 100 places pour celles et ceux qui parlent chaque jour), tu vois son cube et tu peux lui laisser un cœur ou un petit mot.
-• Dans un texte d’étude de Discours, appuie longuement sur un mot pour voir son sens. Les mots que tu as cherchés restent marqués.
+• Ta prononciation est maintenant écoutée son par son. En shadowing et dans Discours, ton enregistrement est comparé à la prononciation d’un locuteur natif, les mots qui ne sonnaient pas tout à fait juste sont soulignés, et le coach te dit quel son travailler.
 
 Corrections
-• En mode coach, « Essaie de dire » s’adapte maintenant à ton niveau, en longueur comme en contenu, et à la personne avec qui tu parles. Si tu actives le mode coach pendant un appel, il te propose aussitôt une réponse à la question déjà à l’écran.
-• Le point de grammaire n’apparaît plus que si la même faute revient pendant l’appel.
-• Ton niveau de vocabulaire se mesure désormais aux mots que tu emploies, et non à leur nombre. Il peut donc être différent d’avant.
-• Sur une carte de mot, les flèches haut et bas restent là quand tu touches « Je sais ».
+• Dans Redire, la conversation ne transparaît plus derrière la carte du script et ne se mélange plus à son texte.

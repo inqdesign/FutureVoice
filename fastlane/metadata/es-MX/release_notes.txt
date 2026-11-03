@@ -1,12 +1,5 @@
 Novedades
-• Ahora puedes hacerle preguntas al tutor. Toca la carita de abajo a la derecha en la pestaña Hablar y se abre un chat: revisa tus conversaciones anteriores, tus tarjetas y tu libreta de palabras para responder lo que quieras saber sobre tu práctica. Los botones debajo de cada respuesta te llevan directo a ese cuaderno o a esa palabra.
-• El tutor elige tu plan de hoy: una cosa para hacer ahora y otra para después. El resto queda guardado debajo.
-• Próximos objetivos: agrega a tu Perfil una entrevista, un examen, una presentación, una mudanza o un viaje, y el tutor te prepara para eso cada día. Adjunta la oferta de empleo o tu CV y te escribe las preguntas que seguramente te harán y una respuesta modelo. Después las practica contigo hasta que te salgan con soltura.
-• Cuando alguien nuevo entra en el Núcleo (el club de 100 asientos para quienes hablan todos los días), ves su cubo y puedes dejarle un corazón o un ánimo.
-• En un guion de estudio de Discurso, mantén presionada cualquier palabra para ver qué significa. Las palabras que buscaste quedan marcadas.
+• Ahora escuchamos tu pronunciación sonido por sonido. En shadowing y en Discurso, comparamos tu grabación con la pronunciación de un hablante nativo, subrayamos las palabras que no sonaron del todo bien y el coach te dice qué sonido practicar.
 
 Correcciones
-• En el Modo coach, «Prueba a decir» ahora se ajusta a tu nivel en longitud y contenido, y también a la persona con la que hablas. Si activas el modo coach durante una llamada, te sugiere al momento una respuesta a la pregunta que ya está en pantalla.
-• El punto de gramática solo aparece cuando el mismo error vuelve a salir en esa llamada.
-• Tu nivel de vocabulario ahora se mide por qué palabras usas, no por cuántas. Puede que lo veas distinto que antes.
-• En una tarjeta de palabra, las flechas de arriba y abajo siguen ahí después de tocar «Ya lo sé».
+• En Volver a decirlo, la conversación ya no se transparenta detrás de la tarjeta del guion ni se mezcla con el texto.
