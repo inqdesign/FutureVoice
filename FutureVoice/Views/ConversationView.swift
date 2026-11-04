@@ -5287,7 +5287,8 @@ struct ConversationView: View {
                 if now.isFinished { finishPronRound(now) }
                 tutorNudge(PronunciationNotes.passed(score: score,
                                                      next: now.current.map { now.lines[$0] },
-                                                     round: now))
+                                                     round: now,
+                                                     afterMisses: line.tries > 0))
             case .notSmooth(let score):
                 pronUnheard = 0
                 now.lines[i].tries += 1

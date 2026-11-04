@@ -897,8 +897,34 @@ enum PronunciationNotes {
         "Say ONLY this, in the call's language, at most \(words) words, nothing before or after it: \"\(example)\""
     }
 
-    static func passed(score: Int, next: PronunciationRound.Line?, round: PronunciationRound) -> String {
-        if next != nil { return "Result: PASSED. " + only("Yes! Next one.", max: 5) }
+    // A pass is said many times a call, and one fixed line ("Yes! Next
+    // one.") was heard on every one (founder, 2026-11-04). The reaction
+    // rotates, never the same twice in a row, and fits HOW it passed: right
+    // away, after misses, or cleanly. Still a few words: it is talk time.
+    nonisolated(unsafe) private static var lastReaction: String?
+
+    private static func reaction(_ pool: [String]) -> String {
+        let pick = pool.filter { $0 != lastReaction }.randomElement() ?? pool[0]
+        lastReaction = pick
+        return pick
+    }
+
+    static func passed(score: Int, next: PronunciationRound.Line?, round: PronunciationRound,
+                       afterMisses: Bool = false) -> String {
+        if next != nil {
+            let pool: [String]
+            if afterMisses {
+                pool = ["There it is! Next one.", "You got it! Next.", "That's the one! Next.",
+                        "Yes, much better! Next one.", "Nailed it this time. Next."]
+            } else if score >= 90 {
+                pool = ["Perfect! Next one.", "Spot on. Next.", "Beautiful! Next one.",
+                        "First try, perfect! Next.", "Wow, clean! Next one."]
+            } else {
+                pool = ["Yes! Next one.", "Good! Next.", "Nice, that works. Next.",
+                        "Well done! Next one.", "Great. On to the next."]
+            }
+            return "Result: PASSED. " + only(reaction(pool), max: 6)
+        }
         return "Result: PASSED — the last sentence of the round (\(round.passedCount) of \(round.sentenceCount) passed). In one or two short sentences: the round is done; another round of this sound, or a different one with the button on their screen?"
     }
 
@@ -936,7 +962,11 @@ enum PronunciationNotes {
     static let asInSentence = " Say it exactly the way it sounds inside the sentence on their screen (a reduced \"the\" stays \"thuh\" before a consonant), never a careful dictionary form."
 
     static func wordPassed(word: String) -> String {
-        "Result: PASSED. " + only("Yes! Now the whole sentence.", max: 6)
+        "Result: PASSED. " + only(reaction(["Yes! Now the whole sentence.",
+                                            "That's it! Now the sentence.",
+                                            "Good! Back to the whole sentence.",
+                                            "There it is. Now all of it.",
+                                            "Nice! Now read the sentence."]), max: 7)
     }
 
     /// Back to the sentence after the word's tries ran out: say what is
