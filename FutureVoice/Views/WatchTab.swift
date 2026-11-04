@@ -69,6 +69,11 @@ struct WatchTab: View {
     /// The person whose card floats over the map (a tap on them).
     @State private var skyCard: Counterpart?
     @State private var skyCardPaywall = false
+    /// Someone just bumped into (the walking figure), and the call with them.
+    @State private var encounter: ChanceEncounter?
+    @State private var encounterCall: ChanceEncounter?
+    @State private var encounterPaywall = false
+    @State private var encounterWall: TalkWall?
     /// Not enough talk time left for a scene (2026-10-19).
     @State private var skyCardWall: TalkWall?
     @StateObject private var previewPlayer = AudioPlayer()
@@ -342,6 +347,8 @@ struct WatchTab: View {
                                                  if let p = dockPerson { leaveBoxForCard(p) } else { afterKeyboard { creating = false } }
                                              } else if skyCard != nil {
                                                  skyCard = nil
+                                             } else if encounter != nil {
+                                                 encounter = nil
                                              } else {
                                                  openSkyCard(c)
                                              }
@@ -378,6 +385,8 @@ struct WatchTab: View {
                                 // The card is a step on top of the map: a tap on
                                 // the map puts it away.
                                 skyCard = nil
+                            } else if encounter != nil {
+                                encounter = nil
                             }
                         }
                         // The map fades into the page at the bottom instead of
@@ -461,6 +470,33 @@ struct WatchTab: View {
                         .padding(.horizontal, 12)
                         .padding(.bottom, 8)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
+                } else if !creating, let e = encounter {
+                    EncounterCard(encounter: e,
+                                  onClose: { encounter = nil },
+                                  onAnother: { bumpIntoSomeone() },
+                                  onWatch: {
+                                      BillingGate.startScene(orShow: $encounterPaywall, wall: $encounterWall) {
+                                          let p = savedFromCard(e.person)
+                                          let met = ChanceEncounter(person: p, moment: e.moment,
+                                                                    metBefore: e.metBefore)
+                                          let (s, isNew) = met.scenario(existing: appState.scenarios)
+                                          if isNew { appState.saveScenario(s) }
+                                          encounter = nil
+                                          watchScene = WatchTarget(scenario: s, fresh: !isNew)
+                                      }
+                                  },
+                                  onTalk: {
+                                      BillingGate.start(orShow: $encounterPaywall) {
+                                          let p = savedFromCard(e.person)
+                                          encounter = nil
+                                          encounterCall = ChanceEncounter(person: p, moment: e.moment,
+                                                                          metBefore: e.metBefore)
+                                      }
+                                  })
+                        .id(e.id)
+                        .padding(.horizontal, 12)
+                        .padding(.bottom, 8)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
                 } else if !creating {
                 Button {
                     if PeopleSky.dockEnabled {
@@ -484,7 +520,7 @@ struct WatchTab: View {
                 // in the faded bottom edge and showed at a third of its
                 // strength. Level with "New situation"; above the box while
                 // writing; out of the way of a person's card.
-                if skyAway, skyCard == nil {
+                if skyAway, skyCard == nil, encounter == nil {
                     Button { backToMeTick += 1 } label: {
                         // Same size as "New situation" beside it: the glass
                         // button already pads its content, so a 48-pt frame
@@ -500,6 +536,30 @@ struct WatchTab: View {
                     .padding(.bottom, PeopleSky.dockEnabled && creating ? 216 : 16)
                     .transition(.opacity)
                 }
+            }
+            .overlay(alignment: .bottomLeading) {
+                // Bumping into someone: on the "New situation" row, at its
+                // left, a glyph alone (founder: no label).
+                if !creating, skyCard == nil, encounter == nil, PeopleSky.dockEnabled {
+                    Button { bumpIntoSomeone() } label: {
+                        Image(systemName: "figure.2.arms.open")
+                            .font(.body.weight(.semibold))
+                            .padding(4)
+                    }
+                    .modifier(GlassFloatingButton())
+                    .accessibilityLabel(Text(explain(key: "watch.bump", default: "Bump into someone")))
+                    .padding(.leading, 16)
+                    .padding(.bottom, 16)
+                    .transition(.opacity)
+                }
+            }
+            .animation(.smooth(duration: 0.3), value: encounter?.id)
+            .sheet(isPresented: $encounterPaywall) { PaywallView(source: "watch_encounter") }
+            .talkWall($encounterWall, source: "watch_encounter_scene_short")
+            .fullScreenCover(item: $encounterCall) { e in
+                ConversationView(initialTopic: e.moment.place, initialBlurb: e.blurb,
+                                 initialCounterpart: e.person, entry: .watchEncounter)
+                    .environmentObject(appState)
             }
             .animation(.smooth(duration: 0.3), value: skyAway)
             .animation(.smooth(duration: 0.3), value: skyCard?.id)
@@ -577,7 +637,9 @@ struct WatchTab: View {
             appState.counterparts.first { $0.id.uuidString == id } ?? skyPool.first { $0.id.uuidString == id }
         }
         skyCentred = person
-        guard let person else { return }
+        // Bumped into: the place on the card is what's happening, and their
+        // saved hello ("are you a parent here too?") would contradict it.
+        guard let person, encounter == nil else { return }
         bubbleTask = Task {
             try? await Task.sleep(for: .milliseconds(450))
             guard !Task.isCancelled else { return }
@@ -594,6 +656,31 @@ struct WatchTab: View {
         let id = c.id.uuidString
         DispatchQueue.main.async { skyScrollTarget = id }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) { centre(on: id, force: true) }
+    }
+
+    /// The walking figure: deal someone to bump into. A stranger from the
+    /// pool comes to the middle of the map and says their hello, the way a
+    /// person turns around; a role (barista, neighbour) is a built-in
+    /// character, who isn't on the map.
+    private func bumpIntoSomeone() {
+        let strangers = (skyPool.isEmpty
+            ? appState.counterparts.filter { $0.remoteId != nil }
+            : skyPool)
+            .filter { $0.cast == .stranger && !($0.remoteId ?? "").hasPrefix("builtin:") }
+        let met = Set(talksByPerson.filter { $0.value > 0 }.map(\.key))
+        guard let next = ChanceEncounter.deal(strangers: strangers,
+                                              counterparts: appState.counterparts,
+                                              metIds: met, avoiding: encounter) else { return }
+        encounter = next
+        let id = next.person.id.uuidString
+        if skyNodes.contains(where: { $0.id == id }) {
+            panningUntil = Date().addingTimeInterval(0.7)
+            skyScrollTarget = nil
+            DispatchQueue.main.async { skyScrollTarget = id }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) { centre(on: id, force: true) }
+        } else {
+            centre(on: nil, force: true)
+        }
     }
 
     /// Out of the box and back to a person's card, in one motion — the step
@@ -799,6 +886,10 @@ struct WatchTab: View {
         DispatchQueue.main.async { skyReady = true }
         #if DEBUG
         // `-skyCard 1` captures a person's floating card.
+        // `-bumpDemo 1` captures someone just bumped into.
+        if UserDefaults.standard.bool(forKey: "bumpDemo"), encounter == nil {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { bumpIntoSomeone() }
+        }
         if UserDefaults.standard.bool(forKey: "skyCard"), skyCard == nil,
            let first = appState.counterparts.first(where: { $0.remoteId == nil }) {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { openSkyCard(first) }
@@ -1655,5 +1746,90 @@ struct SkyPersonCard: View {
             Text(title).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
             content()
         }
+    }
+}
+
+/// Someone just bumped into: who, and where. Talk starts the call with them
+/// there; "Someone else" deals again. It goes like the person card — pulled
+/// down, or a tap on the map.
+struct EncounterCard: View {
+    let encounter: ChanceEncounter
+    let onClose: () -> Void
+    let onAnother: () -> Void
+    let onWatch: () -> Void
+    let onTalk: () -> Void
+
+    @State private var pull: CGFloat = 0
+    private let dismissPull: CGFloat = 90
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Capsule()
+                .fill(Color(.tertiaryLabel))
+                .frame(width: 36, height: 5)
+                .frame(maxWidth: .infinity)
+                .padding(.top, -6)
+            HStack(alignment: .center, spacing: 12) {
+                PersonBubble(name: encounter.person.name, photoId: encounter.person.id, size: 44)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(encounter.person.name).font(.headline)
+                    let cap = PartnerPickerSheet.caption(for: encounter.person)
+                    if !cap.isEmpty {
+                        Text(cap).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            Text(encounter.moment.place)
+                .font(.title3.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+            // A situation first (founder): Watch is the button; a call with
+            // them there and dealing again are its glyphs beside it, the
+            // person card's row.
+            HStack(spacing: 10) {
+                Button(action: onWatch) {
+                    Label("Watch", systemImage: "play.fill")
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                        .frame(maxWidth: .infinity)
+                }
+                .accentProminent()
+                .labelStyle(.titleAndIcon)
+                Button(action: onTalk) {
+                    Image(systemName: "phone.fill")
+                        .frame(width: 30)
+                }
+                .buttonStyle(.bordered)
+                .accessibilityLabel(Text("Talk"))
+                Button(action: onAnother) {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .frame(width: 30)
+                }
+                .buttonStyle(.bordered)
+                .accessibilityLabel(Text(explain(key: "encounter.another", default: "Someone else")))
+            }
+            .font(.body.weight(.semibold))
+            .controlSize(.large)
+            SceneCostNote()
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, 18)
+        .padding(.top, 14)
+        .padding(.bottom, 16)
+        .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 34, style: .continuous))
+        .shadow(color: .black.opacity(0.08), radius: 24, y: 2)
+        .offset(y: pull)
+        .accessibilityAction(.escape, onClose)
+        .gesture(
+            DragGesture(minimumDistance: 8)
+                .onChanged { v in pull = max(0, v.translation.height) }
+                .onEnded { v in
+                    if v.translation.height > dismissPull || v.predictedEndTranslation.height > dismissPull * 2 {
+                        onClose()
+                    } else {
+                        withAnimation(.smooth(duration: 0.25)) { pull = 0 }
+                    }
+                }
+        )
     }
 }

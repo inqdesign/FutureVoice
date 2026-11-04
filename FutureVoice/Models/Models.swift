@@ -151,6 +151,8 @@ enum TalkEntry: String {
     /// The empty Review page's "Start a talk".
     case practiceEmpty = "practice_empty"
     case watchPerson = "watch_person"
+    /// Watch's walking figure: someone bumped into (`ChanceEncounter`).
+    case watchEncounter = "watch_encounter"
     /// "Your turn" on the news of a new Core member.
     case coreNews = "core_news"
     case resume

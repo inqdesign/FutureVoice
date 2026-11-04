@@ -290,6 +290,13 @@ struct ConversationView: View {
         } else if self.forceTutor {
             _tutorThisCall = State(initialValue: true)
             _tutorWasOn = State(initialValue: true)
+        } else if (resumeSession?.counterpartId ?? initialCounterpart?.id) != nil {
+            // A call WITH someone (a person on the map, a stranger, someone
+            // bumped into) is that person talking, never the tutor: tutor
+            // mode is the fluent self's (2026-11-04, founder — a call with a
+            // stranger came up as a lesson). Turning it on mid-call still works.
+            _tutorThisCall = State(initialValue: false)
+            _tutorWasOn = State(initialValue: false)
         }
         self.entry = resumeSession != nil ? .resume : entry
         if let s = resumeSession {
@@ -3481,7 +3488,7 @@ struct ConversationView: View {
     private func resumeAfterFirstCallSetup() {
         // Tutor mode decides the opener, read right after this resumes; take
         // the sheet's answer here rather than trust `onChange` to have run.
-        tutorThisCall = (TutorMode.isOn || forceTutor) && !pronThisCall
+        tutorThisCall = ((TutorMode.isOn && sessionCounterpartId == nil) || forceTutor) && !pronThisCall
         if tutorThisCall { tutorWasOn = true }
         firstCallSetupContinuation?.resume()
         firstCallSetupContinuation = nil
@@ -4997,7 +5004,7 @@ struct ConversationView: View {
         sessionStartedAt = Date()
         turns = []
         pinPromptClock()
-        tutorThisCall = (TutorMode.isOn || forceTutor) && !pronThisCall
+        tutorThisCall = ((TutorMode.isOn && sessionCounterpartId == nil) || forceTutor) && !pronThisCall
         tutorWasOn = tutorThisCall
         tutorCheckTurnIds = []
         learnerSpokeThisCall = false
