@@ -1129,11 +1129,11 @@ private fun FinishedPanel(
                 Icon(Icons.Filled.Refresh, contentDescription = null,
                     modifier = Modifier.size(18.dp).graphicsLayer { scaleX = -1f })
                 Spacer(Modifier.width(6.dp))
-                Text(stringResource(R.string.run_again), maxLines = 1)
+                com.roro.futurevoice.ui.brand.FitButtonLabel(stringResource(R.string.run_again), androidx.compose.material3.LocalTextStyle.current)
             }
             Button(onClick = onDone, modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(vertical = 12.dp)) {
-                Text(stringResource(R.string.done))
+                com.roro.futurevoice.ui.brand.FitButtonLabel(stringResource(R.string.done), androidx.compose.material3.LocalTextStyle.current)
             }
         }
     }

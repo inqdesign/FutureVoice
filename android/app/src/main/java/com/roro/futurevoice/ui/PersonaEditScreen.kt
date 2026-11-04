@@ -142,7 +142,7 @@ fun PersonaEditScreen(
                 if (step > 0) {
                     OutlinedButton(onClick = { step -= 1 }, modifier = Modifier.weight(1f)) {
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = null)
-                        Text(stringResource(R.string.back))
+                        com.roro.futurevoice.ui.brand.FitButtonLabel(stringResource(R.string.back), androidx.compose.material3.LocalTextStyle.current)
                     }
                 }
                 Button(
@@ -152,7 +152,7 @@ fun PersonaEditScreen(
                         if (step < 2) step += 1 else onClose()
                     },
                     modifier = Modifier.weight(1f),
-                ) { Text(stringResource(if (step < 2) R.string.next else R.string.save)) }
+                ) { com.roro.futurevoice.ui.brand.FitButtonLabel(stringResource(if (step < 2) R.string.next else R.string.save), androidx.compose.material3.LocalTextStyle.current) }
             }
         },
     ) { padding ->

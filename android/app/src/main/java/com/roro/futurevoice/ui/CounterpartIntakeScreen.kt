@@ -439,8 +439,9 @@ internal fun IntakeBottomBar(
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = null,
                     tint = if (!working) accent else faded, modifier = Modifier.size(24.dp))
                 Spacer(Modifier.width(2.dp))
-                Text(stringResource(R.string.back), style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium, color = if (!working) accent else faded)
+                com.roro.futurevoice.ui.brand.FitButtonLabel(stringResource(R.string.back),
+                    MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                    color = if (!working) accent else faded)
             }
         }
         val on = nextEnabled && !working
@@ -453,7 +454,7 @@ internal fun IntakeBottomBar(
                 Text(stringResource(R.string.sorting_it_out), style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium, color = faded)
             } else {
-                Text(nextTitle, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium,
+                com.roro.futurevoice.ui.brand.FitButtonLabel(nextTitle, MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                     color = if (on) MaterialTheme.colorScheme.surface else faded)
             }
         }

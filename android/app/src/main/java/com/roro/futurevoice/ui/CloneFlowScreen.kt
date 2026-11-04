@@ -1462,7 +1462,7 @@ fun CloneFlowScreen(
                     // step that gates its Next becomes a wall.
                     Button(onClick = onNext, enabled = nextEnabled, modifier = Modifier.weight(1f)) {
                         nextIcon?.let { Icon(it, null, Modifier.size(18.dp)); Spacer(Modifier.size(6.dp)) }
-                        Text(next, maxLines = 1)
+                        com.roro.futurevoice.ui.brand.FitButtonLabel(next, androidx.compose.material3.LocalTextStyle.current)
                     }
                 }
             }

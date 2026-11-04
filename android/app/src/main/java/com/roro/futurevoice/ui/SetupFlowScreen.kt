@@ -240,7 +240,7 @@ private fun SetupFlowBody(
                     colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.14f),
                         contentColor = MaterialTheme.colorScheme.onSurface),
-                ) { Text(stringResource(R.string.back)) }
+                ) { com.roro.futurevoice.ui.brand.FitButtonLabel(stringResource(R.string.back), androidx.compose.material3.LocalTextStyle.current) }
                 Button(
                     onClick = {
                         if (step < steps.size - 1) {
@@ -252,10 +252,10 @@ private fun SetupFlowBody(
                         else finish()
                     },
                     modifier = Modifier.weight(1f),
-                ) { Text(stringResource(when {
+                ) { com.roro.futurevoice.ui.brand.FitButtonLabel(stringResource(when {
                     step < steps.size - 1 -> R.string.next
                     else -> R.string.continue_
-                })) }
+                }), androidx.compose.material3.LocalTextStyle.current) }
             }
         },
     ) { padding ->

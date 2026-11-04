@@ -11,7 +11,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -799,10 +801,11 @@ private val SceneBarPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
 @Composable
 private fun ControlLabel(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String) {
     Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
-    // Wraps like iOS's `Label` in a `.bordered` button rather than clipping:
-    // one line clipped "Empezar de nuevo" (es) to "Empezar de".
-    Text("  $label", maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+    Spacer(Modifier.width(8.dp))
+    // One line that shrinks, never two (iOS `buttonRowFitsOneLine`): two
+    // lines made "교재로 공부하기" a tall pill beside a one-line one, and one
+    // clipped line cut "Empezar de nuevo" (es) to "Empezar de".
+    com.roro.futurevoice.ui.brand.FitButtonLabel(label, androidx.compose.material3.LocalTextStyle.current)
 }
 
 /** One line's offer: a glyph and a word, in the accent — never a button, or

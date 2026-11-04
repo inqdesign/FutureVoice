@@ -659,10 +659,10 @@ private fun ConfirmContent(callBlocked: Boolean, working: Boolean, onBack: () ->
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             com.roro.futurevoice.ui.brand.IosTonalButton(onClick = onBack, enabled = !working,
                 modifier = Modifier.width(120.dp)) {
-                Text(stringResource(R.string.back), maxLines = 1)
+                com.roro.futurevoice.ui.brand.FitButtonLabel(stringResource(R.string.back), androidx.compose.material3.LocalTextStyle.current)
             }
             Button(onClick = onKeep, enabled = !working, modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.routine_keep_it_like_this))
+                com.roro.futurevoice.ui.brand.FitButtonLabel(stringResource(R.string.routine_keep_it_like_this), androidx.compose.material3.LocalTextStyle.current)
             }
         }
     }

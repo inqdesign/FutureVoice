@@ -645,7 +645,7 @@ internal fun FindPersonCard(
                     ) {
                         Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.size(8.dp))
-                        Text(stringResource(R.string.watch))
+                        com.roro.futurevoice.ui.brand.FitButtonLabel(stringResource(R.string.watch), androidx.compose.material3.LocalTextStyle.current)
                     }
                     com.roro.futurevoice.ui.brand.IosTonalButton(
                         onClick = {
@@ -656,7 +656,7 @@ internal fun FindPersonCard(
                     ) {
                         Icon(Icons.Filled.Phone, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.size(8.dp))
-                        Text(stringResource(R.string.talk))
+                        com.roro.futurevoice.ui.brand.FitButtonLabel(stringResource(R.string.talk), androidx.compose.material3.LocalTextStyle.current)
                     }
                 }
                 // What Watch spends, under the button that spends it.

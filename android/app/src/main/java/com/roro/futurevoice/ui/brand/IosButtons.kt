@@ -91,8 +91,8 @@ fun IosOutlinedButton(
  */
 @Composable
 fun FitButtonLabel(text: String, style: androidx.compose.ui.text.TextStyle =
-    androidx.compose.material3.MaterialTheme.typography.bodyLarge) {
-    val color = androidx.compose.material3.LocalContentColor.current
+    androidx.compose.material3.MaterialTheme.typography.bodyLarge,
+    color: androidx.compose.ui.graphics.Color = androidx.compose.material3.LocalContentColor.current) {
     androidx.compose.foundation.text.BasicText(
         text, maxLines = 1, softWrap = false,
         style = style.merge(androidx.compose.ui.text.TextStyle(color = color)),

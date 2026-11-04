@@ -485,7 +485,7 @@ internal fun ScriptVoiceoverSection(script: SpeechScript, voiceId: String) {
 private fun VoiceoverLabel(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String) {
     Icon(icon, null, modifier = Modifier.size(18.dp))
     Spacer(Modifier.width(6.dp))
-    Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    com.roro.futurevoice.ui.brand.FitButtonLabel(label, androidx.compose.material3.LocalTextStyle.current)
 }
 
 @Composable
