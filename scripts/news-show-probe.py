@@ -41,13 +41,16 @@ LEVEL = os.environ.get("LEVEL", "B1")
 OUT = os.environ.get("OUT_DIR", os.path.expanduser(f"~/Desktop/beta audio/news-show-{TODAY}"))
 MODEL = "gemini-3.6-flash"
 
-# Two hosts per language: the female and male US/German preset slots
+# Two hosts per language. English: the female and male US preset slots
 # (`VoicePreset.voicedBySlot`), so the show sounds like the app's people.
+# German: Lena + Klaus since 2026-11-04 (founder, by ear). The German male
+# preset Jonas is muffled (99% of energy under 1.5 kHz) and Lea moved with him.
+# The hosts keep their names: only the voices changed.
 HOSTS = {
     "en": [("Layla", "999df508-4de5-40a7-8bd3-8c12f678c284"),
            ("Kyle", "c961b81c-a935-4c17-bfb3-ba2239de8c2f")],
-    "de": [("Lea", "1ade29fc-6b82-4607-9e70-361720139b12"),
-           ("Jonas", "dff81230-ff75-49a4-af44-f6b2f43500d8")],
+    "de": [("Lea", "4ab1ff51-476d-42bb-8019-4d315f7c0c05"),
+           ("Jonas", "24c61c42-b538-468e-a9ad-16c7a032c9cb")],
 }
 REGION = {"en": "the US and the UK", "de": "Germany, Austria and Switzerland"}
 LANG_NAME = {"en": "English", "de": "German"}
