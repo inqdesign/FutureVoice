@@ -531,12 +531,14 @@ struct TutorChatView: View {
                              trailingControls: AnyView(sendButton))
                 // The Watch situation box's own card (24 pt, continuous):
                 // the field's built-in 12 pt card read as a different
-                // component. The fill stays grey because this chat sits on
-                // systemBackground, where the grouped white would vanish.
+                // component. The fill is grey on the sheet's systemBackground,
+                // where the grouped white would vanish, and the grouped card
+                // white in the Mac's Talk column, whose ground is that grey.
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 6)
                 .background(RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(Color(.secondarySystemBackground)))
+                    .fill(inColumn ? Color(.secondarySystemGroupedBackground)
+                                   : Color(.secondarySystemBackground)))
                 .padding(.horizontal, 12)
                 .padding(.bottom, 8)
         }
