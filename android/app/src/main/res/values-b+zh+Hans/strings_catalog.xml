@@ -3083,6 +3083,7 @@
     <string name="the_reusable_phrases_this_talk_produced_the_ones_your_fluent_1940be">"这通电话里出现、以后还能再用的用语。有流利的自己用过的，也有你自己说的。点击打开卡片：意思、例句，还有它是在哪里出现的。"</string>
     <string name="the_right_way">"正确说法"</string>
     <string name="the_ring_is_today_s_goal">"圆环是今天的目标"</string>
+    <string name="the_role_questions_you_expect_what_worries_you">"应聘的职位、可能被问的问题、担心的地方…"</string>
     <string name="the_role_the_score_you_need_who_will_be_there">"应聘的职位、需要的分数、有谁在场…"</string>
     <string name="the_same_fix_kept_coming_back_one_more_look_and_it_s_yours">"同一个地方一直在被纠正。再看一眼，就是你的了。"</string>
     <!-- 'The same plan comes back every week. Leave a day empty to rest.' -->
@@ -3098,6 +3099,7 @@
     <!-- "The scene's book brings its words and expressions back to you as cards." -->
     <string name="the_scene_s_book_brings_its_words_and_expressions_back_to_yo_bf4a1f">"情境的教材会把其中的单词和用语以卡片形式再次呈现。"</string>
     <!-- 'The script and your face together in one vertical video. Save it to Photos to share, or delete it.' -->
+    <string name="the_score_you_need_your_weakest_part_the_format">"目标分数、最难的部分、考试形式…"</string>
     <string name="the_script_and_your_face_together_in_one_vertical_video_save_41e503">"讲稿和你的脸会放在同一个竖屏视频里。可以保存到“照片”应用分享出去，也可以删除。"</string>
     <string name="the_script_couldn_t_be_written_try_again">"无法生成讲稿。请再试一次。"</string>
     <string name="the_script_follows_your_voice">"文字跟着你走"</string>
@@ -3114,6 +3116,7 @@
     <!-- 'The three buttons in the header are about the whole week, not just today.' -->
     <string name="the_three_buttons_in_the_header_are_about_the_whole_week_not_651e49">"顶部的三个按钮关于整周，而不只是今天。"</string>
     <string name="the_top_score_of_lld_people">"%d 人中的最高分"</string>
+    <string name="the_topic_how_long_you_speak_questions_after">"主题、讲多久、讲完会被问什么…"</string>
     <string name="the_trial_s_scenes_are_used_up">"试用的情境练习都看完了。"</string>
     <string name="the_trial_s_talk_time_is_used_up">"试用的通话时间用完了。"</string>
     <string name="the_tutor_will_keep_it_at_your_level">"家教会按你的水平来。"</string>
@@ -3508,6 +3511,7 @@
     <string name="what_i_noticed_lately">"最近注意到的"</string>
     <string name="what_is_it">"类型"</string>
     <string name="what_it_is">"这是什么"</string>
+    <string name="what_it_is_who_s_involved_what_worries_you">"是什么事、有谁在场、担心的地方…"</string>
     <string name="what_never_moves_the_level">"不会影响水平的"</string>
     <string name="what_s_going_on_in_their_life">"他最近生活有什么事？"</string>
     <string name="what_s_into">"%s喜欢什么？"</string>
@@ -3546,6 +3550,7 @@
     <string name="what_this_is_about">"这是关于什么"</string>
     <string name="what_to_have_ready">"我这边要准备的"</string>
     <string name="what_to_practice">"待练习"</string>
+    <string name="what_to_sort_out_there_a_flat_the_bank_a_visa">"到那边要办的事：找房子、银行、签证…"</string>
     <string name="what_uses_talk_time">"通话时间用在哪里？"</string>
     <string name="what_was_said">"说的是"</string>
     <string name="what_you_call_them">"你怎么称呼对方"</string>
@@ -3558,6 +3563,7 @@
     <!-- 'What you keep getting wrong comes back every day,\nand you say it until it sticks.' -->
     <string name="what_you_keep_getting_wrong_comes_back_every_day_and_you_say_38c34e">"常出错的地方，每天再练一遍，\n练到张口就来。"</string>
     <string name="what_you_learn_today_is_gone_in_a_few_days">"今天学的，几天后就忘了"</string>
+    <string name="what_you_ll_do_there_who_you_ll_meet">"到那边想做什么、要见谁…"</string>
     <string name="what_you_pick_becomes_your_goal_practice_aims_at_it">"这里选的会成为你的目标，练习也会朝着它走。"</string>
     <!-- "What you say depends on who you say it to. Asking for a day off is a different conversation with your boss than with a coworker, and a generic stranger can't show you that difference. With a specific person, every scene sounds like the real thing." -->
     <string name="what_you_say_depends_on_who_you_say_it_to_asking_for_a_day_o_63228d">"说什么取决于对谁说。向上司请假和向同事请假是完全不同的对话，随便一个陌生人没法让你练出这种差别。有了具体的人，每个情境都像真的一样。"</string>

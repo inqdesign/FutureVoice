@@ -3083,6 +3083,7 @@
     <string name="the_reusable_phrases_this_talk_produced_the_ones_your_fluent_1940be">"この通話で出てきた、また使えそうな表現です。流暢な自分が使った言葉と、自分で使った言葉。タップすると、意味と例文、どこで出てきたかがわかるカードが開きます。"</string>
     <string name="the_right_way">"正しくは"</string>
     <string name="the_ring_is_today_s_goal">"リングは今日の目標"</string>
+    <string name="the_role_questions_you_expect_what_worries_you">"応募する職種、聞かれそうなこと、不安なところ…"</string>
     <string name="the_role_the_score_you_need_who_will_be_there">"応募する職種、必要なスコア、当日いる人…"</string>
     <string name="the_same_fix_kept_coming_back_one_more_look_and_it_s_yours">"同じところを何度も直されました。あと一度見れば、自分のものです。"</string>
     <!-- 'The same plan comes back every week. Leave a day empty to rest.' -->
@@ -3098,6 +3099,7 @@
     <!-- "The scene's book brings its words and expressions back to you as cards." -->
     <string name="the_scene_s_book_brings_its_words_and_expressions_back_to_yo_bf4a1f">"シーンの教材が、単語と表現をカードでもう一度出してくれます。"</string>
     <!-- 'The script and your face together in one vertical video. Save it to Photos to share, or delete it.' -->
+    <string name="the_score_you_need_your_weakest_part_the_format">"目標スコア、苦手なパート、試験の形式…"</string>
     <string name="the_script_and_your_face_together_in_one_vertical_video_save_41e503">"原稿と顔がひとつの画面に収まった縦長の動画ができます。「写真」アプリに保存してシェアすることも、削除することもできます。"</string>
     <string name="the_script_couldn_t_be_written_try_again">"原稿を作成できませんでした。もう一度お試しください。"</string>
     <string name="the_script_follows_your_voice">"読むのに合わせて原稿が進む"</string>
@@ -3114,6 +3116,7 @@
     <!-- 'The three buttons in the header are about the whole week, not just today.' -->
     <string name="the_three_buttons_in_the_header_are_about_the_whole_week_not_651e49">"上の3つのボタンは、今日だけでなく1週間全体に関するものです。"</string>
     <string name="the_top_score_of_lld_people">"%d人の中でいちばん高い点数です"</string>
+    <string name="the_topic_how_long_you_speak_questions_after">"テーマ、持ち時間、終わったあとの質疑…"</string>
     <string name="the_trial_s_scenes_are_used_up">"トライアルのシーン練習は使い切りました。"</string>
     <string name="the_trial_s_talk_time_is_used_up">"トライアルの通話時間は使い切りました。"</string>
     <string name="the_tutor_will_keep_it_at_your_level">"チューターが今のレベルに合わせて進めます。"</string>
@@ -3508,6 +3511,7 @@
     <string name="what_i_noticed_lately">"最近気づいたこと"</string>
     <string name="what_is_it">"種類"</string>
     <string name="what_it_is">"どんな機能？"</string>
+    <string name="what_it_is_who_s_involved_what_worries_you">"どんなことか、誰がいるか、不安なところ…"</string>
     <string name="what_never_moves_the_level">"レベルを動かさないもの"</string>
     <string name="what_s_going_on_in_their_life">"最近どんな様子？"</string>
     <string name="what_s_into">"%sの好きなことは？"</string>
@@ -3546,6 +3550,7 @@
     <string name="what_this_is_about">"何についてか"</string>
     <string name="what_to_have_ready">"自分が用意しておくこと"</string>
     <string name="what_to_practice">"練習するもの"</string>
+    <string name="what_to_sort_out_there_a_flat_the_bank_a_visa">"向こうでやること：部屋探し、銀行、ビザ…"</string>
     <string name="what_uses_talk_time">"通話時間は何に使われますか？"</string>
     <string name="what_was_said">"言われた文"</string>
     <string name="what_you_call_them">"相手の呼び方"</string>
@@ -3558,6 +3563,7 @@
     <!-- 'What you keep getting wrong comes back every day,\nand you say it until it sticks.' -->
     <string name="what_you_keep_getting_wrong_comes_back_every_day_and_you_say_38c34e">"よく間違えるところは毎日もう一度。\n口が覚えるまで言ってみよう。"</string>
     <string name="what_you_learn_today_is_gone_in_a_few_days">"今日覚えたことは、数日で忘れてしまう"</string>
+    <string name="what_you_ll_do_there_who_you_ll_meet">"向こうでしたいこと、会う人…"</string>
     <string name="what_you_pick_becomes_your_goal_practice_aims_at_it">"ここで選んだものが目標になり、練習もそれに合わせます。"</string>
     <!-- "What you say depends on who you say it to. Asking for a day off is a different conversation with your boss than with a coworker, and a generic stranger can't show you that difference. With a specific person, every scene sounds like the real thing." -->
     <string name="what_you_say_depends_on_who_you_say_it_to_asking_for_a_day_o_63228d">"同じことでも、誰に言うかで変わります。休みの相談も、上司と同僚とではまったく違う会話です。誰でもない相手では、その違いは練習できません。具体的な人がいれば、その人とのシーンが本物のように聞こえます。"</string>

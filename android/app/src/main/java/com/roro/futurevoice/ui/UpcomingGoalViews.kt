@@ -343,7 +343,7 @@ fun UpcomingGoalEditor(goal: UpcomingGoal?, language: String, onDismiss: () -> U
         FormSection(stringResource(R.string.notes),
             footer = stringResource(R.string.your_tutor_prepares_you_for_this_the_more_it_knows_the_close_b3fbe1)) {
             FormTextRow(draft.notes, { draft = draft.copy(notes = it) },
-                stringResource(R.string.the_role_the_score_you_need_who_will_be_there), minLines = 3, maxLines = 8)
+                stringResource(draft.kind.notesPrompt), minLines = 3, maxLines = 8)
         }
         FormSection(stringResource(R.string.material),
             footer = stringResource(R.string.read_once_when_you_save_files_stay_where_they_are_on_your_ph_cbc3e0)) {

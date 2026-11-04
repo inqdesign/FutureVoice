@@ -3079,6 +3079,7 @@
     <string name="the_reusable_phrases_this_talk_produced_the_ones_your_fluent_1940be">"Die wiederverwendbaren Wendungen aus diesem Gespräch: die, zu denen dein fließendes Ich gegriffen hat, und die, die du selbst gesagt hast. Tippe für die Karte mit Bedeutung, Beispielen und wo sie vorkam."</string>
     <string name="the_right_way">"So ist es richtig"</string>
     <string name="the_ring_is_today_s_goal">"Der Ring ist dein Tagesziel"</string>
+    <string name="the_role_questions_you_expect_what_worries_you">"Die Stelle, Fragen, mit denen du rechnest, was dich nervös macht…"</string>
     <string name="the_role_the_score_you_need_who_will_be_there">"Die Stelle, die nötige Punktzahl, wer dabei ist…"</string>
     <string name="the_same_fix_kept_coming_back_one_more_look_and_it_s_yours">"Dieselbe Korrektur kam immer wieder. Noch ein Blick, dann sitzt sie."</string>
     <!-- 'The same plan comes back every week. Leave a day empty to rest.' -->
@@ -3094,6 +3095,7 @@
     <!-- "The scene's book brings its words and expressions back to you as cards." -->
     <string name="the_scene_s_book_brings_its_words_and_expressions_back_to_yo_bf4a1f">"Das Buch der Szene bringt dir ihre Wörter und Wendungen als Karten zurück."</string>
     <!-- 'The script and your face together in one vertical video. Save it to Photos to share, or delete it.' -->
+    <string name="the_score_you_need_your_weakest_part_the_format">"Die Punktzahl, die du brauchst, dein schwächster Teil, das Format…"</string>
     <string name="the_script_and_your_face_together_in_one_vertical_video_save_41e503">"Du bekommst ein Hochformat-Video mit Skript und Gesicht auf einem Bild. Speichere es in der Fotos-App zum Teilen oder lösch es."</string>
     <string name="the_script_couldn_t_be_written_try_again">"Das Skript konnte nicht geschrieben werden. Versuch es noch mal."</string>
     <string name="the_script_follows_your_voice">"Der Text liest mit"</string>
@@ -3110,6 +3112,7 @@
     <!-- 'The three buttons in the header are about the whole week, not just today.' -->
     <string name="the_three_buttons_in_the_header_are_about_the_whole_week_not_651e49">"Die drei Buttons oben betreffen die ganze Woche, nicht nur heute."</string>
     <string name="the_top_score_of_lld_people">"Die beste Punktzahl von %d Leuten"</string>
+    <string name="the_topic_how_long_you_speak_questions_after">"Das Thema, wie lange du sprichst, Fragen danach…"</string>
     <string name="the_trial_s_scenes_are_used_up">"Die Szenen der Testphase sind aufgebraucht."</string>
     <string name="the_trial_s_talk_time_is_used_up">"Die Sprechzeit der Testphase ist aufgebraucht."</string>
     <string name="the_tutor_will_keep_it_at_your_level">"Der Tutor bleibt auf deinem Niveau."</string>
@@ -3504,6 +3507,7 @@
     <string name="what_i_noticed_lately">"Was mir zuletzt aufgefallen ist"</string>
     <string name="what_is_it">"Art"</string>
     <string name="what_it_is">"Was es ist"</string>
+    <string name="what_it_is_who_s_involved_what_worries_you">"Worum es geht, wer dabei ist, was dich nervös macht…"</string>
     <string name="what_never_moves_the_level">"Was das Niveau nie bewegt"</string>
     <string name="what_s_going_on_in_their_life">"Was ist bei der Person gerade los?"</string>
     <string name="what_s_into">"Wofür begeistert sich %s?"</string>
@@ -3542,6 +3546,7 @@
     <string name="what_this_is_about">"Worum es geht"</string>
     <string name="what_to_have_ready">"Was du bereithalten solltest"</string>
     <string name="what_to_practice">"Was du üben solltest"</string>
+    <string name="what_to_sort_out_there_a_flat_the_bank_a_visa">"Was dort zu erledigen ist: Wohnung, Bank, Visum…"</string>
     <string name="what_uses_talk_time">"Was verbraucht Sprechzeit?"</string>
     <string name="what_was_said">"Was gesagt wurde"</string>
     <string name="what_you_call_them">"Wie du die Person nennst"</string>
@@ -3554,6 +3559,7 @@
     <!-- 'What you keep getting wrong comes back every day,\nand you say it until it sticks.' -->
     <string name="what_you_keep_getting_wrong_comes_back_every_day_and_you_say_38c34e">"Was dir oft danebengeht, kommt täglich wieder,\nbis es von allein sitzt."</string>
     <string name="what_you_learn_today_is_gone_in_a_few_days">"Was du heute lernst, ist in ein paar Tagen weg"</string>
+    <string name="what_you_ll_do_there_who_you_ll_meet">"Was du dort vorhast, wen du triffst…"</string>
     <string name="what_you_pick_becomes_your_goal_practice_aims_at_it">"Was du hier wählst, wird dein Ziel — das Üben richtet sich danach."</string>
     <!-- "What you say depends on who you say it to. Asking for a day off is a different conversation with your boss than with a coworker, and a generic stranger can't show you that difference. With a specific person, every scene sounds like the real thing." -->
     <string name="what_you_say_depends_on_who_you_say_it_to_asking_for_a_day_o_63228d">"Was du sagst, hängt davon ab, mit wem du sprichst. Um einen freien Tag bittest du deine Chefin anders als einen Kollegen, und eine beliebige fremde Person kann dir diesen Unterschied nicht zeigen. Mit einer bestimmten Person klingt jede Szene wie echt."</string>

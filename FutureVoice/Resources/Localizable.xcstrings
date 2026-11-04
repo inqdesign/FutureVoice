@@ -138847,6 +138847,282 @@
         }
       }
     },
+    "The role, questions you expect, what worries you…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Stelle, Fragen, mit denen du rechnest, was dich nervös macht…"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El puesto, las preguntas que esperas, lo que te preocupa…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le poste, les questions que tu attends, ce qui t’inquiète…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "応募する職種、聞かれそうなこと、不安なところ…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지원 직무, 예상 질문, 걱정되는 부분…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "应聘的职位、可能被问的问题、担心的地方…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "應徵的職位、可能會被問的問題、擔心的地方…"
+          }
+        }
+      }
+    },
+    "The score you need, your weakest part, the format…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Punktzahl, die du brauchst, dein schwächster Teil, das Format…"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La puntuación que necesitas, la parte que más te cuesta, el formato…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le score à viser, la partie la plus dure, le format…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目標スコア、苦手なパート、試験の形式…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목표 점수, 가장 어려운 파트, 시험 형식…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目标分数、最难的部分、考试形式…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目標分數、最難的部分、考試形式…"
+          }
+        }
+      }
+    },
+    "The topic, how long you speak, questions after…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das Thema, wie lange du sprichst, Fragen danach…"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El tema, cuánto tiempo hablas, las preguntas del final…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le sujet, la durée, les questions à la fin…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "テーマ、持ち時間、終わったあとの質疑…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "발표 주제, 발표 시간, 끝나고 나올 질문…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "主题、讲多久、讲完会被问什么…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "主題、要講多久、講完會被問什麼…"
+          }
+        }
+      }
+    },
+    "What to sort out there: a flat, the bank, a visa…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was dort zu erledigen ist: Wohnung, Bank, Visum…"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lo que tendrás que resolver allí: buscar casa, el banco, la visa…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce qu’il faudra régler là-bas : logement, banque, visa…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "向こうでやること：部屋探し、銀行、ビザ…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "가서 해결할 일: 집 구하기, 은행, 비자…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "到那边要办的事：找房子、银行、签证…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "到那邊要辦的事：找房子、銀行、簽證…"
+          }
+        }
+      }
+    },
+    "What you'll do there, who you'll meet…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was du dort vorhast, wen du triffst…"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lo que vas a hacer allí, a quién vas a ver…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce que tu vas y faire, qui tu vas voir…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "向こうでしたいこと、会う人…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "가서 하고 싶은 것, 만날 사람…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "到那边想做什么、要见谁…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "到那邊想做什麼、要見誰…"
+          }
+        }
+      }
+    },
+    "What it is, who's involved, what worries you…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Worum es geht, wer dabei ist, was dich nervös macht…"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De qué se trata, quién estará, lo que te preocupa…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De quoi il s’agit, qui sera là, ce qui t’inquiète…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "どんなことか、誰がいるか、不安なところ…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "어떤 일인지, 누가 있는지, 걱정되는 부분…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "是什么事、有谁在场、担心的地方…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "是什麼事、有誰在場、擔心的地方…"
+          }
+        }
+      }
+    },
     "The role, the score you need, who will be there…" : {
       "localizations" : {
         "de" : {

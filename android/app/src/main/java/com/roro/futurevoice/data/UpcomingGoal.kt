@@ -115,6 +115,17 @@ data class UpcomingGoal(
             OTHER -> R.string.what_are_you_preparing_for
         }
 
+        /** The notes field's example, per kind (iOS `notesPrompt`): what is
+         *  worth telling the tutor about THIS kind of day. */
+        @get:StringRes val notesPrompt: Int get() = when (this) {
+            INTERVIEW -> R.string.the_role_questions_you_expect_what_worries_you
+            EXAM -> R.string.the_score_you_need_your_weakest_part_the_format
+            PRESENTATION -> R.string.the_topic_how_long_you_speak_questions_after
+            MOVE -> R.string.what_to_sort_out_there_a_flat_the_bank_a_visa
+            TRIP -> R.string.what_you_ll_do_there_who_you_ll_meet
+            OTHER -> R.string.what_it_is_who_s_involved_what_worries_you
+        }
+
         @get:StringRes val placePrompt: Int get() = when (this) {
             INTERVIEW -> R.string.company_or_place
             EXAM -> R.string.test_centre
