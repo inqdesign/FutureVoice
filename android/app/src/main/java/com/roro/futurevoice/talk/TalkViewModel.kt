@@ -463,6 +463,13 @@ class TalkViewModel(context: Context) : ViewModel() {
                     .load(config.targetLanguage, config.level.code)
                 val brief = scenarioBrief(config)
                 val clock = pinPromptClock(config)
+                // What came earlier today (iOS `EarlierToday`, 98d7ff2a) —
+                // read with the clock, so the opener and the prompt agree on
+                // it. Null on the day's first talk and on a resumed talk,
+                // which has its own lines.
+                val earlierToday = if (config.resume != null) null else withContext(Dispatchers.IO) {
+                    runCatching { EarlierToday.current(appContext, config.targetLanguage, excluding = sessionId) }.getOrNull()
+                }
                 val history = personHistory(config)
                 // Drawn with the clock, once per call (iOS `FreeTalkCue.random`).
                 val freeTalkCue = ConversationPrompt.FreeTalkCue.random(hasRecentNews =
@@ -483,6 +490,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                         clock = clock,
                         tutor = tutor,
                         freeTalkCue = freeTalkCue,
+                        earlierToday = earlierToday,
                         learnerPicksTopic = config.picksTopic,
                         tutorLesson = _state.value.tutorLesson,
                         tutorJustTicked = tutorJustTicked,
@@ -606,6 +614,11 @@ class TalkViewModel(context: Context) : ViewModel() {
             // it (iOS `toAnalyze.summary = priorSummary`).
             runCatching { sessions.save(saved) }
             StoreEvents.bump()
+            // The next call today opens on what this one was about (iOS: the
+            // call screen's close re-warms, `prepareSameDayOpener`).
+            if (cfg.cast == null) launch(Dispatchers.IO) {
+                runCatching { FreeTalkOpeners(appContext).prepareSameDayOpener(cfg.targetLanguage, cfg.voiceId) }
+            }
             SessionSummarizer.summarizeInBackground(appContext, saved, cfg.nativeLanguage, cfg.level,
                 priorSummary = prior?.summary)
         }
@@ -662,6 +675,11 @@ class TalkViewModel(context: Context) : ViewModel() {
                 // speaks, and the correction is a separate, later request.
                 val brief = scenarioBrief(config)
                 val clock = pinPromptClock(config)
+                // What came earlier today (iOS `EarlierToday`, 98d7ff2a) —
+                // read with the clock, so the opener and the prompt agree on it.
+                val earlierToday = if (config.resume != null) null else withContext(Dispatchers.IO) {
+                    runCatching { EarlierToday.current(appContext, config.targetLanguage, excluding = sessionId) }.getOrNull()
+                }
                 val history = personHistory(config)
                 // Drawn with the clock, once per call (iOS `FreeTalkCue.random`).
                 val freeTalkCue = ConversationPrompt.FreeTalkCue.random(hasRecentNews =
@@ -687,6 +705,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                         clock = clock,
                         tutor = tutor,
                         freeTalkCue = freeTalkCue,
+                        earlierToday = earlierToday,
                         learnerPicksTopic = config.picksTopic,
                         tutorLesson = _state.value.tutorLesson,
                         tutorJustTicked = tutorJustTicked,
@@ -749,7 +768,13 @@ class TalkViewModel(context: Context) : ViewModel() {
                     if (config.picksTopic) FreeTalkOpeners.topicOpener(config.targetLanguage)
                     else if (freeTalk) {
                         if (config.persona?.metAt == null) FreeTalkOpeners.introOpener(config.targetLanguage)
-                        else FreeTalkOpeners.pickUpOpener(config.targetLanguage)
+                        // A later call the same day picks up what came
+                        // earlier instead (iOS `callOpener`, 98d7ff2a).
+                        else FreeTalkOpeners.callOpener(appContext, config.targetLanguage, earlierToday,
+                            talkedEarlierToday = clock.talksEarlierToday > 0).let { (line, usedKey) ->
+                            usedKey?.let { FreeTalkOpeners.markSameDayUsed(appContext, it) }
+                            line
+                        }
                     } else config.scenarioId?.let { id ->
                         // A scenario with a stored pool (a ready-made
                         // situation's written greetings, or an iOS-made

@@ -144,10 +144,21 @@ object ConversationPrompt {
     }
 
     /** iOS `theyCalledBlock` — a plain free talk the LEARNER placed. */
-    fun theyCalledBlock(freeTalkCue: FreeTalkCue): String =
-        "\n\nTHEY CALLED YOU. Your opening line was only a friend's hello for the time of day (\"what are you up to?\", \"how was your day?\"), so whatever they bring first IS the call — go with it, and don't steer to something you'd rather ask about. If their answer brings no subject of their own — they only answer the greeting (\"good, you?\", \"just chilling\", \"not much\") — that is your cue, in this very turn: say how you are in a few words if they asked, then " +
+    fun theyCalledBlock(freeTalkCue: FreeTalkCue, sameDay: Boolean = false): String =
+        "\n\nTHEY CALLED YOU. Your opening line was " +
+            (if (sameDay) "a friend's hello for a second call the same day, picking up what came earlier"
+             else "only a friend's hello for the time of day (\"what are you up to?\", \"how was your day?\")") +
+            ", so whatever they bring first IS the call — go with it, and don't steer to something you'd rather ask about. If their answer brings no subject of their own — they only answer the greeting (\"good, you?\", \"just chilling\", \"not much\") — that is your cue, in this very turn: say how you are in a few words if they asked, then " +
             freeTalkCue.instruction +
             " Whatever you bring, it is one thing, not a menu of options, and nothing that sounds worried or puzzled that they called (\"is something wrong?\", 무슨 일 있어?, 왜 전화했어?). Later in the call, once their subject has run its course, bring something the same way."
+
+    /** iOS `earlierBlock` (98d7ff2a): what you and they did earlier today —
+     *  a talk, a tutor lesson, a scene or a pronunciation drill. Free talk
+     *  only; absent, every prompt from before is byte-identical. */
+    fun earlierTodayBlock(record: String): String =
+        "\n\nEARLIER TODAY — what you and they did before this call (this is the same day, so you are carrying on, not catching up after a while):\n" +
+            record +
+            "\nTreat it as something you both remember. If they take up what your opening line asked about, stay on it; if they bring something else, go with theirs. Never recap it, quote it back at length, or score it — a lesson or a drill is time you spent with them, mentioned the way a friend would, not a report. If it was a talk that stopped only minutes ago, simply carry on from its last lines."
 
     /** iOS `ownTopicBlock` — a "my own topic" call (topics page): the
      *  subject the learner names is the call. */
@@ -252,6 +263,7 @@ object ConversationPrompt {
         languageName: String, nativeName: String, levelName: String, level: CefrLevel,
         personaBlock: String, counterpartBlock: String, firstMeetingBlock: String,
         theyCalledBlock: String, ownTopicBlock: String, clockBlock: String,
+        earlierBlock: String = "",
         patterns: String, weak: String, topic: String, newsBlock: String, briefBlock: String,
         targetLanguage: String, tutor: Boolean, tutorBlock: String = "", futureBlock: String = "",
     ): String =
@@ -263,6 +275,7 @@ object ConversationPrompt {
             counterpartBlock +
             firstMeetingBlock +
             theyCalledBlock +
+            earlierBlock +
             ownTopicBlock +
             clockBlock +
             "\n\nLanguage profile:\n- Native language: " +

@@ -69,6 +69,9 @@ object ConversationEngine {
         tutor: Boolean = false,
         /** How this call follows a hello answered with no subject (iOS `freeTalkCue:`), drawn once per call. */
         freeTalkCue: ConversationPrompt.FreeTalkCue = ConversationPrompt.FreeTalkCue.PLAIN_QUESTION,
+        /** What came earlier today (iOS `earlierToday:`, 98d7ff2a): a later
+         *  free talk the same day picks it up. Null = the day's first talk. */
+        earlierToday: EarlierToday? = null,
         /** A "my own topic" call (iOS `learnerPicksTopic:`, topics page). */
         learnerPicksTopic: Boolean = false,
         /** Tutor mode's lesson (iOS `tutorLesson:`): null until a topic is set. */
@@ -125,8 +128,13 @@ object ConversationEngine {
 
         // A plain free talk the learner placed: their subject first, and on
         // "nothing much" the fluent self brings what `freeTalkCue` says (iOS `bbfa2902`).
-        val theyCalledBlock = if (topic.isEmpty() && counterpart == null && !firstMeeting && !learnerPicksTopic && !tutor)
-            ConversationPrompt.theyCalledBlock(freeTalkCue) else ""
+        val isFreeTalk = topic.isEmpty() && counterpart == null && !firstMeeting && !learnerPicksTopic && !tutor
+        // A later call the same day opens on what came earlier
+        // (`FreeTalkOpeners.callOpener`), so the line says so.
+        val sameDay = if (isFreeTalk) earlierToday else null
+        val theyCalledBlock = if (isFreeTalk)
+            ConversationPrompt.theyCalledBlock(freeTalkCue, sameDay = sameDay != null) else ""
+        val earlierBlock = sameDay?.let { ConversationPrompt.earlierTodayBlock(it.record) } ?: ""
 
         // "My own topic" (topics page, iOS deed6cf4): not a free talk. This
         // call was placed to talk about ONE thing the learner names, so the
@@ -158,6 +166,7 @@ object ConversationEngine {
             personaBlock = personaBlock, counterpartBlock = counterpartBlock,
             firstMeetingBlock = firstMeetingBlock, theyCalledBlock = theyCalledBlock,
             ownTopicBlock = ownTopicBlock, clockBlock = clockBlock,
+            earlierBlock = earlierBlock,
             patterns = patterns, weak = weak, topic = topic,
             newsBlock = newsBlock, briefBlock = briefBlock,
             targetLanguage = targetLanguage, tutor = tutor,
