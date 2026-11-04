@@ -226,6 +226,10 @@ object GoalPrep {
             if (persona.interests.isNotEmpty()) about += "Interests: ${persona.interests.joinToString(", ")}"
             for (n in persona.currentNotes(now).takeLast(8)) about += n.text
         }
+        // The goal's notes are the learner's own words about THIS day: an
+        // experience they want to tell is theirs to use in the answer, and
+        // the part they dread is where the days should go (iOS 333b3ee6).
+        if (goal.notes.isNotEmpty()) about += "About this goal, in their words: ${goal.notes}"
         val done = earlier.take(10).map {
             "- ${it.day}: ${it.focus} (reading \"${it.reading.title}\", answer \"${it.speech.title}\")"
         }

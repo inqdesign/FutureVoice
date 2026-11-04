@@ -30,7 +30,8 @@ gen-tutor-prompts.py d3a28206
 gen-weekly-prompt.py 4925df02
 # The upcoming goal's preparation (iOS 70bb10f4 … 67cae6a9).
 # + a past goal reads as today (iOS a960e606).
-gen-goal-prep-prompts.py a960e606
+# + the goal's notes as the learner's own words (iOS 333b3ee6).
+gen-goal-prep-prompts.py 333b3ee6
 # The level tagging prompt and the level map (personal report step 3, iOS 465331f6).
 gen-level-tag-prompt.py 465331f6
 # The tutor chat as an agent (iOS 57ba9c6f).

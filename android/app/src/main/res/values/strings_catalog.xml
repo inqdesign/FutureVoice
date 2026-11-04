@@ -3088,6 +3088,7 @@
     <string name="the_other_person">"The other person"</string>
     <string name="the_outlined_cell_is_you">"The outlined cell is you."</string>
     <!-- "The phone's mic hears more detail, but only when the phone is near you. The earphone's mic sounds narrower, and is always at your mouth. You can change this later in Me → Sound & mic." -->
+    <string name="the_part_you_re_unsure_of_where_you_got_stuck_last_time">"The part you're unsure of, where you got stuck last time…"</string>
     <string name="the_phone_s_mic_hears_more_detail_but_only_when_the_phone_is_3f6c6c">"The phone's mic hears more detail, but only when the phone is near you. The earphone's mic sounds narrower, and is always at your mouth. You can change this later in Me → Sound &amp; mic."</string>
     <string name="the_playground">"The playground"</string>
     <string name="the_preparing_finished_before_the_interview">"The preparing finished before the interview."</string>
@@ -3098,7 +3099,7 @@
     <string name="the_reusable_phrases_this_talk_produced_the_ones_your_fluent_1940be">"The reusable phrases this talk produced — the ones your fluent self reached for, and the ones you said yourself. Tap for the card: meaning, examples, and where it came up."</string>
     <string name="the_right_way">"The right way"</string>
     <string name="the_ring_is_today_s_goal">"The ring is today's goal"</string>
-    <string name="the_role_questions_you_expect_what_worries_you">"The role, questions you expect, what worries you…"</string>
+    <string name="the_role_an_experience_you_want_to_tell_a_question_you_dread">"The role, an experience you want to tell, a question you dread…"</string>
     <string name="the_role_the_score_you_need_who_will_be_there">"The role, the score you need, who will be there…"</string>
     <string name="the_same_fix_kept_coming_back_one_more_look_and_it_s_yours">"The same fix kept coming back. One more look and it's yours."</string>
     <!-- 'The same plan comes back every week. Leave a day empty to rest.' -->
@@ -3114,7 +3115,6 @@
     <!-- "The scene's book brings its words and expressions back to you as cards." -->
     <string name="the_scene_s_book_brings_its_words_and_expressions_back_to_yo_bf4a1f">"The scene's book brings its words and expressions back to you as cards."</string>
     <!-- 'The script and your face together in one vertical video. Save it to Photos to share, or delete it.' -->
-    <string name="the_score_you_need_your_weakest_part_the_format">"The score you need, your weakest part, the format…"</string>
     <string name="the_script_and_your_face_together_in_one_vertical_video_save_41e503">"The script and your face together in one vertical video. Save it to Photos to share, or delete it."</string>
     <string name="the_script_couldn_t_be_written_try_again">"The script couldn't be written. Try again."</string>
     <string name="the_script_follows_your_voice">"The script follows your voice"</string>
@@ -3131,7 +3131,6 @@
     <!-- 'The three buttons in the header are about the whole week, not just today.' -->
     <string name="the_three_buttons_in_the_header_are_about_the_whole_week_not_651e49">"The three buttons in the header are about the whole week, not just today."</string>
     <string name="the_top_score_of_lld_people">"The top score of %d people"</string>
-    <string name="the_topic_how_long_you_speak_questions_after">"The topic, how long you speak, questions after…"</string>
     <string name="the_trial_s_scenes_are_used_up">"The trial's scenes are used up."</string>
     <string name="the_trial_s_talk_time_is_used_up">"The trial's talk time is used up."</string>
     <string name="the_tutor_will_keep_it_at_your_level">"The tutor will keep it at your level."</string>
@@ -3529,6 +3528,7 @@
     <string name="what_is_it">"What is it?"</string>
     <string name="what_it_is">"What it is"</string>
     <string name="what_it_is_who_s_involved_what_worries_you">"What it is, who's involved, what worries you…"</string>
+    <string name="what_it_s_about_the_point_to_get_across_a_question_you_dread">"What it's about, the point to get across, a question you dread…"</string>
     <string name="what_never_moves_the_level">"What never moves the level"</string>
     <string name="what_s_going_on_in_their_life">"What's going on in their life?"</string>
     <string name="what_s_into">"What's %s into?"</string>
@@ -3567,7 +3567,7 @@
     <string name="what_this_is_about">"What this is about"</string>
     <string name="what_to_have_ready">"What to have ready"</string>
     <string name="what_to_practice">"What to practice"</string>
-    <string name="what_to_sort_out_there_a_flat_the_bank_a_visa">"What to sort out there: a flat, the bank, a visa…"</string>
+    <string name="what_to_sort_out_there_a_flat_the_bank_a_visa_what_s_already_7fd465">"What to sort out there (a flat, the bank, a visa), what's already settled…"</string>
     <string name="what_uses_talk_time">"What uses talk time?"</string>
     <string name="what_was_said">"What was said"</string>
     <string name="what_you_call_them">"What you call them"</string>
@@ -3580,7 +3580,7 @@
     <!-- 'What you keep getting wrong comes back every day,\nand you say it until it sticks.' -->
     <string name="what_you_keep_getting_wrong_comes_back_every_day_and_you_say_38c34e">"What you keep getting wrong comes back every day,\nand you say it until it sticks."</string>
     <string name="what_you_learn_today_is_gone_in_a_few_days">"What you learn today is gone in a few days"</string>
-    <string name="what_you_ll_do_there_who_you_ll_meet">"What you'll do there, who you'll meet…"</string>
+    <string name="what_you_ll_do_there_who_you_ll_meet_where_you_ll_need_to_ta_a8d05e">"What you'll do there, who you'll meet, where you'll need to talk…"</string>
     <string name="what_you_pick_becomes_your_goal_practice_aims_at_it">"What you pick becomes your goal — practice aims at it."</string>
     <!-- "What you say depends on who you say it to. Asking for a day off is a different conversation with your boss than with a coworker, and a generic stranger can't show you that difference. With a specific person, every scene sounds like the real thing." -->
     <string name="what_you_say_depends_on_who_you_say_it_to_asking_for_a_day_o_63228d">"What you say depends on who you say it to. Asking for a day off is a different conversation with your boss than with a coworker, and a generic stranger can't show you that difference. With a specific person, every scene sounds like the real thing."</string>

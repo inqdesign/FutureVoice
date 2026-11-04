@@ -110,7 +110,7 @@ questions_system = kotlin(q_segs, q_interp)
 # --- hand-ported pieces, pinned ----------------------------------------------
 pin({
     # The learner's facts and the days already done (GoalPrep.kt `system`).
-    "GoalPrep.system": (func_body(src, "system", sy), "dc4168e24a50"),
+    "GoalPrep.system": (func_body(src, "system", sy), "ef09632267d1"),
 })
 
 emit(OUT, f'''package com.roro.futurevoice.talk

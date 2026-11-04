@@ -3073,6 +3073,7 @@
     <string name="the_other_person">"상대방"</string>
     <string name="the_outlined_cell_is_you">"테두리 친 칸이 내 자리예요."</string>
     <!-- "The phone's mic hears more detail, but only when the phone is near you. The earphone's mic sounds narrower, and is always at your mouth. You can change this later in Me → Sound & mic." -->
+    <string name="the_part_you_re_unsure_of_where_you_got_stuck_last_time">"자신 없는 파트, 지난번에 막혔던 것…"</string>
     <string name="the_phone_s_mic_hears_more_detail_but_only_when_the_phone_is_3f6c6c">"폰 마이크가 소리를 더 잘 담지만, 폰이 가까이 있을 때만 그래요. 이어폰 마이크는 통화처럼 좁게 들려도 늘 입 앞에 있어요. 나중에 Me → Sound &amp; mic에서 바꿀 수 있어요."</string>
     <string name="the_playground">"놀이터"</string>
     <string name="the_preparing_finished_before_the_interview">"준비는 면접 전에 이미 끝났어요."</string>
@@ -3083,7 +3084,7 @@
     <string name="the_reusable_phrases_this_talk_produced_the_ones_your_fluent_1940be">"이번 대화에서 나온, 다시 쓸 만한 표현들이에요. 유창해진 내가 꺼낸 말과 내가 직접 쓴 말이요. 누르면 뜻과 예문, 어디서 나왔는지가 담긴 카드가 열려요."</string>
     <string name="the_right_way">"이렇게 말해요"</string>
     <string name="the_ring_is_today_s_goal">"링은 오늘의 목표예요"</string>
-    <string name="the_role_questions_you_expect_what_worries_you">"지원 직무, 예상 질문, 걱정되는 부분…"</string>
+    <string name="the_role_an_experience_you_want_to_tell_a_question_you_dread">"지원 직무, 꼭 말하고 싶은 경험, 자신 없는 질문…"</string>
     <string name="the_role_the_score_you_need_who_will_be_there">"지원 직무, 필요한 점수, 누가 오는지…"</string>
     <string name="the_same_fix_kept_coming_back_one_more_look_and_it_s_yours">"같은 부분을 계속 고쳤어요. 한 번만 더 보면 내 것이 돼요."</string>
     <!-- 'The same plan comes back every week. Leave a day empty to rest.' -->
@@ -3099,7 +3100,6 @@
     <!-- "The scene's book brings its words and expressions back to you as cards." -->
     <string name="the_scene_s_book_brings_its_words_and_expressions_back_to_yo_bf4a1f">"장면의 교재가 단어와 표현을 카드로 다시 보여줘요."</string>
     <!-- 'The script and your face together in one vertical video. Save it to Photos to share, or delete it.' -->
-    <string name="the_score_you_need_your_weakest_part_the_format">"목표 점수, 가장 어려운 파트, 시험 형식…"</string>
     <string name="the_script_and_your_face_together_in_one_vertical_video_save_41e503">"원고와 내 얼굴이 한 화면에 담긴 세로 영상이 남아요. 사진 앱에 저장해서 공유해도 되고, 지워도 돼요."</string>
     <string name="the_script_couldn_t_be_written_try_again">"원고를 만들지 못했어요. 다시 해 볼까요?"</string>
     <string name="the_script_follows_your_voice">"원고가 나를 따라와요"</string>
@@ -3116,7 +3116,6 @@
     <!-- 'The three buttons in the header are about the whole week, not just today.' -->
     <string name="the_three_buttons_in_the_header_are_about_the_whole_week_not_651e49">"위쪽 버튼 세 개는 오늘이 아니라 한 주 전체에 관한 거예요."</string>
     <string name="the_top_score_of_lld_people">"%d명 중 가장 높은 점수예요"</string>
-    <string name="the_topic_how_long_you_speak_questions_after">"발표 주제, 발표 시간, 끝나고 나올 질문…"</string>
     <string name="the_trial_s_scenes_are_used_up">"체험 상황연습을 다 봤어요."</string>
     <string name="the_trial_s_talk_time_is_used_up">"체험 통화 시간을 다 썼어요."</string>
     <string name="the_tutor_will_keep_it_at_your_level">"튜터가 지금 레벨에 맞춰 진행해요."</string>
@@ -3512,6 +3511,7 @@
     <string name="what_is_it">"종류"</string>
     <string name="what_it_is">"무엇인가요"</string>
     <string name="what_it_is_who_s_involved_what_worries_you">"어떤 일인지, 누가 있는지, 걱정되는 부분…"</string>
+    <string name="what_it_s_about_the_point_to_get_across_a_question_you_dread">"무슨 내용인지, 꼭 전할 메시지, 걱정되는 질문…"</string>
     <string name="what_never_moves_the_level">"레벨을 움직이지 않는 것"</string>
     <string name="what_s_going_on_in_their_life">"요즘 그 사람에게 무슨 일이 있나요?"</string>
     <string name="what_s_into">"%s의 관심사는?"</string>
@@ -3550,7 +3550,7 @@
     <string name="what_this_is_about">"무엇에 관한 건지"</string>
     <string name="what_to_have_ready">"내 쪽에서 준비할 것"</string>
     <string name="what_to_practice">"연습할 것"</string>
-    <string name="what_to_sort_out_there_a_flat_the_bank_a_visa">"가서 해결할 일: 집 구하기, 은행, 비자…"</string>
+    <string name="what_to_sort_out_there_a_flat_the_bank_a_visa_what_s_already_7fd465">"가서 처리할 일(집, 은행, 비자), 이미 정해진 것…"</string>
     <string name="what_uses_talk_time">"통화 시간은 어디에 쓰이나요?"</string>
     <string name="what_was_said">"들린 문장"</string>
     <string name="what_you_call_them">"내가 부르는 호칭"</string>
@@ -3563,7 +3563,7 @@
     <!-- 'What you keep getting wrong comes back every day,\nand you say it until it sticks.' -->
     <string name="what_you_keep_getting_wrong_comes_back_every_day_and_you_say_38c34e">"자주 틀리는 건 매일 다시,\n입에 붙을 때까지 말해 보자."</string>
     <string name="what_you_learn_today_is_gone_in_a_few_days">"오늘 배운 건 며칠이면 잊혀요"</string>
-    <string name="what_you_ll_do_there_who_you_ll_meet">"가서 하고 싶은 것, 만날 사람…"</string>
+    <string name="what_you_ll_do_there_who_you_ll_meet_where_you_ll_need_to_ta_a8d05e">"가서 할 일, 만날 사람, 말이 필요할 상황…"</string>
     <string name="what_you_pick_becomes_your_goal_practice_aims_at_it">"여기서 고른 게 목표가 되고, 연습도 거기에 맞춰요."</string>
     <!-- "What you say depends on who you say it to. Asking for a day off is a different conversation with your boss than with a coworker, and a generic stranger can't show you that difference. With a specific person, every scene sounds like the real thing." -->
     <string name="what_you_say_depends_on_who_you_say_it_to_asking_for_a_day_o_63228d">"같은 말이라도 누구에게 하느냐에 따라 달라져요. 휴가 얘기도 상사에게 할 때와 동료에게 할 때는 전혀 다른 대화고, 아무나인 상대로는 그 차이를 연습할 수 없어요. 구체적인 사람이 있으면 그 사람과의 장면이 실제처럼 들려요."</string>
